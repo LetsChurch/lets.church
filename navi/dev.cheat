@@ -1,0 +1,10 @@
+% LetsChurch Dev
+
+# Create User
+just create-user <email> <password> <role>
+
+$ password: echo -e 'password\n'
+$ role: echo -e 'user\nadmin'
+
+# Open GraphQL Engine Console
+just graphql-console

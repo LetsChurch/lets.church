@@ -1,0 +1,138 @@
+version: "3.7"
+
+volumes:
+  auth-bridge-node-modules:
+  pg-data:
+
+services:
+  #
+  # App Services
+  #
+  auth-bridge:
+    build:
+      context: ./services/auth-bridge
+      dockerfile: Dockerfile
+      target: dev
+    environment:
+      KRATOS_URL: http://ory-kratos:3000
+    ports:
+      - 3002:3000
+    volumes:
+      - ./services/auth-bridge:/home/node/app
+      - auth-bridge-node-modules:/home/node/app/node_modules
+    depends_on:
+      - ory-kratos
+
+  #
+  # Vendor Services
+  #
+  graphql-engine:
+    image: hasura/graphql-engine:v2.13.0-ce.cli-migrations-v3
+    ports:
+      - 8080:8080
+    depends_on:
+      - auth-bridge
+      - postgres
+    restart: always
+    environment:
+      HASURA_GRAPHQL_METADATA_DATABASE_URL: postgres://graphql_engine:password@postgres:5432/graphql_engine_metadata
+      PG_DATABASE_URL: postgres://graphql_engine:password@postgres:5432/graphql_engine
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "false"
+      HASURA_GRAPHQL_DEV_MODE: "true"
+      HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
+      HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET}
+      HASURA_GRAPHQL_AUTH_HOOK: http://auth-bridge:3000/graphql-engine-hook
+      HASURA_GRAPHQL_EXPERIMENTAL_FEATURES: naming_convention
+    volumes:
+      - ./etc/graphql-engine/metadata:/hasura-metadata
+      - ./etc/graphql-engine/migrations:/hasura-migrations
+
+  ory-kratos:
+    depends_on:
+      - ory-kratos-migrate
+    image: oryd/kratos:v0.10.1
+    ports:
+      - ${HOST_ORY_KRATOS_PUBLIC_PORT}:3000 # public
+      - ${HOST_ORY_KRATOS_ADMIN_PORT}:3001 # admin
+    restart: unless-stopped
+    environment:
+      DSN: postgres://ory_kratos:password@postgres:5432/ory_kratos?sslmode=disable&max_conns=20&max_idle_conns=4
+      SERVE_PUBLIC_PORT: 3000
+      SERVE_ADMIN_PORT: 3001
+      SERVE_PUBLIC_BASE_URL: http://localhost:${HOST_ORY_KRATOS_PUBLIC_PORT}/
+      SERVE_ADMIN_BASE_URL: http://ory-kratos:${HOST_ORY_KRATOS_ADMIN_PORT}/
+      SELFSERVICE_DEFAULT_BROWSER_RETURN_URL: http://localhost:${HOST_WEB_PORT}/
+      SELFSERVICE_ALLOWED_RETURN_URLS_0: http://localhost:${HOST_WEB_PORT}/
+      SELFSERVICE_FLOWS_ERROR_UI_URL: http://localhost:${HOST_WEB_PORT}/error
+      SELFSERVICE_FLOWS_SETTINGS_UI_URL: http://localhost:${HOST_WEB_PORT}/settings
+      SELFSERVICE_FLOWS_RECOVERY_UI_URL: http://localhost:${HOST_WEB_PORT}/recovery
+      SELFSERVICE_FLOWS_REGISTRATION_UI_URL: http://localhost:${HOST_WEB_PORT}/registration
+      SELFSERVICE_FLOWS_VERIFICATION_UI_URL: http://localhost:${HOST_WEB_PORT}/verification
+      SELFSERVICE_FLOWS_LOGIN_UI_URL: http://localhost:${HOST_WEB_PORT}/login
+      SELFSERVICE_FLOWS_LOGOUT_AFTER_DEFAULT_BROWSER_RETURN_URL: http://127.0.0.1:${HOST_WEB_PORT}/login
+      COURIER_SMTP_CONNECTION_URI: smtps://mailhog_stunnel:4650/?skip_ssl_verify=true
+    command: serve -c /etc/ory-kratos/config.yml --dev --watch-courier
+    volumes:
+      - ./etc/ory-kratos:/etc/ory-kratos
+
+  ory-kratos-selfservice-ui-node:
+    image: oryd/kratos-selfservice-ui-node:v0.10.1
+    environment:
+      PORT: 3000
+      KRATOS_PUBLIC_URL: http://ory-kratos:3000/
+      KRATOS_BROWSER_URL: http://localhost:${HOST_ORY_KRATOS_PUBLIC_PORT}/
+      SECURITY_MODE:
+    ports:
+      - ${HOST_WEB_PORT}:3000
+    restart: on-failure
+
+  #
+  # Ops
+  #
+  ory-kratos-migrate:
+    image: oryd/kratos:v0.10.1
+    environment:
+      DSN: postgres://ory_kratos:password@postgres:5432/ory_kratos?sslmode=disable&max_conns=20&max_idle_conns=4
+    command: -c /etc/ory-kratos/config.yml migrate sql -e --yes
+    volumes:
+      - ./etc/ory-kratos:/etc/ory-kratos
+    restart: on-failure
+
+  #
+  # Service Dependencies
+  #
+  postgres:
+    image: postgres:14.5-alpine
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DATABASE}
+    ports:
+      - '${HOST_PG_PORT}:5432'
+    volumes:
+      - ./etc/postgres-init:/docker-entrypoint-initdb.d
+      - pg-data:/var/lib/postgresql/data
+    command:
+      [
+        'postgres',
+        '-c',
+        'log_statement=all',
+        '-c',
+        'log_min_duration_statement=0',
+      ]
+
+  mailhog:
+    image: mailhog/mailhog
+    restart: always
+    ports:
+      - ${HOST_MAILHOG_SMTP_PORT}:1025 # smtp server
+      - ${HOST_MAILHOG_WEB_PORT}:8025 # web ui
+  mailhog_stunnel:
+    image: dweomer/stunnel
+    restart: always
+    environment:
+      - STUNNEL_SERVICE=smtps
+      - STUNNEL_ACCEPT=4650
+      - STUNNEL_CONNECT=mailhog:1025
+    ports:
+      - ${HOST_MAILHOG_SMTPS_PORT}:4650 # smtp tls

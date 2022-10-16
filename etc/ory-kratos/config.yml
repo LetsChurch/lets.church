@@ -1,0 +1,60 @@
+version: v0.10.1
+
+dsn: memory
+
+log:
+  level: debug
+  format: text
+  leak_sensitive_values: true
+
+secrets:
+  cookie:
+    - PLEASE-CHANGE-ME-I-AM-VERY-INSECURE
+  cipher:
+    - 32-LONG-SECRET-NOT-SECURE-AT-ALL
+
+serve:
+  public:
+    cors:
+      enabled: true
+
+selfservice:
+  methods:
+    password:
+      enabled: true
+      config:
+        haveibeenpwned_enabled: true
+        min_password_length: 8
+        identifier_similarity_check_enabled: true
+
+  flows:
+    settings:
+      privileged_session_max_age: 15m
+
+    recovery:
+      enabled: true
+
+    verification:
+      enabled: true
+
+    login:
+      lifespan: 10m
+
+    registration:
+      lifespan: 10m
+      after:
+        password:
+          hooks:
+            - hook: session
+
+ciphers:
+  algorithm: xchacha20-poly1305
+
+hashers:
+  algorithm: argon2
+
+identity:
+  default_schema_id: user_v0
+  schemas:
+    - id: user_v0
+      url: file:///etc/ory-kratos/user-v0.schema.json

@@ -1,0 +1,8 @@
+table:
+  name: ministry
+  schema: public
+select_permissions:
+  - role: user
+    permission:
+      columns: []
+      filter: {}
