@@ -15,10 +15,20 @@ secrets:
 
 serve:
   public:
+    base_url: null # SERVE_PUBLIC_BASE_URL
+    port: null # SERVE_PUBLIC_PORT
     cors:
       enabled: true
+  admin:
+    base_url: null # SERVE_ADMIN_BASE_URL
+    port: null # SERVE_ADMIN_PORT
 
 selfservice:
+  default_browser_return_url: null # SELFSERVICE_DEFAULT_BROWSER_RETURN_URL
+
+  allowed_return_urls:
+    - null # SELFSERVICE_ALLOWED_RETURN_URLS_0
+
   methods:
     password:
       enabled: true
@@ -28,16 +38,23 @@ selfservice:
         identifier_similarity_check_enabled: true
 
   flows:
+    error:
+      ui_url: null # SELFSERVICE_FLOWS_ERROR_UI_URL
+
     settings:
+      ui_url: null # SELFSERVICE_FLOWS_SETTINGS_UI_URL
       privileged_session_max_age: 15m
 
     recovery:
+      ui_url: null # SELFSERVICE_FLOWS_RECOVERY_UI_URL
       enabled: true
 
     verification:
+      ui_url: null # SELFSERVICE_FLOWS_VERIFICATION_UI_URL
       enabled: true
 
     login:
+      ui_url: null # SELFSERVICE_FLOWS_LOGIN_UI_URL
       lifespan: 10m
       after:
         hooks:
@@ -52,8 +69,12 @@ selfservice:
                   name: Authorization
                   value: null # SELFSERVICE_FLOWS_LOGIN_AFTER_HOOKS_0_CONFIG_AUTH_CONFIG_VALUE
                   in: header
+    logout:
+      after:
+        default_browser_return_url: null # SELFSERVICE_FLOWS_LOGOUT_AFTER_DEFAULT_BROWSER_RETURN_URL
 
     registration:
+      ui_url: null # SELFSERVICE_FLOWS_REGISTRATION_UI_URL
       lifespan: 10m
       after:
         hooks:
@@ -80,3 +101,9 @@ identity:
   schemas:
     - id: user_v0
       url: file:///etc/ory-kratos/user-v0.schema.json
+
+courier:
+  smtp:
+    connection_uri: null # COURIER_SMTP_CONNECTION_URI
+    from_address: no-reply@lets.church
+    from_name: Let's Church

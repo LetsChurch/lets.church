@@ -61,8 +61,8 @@ services:
     environment:
       DSN: postgres://ory_kratos:password@postgres:5432/ory_kratos?sslmode=disable&max_conns=20&max_idle_conns=4
       SERVE_PUBLIC_PORT: 3000
-      SERVE_ADMIN_PORT: 3001
       SERVE_PUBLIC_BASE_URL: http://localhost:${HOST_ORY_KRATOS_PUBLIC_PORT}/
+      SERVE_ADMIN_PORT: 3001
       SERVE_ADMIN_BASE_URL: http://ory-kratos:${HOST_ORY_KRATOS_ADMIN_PORT}/
       SELFSERVICE_DEFAULT_BROWSER_RETURN_URL: http://localhost:${HOST_WEB_PORT}/
       SELFSERVICE_ALLOWED_RETURN_URLS_0: http://localhost:${HOST_WEB_PORT}/
@@ -74,9 +74,9 @@ services:
       SELFSERVICE_FLOWS_REGISTRATION_AFTER_HOOKS_0_CONFIG_AUTH_CONFIG_VALUE: ${AUTH_BRIDGE_SECRET}
       SELFSERVICE_FLOWS_VERIFICATION_UI_URL: http://localhost:${HOST_WEB_PORT}/verification
       SELFSERVICE_FLOWS_LOGIN_UI_URL: http://localhost:${HOST_WEB_PORT}/login
-      SELFSERVICE_FLOWS_LOGOUT_AFTER_DEFAULT_BROWSER_RETURN_URL: http://127.0.0.1:${HOST_WEB_PORT}/login
       SELFSERVICE_FLOWS_LOGIN_AFTER_HOOKS_0_CONFIG_URL: http://auth-bridge:3000/ory-hook
       SELFSERVICE_FLOWS_LOGIN_AFTER_HOOKS_0_CONFIG_AUTH_CONFIG_VALUE: ${AUTH_BRIDGE_SECRET}
+      SELFSERVICE_FLOWS_LOGOUT_AFTER_DEFAULT_BROWSER_RETURN_URL: http://127.0.0.1:${HOST_WEB_PORT}/login
       COURIER_SMTP_CONNECTION_URI: smtps://mailhog_stunnel:4650/?skip_ssl_verify=true
     command: serve -c /etc/ory-kratos/config.yml --dev --watch-courier
     volumes:
