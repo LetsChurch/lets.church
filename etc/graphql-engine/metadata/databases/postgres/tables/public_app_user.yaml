@@ -17,7 +17,7 @@ array_relationships:
           name: organization_membership
           schema: public
 insert_permissions:
-  - role: api
+  - role: internal
     permission:
       check: {}
       columns:
@@ -38,7 +38,7 @@ select_permissions:
         - id
       filter: {}
 update_permissions:
-  - role: api
+  - role: internal
     permission:
       columns:
         - email
@@ -47,7 +47,7 @@ update_permissions:
       check: {}
       backend_only: true
 delete_permissions:
-  - role: api
+  - role: internal
     permission:
       backend_only: true
       filter: {}

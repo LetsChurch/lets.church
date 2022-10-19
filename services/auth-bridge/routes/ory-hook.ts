@@ -18,7 +18,7 @@ const upsertUserQuery = gql`
 
 const graphqlClient = new GraphQLClient(GRAPHQL_URL, {
   headers: {
-    'x-hasura-role': 'api',
+    'x-hasura-role': 'internal',
     'x-hasura-admin-secret': HASURA_GRAPHQL_ADMIN_SECRET,
     'x-hasura-use-backend-only-permissions': 'true',
   },
