@@ -9,6 +9,13 @@ array_relationships:
         table:
           name: channel_membership
           schema: public
+  - name: emails
+    using:
+      foreign_key_constraint_on:
+        column: user_id
+        table:
+          name: app_user_email
+          schema: public
   - name: organizationMemberships
     using:
       foreign_key_constraint_on:
@@ -21,7 +28,6 @@ insert_permissions:
     permission:
       check: {}
       columns:
-        - email
         - id
       backend_only: true
 select_permissions:
@@ -41,7 +47,6 @@ update_permissions:
   - role: internal
     permission:
       columns:
-        - email
         - id
       filter: {}
       check: {}

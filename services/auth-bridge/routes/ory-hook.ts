@@ -6,10 +6,22 @@ const HASURA_GRAPHQL_ADMIN_SECRET = envariant('HASURA_GRAPHQL_ADMIN_SECRET');
 const GRAPHQL_URL = envariant('GRAPHQL_URL');
 
 const upsertUserQuery = gql`
-  mutation UpsertUser($id: uuid!, $email: citext!) {
+  mutation UpsertUser(
+    $id: uuid = ""
+    $emails: [AppUserEmailInsertInput!] = {}
+  ) {
     insertAppUser(
-      objects: { id: $id, email: $email }
-      onConflict: { constraint: app_user_pkey, update_columns: [email] }
+      objects: {
+        id: $id
+        emails: {
+          data: $emails
+          onConflict: {
+            constraint: app_user_email_pkey
+            update_columns: [id, email, verified, createdAt, updatedAt]
+          }
+        }
+      }
+      onConflict: { constraint: app_user_pkey, update_columns: id }
     ) {
       affected_rows
     }
@@ -36,9 +48,9 @@ export default eventHandler(async (event) => {
 
   const body = await useBody(event);
 
-  graphqlClient.request(upsertUserQuery, {
+  await graphqlClient.request(upsertUserQuery, {
     id: body.userId,
-    email: body.email,
+    emails: body.emails,
   });
 
   return send(event);

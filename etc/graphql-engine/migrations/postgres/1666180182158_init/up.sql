@@ -12,9 +12,16 @@ END;
 $$;
 CREATE TABLE public.app_user (
     id uuid NOT NULL,
-    email public.citext NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE TABLE public.app_user_email (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    email public.citext NOT NULL,
+    verified boolean NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL
 );
 CREATE TABLE public.channel (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -52,8 +59,8 @@ CREATE TABLE public.organization_membership (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
-ALTER TABLE ONLY public.app_user
-    ADD CONSTRAINT app_user_email_key UNIQUE (email);
+ALTER TABLE ONLY public.app_user_email
+    ADD CONSTRAINT app_user_email_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.app_user
     ADD CONSTRAINT app_user_pkey PRIMARY KEY (id);
 ALTER TABLE ONLY public.channel_membership
@@ -82,6 +89,8 @@ CREATE TRIGGER set_public_organization_membership_updated_at BEFORE UPDATE ON pu
 COMMENT ON TRIGGER set_public_organization_membership_updated_at ON public.organization_membership IS 'trigger to set value of column "updated_at" to current timestamp on row update';
 CREATE TRIGGER set_public_organization_updated_at BEFORE UPDATE ON public.organization FOR EACH ROW EXECUTE FUNCTION public.set_current_timestamp_updated_at();
 COMMENT ON TRIGGER set_public_organization_updated_at ON public.organization IS 'trigger to set value of column "updated_at" to current timestamp on row update';
+ALTER TABLE ONLY public.app_user_email
+    ADD CONSTRAINT app_user_email_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON UPDATE RESTRICT ON DELETE CASCADE;
 ALTER TABLE ONLY public.channel_membership
     ADD CONSTRAINT channel_membership_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES public.channel(id) ON UPDATE RESTRICT ON DELETE CASCADE;
 ALTER TABLE ONLY public.channel_membership
