@@ -1,0 +1,33 @@
+table:
+  name: channel
+  schema: public
+array_relationships:
+  - name: memberships
+    using:
+      foreign_key_constraint_on:
+        column: channel_id
+        table:
+          name: channel_membership
+          schema: public
+  - name: organizationAssociations
+    using:
+      foreign_key_constraint_on:
+        column: channel_id
+        table:
+          name: channel_organization_association
+          schema: public
+select_permissions:
+  - role: anonymous
+    permission:
+      columns:
+        - id
+        - name
+        - slug
+      filter: {}
+  - role: user
+    permission:
+      columns:
+        - id
+        - name
+        - slug
+      filter: {}

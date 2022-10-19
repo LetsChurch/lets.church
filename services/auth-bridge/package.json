@@ -13,7 +13,8 @@
   "dependencies": {
     "@knpwrs/envariant": "^1.0.2",
     "@ory/client": "^0.2.0-alpha.48",
-    "dot-prop": "^7.2.0"
+    "dot-prop": "^7.2.0",
+    "graphql-request": "^5.0.0"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.40.0",

@@ -4,6 +4,10 @@ import { getProperty, hasProperty } from 'dot-prop';
 
 const KRATOS_URL = envariant('KRATOS_URL');
 
+const anonymous = {
+  'X-Hasura-Role': 'anonymous',
+};
+
 export default eventHandler(async (event) => {
   const cookieHeader =
     getHeader(event, 'cookie') ?? getHeader(event, 'x-cookie');
@@ -15,13 +19,13 @@ export default eventHandler(async (event) => {
   });
 
   if (!res.ok) {
-    return sendError(event, createError({ statusCode: 401 }));
+    return anonymous;
   }
 
   const session: Session = await res.json();
 
   if (!hasProperty(session.identity.metadata_public, 'role')) {
-    return sendError(event, createError({ statusCode: 401 }));
+    return anonymous;
   }
 
   return {
