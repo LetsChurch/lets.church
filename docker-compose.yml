@@ -39,13 +39,13 @@ services:
     restart: always
     environment:
       HASURA_GRAPHQL_METADATA_DATABASE_URL: postgres://graphql_engine:password@postgres:5432/graphql_engine_metadata
-      PG_DATABASE_URL: postgres://graphql_engine:password@postgres:5432/graphql_engine
       HASURA_GRAPHQL_ENABLE_CONSOLE: "false"
       HASURA_GRAPHQL_DEV_MODE: "true"
       HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
       HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET}
       HASURA_GRAPHQL_AUTH_HOOK: http://auth-bridge:3000/graphql-engine-hook
       HASURA_GRAPHQL_EXPERIMENTAL_FEATURES: naming_convention
+      PG_DATABASE_URL: postgres://graphql_engine:password@postgres:5432/graphql_engine
     volumes:
       - ./etc/graphql-engine/metadata:/hasura-metadata
       - ./etc/graphql-engine/migrations:/hasura-migrations
