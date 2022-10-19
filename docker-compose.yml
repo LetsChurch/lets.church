@@ -75,6 +75,8 @@ services:
       SELFSERVICE_FLOWS_VERIFICATION_UI_URL: http://localhost:${HOST_WEB_PORT}/verification
       SELFSERVICE_FLOWS_LOGIN_UI_URL: http://localhost:${HOST_WEB_PORT}/login
       SELFSERVICE_FLOWS_LOGOUT_AFTER_DEFAULT_BROWSER_RETURN_URL: http://127.0.0.1:${HOST_WEB_PORT}/login
+      SELFSERVICE_FLOWS_LOGIN_AFTER_HOOKS_0_CONFIG_URL: http://auth-bridge:3000/ory-hook
+      SELFSERVICE_FLOWS_LOGIN_AFTER_HOOKS_0_CONFIG_AUTH_CONFIG_VALUE: ${AUTH_BRIDGE_SECRET}
       COURIER_SMTP_CONNECTION_URI: smtps://mailhog_stunnel:4650/?skip_ssl_verify=true
     command: serve -c /etc/ory-kratos/config.yml --dev --watch-courier
     volumes:
