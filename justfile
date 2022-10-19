@@ -36,5 +36,5 @@ purge-pg:
 create-user email password="password" role="user":
   jo schema_id=user_v0 traits=$(jo email={{email}}) metadata_public=$(jo role={{role}}) verifiable_addresses=$(jo -a $(jo value={{email}} verified=true via=email status=completed)) credentials=$(jo password=$(jo config=$(jo password={{password}}))) | curl -X POST -L -H "Content-Type: application/json" -d @- http://localhost:4434/identities
 
-graphql-console:
-  cd ./etc/graphql-engine; hasura console
+console:
+  cd ./etc/graphql-engine; hasura console  --console-port $HOST_CONSOLE_PORT
