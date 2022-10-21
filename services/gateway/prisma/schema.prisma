@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator pothos {
+  provider = "prisma-pothos-types"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model AppUser {
+  id                     String                   @id @db.Uuid
+  ChannelMembership      ChannelMembership[]
+  OrganizationMembership OrganizationMembership[]
+
+  @@map("app_user")
+}
+
+model Organization {
+  id                      String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                    String
+  slug                    String                           @unique
+  description             String?
+  memberships             OrganizationMembership[]
+  OrganizationAssociation OrganizationChannelAssociation[]
+
+  @@map("organization")
+}
+
+model OrganizationMembership {
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String       @map("channel_id") @db.Uuid
+  appUser        AppUser      @relation(fields: [appUserId], references: [id])
+  appUserId      String       @map("app_user_id") @db.Uuid
+  isAdmin        Boolean      @default(false) @map("is_admin")
+  canEdit        Boolean      @default(false) @map("can_edit")
+
+  @@id([organizationId, appUserId])
+  @@map("organization_membership")
+}
+
+model OrganizationChannelAssociation {
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String       @map("organization_id") @db.Uuid
+  channel        Channel      @relation(fields: [channelId], references: [id])
+  channelId      String       @map("channel_id") @db.Uuid
+
+  @@id([organizationId, channelId])
+  @@map("organization_channel_association")
+}
+
+model Channel {
+  id           String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String
+  slug         String                           @unique
+  description  String?
+  memberships  ChannelMembership[]
+  associations OrganizationChannelAssociation[]
+
+  @@map("channel")
+}
+
+model ChannelMembership {
+  channel   Channel @relation(fields: [channelId], references: [id])
+  channelId String  @map("channel_id") @db.Uuid
+  appUser   AppUser @relation(fields: [appUserId], references: [id])
+  appUserId String  @map("app_user_id") @db.Uuid
+  isAdmin   Boolean @default(false) @map("is_admin")
+  canEdit   Boolean @default(false) @map("can_edit")
+  canUpload Boolean @default(false) @map("can_upload")
+
+  @@id([channelId, appUserId])
+  @@map("channel_membership")
+}

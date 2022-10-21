@@ -1,0 +1,57 @@
+{
+  "name": "@letschurch/gateway",
+  "private": true,
+  "scripts": {
+    "dev": "NODE_ENV=development tsx watch --clear-screen=false src/server.ts",
+    "build": "esbuild src/index.ts --bundle --platform=node --external:./node_modules/* --outfile=dist/index.js",
+    "start": "node dist",
+    "check": "npm-run-all check:*",
+    "check:format": "prettier --check src prisma/seed.ts",
+    "check:lint": "eslint --ext .ts,.tsx src",
+    "check:ts": "tsc",
+    "test": "vitest",
+    "prisma:studio": "prisma studio",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:migrate:test": "./test-cmd prisma db push --accept-data-loss",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:migrate:status": "prisma migrate status",
+    "prisma:migrate:reset": "prisma migrate reset",
+    "prisma:db:push": "prisma db push",
+    "prisma:db:push:force": "prisma db push --accept-data-loss",
+    "prisma:db:seed": "prisma db seed",
+    "prisma:generate": "prisma generate"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "license": "UNLICENSE",
+  "dependencies": {
+    "@envelop/disable-introspection": "^4.0.2",
+    "@knpwrs/envariant": "^1.0.2",
+    "@pothos/core": "^3.22.6",
+    "@pothos/plugin-prisma": "^3.35.4",
+    "@pothos/plugin-relay": "^3.28.5",
+    "@pothos/plugin-simple-objects": "^3.6.4",
+    "@pothos/plugin-tracing": "^0.5.4",
+    "@prisma/client": "^4.5.0",
+    "camelcase-keys": "^8.0.2",
+    "graphql-yoga": "^2.13.13",
+    "zod": "^3.19.1"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^7.6.0",
+    "@tsconfig/node18-strictest": "^1.0.0",
+    "@types/node": "^18.11.2",
+    "@typescript-eslint/eslint-plugin": "^5.40.1",
+    "@typescript-eslint/parser": "^5.40.1",
+    "esbuild": "^0.15.12",
+    "eslint": "^8.25.0",
+    "eslint-plugin-import": "^2.26.0",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^2.7.1",
+    "prisma": "^4.5.0",
+    "tsx": "^3.10.4",
+    "typescript": "^4.8.4",
+    "vitest": "^0.24.3"
+  }
+}

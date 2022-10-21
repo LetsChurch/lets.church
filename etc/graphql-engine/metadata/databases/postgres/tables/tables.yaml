@@ -1,7 +1,0 @@
-- "!include public_app_user.yaml"
-- "!include public_app_user_email.yaml"
-- "!include public_channel.yaml"
-- "!include public_channel_membership.yaml"
-- "!include public_channel_organization_association.yaml"
-- "!include public_organization.yaml"
-- "!include public_organization_membership.yaml"

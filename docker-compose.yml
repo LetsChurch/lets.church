@@ -1,55 +1,32 @@
 version: "3.7"
 
 volumes:
-  auth-bridge-node-modules:
+  gateway-node-modules:
   pg-data:
 
 services:
   #
   # App Services
   #
-  auth-bridge:
+  gateway:
     build:
-      context: ./services/auth-bridge
+      context: ./services/gateway
       dockerfile: Dockerfile
       target: dev
-    environment:
-      AUTH_BRIDGE_SECRET: ${AUTH_BRIDGE_SECRET}
-      KRATOS_URL: http://ory-kratos:3000
-      GRAPHQL_URL: http://graphql-engine:8080/v1/graphql
-      HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET}
     ports:
-      - ${HOST_AUTH_BRIDGE_PORT}:3000
+      - ${HOST_GATEWAY_PORT}:3000
+    environment:
+      DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
+      ORY_KRATOS_ADMIN_URL: http://ory-kratos:3001
+      ORY_KRATOS_PUBLIC_URL: http://ory-kratos:3000
     volumes:
-      - ./services/auth-bridge:/home/node/app
-      - auth-bridge-node-modules:/home/node/app/node_modules
+      - ./services/gateway:/home/node/app
+      - gateway-node-modules:/home/node/app/node_modules
     depends_on:
       - ory-kratos
-
   #
   # Vendor Services
   #
-  graphql-engine:
-    image: hasura/graphql-engine:v2.13.0-ce.cli-migrations-v3
-    ports:
-      - ${HOST_GRAPHQL_PORT}:8080
-    depends_on:
-      - auth-bridge
-      - postgres
-    restart: always
-    environment:
-      HASURA_GRAPHQL_METADATA_DATABASE_URL: postgres://graphql_engine:password@postgres:5432/graphql_engine_metadata
-      HASURA_GRAPHQL_ENABLE_CONSOLE: "false"
-      HASURA_GRAPHQL_DEV_MODE: "true"
-      HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
-      HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_GRAPHQL_ADMIN_SECRET}
-      HASURA_GRAPHQL_AUTH_HOOK: http://auth-bridge:3000/graphql-engine-hook
-      HASURA_GRAPHQL_EXPERIMENTAL_FEATURES: naming_convention
-      PG_DATABASE_URL: postgres://graphql_engine:password@postgres:5432/graphql_engine
-    volumes:
-      - ./etc/graphql-engine/metadata:/hasura-metadata
-      - ./etc/graphql-engine/migrations:/hasura-migrations
-
   ory-kratos:
     depends_on:
       - ory-kratos-migrate
@@ -70,12 +47,8 @@ services:
       SELFSERVICE_FLOWS_SETTINGS_UI_URL: http://localhost:${HOST_WEB_PORT}/settings
       SELFSERVICE_FLOWS_RECOVERY_UI_URL: http://localhost:${HOST_WEB_PORT}/recovery
       SELFSERVICE_FLOWS_REGISTRATION_UI_URL: http://localhost:${HOST_WEB_PORT}/registration
-      SELFSERVICE_FLOWS_REGISTRATION_AFTER_HOOKS_0_CONFIG_URL: http://auth-bridge:3000/ory-hook
-      SELFSERVICE_FLOWS_REGISTRATION_AFTER_HOOKS_0_CONFIG_AUTH_CONFIG_VALUE: ${AUTH_BRIDGE_SECRET}
       SELFSERVICE_FLOWS_VERIFICATION_UI_URL: http://localhost:${HOST_WEB_PORT}/verification
       SELFSERVICE_FLOWS_LOGIN_UI_URL: http://localhost:${HOST_WEB_PORT}/login
-      SELFSERVICE_FLOWS_LOGIN_AFTER_HOOKS_0_CONFIG_URL: http://auth-bridge:3000/ory-hook
-      SELFSERVICE_FLOWS_LOGIN_AFTER_HOOKS_0_CONFIG_AUTH_CONFIG_VALUE: ${AUTH_BRIDGE_SECRET}
       SELFSERVICE_FLOWS_LOGOUT_AFTER_DEFAULT_BROWSER_RETURN_URL: http://127.0.0.1:${HOST_WEB_PORT}/login
       COURIER_SMTP_CONNECTION_URI: smtps://mailhog_stunnel:4650/?skip_ssl_verify=true
     command: serve -c /etc/ory-kratos/config.yml --dev --watch-courier
