@@ -31,11 +31,15 @@
     "@pothos/core": "^3.22.6",
     "@pothos/plugin-prisma": "^3.35.4",
     "@pothos/plugin-relay": "^3.28.5",
+    "@pothos/plugin-scope-auth": "^3.15.2",
     "@pothos/plugin-simple-objects": "^3.6.4",
     "@pothos/plugin-tracing": "^0.5.4",
     "@prisma/client": "^4.5.0",
     "camelcase-keys": "^8.0.2",
+    "dot-prop": "^7.2.0",
     "graphql-yoga": "^2.13.13",
+    "p-lazy": "^4.0.0",
+    "tiny-invariant": "^1.3.1",
     "zod": "^3.19.1"
   },
   "devDependencies": {
