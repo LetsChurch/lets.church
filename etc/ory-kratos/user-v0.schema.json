@@ -26,13 +26,27 @@
             }
           }
         },
+        "username": {
+          "type": "string",
+          "title": "Username",
+          "minLength": 3,
+          "pattern": "^[a-zA-Z0-9_]{3,}$",
+          "ory.sh/kratos": {
+            "credentials": {
+              "password": {
+                "identifier": true
+              }
+            }
+          }
+        },
         "fullName": {
           "type": "string",
           "title": "Full Name"
         }
       },
       "required": [
-        "email"
+        "email",
+        "username"
       ],
       "additionalProperties": false
     }

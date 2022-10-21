@@ -11,6 +11,7 @@ const profileSchema = Z.object({
   id: Z.string().uuid(),
   traits: Z.object({
     email: Z.string().email(),
+    username: Z.string(),
     fullName: Z.string(),
   }),
   verifiable_addresses: Z.array(

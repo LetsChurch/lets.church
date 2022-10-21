@@ -15,11 +15,13 @@ type Role = 'admin' | 'user';
 
 function createUser({
   email = faker.internet.email(),
+  username = faker.internet.userName(),
   fullName = `${faker.name.firstName()} ${faker.name.lastName()}`,
   role = 'user',
   password = 'password',
 }: Partial<{
   email: string;
+  username: string;
   fullName: string;
   role: Role;
   password: string;
@@ -28,6 +30,7 @@ function createUser({
     schema_id: 'user_v0',
     traits: {
       email,
+      username,
       fullName,
     },
     metadata_public: {
@@ -55,6 +58,7 @@ void (async function main() {
   const users = [
     createUser({
       email: 'admin@lets.church',
+      username: 'admin',
       fullName: 'Admin McGee',
       role: 'admin',
     }),
