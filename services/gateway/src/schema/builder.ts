@@ -18,6 +18,12 @@ export default new SchemaBuilder<{
     authenticated: boolean;
     admin: boolean;
   };
+  Scalars: {
+    ShortUuid: {
+      Input: string;
+      Output: string;
+    };
+  };
 }>({
   plugins: [
     // ScopeAuthPlugin must be listed first

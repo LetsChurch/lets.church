@@ -9,7 +9,7 @@ builder.queryType();
 
 const AppUserIdentity = builder.simpleObject('AppUserIdentity', {
   fields: (pt) => ({
-    id: pt.string(),
+    id: pt.field({ type: 'ShortUuid' }),
     username: pt.string(),
     role: pt.field({
       type: builder.enumType('AppUserRole', {
@@ -31,7 +31,7 @@ const AppUserIdentity = builder.simpleObject('AppUserIdentity', {
       type: [
         builder.simpleObject('AppUserVerifiableAddress', {
           fields: (vat) => ({
-            id: vat.id(),
+            id: vat.field({ type: 'ShortUuid' }),
             value: vat.string(),
             verified: vat.boolean(),
           }),
@@ -43,7 +43,7 @@ const AppUserIdentity = builder.simpleObject('AppUserIdentity', {
 
 const AppUser = builder.prismaObject('AppUser', {
   fields: (t) => ({
-    id: t.exposeID('id'),
+    id: t.expose('id', { type: 'ShortUuid' }),
     profile: t.field({
       type: AppUserIdentity,
       resolve: async ({ id }) => {
@@ -93,5 +93,17 @@ builder.queryFields((t) => ({
     defaultSize: 50,
     resolve: (query, _root, _args, context, _info) =>
       context.prisma.appUser.findMany(query),
+  }),
+  userById: t.prismaField({
+    type: AppUser,
+    args: {
+      id: t.arg({ type: 'ShortUuid', required: true }),
+    },
+    resolve: (query, _root, { id }, context) => {
+      return context.prisma.appUser.findUniqueOrThrow({
+        ...query,
+        where: { id },
+      });
+    },
   }),
 }));
