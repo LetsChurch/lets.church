@@ -1,6 +1,8 @@
 -- CreateTable
 CREATE TABLE "app_user" (
     "id" UUID NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "app_user_pkey" PRIMARY KEY ("id")
 );
@@ -11,6 +13,8 @@ CREATE TABLE "organization" (
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "description" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "organization_pkey" PRIMARY KEY ("id")
 );
@@ -21,6 +25,8 @@ CREATE TABLE "organization_membership" (
     "app_user_id" UUID NOT NULL,
     "is_admin" BOOLEAN NOT NULL DEFAULT false,
     "can_edit" BOOLEAN NOT NULL DEFAULT false,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "organization_membership_pkey" PRIMARY KEY ("channel_id","app_user_id")
 );
@@ -29,6 +35,8 @@ CREATE TABLE "organization_membership" (
 CREATE TABLE "organization_channel_association" (
     "organization_id" UUID NOT NULL,
     "channel_id" UUID NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "organization_channel_association_pkey" PRIMARY KEY ("organization_id","channel_id")
 );
@@ -39,6 +47,8 @@ CREATE TABLE "channel" (
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "description" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "channel_pkey" PRIMARY KEY ("id")
 );
@@ -50,6 +60,8 @@ CREATE TABLE "channel_membership" (
     "is_admin" BOOLEAN NOT NULL DEFAULT false,
     "can_edit" BOOLEAN NOT NULL DEFAULT false,
     "can_upload" BOOLEAN NOT NULL DEFAULT false,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "channel_membership_pkey" PRIMARY KEY ("channel_id","app_user_id")
 );
@@ -73,7 +85,7 @@ ALTER TABLE "organization_channel_association" ADD CONSTRAINT "organization_chan
 ALTER TABLE "organization_channel_association" ADD CONSTRAINT "organization_channel_association_channel_id_fkey" FOREIGN KEY ("channel_id") REFERENCES "channel"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "channel_membership" ADD CONSTRAINT "channel_membership_channel_id_fkey" FOREIGN KEY ("channel_id") REFERENCES "channel"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "channel_membership" ADD CONSTRAINT "channel_membership_channel_id_fkey" FOREIGN KEY ("channel_id") REFERENCES "channel"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "channel_membership" ADD CONSTRAINT "channel_membership_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "channel_membership" ADD CONSTRAINT "channel_membership_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;

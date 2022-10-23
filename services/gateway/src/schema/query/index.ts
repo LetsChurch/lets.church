@@ -41,6 +41,35 @@ const AppUserIdentity = builder.simpleObject('AppUserIdentity', {
   }),
 });
 
+builder.prismaObject('Channel', {
+  fields: (t) => ({
+    id: t.expose('id', { type: 'ShortUuid' }),
+    name: t.exposeString('name'),
+    slug: t.exposeString('slug'),
+    description: t.exposeString('description', { nullable: true }),
+    memberships: t.relatedConnection('memberships', {
+      cursor: 'channelId_appUserId',
+    }),
+    createdAt: t.field({
+      type: 'String',
+      select: { createdAt: true },
+      resolve: (channel) => channel.createdAt.toISOString(), // TODO: datetime scalar
+    }),
+    updatedAt: t.field({
+      type: 'String',
+      select: { updatedAt: true },
+      resolve: (channel) => channel.updatedAt.toISOString(), // TODO: datetime scalar
+    }),
+  }),
+});
+
+builder.prismaObject('ChannelMembership', {
+  fields: (t) => ({
+    user: t.relation('appUser'),
+    channel: t.relation('channel'),
+  }),
+});
+
 const AppUser = builder.prismaObject('AppUser', {
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
@@ -57,30 +86,34 @@ const AppUser = builder.prismaObject('AppUser', {
         };
       },
     }),
+    channelMemberships: t.relatedConnection('channelMemberships', {
+      cursor: 'channelId_appUserId',
+    }),
+    createdAt: t.field({
+      type: 'String',
+      select: { createdAt: true },
+      resolve: (channel) => channel.createdAt.toISOString(), // TODO: datetime scalar
+    }),
+    updatedAt: t.field({
+      type: 'String',
+      select: { updatedAt: true },
+      resolve: (channel) => channel.updatedAt.toISOString(), // TODO: datetime scalar
+    }),
   }),
 });
 
 builder.queryFields((t) => ({
-  me: t.field({
+  me: t.prismaField({
     type: AppUser,
     nullable: true,
-    resolve: async (_root, _args, context, _info) => {
+    resolve: async (query, _root, _args, context, _info) => {
       const identity = await context.identity;
 
       if (identity) {
-        const {
-          id,
-          traits: { username },
-          metadataPublic: { role },
-          verifiableAddresses,
-        } = identity;
-
-        return {
-          id,
-          username,
-          role,
-          verifiableAddresses,
-        };
+        return context.prisma.appUser.findUniqueOrThrow({
+          ...query,
+          where: { id: identity.id },
+        });
       }
 
       return null;

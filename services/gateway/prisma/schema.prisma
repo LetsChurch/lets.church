@@ -12,20 +12,24 @@ datasource db {
 }
 
 model AppUser {
-  id                     String                   @id @db.Uuid
-  ChannelMembership      ChannelMembership[]
-  OrganizationMembership OrganizationMembership[]
+  id                      String                   @id @db.Uuid
+  createdAt               DateTime                 @default(now()) @map("created_at")
+  updatedAt               DateTime                 @updatedAt @map("updated_at")
+  channelMemberships      ChannelMembership[]
+  organizationMemberships OrganizationMembership[]
 
   @@map("app_user")
 }
 
 model Organization {
-  id                      String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                    String
-  slug                    String                           @unique
-  description             String?
-  memberships             OrganizationMembership[]
-  OrganizationAssociation OrganizationChannelAssociation[]
+  id           String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String
+  slug         String                           @unique // TODO: @db.Citext
+  description  String?
+  memberships  OrganizationMembership[]
+  associations OrganizationChannelAssociation[]
+  createdAt    DateTime                         @default(now()) @map("created_at")
+  updatedAt    DateTime                         @updatedAt @map("updated_at")
 
   @@map("organization")
 }
@@ -37,6 +41,8 @@ model OrganizationMembership {
   appUserId      String       @map("app_user_id") @db.Uuid
   isAdmin        Boolean      @default(false) @map("is_admin")
   canEdit        Boolean      @default(false) @map("can_edit")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
 
   @@id([organizationId, appUserId])
   @@map("organization_membership")
@@ -47,6 +53,8 @@ model OrganizationChannelAssociation {
   organizationId String       @map("organization_id") @db.Uuid
   channel        Channel      @relation(fields: [channelId], references: [id])
   channelId      String       @map("channel_id") @db.Uuid
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
 
   @@id([organizationId, channelId])
   @@map("organization_channel_association")
@@ -59,18 +67,22 @@ model Channel {
   description  String?
   memberships  ChannelMembership[]
   associations OrganizationChannelAssociation[]
+  createdAt    DateTime                         @default(now()) @map("created_at")
+  updatedAt    DateTime                         @updatedAt @map("updated_at")
 
   @@map("channel")
 }
 
 model ChannelMembership {
-  channel   Channel @relation(fields: [channelId], references: [id])
-  channelId String  @map("channel_id") @db.Uuid
-  appUser   AppUser @relation(fields: [appUserId], references: [id])
-  appUserId String  @map("app_user_id") @db.Uuid
-  isAdmin   Boolean @default(false) @map("is_admin")
-  canEdit   Boolean @default(false) @map("can_edit")
-  canUpload Boolean @default(false) @map("can_upload")
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channelId String   @map("channel_id") @db.Uuid
+  appUser   AppUser  @relation(fields: [appUserId], references: [id], onDelete: Cascade)
+  appUserId String   @map("app_user_id") @db.Uuid
+  isAdmin   Boolean  @default(false) @map("is_admin")
+  canEdit   Boolean  @default(false) @map("can_edit")
+  canUpload Boolean  @default(false) @map("can_upload")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@id([channelId, appUserId])
   @@map("channel_membership")

@@ -35,6 +35,7 @@
     "@pothos/plugin-simple-objects": "^3.6.4",
     "@pothos/plugin-tracing": "^0.5.4",
     "@prisma/client": "^4.5.0",
+    "@sindresorhus/slugify": "^2.1.1",
     "camelcase-keys": "^8.0.2",
     "dot-prop": "^7.2.0",
     "graphql-yoga": "^2.13.13",
