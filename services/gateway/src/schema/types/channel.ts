@@ -1,8 +1,28 @@
-import invariant from 'tiny-invariant';
 import slugify from '@sindresorhus/slugify';
+import invariant from 'tiny-invariant';
 import builder from '../builder';
 
-builder.mutationType();
+builder.prismaObject('Channel', {
+  fields: (t) => ({
+    id: t.expose('id', { type: 'ShortUuid' }),
+    name: t.exposeString('name'),
+    slug: t.exposeString('slug'),
+    description: t.exposeString('description', { nullable: true }),
+    memberships: t.relatedConnection('memberships', {
+      cursor: 'channelId_appUserId',
+    }),
+    createdAt: t.field({
+      type: 'String',
+      select: { createdAt: true },
+      resolve: (channel) => channel.createdAt.toISOString(), // TODO: datetime scalar
+    }),
+    updatedAt: t.field({
+      type: 'String',
+      select: { updatedAt: true },
+      resolve: (channel) => channel.updatedAt.toISOString(), // TODO: datetime scalar
+    }),
+  }),
+});
 
 builder.mutationFields((t) => ({
   createChannel: t.prismaField({

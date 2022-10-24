@@ -1,6 +1,5 @@
 import builder from './builder';
 import './scalars';
-import './query';
-import './mutation';
+import './types';
 
 export default builder.toSchema();

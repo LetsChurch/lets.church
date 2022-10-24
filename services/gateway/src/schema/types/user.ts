@@ -1,13 +1,11 @@
 import envariant from '@knpwrs/envariant';
 import { getProperty } from 'dot-prop';
-import { userV0Schema } from '../../util/ory';
 import builder from '../builder';
+import { userV0Schema } from '../../util/ory';
 
 const ORY_KRATOS_ADMIN_URL = envariant('ORY_KRATOS_ADMIN_URL');
 
-builder.queryType();
-
-const AppUserIdentity = builder.simpleObject('AppUserIdentity', {
+export const AppUserIdentity = builder.simpleObject('AppUserIdentity', {
   fields: (pt) => ({
     id: pt.field({ type: 'ShortUuid' }),
     username: pt.string(),
@@ -41,36 +39,7 @@ const AppUserIdentity = builder.simpleObject('AppUserIdentity', {
   }),
 });
 
-builder.prismaObject('Channel', {
-  fields: (t) => ({
-    id: t.expose('id', { type: 'ShortUuid' }),
-    name: t.exposeString('name'),
-    slug: t.exposeString('slug'),
-    description: t.exposeString('description', { nullable: true }),
-    memberships: t.relatedConnection('memberships', {
-      cursor: 'channelId_appUserId',
-    }),
-    createdAt: t.field({
-      type: 'String',
-      select: { createdAt: true },
-      resolve: (channel) => channel.createdAt.toISOString(), // TODO: datetime scalar
-    }),
-    updatedAt: t.field({
-      type: 'String',
-      select: { updatedAt: true },
-      resolve: (channel) => channel.updatedAt.toISOString(), // TODO: datetime scalar
-    }),
-  }),
-});
-
-builder.prismaObject('ChannelMembership', {
-  fields: (t) => ({
-    user: t.relation('appUser'),
-    channel: t.relation('channel'),
-  }),
-});
-
-const AppUser = builder.prismaObject('AppUser', {
+export const AppUser = builder.prismaObject('AppUser', {
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
     profile: t.field({
@@ -99,6 +68,13 @@ const AppUser = builder.prismaObject('AppUser', {
       select: { updatedAt: true },
       resolve: (channel) => channel.updatedAt.toISOString(), // TODO: datetime scalar
     }),
+  }),
+});
+
+builder.prismaObject('ChannelMembership', {
+  fields: (t) => ({
+    user: t.relation('appUser'),
+    channel: t.relation('channel'),
   }),
 });
 
