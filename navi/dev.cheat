@@ -6,5 +6,5 @@ just create-user <email> <password> <role>
 $ password: echo -e 'password\n'
 $ role: echo -e 'user\nadmin'
 
-# Open GraphQL Engine Console
-just graphql-console
+# Open GraphiQL
+just open-graphiql
