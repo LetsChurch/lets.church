@@ -28,8 +28,6 @@ services:
   # Vendor Services
   #
   ory-kratos:
-    depends_on:
-      - ory-kratos-migrate
     image: oryd/kratos:v0.10.1
     ports:
       - ${HOST_ORY_KRATOS_PUBLIC_PORT}:3000 # public
@@ -64,18 +62,6 @@ services:
       SECURITY_MODE:
     ports:
       - ${HOST_WEB_PORT}:3000
-    restart: on-failure
-
-  #
-  # Ops
-  #
-  ory-kratos-migrate:
-    image: oryd/kratos:v0.10.1
-    environment:
-      DSN: postgres://ory_kratos:password@postgres:5432/ory_kratos?sslmode=disable&max_conns=20&max_idle_conns=4
-    command: -c /etc/ory-kratos/config.yml migrate sql -e --yes
-    volumes:
-      - ./etc/ory-kratos:/etc/ory-kratos
     restart: on-failure
 
   #
