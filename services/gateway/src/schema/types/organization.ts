@@ -2,14 +2,17 @@ import slugify from '@sindresorhus/slugify';
 import invariant from 'tiny-invariant';
 import builder from '../builder';
 
-builder.prismaObject('Channel', {
+builder.prismaObject('Organization', {
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
     name: t.exposeString('name'),
     slug: t.exposeString('slug'),
     description: t.exposeString('description', { nullable: true }),
     membershipsConnection: t.relatedConnection('memberships', {
-      cursor: 'channelId_appUserId',
+      cursor: 'organizationId_appUserId',
+    }),
+    associationsConnection: t.relatedConnection('associations', {
+      cursor: 'organizationId_channelId',
     }),
     createdAt: t.field({
       type: 'DateTime',
@@ -24,9 +27,16 @@ builder.prismaObject('Channel', {
   }),
 });
 
+builder.prismaObject('OrganizationChannelAssociation', {
+  fields: (t) => ({
+    organization: t.relation('organization'),
+    channel: t.relation('channel'),
+  }),
+});
+
 builder.mutationFields((t) => ({
-  createChannel: t.prismaField({
-    type: 'Channel',
+  createOrganization: t.prismaField({
+    type: 'Organization',
     args: {
       name: t.arg.string({ required: true }),
       slug: t.arg.string(),
@@ -38,7 +48,7 @@ builder.mutationFields((t) => ({
       const userId = (await context.identity)?.id;
       invariant(userId);
 
-      return context.prisma.channel.create({
+      return context.prisma.organization.create({
         ...query,
         data: {
           ...args,

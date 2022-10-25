@@ -55,9 +55,15 @@ export const AppUser = builder.prismaObject('AppUser', {
         };
       },
     }),
-    channelMemberships: t.relatedConnection('channelMemberships', {
+    channelMembershipsConnection: t.relatedConnection('channelMemberships', {
       cursor: 'channelId_appUserId',
     }),
+    organizationMemberhipsConnection: t.relatedConnection(
+      'organizationMemberships',
+      {
+        cursor: 'organizationId_appUserId',
+      },
+    ),
     createdAt: t.field({
       type: 'DateTime',
       select: { createdAt: true },
@@ -75,6 +81,15 @@ builder.prismaObject('ChannelMembership', {
   fields: (t) => ({
     user: t.relation('appUser'),
     channel: t.relation('channel'),
+    isAdmin: t.exposeBoolean('isAdmin'),
+  }),
+});
+
+builder.prismaObject('OrganizationMembership', {
+  fields: (t) => ({
+    user: t.relation('appUser'),
+    channel: t.relation('organization'),
+    isAdmin: t.exposeBoolean('isAdmin'),
   }),
 });
 
