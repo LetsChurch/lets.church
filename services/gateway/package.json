@@ -19,6 +19,7 @@
     "prisma:db:push": "prisma db push",
     "prisma:db:push:force": "prisma db push --accept-data-loss",
     "prisma:db:seed": "prisma db seed",
+    "prisma:db:truncate": "tsx prisma/truncate.ts",
     "prisma:generate": "prisma generate"
   },
   "prisma": {

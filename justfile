@@ -68,6 +68,9 @@ seed-gateway:
 
 seed: seed-users seed-gateway
 
+truncate:
+  docker-compose exec gateway npm run prisma:db:truncate
+
 check-gateway:
   cd services/gateway; npm run check
 
