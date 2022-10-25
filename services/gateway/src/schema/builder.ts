@@ -19,6 +19,10 @@ export default new SchemaBuilder<{
     admin: boolean;
   };
   Scalars: {
+    DateTime: {
+      Input: Date | string;
+      Output: string;
+    };
     ShortUuid: {
       Input: string;
       Output: string;

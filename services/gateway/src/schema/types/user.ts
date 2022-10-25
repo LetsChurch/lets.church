@@ -59,14 +59,14 @@ export const AppUser = builder.prismaObject('AppUser', {
       cursor: 'channelId_appUserId',
     }),
     createdAt: t.field({
-      type: 'String',
+      type: 'DateTime',
       select: { createdAt: true },
-      resolve: (channel) => channel.createdAt.toISOString(), // TODO: datetime scalar
+      resolve: (channel) => channel.createdAt.toISOString(),
     }),
     updatedAt: t.field({
-      type: 'String',
+      type: 'DateTime',
       select: { updatedAt: true },
-      resolve: (channel) => channel.updatedAt.toISOString(), // TODO: datetime scalar
+      resolve: (channel) => channel.updatedAt.toISOString(),
     }),
   }),
 });
