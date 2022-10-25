@@ -15,7 +15,7 @@ type Role = 'admin' | 'user';
 
 function createUser({
   email = faker.internet.email(),
-  username = faker.internet.userName(),
+  username = faker.internet.userName().replace(/[^a-zA-Z0-9_-]/g, '_'),
   fullName = `${faker.name.firstName()} ${faker.name.lastName()}`,
   role = 'user',
   password = 'password',
@@ -74,6 +74,10 @@ void (async function main() {
       },
     );
     const json = await res.json();
+    if (!res.ok) {
+      console.log('Error creating user:');
+      console.dir(user, { depth: null });
+    }
     console.dir(json, { depth: null });
   }
 })();

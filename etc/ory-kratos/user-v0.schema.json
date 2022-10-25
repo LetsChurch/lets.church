@@ -30,7 +30,8 @@
           "type": "string",
           "title": "Username",
           "minLength": 3,
-          "pattern": "^[a-zA-Z0-9_]{3,}$",
+          "maxLength": 20,
+          "pattern": "^[a-zA-Z0-9_-]{3,20}$",
           "ory.sh/kratos": {
             "credentials": {
               "password": {
