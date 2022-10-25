@@ -14,15 +14,21 @@ function times<T>(n: number, fn: () => T): Array<T> {
 type Role = 'admin' | 'user';
 
 function createUser({
-  email = faker.internet.email(),
-  username = faker.internet.userName().replace(/[^a-zA-Z0-9_-]/g, '_'),
-  fullName = `${faker.name.firstName()} ${faker.name.lastName()}`,
+  firstName = faker.name.firstName(),
+  lastName = faker.name.firstName(),
+  email = faker.internet.email(firstName, lastName),
+  username = faker.internet
+    .userName(firstName, lastName)
+    .replace(/[^a-zA-Z0-9_-]/g, '_'),
+  fullName = `${firstName} ${lastName}`,
   role = 'user',
   password = 'password',
 }: Partial<{
   email: string;
   username: string;
   fullName: string;
+  firstName: string;
+  lastName: string;
   role: Role;
   password: string;
 }> = {}) {
@@ -59,7 +65,8 @@ void (async function main() {
     createUser({
       email: 'admin@lets.church',
       username: 'admin',
-      fullName: 'Admin McGee',
+      firstName: 'Admin',
+      lastName: 'McGee',
       role: 'admin',
     }),
     ...times(49, () => createUser()),
