@@ -77,22 +77,6 @@ export const AppUser = builder.prismaObject('AppUser', {
   }),
 });
 
-builder.prismaObject('ChannelMembership', {
-  fields: (t) => ({
-    user: t.relation('appUser'),
-    channel: t.relation('channel'),
-    isAdmin: t.exposeBoolean('isAdmin'),
-  }),
-});
-
-builder.prismaObject('OrganizationMembership', {
-  fields: (t) => ({
-    user: t.relation('appUser'),
-    channel: t.relation('organization'),
-    isAdmin: t.exposeBoolean('isAdmin'),
-  }),
-});
-
 builder.queryFields((t) => ({
   me: t.prismaField({
     type: AppUser,

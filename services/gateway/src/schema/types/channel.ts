@@ -24,6 +24,16 @@ builder.prismaObject('Channel', {
   }),
 });
 
+const ChannelMembership = builder.prismaObject('ChannelMembership', {
+  fields: (t) => ({
+    user: t.relation('appUser'),
+    channel: t.relation('channel'),
+    isAdmin: t.exposeBoolean('isAdmin'),
+    canEdit: t.exposeBoolean('canEdit'),
+    canUpload: t.exposeBoolean('canUpload'),
+  }),
+});
+
 builder.mutationFields((t) => ({
   createChannel: t.prismaField({
     type: 'Channel',
@@ -59,6 +69,81 @@ builder.mutationFields((t) => ({
             },
           },
         },
+      });
+    },
+  }),
+  upsertChannelMembership: t.prismaField({
+    type: ChannelMembership,
+    args: {
+      channelId: t.arg({ type: 'ShortUuid', required: true }),
+      userId: t.arg({ type: 'ShortUuid', required: true }),
+      isAdmin: t.arg.boolean({ required: true }),
+      canEdit: t.arg.boolean({ required: true }),
+      canUpload: t.arg.boolean({ required: true }),
+    },
+    authScopes: async (_root, { channelId }, context) => {
+      const identity = await context.identity;
+
+      invariant(identity, 'Unauthorized');
+
+      const adminMembership = await context.prisma.channelMembership.findFirst({
+        where: {
+          channelId,
+          appUserId: identity.id,
+          isAdmin: true,
+        },
+      });
+
+      if (adminMembership) {
+        return true;
+      }
+
+      return {
+        admin: true,
+      };
+    },
+    resolve: async (
+      query,
+      _root,
+      { channelId, userId, isAdmin, canEdit, canUpload },
+      context,
+      _info,
+    ) => {
+      return context.prisma.$transaction(async (tx) => {
+        const res = await tx.channelMembership.upsert({
+          ...query,
+          where: {
+            channelId_appUserId: {
+              channelId,
+              appUserId: userId,
+            },
+          },
+          update: {
+            isAdmin,
+            canEdit,
+            canUpload,
+          },
+          create: {
+            channelId,
+            appUserId: userId,
+            isAdmin,
+            canEdit,
+            canUpload,
+          },
+        });
+
+        const adminCount = await tx.channelMembership.count({
+          where: {
+            channelId,
+            isAdmin: true,
+          },
+        });
+
+        if (adminCount < 1) {
+          throw new Error(`Channel ${channelId} must have at least one admin!`);
+        }
+
+        return res;
       });
     },
   }),

@@ -34,6 +34,14 @@ builder.prismaObject('OrganizationChannelAssociation', {
   }),
 });
 
+const OrganizationMembership = builder.prismaObject('OrganizationMembership', {
+  fields: (t) => ({
+    user: t.relation('appUser'),
+    channel: t.relation('organization'),
+    isAdmin: t.exposeBoolean('isAdmin'),
+  }),
+});
+
 builder.mutationFields((t) => ({
   createOrganization: t.prismaField({
     type: 'Organization',
@@ -69,6 +77,81 @@ builder.mutationFields((t) => ({
             },
           },
         },
+      });
+    },
+  }),
+  upsertOrganizationMembership: t.prismaField({
+    type: OrganizationMembership,
+    args: {
+      organizationId: t.arg({ type: 'ShortUuid', required: true }),
+      userId: t.arg({ type: 'ShortUuid', required: true }),
+      isAdmin: t.arg.boolean({ required: true }),
+      canEdit: t.arg.boolean({ required: true }),
+    },
+    authScopes: async (_root, { organizationId }, context) => {
+      const identity = await context.identity;
+
+      invariant(identity, 'Unauthorized');
+
+      const adminMembership =
+        await context.prisma.organizationMembership.findFirst({
+          where: {
+            organizationId,
+            appUserId: identity.id,
+            isAdmin: true,
+          },
+        });
+
+      if (adminMembership) {
+        return true;
+      }
+
+      return {
+        admin: true,
+      };
+    },
+    resolve: async (
+      query,
+      _root,
+      { organizationId, userId, isAdmin, canEdit },
+      context,
+      _info,
+    ) => {
+      return context.prisma.$transaction(async (tx) => {
+        const res = await tx.organizationMembership.upsert({
+          ...query,
+          where: {
+            organizationId_appUserId: {
+              organizationId,
+              appUserId: userId,
+            },
+          },
+          update: {
+            isAdmin,
+            canEdit,
+          },
+          create: {
+            organizationId,
+            appUserId: userId,
+            isAdmin,
+            canEdit,
+          },
+        });
+
+        const adminCount = await tx.organizationMembership.count({
+          where: {
+            organizationId,
+            isAdmin: true,
+          },
+        });
+
+        if (adminCount < 1) {
+          throw new Error(
+            `Organization ${organizationId} must have at least one admin!`,
+          );
+        }
+
+        return res;
       });
     },
   }),
