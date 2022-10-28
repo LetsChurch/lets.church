@@ -39,8 +39,6 @@ purge-pg:
 create-user email username password="password" role="user":
   jo schema_id=user_v0 traits=$(jo email={{email}} username={{username}}) metadata_public=$(jo role={{role}}) verifiable_addresses=$(jo -a $(jo value={{email}} verified=true via=email status=completed)) credentials=$(jo password=$(jo config=$(jo password={{password}}))) | curl -X POST -L -H "Content-Type: application/json" -d @- http://localhost:${HOST_ORY_KRATOS_ADMIN_PORT}/identities
 
-gateway-npmi: (exec 'gateway' 'npm' 'i')
-
 gateway-db-push:
   docker-compose exec gateway npm run prisma:db:push
 
@@ -60,6 +58,10 @@ migrate-dev-ory-kratos:
   docker-compose exec ory-kratos kratos -c /etc/ory-kratos/config.yml migrate sql -e --yes
 migrate-dev: migrate-dev-ory-kratos migrate-dev-gateway
 
+npmi-gateway: (exec 'gateway' 'npm' 'i')
+npmi-web: (exec 'web' 'npm' 'i')
+npmi: npmi-gateway npmi-web
+
 seed-users:
   cd scripts; npm run seed:users
 
@@ -74,10 +76,13 @@ truncate:
 check-gateway:
   cd services/gateway; npm run check
 
+check-web:
+  cd apps/web; npm run check
+
 check-scripts:
   cd scripts; npm run check
 
-check: check-gateway check-scripts
+check: check-gateway check-web check-scripts
 
 open-graphiql:
   open http://localhost:$HOST_GATEWAY_PORT/graphql

@@ -2,12 +2,30 @@ version: "3.7"
 
 volumes:
   gateway-node-modules:
+  web-node-modules:
   pg-data:
 
 services:
   #
   # App Services
   #
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      target: dev
+    ports:
+      - ${HOST_WEB_PORT}:3000
+    environment:
+      GRAPHQL_ENDPOINT: http://gateway:3000/graphql
+      ORY_KRATOS_PUBLIC_URL: http://ory-kratos:3000
+      ORY_KRATOS_BROWSER_URL: http://localhost:${HOST_ORY_KRATOS_PUBLIC_PORT}
+    volumes:
+      - ./apps/web:/home/node/app
+      - web-node-modules:/home/node/app/node_modules
+    depends_on:
+      - gateway
+
   gateway:
     build:
       context: ./services/gateway
@@ -39,30 +57,21 @@ services:
       SERVE_PUBLIC_BASE_URL: http://localhost:${HOST_ORY_KRATOS_PUBLIC_PORT}/
       SERVE_ADMIN_PORT: 3001
       SERVE_ADMIN_BASE_URL: http://ory-kratos:${HOST_ORY_KRATOS_ADMIN_PORT}/
+
       SELFSERVICE_DEFAULT_BROWSER_RETURN_URL: http://localhost:${HOST_WEB_PORT}/
       SELFSERVICE_ALLOWED_RETURN_URLS_0: http://localhost:${HOST_WEB_PORT}/
-      SELFSERVICE_FLOWS_ERROR_UI_URL: http://localhost:${HOST_WEB_PORT}/error
-      SELFSERVICE_FLOWS_SETTINGS_UI_URL: http://localhost:${HOST_WEB_PORT}/settings
-      SELFSERVICE_FLOWS_RECOVERY_UI_URL: http://localhost:${HOST_WEB_PORT}/recovery
-      SELFSERVICE_FLOWS_REGISTRATION_UI_URL: http://localhost:${HOST_WEB_PORT}/registration
-      SELFSERVICE_FLOWS_VERIFICATION_UI_URL: http://localhost:${HOST_WEB_PORT}/verification
-      SELFSERVICE_FLOWS_LOGIN_UI_URL: http://localhost:${HOST_WEB_PORT}/login
-      SELFSERVICE_FLOWS_LOGOUT_AFTER_DEFAULT_BROWSER_RETURN_URL: http://127.0.0.1:${HOST_WEB_PORT}/login
+      SELFSERVICE_FLOWS_ERROR_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/error
+      SELFSERVICE_FLOWS_SETTINGS_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/settings
+      SELFSERVICE_FLOWS_RECOVERY_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/recover
+      SELFSERVICE_FLOWS_REGISTRATION_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/register
+      SELFSERVICE_FLOWS_VERIFICATION_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/verify
+      SELFSERVICE_FLOWS_LOGIN_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/login
+      SELFSERVICE_FLOWS_LOGOUT_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/logout
+      SELFSERVICE_FLOWS_LOGOUT_AFTER_DEFAULT_BROWSER_RETURN_URL: http://127.0.0.1:${HOST_WEB_PORT}/auth/login
       COURIER_SMTP_CONNECTION_URI: smtps://mailhog_stunnel:4650/?skip_ssl_verify=true
     command: serve -c /etc/ory-kratos/config.yml --dev --watch-courier
     volumes:
       - ./etc/ory-kratos:/etc/ory-kratos
-
-  ory-kratos-selfservice-ui-node:
-    image: oryd/kratos-selfservice-ui-node:v0.10.1
-    environment:
-      PORT: 3000
-      KRATOS_PUBLIC_URL: http://ory-kratos:3000/
-      KRATOS_BROWSER_URL: http://localhost:${HOST_ORY_KRATOS_PUBLIC_PORT}/
-      SECURITY_MODE:
-    ports:
-      - ${HOST_WEB_PORT}:3000
-    restart: on-failure
 
   #
   # Service Dependencies
