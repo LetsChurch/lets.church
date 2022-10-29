@@ -240,3 +240,19 @@ export async function getSelfServiceLogoutUrl(cookie: string | null) {
 
   return oryLogoutRes.parse(await res.json());
 }
+
+export async function getSelfServiceError(id: string, cookie: string | null) {
+  const params = new URLSearchParams();
+  params.set('id', id);
+
+  const res = await fetch(
+    `${ORY_KRATOS_PUBLIC_URL}/self-service/errors?${params.toString()}`,
+    {
+      headers: { cookie: cookie ?? '' },
+    },
+  );
+
+  const json = await res.json();
+
+  return json;
+}

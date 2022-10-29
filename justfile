@@ -73,6 +73,9 @@ seed: seed-users seed-gateway
 truncate:
   docker-compose exec gateway npm run prisma:db:truncate
 
+check-auth-hooks:
+  cd services/auth-hooks; npm run check
+
 check-gateway:
   cd services/gateway; npm run check
 
@@ -82,7 +85,7 @@ check-web:
 check-scripts:
   cd scripts; npm run check
 
-check: check-gateway check-web check-scripts
+check: check-auth-hooks check-gateway check-web check-scripts
 
 open-graphiql:
   open http://localhost:$HOST_GATEWAY_PORT/graphql

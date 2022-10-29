@@ -64,6 +64,15 @@ selfservice:
     registration:
       ui_url: null # SELFSERVICE_FLOWS_REGISTRATION_UI_URL
       lifespan: 10m
+      after:
+        hooks:
+          - hook: web_hook
+            config:
+              url: null:// # SELFSERVICE_FLOWS_REGISTRATION_AFTER_HOOKS_0_CONFIG_URL
+              method: POST
+              body: file:///etc/ory-kratos/webhook-after-registration.jsonnet
+              response:
+                ignore: true
 
 ciphers:
   algorithm: xchacha20-poly1305

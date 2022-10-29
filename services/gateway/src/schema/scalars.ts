@@ -1,4 +1,4 @@
-import { GraphQLDateTime } from 'graphql-scalars';
+import { GraphQLDateTime, GraphQLUUID } from 'graphql-scalars';
 import short from 'short-uuid';
 import invariant from 'tiny-invariant';
 import builder from './builder';
@@ -14,3 +14,4 @@ builder.scalarType('ShortUuid', {
 });
 
 builder.addScalarType('DateTime', GraphQLDateTime, {});
+builder.addScalarType('Uuid', GraphQLUUID, {});

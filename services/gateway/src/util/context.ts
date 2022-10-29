@@ -13,6 +13,7 @@ export default async function context({
   res: ServerResponse;
 }) {
   const cookie = req.headers['cookie'] ?? '';
+  const authorization = req.headers['authorization'] ?? '';
 
   const session = PLazy.from(async () => {
     const res = await fetch(`${ORY_KRATOS_PUBLIC_URL}/sessions/whoami`, {
@@ -37,6 +38,7 @@ export default async function context({
     prisma,
     session,
     identity,
+    authorization,
   };
 }
 

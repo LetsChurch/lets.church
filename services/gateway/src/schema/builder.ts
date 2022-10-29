@@ -4,6 +4,7 @@ import PrismaPlugin from '@pothos/plugin-prisma';
 import RelayPlugin from '@pothos/plugin-relay';
 import SimpleObjectsPlugin from '@pothos/plugin-simple-objects';
 import type PrismaTypes from '@pothos/plugin-prisma/generated';
+import envariant from '@knpwrs/envariant';
 import TracingPlugin, {
   wrapResolver,
   isRootField,
@@ -11,16 +12,23 @@ import TracingPlugin, {
 import type { Context } from '../util/context';
 import prisma from '../util/prisma';
 
+const AUTH_HOOKS_SECRET = envariant('AUTH_HOOKS_SECRET');
+
 export default new SchemaBuilder<{
   PrismaTypes: PrismaTypes;
   Context: Context;
   AuthScopes: {
     authenticated: boolean;
     admin: boolean;
+    internal: boolean;
   };
   Scalars: {
     DateTime: {
       Input: Date | string;
+      Output: string;
+    };
+    Uuid: {
+      Input: string;
       Output: string;
     };
     ShortUuid: {
@@ -38,17 +46,18 @@ export default new SchemaBuilder<{
     TracingPlugin,
     SimpleObjectsPlugin,
   ],
-  authScopes: async ({ identity }) => ({
+  authScopes: async ({ identity, authorization }) => ({
     authenticated: async () => !!(await identity),
     admin: async () => {
       const i = await identity;
 
       if (i) {
-        return i.metadataPublic.role === 'admin';
+        return i.metadataPublic?.role === 'admin';
       }
 
       return false;
     },
+    internal: authorization === AUTH_HOOKS_SECRET,
   }),
   prisma: {
     client: prisma,

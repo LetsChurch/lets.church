@@ -50,7 +50,7 @@ export const AppUser = builder.prismaObject('AppUser', {
         return {
           id,
           username: json.traits.username,
-          role: json.metadataPublic.role,
+          role: json.metadataPublic?.role ?? 'user',
           verifiableAddresses: json.verifiableAddresses,
         };
       },
@@ -112,6 +112,25 @@ builder.queryFields((t) => ({
         ...query,
         where: { id },
       });
+    },
+  }),
+}));
+
+builder.mutationFields((t) => ({
+  // TODO: this should be moved to another API that isn't visible from the frontend
+  syncUserProfile: t.boolean({
+    args: {
+      id: t.arg({ type: 'Uuid', required: true }),
+    },
+    authScopes: { internal: true },
+    resolve: async (_root, { id }, context, _info) => {
+      await context.prisma.appUser.upsert({
+        create: { id },
+        where: { id },
+        update: {},
+      });
+
+      return true;
     },
   }),
 }));

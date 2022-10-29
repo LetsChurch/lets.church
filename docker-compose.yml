@@ -1,6 +1,7 @@
 version: "3.7"
 
 volumes:
+  auth-hooks-node-modules:
   gateway-node-modules:
   web-node-modules:
   pg-data:
@@ -26,6 +27,23 @@ services:
     depends_on:
       - gateway
 
+  auth-hooks:
+    build:
+      context: ./services/auth-hooks
+      dockerfile: Dockerfile
+      target: dev
+    ports:
+      - ${HOST_AUTH_HOOKS_PORT}:3000
+    environment:
+      AUTH_HOOKS_SECRET: ${AUTH_HOOKS_SECRET}
+      GATEWAY_GRAPHQL_URL: http://gateway:3000/graphql
+      ORY_KRATOS_ADMIN_URL: http://ory-kratos:3001
+    volumes:
+      - ./services/auth-hooks:/home/node/app
+      - auth-hooks-node-modules:/home/node/app/node_modules
+    depends_on:
+      - ory-kratos
+
   gateway:
     build:
       context: ./services/gateway
@@ -34,6 +52,7 @@ services:
     ports:
       - ${HOST_GATEWAY_PORT}:3000
     environment:
+      AUTH_HOOKS_SECRET: ${AUTH_HOOKS_SECRET}
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       ORY_KRATOS_ADMIN_URL: http://ory-kratos:3001
       ORY_KRATOS_PUBLIC_URL: http://ory-kratos:3000
@@ -64,6 +83,7 @@ services:
       SELFSERVICE_FLOWS_SETTINGS_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/settings
       SELFSERVICE_FLOWS_RECOVERY_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/recover
       SELFSERVICE_FLOWS_REGISTRATION_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/register
+      SELFSERVICE_FLOWS_REGISTRATION_AFTER_HOOKS_0_CONFIG_URL: http://auth-hooks:3000/after/registration
       SELFSERVICE_FLOWS_VERIFICATION_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/verify
       SELFSERVICE_FLOWS_LOGIN_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/login
       SELFSERVICE_FLOWS_LOGOUT_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/logout
