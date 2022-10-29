@@ -37,7 +37,7 @@ purge-pg:
 #
 
 create-user email username password="password" role="user":
-  jo schema_id=user_v0 traits=$(jo email={{email}} username={{username}}) metadata_public=$(jo role={{role}}) verifiable_addresses=$(jo -a $(jo value={{email}} verified=true via=email status=completed)) credentials=$(jo password=$(jo config=$(jo password={{password}}))) | curl -X POST -L -H "Content-Type: application/json" -d @- http://localhost:${HOST_ORY_KRATOS_ADMIN_PORT}/identities
+  jo schema_id=user_v0 traits=$(jo email={{email}} username={{username}}) metadata_public=$(jo role={{role}}) verifiable_addresses=$(jo -a $(jo value={{email}} verified=true via=email status=completed)) credentials=$(jo password=$(jo config=$(jo password={{password}}))) | http POST http://localhost:${HOST_ORY_KRATOS_ADMIN_PORT}/identities -Fv
 
 gateway-db-push:
   docker-compose exec gateway npm run prisma:db:push
@@ -87,6 +87,8 @@ check-scripts:
 
 check: check-auth-hooks check-gateway check-web check-scripts
 
+open:
+  open http://localhost:$HOST_WEB_PORT
 open-graphiql:
   open http://localhost:$HOST_GATEWAY_PORT/graphql
 open-mailhog:
