@@ -93,6 +93,49 @@ services:
     volumes:
       - ./etc/ory-kratos:/etc/ory-kratos
 
+  temporal:
+    image: temporalio/auto-setup:1.18.3
+    environment:
+      # See auto-setup.sh: https://github.com/temporalio/docker-builds/blob/a442b94edbe10bb49e2f0fc00c3154cdf0590be5/docker/auto-setup.sh
+      SKIP_DB_CREATE: true # Database is already created via init script
+      DB: postgresql # Database vendor
+      DB_PORT: 5432 # Database port
+      POSTGRES_SEEDS: postgres # Databae server
+      POSTGRES_USER: temporal # Database user
+      POSTGRES_PWD: password # Database user password
+      DBNAME: temporal # Database on server
+      VISIBILITY_DBNAME: temporal_visibility
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yml
+      ENABLE_ES: true
+      ES_SEEDS: elasticsearch
+      ES_VERSION: v7 # Even though we run v8, temporal only has configuration for v7
+    ports:
+      - ${HOST_TEMPORAL_PORT}:7233
+    volumes:
+      - ./etc/temporal/dynamicconfig:/etc/temporal/config/dynamicconfig
+    depends_on:
+      - postgres
+      - elasticsearch
+
+  temporal-admin-tools:
+    image: temporalio/admin-tools:1.18.3
+    environment:
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
+    stdin_open: true
+    tty: true
+    depends_on:
+      - temporal
+
+  temporal-ui:
+    image: temporalio/ui:2.8.0
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    ports:
+      - ${HOST_TEMPORAL_UI_PORT}:8080
+    depends_on:
+      - temporal
+
   #
   # Service Dependencies
   #
@@ -115,6 +158,19 @@ services:
         '-c',
         'log_min_duration_statement=0',
       ]
+
+  elasticsearch:
+    environment:
+      - cluster.routing.allocation.disk.threshold_enabled=true
+      - cluster.routing.allocation.disk.watermark.low=512mb
+      - cluster.routing.allocation.disk.watermark.high=256mb
+      - cluster.routing.allocation.disk.watermark.flood_stage=128mb
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+      - xpack.security.enabled=false
+    image: elasticsearch:8.4.3
+    ports:
+      - ${HOST_ES_PORT}:9200
 
   mailhog:
     image: mailhog/mailhog
