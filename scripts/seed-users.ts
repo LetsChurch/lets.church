@@ -69,7 +69,21 @@ void (async function main() {
       lastName: 'McGee',
       role: 'admin',
     }),
-    ...times(49, () => createUser()),
+    createUser({
+      email: 'user1@example.email',
+      username: 'user1',
+      firstName: 'User',
+      lastName: 'One',
+      role: 'user',
+    }),
+    createUser({
+      email: 'user2@example.email',
+      username: 'user2',
+      firstName: 'User',
+      lastName: 'Two',
+      role: 'user',
+    }),
+    ...times(47, () => createUser()),
   ];
 
   for (const user of users) {
