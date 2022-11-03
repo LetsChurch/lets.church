@@ -21,11 +21,13 @@
     "@temporalio/worker": "^1.4.3",
     "@temporalio/workflow": "^1.4.3",
     "fastify": "^4.9.2",
-    "fastify-type-provider-zod": "^1.1.7"
+    "fastify-type-provider-zod": "^1.1.7",
+    "wait-on": "^6.0.1"
   },
   "devDependencies": {
     "@tsconfig/node18-strictest-esm": "^1.0.1",
     "@types/node": "^18.11.9",
+    "@types/wait-on": "^5.3.1",
     "@typescript-eslint/eslint-plugin": "^5.42.0",
     "@typescript-eslint/parser": "^5.42.0",
     "eslint": "^8.26.0",

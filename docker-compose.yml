@@ -70,13 +70,14 @@ services:
       dockerfile: Dockerfile
       target: dev
     ports:
-      - ${HOST_PROSKAIROS_CLIENT_PORT}:3001
+      - ${HOST_PROSKAIROS_CLIENT_PORT}:3000
     environment:
       TEMPORAL_ADDRESS: temporal:7233
     volumes:
       - ./services/proskairos:/home/node/app
       - prokairos-node-modules:/home/node/app/node_modules
     command: npm run dev:client
+    restart: unless-stopped
     depends_on:
       - proskairos-worker
 
@@ -91,6 +92,7 @@ services:
       - ./services/proskairos:/home/node/app
       - prokairos-node-modules:/home/node/app/node_modules
     command: npm run dev:worker
+    restart: unless-stopped
     depends_on:
       - temporal
 
