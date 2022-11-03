@@ -57,6 +57,7 @@ gateway-prisma-studio:
 
 migrate-dev-gateway:
   docker-compose exec gateway npm run prisma:migrate:dev
+  cd services/gateway; npm run prisma:generate
 migrate-dev-ory-kratos:
   docker-compose exec ory-kratos kratos -c /etc/ory-kratos/config.yml migrate sql -e --yes
 migrate-dev: migrate-dev-ory-kratos migrate-dev-gateway
