@@ -64,7 +64,9 @@ migrate-dev: migrate-dev-ory-kratos migrate-dev-gateway
 
 npmi-gateway: (exec 'gateway' 'npm' 'i')
 npmi-web: (exec 'web' 'npm' 'i')
-npmi: npmi-gateway npmi-web
+npmi-proskairos-client: (exec 'proskairos-client' 'npm' 'i')
+npmi-proskairos-worker: (exec 'proskairos-worker' 'npm' 'i')
+npmi: npmi-gateway npmi-web npmi-proskairos-client npmi-proskairos-worker
 
 seed-users:
   cd scripts; npm run seed:users
@@ -83,13 +85,16 @@ check-auth-hooks:
 check-gateway:
   cd services/gateway; npm run check
 
+check-proskairos:
+  cd services/proskairos; npm run check
+
 check-web:
   cd apps/web; npm run check
 
 check-scripts:
   cd scripts; npm run check
 
-check: check-auth-hooks check-gateway check-web check-scripts
+check: check-auth-hooks check-gateway check-proskairos check-web check-scripts
 
 open:
   open http://localhost:$HOST_WEB_PORT

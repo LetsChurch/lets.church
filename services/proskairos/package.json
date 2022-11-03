@@ -1,0 +1,38 @@
+{
+  "name": "@letschurch/proskairos",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --build",
+    "start:worker": "node --experimental-specifier-resolution=node dist/worker.js",
+    "start:client": "node --experimental-specifier-resolution=node dist/client.js",
+    "dev:worker": "node --watch --loader ts-node/esm --experimental-specifier-resolution=node src/worker.ts",
+    "dev:client": "node --watch --loader ts-node/esm --experimental-specifier-resolution=node src/client.ts",
+    "dev": "npm-run-all dev:*",
+    "check": "npm-run-all check:*",
+    "check:format": "prettier --check src",
+    "check:lint": "eslint --ext .ts,.tsx src",
+    "check:ts": "tsc --noEmit"
+  },
+  "license": "UNLICENSE",
+  "dependencies": {
+    "@knpwrs/envariant": "^1.0.2",
+    "@temporalio/client": "^1.4.3",
+    "@temporalio/worker": "^1.4.3",
+    "@temporalio/workflow": "^1.4.3",
+    "fastify": "^4.9.2",
+    "fastify-type-provider-zod": "^1.1.7"
+  },
+  "devDependencies": {
+    "@tsconfig/node18-strictest-esm": "^1.0.1",
+    "@types/node": "^18.11.9",
+    "@typescript-eslint/eslint-plugin": "^5.42.0",
+    "@typescript-eslint/parser": "^5.42.0",
+    "eslint": "^8.26.0",
+    "eslint-plugin-import": "^2.26.0",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^2.7.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.8.4"
+  }
+}

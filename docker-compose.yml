@@ -5,6 +5,7 @@ volumes:
   gateway-node-modules:
   web-node-modules:
   pg-data:
+  prokairos-node-modules:
 
 services:
   #
@@ -61,6 +62,38 @@ services:
       - gateway-node-modules:/home/node/app/node_modules
     depends_on:
       - ory-kratos
+      - proskairos-client
+
+  proskairos-client:
+    build:
+      context: ./services/proskairos
+      dockerfile: Dockerfile
+      target: dev
+    ports:
+      - ${HOST_PROSKAIROS_CLIENT_PORT}:3001
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+    volumes:
+      - ./services/proskairos:/home/node/app
+      - prokairos-node-modules:/home/node/app/node_modules
+    command: npm run dev:client
+    depends_on:
+      - proskairos-worker
+
+  proskairos-worker:
+    build:
+      context: ./services/proskairos
+      dockerfile: Dockerfile
+      target: dev
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+    volumes:
+      - ./services/proskairos:/home/node/app
+      - prokairos-node-modules:/home/node/app/node_modules
+    command: npm run dev:worker
+    depends_on:
+      - temporal
+
   #
   # Vendor Services
   #
@@ -129,8 +162,8 @@ services:
   temporal-ui:
     image: temporalio/ui:2.8.0
     environment:
-      - TEMPORAL_ADDRESS=temporal:7233
-      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:3000
     ports:
       - ${HOST_TEMPORAL_UI_PORT}:8080
     depends_on:
