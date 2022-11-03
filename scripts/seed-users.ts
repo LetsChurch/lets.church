@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker';
 import envariant from '@knpwrs/envariant';
+import waitOn from 'wait-on';
 
 const HOST_ORY_KRATOS_ADMIN_PORT = envariant('HOST_ORY_KRATOS_ADMIN_PORT');
 
@@ -60,45 +61,52 @@ function createUser({
   };
 }
 
-void (async function main() {
-  const users = [
-    createUser({
-      email: 'admin@lets.church',
-      username: 'admin',
-      firstName: 'Admin',
-      lastName: 'McGee',
-      role: 'admin',
-    }),
-    createUser({
-      email: 'user1@example.email',
-      username: 'user1',
-      firstName: 'User',
-      lastName: 'One',
-      role: 'user',
-    }),
-    createUser({
-      email: 'user2@example.email',
-      username: 'user2',
-      firstName: 'User',
-      lastName: 'Two',
-      role: 'user',
-    }),
-    ...times(47, () => createUser()),
-  ];
+const users = [
+  createUser({
+    email: 'admin@lets.church',
+    username: 'admin',
+    firstName: 'Admin',
+    lastName: 'McGee',
+    role: 'admin',
+  }),
+  createUser({
+    email: 'user1@example.email',
+    username: 'user1',
+    firstName: 'User',
+    lastName: 'One',
+    role: 'user',
+  }),
+  createUser({
+    email: 'user2@example.email',
+    username: 'user2',
+    firstName: 'User',
+    lastName: 'Two',
+    role: 'user',
+  }),
+  ...times(47, () => createUser()),
+];
 
-  for (const user of users) {
-    const res = await fetch(
-      `http://localhost:${HOST_ORY_KRATOS_ADMIN_PORT}/identities`,
-      {
-        method: 'POST',
-        body: JSON.stringify(user),
+console.log('Waiting for Ory Kratos admin API...');
+
+await waitOn({
+  resources: [`tcp:${HOST_ORY_KRATOS_ADMIN_PORT}`],
+});
+
+for (const user of users) {
+  const res = await fetch(
+    `http://localhost:${HOST_ORY_KRATOS_ADMIN_PORT}/identities`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-    );
-    const json = await res.json();
-    if (!res.ok) {
-      console.log('Error creating user:');
-      console.dir(user, { depth: null });
-    }
-    console.dir(json, { depth: null });
+      body: JSON.stringify(user),
+    },
+  );
+  const json = await res.json();
+  if (!res.ok) {
+    console.log('Error creating user:');
+    console.dir(user, { depth: null });
   }
-})();
+  console.dir(json, { depth: null });
+}
