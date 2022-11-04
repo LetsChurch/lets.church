@@ -72,6 +72,21 @@ CREATE TABLE "channel_membership" (
     CONSTRAINT "channel_membership_pkey" PRIMARY KEY ("channel_id","app_user_id")
 );
 
+-- CreateTable
+CREATE TABLE "UploadRecord" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+    "app_user_id" UUID NOT NULL,
+    "channel_id" UUID NOT NULL,
+    "upload_mime_type" TEXT NOT NULL,
+    "upload_size_bytes" BIGINT,
+    "upload_finalized" BOOLEAN NOT NULL DEFAULT false,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
+
+    CONSTRAINT "UploadRecord_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "organization_slug_key" ON "organization"("slug");
 
@@ -95,3 +110,9 @@ ALTER TABLE "channel_membership" ADD CONSTRAINT "channel_membership_channel_id_f
 
 -- AddForeignKey
 ALTER TABLE "channel_membership" ADD CONSTRAINT "channel_membership_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "UploadRecord" ADD CONSTRAINT "UploadRecord_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "UploadRecord" ADD CONSTRAINT "UploadRecord_channel_id_fkey" FOREIGN KEY ("channel_id") REFERENCES "channel"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
