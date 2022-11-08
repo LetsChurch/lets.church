@@ -1,0 +1,28 @@
+{
+  "name": "@letschurch/external-hooks",
+  "private": true,
+  "scripts": {
+    "dev": "nitropack dev",
+    "build": "NITRO_PRESET=node-cluster nitropack build",
+    "check": "run-s check:*",
+    "check:eslint": "eslint .",
+    "check:prettier": "prettier --check .",
+    "check:ts": "tsc --noEmit"
+  },
+  "license": "UNLICENSE",
+  "dependencies": {
+    "@knpwrs/envariant": "^1.0.2",
+    "camelcase-keys": "^8.0.2",
+    "jose": "^4.10.4",
+    "zod": "^3.19.1"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.40.0",
+    "@typescript-eslint/parser": "^5.40.0",
+    "eslint": "^8.25.0",
+    "nitropack": "^0.5.4",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^2.7.1",
+    "typescript": "^4.8.4"
+  }
+}

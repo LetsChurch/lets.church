@@ -40,7 +40,7 @@ export async function putFile(
     contentLength,
   }: {
     contentLength?: number;
-  },
+  } = {},
 ) {
   const cmd = new PutObjectCommand({
     Bucket: S3_BUCKET,

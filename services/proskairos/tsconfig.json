@@ -2,7 +2,8 @@
   "extends": "@tsconfig/node18-strictest-esm",
   "compilerOptions": {
     "rootDir": "./src",
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "lib": ["dom", "es2021"]
   },
   "include": ["src/**/*.ts"]
 }

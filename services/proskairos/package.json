@@ -27,6 +27,7 @@
     "fast-glob": "^3.2.12",
     "fastify": "^4.9.2",
     "fastify-type-provider-zod": "^1.1.7",
+    "jose": "^4.11.0",
     "lodash-es": "^4.17.21",
     "mkdirp": "^1.0.4",
     "p-map": "^5.5.0",

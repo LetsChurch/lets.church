@@ -82,6 +82,9 @@ truncate:
 check-auth-hooks:
   cd services/auth-hooks; npm run check
 
+check-external-hooks:
+  cd services/external-hooks; npm run check
+
 check-gateway:
   cd services/gateway; npm run check
 

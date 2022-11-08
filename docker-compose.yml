@@ -2,6 +2,7 @@ version: "3.7"
 
 volumes:
   auth-hooks-node-modules:
+  external-hooks-node-modules:
   gateway-node-modules:
   web-node-modules:
   pg-data:
@@ -44,6 +45,22 @@ services:
       - auth-hooks-node-modules:/home/node/app/node_modules
     depends_on:
       - ory-kratos
+
+  external-hooks:
+    build:
+      context: ./services/external-hooks
+      dockerfile: Dockerfile
+      target: dev
+    ports:
+      - ${HOST_EXTERNAL_HOOKS_PORT}:3000
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      TEMPORAL_CLIENT_URL: http://proskairos-client:3000
+    volumes:
+      - ./services/external-hooks:/home/node/app
+      - external-hooks-node-modules:/home/node/app/node_modules
+    depends_on:
+      - proskairos-client
 
   gateway:
     build:
@@ -93,6 +110,9 @@ services:
       dockerfile: Dockerfile
       target: dev
     environment:
+      ASSEMBLY_AI_API_KEY: ${ASSEMBLY_AI_API_KEY}
+      EXTERNAL_HOOKS_HOST: ${EXTERNAL_HOOKS_HOST}
+      JWT_SECRET: ${JWT_SECRET}
       TEMPORAL_ADDRESS: temporal:7233
       S3_REGION: ${S3_REGION}
       S3_ENDPOINT: ${S3_ENDPOINT}
@@ -218,6 +238,9 @@ services:
     ports:
       - ${HOST_ES_PORT}:9200
 
+  #
+  # Development
+  #
   mailhog:
     image: mailhog/mailhog
     restart: always
@@ -233,3 +256,15 @@ services:
       - STUNNEL_CONNECT=mailhog:1025
     ports:
       - ${HOST_MAILHOG_SMTPS_PORT}:4650 # smtp tls
+  webhooks-tunnel:
+    build:
+      context: ./scripts
+      dockerfile: ssh.Dockerfile
+    volumes:
+      - type: bind
+        source: ${LHR_KEYFILE}
+        target: /private-key
+      - type: bind
+        source: ./scripts/known_hosts
+        target: /root/.ssh/known_hosts
+    command: ssh -i /private-key -R ${LHR_DOMAIN}:80:external-hooks:3000 plan@localhost.run

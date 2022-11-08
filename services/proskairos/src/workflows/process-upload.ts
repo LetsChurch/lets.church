@@ -1,4 +1,5 @@
-import { proxyActivities } from '@temporalio/workflow';
+import { proxyActivities, executeChild } from '@temporalio/workflow';
+import transcribe from './transcribe';
 import type * as activities from '../activities';
 import invariant from 'tiny-invariant';
 
@@ -16,5 +17,9 @@ export default async function processUpload(id: string) {
   await Promise.allSettled([
     transcode(id, probeRes),
     createThumbnails(id),
+    executeChild(transcribe, {
+      workflowId: `transcribe:${id}`,
+      args: [id],
+    }),
   ]);
 }
