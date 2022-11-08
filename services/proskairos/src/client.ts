@@ -45,7 +45,7 @@ app.withTypeProvider<ZodTypeProvider>().post('/process-upload', {
     client.start(processUpload, {
       taskQueue: 'process-upload',
       workflowId: req.body.id,
-      args: [req.body.id, req.body.url],
+      args: [req.body.id],
     });
 
     res.status(204).send();

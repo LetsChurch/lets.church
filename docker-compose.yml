@@ -57,11 +57,11 @@ services:
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       ORY_KRATOS_ADMIN_URL: http://ory-kratos:3001
       ORY_KRATOS_PUBLIC_URL: http://ory-kratos:3000
-      S3_REGION: ${GATEWAY_S3_REGION}
-      S3_ENDPOINT: ${GATEWAY_S3_ENDPOINT}
-      S3_BUCKET: ${GATEWAY_S3_BUCKET}
-      S3_ACCESS_KEY_ID: ${GATEWAY_S3_ACCESS_KEY_ID}
-      S3_SECRET_ACCESS_KEY: ${GATEWAY_S3_SECRET_ACCESS_KEY}
+      S3_REGION: ${S3_REGION}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_BUCKET: ${S3_BUCKET}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
       TEMPORAL_CLIENT_URL: http://proskairos-client:3000
     volumes:
       - ./services/gateway:/home/node/app
@@ -94,6 +94,11 @@ services:
       target: dev
     environment:
       TEMPORAL_ADDRESS: temporal:7233
+      S3_REGION: ${S3_REGION}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_BUCKET: ${S3_BUCKET}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
     volumes:
       - ./services/proskairos:/home/node/app
       - prokairos-node-modules:/home/node/app/node_modules
