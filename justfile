@@ -99,6 +99,11 @@ check-scripts:
 
 check: check-auth-hooks check-gateway check-proskairos check-web check-scripts
 
+test-proskairos:
+  cd services/proskairos; npm test
+
+test: test-proskairos
+
 open:
   open http://localhost:$HOST_WEB_PORT
 open-graphiql:

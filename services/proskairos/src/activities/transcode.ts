@@ -7,7 +7,11 @@ import PQueue from 'p-queue';
 import chokidar from 'chokidar';
 import fastGlob from 'fast-glob';
 import type { Probe } from './probe';
-import { getVariantKinds, runFfmpegEncode } from '../util/ffmpeg';
+import {
+  getVariants,
+  runFfmpegEncode,
+  variantsToMasterVideoPlaylist,
+} from '../util/ffmpeg';
 import { retryablePutFile, streamObjectToFile } from '../util/s3';
 import rimraf from '../util/rimraf';
 
@@ -38,12 +42,10 @@ export default async function transcode(id: string, probe: Probe) {
       `Found ${probe.streams.length} streams. (width: ${width}, height: ${height})`,
     );
 
-    const variantKinds = getVariantKinds(width, height);
+    const variants = getVariants(width, height);
 
     console.log(
-      `Will encode ${variantKinds.length} variants: ${formatter.format(
-        variantKinds,
-      )}`,
+      `Will encode ${variants.length} variants: ${formatter.format(variants)}`,
     );
 
     const uploadQueue = new PQueue({ concurrency: 1 });
@@ -77,7 +79,7 @@ export default async function transcode(id: string, probe: Probe) {
       });
     });
 
-    const encodeProc = await runFfmpegEncode(dir, downloadPath, variantKinds);
+    const encodeProc = await runFfmpegEncode(dir, downloadPath, variants);
     const playlists = await fastGlob(join(dir, '*.m3u8'));
 
     // Upload playlist files
@@ -98,6 +100,22 @@ export default async function transcode(id: string, probe: Probe) {
         console.log(`Uploaded playlist file: ${filename}`);
       }),
     );
+
+    // Upload master playlist
+    uploadQueue.add(async () => {
+      console.log('Uploading master playlist file');
+      Context.current().heartbeat(`Uploading playlist file`);
+      const playlistBuffer = Buffer.from(
+        variantsToMasterVideoPlaylist(variants),
+      );
+      await retryablePutFile(
+        `${id}/master.m3u8`,
+        'application/x-mpegURL',
+        playlistBuffer,
+      );
+      Context.current().heartbeat('Uploaded master playlist file');
+      console.log('Uploaded master playlist file');
+    });
 
     // Upload logs
     uploadQueue.add(async () => {

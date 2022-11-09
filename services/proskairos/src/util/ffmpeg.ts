@@ -23,11 +23,7 @@ const BASE_ARGS = [
   'temp_file',
 ];
 
-function ffmpegScaleFilter(width: number, height: number) {
-  return `scale=w=${width}:h=${height}:force_original_aspect_ratio=decrease`;
-}
-
-enum MediaVariant {
+export enum MediaVariant {
   VIDEO_4K = '4k',
   VIDEO_1080P = '1080p',
   VIDEO_720P = '720p',
@@ -36,7 +32,9 @@ enum MediaVariant {
   AUDIO = 'audio',
 }
 
-export function getVariantKinds(
+type VideoVariant = Exclude<MediaVariant, MediaVariant.AUDIO>;
+
+export function getVariants(
   inputWidth: number,
   inputHeight: number,
 ): Array<MediaVariant> {
@@ -66,106 +64,166 @@ export function getVariantKinds(
   return res;
 }
 
+function videoVariantToKbps(variant: VideoVariant) {
+  switch (variant) {
+    case MediaVariant.VIDEO_4K:
+      return 18200;
+    case MediaVariant.VIDEO_1080P:
+      return 5000;
+    case MediaVariant.VIDEO_720P:
+      return 2800;
+    case MediaVariant.VIDEO_480P:
+      return 1400;
+    case MediaVariant.VIDEO_360P:
+      return 800;
+    default:
+      const nope: never = variant;
+      throw new Error(`Invalid variant: ${nope}`);
+  }
+}
+
+function videoVariantToDimensions(variant: VideoVariant): [number, number] {
+  switch (variant) {
+    case MediaVariant.VIDEO_4K:
+      return [3840, 2160];
+    case MediaVariant.VIDEO_1080P:
+      return [1920, 1080];
+    case MediaVariant.VIDEO_720P:
+      return [1280, 720];
+    case MediaVariant.VIDEO_480P:
+      return [842, 480];
+    case MediaVariant.VIDEO_360P:
+      return [640, 360];
+    default:
+      const nope: never = variant;
+      throw new Error(`Invalid variant: ${nope}`);
+  }
+}
+
+function videoVariantToFfmpegScaleFilter(v: VideoVariant) {
+  const [width, height] = videoVariantToDimensions(v);
+
+  return [
+    '-vf',
+    `scale=w=${width}:h=${height}:force_original_aspect_ratio=decrease`,
+  ];
+}
+
+function variantToPlaylistName(variant: MediaVariant) {
+  return `${variant}.m3u8`;
+}
+
+export function variantsToMasterVideoPlaylist(variants: Array<MediaVariant>) {
+  return [
+    '#EXTM3U',
+    '#EXT-X-VERSION:3',
+    ...variants
+      .filter(
+        (v): v is Exclude<MediaVariant, MediaVariant.AUDIO> =>
+          v !== MediaVariant.AUDIO,
+      )
+      .flatMap((v) => [
+        `#EXT-X-STREAM-INF:BANDWIDTH=${
+          videoVariantToKbps(v) * 1000
+        },RESOLUTION=${videoVariantToDimensions(v).join('x')}`,
+        variantToPlaylistName(v),
+      ]),
+  ].join('\n');
+}
+
 // TODO: 60fps and portrait
-function ffmpegEncodingOutputArgs(
+export function ffmpegEncodingOutputArgs(
   variants: Array<MediaVariant>,
 ): Array<string> {
   return variants.flatMap((v) => {
+    const scaleFilter =
+      v !== MediaVariant.AUDIO ? videoVariantToFfmpegScaleFilter(v) : [];
+    const bvm =
+      v !== MediaVariant.AUDIO
+        ? [
+            '-b:v',
+            `${videoVariantToKbps(v)}k`,
+            '-maxrate',
+            `${Math.floor(videoVariantToKbps(v) * 1.07)}k`,
+          ]
+        : [];
+    const playlistName = variantToPlaylistName(v);
+
     switch (v) {
       case MediaVariant.VIDEO_4K:
         return [
-          '-vf',
-          ffmpegScaleFilter(3840, 2160),
+          ...scaleFilter,
           ...BASE_AUDIO_ARGS,
           ...BASE_VIDEO_ARGS,
           ...BASE_ARGS,
-          '-b:v',
-          '18200k',
-          '-maxrate',
-          '19474k',
+          ...bvm,
           '-bufsize',
           '27300k',
           '-b:a',
           '192k',
           '-hls_segment_filename',
           'VIDEO_4K_%04d.ts',
-          'VIDEO_4K.m3u8',
+          playlistName,
         ];
       case MediaVariant.VIDEO_1080P:
         return [
-          '-vf',
-          ffmpegScaleFilter(1920, 1080),
+          ...scaleFilter,
           ...BASE_AUDIO_ARGS,
           ...BASE_VIDEO_ARGS,
           ...BASE_ARGS,
-          '-b:v',
-          '5000k',
-          '-maxrate',
-          '5350k',
+          ...bvm,
           '-bufsize',
           '7500k',
           '-b:a',
           '192k',
           '-hls_segment_filename',
           'VIDEO_1080P_%04d.ts',
-          'VIDEO_1080P.m3u8',
+          playlistName,
         ];
       case MediaVariant.VIDEO_720P:
         return [
-          '-vf',
-          ffmpegScaleFilter(1280, 720),
+          ...scaleFilter,
           ...BASE_AUDIO_ARGS,
           ...BASE_VIDEO_ARGS,
           ...BASE_ARGS,
-          '-b:v',
-          '5000k',
-          '-maxrate',
-          '5350k',
+          ...bvm,
           '-bufsize',
           '4200k',
           '-b:a',
           '128k',
           '-hls_segment_filename',
           'VIDEO_720P_%04d.ts',
-          'VIDEO_720P.m3u8',
+          playlistName,
         ];
       case MediaVariant.VIDEO_480P:
         return [
-          '-vf',
-          ffmpegScaleFilter(842, 480),
+          ...scaleFilter,
           ...BASE_AUDIO_ARGS,
           ...BASE_VIDEO_ARGS,
           ...BASE_ARGS,
-          '-b:v',
-          '1400k',
-          '-maxrate',
-          '1498k',
+          ...bvm,
           '-bufsize',
           '2100k',
           '-b:a',
           '128k',
           '-hls_segment_filename',
           'VIDEO_480P_%04d.ts',
-          'VIDEO_480P.m3u8',
+          playlistName,
         ];
       case MediaVariant.VIDEO_360P:
         return [
-          '-vf',
-          ffmpegScaleFilter(640, 360),
+          ...scaleFilter,
           ...BASE_AUDIO_ARGS,
           ...BASE_VIDEO_ARGS,
           ...BASE_ARGS,
-          '-b:v',
-          '800k',
-          '-maxrate',
-          '856k',
+          ...bvm,
           '-bufsize',
           '1200k',
           '-b:a',
           '96k',
           '-hls_segment_filename',
           'VIDEO_360P_%04d.ts',
-          'VIDEO_360P.m3u8',
+          playlistName,
         ];
       case MediaVariant.AUDIO:
         return [
@@ -176,7 +234,7 @@ function ffmpegEncodingOutputArgs(
           '192k',
           '-hls_segment_filename',
           'AUDIO_%04d.ts',
-          'AUDIO.m3u8',
+          playlistName,
         ];
       default:
         const c: never = v;
