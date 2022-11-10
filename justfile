@@ -70,9 +70,7 @@ init: migrate-dev-ory-kratos gateway-init
 
 npmi-gateway: (exec 'gateway' 'npm' 'i')
 npmi-web: (exec 'web' 'npm' 'i')
-npmi-proskairos-client: (exec 'proskairos-client' 'npm' 'i')
-npmi-proskairos-worker: (exec 'proskairos-worker' 'npm' 'i')
-npmi: npmi-gateway npmi-web npmi-proskairos-client npmi-proskairos-worker
+npmi: npmi-gateway npmi-web
 
 seed-users:
   cd scripts; npm run seed:users

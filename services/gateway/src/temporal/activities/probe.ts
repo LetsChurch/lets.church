@@ -1,10 +1,10 @@
 import { join } from 'node:path';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
-import { retryablePutFile, streamObjectToFile } from '../util/s3';
-import { runFfprobe } from '../util/ffmpeg';
-import { ffprobeSchema } from '../util/zod';
-import rimraf from '../util/rimraf';
+import { retryablePutFile, streamObjectToFile } from '../../util/s3';
+import { runFfprobe } from '../../util/ffmpeg';
+import { ffprobeSchema } from '../../util/zod';
+import rimraf from '../../util/rimraf';
 
 const WORK_DIR = '/data/transcode';
 

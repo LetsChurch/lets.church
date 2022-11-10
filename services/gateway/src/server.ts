@@ -1,20 +1,53 @@
 import { createServer } from '@graphql-yoga/node';
+import fastify, { FastifyRequest, FastifyReply } from 'fastify';
 import { useDisableIntrospection } from '@envelop/disable-introspection';
+import {
+  serializerCompiler,
+  validatorCompiler,
+} from 'fastify-type-provider-zod';
 import context from './util/context';
 import schema from './schema';
+import hooks from './hooks';
 
-const plugins = [
+const app = fastify({ logger: true });
+
+app.setValidatorCompiler(validatorCompiler);
+app.setSerializerCompiler(serializerCompiler);
+
+const graphqlPlugins = [
   process.env['NODE_ENV'] !== 'development' && useDisableIntrospection,
 ];
 
-const server = createServer({
+const graphqlServer = createServer<{
+  req: FastifyRequest;
+  reply: FastifyReply;
+}>({
   schema,
   context,
-  plugins,
+  plugins: graphqlPlugins,
   port: 3000,
 });
 
-server.start().catch((e) => {
-  console.error(e);
-  process.exit(-1);
+app.route({
+  url: '/graphql',
+  method: ['GET', 'POST', 'OPTIONS'],
+  async handler(req, reply) {
+    const response = await graphqlServer.handleIncomingMessage(req, {
+      req,
+      reply,
+    });
+    response.headers.forEach((value, key) => {
+      reply.header(key, value);
+    });
+
+    reply.status(response.status);
+
+    reply.send(response.body);
+
+    return reply;
+  },
 });
+
+app.register(hooks, { prefix: '/hooks' });
+
+await app.listen({ host: '0.0.0.0', port: 3000 });

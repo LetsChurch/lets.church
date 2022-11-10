@@ -1,6 +1,6 @@
 import { SignJWT } from 'jose';
 import envariant from '@knpwrs/envariant';
-import { createPresignedGetUrl } from '../util/s3';
+import { createPresignedGetUrl } from '../../util/s3';
 
 const ASSEMBLY_AI_API_KEY = envariant('ASSEMBLY_AI_API_KEY');
 const EXTERNAL_HOOKS_HOST = envariant('EXTERNAL_HOOKS_HOST');
@@ -25,7 +25,7 @@ export default async function transcribeRequest(id: string) {
       audio_url: presignedGet,
       speaker_labels: true,
       language_detection: true,
-      webhook_url: `${EXTERNAL_HOOKS_HOST}/transcript-done`,
+      webhook_url: `${EXTERNAL_HOOKS_HOST}/hooks/transcript-done`,
       webhook_auth_header_name: 'Authorization',
       webhook_auth_header_value: `Bearer ${jwt}`,
     }),

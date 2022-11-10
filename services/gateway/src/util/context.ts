@@ -1,5 +1,5 @@
 import envariant from '@knpwrs/envariant';
-import type { IncomingMessage, ServerResponse } from 'node:http';
+import type { FastifyRequest, FastifyReply } from 'fastify';
 import PLazy from 'p-lazy';
 import { whoAmIResponse } from './ory';
 import prisma from './prisma';
@@ -9,8 +9,8 @@ const ORY_KRATOS_PUBLIC_URL = envariant('ORY_KRATOS_PUBLIC_URL');
 export default async function context({
   req,
 }: {
-  req: IncomingMessage;
-  res: ServerResponse;
+  req: FastifyRequest;
+  reply: FastifyReply;
 }) {
   const cookie = req.headers['cookie'] ?? '';
   const authorization = req.headers['authorization'] ?? '';

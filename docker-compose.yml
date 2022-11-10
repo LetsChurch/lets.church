@@ -2,7 +2,6 @@ version: "3.7"
 
 volumes:
   auth-hooks-node-modules:
-  external-hooks-node-modules:
   gateway-node-modules:
   web-node-modules:
   es-data:
@@ -47,26 +46,10 @@ services:
     depends_on:
       - ory-kratos
 
-  external-hooks:
-    build:
-      context: ./services/external-hooks
-      dockerfile: Dockerfile
-      target: dev
-    ports:
-      - ${HOST_EXTERNAL_HOOKS_PORT}:3000
-    environment:
-      JWT_SECRET: ${JWT_SECRET}
-      TEMPORAL_CLIENT_URL: http://proskairos-client:3000
-    volumes:
-      - ./services/external-hooks:/home/node/app
-      - external-hooks-node-modules:/home/node/app/node_modules
-    depends_on:
-      - proskairos-client
-
   gateway:
     build:
       context: ./services/gateway
-      dockerfile: Dockerfile
+      dockerfile: gateway.Dockerfile
       target: dev
     ports:
       - ${HOST_GATEWAY_PORT}:3000
@@ -74,6 +57,8 @@ services:
       AUTH_HOOKS_SECRET: ${AUTH_HOOKS_SECRET}
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       ELASTICSEARCH_URL: http://elasticsearch:9200
+      EXTERNAL_HOOKS_HOST: ${EXTERNAL_HOOKS_HOST}
+      JWT_SECRET: ${JWT_SECRET}
       ORY_KRATOS_ADMIN_URL: http://ory-kratos:3001
       ORY_KRATOS_PUBLIC_URL: http://ory-kratos:3000
       S3_REGION: ${S3_REGION}
@@ -81,35 +66,18 @@ services:
       S3_BUCKET: ${S3_BUCKET}
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
-      TEMPORAL_CLIENT_URL: http://proskairos-client:3000
+      TEMPORAL_ADDRESS: temporal:7233
     volumes:
       - ./services/gateway:/home/node/app
       - gateway-node-modules:/home/node/app/node_modules
     depends_on:
       - ory-kratos
-      - proskairos-client
-
-  proskairos-client:
+      - temporal
+  
+  temporal-worker:
     build:
-      context: ./services/proskairos
-      dockerfile: Dockerfile
-      target: dev
-    ports:
-      - ${HOST_PROSKAIROS_CLIENT_PORT}:3000
-    environment:
-      TEMPORAL_ADDRESS: temporal:7233
-    volumes:
-      - ./services/proskairos:/home/node/app
-      - prokairos-node-modules:/home/node/app/node_modules
-    command: npm run dev:client
-    restart: unless-stopped
-    depends_on:
-      - proskairos-worker
-
-  proskairos-worker:
-    build:
-      context: ./services/proskairos
-      dockerfile: Dockerfile
+      context: ./services/gateway
+      dockerfile: worker.Dockerfile
       target: dev
     environment:
       ASSEMBLY_AI_API_KEY: ${ASSEMBLY_AI_API_KEY}
@@ -122,12 +90,9 @@ services:
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
     volumes:
-      - ./services/proskairos:/home/node/app
-      - prokairos-node-modules:/home/node/app/node_modules
-    command: npm run dev:worker
-    restart: unless-stopped
-    depends_on:
-      - temporal
+      - ./services/gateway:/home/node/app
+      - gateway-node-modules:/home/node/app/node_modules
+    command: npm run dev:temporal-worker
 
   #
   # Vendor Services
@@ -271,4 +236,4 @@ services:
       - type: bind
         source: ./scripts/known_hosts
         target: /root/.ssh/known_hosts
-    command: ssh -i /private-key -R ${LHR_DOMAIN}:80:external-hooks:3000 plan@localhost.run
+    command: ssh -i /private-key -R ${LHR_DOMAIN}:80:gateway:3000 plan@localhost.run

@@ -11,9 +11,9 @@ import {
   getVariants,
   runFfmpegEncode,
   variantsToMasterVideoPlaylist,
-} from '../util/ffmpeg';
-import { retryablePutFile, streamObjectToFile } from '../util/s3';
-import rimraf from '../util/rimraf';
+} from '../../util/ffmpeg';
+import { retryablePutFile, streamObjectToFile } from '../../util/s3';
+import rimraf from '../../util/rimraf';
 
 const WORK_DIR = '/data/transcode';
 

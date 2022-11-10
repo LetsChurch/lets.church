@@ -1,10 +1,6 @@
 import invariant from 'tiny-invariant';
-import {
-  createPresignedGetUrl,
-  createPresignedUploadUrl,
-  headObject,
-} from '../../util/s3';
-import { processUpload } from '../../util/temporal';
+import { createPresignedUploadUrl, headObject } from '../../util/s3';
+import { processUpload } from '../../temporal';
 import builder from '../builder';
 
 builder.prismaObject('UploadRecord', {
@@ -165,10 +161,7 @@ builder.mutationFields((t) => ({
           where: { id: uploadRecordId },
         });
 
-        await processUpload(
-          uploadRecordId,
-          await createPresignedGetUrl(uploadRecordId),
-        );
+        await processUpload(uploadRecordId);
       });
 
       return true;
