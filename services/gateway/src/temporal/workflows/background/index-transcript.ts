@@ -1,5 +1,5 @@
 import { proxyActivities } from '@temporalio/workflow';
-import type * as activities from '../activities';
+import type * as activities from '../../activities/background';
 
 const { indexTranscript: indexTranscriptActivity } = proxyActivities<
   typeof activities

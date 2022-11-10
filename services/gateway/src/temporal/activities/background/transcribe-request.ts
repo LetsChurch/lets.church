@@ -1,6 +1,6 @@
 import { SignJWT } from 'jose';
 import envariant from '@knpwrs/envariant';
-import { createPresignedGetUrl } from '../../util/s3';
+import { createPresignedGetUrl } from '../../../util/s3';
 
 const ASSEMBLY_AI_API_KEY = envariant('ASSEMBLY_AI_API_KEY');
 const EXTERNAL_HOOKS_HOST = envariant('EXTERNAL_HOOKS_HOST');

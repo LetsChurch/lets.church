@@ -3,7 +3,8 @@ import { URL } from 'node:url';
 import path from 'node:path';
 import envariant from '@knpwrs/envariant';
 import waitOn from 'wait-on';
-import * as activities from './activities';
+import * as activities from './activities/background';
+import { BACKGROUND_QUEUE } from './queues';
 
 const TEMPORAL_ADDRESS = envariant('TEMPORAL_ADDRESS');
 
@@ -16,7 +17,7 @@ await waitOn({
 console.log('Temporal is available!');
 
 const workflowsPath = new URL(
-  `./workflows/index${path.extname(import.meta.url)}`,
+  `./workflows/background/index${path.extname(import.meta.url)}`,
   import.meta.url,
 ).pathname;
 
@@ -25,8 +26,7 @@ const worker = await Worker.create({
   // TODO: prebundle
   workflowsPath,
   activities,
-  // TODO: split worker and set limits so indexing doesn't get blocked by transcoding
-  taskQueue: 'background',
+  taskQueue: BACKGROUND_QUEUE,
 });
 
 await worker.run();

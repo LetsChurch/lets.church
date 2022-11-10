@@ -1,5 +1,5 @@
 import envariant from '@knpwrs/envariant';
-import { putFile } from '../../util/s3';
+import { putFile } from '../../../util/s3';
 
 const ASSEMBLY_AI_API_KEY = envariant('ASSEMBLY_AI_API_KEY');
 

@@ -1,7 +1,8 @@
 import envariant from '@knpwrs/envariant';
 import { Connection, WorkflowClient } from '@temporalio/client';
-import * as workflows from './workflows';
-import { transcriptionDoneSignal } from './workflows/transcribe';
+import { transcriptionDoneSignal } from './workflows/background/transcribe';
+import { processUpload as processUploadWorkflow } from './workflows/process-upload';
+import { PROCESS_UPLOAD_QUEUE } from './queues';
 
 const TEMPORAL_ADDRESS = envariant('TEMPORAL_ADDRESS');
 
@@ -12,9 +13,9 @@ const client = new WorkflowClient({
 });
 
 export async function processUpload(id: string) {
-  return client.start(workflows.processUpload, {
-    taskQueue: 'background',
-    workflowId: `process-upload:${id}`,
+  return client.start(processUploadWorkflow, {
+    taskQueue: PROCESS_UPLOAD_QUEUE,
+    workflowId: id,
     args: [id],
   });
 }

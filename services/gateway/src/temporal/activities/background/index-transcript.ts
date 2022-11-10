@@ -1,7 +1,7 @@
 import invariant from 'tiny-invariant';
 import * as Z from 'zod';
-import { getObject } from '../../util/s3';
-import { client, escapeDocument } from '../../util/elasticsearch';
+import { getObject } from '../../../util/s3';
+import { client, escapeDocument } from '../../../util/elasticsearch';
 
 const wordSchema = Z.object({
   text: Z.string(),

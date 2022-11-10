@@ -5,11 +5,11 @@ import PQueue from 'p-queue';
 import pMap from 'p-map';
 import fastGlob from 'fast-glob';
 import { chunk, compact, maxBy } from 'lodash-es';
-import { retryablePutFile, streamObjectToFile } from '../../util/s3';
-import { concatThumbs, runFfmpegThumbnails } from '../../util/ffmpeg';
+import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
+import { concatThumbs, runFfmpegThumbnails } from '../../../util/ffmpeg';
 import { stat } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
-import rimraf from '../../util/rimraf';
+import rimraf from '../../../util/rimraf';
 
 const WORK_DIR = '/data/thumbnails';
 

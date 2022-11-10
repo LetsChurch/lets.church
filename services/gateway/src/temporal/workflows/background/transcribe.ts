@@ -5,20 +5,21 @@ import {
   setHandler,
   executeChild,
 } from '@temporalio/workflow';
-import type * as activities from '../activities';
-import { indexTranscript } from '../workflows';
+import indexTranscript from './index-transcript';
+import { BACKGROUND_QUEUE } from '../../queues';
+import type * as activities from '../../activities/background';
 
 type TranscriptionPayload = {
   transcriptId: string;
   status: 'completed' | 'error';
 };
 
-const { transcribeRequest, getTranscription } = proxyActivities<
-  typeof activities
->({
-  startToCloseTimeout: '60 minutes',
-  heartbeatTimeout: '1 minute',
-});
+const { transcribeRequest, getTranscript } = proxyActivities<typeof activities>(
+  {
+    startToCloseTimeout: '60 minutes',
+    heartbeatTimeout: '1 minute',
+  },
+);
 
 export const transcriptionDoneSignal =
   defineSignal<[TranscriptionPayload]>('transcriptionDone');
@@ -39,10 +40,11 @@ export default async function transcribe(uploadId: string) {
     throw new Error('Transcription status is not completed!');
   }
 
-  await getTranscription(uploadId, state.webhookPayload.transcriptId);
+  await getTranscript(uploadId, state.webhookPayload.transcriptId);
 
   await executeChild(indexTranscript, {
     workflowId: `indexTranscript:${uploadId}`,
     args: [uploadId],
+    taskQueue: BACKGROUND_QUEUE,
   });
 }

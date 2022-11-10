@@ -2,11 +2,12 @@ version: "3.7"
 
 volumes:
   auth-hooks-node-modules:
-  gateway-node-modules:
-  web-node-modules:
+  background-worker-node-modules:
   es-data:
+  gateway-node-modules:
   pg-data:
-  prokairos-node-modules:
+  process-upload-worker-node-modules:
+  web-node-modules:
 
 services:
   #
@@ -74,10 +75,27 @@ services:
       - ory-kratos
       - temporal
   
-  temporal-worker:
+  process-upload-worker:
     build:
       context: ./services/gateway
-      dockerfile: worker.Dockerfile
+      dockerfile: process-upload-worker.Dockerfile
+      target: dev
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      S3_REGION: ${S3_REGION}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_BUCKET: ${S3_BUCKET}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+    volumes:
+      - ./services/gateway:/home/node/app
+      - process-upload-worker-node-modules:/home/node/app/node_modules
+    command: npm run dev:process-upload-worker
+
+  background-worker:
+    build:
+      context: ./services/gateway
+      dockerfile: background-worker.Dockerfile
       target: dev
     environment:
       ASSEMBLY_AI_API_KEY: ${ASSEMBLY_AI_API_KEY}
@@ -92,9 +110,8 @@ services:
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
     volumes:
       - ./services/gateway:/home/node/app
-      - gateway-node-modules:/home/node/app/node_modules
-    command: npm run dev:temporal-worker
-
+      - background-worker-node-modules:/home/node/app/node_modules
+    command: npm run dev:background-worker
   #
   # Vendor Services
   #
