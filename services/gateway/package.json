@@ -1,6 +1,7 @@
 {
   "name": "@letschurch/gateway",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "NODE_ENV=development tsx watch --clear-screen=false src/server.ts",
     "build": "esbuild src/index.ts --bundle --platform=node --external:./node_modules/* --outfile=dist/index.js",
@@ -20,7 +21,8 @@
     "prisma:db:push:force": "prisma db push --accept-data-loss",
     "prisma:db:seed": "prisma db seed",
     "prisma:db:truncate": "tsx prisma/truncate.ts",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "es:push-mappings": "tsx elasticsearch/mappings.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -29,6 +31,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.200.0",
     "@aws-sdk/s3-request-presigner": "^3.200.0",
+    "@elastic/elasticsearch": "^8.5.0",
     "@envelop/disable-introspection": "^4.0.2",
     "@knpwrs/envariant": "^1.0.2",
     "@pothos/core": "^3.22.6",
@@ -50,19 +53,23 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^7.6.0",
-    "@tsconfig/node18-strictest": "^1.0.0",
+    "@tsconfig/node18-strictest-esm": "^1.0.1",
     "@types/node": "^18.11.2",
+    "@types/wait-on": "^5.3.1",
     "@typescript-eslint/eslint-plugin": "^5.40.1",
     "@typescript-eslint/parser": "^5.40.1",
+    "chalk": "^5.1.2",
     "esbuild": "^0.15.12",
     "eslint": "^8.25.0",
     "eslint-plugin-import": "^2.26.0",
+    "jest-diff": "^29.3.1",
     "npm-run-all": "^4.1.5",
     "prettier": "^2.7.1",
     "prisma": "^4.5.0",
     "tsx": "^3.10.4",
     "type-fest": "^3.1.0",
     "typescript": "^4.8.4",
-    "vitest": "^0.24.3"
+    "vitest": "^0.24.3",
+    "wait-on": "^6.0.1"
   }
 }

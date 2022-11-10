@@ -5,6 +5,7 @@ volumes:
   external-hooks-node-modules:
   gateway-node-modules:
   web-node-modules:
+  es-data:
   pg-data:
   prokairos-node-modules:
 
@@ -72,6 +73,7 @@ services:
     environment:
       AUTH_HOOKS_SECRET: ${AUTH_HOOKS_SECRET}
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
+      ELASTICSEARCH_URL: http://elasticsearch:9200
       ORY_KRATOS_ADMIN_URL: http://ory-kratos:3001
       ORY_KRATOS_PUBLIC_URL: http://ory-kratos:3000
       S3_REGION: ${S3_REGION}
@@ -237,6 +239,8 @@ services:
     image: elasticsearch:8.4.3
     ports:
       - ${HOST_ES_PORT}:9200
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
 
   #
   # Development

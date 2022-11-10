@@ -6,7 +6,7 @@
 1. Clone this repo
 1. Run `direnv allow` to load the shell environment and `nix` packages
 1. Run `just start` to start the `docker-compose` setup
-1. Run `just migrate-dev` to migrate the databases
+1. Run `just init` to migrate the databases and set up ElasticSearch
 1. Run `just seed` to seed the databases with sample data
 1. Run `just open` to open the web interface
 

@@ -55,12 +55,18 @@ gateway-prisma-generate:
 gateway-prisma-studio:
   cd services/gateway; DATABASE_URL=$HOST_DATABASE_URL npm run prisma:studio
 
+gateway-es-push-mappings:
+  docker-compose exec gateway npm run es:push-mappings
+
 migrate-dev-gateway:
   docker-compose exec gateway npm run prisma:migrate:dev
   cd services/gateway; npm run prisma:generate
 migrate-dev-ory-kratos:
   docker-compose exec ory-kratos kratos -c /etc/ory-kratos/config.yml migrate sql -e --yes
-migrate-dev: migrate-dev-ory-kratos migrate-dev-gateway
+
+gateway-init: migrate-dev-gateway gateway-es-push-mappings
+
+init: migrate-dev-ory-kratos gateway-init
 
 npmi-gateway: (exec 'gateway' 'npm' 'i')
 npmi-web: (exec 'web' 'npm' 'i')
