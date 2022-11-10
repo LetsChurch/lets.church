@@ -4,19 +4,9 @@ import type {
 } from '@elastic/elasticsearch/lib/api/types';
 import { diff } from 'jest-diff';
 import chalk from 'chalk';
-import { Client } from '@elastic/elasticsearch';
-import envariant from '@knpwrs/envariant';
-import waitOn from 'wait-on';
+import { waitForElasticsearch, client } from '../src/util/elasticsearch';
 
-const ELASTICSEARCH_URL = envariant('ELASTICSEARCH_URL');
-
-await waitOn({
-  resources: [ELASTICSEARCH_URL],
-});
-
-const client = new Client({
-  node: ELASTICSEARCH_URL,
-});
+await waitForElasticsearch();
 
 // Define target mappings
 const targetMappings: Record<

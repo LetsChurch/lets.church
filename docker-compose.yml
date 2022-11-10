@@ -81,6 +81,7 @@ services:
       target: dev
     environment:
       ASSEMBLY_AI_API_KEY: ${ASSEMBLY_AI_API_KEY}
+      ELASTICSEARCH_URL: http://elasticsearch:9200
       EXTERNAL_HOOKS_HOST: ${EXTERNAL_HOOKS_HOST}
       JWT_SECRET: ${JWT_SECRET}
       TEMPORAL_ADDRESS: temporal:7233

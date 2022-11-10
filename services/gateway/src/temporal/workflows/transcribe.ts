@@ -3,8 +3,10 @@ import {
   condition,
   defineSignal,
   setHandler,
+  executeChild,
 } from '@temporalio/workflow';
 import type * as activities from '../activities';
+import { indexTranscript } from '../workflows';
 
 type TranscriptionPayload = {
   transcriptId: string;
@@ -21,7 +23,7 @@ const { transcribeRequest, getTranscription } = proxyActivities<
 export const transcriptionDoneSignal =
   defineSignal<[TranscriptionPayload]>('transcriptionDone');
 
-export default async function transcribe(id: string) {
+export default async function transcribe(uploadId: string) {
   const state: { webhookPayload: TranscriptionPayload | null } = {
     webhookPayload: null,
   };
@@ -30,12 +32,17 @@ export default async function transcribe(id: string) {
     state.webhookPayload = payload;
   });
 
-  await transcribeRequest(id);
+  await transcribeRequest(uploadId);
   await condition(() => !!state.webhookPayload);
 
   if (state.webhookPayload?.status !== 'completed') {
     throw new Error('Transcription status is not completed!');
   }
 
-  await getTranscription(id, state.webhookPayload.transcriptId);
+  await getTranscription(uploadId, state.webhookPayload.transcriptId);
+
+  await executeChild(indexTranscript, {
+    workflowId: `indexTranscript:${uploadId}`,
+    args: [uploadId],
+  });
 }

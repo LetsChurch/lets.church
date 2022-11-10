@@ -13,7 +13,7 @@ const client = new WorkflowClient({
 
 export async function processUpload(id: string) {
   return client.start(workflows.processUpload, {
-    taskQueue: 'process-upload',
+    taskQueue: 'background',
     workflowId: `process-upload:${id}`,
     args: [id],
   });

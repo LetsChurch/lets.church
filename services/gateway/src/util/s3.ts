@@ -55,8 +55,16 @@ export async function headObject(key: string) {
       Key: key,
     });
   } catch (e) {
+    console.log(e);
     return null;
   }
+}
+
+export async function getObject(key: string) {
+  return client.getObject({
+    Bucket: S3_BUCKET,
+    Key: key,
+  });
 }
 
 export async function streamObjectToFile(key: string, path: string) {

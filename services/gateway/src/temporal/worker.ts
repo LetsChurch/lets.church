@@ -25,7 +25,8 @@ const worker = await Worker.create({
   // TODO: prebundle
   workflowsPath,
   activities,
-  taskQueue: 'process-upload',
+  // TODO: split worker and set limits so indexing doesn't get blocked by transcoding
+  taskQueue: 'background',
 });
 
 await worker.run();
