@@ -92,21 +92,18 @@ check-external-hooks:
 check-gateway:
   cd services/gateway; npm run check
 
-check-proskairos:
-  cd services/proskairos; npm run check
-
 check-web:
   cd apps/web; npm run check
 
 check-scripts:
   cd scripts; npm run check
 
-check: check-auth-hooks check-gateway check-proskairos check-web check-scripts
+check: check-auth-hooks check-gateway check-web check-scripts
 
-test-proskairos:
-  cd services/proskairos; npm test
+test-gateway:
+  cd services/gateway; npm test
 
-test: test-proskairos
+test: test-gateway
 
 open:
   open http://localhost:$HOST_WEB_PORT
