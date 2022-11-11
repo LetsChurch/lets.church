@@ -1,8 +1,10 @@
 import slugify from '@sindresorhus/slugify';
 import invariant from 'tiny-invariant';
+import { indexDocument } from '../../temporal';
 import builder from '../builder';
 
 builder.prismaObject('Channel', {
+  select: { id: true },
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
     name: t.exposeString('name'),
@@ -34,6 +36,16 @@ const ChannelMembership = builder.prismaObject('ChannelMembership', {
   }),
 });
 
+builder.queryFields((t) => ({
+  channelById: t.prismaField({
+    type: 'Channel',
+    args: { id: t.arg({ type: 'ShortUuid', required: true }) },
+    resolve: async (query, _root, { id }, { prisma }, _info) => {
+      return prisma.channel.findUniqueOrThrow({ ...query, where: { id } });
+    },
+  }),
+}));
+
 builder.mutationFields((t) => ({
   createChannel: t.prismaField({
     type: 'Channel',
@@ -48,8 +60,9 @@ builder.mutationFields((t) => ({
       const userId = (await context.identity)?.id;
       invariant(userId);
 
-      return context.prisma.channel.create({
+      const res = await context.prisma.channel.create({
         ...query,
+        select: { ...(query.select ?? {}), id: true },
         data: {
           ...args,
           slug: args.slug || slugify(args.name),
@@ -70,6 +83,10 @@ builder.mutationFields((t) => ({
           },
         },
       });
+
+      indexDocument('channel', res.id);
+
+      return res;
     },
   }),
   upsertChannelMembership: t.prismaField({

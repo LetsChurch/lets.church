@@ -6,7 +6,7 @@ import {
   setHandler,
 } from '@temporalio/workflow';
 import type * as activities from '../../activities/background';
-import type { DocumentType } from '../../activities/background/index-document';
+import type { DocumentKind } from '../../activities/background/index-document';
 
 const { indexDocument: indexDocumentActivity } = proxyActivities<
   typeof activities
@@ -16,7 +16,7 @@ const { indexDocument: indexDocumentActivity } = proxyActivities<
 
 export const indexDocumentSignal = defineSignal('indexDocument');
 
-export default async function indexDocument(kind: DocumentType, id: string) {
+export default async function indexDocument(kind: DocumentKind, id: string) {
   let debouncing = false;
 
   setHandler(indexDocumentSignal, () => void (debouncing = true));

@@ -1,8 +1,14 @@
 import envariant from '@knpwrs/envariant';
 import { Connection, WorkflowClient } from '@temporalio/client';
-import { transcriptionDoneSignal } from './workflows/background/transcribe';
+import pRetry from 'p-retry';
+import {
+  indexDocumentSignal,
+  indexDocument as indexDocumentWorkflow,
+  transcriptionDoneSignal,
+} from './workflows/background';
 import { processUpload as processUploadWorkflow } from './workflows/process-upload';
-import { PROCESS_UPLOAD_QUEUE } from './queues';
+import { PROCESS_UPLOAD_QUEUE, BACKGROUND_QUEUE } from './queues';
+import type { DocumentKind } from './activities/background/index-document';
 
 const TEMPORAL_ADDRESS = envariant('TEMPORAL_ADDRESS');
 
@@ -27,4 +33,19 @@ export async function processTranscript(
   return client
     .getHandle(`transcribe:${uploadId}`)
     .signal(transcriptionDoneSignal, body);
+}
+
+export async function indexDocument(kind: DocumentKind, id: string) {
+  return pRetry(
+    async () => {
+      return client.signalWithStart(indexDocumentWorkflow, {
+        taskQueue: BACKGROUND_QUEUE,
+        workflowId: `${kind}:${id}`,
+        args: [kind, id],
+        signal: indexDocumentSignal,
+        signalArgs: [],
+      });
+    },
+    { retries: 5 },
+  );
 }

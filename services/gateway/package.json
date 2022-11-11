@@ -27,7 +27,7 @@
     "es:push-mappings": "tsx elasticsearch/mappings.ts"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "node --loader ts-node/esm --experimental-specifier-resolution=node prisma/seed.ts"
   },
   "license": "UNLICENSE",
   "dependencies": {

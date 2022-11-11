@@ -1,9 +1,12 @@
 import { faker } from '@faker-js/faker';
 import envariant from '@knpwrs/envariant';
 import slugify from '@sindresorhus/slugify';
+import waitOn from 'wait-on';
+import { indexDocument } from '../src/temporal';
 import prisma from '../src/util/prisma';
 
 const ORY_KRATOS_ADMIN_URL = envariant('ORY_KRATOS_ADMIN_URL');
+const TEMPORAL_ADDRESS = envariant('TEMPORAL_ADDRESS');
 
 faker.seed(1337);
 
@@ -34,59 +37,66 @@ function collateUsers(
   return { user1Id, user2Id, adminId, otherIds };
 }
 
-void (async function main() {
-  const oryRes = await fetch(`${ORY_KRATOS_ADMIN_URL}/identities`);
-  const oryIdents = await oryRes.json();
-  const usersRes = await prisma.appUser.createMany({
-    data: oryIdents.map(
-      (o: { id: string; metadata_public: { role: 'admin' | 'user' } }) => ({
-        id: o.id,
-      }),
-    ),
-    skipDuplicates: true,
-  });
+await waitOn({
+  resources: [`tcp:${TEMPORAL_ADDRESS}`],
+});
 
-  console.log(`Synced ${usersRes.count} users`);
+const oryRes = await fetch(`${ORY_KRATOS_ADMIN_URL}/identities`);
+const oryIdents = await oryRes.json();
+const usersRes = await prisma.appUser.createMany({
+  data: oryIdents.map(
+    (o: { id: string; metadata_public: { role: 'admin' | 'user' } }) => ({
+      id: o.id,
+    }),
+  ),
+  skipDuplicates: true,
+});
 
-  const { adminId, user1Id, user2Id, otherIds } = collateUsers(oryIdents);
-  await prisma.organization.create({
-    data: {
-      name: "Let's Church",
-      slug: 'letschurch',
-      memberships: {
-        create: {
-          appUser: {
-            connect: {
-              id: adminId,
-            },
+console.log(`Synced ${usersRes.count} users`);
+
+const { adminId, user1Id, user2Id, otherIds } = collateUsers(oryIdents);
+await prisma.organization.create({
+  data: {
+    name: "Let's Church",
+    slug: 'letschurch',
+    memberships: {
+      create: {
+        appUser: {
+          connect: {
+            id: adminId,
           },
-          isAdmin: true,
         },
+        isAdmin: true,
       },
-      associations: {
-        create: {
-          channel: {
-            create: {
-              name: "Let's Church",
-              slug: 'letschurch',
-              memberships: {
-                create: {
-                  appUser: {
-                    connect: {
-                      id: adminId,
-                    },
+    },
+    associations: {
+      create: {
+        channel: {
+          create: {
+            name: "Let's Church",
+            slug: 'letschurch',
+            memberships: {
+              create: {
+                appUser: {
+                  connect: {
+                    id: adminId,
                   },
-                  isAdmin: true,
                 },
+                isAdmin: true,
               },
             },
           },
         },
       },
     },
-  });
+  },
+});
 
+const { id: org1Id, associations: org1Associations } =
   await prisma.organization.create({
+    include: {
+      associations: { include: { channel: { select: { id: true } } } },
+    },
     data: {
       name: 'Organization 1',
       slug: 'org1',
@@ -123,7 +133,16 @@ void (async function main() {
     },
   });
 
+await indexDocument('organization', org1Id);
+await Promise.all(
+  org1Associations.map(({ channel }) => indexDocument('channel', channel.id)),
+);
+
+const { id: org2Id, associations: org2Associations } =
   await prisma.organization.create({
+    include: {
+      associations: { include: { channel: { select: { id: true } } } },
+    },
     data: {
       name: 'Organization 2',
       slug: 'org2',
@@ -160,33 +179,39 @@ void (async function main() {
     },
   });
 
-  for (let i = 0; i < 47; i += 1) {
-    const name = `${faker.helpers.arrayElement([
-      'Second Baptist',
-      'Covenant',
-      'Redeemer',
-      'Covenant Presbyterian',
-      'Redeemer Presbyterian',
-      'Grace Fellowship Assembly',
-    ])} Church ${faker.address.cityName()}`.trim();
+await indexDocument('organization', org2Id);
+await Promise.all(
+  org2Associations.map(({ channel }) => indexDocument('channel', channel.id)),
+);
 
-    await prisma.organization.create({
-      data: {
-        name,
-        slug: slugify(name),
-        memberships: {
-          create: {
-            appUser: {
-              connect: {
-                id: faker.helpers.arrayElement(otherIds),
-              },
+for (let i = 0; i < 47; i += 1) {
+  const name = `${faker.helpers.arrayElement([
+    'Second Baptist',
+    'Covenant',
+    'Redeemer',
+    'Covenant Presbyterian',
+    'Redeemer Presbyterian',
+    'Grace Fellowship Assembly',
+  ])} Church ${faker.address.cityName()}`.trim();
+
+  const { id } = await prisma.organization.create({
+    data: {
+      name,
+      slug: slugify(name),
+      memberships: {
+        create: {
+          appUser: {
+            connect: {
+              id: faker.helpers.arrayElement(otherIds),
             },
-            isAdmin: true,
           },
+          isAdmin: true,
         },
       },
-    });
-  }
+    },
+  });
 
-  console.log('Created example organizations and channels');
-})();
+  await indexDocument('organization', id);
+}
+
+console.log('Created example organizations and channels');

@@ -1,8 +1,10 @@
 import slugify from '@sindresorhus/slugify';
 import invariant from 'tiny-invariant';
+import { indexDocument } from '../../temporal';
 import builder from '../builder';
 
 builder.prismaObject('Organization', {
+  select: { id: true },
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
     name: t.exposeString('name'),
@@ -42,6 +44,16 @@ const OrganizationMembership = builder.prismaObject('OrganizationMembership', {
   }),
 });
 
+builder.queryFields((t) => ({
+  organizationById: t.prismaField({
+    type: 'Organization',
+    args: { id: t.arg({ type: 'ShortUuid', required: true }) },
+    resolve: async (query, _root, { id }, { prisma }, _info) => {
+      return prisma.organization.findUniqueOrThrow({ ...query, where: { id } });
+    },
+  }),
+}));
+
 builder.mutationFields((t) => ({
   createOrganization: t.prismaField({
     type: 'Organization',
@@ -56,8 +68,9 @@ builder.mutationFields((t) => ({
       const userId = (await context.identity)?.id;
       invariant(userId);
 
-      return context.prisma.organization.create({
+      const res = await context.prisma.organization.create({
         ...query,
+        select: { ...(query.select ?? {}), id: true },
         data: {
           ...args,
           slug: args.slug || slugify(args.name),
@@ -78,6 +91,10 @@ builder.mutationFields((t) => ({
           },
         },
       });
+
+      indexDocument('organization', res.id);
+
+      return res;
     },
   }),
   upsertOrganizationMembership: t.prismaField({
