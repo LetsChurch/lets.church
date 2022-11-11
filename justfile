@@ -100,6 +100,8 @@ check-scripts:
 
 check: check-auth-hooks check-gateway check-web check-scripts
 
+export CI := "1"
+
 test-gateway:
   cd services/gateway; npm test
 
