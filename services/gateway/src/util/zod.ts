@@ -61,3 +61,25 @@ export const ffprobeSchema = Z.object({
     }),
   }),
 });
+
+export const assemblyAiWordSchema = Z.object({
+  text: Z.string(),
+  start: Z.number(),
+  end: Z.number(),
+  confidence: Z.number(),
+});
+
+export const databaseTranscriptSchema = Z.array(assemblyAiWordSchema);
+
+const sentenceSchema = assemblyAiWordSchema.and(
+  Z.object({
+    words: Z.array(assemblyAiWordSchema),
+  }),
+);
+
+export const assemblyAiSentencesSchema = Z.object({
+  sentences: Z.array(sentenceSchema),
+  id: Z.string(), // NOT UUID
+  confidence: Z.number(),
+  audio_duration: Z.number(),
+});

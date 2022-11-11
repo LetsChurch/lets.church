@@ -99,6 +99,7 @@ services:
       target: dev
     environment:
       ASSEMBLY_AI_API_KEY: ${ASSEMBLY_AI_API_KEY}
+      DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       ELASTICSEARCH_URL: http://elasticsearch:9200
       EXTERNAL_HOOKS_HOST: ${EXTERNAL_HOOKS_HOST}
       JWT_SECRET: ${JWT_SECRET}

@@ -1,5 +1,7 @@
 import envariant from '@knpwrs/envariant';
+import prisma from '../../../util/prisma';
 import { putFile } from '../../../util/s3';
+import { assemblyAiSentencesSchema } from '../../../util/zod';
 
 const ASSEMBLY_AI_API_KEY = envariant('ASSEMBLY_AI_API_KEY');
 
@@ -14,7 +16,7 @@ export default async function (uploadId: string, transcriptId: string) {
       },
     },
   );
-  const transcript = await res.text();
+  const transcriptJson = await res.text();
   console.log(
     `Received ${res.headers.get('Content-Length')} bytes of ${res.headers.get(
       'Content-Type',
@@ -31,7 +33,7 @@ export default async function (uploadId: string, transcriptId: string) {
       },
     },
   );
-  const sentences = await sentencesRes.text();
+  const sentencesJson = await sentencesRes.text();
   console.log(
     `Received ${res.headers.get('Content-Length')} bytes of ${res.headers.get(
       'Content-Type',
@@ -48,7 +50,7 @@ export default async function (uploadId: string, transcriptId: string) {
       },
     },
   );
-  const paragraphs = await paragraphsRes.text();
+  const paragraphsJson = await paragraphsRes.text();
   console.log(
     `Received ${res.headers.get('Content-Length')} bytes of ${res.headers.get(
       'Content-Type',
@@ -59,19 +61,29 @@ export default async function (uploadId: string, transcriptId: string) {
   await putFile(
     `${uploadId}.transcript.json`,
     'application/json',
-    Buffer.from(transcript),
+    Buffer.from(transcriptJson),
   );
   console.log('Uploaded transcript');
   await putFile(
     `${uploadId}.sentences.json`,
     'application/json',
-    Buffer.from(sentences),
+    Buffer.from(sentencesJson),
   );
   console.log('Uploaded sentences');
   await putFile(
     `${uploadId}.paragraphs.json`,
     'application/json',
-    Buffer.from(paragraphs),
+    Buffer.from(paragraphsJson),
   );
   console.log('Uploaded paragraphs');
+
+  console.log('Saving transcript to database');
+  const { sentences } = assemblyAiSentencesSchema.parse(
+    JSON.parse(sentencesJson),
+  );
+
+  await prisma.uploadRecord.update({
+    data: { transcriptSentences: sentences.map(({ words, ...rest }) => rest) },
+    where: { id: uploadId },
+  });
 }

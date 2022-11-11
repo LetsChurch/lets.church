@@ -5,7 +5,7 @@ import {
   setHandler,
   executeChild,
 } from '@temporalio/workflow';
-import indexTranscript from './index-transcript';
+import indexDocument from './index-document';
 import { BACKGROUND_QUEUE } from '../../queues';
 import type * as activities from '../../activities/background';
 
@@ -42,9 +42,9 @@ export default async function transcribe(uploadId: string) {
 
   await getTranscript(uploadId, state.webhookPayload.transcriptId);
 
-  await executeChild(indexTranscript, {
-    workflowId: `indexTranscript:${uploadId}`,
-    args: [uploadId],
+  await executeChild(indexDocument, {
+    workflowId: `transcript:${uploadId}`,
+    args: ['transcript', uploadId],
     taskQueue: BACKGROUND_QUEUE,
   });
 }

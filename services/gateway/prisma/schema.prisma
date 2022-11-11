@@ -93,15 +93,18 @@ model ChannelMembership {
 }
 
 model UploadRecord {
-  id              String    @id @default(dbgenerated("gen_random_uuid()"))
-  uploader        AppUser   @relation(fields: [appUserId], references: [id])
-  appUserId       String    @map("app_user_id") @db.Uuid
-  channel         Channel   @relation(fields: [channelId], references: [id])
-  channelId       String    @map("channel_id") @db.Uuid
-  uploadMimeType  String    @map("upload_mime_type")
-  uploadSizeBytes BigInt?   @map("upload_size_bytes")
-  uploadFinalized Boolean   @default(false) @map("upload_finalized")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  deletedAt       DateTime? @map("deleted_at")
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  uploader            AppUser   @relation(fields: [appUserId], references: [id])
+  appUserId           String    @map("app_user_id") @db.Uuid
+  channel             Channel   @relation(fields: [channelId], references: [id])
+  channelId           String    @map("channel_id") @db.Uuid
+  uploadMimeType      String    @map("upload_mime_type")
+  uploadSizeBytes     BigInt?   @map("upload_size_bytes")
+  uploadFinalized     Boolean   @default(false) @map("upload_finalized")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  deletedAt           DateTime? @map("deleted_at")
+  transcriptSentences Json?     @map("transcript_sentences") @db.Json
+
+  @@map("upload_record")
 }

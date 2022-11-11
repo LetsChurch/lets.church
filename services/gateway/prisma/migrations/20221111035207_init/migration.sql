@@ -73,8 +73,8 @@ CREATE TABLE "channel_membership" (
 );
 
 -- CreateTable
-CREATE TABLE "UploadRecord" (
-    "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
+CREATE TABLE "upload_record" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "app_user_id" UUID NOT NULL,
     "channel_id" UUID NOT NULL,
     "upload_mime_type" TEXT NOT NULL,
@@ -83,8 +83,9 @@ CREATE TABLE "UploadRecord" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "deleted_at" TIMESTAMP(3),
+    "transcript_sentences" JSON,
 
-    CONSTRAINT "UploadRecord_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "upload_record_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -112,7 +113,7 @@ ALTER TABLE "channel_membership" ADD CONSTRAINT "channel_membership_channel_id_f
 ALTER TABLE "channel_membership" ADD CONSTRAINT "channel_membership_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "UploadRecord" ADD CONSTRAINT "UploadRecord_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "upload_record" ADD CONSTRAINT "upload_record_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "UploadRecord" ADD CONSTRAINT "UploadRecord_channel_id_fkey" FOREIGN KEY ("channel_id") REFERENCES "channel"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "upload_record" ADD CONSTRAINT "upload_record_channel_id_fkey" FOREIGN KEY ("channel_id") REFERENCES "channel"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

@@ -2,6 +2,7 @@ import invariant from 'tiny-invariant';
 import { createPresignedUploadUrl, headObject } from '../../util/s3';
 import { processUpload } from '../../temporal';
 import builder from '../builder';
+import { databaseTranscriptSchema } from '../../util/zod';
 
 builder.prismaObject('UploadRecord', {
   authScopes: async (uploadRecord, context) => {
@@ -31,34 +32,77 @@ builder.prismaObject('UploadRecord', {
 
     return { admin: true };
   },
+  select: {
+    id: true,
+    channelId: true, // For authScopes
+  },
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
     uploader: t.relation('uploader'),
     channel: t.relation('channel'),
     uploadSizeBytes: t.string({
       nullable: true,
+      select: {
+        uploadSizeBytes: true,
+      },
       resolve: ({ uploadSizeBytes }) => uploadSizeBytes?.toString(),
     }),
     uploadFinalized: t.exposeBoolean('uploadFinalized'),
     createdAt: t.field({
       type: 'DateTime',
+      select: {
+        createdAt: true,
+      },
       resolve: ({ createdAt }) => createdAt.toISOString(),
     }),
     updatedAt: t.field({
       type: 'DateTime',
+      select: {
+        updatedAt: true,
+      },
       resolve: ({ updatedAt }) => updatedAt.toISOString(),
     }),
     uploadUrl: t.string({
       select: {
         id: true,
+        uploadMimeType: true,
         uploadFinalized: true,
       },
       authScopes: (root) => !root.uploadFinalized,
       resolve: ({ id, uploadMimeType }) =>
         createPresignedUploadUrl(id, uploadMimeType),
     }),
+    transcriptSentences: t.field({
+      type: [
+        builder.simpleObject('TranscriptSentence', {
+          fields: (tst) => ({
+            text: tst.string(),
+            start: tst.int(),
+            end: tst.int(),
+            confidence: tst.float(),
+          }),
+        }),
+      ],
+      nullable: true,
+      select: { transcriptSentences: true },
+      resolve: ({ transcriptSentences }) =>
+        transcriptSentences
+          ? databaseTranscriptSchema.parse(transcriptSentences)
+          : null,
+    }),
   }),
 });
+
+builder.queryFields((t) => ({
+  uploadRecordById: t.prismaField({
+    type: 'UploadRecord',
+    args: {
+      id: t.arg({ type: 'ShortUuid', required: true }),
+    },
+    resolve: (query, _root, { id }, { prisma }) =>
+      prisma.uploadRecord.findUniqueOrThrow({ ...query, where: { id } }),
+  }),
+}));
 
 builder.mutationFields((t) => ({
   createUploadRecord: t.prismaField({
