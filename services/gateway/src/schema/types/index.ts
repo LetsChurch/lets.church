@@ -1,6 +1,8 @@
 import './query';
 import './mutation';
-import './upload';
-import './user';
+
 import './channel';
 import './organization';
+import './search';
+import './upload';
+import './user';

@@ -3,6 +3,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import PLazy from 'p-lazy';
 import { whoAmIResponse } from './ory';
 import prisma from './prisma';
+import { client as esClient } from './elasticsearch';
 
 const ORY_KRATOS_PUBLIC_URL = envariant('ORY_KRATOS_PUBLIC_URL');
 
@@ -36,6 +37,7 @@ export default async function context({
 
   return {
     prisma,
+    esClient,
     session,
     identity,
     authorization,
