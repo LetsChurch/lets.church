@@ -2,59 +2,72 @@ import { faker } from '@faker-js/faker';
 import envariant from '@knpwrs/envariant';
 import slugify from '@sindresorhus/slugify';
 import waitOn from 'wait-on';
+import argon2 from 'argon2';
 import { indexDocument } from '../src/temporal';
 import prisma from '../src/util/prisma';
 
-const ORY_KRATOS_ADMIN_URL = envariant('ORY_KRATOS_ADMIN_URL');
 const TEMPORAL_ADDRESS = envariant('TEMPORAL_ADDRESS');
 
 faker.seed(1337);
-
-function collateUsers(
-  users: Array<{ id: string; traits: { username: string } }>,
-) {
-  let user1Id;
-  let user2Id;
-  let adminId;
-  const otherIds = [];
-
-  for (const user of users) {
-    if (user.traits.username === 'admin') {
-      adminId = user.id;
-    } else if (user.traits.username === 'user1') {
-      user1Id = user.id;
-    } else if (user.traits.username === 'user2') {
-      user2Id = user.id;
-    } else {
-      otherIds.push(user.id);
-    }
-  }
-
-  if (!user1Id || !user2Id || !adminId) {
-    throw new Error('Missing expected data');
-  }
-
-  return { user1Id, user2Id, adminId, otherIds };
-}
 
 await waitOn({
   resources: [`tcp:${TEMPORAL_ADDRESS}`],
 });
 
-const oryRes = await fetch(`${ORY_KRATOS_ADMIN_URL}/identities`);
-const oryIdents = await oryRes.json();
-const usersRes = await prisma.appUser.createMany({
-  data: oryIdents.map(
-    (o: { id: string; metadata_public: { role: 'admin' | 'user' } }) => ({
-      id: o.id,
-    }),
-  ),
+const password = await argon2.hash('password', { type: argon2.argon2id });
+
+await prisma.appUser.createMany({
+  data: [
+    {
+      email: 'admin@lets.church',
+      username: 'admin',
+      password,
+    },
+    {
+      email: 'user1@example.org',
+      username: 'user1',
+      fullName: 'User One',
+      password,
+    },
+    {
+      email: 'user2@example.org',
+      username: 'user2',
+      fullName: 'User Two',
+      password,
+    },
+    ...Array(47)
+      .fill(null)
+      .map(() => {
+        const firstName = faker.name.firstName();
+        const lastName = faker.name.lastName();
+        return {
+          email: faker.internet.email(firstName, lastName),
+          username: faker.internet
+            .userName(firstName, lastName)
+            .replace(/[^a-zA-Z0-9_-]/g, '_'),
+          fullName: `${firstName} ${lastName}`,
+          password,
+        };
+      }),
+  ],
   skipDuplicates: true,
 });
 
-console.log(`Synced ${usersRes.count} users`);
+const { id: adminId } = await prisma.appUser.findUniqueOrThrow({
+  where: { username: 'admin' },
+});
+const { id: user1Id } = await prisma.appUser.findUniqueOrThrow({
+  where: { username: 'user1' },
+});
+const { id: user2Id } = await prisma.appUser.findUniqueOrThrow({
+  where: { username: 'user2' },
+});
+const otherIds = (
+  await prisma.appUser.findMany({
+    where: { username: { notIn: ['admin', 'user1', 'user2'] } },
+  })
+).map(({ id }) => id);
 
-const { adminId, user1Id, user2Id, otherIds } = collateUsers(oryIdents);
 await prisma.organization.create({
   data: {
     name: "Let's Church",

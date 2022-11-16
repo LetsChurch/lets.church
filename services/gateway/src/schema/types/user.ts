@@ -1,67 +1,50 @@
-import envariant from '@knpwrs/envariant';
-import { getProperty } from 'dot-prop';
+import { AppUserRole, type AppUser as PrismaAppUser } from '@prisma/client';
+import * as argon2 from 'argon2';
+import invariant from 'tiny-invariant';
+import * as z from 'zod';
 import builder from '../builder';
-import { userV0Schema } from '../../util/ory';
+import type { Context } from '../../util/context';
+import zxcvbn from '../../util/zxcvbn';
+import { ZodIssueCode } from 'zod';
+import { sendEmail } from '../../temporal';
 
-const ORY_KRATOS_ADMIN_URL = envariant('ORY_KRATOS_ADMIN_URL');
+async function privateAuthScopes(
+  appUser: PrismaAppUser,
+  _args: unknown,
+  context: Context,
+) {
+  const session = await context.session;
 
-export const AppUserIdentity = builder.simpleObject('AppUserIdentity', {
-  fields: (pt) => ({
-    id: pt.field({ type: 'ShortUuid' }),
-    username: pt.string(),
-    role: pt.field({
-      type: builder.enumType('AppUserRole', {
-        values: ['admin', 'user'] as const,
-      }),
-    }),
-    verifiableAddresses: pt.field({
-      nullable: true,
-      authScopes: async (parent, _args, { identity }) => {
-        if (getProperty(await identity, 'id') === getProperty(parent, 'id')) {
-          return true;
-        }
+  // Users can see their own private fields
+  if (session?.appUserId === appUser.id) {
+    return true;
+  }
 
-        return {
-          admin: true,
-        };
-      },
-      unauthorizedResolver: () => null,
-      type: [
-        builder.simpleObject('AppUserVerifiableAddress', {
-          fields: (vat) => ({
-            id: vat.field({ type: 'ShortUuid' }),
-            value: vat.string(),
-            verified: vat.boolean(),
-          }),
-        }),
-      ],
-    }),
-  }),
+  // Otherwise require admin scope
+  return { admin: true };
+}
+
+const AppUserRoleEnum = builder.enumType('AppUserRole', {
+  values: Object.keys(AppUserRole),
 });
 
 export const AppUser = builder.prismaObject('AppUser', {
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
-    profile: t.field({
-      type: AppUserIdentity,
-      resolve: async ({ id }) => {
-        const res = await fetch(`${ORY_KRATOS_ADMIN_URL}/identities/${id}`);
-        const json = userV0Schema.parse(await res.json());
-        return {
-          id,
-          username: json.traits.username,
-          role: json.metadataPublic?.role ?? 'user',
-          verifiableAddresses: json.verifiableAddresses,
-        };
-      },
+    email: t.exposeString('email', {
+      authScopes: privateAuthScopes,
     }),
+    username: t.exposeString('username'),
+    role: t.field({ type: AppUserRoleEnum, resolve: ({ role }) => role }),
     channelMembershipsConnection: t.relatedConnection('channelMemberships', {
       cursor: 'channelId_appUserId',
+      authScopes: privateAuthScopes,
     }),
     organizationMemberhipsConnection: t.relatedConnection(
       'organizationMemberships',
       {
         cursor: 'organizationId_appUserId',
+        authScopes: privateAuthScopes,
       },
     ),
     createdAt: t.field({
@@ -82,12 +65,12 @@ builder.queryFields((t) => ({
     type: AppUser,
     nullable: true,
     resolve: async (query, _root, _args, context, _info) => {
-      const identity = await context.identity;
+      const session = await context.session;
 
-      if (identity) {
+      if (session) {
         return context.prisma.appUser.findUniqueOrThrow({
           ...query,
-          where: { id: identity.id },
+          where: { id: session.appUserId },
         });
       }
 
@@ -117,20 +100,124 @@ builder.queryFields((t) => ({
 }));
 
 builder.mutationFields((t) => ({
-  // TODO: this should be moved to another API that isn't visible from the frontend
-  syncUserProfile: t.boolean({
+  login: t.prismaField({
+    type: 'AppUser',
+    nullable: true,
     args: {
-      id: t.arg({ type: 'Uuid', required: true }),
+      id: t.arg.string({ required: true }),
+      password: t.arg.string({ required: true }),
     },
-    authScopes: { internal: true },
-    resolve: async (_root, { id }, context, _info) => {
-      await context.prisma.appUser.upsert({
-        create: { id },
-        where: { id },
-        update: {},
+    authScopes: {
+      unauthenticated: true,
+    },
+    resolve: async (
+      query,
+      _parent,
+      { id, password },
+      { prisma, setSessionId },
+    ) => {
+      const user = await prisma.appUser.findFirst({
+        ...query,
+        where: { OR: [{ username: id }, { email: id }] },
+        select: {
+          ...(query.select ? query.select : {}),
+          password: true,
+          id: true,
+        },
       });
 
+      if (!user || !(await argon2.verify(user.password, password))) {
+        throw new Error('Error logging in. Please try again.');
+      }
+
+      const { id: sessionId } = await prisma.appSession.create({
+        data: { appUserId: user.id },
+      });
+
+      setSessionId(sessionId);
+
+      return user;
+    },
+  }),
+  logout: t.boolean({
+    authScopes: {
+      authenticated: true,
+    },
+    resolve: async (
+      _parent,
+      _args,
+      { sessionId, clearSessionId, prisma },
+      _info,
+    ) => {
+      invariant(sessionId, 'Session ID is missing');
+      await prisma.appSession.update({
+        where: { id: sessionId },
+        data: { deletedAt: new Date() },
+      });
+
+      clearSessionId();
+
       return true;
+    },
+  }),
+  signup: t.prismaField({
+    type: 'AppUser',
+    args: {
+      username: t.arg.string({ required: true }),
+      password: t.arg.string({ required: true }),
+      email: t.arg.string({ required: true }),
+      fullName: t.arg.string(),
+    },
+    validate: {
+      schema: z.object({
+        username: z.string().min(3).max(20),
+        password: z
+          .string()
+          .max(100)
+          .superRefine((val, ctx) => {
+            const message = zxcvbn(val);
+
+            if (message) {
+              ctx.addIssue({
+                code: ZodIssueCode.custom,
+                message,
+              });
+            }
+          }),
+        email: z.string().email(),
+        fullName: z.string().max(100).optional(),
+      }),
+    },
+    authScopes: {
+      unauthenticated: true,
+    },
+    resolve: async (
+      query,
+      _parent,
+      { username, password, email, fullName },
+      { prisma },
+    ) => {
+      const passwordHash = await argon2.hash(password, {
+        type: argon2.argon2id,
+      });
+      const user = await prisma.appUser.create({
+        ...query,
+        data: {
+          username,
+          email,
+          fullName: fullName || null,
+          password: passwordHash,
+        },
+      });
+      await sendEmail(`signup:${email}`, {
+        from: 'noreply@lets.church',
+        to: email,
+        subject: `Welcome to Let's Church! Please confirm your email.`, // TODO: What should this say?
+        text: `Welcome, ${username}!`,
+        html: `Welcome, <b>${username}</b>!`,
+      });
+
+      return user;
     },
   }),
 }));

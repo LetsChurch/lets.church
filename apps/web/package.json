@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
+    "dev": "run-p dev:*",
+    "dev:vite": "vite dev",
+    "dev:codegen": "node wait.cjs && npm run codegen -- -w src/routes/**/*.ts",
     "build": "vite build",
     "preview": "vite preview",
     "test": "playwright test",
@@ -11,12 +13,23 @@
     "check:lint": "prettier --plugin-search-dir . --check . && eslint .",
     "check:format": "prettier --check .",
     "check:svelte": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "check-watch:svelte": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+    "check-watch:svelte": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "codegen": "graphql-codegen --config codegen.yml"
+  },
+  "dependencies": {
+    "@knpwrs/envariant": "^1.0.2",
+    "camelcase-keys": "^8.0.2",
+    "graphql-request": "^5.0.0",
+    "zod": "^3.19.1"
   },
   "devDependencies": {
+    "@graphql-codegen/cli": "^2.13.12",
+    "@graphql-codegen/near-operation-file-preset": "^2.4.4",
+    "@graphql-codegen/typescript": "^2.8.1",
+    "@graphql-codegen/typescript-operations": "^2.5.6",
     "@playwright/test": "^1.25.0",
-    "@sveltejs/adapter-auto": "next",
-    "@sveltejs/kit": "next",
+    "@sveltejs/adapter-auto": "^1.0.0-next.88",
+    "@sveltejs/kit": "^1.0.0-next.548",
     "@typescript-eslint/eslint-plugin": "^5.27.0",
     "@typescript-eslint/parser": "^5.27.0",
     "eslint": "^8.16.0",
@@ -24,17 +37,13 @@
     "eslint-plugin-svelte3": "^4.0.0",
     "npm-run-all": "^4.1.5",
     "prettier": "^2.6.2",
-    "prettier-plugin-svelte": "^2.7.0",
-    "svelte": "^3.44.0",
-    "svelte-check": "^2.7.1",
-    "svelte-preprocess": "^4.10.6",
+    "prettier-plugin-svelte": "^2.8.0",
+    "svelte": "^3.53.1",
+    "svelte-check": "^2.9.2",
+    "svelte-preprocess": "^4.10.7",
     "tslib": "^2.3.1",
     "typescript": "^4.7.4",
-    "vite": "^3.1.0"
-  },
-  "dependencies": {
-    "@knpwrs/envariant": "^1.0.2",
-    "camelcase-keys": "^8.0.2",
-    "zod": "^3.19.1"
+    "vite": "^3.1.0",
+    "wait-on": "^6.0.1"
   }
 }

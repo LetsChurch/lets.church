@@ -57,7 +57,7 @@ builder.mutationFields((t) => ({
       authenticated: true,
     },
     resolve: async (query, _root, args, context, _info) => {
-      const userId = (await context.identity)?.id;
+      const userId = (await context.session)?.appUserId;
       invariant(userId);
 
       const res = await context.prisma.channel.create({
@@ -70,13 +70,8 @@ builder.mutationFields((t) => ({
             create: {
               isAdmin: true,
               appUser: {
-                connectOrCreate: {
-                  where: {
-                    id: userId,
-                  },
-                  create: {
-                    id: userId,
-                  },
+                connect: {
+                  id: userId,
                 },
               },
             },
@@ -99,14 +94,14 @@ builder.mutationFields((t) => ({
       canUpload: t.arg.boolean({ required: true }),
     },
     authScopes: async (_root, { channelId }, context) => {
-      const identity = await context.identity;
+      const userId = (await context.session)?.appUserId;
 
-      invariant(identity, 'Unauthorized');
+      invariant(userId, 'Unauthorized');
 
       const adminMembership = await context.prisma.channelMembership.findFirst({
         where: {
           channelId,
-          appUserId: identity.id,
+          appUserId: userId,
           isAdmin: true,
         },
       });

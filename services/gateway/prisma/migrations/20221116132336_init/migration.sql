@@ -4,13 +4,34 @@ CREATE EXTENSION IF NOT EXISTS "citext";
 -- CreateExtension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- CreateEnum
+CREATE TYPE "app_user_role" AS ENUM ('USER', 'ADMIN');
+
 -- CreateTable
 CREATE TABLE "app_user" (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "email" CITEXT NOT NULL,
+    "username" CITEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "fullName" VARCHAR(100),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
+    "role" "app_user_role" NOT NULL DEFAULT 'USER',
 
     CONSTRAINT "app_user_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "app_session" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "app_user_id" UUID NOT NULL,
+    "expires_at" TIMESTAMP(3) NOT NULL DEFAULT (now() + '14 days'::interval),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
+
+    CONSTRAINT "app_session_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -89,10 +110,19 @@ CREATE TABLE "upload_record" (
 );
 
 -- CreateIndex
+CREATE UNIQUE INDEX "app_user_email_key" ON "app_user"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "app_user_username_key" ON "app_user"("username");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "organization_slug_key" ON "organization"("slug");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "channel_slug_key" ON "channel"("slug");
+
+-- AddForeignKey
+ALTER TABLE "app_session" ADD CONSTRAINT "app_session_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "organization_membership" ADD CONSTRAINT "organization_membership_channel_id_fkey" FOREIGN KEY ("channel_id") REFERENCES "organization"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

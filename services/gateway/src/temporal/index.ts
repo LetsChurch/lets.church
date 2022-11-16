@@ -4,6 +4,7 @@ import pRetry from 'p-retry';
 import {
   indexDocumentSignal,
   indexDocument as indexDocumentWorkflow,
+  sendEmail as sendEmailWorkflow,
   transcriptionDoneSignal,
 } from './workflows/background';
 import { processUpload as processUploadWorkflow } from './workflows/process-upload';
@@ -48,4 +49,15 @@ export async function indexDocument(kind: DocumentKind, id: string) {
     },
     { retries: 5 },
   );
+}
+
+export async function sendEmail(
+  id: string,
+  ...args: Parameters<typeof sendEmailWorkflow>
+) {
+  return client.start(sendEmailWorkflow, {
+    taskQueue: BACKGROUND_QUEUE,
+    args,
+    workflowId: id,
+  });
 }

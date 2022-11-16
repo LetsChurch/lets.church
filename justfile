@@ -36,9 +36,6 @@ purge-pg:
 # Development
 #
 
-create-user email username password="password" role="user":
-  jo schema_id=user_v0 traits=$(jo email={{email}} username={{username}}) metadata_public=$(jo role={{role}}) verifiable_addresses=$(jo -a $(jo value={{email}} verified=true via=email status=completed)) credentials=$(jo password=$(jo config=$(jo password={{password}}))) | http POST http://localhost:${HOST_ORY_KRATOS_ADMIN_PORT}/identities -Fv
-
 tctl:
   docker exec temporal-admin-tools tctl
 
@@ -58,33 +55,23 @@ gateway-prisma-studio:
 gateway-es-push-mappings:
   docker-compose exec gateway npm run es:push-mappings
 
-migrate-dev-gateway:
+gateway-migrate-dev:
   docker-compose exec gateway npm run prisma:migrate:dev
   cd services/gateway; npm run prisma:generate
-migrate-dev-ory-kratos:
-  docker-compose exec ory-kratos kratos -c /etc/ory-kratos/config.yml migrate sql -e --yes
 
-gateway-init: migrate-dev-gateway gateway-es-push-mappings
+gateway-init: gateway-migrate-dev gateway-es-push-mappings
 
-init: migrate-dev-ory-kratos gateway-init
+init: gateway-init
 
 npmi-gateway: (exec 'gateway' 'npm' 'i')
 npmi-web: (exec 'web' 'npm' 'i')
 npmi: npmi-gateway npmi-web
 
-seed-users:
-  cd scripts; npm run seed:users
-
-seed-gateway:
+seed:
   docker-compose exec gateway npm run prisma:db:seed
-
-seed: seed-users seed-gateway
 
 truncate:
   docker-compose exec gateway npm run prisma:db:truncate
-
-check-auth-hooks:
-  cd services/auth-hooks; npm run check
 
 check-external-hooks:
   cd services/external-hooks; npm run check
@@ -95,10 +82,7 @@ check-gateway:
 check-web:
   cd apps/web; npm run check
 
-check-scripts:
-  cd scripts; npm run check
-
-check: check-auth-hooks check-gateway check-web check-scripts
+check: check-gateway check-web
 
 export CI := "1"
 

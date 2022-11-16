@@ -6,7 +6,7 @@ import { databaseTranscriptSchema } from '../../util/zod';
 
 builder.prismaObject('UploadRecord', {
   authScopes: async (uploadRecord, context) => {
-    const userId = (await context.identity)?.id;
+    const userId = (await context.session)?.appUserId;
 
     if (!userId) {
       return false;
@@ -112,7 +112,7 @@ builder.mutationFields((t) => ({
       uploadMimeType: t.arg.string({ required: true }),
     },
     authScopes: async (_root, args, context) => {
-      const userId = (await context.identity)?.id;
+      const userId = (await context.session)?.appUserId;
 
       if (!userId) {
         return false;
@@ -139,8 +139,8 @@ builder.mutationFields((t) => ({
       return { admin: true };
     },
     resolve: async (query, _root, { channelId, uploadMimeType }, context) => {
-      const identity = await context.identity;
-      invariant(identity, 'No user found!');
+      const userId = (await context.session)?.appUserId;
+      invariant(userId, 'No user found!');
 
       return context.prisma.uploadRecord.create({
         ...query,
@@ -148,7 +148,7 @@ builder.mutationFields((t) => ({
           uploadMimeType,
           uploader: {
             connect: {
-              id: identity.id,
+              id: userId,
             },
           },
           channel: {
@@ -165,7 +165,7 @@ builder.mutationFields((t) => ({
       uploadRecordId: t.arg({ type: 'ShortUuid', required: true }),
     },
     authScopes: async (_root, args, context) => {
-      const userId = (await context.identity)?.id;
+      const userId = (await context.session)?.id;
 
       if (!userId) {
         return false;

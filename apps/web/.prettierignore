@@ -2,3 +2,4 @@ node_modules
 build
 .svelte-kit
 package-lock.json
+**/__generated__/**/*

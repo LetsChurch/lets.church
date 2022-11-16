@@ -1,10 +1,19 @@
+import { getClient, gql } from '../util/graphql-request';
+import type { MeQuery } from '../__generated__/graphql-types';
 import type { LayoutServerLoad } from './$types';
-import { getSelfServiceLogoutUrl, whoAmI } from './auth/ory.server';
 
-export const load: LayoutServerLoad = async ({ request }) => {
-  const cookie = request.headers.get('cookie');
-  const session = await whoAmI(cookie);
-  const logoutUrl = await getSelfServiceLogoutUrl(cookie);
+export const load: LayoutServerLoad = async (event) => {
+  const client = getClient(event);
 
-  return { logoutUrl, session };
+  const res = await client.request<MeQuery>(
+    gql`
+      query Me {
+        me {
+          id
+        }
+      }
+    `,
+  );
+
+  return res;
 };

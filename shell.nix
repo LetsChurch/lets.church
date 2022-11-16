@@ -8,8 +8,6 @@ with (import (fetchTarball {
 
 mkShell {
   packages = [
-    httpie
-    jo
     just
     lazydocker
     navi

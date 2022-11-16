@@ -13,15 +13,41 @@ datasource db {
   extensions = [citext, uuidOssp(map: "uuid-ossp")]
 }
 
+enum AppUserRole {
+  USER
+  ADMIN
+
+  @@map("app_user_role")
+}
+
 model AppUser {
-  id                      String                   @id @db.Uuid
+  id                      String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                   String                   @unique @db.Citext
+  username                String                   @unique @db.Citext
+  password                String
+  fullName                String?                  @db.VarChar(100)
   createdAt               DateTime                 @default(now()) @map("created_at")
   updatedAt               DateTime                 @updatedAt @map("updated_at")
+  deletedAt               DateTime?                @map("deleted_at")
+  role                    AppUserRole              @default(USER)
+  sessions                AppSession[]
   channelMemberships      ChannelMembership[]
   organizationMemberships OrganizationMembership[]
   uploads                 UploadRecord[]
 
   @@map("app_user")
+}
+
+model AppSession {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  appUserId String    @map("app_user_id") @db.Uuid
+  appUser   AppUser   @relation(fields: [appUserId], references: [id])
+  expiresAt DateTime  @default(dbgenerated("(now() + '14 days'::interval)")) @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@map("app_session")
 }
 
 model Organization {

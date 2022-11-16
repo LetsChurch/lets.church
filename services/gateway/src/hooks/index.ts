@@ -1,16 +1,10 @@
-import envariant from '@knpwrs/envariant';
 import camelcaseKeys from 'camelcase-keys';
 import type { FastifyPluginCallback } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
-import { jwtVerify } from 'jose';
+import invariant from 'tiny-invariant';
 import * as Z from 'zod';
 import { processTranscript } from '../temporal';
-
-const JWT_SECRET = Buffer.from(envariant('JWT_SECRET'), 'hex');
-
-const jwtSchema = Z.object({
-  id: Z.string().uuid(),
-});
+import { parseAssemblyAiJwt } from '../util/jwt';
 
 const register: FastifyPluginCallback = (app, _opts, done) => {
   app.withTypeProvider<ZodTypeProvider>().post(
@@ -34,9 +28,9 @@ const register: FastifyPluginCallback = (app, _opts, done) => {
       }
 
       try {
-        const { payload } = await jwtVerify(jwt, JWT_SECRET);
-        const jwtPayload = jwtSchema.parse(payload);
-        await processTranscript(jwtPayload.id, req.body);
+        const jwtPayload = await parseAssemblyAiJwt(jwt);
+        invariant(jwtPayload, 'Missing JWT Payload!');
+        await processTranscript(jwtPayload.uploadId, req.body);
       } catch (e) {
         return reply.status(401).send();
       }

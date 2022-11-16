@@ -21,31 +21,13 @@ services:
     ports:
       - ${HOST_WEB_PORT}:3000
     environment:
-      GRAPHQL_ENDPOINT: http://gateway:3000/graphql
-      ORY_KRATOS_PUBLIC_URL: http://ory-kratos:3000
-      ORY_KRATOS_BROWSER_URL: http://localhost:${HOST_ORY_KRATOS_PUBLIC_PORT}
+      GRAPHQL_URL: http://gateway:3000/graphql
     volumes:
       - ./apps/web:/home/node/app
       - web-node-modules:/home/node/app/node_modules
+    command: npm run dev
     depends_on:
       - gateway
-
-  auth-hooks:
-    build:
-      context: ./services/auth-hooks
-      dockerfile: Dockerfile
-      target: dev
-    ports:
-      - ${HOST_AUTH_HOOKS_PORT}:3000
-    environment:
-      AUTH_HOOKS_SECRET: ${AUTH_HOOKS_SECRET}
-      GATEWAY_GRAPHQL_URL: http://gateway:3000/graphql
-      ORY_KRATOS_ADMIN_URL: http://ory-kratos:3001
-    volumes:
-      - ./services/auth-hooks:/home/node/app
-      - auth-hooks-node-modules:/home/node/app/node_modules
-    depends_on:
-      - ory-kratos
 
   gateway:
     build:
@@ -55,24 +37,22 @@ services:
     ports:
       - ${HOST_GATEWAY_PORT}:3000
     environment:
-      AUTH_HOOKS_SECRET: ${AUTH_HOOKS_SECRET}
+      COOKIE_SECRET: ${COOKIE_SECRET}
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       ELASTICSEARCH_URL: http://elasticsearch:9200
       EXTERNAL_HOOKS_HOST: ${EXTERNAL_HOOKS_HOST}
       JWT_SECRET: ${JWT_SECRET}
-      ORY_KRATOS_ADMIN_URL: http://ory-kratos:3001
-      ORY_KRATOS_PUBLIC_URL: http://ory-kratos:3000
       S3_REGION: ${S3_REGION}
       S3_ENDPOINT: ${S3_ENDPOINT}
       S3_BUCKET: ${S3_BUCKET}
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
       TEMPORAL_ADDRESS: temporal:7233
+      ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
     volumes:
       - ./services/gateway:/home/node/app
       - gateway-node-modules:/home/node/app/node_modules
     depends_on:
-      - ory-kratos
       - temporal
   
   process-upload-worker:
@@ -109,42 +89,15 @@ services:
       S3_BUCKET: ${S3_BUCKET}
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      SMTP_URL: smtp://mailhog:1025?pool=true
     volumes:
       - ./services/gateway:/home/node/app
       - background-worker-node-modules:/home/node/app/node_modules
     command: npm run dev:background-worker
+
   #
   # Vendor Services
   #
-  ory-kratos:
-    image: oryd/kratos:v0.10.1
-    ports:
-      - ${HOST_ORY_KRATOS_PUBLIC_PORT}:3000 # public
-      - ${HOST_ORY_KRATOS_ADMIN_PORT}:3001 # admin
-    restart: unless-stopped
-    environment:
-      DSN: postgres://ory_kratos:password@postgres:5432/ory_kratos?sslmode=disable&max_conns=20&max_idle_conns=4
-      SERVE_PUBLIC_PORT: 3000
-      SERVE_PUBLIC_BASE_URL: http://localhost:${HOST_ORY_KRATOS_PUBLIC_PORT}/
-      SERVE_ADMIN_PORT: 3001
-      SERVE_ADMIN_BASE_URL: http://ory-kratos:${HOST_ORY_KRATOS_ADMIN_PORT}/
-
-      SELFSERVICE_DEFAULT_BROWSER_RETURN_URL: http://localhost:${HOST_WEB_PORT}/
-      SELFSERVICE_ALLOWED_RETURN_URLS_0: http://localhost:${HOST_WEB_PORT}/
-      SELFSERVICE_FLOWS_ERROR_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/error
-      SELFSERVICE_FLOWS_SETTINGS_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/settings
-      SELFSERVICE_FLOWS_RECOVERY_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/recover
-      SELFSERVICE_FLOWS_REGISTRATION_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/register
-      SELFSERVICE_FLOWS_REGISTRATION_AFTER_HOOKS_0_CONFIG_URL: http://auth-hooks:3000/after/registration
-      SELFSERVICE_FLOWS_VERIFICATION_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/verify
-      SELFSERVICE_FLOWS_LOGIN_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/login
-      SELFSERVICE_FLOWS_LOGOUT_UI_URL: http://localhost:${HOST_WEB_PORT}/auth/logout
-      SELFSERVICE_FLOWS_LOGOUT_AFTER_DEFAULT_BROWSER_RETURN_URL: http://127.0.0.1:${HOST_WEB_PORT}/auth/login
-      COURIER_SMTP_CONNECTION_URI: smtps://mailhog_stunnel:4650/?skip_ssl_verify=true
-    command: serve -c /etc/ory-kratos/config.yml --dev --watch-courier
-    volumes:
-      - ./etc/ory-kratos:/etc/ory-kratos
-
   temporal:
     image: temporalio/auto-setup:1.18.3
     environment:
@@ -243,24 +196,15 @@ services:
     ports:
       - ${HOST_MAILHOG_SMTP_PORT}:1025 # smtp server
       - ${HOST_MAILHOG_WEB_PORT}:8025 # web ui
-  mailhog_stunnel:
-    image: dweomer/stunnel
-    restart: always
-    environment:
-      - STUNNEL_SERVICE=smtps
-      - STUNNEL_ACCEPT=4650
-      - STUNNEL_CONNECT=mailhog:1025
-    ports:
-      - ${HOST_MAILHOG_SMTPS_PORT}:4650 # smtp tls
   webhooks-tunnel:
     build:
-      context: ./scripts
+      context: ./etc
       dockerfile: ssh.Dockerfile
     volumes:
       - type: bind
         source: ${LHR_KEYFILE}
         target: /private-key
       - type: bind
-        source: ./scripts/known_hosts
+        source: ./etc/known_hosts
         target: /root/.ssh/known_hosts
     command: ssh -i /private-key -R ${LHR_DOMAIN}:80:gateway:3000 plan@localhost.run

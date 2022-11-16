@@ -3,8 +3,8 @@ import ScopeAuthPlugin from '@pothos/plugin-scope-auth';
 import PrismaPlugin from '@pothos/plugin-prisma';
 import RelayPlugin from '@pothos/plugin-relay';
 import SimpleObjectsPlugin from '@pothos/plugin-simple-objects';
+import ValidationPlugin from '@pothos/plugin-validation';
 import type PrismaTypes from '@pothos/plugin-prisma/generated';
-import envariant from '@knpwrs/envariant';
 import TracingPlugin, {
   wrapResolver,
   isRootField,
@@ -12,15 +12,13 @@ import TracingPlugin, {
 import type { Context } from '../util/context';
 import prisma from '../util/prisma';
 
-const AUTH_HOOKS_SECRET = envariant('AUTH_HOOKS_SECRET');
-
 export default new SchemaBuilder<{
   PrismaTypes: PrismaTypes;
   Context: Context;
   AuthScopes: {
     authenticated: boolean;
+    unauthenticated: boolean;
     admin: boolean;
-    internal: boolean;
   };
   Scalars: {
     DateTime: {
@@ -45,19 +43,20 @@ export default new SchemaBuilder<{
     RelayPlugin,
     TracingPlugin,
     SimpleObjectsPlugin,
+    ValidationPlugin,
   ],
-  authScopes: async ({ identity, authorization }) => ({
-    authenticated: async () => !!(await identity),
+  authScopes: async ({ session }) => ({
+    authenticated: async () => !!(await session),
+    unauthenticated: async () => !(await session),
     admin: async () => {
-      const i = await identity;
+      const s = await session;
 
-      if (i) {
-        return i.metadataPublic?.role === 'admin';
+      if (s) {
+        return s.appUser.role === 'ADMIN';
       }
 
       return false;
     },
-    internal: authorization === AUTH_HOOKS_SECRET,
   }),
   prisma: {
     client: prisma,

@@ -1,10 +1,11 @@
 <script lang="ts">
-  import type { PageData } from './$types';
-  import OryForm from '../ory-form.svelte';
-
-  export let data: PageData;
+  import { enhance } from '$app/forms';
 </script>
 
 <h2>Login</h2>
 
-<OryForm action={data.oryUi.action} nodes={data.oryUi.nodes} />
+<form method="POST" action="/auth?/login" use:enhance>
+  <input name="id" placeholder="Username or Email" />
+  <input name="password" type="password" placeholder="password" />
+  <button type="submit">Login</button>
+</form>
