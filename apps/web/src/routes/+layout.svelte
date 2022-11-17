@@ -29,3 +29,9 @@
 {/if}
 
 <slot />
+
+<style>
+  h1 {
+    color: var(--red-6);
+  }
+</style>

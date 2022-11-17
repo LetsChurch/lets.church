@@ -9,3 +9,9 @@
   <input name="password" type="password" placeholder="password" />
   <button type="submit">Login</button>
 </form>
+
+<style>
+  h2 {
+    color: var(--red-6);
+  }
+</style>
