@@ -1,18 +1,12 @@
 import { faker } from '@faker-js/faker';
-import envariant from '@knpwrs/envariant';
 import slugify from '@sindresorhus/slugify';
-import waitOn from 'wait-on';
 import argon2 from 'argon2';
-import { indexDocument } from '../src/temporal';
+import { indexDocument, waitOnTemporal } from '../src/temporal';
 import prisma from '../src/util/prisma';
-
-const TEMPORAL_ADDRESS = envariant('TEMPORAL_ADDRESS');
 
 faker.seed(1337);
 
-await waitOn({
-  resources: [`tcp:${TEMPORAL_ADDRESS}`],
-});
+await waitOnTemporal();
 
 const password = await argon2.hash('password', { type: argon2.argon2id });
 

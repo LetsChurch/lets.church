@@ -1,6 +1,7 @@
 import envariant from '@knpwrs/envariant';
 import { Connection, WorkflowClient } from '@temporalio/client';
 import pRetry from 'p-retry';
+import waitOn from 'wait-on';
 import {
   indexDocumentSignal,
   indexDocument as indexDocumentWorkflow,
@@ -60,4 +61,14 @@ export async function sendEmail(
     args,
     workflowId: id,
   });
+}
+
+export async function waitOnTemporal() {
+  console.log('Waiting for Temporal');
+
+  await waitOn({
+    resources: [`tcp:${TEMPORAL_ADDRESS}`],
+  });
+
+  console.log('Temporal is available!');
 }
