@@ -22,6 +22,7 @@ await prisma.appUser.createMany({
       email: 'admin@lets.church',
       username: 'admin',
       password,
+      role: 'ADMIN',
     },
     {
       email: 'user1@example.org',
