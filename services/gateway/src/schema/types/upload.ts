@@ -165,7 +165,7 @@ builder.mutationFields((t) => ({
       uploadRecordId: t.arg({ type: 'ShortUuid', required: true }),
     },
     authScopes: async (_root, args, context) => {
-      const userId = (await context.session)?.id;
+      const userId = (await context.session)?.appUserId;
 
       if (!userId) {
         return false;
