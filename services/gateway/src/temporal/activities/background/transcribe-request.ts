@@ -8,7 +8,7 @@ const EXTERNAL_HOOKS_HOST = envariant('EXTERNAL_HOOKS_HOST');
 export default async function transcribeRequest(uploadId: string) {
   const presignedGet = await createPresignedGetUrl(uploadId);
 
-  const jwt = createAssemblyAiJwt({ uploadId });
+  const jwt = await createAssemblyAiJwt({ uploadId });
 
   const res = await fetch('https://api.assemblyai.com/v2/transcript', {
     method: 'POST',
