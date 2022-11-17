@@ -8,7 +8,7 @@ export const handleFetch: HandleFetch = async ({ event, request, fetch }) => {
   const cookie = event.request.headers.get('cookie');
 
   if (request.url.startsWith(GRAPHQL_URL) && cookie) {
-    request.headers.set('cookie', cookie);
+    request.headers.set('cookie', decodeURIComponent(cookie));
   }
 
   const res = await fetch(request);
