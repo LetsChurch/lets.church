@@ -15,6 +15,8 @@ export default async function context({
   const rawCookie = req.cookies[COOKIE_KEY];
   const cookedCookie = rawCookie ? req.unsignCookie(rawCookie) : null;
 
+  console.log({ rawCookie, cookedCookie });
+
   const session = PLazy.from(async () => {
     if (!cookedCookie || !cookedCookie.valid || !cookedCookie.value) {
       return null;

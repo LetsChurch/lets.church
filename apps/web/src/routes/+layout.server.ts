@@ -1,5 +1,5 @@
-import { getClient, gql } from '../util/graphql-request';
-import type { MeQuery } from '../__generated__/graphql-types';
+import { getClient, gql } from '~/util/graphql-request';
+import type { MeQuery } from '~/__generated__/graphql-types';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async (event) => {

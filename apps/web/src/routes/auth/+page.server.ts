@@ -1,11 +1,11 @@
 import { redirect } from '@sveltejs/kit';
 import * as Z from 'zod';
-import { getClient, gql } from '../../util/graphql-request';
+import { getClient, gql } from '~/util/graphql-request';
 import type {
   LoginMutation,
   LoginMutationVariables,
   LogoutMutation,
-} from '../../__generated__/graphql-types';
+} from '~/__generated__/graphql-types';
 import type { Actions } from './$types';
 
 const LoginSchema = Z.object({
@@ -48,6 +48,6 @@ export const actions: Actions = {
       `,
     );
 
-    throw redirect(307, '/');
+    throw redirect(307, '/auth/login');
   },
 };

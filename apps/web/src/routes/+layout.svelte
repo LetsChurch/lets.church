@@ -1,31 +1,31 @@
 <script lang="ts">
+  import '@fontsource/inter/variable-full.css';
+  import '~/app.css';
+  import Header from '~/components/header.svelte';
+  import Footer from '~/components/footer.svelte';
   import type { LayoutData } from './$types';
-  import { enhance } from '$app/forms';
 
   export let data: LayoutData;
 </script>
 
-<h1>Let's Church</h1>
+<Header me={data.me} />
 
-<nav>
-  <ul>
-    <li><a href="/">Home</a></li>
-    <li>
-      {#if data.me?.id}
-        <form method="POST" action="/auth?/logout" use:enhance>
-          <button type="submit">Logout</button>
-        </form>
-      {:else}
-        <a href="/auth/login">Login</a>
-      {/if}
-    </li>
-  </ul>
-</nav>
+<main class="mt-5">
+  <div class="mx-auto max-w-7xl">
+    <slot />
+  </div>
+</main>
 
-{#if data.me}
-  {data.me.id}
-{:else}
-  Not logged in!
-{/if}
+<Footer />
 
-<slot />
+<style>
+  :global(html, body) {
+    height: 100%;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    height: 100%;
+  }
+</style>
