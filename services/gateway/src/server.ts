@@ -1,4 +1,4 @@
-import { createServer } from '@graphql-yoga/node';
+import { createYoga } from 'graphql-yoga';
 import fastify, { FastifyRequest, FastifyReply } from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import { useDisableIntrospection } from '@envelop/disable-introspection';
@@ -24,26 +24,26 @@ const graphqlPlugins = [
   process.env['NODE_ENV'] !== 'development' && useDisableIntrospection,
 ];
 
-const graphqlServer = createServer<{
+const graphqlHandler = createYoga<{
   req: FastifyRequest;
   reply: FastifyReply;
 }>({
   schema,
   context,
   plugins: graphqlPlugins,
-  port: 3000,
 });
 
 app.route({
   url: '/graphql',
   method: ['GET', 'POST', 'OPTIONS'],
   async handler(req, reply) {
-    const response = await graphqlServer.handleIncomingMessage(req, {
+    const response = await graphqlHandler.handleNodeRequest(req, {
       req,
       reply,
     });
     response.headers.forEach((value, key) => {
-      reply.header(key, value);
+      // TODO: https://github.com/prisma-labs/graphql-request/issues/373
+      reply.header(key, value.replace('graphql-response+', ''));
     });
 
     reply.status(response.status);
