@@ -62,7 +62,6 @@ builder.mutationFields((t) => ({
 
       const res = await context.prisma.channel.create({
         ...query,
-        select: { ...(query.select ?? {}), id: true },
         data: {
           ...args,
           slug: args.slug || slugify(args.name),

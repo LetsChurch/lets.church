@@ -9,7 +9,7 @@ import { ZodIssueCode } from 'zod';
 import { sendEmail } from '../../temporal';
 
 async function privateAuthScopes(
-  appUser: PrismaAppUser,
+  appUser: Pick<PrismaAppUser, 'id'>,
   _args: unknown,
   context: Context,
 ) {
@@ -29,6 +29,7 @@ const AppUserRoleEnum = builder.enumType('AppUserRole', {
 });
 
 export const AppUser = builder.prismaObject('AppUser', {
+  select: { id: true, password: true, role: true },
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
     email: t.exposeString('email', {
@@ -119,11 +120,6 @@ builder.mutationFields((t) => ({
       const user = await prisma.appUser.findFirst({
         ...query,
         where: { OR: [{ username: id }, { email: id }] },
-        select: {
-          ...(query.select ? query.select : {}),
-          password: true,
-          id: true,
-        },
       });
 
       if (!user || !(await argon2.verify(user.password, password))) {
