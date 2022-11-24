@@ -1,5 +1,6 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
+  import { page } from '$app/stores';
   import { offset, flip, shift } from '@floating-ui/dom';
   import { createFloatingActions } from 'svelte-floating-ui';
   import tclasses from 'svelte-transition-classes';
@@ -24,6 +25,12 @@
   function closeMenu() {
     showMenu = false;
   }
+
+  export const profileLinks = [
+    { href: '/upload', label: 'Upload' },
+    { href: '#', label: 'Your Profile' },
+    { href: '#', label: 'Settings' },
+  ];
 </script>
 
 <div class="relative ml-4 flex-shrink-0">
@@ -80,23 +87,17 @@
       }}
       use:portal={'body'}
     >
-      <!-- Active: "bg-gray-100", Not Active: "" -->
-      <a
-        href="#"
-        class="block px-4 py-2 text-sm text-gray-700"
-        role="menuitem"
-        tabindex="-1"
-        id="user-menu-item-0"
-        use:clickOutside={closeMenu}>Your Profile</a
-      >
-      <a
-        href="#"
-        class="block px-4 py-2 text-sm text-gray-700"
-        role="menuitem"
-        tabindex="-1"
-        id="user-menu-item-1"
-        use:clickOutside={closeMenu}>Settings</a
-      >
+      {#each profileLinks as { href, label }}
+        <a
+          {href}
+          class="block px-4 py-2 text-sm text-gray-700"
+          class:bg-gray-100={$page.route.id === href}
+          role="menuitem"
+          tabindex="-1"
+          id="user-menu-item-0"
+          use:clickOutside={closeMenu}>{label}</a
+        >
+      {/each}
       <form method="POST" action="/auth?/logout" use:enhance>
         <button type="submit" class="block px-4 py-2 text-sm text-gray-700"
           >Logout</button
