@@ -2,29 +2,31 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import PLazy from 'p-lazy';
 import prisma from './prisma';
 import { client as esClient } from './elasticsearch';
-
-const COOKIE_KEY = 'lcSessionId';
+import { parseSessionJwt } from './jwt';
 
 export default async function context({
   req,
-  reply,
+  reply: _reply,
 }: {
   req: FastifyRequest;
   reply: FastifyReply;
 }) {
-  const rawCookie = req.cookies[COOKIE_KEY];
-  const cookedCookie = rawCookie ? req.unsignCookie(rawCookie) : null;
-
-  console.log({ rawCookie, cookedCookie });
+  const sessionJwt = req.headers.authorization?.split(' ')[1];
 
   const session = PLazy.from(async () => {
-    if (!cookedCookie || !cookedCookie.valid || !cookedCookie.value) {
+    if (!sessionJwt) {
+      return null;
+    }
+
+    const parsed = await parseSessionJwt(sessionJwt);
+
+    if (!parsed) {
       return null;
     }
 
     const s = prisma.appSession.findFirst({
       where: {
-        id: cookedCookie.value,
+        id: parsed.sub,
         expiresAt: { gt: new Date() },
         deletedAt: null,
       },
@@ -34,21 +36,10 @@ export default async function context({
     return s;
   });
 
-  function setSessionId(sessionId: string) {
-    reply.setCookie(COOKIE_KEY, sessionId, { signed: true });
-  }
-
-  function clearSessionId() {
-    reply.clearCookie(COOKIE_KEY);
-  }
-
   return {
     prisma,
     esClient,
-    sessionId: cookedCookie?.value ?? null,
     session,
-    setSessionId,
-    clearSessionId,
   };
 }
 

@@ -1,3 +1,5 @@
+import { onCleanup } from 'solid-js';
+
 export default function clickOutside(
   node: HTMLElement,
   fn: (event: MouseEvent) => unknown,
@@ -15,9 +17,8 @@ export default function clickOutside(
 
   document.addEventListener('click', handleClick, true);
 
-  return {
-    destroy() {
-      document.removeEventListener('click', handleClick, true);
-    },
-  };
+  onCleanup(() => {
+    console.log('Cleaning up!');
+    document.removeEventListener('click', handleClick, true);
+  });
 }

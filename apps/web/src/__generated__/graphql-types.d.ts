@@ -134,7 +134,7 @@ export type Mutation = {
   createOrganization: Organization;
   createUploadRecord: UploadRecord;
   finalizeUpload: Scalars['Boolean'];
-  login?: Maybe<AppUser>;
+  login?: Maybe<Scalars['String']>;
   logout: Scalars['Boolean'];
   signup: AppUser;
   upsertChannelMembership: ChannelMembership;
@@ -388,21 +388,3 @@ export type UploadRecord = {
   uploadUrl: Scalars['String'];
   uploader: AppUser;
 };
-
-export type MeQueryVariables = Exact<{ [key: string]: never; }>;
-
-
-export type MeQuery = { __typename?: 'Query', me?: { __typename?: 'AppUser', id: string } | null };
-
-export type LoginMutationVariables = Exact<{
-  id: Scalars['String'];
-  password: Scalars['String'];
-}>;
-
-
-export type LoginMutation = { __typename?: 'Mutation', login?: { __typename?: 'AppUser', id: string } | null };
-
-export type LogoutMutationVariables = Exact<{ [key: string]: never; }>;
-
-
-export type LogoutMutation = { __typename?: 'Mutation', logout: boolean };

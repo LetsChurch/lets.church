@@ -1,4 +1,5 @@
 node_modules
-build
-.svelte-kit
+dist
+.solid
 package-lock.json
+**/__generated__/**/*

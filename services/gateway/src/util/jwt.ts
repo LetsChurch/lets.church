@@ -21,7 +21,10 @@ function jwtFactory<S extends ZodTypeAny>(Schema: S, expires?: string) {
     parse: async (jwt?: string): Promise<T | null> => {
       try {
         return jwt
-          ? Schema.parse((await jwtVerify(jwt, jwtSecret)).payload)
+          ? Schema.parse(
+              (await jwtVerify(jwt, jwtSecret, { algorithms: ['HS512'] }))
+                .payload,
+            )
           : null;
       } catch (e) {
         // Expired or invalid
@@ -37,3 +40,12 @@ const AssemblyAiJwtSchema = Z.object({
 
 export const { create: createAssemblyAiJwt, parse: parseAssemblyAiJwt } =
   jwtFactory(AssemblyAiJwtSchema, '2h');
+
+const SessionJwtSchema = Z.object({
+  sub: Z.string().uuid(),
+});
+
+export const { create: createSessionJwt, parse: parseSessionJwt } = jwtFactory(
+  SessionJwtSchema,
+  '2w',
+);

@@ -1,21 +1,15 @@
 import { createYoga } from 'graphql-yoga';
 import fastify, { FastifyRequest, FastifyReply } from 'fastify';
-import fastifyCookie from '@fastify/cookie';
 import { useDisableIntrospection } from '@envelop/disable-introspection';
 import {
   serializerCompiler,
   validatorCompiler,
 } from 'fastify-type-provider-zod';
-import envariant from '@knpwrs/envariant';
 import context from './util/context';
 import schema from './schema';
 import hooks from './hooks';
 
 const app = fastify({ logger: true });
-
-app.register(fastifyCookie, {
-  secret: envariant('COOKIE_SECRET'),
-});
 
 app.setValidatorCompiler(validatorCompiler);
 app.setSerializerCompiler(serializerCompiler);

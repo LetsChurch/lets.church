@@ -7,6 +7,7 @@ import type { Context } from '../../util/context';
 import zxcvbn from '../../util/zxcvbn';
 import { ZodIssueCode } from 'zod';
 import { sendEmail } from '../../temporal';
+import { createSessionJwt } from '../../util/jwt';
 
 async function privateAuthScopes(
   appUser: Pick<PrismaAppUser, 'id'>,
@@ -101,8 +102,7 @@ builder.queryFields((t) => ({
 }));
 
 builder.mutationFields((t) => ({
-  login: t.prismaField({
-    type: 'AppUser',
+  login: t.string({
     nullable: true,
     args: {
       id: t.arg.string({ required: true }),
@@ -111,14 +111,8 @@ builder.mutationFields((t) => ({
     authScopes: {
       unauthenticated: true,
     },
-    resolve: async (
-      query,
-      _parent,
-      { id, password },
-      { prisma, setSessionId },
-    ) => {
+    resolve: async (_parent, { id, password }, { prisma }) => {
       const user = await prisma.appUser.findFirst({
-        ...query,
         where: { OR: [{ username: id }, { email: id }] },
       });
 
@@ -130,28 +124,22 @@ builder.mutationFields((t) => ({
         data: { appUserId: user.id },
       });
 
-      setSessionId(sessionId);
-
-      return user;
+      return createSessionJwt({ sub: sessionId });
     },
   }),
   logout: t.boolean({
     authScopes: {
       authenticated: true,
     },
-    resolve: async (
-      _parent,
-      _args,
-      { sessionId, clearSessionId, prisma },
-      _info,
-    ) => {
-      invariant(sessionId, 'Session ID is missing');
+    resolve: async (_parent, _args, { session, prisma }, _info) => {
+      const s = await session;
+
+      invariant(s, 'No session!');
+
       await prisma.appSession.update({
-        where: { id: sessionId },
+        where: { id: s.id },
         data: { deletedAt: new Date() },
       });
-
-      clearSessionId();
 
       return true;
     },

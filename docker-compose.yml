@@ -37,7 +37,6 @@ services:
     ports:
       - ${HOST_GATEWAY_PORT}:3000
     environment:
-      COOKIE_SECRET: ${COOKIE_SECRET}
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       ELASTICSEARCH_URL: http://elasticsearch:9200
       EXTERNAL_HOOKS_HOST: ${EXTERNAL_HOOKS_HOST}
