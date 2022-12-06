@@ -33,7 +33,8 @@ model AppUser {
   sessions                AppSession[]
   channelMemberships      ChannelMembership[]
   organizationMemberships OrganizationMembership[]
-  uploads                 UploadRecord[]
+  createdUploads          UploadRecord[]           @relation("createdUploads")
+  finalizedUploads        UploadRecord[]           @relation("finalizedUploads")
 
   @@map("app_user")
 }
@@ -120,13 +121,16 @@ model ChannelMembership {
 
 model UploadRecord {
   id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  uploader            AppUser   @relation(fields: [appUserId], references: [id])
+  title               String?
+  description         String?
+  createdBy           AppUser   @relation("createdUploads", fields: [appUserId], references: [id])
   appUserId           String    @map("app_user_id") @db.Uuid
   channel             Channel   @relation(fields: [channelId], references: [id])
   channelId           String    @map("channel_id") @db.Uuid
-  uploadMimeType      String    @map("upload_mime_type")
   uploadSizeBytes     BigInt?   @map("upload_size_bytes")
   uploadFinalized     Boolean   @default(false) @map("upload_finalized")
+  uploadFinalizedBy   AppUser?  @relation("finalizedUploads", fields: [uploadFinalizedById], references: [id])
+  uploadFinalizedById String?   @map("upload_finalized_by_id") @db.Uuid
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
   deletedAt           DateTime? @map("deleted_at")

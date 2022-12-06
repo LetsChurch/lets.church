@@ -9,7 +9,7 @@
     "check": "npm-run-all check:*",
     "check:lint": "eslint --ext .ts,.tsx .",
     "check:format": "prettier --check .",
-    "check:types": "tsc",
+    "check:ts": "tsc",
     "codegen": "graphql-codegen --config codegen.yml",
     "postinstall": "patch-package"
   },
@@ -20,13 +20,17 @@
   "dependencies": {
     "@fontsource/inter": "^4.5.14",
     "@knpwrs/envariant": "^1.0.2",
+    "@solid-primitives/scheduled": "^1.2.0",
     "@solidjs/meta": "^0.28.2",
     "@solidjs/router": "^0.5.1",
     "@tabler/icons": "^1.113.0",
     "graphql-request": "^5.0.0",
+    "p-progress": "^0.6.0",
+    "p-retry": "^5.1.2",
     "solid-floating-ui": "^0.2.0",
     "solid-js": "^1.6.2",
     "solid-start": "^0.2.6",
+    "tiny-invariant": "^1.3.1",
     "undici": "^5.11.0",
     "zod": "^3.19.1"
   },

@@ -9,11 +9,11 @@ import { Portal } from 'solid-js/web';
 import { A, useLocation } from 'solid-start';
 import { useFloating } from 'solid-floating-ui';
 import clickOutside from '~/util/click-outside';
-import type { MeQuery } from '~/routes/__generated__/(root)';
 import { useBeforeLeave, useIsRouting } from '@solidjs/router';
 import ShowTransition from './show-transition';
 import { createServerAction$ } from 'solid-start/server';
 import logoutAction from '~/util/logout-action';
+import type { MeQuery } from '~/routes/__generated__/(root)';
 
 export const profileLinks = [
   { href: '/upload', label: 'Upload' },

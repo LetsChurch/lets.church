@@ -31,6 +31,7 @@ export type AppUser = {
 export type AppUserChannelMembershipsConnectionArgs = {
   after?: InputMaybe<Scalars['String']>;
   before?: InputMaybe<Scalars['String']>;
+  canUpload?: InputMaybe<Scalars['Boolean']>;
   first?: InputMaybe<Scalars['Int']>;
   last?: InputMaybe<Scalars['Int']>;
 };
@@ -128,17 +129,27 @@ export type ISearchHit = {
   id: Scalars['ShortUuid'];
 };
 
+export type MultipartUploadMeta = {
+  __typename?: 'MultipartUploadMeta';
+  partSize: Scalars['Int'];
+  s3UploadId: Scalars['String'];
+  s3UploadKey: Scalars['String'];
+  urls: Array<Scalars['String']>;
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   createChannel: Channel;
+  createMultipartUpload: MultipartUploadMeta;
   createOrganization: Organization;
-  createUploadRecord: UploadRecord;
   finalizeUpload: Scalars['Boolean'];
   login?: Maybe<Scalars['String']>;
   logout: Scalars['Boolean'];
   signup: AppUser;
+  thumbnailUploadUrl: Scalars['String'];
   upsertChannelMembership: ChannelMembership;
   upsertOrganizationMembership: OrganizationMembership;
+  upsertUploadRecord: UploadRecord;
 };
 
 
@@ -148,19 +159,23 @@ export type MutationCreateChannelArgs = {
 };
 
 
+export type MutationCreateMultipartUploadArgs = {
+  bytes: Scalars['Int'];
+  uploadMimeType: Scalars['String'];
+  uploadRecordId: Scalars['ShortUuid'];
+};
+
+
 export type MutationCreateOrganizationArgs = {
   name: Scalars['String'];
   slug?: InputMaybe<Scalars['String']>;
 };
 
 
-export type MutationCreateUploadRecordArgs = {
-  channelId: Scalars['ShortUuid'];
-  uploadMimeType: Scalars['String'];
-};
-
-
 export type MutationFinalizeUploadArgs = {
+  s3PartETags: Array<Scalars['String']>;
+  s3UploadId: Scalars['String'];
+  s3UploadKey: Scalars['String'];
   uploadRecordId: Scalars['ShortUuid'];
 };
 
@@ -179,6 +194,12 @@ export type MutationSignupArgs = {
 };
 
 
+export type MutationThumbnailUploadUrlArgs = {
+  uploadMimeType: Scalars['String'];
+  uploadRecordId: Scalars['ShortUuid'];
+};
+
+
 export type MutationUpsertChannelMembershipArgs = {
   canEdit: Scalars['Boolean'];
   canUpload: Scalars['Boolean'];
@@ -193,6 +214,14 @@ export type MutationUpsertOrganizationMembershipArgs = {
   isAdmin: Scalars['Boolean'];
   organizationId: Scalars['ShortUuid'];
   userId: Scalars['ShortUuid'];
+};
+
+
+export type MutationUpsertUploadRecordArgs = {
+  channelId: Scalars['ShortUuid'];
+  description?: InputMaybe<Scalars['String']>;
+  title?: InputMaybe<Scalars['String']>;
+  uploadRecordId?: InputMaybe<Scalars['ShortUuid']>;
 };
 
 export type Organization = {
@@ -380,11 +409,11 @@ export type UploadRecord = {
   __typename?: 'UploadRecord';
   channel: Channel;
   createdAt: Scalars['DateTime'];
+  createdBy: AppUser;
   id: Scalars['ShortUuid'];
   transcriptSentences?: Maybe<Array<TranscriptSentence>>;
   updatedAt: Scalars['DateTime'];
   uploadFinalized: Scalars['Boolean'];
+  uploadFinalizedBy: AppUser;
   uploadSizeBytes?: Maybe<Scalars['String']>;
-  uploadUrl: Scalars['String'];
-  uploader: AppUser;
 };

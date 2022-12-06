@@ -22,6 +22,7 @@ services:
       - ${HOST_WEB_PORT}:3000
     environment:
       GRAPHQL_URL: http://gateway:3000/graphql
+      VITE_GRAPHQL_URL: ${HOST_GATEWAY_URL}/graphql
     volumes:
       - ./apps/web:/home/node/app
       - web-node-modules:/home/node/app/node_modules

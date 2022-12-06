@@ -1,6 +1,6 @@
 import envariant from '@knpwrs/envariant';
 import { GraphQLClient } from 'graphql-request';
-import { getSessionJwt } from './session';
+import { getSessionJwt } from '../session';
 
 export { gql } from 'graphql-request';
 

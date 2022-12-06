@@ -1,5 +1,5 @@
 import { redirect } from 'solid-start/server';
-import { createAuthenticatedClient, gql } from './gql';
+import { createAuthenticatedClient, gql } from './gql/server';
 import { storage } from './session';
 
 const action = async (_form: FormData, { request }: { request: Request }) => {

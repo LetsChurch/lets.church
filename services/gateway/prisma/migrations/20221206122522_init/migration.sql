@@ -96,11 +96,13 @@ CREATE TABLE "channel_membership" (
 -- CreateTable
 CREATE TABLE "upload_record" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "title" TEXT,
+    "description" TEXT,
     "app_user_id" UUID NOT NULL,
     "channel_id" UUID NOT NULL,
-    "upload_mime_type" TEXT NOT NULL,
     "upload_size_bytes" BIGINT,
     "upload_finalized" BOOLEAN NOT NULL DEFAULT false,
+    "upload_finalized_by_id" UUID,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "deleted_at" TIMESTAMP(3),
@@ -147,3 +149,6 @@ ALTER TABLE "upload_record" ADD CONSTRAINT "upload_record_app_user_id_fkey" FORE
 
 -- AddForeignKey
 ALTER TABLE "upload_record" ADD CONSTRAINT "upload_record_channel_id_fkey" FOREIGN KEY ("channel_id") REFERENCES "channel"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "upload_record" ADD CONSTRAINT "upload_record_upload_finalized_by_id_fkey" FOREIGN KEY ("upload_finalized_by_id") REFERENCES "app_user"("id") ON DELETE SET NULL ON UPDATE CASCADE;

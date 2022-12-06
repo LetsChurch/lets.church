@@ -1,4 +1,8 @@
 export {
+  default as handleMultipartMediaUpload,
+  uploadDoneSignal,
+} from './handle-multipart-media-upload';
+export {
   default as indexDocument,
   indexDocumentSignal,
 } from './index-document';

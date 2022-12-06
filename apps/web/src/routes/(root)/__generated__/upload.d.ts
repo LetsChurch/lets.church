@@ -1,0 +1,35 @@
+import * as Types from '../../../__generated__/graphql-types.d';
+
+export type ChannelsForUploadQueryVariables = Types.Exact<{ [key: string]: never; }>;
+
+
+export type ChannelsForUploadQuery = { __typename?: 'Query', me?: { __typename?: 'AppUser', channelMembershipsConnection: { __typename?: 'AppUserChannelMembershipsConnection', edges: Array<{ __typename?: 'AppUserChannelMembershipsConnectionEdge', node: { __typename?: 'ChannelMembership', channel: { __typename?: 'Channel', id: any, name: string } } } | null> } } | null };
+
+export type UpsertUploadRecordMutationVariables = Types.Exact<{
+  uploadRecordId?: Types.InputMaybe<Types.Scalars['ShortUuid']>;
+  title?: Types.InputMaybe<Types.Scalars['String']>;
+  description?: Types.InputMaybe<Types.Scalars['String']>;
+  channelId: Types.Scalars['ShortUuid'];
+}>;
+
+
+export type UpsertUploadRecordMutation = { __typename?: 'Mutation', upsertUploadRecord: { __typename?: 'UploadRecord', id: any } };
+
+export type CreateMultipartUploadMutationVariables = Types.Exact<{
+  uploadRecordId: Types.Scalars['ShortUuid'];
+  bytes: Types.Scalars['Int'];
+  uploadMimeType: Types.Scalars['String'];
+}>;
+
+
+export type CreateMultipartUploadMutation = { __typename?: 'Mutation', createMultipartUpload: { __typename?: 'MultipartUploadMeta', s3UploadKey: string, s3UploadId: string, partSize: number, urls: Array<string> } };
+
+export type FinalizeUploadMutationVariables = Types.Exact<{
+  uploadRecordId: Types.Scalars['ShortUuid'];
+  s3UploadKey: Types.Scalars['String'];
+  s3UploadId: Types.Scalars['String'];
+  s3PartETags: Array<Types.Scalars['String']> | Types.Scalars['String'];
+}>;
+
+
+export type FinalizeUploadMutation = { __typename?: 'Mutation', finalizeUpload: boolean };

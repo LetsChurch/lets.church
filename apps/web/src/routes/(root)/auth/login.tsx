@@ -1,7 +1,7 @@
 import { createUniqueId, mergeProps } from 'solid-js';
 import { createServerAction$, redirect } from 'solid-start/server';
 import * as Z from 'zod';
-import { gql, client } from '~/util/gql';
+import { gql, client } from '~/util/gql/server';
 import { storage } from '~/util/session';
 import type {
   LoginMutation,

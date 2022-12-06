@@ -1,10 +1,20 @@
-import { GetObjectCommand, PutObjectCommand, S3 } from '@aws-sdk/client-s3';
+import {
+  AbortMultipartUploadCommand,
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3,
+  UploadPartCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import envariant from '@knpwrs/envariant';
 import { createWriteStream } from 'node:fs';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import pMap from 'p-map';
 import pRetry from 'p-retry';
+import invariant from 'tiny-invariant';
 
 const S3_REGION = envariant('S3_REGION');
 const S3_ENDPOINT = envariant('S3_ENDPOINT');
@@ -21,7 +31,86 @@ export const client = new S3({
   },
 });
 
-// TODO: multipart upload
+export const PART_SIZE = 10_000_000;
+
+export async function createMultipartUpload(key: string, contentType: string) {
+  const { UploadId: uploadId, Key: uploadKey } = await client.send(
+    new CreateMultipartUploadCommand({
+      Bucket: S3_BUCKET,
+      Key: key,
+      ContentType: contentType,
+    }),
+  );
+
+  invariant(uploadId && uploadKey, 'Failed to create multipart upload id!');
+
+  return { uploadId, uploadKey };
+}
+
+export function createPresignedPartUploadUrl(
+  uploadId: string,
+  uploadKey: string,
+  part: number,
+) {
+  invariant(
+    part > 0 && part <= 10_000,
+    `Part number must be between 1 and 10,000 inclusive, was ${part}`,
+  );
+
+  return getSignedUrl(
+    client,
+    new UploadPartCommand({
+      Bucket: S3_BUCKET,
+      UploadId: uploadId,
+      Key: uploadKey,
+      PartNumber: part,
+    }),
+    { expiresIn: 60 * 60 * 12 }, // 12 hours
+  );
+}
+
+export async function createPresignedPartUploadUrls(
+  uploadId: string,
+  uploadKey: string,
+  size: number,
+) {
+  return pMap(
+    Array(Math.ceil(size / PART_SIZE)).fill(null),
+    (_, i) => createPresignedPartUploadUrl(uploadId, uploadKey, i + 1),
+    { concurrency: 5 },
+  );
+}
+
+export async function completeMultipartUpload(
+  uploadKey: string,
+  uploadId: string,
+  eTags: Array<string>,
+) {
+  await client.send(
+    new CompleteMultipartUploadCommand({
+      Bucket: S3_BUCKET,
+      Key: uploadKey,
+      UploadId: uploadId,
+      MultipartUpload: {
+        Parts: eTags.map((tag, i) => ({ ETag: tag, PartNumber: i + 1 })),
+      },
+    }),
+  );
+}
+
+export async function abortMultipartUpload(
+  uploadKey: string,
+  uploadId: string,
+) {
+  await client.send(
+    new AbortMultipartUploadCommand({
+      Bucket: S3_BUCKET,
+      Key: uploadKey,
+      UploadId: uploadId,
+    }),
+  );
+}
+
 export async function createPresignedUploadUrl(
   key: string,
   contentType: string,
@@ -33,7 +122,7 @@ export async function createPresignedUploadUrl(
       Key: key,
       ContentType: contentType,
     }),
-    { expiresIn: 5 * 60 },
+    { expiresIn: 5 * 60 }, // 5 Minutes
   );
 }
 
@@ -44,7 +133,7 @@ export async function createPresignedGetUrl(key: string) {
       Bucket: S3_BUCKET,
       Key: key,
     }),
-    { expiresIn: 60 * 60 },
+    { expiresIn: 60 * 60 }, // 1 hour
   );
 }
 

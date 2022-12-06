@@ -18,7 +18,6 @@ export default function clickOutside(
   document.addEventListener('click', handleClick, true);
 
   onCleanup(() => {
-    console.log('Cleaning up!');
     document.removeEventListener('click', handleClick, true);
   });
 }

@@ -1,15 +1,17 @@
 import envariant from '@knpwrs/envariant';
+import { xxh32 } from '@node-rs/xxhash';
 import { Connection, WorkflowClient } from '@temporalio/client';
 import pRetry from 'p-retry';
 import waitOn from 'wait-on';
 import {
+  handleMultipartMediaUpload as handleMultipartMediaUploadWorkflow,
   indexDocumentSignal,
   indexDocument as indexDocumentWorkflow,
   sendEmail as sendEmailWorkflow,
   transcriptionDoneSignal,
+  uploadDoneSignal,
 } from './workflows/background';
-import { processUpload as processUploadWorkflow } from './workflows/process-upload';
-import { PROCESS_UPLOAD_QUEUE, BACKGROUND_QUEUE } from './queues';
+import { BACKGROUND_QUEUE } from './queues';
 import type { DocumentKind } from './activities/background/index-document';
 
 const TEMPORAL_ADDRESS = envariant('TEMPORAL_ADDRESS');
@@ -20,12 +22,25 @@ const client = new WorkflowClient({
   }),
 });
 
-export async function processUpload(id: string) {
-  return client.start(processUploadWorkflow, {
-    taskQueue: PROCESS_UPLOAD_QUEUE,
-    workflowId: id,
-    args: [id],
+export async function handleMultipartMediaUpload(
+  key: string,
+  uploadId: string,
+) {
+  return client.start(handleMultipartMediaUploadWorkflow, {
+    taskQueue: BACKGROUND_QUEUE,
+    workflowId: `handleMultipartMediaUpload:${key}:${xxh32(uploadId)}`,
+    args: [key, uploadId],
   });
+}
+
+export async function completeMultipartMediaUpload(
+  key: string,
+  uploadId: string,
+  partETags: Array<string>,
+) {
+  return client
+    .getHandle(`handleMultipartMediaUpload:${key}:${xxh32(uploadId)}`)
+    .signal(uploadDoneSignal, partETags);
 }
 
 export async function processTranscript(
@@ -72,3 +87,5 @@ export async function waitOnTemporal() {
 
   console.log('Temporal is available!');
 }
+
+// TODO: handle multipart upload

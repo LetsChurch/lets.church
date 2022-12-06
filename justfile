@@ -73,16 +73,16 @@ seed:
 truncate:
   docker-compose exec gateway npm run prisma:db:truncate
 
-check-external-hooks:
-  cd services/external-hooks; npm run check
-
 check-gateway:
   cd services/gateway; npm run check
+
+check-scripts:
+  cd scripts; npm run check
 
 check-web:
   cd apps/web; npm run check
 
-check: check-gateway check-web
+check: check-gateway check-scripts check-web
 
 export CI := "1"
 

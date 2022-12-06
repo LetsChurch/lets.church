@@ -41,6 +41,17 @@ export const AppUser = builder.prismaObject('AppUser', {
     channelMembershipsConnection: t.relatedConnection('channelMemberships', {
       cursor: 'channelId_appUserId',
       authScopes: privateAuthScopes,
+      args: {
+        canUpload: t.arg.boolean(),
+      },
+      query: ({ canUpload }, _context) =>
+        typeof canUpload === 'boolean'
+          ? {
+              where: {
+                OR: [{ canUpload }, { isAdmin: canUpload }],
+              },
+            }
+          : {},
     }),
     organizationMemberhipsConnection: t.relatedConnection(
       'organizationMemberships',
