@@ -16,7 +16,7 @@ const { indexDocument: indexDocumentActivity } = proxyActivities<
 
 export const indexDocumentSignal = defineSignal('indexDocument');
 
-export default async function indexDocument(kind: DocumentKind, id: string) {
+export async function indexDocumentWorkflow(kind: DocumentKind, id: string) {
   let debouncing = false;
 
   setHandler(indexDocumentSignal, () => void (debouncing = true));

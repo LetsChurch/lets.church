@@ -4,10 +4,10 @@ import { Connection, WorkflowClient } from '@temporalio/client';
 import pRetry from 'p-retry';
 import waitOn from 'wait-on';
 import {
-  handleMultipartMediaUpload as handleMultipartMediaUploadWorkflow,
+  handleMultipartMediaUploadWorkflow,
   indexDocumentSignal,
-  indexDocument as indexDocumentWorkflow,
-  sendEmail as sendEmailWorkflow,
+  indexDocumentWorkflow,
+  sendEmailWorkflow,
   transcriptionDoneSignal,
   uploadDoneSignal,
 } from './workflows/background';
@@ -87,5 +87,3 @@ export async function waitOnTemporal() {
 
   console.log('Temporal is available!');
 }
-
-// TODO: handle multipart upload

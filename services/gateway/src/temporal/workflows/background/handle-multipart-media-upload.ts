@@ -18,7 +18,7 @@ const { abortMultipartUpload, completeMultipartUpload } = proxyActivities<
 
 export const uploadDoneSignal = defineSignal<[Array<string>]>('uploadDone');
 
-export default async function handleMultipartMediaUpload(
+export async function handleMultipartMediaUploadWorkflow(
   uploadKey: string,
   uploadId: string,
 ) {

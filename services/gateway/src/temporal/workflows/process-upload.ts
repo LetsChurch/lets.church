@@ -1,5 +1,5 @@
 import { proxyActivities, executeChild } from '@temporalio/workflow';
-import transcribe from './background/transcribe';
+import { transcribeWorkflow } from './background/transcribe';
 import type * as activities from '../activities/process-upload';
 import invariant from 'tiny-invariant';
 import { BACKGROUND_QUEUE } from '../queues';
@@ -18,7 +18,7 @@ export async function processUpload(id: string) {
   await Promise.allSettled([
     transcode(id, probeRes),
     createThumbnails(id),
-    executeChild(transcribe, {
+    executeChild(transcribeWorkflow, {
       workflowId: `transcribe:${id}`,
       args: [id],
       taskQueue: BACKGROUND_QUEUE,

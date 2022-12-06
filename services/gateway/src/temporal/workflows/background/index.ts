@@ -1,10 +1,7 @@
 export {
-  default as handleMultipartMediaUpload,
+  handleMultipartMediaUploadWorkflow,
   uploadDoneSignal,
 } from './handle-multipart-media-upload';
-export {
-  default as indexDocument,
-  indexDocumentSignal,
-} from './index-document';
-export { default as sendEmail } from './send-email';
-export { default as transcribe, transcriptionDoneSignal } from './transcribe';
+export { indexDocumentWorkflow, indexDocumentSignal } from './index-document';
+export { sendEmailWorkflow } from './send-email';
+export { transcribeWorkflow, transcriptionDoneSignal } from './transcribe';

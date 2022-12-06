@@ -5,7 +5,7 @@ import {
   setHandler,
   executeChild,
 } from '@temporalio/workflow';
-import indexDocument from './index-document';
+import { indexDocumentWorkflow } from './index-document';
 import { BACKGROUND_QUEUE } from '../../queues';
 import type * as activities from '../../activities/background';
 
@@ -24,7 +24,7 @@ const { transcribeRequest, getTranscript } = proxyActivities<typeof activities>(
 export const transcriptionDoneSignal =
   defineSignal<[TranscriptionPayload]>('transcriptionDone');
 
-export default async function transcribe(uploadId: string) {
+export async function transcribeWorkflow(uploadId: string) {
   const state: { webhookPayload: TranscriptionPayload | null } = {
     webhookPayload: null,
   };
@@ -42,7 +42,7 @@ export default async function transcribe(uploadId: string) {
 
   await getTranscript(uploadId, state.webhookPayload.transcriptId);
 
-  await executeChild(indexDocument, {
+  await executeChild(indexDocumentWorkflow, {
     workflowId: `transcript:${uploadId}`,
     args: ['transcript', uploadId],
     taskQueue: BACKGROUND_QUEUE,
