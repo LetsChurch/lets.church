@@ -1,6 +1,6 @@
 import envariant from '@knpwrs/envariant';
 import { xxh32 } from '@node-rs/xxhash';
-import { Connection, WorkflowClient } from '@temporalio/client';
+import { Connection, Workflow, WorkflowClient } from '@temporalio/client';
 import pRetry from 'p-retry';
 import waitOn from 'wait-on';
 import {
@@ -22,13 +22,37 @@ const client = new WorkflowClient({
   }),
 });
 
+type StartArgs<T extends Workflow> = Parameters<typeof client.start<T>>;
+
+/**
+ * Attempt to start a workflow up to 8 times, retrying activities up to 8 times
+ */
+function startWorkflow<T extends Workflow>(
+  workflow: StartArgs<T>[0],
+  ops: StartArgs<T>[1],
+) {
+  return pRetry(
+    async () => {
+      return client.start(workflow, {
+        retry: { maximumAttempts: 8 },
+        ...ops,
+      });
+    },
+    { retries: 8 },
+  );
+}
+
+function makeMultipartMediaUploadWorkflowId(key: string, uploadId: string) {
+  return `handleMultipartMediaUpload:${key}:${xxh32(uploadId)}`;
+}
+
 export async function handleMultipartMediaUpload(
   key: string,
   uploadId: string,
 ) {
-  return client.start(handleMultipartMediaUploadWorkflow, {
+  return startWorkflow(handleMultipartMediaUploadWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
-    workflowId: `handleMultipartMediaUpload:${key}:${xxh32(uploadId)}`,
+    workflowId: makeMultipartMediaUploadWorkflowId(key, uploadId),
     args: [key, uploadId],
   });
 }
@@ -39,7 +63,7 @@ export async function completeMultipartMediaUpload(
   partETags: Array<string>,
 ) {
   return client
-    .getHandle(`handleMultipartMediaUpload:${key}:${xxh32(uploadId)}`)
+    .getHandle(makeMultipartMediaUploadWorkflowId(key, uploadId))
     .signal(uploadDoneSignal, partETags);
 }
 
@@ -61,9 +85,12 @@ export async function indexDocument(kind: DocumentKind, id: string) {
         args: [kind, id],
         signal: indexDocumentSignal,
         signalArgs: [],
+        retry: {
+          maximumAttempts: 8,
+        },
       });
     },
-    { retries: 5 },
+    { retries: 8 },
   );
 }
 
@@ -71,7 +98,7 @@ export async function sendEmail(
   id: string,
   ...args: Parameters<typeof sendEmailWorkflow>
 ) {
-  return client.start(sendEmailWorkflow, {
+  return startWorkflow(sendEmailWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
     args,
     workflowId: id,
