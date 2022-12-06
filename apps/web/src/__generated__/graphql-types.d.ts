@@ -140,7 +140,7 @@ export type MultipartUploadMeta = {
 export type Mutation = {
   __typename?: 'Mutation';
   createChannel: Channel;
-  createMultipartUpload: MultipartUploadMeta;
+  createMultipartMediaUpload: MultipartUploadMeta;
   createOrganization: Organization;
   finalizeUpload: Scalars['Boolean'];
   login?: Maybe<Scalars['String']>;
@@ -159,7 +159,7 @@ export type MutationCreateChannelArgs = {
 };
 
 
-export type MutationCreateMultipartUploadArgs = {
+export type MutationCreateMultipartMediaUploadArgs = {
   bytes: Scalars['Int'];
   uploadMimeType: Scalars['String'];
   uploadRecordId: Scalars['ShortUuid'];

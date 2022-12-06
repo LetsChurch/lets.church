@@ -15,8 +15,8 @@ import type { Channel } from '~/__generated__/graphql-types';
 import * as Z from 'zod';
 import type {
   ChannelsForUploadQuery,
-  CreateMultipartUploadMutation,
-  CreateMultipartUploadMutationVariables,
+  CreateMultipartMediaUploadMutation,
+  CreateMultipartMediaUploadMutationVariables,
   FinalizeUploadMutation,
   FinalizeUploadMutationVariables,
   UpsertUploadRecordMutation,
@@ -164,7 +164,7 @@ const FinalizeUploadSchema = Z.object({
 });
 
 const CreateMultipartUploadResponseSchema = Z.object({
-  createMultipartUpload: Z.object({
+  createMultipartMediaUpload: Z.object({
     s3UploadKey: Z.string(),
     s3UploadId: Z.string(),
     partSize: Z.number(),
@@ -246,7 +246,7 @@ export default function UploadRoute() {
     },
   );
 
-  const [, createMultipartUpload] = createServerAction$(
+  const [, createMultipartMediaUpload] = createServerAction$(
     async (form: FormData, event) => {
       const client = await createAuthenticatedClient(event.request);
       const variables = CreateMultipartUploadSchema.parse(
@@ -259,16 +259,16 @@ export default function UploadRoute() {
       );
 
       const data = await client.request<
-        CreateMultipartUploadMutation,
-        CreateMultipartUploadMutationVariables
+        CreateMultipartMediaUploadMutation,
+        CreateMultipartMediaUploadMutationVariables
       >(
         gql`
-          mutation CreateMultipartUpload(
+          mutation CreateMultipartMediaUpload(
             $uploadRecordId: ShortUuid!
             $bytes: Int!
             $uploadMimeType: String!
           ) {
-            createMultipartUpload(
+            createMultipartMediaUpload(
               uploadRecordId: $uploadRecordId
               bytes: $bytes
               uploadMimeType: $uploadMimeType
@@ -355,9 +355,9 @@ export default function UploadRoute() {
       createVariables.set('uploadMimeType', mime);
       createVariables.set('bytes', `${file.size}`);
 
-      const res = await createMultipartUpload(createVariables);
+      const res = await createMultipartMediaUpload(createVariables);
       const {
-        createMultipartUpload: { urls, partSize, s3UploadKey, s3UploadId },
+        createMultipartMediaUpload: { urls, partSize, s3UploadKey, s3UploadId },
       } = CreateMultipartUploadResponseSchema.parse(await res.json());
 
       const upload = doMultipartUpload(file, urls, partSize);

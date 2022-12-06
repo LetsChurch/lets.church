@@ -183,7 +183,7 @@ builder.mutationFields((t) => ({
       });
     },
   }),
-  createMultipartUpload: t.field({
+  createMultipartMediaUpload: t.field({
     type: builder.simpleObject('MultipartUploadMeta', {
       fields: (sot) => ({
         s3UploadKey: sot.string(),

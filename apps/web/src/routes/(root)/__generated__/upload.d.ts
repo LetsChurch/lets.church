@@ -15,14 +15,14 @@ export type UpsertUploadRecordMutationVariables = Types.Exact<{
 
 export type UpsertUploadRecordMutation = { __typename?: 'Mutation', upsertUploadRecord: { __typename?: 'UploadRecord', id: any } };
 
-export type CreateMultipartUploadMutationVariables = Types.Exact<{
+export type CreateMultipartMediaUploadMutationVariables = Types.Exact<{
   uploadRecordId: Types.Scalars['ShortUuid'];
   bytes: Types.Scalars['Int'];
   uploadMimeType: Types.Scalars['String'];
 }>;
 
 
-export type CreateMultipartUploadMutation = { __typename?: 'Mutation', createMultipartUpload: { __typename?: 'MultipartUploadMeta', s3UploadKey: string, s3UploadId: string, partSize: number, urls: Array<string> } };
+export type CreateMultipartMediaUploadMutation = { __typename?: 'Mutation', createMultipartMediaUpload: { __typename?: 'MultipartUploadMeta', s3UploadKey: string, s3UploadId: string, partSize: number, urls: Array<string> } };
 
 export type FinalizeUploadMutationVariables = Types.Exact<{
   uploadRecordId: Types.Scalars['ShortUuid'];
