@@ -36,6 +36,9 @@ export async function handleMultipartMediaUploadWorkflow(
       args: [uploadKey],
       workflowId: `processUpload:${uploadKey}`,
       taskQueue: PROCESS_UPLOAD_QUEUE,
+      retry: {
+        maximumAttempts: 8,
+      },
     });
   } else {
     await abortMultipartUpload(uploadKey, uploadId);

@@ -8,7 +8,6 @@ import {
   indexDocumentSignal,
   indexDocumentWorkflow,
   sendEmailWorkflow,
-  transcriptionDoneSignal,
   uploadDoneSignal,
 } from './workflows/background';
 import { BACKGROUND_QUEUE } from './queues';
@@ -65,15 +64,6 @@ export async function completeMultipartMediaUpload(
   return client
     .getHandle(makeMultipartMediaUploadWorkflowId(key, uploadId))
     .signal(uploadDoneSignal, partETags);
-}
-
-export async function processTranscript(
-  uploadId: string,
-  body: { transcriptId: string; status: 'completed' | 'error' },
-) {
-  return client
-    .getHandle(`transcribe:${uploadId}`)
-    .signal(transcriptionDoneSignal, body);
 }
 
 export async function indexDocument(kind: DocumentKind, id: string) {

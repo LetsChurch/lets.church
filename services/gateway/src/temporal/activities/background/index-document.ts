@@ -1,21 +1,16 @@
 import invariant from 'tiny-invariant';
-import * as Z from 'zod';
 import { client, escapeDocument } from '../../../util/elasticsearch';
 import prisma from '../../../util/prisma';
-import { assemblyAiWordSchema } from '../../../util/zod';
-
-const transformTranscriptSchema = Z.array(
-  assemblyAiWordSchema.omit({ confidence: true }),
-);
+import { transcriptSegmentSchema } from '../../../util/zod';
 
 export type DocumentKind = 'transcript' | 'organization' | 'channel';
 
 async function getDocument(kind: DocumentKind, id: string) {
   switch (kind) {
     case 'transcript':
-      const { transcriptSentences } =
+      const { transcriptSegments } =
         await prisma.uploadRecord.findUniqueOrThrow({
-          select: { transcriptSentences: true },
+          select: { transcriptSegments: true },
           where: { id },
         });
 
@@ -23,7 +18,7 @@ async function getDocument(kind: DocumentKind, id: string) {
         index: 'lc_transcripts',
         id,
         document: escapeDocument({
-          sentences: transformTranscriptSchema.parse(transcriptSentences),
+          segments: transcriptSegmentSchema.parse(transcriptSegments),
         }),
       };
     case 'organization':

@@ -1,18 +1,10 @@
 import { createYoga } from 'graphql-yoga';
 import fastify, { FastifyRequest, FastifyReply } from 'fastify';
 import { useDisableIntrospection } from '@envelop/disable-introspection';
-import {
-  serializerCompiler,
-  validatorCompiler,
-} from 'fastify-type-provider-zod';
 import context from './util/context';
 import schema from './schema';
-import hooks from './hooks';
 
 const app = fastify({ logger: true });
-
-app.setValidatorCompiler(validatorCompiler);
-app.setSerializerCompiler(serializerCompiler);
 
 const graphqlPlugins = [
   process.env['NODE_ENV'] !== 'development' && useDisableIntrospection,
@@ -35,6 +27,7 @@ app.route({
       req,
       reply,
     });
+
     response.headers.forEach((value, key) => {
       // TODO: https://github.com/prisma-labs/graphql-request/issues/373
       reply.header(key, value.replace('graphql-response+', ''));
@@ -47,7 +40,5 @@ app.route({
     return reply;
   },
 });
-
-app.register(hooks, { prefix: '/hooks' });
 
 await app.listen({ host: '0.0.0.0', port: 3000 });

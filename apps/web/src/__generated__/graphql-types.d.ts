@@ -398,9 +398,8 @@ export type TranscriptSearchHit = ISearchHit & {
   text: HighlightedText;
 };
 
-export type TranscriptSentence = {
-  __typename?: 'TranscriptSentence';
-  confidence: Scalars['Float'];
+export type TranscriptSegment = {
+  __typename?: 'TranscriptSegment';
   end: Scalars['Int'];
   start: Scalars['Int'];
   text: Scalars['String'];
@@ -412,7 +411,7 @@ export type UploadRecord = {
   createdAt: Scalars['DateTime'];
   createdBy: AppUser;
   id: Scalars['ShortUuid'];
-  transcriptSentences?: Maybe<Array<TranscriptSentence>>;
+  transcriptSegments?: Maybe<Array<TranscriptSegment>>;
   updatedAt: Scalars['DateTime'];
   uploadFinalized: Scalars['Boolean'];
   uploadFinalizedBy: AppUser;

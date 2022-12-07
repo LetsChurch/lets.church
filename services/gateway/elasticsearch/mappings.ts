@@ -54,7 +54,7 @@ const targetMappings: Record<
   },
   lc_transcripts: {
     properties: {
-      sentences: {
+      segments: {
         type: 'nested',
         properties: {
           start: {

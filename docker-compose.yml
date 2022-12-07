@@ -61,6 +61,7 @@ services:
       dockerfile: process-upload-worker.Dockerfile
       target: dev
     environment:
+      DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       TEMPORAL_ADDRESS: temporal:7233
       S3_REGION: ${S3_REGION}
       S3_ENDPOINT: ${S3_ENDPOINT}
@@ -78,7 +79,6 @@ services:
       dockerfile: background-worker.Dockerfile
       target: dev
     environment:
-      ASSEMBLY_AI_API_KEY: ${ASSEMBLY_AI_API_KEY}
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       ELASTICSEARCH_URL: http://elasticsearch:9200
       EXTERNAL_HOOKS_HOST: ${EXTERNAL_HOOKS_HOST}
@@ -196,15 +196,3 @@ services:
     ports:
       - ${HOST_MAILHOG_SMTP_PORT}:1025 # smtp server
       - ${HOST_MAILHOG_WEB_PORT}:8025 # web ui
-  webhooks-tunnel:
-    build:
-      context: ./etc
-      dockerfile: ssh.Dockerfile
-    volumes:
-      - type: bind
-        source: ${LHR_KEYFILE}
-        target: /private-key
-      - type: bind
-        source: ./etc/known_hosts
-        target: /root/.ssh/known_hosts
-    command: ssh -i /private-key -R ${LHR_DOMAIN}:80:gateway:3000 plan@localhost.run

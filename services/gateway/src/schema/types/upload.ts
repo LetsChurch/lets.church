@@ -10,7 +10,7 @@ import {
   handleMultipartMediaUpload,
 } from '../../temporal';
 import builder from '../builder';
-import { databaseTranscriptSchema } from '../../util/zod';
+import { transcriptSegmentSchema } from '../../util/zod';
 
 builder.prismaObject('UploadRecord', {
   authScopes: async (uploadRecord, context) => {
@@ -70,22 +70,21 @@ builder.prismaObject('UploadRecord', {
       },
       resolve: ({ updatedAt }) => updatedAt.toISOString(),
     }),
-    transcriptSentences: t.field({
+    transcriptSegments: t.field({
       type: [
-        builder.simpleObject('TranscriptSentence', {
+        builder.simpleObject('TranscriptSegment', {
           fields: (tst) => ({
             text: tst.string(),
             start: tst.int(),
             end: tst.int(),
-            confidence: tst.float(),
           }),
         }),
       ],
       nullable: true,
-      select: { transcriptSentences: true },
-      resolve: ({ transcriptSentences }) =>
-        transcriptSentences
-          ? databaseTranscriptSchema.parse(transcriptSentences)
+      select: { transcriptSegments: true },
+      resolve: ({ transcriptSegments }) =>
+        transcriptSegments
+          ? transcriptSegmentSchema.parse(transcriptSegments)
           : null,
     }),
   }),

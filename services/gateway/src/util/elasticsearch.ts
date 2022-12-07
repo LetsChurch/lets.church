@@ -39,14 +39,14 @@ export function msearchTranscripts(
       _source: false,
       query: {
         nested: {
-          path: 'sentences',
+          path: 'segments',
           query: {
             span_near: {
               clauses: query.split(/\s+/g).map((w) => ({
                 span_multi: {
                   match: {
                     fuzzy: {
-                      'sentences.text': {
+                      'segments.text': {
                         value: w,
                         fuzziness: w.length > 4 ? 2 : 1,
                       },
@@ -66,7 +66,7 @@ export function msearchTranscripts(
               post_tags: ['</mark>'],
               encoder: 'html',
               fields: {
-                'sentences.text': {},
+                'segments.text': {},
               },
             },
           },
@@ -145,7 +145,7 @@ export const TranscriptHitSchema = Z.object({
   ...BaseHitSchema,
   _index: Z.literal('lc_transcripts'),
   inner_hits: Z.object({
-    sentences: Z.object({
+    segments: Z.object({
       hits: Z.object({
         total: Z.object({
           value: Z.number(),
@@ -157,7 +157,7 @@ export const TranscriptHitSchema = Z.object({
             ...BaseHitSchema,
             _index: Z.literal('lc_transcripts'),
             _nested: Z.object({
-              field: Z.literal('sentences'),
+              field: Z.literal('segments'),
               offset: Z.number(),
             }),
             _source: Z.object({
@@ -166,7 +166,7 @@ export const TranscriptHitSchema = Z.object({
               text: Z.string(),
             }),
             highlight: Z.object({
-              'sentences.text': Z.array(Z.string()),
+              'segments.text': Z.array(Z.string()),
             }),
           }),
         ),

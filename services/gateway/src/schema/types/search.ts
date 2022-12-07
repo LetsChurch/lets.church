@@ -110,8 +110,6 @@ builder.queryFields((t) => ({
 
             const parsed = MSearchResponseSchema.parse(esRes);
 
-            console.dir({ parsed }, { depth: null });
-
             totalCount = parsed.responses.reduce(
               (sum, res) => sum + res.hits.total.value,
               0,
@@ -134,10 +132,10 @@ builder.queryFields((t) => ({
                   ? {
                       text: {
                         source:
-                          hit.inner_hits.sentences.hits.hits[0]?._source.text,
+                          hit.inner_hits.segments.hits.hits[0]?._source.text,
                         marked:
-                          hit.inner_hits.sentences.hits.hits[0]?.highlight[
-                            'sentences.text'
+                          hit.inner_hits.segments.hits.hits[0]?.highlight[
+                            'segments.text'
                           ][0],
                       },
                     }

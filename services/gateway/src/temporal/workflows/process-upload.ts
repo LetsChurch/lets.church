@@ -1,10 +1,10 @@
-import { proxyActivities, executeChild } from '@temporalio/workflow';
-import { transcribeWorkflow } from './background/transcribe';
+import { executeChild, proxyActivities } from '@temporalio/workflow';
 import type * as activities from '../activities/process-upload';
 import invariant from 'tiny-invariant';
+import { indexDocumentWorkflow } from './background';
 import { BACKGROUND_QUEUE } from '../queues';
 
-const { transcode, probe, createThumbnails } = proxyActivities<
+const { probe, transcode, createThumbnails, transcribe } = proxyActivities<
   typeof activities
 >({
   startToCloseTimeout: '60 minutes',
@@ -18,10 +18,15 @@ export async function processUpload(id: string) {
   await Promise.allSettled([
     transcode(id, probeRes),
     createThumbnails(id),
-    executeChild(transcribeWorkflow, {
-      workflowId: `transcribe:${id}`,
-      args: [id],
-      taskQueue: BACKGROUND_QUEUE,
+    transcribe(id).then(() => {
+      return executeChild(indexDocumentWorkflow, {
+        workflowId: `transcript:${id}`,
+        args: ['transcript', id],
+        taskQueue: BACKGROUND_QUEUE,
+        retry: {
+          maximumAttempts: 8,
+        },
+      });
     }),
   ]);
 }

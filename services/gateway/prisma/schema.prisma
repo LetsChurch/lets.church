@@ -134,7 +134,7 @@ model UploadRecord {
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
   deletedAt           DateTime? @map("deleted_at")
-  transcriptSentences Json?     @map("transcript_sentences") @db.Json
+  transcriptSegments  Json?     @map("transcript_segments") @db.Json
 
   @@map("upload_record")
 }
