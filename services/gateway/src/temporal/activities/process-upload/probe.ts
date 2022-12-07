@@ -1,10 +1,12 @@
 import { join } from 'node:path';
+import { stat } from 'node:fs/promises';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
 import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import { runFfprobe } from '../../../util/ffmpeg';
 import { ffprobeSchema } from '../../../util/zod';
 import rimraf from '../../../util/rimraf';
+import prisma from '../../../util/prisma';
 
 const WORK_DIR = '/data/transcode';
 
@@ -21,6 +23,13 @@ export default async function probe(id: string) {
     Context.current().heartbeat();
 
     console.log(`Probing ${downloadPath}`);
+
+    const stats = await stat(downloadPath);
+
+    await prisma.uploadRecord.update({
+      where: { id },
+      data: { uploadSizeBytes: stats.size },
+    });
 
     const probe = await runFfprobe(dir, downloadPath);
     const probeJson = probe.stdout;

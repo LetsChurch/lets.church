@@ -11,6 +11,7 @@ export type Scalars = {
   Int: number;
   Float: number;
   DateTime: string;
+  SafeInt: any;
   ShortUuid: string;
   Uuid: string;
 };
@@ -160,7 +161,7 @@ export type MutationCreateChannelArgs = {
 
 
 export type MutationCreateMultipartMediaUploadArgs = {
-  bytes: Scalars['Int'];
+  bytes: Scalars['SafeInt'];
   uploadMimeType: Scalars['String'];
   uploadRecordId: Scalars['ShortUuid'];
 };
@@ -415,5 +416,5 @@ export type UploadRecord = {
   updatedAt: Scalars['DateTime'];
   uploadFinalized: Scalars['Boolean'];
   uploadFinalizedBy: AppUser;
-  uploadSizeBytes?: Maybe<Scalars['String']>;
+  uploadSizeBytes?: Maybe<Scalars['SafeInt']>;
 };

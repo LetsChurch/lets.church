@@ -49,12 +49,11 @@ builder.prismaObject('UploadRecord', {
     createdBy: t.relation('createdBy'),
     uploadFinalizedBy: t.relation('uploadFinalizedBy'),
     channel: t.relation('channel'),
-    uploadSizeBytes: t.string({
+    uploadSizeBytes: t.field({
+      type: 'SafeInt',
+      select: { uploadSizeBytes: true },
       nullable: true,
-      select: {
-        uploadSizeBytes: true,
-      },
-      resolve: ({ uploadSizeBytes }) => uploadSizeBytes?.toString(),
+      resolve: ({ uploadSizeBytes }) => Number(uploadSizeBytes?.valueOf()),
     }),
     uploadFinalized: t.exposeBoolean('uploadFinalized'),
     createdAt: t.field({
@@ -194,7 +193,14 @@ builder.mutationFields((t) => ({
     }),
     args: {
       uploadRecordId: t.arg({ type: 'ShortUuid', required: true }),
-      bytes: t.arg.int({ required: true }),
+      bytes: t.arg({
+        type: 'SafeInt',
+        required: true,
+        validate: {
+          min: 0, // i.e., Positive; should we really allow the API to take an upload size of 0?
+          max: 20e9, // i.e., 20 GB, reasonably large upper limit
+        },
+      }),
       uploadMimeType: t.arg.string({ required: true }),
     },
     resolve: async (

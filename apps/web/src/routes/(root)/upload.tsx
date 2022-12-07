@@ -265,7 +265,7 @@ export default function UploadRoute() {
         gql`
           mutation CreateMultipartMediaUpload(
             $uploadRecordId: ShortUuid!
-            $bytes: Int!
+            $bytes: SafeInt!
             $uploadMimeType: String!
           ) {
             createMultipartMediaUpload(

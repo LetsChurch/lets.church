@@ -17,7 +17,7 @@ export type UpsertUploadRecordMutation = { __typename?: 'Mutation', upsertUpload
 
 export type CreateMultipartMediaUploadMutationVariables = Types.Exact<{
   uploadRecordId: Types.Scalars['ShortUuid'];
-  bytes: Types.Scalars['Int'];
+  bytes: Types.Scalars['SafeInt'];
   uploadMimeType: Types.Scalars['String'];
 }>;
 

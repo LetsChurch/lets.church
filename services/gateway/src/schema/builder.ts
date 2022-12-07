@@ -11,6 +11,7 @@ import TracingPlugin, {
 } from '@pothos/plugin-tracing';
 import type { Context } from '../util/context';
 import prisma from '../util/prisma';
+import type { Scalars } from './scalars';
 
 export default new SchemaBuilder<{
   PrismaTypes: PrismaTypes;
@@ -20,20 +21,7 @@ export default new SchemaBuilder<{
     unauthenticated: boolean;
     admin: boolean;
   };
-  Scalars: {
-    DateTime: {
-      Input: Date | string;
-      Output: string;
-    };
-    Uuid: {
-      Input: string;
-      Output: string;
-    };
-    ShortUuid: {
-      Input: string;
-      Output: string;
-    };
-  };
+  Scalars: Scalars;
 }>({
   plugins: [
     // ScopeAuthPlugin must be listed first
