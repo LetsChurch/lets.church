@@ -113,7 +113,8 @@ builder.queryFields((t) => ({
 }));
 
 builder.mutationFields((t) => ({
-  login: t.string({
+  login: t.field({
+    type: 'Jwt',
     nullable: true,
     args: {
       id: t.arg.string({ required: true }),

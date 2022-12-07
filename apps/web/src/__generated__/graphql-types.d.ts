@@ -11,7 +11,8 @@ export type Scalars = {
   Int: number;
   Float: number;
   DateTime: string;
-  SafeInt: any;
+  Jwt: string;
+  SafeInt: number;
   ShortUuid: string;
   Uuid: string;
 };
@@ -144,7 +145,7 @@ export type Mutation = {
   createMultipartMediaUpload: MultipartUploadMeta;
   createOrganization: Organization;
   finalizeUpload: Scalars['Boolean'];
-  login?: Maybe<Scalars['String']>;
+  login?: Maybe<Scalars['Jwt']>;
   logout: Scalars['Boolean'];
   signup: AppUser;
   thumbnailUploadUrl: Scalars['String'];

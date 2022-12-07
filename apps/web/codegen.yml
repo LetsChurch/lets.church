@@ -10,6 +10,8 @@ generates:
     config:
       scalars:
         DateTime: string
+        Jwt: string
+        SafeInt: number
         ShortUuid: string
         Uuid: string
   src/:
