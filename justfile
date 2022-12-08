@@ -91,6 +91,12 @@ test-gateway:
 
 test: test-gateway
 
+transcribe file:
+  docker-compose run -v $PWD:/host -w /host process-upload-worker /bin/bash -c 'ffmpeg -i {{file}} -ar 16000 -ac 1 {{file}}.wav'
+  docker-compose run -v $PWD:/host -w /host process-upload-worker /bin/bash -c 'whisper --output-vtt -m /opt/whisper/ggml-base.bin {{file}}.wav'
+  rm {{file}}.wav
+  mv {{file}}.wav.vtt {{file}}.vtt
+
 open:
   open http://localhost:$HOST_WEB_PORT
 open-graphiql:
