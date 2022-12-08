@@ -28,7 +28,7 @@ export default function Home() {
   return (
     <UserContext.Provider value={data}>
       <Header />
-      <main class="mt-5">
+      <main class="mt-5 px-2 sm:px-4 lg:px-8">
         <div class="mx-auto max-w-7xl">
           <Outlet />
         </div>
