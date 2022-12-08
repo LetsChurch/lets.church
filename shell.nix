@@ -8,6 +8,7 @@ with (import (fetchTarball {
 
 mkShell {
   packages = [
+    fd
     just
     lazydocker
     navi

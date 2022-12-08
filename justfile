@@ -97,6 +97,9 @@ transcribe file:
   rm {{file}}.wav
   mv {{file}}.wav.vtt {{file}}.vtt
 
+transcribe-dir dir:
+  fd . {{dir}} | xargs -o -n1 just transcribe
+
 open:
   open http://localhost:$HOST_WEB_PORT
 open-graphiql:
