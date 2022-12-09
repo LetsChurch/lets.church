@@ -1,6 +1,8 @@
 import invariant from 'tiny-invariant';
+import { type NodeCue, parseSync as parseVtt } from 'subtitle';
 import { client, escapeDocument } from '../../../util/elasticsearch';
 import prisma from '../../../util/prisma';
+import { getObject } from '../../../util/s3';
 import { transcriptSegmentSchema } from '../../../util/zod';
 
 export type DocumentKind = 'transcript' | 'organization' | 'channel';
@@ -8,17 +10,19 @@ export type DocumentKind = 'transcript' | 'organization' | 'channel';
 async function getDocument(kind: DocumentKind, id: string) {
   switch (kind) {
     case 'transcript':
-      const { transcriptSegments } =
-        await prisma.uploadRecord.findUniqueOrThrow({
-          select: { transcriptSegments: true },
-          where: { id },
-        });
+      const key = `${id}.vtt`;
+      const res = await getObject(key);
+      const body = await res.Body?.transformToString('utf-8');
+      invariant(body, `No object with key ${key} found`);
+      const parsed = parseVtt(body)
+        .filter((n): n is NodeCue => n.type === 'cue')
+        .map(({ data: { start, end, text } }) => ({ start, end, text }));
 
       return {
         index: 'lc_transcripts',
         id,
         document: escapeDocument({
-          segments: transcriptSegmentSchema.parse(transcriptSegments),
+          segments: transcriptSegmentSchema.parse(parsed),
         }),
       };
     case 'organization':

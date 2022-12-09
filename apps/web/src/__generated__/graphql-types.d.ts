@@ -399,20 +399,12 @@ export type TranscriptSearchHit = ISearchHit & {
   text: HighlightedText;
 };
 
-export type TranscriptSegment = {
-  __typename?: 'TranscriptSegment';
-  end: Scalars['Int'];
-  start: Scalars['Int'];
-  text: Scalars['String'];
-};
-
 export type UploadRecord = {
   __typename?: 'UploadRecord';
   channel: Channel;
   createdAt: Scalars['DateTime'];
   createdBy: AppUser;
   id: Scalars['ShortUuid'];
-  transcriptSegments?: Maybe<Array<TranscriptSegment>>;
   updatedAt: Scalars['DateTime'];
   uploadFinalized: Scalars['Boolean'];
   uploadFinalizedBy: AppUser;

@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["postgresqlExtensions", "interactiveTransactions"]
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 generator pothos {
@@ -134,7 +134,6 @@ model UploadRecord {
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
   deletedAt           DateTime? @map("deleted_at")
-  transcriptSegments  Json?     @map("transcript_segments") @db.Json
 
   @@map("upload_record")
 }

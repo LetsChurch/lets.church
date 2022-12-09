@@ -106,7 +106,6 @@ CREATE TABLE "upload_record" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "deleted_at" TIMESTAMP(3),
-    "transcript_segments" JSON,
 
     CONSTRAINT "upload_record_pkey" PRIMARY KEY ("id")
 );
