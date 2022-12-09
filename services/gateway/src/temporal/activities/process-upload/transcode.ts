@@ -9,6 +9,7 @@ import fastGlob from 'fast-glob';
 import type { Probe } from './probe';
 import {
   getVariants,
+  MediaVariant,
   runFfmpegEncode,
   variantsToMasterVideoPlaylist,
 } from '../../../util/ffmpeg';
@@ -101,21 +102,29 @@ export default async function transcode(id: string, probe: Probe) {
       }),
     );
 
-    // Upload master playlist
-    uploadQueue.add(async () => {
-      console.log('Uploading master playlist file');
-      Context.current().heartbeat(`Uploading playlist file`);
-      const playlistBuffer = Buffer.from(
-        variantsToMasterVideoPlaylist(variants),
+    // Upload master playlist if there is more than just audio
+    if (variants.filter((v) => v !== MediaVariant.AUDIO).length > 0) {
+      uploadQueue.add(async () => {
+        console.log('Uploading master playlist file');
+        Context.current().heartbeat(`Uploading playlist file`);
+        const playlistBuffer = Buffer.from(
+          variantsToMasterVideoPlaylist(variants),
+        );
+        await retryablePutFile(
+          `${id}/master.m3u8`,
+          'application/x-mpegURL',
+          playlistBuffer,
+        );
+        Context.current().heartbeat('Uploaded master playlist file');
+        console.log('Uploaded master playlist file');
+      });
+    } else {
+      console.log(
+        `Not creating master playlist given the variants: ${variants.join(
+          ' ',
+        )}`,
       );
-      await retryablePutFile(
-        `${id}/master.m3u8`,
-        'application/x-mpegURL',
-        playlistBuffer,
-      );
-      Context.current().heartbeat('Uploaded master playlist file');
-      console.log('Uploaded master playlist file');
-    });
+    }
 
     // Upload logs
     uploadQueue.add(async () => {
