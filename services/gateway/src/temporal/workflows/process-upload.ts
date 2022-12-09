@@ -17,7 +17,9 @@ export async function processUpload(id: string) {
 
   await Promise.allSettled([
     transcode(id, probeRes),
-    createThumbnails(id),
+    ...(probeRes.streams.some((s) => s.codec_type === 'video')
+      ? [createThumbnails(id)]
+      : []),
     transcribe(id).then(() => {
       return executeChild(indexDocumentWorkflow, {
         workflowId: `transcript:${id}`,
