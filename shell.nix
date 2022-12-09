@@ -13,5 +13,6 @@ mkShell {
     lazydocker
     navi
     nodejs-18_x
+    rclone
   ];
 }

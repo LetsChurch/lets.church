@@ -67,8 +67,11 @@ npmi-gateway: (exec 'gateway' 'npm' 'i')
 npmi-web: (exec 'web' 'npm' 'i')
 npmi: npmi-gateway npmi-web
 
-seed:
+seed-db:
   docker-compose exec gateway npm run prisma:db:seed
+seed-s3:
+  rclone sync -P ./seed-data/lcdevs3/letschurch-dev lcdevs3:letschurch-dev
+seed: seed-db seed-s3
 
 truncate:
   docker-compose exec gateway npm run prisma:db:truncate
