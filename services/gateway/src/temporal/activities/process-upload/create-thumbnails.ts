@@ -8,7 +8,7 @@ import { chunk, compact, maxBy } from 'lodash-es';
 import {
   retryablePutFile,
   S3_INGEST_BUCKET,
-  S3_SERVE_BUCKET,
+  S3_PUBLIC_BUCKET,
   streamObjectToFile,
 } from '../../../util/s3';
 import { concatThumbs, runFfmpegThumbnails } from '../../../util/ffmpeg';
@@ -45,7 +45,7 @@ export default async function createThumbnails(id: string) {
         Context.current().heartbeat();
         console.log(`Uploading thumbnail: ${path}`);
         await retryablePutFile(
-          S3_SERVE_BUCKET,
+          S3_PUBLIC_BUCKET,
           `${id}/${basename(path)}`,
           'image/jpeg',
           createReadStream(path),
@@ -65,7 +65,7 @@ export default async function createThumbnails(id: string) {
     uploadQueue.add(async () => {
       console.log('Uploading hovernail');
       await retryablePutFile(
-        S3_SERVE_BUCKET,
+        S3_PUBLIC_BUCKET,
         `${id}/hovernail.jpg`,
         'image/jpeg',
         createReadStream(join(dir, 'hovernail.jpg')),

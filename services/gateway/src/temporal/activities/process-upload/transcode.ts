@@ -16,7 +16,7 @@ import {
 import {
   retryablePutFile,
   S3_INGEST_BUCKET,
-  S3_SERVE_BUCKET,
+  S3_PUBLIC_BUCKET,
   streamObjectToFile,
 } from '../../../util/s3';
 import rimraf from '../../../util/rimraf';
@@ -67,7 +67,7 @@ export default async function transcode(id: string, probe: Probe) {
         console.log(`Uploading media segment: ${path}`);
 
         await retryablePutFile(
-          S3_SERVE_BUCKET,
+          S3_PUBLIC_BUCKET,
           `${id}/${fileName}`,
           'video/mp2ts',
           createReadStream(path),
@@ -96,7 +96,7 @@ export default async function transcode(id: string, probe: Probe) {
         Context.current().heartbeat(`Uploading playlist file`);
         console.log(`Uploading playlist file: ${filename}`);
         await retryablePutFile(
-          S3_SERVE_BUCKET,
+          S3_PUBLIC_BUCKET,
           `${id}/${filename}`,
           'application/x-mpegURL',
           createReadStream(playlist),
@@ -118,7 +118,7 @@ export default async function transcode(id: string, probe: Probe) {
           variantsToMasterVideoPlaylist(variants),
         );
         await retryablePutFile(
-          S3_SERVE_BUCKET,
+          S3_PUBLIC_BUCKET,
           `${id}/master.m3u8`,
           'application/x-mpegURL',
           playlistBuffer,
@@ -138,7 +138,7 @@ export default async function transcode(id: string, probe: Probe) {
     uploadQueue.add(async () => {
       Context.current().heartbeat('Uploading stdout');
       await retryablePutFile(
-        S3_SERVE_BUCKET,
+        S3_PUBLIC_BUCKET,
         `${id}/stdout.txt`,
         'text/plain',
         Buffer.from(encodeProc.stdout),

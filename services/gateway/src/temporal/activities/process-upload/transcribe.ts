@@ -6,7 +6,7 @@ import mkdirp from 'mkdirp';
 import {
   retryablePutFile,
   S3_INGEST_BUCKET,
-  S3_SERVE_BUCKET,
+  S3_PUBLIC_BUCKET,
   streamObjectToFile,
 } from '../../../util/s3';
 import rimraf from '../../../util/rimraf';
@@ -38,7 +38,7 @@ export default async function transcribe(id: string) {
 
     console.log('uploading file');
     await retryablePutFile(
-      S3_SERVE_BUCKET,
+      S3_PUBLIC_BUCKET,
       `${id}.vtt`,
       'text/vtt',
       createReadStream(vttFile),

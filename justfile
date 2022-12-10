@@ -73,7 +73,7 @@ npmi: npmi-gateway npmi-web
 seed-db:
   docker-compose exec gateway npm run prisma:db:seed
 seed-s3:
-  rclone sync -P ./seed-data/lcdevs3/letschurch-dev-serve lcdevs3:letschurch-dev-serve
+  rclone sync -P ./seed-data/lcdevs3/letschurch-dev-public lcdevs3:letschurch-dev-public
 seed: seed-s3 seed-db
 
 truncate:

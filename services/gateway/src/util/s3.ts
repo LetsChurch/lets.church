@@ -22,11 +22,11 @@ const S3_INGEST_ENDPOINT = envariant('S3_INGEST_ENDPOINT');
 const S3_INGEST_ACCESS_KEY_ID = envariant('S3_INGEST_ACCESS_KEY_ID');
 const S3_INGEST_SECRET_ACCESS_KEY = envariant('S3_INGEST_SECRET_ACCESS_KEY');
 
-export const S3_SERVE_BUCKET = envariant('S3_SERVE_BUCKET');
-const S3_SERVE_REGION = envariant('S3_SERVE_REGION');
-const S3_SERVE_ENDPOINT = envariant('S3_SERVE_ENDPOINT');
-const S3_SERVE_ACCESS_KEY_ID = envariant('S3_SERVE_ACCESS_KEY_ID');
-const S3_SERVE_SECRET_ACCESS_KEY = envariant('S3_SERVE_SECRET_ACCESS_KEY');
+export const S3_PUBLIC_BUCKET = envariant('S3_PUBLIC_BUCKET');
+const S3_PUBLIC_REGION = envariant('S3_PUBLIC_REGION');
+const S3_PUBLIC_ENDPOINT = envariant('S3_PUBLIC_ENDPOINT');
+const S3_PUBLIC_ACCESS_KEY_ID = envariant('S3_PUBLIC_ACCESS_KEY_ID');
+const S3_PUBLIC_SECRET_ACCESS_KEY = envariant('S3_PUBLIC_SECRET_ACCESS_KEY');
 
 export const s3IngestClient = new S3({
   region: S3_INGEST_REGION,
@@ -38,11 +38,11 @@ export const s3IngestClient = new S3({
 });
 
 export const s3ServeClient = new S3({
-  region: S3_SERVE_REGION,
-  endpoint: S3_SERVE_ENDPOINT,
+  region: S3_PUBLIC_REGION,
+  endpoint: S3_PUBLIC_ENDPOINT,
   credentials: {
-    accessKeyId: S3_SERVE_ACCESS_KEY_ID,
-    secretAccessKey: S3_SERVE_SECRET_ACCESS_KEY,
+    accessKeyId: S3_PUBLIC_ACCESS_KEY_ID,
+    secretAccessKey: S3_PUBLIC_SECRET_ACCESS_KEY,
   },
 });
 
