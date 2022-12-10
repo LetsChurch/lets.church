@@ -130,6 +130,8 @@ builder.queryFields((t) => ({
                 id: hit._id,
                 ...(hit._index === 'lc_transcripts'
                   ? {
+                      moreResultsCount:
+                        hit.inner_hits.segments.hits.total.value - 1,
                       text: {
                         source:
                           hit.inner_hits.segments.hits.hits[0]?._source.text,
