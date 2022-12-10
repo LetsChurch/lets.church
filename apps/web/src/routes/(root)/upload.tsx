@@ -22,7 +22,11 @@ import type {
   UpsertUploadRecordMutation,
   UpsertUploadRecordMutationVariables,
 } from './__generated__/upload';
-import { createServerAction$, createServerData$ } from 'solid-start/server';
+import {
+  createServerAction$,
+  createServerData$,
+  redirect,
+} from 'solid-start/server';
 import { notEmpty } from '~/util';
 import invariant from 'tiny-invariant';
 import { doMultipartUpload } from '~/util/multipart-upload';
@@ -176,7 +180,7 @@ export function routeData() {
   return createServerData$(async (_, { request }) => {
     const client = await createAuthenticatedClient(request);
 
-    return client.request<ChannelsForUploadQuery>(gql`
+    const res = await client.request<ChannelsForUploadQuery>(gql`
       query ChannelsForUpload {
         me {
           channelMembershipsConnection(canUpload: true) {
@@ -192,6 +196,12 @@ export function routeData() {
         }
       }
     `);
+
+    if (!res.me) {
+      throw redirect('/');
+    }
+
+    return res;
   });
 }
 
