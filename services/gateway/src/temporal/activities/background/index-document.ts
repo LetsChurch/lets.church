@@ -2,7 +2,7 @@ import invariant from 'tiny-invariant';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
 import { client, escapeDocument } from '../../../util/elasticsearch';
 import prisma from '../../../util/prisma';
-import { getObject } from '../../../util/s3';
+import { getObject, S3_SERVE_BUCKET } from '../../../util/s3';
 import { transcriptSegmentSchema } from '../../../util/zod';
 
 export type DocumentKind = 'transcript' | 'organization' | 'channel';
@@ -11,7 +11,7 @@ async function getDocument(kind: DocumentKind, id: string) {
   switch (kind) {
     case 'transcript':
       const key = `${id}.vtt`;
-      const res = await getObject(key);
+      const res = await getObject(S3_SERVE_BUCKET, key);
       const body = await res.Body?.transformToString('utf-8');
       invariant(body, `No object with key ${key} found`);
       const parsed = parseVtt(body)

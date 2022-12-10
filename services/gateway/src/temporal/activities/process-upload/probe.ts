@@ -2,7 +2,11 @@ import { join } from 'node:path';
 import { stat } from 'node:fs/promises';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
-import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
+import {
+  retryablePutFile,
+  S3_INGEST_BUCKET,
+  streamObjectToFile,
+} from '../../../util/s3';
 import { runFfprobe } from '../../../util/ffmpeg';
 import { ffprobeSchema } from '../../../util/zod';
 import rimraf from '../../../util/rimraf';
@@ -18,7 +22,7 @@ export default async function probe(id: string) {
 
   try {
     await mkdirp(dir);
-    await streamObjectToFile(id, downloadPath);
+    await streamObjectToFile(S3_INGEST_BUCKET, id, downloadPath);
 
     Context.current().heartbeat();
 
@@ -37,6 +41,7 @@ export default async function probe(id: string) {
     const parsedProbe = ffprobeSchema.parse(JSON.parse(probeJson));
 
     await retryablePutFile(
+      S3_INGEST_BUCKET,
       `${id}.probe.json`,
       'application/json',
       Buffer.from(probeJson),

@@ -3,7 +3,12 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
-import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
+import {
+  retryablePutFile,
+  S3_INGEST_BUCKET,
+  S3_SERVE_BUCKET,
+  streamObjectToFile,
+} from '../../../util/s3';
 import rimraf from '../../../util/rimraf';
 import { runWhisper } from '../../../util/whisper';
 
@@ -18,7 +23,7 @@ export default async function transcribe(id: string) {
 
     await mkdirp(dir);
     const downloadPath = join(dir, id);
-    await streamObjectToFile(id, downloadPath);
+    await streamObjectToFile(S3_INGEST_BUCKET, id, downloadPath);
 
     console.log('media downloaded');
     Context.current().heartbeat('media downloaded');
@@ -32,9 +37,15 @@ export default async function transcribe(id: string) {
     Context.current().heartbeat('whisper done');
 
     console.log('uploading file');
-    await retryablePutFile(`${id}.vtt`, 'text/vtt', createReadStream(vttFile), {
-      contentLength: (await stat(vttFile)).size,
-    });
+    await retryablePutFile(
+      S3_SERVE_BUCKET,
+      `${id}.vtt`,
+      'text/vtt',
+      createReadStream(vttFile),
+      {
+        contentLength: (await stat(vttFile)).size,
+      },
+    );
 
     console.log('done uploading');
     Context.current().heartbeat('done uploading');

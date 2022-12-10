@@ -4,6 +4,7 @@ import {
   createPresignedPartUploadUrls,
   createPresignedUploadUrl,
   PART_SIZE,
+  S3_INGEST_BUCKET,
 } from '../../util/s3';
 import {
   completeMultipartMediaUpload,
@@ -197,13 +198,15 @@ builder.mutationFields((t) => ({
       invariant(!uploadFinalized, 'Upload is already finalized!');
 
       const { uploadKey, uploadId } = await createMultipartUpload(
+        S3_INGEST_BUCKET,
         uploadRecordId,
         uploadMimeType,
       );
 
-      await handleMultipartMediaUpload(uploadKey, uploadId);
+      await handleMultipartMediaUpload(S3_INGEST_BUCKET, uploadKey, uploadId);
 
       const urls = await createPresignedPartUploadUrls(
+        S3_INGEST_BUCKET,
         uploadId,
         uploadKey,
         bytes,
@@ -223,7 +226,11 @@ builder.mutationFields((t) => ({
       uploadMimeType: t.arg.string({ required: true }),
     },
     resolve: (_root, { uploadRecordId, uploadMimeType }) =>
-      createPresignedUploadUrl(`${uploadRecordId}-thumbnail`, uploadMimeType),
+      createPresignedUploadUrl(
+        S3_INGEST_BUCKET,
+        `${uploadRecordId}-thumbnail`,
+        uploadMimeType,
+      ),
   }),
   finalizeUpload: t.boolean({
     args: {

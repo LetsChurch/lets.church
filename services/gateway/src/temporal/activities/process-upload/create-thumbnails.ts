@@ -5,7 +5,12 @@ import PQueue from 'p-queue';
 import pMap from 'p-map';
 import fastGlob from 'fast-glob';
 import { chunk, compact, maxBy } from 'lodash-es';
-import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
+import {
+  retryablePutFile,
+  S3_INGEST_BUCKET,
+  S3_SERVE_BUCKET,
+  streamObjectToFile,
+} from '../../../util/s3';
 import { concatThumbs, runFfmpegThumbnails } from '../../../util/ffmpeg';
 import { stat } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
@@ -18,7 +23,7 @@ export default async function createThumbnails(id: string) {
 
   await mkdirp(dir);
   const downloadPath = join(dir, id);
-  await streamObjectToFile(id, downloadPath);
+  await streamObjectToFile(S3_INGEST_BUCKET, id, downloadPath);
 
   Context.current().heartbeat();
   try {
@@ -40,6 +45,7 @@ export default async function createThumbnails(id: string) {
         Context.current().heartbeat();
         console.log(`Uploading thumbnail: ${path}`);
         await retryablePutFile(
+          S3_SERVE_BUCKET,
           `${id}/${basename(path)}`,
           'image/jpeg',
           createReadStream(path),
@@ -59,6 +65,7 @@ export default async function createThumbnails(id: string) {
     uploadQueue.add(async () => {
       console.log('Uploading hovernail');
       await retryablePutFile(
+        S3_SERVE_BUCKET,
         `${id}/hovernail.jpg`,
         'image/jpeg',
         createReadStream(join(dir, 'hovernail.jpg')),

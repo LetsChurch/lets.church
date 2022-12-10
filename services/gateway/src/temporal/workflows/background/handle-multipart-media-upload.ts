@@ -19,6 +19,7 @@ const { abortMultipartUpload, completeMultipartUpload } = proxyActivities<
 export const uploadDoneSignal = defineSignal<[Array<string>]>('uploadDone');
 
 export async function handleMultipartMediaUploadWorkflow(
+  bucket: string,
   uploadKey: string,
   uploadId: string,
 ) {
@@ -31,7 +32,7 @@ export async function handleMultipartMediaUploadWorkflow(
   await condition(() => !!eTags, '1d');
 
   if (eTags) {
-    await completeMultipartUpload(uploadKey, uploadId, eTags);
+    await completeMultipartUpload(bucket, uploadKey, uploadId, eTags);
     await executeChild(processUploadWorkflow, {
       args: [uploadKey],
       workflowId: `processUpload:${uploadKey}`,
@@ -41,6 +42,6 @@ export async function handleMultipartMediaUploadWorkflow(
       },
     });
   } else {
-    await abortMultipartUpload(uploadKey, uploadId);
+    await abortMultipartUpload(bucket, uploadKey, uploadId);
   }
 }

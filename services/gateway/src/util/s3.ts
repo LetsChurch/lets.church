@@ -16,27 +16,46 @@ import pMap from 'p-map';
 import pRetry from 'p-retry';
 import invariant from 'tiny-invariant';
 
-const S3_REGION = envariant('S3_REGION');
-const S3_ENDPOINT = envariant('S3_ENDPOINT');
-const S3_BUCKET = envariant('S3_BUCKET');
-const S3_ACCESS_KEY_ID = envariant('S3_ACCESS_KEY_ID');
-const S3_SECRET_ACCESS_KEY = envariant('S3_SECRET_ACCESS_KEY');
+export const S3_INGEST_BUCKET = envariant('S3_INGEST_BUCKET');
+const S3_INGEST_REGION = envariant('S3_INGEST_REGION');
+const S3_INGEST_ENDPOINT = envariant('S3_INGEST_ENDPOINT');
+const S3_INGEST_ACCESS_KEY_ID = envariant('S3_INGEST_ACCESS_KEY_ID');
+const S3_INGEST_SECRET_ACCESS_KEY = envariant('S3_INGEST_SECRET_ACCESS_KEY');
 
-export const client = new S3({
-  region: S3_REGION,
-  endpoint: S3_ENDPOINT,
+export const S3_SERVE_BUCKET = envariant('S3_SERVE_BUCKET');
+const S3_SERVE_REGION = envariant('S3_SERVE_REGION');
+const S3_SERVE_ENDPOINT = envariant('S3_SERVE_ENDPOINT');
+const S3_SERVE_ACCESS_KEY_ID = envariant('S3_SERVE_ACCESS_KEY_ID');
+const S3_SERVE_SECRET_ACCESS_KEY = envariant('S3_SERVE_SECRET_ACCESS_KEY');
+
+export const s3IngestClient = new S3({
+  region: S3_INGEST_REGION,
+  endpoint: S3_INGEST_ENDPOINT,
   credentials: {
-    accessKeyId: S3_ACCESS_KEY_ID,
-    secretAccessKey: S3_SECRET_ACCESS_KEY,
+    accessKeyId: S3_INGEST_ACCESS_KEY_ID,
+    secretAccessKey: S3_INGEST_SECRET_ACCESS_KEY,
+  },
+});
+
+export const s3ServeClient = new S3({
+  region: S3_SERVE_REGION,
+  endpoint: S3_SERVE_ENDPOINT,
+  credentials: {
+    accessKeyId: S3_SERVE_ACCESS_KEY_ID,
+    secretAccessKey: S3_SERVE_SECRET_ACCESS_KEY,
   },
 });
 
 export const PART_SIZE = 10_000_000;
 
-export async function createMultipartUpload(key: string, contentType: string) {
-  const { UploadId: uploadId, Key: uploadKey } = await client.send(
+export async function createMultipartUpload(
+  bucket: string,
+  key: string,
+  contentType: string,
+) {
+  const { UploadId: uploadId, Key: uploadKey } = await s3IngestClient.send(
     new CreateMultipartUploadCommand({
-      Bucket: S3_BUCKET,
+      Bucket: bucket,
       Key: key,
       ContentType: contentType,
     }),
@@ -48,6 +67,7 @@ export async function createMultipartUpload(key: string, contentType: string) {
 }
 
 export function createPresignedPartUploadUrl(
+  bucket: string,
   uploadId: string,
   uploadKey: string,
   part: number,
@@ -58,9 +78,9 @@ export function createPresignedPartUploadUrl(
   );
 
   return getSignedUrl(
-    client,
+    s3IngestClient,
     new UploadPartCommand({
-      Bucket: S3_BUCKET,
+      Bucket: bucket,
       UploadId: uploadId,
       Key: uploadKey,
       PartNumber: part,
@@ -70,25 +90,27 @@ export function createPresignedPartUploadUrl(
 }
 
 export async function createPresignedPartUploadUrls(
+  bucket: string,
   uploadId: string,
   uploadKey: string,
   size: number,
 ) {
   return pMap(
     Array(Math.ceil(size / PART_SIZE)).fill(null),
-    (_, i) => createPresignedPartUploadUrl(uploadId, uploadKey, i + 1),
+    (_, i) => createPresignedPartUploadUrl(bucket, uploadId, uploadKey, i + 1),
     { concurrency: 5 },
   );
 }
 
 export async function completeMultipartUpload(
+  bucket: string,
   uploadKey: string,
   uploadId: string,
   eTags: Array<string>,
 ) {
-  await client.send(
+  await s3IngestClient.send(
     new CompleteMultipartUploadCommand({
-      Bucket: S3_BUCKET,
+      Bucket: bucket,
       Key: uploadKey,
       UploadId: uploadId,
       MultipartUpload: {
@@ -99,12 +121,13 @@ export async function completeMultipartUpload(
 }
 
 export async function abortMultipartUpload(
+  bucket: string,
   uploadKey: string,
   uploadId: string,
 ) {
-  await client.send(
+  await s3IngestClient.send(
     new AbortMultipartUploadCommand({
-      Bucket: S3_BUCKET,
+      Bucket: bucket,
       Key: uploadKey,
       UploadId: uploadId,
     }),
@@ -112,13 +135,14 @@ export async function abortMultipartUpload(
 }
 
 export async function createPresignedUploadUrl(
+  bucket: string,
   key: string,
   contentType: string,
 ) {
   return getSignedUrl(
-    client,
+    s3IngestClient,
     new PutObjectCommand({
-      Bucket: S3_BUCKET,
+      Bucket: bucket,
       Key: key,
       ContentType: contentType,
     }),
@@ -126,21 +150,21 @@ export async function createPresignedUploadUrl(
   );
 }
 
-export async function createPresignedGetUrl(key: string) {
+export async function createPresignedGetUrl(bucket: string, key: string) {
   return getSignedUrl(
-    client,
+    s3IngestClient,
     new GetObjectCommand({
-      Bucket: S3_BUCKET,
+      Bucket: bucket,
       Key: key,
     }),
     { expiresIn: 60 * 60 }, // 1 hour
   );
 }
 
-export async function headObject(key: string) {
+export async function headObject(bucket: string, key: string) {
   try {
-    return await client.headObject({
-      Bucket: S3_BUCKET,
+    return await s3IngestClient.headObject({
+      Bucket: bucket,
       Key: key,
     });
   } catch (e) {
@@ -149,16 +173,20 @@ export async function headObject(key: string) {
   }
 }
 
-export async function getObject(key: string) {
-  return client.getObject({
-    Bucket: S3_BUCKET,
+export async function getObject(bucket: string, key: string) {
+  return s3IngestClient.getObject({
+    Bucket: bucket,
     Key: key,
   });
 }
 
-export async function streamObjectToFile(key: string, path: string) {
-  const cmd = new GetObjectCommand({ Bucket: S3_BUCKET, Key: key });
-  const res = await client.send(cmd);
+export async function streamObjectToFile(
+  bucket: string,
+  key: string,
+  path: string,
+) {
+  const cmd = new GetObjectCommand({ Bucket: bucket, Key: key });
+  const res = await s3IngestClient.send(cmd);
 
   if (res.Body instanceof Readable) {
     return pipeline(res.Body, createWriteStream(path));
@@ -168,6 +196,7 @@ export async function streamObjectToFile(key: string, path: string) {
 }
 
 export async function putFile(
+  bucket: string,
   key: string,
   contentType: string,
   body: Readable | Buffer,
@@ -178,16 +207,17 @@ export async function putFile(
   } = {},
 ) {
   const cmd = new PutObjectCommand({
-    Bucket: S3_BUCKET,
+    Bucket: bucket,
     Key: key,
     ContentType: contentType,
     Body: body,
     ...(contentLength ? { ContentLength: contentLength } : {}),
   });
-  return client.send(cmd);
+  return s3IngestClient.send(cmd);
 }
 
 export async function retryablePutFile(
+  bucket: string,
   key: string,
   contentType: string,
   body: Readable | Buffer,
@@ -201,7 +231,13 @@ export async function retryablePutFile(
 ) {
   return pRetry(
     () =>
-      putFile(key, contentType, body, contentLength ? { contentLength } : {}),
+      putFile(
+        bucket,
+        key,
+        contentType,
+        body,
+        contentLength ? { contentLength } : {},
+      ),
     {
       retries: maxAttempts,
       onFailedAttempt: (error) => {

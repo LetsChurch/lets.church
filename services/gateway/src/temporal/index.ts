@@ -46,13 +46,14 @@ function makeMultipartMediaUploadWorkflowId(key: string, uploadId: string) {
 }
 
 export async function handleMultipartMediaUpload(
+  bucket: string,
   key: string,
   uploadId: string,
 ) {
   return startWorkflow(handleMultipartMediaUploadWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
     workflowId: makeMultipartMediaUploadWorkflowId(key, uploadId),
-    args: [key, uploadId],
+    args: [bucket, key, uploadId],
   });
 }
 

@@ -61,7 +61,10 @@ gateway-migrate-dev:
 
 gateway-init: gateway-migrate-dev gateway-es-push-mappings
 
-init: gateway-init
+s3-init:
+  cd scripts; npm run s3:cors
+
+init: gateway-init s3-init
 
 npmi-gateway: (exec 'gateway' 'npm' 'i')
 npmi-web: (exec 'web' 'npm' 'i')
@@ -70,7 +73,7 @@ npmi: npmi-gateway npmi-web
 seed-db:
   docker-compose exec gateway npm run prisma:db:seed
 seed-s3:
-  rclone sync -P ./seed-data/lcdevs3/letschurch-dev lcdevs3:letschurch-dev
+  rclone sync -P ./seed-data/lcdevs3/letschurch-dev-serve lcdevs3:letschurch-dev-serve
 seed: seed-s3 seed-db
 
 truncate:
