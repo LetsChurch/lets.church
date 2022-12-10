@@ -1,7 +1,12 @@
 import envariant from '@knpwrs/envariant';
 import { xxh32 } from '@node-rs/xxhash';
-import { Connection, Workflow, WorkflowClient } from '@temporalio/client';
+import {
+  Connection,
+  WorkflowClient,
+  WorkflowOptions,
+} from '@temporalio/client';
 import pRetry from 'p-retry';
+import PLazy from 'p-lazy';
 import waitOn from 'wait-on';
 import {
   handleMultipartMediaUploadWorkflow,
@@ -15,31 +20,19 @@ import type { DocumentKind } from './activities/background/index-document';
 
 const TEMPORAL_ADDRESS = envariant('TEMPORAL_ADDRESS');
 
-const client = new WorkflowClient({
-  connection: await Connection.connect({
-    address: TEMPORAL_ADDRESS,
-  }),
+const client = PLazy.from(async () => {
+  await waitOnTemporal();
+
+  return new WorkflowClient({
+    connection: await Connection.connect({
+      address: TEMPORAL_ADDRESS,
+    }),
+  });
 });
 
-type StartArgs<T extends Workflow> = Parameters<typeof client.start<T>>;
-
-/**
- * Attempt to start a workflow up to 8 times, retrying activities up to 8 times
- */
-function startWorkflow<T extends Workflow>(
-  workflow: StartArgs<T>[0],
-  ops: StartArgs<T>[1],
-) {
-  return pRetry(
-    async () => {
-      return client.start(workflow, {
-        retry: { maximumAttempts: 8 },
-        ...ops,
-      });
-    },
-    { retries: 8 },
-  );
-}
+const retryOps: Pick<WorkflowOptions, 'retry'> = {
+  retry: { maximumAttempts: 8 },
+};
 
 function makeMultipartMediaUploadWorkflowId(key: string, uploadId: string) {
   return `handleMultipartMediaUpload:${key}:${xxh32(uploadId)}`;
@@ -50,7 +43,8 @@ export async function handleMultipartMediaUpload(
   key: string,
   uploadId: string,
 ) {
-  return startWorkflow(handleMultipartMediaUploadWorkflow, {
+  return (await client).start(handleMultipartMediaUploadWorkflow, {
+    ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     workflowId: makeMultipartMediaUploadWorkflowId(key, uploadId),
     args: [bucket, key, uploadId],
@@ -62,7 +56,7 @@ export async function completeMultipartMediaUpload(
   uploadId: string,
   partETags: Array<string>,
 ) {
-  return client
+  return (await client)
     .getHandle(makeMultipartMediaUploadWorkflowId(key, uploadId))
     .signal(uploadDoneSignal, partETags);
 }
@@ -70,7 +64,7 @@ export async function completeMultipartMediaUpload(
 export async function indexDocument(kind: DocumentKind, id: string) {
   return pRetry(
     async () => {
-      return client.signalWithStart(indexDocumentWorkflow, {
+      return (await client).signalWithStart(indexDocumentWorkflow, {
         taskQueue: BACKGROUND_QUEUE,
         workflowId: `${kind}:${id}`,
         args: [kind, id],
@@ -89,7 +83,8 @@ export async function sendEmail(
   id: string,
   ...args: Parameters<typeof sendEmailWorkflow>
 ) {
-  return startWorkflow(sendEmailWorkflow, {
+  return (await client).start(sendEmailWorkflow, {
+    ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     args,
     workflowId: id,
