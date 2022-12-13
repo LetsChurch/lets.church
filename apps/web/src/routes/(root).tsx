@@ -3,6 +3,9 @@ import { Outlet, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
 import Footer from '~/components/footer';
 import Header from '~/components/header';
+import PageBreadcrumbs, {
+  BreadcrumbProvider,
+} from '~/components/page-breadcrumbs';
 import { createAuthenticatedClient, gql } from '~/util/gql/server';
 import type { MeQuery } from './__generated__/(root)';
 
@@ -27,13 +30,16 @@ export default function Home() {
 
   return (
     <UserContext.Provider value={data}>
-      <Header />
-      <main class="mt-5 px-2 sm:px-4 lg:px-8">
-        <div class="mx-auto max-w-7xl">
-          <Outlet />
-        </div>
-      </main>
-      <Footer />
+      <BreadcrumbProvider>
+        <Header />
+        <main class="mt-5 px-2 sm:px-4 lg:px-8">
+          <div class="mx-auto max-w-7xl">
+            <PageBreadcrumbs />
+            <Outlet />
+          </div>
+        </main>
+        <Footer />
+      </BreadcrumbProvider>
     </UserContext.Provider>
   );
 }

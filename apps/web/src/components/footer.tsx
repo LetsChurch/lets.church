@@ -7,7 +7,7 @@ import GitlabIcon from '@tabler/icons/brand-gitlab.svg?component-solid';
 
 export default function Footer() {
   const links = [
-    { href: '#', label: 'Watch' },
+    { href: '/', label: 'Watch' },
     { href: '#', label: 'Listen' },
     { href: '#', label: 'Read' },
     { href: '#', label: 'About' },

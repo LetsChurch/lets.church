@@ -1,5 +1,6 @@
 import envariant from '@knpwrs/envariant';
 import { GraphQLClient } from 'graphql-request';
+import { redirect } from 'solid-start';
 import { getSessionJwt } from '../session';
 
 export { gql } from 'graphql-request';
@@ -10,14 +11,27 @@ export const client = new GraphQLClient(GRAPHQL_URL, {
   credentials: 'include',
 });
 
-export async function createAuthenticatedClient(request: Request) {
+export async function createAuthenticatedClientOrRedirect(request: Request) {
   const jwt = await getSessionJwt(request);
 
   if (!jwt) {
-    return client;
+    throw redirect('/');
   }
 
   return new GraphQLClient(GRAPHQL_URL, {
     headers: { authorization: `Bearer ${jwt}` },
   });
+}
+
+export async function createAuthenticatedClient(request: Request) {
+  try {
+    return createAuthenticatedClientOrRedirect(request);
+  } catch (eOrRedir) {
+    console.log({ eOrRedir });
+    if (eOrRedir instanceof Response) {
+      return client;
+    }
+
+    throw eOrRedir;
+  }
 }

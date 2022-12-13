@@ -84,7 +84,7 @@ export default function Header() {
                 <A href="/">✝️</A>
               </div>
               <div class="hidden lg:ml-6 lg:flex lg:space-x-8">
-                <NavLink href="#" active>
+                <NavLink href="/" active>
                   Watch
                 </NavLink>
                 <NavLink href="#">Listen</NavLink>

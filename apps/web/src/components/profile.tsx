@@ -1,19 +1,11 @@
-import {
-  createEffect,
-  createSignal,
-  createUniqueId,
-  For,
-  Show,
-} from 'solid-js';
-import { Portal } from 'solid-js/web';
-import { A, useLocation } from 'solid-start';
+import { createEffect, createSignal, createUniqueId, Show } from 'solid-js';
+import { A } from 'solid-start';
 import { useFloating } from 'solid-floating-ui';
-import clickOutside from '~/util/click-outside';
 import { useBeforeLeave, useIsRouting } from '@solidjs/router';
-import ShowTransition from './show-transition';
 import { createServerAction$ } from 'solid-start/server';
 import logoutAction from '~/util/logout-action';
 import type { MeQuery } from '~/routes/__generated__/(root)';
+import FloatingMenu from './floating-menu';
 
 export const profileLinks = [
   { href: '/upload', label: 'Upload' },
@@ -31,7 +23,6 @@ export default function Profile(props: Props) {
   const position = useFloating(reference, floating, {
     placement: 'bottom-end',
   });
-  const loc = useLocation();
 
   function toggleMenu() {
     setShowMenu((show) => !show);
@@ -96,60 +87,18 @@ export default function Profile(props: Props) {
           </Show>
         </div>
       </div>
-
-      <ShowTransition
-        when={showMenu()}
-        classEnterBase="transition ease-out duration-100"
-        classEnterFrom="transform opacity-0 scale-95"
-        classEnterTo="transform opacity-100 scale-100"
-        classExitBase="transition ease-in duration-75"
-        classExitFrom="transform opacity-100 scale-100"
-        classExitTo="transform opacity-0 scale-95"
-      >
-        {(tref) => (
-          <Portal>
-            <div
-              class="z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
-              role="menu"
-              aria-orientation="vertical"
-              aria-labelledby={menuButtonId}
-              tabindex="-1"
-              ref={(el) => {
-                tref(el);
-                setFloating(el);
-                clickOutside(el, closeMenu);
-              }}
-              style={{
-                position: position.strategy,
-                top: `${position.y ?? 0}px`,
-                left: `${position.x ?? 0}px`,
-              }}
-            >
-              <For each={profileLinks}>
-                {({ href, label }) => (
-                  <A
-                    href={href}
-                    class="block px-4 py-2 text-sm text-gray-700"
-                    class:bg-gray-100={loc.pathname === href}
-                    role="menuitem"
-                    tabindex="-1"
-                  >
-                    {label}
-                  </A>
-                )}
-              </For>
-              <button
-                type="submit"
-                class="block px-4 py-2 text-sm text-gray-700"
-                disabled={loggingOut.pending}
-                form={logoutFormId}
-              >
-                Logout
-              </button>
-            </div>
-          </Portal>
-        )}
-      </ShowTransition>
+      <FloatingMenu
+        ref={setFloating}
+        open={showMenu()}
+        position={position}
+        aria-labelledby={menuButtonId}
+        onClose={closeMenu}
+        links={[
+          ...profileLinks,
+          { label: 'Logout', form: logoutFormId, pending: loggingOut.pending },
+        ]}
+        class="w-48"
+      />
     </div>
   );
 }
