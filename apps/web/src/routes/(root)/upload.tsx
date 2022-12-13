@@ -10,7 +10,7 @@ import {
 import { debounce } from '@solid-primitives/scheduled';
 import { json, useRouteData } from 'solid-start';
 import Dropzone, { DroppedRes } from '~/components/dropzone';
-import { createAuthenticatedClient, gql } from '~/util/gql/server';
+import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
 import type { Channel } from '~/__generated__/graphql-types';
 import * as Z from 'zod';
 import type {
@@ -22,7 +22,7 @@ import type {
   UpsertUploadRecordMutation,
   UpsertUploadRecordMutationVariables,
 } from './__generated__/upload';
-import {
+import server$, {
   createServerAction$,
   createServerData$,
   redirect,
@@ -151,34 +151,9 @@ function getSections(
   ];
 }
 
-const CreateMultipartUploadSchema = Z.object({
-  uploadRecordId: Z.string(),
-  bytes: Z.preprocess(
-    (s) => (typeof s === 'string' ? parseInt(s, 10) : s),
-    Z.number(),
-  ),
-  uploadMimeType: Z.string(),
-});
-
-const FinalizeUploadSchema = Z.object({
-  uploadRecordId: Z.string(),
-  s3UploadKey: Z.string(),
-  s3UploadId: Z.string(),
-  s3PartETags: Z.array(Z.string()),
-});
-
-const CreateMultipartUploadResponseSchema = Z.object({
-  createMultipartMediaUpload: Z.object({
-    s3UploadKey: Z.string(),
-    s3UploadId: Z.string(),
-    partSize: Z.number(),
-    urls: Z.array(Z.string()),
-  }),
-});
-
 export function routeData() {
   return createServerData$(async (_, { request }) => {
-    const client = await createAuthenticatedClient(request);
+    const client = await createAuthenticatedClientOrRedirect(request);
 
     const res = await client.request<ChannelsForUploadQuery>(gql`
       query ChannelsForUpload {
@@ -217,7 +192,7 @@ export default function UploadRoute() {
 
   const [upserting, upsert] = createServerAction$(
     async (form: FormData, event) => {
-      const client = await createAuthenticatedClient(event.request);
+      const client = await createAuthenticatedClientOrRedirect(event.request);
 
       const variables = UpsertUploadRecordSchema.parse(
         Object.fromEntries(
@@ -256,17 +231,9 @@ export default function UploadRoute() {
     },
   );
 
-  const [, createMultipartMediaUpload] = createServerAction$(
-    async (form: FormData, event) => {
-      const client = await createAuthenticatedClient(event.request);
-      const variables = CreateMultipartUploadSchema.parse(
-        Object.fromEntries(
-          ['uploadRecordId', 'bytes', 'uploadMimeType'].map((p) => [
-            p,
-            form.get(p),
-          ]),
-        ),
-      );
+  const createMultipartMediaUpload = server$(
+    async (variables: CreateMultipartMediaUploadMutationVariables) => {
+      const client = await createAuthenticatedClientOrRedirect(server$.request);
 
       const data = await client.request<
         CreateMultipartMediaUploadMutation,
@@ -293,22 +260,13 @@ export default function UploadRoute() {
         variables,
       );
 
-      return json(data);
+      return data;
     },
   );
 
-  const [, finalizeUpload] = createServerAction$(
-    async (form: FormData, event) => {
-      const client = await createAuthenticatedClient(event.request);
-      const variables = FinalizeUploadSchema.parse(
-        Object.fromEntries([
-          ...['uploadRecordId', 's3UploadKey', 's3UploadId'].map((p) => [
-            p,
-            form.get(p),
-          ]),
-          ['s3PartETags', form.getAll('s3PartETags')],
-        ]),
-      );
+  const finalizeUpload = server$(
+    async (variables: FinalizeUploadMutationVariables) => {
+      const client = await createAuthenticatedClientOrRedirect(server$.request);
 
       const data = await client.request<
         FinalizeUploadMutation,
@@ -332,7 +290,7 @@ export default function UploadRoute() {
         variables,
       );
 
-      return json(data);
+      return data;
     },
   );
 
@@ -358,30 +316,27 @@ export default function UploadRoute() {
         await submitUpsert();
       }
 
-      const createVariables = new FormData();
       const upRecId = uploadRecordId();
-      invariant(upRecId, 'Missing uploadRecordId!');
-      createVariables.set('uploadRecordId', upRecId);
-      createVariables.set('uploadMimeType', mime);
-      createVariables.set('bytes', `${file.size}`);
+      invariant(upRecId);
 
-      const res = await createMultipartMediaUpload(createVariables);
-      const {
-        createMultipartMediaUpload: { urls, partSize, s3UploadKey, s3UploadId },
-      } = CreateMultipartUploadResponseSchema.parse(await res.json());
+      const { createMultipartMediaUpload: res } =
+        await createMultipartMediaUpload({
+          uploadRecordId: upRecId,
+          bytes: file.size,
+          uploadMimeType: mime,
+        });
 
-      const upload = doMultipartUpload(file, urls, partSize);
+      const upload = doMultipartUpload(file, res.urls, res.partSize);
       upload.onProgress((i) => setMediaUploadProgress(i));
 
       const eTags = await upload;
 
-      const finalizeVariables = new FormData();
-      finalizeVariables.set('uploadRecordId', upRecId);
-      finalizeVariables.set('s3UploadKey', s3UploadKey);
-      finalizeVariables.set('s3UploadId', s3UploadId);
-      eTags.forEach((tag) => finalizeVariables.append('s3PartETags', tag));
-
-      await finalizeUpload(finalizeVariables);
+      await finalizeUpload({
+        uploadRecordId: upRecId,
+        s3UploadKey: res.s3UploadKey,
+        s3UploadId: res.s3UploadId,
+        s3PartETags: eTags,
+      });
     })();
 
     return { title: file.name, progress: uploadProgress };

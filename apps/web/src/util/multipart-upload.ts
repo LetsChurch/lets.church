@@ -35,7 +35,7 @@ function uploadPart(
             progress(1);
             const eTag = xhr.getResponseHeader('ETag');
             if (eTag) {
-              resolve(eTag);
+              resolve(eTag.replaceAll('"', ''));
             } else {
               reject(new Error(`No ETag from part upload: ${part}`));
             }
