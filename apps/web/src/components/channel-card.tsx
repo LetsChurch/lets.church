@@ -39,22 +39,13 @@ export default function ChannelCard(props: Props) {
             <dt class="contents">
               <SubscribersIcon
                 class="mr-1 inline h-4 w-4"
-                viewBox="0 0 24 24"
-                width="24"
-                height="24"
                 role="presentation"
               />
               <span class="sr-only">Subscribers</span>
             </dt>
             <dd class="mr-2">13k</dd>
             <dt class="contents">
-              <FloppyIcon
-                class="mr-1 inline h-4 w-4"
-                viewBox="0 0 24 24"
-                width="24"
-                height="24"
-                role="presentation"
-              />
+              <FloppyIcon class="mr-1 inline h-4 w-4" role="presentation" />
               <span class="sr-only">Uploads</span>
             </dt>
             <dd class="mr-2">100</dd>

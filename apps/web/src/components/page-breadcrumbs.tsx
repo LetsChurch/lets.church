@@ -68,6 +68,8 @@ export default function PageBreadcrumbs() {
   const initialCrumbs = () => {
     const list = crumbs();
 
+    console.log(list);
+
     return list.slice(0, -1);
   };
 
@@ -81,9 +83,6 @@ export default function PageBreadcrumbs() {
           >
             <ChevronLeft
               class="-ml-1 mr-1 h-5 w-5 flex-shrink-0 text-gray-400"
-              viewBox="0 0 24 24"
-              width={24}
-              height={24}
               aria-hidden="true"
             />
             Back
@@ -98,10 +97,6 @@ export default function PageBreadcrumbs() {
                     <Show when={crumbI() > 0}>
                       <ChevronRight
                         class="h-4 w-4 flex-shrink-0 text-gray-400"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        width={24}
-                        height={24}
                         aria-hidden="true"
                       />
                     </Show>
