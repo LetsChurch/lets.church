@@ -88,6 +88,7 @@ services:
       EXTERNAL_HOOKS_HOST: ${EXTERNAL_HOOKS_HOST}
       JWT_SECRET: ${JWT_SECRET}
       TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
       <<: *s3-env
       SMTP_URL: smtp://mailhog:1025?pool=true
     volumes:

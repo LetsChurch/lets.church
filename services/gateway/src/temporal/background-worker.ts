@@ -21,6 +21,7 @@ const worker = await Worker.create({
   workflowsPath,
   activities,
   taskQueue: BACKGROUND_QUEUE,
+  shutdownGraceTime: envariant('TEMPORAL_SHUTDOWN_GRACE_TIME'),
 });
 
 await worker.run();
