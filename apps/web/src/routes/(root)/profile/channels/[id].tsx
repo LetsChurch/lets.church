@@ -1,13 +1,13 @@
 import { useParams } from 'solid-start';
-import { useCrumb } from '~/components/page-breadcrumbs';
+import { PageHeading } from '~/components/page-heading';
 
 export default function ChannelRoute() {
   const params = useParams();
 
-  useCrumb({
-    title: params['id'] ?? '',
-    href: `/profile/channels/${params['id']}`,
-  });
-
-  return <h1>Channel: {params['id']}</h1>;
+  return (
+    <>
+      <PageHeading title={`Channel: ${params['id']}`} backButton />
+      <p>Hello</p>
+    </>
+  );
 }
