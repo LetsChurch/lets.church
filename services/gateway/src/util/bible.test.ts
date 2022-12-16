@@ -151,11 +151,13 @@ describe('getBibleRegex', () => {
 });
 
 test('getBibleReferences', () => {
-  expect([
-    ...getBibleReferences(
-      'Genesis can be abbreviated gn or Gen and Exodus 22 as Ex 22. Romans 1:20 is the same as Romans Chapter 1 Verse 20 or even Rm 1:20.',
+  expect(
+    Array.from(
+      getBibleReferences(
+        'Genesis can be abbreviated gn or Gen and Exodus 22 as Ex 22. Romans 1:20 is the same as Romans Chapter 1 Verse 20 or even Rm 1:20.',
+      ),
     ),
-  ]).toMatchInlineSnapshot(`
+  ).toMatchInlineSnapshot(`
     [
       {
         "book": "Genesis",

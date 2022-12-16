@@ -70,7 +70,7 @@ export const transcriptSegmentSchema = Z.array(
     end: Z.number(),
   }).transform((segment) => ({
     ...segment,
-    bibleReferences: [...getBibleReferences(segment.text)].map(
+    bibleReferences: Array.from(getBibleReferences(segment.text)).map(
       ({ book, chapter, verse }) => ({
         book: book as string,
         chapter: chapter ?? null,
