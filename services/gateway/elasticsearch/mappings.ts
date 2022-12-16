@@ -66,6 +66,20 @@ const targetMappings: Record<
           text: {
             type: 'text',
           },
+          bibleReferences: {
+            type: 'nested',
+            properties: {
+              book: {
+                type: 'keyword',
+              },
+              chapter: {
+                type: 'integer',
+              },
+              verse: {
+                type: 'integer',
+              },
+            },
+          },
         },
       },
     },

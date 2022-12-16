@@ -1,4 +1,5 @@
 import * as Z from 'zod';
+import { getBibleReferences } from './bible';
 
 const streamUnionSchema = Z.discriminatedUnion('codec_type', [
   Z.object({
@@ -67,5 +68,14 @@ export const transcriptSegmentSchema = Z.array(
     text: Z.string(),
     start: Z.number(),
     end: Z.number(),
-  }),
+  }).transform((segment) => ({
+    ...segment,
+    bibleReferences: [...getBibleReferences(segment.text)].map(
+      ({ book, chapter, verse }) => ({
+        book: book as string,
+        chapter: chapter ?? null,
+        verse: verse ?? null,
+      }),
+    ),
+  })),
 );
