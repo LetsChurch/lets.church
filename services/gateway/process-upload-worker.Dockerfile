@@ -4,7 +4,7 @@ RUN apt update && apt install -y build-essential git curl
 RUN mkdir -p /home/build
 RUN git clone https://github.com/ggerganov/whisper.cpp.git /home/build/whisper.cpp
 WORKDIR /home/build/whisper.cpp
-RUN git checkout faa85f9 && make
+RUN git checkout 32fbc8c && make
 RUN ./models/download-ggml-model.sh base
 
 FROM node:19.0.0-bullseye as dev
