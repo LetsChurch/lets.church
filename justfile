@@ -63,6 +63,8 @@ gateway-init: gateway-migrate-dev gateway-es-push-mappings
 
 s3-init:
   cd scripts; npm run s3:cors
+s3-prune-multipart-uploads:
+  cd scripts; S3_BUCKET=${S3_INGEST_BUCKET} npm run s3:prune-multipart-uploads
 
 init: gateway-init s3-init
 
