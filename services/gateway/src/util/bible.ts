@@ -390,51 +390,61 @@ export const aliasesToBookName = Object.fromEntries(
   ]),
 );
 
-export function getBibleRegex() {
-  const booksRegex = books
-    .flatMap((book) => [book.name, ...book.aliases])
-    .join('|');
+const booksRegex = books
+  .flatMap((book) => [book.name, ...book.aliases])
+  .join('|');
 
-  const regex = new RegExp(
-    `(?:\\b)(?<book>${booksRegex})\\s*(?:chapter)?\\s*(?:(?<chapter>\\d+)(?:\\s*:?(?:verse)?\\s*(?<verse>\\d+))?)?(?:\\b)`,
-    'gi',
-  );
-
-  return regex;
-}
+// The suffixes (for now) are split out into their own separate regexes,
+// putting them all together into a giant regex has proven to be unmaintainable
+const suffixRegexes = [
+  // Only the book (maybe this should only be when the book name is preceeded by "Book of"?)
+  '(?!\\s+\\d+)',
+  // Only the chapter, no verses (e.g., "John 3")
+  '\\s+(?<chapter>\\d+)(?![:.]|through|,?\\s+\\d+)',
+  // Chapter followed by a verse or verse range (e.g., "John 3:16", "John 3.16", or "John 3:16-18")
+  '\\s+(?<chapter>\\d+)[:.](?<verse>\\d+)(?:-(?<verseEnd>\\d+))?',
+  // Chapter followed by a verse or verse range, spoken (e.g., "John 3, 16", "John 3, 16-18", or "John 3, 16 through 18") (commas optional)
+  '\\s+(?<chapter>\\d+),?\\s*(?<verse>\\d+)(?:-|,?\\s+through\\s+)(?<verseEnd>\\d+)',
+];
 
 const bookNamesSet = new Set(books.map((book) => book.name));
 
 export function* getBibleReferences(text: string) {
-  const regex = getBibleRegex();
-
   let match: RegExpExecArray | null;
 
-  while ((match = regex.exec(text))) {
-    const { groups } = match;
+  for (const suffix of suffixRegexes) {
+    const regex = new RegExp(
+      `(?:\\b)(?<book>${booksRegex})${suffix}(?:\\b)`,
+      'gi',
+    );
 
-    if (!groups) {
-      continue;
+    while ((match = regex.exec(text))) {
+      const { groups } = match;
+
+      if (!groups) {
+        continue;
+      }
+
+      const { book, chapter, verse, verseEnd } = groups;
+
+      if (!book) {
+        continue;
+      }
+
+      // If there is no chapter and we matched an alias, don't yield any results
+      // (aliases must be followed by at least a chapter)
+      if (!chapter && !bookNamesSet.has(book)) {
+        continue;
+      }
+
+      yield {
+        match: match[0].trim(),
+        index: match.index,
+        book: book ? aliasesToBookName[book.toLocaleLowerCase()] : undefined,
+        chapter: chapter ? parseInt(chapter) : undefined,
+        verse: verse ? parseInt(verse) : undefined,
+        verseEnd: verseEnd ? parseInt(verseEnd) : undefined,
+      };
     }
-
-    const { book, chapter, verse } = groups;
-
-    if (!book) {
-      continue;
-    }
-
-    // If there is no chapter and we matched an alias, don't yield any results
-    // (aliases must be followed by at least a chapter)
-    if (!chapter && !bookNamesSet.has(book)) {
-      continue;
-    }
-
-    yield {
-      match: match[0].trim(),
-      index: match.index,
-      book: book ? aliasesToBookName[book.toLocaleLowerCase()] : undefined,
-      chapter: chapter ? parseInt(chapter) : undefined,
-      verse: verse ? parseInt(verse) : undefined,
-    };
   }
 }
