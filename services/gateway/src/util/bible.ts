@@ -1,18 +1,18 @@
 type Book = {
   name: string;
   aliases: ReadonlyArray<string>;
-  singleChapter?: boolean;
+  chapters: number;
 };
 
 export const books: ReadonlyArray<Book> = [
-  { name: 'Genesis', aliases: ['Gen', 'Ge', 'Gn'] },
-  { name: 'Exodus', aliases: ['Exod', 'Exo', 'Ex'] },
-  { name: 'Leviticus', aliases: ['Lev', 'Le', 'Lv'] },
-  { name: 'Numbers', aliases: ['Num', 'Nu', 'Nm', 'Nb'] },
-  { name: 'Deuteronomy', aliases: ['Deut', 'De', 'Dt'] },
-  { name: 'Joshua', aliases: ['Josh', 'Jos', 'Jsh'] },
-  { name: 'Judges', aliases: ['Judg', 'Jdg', 'Jg', 'Jdgs'] },
-  { name: 'Ruth', aliases: ['Rth', 'Ru'] },
+  { name: 'Genesis', aliases: ['Gen', 'Ge', 'Gn'], chapters: 50 },
+  { name: 'Exodus', aliases: ['Exod', 'Exo', 'Ex'], chapters: 40 },
+  { name: 'Leviticus', aliases: ['Lev', 'Le', 'Lv'], chapters: 27 },
+  { name: 'Numbers', aliases: ['Num', 'Nu', 'Nm', 'Nb'], chapters: 36 },
+  { name: 'Deuteronomy', aliases: ['Deut', 'De', 'Dt'], chapters: 34 },
+  { name: 'Joshua', aliases: ['Josh', 'Jos', 'Jsh'], chapters: 24 },
+  { name: 'Judges', aliases: ['Judg', 'Jdg', 'Jg', 'Jdgs'], chapters: 21 },
+  { name: 'Ruth', aliases: ['Rth', 'Ru'], chapters: 4 },
   {
     name: '1 Samuel',
     aliases: [
@@ -28,6 +28,7 @@ export const books: ReadonlyArray<Book> = [
       'First Sam',
       'First Samuel',
     ],
+    chapters: 31,
   },
   {
     name: '2 Samuel',
@@ -46,6 +47,7 @@ export const books: ReadonlyArray<Book> = [
       'Second Samuel',
       'Second Sam',
     ],
+    chapters: 24,
   },
   {
     name: '1 Kings',
@@ -63,6 +65,7 @@ export const books: ReadonlyArray<Book> = [
       'First Kgs',
       'First Kings',
     ],
+    chapters: 22,
   },
   {
     name: '2 Kings',
@@ -81,6 +84,7 @@ export const books: ReadonlyArray<Book> = [
       'Second Kings',
       'Second Kgs',
     ],
+    chapters: 25,
   },
   {
     name: '1 Chronicles',
@@ -99,6 +103,7 @@ export const books: ReadonlyArray<Book> = [
       'First Chron',
       'First Chronicles',
     ],
+    chapters: 29,
   },
   {
     name: '2 Chronicles',
@@ -117,14 +122,23 @@ export const books: ReadonlyArray<Book> = [
       'Second Chronicles',
       'Second Chron',
     ],
+    chapters: 36,
   },
-  { name: 'Ezra', aliases: ['Ezr', 'Ez'] },
-  { name: 'Nehemiah', aliases: ['Neh', 'Ne'] },
-  { name: 'Esther', aliases: ['Esth', 'Es'] },
-  { name: 'Job', aliases: ['Jb'] },
-  { name: 'Psalms', aliases: ['Psalm', 'Pslm', 'Ps', 'Psa', 'Psm', 'Pss'] },
-  { name: 'Proverbs', aliases: ['Prov', 'Pro', 'Pr', 'Prv'] },
-  { name: 'Ecclsiastes', aliases: ['Eccles', 'Eccle', 'Ecc', 'Ec', 'Qoh'] },
+  { name: 'Ezra', aliases: ['Ezr', 'Ez'], chapters: 10 },
+  { name: 'Nehemiah', aliases: ['Neh', 'Ne'], chapters: 13 },
+  { name: 'Esther', aliases: ['Esth', 'Es'], chapters: 10 },
+  { name: 'Job', aliases: ['Jb'], chapters: 42 },
+  {
+    name: 'Psalms',
+    aliases: ['Psalm', 'Pslm', 'Ps', 'Psa', 'Psm', 'Pss'],
+    chapters: 150,
+  },
+  { name: 'Proverbs', aliases: ['Prov', 'Pro', 'Pr', 'Prv'], chapters: 31 },
+  {
+    name: 'Ecclsiastes',
+    aliases: ['Eccles', 'Eccle', 'Ecc', 'Ec', 'Qoh'],
+    chapters: 12,
+  },
   {
     name: 'Song of Solomon',
     aliases: [
@@ -136,30 +150,31 @@ export const books: ReadonlyArray<Book> = [
       'Canticles',
       'Cant',
     ],
+    chapters: 8,
   },
-  { name: 'Isaiah', aliases: ['Isa', 'Is'] },
-  { name: 'Jeremiah', aliases: ['Jer', 'Je', 'Jr'] },
-  { name: 'Lamentations', aliases: ['Lam', 'La'] },
-  { name: 'Ezekiel', aliases: ['Ezek', 'Eze', 'Ezk'] },
-  { name: 'Daniel', aliases: ['Dan', 'Da', 'Dn'] },
-  { name: 'Hosea', aliases: ['Hos', 'Ho'] },
-  { name: 'Joel', aliases: ['Joe', 'Jl'] },
-  { name: 'Amos', aliases: ['Am'] },
-  { name: 'Obadiah', aliases: ['Obad', 'Ob'], singleChapter: true },
-  { name: 'Jonah', aliases: ['Jnh', 'Jon'] },
-  { name: 'Michah', aliases: ['Mic', 'Mc'] },
-  { name: 'Nahum', aliases: ['Nah', 'Na'] },
-  { name: 'Habakkuk', aliases: ['Hab', 'Hb'] },
-  { name: 'Zephaniah', aliases: ['Zeph', 'Zep', 'Zp'] },
-  { name: 'Haggai', aliases: ['Hag', 'Hg'] },
-  { name: 'Zechariah', aliases: ['Zech', 'Zec', 'Zc'] },
-  { name: 'Malachi', aliases: ['Mal', 'Ml'] },
-  { name: 'Matthew', aliases: ['Matt', 'Mt'] },
-  { name: 'Mark', aliases: ['Mrk', 'Mar', 'Mk', 'Mr'] },
-  { name: 'Luke', aliases: ['Luk', 'Lk'] },
-  { name: 'John', aliases: ['Jon', 'Jhn', 'Jn'] },
-  { name: 'Acts', aliases: ['Act', 'Ac'] },
-  { name: 'Romans', aliases: ['Rom', 'Ro', 'Rm'] },
+  { name: 'Isaiah', aliases: ['Isa', 'Is'], chapters: 66 },
+  { name: 'Jeremiah', aliases: ['Jer', 'Je', 'Jr'], chapters: 52 },
+  { name: 'Lamentations', aliases: ['Lam', 'La'], chapters: 5 },
+  { name: 'Ezekiel', aliases: ['Ezek', 'Eze', 'Ezk'], chapters: 48 },
+  { name: 'Daniel', aliases: ['Dan', 'Da', 'Dn'], chapters: 12 },
+  { name: 'Hosea', aliases: ['Hos', 'Ho'], chapters: 14 },
+  { name: 'Joel', aliases: ['Joe', 'Jl'], chapters: 3 },
+  { name: 'Amos', aliases: ['Am'], chapters: 9 },
+  { name: 'Obadiah', aliases: ['Obad', 'Ob'], chapters: 1 },
+  { name: 'Jonah', aliases: ['Jnh', 'Jon'], chapters: 4 },
+  { name: 'Michah', aliases: ['Mic', 'Mc'], chapters: 7 },
+  { name: 'Nahum', aliases: ['Nah', 'Na'], chapters: 3 },
+  { name: 'Habakkuk', aliases: ['Hab', 'Hb'], chapters: 3 },
+  { name: 'Zephaniah', aliases: ['Zeph', 'Zep', 'Zp'], chapters: 3 },
+  { name: 'Haggai', aliases: ['Hag', 'Hg'], chapters: 2 },
+  { name: 'Zechariah', aliases: ['Zech', 'Zec', 'Zc'], chapters: 14 },
+  { name: 'Malachi', aliases: ['Mal', 'Ml'], chapters: 4 },
+  { name: 'Matthew', aliases: ['Matt', 'Mt'], chapters: 28 },
+  { name: 'Mark', aliases: ['Mrk', 'Mar', 'Mk', 'Mr'], chapters: 16 },
+  { name: 'Luke', aliases: ['Luk', 'Lk'], chapters: 24 },
+  { name: 'John', aliases: ['Jon', 'Jhn', 'Jn'], chapters: 21 },
+  { name: 'Acts', aliases: ['Act', 'Ac'], chapters: 28 },
+  { name: 'Romans', aliases: ['Rom', 'Ro', 'Rm'], chapters: 16 },
   {
     name: '1 Corinthians',
     aliases: [
@@ -176,6 +191,7 @@ export const books: ReadonlyArray<Book> = [
       'First Cor',
       'First Corinthians',
     ],
+    chapters: 16,
   },
   {
     name: '2 Corinthians',
@@ -191,11 +207,12 @@ export const books: ReadonlyArray<Book> = [
       '2nd Corinthians',
       'Second Corinthians',
     ],
+    chapters: 13,
   },
-  { name: 'Galatians', aliases: ['Gal', 'Ga'] },
-  { name: 'Ephesians', aliases: ['Ephes', 'Eph'] },
-  { name: 'Philippians', aliases: ['Phil', 'Php', 'Pp'] },
-  { name: 'Colossians', aliases: ['Col', 'Co'] },
+  { name: 'Galatians', aliases: ['Gal', 'Ga'], chapters: 6 },
+  { name: 'Ephesians', aliases: ['Ephes', 'Eph'], chapters: 6 },
+  { name: 'Philippians', aliases: ['Phil', 'Php', 'Pp'], chapters: 4 },
+  { name: 'Colossians', aliases: ['Col', 'Co'], chapters: 4 },
   {
     name: '1 Thessalonians',
     aliases: [
@@ -215,6 +232,7 @@ export const books: ReadonlyArray<Book> = [
       'First Thessalonians',
       'First Thess',
     ],
+    chapters: 5,
   },
   {
     name: '2 Thessalonians',
@@ -235,6 +253,7 @@ export const books: ReadonlyArray<Book> = [
       'Second Thessalonians',
       'Second Thess',
     ],
+    chapters: 3,
   },
   {
     name: '1 Timothy',
@@ -252,6 +271,7 @@ export const books: ReadonlyArray<Book> = [
       'First Timothy',
       'First Tim',
     ],
+    chapters: 6,
   },
   {
     name: '2 Timothy',
@@ -269,11 +289,12 @@ export const books: ReadonlyArray<Book> = [
       'Second Timothy',
       'Second Tim',
     ],
+    chapters: 4,
   },
-  { name: 'Titus', aliases: ['Tit', 'Ti'] },
-  { name: 'Philemon', aliases: ['Philem', 'Phm', 'Pm'], singleChapter: true },
-  { name: 'Hebrews', aliases: ['Heb'] },
-  { name: 'James', aliases: ['Jas', 'Jm'] },
+  { name: 'Titus', aliases: ['Tit', 'Ti'], chapters: 3 },
+  { name: 'Philemon', aliases: ['Philem', 'Phm', 'Pm'], chapters: 1 },
+  { name: 'Hebrews', aliases: ['Heb'], chapters: 13 },
+  { name: 'James', aliases: ['Jas', 'Jm'], chapters: 5 },
   {
     name: '1 Peter',
     aliases: [
@@ -293,6 +314,7 @@ export const books: ReadonlyArray<Book> = [
       '1st Peter',
       'First Peter',
     ],
+    chapters: 5,
   },
   {
     name: '2 Peter',
@@ -313,6 +335,7 @@ export const books: ReadonlyArray<Book> = [
       '2nd Peter',
       'Second Peter',
     ],
+    chapters: 3,
   },
   {
     name: '1 John',
@@ -334,6 +357,7 @@ export const books: ReadonlyArray<Book> = [
       '1st John',
       'First John',
     ],
+    chapters: 5,
   },
   {
     name: '2 John',
@@ -355,7 +379,7 @@ export const books: ReadonlyArray<Book> = [
       '2nd John',
       'Second John',
     ],
-    singleChapter: true,
+    chapters: 1,
   },
   {
     name: '3 John',
@@ -377,16 +401,20 @@ export const books: ReadonlyArray<Book> = [
       '3rd John',
       'Third John',
     ],
-    singleChapter: true,
+    chapters: 1,
   },
-  { name: 'Jude', aliases: ['Jude', 'Jud', 'Jd'], singleChapter: true },
-  { name: 'Revelation', aliases: ['Rev', 'Re', 'The Revelation'] },
+  { name: 'Jude', aliases: ['Jude', 'Jud', 'Jd'], chapters: 1 },
+  {
+    name: 'Revelation',
+    aliases: ['Rev', 'Re', 'The Revelation'],
+    chapters: 22,
+  },
 ] as const;
 
-export const aliasesToBookName = Object.fromEntries(
+export const aliasesToBook: Record<string, Book> = Object.fromEntries(
   books.flatMap((book) => [
-    [book.name.toLocaleLowerCase(), book.name],
-    ...book.aliases.map((alias) => [alias.toLocaleLowerCase(), book.name]),
+    [book.name.toLocaleLowerCase(), book],
+    ...book.aliases.map((alias) => [alias.toLocaleLowerCase(), book]),
   ]),
 );
 
@@ -407,8 +435,6 @@ const suffixRegexes = [
   '\\s+(?<chapter>\\d+),?\\s*(?<verse>\\d+)(?:-|,?\\s+through\\s+)(?<verseEnd>\\d+)',
 ];
 
-const bookNamesSet = new Set(books.map((book) => book.name));
-
 export function* getBibleReferences(text: string) {
   let match: RegExpExecArray | null;
 
@@ -425,22 +451,34 @@ export function* getBibleReferences(text: string) {
         continue;
       }
 
-      const { book, chapter, verse, verseEnd } = groups;
+      const { book, verseEnd } = groups;
+      let { chapter, verse } = groups;
 
       if (!book) {
         continue;
       }
 
-      // If there is no chapter and we matched an alias, don't yield any results
-      // (aliases must be followed by at least a chapter)
-      if (!chapter && !bookNamesSet.has(book)) {
+      const bookInfo = aliasesToBook[book.toLocaleLowerCase()];
+
+      if (!bookInfo) {
         continue;
+      }
+
+      // If there are more chapters than the book has, attempt to correct transcription error
+      if (chapter && !verse && parseInt(chapter) > bookInfo.chapters) {
+        const matchedChapter = chapter;
+        let i = 1;
+        while (parseInt(matchedChapter.slice(0, i)) <= bookInfo.chapters) {
+          i++;
+        }
+        chapter = matchedChapter.slice(0, i - 1);
+        verse = matchedChapter.slice(i - 1);
       }
 
       yield {
         match: match[0].trim(),
         index: match.index,
-        book: book ? aliasesToBookName[book.toLocaleLowerCase()] : undefined,
+        book: bookInfo.name,
         chapter: chapter ? parseInt(chapter) : undefined,
         verse: verse ? parseInt(verse) : undefined,
         verseEnd: verseEnd ? parseInt(verseEnd) : undefined,

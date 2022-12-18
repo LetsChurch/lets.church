@@ -1,12 +1,12 @@
 import { describe, test, expect } from 'vitest';
-import { books, aliasesToBookName, getBibleReferences } from './bible';
+import { books, aliasesToBook, getBibleReferences } from './bible';
 
 test('books', () => {
   expect(books).toMatchSnapshot();
 });
 
-test('aliasesToBookName', () => {
-  expect(aliasesToBookName).toMatchSnapshot();
+test('aliasesToBook', () => {
+  expect(aliasesToBook).toMatchSnapshot();
 });
 
 describe('getBibleReferences', () => {
@@ -151,6 +151,42 @@ describe('getBibleReferences', () => {
             },
           ]
         `);
+    });
+  });
+
+  describe.only('incorrect transcriptions', () => {
+    describe('large numbers', () => {
+      test('john 316', () => {
+        expect(Array.from(getBibleReferences('john 316')))
+          .toMatchInlineSnapshot(`
+          [
+            {
+              "book": "John",
+              "chapter": 3,
+              "index": 0,
+              "match": "john 316",
+              "verse": 16,
+              "verseEnd": undefined,
+            },
+          ]
+        `);
+      });
+
+      test('romans 1516', () => {
+        expect(Array.from(getBibleReferences('romans 1516')))
+          .toMatchInlineSnapshot(`
+          [
+            {
+              "book": "Romans",
+              "chapter": 15,
+              "index": 0,
+              "match": "romans 1516",
+              "verse": 16,
+              "verseEnd": undefined,
+            },
+          ]
+        `);
+      });
     });
   });
 
