@@ -1,3 +1,6 @@
+import invariant from 'tiny-invariant';
+import { orderBy } from 'lodash-es';
+
 type Book = {
   name: string;
   aliases: ReadonlyArray<string>;
@@ -418,71 +421,96 @@ export const aliasesToBook: Record<string, Book> = Object.fromEntries(
   ]),
 );
 
-const booksRegex = books
-  .flatMap((book) => [book.name, ...book.aliases])
-  .join('|');
+const bookNamePattern = `(?<book>${books.map((book) => book.name).join('|')})`;
 
-// The suffixes (for now) are split out into their own separate regexes,
+const bookNamesAndAliasesPattern = `(?<book>${books
+  .flatMap((book) => [book.name, ...book.aliases])
+  .join('|')})`;
+
+// The cases (for now) are split out into their own separate regexes,
 // putting them all together into a giant regex has proven to be unmaintainable
-const suffixRegexes = [
-  // Only the book (maybe this should only be when the book name is preceeded by "Book of"?)
-  '(?!\\s+\\d+)',
-  // Only the chapter, no verses (e.g., "John 3")
-  '\\s+(?<chapter>\\d+)(?![:.]|through|,?\\s+\\d+)',
-  // Chapter followed by a verse or verse range (e.g., "John 3:16", "John 3.16", or "John 3:16-18")
-  '\\s+(?<chapter>\\d+)[:.](?<verse>\\d+)(?:-(?<verseEnd>\\d+))?',
+const regexes = [
+  // Only the book (not an alias) (maybe this should only be when the book name is preceeded by "Book of"?)
+  new RegExp(bookNamePattern, 'gi'),
+  // Chapter followed by optional verse or verse range (e.g., "John 3:16", "John 3.16", or "John 3:16-18")
+  new RegExp(
+    `${bookNamesAndAliasesPattern}\\s+${
+      /(?:chapter\s+)?(?<chapter>\d+)(?:(?:[:.]|\s+verse\s+)(?<verse>\d+)(?:-(?<verseEnd>\d+))?)?/
+        .source
+    }`,
+    'gi',
+  ),
   // Chapter followed by a verse or verse range, spoken (e.g., "John 3, 16", "John 3, 16-18", or "John 3, 16 through 18") (commas optional)
-  '\\s+(?<chapter>\\d+),?\\s*(?<verse>\\d+)(?:-|,?\\s+through\\s+)(?<verseEnd>\\d+)',
+  new RegExp(
+    `${bookNamesAndAliasesPattern}\\s+${
+      /(?:chapter\s+)?(?<chapter>\d+)(?:(?:,?\s*|\s+verse\s+)(?<verse>\d+),?(?:(?:-|\s+to\s+|\s+through\s+)(?<verseEnd>\d+))?)?/
+        .source
+    }`,
+    'gi',
+  ),
 ];
 
 export function* getBibleReferences(text: string) {
-  let match: RegExpExecArray | null;
+  let lastIndex = 0;
+  let lastMatch: RegExpExecArray | null = null;
 
-  for (const suffix of suffixRegexes) {
-    const regex = new RegExp(
-      `(?:\\b)(?<book>${booksRegex})${suffix}(?:\\b)`,
-      'gi',
-    );
+  while (lastIndex <= text.length) {
+    const res = regexes.map((re) => {
+      re.lastIndex = lastIndex;
+      return [re, re.exec(text)] as const;
+    });
 
-    while ((match = regex.exec(text))) {
-      const { groups } = match;
-
-      if (!groups) {
-        continue;
-      }
-
-      const { book, verseEnd } = groups;
-      let { chapter, verse } = groups;
-
-      if (!book) {
-        continue;
-      }
-
-      const bookInfo = aliasesToBook[book.toLocaleLowerCase()];
-
-      if (!bookInfo) {
-        continue;
-      }
-
-      // If there are more chapters than the book has, attempt to correct transcription error
-      if (chapter && !verse && parseInt(chapter) > bookInfo.chapters) {
-        const matchedChapter = chapter;
-        let i = 1;
-        while (parseInt(matchedChapter.slice(0, i)) <= bookInfo.chapters) {
-          i++;
-        }
-        chapter = matchedChapter.slice(0, i - 1);
-        verse = matchedChapter.slice(i - 1);
-      }
-
-      yield {
-        match: match[0].trim(),
-        index: match.index,
-        book: bookInfo.name,
-        chapter: chapter ? parseInt(chapter) : undefined,
-        verse: verse ? parseInt(verse) : undefined,
-        verseEnd: verseEnd ? parseInt(verseEnd) : undefined,
-      };
+    // Do we have any matches
+    if (res.every(([, match]) => match === null)) {
+      // No matches, we're doe
+      break;
     }
+
+    const sortedRes = orderBy(res, ['1.index', '0.lastIndex'], ['asc', 'desc']);
+    const first = sortedRes[0];
+    invariant(first);
+    lastIndex = first[0].lastIndex;
+    lastMatch = first[1];
+    invariant(lastMatch);
+
+    // Process the match
+    const { groups } = lastMatch;
+
+    if (!groups) {
+      continue;
+    }
+
+    const { book, verseEnd } = groups;
+    let { chapter, verse } = groups;
+
+    if (!book) {
+      continue;
+    }
+
+    const bookInfo = aliasesToBook[book.toLocaleLowerCase()];
+
+    if (!bookInfo) {
+      continue;
+    }
+
+    // If there are more chapters than the book has, attempt to correct transcription error
+    if (chapter && !verse && parseInt(chapter) > bookInfo.chapters) {
+      const matchedChapter = chapter;
+      let i = 1;
+      while (parseInt(matchedChapter.slice(0, i)) <= bookInfo.chapters) {
+        i++;
+      }
+      chapter = matchedChapter.slice(0, i - 1);
+      verse = matchedChapter.slice(i - 1);
+    }
+
+    yield {
+      match: lastMatch[0].trim(),
+      index: lastMatch.index,
+      book: bookInfo.name,
+      chapter: chapter ? parseInt(chapter) : undefined,
+      verse: verse ? parseInt(verse) : undefined,
+      verseEnd: verseEnd ? parseInt(verseEnd) : undefined,
+    };
   }
 }
