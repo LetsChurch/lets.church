@@ -7357,21 +7357,21 @@ exports[`getBibleReferences > individual cases > Book name and chapter 2`] = `
 ]
 `;
 
-exports[`getBibleReferences > individual cases > Book name, chapter, and verse or verse range 1`] = `
+exports[`getBibleReferences > individual cases > Book name, chapter, and chapter/verse or chapter/verse range > John 3, 16-18 1`] = `
 [
   {
     "book": "John",
     "chapter": 3,
     "chapterEnd": null,
     "index": 0,
-    "match": "John 3:16",
+    "match": "John 3, 16-18",
     "verse": 16,
-    "verseEnd": null,
+    "verseEnd": 18,
   },
 ]
 `;
 
-exports[`getBibleReferences > individual cases > Book name, chapter, and verse or verse range 2`] = `
+exports[`getBibleReferences > individual cases > Book name, chapter, and chapter/verse or chapter/verse range > John 3.16 1`] = `
 [
   {
     "book": "John",
@@ -7385,16 +7385,30 @@ exports[`getBibleReferences > individual cases > Book name, chapter, and verse o
 ]
 `;
 
-exports[`getBibleReferences > individual cases > Book name, chapter, and verse or verse range 3`] = `
+exports[`getBibleReferences > individual cases > Book name, chapter, and chapter/verse or chapter/verse range > John 3:16 1`] = `
 [
   {
     "book": "John",
     "chapter": 3,
     "chapterEnd": null,
     "index": 0,
-    "match": "John 3, 16-18",
+    "match": "John 3:16",
     "verse": 16,
-    "verseEnd": 18,
+    "verseEnd": null,
+  },
+]
+`;
+
+exports[`getBibleReferences > individual cases > Book name, chapter, and chapter/verse or chapter/verse range > John 3:16-4:1 1`] = `
+[
+  {
+    "book": "John",
+    "chapter": 3,
+    "chapterEnd": 4,
+    "index": 0,
+    "match": "John 3:16-4:1",
+    "verse": 16,
+    "verseEnd": 1,
   },
 ]
 `;

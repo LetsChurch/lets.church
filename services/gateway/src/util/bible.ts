@@ -435,7 +435,7 @@ const regexes = [
   // Chapter followed by optional verse or verse range (e.g., "John 3:16", "John 3.16", or "John 3:16-18")
   new RegExp(
     `${bookNamesAndAliasesPattern}\\s+${
-      /(?:chapter\s+)?(?<chapter>\d+)(?:(?:[:.]|\s+verse\s+)(?<verse>\d+)(?:-(?<verseEnd>\d+))?)?/
+      /(?:chapter\s+)?(?<chapter>\d+)(?:(?:[:.]|\s+verse\s+)(?<verse>\d+)(?:-(?:(?<chapterEnd>\d+)[:.])?(?<verseEnd>\d+))?)?/
         .source
     }`,
     'gi',
@@ -443,12 +443,12 @@ const regexes = [
   // Chapter followed by a verse or verse range, spoken (e.g., "John 3, 16", "John 3, 16-18", or "John 3, 16 through 18") (commas optional)
   new RegExp(
     `${bookNamesAndAliasesPattern}\\s+${
-      /(?:chapter\s+)?(?<chapter>\d+)(?:(?:,?\s*|\s+verse\s+)(?<verse>\d+),?(?:(?:-|\s+to\s+|\s+through\s+)(?<verseEnd>\d+))?)?/
+      /(?:chapter\s+)?(?<chapter>\d+)(?:(?:,?\s*|\s+verse\s+)(?<verse>\d+),?(?:(?:-|\s+to\s+|\s+through\s+)(?:(?<chapterEnd>\d+)[:.])?(?<verseEnd>\d+))?)?/
         .source
     }`,
     'gi',
   ),
-  // Chapter range
+  // Chapter range (e.g., John 3-4, etc)
   new RegExp(
     `${bookNamesAndAliasesPattern}\\s+${
       /(?<chapter>\d+)\s*(?:through|to|-)\s*(?<chapterEnd>\d+)/.source

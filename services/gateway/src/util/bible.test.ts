@@ -20,10 +20,13 @@ describe('getBibleReferences', () => {
       expect(Array.from(getBibleReferences('Jn 3'))).toMatchSnapshot();
     });
 
-    test('Book name, chapter, and verse or verse range', () => {
-      expect(Array.from(getBibleReferences('John 3:16'))).toMatchSnapshot();
-      expect(Array.from(getBibleReferences('John 3.16'))).toMatchSnapshot();
-      expect(Array.from(getBibleReferences('John 3, 16-18'))).toMatchSnapshot();
+    describe('Book name, chapter, and chapter/verse or chapter/verse range', () => {
+      test.each(['John 3:16', 'John 3.16', 'John 3, 16-18', 'John 3:16-4:1'])(
+        '%s',
+        (s) => {
+          expect(Array.from(getBibleReferences(s))).toMatchSnapshot();
+        },
+      );
     });
 
     describe('Book name, chapter, and verse range (spoken)', () => {
