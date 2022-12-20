@@ -7204,51 +7204,57 @@ exports[`getBibleReferences > compound cases > getBibleReferences 1`] = `
 [
   {
     "book": "Genesis",
-    "chapter": undefined,
+    "chapter": null,
+    "chapterEnd": null,
     "index": 0,
     "match": "Genesis",
-    "verse": undefined,
-    "verseEnd": undefined,
+    "verse": null,
+    "verseEnd": null,
   },
   {
     "book": "Exodus",
     "chapter": 22,
+    "chapterEnd": null,
     "index": 41,
     "match": "Exodus 22",
-    "verse": undefined,
-    "verseEnd": undefined,
+    "verse": null,
+    "verseEnd": null,
   },
   {
     "book": "Exodus",
     "chapter": 22,
+    "chapterEnd": null,
     "index": 54,
     "match": "Ex 22",
-    "verse": undefined,
-    "verseEnd": undefined,
+    "verse": null,
+    "verseEnd": null,
   },
   {
     "book": "Romans",
     "chapter": 1,
+    "chapterEnd": null,
     "index": 61,
     "match": "Romans 1:20",
     "verse": 20,
-    "verseEnd": undefined,
+    "verseEnd": null,
   },
   {
     "book": "Romans",
     "chapter": 1,
+    "chapterEnd": null,
     "index": 88,
     "match": "Romans Chapter 1 Verse 20",
     "verse": 20,
-    "verseEnd": undefined,
+    "verseEnd": null,
   },
   {
     "book": "Romans",
     "chapter": 1,
+    "chapterEnd": null,
     "index": 122,
     "match": "Rm 1:20",
     "verse": 20,
-    "verseEnd": undefined,
+    "verseEnd": null,
   },
 ]
 `;
@@ -7258,10 +7264,39 @@ exports[`getBibleReferences > incorrect transcriptions > large numbers > john 31
   {
     "book": "John",
     "chapter": 3,
+    "chapterEnd": null,
     "index": 0,
     "match": "john 316",
     "verse": 16,
-    "verseEnd": undefined,
+    "verseEnd": null,
+  },
+]
+`;
+
+exports[`getBibleReferences > incorrect transcriptions > large numbers > john 316 to 18 1`] = `
+[
+  {
+    "book": "John",
+    "chapter": 3,
+    "chapterEnd": null,
+    "index": 0,
+    "match": "john 316 to 18",
+    "verse": 16,
+    "verseEnd": 18,
+  },
+]
+`;
+
+exports[`getBibleReferences > incorrect transcriptions > large numbers > jude 34 1`] = `
+[
+  {
+    "book": "Jude",
+    "chapter": null,
+    "chapterEnd": null,
+    "index": 0,
+    "match": "jude 34",
+    "verse": 3,
+    "verseEnd": 4,
   },
 ]
 `;
@@ -7271,10 +7306,11 @@ exports[`getBibleReferences > incorrect transcriptions > large numbers > romans 
   {
     "book": "Romans",
     "chapter": 15,
+    "chapterEnd": null,
     "index": 0,
     "match": "romans 1516",
     "verse": 16,
-    "verseEnd": undefined,
+    "verseEnd": null,
   },
 ]
 `;
@@ -7283,11 +7319,12 @@ exports[`getBibleReferences > individual cases > Book name alone 1`] = `
 [
   {
     "book": "John",
-    "chapter": undefined,
+    "chapter": null,
+    "chapterEnd": null,
     "index": 0,
     "match": "John",
-    "verse": undefined,
-    "verseEnd": undefined,
+    "verse": null,
+    "verseEnd": null,
   },
 ]
 `;
@@ -7297,10 +7334,11 @@ exports[`getBibleReferences > individual cases > Book name and chapter 1`] = `
   {
     "book": "John",
     "chapter": 3,
+    "chapterEnd": null,
     "index": 0,
     "match": "John 3",
-    "verse": undefined,
-    "verseEnd": undefined,
+    "verse": null,
+    "verseEnd": null,
   },
 ]
 `;
@@ -7310,10 +7348,11 @@ exports[`getBibleReferences > individual cases > Book name and chapter 2`] = `
   {
     "book": "John",
     "chapter": 3,
+    "chapterEnd": null,
     "index": 0,
     "match": "Jn 3",
-    "verse": undefined,
-    "verseEnd": undefined,
+    "verse": null,
+    "verseEnd": null,
   },
 ]
 `;
@@ -7323,10 +7362,11 @@ exports[`getBibleReferences > individual cases > Book name, chapter, and verse o
   {
     "book": "John",
     "chapter": 3,
+    "chapterEnd": null,
     "index": 0,
     "match": "John 3:16",
     "verse": 16,
-    "verseEnd": undefined,
+    "verseEnd": null,
   },
 ]
 `;
@@ -7336,10 +7376,11 @@ exports[`getBibleReferences > individual cases > Book name, chapter, and verse o
   {
     "book": "John",
     "chapter": 3,
+    "chapterEnd": null,
     "index": 0,
     "match": "John 3.16",
     "verse": 16,
-    "verseEnd": undefined,
+    "verseEnd": null,
   },
 ]
 `;
@@ -7349,6 +7390,7 @@ exports[`getBibleReferences > individual cases > Book name, chapter, and verse o
   {
     "book": "John",
     "chapter": 3,
+    "chapterEnd": null,
     "index": 0,
     "match": "John 3, 16-18",
     "verse": 16,
@@ -7362,6 +7404,7 @@ exports[`getBibleReferences > individual cases > Book name, chapter, and verse r
   {
     "book": "John",
     "chapter": 3,
+    "chapterEnd": null,
     "index": 0,
     "match": "John 3 16 through 18",
     "verse": 16,
@@ -7375,6 +7418,7 @@ exports[`getBibleReferences > individual cases > Book name, chapter, and verse r
   {
     "book": "John",
     "chapter": 3,
+    "chapterEnd": null,
     "index": 0,
     "match": "John 3 16 to 18",
     "verse": 16,
@@ -7388,6 +7432,7 @@ exports[`getBibleReferences > individual cases > Book name, chapter, and verse r
   {
     "book": "John",
     "chapter": 3,
+    "chapterEnd": null,
     "index": 0,
     "match": "John 3, 16 to 18",
     "verse": 16,
@@ -7401,10 +7446,25 @@ exports[`getBibleReferences > individual cases > Book name, chapter, and verse r
   {
     "book": "John",
     "chapter": 3,
+    "chapterEnd": null,
     "index": 0,
     "match": "John 3, 16, to 18",
     "verse": 16,
     "verseEnd": 18,
+  },
+]
+`;
+
+exports[`getBibleReferences > individual cases > Book name, chapter, and verse range (spoken) > Jude 1 to 3 1`] = `
+[
+  {
+    "book": "Jude",
+    "chapter": null,
+    "chapterEnd": null,
+    "index": 0,
+    "match": "Jude 1 to 3",
+    "verse": 1,
+    "verseEnd": 3,
   },
 ]
 `;

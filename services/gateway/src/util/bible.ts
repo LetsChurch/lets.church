@@ -448,6 +448,13 @@ const regexes = [
     }`,
     'gi',
   ),
+  // Chapter range
+  new RegExp(
+    `${bookNamesAndAliasesPattern}\\s+${
+      /(?<chapter>\d+)\s*(?:through|to|-)\s*(?<chapterEnd>\d+)/.source
+    }`,
+    'gi',
+  ),
 ];
 
 export function* getBibleReferences(text: string) {
@@ -480,8 +487,8 @@ export function* getBibleReferences(text: string) {
       continue;
     }
 
-    const { book, verseEnd } = groups;
-    let { chapter, verse } = groups;
+    const { book } = groups;
+    let { chapter, verse, verseEnd, chapterEnd } = groups;
 
     if (!book) {
       continue;
@@ -493,24 +500,42 @@ export function* getBibleReferences(text: string) {
       continue;
     }
 
-    // If there are more chapters than the book has, attempt to correct transcription error
     if (chapter && !verse && parseInt(chapter) > bookInfo.chapters) {
+      // If there are more chapters than the book has, attempt to correct transcription error
       const matchedChapter = chapter;
       let i = 1;
+
       while (parseInt(matchedChapter.slice(0, i)) <= bookInfo.chapters) {
         i++;
       }
-      chapter = matchedChapter.slice(0, i - 1);
-      verse = matchedChapter.slice(i - 1);
+
+      if (bookInfo.chapters === 1) {
+        verse = matchedChapter.slice(0, i);
+        verseEnd = matchedChapter.slice(i);
+        chapter = undefined;
+        chapterEnd = undefined;
+      } else {
+        chapter = matchedChapter.slice(0, i - 1);
+        verse = matchedChapter.slice(i - 1);
+        verseEnd = chapterEnd;
+        chapterEnd = undefined;
+      }
+    } else if (bookInfo.chapters === 1) {
+      // If this is a single-chapter book, shift chapters to verses
+      verse = chapter;
+      verseEnd = chapterEnd;
+      chapter = undefined;
+      chapterEnd = undefined;
     }
 
     yield {
       match: lastMatch[0].trim(),
       index: lastMatch.index,
       book: bookInfo.name,
-      chapter: chapter ? parseInt(chapter) : undefined,
-      verse: verse ? parseInt(verse) : undefined,
-      verseEnd: verseEnd ? parseInt(verseEnd) : undefined,
+      chapter: chapter ? parseInt(chapter) : null,
+      chapterEnd: chapterEnd ? parseInt(chapterEnd) : null,
+      verse: verse ? parseInt(verse) : null,
+      verseEnd: verseEnd ? parseInt(verseEnd) : null,
     };
   }
 }

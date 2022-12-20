@@ -32,6 +32,7 @@ describe('getBibleReferences', () => {
         'John 3 16 to 18',
         'John 3, 16 to 18',
         'John 3, 16, to 18',
+        'Jude 1 to 3',
       ])('%s', (s) => {
         expect(Array.from(getBibleReferences(s))).toMatchSnapshot();
       });
@@ -40,9 +41,12 @@ describe('getBibleReferences', () => {
 
   describe('incorrect transcriptions', () => {
     describe('large numbers', () => {
-      test.each(['john 316', 'romans 1516'])('%s', (s) => {
-        expect(Array.from(getBibleReferences(s))).toMatchSnapshot();
-      });
+      test.each(['john 316', 'romans 1516', 'john 316 to 18', 'jude 34'])(
+        '%s',
+        (s) => {
+          expect(Array.from(getBibleReferences(s))).toMatchSnapshot();
+        },
+      );
     });
   });
 
