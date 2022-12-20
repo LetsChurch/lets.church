@@ -422,7 +422,6 @@ export const aliasesToBook: Record<string, Book> = Object.fromEntries(
 );
 
 const bookNamePattern = `(?<book>${books.map((book) => book.name).join('|')})`;
-
 const bookNamesAndAliasesPattern = `(?<book>${books
   .flatMap((book) => [book.name, ...book.aliases])
   .join('|')})`;
@@ -533,9 +532,13 @@ export function* getBibleReferences(text: string) {
       index: lastMatch.index,
       book: bookInfo.name,
       chapter: chapter ? parseInt(chapter) : null,
-      chapterEnd: chapterEnd ? parseInt(chapterEnd) : null,
+      chapterEnd: chapterEnd
+        ? parseInt(chapterEnd)
+        : chapter
+        ? parseInt(chapter)
+        : null,
       verse: verse ? parseInt(verse) : null,
-      verseEnd: verseEnd ? parseInt(verseEnd) : null,
+      verseEnd: verseEnd ? parseInt(verseEnd) : verse ? parseInt(verse) : null,
     };
   }
 }
