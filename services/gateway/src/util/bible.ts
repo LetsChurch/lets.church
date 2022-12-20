@@ -434,7 +434,7 @@ const regexes = [
   // Chapter followed by optional verse or verse range (e.g., "John 3:16", "John 3.16", or "John 3:16-18")
   new RegExp(
     `${bookNamesAndAliasesPattern}\\s+${
-      /(?:chapter\s+)?(?<chapter>\d+)(?:(?:[:.]|\s+verse\s+)(?<verse>\d+)(?:-(?:(?<chapterEnd>\d+)[:.])?(?<verseEnd>\d+))?)?/
+      /(?:chapter\s+)?(?<chapter>\d+)(?:th|nd|rd)?(?:(?:[:.]|\s+verse\s+)(?<verse>\d+)(?:th|nd|rd|(?<verseSuffix>[ab]))?(?:-(?:(?<chapterEnd>\d+)(?:th|nd|rd)?[:.])?(?<verseEnd>\d+))?(?:th|nd|rd|(?<verseEndSuffix>[ab]))?)?/
         .source
     }`,
     'gi',
@@ -442,7 +442,7 @@ const regexes = [
   // Chapter followed by a verse or verse range, spoken (e.g., "John 3, 16", "John 3, 16-18", or "John 3, 16 through 18") (commas optional)
   new RegExp(
     `${bookNamesAndAliasesPattern}\\s+${
-      /(?:chapter\s+)?(?<chapter>\d+)(?:(?:,?\s*|\s+verse\s+)(?<verse>\d+),?(?:(?:-|\s+to\s+|\s+through\s+)(?:(?<chapterEnd>\d+)[:.])?(?<verseEnd>\d+))?)?/
+      /(?:chapter\s+)?(?<chapter>\d+)(?:th|nd|rd)?(?:(?:,?\s*|\s+verse\s+)(?<verse>\d+)(?:th|nd|rd|(?<verseSuffix>[ab]))?,?(?:(?:-|\s+to\s+|\s+through\s+)(?:(?<chapterEnd>\d+)(?:th|nd|rd)?[:.])?(?<verseEnd>\d+))?(?:th|nd|rd|(?<verseEndSuffix>[ab]))?)?/
         .source
     }`,
     'gi',
@@ -486,7 +486,7 @@ export function* getBibleReferences(text: string) {
       continue;
     }
 
-    const { book } = groups;
+    const { book, verseSuffix, verseEndSuffix } = groups;
     let { chapter, verse, verseEnd, chapterEnd } = groups;
 
     if (!book) {
@@ -538,7 +538,9 @@ export function* getBibleReferences(text: string) {
         ? parseInt(chapter)
         : null,
       verse: verse ? parseInt(verse) : null,
+      verseSuffix: verseSuffix ? verseSuffix : null,
       verseEnd: verseEnd ? parseInt(verseEnd) : verse ? parseInt(verse) : null,
+      verseEndSuffix: verseEndSuffix ? verseEndSuffix : null,
     };
   }
 }

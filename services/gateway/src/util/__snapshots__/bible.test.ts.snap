@@ -7210,6 +7210,8 @@ exports[`getBibleReferences > compound cases > getBibleReferences 1`] = `
     "match": "Genesis",
     "verse": null,
     "verseEnd": null,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
   {
     "book": "Exodus",
@@ -7219,6 +7221,8 @@ exports[`getBibleReferences > compound cases > getBibleReferences 1`] = `
     "match": "Exodus 22",
     "verse": null,
     "verseEnd": null,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
   {
     "book": "Exodus",
@@ -7228,6 +7232,8 @@ exports[`getBibleReferences > compound cases > getBibleReferences 1`] = `
     "match": "Ex 22",
     "verse": null,
     "verseEnd": null,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
   {
     "book": "Romans",
@@ -7237,6 +7243,8 @@ exports[`getBibleReferences > compound cases > getBibleReferences 1`] = `
     "match": "Romans 1:20",
     "verse": 20,
     "verseEnd": 20,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
   {
     "book": "Romans",
@@ -7246,6 +7254,8 @@ exports[`getBibleReferences > compound cases > getBibleReferences 1`] = `
     "match": "Romans Chapter 1 Verse 20",
     "verse": 20,
     "verseEnd": 20,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
   {
     "book": "Romans",
@@ -7255,6 +7265,24 @@ exports[`getBibleReferences > compound cases > getBibleReferences 1`] = `
     "match": "Rm 1:20",
     "verse": 20,
     "verseEnd": 20,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
+  },
+]
+`;
+
+exports[`getBibleReferences > incorrect transcriptions > large numbers > First Samuel 2, 12th through 17 1`] = `
+[
+  {
+    "book": "1 Samuel",
+    "chapter": 2,
+    "chapterEnd": 2,
+    "index": 0,
+    "match": "First Samuel 2, 12th through 17",
+    "verse": 12,
+    "verseEnd": 17,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
 ]
 `;
@@ -7269,6 +7297,8 @@ exports[`getBibleReferences > incorrect transcriptions > large numbers > john 31
     "match": "john 316",
     "verse": 16,
     "verseEnd": 16,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
 ]
 `;
@@ -7283,6 +7313,8 @@ exports[`getBibleReferences > incorrect transcriptions > large numbers > john 31
     "match": "john 316 to 18",
     "verse": 16,
     "verseEnd": 18,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
 ]
 `;
@@ -7297,6 +7329,8 @@ exports[`getBibleReferences > incorrect transcriptions > large numbers > jude 34
     "match": "jude 34",
     "verse": 3,
     "verseEnd": 4,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
 ]
 `;
@@ -7311,6 +7345,8 @@ exports[`getBibleReferences > incorrect transcriptions > large numbers > romans 
     "match": "romans 1516",
     "verse": 16,
     "verseEnd": 16,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
 ]
 `;
@@ -7325,6 +7361,8 @@ exports[`getBibleReferences > individual cases > Book name alone 1`] = `
     "match": "John",
     "verse": null,
     "verseEnd": null,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
 ]
 `;
@@ -7339,6 +7377,8 @@ exports[`getBibleReferences > individual cases > Book name and chapter 1`] = `
     "match": "John 3",
     "verse": null,
     "verseEnd": null,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
 ]
 `;
@@ -7353,6 +7393,8 @@ exports[`getBibleReferences > individual cases > Book name and chapter 2`] = `
     "match": "Jn 3",
     "verse": null,
     "verseEnd": null,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
 ]
 `;
@@ -7367,6 +7409,8 @@ exports[`getBibleReferences > individual cases > Book name, chapter, and chapter
     "match": "John 3, 16-18",
     "verse": 16,
     "verseEnd": 18,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
 ]
 `;
@@ -7381,6 +7425,8 @@ exports[`getBibleReferences > individual cases > Book name, chapter, and chapter
     "match": "John 3.16",
     "verse": 16,
     "verseEnd": 16,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
 ]
 `;
@@ -7395,6 +7441,8 @@ exports[`getBibleReferences > individual cases > Book name, chapter, and chapter
     "match": "John 3:16",
     "verse": 16,
     "verseEnd": 16,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
 ]
 `;
@@ -7409,6 +7457,24 @@ exports[`getBibleReferences > individual cases > Book name, chapter, and chapter
     "match": "John 3:16-4:1",
     "verse": 16,
     "verseEnd": 1,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
+  },
+]
+`;
+
+exports[`getBibleReferences > individual cases > Book name, chapter, and chapter/verse or chapter/verse range > John 3:16a-4:2a 1`] = `
+[
+  {
+    "book": "John",
+    "chapter": 3,
+    "chapterEnd": 4,
+    "index": 0,
+    "match": "John 3:16a-4:2a",
+    "verse": 16,
+    "verseEnd": 2,
+    "verseEndSuffix": "a",
+    "verseSuffix": "a",
   },
 ]
 `;
@@ -7423,6 +7489,8 @@ exports[`getBibleReferences > individual cases > Book name, chapter, and verse r
     "match": "John 3 16 through 18",
     "verse": 16,
     "verseEnd": 18,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
 ]
 `;
@@ -7437,6 +7505,8 @@ exports[`getBibleReferences > individual cases > Book name, chapter, and verse r
     "match": "John 3 16 to 18",
     "verse": 16,
     "verseEnd": 18,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
 ]
 `;
@@ -7451,6 +7521,8 @@ exports[`getBibleReferences > individual cases > Book name, chapter, and verse r
     "match": "John 3, 16 to 18",
     "verse": 16,
     "verseEnd": 18,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
 ]
 `;
@@ -7465,6 +7537,8 @@ exports[`getBibleReferences > individual cases > Book name, chapter, and verse r
     "match": "John 3, 16, to 18",
     "verse": 16,
     "verseEnd": 18,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
   },
 ]
 `;
@@ -7479,6 +7553,40 @@ exports[`getBibleReferences > individual cases > Book name, chapter, and verse r
     "match": "Jude 1 to 3",
     "verse": 1,
     "verseEnd": 3,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
+  },
+]
+`;
+
+exports[`getBibleReferences > individual cases > Book name, chapter, and verse range (spoken) > Romans Chapter 1 Verse 20 1`] = `
+[
+  {
+    "book": "Romans",
+    "chapter": 1,
+    "chapterEnd": 1,
+    "index": 0,
+    "match": "Romans Chapter 1 Verse 20",
+    "verse": 20,
+    "verseEnd": 20,
+    "verseEndSuffix": null,
+    "verseSuffix": null,
+  },
+]
+`;
+
+exports[`getBibleReferences > individual cases > Book name, chapter, and verse range (spoken) > Romans Chapter 1 Verse 20b 1`] = `
+[
+  {
+    "book": "Romans",
+    "chapter": 1,
+    "chapterEnd": 1,
+    "index": 0,
+    "match": "Romans Chapter 1 Verse 20b",
+    "verse": 20,
+    "verseEnd": 20,
+    "verseEndSuffix": null,
+    "verseSuffix": "b",
   },
 ]
 `;
