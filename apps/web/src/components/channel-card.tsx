@@ -1,6 +1,6 @@
 import { A } from 'solid-start';
 import SubscribersIcon from '@tabler/icons/rss.svg?component-solid';
-import FloppyIcon from '@tabler/icons/device-floppy.svg?component-solid';
+import PlayIcon from '@tabler/icons/player-play.svg?component-solid';
 import MenuIcon from '@tabler/icons/dots-vertical.svg?component-solid';
 import { createSignal } from 'solid-js';
 import FloatingMenu from './floating-menu';
@@ -43,11 +43,13 @@ export default function ChannelCard(props: Props) {
               />
               <span class="sr-only">Subscribers</span>
             </dt>
+            {/* TODO: Real subscribers count */}
             <dd class="mr-2">13k</dd>
             <dt class="contents">
-              <FloppyIcon class="mr-1 inline h-4 w-4" role="presentation" />
+              <PlayIcon class="mr-1 inline h-4 w-4" role="presentation" />
               <span class="sr-only">Uploads</span>
             </dt>
+            {/* TODO: Real media count */}
             <dd class="mr-2">100</dd>
           </dl>
         </div>
