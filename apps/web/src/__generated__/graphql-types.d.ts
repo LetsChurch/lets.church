@@ -48,7 +48,7 @@ export type AppUserOrganizationMemberhipsConnectionArgs = {
 
 export type AppUserChannelMembershipsConnection = {
   __typename?: 'AppUserChannelMembershipsConnection';
-  edges: Array<Maybe<AppUserChannelMembershipsConnectionEdge>>;
+  edges: Array<AppUserChannelMembershipsConnectionEdge>;
   pageInfo: PageInfo;
 };
 
@@ -60,7 +60,7 @@ export type AppUserChannelMembershipsConnectionEdge = {
 
 export type AppUserOrganizationMemberhipsConnection = {
   __typename?: 'AppUserOrganizationMemberhipsConnection';
-  edges: Array<Maybe<AppUserOrganizationMemberhipsConnectionEdge>>;
+  edges: Array<AppUserOrganizationMemberhipsConnectionEdge>;
   pageInfo: PageInfo;
 };
 
@@ -84,10 +84,19 @@ export type Channel = {
   name: Scalars['String'];
   slug: Scalars['String'];
   updatedAt: Scalars['DateTime'];
+  uploadsConnection: ChannelUploadsConnection;
 };
 
 
 export type ChannelMembershipsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']>;
+  before?: InputMaybe<Scalars['String']>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+};
+
+
+export type ChannelUploadsConnectionArgs = {
   after?: InputMaybe<Scalars['String']>;
   before?: InputMaybe<Scalars['String']>;
   first?: InputMaybe<Scalars['Int']>;
@@ -105,7 +114,7 @@ export type ChannelMembership = {
 
 export type ChannelMembershipsConnection = {
   __typename?: 'ChannelMembershipsConnection';
-  edges: Array<Maybe<ChannelMembershipsConnectionEdge>>;
+  edges: Array<ChannelMembershipsConnectionEdge>;
   pageInfo: PageInfo;
 };
 
@@ -119,6 +128,18 @@ export type ChannelSearchHit = ISearchHit & {
   __typename?: 'ChannelSearchHit';
   id: Scalars['ShortUuid'];
   name: HighlightedText;
+};
+
+export type ChannelUploadsConnection = {
+  __typename?: 'ChannelUploadsConnection';
+  edges: Array<ChannelUploadsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type ChannelUploadsConnectionEdge = {
+  __typename?: 'ChannelUploadsConnectionEdge';
+  cursor: Scalars['String'];
+  node: UploadRecord;
 };
 
 export type HighlightedText = {
@@ -256,7 +277,7 @@ export type OrganizationMembershipsConnectionArgs = {
 
 export type OrganizationAssociationsConnection = {
   __typename?: 'OrganizationAssociationsConnection';
-  edges: Array<Maybe<OrganizationAssociationsConnectionEdge>>;
+  edges: Array<OrganizationAssociationsConnectionEdge>;
   pageInfo: PageInfo;
 };
 
@@ -281,7 +302,7 @@ export type OrganizationMembership = {
 
 export type OrganizationMembershipsConnection = {
   __typename?: 'OrganizationMembershipsConnection';
-  edges: Array<Maybe<OrganizationMembershipsConnectionEdge>>;
+  edges: Array<OrganizationMembershipsConnectionEdge>;
   pageInfo: PageInfo;
 };
 
@@ -356,7 +377,7 @@ export type QueryUsersConnectionArgs = {
 
 export type QueryUsersConnection = {
   __typename?: 'QueryUsersConnection';
-  edges: Array<Maybe<QueryUsersConnectionEdge>>;
+  edges: Array<QueryUsersConnectionEdge>;
   pageInfo: PageInfo;
 };
 
@@ -376,7 +397,7 @@ export type SearchAggs = {
 export type SearchConnection = {
   __typename?: 'SearchConnection';
   aggs: SearchAggs;
-  edges: Array<Maybe<SearchConnectionEdge>>;
+  edges: Array<SearchConnectionEdge>;
   pageInfo: PageInfo;
 };
 
@@ -405,6 +426,7 @@ export type UploadRecord = {
   createdAt: Scalars['DateTime'];
   createdBy: AppUser;
   id: Scalars['ShortUuid'];
+  title?: Maybe<Scalars['String']>;
   updatedAt: Scalars['DateTime'];
   uploadFinalized: Scalars['Boolean'];
   uploadFinalizedBy: AppUser;

@@ -46,8 +46,8 @@ export default function ChannelsRoute() {
           {(edge) => (
             <li>
               <ChannelCard
-                id={edge?.node.channel.id}
-                name={edge?.node.channel.name ?? 'Unnamed Channel'}
+                id={edge.node.channel.id}
+                name={edge.node.channel.name}
               />
             </li>
           )}

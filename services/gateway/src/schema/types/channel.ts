@@ -23,6 +23,9 @@ builder.prismaObject('Channel', {
       select: { updatedAt: true },
       resolve: (channel) => channel.updatedAt.toISOString(),
     }),
+    uploadsConnection: t.relatedConnection('uploadRecords', {
+      cursor: 'id',
+    }),
   }),
 });
 

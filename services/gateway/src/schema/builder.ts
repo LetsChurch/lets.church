@@ -15,6 +15,8 @@ import type { Scalars } from './scalars';
 
 export default new SchemaBuilder<{
   PrismaTypes: PrismaTypes;
+  DefaultEdgesNullability: false;
+  DefaultNodeNullability: false;
   Context: Context;
   AuthScopes: {
     authenticated: boolean;
@@ -52,6 +54,12 @@ export default new SchemaBuilder<{
   relayOptions: {
     clientMutationId: 'omit',
     cursorType: 'String',
+    edgesFieldOptions: {
+      nullable: false,
+    },
+    nodeFieldOptions: {
+      nullable: false,
+    },
   },
   tracing: {
     default:

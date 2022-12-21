@@ -11,43 +11,52 @@ import {
   handleMultipartMediaUpload,
 } from '../../temporal';
 import builder from '../builder';
+import type { Context } from '../../util/context';
+
+async function internalAuthScopes(
+  uploadRecord: { id: string; channelId: string },
+  _args: unknown,
+  context: Context,
+) {
+  const userId = (await context.session)?.appUserId;
+
+  if (!userId) {
+    return false;
+  }
+
+  // TODO: can this be done more efficiently at scale?
+  const membership = await context.prisma.channelMembership.findUnique({
+    select: {
+      isAdmin: true,
+      canUpload: true,
+    },
+    where: {
+      channelId_appUserId: {
+        channelId: uploadRecord.channelId,
+        appUserId: userId,
+      },
+    },
+  });
+
+  if (membership) {
+    return membership.isAdmin || membership.canUpload;
+  }
+
+  return { admin: true };
+}
 
 builder.prismaObject('UploadRecord', {
-  authScopes: async (uploadRecord, context) => {
-    const userId = (await context.session)?.appUserId;
-
-    if (!userId) {
-      return false;
-    }
-
-    // TODO: can this be done more efficiently at scale?
-    const membership = await context.prisma.channelMembership.findUnique({
-      select: {
-        isAdmin: true,
-        canUpload: true,
-      },
-      where: {
-        channelId_appUserId: {
-          channelId: uploadRecord.channelId,
-          appUserId: userId,
-        },
-      },
-    });
-
-    if (membership) {
-      return membership.isAdmin || membership.canUpload;
-    }
-
-    return { admin: true };
-  },
   select: {
     id: true,
     channelId: true, // For authScopes
   },
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
-    createdBy: t.relation('createdBy'),
-    uploadFinalizedBy: t.relation('uploadFinalizedBy'),
+    title: t.exposeString('title', { nullable: true }),
+    createdBy: t.relation('createdBy', { authScopes: internalAuthScopes }),
+    uploadFinalizedBy: t.relation('uploadFinalizedBy', {
+      authScopes: internalAuthScopes,
+    }),
     channel: t.relation('channel'),
     uploadSizeBytes: t.field({
       type: 'SafeInt',
@@ -55,7 +64,9 @@ builder.prismaObject('UploadRecord', {
       nullable: true,
       resolve: ({ uploadSizeBytes }) => Number(uploadSizeBytes?.valueOf()),
     }),
-    uploadFinalized: t.exposeBoolean('uploadFinalized'),
+    uploadFinalized: t.exposeBoolean('uploadFinalized', {
+      authScopes: internalAuthScopes,
+    }),
     createdAt: t.field({
       type: 'DateTime',
       select: {
