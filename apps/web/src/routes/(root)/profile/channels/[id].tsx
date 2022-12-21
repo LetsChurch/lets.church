@@ -3,13 +3,13 @@ import { RouteDataArgs, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
 import invariant from 'tiny-invariant';
 import { PageHeading } from '~/components/page-heading';
+import UploadCard from '~/components/upload-card';
 import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
 import type { ChannelQuery, ChannelQueryVariables } from './__generated__/[id]';
 
 export function routeData({ params }: RouteDataArgs<{ id: string }>) {
   return createServerData$(
-    async ([oink, id], { request }) => {
-      console.log({ oink });
+    async ([, id], { request }) => {
       invariant(id, 'No id provided');
       const client = await createAuthenticatedClientOrRedirect(request);
 
@@ -45,9 +45,20 @@ export default function ChannelRoute() {
     <>
       <PageHeading title={`Channel: ${data()?.channelById.name}`} backButton />
       <h2 class="text-xl">Uploads</h2>
-      <For each={data()?.channelById.uploadsConnection.edges}>
-        {(edge) => <h3>{edge.node.title}</h3>}
-      </For>
+      <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <For each={data()?.channelById.uploadsConnection.edges}>
+          {(edge) => (
+            <li>
+              <UploadCard
+                title={edge.node.title ?? 'Untitled Upload'}
+                channel={data()?.channelById.name ?? 'Unnamed Channel'}
+                href="#"
+                avatarUrl="https://images.unsplash.com/photo-1477672680933-0287a151330e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+              />
+            </li>
+          )}
+        </For>
+      </ul>
     </>
   );
 }

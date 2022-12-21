@@ -5,7 +5,7 @@ export type VideoCardProps = {
   avatarUrl: string;
 };
 
-export default function VideoCard(props: VideoCardProps) {
+export default function UploadCard(props: VideoCardProps) {
   return (
     <div class="relative space-y-3">
       <div class="aspect-video bg-gray-100" />

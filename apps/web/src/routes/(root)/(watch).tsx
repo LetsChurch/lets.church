@@ -1,5 +1,5 @@
 import { For } from 'solid-js';
-import VideoCard from '~/components/video-card';
+import UploadCard from '~/components/upload-card';
 
 export default function WatchRoute() {
   return (
@@ -7,7 +7,7 @@ export default function WatchRoute() {
       <For each={Array(30)}>
         {() => (
           <li>
-            <VideoCard
+            <UploadCard
               title="Hello, World!"
               channel="Let's Church"
               href="#"
