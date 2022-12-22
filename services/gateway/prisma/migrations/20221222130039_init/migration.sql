@@ -122,6 +122,9 @@ CREATE UNIQUE INDEX "organization_slug_key" ON "organization"("slug");
 -- CreateIndex
 CREATE UNIQUE INDEX "channel_slug_key" ON "channel"("slug");
 
+-- CreateIndex
+CREATE INDEX "upload_record_created_at_id_idx" ON "upload_record"("created_at", "id");
+
 -- AddForeignKey
 ALTER TABLE "app_session" ADD CONSTRAINT "app_session_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 

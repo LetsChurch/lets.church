@@ -135,5 +135,6 @@ model UploadRecord {
   updatedAt           DateTime  @updatedAt @map("updated_at")
   deletedAt           DateTime? @map("deleted_at")
 
+  @@index([createdAt, id])
   @@map("upload_record")
 }

@@ -3,6 +3,10 @@ import invariant from 'tiny-invariant';
 import { indexDocument } from '../../temporal';
 import builder from '../builder';
 
+const orderEnum = builder.enumType('Order', {
+  values: ['asc', 'desc'] as const,
+});
+
 builder.prismaObject('Channel', {
   select: { id: true },
   fields: (t) => ({
@@ -26,6 +30,15 @@ builder.prismaObject('Channel', {
     uploadsConnection: t.relatedConnection('uploadRecords', {
       cursor: 'id',
       totalCount: true,
+      args: {
+        order: t.arg({
+          type: orderEnum,
+          defaultValue: 'desc',
+        }),
+      },
+      query: ({ order }) => ({
+        orderBy: [{ createdAt: order ?? 'desc' }, { id: 'asc' }],
+      }),
     }),
   }),
 });
