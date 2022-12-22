@@ -10,8 +10,6 @@ import type { ChannelQuery, ChannelQueryVariables } from './__generated__/[id]';
 const PAGE_SIZE = 12;
 
 export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
-  console.log('routeData', location.query['after']);
-
   return createServerData$(
     async ([, id, after = null, before = null], { request }) => {
       invariant(id, 'No id provided');
