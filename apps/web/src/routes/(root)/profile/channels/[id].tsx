@@ -17,7 +17,10 @@ export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
       invariant(id, 'No id provided');
       const client = await createAuthenticatedClientOrRedirect(request);
 
-      return client.request<ChannelQuery, ChannelQueryVariables>(
+      const { channelById } = await client.request<
+        ChannelQuery,
+        ChannelQueryVariables
+      >(
         gql`
           query Channel(
             $id: ShortUuid!
@@ -27,6 +30,7 @@ export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
             $before: String
           ) {
             channelById(id: $id) {
+              id
               name
               uploadsConnection(
                 first: $first
@@ -60,6 +64,8 @@ export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
           last: before ? PAGE_SIZE : null,
         },
       );
+
+      return channelById;
     },
     {
       key: () => [
@@ -68,6 +74,9 @@ export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
         location.query['after'],
         location.query['before'],
       ],
+      reconcileOptions: {
+        key: 'id',
+      },
     },
   );
 }
@@ -77,14 +86,14 @@ export default function ChannelRoute() {
 
   return (
     <>
-      <PageHeading title={`Channel: ${data()?.channelById.name}`} backButton />
+      <PageHeading title={`Channel: ${data()?.name}`} backButton />
       <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <For each={data()?.channelById.uploadsConnection.edges}>
+        <For each={data()?.uploadsConnection.edges}>
           {(edge) => (
             <li>
               <UploadCard
                 title={edge.node.title ?? 'Untitled Upload'}
-                channel={data()?.channelById.name ?? 'Unnamed Channel'}
+                channel={data()?.name ?? 'Unnamed Channel'}
                 href="#"
                 avatarUrl="https://images.unsplash.com/photo-1477672680933-0287a151330e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
               />
@@ -92,23 +101,13 @@ export default function ChannelRoute() {
           )}
         </For>
       </ul>
-      <Show
-        when={data()?.channelById.uploadsConnection.pageInfo.hasPreviousPage}
-      >
-        <A
-          href={`?before=${
-            data()?.channelById.uploadsConnection.pageInfo.startCursor
-          }`}
-        >
+      <Show when={data()?.uploadsConnection.pageInfo.hasPreviousPage}>
+        <A href={`?before=${data()?.uploadsConnection.pageInfo.startCursor}`}>
           Previous Page
         </A>
       </Show>
-      <Show when={data()?.channelById.uploadsConnection.pageInfo.hasNextPage}>
-        <A
-          href={`?after=${
-            data()?.channelById.uploadsConnection.pageInfo.endCursor
-          }`}
-        >
+      <Show when={data()?.uploadsConnection.pageInfo.hasNextPage}>
+        <A href={`?after=${data()?.uploadsConnection.pageInfo.endCursor}`}>
           Next Page
         </A>
       </Show>
