@@ -134,6 +134,7 @@ export type ChannelUploadsConnection = {
   __typename?: 'ChannelUploadsConnection';
   edges: Array<ChannelUploadsConnectionEdge>;
   pageInfo: PageInfo;
+  totalCount: Scalars['Int'];
 };
 
 export type ChannelUploadsConnectionEdge = {

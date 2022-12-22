@@ -25,6 +25,7 @@ builder.prismaObject('Channel', {
     }),
     uploadsConnection: t.relatedConnection('uploadRecords', {
       cursor: 'id',
+      totalCount: true,
     }),
   }),
 });

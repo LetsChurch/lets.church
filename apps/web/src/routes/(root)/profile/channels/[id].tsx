@@ -36,6 +36,7 @@ export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
                 last: $last
                 before: $before
               ) {
+                totalCount
                 pageInfo {
                   startCursor
                   endCursor
@@ -99,16 +100,42 @@ export default function ChannelRoute() {
           )}
         </For>
       </ul>
-      <Show when={data()?.uploadsConnection.pageInfo.hasPreviousPage}>
-        <A href={`?before=${data()?.uploadsConnection.pageInfo.startCursor}`}>
-          Previous Page
-        </A>
-      </Show>
-      <Show when={data()?.uploadsConnection.pageInfo.hasNextPage}>
-        <A href={`?after=${data()?.uploadsConnection.pageInfo.endCursor}`}>
-          Next Page
-        </A>
-      </Show>
+      <nav
+        class="mt-6 flex items-center justify-between"
+        aria-label="Pagination"
+      >
+        <div class="hidden sm:block">
+          <p class="text-sm text-gray-700">
+            Showing{' '}
+            <span class="font-medium">
+              {data()?.uploadsConnection.edges.length}
+            </span>{' '}
+            of{' '}
+            <span class="font-medium">
+              {data()?.uploadsConnection.totalCount}
+            </span>{' '}
+            uploads
+          </p>
+        </div>
+        <div class="flex flex-1 justify-between sm:justify-end">
+          <Show when={data()?.uploadsConnection.pageInfo.hasPreviousPage}>
+            <A
+              href={`?before=${data()?.uploadsConnection.pageInfo.startCursor}`}
+              class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Previous Page
+            </A>
+          </Show>
+          <Show when={data()?.uploadsConnection.pageInfo.hasNextPage}>
+            <A
+              href={`?after=${data()?.uploadsConnection.pageInfo.endCursor}`}
+              class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Next Page
+            </A>
+          </Show>
+        </div>
+      </nav>
     </>
   );
 }

@@ -50,6 +50,7 @@ export default new SchemaBuilder<{
   }),
   prisma: {
     client: prisma,
+    filterConnectionTotalCount: true,
   },
   relayOptions: {
     clientMutationId: 'omit',
