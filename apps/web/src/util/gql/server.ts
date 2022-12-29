@@ -24,14 +24,13 @@ export async function createAuthenticatedClientOrRedirect(request: Request) {
 }
 
 export async function createAuthenticatedClient(request: Request) {
-  try {
-    return createAuthenticatedClientOrRedirect(request);
-  } catch (eOrRedir) {
-    console.log({ eOrRedir });
-    if (eOrRedir instanceof Response) {
-      return client;
-    }
+  const jwt = await getSessionJwt(request);
 
-    throw eOrRedir;
+  if (jwt) {
+    return new GraphQLClient(GRAPHQL_URL, {
+      headers: { authorization: `Bearer ${jwt}` },
+    });
   }
+
+  return client;
 }
