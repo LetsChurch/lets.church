@@ -101,6 +101,7 @@ export type ChannelUploadsConnectionArgs = {
   before?: InputMaybe<Scalars['String']>;
   first?: InputMaybe<Scalars['Int']>;
   last?: InputMaybe<Scalars['Int']>;
+  order?: InputMaybe<Order>;
 };
 
 export type ChannelMembership = {
@@ -247,6 +248,11 @@ export type MutationUpsertUploadRecordArgs = {
   title?: InputMaybe<Scalars['String']>;
   uploadRecordId?: InputMaybe<Scalars['ShortUuid']>;
 };
+
+export enum Order {
+  Asc = 'asc',
+  Desc = 'desc'
+}
 
 export type Organization = {
   __typename?: 'Organization';
