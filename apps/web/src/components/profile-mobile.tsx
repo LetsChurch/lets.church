@@ -16,12 +16,12 @@ export default function ProfileMobile(props: Props) {
       <Show
         when={props.me}
         fallback={
-          <a
+          <A
             href="/auth/login"
             class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
           >
             Login
-          </a>
+          </A>
         }
       >
         <div class="flex items-center px-4">

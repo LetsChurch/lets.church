@@ -30,6 +30,7 @@ import server$, {
 import { notEmpty } from '~/util';
 import invariant from 'tiny-invariant';
 import { doMultipartUpload } from '~/util/multipart-upload';
+import { Input, Select, Button, Radios } from '~/components/form';
 
 type BaseField = {
   label: string;
@@ -386,72 +387,27 @@ export default function UploadRoute() {
                       </Show>
                       <Switch
                         fallback={
-                          <input
+                          <Input
                             id={field.id}
                             {...(field.name ? { name: field.name } : {})}
                             type={field.type}
-                            class="mt-1 block w-full rounded-md border border-gray-300 bg-white py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
                           />
                         }
                       >
                         <Match when={field.type === 'select'}>
-                          <select
+                          <Select
                             id={field.id}
                             {...(field.name ? { name: field.name } : {})}
-                            class="mt-1 block w-full rounded-md border border-gray-300 bg-white py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
-                          >
-                            <For each={(field as SelectField).options}>
-                              {(op) => (
-                                <option
-                                  value={op.value}
-                                  disabled={op.disabled ?? false}
-                                >
-                                  {op.label}
-                                </option>
-                              )}
-                            </For>
-                          </select>
+                            options={(field as SelectField).options}
+                          />
                         </Match>
                         <Match when={field.type === 'radio'}>
-                          <fieldset>
-                            <legend class="contents text-base font-medium text-gray-900">
-                              {field.label}
-                            </legend>
-                            <div class="mt-4 space-y-4">
-                              <For each={(field as RadioField).options}>
-                                {(op) => (
-                                  <div
-                                    class={`flex ${
-                                      op.help ? 'items-start' : 'items-center'
-                                    }`}
-                                  >
-                                    <div class="flex h-5 items-center">
-                                      <input
-                                        id={`${field.id}_${op.value}`}
-                                        {...(field.name
-                                          ? { name: field.name }
-                                          : {})}
-                                        value={op.value}
-                                        type="radio"
-                                        class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                      />
-                                    </div>
-                                    <div class="ml-3 text-sm">
-                                      <label
-                                        for={`${field.id}_${op.value}`}
-                                        class="font-medium text-gray-700"
-                                      >
-                                        {op.label}
-                                      </label>
-                                      <Show when={op.help}>
-                                        <p class="text-gray-500">{op.help}</p>
-                                      </Show>
-                                    </div>
-                                  </div>
-                                )}
-                              </For>
-                            </div>
-                          </fieldset>
+                          <Radios
+                            label={field.label}
+                            id={field.id}
+                            name={field.name!}
+                            options={(field as RadioField).options}
+                          />
                         </Match>
                         <Match when={field.type === 'file'}>
                           <Dropzone
@@ -480,13 +436,9 @@ export default function UploadRoute() {
       </For>
       <div class="pt-5">
         <div class="flex justify-end">
-          <button
-            type="submit"
-            disabled={upserting.pending}
-            class="ml-3 inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-          >
+          <Button type="submit" disabled={upserting.pending}>
             Save
-          </button>
+          </Button>
         </div>
       </div>
     </upsert.Form>
