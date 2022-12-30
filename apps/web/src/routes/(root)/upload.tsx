@@ -35,7 +35,7 @@ import { Input, Select, Button, Radios } from '~/components/form';
 
 type BaseField = {
   label: string;
-  name?: string;
+  name: string;
   required?: boolean;
   defaultValue?: string | undefined | null;
   id: string;
@@ -122,6 +122,7 @@ function getSections(
       fields: [
         {
           label: 'Media',
+          name: 'Media',
           type: 'file',
           caption: 'Video or audio file (mp4, m4a, etc)',
           accept: 'video/*,audio/*',
@@ -130,6 +131,7 @@ function getSections(
         },
         {
           label: 'Thumbnail',
+          name: 'Thumbnail',
           type: 'file',
           caption: 'Optional image file (png recommended)',
           accept: 'image/*',
@@ -426,7 +428,7 @@ export default function UploadRoute() {
                         fallback={
                           <Input
                             id={field.id}
-                            {...(field.name ? { name: field.name } : {})}
+                            name={field.name}
                             {...(field.defaultValue
                               ? { value: field.defaultValue }
                               : {})}
@@ -437,7 +439,7 @@ export default function UploadRoute() {
                         <Match when={field.type === 'select'}>
                           <Select
                             id={field.id}
-                            {...(field.name ? { name: field.name } : {})}
+                            name={field.name}
                             options={(field as SelectField).options}
                             {...(field.defaultValue
                               ? { value: field.defaultValue }
@@ -448,7 +450,7 @@ export default function UploadRoute() {
                           <Radios
                             label={field.label}
                             id={field.id}
-                            name={field.name!}
+                            name={field.name}
                             options={(field as RadioField).options}
                             {...(field.defaultValue
                               ? { value: field.defaultValue }
@@ -458,7 +460,6 @@ export default function UploadRoute() {
                         <Match when={field.type === 'file'}>
                           <Dropzone
                             progressLabel={`${field.label} upload progress`}
-                            {...('tag' in field ? { tag: field.tag } : {})}
                             {...('caption' in field
                               ? { caption: field.caption }
                               : {})}
