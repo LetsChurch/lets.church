@@ -81,6 +81,19 @@ builder.prismaObject('UploadRecord', {
       },
       resolve: ({ updatedAt }) => updatedAt.toISOString(),
     }),
+    canMutate: t.boolean({
+      resolve: async (root, args, context) => {
+        const res = await internalAuthScopes(root, args, context);
+
+        if (typeof res === 'boolean') {
+          return res;
+        }
+
+        const ses = await context.session;
+
+        return ses?.appUser.role === 'ADMIN';
+      },
+    }),
   }),
 });
 

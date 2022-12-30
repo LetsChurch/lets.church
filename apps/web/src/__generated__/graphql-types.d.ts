@@ -429,6 +429,7 @@ export type TranscriptSearchHit = ISearchHit & {
 
 export type UploadRecord = {
   __typename?: 'UploadRecord';
+  canMutate: Scalars['Boolean'];
   channel: Channel;
   createdAt: Scalars['DateTime'];
   createdBy: AppUser;

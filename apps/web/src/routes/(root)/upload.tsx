@@ -8,19 +8,20 @@ import {
   Switch,
 } from 'solid-js';
 import { debounce } from '@solid-primitives/scheduled';
-import { json, useRouteData } from 'solid-start';
+import { json, RouteDataArgs, useRouteData } from 'solid-start';
 import Dropzone, { DroppedRes } from '~/components/dropzone';
 import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
 import type { Channel } from '~/__generated__/graphql-types';
 import * as Z from 'zod';
 import type {
-  ChannelsForUploadQuery,
+  UploadRouteDataQuery,
   CreateMultipartMediaUploadMutation,
   CreateMultipartMediaUploadMutationVariables,
   FinalizeUploadMutation,
   FinalizeUploadMutationVariables,
   UpsertUploadRecordMutation,
   UpsertUploadRecordMutationVariables,
+  UploadRouteDataQueryVariables,
 } from './__generated__/upload';
 import server$, {
   createServerAction$,
@@ -36,6 +37,7 @@ type BaseField = {
   label: string;
   name?: string;
   required?: boolean;
+  defaultValue?: string | undefined | null;
   id: string;
 };
 
@@ -68,6 +70,11 @@ function getSections(
   channels: Array<Pick<Channel, 'id' | 'name'>> = [],
   onDropMedia: FileField['onDrop'],
   onDropThumbnail: FileField['onDrop'],
+  // TODO: felte
+  defaultValues: {
+    channelId: string | null | undefined;
+    title: string | null | undefined;
+  },
 ): Array<Section> {
   return [
     {
@@ -80,8 +87,15 @@ function getSections(
           type: 'select',
           options: channels.map(({ id, name }) => ({ label: name, value: id })),
           id: createUniqueId(),
+          defaultValue: defaultValues.channelId,
         },
-        { label: 'Title', name: 'title', type: 'text', id: createUniqueId() },
+        {
+          label: 'Title',
+          name: 'title',
+          type: 'text',
+          id: createUniqueId(),
+          defaultValue: defaultValues.title,
+        },
         {
           label: 'License',
           name: 'license',
@@ -152,33 +166,51 @@ function getSections(
   ];
 }
 
-export function routeData() {
-  return createServerData$(async (_, { request }) => {
-    const client = await createAuthenticatedClientOrRedirect(request);
+export function routeData({ location }: RouteDataArgs) {
+  return createServerData$(
+    async ([id = null], { request }) => {
+      const client = await createAuthenticatedClientOrRedirect(request);
 
-    const res = await client.request<ChannelsForUploadQuery>(gql`
-      query ChannelsForUpload {
-        me {
-          channelMembershipsConnection(canUpload: true) {
-            edges {
-              node {
-                channel {
-                  id
-                  name
+      const res = await client.request<
+        UploadRouteDataQuery,
+        UploadRouteDataQueryVariables
+      >(
+        gql`
+          query UploadRouteData($id: ShortUuid = "", $prefetch: Boolean!) {
+            me {
+              channelMembershipsConnection(canUpload: true) {
+                edges {
+                  node {
+                    channel {
+                      id
+                      name
+                    }
+                  }
                 }
               }
             }
+            uploadRecordById(id: $id) @include(if: $prefetch) {
+              canMutate
+              id
+              title
+              channel {
+                id
+              }
+            }
           }
-        }
+        `,
+        { id, prefetch: Boolean(id) },
+      );
+
+      // If we aren't logged in or otherwise can't mutate a given record, redirect
+      if (!res.me || (id && !res.uploadRecordById?.canMutate)) {
+        throw redirect('/');
       }
-    `);
 
-    if (!res.me) {
-      throw redirect('/');
-    }
-
-    return res;
-  });
+      return res;
+    },
+    { key: () => [location.query['id']] },
+  );
 }
 
 const UpsertUploadRecordSchema = Z.object({
@@ -296,6 +328,7 @@ export default function UploadRoute() {
   );
 
   const [uploadRecordId, setUploadRecordId] = createSignal<string>();
+  const resolvedId = () => data()?.uploadRecordById?.id ?? uploadRecordId();
 
   let form: HTMLFormElement;
 
@@ -313,7 +346,7 @@ export default function UploadRoute() {
     const [uploadProgress, setMediaUploadProgress] = createSignal(0);
 
     (async () => {
-      if (!uploadRecordId()) {
+      if (!resolvedId()) {
         await submitUpsert();
       }
 
@@ -353,12 +386,16 @@ export default function UploadRoute() {
         const [progress] = createSignal(0.5);
         return { title: file.name, progress };
       },
+      {
+        channelId: data()?.uploadRecordById?.channel.id,
+        title: data()?.uploadRecordById?.title,
+      },
     ),
   );
 
   return (
     <upsert.Form onInput={onInput} ref={(f) => void (form = f)}>
-      <Show when={uploadRecordId()} keyed>
+      <Show when={resolvedId()} keyed>
         {(value) => <input type="hidden" name="uploadRecordId" value={value} />}
       </Show>
       <For each={sections()}>
@@ -390,6 +427,9 @@ export default function UploadRoute() {
                           <Input
                             id={field.id}
                             {...(field.name ? { name: field.name } : {})}
+                            {...(field.defaultValue
+                              ? { value: field.defaultValue }
+                              : {})}
                             type={field.type}
                           />
                         }
@@ -399,6 +439,9 @@ export default function UploadRoute() {
                             id={field.id}
                             {...(field.name ? { name: field.name } : {})}
                             options={(field as SelectField).options}
+                            {...(field.defaultValue
+                              ? { value: field.defaultValue }
+                              : {})}
                           />
                         </Match>
                         <Match when={field.type === 'radio'}>
@@ -407,6 +450,9 @@ export default function UploadRoute() {
                             id={field.id}
                             name={field.name!}
                             options={(field as RadioField).options}
+                            {...(field.defaultValue
+                              ? { value: field.defaultValue }
+                              : {})}
                           />
                         </Match>
                         <Match when={field.type === 'file'}>

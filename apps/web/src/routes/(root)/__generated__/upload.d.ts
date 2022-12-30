@@ -1,9 +1,12 @@
 import * as Types from '../../../__generated__/graphql-types.d';
 
-export type ChannelsForUploadQueryVariables = Types.Exact<{ [key: string]: never; }>;
+export type UploadRouteDataQueryVariables = Types.Exact<{
+  id?: Types.InputMaybe<Types.Scalars['ShortUuid']>;
+  prefetch: Types.Scalars['Boolean'];
+}>;
 
 
-export type ChannelsForUploadQuery = { __typename?: 'Query', me?: { __typename?: 'AppUser', channelMembershipsConnection: { __typename?: 'AppUserChannelMembershipsConnection', edges: Array<{ __typename?: 'AppUserChannelMembershipsConnectionEdge', node: { __typename?: 'ChannelMembership', channel: { __typename?: 'Channel', id: any, name: string } } }> } } | null };
+export type UploadRouteDataQuery = { __typename?: 'Query', me?: { __typename?: 'AppUser', channelMembershipsConnection: { __typename?: 'AppUserChannelMembershipsConnection', edges: Array<{ __typename?: 'AppUserChannelMembershipsConnectionEdge', node: { __typename?: 'ChannelMembership', channel: { __typename?: 'Channel', id: any, name: string } } }> } } | null, uploadRecordById?: { __typename?: 'UploadRecord', canMutate: boolean, id: any, title?: string | null, channel: { __typename?: 'Channel', id: any } } };
 
 export type UpsertUploadRecordMutationVariables = Types.Exact<{
   uploadRecordId?: Types.InputMaybe<Types.Scalars['ShortUuid']>;
