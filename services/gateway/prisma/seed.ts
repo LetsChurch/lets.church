@@ -237,6 +237,7 @@ const baseUploadRecord = {
   uploadFinalized: true,
   uploadFinalizedById: adminId,
   license: 'CC0' as const,
+  visibility: 'PUBLIC' as const,
 };
 
 const uploadRecordData = [

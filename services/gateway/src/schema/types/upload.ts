@@ -1,5 +1,8 @@
 import invariant from 'tiny-invariant';
-import { UploadLicense as PrismaUploadLicense } from '@prisma/client';
+import {
+  UploadLicense as PrismaUploadLicense,
+  UploadVisibility as PrismaUploadVisibility,
+} from '@prisma/client';
 import {
   createMultipartUpload,
   createPresignedPartUploadUrls,
@@ -50,6 +53,10 @@ const UploadLicense = builder.enumType('UploadLicense', {
   values: Object.keys(PrismaUploadLicense),
 });
 
+const UploadVisibility = builder.enumType('UploadVisibility', {
+  values: Object.keys(PrismaUploadVisibility),
+});
+
 builder.prismaObject('UploadRecord', {
   select: {
     id: true,
@@ -59,6 +66,7 @@ builder.prismaObject('UploadRecord', {
     id: t.expose('id', { type: 'ShortUuid' }),
     title: t.exposeString('title', { nullable: true }),
     license: t.expose('license', { type: UploadLicense }),
+    visibility: t.expose('visibility', { type: UploadVisibility }),
     createdBy: t.relation('createdBy', { authScopes: internalAuthScopes }),
     uploadFinalizedBy: t.relation('uploadFinalizedBy', {
       authScopes: internalAuthScopes,
@@ -122,6 +130,7 @@ builder.mutationFields((t) => ({
       title: t.arg.string(),
       description: t.arg.string(),
       license: t.arg({ type: UploadLicense, required: true }),
+      visibility: t.arg({ type: UploadVisibility, required: true }),
       channelId: t.arg({ type: 'ShortUuid', required: true }),
     },
     authScopes: async (_root, args, context) => {
@@ -154,13 +163,22 @@ builder.mutationFields((t) => ({
     resolve: async (
       query,
       _root,
-      { uploadRecordId, title = null, description = null, license, channelId },
+      {
+        uploadRecordId,
+        title = null,
+        description = null,
+        license,
+        visibility,
+        channelId,
+      },
       context,
     ) => {
       const userId = (await context.session)?.appUserId;
       invariant(userId, 'No user found!');
       invariant(license in PrismaUploadLicense, 'Invalid license');
       const lice = license as PrismaUploadLicense;
+      invariant(visibility in PrismaUploadVisibility, 'Invalid visibility');
+      const vis = visibility as PrismaUploadVisibility;
 
       if (uploadRecordId) {
         return context.prisma.uploadRecord.update({
@@ -170,6 +188,7 @@ builder.mutationFields((t) => ({
             title,
             description,
             license: lice,
+            visibility: vis,
             channel: {
               connect: {
                 id: channelId,
@@ -185,6 +204,7 @@ builder.mutationFields((t) => ({
           title,
           description,
           license: lice,
+          visibility: vis,
           createdBy: {
             connect: {
               id: userId,

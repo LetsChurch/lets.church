@@ -11,7 +11,11 @@ import { debounce } from '@solid-primitives/scheduled';
 import { json, RouteDataArgs, useRouteData } from 'solid-start';
 import Dropzone, { DroppedRes } from '~/components/dropzone';
 import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
-import { UploadLicense, type Channel } from '~/__generated__/graphql-types';
+import {
+  UploadLicense,
+  UploadVisibility,
+  type Channel,
+} from '~/__generated__/graphql-types';
 import * as Z from 'zod';
 import type {
   UploadRouteDataQuery,
@@ -75,6 +79,7 @@ function getSections(
     channelId: string | null | undefined;
     title: string | null | undefined;
     license: string | null | undefined;
+    visibility: string | null | undefined;
   },
 ): Array<Section> {
   return [
@@ -148,19 +153,20 @@ function getSections(
       fields: [
         {
           type: 'radio',
-          label: 'Visiblity',
-          name: 'visiblity',
+          label: 'Visibility',
+          name: 'visibility',
+          defaultValue: defaultValues.visibility,
           options: [
-            { label: 'Public', help: 'Visible to everyone', value: 'public' },
+            { label: 'Public', help: 'Visible to everyone', value: 'PUBLIC' },
             {
               label: 'Private',
               help: 'Visible only to members of <channel>',
-              value: 'private',
+              value: 'PRIVATE',
             },
             {
               label: 'Unlisted',
               help: 'Visible everyone with a link',
-              value: 'unlisted',
+              value: 'UNLISTED',
             },
           ],
           id: createUniqueId(),
@@ -198,6 +204,7 @@ export function routeData({ location }: RouteDataArgs) {
               id
               title
               license
+              visibility
               channel {
                 id
               }
@@ -223,6 +230,7 @@ const UpsertUploadRecordSchema = Z.object({
   title: Z.string().optional().nullable().default(null),
   description: Z.string().optional().nullable().default(null),
   license: Z.nativeEnum(UploadLicense),
+  visibility: Z.nativeEnum(UploadVisibility),
   channelId: Z.string(),
 });
 
@@ -240,6 +248,7 @@ export default function UploadRoute() {
             'title',
             'description',
             'license',
+            'visibility',
             'channelId',
           ].map((p) => [p, form.get(p)]),
         ),
@@ -255,6 +264,7 @@ export default function UploadRoute() {
             $title: String
             $description: String
             $license: UploadLicense!
+            $visibility: UploadVisibility!
             $channelId: ShortUuid!
           ) {
             upsertUploadRecord(
@@ -262,6 +272,7 @@ export default function UploadRoute() {
               title: $title
               description: $description
               license: $license
+              visibility: $visibility
               channelId: $channelId
             ) {
               id
@@ -401,6 +412,7 @@ export default function UploadRoute() {
         channelId: data()?.uploadRecordById?.channel.id,
         title: data()?.uploadRecordById?.title,
         license: data()?.uploadRecordById?.license,
+        visibility: data()?.uploadRecordById?.visibility ?? 'PUBLIC',
       },
     ),
   );

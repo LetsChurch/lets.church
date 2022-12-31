@@ -22,6 +22,7 @@ export default function Radios(props: Props) {
                   id={`${props.id}_${op.value}`}
                   {...(props.name ? { name: props.name } : {})}
                   value={op.value}
+                  checked={props.value === op.value}
                   type="radio"
                   class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
                 />

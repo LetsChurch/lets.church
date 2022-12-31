@@ -131,22 +131,29 @@ enum UploadLicense {
   CC0
 }
 
+enum UploadVisibility {
+  PUBLIC
+  PRIVATE
+  UNLISTED
+}
+
 model UploadRecord {
-  id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title               String?
   description         String?
-  createdBy           AppUser       @relation("createdUploads", fields: [appUserId], references: [id])
-  appUserId           String        @map("app_user_id") @db.Uuid
+  createdBy           AppUser          @relation("createdUploads", fields: [appUserId], references: [id])
+  appUserId           String           @map("app_user_id") @db.Uuid
   license             UploadLicense
-  channel             Channel       @relation(fields: [channelId], references: [id])
-  channelId           String        @map("channel_id") @db.Uuid
-  uploadSizeBytes     BigInt?       @map("upload_size_bytes")
-  uploadFinalized     Boolean       @default(false) @map("upload_finalized")
-  uploadFinalizedBy   AppUser?      @relation("finalizedUploads", fields: [uploadFinalizedById], references: [id])
-  uploadFinalizedById String?       @map("upload_finalized_by_id") @db.Uuid
-  createdAt           DateTime      @default(now()) @map("created_at")
-  updatedAt           DateTime      @updatedAt @map("updated_at")
-  deletedAt           DateTime?     @map("deleted_at")
+  channel             Channel          @relation(fields: [channelId], references: [id])
+  channelId           String           @map("channel_id") @db.Uuid
+  visibility          UploadVisibility
+  uploadSizeBytes     BigInt?          @map("upload_size_bytes")
+  uploadFinalized     Boolean          @default(false) @map("upload_finalized")
+  uploadFinalizedBy   AppUser?         @relation("finalizedUploads", fields: [uploadFinalizedById], references: [id])
+  uploadFinalizedById String?          @map("upload_finalized_by_id") @db.Uuid
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
+  deletedAt           DateTime?        @map("deleted_at")
 
   @@index([createdAt, id])
   @@map("upload_record")

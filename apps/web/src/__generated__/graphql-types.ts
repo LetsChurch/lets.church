@@ -453,4 +453,11 @@ export type UploadRecord = {
   uploadFinalized: Scalars['Boolean'];
   uploadFinalizedBy: AppUser;
   uploadSizeBytes?: Maybe<Scalars['SafeInt']>;
+  visibility: UploadVisibility;
 };
+
+export enum UploadVisibility {
+  Private = 'PRIVATE',
+  Public = 'PUBLIC',
+  Unlisted = 'UNLISTED'
+}
