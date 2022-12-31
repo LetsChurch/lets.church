@@ -248,6 +248,7 @@ export type MutationUpsertUploadRecordArgs = {
   license: UploadLicense;
   title?: InputMaybe<Scalars['String']>;
   uploadRecordId?: InputMaybe<Scalars['ShortUuid']>;
+  visibility: UploadVisibility;
 };
 
 export enum Order {

@@ -10,6 +10,7 @@ export type Props = {
   progressLabel?: string;
   accept?: string;
   onDrop: (file: File, mime: string) => DroppedRes;
+  disabled?: boolean;
 };
 
 function renderPercent(percent = 0) {
@@ -60,7 +61,7 @@ export default function Dropzone(props: Props) {
   }
 
   function handleDrop(e: DragEvent) {
-    if (droppedRes()) {
+    if (droppedRes() || props.disabled) {
       return;
     }
 
@@ -93,6 +94,7 @@ export default function Dropzone(props: Props) {
       }`}
       classList={{
         'bg-gray-50': draggingOver(),
+        'opacity-75': props.disabled,
       }}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
@@ -124,7 +126,11 @@ export default function Dropzone(props: Props) {
               <div class="flex justify-center text-sm text-gray-600">
                 <label
                   for={inputId}
-                  class="relative cursor-pointer rounded-md font-medium text-indigo-600 focus-within:outline-none focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:text-indigo-500"
+                  class={`relative rounded-md font-medium focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 ${
+                    props.disabled
+                      ? 'text-gray-600'
+                      : 'cursor-pointer text-indigo-600 focus-within:ring-indigo-500 hover:text-indigo-500 '
+                  }`}
                 >
                   <span>Upload a file</span>
                   <input
@@ -133,6 +139,7 @@ export default function Dropzone(props: Props) {
                     type="file"
                     onInput={handleInput}
                     {...(props.accept ? { accept: props.accept } : {})}
+                    disabled={props.disabled ?? false}
                     class="sr-only"
                   />
                 </label>

@@ -43,6 +43,7 @@ type BaseField = {
   required?: boolean;
   defaultValue?: string | undefined | null;
   id: string;
+  disabled?: boolean;
 };
 
 type TextField = BaseField & {
@@ -80,6 +81,7 @@ function getSections(
     title: string | null | undefined;
     license: string | null | undefined;
     visibility: string | null | undefined;
+    uploadFinalized: boolean;
   },
 ): Array<Section> {
   return [
@@ -135,6 +137,7 @@ function getSections(
           accept: 'video/*,audio/*',
           id: createUniqueId(),
           onDrop: onDropMedia,
+          disabled: defaultValues.uploadFinalized,
         },
         {
           label: 'Thumbnail',
@@ -205,6 +208,7 @@ export function routeData({ location }: RouteDataArgs) {
               title
               license
               visibility
+              uploadFinalized
               channel {
                 id
               }
@@ -413,6 +417,7 @@ export default function UploadRoute() {
         title: data()?.uploadRecordById?.title,
         license: data()?.uploadRecordById?.license,
         visibility: data()?.uploadRecordById?.visibility ?? 'PUBLIC',
+        uploadFinalized: data()?.uploadRecordById?.uploadFinalized ?? false,
       },
     ),
   );
@@ -455,6 +460,7 @@ export default function UploadRoute() {
                               ? { value: field.defaultValue }
                               : {})}
                             type={field.type}
+                            disabled={field.disabled ?? false}
                           />
                         }
                       >
@@ -466,6 +472,7 @@ export default function UploadRoute() {
                             {...(field.defaultValue
                               ? { value: field.defaultValue }
                               : {})}
+                            disabled={field.disabled ?? false}
                           />
                         </Match>
                         <Match when={field.type === 'radio'}>
@@ -477,6 +484,7 @@ export default function UploadRoute() {
                             {...(field.defaultValue
                               ? { value: field.defaultValue }
                               : {})}
+                            disabled={field.disabled ?? false}
                           />
                         </Match>
                         <Match when={field.type === 'file'}>
@@ -489,6 +497,7 @@ export default function UploadRoute() {
                               ? { accept: field.accept }
                               : {})}
                             onDrop={(field as FileField).onDrop}
+                            disabled={field.disabled ?? false}
                           />
                         </Match>
                       </Switch>
