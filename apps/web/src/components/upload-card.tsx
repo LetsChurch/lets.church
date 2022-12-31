@@ -6,6 +6,8 @@ export type VideoCardProps = {
 };
 
 export default function UploadCard(props: VideoCardProps) {
+  const resolvedTitle = () => props.title || 'Untitled';
+
   return (
     <div class="relative space-y-3">
       <div class="aspect-video bg-gray-100" />
@@ -13,14 +15,14 @@ export default function UploadCard(props: VideoCardProps) {
         <img
           class="h-8 w-8 rounded-full"
           src={props.avatarUrl}
-          alt={props.title}
+          alt={resolvedTitle()}
         />
         <a
           href={props.href}
           class="block min-w-0 before:absolute before:inset-0"
         >
           <p class="truncate text-sm font-medium text-gray-900">
-            {props.title}
+            {resolvedTitle()}
           </p>
           <p class="truncate text-sm text-gray-500">{props.channel}</p>
         </a>
