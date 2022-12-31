@@ -236,6 +236,7 @@ const baseUploadRecord = {
   ).id,
   uploadFinalized: true,
   uploadFinalizedById: adminId,
+  license: 'CC0' as const,
 };
 
 const uploadRecordData = [

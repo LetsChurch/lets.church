@@ -1,4 +1,5 @@
 import invariant from 'tiny-invariant';
+import { UploadLicense as PrismaUploadLicense } from '@prisma/client';
 import {
   createMultipartUpload,
   createPresignedPartUploadUrls,
@@ -45,6 +46,10 @@ async function internalAuthScopes(
   return { admin: true };
 }
 
+const UploadLicense = builder.enumType('UploadLicense', {
+  values: Object.keys(PrismaUploadLicense),
+});
+
 builder.prismaObject('UploadRecord', {
   select: {
     id: true,
@@ -53,6 +58,7 @@ builder.prismaObject('UploadRecord', {
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
     title: t.exposeString('title', { nullable: true }),
+    license: t.expose('license', { type: UploadLicense }),
     createdBy: t.relation('createdBy', { authScopes: internalAuthScopes }),
     uploadFinalizedBy: t.relation('uploadFinalizedBy', {
       authScopes: internalAuthScopes,
@@ -115,6 +121,7 @@ builder.mutationFields((t) => ({
       uploadRecordId: t.arg({ type: 'ShortUuid' }),
       title: t.arg.string(),
       description: t.arg.string(),
+      license: t.arg({ type: UploadLicense, required: true }),
       channelId: t.arg({ type: 'ShortUuid', required: true }),
     },
     authScopes: async (_root, args, context) => {
@@ -147,11 +154,13 @@ builder.mutationFields((t) => ({
     resolve: async (
       query,
       _root,
-      { uploadRecordId, title = null, description = null, channelId },
+      { uploadRecordId, title = null, description = null, license, channelId },
       context,
     ) => {
       const userId = (await context.session)?.appUserId;
       invariant(userId, 'No user found!');
+      invariant(license in PrismaUploadLicense, 'Invalid license');
+      const lice = license as PrismaUploadLicense;
 
       if (uploadRecordId) {
         return context.prisma.uploadRecord.update({
@@ -160,6 +169,7 @@ builder.mutationFields((t) => ({
           data: {
             title,
             description,
+            license: lice,
             channel: {
               connect: {
                 id: channelId,
@@ -174,6 +184,7 @@ builder.mutationFields((t) => ({
         data: {
           title,
           description,
+          license: lice,
           createdBy: {
             connect: {
               id: userId,

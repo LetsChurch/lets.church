@@ -11,7 +11,7 @@ import { debounce } from '@solid-primitives/scheduled';
 import { json, RouteDataArgs, useRouteData } from 'solid-start';
 import Dropzone, { DroppedRes } from '~/components/dropzone';
 import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
-import type { Channel } from '~/__generated__/graphql-types';
+import { UploadLicense, type Channel } from '~/__generated__/graphql-types';
 import * as Z from 'zod';
 import type {
   UploadRouteDataQuery,
@@ -74,6 +74,7 @@ function getSections(
   defaultValues: {
     channelId: string | null | undefined;
     title: string | null | undefined;
+    license: string | null | undefined;
   },
 ): Array<Section> {
   return [
@@ -100,17 +101,18 @@ function getSections(
           label: 'License',
           name: 'license',
           type: 'select',
+          defaultValue: defaultValues.license,
           options: [
-            { label: 'Standard Copyright', value: 'standard' },
-            { label: 'Public Domain', value: 'public-domain' },
+            { label: 'Standard Copyright', value: 'STANDARD' },
+            { label: 'Public Domain', value: 'PUBLIC_DOMAIN' },
             { label: 'Creative Commons', value: '', disabled: true },
-            { label: 'CC BY', value: 'cc-by' },
-            { label: 'CC BY-SA', value: 'cc-by-sa' },
-            { label: 'CC BY-NC', value: 'cc-by-nc' },
-            { label: 'CC BY-NC-SA', value: 'cc-by-nc-sa' },
-            { label: 'CC BY-ND', value: 'cc-by-nd' },
-            { label: 'CC BY-NC-ND', value: 'cc-by-nc-nd' },
-            { label: 'CC0', value: 'cc0' },
+            { label: 'CC BY', value: 'CC_BY' },
+            { label: 'CC BY-SA', value: 'CC_BY_SA' },
+            { label: 'CC BY-NC', value: 'CC_BY_NC' },
+            { label: 'CC BY-NC-SA', value: 'CC_BY_NC_SA' },
+            { label: 'CC BY-ND', value: 'CC_BY_ND' },
+            { label: 'CC BY-NC-ND', value: 'CC_BY_NC_ND' },
+            { label: 'CC0', value: 'CC0' },
           ],
           id: createUniqueId(),
         },
@@ -195,6 +197,7 @@ export function routeData({ location }: RouteDataArgs) {
               canMutate
               id
               title
+              license
               channel {
                 id
               }
@@ -219,6 +222,7 @@ const UpsertUploadRecordSchema = Z.object({
   uploadRecordId: Z.string().optional().nullable().default(null),
   title: Z.string().optional().nullable().default(null),
   description: Z.string().optional().nullable().default(null),
+  license: Z.nativeEnum(UploadLicense),
   channelId: Z.string(),
 });
 
@@ -231,10 +235,13 @@ export default function UploadRoute() {
 
       const variables = UpsertUploadRecordSchema.parse(
         Object.fromEntries(
-          ['uploadRecordId', 'title', 'description', 'channelId'].map((p) => [
-            p,
-            form.get(p),
-          ]),
+          [
+            'uploadRecordId',
+            'title',
+            'description',
+            'license',
+            'channelId',
+          ].map((p) => [p, form.get(p)]),
         ),
       );
 
@@ -247,12 +254,14 @@ export default function UploadRoute() {
             $uploadRecordId: ShortUuid
             $title: String
             $description: String
+            $license: UploadLicense!
             $channelId: ShortUuid!
           ) {
             upsertUploadRecord(
               uploadRecordId: $uploadRecordId
               title: $title
               description: $description
+              license: $license
               channelId: $channelId
             ) {
               id
@@ -391,6 +400,7 @@ export default function UploadRoute() {
       {
         channelId: data()?.uploadRecordById?.channel.id,
         title: data()?.uploadRecordById?.title,
+        license: data()?.uploadRecordById?.license,
       },
     ),
   );

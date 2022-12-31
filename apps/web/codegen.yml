@@ -4,7 +4,7 @@ documents:
   - './src/**/!(*.d).ts{,x}'
   - '!**/__generated__/**'
 generates:
-  src/__generated__/graphql-types.d.ts:
+  src/__generated__/graphql-types.ts:
     plugins:
       - typescript
     config:

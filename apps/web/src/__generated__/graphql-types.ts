@@ -245,6 +245,7 @@ export type MutationUpsertOrganizationMembershipArgs = {
 export type MutationUpsertUploadRecordArgs = {
   channelId: Scalars['ShortUuid'];
   description?: InputMaybe<Scalars['String']>;
+  license: UploadLicense;
   title?: InputMaybe<Scalars['String']>;
   uploadRecordId?: InputMaybe<Scalars['ShortUuid']>;
 };
@@ -427,6 +428,18 @@ export type TranscriptSearchHit = ISearchHit & {
   text: HighlightedText;
 };
 
+export enum UploadLicense {
+  Cc0 = 'CC0',
+  CcBy = 'CC_BY',
+  CcByNc = 'CC_BY_NC',
+  CcByNcNd = 'CC_BY_NC_ND',
+  CcByNcSa = 'CC_BY_NC_SA',
+  CcByNd = 'CC_BY_ND',
+  CcBySa = 'CC_BY_SA',
+  PublicDomain = 'PUBLIC_DOMAIN',
+  Standard = 'STANDARD'
+}
+
 export type UploadRecord = {
   __typename?: 'UploadRecord';
   canMutate: Scalars['Boolean'];
@@ -434,6 +447,7 @@ export type UploadRecord = {
   createdAt: Scalars['DateTime'];
   createdBy: AppUser;
   id: Scalars['ShortUuid'];
+  license: UploadLicense;
   title?: Maybe<Scalars['String']>;
   updatedAt: Scalars['DateTime'];
   uploadFinalized: Scalars['Boolean'];

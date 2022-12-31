@@ -7,6 +7,9 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- CreateEnum
 CREATE TYPE "app_user_role" AS ENUM ('USER', 'ADMIN');
 
+-- CreateEnum
+CREATE TYPE "UploadLicense" AS ENUM ('STANDARD', 'PUBLIC_DOMAIN', 'CC_BY', 'CC_BY_SA', 'CC_BY_NC', 'CC_BY_NC_SA', 'CC_BY_ND', 'CC_BY_NC_ND', 'CC0');
+
 -- CreateTable
 CREATE TABLE "app_user" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
@@ -99,6 +102,7 @@ CREATE TABLE "upload_record" (
     "title" TEXT,
     "description" TEXT,
     "app_user_id" UUID NOT NULL,
+    "license" "UploadLicense" NOT NULL,
     "channel_id" UUID NOT NULL,
     "upload_size_bytes" BIGINT,
     "upload_finalized" BOOLEAN NOT NULL DEFAULT false,
