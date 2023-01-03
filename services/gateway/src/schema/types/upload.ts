@@ -275,18 +275,6 @@ builder.mutationFields((t) => ({
       };
     },
   }),
-  thumbnailUploadUrl: t.string({
-    args: {
-      uploadRecordId: t.arg({ type: 'ShortUuid', required: true }),
-      uploadMimeType: t.arg.string({ required: true }),
-    },
-    resolve: (_root, { uploadRecordId, uploadMimeType }) =>
-      createPresignedUploadUrl(
-        S3_INGEST_BUCKET,
-        `${uploadRecordId}-thumbnail`,
-        uploadMimeType,
-      ),
-  }),
   finalizeUpload: t.boolean({
     args: {
       uploadRecordId: t.arg({ type: 'ShortUuid', required: true }),
@@ -349,5 +337,17 @@ builder.mutationFields((t) => ({
 
       return true;
     },
+  }),
+  thumbnailUploadUrl: t.string({
+    args: {
+      uploadRecordId: t.arg({ type: 'ShortUuid', required: true }),
+      uploadMimeType: t.arg.string({ required: true }),
+    },
+    resolve: (_root, { uploadRecordId, uploadMimeType }) =>
+      createPresignedUploadUrl(
+        S3_INGEST_BUCKET,
+        `${uploadRecordId}-thumbnail`,
+        uploadMimeType,
+      ),
   }),
 }));

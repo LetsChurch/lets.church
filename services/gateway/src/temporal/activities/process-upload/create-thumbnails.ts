@@ -15,6 +15,8 @@ import { concatThumbs, runFfmpegThumbnails } from '../../../util/ffmpeg';
 import { stat } from 'node:fs/promises';
 import { createReadStream } from 'node:fs';
 import rimraf from '../../../util/rimraf';
+import prisma from '../../../util/prisma';
+import pRetry from 'p-retry';
 
 const WORK_DIR = '/data/thumbnails';
 
@@ -40,8 +42,42 @@ export default async function createThumbnails(id: string) {
     );
     Context.current().heartbeat();
     console.log('Uploading thumbnails');
+    const largestThumbnail = maxBy(thumbnailsWithSizes, 'size')?.path;
+    if (largestThumbnail) {
+      // Upload the largest thumbnail as the video thumbnail
+      uploadQueue.add(async () => {
+        Context.current().heartbeat();
+        console.log(`Uploading thumbnail: ${largestThumbnail}`);
+        const path = `${id}/${basename(largestThumbnail)}`;
+        await retryablePutFile(
+          S3_PUBLIC_BUCKET,
+          path,
+          'image/jpeg',
+          createReadStream(largestThumbnail),
+          { contentLength: (await stat(largestThumbnail)).size },
+        );
+        await pRetry(
+          async (attempt) => {
+            console.log(`Setting thumbnail path: attempt ${attempt}`);
+            await prisma.uploadRecord.update({
+              where: { id },
+              data: { defaultThumbnailPath: path },
+            });
+          },
+          { retries: 8 },
+        );
+        Context.current().heartbeat();
+        console.log(`Done uploading thumbnail: ${largestThumbnail}`);
+      });
+    }
+    // Upload the remaining thumbnails
     uploadQueue.addAll(
       thumbnailJpgs.map((path) => async () => {
+        // Skip uploading the largest thumbnail here
+        if (path === largestThumbnail) {
+          return;
+        }
+
         Context.current().heartbeat();
         console.log(`Uploading thumbnail: ${path}`);
         await retryablePutFile(
