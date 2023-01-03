@@ -4,6 +4,10 @@ import { getBibleReferences } from './bible';
 const streamUnionSchema = Z.discriminatedUnion('codec_type', [
   Z.object({
     codec_type: Z.literal('video'),
+    codec_name: Z.string(),
+    codec_long_name: Z.string(),
+    codec_tag_string: Z.string(),
+    codec_tag: Z.string(),
     width: Z.number(),
     height: Z.number(),
     coded_width: Z.number(),
@@ -27,18 +31,21 @@ const streamUnionSchema = Z.discriminatedUnion('codec_type', [
     bits_per_raw_sample: Z.string(),
     nb_frames: Z.string().optional(),
     profile: Z.string(),
-  }),
+  }).passthrough(),
   Z.object({
     codec_type: Z.literal('audio'),
-  }),
-]).and(
-  Z.object({
-    index: Z.number(),
     codec_name: Z.string(),
     codec_long_name: Z.string(),
     codec_tag_string: Z.string(),
     codec_tag: Z.string(),
-  }),
+  }).passthrough(),
+  Z.object({
+    codec_type: Z.literal('data'),
+  }).passthrough(),
+]).and(
+  Z.object({
+    index: Z.number(),
+  }).passthrough(),
 );
 
 export const ffprobeSchema = Z.object({
