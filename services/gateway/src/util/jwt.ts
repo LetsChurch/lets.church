@@ -34,13 +34,6 @@ function jwtFactory<S extends ZodTypeAny>(Schema: S, expires?: string) {
   };
 }
 
-const AssemblyAiJwtSchema = Z.object({
-  uploadId: Z.string().uuid(),
-});
-
-export const { create: createAssemblyAiJwt, parse: parseAssemblyAiJwt } =
-  jwtFactory(AssemblyAiJwtSchema, '2h');
-
 const SessionJwtSchema = Z.object({
   sub: Z.string().uuid(),
 });
