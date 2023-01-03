@@ -7,7 +7,7 @@ const JWT_SECRET = envariant('JWT_SECRET');
 const jwtSecret = Buffer.from(JWT_SECRET, 'hex');
 
 function jwtFactory<S extends ZodTypeAny>(Schema: S, expires?: string) {
-  type T = ReturnType<S['parse']>;
+  type T = Z.infer<S>;
   return {
     create: (t: T, exp = expires) => {
       const jwt = new SignJWT(t)
