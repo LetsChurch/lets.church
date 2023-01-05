@@ -17,7 +17,7 @@ generates:
   src/:
     preset: near-operation-file
     presetConfig:
-      baseTypesPath: '__generated__/graphql-types.d.ts'
+      baseTypesPath: '__generated__/graphql-types.ts'
       folder: __generated__
       extension: '.d.ts'
     config:
