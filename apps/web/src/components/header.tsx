@@ -1,4 +1,4 @@
-import { A } from 'solid-start';
+import { A, useLocation, useNavigate } from 'solid-start';
 import {
   createEffect,
   createSignal,
@@ -73,6 +73,21 @@ export default function Header() {
   });
 
   const searchId = createUniqueId();
+  const navigate = useNavigate();
+  const loc = useLocation();
+
+  function onSearch(e: SubmitEvent) {
+    e.preventDefault();
+    const search = (e.target as HTMLFormElement)
+      ?.elements[0] as HTMLInputElement;
+    const params = new URLSearchParams({ q: search.value });
+    navigate(`/search?${params.toString()}`);
+  }
+
+  function defaultSearch() {
+    const params = new URLSearchParams(loc.search);
+    return params.get('q') ?? '';
+  }
 
   return (
     <header>
@@ -101,13 +116,16 @@ export default function Header() {
                   <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                     <SearchIcon class="h-5 w-5 text-gray-400" />
                   </div>
-                  <input
-                    id={searchId}
-                    name="search"
-                    class="block w-full rounded-md border border-gray-300 bg-white py-2 pl-10 pr-3 leading-5 placeholder-gray-500 focus:border-indigo-500 focus:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
-                    placeholder="Search"
-                    type="search"
-                  />
+                  <form method="get" action="/search" onSubmit={onSearch}>
+                    <input
+                      id={searchId}
+                      name="q"
+                      class="block w-full rounded-md border border-gray-300 bg-white py-2 pl-10 pr-3 leading-5 placeholder-gray-500 focus:border-indigo-500 focus:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
+                      placeholder="Search"
+                      type="search"
+                      value={defaultSearch()}
+                    />
+                  </form>
                 </div>
               </div>
             </div>
