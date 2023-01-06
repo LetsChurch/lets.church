@@ -4,12 +4,11 @@ import invariant from 'tiny-invariant';
 import { indexDocumentWorkflow } from './background';
 import { BACKGROUND_QUEUE } from '../queues';
 
-const { probe, transcode, createThumbnails } = proxyActivities<
-  typeof activities
->({
-  startToCloseTimeout: '60 minutes',
-  heartbeatTimeout: '1 minute',
-});
+const { probe, transcode, createThumbnails, processThumbnail } =
+  proxyActivities<typeof activities>({
+    startToCloseTimeout: '60 minutes',
+    heartbeatTimeout: '1 minute',
+  });
 
 // TODO: figure out how to get more frequent heartbeats
 const { transcribe } = proxyActivities<typeof activities>({
@@ -17,24 +16,32 @@ const { transcribe } = proxyActivities<typeof activities>({
   heartbeatTimeout: '60 minutes',
 });
 
-export async function processUpload(id: string) {
-  const probeRes = await probe(id);
-  invariant(probeRes !== null, 'Probe is null!');
+export async function processUpload(
+  uploadRecordId: string,
+  s3UploadKey: string,
+  postProcess: 'media' | 'thumbnail',
+) {
+  if (postProcess === 'media') {
+    const probeRes = await probe(uploadRecordId, s3UploadKey);
+    invariant(probeRes !== null, 'Probe is null!');
 
-  await Promise.allSettled([
-    transcode(id, probeRes),
-    ...(probeRes.streams.some((s) => s.codec_type === 'video')
-      ? [createThumbnails(id)]
-      : []),
-    transcribe(id).then(() => {
-      return executeChild(indexDocumentWorkflow, {
-        workflowId: `transcript:${id}`,
-        args: ['transcript', id],
-        taskQueue: BACKGROUND_QUEUE,
-        retry: {
-          maximumAttempts: 8,
-        },
-      });
-    }),
-  ]);
+    await Promise.allSettled([
+      transcode(uploadRecordId, s3UploadKey, probeRes),
+      ...(probeRes.streams.some((s) => s.codec_type === 'video')
+        ? [createThumbnails(uploadRecordId, s3UploadKey)]
+        : []),
+      transcribe(uploadRecordId, s3UploadKey).then((uploadKey) => {
+        return executeChild(indexDocumentWorkflow, {
+          workflowId: `transcript:${s3UploadKey}`,
+          args: ['transcript', uploadRecordId, uploadKey],
+          taskQueue: BACKGROUND_QUEUE,
+          retry: {
+            maximumAttempts: 8,
+          },
+        });
+      }),
+    ]);
+  } else if (postProcess === 'thumbnail') {
+    await processThumbnail(uploadRecordId, s3UploadKey);
+  }
 }

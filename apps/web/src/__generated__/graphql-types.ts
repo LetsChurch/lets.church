@@ -171,7 +171,6 @@ export type Mutation = {
   login?: Maybe<Scalars['Jwt']>;
   logout: Scalars['Boolean'];
   signup: AppUser;
-  thumbnailUploadUrl: Scalars['String'];
   upsertChannelMembership: ChannelMembership;
   upsertOrganizationMembership: OrganizationMembership;
   upsertUploadRecord: UploadRecord;
@@ -186,6 +185,7 @@ export type MutationCreateChannelArgs = {
 
 export type MutationCreateMultipartMediaUploadArgs = {
   bytes: Scalars['SafeInt'];
+  postProcess: UploadPostProcess;
   uploadMimeType: Scalars['String'];
   uploadRecordId: Scalars['ShortUuid'];
 };
@@ -216,12 +216,6 @@ export type MutationSignupArgs = {
   fullName?: InputMaybe<Scalars['String']>;
   password: Scalars['String'];
   username: Scalars['String'];
-};
-
-
-export type MutationThumbnailUploadUrlArgs = {
-  uploadMimeType: Scalars['String'];
-  uploadRecordId: Scalars['ShortUuid'];
 };
 
 
@@ -439,6 +433,11 @@ export enum UploadLicense {
   CcBySa = 'CC_BY_SA',
   PublicDomain = 'PUBLIC_DOMAIN',
   Standard = 'STANDARD'
+}
+
+export enum UploadPostProcess {
+  Media = 'media',
+  Thumbnail = 'thumbnail'
 }
 
 export type UploadRecord = {

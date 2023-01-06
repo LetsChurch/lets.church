@@ -34,40 +34,47 @@ const retryOps: Pick<WorkflowOptions, 'retry'> = {
   retry: { maximumAttempts: 8 },
 };
 
-function makeMultipartMediaUploadWorkflowId(key: string, uploadId: string) {
-  return `handleMultipartMediaUpload:${key}:${xxh32(uploadId)}`;
+function makeMultipartMediaUploadWorkflowId(uploadId: string, key: string) {
+  return `handleMultipartMediaUpload:${xxh32(uploadId)}:${key}`;
 }
 
 export async function handleMultipartMediaUpload(
+  uploadRecordId: string,
   bucket: string,
-  key: string,
-  uploadId: string,
+  s3UploadId: string,
+  s3UploadKey: string,
+  postProcess: 'media' | 'thumbnail',
 ) {
   return (await client).start(handleMultipartMediaUploadWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
-    workflowId: makeMultipartMediaUploadWorkflowId(key, uploadId),
-    args: [bucket, key, uploadId],
+    workflowId: makeMultipartMediaUploadWorkflowId(s3UploadId, s3UploadKey),
+    args: [uploadRecordId, bucket, s3UploadId, s3UploadKey, postProcess],
   });
 }
 
 export async function completeMultipartMediaUpload(
-  key: string,
-  uploadId: string,
+  s3UploadId: string,
+  s3UploadKey: string,
   partETags: Array<string>,
+  userId: string,
 ) {
   return (await client)
-    .getHandle(makeMultipartMediaUploadWorkflowId(key, uploadId))
-    .signal(uploadDoneSignal, partETags);
+    .getHandle(makeMultipartMediaUploadWorkflowId(s3UploadId, s3UploadKey))
+    .signal(uploadDoneSignal, partETags, userId);
 }
 
-export async function indexDocument(kind: DocumentKind, id: string) {
+export async function indexDocument(
+  kind: DocumentKind,
+  uploadId: string,
+  uploadKey?: string,
+) {
   return pRetry(
     async () => {
       return (await client).signalWithStart(indexDocumentWorkflow, {
         taskQueue: BACKGROUND_QUEUE,
-        workflowId: `${kind}:${id}`,
-        args: [kind, id],
+        workflowId: `${kind}:${uploadId}`,
+        args: [kind, uploadId, uploadKey],
         signal: indexDocumentSignal,
         signalArgs: [],
         retry: {

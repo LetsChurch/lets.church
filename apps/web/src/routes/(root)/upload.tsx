@@ -13,6 +13,7 @@ import Dropzone, { DroppedRes } from '~/components/dropzone';
 import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
 import {
   UploadLicense,
+  UploadPostProcess,
   UploadVisibility,
   type Channel,
 } from '~/__generated__/graphql-types';
@@ -303,11 +304,13 @@ export default function UploadRoute() {
             $uploadRecordId: ShortUuid!
             $bytes: SafeInt!
             $uploadMimeType: String!
+            $postProcess: UploadPostProcess!
           ) {
             createMultipartMediaUpload(
               uploadRecordId: $uploadRecordId
               bytes: $bytes
               uploadMimeType: $uploadMimeType
+              postProcess: $postProcess
             ) {
               s3UploadKey
               s3UploadId
@@ -368,7 +371,11 @@ export default function UploadRoute() {
     submitUpsert();
   }, 200);
 
-  function onDropMedia(file: File, mime: string) {
+  function onDropFile(
+    file: File,
+    mime: string,
+    postProcess: UploadPostProcess,
+  ) {
     const [uploadProgress, setMediaUploadProgress] = createSignal(0);
 
     (async () => {
@@ -376,14 +383,15 @@ export default function UploadRoute() {
         await submitUpsert();
       }
 
-      const upRecId = uploadRecordId();
-      invariant(upRecId);
+      const uploadRecordId = resolvedId();
+      invariant(uploadRecordId);
 
       const { createMultipartMediaUpload: res } =
         await createMultipartMediaUpload({
-          uploadRecordId: upRecId,
+          uploadRecordId: uploadRecordId,
           bytes: file.size,
           uploadMimeType: mime,
+          postProcess,
         });
 
       const upload = doMultipartUpload(file, res.urls, res.partSize);
@@ -392,7 +400,7 @@ export default function UploadRoute() {
       const eTags = await upload;
 
       await finalizeUpload({
-        uploadRecordId: upRecId,
+        uploadRecordId: uploadRecordId,
         s3UploadKey: res.s3UploadKey,
         s3UploadId: res.s3UploadId,
         s3PartETags: eTags,
@@ -402,16 +410,21 @@ export default function UploadRoute() {
     return { title: file.name, progress: uploadProgress };
   }
 
+  function onDropMedia(file: File, mime: string) {
+    return onDropFile(file, mime, UploadPostProcess.Media);
+  }
+
+  function onDropThumbnail(file: File, mime: string) {
+    return onDropFile(file, mime, UploadPostProcess.Thumbnail);
+  }
+
   const sections = createMemo(() =>
     getSections(
       data()
         ?.me?.channelMembershipsConnection.edges.map((e) => e?.node.channel)
         .filter(notEmpty),
       onDropMedia,
-      (file: File) => {
-        const [progress] = createSignal(0.5);
-        return { title: file.name, progress };
-      },
+      onDropThumbnail,
       {
         channelId: data()?.uploadRecordById?.channel.id,
         title: data()?.uploadRecordById?.title,

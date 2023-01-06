@@ -86,3 +86,13 @@ export const transcriptSegmentSchema = Z.array(
     ),
   })),
 );
+
+export const imageMagickJsonSchema = Z.array(
+  Z.object({
+    version: Z.string(),
+    image: Z.object({
+      format: Z.string(),
+      mimeType: Z.string(),
+    }),
+  }).passthrough(),
+);

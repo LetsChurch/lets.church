@@ -15,6 +15,7 @@ import { pipeline } from 'node:stream/promises';
 import pMap from 'p-map';
 import pRetry from 'p-retry';
 import invariant from 'tiny-invariant';
+import { v4 as uuid } from 'uuid';
 
 export const S3_INGEST_BUCKET = envariant('S3_INGEST_BUCKET');
 const S3_INGEST_REGION = envariant('S3_INGEST_REGION');
@@ -56,7 +57,7 @@ export async function createMultipartUpload(
   const { UploadId: uploadId, Key: uploadKey } = await s3IngestClient.send(
     new CreateMultipartUploadCommand({
       Bucket: bucket,
-      Key: key,
+      Key: `${key}/${uuid()}`,
       ContentType: contentType,
     }),
   );
@@ -104,8 +105,8 @@ export async function createPresignedPartUploadUrls(
 
 export async function completeMultipartUpload(
   bucket: string,
-  uploadKey: string,
   uploadId: string,
+  uploadKey: string,
   eTags: Array<string>,
 ) {
   await s3IngestClient.send(
@@ -122,8 +123,8 @@ export async function completeMultipartUpload(
 
 export async function abortMultipartUpload(
   bucket: string,
-  uploadKey: string,
   uploadId: string,
+  uploadKey: string,
 ) {
   await s3IngestClient.send(
     new AbortMultipartUploadCommand({

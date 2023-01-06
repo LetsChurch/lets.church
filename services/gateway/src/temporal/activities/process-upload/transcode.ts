@@ -28,14 +28,18 @@ const formatter = new Intl.ListFormat('en', {
   type: 'conjunction',
 });
 
-export default async function transcode(id: string, probe: Probe) {
+export default async function transcode(
+  uploadRecordId: string,
+  s3UploadKey: string,
+  probe: Probe,
+) {
   Context.current().heartbeat('job start');
-  const dir = join(WORK_DIR, id);
+  const dir = join(WORK_DIR, uploadRecordId);
 
   try {
     await mkdirp(dir);
-    const downloadPath = join(dir, id);
-    await streamObjectToFile(S3_INGEST_BUCKET, id, downloadPath);
+    const downloadPath = join(dir, 'download');
+    await streamObjectToFile(S3_INGEST_BUCKET, s3UploadKey, downloadPath);
 
     Context.current().heartbeat('file downloaded');
 
@@ -68,7 +72,7 @@ export default async function transcode(id: string, probe: Probe) {
 
         await retryablePutFile(
           S3_PUBLIC_BUCKET,
-          `${id}/${fileName}`,
+          `${uploadRecordId}/${fileName}`,
           'video/mp2ts',
           createReadStream(path),
           {
@@ -97,7 +101,7 @@ export default async function transcode(id: string, probe: Probe) {
         console.log(`Uploading playlist file: ${filename}`);
         await retryablePutFile(
           S3_PUBLIC_BUCKET,
-          `${id}/${filename}`,
+          `${uploadRecordId}/${filename}`,
           'application/x-mpegURL',
           createReadStream(playlist),
           {
@@ -119,7 +123,7 @@ export default async function transcode(id: string, probe: Probe) {
         );
         await retryablePutFile(
           S3_PUBLIC_BUCKET,
-          `${id}/master.m3u8`,
+          `${uploadRecordId}/master.m3u8`,
           'application/x-mpegURL',
           playlistBuffer,
         );
@@ -139,7 +143,7 @@ export default async function transcode(id: string, probe: Probe) {
       Context.current().heartbeat('Uploading stdout');
       await retryablePutFile(
         S3_PUBLIC_BUCKET,
-        `${id}/stdout.txt`,
+        `${uploadRecordId}/stdout.txt`,
         'text/plain',
         Buffer.from(encodeProc.stdout),
       );

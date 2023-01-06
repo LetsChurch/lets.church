@@ -1,4 +1,4 @@
-import * as Types from '../../../../../__generated__/graphql-types.d';
+import * as Types from '../../../../../__generated__/graphql-types';
 
 export type ChannelQueryVariables = Types.Exact<{
   id: Types.Scalars['ShortUuid'];

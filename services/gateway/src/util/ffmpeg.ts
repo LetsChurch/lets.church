@@ -289,12 +289,6 @@ export function runFfmpegThumbnails(cwd: string, inputFilename: string) {
   );
 }
 
-export function concatThumbs(cwd: string, inputFileNames: Array<string>) {
-  return execa('convert', [...inputFileNames, '-append', 'hovernail.jpg'], {
-    cwd,
-  });
-}
-
 // ffprobe -v quiet -print_format json -show_format -show_streams Stars.mp4
 export function runFfprobe(cwd: string, inputFilename: string) {
   return execa(

@@ -14,16 +14,19 @@ import { runWhisper } from '../../../util/whisper';
 
 const WORK_DIR = '/data/transcribe';
 
-export default async function transcribe(id: string) {
+export default async function transcribe(
+  uploadRecordId: string,
+  s3UploadKey: string,
+) {
   Context.current().heartbeat('job start');
-  const dir = join(WORK_DIR, id);
+  const dir = join(WORK_DIR, uploadRecordId);
 
   try {
     console.log('downloading media');
 
     await mkdirp(dir);
-    const downloadPath = join(dir, id);
-    await streamObjectToFile(S3_INGEST_BUCKET, id, downloadPath);
+    const downloadPath = join(dir, 'download');
+    await streamObjectToFile(S3_INGEST_BUCKET, s3UploadKey, downloadPath);
 
     console.log('media downloaded');
     Context.current().heartbeat('media downloaded');
@@ -37,9 +40,10 @@ export default async function transcribe(id: string) {
     Context.current().heartbeat('whisper done');
 
     console.log('uploading file');
+    const key = `${uploadRecordId}.vtt`;
     await retryablePutFile(
       S3_PUBLIC_BUCKET,
-      `${id}.vtt`,
+      key,
       'text/vtt',
       createReadStream(vttFile),
       {
@@ -49,6 +53,8 @@ export default async function transcribe(id: string) {
 
     console.log('done uploading');
     Context.current().heartbeat('done uploading');
+
+    return key;
   } finally {
     console.log('Cleaning up');
     await rimraf(dir);

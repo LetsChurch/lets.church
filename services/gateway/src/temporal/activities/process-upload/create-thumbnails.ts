@@ -1,6 +1,8 @@
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
 import { basename, join } from 'node:path';
+import { stat } from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
 import PQueue from 'p-queue';
 import pMap from 'p-map';
 import fastGlob from 'fast-glob';
@@ -11,21 +13,23 @@ import {
   S3_PUBLIC_BUCKET,
   streamObjectToFile,
 } from '../../../util/s3';
-import { concatThumbs, runFfmpegThumbnails } from '../../../util/ffmpeg';
-import { stat } from 'node:fs/promises';
-import { createReadStream } from 'node:fs';
+import { runFfmpegThumbnails } from '../../../util/ffmpeg';
+import { concatThumbs } from '../../../util/images';
 import rimraf from '../../../util/rimraf';
 import prisma from '../../../util/prisma';
 import pRetry from 'p-retry';
 
 const WORK_DIR = '/data/thumbnails';
 
-export default async function createThumbnails(id: string) {
-  const dir = join(WORK_DIR, id);
+export default async function createThumbnails(
+  uploadRecordId: string,
+  s3UploadKey: string,
+) {
+  const dir = join(WORK_DIR, s3UploadKey);
 
   await mkdirp(dir);
-  const downloadPath = join(dir, id);
-  await streamObjectToFile(S3_INGEST_BUCKET, id, downloadPath);
+  const downloadPath = join(dir, 'download');
+  await streamObjectToFile(S3_INGEST_BUCKET, s3UploadKey, downloadPath);
 
   Context.current().heartbeat();
   try {
@@ -48,7 +52,7 @@ export default async function createThumbnails(id: string) {
       uploadQueue.add(async () => {
         Context.current().heartbeat();
         console.log(`Uploading thumbnail: ${largestThumbnail}`);
-        const path = `${id}/${basename(largestThumbnail)}`;
+        const path = `${uploadRecordId}/${basename(largestThumbnail)}`;
         await retryablePutFile(
           S3_PUBLIC_BUCKET,
           path,
@@ -59,8 +63,8 @@ export default async function createThumbnails(id: string) {
         await pRetry(
           async (attempt) => {
             console.log(`Setting thumbnail path: attempt ${attempt}`);
-            await prisma.uploadRecord.update({
-              where: { id },
+            await prisma.uploadRecord.updateMany({
+              where: { id: uploadRecordId, defaultThumbnailPath: null },
               data: { defaultThumbnailPath: path },
             });
           },
@@ -82,7 +86,7 @@ export default async function createThumbnails(id: string) {
         console.log(`Uploading thumbnail: ${path}`);
         await retryablePutFile(
           S3_PUBLIC_BUCKET,
-          `${id}/${basename(path)}`,
+          `${uploadRecordId}/${basename(path)}`,
           'image/jpeg',
           createReadStream(path),
           { contentLength: (await stat(path)).size },
@@ -102,7 +106,7 @@ export default async function createThumbnails(id: string) {
       console.log('Uploading hovernail');
       await retryablePutFile(
         S3_PUBLIC_BUCKET,
-        `${id}/hovernail.jpg`,
+        `${uploadRecordId}/hovernail.jpg`,
         'image/jpeg',
         createReadStream(join(dir, 'hovernail.jpg')),
       );

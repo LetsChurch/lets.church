@@ -1,4 +1,4 @@
-import * as Types from '../../../__generated__/graphql-types.d';
+import * as Types from '../../../__generated__/graphql-types';
 
 export type UploadRouteDataQueryVariables = Types.Exact<{
   id?: Types.InputMaybe<Types.Scalars['ShortUuid']>;
@@ -24,6 +24,7 @@ export type CreateMultipartMediaUploadMutationVariables = Types.Exact<{
   uploadRecordId: Types.Scalars['ShortUuid'];
   bytes: Types.Scalars['SafeInt'];
   uploadMimeType: Types.Scalars['String'];
+  postProcess: Types.UploadPostProcess;
 }>;
 
 

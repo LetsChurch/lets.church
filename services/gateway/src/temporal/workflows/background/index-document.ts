@@ -16,7 +16,11 @@ const { indexDocument: indexDocumentActivity } = proxyActivities<
 
 export const indexDocumentSignal = defineSignal('indexDocument');
 
-export async function indexDocumentWorkflow(kind: DocumentKind, id: string) {
+export async function indexDocumentWorkflow(
+  kind: DocumentKind,
+  uploadRecordId: string,
+  s3UploadKey?: string,
+) {
   let debouncing = false;
 
   setHandler(indexDocumentSignal, () => void (debouncing = true));
@@ -25,9 +29,9 @@ export async function indexDocumentWorkflow(kind: DocumentKind, id: string) {
     debouncing = false;
   }
 
-  await indexDocumentActivity(kind, id);
+  await indexDocumentActivity(kind, uploadRecordId, s3UploadKey);
 
   if (debouncing) {
-    await continueAsNew(kind, id);
+    await continueAsNew(kind, uploadRecordId, s3UploadKey);
   }
 }

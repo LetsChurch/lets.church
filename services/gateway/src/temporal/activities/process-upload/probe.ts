@@ -14,15 +14,18 @@ import prisma from '../../../util/prisma';
 
 const WORK_DIR = '/data/transcode';
 
-export default async function probe(id: string) {
+export default async function probe(
+  uploadRecordId: string,
+  s3UploadKey: string,
+) {
   Context.current().heartbeat();
 
-  const dir = join(WORK_DIR, id);
-  const downloadPath = join(dir, id);
+  const dir = join(WORK_DIR, uploadRecordId);
+  const downloadPath = join(dir, 'download');
 
   try {
     await mkdirp(dir);
-    await streamObjectToFile(S3_INGEST_BUCKET, id, downloadPath);
+    await streamObjectToFile(S3_INGEST_BUCKET, s3UploadKey, downloadPath);
 
     Context.current().heartbeat();
 
@@ -31,7 +34,7 @@ export default async function probe(id: string) {
     const stats = await stat(downloadPath);
 
     await prisma.uploadRecord.update({
-      where: { id },
+      where: { id: uploadRecordId },
       data: { uploadSizeBytes: stats.size },
     });
 
@@ -42,7 +45,7 @@ export default async function probe(id: string) {
 
     await retryablePutFile(
       S3_INGEST_BUCKET,
-      `${id}.probe.json`,
+      `${uploadRecordId}.probe.json`,
       'application/json',
       Buffer.from(probeJson),
     );

@@ -1,4 +1,4 @@
-import * as Types from '../../../../__generated__/graphql-types.d';
+import * as Types from '../../../../__generated__/graphql-types';
 
 export type LoginMutationVariables = Types.Exact<{
   id: Types.Scalars['String'];

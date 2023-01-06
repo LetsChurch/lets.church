@@ -1,4 +1,4 @@
-import * as Types from '../../__generated__/graphql-types.d';
+import * as Types from '../../__generated__/graphql-types';
 
 export type MeQueryVariables = Types.Exact<{ [key: string]: never; }>;
 

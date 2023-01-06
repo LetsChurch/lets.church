@@ -6,7 +6,6 @@ import {
 import {
   createMultipartUpload,
   createPresignedPartUploadUrls,
-  createPresignedUploadUrl,
   PART_SIZE,
   S3_INGEST_BUCKET,
 } from '../../util/s3';
@@ -55,6 +54,10 @@ const UploadLicense = builder.enumType('UploadLicense', {
 
 const UploadVisibility = builder.enumType('UploadVisibility', {
   values: Object.keys(PrismaUploadVisibility),
+});
+
+const UploadPostProcess = builder.enumType('UploadPostProcess', {
+  values: ['media', 'thumbnail'] as const,
 });
 
 builder.prismaObject('UploadRecord', {
@@ -239,10 +242,11 @@ builder.mutationFields((t) => ({
         },
       }),
       uploadMimeType: t.arg.string({ required: true }),
+      postProcess: t.arg({ type: UploadPostProcess, required: true }),
     },
     resolve: async (
       _root,
-      { uploadRecordId, uploadMimeType, bytes },
+      { uploadRecordId, uploadMimeType, bytes, postProcess },
       { prisma },
     ) => {
       const { uploadFinalized } = await prisma.uploadRecord.findUniqueOrThrow({
@@ -250,7 +254,9 @@ builder.mutationFields((t) => ({
         select: { uploadFinalized: true },
       });
 
-      invariant(!uploadFinalized, 'Upload is already finalized!');
+      if (uploadFinalized && postProcess === 'media') {
+        throw new Error('Upload is already finalized!');
+      }
 
       const { uploadKey, uploadId } = await createMultipartUpload(
         S3_INGEST_BUCKET,
@@ -258,7 +264,13 @@ builder.mutationFields((t) => ({
         uploadMimeType,
       );
 
-      await handleMultipartMediaUpload(S3_INGEST_BUCKET, uploadKey, uploadId);
+      await handleMultipartMediaUpload(
+        uploadRecordId,
+        S3_INGEST_BUCKET,
+        uploadId,
+        uploadKey,
+        postProcess,
+      );
 
       const urls = await createPresignedPartUploadUrls(
         S3_INGEST_BUCKET,
@@ -312,42 +324,21 @@ builder.mutationFields((t) => ({
     },
     resolve: async (
       _root,
-      { uploadRecordId, s3UploadId, s3UploadKey, s3PartETags },
+      { s3UploadId, s3UploadKey, s3PartETags },
       context,
       _info,
     ) => {
       const userId = (await context.session)?.appUserId;
       invariant(userId, 'No user found!');
 
-      await completeMultipartMediaUpload(s3UploadKey, s3UploadId, s3PartETags);
-
-      await context.prisma.$transaction(async (tx) => {
-        await tx.uploadRecord.update({
-          data: {
-            uploadFinalized: true,
-            uploadFinalizedBy: {
-              connect: {
-                id: userId,
-              },
-            },
-          },
-          where: { id: uploadRecordId },
-        });
-      });
+      await completeMultipartMediaUpload(
+        s3UploadId,
+        s3UploadKey,
+        s3PartETags,
+        userId,
+      );
 
       return true;
     },
-  }),
-  thumbnailUploadUrl: t.string({
-    args: {
-      uploadRecordId: t.arg({ type: 'ShortUuid', required: true }),
-      uploadMimeType: t.arg.string({ required: true }),
-    },
-    resolve: (_root, { uploadRecordId, uploadMimeType }) =>
-      createPresignedUploadUrl(
-        S3_INGEST_BUCKET,
-        `${uploadRecordId}-thumbnail`,
-        uploadMimeType,
-      ),
   }),
 }));
