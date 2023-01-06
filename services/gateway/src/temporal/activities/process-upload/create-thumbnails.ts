@@ -14,7 +14,7 @@ import {
   streamObjectToFile,
 } from '../../../util/s3';
 import { runFfmpegThumbnails } from '../../../util/ffmpeg';
-import { concatThumbs } from '../../../util/images';
+import { concatThumbs, imageToBlurhash } from '../../../util/images';
 import rimraf from '../../../util/rimraf';
 import prisma from '../../../util/prisma';
 import pRetry from 'p-retry';
@@ -63,9 +63,12 @@ export default async function createThumbnails(
         await pRetry(
           async (attempt) => {
             console.log(`Setting thumbnail path: attempt ${attempt}`);
+
+            const blurhash = await imageToBlurhash(largestThumbnail);
+
             await prisma.uploadRecord.updateMany({
               where: { id: uploadRecordId, defaultThumbnailPath: null },
-              data: { defaultThumbnailPath: path },
+              data: { defaultThumbnailPath: path, thumbnailBlurhash: blurhash },
             });
           },
           { retries: 8 },

@@ -152,6 +152,7 @@ model UploadRecord {
   uploadFinalizedBy    AppUser?         @relation("finalizedUploads", fields: [uploadFinalizedById], references: [id])
   uploadFinalizedById  String?          @map("upload_finalized_by_id") @db.Uuid
   defaultThumbnailPath String?          @map("default_thumbnail_path")
+  thumbnailBlurhash    String?          @map("thumbnail_blurhash")
   createdAt            DateTime         @default(now()) @map("created_at")
   updatedAt            DateTime         @updatedAt @map("updated_at")
   deletedAt            DateTime?        @map("deleted_at")

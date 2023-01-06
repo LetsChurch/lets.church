@@ -11,7 +11,12 @@ import {
 } from '../../../util/s3';
 import rimraf from '../../../util/rimraf';
 import prisma from '../../../util/prisma';
-import { imgJson, jpegOptim, oxiPng } from '../../../util/images';
+import {
+  imageToBlurhash,
+  imgJson,
+  jpegOptim,
+  oxiPng,
+} from '../../../util/images';
 
 const WORK_DIR = '/data/process-thumbnail';
 
@@ -62,9 +67,17 @@ export default async function processThumbnail(
       createReadStream(downloadPath),
     );
 
+    Context.current().heartbeat();
+
+    console.log('Creating blurhash');
+
+    const blurhash = await imageToBlurhash(downloadPath);
+
+    Context.current().heartbeat();
+
     await prisma.uploadRecord.update({
       where: { id: uploadRecordId },
-      data: { defaultThumbnailPath: path },
+      data: { defaultThumbnailPath: path, thumbnailBlurhash: blurhash },
     });
   } catch (e) {
     console.log('Error!');

@@ -1,5 +1,7 @@
 import { execa } from 'execa';
 import invariant from 'tiny-invariant';
+import sharp from 'sharp';
+import { encode as encodeBlurhash } from 'blurhash';
 import { imageMagickJsonSchema } from './zod';
 
 export async function imgJson(cwd: string, inputFileNames: string[]) {
@@ -21,4 +23,22 @@ export function oxiPng(cwd: string, inputFileNames: Array<string>) {
 
 export function jpegOptim(cwd: string, inputFileNames: Array<string>) {
   return execa('jpegoptim', [...inputFileNames], { cwd });
+}
+
+export async function imageToBlurhash(path: string) {
+  const {
+    data,
+    info: { width, height },
+  } = await sharp(path)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  return encodeBlurhash(
+    new Uint8ClampedArray(data.buffer, data.byteOffset, data.byteLength),
+    width,
+    height,
+    4,
+    4,
+  );
 }
