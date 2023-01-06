@@ -30,6 +30,7 @@ export async function imageToBlurhash(path: string) {
     data,
     info: { width, height },
   } = await sharp(path)
+    .resize(1600, 900, { fit: 'outside' })
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
