@@ -26,6 +26,34 @@ const highlightSettings: Partial<SearchHighlight> = {
   post_tags: ['</mark>'],
 };
 
+export function msearchUploads(
+  query: string,
+  from = 0,
+  size = 0,
+): Array<MsearchRequestItem> {
+  return [
+    { index: 'lc_uploads' },
+    {
+      from,
+      size,
+      query: {
+        fuzzy: {
+          title: {
+            value: query,
+            fuzziness: 'AUTO',
+          },
+        },
+      },
+      highlight: {
+        ...highlightSettings,
+        fields: {
+          title: {},
+        },
+      },
+    },
+  ];
+}
+
 export function msearchTranscripts(
   query: string,
   from = 0,
@@ -94,8 +122,6 @@ export function msearchChannels(
           },
         },
       },
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
       highlight: {
         ...highlightSettings,
         fields: {
@@ -124,8 +150,6 @@ export function msearchOrganizations(
           },
         },
       },
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
       highlight: {
         ...highlightSettings,
         fields: {
@@ -140,6 +164,14 @@ export const BaseHitSchema = {
   _id: Z.string(),
   _score: Z.number(),
 };
+
+export const UploadHitSourceSchema = Z.object({
+  title: Z.string(),
+});
+
+export const UploadHitHighlightSchema = Z.object({
+  title: Z.array(Z.string()),
+});
 
 export const TranscriptHitSchema = Z.object({
   ...BaseHitSchema,
@@ -191,6 +223,13 @@ export const OrganizationHitHighlightSchema = Z.object({
   name: Z.array(Z.string()),
 });
 
+export const UploadHitSchema = Z.object({
+  ...BaseHitSchema,
+  _index: Z.literal('lc_uploads'),
+  _source: UploadHitSourceSchema,
+  highlight: UploadHitHighlightSchema,
+});
+
 export const ChannelHitSchema = Z.object({
   ...BaseHitSchema,
   _index: Z.literal('lc_channels'),
@@ -222,6 +261,7 @@ export const MSearchResponseSchema = Z.object({
         hits: Z.array(
           Z.discriminatedUnion('_index', [
             TranscriptHitSchema,
+            UploadHitSchema,
             ChannelHitSchema,
             OrganizationHitSchema,
           ]),

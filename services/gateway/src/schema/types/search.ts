@@ -5,6 +5,7 @@ import {
   msearchOrganizations,
   MSearchResponseSchema,
   msearchTranscripts,
+  msearchUploads,
 } from '../../util/elasticsearch';
 import builder from '../builder';
 
@@ -31,6 +32,16 @@ builder.simpleObject('TranscriptSearchHit', {
   }),
 });
 
+builder.simpleObject('UploadSearchHit', {
+  interfaces: [ISearchHit],
+  isTypeOf: (value) => valueIsKind(value, 'UploadSearchHit'),
+  fields: (t) => ({
+    title: t.field({ type: HighlightedText }),
+    // TODO
+    // description: t.field({ type: HighlightedText }),
+  }),
+});
+
 builder.simpleObject('ChannelSearchHit', {
   interfaces: [ISearchHit],
   isTypeOf: (value) => valueIsKind(value, 'ChannelSearchHit'),
@@ -53,13 +64,19 @@ builder.simpleObject('OrganizationSearchHit', {
 
 const SearchAggs = builder.simpleObject('SearchAggs', {
   fields: (t) => ({
+    uploadHitCount: t.int(),
     transcriptHitCount: t.int(),
     channelHitCount: t.int(),
     organizationHitCount: t.int(),
   }),
 });
 
-const focuses = ['TRANSCRIPTS', 'CHANNELS', 'ORGANIZATIONS'] as const;
+const focuses = [
+  'UPLOADS',
+  'TRANSCRIPTS',
+  'CHANNELS',
+  'ORGANIZATIONS',
+] as const;
 
 builder.queryFields((t) => ({
   search: t.connection(
@@ -81,6 +98,7 @@ builder.queryFields((t) => ({
         _info,
       ) => {
         let totalCount = 0;
+        let uploadHitCount = 0;
         let transcriptHitCount = 0;
         let channelHitCount = 0;
         let organizationHitCount = 0;
@@ -90,6 +108,11 @@ builder.queryFields((t) => ({
           async ({ offset, limit }) => {
             const esRes = await esClient.msearch({
               searches: [
+                ...msearchUploads(
+                  query,
+                  focus === 'UPLOADS' ? offset : 0,
+                  focus === 'UPLOADS' ? limit : 0,
+                ),
                 ...msearchTranscripts(
                   query,
                   focus === 'TRANSCRIPTS' ? offset : 0,
@@ -114,21 +137,33 @@ builder.queryFields((t) => ({
               (sum, res) => sum + res.hits.total.value,
               0,
             );
-            transcriptHitCount = parsed.responses[0]?.hits.total.value ?? 0;
-            channelHitCount = parsed.responses[1]?.hits.total.value ?? 0;
-            organizationHitCount = parsed.responses[2]?.hits.total.value ?? 0;
+            uploadHitCount = parsed.responses[0]?.hits.total.value ?? 0;
+            transcriptHitCount = parsed.responses[1]?.hits.total.value ?? 0;
+            channelHitCount = parsed.responses[2]?.hits.total.value ?? 0;
+            organizationHitCount = parsed.responses[3]?.hits.total.value ?? 0;
+
+            console.dir(parsed.responses, { depth: null });
 
             return parsed.responses
               .flatMap(({ hits: { hits } }) => hits)
               .map((hit) => ({
                 __typename:
-                  focus === 'TRANSCRIPTS'
+                  focus === 'UPLOADS'
+                    ? 'UploadSearchHit'
+                    : focus === 'TRANSCRIPTS'
                     ? 'TranscriptSearchHit'
                     : focus === 'CHANNELS'
                     ? 'ChannelSearchHit'
                     : 'OrganizationSearchHit',
                 id: hit._id,
-                ...(hit._index === 'lc_transcripts'
+                ...(hit._index === 'lc_uploads'
+                  ? {
+                      title: {
+                        source: hit._source.title,
+                        marked: hit.highlight.title[0],
+                      },
+                    }
+                  : hit._index === 'lc_transcripts'
                   ? {
                       moreResultsCount:
                         hit.inner_hits.segments.hits.total.value - 1,
@@ -158,6 +193,7 @@ builder.queryFields((t) => ({
           ...res,
           totalCount,
           aggs: {
+            uploadHitCount,
             transcriptHitCount,
             channelHitCount,
             organizationHitCount,

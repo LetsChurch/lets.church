@@ -12,7 +12,7 @@ export function routeData({ location }: RouteDataArgs) {
       return client.request<SearchQuery, SearchQueryVariables>(
         gql`
           query Search($query: String!) {
-            search(focus: TRANSCRIPTS, query: $query) {
+            search(focus: UPLOADS, query: $query) {
               aggs {
                 channelHitCount
                 organizationHitCount
@@ -22,10 +22,8 @@ export function routeData({ location }: RouteDataArgs) {
                 cursor
                 node {
                   id
-                  ... on TranscriptSearchHit {
-                    id
-                    moreResultsCount
-                    text {
+                  ... on UploadSearchHit {
+                    title {
                       marked
                       source
                     }

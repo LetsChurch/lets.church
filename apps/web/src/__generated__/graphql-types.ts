@@ -395,6 +395,7 @@ export type SearchAggs = {
   channelHitCount: Scalars['Int'];
   organizationHitCount: Scalars['Int'];
   transcriptHitCount: Scalars['Int'];
+  uploadHitCount: Scalars['Int'];
 };
 
 export type SearchConnection = {
@@ -413,7 +414,8 @@ export type SearchConnectionEdge = {
 export enum SearchFocus {
   Channels = 'CHANNELS',
   Organizations = 'ORGANIZATIONS',
-  Transcripts = 'TRANSCRIPTS'
+  Transcripts = 'TRANSCRIPTS',
+  Uploads = 'UPLOADS'
 }
 
 export type TranscriptSearchHit = ISearchHit & {
@@ -454,6 +456,12 @@ export type UploadRecord = {
   uploadFinalizedBy: AppUser;
   uploadSizeBytes?: Maybe<Scalars['SafeInt']>;
   visibility: UploadVisibility;
+};
+
+export type UploadSearchHit = ISearchHit & {
+  __typename?: 'UploadSearchHit';
+  id: Scalars['ShortUuid'];
+  title: HighlightedText;
 };
 
 export enum UploadVisibility {

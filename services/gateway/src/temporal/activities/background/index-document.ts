@@ -5,11 +5,11 @@ import prisma from '../../../util/prisma';
 import { getObject, S3_PUBLIC_BUCKET } from '../../../util/s3';
 import { transcriptSegmentSchema } from '../../../util/zod';
 
-export type DocumentKind = 'transcript' | 'organization' | 'channel';
+export type DocumentKind = 'transcript' | 'upload' | 'organization' | 'channel';
 
 async function getDocument(
   kind: DocumentKind,
-  uploadRecordId: string,
+  documentId: string,
   s3UploadKey?: string,
 ) {
   switch (kind) {
@@ -24,26 +24,40 @@ async function getDocument(
 
       return {
         index: 'lc_transcripts',
-        id: uploadRecordId,
+        id: documentId,
         document: escapeDocument({
           segments: transcriptSegmentSchema.parse(parsed),
+        }),
+      };
+    case 'upload':
+      return {
+        index: 'lc_uploads',
+        id: documentId,
+        document: await prisma.uploadRecord.findUniqueOrThrow({
+          where: { id: documentId },
+          select: {
+            channelId: true,
+            title: true,
+            description: true,
+            // TODO: tags, publishedAt
+          },
         }),
       };
     case 'organization':
       return {
         index: 'lc_organizations',
-        id: uploadRecordId,
+        id: documentId,
         document: await prisma.organization.findUniqueOrThrow({
-          where: { id: uploadRecordId },
+          where: { id: documentId },
           select: { name: true },
         }),
       };
     case 'channel':
       return {
         index: 'lc_organizations',
-        id: uploadRecordId,
+        id: documentId,
         document: await prisma.channel.findUniqueOrThrow({
-          where: { id: uploadRecordId },
+          where: { id: documentId },
           select: { name: true },
         }),
       };

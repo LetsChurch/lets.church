@@ -33,7 +33,7 @@ const targetMappings: Record<
       },
     },
   },
-  lc_media: {
+  lc_uploads: {
     properties: {
       channelId: {
         type: 'keyword',

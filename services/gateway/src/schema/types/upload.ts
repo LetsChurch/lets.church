@@ -12,6 +12,7 @@ import {
 import {
   completeMultipartMediaUpload,
   handleMultipartMediaUpload,
+  indexDocument,
 } from '../../temporal';
 import builder from '../builder';
 import type { Context } from '../../util/context';
@@ -184,7 +185,7 @@ builder.mutationFields((t) => ({
       const vis = visibility as PrismaUploadVisibility;
 
       if (uploadRecordId) {
-        return context.prisma.uploadRecord.update({
+        const res = await context.prisma.uploadRecord.update({
           ...query,
           where: { id: uploadRecordId },
           data: {
@@ -199,9 +200,13 @@ builder.mutationFields((t) => ({
             },
           },
         });
+
+        await indexDocument('upload', uploadRecordId);
+
+        return res;
       }
 
-      return context.prisma.uploadRecord.create({
+      const res = await context.prisma.uploadRecord.create({
         ...query,
         data: {
           title,
@@ -220,6 +225,10 @@ builder.mutationFields((t) => ({
           },
         },
       });
+
+      await indexDocument('upload', res.id);
+
+      return res;
     },
   }),
   createMultipartMediaUpload: t.field({
