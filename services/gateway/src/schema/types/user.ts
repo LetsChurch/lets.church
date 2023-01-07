@@ -8,6 +8,7 @@ import zxcvbn from '../../util/zxcvbn';
 import { ZodIssueCode } from 'zod';
 import { sendEmail } from '../../temporal';
 import { createSessionJwt } from '../../util/jwt';
+import prisma from '../../util/prisma';
 
 async function privateAuthScopes(
   appUser: Pick<PrismaAppUser, 'id'>,
@@ -81,7 +82,7 @@ builder.queryFields((t) => ({
       const session = await context.session;
 
       if (session) {
-        return context.prisma.appUser.findUniqueOrThrow({
+        return prisma.appUser.findUniqueOrThrow({
           ...query,
           where: { id: session.appUserId },
         });
@@ -95,16 +96,16 @@ builder.queryFields((t) => ({
     cursor: 'id',
     maxSize: 50,
     defaultSize: 50,
-    resolve: (query, _root, _args, context, _info) =>
-      context.prisma.appUser.findMany(query),
+    resolve: (query, _root, _args, _context, _info) =>
+      prisma.appUser.findMany(query),
   }),
   userById: t.prismaField({
     type: AppUser,
     args: {
       id: t.arg({ type: 'ShortUuid', required: true }),
     },
-    resolve: (query, _root, { id }, context) => {
-      return context.prisma.appUser.findUniqueOrThrow({
+    resolve: (query, _root, { id }, _context) => {
+      return prisma.appUser.findUniqueOrThrow({
         ...query,
         where: { id },
       });
@@ -123,7 +124,7 @@ builder.mutationFields((t) => ({
     authScopes: {
       unauthenticated: true,
     },
-    resolve: async (_parent, { id, password }, { prisma }) => {
+    resolve: async (_parent, { id, password }, _context) => {
       const user = await prisma.appUser.findFirst({
         where: { OR: [{ username: id }, { email: id }] },
       });
@@ -143,7 +144,7 @@ builder.mutationFields((t) => ({
     authScopes: {
       authenticated: true,
     },
-    resolve: async (_parent, _args, { session, prisma }, _info) => {
+    resolve: async (_parent, _args, { session }, _info) => {
       const s = await session;
 
       invariant(s, 'No session!');
@@ -191,7 +192,7 @@ builder.mutationFields((t) => ({
       query,
       _parent,
       { username, password, email, fullName },
-      { prisma },
+      _context,
     ) => {
       const passwordHash = await argon2.hash(password, {
         type: argon2.argon2id,

@@ -16,6 +16,7 @@ import {
 } from '../../temporal';
 import builder from '../builder';
 import type { Context } from '../../util/context';
+import prisma from '../../util/prisma';
 
 async function internalAuthScopes(
   uploadRecord: { id: string; channelId: string },
@@ -29,7 +30,7 @@ async function internalAuthScopes(
   }
 
   // TODO: can this be done more efficiently at scale?
-  const membership = await context.prisma.channelMembership.findUnique({
+  const membership = await prisma.channelMembership.findUnique({
     select: {
       isAdmin: true,
       canUpload: true,
@@ -121,7 +122,7 @@ builder.queryFields((t) => ({
     args: {
       id: t.arg({ type: 'ShortUuid', required: true }),
     },
-    resolve: (query, _root, { id }, { prisma }) =>
+    resolve: (query, _root, { id }, _context) =>
       prisma.uploadRecord.findUniqueOrThrow({ ...query, where: { id } }),
   }),
 }));
@@ -145,7 +146,7 @@ builder.mutationFields((t) => ({
       }
 
       // TODO: can this be done more efficiently at scale?
-      const membership = await context.prisma.channelMembership.findUnique({
+      const membership = await prisma.channelMembership.findUnique({
         select: {
           isAdmin: true,
           canUpload: true,
@@ -185,7 +186,7 @@ builder.mutationFields((t) => ({
       const vis = visibility as PrismaUploadVisibility;
 
       if (uploadRecordId) {
-        const res = await context.prisma.uploadRecord.update({
+        const res = await prisma.uploadRecord.update({
           ...query,
           where: { id: uploadRecordId },
           data: {
@@ -206,7 +207,7 @@ builder.mutationFields((t) => ({
         return res;
       }
 
-      const res = await context.prisma.uploadRecord.create({
+      const res = await prisma.uploadRecord.create({
         ...query,
         data: {
           title,
@@ -256,7 +257,7 @@ builder.mutationFields((t) => ({
     resolve: async (
       _root,
       { uploadRecordId, uploadMimeType, bytes, postProcess },
-      { prisma },
+      _context,
     ) => {
       const { uploadFinalized } = await prisma.uploadRecord.findUniqueOrThrow({
         where: { id: uploadRecordId },
@@ -310,7 +311,7 @@ builder.mutationFields((t) => ({
         return false;
       }
 
-      const record = await context.prisma.uploadRecord.findFirst({
+      const record = await prisma.uploadRecord.findFirst({
         where: {
           id: args.uploadRecordId,
           uploadFinalized: false,

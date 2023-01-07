@@ -1,6 +1,7 @@
 import slugify from '@sindresorhus/slugify';
 import invariant from 'tiny-invariant';
 import { indexDocument } from '../../temporal';
+import prisma from '../../util/prisma';
 import builder from '../builder';
 
 const orderEnum = builder.enumType('Order', {
@@ -57,7 +58,7 @@ builder.queryFields((t) => ({
   channelById: t.prismaField({
     type: 'Channel',
     args: { id: t.arg({ type: 'ShortUuid', required: true }) },
-    resolve: async (query, _root, { id }, { prisma }, _info) => {
+    resolve: async (query, _root, { id }, _context, _info) => {
       return prisma.channel.findUniqueOrThrow({ ...query, where: { id } });
     },
   }),
@@ -77,7 +78,7 @@ builder.mutationFields((t) => ({
       const userId = (await context.session)?.appUserId;
       invariant(userId);
 
-      const res = await context.prisma.channel.create({
+      const res = await prisma.channel.create({
         ...query,
         data: {
           ...args,
@@ -114,7 +115,7 @@ builder.mutationFields((t) => ({
 
       invariant(userId, 'Unauthorized');
 
-      const adminMembership = await context.prisma.channelMembership.findFirst({
+      const adminMembership = await prisma.channelMembership.findFirst({
         where: {
           channelId,
           appUserId: userId,
@@ -134,10 +135,10 @@ builder.mutationFields((t) => ({
       query,
       _root,
       { channelId, userId, isAdmin, canEdit, canUpload },
-      context,
+      _context,
       _info,
     ) => {
-      return context.prisma.$transaction(async (tx) => {
+      return prisma.$transaction(async (tx) => {
         const res = await tx.channelMembership.upsert({
           ...query,
           where: {
