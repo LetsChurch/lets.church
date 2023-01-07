@@ -54,7 +54,7 @@ async function getDocument(
       };
     case 'channel':
       return {
-        index: 'lc_organizations',
+        index: 'lc_channels',
         id: documentId,
         document: await prisma.channel.findUniqueOrThrow({
           where: { id: documentId },
