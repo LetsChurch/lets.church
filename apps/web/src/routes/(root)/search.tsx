@@ -1,14 +1,11 @@
 import { RouteDataArgs, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
-import invariant from 'tiny-invariant';
 import { client, gql } from '~/util/gql/server';
 import type { SearchQuery, SearchQueryVariables } from './__generated__/search';
 
 export function routeData({ location }: RouteDataArgs) {
   return createServerData$(
-    async ([, q]) => {
-      invariant(q, 'Query is required');
-
+    async ([, q = '']) => {
       return client.request<SearchQuery, SearchQueryVariables>(
         gql`
           query Search($query: String!) {

@@ -1,6 +1,10 @@
 import * as Z from 'zod';
 import { getBibleReferences } from './bible';
 
+export const identifiableSchema = Z.object({
+  id: Z.string().uuid(),
+});
+
 const streamUnionSchema = Z.discriminatedUnion('codec_type', [
   Z.object({
     codec_type: Z.literal('video'),

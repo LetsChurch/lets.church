@@ -127,6 +127,7 @@ export type ChannelMembershipsConnectionEdge = {
 
 export type ChannelSearchHit = ISearchHit & {
   __typename?: 'ChannelSearchHit';
+  channel: Channel;
   id: Scalars['ShortUuid'];
   name: HighlightedText;
 };
@@ -319,6 +320,7 @@ export type OrganizationSearchHit = ISearchHit & {
   __typename?: 'OrganizationSearchHit';
   id: Scalars['ShortUuid'];
   name: HighlightedText;
+  organization: Organization;
 };
 
 export type PageInfo = {
@@ -423,6 +425,7 @@ export type TranscriptSearchHit = ISearchHit & {
   id: Scalars['ShortUuid'];
   moreResultsCount: Scalars['Int'];
   text: HighlightedText;
+  uploadRecord: UploadRecord;
 };
 
 export enum UploadLicense {
@@ -462,6 +465,7 @@ export type UploadSearchHit = ISearchHit & {
   __typename?: 'UploadSearchHit';
   id: Scalars['ShortUuid'];
   title: HighlightedText;
+  uploadRecord: UploadRecord;
 };
 
 export enum UploadVisibility {

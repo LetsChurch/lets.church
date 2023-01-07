@@ -7,6 +7,8 @@ import {
   msearchTranscripts,
   msearchUploads,
 } from '../../util/elasticsearch';
+import prisma from '../../util/prisma';
+import { identifiableSchema } from '../../util/zod';
 import builder from '../builder';
 
 const HighlightedText = builder.simpleObject('HighlightedText', {
@@ -29,6 +31,15 @@ builder.simpleObject('TranscriptSearchHit', {
   fields: (t) => ({
     text: t.field({ type: HighlightedText }),
     moreResultsCount: t.int(),
+    // TODO: this isn't batching
+    uploadRecord: t.prismaField({
+      type: 'UploadRecord',
+      resolve: async (query, root, _args, _context, _info) =>
+        prisma.uploadRecord.findUniqueOrThrow({
+          ...query,
+          where: identifiableSchema.parse(root),
+        }),
+    }),
   }),
 });
 
@@ -39,6 +50,15 @@ builder.simpleObject('UploadSearchHit', {
     title: t.field({ type: HighlightedText }),
     // TODO
     // description: t.field({ type: HighlightedText }),
+    // TODO: this isn't batching
+    uploadRecord: t.prismaField({
+      type: 'UploadRecord',
+      resolve: async (query, root, _args, _context, _info) =>
+        prisma.uploadRecord.findUniqueOrThrow({
+          ...query,
+          where: identifiableSchema.parse(root),
+        }),
+    }),
   }),
 });
 
@@ -49,6 +69,14 @@ builder.simpleObject('ChannelSearchHit', {
     name: t.field({ type: HighlightedText }),
     // TODO
     // description: t.field({ type: HighlightedText }),
+    channel: t.prismaField({
+      type: 'Channel',
+      resolve: async (query, root, _args, _context, _info) =>
+        prisma.channel.findUniqueOrThrow({
+          ...query,
+          where: identifiableSchema.parse(root),
+        }),
+    }),
   }),
 });
 
@@ -59,6 +87,14 @@ builder.simpleObject('OrganizationSearchHit', {
     name: t.field({ type: HighlightedText }),
     // TODO
     // description: t.field({ type: HighlightedText }),
+    organization: t.prismaField({
+      type: 'Organization',
+      resolve: async (query, root, _args, _context, _info) =>
+        prisma.organization.findUniqueOrThrow({
+          ...query,
+          where: identifiableSchema.parse(root),
+        }),
+    }),
   }),
 });
 
@@ -142,8 +178,6 @@ builder.queryFields((t) => ({
             channelHitCount = parsed.responses[2]?.hits.total.value ?? 0;
             organizationHitCount = parsed.responses[3]?.hits.total.value ?? 0;
 
-            console.dir(parsed.responses, { depth: null });
-
             return parsed.responses
               .flatMap(({ hits: { hits } }) => hits)
               .map((hit) => ({
@@ -158,6 +192,7 @@ builder.queryFields((t) => ({
                 id: hit._id,
                 ...(hit._index === 'lc_uploads'
                   ? {
+                      uploadRecord: { id: hit._id },
                       title: {
                         source: hit._source.title,
                         marked: hit.highlight.title[0],
@@ -165,6 +200,7 @@ builder.queryFields((t) => ({
                     }
                   : hit._index === 'lc_transcripts'
                   ? {
+                      uploadRecord: { id: hit._id },
                       moreResultsCount:
                         hit.inner_hits.segments.hits.total.value - 1,
                       text: {
@@ -176,9 +212,17 @@ builder.queryFields((t) => ({
                           ][0],
                       },
                     }
-                  : hit._index === 'lc_channels' ||
-                    hit._index === 'lc_organizations'
+                  : hit._index === 'lc_channels'
                   ? {
+                      channel: { id: hit._id },
+                      name: {
+                        source: hit._source.name,
+                        marked: hit.highlight.name[0],
+                      },
+                    }
+                  : hit._index === 'lc_organizations'
+                  ? {
+                      organization: { id: hit._id },
                       name: {
                         source: hit._source.name,
                         marked: hit.highlight.name[0],
