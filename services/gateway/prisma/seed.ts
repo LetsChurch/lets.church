@@ -63,42 +63,51 @@ const otherIds = (
   })
 ).map(({ id }) => id);
 
-await prisma.organization.create({
-  data: {
-    name: "Let's Church",
-    slug: 'letschurch',
-    memberships: {
-      create: {
-        appUser: {
-          connect: {
-            id: adminId,
-          },
-        },
-        isAdmin: true,
-      },
+const { id: lcId, associations: lcAssociations } =
+  await prisma.organization.create({
+    include: {
+      associations: { include: { channel: { select: { id: true } } } },
     },
-    associations: {
-      create: {
-        channel: {
-          create: {
-            name: "Let's Church",
-            slug: 'letschurch',
-            memberships: {
-              create: {
-                appUser: {
-                  connect: {
-                    id: adminId,
+    data: {
+      name: "Let's Church",
+      slug: 'letschurch',
+      memberships: {
+        create: {
+          appUser: {
+            connect: {
+              id: adminId,
+            },
+          },
+          isAdmin: true,
+        },
+      },
+      associations: {
+        create: {
+          channel: {
+            create: {
+              name: "Let's Church",
+              slug: 'letschurch',
+              memberships: {
+                create: {
+                  appUser: {
+                    connect: {
+                      id: adminId,
+                    },
                   },
+                  isAdmin: true,
                 },
-                isAdmin: true,
               },
             },
           },
         },
       },
     },
-  },
-});
+  });
+
+await indexDocument('organization', lcId);
+await Promise.all(
+  lcAssociations.map(({ channel }) => indexDocument('channel', channel.id)),
+);
 
 const { id: org1Id, associations: org1Associations } =
   await prisma.organization.create({
