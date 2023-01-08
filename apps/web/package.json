@@ -24,6 +24,7 @@
     "@solidjs/meta": "^0.28.2",
     "@solidjs/router": "^0.5.1",
     "@tabler/icons": "^1.116.0",
+    "blurhash": "^2.0.4",
     "graphql-request": "^5.0.0",
     "p-progress": "^0.6.0",
     "p-retry": "^5.1.2",

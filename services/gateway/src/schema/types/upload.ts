@@ -5,9 +5,11 @@ import {
 } from '@prisma/client';
 import {
   createMultipartUpload,
+  createPresignedGetUrl,
   createPresignedPartUploadUrls,
   PART_SIZE,
   S3_INGEST_BUCKET,
+  S3_PUBLIC_BUCKET,
 } from '../../util/s3';
 import {
   completeMultipartMediaUpload,
@@ -76,6 +78,18 @@ builder.prismaObject('UploadRecord', {
     uploadFinalizedBy: t.relation('uploadFinalizedBy', {
       authScopes: internalAuthScopes,
     }),
+    thumbnailUrl: t.string({
+      nullable: true,
+      select: { defaultThumbnailPath: true },
+      resolve: ({ defaultThumbnailPath }) => {
+        if (!defaultThumbnailPath) {
+          return null;
+        }
+
+        return createPresignedGetUrl(S3_PUBLIC_BUCKET, defaultThumbnailPath);
+      },
+    }),
+    thumbnailBlurhash: t.exposeString('thumbnailBlurhash', { nullable: true }),
     channel: t.relation('channel'),
     uploadSizeBytes: t.field({
       type: 'SafeInt',

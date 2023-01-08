@@ -453,6 +453,8 @@ export type UploadRecord = {
   createdBy: AppUser;
   id: Scalars['ShortUuid'];
   license: UploadLicense;
+  thumbnailBlurhash?: Maybe<Scalars['String']>;
+  thumbnailUrl?: Maybe<Scalars['String']>;
   title?: Maybe<Scalars['String']>;
   updatedAt: Scalars['DateTime'];
   uploadFinalized: Scalars['Boolean'];
