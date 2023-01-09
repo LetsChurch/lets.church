@@ -477,41 +477,39 @@ export default function UploadRoute() {
                           />
                         }
                       >
-                        <Match when={field.type === 'select'}>
-                          <Select
-                            id={field.id}
-                            name={field.name}
-                            options={(field as SelectField).options}
-                            {...(field.defaultValue
-                              ? { value: field.defaultValue }
-                              : {})}
-                            disabled={field.disabled ?? false}
-                          />
+                        <Match when={field.type === 'select' && field} keyed>
+                          {(selectField) => (
+                            <Select
+                              id={field.id}
+                              name={field.name}
+                              options={(field as SelectField).options}
+                              value={selectField.defaultValue ?? ''}
+                              disabled={field.disabled ?? false}
+                            />
+                          )}
                         </Match>
-                        <Match when={field.type === 'radio'}>
-                          <Radios
-                            label={field.label}
-                            id={field.id}
-                            name={field.name}
-                            options={(field as RadioField).options}
-                            {...(field.defaultValue
-                              ? { value: field.defaultValue }
-                              : {})}
-                            disabled={field.disabled ?? false}
-                          />
+                        <Match when={field.type === 'radio' && field} keyed>
+                          {(radioField) => (
+                            <Radios
+                              label={field.label}
+                              id={field.id}
+                              name={field.name}
+                              options={radioField.options}
+                              value={radioField.defaultValue}
+                              disabled={field.disabled ?? false}
+                            />
+                          )}
                         </Match>
-                        <Match when={field.type === 'file'}>
-                          <Dropzone
-                            progressLabel={`${field.label} upload progress`}
-                            {...('caption' in field
-                              ? { caption: field.caption }
-                              : {})}
-                            {...('accept' in field
-                              ? { accept: field.accept }
-                              : {})}
-                            onDrop={(field as FileField).onDrop}
-                            disabled={field.disabled ?? false}
-                          />
+                        <Match when={field.type === 'file' && field} keyed>
+                          {(fileField) => (
+                            <Dropzone
+                              progressLabel={`${field.label} upload progress`}
+                              caption={fileField.caption}
+                              accept={fileField.accept}
+                              onDrop={(field as FileField).onDrop}
+                              disabled={field.disabled ?? false}
+                            />
+                          )}
                         </Match>
                       </Switch>
                     </div>

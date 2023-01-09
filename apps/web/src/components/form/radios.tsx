@@ -1,10 +1,12 @@
-import { For, Show, type JSX } from 'solid-js';
+import { For, Show } from 'solid-js';
 
-export type Props = JSX.IntrinsicElements['select'] & {
+export type Props = {
   label: string;
   id: string;
   name: string;
   options: Array<{ label: string; help?: string; value: string }>;
+  value?: string | null | undefined;
+  disabled?: boolean | null | undefined;
 };
 
 export default function Radios(props: Props) {

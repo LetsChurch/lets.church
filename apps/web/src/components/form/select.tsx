@@ -1,10 +1,12 @@
-import { For, splitProps, type JSX } from 'solid-js';
+import { For, mergeProps, splitProps, type JSX } from 'solid-js';
 
-export type Props = JSX.IntrinsicElements['select'] & {
+export type Props = Omit<JSX.IntrinsicElements['select'], 'value'> & {
   options: Array<{ label: string; value: string; disabled?: boolean }>;
+  value?: string | undefined;
 };
 
-export default function Select(props: Props) {
+export default function Select(incomingProps: Props) {
+  const props = mergeProps({ value: '' }, incomingProps);
   const [localProps, restProps] = splitProps(props, ['options']);
 
   return (

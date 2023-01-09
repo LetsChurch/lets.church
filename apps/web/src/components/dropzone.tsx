@@ -5,10 +5,10 @@ import invariant from 'tiny-invariant';
 export type DroppedRes = { title: string; progress: Accessor<number> };
 
 export type Props = {
-  caption?: string;
+  caption?: string | undefined;
   name?: string;
   progressLabel?: string;
-  accept?: string;
+  accept?: string | undefined;
   onDrop: (file: File, mime: string) => DroppedRes;
   disabled?: boolean;
 };
