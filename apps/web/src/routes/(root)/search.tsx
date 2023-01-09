@@ -1,4 +1,4 @@
-import { For, Match, Switch } from 'solid-js';
+import { For, Match, type ParentProps, Switch } from 'solid-js';
 import { A, RouteDataArgs, useLocation, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
 import Pagination from '~/components/pagination';
@@ -108,14 +108,14 @@ export function routeData({ location }: RouteDataArgs) {
   );
 }
 
-type SearchHitRowProps = Omit<ThumbnailProps, 'width' | 'height' | 'url'> & {
-  thumbnailUrl?: string | null | undefined;
-  title: string;
-  channelName: string;
-  channelId: string;
-  body?: string;
-  marked?: boolean;
-};
+type SearchHitRowProps = Omit<ThumbnailProps, 'width' | 'height' | 'url'> &
+  ParentProps<{
+    thumbnailUrl?: string | null | undefined;
+    title: string;
+    channelName: string;
+    channelId: string;
+    marked?: boolean;
+  }>;
 
 function SearchHitRow(props: SearchHitRowProps) {
   return (
@@ -135,20 +135,7 @@ function SearchHitRow(props: SearchHitRowProps) {
         <p class="text-sm text-gray-500">
           {props.channelName} &middot; {props.channelId}
         </p>
-        <Switch>
-          <Match when={props.marked && props.body} keyed>
-            {(body) => (
-              <p
-                class="[&_mark]:in-expo [&_mark]:out-expo [&_mark]:bg-transparent [&_mark]:transition-colors [&_mark]:duration-200 group-hover:[&_mark]:bg-yellow-200"
-                // eslint-disable-next-line solid/no-innerhtml
-                innerHTML={body}
-              />
-            )}
-          </Match>
-          <Match when={props.body} keyed>
-            {(body) => <p>{body}</p>}
-          </Match>
-        </Switch>
+        {props.children}
       </div>
     </div>
   );
@@ -257,9 +244,14 @@ export default function SearchRoute() {
                       ? 'audio'
                       : undefined
                   }
-                  body={node.text.marked}
                   marked
-                />
+                >
+                  <p
+                    class="[&_mark]:in-expo [&_mark]:out-expo [&_mark]:bg-transparent [&_mark]:transition-colors [&_mark]:duration-200 group-hover:[&_mark]:bg-yellow-200"
+                    // eslint-disable-next-line solid/no-innerhtml
+                    innerHTML={node.text.marked}
+                  />
+                </SearchHitRow>
               )}
             </Match>
           </Switch>
