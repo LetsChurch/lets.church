@@ -1,8 +1,9 @@
-import { For, Show } from 'solid-js';
-import { A, RouteDataArgs, useRouteData } from 'solid-start';
+import { For } from 'solid-js';
+import { RouteDataArgs, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
 import invariant from 'tiny-invariant';
 import { PageHeading } from '~/components/page-heading';
+import Pagination from '~/components/pagination';
 import UploadCard from '~/components/upload-card';
 import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
 import type { ChannelQuery, ChannelQueryVariables } from './__generated__/[id]';
@@ -100,12 +101,15 @@ export default function ChannelRoute() {
           )}
         </For>
       </ul>
-      <nav
-        class="mt-6 flex items-center justify-between"
-        aria-label="Pagination"
-      >
-        <div class="hidden sm:block">
-          <p class="text-sm text-gray-700">
+      <Pagination
+        hasPreviousPage={
+          data()?.uploadsConnection.pageInfo.hasPreviousPage ?? false
+        }
+        hasNextPage={data()?.uploadsConnection.pageInfo.hasNextPage ?? false}
+        startCursor={data()?.uploadsConnection.pageInfo.startCursor ?? ''}
+        endCursor={data()?.uploadsConnection.pageInfo.endCursor ?? ''}
+        label={
+          <>
             Showing{' '}
             <span class="font-medium">
               {data()?.uploadsConnection.edges.length}
@@ -115,27 +119,9 @@ export default function ChannelRoute() {
               {data()?.uploadsConnection.totalCount}
             </span>{' '}
             uploads
-          </p>
-        </div>
-        <div class="flex flex-1 justify-between sm:justify-end">
-          <Show when={data()?.uploadsConnection.pageInfo.hasPreviousPage}>
-            <A
-              href={`?before=${data()?.uploadsConnection.pageInfo.startCursor}`}
-              class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Previous Page
-            </A>
-          </Show>
-          <Show when={data()?.uploadsConnection.pageInfo.hasNextPage}>
-            <A
-              href={`?after=${data()?.uploadsConnection.pageInfo.endCursor}`}
-              class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Next Page
-            </A>
-          </Show>
-        </div>
-      </nav>
+          </>
+        }
+      />
     </>
   );
 }

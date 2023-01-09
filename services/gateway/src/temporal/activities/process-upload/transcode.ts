@@ -9,7 +9,6 @@ import fastGlob from 'fast-glob';
 import type { Probe } from './probe';
 import {
   getVariants,
-  MediaVariant,
   runFfmpegEncode,
   variantsToMasterVideoPlaylist,
 } from '../../../util/ffmpeg';
@@ -20,6 +19,7 @@ import {
   streamObjectToFile,
 } from '../../../util/s3';
 import rimraf from '../../../util/rimraf';
+import prisma from '../../../util/prisma';
 
 const WORK_DIR = '/data/transcode';
 
@@ -114,7 +114,7 @@ export default async function transcode(
     );
 
     // Upload master playlist if there is more than just audio
-    if (variants.filter((v) => v !== MediaVariant.AUDIO).length > 0) {
+    if (variants.filter((v) => v !== 'AUDIO').length > 0) {
       uploadQueue.add(async () => {
         console.log('Uploading master playlist file');
         Context.current().heartbeat(`Uploading playlist file`);
@@ -152,6 +152,12 @@ export default async function transcode(
 
     await uploadQueue.onEmpty();
     await watcher.close();
+    await prisma.uploadRecord.update({
+      where: { id: uploadRecordId },
+      data: {
+        variants,
+      },
+    });
   } finally {
     await rimraf(dir);
   }

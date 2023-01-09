@@ -1,3 +1,6 @@
+import UnknownIcon from '@tabler/icons/3d-cube-sphere.svg?component-solid';
+import VideoIcon from '@tabler/icons/video.svg?component-solid';
+import AudioIcon from '@tabler/icons/volume.svg?component-solid';
 import { createEffect, createSignal, Match, onMount, Switch } from 'solid-js';
 import { decode } from 'blurhash';
 
@@ -6,6 +9,7 @@ export type Props = {
   url?: string | null | undefined;
   width: number;
   height: number;
+  placeholder?: 'video' | 'audio' | undefined;
 };
 
 export default function Thumbnail(props: Props) {
@@ -35,9 +39,22 @@ export default function Thumbnail(props: Props) {
     <Switch
       fallback={
         <div
-          class="bg-gray-100"
+          class="flex items-center justify-center bg-gray-100 text-gray-300"
           style={{ width: `${props.width}px`, height: `${props.height}px` }}
-        />
+        >
+          <Switch
+            fallback={
+              <UnknownIcon width={props.width / 2} height={props.height / 2} />
+            }
+          >
+            <Match when={props.placeholder === 'video'}>
+              <VideoIcon width={props.width / 2} height={props.height / 2} />
+            </Match>
+            <Match when={props.placeholder === 'audio'}>
+              <AudioIcon width={props.width / 2} height={props.height / 2} />
+            </Match>
+          </Switch>
+        </div>
       }
     >
       <Match when={loaded()}>

@@ -13,6 +13,9 @@ CREATE TYPE "UploadLicense" AS ENUM ('STANDARD', 'PUBLIC_DOMAIN', 'CC_BY', 'CC_B
 -- CreateEnum
 CREATE TYPE "UploadVisibility" AS ENUM ('PUBLIC', 'PRIVATE', 'UNLISTED');
 
+-- CreateEnum
+CREATE TYPE "UploadVariant" AS ENUM ('VIDEO_4K', 'VIDEO_1080P', 'VIDEO_720P', 'VIDEO_480P', 'VIDEO_360P', 'AUDIO');
+
 -- CreateTable
 CREATE TABLE "app_user" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
@@ -116,6 +119,7 @@ CREATE TABLE "upload_record" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "deleted_at" TIMESTAMP(3),
+    "variants" "UploadVariant"[],
 
     CONSTRAINT "upload_record_pkey" PRIMARY KEY ("id")
 );

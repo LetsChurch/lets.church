@@ -1,8 +1,5 @@
 import { Client } from '@elastic/elasticsearch';
-import type {
-  MsearchRequestItem,
-  SearchHighlight,
-} from '@elastic/elasticsearch/lib/api/types';
+import type { MsearchRequestItem } from '@elastic/elasticsearch/lib/api/types';
 import envariant from '@knpwrs/envariant';
 import waitOn from 'wait-on';
 import * as Z from 'zod';
@@ -20,12 +17,6 @@ export async function waitForElasticsearch() {
   });
 }
 
-const highlightSettings: Partial<SearchHighlight> = {
-  encoder: 'html',
-  pre_tags: ['<mark>'],
-  post_tags: ['</mark>'],
-};
-
 export function msearchUploads(
   query: string,
   from = 0,
@@ -37,17 +28,10 @@ export function msearchUploads(
       from,
       size,
       query: {
-        fuzzy: {
-          title: {
-            value: query,
-            fuzziness: 'AUTO',
-          },
-        },
-      },
-      highlight: {
-        ...highlightSettings,
-        fields: {
-          title: {},
+        multi_match: {
+          query,
+          type: 'bool_prefix',
+          fields: ['title^3', 'title._2gram', 'title._3gram', 'description'],
         },
       },
     },
@@ -115,17 +99,10 @@ export function msearchChannels(
       from,
       size,
       query: {
-        fuzzy: {
-          name: {
-            value: query,
-            fuzziness: 'AUTO',
-          },
-        },
-      },
-      highlight: {
-        ...highlightSettings,
-        fields: {
-          name: {},
+        multi_match: {
+          query,
+          type: 'bool_prefix',
+          fields: ['name^3', 'name._2gram', 'name._3gram'],
         },
       },
     },
@@ -143,17 +120,10 @@ export function msearchOrganizations(
       from,
       size,
       query: {
-        fuzzy: {
-          name: {
-            value: query,
-            fuzziness: 'AUTO',
-          },
-        },
-      },
-      highlight: {
-        ...highlightSettings,
-        fields: {
-          name: {},
+        multi_match: {
+          query,
+          type: 'bool_prefix',
+          fields: ['name^3', 'name._2gram', 'name._3gram'],
         },
       },
     },
@@ -227,21 +197,18 @@ export const UploadHitSchema = Z.object({
   ...BaseHitSchema,
   _index: Z.literal('lc_uploads'),
   _source: UploadHitSourceSchema,
-  highlight: UploadHitHighlightSchema,
 });
 
 export const ChannelHitSchema = Z.object({
   ...BaseHitSchema,
   _index: Z.literal('lc_channels'),
   _source: ChannelHitSourceSchema,
-  highlight: ChannelHitHighlightSchema,
 });
 
 export const OrganizationHitSchema = Z.object({
   ...BaseHitSchema,
   _index: Z.literal('lc_organizations'),
   _source: OrganizationHitSourceSchema,
-  highlight: OrganizationHitHighlightSchema,
 });
 
 export const MSearchResponseSchema = Z.object({

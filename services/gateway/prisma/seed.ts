@@ -1,6 +1,7 @@
 import { faker } from '@faker-js/faker';
 import slugify from '@sindresorhus/slugify';
 import argon2 from 'argon2';
+import type { Prisma } from '@prisma/client';
 import { indexDocument, waitOnTemporal } from '../src/temporal';
 import prisma from '../src/util/prisma';
 
@@ -247,7 +248,8 @@ const baseUploadRecord = {
   uploadFinalizedById: adminId,
   license: 'CC0' as const,
   visibility: 'PUBLIC' as const,
-};
+  variants: ['AUDIO'],
+} satisfies Prisma.UploadRecordCreateManyInput;
 
 const uploadRecordData = [
   {
@@ -370,7 +372,7 @@ const uploadRecordData = [
     title: 'Appendix C - Copyright and Natural Law',
     uploadSizeBytes: 6713553,
   },
-];
+] satisfies Array<Prisma.UploadRecordCreateManyInput>;
 
 await prisma.uploadRecord.createMany({
   data: uploadRecordData,

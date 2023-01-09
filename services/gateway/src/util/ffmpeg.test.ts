@@ -2,7 +2,6 @@ import { test, describe, expect } from 'vitest';
 import {
   getVariants,
   variantsToMasterVideoPlaylist,
-  MediaVariant,
   ffmpegEncodingOutputArgs,
 } from './ffmpeg';
 
@@ -10,42 +9,42 @@ describe('getVariants', () => {
   test('standard resolutions', () => {
     expect(getVariants(3840, 2160)).toMatchInlineSnapshot(`
       [
-        "audio",
-        "4k",
-        "1080p",
-        "720p",
-        "480p",
-        "360p",
+        "AUDIO",
+        "VIDEO_4K",
+        "VIDEO_1080P",
+        "VIDEO_720P",
+        "VIDEO_480P",
+        "VIDEO_360P",
       ]
     `);
     expect(getVariants(1920, 1080)).toMatchInlineSnapshot(`
       [
-        "audio",
-        "1080p",
-        "720p",
-        "480p",
-        "360p",
+        "AUDIO",
+        "VIDEO_1080P",
+        "VIDEO_720P",
+        "VIDEO_480P",
+        "VIDEO_360P",
       ]
     `);
     expect(getVariants(1280, 720)).toMatchInlineSnapshot(`
       [
-        "audio",
-        "720p",
-        "480p",
-        "360p",
+        "AUDIO",
+        "VIDEO_720P",
+        "VIDEO_480P",
+        "VIDEO_360P",
       ]
     `);
     expect(getVariants(842, 480)).toMatchInlineSnapshot(`
       [
-        "audio",
-        "480p",
-        "360p",
+        "AUDIO",
+        "VIDEO_480P",
+        "VIDEO_360P",
       ]
     `);
     expect(getVariants(640, 360)).toMatchInlineSnapshot(`
       [
-        "audio",
-        "360p",
+        "AUDIO",
+        "VIDEO_360P",
       ]
     `);
   });
@@ -53,161 +52,156 @@ describe('getVariants', () => {
   test('non-standard resolutions', () => {
     expect(getVariants(4000, 4000)).toMatchInlineSnapshot(`
       [
-        "audio",
-        "4k",
-        "1080p",
-        "720p",
-        "480p",
-        "360p",
+        "AUDIO",
+        "VIDEO_4K",
+        "VIDEO_1080P",
+        "VIDEO_720P",
+        "VIDEO_480P",
+        "VIDEO_360P",
       ]
     `);
     expect(getVariants(2000, 2000)).toMatchInlineSnapshot(`
       [
-        "audio",
-        "1080p",
-        "720p",
-        "480p",
-        "360p",
+        "AUDIO",
+        "VIDEO_1080P",
+        "VIDEO_720P",
+        "VIDEO_480P",
+        "VIDEO_360P",
       ]
     `);
     expect(getVariants(1000, 1000)).toMatchInlineSnapshot(`
       [
-        "audio",
-        "720p",
-        "480p",
-        "360p",
+        "AUDIO",
+        "VIDEO_720P",
+        "VIDEO_480P",
+        "VIDEO_360P",
       ]
     `);
     expect(getVariants(500, 500)).toMatchInlineSnapshot(`
       [
-        "audio",
-        "480p",
-        "360p",
+        "AUDIO",
+        "VIDEO_480P",
+        "VIDEO_360P",
       ]
     `);
   });
 });
 
 test('variantsToMasterVideoPlaylist', () => {
-  expect(
-    variantsToMasterVideoPlaylist([
-      MediaVariant.VIDEO_4K,
-      MediaVariant.VIDEO_1080P,
-    ]),
-  ).toMatchInlineSnapshot(`
-    "#EXTM3U
-    #EXT-X-VERSION:3
-    #EXT-X-STREAM-INF:BANDWIDTH=18200000,RESOLUTION=3840x2160
-    4k.m3u8
-    #EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=1920x1080
-    1080p.m3u8"
-  `);
+  expect(variantsToMasterVideoPlaylist(['VIDEO_4K', 'VIDEO_1080P']))
+    .toMatchInlineSnapshot(`
+      "#EXTM3U
+      #EXT-X-VERSION:3
+      #EXT-X-STREAM-INF:BANDWIDTH=18200000,RESOLUTION=3840x2160
+      VIDEO_4K.m3u8
+      #EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=1920x1080
+      VIDEO_1080P.m3u8"
+    `);
 
   expect(
     variantsToMasterVideoPlaylist([
-      MediaVariant.VIDEO_1080P,
-      MediaVariant.VIDEO_720P,
-      MediaVariant.VIDEO_480P,
-      MediaVariant.VIDEO_360P,
+      'VIDEO_1080P',
+      'VIDEO_720P',
+      'VIDEO_480P',
+      'VIDEO_360P',
     ]),
   ).toMatchInlineSnapshot(`
     "#EXTM3U
     #EXT-X-VERSION:3
     #EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=1920x1080
-    1080p.m3u8
+    VIDEO_1080P.m3u8
     #EXT-X-STREAM-INF:BANDWIDTH=2800000,RESOLUTION=1280x720
-    720p.m3u8
+    VIDEO_720P.m3u8
     #EXT-X-STREAM-INF:BANDWIDTH=1400000,RESOLUTION=842x480
-    480p.m3u8
+    VIDEO_480P.m3u8
     #EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=640x360
-    360p.m3u8"
+    VIDEO_360P.m3u8"
   `);
 });
 
 test('ffmpegEncodingOutputArgs', () => {
-  expect(
-    ffmpegEncodingOutputArgs([MediaVariant.VIDEO_4K, MediaVariant.VIDEO_1080P]),
-  ).toMatchInlineSnapshot(`
-    [
-      "-vf",
-      "scale=w=3840:h=2160:force_original_aspect_ratio=decrease",
-      "-c:a",
-      "aac",
-      "-ar",
-      "48000",
-      "-c:v",
-      "h264",
-      "-profile:v",
-      "main",
-      "-crf",
-      "20",
-      "-sc_threshold",
-      "0",
-      "-g",
-      "48",
-      "-keyint_min",
-      "48",
-      "-hls_time",
-      "6",
-      "-hls_playlist_type",
-      "vod",
-      "-hls_flags",
-      "temp_file",
-      "-b:v",
-      "18200k",
-      "-maxrate",
-      "19474k",
-      "-bufsize",
-      "27300k",
-      "-b:a",
-      "192k",
-      "-hls_segment_filename",
-      "VIDEO_4K_%04d.ts",
-      "4k.m3u8",
-      "-vf",
-      "scale=w=1920:h=1080:force_original_aspect_ratio=decrease",
-      "-c:a",
-      "aac",
-      "-ar",
-      "48000",
-      "-c:v",
-      "h264",
-      "-profile:v",
-      "main",
-      "-crf",
-      "20",
-      "-sc_threshold",
-      "0",
-      "-g",
-      "48",
-      "-keyint_min",
-      "48",
-      "-hls_time",
-      "6",
-      "-hls_playlist_type",
-      "vod",
-      "-hls_flags",
-      "temp_file",
-      "-b:v",
-      "5000k",
-      "-maxrate",
-      "5350k",
-      "-bufsize",
-      "7500k",
-      "-b:a",
-      "192k",
-      "-hls_segment_filename",
-      "VIDEO_1080P_%04d.ts",
-      "1080p.m3u8",
-    ]
-  `);
+  expect(ffmpegEncodingOutputArgs(['VIDEO_4K', 'VIDEO_1080P']))
+    .toMatchInlineSnapshot(`
+      [
+        "-vf",
+        "scale=w=3840:h=2160:force_original_aspect_ratio=decrease",
+        "-c:a",
+        "aac",
+        "-ar",
+        "48000",
+        "-c:v",
+        "h264",
+        "-profile:v",
+        "main",
+        "-crf",
+        "20",
+        "-sc_threshold",
+        "0",
+        "-g",
+        "48",
+        "-keyint_min",
+        "48",
+        "-hls_time",
+        "6",
+        "-hls_playlist_type",
+        "vod",
+        "-hls_flags",
+        "temp_file",
+        "-b:v",
+        "18200k",
+        "-maxrate",
+        "19474k",
+        "-bufsize",
+        "27300k",
+        "-b:a",
+        "192k",
+        "-hls_segment_filename",
+        "VIDEO_4K_%04d.ts",
+        "VIDEO_4K.m3u8",
+        "-vf",
+        "scale=w=1920:h=1080:force_original_aspect_ratio=decrease",
+        "-c:a",
+        "aac",
+        "-ar",
+        "48000",
+        "-c:v",
+        "h264",
+        "-profile:v",
+        "main",
+        "-crf",
+        "20",
+        "-sc_threshold",
+        "0",
+        "-g",
+        "48",
+        "-keyint_min",
+        "48",
+        "-hls_time",
+        "6",
+        "-hls_playlist_type",
+        "vod",
+        "-hls_flags",
+        "temp_file",
+        "-b:v",
+        "5000k",
+        "-maxrate",
+        "5350k",
+        "-bufsize",
+        "7500k",
+        "-b:a",
+        "192k",
+        "-hls_segment_filename",
+        "VIDEO_1080P_%04d.ts",
+        "VIDEO_1080P.m3u8",
+      ]
+    `);
 
   expect(
     ffmpegEncodingOutputArgs([
-      MediaVariant.VIDEO_1080P,
-      MediaVariant.VIDEO_720P,
-      MediaVariant.VIDEO_480P,
-      MediaVariant.VIDEO_360P,
+      'VIDEO_1080P',
+      'VIDEO_720P',
+      'VIDEO_480P',
+      'VIDEO_360P',
     ]),
   ).toMatchInlineSnapshot(`
     [
@@ -245,7 +239,7 @@ test('ffmpegEncodingOutputArgs', () => {
       "192k",
       "-hls_segment_filename",
       "VIDEO_1080P_%04d.ts",
-      "1080p.m3u8",
+      "VIDEO_1080P.m3u8",
       "-vf",
       "scale=w=1280:h=720:force_original_aspect_ratio=decrease",
       "-c:a",
@@ -280,7 +274,7 @@ test('ffmpegEncodingOutputArgs', () => {
       "128k",
       "-hls_segment_filename",
       "VIDEO_720P_%04d.ts",
-      "720p.m3u8",
+      "VIDEO_720P.m3u8",
       "-vf",
       "scale=w=842:h=480:force_original_aspect_ratio=decrease",
       "-c:a",
@@ -315,7 +309,7 @@ test('ffmpegEncodingOutputArgs', () => {
       "128k",
       "-hls_segment_filename",
       "VIDEO_480P_%04d.ts",
-      "480p.m3u8",
+      "VIDEO_480P.m3u8",
       "-vf",
       "scale=w=640:h=360:force_original_aspect_ratio=decrease",
       "-c:a",
@@ -350,7 +344,7 @@ test('ffmpegEncodingOutputArgs', () => {
       "96k",
       "-hls_segment_filename",
       "VIDEO_360P_%04d.ts",
-      "360p.m3u8",
+      "VIDEO_360P.m3u8",
     ]
   `);
 });

@@ -2,6 +2,7 @@ import invariant from 'tiny-invariant';
 import {
   UploadLicense as PrismaUploadLicense,
   UploadVisibility as PrismaUploadVisibility,
+  UploadVariant as PrismaUploadVariant,
 } from '@prisma/client';
 import {
   createMultipartUpload,
@@ -60,6 +61,10 @@ const UploadVisibility = builder.enumType('UploadVisibility', {
   values: Object.keys(PrismaUploadVisibility),
 });
 
+const UploadVariant = builder.enumType('UploadVariant', {
+  values: Object.keys(PrismaUploadVariant),
+});
+
 const UploadPostProcess = builder.enumType('UploadPostProcess', {
   values: ['media', 'thumbnail'] as const,
 });
@@ -78,6 +83,7 @@ builder.prismaObject('UploadRecord', {
     uploadFinalizedBy: t.relation('uploadFinalizedBy', {
       authScopes: internalAuthScopes,
     }),
+    variants: t.expose('variants', { type: [UploadVariant], nullable: false }),
     thumbnailUrl: t.string({
       nullable: true,
       select: { defaultThumbnailPath: true },

@@ -137,6 +137,15 @@ enum UploadVisibility {
   UNLISTED
 }
 
+enum UploadVariant {
+  VIDEO_4K
+  VIDEO_1080P
+  VIDEO_720P
+  VIDEO_480P
+  VIDEO_360P
+  AUDIO
+}
+
 model UploadRecord {
   id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title                String?
@@ -156,6 +165,7 @@ model UploadRecord {
   createdAt            DateTime         @default(now()) @map("created_at")
   updatedAt            DateTime         @updatedAt @map("updated_at")
   deletedAt            DateTime?        @map("deleted_at")
+  variants             UploadVariant[]
 
   @@index([createdAt, id])
   @@map("upload_record")

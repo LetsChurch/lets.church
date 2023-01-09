@@ -129,7 +129,7 @@ export type ChannelSearchHit = ISearchHit & {
   __typename?: 'ChannelSearchHit';
   channel: Channel;
   id: Scalars['ShortUuid'];
-  name: HighlightedText;
+  name: Scalars['String'];
 };
 
 export type ChannelUploadsConnection = {
@@ -319,7 +319,7 @@ export type OrganizationMembershipsConnectionEdge = {
 export type OrganizationSearchHit = ISearchHit & {
   __typename?: 'OrganizationSearchHit';
   id: Scalars['ShortUuid'];
-  name: HighlightedText;
+  name: Scalars['String'];
   organization: Organization;
 };
 
@@ -460,15 +460,25 @@ export type UploadRecord = {
   uploadFinalized: Scalars['Boolean'];
   uploadFinalizedBy: AppUser;
   uploadSizeBytes?: Maybe<Scalars['SafeInt']>;
+  variants: Array<UploadVariant>;
   visibility: UploadVisibility;
 };
 
 export type UploadSearchHit = ISearchHit & {
   __typename?: 'UploadSearchHit';
   id: Scalars['ShortUuid'];
-  title: HighlightedText;
+  title: Scalars['String'];
   uploadRecord: UploadRecord;
 };
+
+export enum UploadVariant {
+  Audio = 'AUDIO',
+  Video_4K = 'VIDEO_4K',
+  Video_360P = 'VIDEO_360P',
+  Video_480P = 'VIDEO_480P',
+  Video_720P = 'VIDEO_720P',
+  Video_1080P = 'VIDEO_1080P'
+}
 
 export enum UploadVisibility {
   Private = 'PRIVATE',

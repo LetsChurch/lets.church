@@ -1,3 +1,4 @@
+import type { UploadVariant } from '@prisma/client';
 import { execa } from 'execa';
 
 const HLS_TIME = 6;
@@ -23,42 +24,32 @@ const BASE_ARGS = [
   'temp_file',
 ];
 
-export enum MediaVariant {
-  VIDEO_4K = '4k',
-  VIDEO_1080P = '1080p',
-  VIDEO_720P = '720p',
-  VIDEO_480P = '480p',
-  VIDEO_360P = '360p',
-  AUDIO = 'audio',
-}
-
-type VideoVariant = Exclude<MediaVariant, MediaVariant.AUDIO>;
+type VideoVariant = Exclude<UploadVariant, 'AUDIO'>;
 
 export function getVariants(
   inputWidth: number,
   inputHeight: number,
-): Array<MediaVariant> {
-  const res: Array<MediaVariant> = [MediaVariant.AUDIO];
+): Array<UploadVariant> {
+  const res: Array<UploadVariant> = ['AUDIO'];
 
   if (inputWidth >= 3840 || inputHeight >= 2160) {
-    /* res.push(MediaVariant['VIDEO_4K']); */
-    res.push(MediaVariant.VIDEO_4K);
+    res.push('VIDEO_4K');
   }
 
   if (inputWidth >= 1920 || inputHeight >= 1080) {
-    res.push(MediaVariant.VIDEO_1080P);
+    res.push('VIDEO_1080P');
   }
 
   if (inputWidth >= 1280 || inputHeight >= 720) {
-    res.push(MediaVariant.VIDEO_720P);
+    res.push('VIDEO_720P');
   }
 
   if (inputWidth >= 842 || inputHeight >= 480) {
-    res.push(MediaVariant.VIDEO_480P);
+    res.push('VIDEO_480P');
   }
 
   if (inputWidth >= 640 || inputHeight >= 360) {
-    res.push(MediaVariant.VIDEO_360P);
+    res.push('VIDEO_360P');
   }
 
   return res;
@@ -66,15 +57,15 @@ export function getVariants(
 
 function videoVariantToKbps(variant: VideoVariant) {
   switch (variant) {
-    case MediaVariant.VIDEO_4K:
+    case 'VIDEO_4K':
       return 18200;
-    case MediaVariant.VIDEO_1080P:
+    case 'VIDEO_1080P':
       return 5000;
-    case MediaVariant.VIDEO_720P:
+    case 'VIDEO_720P':
       return 2800;
-    case MediaVariant.VIDEO_480P:
+    case 'VIDEO_480P':
       return 1400;
-    case MediaVariant.VIDEO_360P:
+    case 'VIDEO_360P':
       return 800;
     default:
       const nope: never = variant;
@@ -84,15 +75,15 @@ function videoVariantToKbps(variant: VideoVariant) {
 
 function videoVariantToDimensions(variant: VideoVariant): [number, number] {
   switch (variant) {
-    case MediaVariant.VIDEO_4K:
+    case 'VIDEO_4K':
       return [3840, 2160];
-    case MediaVariant.VIDEO_1080P:
+    case 'VIDEO_1080P':
       return [1920, 1080];
-    case MediaVariant.VIDEO_720P:
+    case 'VIDEO_720P':
       return [1280, 720];
-    case MediaVariant.VIDEO_480P:
+    case 'VIDEO_480P':
       return [842, 480];
-    case MediaVariant.VIDEO_360P:
+    case 'VIDEO_360P':
       return [640, 360];
     default:
       const nope: never = variant;
@@ -109,19 +100,16 @@ function videoVariantToFfmpegScaleFilter(v: VideoVariant) {
   ];
 }
 
-function variantToPlaylistName(variant: MediaVariant) {
+function variantToPlaylistName(variant: UploadVariant) {
   return `${variant}.m3u8`;
 }
 
-export function variantsToMasterVideoPlaylist(variants: Array<MediaVariant>) {
+export function variantsToMasterVideoPlaylist(variants: Array<UploadVariant>) {
   return [
     '#EXTM3U',
     '#EXT-X-VERSION:3',
     ...variants
-      .filter(
-        (v): v is Exclude<MediaVariant, MediaVariant.AUDIO> =>
-          v !== MediaVariant.AUDIO,
-      )
+      .filter((v): v is Exclude<UploadVariant, 'AUDIO'> => v !== 'AUDIO')
       .flatMap((v) => [
         `#EXT-X-STREAM-INF:BANDWIDTH=${
           videoVariantToKbps(v) * 1000
@@ -133,13 +121,12 @@ export function variantsToMasterVideoPlaylist(variants: Array<MediaVariant>) {
 
 // TODO: 60fps and portrait
 export function ffmpegEncodingOutputArgs(
-  variants: Array<MediaVariant>,
+  variants: Array<UploadVariant>,
 ): Array<string> {
   return variants.flatMap((v) => {
-    const scaleFilter =
-      v !== MediaVariant.AUDIO ? videoVariantToFfmpegScaleFilter(v) : [];
+    const scaleFilter = v !== 'AUDIO' ? videoVariantToFfmpegScaleFilter(v) : [];
     const bvm =
-      v !== MediaVariant.AUDIO
+      v !== 'AUDIO'
         ? [
             '-b:v',
             `${videoVariantToKbps(v)}k`,
@@ -150,7 +137,7 @@ export function ffmpegEncodingOutputArgs(
     const playlistName = variantToPlaylistName(v);
 
     switch (v) {
-      case MediaVariant.VIDEO_4K:
+      case 'VIDEO_4K':
         return [
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
@@ -165,7 +152,7 @@ export function ffmpegEncodingOutputArgs(
           'VIDEO_4K_%04d.ts',
           playlistName,
         ];
-      case MediaVariant.VIDEO_1080P:
+      case 'VIDEO_1080P':
         return [
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
@@ -180,7 +167,7 @@ export function ffmpegEncodingOutputArgs(
           'VIDEO_1080P_%04d.ts',
           playlistName,
         ];
-      case MediaVariant.VIDEO_720P:
+      case 'VIDEO_720P':
         return [
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
@@ -195,7 +182,7 @@ export function ffmpegEncodingOutputArgs(
           'VIDEO_720P_%04d.ts',
           playlistName,
         ];
-      case MediaVariant.VIDEO_480P:
+      case 'VIDEO_480P':
         return [
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
@@ -210,7 +197,7 @@ export function ffmpegEncodingOutputArgs(
           'VIDEO_480P_%04d.ts',
           playlistName,
         ];
-      case MediaVariant.VIDEO_360P:
+      case 'VIDEO_360P':
         return [
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
@@ -225,7 +212,7 @@ export function ffmpegEncodingOutputArgs(
           'VIDEO_360P_%04d.ts',
           playlistName,
         ];
-      case MediaVariant.AUDIO:
+      case 'AUDIO':
         return [
           ...BASE_ARGS,
           ...BASE_AUDIO_ARGS,
@@ -246,7 +233,7 @@ export function ffmpegEncodingOutputArgs(
 export function runFfmpegEncode(
   cwd: string,
   inputFilename: string,
-  variants: Array<MediaVariant>,
+  variants: Array<UploadVariant>,
 ) {
   return execa(
     'ffmpeg',

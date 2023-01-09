@@ -47,9 +47,9 @@ builder.simpleObject('UploadSearchHit', {
   interfaces: [ISearchHit],
   isTypeOf: (value) => valueIsKind(value, 'UploadSearchHit'),
   fields: (t) => ({
-    title: t.field({ type: HighlightedText }),
+    title: t.string(),
     // TODO
-    // description: t.field({ type: HighlightedText }),
+    // description: t.string(),
     // TODO: this isn't batching
     uploadRecord: t.prismaField({
       type: 'UploadRecord',
@@ -66,9 +66,9 @@ builder.simpleObject('ChannelSearchHit', {
   interfaces: [ISearchHit],
   isTypeOf: (value) => valueIsKind(value, 'ChannelSearchHit'),
   fields: (t) => ({
-    name: t.field({ type: HighlightedText }),
+    name: t.string(),
     // TODO
-    // description: t.field({ type: HighlightedText }),
+    // description: t.string(),
     channel: t.prismaField({
       type: 'Channel',
       resolve: async (query, root, _args, _context, _info) =>
@@ -84,9 +84,9 @@ builder.simpleObject('OrganizationSearchHit', {
   interfaces: [ISearchHit],
   isTypeOf: (value) => valueIsKind(value, 'OrganizationSearchHit'),
   fields: (t) => ({
-    name: t.field({ type: HighlightedText }),
+    name: t.string(),
     // TODO
-    // description: t.field({ type: HighlightedText }),
+    // description: t.string(),
     organization: t.prismaField({
       type: 'Organization',
       resolve: async (query, root, _args, _context, _info) =>
@@ -193,10 +193,7 @@ builder.queryFields((t) => ({
                 ...(hit._index === 'lc_uploads'
                   ? {
                       uploadRecord: { id: hit._id },
-                      title: {
-                        source: hit._source.title,
-                        marked: hit.highlight.title[0],
-                      },
+                      title: hit._source.title,
                     }
                   : hit._index === 'lc_transcripts'
                   ? {
@@ -215,18 +212,12 @@ builder.queryFields((t) => ({
                   : hit._index === 'lc_channels'
                   ? {
                       channel: { id: hit._id },
-                      name: {
-                        source: hit._source.name,
-                        marked: hit.highlight.name[0],
-                      },
+                      name: hit._source.name,
                     }
                   : hit._index === 'lc_organizations'
                   ? {
                       organization: { id: hit._id },
-                      name: {
-                        source: hit._source.name,
-                        marked: hit.highlight.name[0],
-                      },
+                      name: hit._source.name,
                     }
                   : (null as never)),
               }));
