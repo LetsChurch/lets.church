@@ -141,7 +141,7 @@ function SearchHitRow(props: SearchHitRowProps) {
           placeholder={props.placeholder}
         />
       </div>
-      <div class="space-y-2">
+      <div class="flex-grow space-y-2">
         <h3 class="text-2xl font-semibold">{props.title}</h3>
         <p class="text-sm text-gray-500">123 Views &middot; 3 Days Ago</p>
         <p class="text-sm text-gray-500">
@@ -163,7 +163,7 @@ function SearchTranscriptHitRow(
 
   return (
     <SearchHitRow {...rest}>
-      <dl class="space-y-1">
+      <dl class="space-y-1 rounded-md bg-gray-50 p-3">
         <For each={local.innerHits.slice(0, showMore() ? undefined : 1)}>
           {(hit) => (
             <div class="group flex gap-2">
