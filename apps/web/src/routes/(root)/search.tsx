@@ -1,4 +1,13 @@
-import { For, Match, type ParentProps, Switch } from 'solid-js';
+import prettyMs from 'pretty-ms';
+import {
+  For,
+  Match,
+  type ParentProps,
+  Switch,
+  splitProps,
+  createSignal,
+  Show,
+} from 'solid-js';
 import { A, RouteDataArgs, useLocation, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
 import Pagination from '~/components/pagination';
@@ -68,9 +77,12 @@ export function routeData({ location }: RouteDataArgs) {
                   }
                   ... on TranscriptSearchHit {
                     id
-                    moreResultsCount
-                    text {
-                      marked
+                    hits {
+                      start
+                      end
+                      text {
+                        marked
+                      }
                     }
                     uploadRecord {
                       ...SearchUploadRecordProps
@@ -119,7 +131,7 @@ type SearchHitRowProps = Omit<ThumbnailProps, 'width' | 'height' | 'url'> &
 
 function SearchHitRow(props: SearchHitRowProps) {
   return (
-    <div class="group flex space-x-5">
+    <div class="flex space-x-5">
       <div>
         <Thumbnail
           url={props.thumbnailUrl}
@@ -129,7 +141,7 @@ function SearchHitRow(props: SearchHitRowProps) {
           placeholder={props.placeholder}
         />
       </div>
-      <div>
+      <div class="space-y-2">
         <h3 class="text-2xl font-semibold">{props.title}</h3>
         <p class="text-sm text-gray-500">123 Views &middot; 3 Days Ago</p>
         <p class="text-sm text-gray-500">
@@ -138,6 +150,47 @@ function SearchHitRow(props: SearchHitRowProps) {
         {props.children}
       </div>
     </div>
+  );
+}
+
+function SearchTranscriptHitRow(
+  props: Omit<SearchHitRowProps, 'children'> & {
+    innerHits: Array<{ start: number; end: number; text: { marked: string } }>;
+  },
+) {
+  const [local, rest] = splitProps(props, ['innerHits']);
+  const [showMore, setShowMore] = createSignal(false);
+
+  return (
+    <SearchHitRow {...rest}>
+      <dl class="space-y-1">
+        <For each={local.innerHits.slice(0, showMore() ? undefined : 1)}>
+          {(hit) => (
+            <div class="group flex gap-2">
+              <dt class="w-10 items-center text-sm font-medium uppercase text-gray-400">
+                {prettyMs(hit.start, {
+                  colonNotation: true,
+                  secondsDecimalDigits: 0,
+                })}
+              </dt>
+              <dd
+                class="[&_mark]:in-expo [&_mark]:out-expo text-sm [&_mark]:bg-transparent [&_mark]:transition-colors [&_mark]:duration-200 group-hover:[&_mark]:bg-yellow-200"
+                // eslint-disable-next-line solid/no-innerhtml
+                innerHTML={hit.text.marked ?? ''}
+              />
+            </div>
+          )}
+        </For>
+      </dl>
+      <Show when={local.innerHits.length > 1}>
+        <button
+          onClick={() => setShowMore((sm) => !sm)}
+          class="text-xs font-medium uppercase text-gray-400"
+        >
+          Show {local.innerHits.length - 1} {showMore() ? 'Less' : 'More'}
+        </button>
+      </Show>
+    </SearchHitRow>
   );
 }
 
@@ -227,7 +280,7 @@ export default function SearchRoute() {
               keyed
             >
               {(node) => (
-                <SearchHitRow
+                <SearchTranscriptHitRow
                   thumbnailUrl={node.uploadRecord.thumbnailUrl}
                   blurhash={node.uploadRecord.thumbnailBlurhash}
                   title={node.uploadRecord.title ?? 'Untitled'}
@@ -244,14 +297,8 @@ export default function SearchRoute() {
                       ? 'audio'
                       : undefined
                   }
-                  marked
-                >
-                  <p
-                    class="[&_mark]:in-expo [&_mark]:out-expo [&_mark]:bg-transparent [&_mark]:transition-colors [&_mark]:duration-200 group-hover:[&_mark]:bg-yellow-200"
-                    // eslint-disable-next-line solid/no-innerhtml
-                    innerHTML={node.text.marked}
-                  />
-                </SearchHitRow>
+                  innerHits={node.hits}
+                />
               )}
             </Match>
           </Switch>

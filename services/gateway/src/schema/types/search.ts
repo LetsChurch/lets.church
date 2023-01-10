@@ -29,8 +29,17 @@ builder.simpleObject('TranscriptSearchHit', {
   interfaces: [ISearchHit],
   isTypeOf: (value) => valueIsKind(value, 'TranscriptSearchHit'),
   fields: (t) => ({
-    text: t.field({ type: HighlightedText }),
-    moreResultsCount: t.int(),
+    hits: t.field({
+      type: [
+        builder.simpleObject('TranscriptSearchInnerHit', {
+          fields: (t) => ({
+            start: t.int(),
+            end: t.int(),
+            text: t.field({ type: HighlightedText }),
+          }),
+        }),
+      ],
+    }),
     // TODO: this isn't batching
     uploadRecord: t.prismaField({
       type: 'UploadRecord',
@@ -178,7 +187,7 @@ builder.queryFields((t) => ({
             channelHitCount = parsed.responses[2]?.hits.total.value ?? 0;
             organizationHitCount = parsed.responses[3]?.hits.total.value ?? 0;
 
-            return parsed.responses
+            const res = parsed.responses
               .flatMap(({ hits: { hits } }) => hits)
               .map((hit) => ({
                 __typename:
@@ -198,16 +207,14 @@ builder.queryFields((t) => ({
                   : hit._index === 'lc_transcripts'
                   ? {
                       uploadRecord: { id: hit._id },
-                      moreResultsCount:
-                        hit.inner_hits.segments.hits.total.value - 1,
-                      text: {
-                        source:
-                          hit.inner_hits.segments.hits.hits[0]?._source.text,
-                        marked:
-                          hit.inner_hits.segments.hits.hits[0]?.highlight[
-                            'segments.text'
-                          ][0],
-                      },
+                      hits: hit.inner_hits.segments.hits.hits.map((h) => ({
+                        start: h._source.start,
+                        end: h._source.end,
+                        text: {
+                          source: h._source.text,
+                          marked: h.highlight['segments.text'][0] ?? '',
+                        },
+                      })),
                     }
                   : hit._index === 'lc_channels'
                   ? {
@@ -221,6 +228,8 @@ builder.queryFields((t) => ({
                     }
                   : (null as never)),
               }));
+
+            return res;
           },
         );
 

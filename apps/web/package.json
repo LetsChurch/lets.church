@@ -28,6 +28,7 @@
     "graphql-request": "^5.0.0",
     "p-progress": "^0.6.0",
     "p-retry": "^5.1.2",
+    "pretty-ms": "^8.0.0",
     "solid-floating-ui": "^0.2.0",
     "solid-js": "^1.6.3",
     "solid-start": "^0.2.7",

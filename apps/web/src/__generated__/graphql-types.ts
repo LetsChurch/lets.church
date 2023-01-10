@@ -422,10 +422,16 @@ export enum SearchFocus {
 
 export type TranscriptSearchHit = ISearchHit & {
   __typename?: 'TranscriptSearchHit';
+  hits: Array<TranscriptSearchInnerHit>;
   id: Scalars['ShortUuid'];
-  moreResultsCount: Scalars['Int'];
-  text: HighlightedText;
   uploadRecord: UploadRecord;
+};
+
+export type TranscriptSearchInnerHit = {
+  __typename?: 'TranscriptSearchInnerHit';
+  end: Scalars['Int'];
+  start: Scalars['Int'];
+  text: HighlightedText;
 };
 
 export enum UploadLicense {
