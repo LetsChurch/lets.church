@@ -127,11 +127,12 @@ type SearchHitRowProps = Omit<ThumbnailProps, 'width' | 'height' | 'url'> &
     channelName: string;
     channelId: string;
     marked?: boolean;
+    class?: string | undefined;
   }>;
 
 function SearchHitRow(props: SearchHitRowProps) {
   return (
-    <div class="flex space-x-5">
+    <div class={`flex space-x-5 ${props.class ?? ''}`}>
       <div>
         <Thumbnail
           url={props.thumbnailUrl}
@@ -162,12 +163,15 @@ function SearchTranscriptHitRow(
   const [showMore, setShowMore] = createSignal(false);
 
   return (
-    <SearchHitRow {...rest}>
+    <SearchHitRow {...rest} class={showMore() ? undefined : 'group'}>
       <dl class="space-y-1 rounded-md bg-gray-50 p-3">
         <For each={local.innerHits.slice(0, showMore() ? undefined : 1)}>
           {(hit) => (
-            <div class="group flex gap-2">
-              <dt class="w-10 items-center text-sm font-medium uppercase text-gray-400">
+            <div
+              class="group/t-row flex gap-2 hover:cursor-pointer"
+              classList={{ group: showMore() }}
+            >
+              <dt class="font-mono w-10 items-center text-sm font-medium uppercase text-gray-400 group-hover/t-row:text-gray-600">
                 {prettyMs(hit.start, {
                   colonNotation: true,
                   secondsDecimalDigits: 0,
