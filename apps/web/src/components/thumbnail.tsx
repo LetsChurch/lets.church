@@ -25,7 +25,6 @@ export default function Thumbnail(props: Props) {
   });
 
   onMount(() => {
-    console.log(canvas, props.blurhash);
     if (!canvas) return;
     const blurhash = props.blurhash;
     if (!blurhash) return;
