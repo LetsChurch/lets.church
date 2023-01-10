@@ -144,10 +144,18 @@ function SearchHitRow(props: SearchHitRowProps) {
       </div>
       <div class="flex-grow space-y-2">
         <h3 class="text-2xl font-semibold">{props.title}</h3>
-        <p class="text-sm text-gray-500">123 Views &middot; 3 Days Ago</p>
-        <p class="text-sm text-gray-500">
-          {props.channelName} &middot; {props.channelId}
-        </p>
+        <p class="text-xs text-gray-500">123 Views &middot; 3 Days Ago</p>
+        <A
+          href={`/channel/${props.channelId}`}
+          class="flex items-center space-x-2 overflow-hidden"
+        >
+          <img
+            class="h-6 w-6 rounded-full"
+            src="https://images.unsplash.com/photo-1477672680933-0287a151330e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+            alt={`${props.channelName} icon`}
+          />
+          <p class="text-sm text-gray-500">{props.channelName}</p>
+        </A>
         {props.children}
       </div>
     </div>
