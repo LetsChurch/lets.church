@@ -122,6 +122,7 @@ export function routeData({ location }: RouteDataArgs) {
 
 type SearchHitRowProps = Omit<ThumbnailProps, 'width' | 'height' | 'url'> &
   ParentProps<{
+    href: string;
     thumbnailUrl?: string | null | undefined;
     title: string;
     channelName: string;
@@ -132,7 +133,7 @@ type SearchHitRowProps = Omit<ThumbnailProps, 'width' | 'height' | 'url'> &
 
 function SearchHitRow(props: SearchHitRowProps) {
   return (
-    <div class={`flex space-x-5 ${props.class ?? ''}`}>
+    <div class={`relative flex space-x-5 ${props.class ?? ''}`}>
       <div>
         <Thumbnail
           url={props.thumbnailUrl}
@@ -143,18 +144,22 @@ function SearchHitRow(props: SearchHitRowProps) {
         />
       </div>
       <div class="flex-grow space-y-2">
-        <h3 class="text-2xl font-semibold">{props.title}</h3>
+        <h3 class="text-2xl font-semibold">
+          <A href={props.href} class="before:absolute before:inset-0">
+            {props.title}
+          </A>
+        </h3>
         <p class="text-xs text-gray-500">123 Views &middot; 3 Days Ago</p>
         <A
           href={`/channel/${props.channelId}`}
-          class="flex items-center space-x-2 overflow-hidden"
+          class="relative z-10 inline-flex items-center space-x-2"
         >
           <img
             class="h-6 w-6 rounded-full"
             src="https://images.unsplash.com/photo-1477672680933-0287a151330e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
             alt={`${props.channelName} icon`}
           />
-          <p class="text-sm text-gray-500">{props.channelName}</p>
+          <span class="text-sm text-gray-500">{props.channelName}</span>
         </A>
         {props.children}
       </div>
@@ -175,8 +180,9 @@ function SearchTranscriptHitRow(
       <dl class="space-y-1 rounded-md bg-gray-50 p-3">
         <For each={local.innerHits.slice(0, showMore() ? undefined : 1)}>
           {(hit) => (
-            <div
-              class="group/t-row flex gap-2 hover:cursor-pointer"
+            <A
+              href={`${props.href}#t=${hit.start}`}
+              class="group/t-row relative z-10 flex gap-2 hover:cursor-pointer"
               classList={{ group: showMore() }}
             >
               <dt class="font-mono w-10 items-center text-sm font-medium uppercase text-gray-400 group-hover/t-row:text-gray-600">
@@ -190,14 +196,14 @@ function SearchTranscriptHitRow(
                 // eslint-disable-next-line solid/no-innerhtml
                 innerHTML={hit.text.marked ?? ''}
               />
-            </div>
+            </A>
           )}
         </For>
       </dl>
       <Show when={local.innerHits.length > 1}>
         <button
           onClick={() => setShowMore((sm) => !sm)}
-          class="text-xs font-medium uppercase text-gray-400"
+          class="relative z-10 text-xs font-medium uppercase text-gray-400 hover:text-gray-600"
         >
           Show {local.innerHits.length - 1} {showMore() ? 'Less' : 'More'}
         </button>
@@ -268,6 +274,7 @@ export default function SearchRoute() {
             >
               {(node) => (
                 <SearchHitRow
+                  href={`/media/${node.id}`}
                   thumbnailUrl={node.uploadRecord.thumbnailUrl}
                   blurhash={node.uploadRecord.thumbnailBlurhash}
                   title={node.title}
@@ -293,6 +300,7 @@ export default function SearchRoute() {
             >
               {(node) => (
                 <SearchTranscriptHitRow
+                  href={`/media/${node.id}`}
                   thumbnailUrl={node.uploadRecord.thumbnailUrl}
                   blurhash={node.uploadRecord.thumbnailBlurhash}
                   title={node.uploadRecord.title ?? 'Untitled'}
