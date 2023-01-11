@@ -2,8 +2,9 @@ import { Title, useParams } from 'solid-start';
 import server$ from 'solid-start/server';
 import ThumbUpIcon from '@tabler/icons/thumb-up.svg?component-solid';
 import ThumbDownIcon from '@tabler/icons/thumb-down.svg?component-solid';
-import { ParentProps, JSX, splitProps } from 'solid-js';
+import { ParentProps, JSX, splitProps, useContext } from 'solid-js';
 import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
+import { UserContext } from '~/routes/(root)';
 import type {
   SubmitUploadRatingMutation,
   SubmitUploadRatingMutationVariables,
@@ -28,9 +29,9 @@ function IconCountButton(
 }
 
 export default function MediaRoute() {
+  const user = useContext(UserContext);
   const params = useParams<{ id: string }>();
 
-  // TODO: guard logged in
   const submitRating = server$(
     async (uploadRecordId: string, rating: Rating) => {
       const client = await createAuthenticatedClientOrRedirect(server$.request);
@@ -55,6 +56,14 @@ export default function MediaRoute() {
     },
   );
 
+  function handleSubmitRating(rating: Rating) {
+    if (!user?.()?.me) {
+      // TODO: show login
+      return alert('TODO: login');
+    }
+    submitRating(params.id, rating);
+  }
+
   return (
     <>
       <Title>Media: {params.id} | Let's Church</Title>
@@ -67,13 +76,13 @@ export default function MediaRoute() {
             <span class="isolate ml-auto inline-flex rounded-md shadow-sm [&>*:not(:first-of-type)]:-ml-px [&>*:last-of-type]:rounded-r-md [&>*:first-of-type]:rounded-l-md">
               <IconCountButton
                 count={123}
-                onClick={() => submitRating(params.id, Rating.Like)}
+                onClick={() => handleSubmitRating(Rating.Like)}
               >
                 <ThumbUpIcon />
               </IconCountButton>
               <IconCountButton
                 count={64}
-                onClick={() => submitRating(params.id, Rating.Dislike)}
+                onClick={() => handleSubmitRating(Rating.Dislike)}
               >
                 <ThumbDownIcon class="-scale-x-100" />
               </IconCountButton>
