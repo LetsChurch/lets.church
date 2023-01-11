@@ -371,4 +371,45 @@ builder.mutationFields((t) => ({
       return true;
     },
   }),
+  rateUpload: t.boolean({
+    args: {
+      uploadRecordId: t.arg({ type: 'ShortUuid', required: true }),
+      rating: t.arg({
+        type: builder.enumType('Rating', {
+          values: ['LIKE', 'DISLIKE'] as const,
+        }),
+        required: true,
+      }),
+    },
+    authScopes: { authenticated: true },
+    resolve: async (_root, { uploadRecordId, rating }, context, _info) => {
+      const userId = (await context.session)?.appUserId;
+
+      if (!userId) {
+        return false;
+      }
+
+      await prisma.$transaction(async (tx) => {
+        // 1. Get existing rating
+        const existing = await tx.uploadUserRating.findFirst({
+          where: { userId, uploadRecordId, rating },
+        });
+        // 2. Delete any existing rating
+        await tx.uploadUserRating.deleteMany({
+          where: {
+            userId: userId,
+            uploadRecordId: uploadRecordId,
+          },
+        });
+        // 3. If the new rating is different from any existing rating, create it
+        if (existing?.rating !== rating) {
+          await tx.uploadUserRating.create({
+            data: { userId, uploadRecordId, rating },
+          });
+        }
+      });
+
+      return true;
+    },
+  }),
 }));

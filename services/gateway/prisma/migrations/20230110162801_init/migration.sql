@@ -16,6 +16,9 @@ CREATE TYPE "UploadVisibility" AS ENUM ('PUBLIC', 'PRIVATE', 'UNLISTED');
 -- CreateEnum
 CREATE TYPE "UploadVariant" AS ENUM ('VIDEO_4K', 'VIDEO_1080P', 'VIDEO_720P', 'VIDEO_480P', 'VIDEO_360P', 'AUDIO');
 
+-- CreateEnum
+CREATE TYPE "Rating" AS ENUM ('LIKE', 'DISLIKE');
+
 -- CreateTable
 CREATE TABLE "app_user" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
@@ -124,6 +127,16 @@ CREATE TABLE "upload_record" (
     CONSTRAINT "upload_record_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "UploadUserRating" (
+    "user_id" UUID NOT NULL,
+    "upload_id" UUID NOT NULL,
+    "rating" "Rating" NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "UploadUserRating_pkey" PRIMARY KEY ("user_id","upload_id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "app_user_email_key" ON "app_user"("email");
 
@@ -138,6 +151,12 @@ CREATE UNIQUE INDEX "channel_slug_key" ON "channel"("slug");
 
 -- CreateIndex
 CREATE INDEX "upload_record_created_at_id_idx" ON "upload_record"("created_at", "id");
+
+-- CreateIndex
+CREATE INDEX "UploadUserRating_upload_id_rating_idx" ON "UploadUserRating"("upload_id", "rating");
+
+-- CreateIndex
+CREATE INDEX "UploadUserRating_user_id_rating_idx" ON "UploadUserRating"("user_id", "rating");
 
 -- AddForeignKey
 ALTER TABLE "app_session" ADD CONSTRAINT "app_session_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

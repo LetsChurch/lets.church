@@ -171,6 +171,7 @@ export type Mutation = {
   finalizeUpload: Scalars['Boolean'];
   login?: Maybe<Scalars['Jwt']>;
   logout: Scalars['Boolean'];
+  rateUpload: Scalars['Boolean'];
   signup: AppUser;
   upsertChannelMembership: ChannelMembership;
   upsertOrganizationMembership: OrganizationMembership;
@@ -209,6 +210,12 @@ export type MutationFinalizeUploadArgs = {
 export type MutationLoginArgs = {
   id: Scalars['String'];
   password: Scalars['String'];
+};
+
+
+export type MutationRateUploadArgs = {
+  rating: Rating;
+  uploadRecordId: Scalars['ShortUuid'];
 };
 
 
@@ -391,6 +398,11 @@ export type QueryUsersConnectionEdge = {
   cursor: Scalars['String'];
   node: AppUser;
 };
+
+export enum Rating {
+  Dislike = 'DISLIKE',
+  Like = 'LIKE'
+}
 
 export type SearchAggs = {
   __typename?: 'SearchAggs';

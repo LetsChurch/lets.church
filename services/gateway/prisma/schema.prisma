@@ -170,3 +170,19 @@ model UploadRecord {
   @@index([createdAt, id])
   @@map("upload_record")
 }
+
+enum Rating {
+  LIKE
+  DISLIKE
+}
+
+model UploadUserRating {
+  userId         String   @map("user_id") @db.Uuid
+  uploadRecordId String   @map("upload_id") @db.Uuid
+  rating         Rating
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@id([userId, uploadRecordId])
+  @@index([uploadRecordId, rating])
+  @@index([userId, rating])
+}
