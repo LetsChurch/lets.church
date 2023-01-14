@@ -10,6 +10,7 @@ import {
 } from 'solid-js';
 import { A, RouteDataArgs, useLocation, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
+import '@fontsource/roboto-mono/variable-full.css';
 import Pagination from '~/components/pagination';
 import Thumbnail, {
   type Props as ThumbnailProps,
@@ -167,6 +168,12 @@ function SearchHitRow(props: SearchHitRowProps) {
   );
 }
 
+function formatTime(ms: number) {
+  const res = prettyMs(ms, { colonNotation: true, secondsDecimalDigits: 0 });
+  const sections = res.split(':').length;
+  return res.padStart(sections * 2 + sections - 1, '0');
+}
+
 function SearchTranscriptHitRow(
   props: Omit<SearchHitRowProps, 'children'> & {
     innerHits: Array<{ start: number; end: number; text: { marked: string } }>;
@@ -177,19 +184,23 @@ function SearchTranscriptHitRow(
 
   return (
     <SearchHitRow {...rest} class={showMore() ? undefined : 'group'}>
-      <dl class="space-y-1 rounded-md bg-gray-50 p-3">
-        <For each={local.innerHits.slice(0, showMore() ? undefined : 1)}>
+      <dl class="rounded-md bg-gray-50 p-3">
+        <For
+          each={local.innerHits
+            .slice(0, showMore() ? undefined : 1)
+            .sort((a, b) => a.start - b.start)}
+        >
           {(hit) => (
             <A
               href={`${props.href}#t=${hit.start}`}
-              class="group/t-row relative z-10 flex gap-2 hover:cursor-pointer"
-              classList={{ group: showMore() }}
+              class="group/t-row relative z-10 flex gap-2 rounded-md px-2 py-1 hover:cursor-pointer"
+              classList={{
+                group: showMore(),
+                'bg-indigo-50': showMore() && hit === local.innerHits[0],
+              }}
             >
-              <dt class="font-mono w-10 items-center text-sm font-medium uppercase text-gray-400 group-hover/t-row:text-gray-600">
-                {prettyMs(hit.start, {
-                  colonNotation: true,
-                  secondsDecimalDigits: 0,
-                })}
+              <dt class="w-10 items-center font-mono text-sm font-medium uppercase text-gray-400 group-hover/t-row:text-gray-600">
+                {formatTime(hit.start)}
               </dt>
               <dd
                 class="[&_mark]:in-expo [&_mark]:out-expo text-sm [&_mark]:bg-transparent [&_mark]:transition-colors [&_mark]:duration-200 group-hover:[&_mark]:bg-yellow-200"
