@@ -471,9 +471,12 @@ export type UploadRecord = {
   createdBy: AppUser;
   id: Scalars['ShortUuid'];
   license: UploadLicense;
+  myRating?: Maybe<Rating>;
   thumbnailBlurhash?: Maybe<Scalars['String']>;
   thumbnailUrl?: Maybe<Scalars['String']>;
   title?: Maybe<Scalars['String']>;
+  totalDislikes: Scalars['Int'];
+  totalLikes: Scalars['Int'];
   updatedAt: Scalars['DateTime'];
   uploadFinalized: Scalars['Boolean'];
   uploadFinalizedBy: AppUser;

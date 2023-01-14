@@ -53,6 +53,10 @@ async function internalAuthScopes(
   return { admin: true };
 }
 
+const Rating = builder.enumType('Rating', {
+  values: ['LIKE', 'DISLIKE'] as const,
+});
+
 const UploadLicense = builder.enumType('UploadLicense', {
   values: Object.keys(PrismaUploadLicense),
 });
@@ -131,6 +135,34 @@ builder.prismaObject('UploadRecord', {
         const ses = await context.session;
 
         return ses?.appUser.role === 'ADMIN';
+      },
+    }),
+    totalLikes: t.relationCount('ratings', { where: { rating: 'LIKE' } }),
+    totalDislikes: t.relationCount('ratings', { where: { rating: 'DISLIKE' } }),
+    myRating: t.field({
+      nullable: true,
+      type: Rating,
+      resolve: async (root, _args, context) => {
+        const userId = (await context.session)?.appUserId;
+
+        if (!userId) {
+          return null;
+        }
+
+        const record = await prisma.uploadUserRating.findUnique({
+          where: {
+            appUserId_uploadRecordId: {
+              appUserId: userId,
+              uploadRecordId: root.id,
+            },
+          },
+        });
+
+        if (!record) {
+          return null;
+        }
+
+        return record.rating;
       },
     }),
   }),
@@ -375,9 +407,7 @@ builder.mutationFields((t) => ({
     args: {
       uploadRecordId: t.arg({ type: 'ShortUuid', required: true }),
       rating: t.arg({
-        type: builder.enumType('Rating', {
-          values: ['LIKE', 'DISLIKE'] as const,
-        }),
+        type: Rating,
         required: true,
       }),
     },
@@ -392,19 +422,19 @@ builder.mutationFields((t) => ({
       await prisma.$transaction(async (tx) => {
         // 1. Get existing rating
         const existing = await tx.uploadUserRating.findFirst({
-          where: { userId, uploadRecordId, rating },
+          where: { appUserId: userId, uploadRecordId, rating },
         });
         // 2. Delete any existing rating
         await tx.uploadUserRating.deleteMany({
           where: {
-            userId: userId,
+            appUserId: userId,
             uploadRecordId: uploadRecordId,
           },
         });
         // 3. If the new rating is different from any existing rating, create it
         if (existing?.rating !== rating) {
           await tx.uploadUserRating.create({
-            data: { userId, uploadRecordId, rating },
+            data: { appUserId: userId, uploadRecordId, rating },
           });
         }
       });
