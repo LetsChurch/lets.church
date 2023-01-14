@@ -5,7 +5,7 @@ export type MediaRouteDataQueryVariables = Types.Exact<{
 }>;
 
 
-export type MediaRouteDataQuery = { __typename?: 'Query', uploadRecord: { __typename?: 'UploadRecord', id: any, title?: string | null, totalLikes: number, totalDislikes: number, myRating?: Types.Rating | null } };
+export type MediaRouteDataQuery = { __typename?: 'Query', uploadRecord: { __typename?: 'UploadRecord', id: any, title?: string | null, totalLikes: number, totalDislikes: number, myRating?: Types.Rating | null, channel: { __typename?: 'Channel', id: any, name: string } } };
 
 export type SubmitUploadRatingMutationVariables = Types.Exact<{
   uploadRecordId: Types.Scalars['ShortUuid'];

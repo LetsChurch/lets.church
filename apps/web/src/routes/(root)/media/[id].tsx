@@ -3,6 +3,7 @@ import {
   Title,
   useParams,
   useRouteData,
+  A,
 } from 'solid-start';
 import server$, { createServerAction$, redirect } from 'solid-start/server';
 import ThumbUpIcon from '@tabler/icons/thumb-up.svg?component-solid';
@@ -87,6 +88,10 @@ export function routeData({ params }: RouteDataArgs) {
             totalLikes
             totalDislikes
             myRating
+            channel {
+              id
+              name
+            }
           }
         }
       `,
@@ -192,13 +197,27 @@ export default function MediaRoute() {
 
   return (
     <>
-      <Title>Media: {params.id} | Let's Church</Title>
+      <Title>{data()?.uploadRecord.title ?? '...'}| Let's Church</Title>
       <div class="grid grid-cols-3 gap-4">
         <div class="col-span-2 space-y-4">
           <div class="aspect-video w-full bg-gray-100">video</div>
-          <h1 class="truncate text-2xl">Media: {params.id}</h1>
+          <h1 class="truncate text-2xl">
+            {data()?.uploadRecord.title ?? '...'}
+          </h1>
           <div class="flex">
-            <div>channel</div>
+            <A
+              href={`/channel/${data()?.uploadRecord.channel.id}`}
+              class="relative z-10 inline-flex items-center space-x-2"
+            >
+              <img
+                class="h-6 w-6 rounded-full"
+                src="https://images.unsplash.com/photo-1477672680933-0287a151330e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                alt={`${data()?.uploadRecord.channel.name} icon`}
+              />
+              <span class="text-sm text-gray-500">
+                {data()?.uploadRecord.channel.name}
+              </span>
+            </A>
             <submitRating.Form
               class="isolate ml-auto inline-flex rounded-md shadow-sm [&>*:not(:first-of-type)]:-ml-px [&>*:last-of-type]:rounded-r-md [&>*:first-of-type]:rounded-l-md"
               replace
