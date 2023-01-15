@@ -224,8 +224,8 @@ export default function MediaRoute() {
               onSubmit={(e) => {
                 if (!user?.()?.me) {
                   e.preventDefault();
-                  alert('Not logged in!');
                   // TODO: show login
+                  return alert('Not logged in!');
                 }
 
                 // Optimistic update
