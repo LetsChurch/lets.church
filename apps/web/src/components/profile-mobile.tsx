@@ -4,12 +4,14 @@ import BellIcon from '@tabler/icons/bell.svg?component-solid';
 import type { MeQuery } from '~/routes/__generated__/(root)';
 import { createServerAction$ } from 'solid-start/server';
 import logoutAction from '~/util/logout-action';
+import { useLoginLocation, useSerializedLocation } from '~/util';
 import { profileLinks } from './profile';
 
 export type Props = MeQuery;
 
 export default function ProfileMobile(props: Props) {
   const [loggingOut, { Form }] = createServerAction$(logoutAction);
+  const loginLocation = useLoginLocation();
 
   return (
     <div class="border-t border-gray-200 pt-4 pb-3">
@@ -17,7 +19,7 @@ export default function ProfileMobile(props: Props) {
         when={props.me}
         fallback={
           <A
-            href="/auth/login"
+            href={loginLocation}
             class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
           >
             Login
@@ -57,6 +59,11 @@ export default function ProfileMobile(props: Props) {
             )}
           </For>
           <Form>
+            <input
+              type="hidden"
+              name="redirect"
+              value={useSerializedLocation()}
+            />
             <button
               type="submit"
               class="block w-full px-4 py-2 text-start text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"

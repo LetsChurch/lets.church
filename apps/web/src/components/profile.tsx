@@ -4,6 +4,7 @@ import { useFloating } from 'solid-floating-ui';
 import { useBeforeLeave, useIsRouting } from '@solidjs/router';
 import { createServerAction$ } from 'solid-start/server';
 import logoutAction from '~/util/logout-action';
+import { useLoginLocation, useSerializedLocation } from '~/util';
 import type { MeQuery } from '~/routes/__generated__/(root)';
 import FloatingMenu from './floating-menu';
 
@@ -47,6 +48,7 @@ export default function Profile(props: Props) {
   const [loggingOut, { Form }] = createServerAction$(logoutAction);
 
   const menuButtonId = createUniqueId();
+  const loginLocation = useLoginLocation();
 
   return (
     <div class="relative ml-4 flex-shrink-0">
@@ -55,7 +57,7 @@ export default function Profile(props: Props) {
           when={props.me}
           fallback={
             <A
-              href="/auth/login"
+              href={loginLocation}
               class="ml-6 inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             >
               Login
@@ -78,7 +80,13 @@ export default function Profile(props: Props) {
               alt="User Icon"
             />
           </button>
-          <Form id={logoutFormId} class="hidden" onSubmit={() => closeMenu()} />
+          <Form id={logoutFormId} class="hidden" onSubmit={() => closeMenu()}>
+            <input
+              type="hidden"
+              name="redirect"
+              value={useSerializedLocation()}
+            />
+          </Form>
         </Show>
       </div>
       <FloatingMenu

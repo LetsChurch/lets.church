@@ -1,4 +1,5 @@
 import { createUniqueId, mergeProps } from 'solid-js';
+import { useLocation } from 'solid-start';
 import { createServerAction$, redirect } from 'solid-start/server';
 import * as Z from 'zod';
 import { gql, client } from '~/util/gql/server';
@@ -11,6 +12,7 @@ import type {
 const LoginSchema = Z.object({
   id: Z.string(),
   password: Z.string(),
+  redirect: Z.string(),
 });
 
 function Input(props: { name: string; label: string; type?: string }) {
@@ -35,8 +37,14 @@ function Input(props: { name: string; label: string; type?: string }) {
 
 export default function LoginRoute() {
   const [loggingIn, { Form }] = createServerAction$(async (form: FormData) => {
-    const { id, password } = LoginSchema.parse(
-      Object.fromEntries(['id', 'password'].map((p) => [p, form.get(p)])),
+    const {
+      id,
+      password,
+      redirect: to,
+    } = LoginSchema.parse(
+      Object.fromEntries(
+        ['id', 'password', 'redirect'].map((p) => [p, form.get(p)]),
+      ),
     );
 
     const data = await client.request<LoginMutation, LoginMutationVariables>(
@@ -51,13 +59,20 @@ export default function LoginRoute() {
     const session = await storage.getSession();
     session.set('jwt', data.login);
 
-    return redirect('/', {
+    return redirect(to, {
       headers: { 'Set-Cookie': await storage.commitSession(session) },
     });
   });
 
+  const loc = useLocation();
+
   return (
     <Form class="mx-auto max-w-md space-y-6">
+      <input
+        type="hidden"
+        name="redirect"
+        value={loc.query['redirect'] ?? '/'}
+      />
       <Input name="id" label="Username or Email" />
       <Input name="password" label="Password" type="password" />
       <button

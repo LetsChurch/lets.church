@@ -1,9 +1,14 @@
 import { redirect } from 'solid-start/server';
-import { createAuthenticatedClient, gql } from './gql/server';
+import invariant from 'tiny-invariant';
+import { createAuthenticatedClientOrRedirect, gql } from './gql/server';
 import { storage } from './session';
 
-const action = async (_form: FormData, { request }: { request: Request }) => {
-  const client = await createAuthenticatedClient(request);
+const action = async (form: FormData, { request }: { request: Request }) => {
+  const client = await createAuthenticatedClientOrRedirect(request);
+
+  const to = form.get('redirect') ?? '/';
+  invariant(typeof to === 'string');
+
   await client.request(
     gql`
       mutation Logout {
@@ -14,7 +19,7 @@ const action = async (_form: FormData, { request }: { request: Request }) => {
 
   const session = await storage.getSession(request.headers.get('Cookie'));
 
-  return redirect('/', {
+  return redirect(to, {
     headers: { 'Set-Cookie': await storage.destroySession(session) },
   });
 };
