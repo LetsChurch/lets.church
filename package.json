@@ -1,0 +1,8 @@
+{
+  "name": "lets.church",
+  "private": true,
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "wrangler": "^2.7.1"
+  }
+}
