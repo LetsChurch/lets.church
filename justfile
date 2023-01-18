@@ -87,7 +87,7 @@ npmci-gateway:
   cd services/gateway; npm ci
 npmci-web:
   cd apps/web; npm ci
-npmci: npmci-gateway npmci-web npci-scripts
+npmci: npmci-gateway npmci-web npmci-scripts
 
 seed-db:
   docker-compose exec gateway npm run prisma:db:seed
