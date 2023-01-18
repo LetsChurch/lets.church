@@ -74,7 +74,7 @@ npmi-host-gateway:
   cd services/gateway; npm i
 npmi-host-web:
   cd apps/web; npm i
-npmi-host: npmi-host-gateway npmi-host-web
+npmi-host: npmi-host-gateway npmi-host-web npmi-host-scripts
 
 npmi-gateway: (exec 'gateway' 'npm' 'i')
 npmi-web: (exec 'web' 'npm' 'i')
