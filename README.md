@@ -10,6 +10,7 @@
 1. Run `just init` to migrate the database and set up ElasticSearch
 1. Run `just seed` to seed the database with sample data and upload sample data to S3
 1. Run `just open` to open the web interface
+1. For host-local editor autocomplete and running scripts outside of docker, run `just npmci` to install all project dependnecies
 
 [Docker]: https://www.docker.com/products/docker-desktop/
 [`direnv`]: https://direnv.net/

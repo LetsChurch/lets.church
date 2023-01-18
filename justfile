@@ -80,6 +80,15 @@ npmi-gateway: (exec 'gateway' 'npm' 'i')
 npmi-web: (exec 'web' 'npm' 'i')
 npmi: npmi-gateway npmi-web
 
+# npmci scripts always run on host (except during docker build)
+npmci-scripts:
+  cd scripts; npm ci
+npmci-gateway:
+  cd services/gateway; npm ci
+npmci-web:
+  cd apps/web; npm ci
+npmci: npmci-gateway npmci-web npci-scripts
+
 seed-db:
   docker-compose exec gateway npm run prisma:db:seed
 seed-s3:
