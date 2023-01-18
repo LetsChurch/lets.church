@@ -1,0 +1,9 @@
+cache:
+  paths:
+    - services/gateway/node_modules
+    - apps/web/node_modules
+check:
+  script:
+    - source ./bin/activate-hermit
+    - just npmi-host
+    - just check
