@@ -4,10 +4,13 @@ import {
   useParams,
   useRouteData,
   A,
+  refetchRouteData,
 } from 'solid-start';
-import server$, { createServerAction$, redirect } from 'solid-start/server';
-import ThumbUpIcon from '@tabler/icons/thumb-up.svg?component-solid';
-import ThumbDownIcon from '@tabler/icons/thumb-down.svg?component-solid';
+import server$, {
+  createServerAction$,
+  createServerData$,
+  redirect,
+} from 'solid-start/server';
 import {
   type ParentProps,
   type JSX,
@@ -15,21 +18,28 @@ import {
   useContext,
   createResource,
   untrack,
+  createEffect,
 } from 'solid-js';
+import ThumbUpIcon from '@tabler/icons/thumb-up.svg?component-solid';
+import ThumbDownIcon from '@tabler/icons/thumb-down.svg?component-solid';
+import invariant from 'tiny-invariant';
+import { decodeJwt } from 'jose';
 import {
   createAuthenticatedClient,
   createAuthenticatedClientOrRedirect,
   gql,
 } from '~/util/gql/server';
 import { UserContext } from '~/routes/(root)';
+import { Rating } from '~/__generated__/graphql-types';
 import type {
-  MediaRouteDataQuery,
-  MediaRouteDataQueryVariables,
+  MediaRouteMetaDataQuery,
+  MediaRouteMetaDataQueryVariables,
+  MediaRouteRatingStateQuery,
+  MediaRouteRatingStateQueryVariables,
   SubmitUploadRatingMutation,
   SubmitUploadRatingMutationVariables,
 } from './__generated__/[id]';
-import { Rating } from '~/__generated__/graphql-types';
-import invariant from 'tiny-invariant';
+import AuthorizedVideo from '~/components/authorized-video';
 
 function RatingButton(
   props: ParentProps<{
@@ -67,31 +77,24 @@ function RatingButton(
 }
 
 export function routeData({ params }: RouteDataArgs) {
-  // Use resource rather than createRouteData or createServerData for two reasons:
-  //   1. We don't need any of the cache invalidation / automatic data refetching logic for this page.
-  //   2. Local mutation is better than refetching for rating data as numbers changing wildly when
-  //      clicking like or dislike can appear to be a bug. Resources have this mutation functionality
-  //      built in.
-  const fetchRouteData = server$(async (id: string) => {
+  // Use resource rather than createRouteData or createServerData for the rating state. We don't
+  // want any of the cache invalidation / automatic data refetching logic for rating. Local mutation
+  // is better than refetching for rating data as numbers changing wildly when clicking like or dislike
+  // can appear to be a bug. Resources have this mutation functionality built in.
+  const fetchRatingState = server$(async (id: string) => {
     const client = await createAuthenticatedClient(server$.request);
     invariant(id, "No id provided to routeData for '/media/[id]'");
 
     const res = await client.request<
-      MediaRouteDataQuery,
-      MediaRouteDataQueryVariables
+      MediaRouteRatingStateQuery,
+      MediaRouteRatingStateQueryVariables
     >(
       gql`
-        query MediaRouteData($id: ShortUuid!) {
-          uploadRecord: uploadRecordById(id: $id) {
-            id
-            title
+        query MediaRouteRatingState($id: ShortUuid!) {
+          data: uploadRecordById(id: $id) {
             totalLikes
             totalDislikes
             myRating
-            channel {
-              id
-              name
-            }
           }
         }
       `,
@@ -104,13 +107,53 @@ export function routeData({ params }: RouteDataArgs) {
   const id = params['id'];
   invariant(id, 'No id provided to media route');
 
-  return createResource(() => fetchRouteData(id));
+  const ratingState = createResource(() => fetchRatingState(id));
+
+  const metaData = createServerData$(
+    async ([, id], { request }) => {
+      const client = await createAuthenticatedClient(request);
+      const res = await client.request<
+        MediaRouteMetaDataQuery,
+        MediaRouteMetaDataQueryVariables
+      >(
+        gql`
+          query MediaRouteMetaData($id: ShortUuid!) {
+            data: uploadRecordById(id: $id) {
+              id
+              title
+              channel {
+                id
+                name
+              }
+              mediaSource
+              audioSource
+              mediaJwt
+            }
+          }
+        `,
+        {
+          id,
+        },
+      );
+
+      return res;
+    },
+    { key: ['media', id, 'meta'] as const },
+  );
+
+  return {
+    ratingState,
+    metaData,
+  };
 }
 
 export default function MediaRoute() {
   const user = useContext(UserContext);
   const params = useParams<{ id: string }>();
-  const [data, { mutate: mutateData }] = useRouteData<typeof routeData>();
+  const {
+    ratingState: [ratingStateData, { mutate: mutateRating }],
+    metaData,
+  } = useRouteData<typeof routeData>();
 
   const [submittingRating, submitRating] = createServerAction$(
     async (form: FormData, { request }) => {
@@ -148,74 +191,105 @@ export default function MediaRoute() {
   );
 
   function handleRating(newRating: Rating) {
-    const uploadRecord = untrack(() => data()?.uploadRecord);
+    const ratingState = untrack(() => ratingStateData()?.data);
 
-    if (!uploadRecord) {
+    if (!ratingState) {
       return;
     }
 
     // New rating
-    if (!uploadRecord.myRating) {
-      return mutateData({
-        uploadRecord: {
-          ...uploadRecord,
+    if (!ratingState.myRating) {
+      return mutateRating({
+        data: {
+          ...ratingState,
           totalLikes:
-            uploadRecord.totalLikes + (newRating === Rating.Like ? 1 : 0),
+            ratingState.totalLikes + (newRating === Rating.Like ? 1 : 0),
           totalDislikes:
-            uploadRecord.totalDislikes + (newRating === Rating.Dislike ? 1 : 0),
+            ratingState.totalDislikes + (newRating === Rating.Dislike ? 1 : 0),
           myRating: newRating,
         },
       });
     }
 
     // Undo rating
-    if (uploadRecord.myRating === newRating) {
-      return mutateData({
-        uploadRecord: {
-          ...uploadRecord,
+    if (ratingState.myRating === newRating) {
+      return mutateRating({
+        data: {
+          ...ratingState,
           totalLikes:
-            uploadRecord.totalLikes - (newRating === Rating.Like ? 1 : 0),
+            ratingState.totalLikes - (newRating === Rating.Like ? 1 : 0),
           totalDislikes:
-            uploadRecord.totalDislikes - (newRating === Rating.Dislike ? 1 : 0),
+            ratingState.totalDislikes - (newRating === Rating.Dislike ? 1 : 0),
           myRating: null,
         },
       });
     }
 
     // Change rating
-    return mutateData({
-      uploadRecord: {
-        ...uploadRecord,
+    return mutateRating({
+      data: {
+        ...ratingState,
         totalLikes:
-          uploadRecord.totalLikes + (newRating === Rating.Like ? 1 : -1),
+          ratingState.totalLikes + (newRating === Rating.Like ? 1 : -1),
         totalDislikes:
-          uploadRecord.totalDislikes + (newRating === Rating.Dislike ? 1 : -1),
+          ratingState.totalDislikes + (newRating === Rating.Dislike ? 1 : -1),
         myRating: newRating,
       },
     });
   }
 
+  // Refresh JWT
+  createEffect<ReturnType<typeof setTimeout> | null>((lastTimeout) => {
+    if (lastTimeout) {
+      clearTimeout(lastTimeout);
+    }
+
+    const jwt = metaData()?.data.mediaJwt;
+
+    if (!jwt) {
+      return null;
+    }
+
+    const { exp } = decodeJwt(jwt);
+
+    if (!exp) {
+      return null;
+    }
+
+    return setTimeout(() => {
+      refetchRouteData(['media', params['id'], 'meta']);
+    }, (new Date(exp * 1000).getTime() - Date.now()) / 2);
+  }, null);
+
   return (
     <>
-      <Title>{data()?.uploadRecord.title ?? '...'}| Let's Church</Title>
+      <Title>{metaData()?.data.title ?? '...'} | Let's Church</Title>
       <div class="grid grid-cols-3 gap-4">
         <div class="col-span-2 space-y-4">
-          <div class="aspect-video w-full bg-gray-100">video</div>
-          <h1 class="truncate text-2xl">
-            {data()?.uploadRecord.title ?? '...'}
-          </h1>
+          <div class="aspect-video w-full bg-gray-100">
+            <AuthorizedVideo
+              source={
+                metaData()?.data.mediaSource ??
+                metaData()?.data.audioSource ??
+                ''
+              }
+              jwt={metaData()?.data.mediaJwt ?? ''}
+              fluid
+            />
+          </div>
+          <h1 class="truncate text-2xl">{metaData()?.data.title ?? '...'}</h1>
           <div class="flex">
             <A
-              href={`/channel/${data()?.uploadRecord.channel.id}`}
+              href={`/channel/${metaData()?.data.channel.id}`}
               class="relative z-10 inline-flex items-center space-x-2"
             >
               <img
                 class="h-6 w-6 rounded-full"
                 src="https://images.unsplash.com/photo-1477672680933-0287a151330e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                alt={`${data()?.uploadRecord.channel.name} icon`}
+                alt={`${metaData()?.data.channel.name} icon`}
               />
               <span class="text-sm text-gray-500">
-                {data()?.uploadRecord.channel.name}
+                {metaData()?.data.channel.name}
               </span>
             </A>
             <submitRating.Form
@@ -241,17 +315,17 @@ export default function MediaRoute() {
             >
               <input type="hidden" name="uploadRecordId" value={params.id} />
               <RatingButton
-                count={data()?.uploadRecord.totalLikes ?? 0}
+                count={ratingStateData()?.data.totalLikes ?? 0}
                 value={Rating.Like}
-                active={data()?.uploadRecord.myRating === Rating.Like}
+                active={ratingStateData()?.data.myRating === Rating.Like}
                 disabled={submittingRating.pending}
               >
                 <ThumbUpIcon class="pointer-events-none" />
               </RatingButton>
               <RatingButton
-                count={data()?.uploadRecord.totalDislikes ?? 0}
+                count={ratingStateData()?.data.totalDislikes ?? 0}
                 value={Rating.Dislike}
-                active={data()?.uploadRecord.myRating === Rating.Dislike}
+                active={ratingStateData()?.data.myRating === Rating.Dislike}
                 disabled={submittingRating.pending}
               >
                 <ThumbDownIcon class="pointer-events-none -scale-x-100" />

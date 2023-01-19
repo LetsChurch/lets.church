@@ -1,0 +1,11 @@
+name = "media"
+main = "src/index.ts"
+compatibility_date = "2023-01-16"
+
+[[r2_buckets]]
+binding = 'PUBLIC'
+bucket_name = 'letschurch-dev-public'
+preview_bucket_name = 'letschurch-dev-public'
+
+# Required Secrets:
+# JWT_SECRET

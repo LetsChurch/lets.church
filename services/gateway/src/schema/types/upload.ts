@@ -4,6 +4,7 @@ import {
   UploadVisibility as PrismaUploadVisibility,
   UploadVariant as PrismaUploadVariant,
 } from '@prisma/client';
+import envariant from '@knpwrs/envariant';
 import {
   createMultipartUpload,
   createPresignedGetUrl,
@@ -20,6 +21,9 @@ import {
 import builder from '../builder';
 import type { Context } from '../../util/context';
 import prisma from '../../util/prisma';
+import { createMediaJwt } from '../../util/jwt';
+
+const MEDIA_URL = envariant('MEDIA_URL');
 
 async function internalAuthScopes(
   uploadRecord: { id: string; channelId: string },
@@ -163,6 +167,67 @@ builder.prismaObject('UploadRecord', {
         }
 
         return record.rating;
+      },
+    }),
+    mediaSource: t.string({
+      nullable: true,
+      select: { id: true, variants: true },
+      resolve: async (root, _args, _context) => {
+        if (root.variants.filter((v) => v !== 'AUDIO').length === 0) {
+          return null;
+        }
+
+        const url = new URL(MEDIA_URL);
+        url.pathname = `${root.id}/master.m3u8`;
+        return url.toString();
+      },
+    }),
+    audioSource: t.string({
+      nullable: true,
+      select: { id: true, variants: true },
+      resolve: async (root, _args, _context) => {
+        if (!root.variants.includes('AUDIO')) {
+          return null;
+        }
+
+        const url = new URL(MEDIA_URL);
+        url.pathname = `${root.id}/audio.m3u8`;
+        return url.toString();
+      },
+    }),
+    mediaJwt: t.field({
+      type: 'Jwt',
+      select: { id: true, channelId: true, visibility: true },
+      authScopes: async (root, _args, context) => {
+        // Allow viewing public and unlisted videos
+        if (root.visibility === 'PUBLIC' || root.visibility === 'UNLISTED') {
+          return true;
+        }
+
+        // Otherwise only allow members to see video
+        const userId = (await context.session)?.appUserId;
+
+        if (!userId) {
+          return false;
+        }
+
+        const membership = await prisma.channelMembership.findUnique({
+          select: {
+            isAdmin: true,
+            canUpload: true,
+          },
+          where: {
+            channelId_appUserId: {
+              channelId: root.channelId,
+              appUserId: userId,
+            },
+          },
+        });
+
+        return Boolean(membership);
+      },
+      resolve: async (root, _args, _context) => {
+        return createMediaJwt({ prefix: root.id });
       },
     }),
   }),

@@ -109,6 +109,7 @@ export function variantsToMasterVideoPlaylist(variants: Array<UploadVariant>) {
     '#EXTM3U',
     '#EXT-X-VERSION:3',
     ...variants
+      // Audio must not be included in the master playlist: https://developer.apple.com/documentation/http_live_streaming/http_live_streaming_hls_authoring_specification_for_apple_devices
       .filter((v): v is Exclude<UploadVariant, 'AUDIO'> => v !== 'AUDIO')
       .flatMap((v) => [
         `#EXT-X-STREAM-INF:BANDWIDTH=${

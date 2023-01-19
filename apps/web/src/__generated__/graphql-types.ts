@@ -465,12 +465,15 @@ export enum UploadPostProcess {
 
 export type UploadRecord = {
   __typename?: 'UploadRecord';
+  audioSource?: Maybe<Scalars['String']>;
   canMutate: Scalars['Boolean'];
   channel: Channel;
   createdAt: Scalars['DateTime'];
   createdBy: AppUser;
   id: Scalars['ShortUuid'];
   license: UploadLicense;
+  mediaJwt: Scalars['Jwt'];
+  mediaSource?: Maybe<Scalars['String']>;
   myRating?: Maybe<Rating>;
   thumbnailBlurhash?: Maybe<Scalars['String']>;
   thumbnailUrl?: Maybe<Scalars['String']>;

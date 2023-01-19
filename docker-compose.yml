@@ -5,6 +5,7 @@ volumes:
   background-worker-node-modules:
   es-data:
   gateway-node-modules:
+  media-node-modules:
   pg-data:
   process-upload-worker-node-modules:
   web-node-modules:
@@ -42,6 +43,19 @@ services:
     depends_on:
       - gateway
 
+  media:
+    build: ./services/media
+    restart: on-failure
+    ports:
+      - ${HOST_MEDIA_PORT}:8787
+    environment:
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN}
+      JWT_SECRET: ${JWT_SECRET}
+    volumes:
+      - ./services/media:/home/node/app
+      - media-node-modules:/home/node/app/node_modules
+
   gateway:
     build:
       context: ./services/gateway
@@ -52,8 +66,8 @@ services:
     environment:
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       ELASTICSEARCH_URL: http://elasticsearch:9200
-      EXTERNAL_HOOKS_HOST: ${EXTERNAL_HOOKS_HOST}
       JWT_SECRET: ${JWT_SECRET}
+      MEDIA_URL: ${MEDIA_URL}
       TEMPORAL_ADDRESS: temporal:7233
       ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
       <<: *s3-env
@@ -85,7 +99,6 @@ services:
     environment:
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       ELASTICSEARCH_URL: http://elasticsearch:9200
-      EXTERNAL_HOOKS_HOST: ${EXTERNAL_HOOKS_HOST}
       JWT_SECRET: ${JWT_SECRET}
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
