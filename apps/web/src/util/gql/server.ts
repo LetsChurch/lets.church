@@ -1,11 +1,12 @@
 import envariant from '@knpwrs/envariant';
 import { GraphQLClient } from 'graphql-request';
 import { redirect } from 'solid-start';
+import server$ from 'solid-start/server';
 import { getSessionJwt } from '../session';
 
 export { gql } from 'graphql-request';
 
-const GRAPHQL_URL = envariant('GRAPHQL_URL');
+const GRAPHQL_URL = envariant('GRAPHQL_URL', server$.env);
 
 export const client = new GraphQLClient(GRAPHQL_URL, {
   credentials: 'include',

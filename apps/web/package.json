@@ -20,7 +20,7 @@
   "dependencies": {
     "@fontsource/inter": "^4.5.14",
     "@fontsource/roboto-mono": "^4.5.8",
-    "@knpwrs/envariant": "^1.0.2",
+    "@knpwrs/envariant": "^1.1.1",
     "@solid-primitives/scheduled": "^1.2.0",
     "@solidjs/meta": "^0.28.2",
     "@solidjs/router": "^0.5.1",
