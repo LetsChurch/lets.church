@@ -30,7 +30,6 @@ services:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
-      target: dev
     ports:
       - ${HOST_WEB_PORT}:3000
     environment:
@@ -39,7 +38,6 @@ services:
     volumes:
       - ./apps/web:/home/node/app
       - web-node-modules:/home/node/app/node_modules
-    command: npm run dev
     depends_on:
       - gateway
 
@@ -60,7 +58,7 @@ services:
     build:
       context: ./services/gateway
       dockerfile: gateway.Dockerfile
-      target: dev
+    command: npm run dev
     ports:
       - ${HOST_GATEWAY_PORT}:3000
     environment:
@@ -81,7 +79,8 @@ services:
     build:
       context: ./services/gateway
       dockerfile: process-upload-worker.Dockerfile
-      target: dev
+      target: app
+    command: npm run dev:process-upload-worker
     environment:
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       TEMPORAL_ADDRESS: temporal:7233
@@ -89,13 +88,12 @@ services:
     volumes:
       - ./services/gateway:/home/node/app
       - process-upload-worker-node-modules:/home/node/app/node_modules
-    command: npm run dev:process-upload-worker
 
   background-worker:
     build:
       context: ./services/gateway
       dockerfile: background-worker.Dockerfile
-      target: dev
+    command: npm run dev:background-worker
     environment:
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       ELASTICSEARCH_URL: http://elasticsearch:9200
@@ -107,7 +105,6 @@ services:
     volumes:
       - ./services/gateway:/home/node/app
       - background-worker-node-modules:/home/node/app/node_modules
-    command: npm run dev:background-worker
 
   #
   # Vendor Services

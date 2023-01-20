@@ -13,5 +13,12 @@ export S3_PUBLIC_SECRET_ACCESS_KEY=
 export CLOUDFLARE_ACCOUNT_ID=
 export CLOUDFLARE_API_TOKEN=
 
-# export TF_VAR_linode_token=
-# export KUBECONFIG=$PWD/kubeconfig.yaml
+export TF_VAR_linode_token=
+
+KUBECONFIG=$PWD/infra/kubeconfig.yaml
+
+if [ -f $PWD/infra/kubeconfig.yaml ]; then
+  export KUBECONFIG
+fi
+
+watch_file $KUBECONFIG

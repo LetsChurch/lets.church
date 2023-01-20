@@ -13,7 +13,7 @@ provider "linode" {
 
 provider "helm" {
   kubernetes {
-    config_path = "kubeconfig.yaml"
+    config_path = var.kubeconfig_location
   }
 }
 
@@ -33,14 +33,14 @@ resource "linode_lke_cluster" "k8s" {
   }
 }
 
-resource "local_file" "kubeconfig" {
-  depends_on = [linode_lke_cluster.k8s]
-  filename   = "kubeconfig.yaml"
-  content    = base64decode(linode_lke_cluster.k8s.kubeconfig)
+resource "local_sensitive_file" "kubeconfig" {
+  depends_on     = [linode_lke_cluster.k8s]
+  filename       = var.kubeconfig_location
+  content_base64 = linode_lke_cluster.k8s.kubeconfig
 }
 
 resource "helm_release" "ingress-nginx" {
-  depends_on = [local_file.kubeconfig]
+  depends_on = [local_sensitive_file.kubeconfig]
   name       = "ingress-nginx"
   repository = "https://kubernetes.github.io/ingress-nginx"
   chart      = "ingress-nginx"

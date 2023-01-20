@@ -1,10 +1,124 @@
+variables:
+  GIT_LFS_SKIP_SMUDGE: "1"
+
+stages:
+  - setup
+  - check
+  - test
+  - build
+  - deploy
+
 cache:
+  key: $CI_COMMIT_REF_SLUG
   paths:
-    - services/gateway/node_modules
-    - apps/web/node_modules
-    - scripts/node_modules
-check:
+    - .npm/
+
+.setup:
+  activate_hermit: source ./bin/activate-hermit
+  npmci: npm ci --cache $CI_PROJECT_DIR/.npm --prefer-offline
+  docker_login: docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+
+default:
+  before_script:
+    - !reference [.setup, activate_hermit]
+
+#  ____  _____ _____ _   _ ____
+# / ___|| ____|_   _| | | |  _ \
+# \___ \|  _|   | | | | | | |_) |
+#  ___) | |___  | | | |_| |  __/
+# |____/|_____| |_|  \___/|_|
+
+npmci:
+  stage: setup
   script:
-    - source ./bin/activate-hermit
-    - just npmi-host
-    - just check
+    - cd $CI_PROJECT_DIR/services/gateway
+    - !reference [.setup, npmci]
+    - cd $CI_PROJECT_DIR/services/media
+    - !reference [.setup, npmci]
+    - cd $CI_PROJECT_DIR/apps/web
+    - !reference [.setup, npmci]
+    - cd $CI_PROJECT_DIR/scripts
+    - !reference [.setup, npmci]
+
+#   ____ _   _ _____ ____ _  __
+#  / ___| | | | ____/ ___| |/ /
+# | |   | |_| |  _|| |   | ' /
+# | |___|  _  | |__| |___| . \
+#  \____|_| |_|_____\____|_|\_\
+
+check-gateway:
+  stage: check
+  script:
+    - cd $CI_PROJECT_DIR/services/gateway
+    - !reference [.setup, npmci]
+    - npm run check
+
+check-media:
+  stage: check
+  script:
+    - cd $CI_PROJECT_DIR/services/media
+    - !reference [.setup, npmci]
+    - npm run check
+
+check-web:
+  stage: check
+  script:
+    - cd $CI_PROJECT_DIR/apps/web
+    - !reference [.setup, npmci]
+    - npm run check
+
+check-scripts:
+  stage: check
+  script:
+    - cd $CI_PROJECT_DIR/scripts
+    - !reference [.setup, npmci]
+    - npm run check
+
+#  _____ _____ ____ _____
+# |_   _| ____/ ___|_   _|
+#   | | |  _| \___ \ | |
+#   | | | |___ ___) || |
+#   |_| |_____|____/ |_|
+
+test-gateway:
+  stage: test
+  script:
+    - cd services/gateway
+    - !reference [.setup, npmci]
+    - npm run test
+
+#  ____  _   _ ___ _     ____
+# | __ )| | | |_ _| |   |  _ \
+# |  _ \| | | || || |   | | | |
+# | |_) | |_| || || |___| |_| |
+# |____/ \___/|___|_____|____/
+
+.build-base: &build-base
+  image: docker:20.10.23
+  stage: build
+  services:
+    - docker:20.10.23-dind
+  before_script:
+    - docker info
+    - !reference [.setup, docker_login]
+
+build-gateway:
+  <<: *build-base
+  script:
+    - cd services/gateway
+    - docker build -f ./gateway.Dockerfile -t registry.gitlab.com/letschurch/lets.church/gateway:${CI_COMMIT_SHORT_SHA} .
+    - docker push registry.gitlab.com/letschurch/lets.church/gateway:${CI_COMMIT_SHORT_SHA}
+
+build-background-worker:
+  <<: *build-base
+  script:
+    - cd services/gateway
+    - docker build -f ./background-worker.Dockerfile -t registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA} .
+    - docker push registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA}
+
+build-process-upload-worker:
+  <<: *build-base
+  script:
+    - cd services/gateway
+    - docker build -f ./process-upload-worker.Dockerfile --target service -t registry.gitlab.com/letschurch/lets.church/process-upload-worker:${CI_COMMIT_SHORT_SHA} .
+    - docker push registry.gitlab.com/letschurch/lets.church/process-upload-worker:${CI_COMMIT_SHORT_SHA}

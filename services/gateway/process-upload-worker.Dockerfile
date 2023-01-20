@@ -13,7 +13,7 @@ WORKDIR /home/build/whisper.cpp
 RUN git checkout 32fbc8c && make
 RUN ./models/download-ggml-model.sh base
 
-FROM node:19.0.0-bullseye as dev
+FROM node:19.4.0-bullseye as service
 RUN apt update && apt install -y ffmpeg imagemagick jpegoptim
 COPY --from=build-oxipng /root/.cargo/bin/oxipng /usr/bin/oxipng
 COPY --from=build-whisper /home/build/whisper.cpp/main /usr/bin/whisper
@@ -22,20 +22,4 @@ COPY --from=build-whisper /home/build/whisper.cpp/models/ggml-base.bin /opt/whis
 WORKDIR /home/node/app
 COPY . .
 RUN npm ci
-CMD npm run dev
-
-FROM dev as build
-ENV NODE_ENV production
-WORKDIR /home/node/app
-RUN npm run build
-
-FROM node:19.0.0-bullseye as prod
-RUN apt update && apt install -y ffmpeg imagemagick jpegoptim
-COPY --from=build-oxipng /root/.cargo/bin/oxipng /usr/bin/oxipng
-COPY --from=build-whisper /home/build/whisper.cpp/main /usr/bin/whisper
-RUN mkdir /opt/whisper
-COPY --from=build-whisper /home/build/whisper.cpp/models/ggml-base.bin /opt/whisper/ggml-base.bin
-ENV NODE_ENV production
-WORKDIR /home/node/app
-COPY --from=build /home/node/app/.output .
-CMD node .output/server/index.mjs
+CMD npm run start:process-upload-worker
