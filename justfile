@@ -124,6 +124,9 @@ test-gateway:
 
 test: test-gateway
 
+tf *params:
+  cd infra; terraform {{params}}
+
 transcribe file:
   docker-compose run -v $PWD:/host -w /host process-upload-worker /bin/bash -c 'ffmpeg -i {{file}} -ar 16000 -ac 1 {{file}}.wav'
   docker-compose run -v $PWD:/host -w /host process-upload-worker /bin/bash -c 'whisper --output-vtt -m /opt/whisper/ggml-base.bin {{file}}.wav'
