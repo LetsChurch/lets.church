@@ -57,8 +57,8 @@ services:
   gateway:
     build:
       context: ./services/gateway
-      dockerfile: gateway.Dockerfile
-    command: npm run dev
+      target: server
+    command: npm run dev:server
     ports:
       - ${HOST_GATEWAY_PORT}:3000
     environment:
@@ -78,8 +78,7 @@ services:
   process-upload-worker:
     build:
       context: ./services/gateway
-      dockerfile: process-upload-worker.Dockerfile
-      target: app
+      target: process-upload-worker
     command: npm run dev:process-upload-worker
     environment:
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
@@ -92,7 +91,7 @@ services:
   background-worker:
     build:
       context: ./services/gateway
-      dockerfile: background-worker.Dockerfile
+      target: background-worker
     command: npm run dev:background-worker
     environment:
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch

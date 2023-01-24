@@ -3,7 +3,7 @@ import type {
   PropertyName,
 } from '@elastic/elasticsearch/lib/api/types';
 import { diff } from 'jest-diff';
-import chalk from 'chalk';
+import pc from 'picocolors';
 import { waitForElasticsearch, client } from '../src/util/elasticsearch';
 
 await waitForElasticsearch();
@@ -122,9 +122,9 @@ console.log('Preview of index mapping changes:');
 console.log(
   diff(serverMappings, targetMappings, {
     aAnnotation: 'Server',
-    aColor: chalk.red,
+    aColor: pc.red,
     bAnnotation: 'Target',
-    bColor: chalk.green,
+    bColor: pc.green,
   }),
 );
 

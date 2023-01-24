@@ -93,7 +93,7 @@ test-gateway:
 # | |_) | |_| || || |___| |_| |
 # |____/ \___/|___|_____|____/
 
-.build-base: &build-base
+.build-common: &build-common
   image: docker:20.10.23
   stage: build
   services:
@@ -102,23 +102,36 @@ test-gateway:
     - docker info
     - !reference [.setup, docker_login]
 
-build-gateway:
-  <<: *build-base
+build-base:
+  <<: *build-common
   script:
     - cd services/gateway
-    - docker build -f ./gateway.Dockerfile -t registry.gitlab.com/letschurch/lets.church/gateway:${CI_COMMIT_SHORT_SHA} .
+    - docker build --target base -t registry.gitlab.com/letschurch/lets.church/base:${CI_COMMIT_SHORT_SHA} --cache-from registry.gitlab.com/letschurch/lets.church/base:latest .
+    - docker push registry.gitlab.com/letschurch/lets.church/base:${CI_COMMIT_SHORT_SHA}
+
+build-server:
+  <<: *build-common
+  needs:
+    - build-base
+  script:
+    - cd services/gateway
+    - docker build --target server -t registry.gitlab.com/letschurch/lets.church/gateway:${CI_COMMIT_SHORT_SHA} --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/server:latest .
     - docker push registry.gitlab.com/letschurch/lets.church/gateway:${CI_COMMIT_SHORT_SHA}
 
 build-background-worker:
-  <<: *build-base
+  <<: *build-common
+  needs:
+    - build-base
   script:
     - cd services/gateway
-    - docker build -f ./background-worker.Dockerfile -t registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA} .
+    - docker build --target background-worker -t registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA} --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/build-background-worker:latest .
     - docker push registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA}
 
 build-process-upload-worker:
-  <<: *build-base
+  <<: *build-common
+  needs:
+    - build-base
   script:
     - cd services/gateway
-    - docker build -f ./process-upload-worker.Dockerfile --target service -t registry.gitlab.com/letschurch/lets.church/process-upload-worker:${CI_COMMIT_SHORT_SHA} .
+    - docker build --target process-upload-worker -t registry.gitlab.com/letschurch/lets.church/process-upload-worker:${CI_COMMIT_SHORT_SHA} --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/process-upload-worker:latest .
     - docker push registry.gitlab.com/letschurch/lets.church/process-upload-worker:${CI_COMMIT_SHORT_SHA}
