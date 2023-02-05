@@ -17,6 +17,10 @@ provider "helm" {
   }
 }
 
+provider "kubernetes" {
+  config_path = var.kubeconfig_location
+}
+
 resource "linode_lke_cluster" "k8s" {
   k8s_version = var.k8s_version
   label       = var.k8s_label
@@ -44,6 +48,36 @@ resource "helm_release" "ingress-nginx" {
   name       = "ingress-nginx"
   repository = "https://kubernetes.github.io/ingress-nginx"
   chart      = "ingress-nginx"
+}
+
+resource "kubernetes_namespace_v1" "preview" {
+  depends_on = [local_sensitive_file.kubeconfig]
+
+  metadata {
+    name = "preview"
+  }
+}
+
+resource "kubernetes_secret_v1" "image_pull" {
+  depends_on = [local_sensitive_file.kubeconfig]
+
+  metadata {
+    name      = "regcred"
+    namespace = kubernetes_namespace_v1.preview.metadata[0].name
+  }
+
+  type = "kubernetes.io/dockerconfigjson"
+
+  data = {
+    ".dockerconfigjson" = jsonencode({
+      auths = {
+        "${var.docker_registry_server}" = {
+          username = var.docker_registry_username
+          password = var.docker_registry_password
+        }
+      }
+    })
+  }
 }
 
 output "kubeconfig" {

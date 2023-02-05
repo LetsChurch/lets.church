@@ -1,0 +1,43 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: $NAMESPACE
+  name: temporal-ui
+  labels:
+    app: temporal-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: temporal-ui
+  template:
+    metadata:
+      labels:
+        app: temporal-ui
+    spec:
+      restartPolicy: Always
+      containers:
+        - image: temporalio/ui:2.9.0
+          name: temporal-ui
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: temporal-client-config
+          env:
+            - name: OINKOINKMOO
+              value: 'hello' # Default value is '*'
+          # env:
+          #   - name: TEMPORAL_CORS_ORIGINS
+          #     value: '*' # Default value is '*'
+      #     volumeMounts:
+      #       - name: temporal-dynamic-config
+      #         mountPath: /etc/temporal/config/dynamicconfig
+      # volumes:
+      #   - name: temporal-dynamic-config
+      #     configMap:
+      #       name: temporal-server-dynamic-config
+      #       items:
+      #         - key: empty
+      #           path: docker.yaml

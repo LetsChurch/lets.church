@@ -1,0 +1,83 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: $NAMESPACE
+  name: elasticsearch
+  labels:
+    app: elasticsearch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      restartPolicy: Always
+      containers:
+        - &elasticsearchContainer
+          image: elasticsearch:8.5.2
+          name: elasticsearch
+          ports:
+            - containerPort: 9200
+          envFrom:
+            - configMapRef:
+                name: elasticsearch-config
+          volumeMounts:
+            - mountPath: /usr/share/elasticsearch/data
+              name: esdata
+      initContainers:
+        - <<: *elasticsearchContainer
+          name: file-permissions
+          image: busybox:1.36.0
+          command: ['chown', '-R', '1000:1000', '/usr/share/elasticsearch/data']
+      volumes:
+        - name: esdata
+          persistentVolumeClaim:
+            claimName: elasticsearch-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+spec:
+  selector:
+    app: elasticsearch
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 9200
+      targetPort: 9200
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: elasticsearch-pv
+  labels:
+    type: local
+    app: elasticsearch
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/mnt/data"
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: elasticsearch-pvc
+  labels:
+    app: elasticsearch
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi

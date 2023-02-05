@@ -1,5 +1,6 @@
 variable "linode_token" {
-  default = "Linode API personal access token"
+  default   = "Linode API personal access token"
+  sensitive = true
 }
 
 variable "k8s_version" {
@@ -25,4 +26,19 @@ variable "k8s_tags" {
 variable "kubeconfig_location" {
   description = "Location to store the kubeconfig file"
   default     = "kubeconfig.yaml"
+}
+
+variable "docker_registry_server" {
+  description = "Docker registry server"
+  default     = "https://registry.gitlab.com"
+}
+
+variable "docker_registry_username" {
+  description = "Docker registry username"
+  sensitive   = true
+}
+
+variable "docker_registry_password" {
+  description = "Docker registry password"
+  sensitive   = true
 }

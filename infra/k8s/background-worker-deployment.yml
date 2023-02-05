@@ -1,0 +1,39 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: $NAMESPACE
+  name: background-worker
+  labels:
+    app: background-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: background-worker
+  template:
+    metadata:
+      labels:
+        app: background-worker
+    spec:
+      restartPolicy: Always
+      imagePullSecrets:
+        - name: regcred
+      containers:
+        - image: "registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA}"
+          name: background-worker
+          envFrom:
+            - configMapRef:
+                name: gateway-config
+            - configMapRef:
+                name: temporal-client-config
+            - configMapRef:
+                name: background-worker-config
+            - secretRef:
+                name: postgres-credentials
+            - secretRef:
+                name: s3-secret
+            - secretRef:
+                name: jwt-secret
+            - secretRef:
+                name: smtp-secret

@@ -1,0 +1,52 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: $NAMESPACE
+  name: temporal
+  labels:
+    app: temporal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: temporal
+  template:
+    metadata:
+      labels:
+        app: temporal
+    spec:
+      restartPolicy: Always
+      containers:
+        - image: temporalio/auto-setup:1.19.0.0
+          name: temporal
+          ports:
+            - containerPort: 7233
+          envFrom:
+            - configMapRef:
+                name: temporal-server-config
+            - secretRef:
+                name: temporal-server-secrets
+          volumeMounts:
+            - name: temporal-dynamic-config
+              mountPath: /etc/temporal/config/dynamicconfig
+      volumes:
+        - name: temporal-dynamic-config
+          configMap:
+            name: temporal-server-dynamic-config
+            items:
+              - key: yaml
+                path: production-sql.yml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal
+spec:
+  selector:
+    app: temporal
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 7233
+      targetPort: 7233

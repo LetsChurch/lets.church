@@ -83,6 +83,7 @@ services:
     environment:
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
       <<: *s3-env
     volumes:
       - ./services/gateway:/home/node/app
@@ -98,7 +99,7 @@ services:
       ELASTICSEARCH_URL: http://elasticsearch:9200
       JWT_SECRET: ${JWT_SECRET}
       TEMPORAL_ADDRESS: temporal:7233
-      TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
+      TEMPORAL_SHUTDOWN_GRACE_TIME: 1m
       <<: *s3-env
       SMTP_URL: smtp://mailhog:1025?pool=true
     volumes:

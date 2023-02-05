@@ -14,6 +14,8 @@ export CLOUDFLARE_ACCOUNT_ID=
 export CLOUDFLARE_API_TOKEN=
 
 export TF_VAR_linode_token=
+export TF_VAR_docker_registry_username=
+export TF_VAR_docker_registry_password=
 
 KUBECONFIG=$PWD/infra/kubeconfig.yaml
 
