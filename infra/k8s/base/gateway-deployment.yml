@@ -21,15 +21,13 @@ spec:
         - name: regcred
       containers:
         - &gatewayContainer
-          image: "registry.gitlab.com/letschurch/lets.church/gateway:${CI_COMMIT_SHORT_SHA}"
+          image: registry.gitlab.com/letschurch/lets.church/gateway:latest
           name: gateway
           ports:
             - containerPort: 3000
           envFrom:
             - configMapRef:
                 name: gateway-config
-            - configMapRef:
-                name: postgres-config
             - configMapRef:
                 name: temporal-client-config
             - secretRef:

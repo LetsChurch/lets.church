@@ -1,0 +1,9 @@
+resources:
+  - config.yml
+  - gateway-deployment.yml
+  - background-worker-deployment.yml
+  - process-upload-worker-deployment.yml
+  - elasticsearch-deployment.yml
+  - temporal-deployment.yml
+  - temporal-ui-deployment.yml
+  - postgres-deployment.yml

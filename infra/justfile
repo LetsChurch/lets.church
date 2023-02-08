@@ -1,0 +1,39 @@
+tf *params:
+  terraform {{params}}
+
+deploy-check-vars:
+  #!/usr/bin/env bash
+
+  required_vars=(
+    CI_COMMIT_SHORT_SHA
+    NAMESPACE
+    MEDIA_URL
+    API_HOST
+    TEMPORAL_POSTGRES_USER_BASE64
+    TEMPORAL_POSTGRES_PASSWORD_BASE64
+    DATABASE_URL_BASE64
+    POSTGRES_USER_BASE64
+    POSTGRES_PASSWORD_BASE64
+    SMTP_URL_BASE64
+  )
+
+  for var in "${required_vars[@]}"; do
+    if [ -z "${!var}" ]; then
+      echo "Error: $var is not set."
+      exit 1
+    fi
+  done
+
+deploy-set-images env hash:
+  #!/usr/bin/env bash
+  cd k8s/{{env}}
+  kustomize edit set image registry.gitlab.com/letschurch/lets.church/gateway:{{hash}}
+  kustomize edit set image registry.gitlab.com/letschurch/lets.church/background-worker:{{hash}}
+  kustomize edit set image registry.gitlab.com/letschurch/lets.church/process-upload-worker:{{hash}}
+
+deploy env: deploy-check-vars
+  just deploy-set-images {{env}} $CI_COMMIT_SHORT_SHA
+  kubectl apply -k k8s/{{env}}
+
+delete-k8s env: deploy-check-vars
+  kustomize build k8s/{{env}} | kubectl delete -f -

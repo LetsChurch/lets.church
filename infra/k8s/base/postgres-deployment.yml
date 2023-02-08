@@ -18,29 +18,33 @@ spec:
     spec:
       restartPolicy: Always
       containers:
-        - image: postgres:14.6-alpine
+        - &postgresContainer
+          image: postgres:14.6-alpine
           name: postgres
           ports:
             - containerPort: 5432
           envFrom:
-            - configMapRef:
-                name: postgres-config
             - secretRef:
                 name: postgres-credentials
           volumeMounts:
             - mountPath: /var/lib/postgresql/data
               name: pgdata
             - mountPath: /docker-entrypoint-initdb.d
-              name: postgres-initsql
+              name: init-sql
+      initContainers:
+        - <<: *postgresContainer
+          name: file-permissions
+          image: busybox:1.36.0
+          command: ['chown', '-R', '70:70', '/var/lib/postgresql/data']
       volumes:
         - name: pgdata
           persistentVolumeClaim:
             claimName: postgres-pvc
-        - name: postgres-initsql
+        - name: init-sql
           secret:
-            secretName: postgres-initsql
+            secretName: init-sql
             items:
-              - key: SQL
+              - key: init.sql
                 path: init.sql
 ---
 apiVersion: v1
@@ -64,11 +68,11 @@ metadata:
     type: local
     app: postgres
 spec:
-  storageClassName: manual
+  # storageClassName: manual
   capacity:
     storage: 5Gi
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   hostPath:
     path: /var/lib/postgresql/data
 ---
@@ -79,9 +83,9 @@ metadata:
   labels:
     app: postgres
 spec:
-  storageClassName: manual
+  # storageClassName: manual
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 5Gi

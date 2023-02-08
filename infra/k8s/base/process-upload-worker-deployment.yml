@@ -3,37 +3,34 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   namespace: $NAMESPACE
-  name: background-worker
+  name: process-upload-worker
   labels:
-    app: background-worker
+    app: process-upload-worker
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: background-worker
+      app: process-upload-worker
   template:
     metadata:
       labels:
-        app: background-worker
+        app: process-upload-worker
     spec:
       restartPolicy: Always
       imagePullSecrets:
         - name: regcred
       containers:
-        - image: "registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA}"
-          name: background-worker
+        - image: registry.gitlab.com/letschurch/lets.church/process-upload-worker:latest
+          name: process-upload-worker
           envFrom:
-            - configMapRef:
-                name: gateway-config
             - configMapRef:
                 name: temporal-client-config
             - configMapRef:
-                name: background-worker-config
+                name: process-upload-worker-config
             - secretRef:
                 name: postgres-credentials
             - secretRef:
                 name: s3-secret
-            - secretRef:
-                name: jwt-secret
-            - secretRef:
-                name: smtp-secret
+          env:
+            - name: TEMPORAL_SHUTDOWN_GRACE_TIME
+              value: 1h
