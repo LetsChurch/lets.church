@@ -7,3 +7,43 @@ resources:
   - temporal-deployment.yml
   - temporal-ui-deployment.yml
   - postgres-deployment.yml
+configMapGenerator:
+  - name: web-config
+    literals:
+      - GRAPHQL_URL="http://gateway:3000/graphql"
+  - name: gateway-config
+    literals:
+      - POSTGRES_HOST="postgres:5432"
+      - ELASTICSEARCH_URL="http://elasticsearch:9200"
+      - MEDIA_URL="http://MEDIA_URL"
+      - ZXCVBN_MINIMUM_SCORE="3"
+  - name: temporal-server-config
+    literals:
+      - SKIP_DB_CREATE="true"
+      - DB=postgresql # Database vendor
+      - DB_PORT="5432" # Database port
+      - POSTGRES_SEEDS=postgres # Database server
+      - DBNAME=temporal
+      - VISIBILITY_DBNAME=temporal
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/production-sql.yml
+      - ENABLE_ES="true"
+      - ES_SEEDS=elasticsearch
+      - ES_VERSION=v7 # Even though we run v8, temporal only has configuration for v7
+  - name: temporal-client-config
+    literals:
+      - TEMPORAL_ADDRESS=temporal:7233
+  - name: background-worker-config
+    literals:
+      - TEMPORAL_SHUTDOWN_GRACE_TIME=1m
+  - name: process-upload-worker-config
+    literals:
+      - TEMPORAL_SHUTDOWN_GRACE_TIME=1h
+  - name: elasticsearch-config
+    literals:
+      - cluster.routing.allocation.disk.threshold_enabled="true"
+      - cluster.routing.allocation.disk.watermark.low=512mb
+      - cluster.routing.allocation.disk.watermark.high=256mb
+      - cluster.routing.allocation.disk.watermark.flood_stage=128mb
+      - discovery.type=single-node
+      - ES_JAVA_OPTS="-Xms256m -Xmx256m"
+      - xpack.security.enabled="false"

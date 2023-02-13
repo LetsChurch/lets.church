@@ -135,3 +135,12 @@ build-process-upload-worker:
     - cd services/gateway
     - docker build --target process-upload-worker -t registry.gitlab.com/letschurch/lets.church/process-upload-worker:${CI_COMMIT_SHORT_SHA} --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/process-upload-worker:latest .
     - docker push registry.gitlab.com/letschurch/lets.church/process-upload-worker:${CI_COMMIT_SHORT_SHA}
+
+build-web:
+  <<: *build-common
+  needs:
+    - build-base
+  script:
+    - cd apps/web
+    - docker build -t registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA} --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/web:latest .
+    - docker push registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA}

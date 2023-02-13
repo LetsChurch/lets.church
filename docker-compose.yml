@@ -30,6 +30,7 @@ services:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
+    command: npm run dev
     ports:
       - ${HOST_WEB_PORT}:3000
     environment:

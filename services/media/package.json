@@ -4,7 +4,7 @@
   "scripts": {
     "predev": "echo JWT_SECRET=$JWT_SECRET > .dev.vars",
     "dev": "wrangler dev",
-    "deploy": "wrangler publish",
+    "deploy:preview": "wrangler publish --env preview",
     "check": "npm-run-all check:*",
     "check:lint": "eslint --ext .ts,.tsx .",
     "check:format": "prettier --check .",
