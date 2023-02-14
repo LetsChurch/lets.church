@@ -1,5 +1,13 @@
+default:
+  @just --choose
+
 tf *params:
   terraform {{params}}
+
+init-k8s-cert-manager:
+  kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.yaml
+
+init-k8s: init-k8s-cert-manager
 
 deploy-check-vars:
   #!/usr/bin/env bash
@@ -30,6 +38,7 @@ deploy-set-images env hash:
   kustomize edit set image registry.gitlab.com/letschurch/lets.church/gateway:{{hash}}
   kustomize edit set image registry.gitlab.com/letschurch/lets.church/background-worker:{{hash}}
   kustomize edit set image registry.gitlab.com/letschurch/lets.church/process-upload-worker:{{hash}}
+  kustomize edit set image registry.gitlab.com/letschurch/lets.church/web:{{hash}}
 
 deploy env: deploy-check-vars
   just deploy-set-images {{env}} $CI_COMMIT_SHORT_SHA

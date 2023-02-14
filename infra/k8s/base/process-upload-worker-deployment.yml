@@ -2,7 +2,6 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  namespace: $NAMESPACE
   name: process-upload-worker
   labels:
     app: process-upload-worker

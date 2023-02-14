@@ -1,4 +1,5 @@
 resources:
+  - production-issuer.yml
   - config.yml
   - gateway-deployment.yml
   - background-worker-deployment.yml
@@ -7,6 +8,7 @@ resources:
   - temporal-deployment.yml
   - temporal-ui-deployment.yml
   - postgres-deployment.yml
+  - web-deployment.yml
 configMapGenerator:
   - name: web-config
     literals:

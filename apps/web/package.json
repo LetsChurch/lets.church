@@ -6,7 +6,7 @@
     "dev:codegen": "ts-node-esm --transpileOnly ./wait.ts && npm run codegen -- -w src/routes/**/*.ts",
     "build": "solid-start build",
     "deploy:preview": "wrangler publish --env preview",
-    "start": "solid-start start",
+    "start": "node ./dist/server.js",
     "check": "npm-run-all check:*",
     "check:lint": "eslint --ext .ts,.tsx .",
     "check:format": "prettier --check .",

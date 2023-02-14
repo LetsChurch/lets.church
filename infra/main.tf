@@ -4,11 +4,19 @@ terraform {
       source  = "linode/linode"
       version = "1.29.4"
     }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "3.34.0"
+    }
   }
 }
 
 provider "linode" {
   token = var.linode_token
+}
+
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token
 }
 
 provider "helm" {
@@ -37,17 +45,27 @@ resource "linode_lke_cluster" "k8s" {
   }
 }
 
+# This is imported. TODO: use external dns
+resource "linode_nodebalancer" "nginx_ingress" {
+  region               = "us-central"
+  label                = "nginx-ingress"
+  client_conn_throttle = 20
+}
+
 resource "local_sensitive_file" "kubeconfig" {
   depends_on     = [linode_lke_cluster.k8s]
   filename       = var.kubeconfig_location
   content_base64 = linode_lke_cluster.k8s.kubeconfig
 }
 
-resource "helm_release" "ingress-nginx" {
+resource "helm_release" "ingress_nginx" {
   depends_on = [local_sensitive_file.kubeconfig]
   name       = "ingress-nginx"
   repository = "https://kubernetes.github.io/ingress-nginx"
   chart      = "ingress-nginx"
+  values = [
+    "${file("nginx-values.yml")}"
+  ]
 }
 
 resource "kubernetes_namespace_v1" "preview" {

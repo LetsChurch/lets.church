@@ -2,7 +2,6 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  namespace: $NAMESPACE
   name: background-worker
   labels:
     app: background-worker

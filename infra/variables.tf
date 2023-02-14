@@ -1,6 +1,16 @@
 variable "linode_token" {
-  default   = "Linode API personal access token"
-  sensitive = true
+  description = "Linode API personal access token"
+  sensitive   = true
+}
+
+variable "cloudflare_account_id" {
+  description = "Cloudflare Account ID"
+  sensitive   = true
+}
+
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token"
+  sensitive   = true
 }
 
 variable "k8s_version" {

@@ -144,3 +144,32 @@ build-web:
     - cd apps/web
     - docker build -t registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA} --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/web:latest .
     - docker push registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA}
+
+#  ____             _
+# |  _ \  ___ _ __ | | ___  _   _ 
+# | | | |/ _ \ '_ \| |/ _ \| | | |
+# | |_| |  __/ |_) | | (_) | |_| |
+# |____/ \___| .__/|_|\___/ \__, |
+#            |_|            |___/ 
+
+deploy-media-worker:
+  stage: deploy
+  script:
+    - cd services/media
+    - !reference [.setup, npmci]
+    - npm run deploy:preview
+
+deploy-k8s:
+  stage: deploy
+  needs:
+    - deploy-media-worker
+  script:
+    - cd infra/k8s/preview
+    - cp $INIT_SQL init.sql
+    - cp $S3_ENV s3.env
+    - cp $SMTP_ENV smtp.env
+    - kustomize edit set image registry.gitlab.com/letschurch/lets.church/gateway:${CI_COMMIT_SHORT_SHA}
+    - kustomize edit set image registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA}
+    - kustomize edit set image registry.gitlab.com/letschurch/lets.church/process-upload-worker:${CI_COMMIT_SHORT_SHA}
+    - kustomize edit set image registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA}
+    - kubectl apply -k .
