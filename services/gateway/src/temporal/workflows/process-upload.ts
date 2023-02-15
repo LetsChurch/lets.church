@@ -4,14 +4,15 @@ import invariant from 'tiny-invariant';
 import { indexDocumentWorkflow } from './background';
 import { BACKGROUND_QUEUE } from '../queues';
 
-const { probe, transcode, createThumbnails, processThumbnail } =
-  proxyActivities<typeof activities>({
-    startToCloseTimeout: '60 minutes',
-    heartbeatTimeout: '1 minute',
-  });
+const { probe, transcode, processThumbnail } = proxyActivities<
+  typeof activities
+>({
+  startToCloseTimeout: '60 minutes',
+  heartbeatTimeout: '1 minute',
+});
 
 // TODO: figure out how to get more frequent heartbeats
-const { transcribe } = proxyActivities<typeof activities>({
+const { transcribe, createThumbnails } = proxyActivities<typeof activities>({
   startToCloseTimeout: '60 minutes',
   heartbeatTimeout: '60 minutes',
 });
