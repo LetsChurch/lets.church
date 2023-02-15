@@ -1,15 +1,16 @@
 import envariant from '@knpwrs/envariant';
-import { SignJWT, jwtVerify } from 'jose';
+import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
 import * as Z from 'zod';
-import type { ZodTypeAny } from 'zod';
 
 const JWT_SECRET = envariant('JWT_SECRET');
 const jwtSecret = Buffer.from(JWT_SECRET, 'hex');
 
-function jwtFactory<S extends ZodTypeAny>(Schema: S, expires?: string) {
-  type T = Z.infer<S>;
+function jwtFactory<S extends JWTPayload>(
+  Schema: Z.Schema<S>,
+  expires?: string,
+) {
   return {
-    create: (t: T, exp = expires) => {
+    create: (t: S, exp = expires) => {
       const jwt = new SignJWT(t)
         .setProtectedHeader({ alg: 'HS512' })
         .setIssuedAt();
@@ -18,7 +19,7 @@ function jwtFactory<S extends ZodTypeAny>(Schema: S, expires?: string) {
       }
       return jwt.sign(jwtSecret);
     },
-    parse: async (jwt?: string): Promise<T | null> => {
+    parse: async (jwt?: string): Promise<S | null> => {
       try {
         return jwt
           ? Schema.parse(
