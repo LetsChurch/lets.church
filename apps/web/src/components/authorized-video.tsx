@@ -7,6 +7,7 @@ export type Props = {
   source: string;
   jwt: string;
   fluid?: boolean | undefined;
+  startAt?: number | undefined;
 };
 
 export default function AuthorizedVideo(props: Props) {
@@ -25,24 +26,32 @@ export default function AuthorizedVideo(props: Props) {
 
     invariant(videoRef, 'Video ref is undefined');
 
-    const player = videojs(videoRef, {
-      controls: true,
-      preload: 'auto',
-      fluid: props.fluid,
-      sources: [
-        {
-          src: props.source,
-          type: 'application/x-mpegURL',
-        },
-      ],
-    });
-
-    try {
-      player.play();
-    } catch (e) {
-      // The play method is not allowed by the user agent or the platform in the current context, possibly because the user denied permission.
-      console.warn('Could not automatically play video', e);
-    }
+    const player = videojs(
+      videoRef,
+      {
+        controls: true,
+        preload: 'auto',
+        fluid: props.fluid,
+        sources: [
+          {
+            src: props.source,
+            type: 'application/x-mpegURL',
+          },
+        ],
+      },
+      async () => {
+        try {
+          await player.play();
+          console.log(props.startAt);
+          if (typeof props.startAt === 'number') {
+            player.currentTime(props.startAt);
+          }
+        } catch (e) {
+          // The play method is not allowed by the user agent or the platform in the current context, possibly because the user denied permission.
+          console.warn('Could not automatically play video', e);
+        }
+      },
+    );
   });
 
   onCleanup(() => {

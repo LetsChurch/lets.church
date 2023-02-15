@@ -192,7 +192,7 @@ function SearchTranscriptHitRow(
         >
           {(hit) => (
             <A
-              href={`${props.href}#t=${hit.start}`}
+              href={`${props.href}#t=${hit.start / 1000}`}
               class="group/t-row relative z-10 flex gap-2 rounded-md px-2 py-1 hover:cursor-pointer"
               classList={{
                 group: showMore(),

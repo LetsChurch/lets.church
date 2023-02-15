@@ -5,6 +5,7 @@ import {
   useRouteData,
   A,
   refetchRouteData,
+  useLocation,
 } from 'solid-start';
 import server$, {
   createServerAction$,
@@ -40,6 +41,7 @@ import type {
   SubmitUploadRatingMutationVariables,
 } from './__generated__/[id]';
 import AuthorizedVideo from '~/components/authorized-video';
+import { isServer } from 'solid-js/web';
 
 function RatingButton(
   props: ParentProps<{
@@ -145,6 +147,23 @@ export function routeData({ params }: RouteDataArgs) {
     ratingState,
     metaData,
   };
+}
+
+function getStartAt() {
+  if (isServer) {
+    return undefined;
+  }
+
+  const loc = useLocation();
+
+  const hashParams = new URLSearchParams(loc.hash.slice(1));
+  const t = hashParams.get('t');
+
+  if (t) {
+    return parseInt(t);
+  }
+
+  return undefined;
 }
 
 export default function MediaRoute() {
@@ -261,6 +280,8 @@ export default function MediaRoute() {
     }, (new Date(exp * 1000).getTime() - Date.now()) / 2);
   }, null);
 
+  const startAt = getStartAt();
+
   return (
     <>
       <Title>{metaData()?.data.title ?? '...'} | Let's Church</Title>
@@ -274,6 +295,7 @@ export default function MediaRoute() {
                 ''
               }
               jwt={metaData()?.data.mediaJwt ?? ''}
+              startAt={startAt}
               fluid
             />
           </div>
