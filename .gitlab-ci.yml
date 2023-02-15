@@ -168,8 +168,5 @@ deploy-k8s:
     - cp $INIT_SQL init.sql
     - cp $S3_ENV s3.env
     - cp $SMTP_ENV smtp.env
-    - kustomize edit set image registry.gitlab.com/letschurch/lets.church/gateway:${CI_COMMIT_SHORT_SHA}
-    - kustomize edit set image registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA}
-    - kustomize edit set image registry.gitlab.com/letschurch/lets.church/process-upload-worker:${CI_COMMIT_SHORT_SHA}
-    - kustomize edit set image registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA}
+    - just deploy-set-images preview $CI_COMMIT_SHORT_SHA
     - kubectl apply -k .
