@@ -263,7 +263,7 @@ export default function SearchRoute() {
               >
                 {title}{' '}
                 <span
-                  class={`ml-3 hidden rounded-full py-0.5 px-2.5 text-xs font-medium md:inline-block ${
+                  class={`ml-3 rounded-full py-0.5 px-2.5 text-xs font-medium md:inline-block ${
                     current()
                       ? 'bg-indigo-100 text-indigo-600'
                       : 'bg-gray-100 text-gray-900'
