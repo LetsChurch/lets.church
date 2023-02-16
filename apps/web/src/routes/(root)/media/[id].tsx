@@ -285,8 +285,8 @@ export default function MediaRoute() {
   return (
     <>
       <Title>{metaData()?.data.title ?? '...'} | Let's Church</Title>
-      <div class="grid grid-cols-3 gap-4">
-        <div class="col-span-2 space-y-4">
+      <div class="md:grid md:grid-cols-3 md:gap-4">
+        <div class="space-y-4 md:col-span-2">
           <div class="aspect-video w-full bg-gray-100">
             <AuthorizedVideo
               source={
@@ -356,7 +356,7 @@ export default function MediaRoute() {
           </div>
           <div>comments</div>
         </div>
-        <div class="col-span-1 bg-gray-100">sidebar</div>
+        <div class="bg-gray-100 md:col-span-1">sidebar</div>
       </div>
     </>
   );
