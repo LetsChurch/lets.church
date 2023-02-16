@@ -54,18 +54,21 @@ export function msearchTranscripts(
           path: 'segments',
           query: {
             span_near: {
-              clauses: query.split(/\s+/g).map((w) => ({
-                span_multi: {
-                  match: {
-                    fuzzy: {
-                      'segments.text': {
-                        value: w,
-                        fuzziness: w.length > 4 ? 2 : 1,
+              clauses: query
+                .trim()
+                .split(/\s+/g)
+                .map((w) => ({
+                  span_multi: {
+                    match: {
+                      fuzzy: {
+                        'segments.text': {
+                          value: w,
+                          fuzziness: w.length > 4 ? 2 : 1,
+                        },
                       },
                     },
                   },
-                },
-              })),
+                })),
               slop: 5,
               in_order: true,
             },
