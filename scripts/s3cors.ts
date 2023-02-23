@@ -27,3 +27,20 @@ console.log(
     }),
   ),
 );
+
+console.log(
+  await client.send(
+    new PutBucketCorsCommand({
+      Bucket: envariant('S3_PUBLIC_BUCKET'),
+
+      CORSConfiguration: {
+        CORSRules: [
+          {
+            AllowedOrigins: ['*'],
+            AllowedMethods: ['GET'],
+          },
+        ],
+      },
+    }),
+  ),
+);
