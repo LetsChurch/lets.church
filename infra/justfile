@@ -4,11 +4,6 @@ default:
 tf *params:
   terraform {{params}}
 
-init-k8s-cert-manager:
-  kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.yaml
-
-init-k8s: init-k8s-cert-manager
-
 deploy-check-vars:
   #!/usr/bin/env bash
 

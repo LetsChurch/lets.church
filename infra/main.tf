@@ -26,12 +26,6 @@ provider "cloudflare" {
   api_token = var.cloudflare_api_token
 }
 
-provider "helm" {
-  kubernetes {
-    config_path = var.kubeconfig_location
-  }
-}
-
 provider "kubernetes" {
   config_path = var.kubeconfig_location
 }
@@ -63,16 +57,6 @@ resource "local_sensitive_file" "kubeconfig" {
   depends_on     = [linode_lke_cluster.k8s]
   filename       = var.kubeconfig_location
   content_base64 = linode_lke_cluster.k8s.kubeconfig
-}
-
-resource "helm_release" "ingress_nginx" {
-  depends_on = [local_sensitive_file.kubeconfig]
-  name       = "ingress-nginx"
-  repository = "https://kubernetes.github.io/ingress-nginx"
-  chart      = "ingress-nginx"
-  values = [
-    "${file("nginx-values.yml")}"
-  ]
 }
 
 resource "kubernetes_namespace_v1" "preview" {
