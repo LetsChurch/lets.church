@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import { stat } from 'node:fs/promises';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
+import { throttle } from 'lodash-es';
 import {
   retryablePutFile,
   S3_INGEST_BUCKET,
@@ -19,13 +20,19 @@ export default async function probe(
   s3UploadKey: string,
 ) {
   Context.current().heartbeat();
+  const cancellationSignal = Context.current().cancellationSignal;
 
   const dir = join(WORK_DIR, uploadRecordId);
   const downloadPath = join(dir, 'download');
 
   try {
     await mkdirp(dir);
-    await streamObjectToFile(S3_INGEST_BUCKET, s3UploadKey, downloadPath);
+    await streamObjectToFile(
+      S3_INGEST_BUCKET,
+      s3UploadKey,
+      downloadPath,
+      throttle(() => Context.current().heartbeat(), 5000),
+    );
 
     Context.current().heartbeat();
 
@@ -38,7 +45,11 @@ export default async function probe(
       data: { uploadSizeBytes: stats.size },
     });
 
-    const probe = await runFfprobe(dir, downloadPath);
+    const probe = await runFfprobe(
+      dir,
+      downloadPath,
+      cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+    );
     const probeJson = probe.stdout;
 
     const parsedProbe = ffprobeSchema.parse(JSON.parse(probeJson));

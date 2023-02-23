@@ -6,7 +6,7 @@ import { createReadStream } from 'node:fs';
 import PQueue from 'p-queue';
 import pMap from 'p-map';
 import fastGlob from 'fast-glob';
-import { chunk, compact, maxBy } from 'lodash-es';
+import { chunk, compact, maxBy, throttle } from 'lodash-es';
 import {
   retryablePutFile,
   S3_INGEST_BUCKET,
@@ -25,15 +25,29 @@ export default async function createThumbnails(
   uploadRecordId: string,
   s3UploadKey: string,
 ) {
+  const cancellationSignal = Context.current().cancellationSignal;
+  const dataHeartbeat = throttle(() => Context.current().heartbeat(), 5000);
   const dir = join(WORK_DIR, s3UploadKey);
 
   await mkdirp(dir);
   const downloadPath = join(dir, 'download');
-  await streamObjectToFile(S3_INGEST_BUCKET, s3UploadKey, downloadPath);
+  await streamObjectToFile(
+    S3_INGEST_BUCKET,
+    s3UploadKey,
+    downloadPath,
+    dataHeartbeat,
+  );
 
   Context.current().heartbeat();
   try {
-    await runFfmpegThumbnails(dir, downloadPath);
+    const proc = runFfmpegThumbnails(
+      dir,
+      downloadPath,
+      cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+    );
+    proc.stdout?.on('data', dataHeartbeat);
+    proc.stderr?.on('data', dataHeartbeat);
+    await proc;
     const uploadQueue = new PQueue({ concurrency: 1 });
     const thumbnailJpgs = (await fastGlob(join(dir, '*.jpg'))).sort();
     const thumbnailsWithSizes = await pMap(
@@ -49,33 +63,41 @@ export default async function createThumbnails(
     const largestThumbnail = maxBy(thumbnailsWithSizes, 'size')?.path;
     if (largestThumbnail) {
       // Upload the largest thumbnail as the video thumbnail
-      uploadQueue.add(async () => {
-        Context.current().heartbeat();
-        console.log(`Uploading thumbnail: ${largestThumbnail}`);
-        const path = `${uploadRecordId}/${basename(largestThumbnail)}`;
-        await retryablePutFile(
-          S3_PUBLIC_BUCKET,
-          path,
-          'image/jpeg',
-          createReadStream(largestThumbnail),
-          { contentLength: (await stat(largestThumbnail)).size },
-        );
-        await pRetry(
-          async (attempt) => {
-            console.log(`Setting thumbnail path: attempt ${attempt}`);
+      uploadQueue.add(
+        async () => {
+          Context.current().heartbeat();
+          console.log(`Uploading thumbnail: ${largestThumbnail}`);
+          const path = `${uploadRecordId}/${basename(largestThumbnail)}`;
+          await retryablePutFile(
+            S3_PUBLIC_BUCKET,
+            path,
+            'image/jpeg',
+            createReadStream(largestThumbnail),
+            { contentLength: (await stat(largestThumbnail)).size },
+          );
+          await pRetry(
+            async (attempt) => {
+              console.log(`Setting thumbnail path: attempt ${attempt}`);
 
-            const blurhash = await imageToBlurhash(largestThumbnail);
+              const blurhash = await imageToBlurhash(largestThumbnail);
 
-            await prisma.uploadRecord.updateMany({
-              where: { id: uploadRecordId, defaultThumbnailPath: null },
-              data: { defaultThumbnailPath: path, thumbnailBlurhash: blurhash },
-            });
-          },
-          { retries: 8 },
-        );
-        Context.current().heartbeat();
-        console.log(`Done uploading thumbnail: ${largestThumbnail}`);
-      });
+              await prisma.uploadRecord.updateMany({
+                where: { id: uploadRecordId, defaultThumbnailPath: null },
+                data: {
+                  defaultThumbnailPath: path,
+                  thumbnailBlurhash: blurhash,
+                },
+              });
+            },
+            { retries: 8 },
+          );
+          Context.current().heartbeat();
+          console.log(`Done uploading thumbnail: ${largestThumbnail}`);
+        },
+        {
+          signal: cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+        },
+      );
     }
     // Upload the remaining thumbnails
     uploadQueue.addAll(
@@ -97,6 +119,9 @@ export default async function createThumbnails(
         Context.current().heartbeat();
         console.log(`Done uploading thumbnail: ${path}`);
       }),
+      {
+        signal: cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+      },
     );
     const chunkSize = Math.ceil(thumbnailsWithSizes.length / 5);
     const thumbnailsWithSizesChunks = chunk(thumbnailsWithSizes, chunkSize);
@@ -104,24 +129,31 @@ export default async function createThumbnails(
       thumbnailsWithSizesChunks.map((chunks) => maxBy(chunks, 'size')?.path),
     );
     Context.current().heartbeat();
+    console.log({ pickedThumbnails });
     await concatThumbs(dir, pickedThumbnails);
-    uploadQueue.add(async () => {
-      console.log('Uploading hovernail');
-      await retryablePutFile(
-        S3_PUBLIC_BUCKET,
-        `${uploadRecordId}/hovernail.jpg`,
-        'image/jpeg',
-        createReadStream(join(dir, 'hovernail.jpg')),
-      );
-      Context.current().heartbeat();
-      console.log('Done uploading hovernail');
-    });
+    uploadQueue.add(
+      async () => {
+        console.log('Uploading hovernail');
+        await retryablePutFile(
+          S3_PUBLIC_BUCKET,
+          `${uploadRecordId}/hovernail.jpg`,
+          'image/jpeg',
+          createReadStream(join(dir, 'hovernail.jpg')),
+        );
+        Context.current().heartbeat();
+        console.log('Done uploading hovernail');
+      },
+      {
+        signal: cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+      },
+    );
     await uploadQueue.onEmpty();
   } catch (e) {
     console.log('Error!');
     console.log(e);
     throw e;
   } finally {
+    dataHeartbeat.flush();
     await rimraf(dir);
   }
 }

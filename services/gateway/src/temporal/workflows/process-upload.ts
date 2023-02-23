@@ -4,17 +4,16 @@ import invariant from 'tiny-invariant';
 import { indexDocumentWorkflow } from './background';
 import { BACKGROUND_QUEUE } from '../queues';
 
-const { probe, transcode, processThumbnail } = proxyActivities<
+const { probe, processThumbnail } = proxyActivities<typeof activities>({
+  startToCloseTimeout: '1 minute',
+  heartbeatTimeout: '1 minute',
+});
+
+const { transcribe, transcode, createThumbnails } = proxyActivities<
   typeof activities
 >({
   startToCloseTimeout: '60 minutes',
   heartbeatTimeout: '1 minute',
-});
-
-// TODO: figure out how to get more frequent heartbeats
-const { transcribe, createThumbnails } = proxyActivities<typeof activities>({
-  startToCloseTimeout: '60 minutes',
-  heartbeatTimeout: '60 minutes',
 });
 
 export async function processUpload(

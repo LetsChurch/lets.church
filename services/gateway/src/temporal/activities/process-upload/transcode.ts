@@ -20,6 +20,7 @@ import {
 } from '../../../util/s3';
 import rimraf from '../../../util/rimraf';
 import prisma from '../../../util/prisma';
+import { throttle } from 'lodash-es';
 
 const WORK_DIR = '/data/transcode';
 
@@ -34,12 +35,20 @@ export default async function transcode(
   probe: Probe,
 ) {
   Context.current().heartbeat('job start');
+  const cancellationSignal = Context.current().cancellationSignal;
   const dir = join(WORK_DIR, uploadRecordId);
+  const uploadQueue = new PQueue({ concurrency: 1 });
+  const dataHeartbeat = throttle(() => Context.current().heartbeat(), 5000);
 
   try {
     await mkdirp(dir);
     const downloadPath = join(dir, 'download');
-    await streamObjectToFile(S3_INGEST_BUCKET, s3UploadKey, downloadPath);
+    await streamObjectToFile(
+      S3_INGEST_BUCKET,
+      s3UploadKey,
+      downloadPath,
+      dataHeartbeat,
+    );
 
     Context.current().heartbeat('file downloaded');
 
@@ -58,39 +67,50 @@ export default async function transcode(
       `Will encode ${variants.length} variants: ${formatter.format(variants)}`,
     );
 
-    const uploadQueue = new PQueue({ concurrency: 1 });
-
     // Watch for new video segments and upload them
     const watcher = chokidar.watch(join(dir, '*.ts')).on('add', (path) => {
       console.log(`New media segment: ${path}`);
 
       const fileName = basename(path);
 
-      uploadQueue.add(async () => {
-        Context.current().heartbeat(`Starting uplaod: ${path}`);
-        console.log(`Uploading media segment: ${path}`);
+      uploadQueue.add(
+        async () => {
+          Context.current().heartbeat(`Starting uplaod: ${path}`);
+          console.log(`Uploading media segment: ${path}`);
 
-        await retryablePutFile(
-          S3_PUBLIC_BUCKET,
-          `${uploadRecordId}/${fileName}`,
-          'video/mp2ts',
-          createReadStream(path),
-          {
-            contentLength: (await stat(path)).size,
-          },
-        );
+          await retryablePutFile(
+            S3_PUBLIC_BUCKET,
+            `${uploadRecordId}/${fileName}`,
+            'video/mp2ts',
+            createReadStream(path),
+            {
+              contentLength: (await stat(path)).size,
+            },
+          );
 
-        console.log(`Done uploading media segment: ${path}`);
-        console.log(`Deleting ${path}`);
+          console.log(`Done uploading media segment: ${path}`);
+          console.log(`Deleting ${path}`);
 
-        await unlink(path);
+          await unlink(path);
 
-        console.log(`Deleted ${path}`);
-        Context.current().heartbeat(`Uploading done: ${path}`);
-      });
+          console.log(`Deleted ${path}`);
+          Context.current().heartbeat(`Uploading done: ${path}`);
+        },
+        {
+          signal: cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+        },
+      );
     });
 
-    const encodeProc = await runFfmpegEncode(dir, downloadPath, variants);
+    const encodeProc = runFfmpegEncode(
+      dir,
+      downloadPath,
+      variants,
+      cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+    );
+    encodeProc.stdout?.on('data', dataHeartbeat);
+    encodeProc.stderr?.on('data', dataHeartbeat);
+
     const playlists = await fastGlob(join(dir, '*.m3u8'));
 
     // Upload playlist files
@@ -111,25 +131,33 @@ export default async function transcode(
         Context.current().heartbeat(`Uploaded playlist file: ${filename}`);
         console.log(`Uploaded playlist file: ${filename}`);
       }),
+      {
+        signal: cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+      },
     );
 
     // Upload master playlist if there is more than just audio
     if (variants.filter((v) => v !== 'AUDIO').length > 0) {
-      uploadQueue.add(async () => {
-        console.log('Uploading master playlist file');
-        Context.current().heartbeat(`Uploading playlist file`);
-        const playlistBuffer = Buffer.from(
-          variantsToMasterVideoPlaylist(variants),
-        );
-        await retryablePutFile(
-          S3_PUBLIC_BUCKET,
-          `${uploadRecordId}/master.m3u8`,
-          'application/x-mpegURL',
-          playlistBuffer,
-        );
-        Context.current().heartbeat('Uploaded master playlist file');
-        console.log('Uploaded master playlist file');
-      });
+      uploadQueue.add(
+        async () => {
+          console.log('Uploading master playlist file');
+          Context.current().heartbeat(`Uploading playlist file`);
+          const playlistBuffer = Buffer.from(
+            variantsToMasterVideoPlaylist(variants),
+          );
+          await retryablePutFile(
+            S3_PUBLIC_BUCKET,
+            `${uploadRecordId}/master.m3u8`,
+            'application/x-mpegURL',
+            playlistBuffer,
+          );
+          Context.current().heartbeat('Uploaded master playlist file');
+          console.log('Uploaded master playlist file');
+        },
+        {
+          signal: cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+        },
+      );
     } else {
       console.log(
         `Not creating master playlist given the variants: ${variants.join(
@@ -139,16 +167,21 @@ export default async function transcode(
     }
 
     // Upload logs
-    uploadQueue.add(async () => {
-      Context.current().heartbeat('Uploading stdout');
-      await retryablePutFile(
-        S3_PUBLIC_BUCKET,
-        `${uploadRecordId}/stdout.txt`,
-        'text/plain',
-        Buffer.from(encodeProc.stdout),
-      );
-      Context.current().heartbeat('Uploaded stdout');
-    });
+    uploadQueue.add(
+      async () => {
+        Context.current().heartbeat('Uploading stdout');
+        await retryablePutFile(
+          S3_PUBLIC_BUCKET,
+          `${uploadRecordId}/stdout.txt`,
+          'text/plain',
+          Buffer.from((await encodeProc).stdout),
+        );
+        Context.current().heartbeat('Uploaded stdout');
+      },
+      {
+        signal: cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+      },
+    );
 
     await uploadQueue.onEmpty();
     await watcher.close();
@@ -159,6 +192,7 @@ export default async function transcode(
       },
     });
   } finally {
+    dataHeartbeat.flush();
     await rimraf(dir);
   }
 }

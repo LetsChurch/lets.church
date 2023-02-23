@@ -185,12 +185,20 @@ export async function streamObjectToFile(
   bucket: string,
   key: string,
   path: string,
+  heartbeat: () => unknown,
 ) {
   const cmd = new GetObjectCommand({ Bucket: bucket, Key: key });
   const res = await s3IngestClient.send(cmd);
 
   if (res.Body instanceof Readable) {
-    return pipeline(res.Body, createWriteStream(path));
+    return pipeline(
+      res.Body,
+      function (chunk) {
+        heartbeat();
+        return chunk;
+      },
+      createWriteStream(path),
+    );
   }
 
   throw new Error('Unknown resposne type');

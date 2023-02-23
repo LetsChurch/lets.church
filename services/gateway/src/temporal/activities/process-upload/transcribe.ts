@@ -11,6 +11,7 @@ import {
 } from '../../../util/s3';
 import rimraf from '../../../util/rimraf';
 import { runWhisper } from '../../../util/whisper';
+import { throttle } from 'lodash-es';
 
 const WORK_DIR = '/data/transcribe';
 
@@ -19,22 +20,34 @@ export default async function transcribe(
   s3UploadKey: string,
 ) {
   Context.current().heartbeat('job start');
+  const cancellationSignal = Context.current().cancellationSignal;
   const dir = join(WORK_DIR, uploadRecordId);
+  const dataHeartbeat = throttle(
+    () => Context.current().heartbeat('data'),
+    5000,
+  );
 
   try {
     console.log('downloading media');
 
     await mkdirp(dir);
     const downloadPath = join(dir, 'download');
-    await streamObjectToFile(S3_INGEST_BUCKET, s3UploadKey, downloadPath);
+    await streamObjectToFile(
+      S3_INGEST_BUCKET,
+      s3UploadKey,
+      downloadPath,
+      dataHeartbeat,
+    );
 
     console.log('media downloaded');
     Context.current().heartbeat('media downloaded');
 
-    const vttFile = await runWhisper(dir, downloadPath, () => {
-      console.log('whisper stdout data');
-      Context.current().heartbeat('whisper stdout data');
-    });
+    const vttFile = await runWhisper(
+      dir,
+      downloadPath,
+      cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+      dataHeartbeat,
+    );
 
     console.log(`whisper done: ${vttFile}`);
     Context.current().heartbeat('whisper done');
@@ -55,6 +68,10 @@ export default async function transcribe(
     Context.current().heartbeat('done uploading');
 
     return key;
+  } catch (e) {
+    console.error(e);
+    dataHeartbeat.flush();
+    throw e;
   } finally {
     console.log('Cleaning up');
     await rimraf(dir);

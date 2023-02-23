@@ -235,6 +235,7 @@ export function runFfmpegEncode(
   cwd: string,
   inputFilename: string,
   variants: Array<UploadVariant>,
+  signal: AbortSignal,
 ) {
   return execa(
     'ffmpeg',
@@ -250,11 +251,15 @@ export function runFfmpegEncode(
       // Outputs
       ...ffmpegEncodingOutputArgs(variants),
     ],
-    { cwd },
+    { cwd, signal },
   );
 }
 
-export function runFfmpegThumbnails(cwd: string, inputFilename: string) {
+export function runFfmpegThumbnails(
+  cwd: string,
+  inputFilename: string,
+  signal: AbortSignal,
+) {
   return execa(
     'ffmpeg',
     [
@@ -273,12 +278,16 @@ export function runFfmpegThumbnails(cwd: string, inputFilename: string) {
       'fps=fps=1',
       '%05d.jpg',
     ],
-    { cwd },
+    { cwd, signal },
   );
 }
 
 // ffprobe -v quiet -print_format json -show_format -show_streams Stars.mp4
-export function runFfprobe(cwd: string, inputFilename: string) {
+export function runFfprobe(
+  cwd: string,
+  inputFilename: string,
+  signal: AbortSignal,
+) {
   return execa(
     'ffprobe',
     [
@@ -290,6 +299,6 @@ export function runFfprobe(cwd: string, inputFilename: string) {
       '-show_streams',
       inputFilename,
     ],
-    { cwd },
+    { cwd, signal },
   );
 }

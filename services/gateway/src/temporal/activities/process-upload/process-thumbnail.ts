@@ -3,6 +3,7 @@ import { createReadStream } from 'node:fs';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
 import mime from 'mime';
+import { throttle } from 'lodash-es';
 import {
   retryablePutFile,
   S3_INGEST_BUCKET,
@@ -31,7 +32,12 @@ export default async function processThumbnail(
 
   try {
     await mkdirp(dir);
-    await streamObjectToFile(S3_INGEST_BUCKET, s3UploadKey, downloadPath);
+    await streamObjectToFile(
+      S3_INGEST_BUCKET,
+      s3UploadKey,
+      downloadPath,
+      throttle(() => Context.current().heartbeat(), 5000),
+    );
 
     Context.current().heartbeat();
 
