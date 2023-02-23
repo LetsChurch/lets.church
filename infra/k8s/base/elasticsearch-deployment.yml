@@ -51,22 +51,6 @@ spec:
       port: 9200
       targetPort: 9200
 ---
-kind: PersistentVolume
-apiVersion: v1
-metadata:
-  name: elasticsearch-pv
-  labels:
-    type: local
-    app: elasticsearch
-spec:
-  storageClassName: manual
-  capacity:
-    storage: 5Gi
-  accessModes:
-    - ReadWriteMany
-  hostPath:
-    path: "/mnt/data"
----
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
@@ -74,9 +58,9 @@ metadata:
   labels:
     app: elasticsearch
 spec:
-  storageClassName: manual
+  storageClassName: linode-block-storage-retain
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
-      storage: 5Gi
+      storage: 10Gi

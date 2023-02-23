@@ -60,22 +60,6 @@ spec:
       port: 5432
       targetPort: 5432
 ---
-kind: PersistentVolume
-apiVersion: v1
-metadata:
-  name: postgres-pv
-  labels:
-    type: local
-    app: postgres
-spec:
-  # storageClassName: manual
-  capacity:
-    storage: 5Gi
-  accessModes:
-    - ReadWriteOnce
-  hostPath:
-    path: /var/lib/postgresql/data
----
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
@@ -83,9 +67,9 @@ metadata:
   labels:
     app: postgres
 spec:
-  # storageClassName: manual
+  storageClassName: linode-block-storage-retain
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 5Gi
+      storage: 10Gi
