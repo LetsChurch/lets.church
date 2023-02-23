@@ -72,27 +72,22 @@ npmi-host-scripts:
   cd scripts; npm i
 npmi-host-gateway:
   cd services/gateway; npm i
-npmi-host-media:
-  cd services/media; npm i
 npmi-host-web:
   cd apps/web; npm i
-npmi-host: npmi-host-gateway npmi-host-media npmi-host-web npmi-host-scripts
+npmi-host: npmi-host-gateway npmi-host-web npmi-host-scripts
 
 npmi-gateway: (exec 'gateway' 'npm' 'i')
-npmi-media: (exec 'gateway' 'npm' 'i')
 npmi-web: (exec 'web' 'npm' 'i')
-npmi: npmi-gateway npmi-media npmi-web
+npmi: npmi-gateway npmi-web
 
 # npmci scripts always run on host (except during docker build)
 npmci-scripts:
   cd scripts; npm ci
 npmci-gateway:
   cd services/gateway; npm ci
-npmci-media:
-  cd services/media; npm ci
 npmci-web:
   cd apps/web; npm ci
-npmci: npmci-gateway npmci-media npmci-web npmci-scripts
+npmci: npmci-gateway npmci-web npmci-scripts
 
 seed-db:
   docker-compose exec gateway npm run prisma:db:seed
@@ -106,16 +101,13 @@ truncate:
 check-gateway:
   cd services/gateway; npm run check
 
-check-media:
-  cd services/media; npm run check
-
 check-scripts:
   cd scripts; npm run check
 
 check-web:
   cd apps/web; npm run check
 
-check: check-gateway check-media check-scripts check-web
+check: check-gateway check-scripts check-web
 
 export CI := "1"
 

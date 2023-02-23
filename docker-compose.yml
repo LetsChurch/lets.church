@@ -5,7 +5,6 @@ volumes:
   background-worker-node-modules:
   es-data:
   gateway-node-modules:
-  media-node-modules:
   pg-data:
   process-upload-worker-node-modules:
   web-node-modules:
@@ -41,19 +40,6 @@ services:
       - web-node-modules:/home/node/app/node_modules
     depends_on:
       - gateway
-
-  media:
-    build: ./services/media
-    restart: on-failure
-    ports:
-      - ${HOST_MEDIA_PORT}:8787
-    environment:
-      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID}
-      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN}
-      JWT_SECRET: ${JWT_SECRET}
-    volumes:
-      - ./services/media:/home/node/app
-      - media-node-modules:/home/node/app/node_modules
 
   gateway:
     build:

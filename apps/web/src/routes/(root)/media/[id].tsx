@@ -40,7 +40,7 @@ import type {
   SubmitUploadRatingMutation,
   SubmitUploadRatingMutationVariables,
 } from './__generated__/[id]';
-import AuthorizedVideo from '~/components/authorized-video';
+import Video from '~/components/video';
 import { isServer } from 'solid-js/web';
 
 function RatingButton(
@@ -288,7 +288,7 @@ export default function MediaRoute() {
       <div class="md:grid md:grid-cols-3 md:gap-4">
         <div class="space-y-4 md:col-span-2">
           <div class="aspect-video w-full bg-gray-100">
-            <AuthorizedVideo
+            <Video
               source={
                 metaData()?.data.mediaSource ??
                 metaData()?.data.audioSource ??

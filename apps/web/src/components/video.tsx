@@ -1,4 +1,4 @@
-import { onCleanup, onMount } from 'solid-js';
+import { onCleanup, onMount, untrack } from 'solid-js';
 import invariant from 'tiny-invariant';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
@@ -10,21 +10,13 @@ export type Props = {
   startAt?: number | undefined;
 };
 
-export default function AuthorizedVideo(props: Props) {
+export default function Video(props: Props) {
   let videoRef: HTMLVideoElement;
 
   onMount(() => {
-    videojs.Vhs.xhr.beforeRequest = function (options) {
-      if (props.jwt) {
-        options.headers = {
-          Authorization: `Bearer ${props.jwt}`,
-        };
-      } else {
-        console.warn('No JWT provided to authorized video player');
-      }
-    };
-
     invariant(videoRef, 'Video ref is undefined');
+
+    const startAt = untrack(() => props.startAt);
 
     const player = videojs(
       videoRef,
@@ -38,20 +30,30 @@ export default function AuthorizedVideo(props: Props) {
             type: 'application/x-mpegURL',
           },
         ],
+        html5: {
+          hls: {
+            overrideNative: false,
+          },
+          nativeVideoTracks: true,
+          nativeAudioTracks: true,
+          nativeTextTracks: true,
+        },
       },
       async () => {
         try {
           await player.play();
-          console.log(props.startAt);
-          if (typeof props.startAt === 'number') {
-            player.currentTime(props.startAt);
-          }
         } catch (e) {
           // The play method is not allowed by the user agent or the platform in the current context, possibly because the user denied permission.
           console.warn('Could not automatically play video', e);
         }
       },
     );
+
+    player.one('play', () => {
+      if (typeof startAt === 'number') {
+        player.currentTime(startAt);
+      }
+    });
   });
 
   onCleanup(() => {
@@ -60,5 +62,7 @@ export default function AuthorizedVideo(props: Props) {
     };
   });
 
-  return <video class="video-js" ref={(el) => void (videoRef = el)} />;
+  return (
+    <video class="video-js" ref={(el) => void (videoRef = el)} playsinline />
+  );
 }

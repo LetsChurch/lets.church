@@ -33,8 +33,6 @@ npmci:
   script:
     - cd $CI_PROJECT_DIR/services/gateway
     - !reference [.setup, npmci]
-    - cd $CI_PROJECT_DIR/services/media
-    - !reference [.setup, npmci]
     - cd $CI_PROJECT_DIR/apps/web
     - !reference [.setup, npmci]
     - cd $CI_PROJECT_DIR/scripts
@@ -50,13 +48,6 @@ check-gateway:
   stage: check
   script:
     - cd $CI_PROJECT_DIR/services/gateway
-    - !reference [.setup, npmci]
-    - npm run check
-
-check-media:
-  stage: check
-  script:
-    - cd $CI_PROJECT_DIR/services/media
     - !reference [.setup, npmci]
     - npm run check
 
@@ -152,17 +143,8 @@ build-web:
 # |____/ \___| .__/|_|\___/ \__, |
 #            |_|            |___/ 
 
-deploy-media-worker:
-  stage: deploy
-  script:
-    - cd services/media
-    - !reference [.setup, npmci]
-    - npm run deploy:preview
-
 deploy-k8s:
   stage: deploy
-  needs:
-    - deploy-media-worker
   script:
     - cd infra/k8s/preview
     - cp $INIT_SQL init.sql
