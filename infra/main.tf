@@ -1,4 +1,11 @@
 terraform {
+  cloud {
+    organization = "LetsChurch"
+
+    workspaces {
+      name = "LetsChurch"
+    }
+  }
   required_providers {
     linode = {
       source  = "linode/linode"
