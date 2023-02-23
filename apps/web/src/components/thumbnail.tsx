@@ -37,10 +37,7 @@ export default function Thumbnail(props: Props) {
   return (
     <Switch
       fallback={
-        <div
-          class="flex items-center justify-center bg-gray-100 text-gray-300"
-          style={{ width: `${props.width}px`, height: `${props.height}px` }}
-        >
+        <div class="flex aspect-video w-full items-center justify-center bg-gray-100 text-gray-300">
           <Switch
             fallback={
               <UnknownIcon width={props.width / 2} height={props.height / 2} />
