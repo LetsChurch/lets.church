@@ -135,21 +135,19 @@ type SearchHitRowProps = Omit<ThumbnailProps, 'width' | 'height' | 'url'> &
 function SearchHitRow(props: SearchHitRowProps) {
   return (
     <div
-      class={`relative grid grid-cols-[176px_auto] grid-rows-[99_auto] gap-5 md:grid-cols-[352px_auto] md:grid-rows-[94px_auto] ${
+      class={`relative grid grid-cols-1 gap-5 md:grid-cols-[352px_auto] md:grid-rows-1 md:flex-row ${
         props.class ?? ''
       }`}
     >
-      <div class="row-span-1 md:row-span-2">
-        <Thumbnail
-          url={props.thumbnailUrl}
-          blurhash={props.blurhash}
-          width={352}
-          height={198}
-          placeholder={props.placeholder}
-        />
-      </div>
-      <div class="min-w-0 space-y-2 overflow-hidden md:col-start-2 md:row-start-1">
-        <h3 class="overflow-hidden text-ellipsis whitespace-nowrap text-2xl font-semibold md:overflow-visible md:whitespace-normal">
+      <Thumbnail
+        url={props.thumbnailUrl}
+        blurhash={props.blurhash}
+        width={352}
+        height={198}
+        placeholder={props.placeholder}
+      />
+      <div class="space-y-2">
+        <h3 class="text-2xl font-semibold">
           <A href={props.href} class="before:absolute before:inset-0">
             {props.title}
           </A>
@@ -166,12 +164,8 @@ function SearchHitRow(props: SearchHitRowProps) {
           />
           <span class="text-sm text-gray-500">{props.channelName}</span>
         </A>
+        {props.children}
       </div>
-      <Show when={props.children}>
-        <div class="col-start-1 col-end-3 row-start-2 md:col-start-2">
-          {props.children}
-        </div>
-      </Show>
     </div>
   );
 }

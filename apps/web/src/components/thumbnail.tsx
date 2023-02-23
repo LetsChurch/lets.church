@@ -54,7 +54,7 @@ export default function Thumbnail(props: Props) {
       }
     >
       <Match when={loaded()}>
-        <img src={props.url ?? ''} width={props.width} height={props.height} />
+        <img src={props.url ?? ''} class="w-full" />
       </Match>
       <Match when={props.blurhash}>
         <canvas
