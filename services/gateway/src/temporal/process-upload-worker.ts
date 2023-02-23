@@ -5,6 +5,7 @@ import envariant from '@knpwrs/envariant';
 import * as activities from './activities/process-upload';
 import { PROCESS_UPLOAD_QUEUE } from './queues';
 import { waitOnTemporal } from '.';
+import os from 'os';
 
 const TEMPORAL_ADDRESS = envariant('TEMPORAL_ADDRESS');
 
@@ -21,6 +22,7 @@ const worker = await Worker.create({
   workflowsPath,
   activities,
   taskQueue: PROCESS_UPLOAD_QUEUE,
+  maxConcurrentActivityTaskExecutions: os.cpus().length,
 });
 
 await worker.run();
