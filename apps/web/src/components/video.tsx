@@ -1,23 +1,25 @@
 import { onCleanup, onMount, untrack } from 'solid-js';
 import invariant from 'tiny-invariant';
-import videojs from 'video.js';
+import videojs, { VideoJsPlayer } from 'video.js';
 import 'video.js/dist/video-js.css';
 
 export type Props = {
   source: string;
   fluid?: boolean | undefined;
   startAt?: number | undefined;
+  onTimeUpdate?: (currentTime: number) => unknown;
 };
 
 export default function Video(props: Props) {
   let videoRef: HTMLVideoElement;
+  let player: VideoJsPlayer;
 
   onMount(() => {
     invariant(videoRef, 'Video ref is undefined');
 
     const startAt = untrack(() => props.startAt);
 
-    const player = videojs(
+    player = videojs(
       videoRef,
       {
         controls: true,
@@ -48,6 +50,12 @@ export default function Video(props: Props) {
       },
     );
 
+    const onTimeUpdate = untrack(() => props.onTimeUpdate);
+
+    player.on('timeupdate', () => {
+      onTimeUpdate?.(player.currentTime());
+    });
+
     player.one('play', () => {
       if (typeof startAt === 'number') {
         player.currentTime(startAt);
@@ -56,9 +64,7 @@ export default function Video(props: Props) {
   });
 
   onCleanup(() => {
-    videojs.Vhs.xhr.beforeRequest = () => {
-      // noop
-    };
+    player?.dispose();
   });
 
   return (

@@ -18,6 +18,7 @@ import {
   useContext,
   createResource,
   untrack,
+  createSignal,
 } from 'solid-js';
 import ThumbUpIcon from '@tabler/icons/thumb-up.svg?component-solid';
 import ThumbDownIcon from '@tabler/icons/thumb-down.svg?component-solid';
@@ -39,6 +40,7 @@ import type {
 } from './__generated__/[id]';
 import Video from '~/components/video';
 import { isServer } from 'solid-js/web';
+import Transcript from '~/components/transcript';
 
 function RatingButton(
   props: ParentProps<{
@@ -126,6 +128,10 @@ export function routeData({ params }: RouteDataArgs) {
               }
               mediaSource
               audioSource
+              transcript {
+                start
+                text
+              }
             }
           }
         `,
@@ -254,6 +260,7 @@ export default function MediaRoute() {
   }
 
   const startAt = getStartAt();
+  const [currentTime, setCurrentTime] = createSignal(startAt ?? 0);
 
   return (
     <>
@@ -268,6 +275,7 @@ export default function MediaRoute() {
                 ''
               }
               startAt={startAt}
+              onTimeUpdate={(time) => setCurrentTime(time)}
               fluid
             />
           </div>
@@ -328,7 +336,12 @@ export default function MediaRoute() {
           </div>
           <div>comments</div>
         </div>
-        <div class="bg-gray-100 md:col-span-1">sidebar</div>
+        <div class="bg-gray-100 md:col-span-1">
+          <Transcript
+            transcript={metaData()?.data.transcript ?? []}
+            currentTime={currentTime() * 1000}
+          />
+        </div>
       </div>
     </>
   );

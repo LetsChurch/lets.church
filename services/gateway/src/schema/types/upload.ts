@@ -5,6 +5,7 @@ import {
   UploadVariant as PrismaUploadVariant,
 } from '@prisma/client';
 import envariant from '@knpwrs/envariant';
+import { type NodeCue, parseSync as parseVtt } from 'subtitle';
 import {
   createMultipartUpload,
   createPresignedGetUrl,
@@ -103,6 +104,34 @@ builder.prismaObject('UploadRecord', {
       },
     }),
     thumbnailBlurhash: t.exposeString('thumbnailBlurhash', { nullable: true }),
+    transcript: t.field({
+      type: [
+        builder.simpleObject('TranscriptLine', {
+          fields: (f) => ({
+            start: f.float(),
+            end: f.float(),
+            text: f.string(),
+          }),
+        }),
+      ],
+      nullable: true,
+      resolve: async ({ id }) => {
+        const url = new URL(MEDIA_URL);
+        url.pathname = `${id}.vtt`;
+        const res = await fetch(url);
+
+        if (!res.ok) {
+          return null;
+        }
+
+        const text = await res.text();
+        const parsed = parseVtt(text)
+          .filter((n): n is NodeCue => n.type === 'cue')
+          .map(({ data: { start, end, text } }) => ({ start, end, text }));
+
+        return parsed;
+      },
+    }),
     channel: t.relation('channel'),
     uploadSizeBytes: t.field({
       type: 'SafeInt',

@@ -432,6 +432,13 @@ export enum SearchFocus {
   Uploads = 'UPLOADS'
 }
 
+export type TranscriptLine = {
+  __typename?: 'TranscriptLine';
+  end: Scalars['Float'];
+  start: Scalars['Float'];
+  text: Scalars['String'];
+};
+
 export type TranscriptSearchHit = ISearchHit & {
   __typename?: 'TranscriptSearchHit';
   hits: Array<TranscriptSearchInnerHit>;
@@ -472,7 +479,6 @@ export type UploadRecord = {
   createdBy: AppUser;
   id: Scalars['ShortUuid'];
   license: UploadLicense;
-  mediaJwt: Scalars['Jwt'];
   mediaSource?: Maybe<Scalars['String']>;
   myRating?: Maybe<Rating>;
   thumbnailBlurhash?: Maybe<Scalars['String']>;
@@ -480,6 +486,7 @@ export type UploadRecord = {
   title?: Maybe<Scalars['String']>;
   totalDislikes: Scalars['Int'];
   totalLikes: Scalars['Int'];
+  transcript?: Maybe<Array<TranscriptLine>>;
   updatedAt: Scalars['DateTime'];
   uploadFinalized: Scalars['Boolean'];
   uploadFinalizedBy: AppUser;

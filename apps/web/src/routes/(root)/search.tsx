@@ -1,4 +1,3 @@
-import prettyMs from 'pretty-ms';
 import {
   For,
   Match,
@@ -18,6 +17,7 @@ import Thumbnail, {
 import { client, gql } from '~/util/gql/server';
 import { SearchFocus } from '~/__generated__/graphql-types';
 import type { SearchQuery, SearchQueryVariables } from './__generated__/search';
+import { formatTime } from '~/util';
 
 const PAGE_SIZE = 12;
 
@@ -168,12 +168,6 @@ function SearchHitRow(props: SearchHitRowProps) {
       </div>
     </div>
   );
-}
-
-function formatTime(ms: number) {
-  const res = prettyMs(ms, { colonNotation: true, secondsDecimalDigits: 0 });
-  const sections = res.split(':').length;
-  return res.padStart(sections * 2 + sections - 1, '0');
 }
 
 function SearchTranscriptHitRow(

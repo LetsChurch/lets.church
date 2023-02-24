@@ -1,3 +1,4 @@
+import prettyMs from 'pretty-ms';
 import { useLocation } from 'solid-start';
 
 export function notEmpty<T>(t?: T | null): t is T {
@@ -22,4 +23,10 @@ export function useLoginLocation() {
 export function useLogoutLocation() {
   const redir = useEncodedLocation();
   return `/auth/logout?redirect=${redir}`;
+}
+
+export function formatTime(ms: number) {
+  const res = prettyMs(ms, { colonNotation: true, secondsDecimalDigits: 0 });
+  const sections = res.split(':').length;
+  return res.padStart(sections * 2 + sections - 1, '0');
 }
