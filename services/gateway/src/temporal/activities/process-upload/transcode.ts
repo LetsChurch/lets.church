@@ -110,6 +110,7 @@ export default async function transcode(
     );
     encodeProc.stdout?.on('data', dataHeartbeat);
     encodeProc.stderr?.on('data', dataHeartbeat);
+    const encodeProcRes = await encodeProc;
 
     const playlists = await fastGlob(join(dir, '*.m3u8'));
 
@@ -174,7 +175,7 @@ export default async function transcode(
           S3_PUBLIC_BUCKET,
           `${uploadRecordId}/stdout.txt`,
           'text/plain',
-          Buffer.from((await encodeProc).stdout),
+          Buffer.from(encodeProcRes.stdout),
         );
         Context.current().heartbeat('Uploaded stdout');
       },
