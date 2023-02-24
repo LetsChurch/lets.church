@@ -97,8 +97,9 @@ build-base:
   <<: *build-common
   script:
     - cd services/gateway
-    - docker build --target base -t registry.gitlab.com/letschurch/lets.church/base:${CI_COMMIT_SHORT_SHA} --cache-from registry.gitlab.com/letschurch/lets.church/base:latest .
+    - docker build --target base -t registry.gitlab.com/letschurch/lets.church/base:${CI_COMMIT_SHORT_SHA} -t registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/base:latest .
     - docker push registry.gitlab.com/letschurch/lets.church/base:${CI_COMMIT_SHORT_SHA}
+    - docker push registry.gitlab.com/letschurch/lets.church/base:latest
 
 build-server:
   <<: *build-common
@@ -106,8 +107,9 @@ build-server:
     - build-base
   script:
     - cd services/gateway
-    - docker build --target server -t registry.gitlab.com/letschurch/lets.church/gateway:${CI_COMMIT_SHORT_SHA} --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/server:latest .
+    - docker build --target server -t registry.gitlab.com/letschurch/lets.church/gateway:${CI_COMMIT_SHORT_SHA} -t registry.gitlab.com/letschurch/lets.church/gateway:latest --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/server:latest .
     - docker push registry.gitlab.com/letschurch/lets.church/gateway:${CI_COMMIT_SHORT_SHA}
+    - docker push registry.gitlab.com/letschurch/lets.church/gateway:latest
 
 build-background-worker:
   <<: *build-common
@@ -115,8 +117,9 @@ build-background-worker:
     - build-base
   script:
     - cd services/gateway
-    - docker build --target background-worker -t registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA} --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/build-background-worker:latest .
+    - docker build --target background-worker -t registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA} -t registry.gitlab.com/letschurch/lets.church/background-worker:latest --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/build-background-worker:latest .
     - docker push registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA}
+    - docker push registry.gitlab.com/letschurch/lets.church/background-worker:latest
 
 build-process-upload-worker:
   <<: *build-common
@@ -124,8 +127,9 @@ build-process-upload-worker:
     - build-base
   script:
     - cd services/gateway
-    - docker build --target process-upload-worker -t registry.gitlab.com/letschurch/lets.church/process-upload-worker:${CI_COMMIT_SHORT_SHA} --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/process-upload-worker:latest .
+    - docker build --target process-upload-worker -t registry.gitlab.com/letschurch/lets.church/process-upload-worker:${CI_COMMIT_SHORT_SHA} -t registry.gitlab.com/letschurch/lets.church/process-upload-worker:latest --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/process-upload-worker:latest .
     - docker push registry.gitlab.com/letschurch/lets.church/process-upload-worker:${CI_COMMIT_SHORT_SHA}
+    - docker push registry.gitlab.com/letschurch/lets.church/process-upload-worker:latest
 
 build-web:
   <<: *build-common
@@ -133,8 +137,9 @@ build-web:
     - build-base
   script:
     - cd apps/web
-    - docker build -t registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA} --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/web:latest .
+    - docker build -t registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA} -t registry.gitlab.com/letschurch/lets.church/web:latest --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/web:latest .
     - docker push registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA}
+    - docker push registry.gitlab.com/letschurch/lets.church/web:latest
 
 #  ____             _
 # |  _ \  ___ _ __ | | ___  _   _ 
