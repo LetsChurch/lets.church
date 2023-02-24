@@ -1,4 +1,4 @@
-import { createMemo, For } from 'solid-js';
+import { createEffect, createMemo, For } from 'solid-js';
 import bSearch from 'binary-search';
 import { formatTime } from '~/util';
 
@@ -22,8 +22,18 @@ export default function Transcript(props: Props) {
     return i;
   });
 
+  createEffect(() => {
+    const el = document.querySelector(
+      `[data-start="${props.transcript[currentI()]?.start}"]`,
+    ) as HTMLElement;
+
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
+
   return (
-    <dl>
+    <dl class="max-h-[500px] overflow-auto bg-gray-100">
       <For each={props.transcript}>
         {(line, i) => (
           <div
@@ -32,6 +42,7 @@ export default function Transcript(props: Props) {
             classList={{
               'bg-indigo-50': i() === currentI(),
             }}
+            data-start={line.start}
           >
             <dt class="w-10 items-center font-mono text-sm font-medium uppercase text-gray-400 group-hover:text-gray-600">
               {formatTime(line.start)}

@@ -336,7 +336,7 @@ export default function MediaRoute() {
           </div>
           <div>comments</div>
         </div>
-        <div class="bg-gray-100 md:col-span-1">
+        <div class="md:col-span-1">
           <Transcript
             transcript={metaData()?.data.transcript ?? []}
             currentTime={currentTime() * 1000}
