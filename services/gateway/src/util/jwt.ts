@@ -43,12 +43,3 @@ export const { create: createSessionJwt, parse: parseSessionJwt } = jwtFactory(
   SessionJwtSchema,
   '2w',
 );
-
-const MediaJwtSchema = Z.object({
-  prefix: Z.string(),
-});
-
-export const { create: createMediaJwt, parse: parseMediaJwt } = jwtFactory(
-  MediaJwtSchema,
-  '10m',
-);

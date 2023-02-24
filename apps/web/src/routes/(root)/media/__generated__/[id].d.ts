@@ -12,7 +12,7 @@ export type MediaRouteMetaDataQueryVariables = Types.Exact<{
 }>;
 
 
-export type MediaRouteMetaDataQuery = { __typename?: 'Query', data: { __typename?: 'UploadRecord', id: any, title?: string | null, mediaSource?: string | null, audioSource?: string | null, mediaJwt: any, channel: { __typename?: 'Channel', id: any, name: string } } };
+export type MediaRouteMetaDataQuery = { __typename?: 'Query', data: { __typename?: 'UploadRecord', id: any, title?: string | null, mediaSource?: string | null, audioSource?: string | null, channel: { __typename?: 'Channel', id: any, name: string } } };
 
 export type SubmitUploadRatingMutationVariables = Types.Exact<{
   uploadRecordId: Types.Scalars['ShortUuid'];

@@ -5,7 +5,6 @@ import 'video.js/dist/video-js.css';
 
 export type Props = {
   source: string;
-  jwt: string;
   fluid?: boolean | undefined;
   startAt?: number | undefined;
 };

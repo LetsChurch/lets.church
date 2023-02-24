@@ -4,7 +4,6 @@ import {
   useParams,
   useRouteData,
   A,
-  refetchRouteData,
   useLocation,
 } from 'solid-start';
 import server$, {
@@ -19,12 +18,10 @@ import {
   useContext,
   createResource,
   untrack,
-  createEffect,
 } from 'solid-js';
 import ThumbUpIcon from '@tabler/icons/thumb-up.svg?component-solid';
 import ThumbDownIcon from '@tabler/icons/thumb-down.svg?component-solid';
 import invariant from 'tiny-invariant';
-import { decodeJwt } from 'jose';
 import {
   createAuthenticatedClient,
   createAuthenticatedClientOrRedirect,
@@ -129,7 +126,6 @@ export function routeData({ params }: RouteDataArgs) {
               }
               mediaSource
               audioSource
-              mediaJwt
             }
           }
         `,
@@ -257,29 +253,6 @@ export default function MediaRoute() {
     });
   }
 
-  // Refresh JWT
-  createEffect<ReturnType<typeof setTimeout> | null>((lastTimeout) => {
-    if (lastTimeout) {
-      clearTimeout(lastTimeout);
-    }
-
-    const jwt = metaData()?.data.mediaJwt;
-
-    if (!jwt) {
-      return null;
-    }
-
-    const { exp } = decodeJwt(jwt);
-
-    if (!exp) {
-      return null;
-    }
-
-    return setTimeout(() => {
-      refetchRouteData(['media', params['id'], 'meta']);
-    }, (new Date(exp * 1000).getTime() - Date.now()) / 2);
-  }, null);
-
   const startAt = getStartAt();
 
   return (
@@ -294,7 +267,6 @@ export default function MediaRoute() {
                 metaData()?.data.audioSource ??
                 ''
               }
-              jwt={metaData()?.data.mediaJwt ?? ''}
               startAt={startAt}
               fluid
             />
