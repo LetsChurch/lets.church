@@ -40,6 +40,7 @@ configMapGenerator:
   - name: process-upload-worker-config
     literals:
       - TEMPORAL_SHUTDOWN_GRACE_TIME=1h
+      - MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS=1
   - name: elasticsearch-config
     literals:
       - cluster.routing.allocation.disk.threshold_enabled="true"
