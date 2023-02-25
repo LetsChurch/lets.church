@@ -3,7 +3,7 @@ RUN apt update && apt install -y build-essential git curl
 RUN mkdir -p /home/build
 RUN git clone https://github.com/ggerganov/whisper.cpp.git /home/build/whisper.cpp
 WORKDIR /home/build/whisper.cpp
-RUN git checkout 32fbc8c && make
+RUN git checkout v1.2.0 && make
 RUN ./models/download-ggml-model.sh base
 
 # Debian Base Image currently required for Prisma and M1 Macs: https://github.com/prisma/prisma/issues/8478

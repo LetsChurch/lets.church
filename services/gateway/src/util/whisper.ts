@@ -28,7 +28,16 @@ export async function runWhisper(
 
   const proc = execa(
     'whisper',
-    ['-m', '/opt/whisper/ggml-base.bin', '--output-vtt', '-f', wavFile],
+    [
+      '-m',
+      '/opt/whisper/ggml-base.bin',
+      '--print-progress',
+      '--language',
+      'auto',
+      '--output-vtt',
+      '-f',
+      wavFile,
+    ],
     { cwd, signal },
   );
 
