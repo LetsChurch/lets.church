@@ -156,6 +156,14 @@ builder.prismaObject('UploadRecord', {
       },
       resolve: ({ updatedAt }) => updatedAt.toISOString(),
     }),
+    publishDate: t.field({
+      type: 'DateTime',
+      nullable: true,
+      select: {
+        publishDate: true,
+      },
+      resolve: ({ publishDate }) => publishDate?.toISOString(),
+    }),
     canMutate: t.boolean({
       resolve: async (root, args, context) => {
         const res = await internalAuthScopes(root, args, context);
@@ -244,6 +252,7 @@ builder.mutationFields((t) => ({
       uploadRecordId: t.arg({ type: 'ShortUuid' }),
       title: t.arg.string(),
       description: t.arg.string(),
+      publishDate: t.arg({ type: 'DateTime' }),
       license: t.arg({ type: UploadLicense, required: true }),
       visibility: t.arg({ type: UploadVisibility, required: true }),
       channelId: t.arg({ type: 'ShortUuid', required: true }),
@@ -282,6 +291,7 @@ builder.mutationFields((t) => ({
         uploadRecordId,
         title = null,
         description = null,
+        publishDate = null,
         license,
         visibility,
         channelId,
@@ -302,6 +312,7 @@ builder.mutationFields((t) => ({
           data: {
             title,
             description,
+            publishDate,
             license: lice,
             visibility: vis,
             channel: {
@@ -322,6 +333,7 @@ builder.mutationFields((t) => ({
         data: {
           title,
           description,
+          publishDate,
           license: lice,
           visibility: vis,
           createdBy: {

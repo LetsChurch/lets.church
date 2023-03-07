@@ -248,6 +248,7 @@ export type MutationUpsertUploadRecordArgs = {
   channelId: Scalars['ShortUuid'];
   description?: InputMaybe<Scalars['String']>;
   license: UploadLicense;
+  publishDate?: InputMaybe<Scalars['DateTime']>;
   title?: InputMaybe<Scalars['String']>;
   uploadRecordId?: InputMaybe<Scalars['ShortUuid']>;
   visibility: UploadVisibility;
@@ -481,6 +482,7 @@ export type UploadRecord = {
   license: UploadLicense;
   mediaSource?: Maybe<Scalars['String']>;
   myRating?: Maybe<Rating>;
+  publishDate?: Maybe<Scalars['DateTime']>;
   thumbnailBlurhash?: Maybe<Scalars['String']>;
   thumbnailUrl?: Maybe<Scalars['String']>;
   title?: Maybe<Scalars['String']>;

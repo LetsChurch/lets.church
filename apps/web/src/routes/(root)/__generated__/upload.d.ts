@@ -6,12 +6,13 @@ export type UploadRouteDataQueryVariables = Types.Exact<{
 }>;
 
 
-export type UploadRouteDataQuery = { __typename?: 'Query', me?: { __typename?: 'AppUser', channelMembershipsConnection: { __typename?: 'AppUserChannelMembershipsConnection', edges: Array<{ __typename?: 'AppUserChannelMembershipsConnectionEdge', node: { __typename?: 'ChannelMembership', channel: { __typename?: 'Channel', id: any, name: string } } }> } } | null, uploadRecordById?: { __typename?: 'UploadRecord', canMutate: boolean, id: any, title?: string | null, license: Types.UploadLicense, visibility: Types.UploadVisibility, uploadFinalized: boolean, channel: { __typename?: 'Channel', id: any } } };
+export type UploadRouteDataQuery = { __typename?: 'Query', me?: { __typename?: 'AppUser', channelMembershipsConnection: { __typename?: 'AppUserChannelMembershipsConnection', edges: Array<{ __typename?: 'AppUserChannelMembershipsConnectionEdge', node: { __typename?: 'ChannelMembership', channel: { __typename?: 'Channel', id: any, name: string } } }> } } | null, uploadRecordById?: { __typename?: 'UploadRecord', canMutate: boolean, id: any, title?: string | null, publishDate?: any | null, license: Types.UploadLicense, visibility: Types.UploadVisibility, uploadFinalized: boolean, channel: { __typename?: 'Channel', id: any } } };
 
 export type UpsertUploadRecordMutationVariables = Types.Exact<{
   uploadRecordId?: Types.InputMaybe<Types.Scalars['ShortUuid']>;
   title?: Types.InputMaybe<Types.Scalars['String']>;
   description?: Types.InputMaybe<Types.Scalars['String']>;
+  publishDate?: Types.InputMaybe<Types.Scalars['DateTime']>;
   license: Types.UploadLicense;
   visibility: Types.UploadVisibility;
   channelId: Types.Scalars['ShortUuid'];

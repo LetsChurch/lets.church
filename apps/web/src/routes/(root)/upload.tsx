@@ -51,6 +51,10 @@ type TextField = BaseField & {
   type: 'text';
 };
 
+type DateField = BaseField & {
+  type: 'date';
+};
+
 type FileField = BaseField & {
   type: 'file';
   caption?: string;
@@ -68,7 +72,7 @@ type RadioField = BaseField & {
   options: Array<{ label: string; help?: string; value: string }>;
 };
 
-type Field = TextField | FileField | SelectField | RadioField;
+type Field = TextField | DateField | FileField | SelectField | RadioField;
 
 type Section = { title: string; help?: string; fields: Array<Field> };
 
@@ -80,6 +84,7 @@ function getSections(
   defaultValues: {
     channelId: string | null | undefined;
     title: string | null | undefined;
+    publishDate: string | null | undefined;
     license: string | null | undefined;
     visibility: string | null | undefined;
     uploadFinalized: boolean;
@@ -123,6 +128,13 @@ function getSections(
             { label: 'CC0', value: 'CC0' },
           ],
           id: createUniqueId(),
+        },
+        {
+          label: 'Publish Date',
+          name: 'publishDate',
+          type: 'date',
+          id: createUniqueId(),
+          defaultValue: defaultValues.publishDate,
         },
       ],
     },
@@ -207,6 +219,7 @@ export function routeData({ location }: RouteDataArgs) {
               canMutate
               id
               title
+              publishDate
               license
               visibility
               uploadFinalized
@@ -234,6 +247,10 @@ const UpsertUploadRecordSchema = Z.object({
   uploadRecordId: Z.string().optional().nullable().default(null),
   title: Z.string().optional().nullable().default(null),
   description: Z.string().optional().nullable().default(null),
+  publishDate: Z.preprocess(
+    (arg) => (typeof arg === 'string' ? new Date(arg).toISOString() : arg),
+    Z.string(),
+  ),
   license: Z.nativeEnum(UploadLicense),
   visibility: Z.nativeEnum(UploadVisibility),
   channelId: Z.string(),
@@ -252,6 +269,7 @@ export default function UploadRoute() {
             'uploadRecordId',
             'title',
             'description',
+            'publishDate',
             'license',
             'visibility',
             'channelId',
@@ -268,6 +286,7 @@ export default function UploadRoute() {
             $uploadRecordId: ShortUuid
             $title: String
             $description: String
+            $publishDate: DateTime
             $license: UploadLicense!
             $visibility: UploadVisibility!
             $channelId: ShortUuid!
@@ -276,6 +295,7 @@ export default function UploadRoute() {
               uploadRecordId: $uploadRecordId
               title: $title
               description: $description
+              publishDate: $publishDate
               license: $license
               visibility: $visibility
               channelId: $channelId
@@ -428,6 +448,11 @@ export default function UploadRoute() {
       {
         channelId: data()?.uploadRecordById?.channel.id,
         title: data()?.uploadRecordById?.title,
+        publishDate:
+          data()?.uploadRecordById?.publishDate ||
+          `${new Date().getFullYear()}-${String(
+            new Date().getMonth() + 1,
+          ).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`,
         license: data()?.uploadRecordById?.license,
         visibility: data()?.uploadRecordById?.visibility ?? 'PUBLIC',
         uploadFinalized: data()?.uploadRecordById?.uploadFinalized ?? false,

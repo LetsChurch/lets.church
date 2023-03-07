@@ -164,6 +164,7 @@ model UploadRecord {
   thumbnailBlurhash    String?            @map("thumbnail_blurhash")
   createdAt            DateTime           @default(now()) @map("created_at")
   updatedAt            DateTime           @updatedAt @map("updated_at")
+  publishDate          DateTime?          @map("publish_date")
   deletedAt            DateTime?          @map("deleted_at")
   variants             UploadVariant[]
   ratings              UploadUserRating[]
