@@ -1,5 +1,6 @@
 import { createEffect, createMemo, For } from 'solid-js';
 import bSearch from 'binary-search';
+import '@fontsource/roboto-mono/variable-full.css';
 import { formatTime } from '~/util';
 
 export type Props = {
