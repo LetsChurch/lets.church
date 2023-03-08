@@ -37,12 +37,8 @@ resource "linode_lke_cluster" "k8s" {
   tags        = var.k8s_tags
 
   pool {
-    type  = "g6-standard-4"
+    type  = "g6-dedicated-2"
     count = 1
-    autoscaler {
-      min = 1
-      max = 3
-    }
   }
 }
 
