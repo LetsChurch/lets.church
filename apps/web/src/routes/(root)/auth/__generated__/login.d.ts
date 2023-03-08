@@ -6,4 +6,4 @@ export type LoginMutationVariables = Types.Exact<{
 }>;
 
 
-export type LoginMutation = { __typename?: 'Mutation', login?: any | null };
+export type LoginMutation = { __typename?: 'Mutation', login?: string | null };

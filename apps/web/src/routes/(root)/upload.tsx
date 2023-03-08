@@ -37,6 +37,7 @@ import { notEmpty } from '~/util';
 import invariant from 'tiny-invariant';
 import { doMultipartUpload } from '~/util/multipart-upload';
 import { Input, Select, Button, Radios } from '~/components/form';
+import { dateToIso8601 } from '~/util/date';
 
 type BaseField = {
   label: string;
@@ -84,7 +85,7 @@ function getSections(
   defaultValues: {
     channelId: string | null | undefined;
     title: string | null | undefined;
-    publishDate: string | null | undefined;
+    publishedAt: string | null | undefined;
     license: string | null | undefined;
     visibility: string | null | undefined;
     uploadFinalized: boolean;
@@ -131,10 +132,10 @@ function getSections(
         },
         {
           label: 'Publish Date',
-          name: 'publishDate',
+          name: 'publishedAt',
           type: 'date',
           id: createUniqueId(),
-          defaultValue: defaultValues.publishDate,
+          defaultValue: defaultValues.publishedAt,
         },
       ],
     },
@@ -219,7 +220,7 @@ export function routeData({ location }: RouteDataArgs) {
               canMutate
               id
               title
-              publishDate
+              publishedAt
               license
               visibility
               uploadFinalized
@@ -247,7 +248,7 @@ const UpsertUploadRecordSchema = Z.object({
   uploadRecordId: Z.string().optional().nullable().default(null),
   title: Z.string().optional().nullable().default(null),
   description: Z.string().optional().nullable().default(null),
-  publishDate: Z.preprocess(
+  publishedAt: Z.preprocess(
     (arg) => (typeof arg === 'string' ? new Date(arg).toISOString() : arg),
     Z.string(),
   ),
@@ -269,7 +270,7 @@ export default function UploadRoute() {
             'uploadRecordId',
             'title',
             'description',
-            'publishDate',
+            'publishedAt',
             'license',
             'visibility',
             'channelId',
@@ -286,7 +287,7 @@ export default function UploadRoute() {
             $uploadRecordId: ShortUuid
             $title: String
             $description: String
-            $publishDate: DateTime
+            $publishedAt: DateTime!
             $license: UploadLicense!
             $visibility: UploadVisibility!
             $channelId: ShortUuid!
@@ -295,7 +296,7 @@ export default function UploadRoute() {
               uploadRecordId: $uploadRecordId
               title: $title
               description: $description
-              publishDate: $publishDate
+              publishedAt: $publishedAt
               license: $license
               visibility: $visibility
               channelId: $channelId
@@ -438,27 +439,28 @@ export default function UploadRoute() {
     return onDropFile(file, mime, UploadPostProcess.Thumbnail);
   }
 
-  const sections = createMemo(() =>
-    getSections(
-      data()
-        ?.me?.channelMembershipsConnection.edges.map((e) => e?.node.channel)
+  const sections = createMemo(() => {
+    const d = data();
+    const publishedAt = d?.uploadRecordById?.publishedAt;
+
+    return getSections(
+      d?.me?.channelMembershipsConnection.edges
+        .map((e) => e?.node.channel)
         .filter(notEmpty),
       onDropMedia,
       onDropThumbnail,
       {
-        channelId: data()?.uploadRecordById?.channel.id,
-        title: data()?.uploadRecordById?.title,
-        publishDate:
-          data()?.uploadRecordById?.publishDate ||
-          `${new Date().getFullYear()}-${String(
-            new Date().getMonth() + 1,
-          ).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`,
-        license: data()?.uploadRecordById?.license,
-        visibility: data()?.uploadRecordById?.visibility ?? 'PUBLIC',
-        uploadFinalized: data()?.uploadRecordById?.uploadFinalized ?? false,
+        channelId: d?.uploadRecordById?.channel.id,
+        title: d?.uploadRecordById?.title,
+        publishedAt: dateToIso8601(
+          publishedAt ? new Date(publishedAt) : new Date(),
+        ),
+        license: d?.uploadRecordById?.license,
+        visibility: d?.uploadRecordById?.visibility ?? 'PUBLIC',
+        uploadFinalized: d?.uploadRecordById?.uploadFinalized ?? false,
       },
-    ),
-  );
+    );
+  });
 
   return (
     <upsert.Form onInput={onInput} ref={(f) => void (form = f)}>

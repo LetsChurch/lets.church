@@ -121,7 +121,7 @@ CREATE TABLE "upload_record" (
     "thumbnail_blurhash" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
-    "publish_date" TIMESTAMP(3),
+    "published_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deleted_at" TIMESTAMP(3),
     "variants" "UploadVariant"[],
 

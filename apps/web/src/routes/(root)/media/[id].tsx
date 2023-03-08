@@ -19,6 +19,7 @@ import {
   createResource,
   untrack,
   createSignal,
+  Show,
 } from 'solid-js';
 import ThumbUpIcon from '@tabler/icons/thumb-up.svg?component-solid';
 import ThumbDownIcon from '@tabler/icons/thumb-down.svg?component-solid';
@@ -41,6 +42,7 @@ import type {
 import Video from '~/components/video';
 import { isServer } from 'solid-js/web';
 import Transcript from '~/components/transcript';
+import { formatDateFull } from '~/util/date';
 
 function RatingButton(
   props: ParentProps<{
@@ -122,6 +124,7 @@ export function routeData({ params }: RouteDataArgs) {
             data: uploadRecordById(id: $id) {
               id
               title
+              publishedAt
               channel {
                 id
                 name
@@ -333,6 +336,21 @@ export default function MediaRoute() {
                 <ThumbDownIcon class="pointer-events-none -scale-x-100" />
               </RatingButton>
             </submitRating.Form>
+          </div>
+          <div class="space-y-2 rounded-md bg-gray-100 p-3">
+            <div class="flex items-center gap-3 text-sm">
+              <p class="font-medium text-gray-900">3.9k views</p>
+              <Show when={metaData()?.data.publishedAt} keyed>
+                {(date) => (
+                  <time datetime={date} class="text-gray-600">
+                    {formatDateFull(new Date(date))}
+                  </time>
+                )}
+              </Show>
+            </div>
+            <div>
+              <p>Description</p>
+            </div>
           </div>
           <div>comments</div>
         </div>

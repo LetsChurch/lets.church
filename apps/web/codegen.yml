@@ -8,7 +8,7 @@ generates:
     plugins:
       - typescript
     config:
-      scalars:
+      scalars: &scalars
         DateTime: string
         Jwt: string
         SafeInt: number
@@ -22,5 +22,6 @@ generates:
       extension: '.d.ts'
     config:
       avoidOptionals: false
+      scalars: *scalars
     plugins:
       - typescript-operations

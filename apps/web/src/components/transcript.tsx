@@ -33,7 +33,7 @@ export default function Transcript(props: Props) {
   });
 
   return (
-    <dl class="max-h-[500px] overflow-auto bg-gray-100">
+    <dl class="max-h-[500px] space-y-2 overflow-auto rounded-md bg-gray-100">
       <For each={props.transcript}>
         {(line, i) => (
           <div
