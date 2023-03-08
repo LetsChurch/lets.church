@@ -14,6 +14,13 @@ export CLOUDFLARE_ACCOUNT_ID=
 export CLOUDFLARE_API_TOKEN=
 
 export TF_VAR_linode_token=
+export TF_VAR_cloudflare_account_id=
+export TF_VAR_cloudflare_api_token=
+export TF_VAR_cloudflare_r2_access_key=$S3_INGEST_ACCESS_KEY_ID
+export TF_VAR_cloudflare_r2_secret_key=$S3_INGEST_SECRET_ACCESS_KEY
+export TF_VAR_cloudflare_r2_endpoint=$S3_INGEST_ENDPOINT
+export TF_VAR_cloudflare_r2_ingest_bucket=$S3_INGEST_BUCKET
+export TF_VAR_cloudflare_r2_public_bucket=$S3_PUBLIC_BUCKET
 export TF_VAR_docker_registry_username=
 export TF_VAR_docker_registry_password=
 

@@ -15,6 +15,10 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "3.34.0"
     }
+    aws = {
+      source  = "hashicorp/aws"
+      version = "4.57.1"
+    }
   }
 }
 
@@ -24,6 +28,20 @@ provider "linode" {
 
 provider "cloudflare" {
   api_token = var.cloudflare_api_token
+}
+
+provider "aws" {
+  alias                       = "cloudflare"
+  region                      = "us-east-1"
+  access_key                  = var.cloudflare_r2_access_key
+  secret_key                  = var.cloudflare_r2_secret_key
+  skip_credentials_validation = true
+  skip_region_validation      = true
+  skip_requesting_account_id  = true
+
+  endpoints {
+    s3 = var.cloudflare_r2_endpoint
+  }
 }
 
 provider "kubernetes" {
@@ -82,6 +100,39 @@ resource "kubernetes_secret_v1" "image_pull" {
         }
       }
     })
+  }
+}
+
+resource "aws_s3_bucket" "ingest_bucket" {
+  provider = aws.cloudflare
+  bucket   = var.cloudflare_r2_ingest_bucket
+}
+
+// Must manually configure public access URL
+resource "aws_s3_bucket" "public_bucket" {
+  provider = aws.cloudflare
+  bucket   = var.cloudflare_r2_public_bucket
+}
+
+resource "aws_s3_bucket_cors_configuration" "ingest_bucket_cors" {
+  provider = aws.cloudflare
+  bucket   = aws_s3_bucket.ingest_bucket.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["PUT"]
+    allowed_origins = ["*"]
+    expose_headers  = ["ETag"]
+  }
+}
+
+resource "aws_s3_bucket_cors_configuration" "public_bucket_cors" {
+  provider = aws.cloudflare
+  bucket   = aws_s3_bucket.public_bucket.id
+
+  cors_rule {
+    allowed_methods = ["GET"]
+    allowed_origins = ["*"]
   }
 }
 

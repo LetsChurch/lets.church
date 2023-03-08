@@ -13,6 +13,29 @@ variable "cloudflare_api_token" {
   sensitive   = true
 }
 
+variable "cloudflare_r2_access_key" {
+  description = "Cloudflare R2 Access Key"
+  sensitive   = true
+}
+
+variable "cloudflare_r2_secret_key" {
+  description = "Cloudflare R2 Access Key"
+  sensitive   = true
+}
+
+variable "cloudflare_r2_endpoint" {
+  description = "Cloudflare R2 Endpoint"
+  sensitive   = true
+}
+
+variable "cloudflare_r2_ingest_bucket" {
+  description = "Cloudflare R2 Ingest Bucket"
+}
+
+variable "cloudflare_r2_public_bucket" {
+  description = "Cloudflare R2 Public Bucket"
+}
+
 variable "k8s_version" {
   description = "Kubernetes version to use"
   default     = "1.25"

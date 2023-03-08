@@ -7,7 +7,6 @@
     "check:format": "prettier --check .",
     "check:lint": "eslint --ext .ts,.tsx .",
     "check:ts": "tsc",
-    "s3:cors": "ts-node-esm ./s3cors.ts",
     "s3:prune-multipart-uploads": "ts-node-esm ./s3-prune-multipart-uploads.ts"
   },
   "license": "UNLICENSE",
