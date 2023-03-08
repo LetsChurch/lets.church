@@ -3,13 +3,13 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
+import rimraf from 'rimraf';
 import {
   retryablePutFile,
   S3_INGEST_BUCKET,
   S3_PUBLIC_BUCKET,
   streamObjectToFile,
 } from '../../../util/s3';
-import rimraf from '../../../util/rimraf';
 import { runWhisper } from '../../../util/whisper';
 import { throttle } from 'lodash-es';
 

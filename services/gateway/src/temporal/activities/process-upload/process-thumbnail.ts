@@ -4,13 +4,13 @@ import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
 import mime from 'mime';
 import { throttle } from 'lodash-es';
+import rimraf from 'rimraf';
 import {
   retryablePutFile,
   S3_INGEST_BUCKET,
   S3_PUBLIC_BUCKET,
   streamObjectToFile,
 } from '../../../util/s3';
-import rimraf from '../../../util/rimraf';
 import prisma from '../../../util/prisma';
 import {
   imageToBlurhash,

@@ -1,6 +1,6 @@
 import { onCleanup, onMount, untrack } from 'solid-js';
 import invariant from 'tiny-invariant';
-import videojs, { VideoJsPlayer } from 'video.js';
+import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
 
 export type Props = {
@@ -12,7 +12,7 @@ export type Props = {
 
 export default function Video(props: Props) {
   let videoRef: HTMLVideoElement;
-  let player: VideoJsPlayer;
+  let player: ReturnType<typeof videojs>;
 
   onMount(() => {
     invariant(videoRef, 'Video ref is undefined');
@@ -52,10 +52,14 @@ export default function Video(props: Props) {
 
     const onTimeUpdate = untrack(() => props.onTimeUpdate);
 
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore: https://github.com/videojs/video.js/issues/8178
     player.on('timeupdate', () => {
       onTimeUpdate?.(player.currentTime());
     });
 
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore: https://github.com/videojs/video.js/issues/8178
     player.one('play', () => {
       if (typeof startAt === 'number') {
         player.currentTime(startAt);

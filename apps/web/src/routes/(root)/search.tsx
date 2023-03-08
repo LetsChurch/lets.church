@@ -9,7 +9,7 @@ import {
 } from 'solid-js';
 import { A, RouteDataArgs, useLocation, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
-import '@fontsource/roboto-mono/variable-full.css';
+import '@fontsource/roboto-mono/variable.css';
 import Pagination from '~/components/pagination';
 import Thumbnail, {
   type Props as ThumbnailProps,

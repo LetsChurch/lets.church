@@ -298,7 +298,7 @@ export default function MediaRoute() {
               </span>
             </A>
             <submitRating.Form
-              class="isolate ml-auto inline-flex rounded-md shadow-sm [&>*:not(:first-of-type)]:-ml-px [&>*:last-of-type]:rounded-r-md [&>*:first-of-type]:rounded-l-md"
+              class="isolate ml-auto inline-flex rounded-md shadow-sm [&>*:first-of-type]:rounded-l-md [&>*:last-of-type]:rounded-r-md [&>*:not(:first-of-type)]:-ml-px"
               replace
               onSubmit={(e) => {
                 if (!user?.()?.me) {

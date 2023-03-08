@@ -6,6 +6,8 @@ import mkdirp from 'mkdirp';
 import PQueue from 'p-queue';
 import chokidar from 'chokidar';
 import fastGlob from 'fast-glob';
+import { throttle } from 'lodash-es';
+import rimraf from 'rimraf';
 import type { Probe } from './probe';
 import {
   getVariants,
@@ -18,9 +20,7 @@ import {
   S3_PUBLIC_BUCKET,
   streamObjectToFile,
 } from '../../../util/s3';
-import rimraf from '../../../util/rimraf';
 import prisma from '../../../util/prisma';
-import { throttle } from 'lodash-es';
 
 const WORK_DIR = '/data/transcode';
 

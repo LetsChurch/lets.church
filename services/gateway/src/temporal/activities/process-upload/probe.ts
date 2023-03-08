@@ -3,6 +3,7 @@ import { stat } from 'node:fs/promises';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
 import { throttle } from 'lodash-es';
+import rimraf from 'rimraf';
 import {
   retryablePutFile,
   S3_INGEST_BUCKET,
@@ -10,7 +11,6 @@ import {
 } from '../../../util/s3';
 import { runFfprobe } from '../../../util/ffmpeg';
 import { ffprobeSchema } from '../../../util/zod';
-import rimraf from '../../../util/rimraf';
 import prisma from '../../../util/prisma';
 
 const WORK_DIR = '/data/transcode';

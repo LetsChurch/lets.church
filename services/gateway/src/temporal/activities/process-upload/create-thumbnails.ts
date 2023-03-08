@@ -7,6 +7,8 @@ import PQueue from 'p-queue';
 import pMap from 'p-map';
 import fastGlob from 'fast-glob';
 import { chunk, compact, maxBy, throttle } from 'lodash-es';
+import pRetry from 'p-retry';
+import rimraf from 'rimraf';
 import {
   retryablePutFile,
   S3_INGEST_BUCKET,
@@ -15,9 +17,7 @@ import {
 } from '../../../util/s3';
 import { runFfmpegThumbnails } from '../../../util/ffmpeg';
 import { concatThumbs, imageToBlurhash } from '../../../util/images';
-import rimraf from '../../../util/rimraf';
 import prisma from '../../../util/prisma';
-import pRetry from 'p-retry';
 
 const WORK_DIR = '/data/thumbnails';
 
