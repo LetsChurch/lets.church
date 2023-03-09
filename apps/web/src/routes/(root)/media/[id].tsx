@@ -12,7 +12,6 @@ import server$, {
   redirect,
 } from 'solid-start/server';
 import {
-  type ParentProps,
   type JSX,
   splitProps,
   useContext,
@@ -20,9 +19,14 @@ import {
   untrack,
   createSignal,
   Show,
+  Switch,
+  Match,
 } from 'solid-js';
 import ThumbUpIcon from '@tabler/icons/thumb-up.svg?component-solid';
 import ThumbDownIcon from '@tabler/icons/thumb-down.svg?component-solid';
+import SubscribeIcon from '@tabler/icons/rss.svg?component-solid';
+// TODO: use share-2 once on tabler icons v2.5+
+import ShareIcon from '@tabler/icons/share.svg?component-solid';
 import invariant from 'tiny-invariant';
 import {
   createAuthenticatedClient,
@@ -44,16 +48,25 @@ import { isServer } from 'solid-js/web';
 import Transcript from '~/components/transcript';
 import { formatDateFull } from '~/util/date';
 
+function UnderbarButton(props: JSX.IntrinsicElements['button']) {
+  const [localProps, restProps] = splitProps(props, ['class']);
+  return (
+    <button
+      {...restProps}
+      class={`relative inline-flex  items-center space-x-2 border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 first-of-type:rounded-l-md last-of-type:rounded-r-md only-of-type:shadow-sm hover:bg-gray-50 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 [&:not(:first-of-type)]:-ml-px ${localProps.class}`}
+    />
+  );
+}
+
 function RatingButton(
-  props: ParentProps<{
+  props: {
     count: number;
     value: Rating;
     active: boolean;
-  }> &
-    Omit<
-      JSX.ButtonHTMLAttributes<HTMLButtonElement>,
-      'class' | 'onClick' | 'value'
-    >,
+  } & Omit<
+    JSX.IntrinsicElements['button'],
+    'class' | 'onClick' | 'value' | 'children'
+  >,
 ) {
   const [localProps, restProps] = splitProps(props, [
     'count',
@@ -62,20 +75,27 @@ function RatingButton(
   ]);
 
   return (
-    <button
+    <UnderbarButton
       type="submit"
       name="rating"
       value={localProps.value}
-      class="relative inline-flex min-w-[80px] items-center space-x-2 border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+      class="min-w-[80px]"
       classList={{
         'bg-indigo-50': localProps.active,
         'text-indigo-700': localProps.active,
       }}
       {...restProps}
     >
-      {props.children}
+      <Switch>
+        <Match when={localProps.value === Rating.Like}>
+          <ThumbUpIcon class="pointer-events-none scale-90" />
+        </Match>
+        <Match when={localProps.value === Rating.Dislike}>
+          <ThumbDownIcon class="pointer-events-none -scale-x-90 scale-y-90" />
+        </Match>
+      </Switch>
       <span>{localProps.count}</span>
-    </button>
+    </UnderbarButton>
   );
 }
 
@@ -284,59 +304,65 @@ export default function MediaRoute() {
             />
           </div>
           <h1 class="truncate text-2xl">{metaData()?.data.title ?? '...'}</h1>
-          <div class="flex">
-            <A
-              href={`/channel/${metaData()?.data.channel.id}`}
-              class="relative z-10 inline-flex items-center space-x-2"
-            >
-              <img
-                class="h-6 w-6 rounded-full"
-                src="https://images.unsplash.com/photo-1477672680933-0287a151330e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                alt={`${metaData()?.data.channel.name} icon`}
-              />
-              <span class="text-sm text-gray-500">
-                {metaData()?.data.channel.name}
-              </span>
-            </A>
-            <submitRating.Form
-              class="isolate ml-auto inline-flex rounded-md shadow-sm [&>*:first-of-type]:rounded-l-md [&>*:last-of-type]:rounded-r-md [&>*:not(:first-of-type)]:-ml-px"
-              replace
-              onSubmit={(e) => {
-                if (!user?.()?.me) {
-                  e.preventDefault();
-                  // TODO: show login
-                  return alert('Not logged in!');
-                }
+          <div class="flex justify-between">
+            <div class="flex gap-3">
+              <A
+                href={`/channel/${metaData()?.data.channel.id}`}
+                class="relative z-10 inline-flex items-center space-x-2"
+              >
+                <img
+                  class="h-6 w-6 rounded-full"
+                  src="https://images.unsplash.com/photo-1477672680933-0287a151330e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                  alt={`${metaData()?.data.channel.name} icon`}
+                />
+                <span class="text-sm text-gray-500">
+                  {metaData()?.data.channel.name}
+                </span>
+              </A>
+              <UnderbarButton onClick={() => alert('TODO: Subscribe')}>
+                <SubscribeIcon class="scale-90" /> <span>Subscribe</span>
+              </UnderbarButton>
+            </div>
+            <div class="flex gap-3">
+              <UnderbarButton onClick={() => alert('TODO: Share')}>
+                <ShareIcon class="scale-90" /> <span>Share</span>
+              </UnderbarButton>
+              <submitRating.Form
+                class="isolate inline-flex rounded-md shadow-sm"
+                replace
+                onSubmit={(e) => {
+                  if (!user?.()?.me) {
+                    e.preventDefault();
+                    // TODO: show login
+                    return alert('Not logged in!');
+                  }
 
-                // Optimistic update
-                if (
-                  e.submitter instanceof HTMLButtonElement &&
-                  e.submitter.value === 'LIKE'
-                ) {
-                  handleRating(Rating.Like);
-                } else {
-                  handleRating(Rating.Dislike);
-                }
-              }}
-            >
-              <input type="hidden" name="uploadRecordId" value={params.id} />
-              <RatingButton
-                count={ratingStateData()?.data.totalLikes ?? 0}
-                value={Rating.Like}
-                active={ratingStateData()?.data.myRating === Rating.Like}
-                disabled={submittingRating.pending}
+                  // Optimistic update
+                  if (
+                    e.submitter instanceof HTMLButtonElement &&
+                    e.submitter.value === 'LIKE'
+                  ) {
+                    handleRating(Rating.Like);
+                  } else {
+                    handleRating(Rating.Dislike);
+                  }
+                }}
               >
-                <ThumbUpIcon class="pointer-events-none" />
-              </RatingButton>
-              <RatingButton
-                count={ratingStateData()?.data.totalDislikes ?? 0}
-                value={Rating.Dislike}
-                active={ratingStateData()?.data.myRating === Rating.Dislike}
-                disabled={submittingRating.pending}
-              >
-                <ThumbDownIcon class="pointer-events-none -scale-x-100" />
-              </RatingButton>
-            </submitRating.Form>
+                <input type="hidden" name="uploadRecordId" value={params.id} />
+                <RatingButton
+                  count={ratingStateData()?.data.totalLikes ?? 0}
+                  value={Rating.Like}
+                  active={ratingStateData()?.data.myRating === Rating.Like}
+                  disabled={submittingRating.pending}
+                />
+                <RatingButton
+                  count={ratingStateData()?.data.totalDislikes ?? 0}
+                  value={Rating.Dislike}
+                  active={ratingStateData()?.data.myRating === Rating.Dislike}
+                  disabled={submittingRating.pending}
+                />
+              </submitRating.Form>
+            </div>
           </div>
           <div class="space-y-2 rounded-md bg-gray-100 p-3">
             <div class="flex items-center gap-3 text-sm">
