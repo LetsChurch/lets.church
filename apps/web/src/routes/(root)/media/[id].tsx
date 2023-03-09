@@ -375,9 +375,9 @@ export default function MediaRoute() {
                 )}
               </Show>
             </div>
-            <div class="whitespace-pre-line">
-              {metaData()?.data.description}
-            </div>
+            <Show when={metaData()?.data.description} keyed>
+              {(desc) => <div class="whitespace-pre-line">{desc}</div>}
+            </Show>
           </div>
           <div>comments</div>
         </div>
