@@ -85,6 +85,7 @@ builder.prismaObject('UploadRecord', {
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
     title: t.exposeString('title', { nullable: true }),
+    description: t.exposeString('description', { nullable: true }),
     license: t.expose('license', { type: UploadLicense }),
     visibility: t.expose('visibility', { type: UploadVisibility }),
     createdBy: t.relation('createdBy', { authScopes: internalAuthScopes }),

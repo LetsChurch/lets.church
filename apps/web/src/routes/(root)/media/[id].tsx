@@ -124,6 +124,7 @@ export function routeData({ params }: RouteDataArgs) {
             data: uploadRecordById(id: $id) {
               id
               title
+              description
               publishedAt
               channel {
                 id
@@ -348,8 +349,8 @@ export default function MediaRoute() {
                 )}
               </Show>
             </div>
-            <div>
-              <p>Description</p>
+            <div class="whitespace-pre-line">
+              {metaData()?.data.description}
             </div>
           </div>
           <div>comments</div>

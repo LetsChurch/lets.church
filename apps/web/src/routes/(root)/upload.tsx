@@ -50,6 +50,7 @@ type BaseField = {
 
 type TextField = BaseField & {
   type: 'text';
+  rows?: number;
 };
 
 type DateField = BaseField & {
@@ -85,6 +86,7 @@ function getSections(
   defaultValues: {
     channelId: string | null | undefined;
     title: string | null | undefined;
+    description: string | null | undefined;
     publishedAt: string | null | undefined;
     license: string | null | undefined;
     visibility: string | null | undefined;
@@ -110,6 +112,14 @@ function getSections(
           type: 'text',
           id: createUniqueId(),
           defaultValue: defaultValues.title,
+        },
+        {
+          label: 'Description',
+          name: 'description',
+          type: 'text',
+          rows: 5,
+          id: createUniqueId(),
+          defaultValue: defaultValues.description,
         },
         {
           label: 'License',
@@ -220,6 +230,7 @@ export function routeData({ location }: RouteDataArgs) {
               canMutate
               id
               title
+              description
               publishedAt
               license
               visibility
@@ -452,6 +463,7 @@ export default function UploadRoute() {
       {
         channelId: d?.uploadRecordById?.channel.id,
         title: d?.uploadRecordById?.title,
+        description: d?.uploadRecordById?.description,
         publishedAt: dateToIso8601(
           publishedAt ? new Date(publishedAt) : new Date(),
         ),
@@ -500,6 +512,9 @@ export default function UploadRoute() {
                               ? { value: field.defaultValue }
                               : {})}
                             type={field.type}
+                            rows={
+                              field.type === 'text' ? field.rows : undefined
+                            }
                             disabled={field.disabled ?? false}
                           />
                         }

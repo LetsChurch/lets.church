@@ -478,6 +478,7 @@ export type UploadRecord = {
   channel: Channel;
   createdAt: Scalars['DateTime'];
   createdBy: AppUser;
+  description?: Maybe<Scalars['String']>;
   id: Scalars['ShortUuid'];
   license: UploadLicense;
   mediaSource?: Maybe<Scalars['String']>;
