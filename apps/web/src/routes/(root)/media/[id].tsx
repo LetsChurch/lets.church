@@ -22,6 +22,8 @@ import {
   Switch,
   Match,
 } from 'solid-js';
+import { isServer } from 'solid-js/web';
+import { useFloating } from 'solid-floating-ui';
 import ThumbUpIcon from '@tabler/icons/thumb-up.svg?component-solid';
 import ThumbDownIcon from '@tabler/icons/thumb-down.svg?component-solid';
 import SubscribeIcon from '@tabler/icons/rss.svg?component-solid';
@@ -44,8 +46,8 @@ import type {
   SubmitUploadRatingMutationVariables,
 } from './__generated__/[id]';
 import Video from '~/components/video';
-import { isServer } from 'solid-js/web';
 import Transcript from '~/components/transcript';
+import FloatingShareMenu from '~/components/floating-share-menu';
 import { formatDateFull } from '~/util/date';
 
 function UnderbarButton(props: JSX.IntrinsicElements['button']) {
@@ -286,6 +288,31 @@ export default function MediaRoute() {
   const startAt = getStartAt();
   const [currentTime, setCurrentTime] = createSignal(startAt ?? 0);
 
+  const [shareFloatOpen, setShareFloatOpen] = createSignal(false);
+  const [shareButtonRef, setShareButtonRef] = createSignal<HTMLButtonElement>();
+  const [floatingShareMenu, setFloatingShareMenu] =
+    createSignal<HTMLDivElement>();
+  const position = useFloating(shareButtonRef, floatingShareMenu, {
+    placement: 'top',
+  });
+
+  function getShareData() {
+    return {
+      title: metaData()?.data.title ?? 'No title',
+      text: metaData()?.data.description?.split(/\n+/g)?.[0] ?? '',
+      url: location.href,
+    };
+  }
+
+  async function handleShare() {
+    const data = getShareData();
+    if (navigator.canShare?.(data)) {
+      return navigator.share(data);
+    }
+
+    setShareFloatOpen(true);
+  }
+
   return (
     <>
       <Title>{metaData()?.data.title ?? '...'} | Let's Church</Title>
@@ -304,11 +331,11 @@ export default function MediaRoute() {
             />
           </div>
           <h1 class="truncate text-2xl">{metaData()?.data.title ?? '...'}</h1>
-          <div class="flex justify-between">
+          <div class="flex justify-between gap-3 overflow-x-auto">
             <div class="flex gap-3">
               <A
                 href={`/channel/${metaData()?.data.channel.id}`}
-                class="relative z-10 inline-flex items-center space-x-2"
+                class="relative z-10 inline-flex min-w-0 items-center space-x-2 whitespace-nowrap"
               >
                 <img
                   class="h-6 w-6 rounded-full"
@@ -322,9 +349,19 @@ export default function MediaRoute() {
               <UnderbarButton onClick={() => alert('TODO: Subscribe')}>
                 <SubscribeIcon class="scale-90" /> <span>Subscribe</span>
               </UnderbarButton>
+              <FloatingShareMenu
+                ref={setFloatingShareMenu}
+                data={getShareData()}
+                open={shareFloatOpen()}
+                onClose={() => setShareFloatOpen(false)}
+                position={position}
+              />
             </div>
             <div class="flex gap-3">
-              <UnderbarButton onClick={() => alert('TODO: Share')}>
+              <UnderbarButton
+                ref={setShareButtonRef}
+                onClick={() => handleShare()}
+              >
                 <ShareIcon class="scale-90" /> <span>Share</span>
               </UnderbarButton>
               <submitRating.Form

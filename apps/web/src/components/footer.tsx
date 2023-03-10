@@ -1,4 +1,5 @@
 import { For } from 'solid-js';
+// TODO: use filled variants on tabler 2+
 import FacebookIcon from '@tabler/icons/brand-facebook.svg?component-solid';
 import InstagramIcon from '@tabler/icons/brand-instagram.svg?component-solid';
 import TwitterIcon from '@tabler/icons/brand-twitter.svg?component-solid';
