@@ -1,8 +1,8 @@
 import { executeChild, proxyActivities } from '@temporalio/workflow';
-import type * as activities from '../activities/process-upload';
 import invariant from 'tiny-invariant';
-import { indexDocumentWorkflow } from './background';
+import type * as activities from '../activities/process-upload';
 import { BACKGROUND_QUEUE } from '../queues';
+import { indexDocumentWorkflow } from './background';
 
 const { probe, processThumbnail } = proxyActivities<typeof activities>({
   startToCloseTimeout: '1 minute',

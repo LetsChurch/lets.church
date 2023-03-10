@@ -1,10 +1,10 @@
 import { createContext, Resource } from 'solid-js';
 import { Outlet, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
+import type { MeQuery } from './__generated__/(root)';
 import Footer from '~/components/footer';
 import Header from '~/components/header';
 import { createAuthenticatedClient, gql } from '~/util/gql/server';
-import type { MeQuery } from './__generated__/(root)';
 
 export function routeData() {
   return createServerData$(async (_, { request }) => {

@@ -1,7 +1,14 @@
 extends:
   - 'eslint:recommended'
+  - 'plugin:import/recommended'
   - 'plugin:@typescript-eslint/recommended'
   - 'plugin:solid/typescript'
 parser: '@typescript-eslint/parser'
 plugins:
   - solid
+settings:
+  import/resolver:
+    typescript: true
+    node: true
+rules:
+  import/order: error

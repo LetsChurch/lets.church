@@ -1,11 +1,11 @@
 import { For, Show } from 'solid-js';
 import { A } from 'solid-start';
 import BellIcon from '@tabler/icons/bell.svg?component-solid';
-import type { MeQuery } from '~/routes/__generated__/(root)';
 import { createServerAction$ } from 'solid-start/server';
+import { profileLinks } from './profile';
+import type { MeQuery } from '~/routes/__generated__/(root)';
 import logoutAction from '~/util/logout-action';
 import { useLoginLocation, useSerializedLocation } from '~/util';
-import { profileLinks } from './profile';
 
 export type Props = MeQuery;
 

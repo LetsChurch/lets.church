@@ -11,10 +11,10 @@ import SearchIcon from '@tabler/icons/search.svg?component-solid';
 import BellIcon from '@tabler/icons/bell.svg?component-solid';
 import MenuIcon from '@tabler/icons/menu-2.svg?component-solid';
 import XIcon from '@tabler/icons/x.svg?component-solid';
-import { UserContext } from '~/routes/(root)';
+import { useBeforeLeave, useIsRouting } from '@solidjs/router';
 import Profile from './profile';
 import ProfileMobile from './profile-mobile';
-import { useBeforeLeave, useIsRouting } from '@solidjs/router';
+import { UserContext } from '~/routes/(root)';
 
 type NavLinkProps = ParentProps<{ href: string; active?: boolean }>;
 

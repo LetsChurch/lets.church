@@ -8,7 +8,6 @@ import chokidar from 'chokidar';
 import fastGlob from 'fast-glob';
 import { throttle } from 'lodash-es';
 import rimraf from 'rimraf';
-import type { Probe } from './probe';
 import {
   getVariants,
   runFfmpegEncode,
@@ -21,6 +20,7 @@ import {
   streamObjectToFile,
 } from '../../../util/s3';
 import prisma from '../../../util/prisma';
+import type { Probe } from './probe';
 
 const WORK_DIR = '/data/transcode';
 

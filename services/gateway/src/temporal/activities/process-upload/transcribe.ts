@@ -4,6 +4,7 @@ import { stat } from 'node:fs/promises';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
 import rimraf from 'rimraf';
+import { throttle } from 'lodash-es';
 import {
   retryablePutFile,
   S3_INGEST_BUCKET,
@@ -11,7 +12,6 @@ import {
   streamObjectToFile,
 } from '../../../util/s3';
 import { runWhisper } from '../../../util/whisper';
-import { throttle } from 'lodash-es';
 
 const WORK_DIR = '/data/transcribe';
 

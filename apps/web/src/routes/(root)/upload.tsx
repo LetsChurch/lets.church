@@ -9,15 +9,13 @@ import {
 } from 'solid-js';
 import { debounce } from '@solid-primitives/scheduled';
 import { json, RouteDataArgs, useRouteData } from 'solid-start';
-import Dropzone, { DroppedRes } from '~/components/dropzone';
-import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
-import {
-  UploadLicense,
-  UploadPostProcess,
-  UploadVisibility,
-  type Channel,
-} from '~/__generated__/graphql-types';
 import * as Z from 'zod';
+import server$, {
+  createServerAction$,
+  createServerData$,
+  redirect,
+} from 'solid-start/server';
+import invariant from 'tiny-invariant';
 import type {
   UploadRouteDataQuery,
   CreateMultipartMediaUploadMutation,
@@ -28,13 +26,15 @@ import type {
   UpsertUploadRecordMutationVariables,
   UploadRouteDataQueryVariables,
 } from './__generated__/upload';
-import server$, {
-  createServerAction$,
-  createServerData$,
-  redirect,
-} from 'solid-start/server';
+import Dropzone, { DroppedRes } from '~/components/dropzone';
+import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
+import {
+  UploadLicense,
+  UploadPostProcess,
+  UploadVisibility,
+  type Channel,
+} from '~/__generated__/graphql-types';
 import { notEmpty } from '~/util';
-import invariant from 'tiny-invariant';
 import { doMultipartUpload } from '~/util/multipart-upload';
 import { Input, Select, Button, Radios } from '~/components/form';
 import { dateToIso8601 } from '~/util/date';

@@ -3,8 +3,8 @@ import SubscribersIcon from '@tabler/icons/rss.svg?component-solid';
 import PlayIcon from '@tabler/icons/player-play.svg?component-solid';
 import MenuIcon from '@tabler/icons/dots-vertical.svg?component-solid';
 import { createSignal } from 'solid-js';
-import FloatingMenu from './floating-menu';
 import { useFloating } from 'solid-floating-ui';
+import FloatingMenu from './floating-menu';
 
 export type Props = {
   id: string;

@@ -10,13 +10,13 @@ import {
 import { A, RouteDataArgs, useLocation, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
 import '@fontsource/roboto-mono/variable.css';
+import type { SearchQuery, SearchQueryVariables } from './__generated__/search';
 import Pagination from '~/components/pagination';
 import Thumbnail, {
   type Props as ThumbnailProps,
 } from '~/components/thumbnail';
 import { client, gql } from '~/util/gql/server';
 import { SearchFocus } from '~/__generated__/graphql-types';
-import type { SearchQuery, SearchQueryVariables } from './__generated__/search';
 import { formatTime } from '~/util';
 
 const PAGE_SIZE = 12;

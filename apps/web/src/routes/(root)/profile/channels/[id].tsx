@@ -2,11 +2,11 @@ import { For } from 'solid-js';
 import { RouteDataArgs, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
 import invariant from 'tiny-invariant';
+import type { ChannelQuery, ChannelQueryVariables } from './__generated__/[id]';
 import { PageHeading } from '~/components/page-heading';
 import Pagination from '~/components/pagination';
 import UploadCard from '~/components/upload-card';
 import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
-import type { ChannelQuery, ChannelQueryVariables } from './__generated__/[id]';
 
 const PAGE_SIZE = 12;
 

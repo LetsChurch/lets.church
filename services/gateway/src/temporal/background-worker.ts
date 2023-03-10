@@ -1,6 +1,6 @@
-import { NativeConnection, Worker } from '@temporalio/worker';
 import { URL } from 'node:url';
 import path from 'node:path';
+import { NativeConnection, Worker } from '@temporalio/worker';
 import envariant from '@knpwrs/envariant';
 import * as activities from './activities/background';
 import { BACKGROUND_QUEUE } from './queues';

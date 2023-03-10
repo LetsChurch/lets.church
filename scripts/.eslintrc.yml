@@ -1,7 +1,9 @@
 extends:
-  - plugin:@typescript-eslint/recommended
+  - eslint:recommended
   - plugin:import/recommended
+  - plugin:@typescript-eslint/recommended
 rules:
+  import/order: error
   import/no-named-as-default: off
   import/no-unresolved: off
   '@typescript-eslint/explicit-function-return-type': off

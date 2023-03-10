@@ -1,10 +1,10 @@
 import { For } from 'solid-js';
 import { useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
+import type { MyChannelsQuery } from './__generated__/(channels)';
 import ChannelCard from '~/components/channel-card';
 import { PageHeading } from '~/components/page-heading';
 import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
-import type { MyChannelsQuery } from './__generated__/(channels)';
 
 export function routeData() {
   return createServerData$(async (_, { request }) => {

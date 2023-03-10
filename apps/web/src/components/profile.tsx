@@ -3,10 +3,10 @@ import { A } from 'solid-start';
 import { useFloating } from 'solid-floating-ui';
 import { useBeforeLeave, useIsRouting } from '@solidjs/router';
 import { createServerAction$ } from 'solid-start/server';
+import FloatingMenu from './floating-menu';
 import logoutAction from '~/util/logout-action';
 import { useLoginLocation, useSerializedLocation } from '~/util';
 import type { MeQuery } from '~/routes/__generated__/(root)';
-import FloatingMenu from './floating-menu';
 
 export const profileLinks = [
   { href: '/upload', label: 'Upload' },

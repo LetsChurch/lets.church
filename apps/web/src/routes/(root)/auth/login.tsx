@@ -2,12 +2,12 @@ import { createUniqueId, mergeProps } from 'solid-js';
 import { useLocation } from 'solid-start';
 import { createServerAction$, redirect } from 'solid-start/server';
 import * as Z from 'zod';
-import { gql, client } from '~/util/gql/server';
-import { storage } from '~/util/session';
 import type {
   LoginMutation,
   LoginMutationVariables,
 } from './__generated__/login';
+import { gql, client } from '~/util/gql/server';
+import { storage } from '~/util/session';
 
 const LoginSchema = Z.object({
   id: Z.string(),

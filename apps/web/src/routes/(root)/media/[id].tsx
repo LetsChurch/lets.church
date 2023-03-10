@@ -30,13 +30,6 @@ import SubscribeIcon from '@tabler/icons/rss.svg?component-solid';
 // TODO: use share-2 once on tabler icons v2.5+
 import ShareIcon from '@tabler/icons/share.svg?component-solid';
 import invariant from 'tiny-invariant';
-import {
-  createAuthenticatedClient,
-  createAuthenticatedClientOrRedirect,
-  gql,
-} from '~/util/gql/server';
-import { UserContext } from '~/routes/(root)';
-import { Rating } from '~/__generated__/graphql-types';
 import type {
   MediaRouteMetaDataQuery,
   MediaRouteMetaDataQueryVariables,
@@ -45,6 +38,13 @@ import type {
   SubmitUploadRatingMutation,
   SubmitUploadRatingMutationVariables,
 } from './__generated__/[id]';
+import {
+  createAuthenticatedClient,
+  createAuthenticatedClientOrRedirect,
+  gql,
+} from '~/util/gql/server';
+import { UserContext } from '~/routes/(root)';
+import { Rating } from '~/__generated__/graphql-types';
 import Video from '~/components/video';
 import Transcript from '~/components/transcript';
 import FloatingShareMenu from '~/components/floating-share-menu';
