@@ -47,6 +47,14 @@ CREATE TABLE "app_session" (
 );
 
 -- CreateTable
+CREATE TABLE "channel_subscription" (
+    "app_user_id" UUID NOT NULL,
+    "channel_id" UUID NOT NULL,
+
+    CONSTRAINT "channel_subscription_pkey" PRIMARY KEY ("app_user_id","channel_id")
+);
+
+-- CreateTable
 CREATE TABLE "organization" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "name" TEXT NOT NULL,
@@ -129,13 +137,13 @@ CREATE TABLE "upload_record" (
 );
 
 -- CreateTable
-CREATE TABLE "UploadUserRating" (
+CREATE TABLE "upload_user_rating" (
     "app_user_id" UUID NOT NULL,
     "upload_id" UUID NOT NULL,
     "rating" "Rating" NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "UploadUserRating_pkey" PRIMARY KEY ("app_user_id","upload_id")
+    CONSTRAINT "upload_user_rating_pkey" PRIMARY KEY ("app_user_id","upload_id")
 );
 
 -- CreateIndex
@@ -154,13 +162,19 @@ CREATE UNIQUE INDEX "channel_slug_key" ON "channel"("slug");
 CREATE INDEX "upload_record_created_at_id_idx" ON "upload_record"("created_at", "id");
 
 -- CreateIndex
-CREATE INDEX "UploadUserRating_upload_id_rating_idx" ON "UploadUserRating"("upload_id", "rating");
+CREATE INDEX "upload_user_rating_upload_id_rating_idx" ON "upload_user_rating"("upload_id", "rating");
 
 -- CreateIndex
-CREATE INDEX "UploadUserRating_app_user_id_rating_idx" ON "UploadUserRating"("app_user_id", "rating");
+CREATE INDEX "upload_user_rating_app_user_id_rating_idx" ON "upload_user_rating"("app_user_id", "rating");
 
 -- AddForeignKey
 ALTER TABLE "app_session" ADD CONSTRAINT "app_session_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "channel_subscription" ADD CONSTRAINT "channel_subscription_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "channel_subscription" ADD CONSTRAINT "channel_subscription_channel_id_fkey" FOREIGN KEY ("channel_id") REFERENCES "channel"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "organization_membership" ADD CONSTRAINT "organization_membership_channel_id_fkey" FOREIGN KEY ("channel_id") REFERENCES "organization"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -190,4 +204,4 @@ ALTER TABLE "upload_record" ADD CONSTRAINT "upload_record_channel_id_fkey" FOREI
 ALTER TABLE "upload_record" ADD CONSTRAINT "upload_record_upload_finalized_by_id_fkey" FOREIGN KEY ("upload_finalized_by_id") REFERENCES "app_user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "UploadUserRating" ADD CONSTRAINT "UploadUserRating_upload_id_fkey" FOREIGN KEY ("upload_id") REFERENCES "upload_record"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "upload_user_rating" ADD CONSTRAINT "upload_user_rating_upload_id_fkey" FOREIGN KEY ("upload_id") REFERENCES "upload_record"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

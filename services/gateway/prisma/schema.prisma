@@ -35,6 +35,7 @@ model AppUser {
   organizationMemberships OrganizationMembership[]
   createdUploads          UploadRecord[]           @relation("createdUploads")
   finalizedUploads        UploadRecord[]           @relation("finalizedUploads")
+  channelSubscriptions    ChannelSubscription[]
 
   @@map("app_user")
 }
@@ -49,6 +50,16 @@ model AppSession {
   deletedAt DateTime? @map("deleted_at")
 
   @@map("app_session")
+}
+
+model ChannelSubscription {
+  appUser   AppUser @relation(fields: [appUserId], references: [id])
+  appUserId String  @map("app_user_id") @db.Uuid
+  channel   Channel @relation(fields: [channelId], references: [id])
+  channelId String  @map("channel_id") @db.Uuid
+
+  @@id([appUserId, channelId])
+  @@map("channel_subscription")
 }
 
 model Organization {
@@ -100,6 +111,7 @@ model Channel {
   createdAt     DateTime                         @default(now()) @map("created_at")
   updatedAt     DateTime                         @updatedAt @map("updated_at")
   uploadRecords UploadRecord[]
+  subscribers   ChannelSubscription[]
 
   @@map("channel")
 }
@@ -188,4 +200,5 @@ model UploadUserRating {
   @@id([appUserId, uploadRecordId])
   @@index([uploadRecordId, rating])
   @@index([appUserId, rating])
+  @@map("upload_user_rating")
 }

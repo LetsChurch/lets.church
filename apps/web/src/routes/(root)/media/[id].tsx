@@ -37,6 +37,8 @@ import type {
   MediaRouteRatingStateQueryVariables,
   SubmitUploadRatingMutation,
   SubmitUploadRatingMutationVariables,
+  ModifySubscriptionMutation,
+  ModifySubscriptionMutationVariables,
 } from './__generated__/[id]';
 import {
   createAuthenticatedClient,
@@ -151,6 +153,7 @@ export function routeData({ params }: RouteDataArgs) {
               channel {
                 id
                 name
+                userIsSubscribed
               }
               mediaSource
               audioSource
@@ -201,6 +204,54 @@ export default function MediaRoute() {
     ratingState: [ratingStateData, { mutate: mutateRating }],
     metaData,
   } = useRouteData<typeof routeData>();
+
+  const [submittingSubscribe, submitSubscribe] = createServerAction$(
+    async (form: FormData, { request }) => {
+      const action = form.get('action');
+      const channelId = form.get('channelId');
+
+      invariant(
+        typeof channelId === 'string',
+        'No channelId provided to submitSubscribe',
+      );
+
+      const client = await createAuthenticatedClientOrRedirect(request);
+
+      return client.request<
+        ModifySubscriptionMutation,
+        ModifySubscriptionMutationVariables
+      >(
+        gql`
+          mutation ModifySubscription(
+            $channelId: ShortUuid!
+            $subscribe: Boolean!
+          ) {
+            subscribeToChannel(channelId: $channelId) @include(if: $subscribe) {
+              channel {
+                id
+                userIsSubscribed
+              }
+            }
+            unsubscribeFromChannel(channelId: $channelId) @skip(if: $subscribe)
+          }
+        `,
+        {
+          channelId,
+          subscribe: action === 'subscribe',
+        },
+      );
+    },
+    {
+      invalidate: ['media', params.id, 'meta'],
+    },
+  );
+
+  const userIsSubscribed = () => {
+    return (
+      submittingSubscribe?.input?.get('action') === 'subscribe' ||
+      metaData()?.data?.channel.userIsSubscribed
+    );
+  };
 
   const [submittingRating, submitRating] = createServerAction$(
     async (form: FormData, { request }) => {
@@ -346,9 +397,29 @@ export default function MediaRoute() {
                   {metaData()?.data.channel.name}
                 </span>
               </A>
-              <UnderbarButton onClick={() => alert('TODO: Subscribe')}>
-                <SubscribeIcon class="scale-90" /> <span>Subscribe</span>
-              </UnderbarButton>
+              <submitSubscribe.Form
+                class="isolate inline-flex rounded-md shadow-sm"
+                replace
+              >
+                <input
+                  type="hidden"
+                  name="channelId"
+                  value={metaData()?.data.channel.id ?? ''}
+                />
+                <UnderbarButton
+                  type="submit"
+                  name="action"
+                  value={userIsSubscribed() ? 'unsubscribe' : 'subscribe'}
+                  classList={{
+                    'text-indigo-700': userIsSubscribed(),
+                    'border-indigo-700': userIsSubscribed(),
+                  }}
+                  disabled={submittingSubscribe.pending}
+                >
+                  <SubscribeIcon class="scale-90" />{' '}
+                  <span>{userIsSubscribed() ? 'Subscribed' : 'Subscribe'}</span>
+                </UnderbarButton>
+              </submitSubscribe.Form>
               <FloatingShareMenu
                 ref={setFloatingShareMenu}
                 data={getShareData()}

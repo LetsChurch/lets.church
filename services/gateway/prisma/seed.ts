@@ -98,6 +98,15 @@ const { id: lcId, associations: lcAssociations } =
                   isAdmin: true,
                 },
               },
+              subscribers: {
+                create: {
+                  appUser: {
+                    connect: {
+                      id: adminId,
+                    },
+                  },
+                },
+              },
             },
           },
         },

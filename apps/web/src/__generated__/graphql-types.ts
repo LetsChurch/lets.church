@@ -20,6 +20,7 @@ export type Scalars = {
 export type AppUser = {
   __typename?: 'AppUser';
   channelMembershipsConnection: AppUserChannelMembershipsConnection;
+  channelSubscriptionsConnection: AppUserChannelSubscriptionsConnection;
   createdAt: Scalars['DateTime'];
   email: Scalars['String'];
   id: Scalars['ShortUuid'];
@@ -34,6 +35,14 @@ export type AppUserChannelMembershipsConnectionArgs = {
   after?: InputMaybe<Scalars['String']>;
   before?: InputMaybe<Scalars['String']>;
   canUpload?: InputMaybe<Scalars['Boolean']>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+};
+
+
+export type AppUserChannelSubscriptionsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']>;
+  before?: InputMaybe<Scalars['String']>;
   first?: InputMaybe<Scalars['Int']>;
   last?: InputMaybe<Scalars['Int']>;
 };
@@ -56,6 +65,18 @@ export type AppUserChannelMembershipsConnectionEdge = {
   __typename?: 'AppUserChannelMembershipsConnectionEdge';
   cursor: Scalars['String'];
   node: ChannelMembership;
+};
+
+export type AppUserChannelSubscriptionsConnection = {
+  __typename?: 'AppUserChannelSubscriptionsConnection';
+  edges: Array<AppUserChannelSubscriptionsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type AppUserChannelSubscriptionsConnectionEdge = {
+  __typename?: 'AppUserChannelSubscriptionsConnectionEdge';
+  cursor: Scalars['String'];
+  node: ChannelSubscription;
 };
 
 export type AppUserOrganizationMemberhipsConnection = {
@@ -83,12 +104,22 @@ export type Channel = {
   membershipsConnection: ChannelMembershipsConnection;
   name: Scalars['String'];
   slug: Scalars['String'];
+  subscribersConnection: ChannelSubscribersConnection;
   updatedAt: Scalars['DateTime'];
   uploadsConnection: ChannelUploadsConnection;
+  userIsSubscribed: Scalars['Boolean'];
 };
 
 
 export type ChannelMembershipsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']>;
+  before?: InputMaybe<Scalars['String']>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+};
+
+
+export type ChannelSubscribersConnectionArgs = {
   after?: InputMaybe<Scalars['String']>;
   before?: InputMaybe<Scalars['String']>;
   first?: InputMaybe<Scalars['Int']>;
@@ -132,6 +163,25 @@ export type ChannelSearchHit = ISearchHit & {
   name: Scalars['String'];
 };
 
+export type ChannelSubscribersConnection = {
+  __typename?: 'ChannelSubscribersConnection';
+  edges: Array<ChannelSubscribersConnectionEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int'];
+};
+
+export type ChannelSubscribersConnectionEdge = {
+  __typename?: 'ChannelSubscribersConnectionEdge';
+  cursor: Scalars['String'];
+  node: ChannelSubscription;
+};
+
+export type ChannelSubscription = {
+  __typename?: 'ChannelSubscription';
+  channel: Channel;
+  user: AppUser;
+};
+
 export type ChannelUploadsConnection = {
   __typename?: 'ChannelUploadsConnection';
   edges: Array<ChannelUploadsConnectionEdge>;
@@ -173,6 +223,8 @@ export type Mutation = {
   logout: Scalars['Boolean'];
   rateUpload: Scalars['Boolean'];
   signup: AppUser;
+  subscribeToChannel: ChannelSubscription;
+  unsubscribeFromChannel: Scalars['Boolean'];
   upsertChannelMembership: ChannelMembership;
   upsertOrganizationMembership: OrganizationMembership;
   upsertUploadRecord: UploadRecord;
@@ -224,6 +276,16 @@ export type MutationSignupArgs = {
   fullName?: InputMaybe<Scalars['String']>;
   password: Scalars['String'];
   username: Scalars['String'];
+};
+
+
+export type MutationSubscribeToChannelArgs = {
+  channelId: Scalars['ShortUuid'];
+};
+
+
+export type MutationUnsubscribeFromChannelArgs = {
+  channelId: Scalars['ShortUuid'];
 };
 
 

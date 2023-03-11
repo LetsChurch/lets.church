@@ -39,6 +39,13 @@ export const AppUser = builder.prismaObject('AppUser', {
     }),
     username: t.exposeString('username'),
     role: t.field({ type: AppUserRoleEnum, resolve: ({ role }) => role }),
+    channelSubscriptionsConnection: t.relatedConnection(
+      'channelSubscriptions',
+      {
+        cursor: 'appUserId_channelId',
+        authScopes: privateAuthScopes,
+      },
+    ),
     channelMembershipsConnection: t.relatedConnection('channelMemberships', {
       cursor: 'channelId_appUserId',
       authScopes: privateAuthScopes,
