@@ -3,6 +3,7 @@ import {
   UploadLicense as PrismaUploadLicense,
   UploadVisibility as PrismaUploadVisibility,
   UploadVariant as PrismaUploadVariant,
+  Prisma,
 } from '@prisma/client';
 import envariant from '@knpwrs/envariant';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
@@ -77,6 +78,36 @@ const UploadPostProcess = builder.enumType('UploadPostProcess', {
   values: ['media', 'thumbnail'] as const,
 });
 
+builder.prismaObject('UploadUserComment', {
+  fields: (t) => ({
+    id: t.expose('id', { type: 'ShortUuid' }),
+    uploadRecordId: t.expose('uploadRecordId', { type: 'ShortUuid' }),
+    replyingTo: t.relation('replyingTo'),
+    createdAt: t.field({
+      type: 'DateTime',
+      select: {
+        createdAt: true,
+      },
+      resolve: ({ createdAt }) => createdAt.toISOString(),
+    }),
+    updatedAt: t.field({
+      type: 'DateTime',
+      select: {
+        updatedAt: true,
+      },
+      resolve: ({ updatedAt }) => updatedAt.toISOString(),
+    }),
+    author: t.relation('author'),
+    upload: t.relation('upload'),
+    replies: t.relatedConnection('replies', {
+      cursor: 'id',
+      totalCount: true,
+      query: { orderBy: { createdAt: Prisma.SortOrder.asc } },
+    }),
+    text: t.exposeString('text'),
+  }),
+});
+
 builder.prismaObject('UploadRecord', {
   select: {
     id: true,
@@ -117,20 +148,24 @@ builder.prismaObject('UploadRecord', {
       ],
       nullable: true,
       resolve: async ({ id }) => {
-        const url = new URL(MEDIA_URL);
-        url.pathname = `${id}.vtt`;
-        const res = await fetch(url);
+        try {
+          const url = new URL(MEDIA_URL);
+          url.pathname = `${id}.vtt`;
+          const res = await fetch(url);
 
-        if (!res.ok) {
+          if (!res.ok) {
+            return null;
+          }
+
+          const text = await res.text();
+          const parsed = parseVtt(text)
+            .filter((n): n is NodeCue => n.type === 'cue')
+            .map(({ data: { start, end, text } }) => ({ start, end, text }));
+
+          return parsed;
+        } catch (e) {
           return null;
         }
-
-        const text = await res.text();
-        const parsed = parseVtt(text)
-          .filter((n): n is NodeCue => n.type === 'cue')
-          .map(({ data: { start, end, text } }) => ({ start, end, text }));
-
-        return parsed;
       },
     }),
     channel: t.relation('channel'),
@@ -178,8 +213,10 @@ builder.prismaObject('UploadRecord', {
         return ses?.appUser.role === 'ADMIN';
       },
     }),
-    totalLikes: t.relationCount('ratings', { where: { rating: 'LIKE' } }),
-    totalDislikes: t.relationCount('ratings', { where: { rating: 'DISLIKE' } }),
+    totalLikes: t.relationCount('userRatings', { where: { rating: 'LIKE' } }),
+    totalDislikes: t.relationCount('userRatings', {
+      where: { rating: 'DISLIKE' },
+    }),
     myRating: t.field({
       nullable: true,
       type: Rating,
@@ -204,6 +241,14 @@ builder.prismaObject('UploadRecord', {
         }
 
         return record.rating;
+      },
+    }),
+    userComments: t.relatedConnection('userComments', {
+      cursor: 'id',
+      totalCount: true,
+      query: {
+        orderBy: { createdAt: Prisma.SortOrder.desc },
+        where: { replyingTo: null },
       },
     }),
     mediaSource: t.string({
@@ -482,7 +527,7 @@ builder.mutationFields((t) => ({
         required: true,
       }),
     },
-    authScopes: { authenticated: true },
+    authScopes: { authenticated: true }, // TODO: restrict rating private uploads
     resolve: async (_root, { uploadRecordId, rating }, context, _info) => {
       const userId = (await context.session)?.appUserId;
 
@@ -511,6 +556,83 @@ builder.mutationFields((t) => ({
       });
 
       return true;
+    },
+  }),
+  upsertUploadUserComment: t.prismaField({
+    type: 'UploadUserComment',
+    args: {
+      uploadRecordId: t.arg({ type: 'ShortUuid', required: true }),
+      replyingTo: t.arg({ type: 'ShortUuid', required: false }),
+      commentId: t.arg({ type: 'ShortUuid', required: false }),
+      text: t.arg.string({ required: true }),
+    },
+    authScopes: async (_root, { commentId }, context) => {
+      const userId = (await context.session)?.appUserId;
+      invariant(userId, 'No user found!');
+
+      // Do not allow modifying other users' comments
+      if (commentId) {
+        const comment = await prisma.uploadUserComment.findUniqueOrThrow({
+          where: { id: commentId },
+          select: { authorId: true },
+        });
+
+        if (comment.authorId !== userId) {
+          return { admin: true };
+        }
+      }
+
+      // TODO: restrict commenting on private uploads
+      return { authenticated: true };
+    },
+    resolve: async (
+      query,
+      _root,
+      { uploadRecordId, commentId, replyingTo, text },
+      context,
+      _info,
+    ) => {
+      const userId = (await context.session)?.appUserId;
+      invariant(userId, 'No user found!');
+
+      // If we are replying, make sure the parent comment is on the same upload
+      if (replyingTo) {
+        const parentComment = await prisma.uploadUserComment.findUniqueOrThrow({
+          where: { id: replyingTo },
+          select: { uploadRecordId: true },
+        });
+        invariant(
+          parentComment.uploadRecordId === uploadRecordId,
+          'Mismatch replyingTo and uploadRecordId!',
+        );
+      }
+
+      if (commentId) {
+        return prisma.uploadUserComment.update({
+          ...query,
+          where: { id: commentId },
+          data: {
+            text,
+            author: { connect: { id: userId } },
+            upload: { connect: { id: uploadRecordId } },
+            ...(replyingTo
+              ? { replyingTo: { connect: { id: replyingTo } } }
+              : {}),
+          },
+        });
+      }
+
+      return prisma.uploadUserComment.create({
+        ...query,
+        data: {
+          text,
+          author: { connect: { id: userId } },
+          upload: { connect: { id: uploadRecordId } },
+          ...(replyingTo
+            ? { replyingTo: { connect: { id: replyingTo } } }
+            : {}),
+        },
+      });
     },
   }),
 }));

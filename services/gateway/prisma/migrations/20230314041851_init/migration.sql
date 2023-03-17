@@ -146,6 +146,19 @@ CREATE TABLE "upload_user_rating" (
     CONSTRAINT "upload_user_rating_pkey" PRIMARY KEY ("app_user_id","upload_id")
 );
 
+-- CreateTable
+CREATE TABLE "upload_user_comment" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    "author_id" UUID NOT NULL,
+    "upload_id" UUID NOT NULL,
+    "replying_to_id" UUID,
+    "text" TEXT NOT NULL,
+
+    CONSTRAINT "upload_user_comment_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "app_user_email_key" ON "app_user"("email");
 
@@ -205,3 +218,12 @@ ALTER TABLE "upload_record" ADD CONSTRAINT "upload_record_upload_finalized_by_id
 
 -- AddForeignKey
 ALTER TABLE "upload_user_rating" ADD CONSTRAINT "upload_user_rating_upload_id_fkey" FOREIGN KEY ("upload_id") REFERENCES "upload_record"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "upload_user_comment" ADD CONSTRAINT "upload_user_comment_author_id_fkey" FOREIGN KEY ("author_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "upload_user_comment" ADD CONSTRAINT "upload_user_comment_upload_id_fkey" FOREIGN KEY ("upload_id") REFERENCES "upload_record"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "upload_user_comment" ADD CONSTRAINT "upload_user_comment_replying_to_id_fkey" FOREIGN KEY ("replying_to_id") REFERENCES "upload_user_comment"("id") ON DELETE SET NULL ON UPDATE CASCADE;

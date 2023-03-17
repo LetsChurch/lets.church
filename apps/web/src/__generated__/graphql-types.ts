@@ -228,6 +228,7 @@ export type Mutation = {
   upsertChannelMembership: ChannelMembership;
   upsertOrganizationMembership: OrganizationMembership;
   upsertUploadRecord: UploadRecord;
+  upsertUploadUserComment: UploadUserComment;
 };
 
 
@@ -314,6 +315,14 @@ export type MutationUpsertUploadRecordArgs = {
   title?: InputMaybe<Scalars['String']>;
   uploadRecordId?: InputMaybe<Scalars['ShortUuid']>;
   visibility: UploadVisibility;
+};
+
+
+export type MutationUpsertUploadUserCommentArgs = {
+  commentId?: InputMaybe<Scalars['ShortUuid']>;
+  replyingTo?: InputMaybe<Scalars['ShortUuid']>;
+  text: Scalars['String'];
+  uploadRecordId: Scalars['ShortUuid'];
 };
 
 export enum Order {
@@ -556,8 +565,30 @@ export type UploadRecord = {
   uploadFinalized: Scalars['Boolean'];
   uploadFinalizedBy: AppUser;
   uploadSizeBytes?: Maybe<Scalars['SafeInt']>;
+  userComments: UploadRecordUserCommentsConnection;
   variants: Array<UploadVariant>;
   visibility: UploadVisibility;
+};
+
+
+export type UploadRecordUserCommentsArgs = {
+  after?: InputMaybe<Scalars['String']>;
+  before?: InputMaybe<Scalars['String']>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+};
+
+export type UploadRecordUserCommentsConnection = {
+  __typename?: 'UploadRecordUserCommentsConnection';
+  edges: Array<UploadRecordUserCommentsConnectionEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int'];
+};
+
+export type UploadRecordUserCommentsConnectionEdge = {
+  __typename?: 'UploadRecordUserCommentsConnectionEdge';
+  cursor: Scalars['String'];
+  node: UploadUserComment;
 };
 
 export type UploadSearchHit = ISearchHit & {
@@ -565,6 +596,40 @@ export type UploadSearchHit = ISearchHit & {
   id: Scalars['ShortUuid'];
   title: Scalars['String'];
   uploadRecord: UploadRecord;
+};
+
+export type UploadUserComment = {
+  __typename?: 'UploadUserComment';
+  author: AppUser;
+  createdAt: Scalars['DateTime'];
+  id: Scalars['ShortUuid'];
+  replies: UploadUserCommentRepliesConnection;
+  replyingTo: UploadUserComment;
+  text: Scalars['String'];
+  updatedAt: Scalars['DateTime'];
+  upload: UploadRecord;
+  uploadRecordId: Scalars['ShortUuid'];
+};
+
+
+export type UploadUserCommentRepliesArgs = {
+  after?: InputMaybe<Scalars['String']>;
+  before?: InputMaybe<Scalars['String']>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+};
+
+export type UploadUserCommentRepliesConnection = {
+  __typename?: 'UploadUserCommentRepliesConnection';
+  edges: Array<UploadUserCommentRepliesConnectionEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int'];
+};
+
+export type UploadUserCommentRepliesConnectionEdge = {
+  __typename?: 'UploadUserCommentRepliesConnectionEdge';
+  cursor: Scalars['String'];
+  node: UploadUserComment;
 };
 
 export enum UploadVariant {

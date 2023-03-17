@@ -36,6 +36,7 @@ model AppUser {
   createdUploads          UploadRecord[]           @relation("createdUploads")
   finalizedUploads        UploadRecord[]           @relation("finalizedUploads")
   channelSubscriptions    ChannelSubscription[]
+  UploadUserComment       UploadUserComment[]
 
   @@map("app_user")
 }
@@ -159,27 +160,28 @@ enum UploadVariant {
 }
 
 model UploadRecord {
-  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id                   String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title                String?
   description          String?
-  createdBy            AppUser            @relation("createdUploads", fields: [appUserId], references: [id])
-  appUserId            String             @map("app_user_id") @db.Uuid
+  createdBy            AppUser             @relation("createdUploads", fields: [appUserId], references: [id])
+  appUserId            String              @map("app_user_id") @db.Uuid
   license              UploadLicense
-  channel              Channel            @relation(fields: [channelId], references: [id])
-  channelId            String             @map("channel_id") @db.Uuid
+  channel              Channel             @relation(fields: [channelId], references: [id])
+  channelId            String              @map("channel_id") @db.Uuid
   visibility           UploadVisibility
-  uploadSizeBytes      BigInt?            @map("upload_size_bytes")
-  uploadFinalized      Boolean            @default(false) @map("upload_finalized")
-  uploadFinalizedBy    AppUser?           @relation("finalizedUploads", fields: [uploadFinalizedById], references: [id])
-  uploadFinalizedById  String?            @map("upload_finalized_by_id") @db.Uuid
-  defaultThumbnailPath String?            @map("default_thumbnail_path")
-  thumbnailBlurhash    String?            @map("thumbnail_blurhash")
-  createdAt            DateTime           @default(now()) @map("created_at")
-  updatedAt            DateTime           @updatedAt @map("updated_at")
-  publishedAt          DateTime           @default(now()) @map("published_at")
-  deletedAt            DateTime?          @map("deleted_at")
+  uploadSizeBytes      BigInt?             @map("upload_size_bytes")
+  uploadFinalized      Boolean             @default(false) @map("upload_finalized")
+  uploadFinalizedBy    AppUser?            @relation("finalizedUploads", fields: [uploadFinalizedById], references: [id])
+  uploadFinalizedById  String?             @map("upload_finalized_by_id") @db.Uuid
+  defaultThumbnailPath String?             @map("default_thumbnail_path")
+  thumbnailBlurhash    String?             @map("thumbnail_blurhash")
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+  publishedAt          DateTime            @default(now()) @map("published_at")
+  deletedAt            DateTime?           @map("deleted_at")
   variants             UploadVariant[]
-  ratings              UploadUserRating[]
+  userRatings          UploadUserRating[]
+  userComments         UploadUserComment[]
 
   @@index([createdAt, id])
   @@map("upload_record")
@@ -201,4 +203,20 @@ model UploadUserRating {
   @@index([uploadRecordId, rating])
   @@index([appUserId, rating])
   @@map("upload_user_rating")
+}
+
+model UploadUserComment {
+  id             String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  author         AppUser             @relation(fields: [authorId], references: [id])
+  authorId       String              @map("author_id") @db.Uuid
+  upload         UploadRecord        @relation(fields: [uploadRecordId], references: [id])
+  uploadRecordId String              @map("upload_id") @db.Uuid
+  replies        UploadUserComment[] @relation("ThreadComments")
+  replyingTo     UploadUserComment?  @relation("ThreadComments", fields: [replyingToId], references: [id])
+  replyingToId   String?             @map("replying_to_id") @db.Uuid
+  text           String
+
+  @@map("upload_user_comment")
 }

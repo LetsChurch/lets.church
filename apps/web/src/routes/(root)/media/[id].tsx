@@ -21,6 +21,8 @@ import {
   Show,
   Switch,
   Match,
+  For,
+  createEffect,
 } from 'solid-js';
 import { isServer } from 'solid-js/web';
 import { useFloating } from 'solid-floating-ui';
@@ -39,6 +41,8 @@ import type {
   SubmitUploadRatingMutationVariables,
   ModifySubscriptionMutation,
   ModifySubscriptionMutationVariables,
+  UpsertCommentMutation,
+  UpsertCommentMutationVariables,
 } from './__generated__/[id]';
 import {
   createAuthenticatedClient,
@@ -48,6 +52,7 @@ import {
 import { UserContext } from '~/routes/(root)';
 import { Rating } from '~/__generated__/graphql-types';
 import Video from '~/components/video';
+import Comment, { CommentForm } from '~/components/comment';
 import Transcript from '~/components/transcript';
 import FloatingShareMenu from '~/components/floating-share-menu';
 import { formatDateFull } from '~/util/date';
@@ -144,6 +149,17 @@ export function routeData({ params }: RouteDataArgs) {
         MediaRouteMetaDataQueryVariables
       >(
         gql`
+          fragment CommentFields on UploadUserComment {
+            id
+            uploadRecordId
+            author {
+              username
+            }
+            createdAt
+            updatedAt
+            text
+          }
+
           query MediaRouteMetaData($id: ShortUuid!) {
             data: uploadRecordById(id: $id) {
               id
@@ -160,6 +176,22 @@ export function routeData({ params }: RouteDataArgs) {
               transcript {
                 start
                 text
+              }
+              userComments {
+                totalCount
+                edges {
+                  node {
+                    ...CommentFields
+                    replies {
+                      totalCount
+                      edges {
+                        node {
+                          ...CommentFields
+                        }
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -336,6 +368,77 @@ export default function MediaRoute() {
     });
   }
 
+  const [submittingComment, submitComment] = createServerAction$(
+    async (form: FormData, { request }) => {
+      const text = form.get('text');
+      invariant(typeof text === 'string', 'No comment text provided');
+      const uploadRecordId = form.get('uploadRecordId');
+      invariant(
+        typeof uploadRecordId === 'string',
+        'No uploadRecordId provided',
+      );
+      const replyingTo = form.get('replyingTo');
+      invariant(
+        replyingTo === null || typeof replyingTo === 'string',
+        'Invalid replyingTo provided',
+      );
+      const commentId = form.get('commentId');
+      invariant(
+        commentId === null || typeof commentId === 'string',
+        'Invalid commentId provided',
+      );
+
+      const client = await createAuthenticatedClientOrRedirect(request);
+
+      client.request<UpsertCommentMutation, UpsertCommentMutationVariables>(
+        gql`
+          mutation UpsertComment(
+            $uploadRecordId: ShortUuid!
+            $replyingTo: ShortUuid
+            $text: String!
+            $commentId: ShortUuid
+          ) {
+            upsertUploadUserComment(
+              uploadRecordId: $uploadRecordId
+              replyingTo: $replyingTo
+              text: $text
+              commentId: $commentId
+            ) {
+              id
+            }
+          }
+        `,
+        {
+          uploadRecordId,
+          replyingTo,
+          text,
+          commentId,
+        },
+      );
+
+      return redirect(`/media/${uploadRecordId}`);
+    },
+    {
+      invalidate: ['media', params.id, 'meta'],
+    },
+  );
+
+  let submittingCommentForm: HTMLFormElement | null = null;
+
+  function setSubmittingCommentForm(e: SubmitEvent) {
+    if (e.target instanceof HTMLFormElement) {
+      submittingCommentForm = e.target;
+    } else {
+      submittingCommentForm = null;
+    }
+  }
+
+  createEffect(() => {
+    if (!submittingComment.pending && !submittingComment.error) {
+      submittingCommentForm?.reset();
+    }
+  });
+
   const startAt = getStartAt();
   const [currentTime, setCurrentTime] = createSignal(startAt ?? 0);
 
@@ -487,7 +590,31 @@ export default function MediaRoute() {
               {(desc) => <div class="whitespace-pre-line">{desc}</div>}
             </Show>
           </div>
-          <div>comments</div>
+          <submitComment.Form onSubmit={setSubmittingCommentForm}>
+            <input
+              type="hidden"
+              name="uploadRecordId"
+              value={metaData()?.data.id ?? ''}
+            />
+            <CommentForm
+              placeholder="Add your comment..."
+              pending={submittingComment.pending}
+            />
+          </submitComment.Form>
+          <p class="font-medium text-gray-900">
+            {metaData()?.data.userComments.totalCount} comments
+          </p>
+          <For each={metaData()?.data.userComments.edges}>
+            {(edge) => (
+              <Comment
+                data={edge.node}
+                replies={edge.node.replies.edges.map((e) => e.node)}
+                ReplyForm={submitComment.Form}
+                onSubmit={setSubmittingCommentForm}
+                pending={submittingComment.pending}
+              />
+            )}
+          </For>
         </div>
         <div class="md:col-span-1">
           <Transcript
