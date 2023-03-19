@@ -3,6 +3,7 @@ import {
   UploadLicense as PrismaUploadLicense,
   UploadVisibility as PrismaUploadVisibility,
   UploadVariant as PrismaUploadVariant,
+  Rating as PrismaRating,
   Prisma,
 } from '@prisma/client';
 import envariant from '@knpwrs/envariant';
@@ -105,6 +106,36 @@ builder.prismaObject('UploadUserComment', {
       query: { orderBy: { createdAt: Prisma.SortOrder.asc } },
     }),
     text: t.exposeString('text'),
+    totalLikes: t.relationCount('userRatings', { where: { rating: 'LIKE' } }),
+    totalDislikes: t.relationCount('userRatings', {
+      where: { rating: 'DISLIKE' },
+    }),
+    myRating: t.field({
+      nullable: true,
+      type: Rating,
+      resolve: async (root, _args, context) => {
+        const userId = (await context.session)?.appUserId;
+
+        if (!userId) {
+          return null;
+        }
+
+        const record = await prisma.uploadUserCommentRating.findUnique({
+          where: {
+            appUserId_uploadUserCommentId: {
+              appUserId: userId,
+              uploadUserCommentId: root.id,
+            },
+          },
+        });
+
+        if (!record) {
+          return null;
+        }
+
+        return record.rating;
+      },
+    }),
   }),
 });
 
@@ -544,7 +575,7 @@ builder.mutationFields((t) => ({
         await tx.uploadUserRating.deleteMany({
           where: {
             appUserId: userId,
-            uploadRecordId: uploadRecordId,
+            uploadRecordId,
           },
         });
         // 3. If the new rating is different from any existing rating, create it
@@ -631,8 +662,55 @@ builder.mutationFields((t) => ({
           ...(replyingTo
             ? { replyingTo: { connect: { id: replyingTo } } }
             : {}),
+          userRatings: {
+            create: {
+              appUser: {
+                connect: { id: userId },
+              },
+              rating: PrismaRating.LIKE,
+            },
+          },
         },
       });
+    },
+  }),
+  rateComment: t.boolean({
+    args: {
+      uploadUserCommentId: t.arg({ type: 'ShortUuid', required: true }),
+      rating: t.arg({
+        type: Rating,
+        required: true,
+      }),
+    },
+    authScopes: { authenticated: true }, // TODO: restrict rating comments on private uploads
+    resolve: async (_root, { uploadUserCommentId, rating }, context, _info) => {
+      const userId = (await context.session)?.appUserId;
+
+      if (!userId) {
+        return false;
+      }
+
+      await prisma.$transaction(async (tx) => {
+        // 1. Get existing rating
+        const existing = await tx.uploadUserCommentRating.findFirst({
+          where: { appUserId: userId, uploadUserCommentId, rating },
+        });
+        // 2. Delete any existing rating
+        await tx.uploadUserCommentRating.deleteMany({
+          where: {
+            appUserId: userId,
+            uploadUserCommentId,
+          },
+        });
+        // 3. If the new rating is different from any existing rating, create it
+        if (existing?.rating !== rating) {
+          await tx.uploadUserCommentRating.create({
+            data: { appUserId: userId, uploadUserCommentId, rating },
+          });
+        }
+      });
+
+      return true;
     },
   }),
 }));

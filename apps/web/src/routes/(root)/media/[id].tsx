@@ -43,6 +43,8 @@ import type {
   ModifySubscriptionMutationVariables,
   UpsertCommentMutation,
   UpsertCommentMutationVariables,
+  SubmitUploadCommentRatingMutation,
+  SubmitUploadCommentRatingMutationVariables,
 } from './__generated__/[id]';
 import {
   createAuthenticatedClient,
@@ -62,7 +64,9 @@ function UnderbarButton(props: JSX.IntrinsicElements['button']) {
   return (
     <button
       {...restProps}
-      class={`relative inline-flex  items-center space-x-2 border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 first-of-type:rounded-l-md last-of-type:rounded-r-md only-of-type:shadow-sm hover:bg-gray-50 focus:z-10 focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-1 focus-visible:ring-indigo-500 [&:not(:first-of-type)]:-ml-px ${localProps.class}`}
+      class={`relative inline-flex items-center space-x-2 border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 first-of-type:rounded-l-md last-of-type:rounded-r-md only-of-type:shadow-sm hover:bg-gray-50 focus:z-10 focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-1 focus-visible:ring-indigo-500 [&:not(:first-of-type)]:-ml-px ${
+        localProps.class ?? ''
+      }`}
     />
   );
 }
@@ -158,6 +162,9 @@ export function routeData({ params }: RouteDataArgs) {
             createdAt
             updatedAt
             text
+            totalLikes
+            totalDislikes
+            myRating
           }
 
           query MediaRouteMetaData($id: ShortUuid!) {
@@ -320,6 +327,49 @@ export default function MediaRoute() {
     { invalidate: [] },
   );
 
+  const [, submitCommentRating] = createServerAction$(
+    async (form: FormData, { request }) => {
+      const uploadRecordId = form.get('uploadRecordById');
+      const uploadUserCommentId = form.get('uploadUserCommentId');
+      const rating =
+        form.get('rating') === 'LIKE' ? Rating.Like : Rating.Dislike;
+      invariant(
+        typeof uploadUserCommentId === 'string',
+        'No uploadUserCommentId provided to submitCommentRating',
+      );
+
+      const client = await createAuthenticatedClientOrRedirect(request);
+
+      await client.request<
+        SubmitUploadCommentRatingMutation,
+        SubmitUploadCommentRatingMutationVariables
+      >(
+        gql`
+          mutation SubmitUploadCommentRating(
+            $uploadUserCommentId: ShortUuid!
+            $rating: Rating!
+          ) {
+            rateComment(
+              uploadUserCommentId: $uploadUserCommentId
+              rating: $rating
+            )
+          }
+        `,
+        {
+          uploadUserCommentId,
+          rating,
+        },
+      );
+
+      if (uploadRecordId) {
+        return redirect(`/media/${uploadRecordId}`);
+      }
+
+      return null;
+    },
+    { invalidate: [] },
+  );
+
   function handleRating(newRating: Rating) {
     const ratingState = untrack(() => ratingStateData()?.data);
 
@@ -425,7 +475,13 @@ export default function MediaRoute() {
 
   let submittingCommentForm: HTMLFormElement | null = null;
 
-  function setSubmittingCommentForm(e: SubmitEvent) {
+  function handleSubmittingCommentForm(e: SubmitEvent) {
+    if (!user?.()?.me) {
+      e.preventDefault();
+      // TODO: show login
+      return alert('Not logged in!');
+    }
+
     if (e.target instanceof HTMLFormElement) {
       submittingCommentForm = e.target;
     } else {
@@ -590,7 +646,7 @@ export default function MediaRoute() {
               {(desc) => <div class="whitespace-pre-line">{desc}</div>}
             </Show>
           </div>
-          <submitComment.Form onSubmit={setSubmittingCommentForm}>
+          <submitComment.Form onSubmit={handleSubmittingCommentForm}>
             <input
               type="hidden"
               name="uploadRecordId"
@@ -610,7 +666,8 @@ export default function MediaRoute() {
                 data={edge.node}
                 replies={edge.node.replies.edges.map((e) => e.node)}
                 ReplyForm={submitComment.Form}
-                onSubmit={setSubmittingCommentForm}
+                RateForm={submitCommentRating.Form}
+                onSubmit={handleSubmittingCommentForm}
                 pending={submittingComment.pending}
               />
             )}

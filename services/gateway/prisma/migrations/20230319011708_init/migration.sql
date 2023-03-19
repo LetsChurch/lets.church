@@ -159,6 +159,16 @@ CREATE TABLE "upload_user_comment" (
     CONSTRAINT "upload_user_comment_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "upload_user_comment_rating" (
+    "app_user_id" UUID NOT NULL,
+    "upload_id" UUID NOT NULL,
+    "rating" "Rating" NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "upload_user_comment_rating_pkey" PRIMARY KEY ("app_user_id","upload_id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "app_user_email_key" ON "app_user"("email");
 
@@ -179,6 +189,15 @@ CREATE INDEX "upload_user_rating_upload_id_rating_idx" ON "upload_user_rating"("
 
 -- CreateIndex
 CREATE INDEX "upload_user_rating_app_user_id_rating_idx" ON "upload_user_rating"("app_user_id", "rating");
+
+-- CreateIndex
+CREATE INDEX "upload_user_comment_replying_to_id_idx" ON "upload_user_comment"("replying_to_id");
+
+-- CreateIndex
+CREATE INDEX "upload_user_comment_rating_upload_id_rating_idx" ON "upload_user_comment_rating"("upload_id", "rating");
+
+-- CreateIndex
+CREATE INDEX "upload_user_comment_rating_app_user_id_rating_idx" ON "upload_user_comment_rating"("app_user_id", "rating");
 
 -- AddForeignKey
 ALTER TABLE "app_session" ADD CONSTRAINT "app_session_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -217,6 +236,9 @@ ALTER TABLE "upload_record" ADD CONSTRAINT "upload_record_channel_id_fkey" FOREI
 ALTER TABLE "upload_record" ADD CONSTRAINT "upload_record_upload_finalized_by_id_fkey" FOREIGN KEY ("upload_finalized_by_id") REFERENCES "app_user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "upload_user_rating" ADD CONSTRAINT "upload_user_rating_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "upload_user_rating" ADD CONSTRAINT "upload_user_rating_upload_id_fkey" FOREIGN KEY ("upload_id") REFERENCES "upload_record"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -227,3 +249,9 @@ ALTER TABLE "upload_user_comment" ADD CONSTRAINT "upload_user_comment_upload_id_
 
 -- AddForeignKey
 ALTER TABLE "upload_user_comment" ADD CONSTRAINT "upload_user_comment_replying_to_id_fkey" FOREIGN KEY ("replying_to_id") REFERENCES "upload_user_comment"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "upload_user_comment_rating" ADD CONSTRAINT "upload_user_comment_rating_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "upload_user_comment_rating" ADD CONSTRAINT "upload_user_comment_rating_upload_id_fkey" FOREIGN KEY ("upload_id") REFERENCES "upload_user_comment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

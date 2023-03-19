@@ -21,22 +21,24 @@ enum AppUserRole {
 }
 
 model AppUser {
-  id                      String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                   String                   @unique @db.Citext
-  username                String                   @unique @db.Citext
-  password                String
-  fullName                String?                  @db.VarChar(100)
-  createdAt               DateTime                 @default(now()) @map("created_at")
-  updatedAt               DateTime                 @updatedAt @map("updated_at")
-  deletedAt               DateTime?                @map("deleted_at")
-  role                    AppUserRole              @default(USER)
-  sessions                AppSession[]
-  channelMemberships      ChannelMembership[]
-  organizationMemberships OrganizationMembership[]
-  createdUploads          UploadRecord[]           @relation("createdUploads")
-  finalizedUploads        UploadRecord[]           @relation("finalizedUploads")
-  channelSubscriptions    ChannelSubscription[]
-  UploadUserComment       UploadUserComment[]
+  id                       String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                    String                    @unique @db.Citext
+  username                 String                    @unique @db.Citext
+  password                 String
+  fullName                 String?                   @db.VarChar(100)
+  createdAt                DateTime                  @default(now()) @map("created_at")
+  updatedAt                DateTime                  @updatedAt @map("updated_at")
+  deletedAt                DateTime?                 @map("deleted_at")
+  role                     AppUserRole               @default(USER)
+  sessions                 AppSession[]
+  channelMemberships       ChannelMembership[]
+  organizationMemberships  OrganizationMembership[]
+  createdUploads           UploadRecord[]            @relation("createdUploads")
+  finalizedUploads         UploadRecord[]            @relation("finalizedUploads")
+  channelSubscriptions     ChannelSubscription[]
+  uploadUserComments       UploadUserComment[]
+  uploadUserRatings        UploadUserRating[]
+  uploadUserCommentRatings UploadUserCommentRating[]
 
   @@map("app_user")
 }
@@ -193,6 +195,7 @@ enum Rating {
 }
 
 model UploadUserRating {
+  appUser        AppUser      @relation(fields: [appUserId], references: [id])
   appUserId      String       @map("app_user_id") @db.Uuid
   uploadRecordId String       @map("upload_id") @db.Uuid
   rating         Rating
@@ -206,17 +209,33 @@ model UploadUserRating {
 }
 
 model UploadUserComment {
-  id             String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  createdAt      DateTime            @default(now()) @map("created_at")
-  updatedAt      DateTime            @updatedAt @map("updated_at")
-  author         AppUser             @relation(fields: [authorId], references: [id])
-  authorId       String              @map("author_id") @db.Uuid
-  upload         UploadRecord        @relation(fields: [uploadRecordId], references: [id])
-  uploadRecordId String              @map("upload_id") @db.Uuid
-  replies        UploadUserComment[] @relation("ThreadComments")
-  replyingTo     UploadUserComment?  @relation("ThreadComments", fields: [replyingToId], references: [id])
-  replyingToId   String?             @map("replying_to_id") @db.Uuid
+  id             String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt      DateTime                  @default(now()) @map("created_at")
+  updatedAt      DateTime                  @updatedAt @map("updated_at")
+  author         AppUser                   @relation(fields: [authorId], references: [id])
+  authorId       String                    @map("author_id") @db.Uuid
+  upload         UploadRecord              @relation(fields: [uploadRecordId], references: [id])
+  uploadRecordId String                    @map("upload_id") @db.Uuid
+  replies        UploadUserComment[]       @relation("ThreadComments")
+  replyingTo     UploadUserComment?        @relation("ThreadComments", fields: [replyingToId], references: [id])
+  replyingToId   String?                   @map("replying_to_id") @db.Uuid
   text           String
+  userRatings    UploadUserCommentRating[]
 
+  @@index(replyingToId)
   @@map("upload_user_comment")
+}
+
+model UploadUserCommentRating {
+  appUser             AppUser           @relation(fields: [appUserId], references: [id])
+  appUserId           String            @map("app_user_id") @db.Uuid
+  uploadUserCommentId String            @map("upload_id") @db.Uuid
+  uploadUserComment   UploadUserComment @relation(fields: [uploadUserCommentId], references: [id])
+  rating              Rating
+  createdAt           DateTime          @default(now()) @map("created_at")
+
+  @@id([appUserId, uploadUserCommentId])
+  @@index([uploadUserCommentId, rating])
+  @@index([appUserId, rating])
+  @@map("upload_user_comment_rating")
 }

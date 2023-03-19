@@ -221,6 +221,7 @@ export type Mutation = {
   finalizeUpload: Scalars['Boolean'];
   login?: Maybe<Scalars['Jwt']>;
   logout: Scalars['Boolean'];
+  rateComment: Scalars['Boolean'];
   rateUpload: Scalars['Boolean'];
   signup: AppUser;
   subscribeToChannel: ChannelSubscription;
@@ -263,6 +264,12 @@ export type MutationFinalizeUploadArgs = {
 export type MutationLoginArgs = {
   id: Scalars['String'];
   password: Scalars['String'];
+};
+
+
+export type MutationRateCommentArgs = {
+  rating: Rating;
+  uploadUserCommentId: Scalars['ShortUuid'];
 };
 
 
@@ -603,9 +610,12 @@ export type UploadUserComment = {
   author: AppUser;
   createdAt: Scalars['DateTime'];
   id: Scalars['ShortUuid'];
+  myRating?: Maybe<Rating>;
   replies: UploadUserCommentRepliesConnection;
   replyingTo: UploadUserComment;
   text: Scalars['String'];
+  totalDislikes: Scalars['Int'];
+  totalLikes: Scalars['Int'];
   updatedAt: Scalars['DateTime'];
   upload: UploadRecord;
   uploadRecordId: Scalars['ShortUuid'];
