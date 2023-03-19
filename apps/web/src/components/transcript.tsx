@@ -29,12 +29,21 @@ export default function Transcript(props: Props) {
     ) as HTMLElement;
 
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const { parentElement } = el;
+      if (parentElement) {
+        // scrollIntoView causes the entire viewport to scroll, which can be jarring while entering comments
+        // Instead, we scroll the parent element to the top of the element, and we additionally scroll in such a way
+        // that the element is offset from the top
+        parentElement.scrollTop = Math.max(
+          el.offsetTop - parentElement.offsetTop - el.clientHeight,
+          0,
+        );
+      }
     }
   });
 
   return (
-    <dl class="max-h-[500px] space-y-2 overflow-auto rounded-md bg-gray-100">
+    <dl class="max-h-[500px] space-y-2 overflow-auto scroll-smooth rounded-md bg-gray-100">
       <For each={props.transcript}>
         {(line, i) => (
           <div
