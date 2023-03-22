@@ -3,6 +3,7 @@ import type { MsearchRequestItem } from '@elastic/elasticsearch/lib/api/types';
 import envariant from '@knpwrs/envariant';
 import waitOn from 'wait-on';
 import * as Z from 'zod';
+import { adjacentPairs } from './misc';
 export { escapeDocument } from './xss';
 
 const ELASTICSEARCH_URL = envariant('ELASTICSEARCH_URL');
@@ -43,6 +44,9 @@ export function msearchTranscripts(
   from = 0,
   size = 0,
 ): Array<MsearchRequestItem> {
+  const trimmed = query.trim();
+  const words = trimmed.split(/\s+/g);
+
   return [
     { index: 'lc_transcripts' },
     {
@@ -53,24 +57,37 @@ export function msearchTranscripts(
         nested: {
           path: 'segments',
           query: {
-            span_near: {
-              clauses: query
-                .trim()
-                .split(/\s+/g)
-                .map((w) => ({
-                  span_multi: {
-                    match: {
-                      fuzzy: {
-                        'segments.text': {
-                          value: w,
-                          fuzziness: w.length > 4 ? 2 : 1,
-                        },
-                      },
+            bool: {
+              // If there are multiple words, require at least two matches
+              minimum_should_match: words.length > 1 ? 2 : 1,
+              should: [
+                // Match any words
+                {
+                  match: {
+                    'segments.text': {
+                      query: query.trim(),
+                      fuzziness: 'AUTO',
+                      // Basic match
+                      boost: 1,
                     },
                   },
-                })),
-              slop: 5,
-              in_order: true,
+                },
+                // Match adjacent pairs of words within a certain proximity
+                ...(words.length > 1
+                  ? adjacentPairs(words as [string, ...string[]]).map(
+                      (pair) => ({
+                        match_phrase: {
+                          'segments.text': {
+                            query: pair.join(' '),
+                            slop: 2,
+                            // Adjacent pair match, double score
+                            boost: 2,
+                          },
+                        },
+                      }),
+                    )
+                  : []),
+              ],
             },
           },
           inner_hits: {
