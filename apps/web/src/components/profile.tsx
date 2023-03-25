@@ -99,7 +99,7 @@ export default function Profile(props: Props) {
           ...profileLinks,
           { label: 'Logout', form: logoutFormId, pending: loggingOut.pending },
         ]}
-        class="w-48"
+        class="mt-2 w-48"
       />
     </div>
   );

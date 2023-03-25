@@ -114,10 +114,63 @@ const { id: lcId, associations: lcAssociations } =
     },
   });
 
+const { id: flId, associations: flAssociations } =
+  await prisma.organization.create({
+    include: {
+      associations: { include: { channel: { select: { id: true } } } },
+    },
+    data: {
+      name: 'FirstLove Publications',
+      slug: 'firstlove',
+      memberships: {
+        create: {
+          appUser: {
+            connect: {
+              id: adminId,
+            },
+          },
+          isAdmin: true,
+        },
+      },
+      associations: {
+        create: {
+          channel: {
+            create: {
+              name: 'FirstLove Publications',
+              slug: 'firstlove',
+              memberships: {
+                create: {
+                  appUser: {
+                    connect: {
+                      id: adminId,
+                    },
+                  },
+                  isAdmin: true,
+                },
+              },
+              subscribers: {
+                create: {
+                  appUser: {
+                    connect: {
+                      id: adminId,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
 await indexDocument('organization', lcId);
-await Promise.all(
-  lcAssociations.map(({ channel }) => indexDocument('channel', channel.id)),
-);
+await indexDocument('organization', flId);
+
+await Promise.all([
+  ...lcAssociations.map(({ channel }) => indexDocument('channel', channel.id)),
+  ...flAssociations.map(({ channel }) => indexDocument('channel', channel.id)),
+]);
 
 const { id: org1Id, associations: org1Associations } =
   await prisma.organization.create({
@@ -171,8 +224,8 @@ const { id: org2Id, associations: org2Associations } =
       associations: { include: { channel: { select: { id: true } } } },
     },
     data: {
-      name: 'Organization 2',
-      slug: 'org2',
+      name: 'Organization 3',
+      slug: 'org3',
       memberships: {
         create: {
           appUser: {
@@ -187,8 +240,8 @@ const { id: org2Id, associations: org2Associations } =
         create: {
           channel: {
             create: {
-              name: 'Channel 2',
-              slug: 'ch2',
+              name: 'Channel 3',
+              slug: 'ch3',
               memberships: {
                 create: {
                   appUser: {
@@ -211,7 +264,7 @@ await Promise.all(
   org2Associations.map(({ channel }) => indexDocument('channel', channel.id)),
 );
 
-for (let i = 0; i < 47; i += 1) {
+for (let i = 0; i < 46; i += 1) {
   const name = `${faker.helpers.arrayElement([
     'Second Baptist',
     'Covenant',
@@ -250,7 +303,7 @@ const baseUploadRecord = {
   channelId: (
     await prisma.channel.findUniqueOrThrow({
       select: { id: true },
-      where: { slug: 'letschurch' },
+      where: { slug: 'firstlove' },
     })
   ).id,
   uploadFinalized: true,

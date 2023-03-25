@@ -442,6 +442,7 @@ export type QueryOrganizationByIdArgs = {
 export type QuerySearchArgs = {
   after?: InputMaybe<Scalars['String']>;
   before?: InputMaybe<Scalars['String']>;
+  channels?: InputMaybe<Array<Scalars['ShortUuid']>>;
   first?: InputMaybe<Scalars['Int']>;
   focus: SearchFocus;
   last?: InputMaybe<Scalars['Int']>;
@@ -486,9 +487,16 @@ export enum Rating {
 export type SearchAggs = {
   __typename?: 'SearchAggs';
   channelHitCount: Scalars['Int'];
+  channels: Array<SearchChannelAgg>;
   organizationHitCount: Scalars['Int'];
   transcriptHitCount: Scalars['Int'];
   uploadHitCount: Scalars['Int'];
+};
+
+export type SearchChannelAgg = {
+  __typename?: 'SearchChannelAgg';
+  channel: Channel;
+  count: Scalars['Int'];
 };
 
 export type SearchConnection = {

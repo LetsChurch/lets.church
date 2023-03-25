@@ -54,6 +54,9 @@ const targetMappings: Record<
   },
   lc_transcripts: {
     properties: {
+      channelId: {
+        type: 'keyword',
+      },
       segments: {
         type: 'nested',
         properties: {

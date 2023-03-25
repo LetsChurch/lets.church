@@ -17,7 +17,7 @@ export default function FloatingMenu(props: Props) {
   const loc = useLocation();
 
   return (
-    <FloatingDiv {...others} class="mt-2" role="menu">
+    <FloatingDiv {...others} role="menu">
       <For each={local.links}>
         {(link) => (
           <Switch>

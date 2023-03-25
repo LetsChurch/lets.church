@@ -6,10 +6,16 @@ import {
   splitProps,
   createSignal,
   Show,
+  createUniqueId,
 } from 'solid-js';
 import { A, RouteDataArgs, useLocation, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
 import '@fontsource/roboto-mono/variable.css';
+import { Dynamic } from 'solid-js/web';
+import type { MergeExclusive } from 'type-fest';
+import ChevronDownIcon from '@tabler/icons/chevron-down.svg?component-solid';
+import { useFloating } from 'solid-floating-ui';
+import { useNavigate } from '@solidjs/router';
 import type { SearchQuery, SearchQueryVariables } from './__generated__/search';
 import Pagination from '~/components/pagination';
 import Thumbnail, {
@@ -18,12 +24,21 @@ import Thumbnail, {
 import { client, gql } from '~/util/gql/server';
 import { SearchFocus } from '~/__generated__/graphql-types';
 import { formatTime } from '~/util';
+import FloatingChecklist from '~/components/floating-checklist';
+import { setQueryParams } from '~/util/url';
 
 const PAGE_SIZE = 12;
 
 export function routeData({ location }: RouteDataArgs) {
   return createServerData$(
-    async ([, q = '', focus = 'uploads', after = null, before = null]) => {
+    async ([
+      ,
+      q = '',
+      focus = 'uploads',
+      after = null,
+      before = null,
+      channels = null,
+    ]) => {
       return client.request<SearchQuery, SearchQueryVariables>(
         gql`
           fragment SearchUploadRecordProps on UploadRecord {
@@ -44,6 +59,7 @@ export function routeData({ location }: RouteDataArgs) {
             $after: String
             $last: Int
             $before: String
+            $channels: [ShortUuid!]
           ) {
             search(
               focus: $focus
@@ -52,12 +68,20 @@ export function routeData({ location }: RouteDataArgs) {
               after: $after
               last: $last
               before: $before
+              channels: $channels
             ) {
               aggs {
                 uploadHitCount
                 channelHitCount
                 organizationHitCount
                 transcriptHitCount
+                channels {
+                  count
+                  channel {
+                    id
+                    name
+                  }
+                }
               }
               pageInfo {
                 endCursor
@@ -106,17 +130,20 @@ export function routeData({ location }: RouteDataArgs) {
           before,
           first: after || !before ? PAGE_SIZE : null,
           last: before ? PAGE_SIZE : null,
+          channels,
         },
       );
     },
     {
-      key: () => [
-        'search',
-        location.query['q'],
-        location.query['focus'],
-        location.query['after'],
-        location.query['before'],
-      ],
+      key: () =>
+        [
+          'search',
+          location.query['q'],
+          location.query['focus'],
+          location.query['after'],
+          location.query['before'],
+          location.query['channels']?.split(',').filter(Boolean),
+        ] as const,
     },
   );
 }
@@ -219,59 +246,156 @@ function SearchTranscriptHitRow(
   );
 }
 
+type AggFilterProps = {
+  title: string;
+  count: number;
+} & MergeExclusive<
+  { q: string; focus: string },
+  { valueKey: string; values: Array<{ label: string; value: string }> }
+>;
+
+function AggFilter(props: AggFilterProps) {
+  const loc = useLocation();
+  const current = () =>
+    loc.query['focus'] === props.focus ||
+    (!loc.query['focus'] && props.focus === 'uploads');
+  const navigate = useNavigate();
+  const currentValues = () =>
+    props.valueKey
+      ? loc.query[props.valueKey]?.split(',').filter(Boolean) ?? []
+      : [];
+  const [showMenu, setShowMenu] = createSignal(false);
+  const [reference, setReference] = createSignal<HTMLDivElement>();
+  const [floating, setFloating] = createSignal<HTMLDivElement>();
+  const position = useFloating(reference, floating, {
+    placement: 'bottom-end',
+  });
+  const menuButtonId = createUniqueId();
+
+  const isMenu = () => Boolean(props.values);
+
+  function handleClick() {
+    if (!isMenu()) {
+      return;
+    }
+
+    setShowMenu(true);
+  }
+
+  function onChange(value: string, checked: boolean) {
+    navigate(
+      `?${setQueryParams(loc.search, {
+        [props.valueKey ?? '']: checked
+          ? [...currentValues(), value]
+          : currentValues().filter((v) => v !== value),
+      })}`,
+    );
+  }
+
+  const options = () =>
+    props.values?.map(({ label, value }) => ({
+      label,
+      value,
+      checked: currentValues().includes(value),
+    })) ?? [];
+
+  return (
+    <Dynamic
+      component={isMenu() ? 'button' : A}
+      {...(isMenu()
+        ? {
+            id: menuButtonId,
+            ref: setReference,
+            disabled: props.values?.length === 0,
+          }
+        : {
+            href: `?${new URLSearchParams({
+              q: props.q ?? '',
+              focus: props.focus ?? '',
+            })}`,
+          })}
+      onClick={handleClick}
+      class={`flex items-center whitespace-nowrap border-b-2 border-transparent py-4 px-1 text-sm font-medium ${
+        current() ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-700'
+      }`}
+    >
+      {props.title}
+      <Show when={!isMenu() || props.count > 0}>
+        <span
+          class={`ml-2 rounded-full py-0.5 px-2.5 text-xs font-medium md:inline-block ${
+            current()
+              ? 'bg-indigo-100 text-indigo-600'
+              : 'bg-gray-100 text-gray-900'
+          }`}
+        >
+          {props.count}
+        </span>
+      </Show>
+      <Show when={isMenu()}>
+        <ChevronDownIcon class="scale-75" />
+      </Show>
+      <FloatingChecklist
+        ref={setFloating}
+        open={showMenu()}
+        position={position}
+        aria-labelledby={menuButtonId}
+        onClose={() => setShowMenu(false)}
+        onChange={onChange}
+        options={options()}
+        class="-m-2 w-48"
+      />
+    </Dynamic>
+  );
+}
+
 export default function SearchRoute() {
   const data = useRouteData<typeof routeData>();
   const loc = useLocation();
+  const channelsCount = () =>
+    new URLSearchParams(loc.search).get('channels')?.split(',').length ?? 0;
+  const channelsValues = () =>
+    data()?.search.aggs.channels.map((c) => ({
+      label: c.channel.name,
+      value: c.channel.id,
+    })) ?? [];
 
   return (
     <div class="space-y-5">
-      <nav class="flex space-x-5" aria-label="Search Focus">
-        <For
-          each={[
-            {
-              title: 'Media',
-              focus: 'uploads',
-              count: data()?.search.aggs.uploadHitCount,
-            },
-            {
-              title: 'Transcripts',
-              focus: 'transcripts',
-              count: data()?.search.aggs.transcriptHitCount,
-            },
-          ]}
-        >
-          {({ title, focus, count }) => {
-            const current = () =>
-              loc.query['focus'] === focus ||
-              (!loc.query['focus'] && focus === 'uploads');
-
-            return (
-              <A
-                href={`?${new URLSearchParams({
-                  q: loc.query['q'] ?? '',
-                  focus,
-                })}`}
-                class={`flex whitespace-nowrap border-b-2 border-transparent py-4 px-1 text-sm font-medium ${
-                  current()
-                    ? 'text-indigo-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {title}{' '}
-                <span
-                  class={`ml-3 rounded-full py-0.5 px-2.5 text-xs font-medium md:inline-block ${
-                    current()
-                      ? 'bg-indigo-100 text-indigo-600'
-                      : 'bg-gray-100 text-gray-900'
-                  }`}
-                >
-                  {count}
-                </span>
-              </A>
-            );
-          }}
-        </For>
-      </nav>
+      <div class="flex justify-between">
+        <nav class="flex space-x-5" aria-label="Search Focus">
+          <For
+            each={[
+              {
+                title: 'Media',
+                focus: 'uploads',
+                count: data()?.search.aggs.uploadHitCount ?? 0,
+              },
+              {
+                title: 'Transcripts',
+                focus: 'transcripts',
+                count: data()?.search.aggs.transcriptHitCount ?? 0,
+              },
+            ]}
+          >
+            {({ title, focus, count }) => (
+              <AggFilter
+                q={loc.query['q'] ?? ''}
+                focus={focus}
+                title={title}
+                count={count}
+              />
+            )}
+          </For>
+        </nav>
+        <nav class="flex space-x-5" aria-label="Search Filters">
+          <AggFilter
+            title="Channels"
+            count={channelsCount()}
+            valueKey="channels"
+            values={channelsValues()}
+          />
+        </nav>
+      </div>
       <For each={data()?.search.edges}>
         {(edge) => (
           <Switch>

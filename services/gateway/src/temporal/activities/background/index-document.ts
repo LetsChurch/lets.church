@@ -26,6 +26,12 @@ async function getDocument(
         index: 'lc_transcripts',
         id: documentId,
         document: escapeDocument({
+          channelId: (
+            await prisma.uploadRecord.findUniqueOrThrow({
+              where: { id: documentId },
+              select: { channelId: true },
+            })
+          ).channelId,
           segments: transcriptSegmentSchema.parse(parsed),
         }),
       };

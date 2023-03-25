@@ -22,7 +22,8 @@ export function msearchUploads(
   query: string,
   from = 0,
   size = 0,
-): Array<MsearchRequestItem> {
+  { channels = [] }: { channels?: string[] | null | undefined },
+): [MsearchRequestItem, MsearchRequestItem] {
   return [
     { index: 'lc_uploads' },
     {
@@ -35,6 +36,9 @@ export function msearchUploads(
           fields: ['title^3', 'title._2gram', 'title._3gram', 'description'],
         },
       },
+      ...(Array.isArray(channels) && channels.length > 0
+        ? { post_filter: { terms: { channelId: channels } } }
+        : {}),
     },
   ];
 }
@@ -43,7 +47,8 @@ export function msearchTranscripts(
   query: string,
   from = 0,
   size = 0,
-): Array<MsearchRequestItem> {
+  { channels = [] }: { channels?: string[] | null | undefined },
+): [MsearchRequestItem, MsearchRequestItem] {
   const trimmed = query.trim();
   const words = trimmed.split(/\s+/g);
 
@@ -104,6 +109,17 @@ export function msearchTranscripts(
           },
         },
       },
+      ...(Array.isArray(channels) && channels.length > 0
+        ? { post_filter: { terms: { channelId: channels } } }
+        : {}),
+      aggs: {
+        channelIds: {
+          terms: {
+            field: 'channelId',
+            size: 10,
+          },
+        },
+      },
     },
   ];
 }
@@ -112,7 +128,7 @@ export function msearchChannels(
   query: string,
   from = 0,
   size = 0,
-): Array<MsearchRequestItem> {
+): [MsearchRequestItem, MsearchRequestItem] {
   return [
     { index: 'lc_channels' },
     {
@@ -133,7 +149,7 @@ export function msearchOrganizations(
   query: string,
   from = 0,
   size = 0,
-): Array<MsearchRequestItem> {
+): [MsearchRequestItem, MsearchRequestItem] {
   return [
     { index: 'lc_organizations' },
     {
@@ -254,6 +270,18 @@ export const MSearchResponseSchema = Z.object({
           ]),
         ),
       }),
+      aggregations: Z.object({
+        channelIds: Z.object({
+          doc_count_error_upper_bound: Z.number(),
+          sum_other_doc_count: Z.number(),
+          buckets: Z.array(
+            Z.object({
+              key: Z.string().uuid(),
+              doc_count: Z.number(),
+            }),
+          ),
+        }).optional(),
+      }).optional(),
     }),
   ),
 });

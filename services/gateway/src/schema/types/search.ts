@@ -1,5 +1,6 @@
 import { resolveOffsetConnection } from '@pothos/plugin-relay';
 import { getProperty as get } from 'dot-prop';
+import * as Z from 'zod';
 import {
   msearchChannels,
   msearchOrganizations,
@@ -107,12 +108,46 @@ builder.simpleObject('OrganizationSearchHit', {
   }),
 });
 
-const SearchAggs = builder.simpleObject('SearchAggs', {
+const SearchAggsData = builder.objectRef<{
+  uploadHitCount: number;
+  transcriptHitCount: number;
+  channelHitCount: number;
+  organizationHitCount: number;
+  channelAggData: Array<{ id: string; count: number }>;
+}>('SearchAggsData');
+
+const SearchChannelAggData = builder.objectRef<{
+  id: string;
+  count: number;
+}>('SearchChannelAgg');
+
+const SearchChannelAgg = builder.objectType(SearchChannelAggData, {
+  name: 'SearchChannelAgg',
   fields: (t) => ({
-    uploadHitCount: t.int(),
-    transcriptHitCount: t.int(),
-    channelHitCount: t.int(),
-    organizationHitCount: t.int(),
+    count: t.exposeInt('count'),
+    // TODO: is this batching?
+    channel: t.prismaField({
+      type: 'Channel',
+      resolve: async (query, root, _args, _context, _info) =>
+        prisma.channel.findUniqueOrThrow({
+          ...query,
+          where: { id: root.id },
+        }),
+    }),
+  }),
+});
+
+const SearchAggs = builder.objectType(SearchAggsData, {
+  name: 'SearchAggs',
+  fields: (t) => ({
+    uploadHitCount: t.exposeInt('uploadHitCount'),
+    transcriptHitCount: t.exposeInt('transcriptHitCount'),
+    channelHitCount: t.exposeInt('channelHitCount'),
+    organizationHitCount: t.exposeInt('organizationHitCount'),
+    channels: t.field({
+      type: [SearchChannelAgg],
+      resolve: (root) => root.channelAggData,
+    }),
   }),
 });
 
@@ -135,10 +170,30 @@ builder.queryFields((t) => ({
             values: focuses,
           }),
         }),
+        channels: t.arg({
+          required: false,
+          type: ['ShortUuid'],
+        }),
+      },
+      validate: {
+        schema: Z.object({
+          query: Z.string(),
+          focus: Z.enum(focuses),
+          channels: Z.array(Z.string().uuid()).nullable().optional(),
+        }).refine(
+          (val) =>
+            val.channels?.length ?? 0 > 0
+              ? val.focus === 'UPLOADS' || val.focus === 'TRANSCRIPTS'
+              : true,
+          {
+            message:
+              '`channels` can only be included if focus is `UPLOADS` or `TRANSCRIPTS`',
+          },
+        ),
       },
       resolve: async (
         _root,
-        { query, focus, ...args },
+        { query, focus, channels, ...args },
         { esClient },
         _info,
       ) => {
@@ -147,6 +202,7 @@ builder.queryFields((t) => ({
         let transcriptHitCount = 0;
         let channelHitCount = 0;
         let organizationHitCount = 0;
+        let channelAggData: Array<{ id: string; count: number }> = [];
 
         const res = await resolveOffsetConnection(
           { args },
@@ -157,11 +213,13 @@ builder.queryFields((t) => ({
                   query,
                   focus === 'UPLOADS' ? offset : 0,
                   focus === 'UPLOADS' ? limit : 0,
+                  { channels },
                 ),
                 ...msearchTranscripts(
                   query,
                   focus === 'TRANSCRIPTS' ? offset : 0,
                   focus === 'TRANSCRIPTS' ? limit : 0,
+                  { channels },
                 ),
                 ...msearchChannels(
                   query,
@@ -186,6 +244,10 @@ builder.queryFields((t) => ({
             transcriptHitCount = parsed.responses[1]?.hits.total.value ?? 0;
             channelHitCount = parsed.responses[2]?.hits.total.value ?? 0;
             organizationHitCount = parsed.responses[3]?.hits.total.value ?? 0;
+
+            channelAggData = parsed.responses
+              .flatMap((res) => res.aggregations?.channelIds?.buckets ?? [])
+              .map(({ key, doc_count }) => ({ id: key, count: doc_count }));
 
             const res = parsed.responses
               .flatMap(({ hits: { hits } }) => hits)
@@ -241,6 +303,7 @@ builder.queryFields((t) => ({
             transcriptHitCount,
             channelHitCount,
             organizationHitCount,
+            channelAggData,
           },
         };
       },
@@ -248,7 +311,10 @@ builder.queryFields((t) => ({
     {
       name: 'SearchConnection',
       fields: (t) => ({
-        aggs: t.field({ type: SearchAggs, resolve: (root) => root.aggs }),
+        aggs: t.field({
+          type: SearchAggs,
+          resolve: ({ aggs }) => aggs,
+        }),
       }),
     },
   ),
