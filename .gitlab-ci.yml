@@ -148,12 +148,12 @@ build-web:
 # |____/ \___| .__/|_|\___/ \__, |
 #            |_|            |___/ 
 
-deploy-k8s:
-  stage: deploy
-  script:
-    - cd infra/k8s/preview
-    - cp $INIT_SQL init.sql
-    - cp $S3_ENV s3.env
-    - cp $SMTP_ENV smtp.env
-    - just deploy-set-images preview $CI_COMMIT_SHORT_SHA
-    - kubectl apply -k .
+# deploy-k8s:
+#   stage: deploy
+#   script:
+#     - cd infra/k8s/preview
+#     - cp $INIT_SQL init.sql
+#     - cp $S3_ENV s3.env
+#     - cp $SMTP_ENV smtp.env
+#     - just deploy-set-images preview $CI_COMMIT_SHORT_SHA
+#     - kubectl apply -k .
