@@ -1,8 +1,7 @@
-#!/usr/bin/env bash
-
-if echo $GIT_AUTHOR_EMAIL | grep 'lets.church$'; then
-  if ! git config --get user.signingKey; then
-    echo "Attempting to commit with @lets.church email with no signingKey configured!"
-    exit 1
-  fi
+#!/bin/sh
+if [ $(date +%u) = 7 ]; then
+	echo "It's Sunday, go to Church!"
+	exit 1
+else
+	exit 0
 fi
