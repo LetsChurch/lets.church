@@ -36,7 +36,7 @@ import {
 } from '~/__generated__/graphql-types';
 import { notEmpty } from '~/util';
 import { doMultipartUpload } from '~/util/multipart-upload';
-import { Input, Select, Button, Radios } from '~/components/form';
+import { Input, Select, Button, Radios, Textarea } from '~/components/form';
 import { dateToIso8601 } from '~/util/date';
 
 type BaseField = {
@@ -512,13 +512,32 @@ export default function UploadRoute() {
                               ? { value: field.defaultValue }
                               : {})}
                             type={field.type}
-                            rows={
-                              field.type === 'text' ? field.rows : undefined
-                            }
                             disabled={field.disabled ?? false}
+                            class="mt-1"
                           />
                         }
                       >
+                        <Match
+                          when={
+                            field.type === 'text' &&
+                            typeof field.rows === 'number' &&
+                            field
+                          }
+                          keyed
+                        >
+                          {(textAreaField) => (
+                            <Textarea
+                              id={field.id}
+                              name={field.name}
+                              {...(field.defaultValue
+                                ? { value: field.defaultValue }
+                                : {})}
+                              rows={textAreaField.rows ?? ''}
+                              disabled={field.disabled ?? false}
+                              class="mt-1"
+                            />
+                          )}
+                        </Match>
                         <Match when={field.type === 'select' && field} keyed>
                           {(selectField) => (
                             <Select
@@ -527,6 +546,7 @@ export default function UploadRoute() {
                               options={(field as SelectField).options}
                               value={selectField.defaultValue ?? ''}
                               disabled={field.disabled ?? false}
+                              class="mt-1"
                             />
                           )}
                         </Match>

@@ -446,6 +446,8 @@ export type QuerySearchArgs = {
   first?: InputMaybe<Scalars['Int']>;
   focus: SearchFocus;
   last?: InputMaybe<Scalars['Int']>;
+  maxPublishedAt?: InputMaybe<Scalars['DateTime']>;
+  minPublishedAt?: InputMaybe<Scalars['DateTime']>;
   query: Scalars['String'];
 };
 
@@ -489,6 +491,7 @@ export type SearchAggs = {
   channelHitCount: Scalars['Int'];
   channels: Array<SearchChannelAgg>;
   organizationHitCount: Scalars['Int'];
+  publishedAtRange?: Maybe<SearchPublishedAtAggData>;
   transcriptHitCount: Scalars['Int'];
   uploadHitCount: Scalars['Int'];
 };
@@ -518,6 +521,12 @@ export enum SearchFocus {
   Transcripts = 'TRANSCRIPTS',
   Uploads = 'UPLOADS'
 }
+
+export type SearchPublishedAtAggData = {
+  __typename?: 'SearchPublishedAtAggData';
+  max: Scalars['DateTime'];
+  min: Scalars['DateTime'];
+};
 
 export type TranscriptLine = {
   __typename?: 'TranscriptLine';

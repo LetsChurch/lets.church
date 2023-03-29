@@ -1,5 +1,9 @@
 import { Client } from '@elastic/elasticsearch';
-import type { MsearchRequestItem } from '@elastic/elasticsearch/lib/api/types';
+import type {
+  MsearchMultisearchBody,
+  MsearchRequestItem,
+  QueryDslQueryContainer,
+} from '@elastic/elasticsearch/lib/api/types';
 import envariant from '@knpwrs/envariant';
 import waitOn from 'wait-on';
 import * as Z from 'zod';
@@ -18,11 +22,47 @@ export async function waitForElasticsearch() {
   });
 }
 
+function makePostFilterSpread({
+  channels,
+  publishedAt,
+}: {
+  channels?: Array<string> | null;
+  publishedAt?: { gte?: string; lte?: string } | undefined;
+}): MsearchMultisearchBody {
+  const res: MsearchMultisearchBody = {};
+
+  const must: Array<QueryDslQueryContainer> = [];
+
+  if ((Array.isArray(channels) && channels.length > 0) || publishedAt) {
+    res.post_filter = { bool: { must: [], should: [] } };
+  }
+
+  if (Array.isArray(channels) && channels.length > 0) {
+    must.push({ terms: { channelId: channels } });
+  }
+
+  if (publishedAt) {
+    must.push({ range: { publishedAt } });
+  }
+
+  if (must.length > 0) {
+    res.post_filter = { bool: { must, should: [] } };
+  }
+
+  return res;
+}
+
 export function msearchUploads(
   query: string,
   from = 0,
   size = 0,
-  { channels = [] }: { channels?: string[] | null | undefined },
+  {
+    channels = [],
+    publishedAt,
+  }: {
+    channels?: string[] | null | undefined;
+    publishedAt?: { gte?: string; lte?: string } | undefined;
+  },
 ): [MsearchRequestItem, MsearchRequestItem] {
   return [
     { index: 'lc_uploads' },
@@ -36,9 +76,25 @@ export function msearchUploads(
           fields: ['title^3', 'title._2gram', 'title._3gram', 'description'],
         },
       },
-      ...(Array.isArray(channels) && channels.length > 0
-        ? { post_filter: { terms: { channelId: channels } } }
-        : {}),
+      ...makePostFilterSpread({ channels, publishedAt }),
+      aggs: {
+        channelIds: {
+          terms: {
+            field: 'channelId',
+            size: 10,
+          },
+        },
+        minPublishedAt: {
+          min: {
+            field: 'publishedAt',
+          },
+        },
+        maxPublishedAt: {
+          max: {
+            field: 'publishedAt',
+          },
+        },
+      },
     },
   ];
 }
@@ -47,7 +103,13 @@ export function msearchTranscripts(
   query: string,
   from = 0,
   size = 0,
-  { channels = [] }: { channels?: string[] | null | undefined },
+  {
+    channels = [],
+    publishedAt,
+  }: {
+    channels?: string[] | null | undefined;
+    publishedAt?: { gte?: string; lte?: string } | undefined;
+  },
 ): [MsearchRequestItem, MsearchRequestItem] {
   const trimmed = query.trim();
   const words = trimmed.split(/\s+/g);
@@ -109,14 +171,22 @@ export function msearchTranscripts(
           },
         },
       },
-      ...(Array.isArray(channels) && channels.length > 0
-        ? { post_filter: { terms: { channelId: channels } } }
-        : {}),
+      ...makePostFilterSpread({ channels, publishedAt }),
       aggs: {
         channelIds: {
           terms: {
             field: 'channelId',
             size: 10,
+          },
+        },
+        minPublishedAt: {
+          min: {
+            field: 'publishedAt',
+          },
+        },
+        maxPublishedAt: {
+          max: {
+            field: 'publishedAt',
           },
         },
       },
@@ -280,6 +350,12 @@ export const MSearchResponseSchema = Z.object({
               doc_count: Z.number(),
             }),
           ),
+        }).optional(),
+        minPublishedAt: Z.object({
+          value: Z.number().nullable(), // null when there are no matches
+        }).optional(),
+        maxPublishedAt: Z.object({
+          value: Z.number().nullable(), // null when there are no matches
         }).optional(),
       }).optional(),
     }),

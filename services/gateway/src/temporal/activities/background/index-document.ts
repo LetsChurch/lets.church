@@ -22,16 +22,17 @@ async function getDocument(
         .filter((n): n is NodeCue => n.type === 'cue')
         .map(({ data: { start, end, text } }) => ({ start, end, text }));
 
+      const upRec = await prisma.uploadRecord.findUniqueOrThrow({
+        where: { id: documentId },
+        select: { channelId: true, publishedAt: true },
+      });
+
       return {
         index: 'lc_transcripts',
         id: documentId,
         document: escapeDocument({
-          channelId: (
-            await prisma.uploadRecord.findUniqueOrThrow({
-              where: { id: documentId },
-              select: { channelId: true },
-            })
-          ).channelId,
+          channelId: upRec.channelId,
+          publishedAt: upRec.publishedAt.toISOString(),
           segments: transcriptSegmentSchema.parse(parsed),
         }),
       };
@@ -45,7 +46,8 @@ async function getDocument(
             channelId: true,
             title: true,
             description: true,
-            // TODO: tags, publishedAt
+            publishedAt: true,
+            // TODO: tags
           },
         }),
       };

@@ -57,6 +57,9 @@ const targetMappings: Record<
       channelId: {
         type: 'keyword',
       },
+      publishedAt: {
+        type: 'date',
+      },
       segments: {
         type: 'nested',
         properties: {

@@ -1,5 +1,6 @@
 import { resolveOffsetConnection } from '@pothos/plugin-relay';
 import { getProperty as get } from 'dot-prop';
+import invariant from 'tiny-invariant';
 import * as Z from 'zod';
 import {
   msearchChannels,
@@ -114,6 +115,7 @@ const SearchAggsData = builder.objectRef<{
   channelHitCount: number;
   organizationHitCount: number;
   channelAggData: Array<{ id: string; count: number }>;
+  dateAggData: { min: Date; max: Date } | null;
 }>('SearchAggsData');
 
 const SearchChannelAggData = builder.objectRef<{
@@ -137,6 +139,24 @@ const SearchChannelAgg = builder.objectType(SearchChannelAggData, {
   }),
 });
 
+const SearchPublishedAtAggData = builder.objectRef<{
+  min: Date;
+  max: Date;
+}>('SearchPublishedAtAggData');
+
+const SearchPublishedAtAgg = builder.objectType(SearchPublishedAtAggData, {
+  fields: (t) => ({
+    min: t.field({
+      type: 'DateTime',
+      resolve: (root) => root.min.toISOString(),
+    }),
+    max: t.field({
+      type: 'DateTime',
+      resolve: (root) => root.max.toISOString(),
+    }),
+  }),
+});
+
 const SearchAggs = builder.objectType(SearchAggsData, {
   name: 'SearchAggs',
   fields: (t) => ({
@@ -147,6 +167,11 @@ const SearchAggs = builder.objectType(SearchAggsData, {
     channels: t.field({
       type: [SearchChannelAgg],
       resolve: (root) => root.channelAggData,
+    }),
+    publishedAtRange: t.field({
+      type: SearchPublishedAtAgg,
+      nullable: true,
+      resolve: (root) => root.dateAggData,
     }),
   }),
 });
@@ -174,12 +199,22 @@ builder.queryFields((t) => ({
           required: false,
           type: ['ShortUuid'],
         }),
+        minPublishedAt: t.arg({
+          required: false,
+          type: 'DateTime',
+        }),
+        maxPublishedAt: t.arg({
+          required: false,
+          type: 'DateTime',
+        }),
       },
       validate: {
         schema: Z.object({
           query: Z.string(),
           focus: Z.enum(focuses),
           channels: Z.array(Z.string().uuid()).nullable().optional(),
+          minPublishedAt: Z.string().or(Z.date()).nullable().optional(),
+          maxPublishedAt: Z.string().or(Z.date()).nullable().optional(),
         }).refine(
           (val) =>
             val.channels?.length ?? 0 > 0
@@ -193,7 +228,7 @@ builder.queryFields((t) => ({
       },
       resolve: async (
         _root,
-        { query, focus, channels, ...args },
+        { query, focus, channels, minPublishedAt, maxPublishedAt, ...args },
         { esClient },
         _info,
       ) => {
@@ -203,6 +238,23 @@ builder.queryFields((t) => ({
         let channelHitCount = 0;
         let organizationHitCount = 0;
         let channelAggData: Array<{ id: string; count: number }> = [];
+        let dateAggData: { min: Date; max: Date } | null = null;
+
+        const publishedAt: { lte?: string; gte?: string } = {};
+
+        if (minPublishedAt) {
+          publishedAt.gte =
+            minPublishedAt instanceof Date
+              ? minPublishedAt.toISOString()
+              : minPublishedAt;
+        }
+
+        if (maxPublishedAt) {
+          publishedAt.lte =
+            maxPublishedAt instanceof Date
+              ? maxPublishedAt.toISOString()
+              : maxPublishedAt;
+        }
 
         const res = await resolveOffsetConnection(
           { args },
@@ -213,13 +265,19 @@ builder.queryFields((t) => ({
                   query,
                   focus === 'UPLOADS' ? offset : 0,
                   focus === 'UPLOADS' ? limit : 0,
-                  { channels },
+                  {
+                    channels,
+                    publishedAt,
+                  },
                 ),
                 ...msearchTranscripts(
                   query,
                   focus === 'TRANSCRIPTS' ? offset : 0,
                   focus === 'TRANSCRIPTS' ? limit : 0,
-                  { channels },
+                  {
+                    channels,
+                    publishedAt,
+                  },
                 ),
                 ...msearchChannels(
                   query,
@@ -245,9 +303,34 @@ builder.queryFields((t) => ({
             channelHitCount = parsed.responses[2]?.hits.total.value ?? 0;
             organizationHitCount = parsed.responses[3]?.hits.total.value ?? 0;
 
-            channelAggData = parsed.responses
-              .flatMap((res) => res.aggregations?.channelIds?.buckets ?? [])
-              .map(({ key, doc_count }) => ({ id: key, count: doc_count }));
+            const focusedResponse =
+              parsed.responses[
+                focus === 'UPLOADS'
+                  ? 0
+                  : focus === 'TRANSCRIPTS'
+                  ? 1
+                  : focus === 'CHANNELS'
+                  ? 2
+                  : 3
+              ];
+            invariant(focusedResponse, 'Focused response should exist');
+            const focusedAggs = focusedResponse.aggregations;
+
+            // Get focused aggregrate value
+            channelAggData = (
+              focus === 'UPLOADS' || focus === 'TRANSCRIPTS'
+                ? focusedAggs?.channelIds?.buckets ?? []
+                : []
+            ).map(({ key, doc_count }) => ({ id: key, count: doc_count }));
+
+            dateAggData =
+              focusedAggs?.minPublishedAt?.value &&
+              focusedAggs.maxPublishedAt?.value
+                ? {
+                    min: new Date(focusedAggs.minPublishedAt.value),
+                    max: new Date(focusedAggs.maxPublishedAt.value),
+                  }
+                : null;
 
             const res = parsed.responses
               .flatMap(({ hits: { hits } }) => hits)
@@ -304,6 +387,7 @@ builder.queryFields((t) => ({
             channelHitCount,
             organizationHitCount,
             channelAggData,
+            dateAggData,
           },
         };
       },

@@ -12,10 +12,8 @@ import { A, RouteDataArgs, useLocation, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
 import '@fontsource/roboto-mono/variable.css';
 import { Dynamic } from 'solid-js/web';
-import type { MergeExclusive } from 'type-fest';
 import ChevronDownIcon from '@tabler/icons/chevron-down.svg?component-solid';
 import { useFloating } from 'solid-floating-ui';
-import { useNavigate } from '@solidjs/router';
 import type { SearchQuery, SearchQueryVariables } from './__generated__/search';
 import Pagination from '~/components/pagination';
 import Thumbnail, {
@@ -24,8 +22,9 @@ import Thumbnail, {
 import { client, gql } from '~/util/gql/server';
 import { SearchFocus } from '~/__generated__/graphql-types';
 import { formatTime } from '~/util';
-import FloatingChecklist from '~/components/floating-checklist';
-import { setQueryParams } from '~/util/url';
+import FloatingDiv from '~/components/floating-div';
+import NavigatingChecklist from '~/components/navigating-checklist';
+import NavigatingDateRange from '~/components/navigating-date-range';
 
 const PAGE_SIZE = 12;
 
@@ -37,8 +36,12 @@ export function routeData({ location }: RouteDataArgs) {
       focus = 'uploads',
       after = null,
       before = null,
+      publishedAtRange = null,
       channels = null,
     ]) => {
+      const [minPublishedAt = null, maxPublishedAt = null] =
+        publishedAtRange?.split('/') ?? [];
+
       return client.request<SearchQuery, SearchQueryVariables>(
         gql`
           fragment SearchUploadRecordProps on UploadRecord {
@@ -59,6 +62,8 @@ export function routeData({ location }: RouteDataArgs) {
             $after: String
             $last: Int
             $before: String
+            $minPublishedAt: DateTime
+            $maxPublishedAt: DateTime
             $channels: [ShortUuid!]
           ) {
             search(
@@ -68,6 +73,8 @@ export function routeData({ location }: RouteDataArgs) {
               after: $after
               last: $last
               before: $before
+              minPublishedAt: $minPublishedAt
+              maxPublishedAt: $maxPublishedAt
               channels: $channels
             ) {
               aggs {
@@ -81,6 +88,10 @@ export function routeData({ location }: RouteDataArgs) {
                     id
                     name
                   }
+                }
+                publishedAtRange {
+                  min
+                  max
                 }
               }
               pageInfo {
@@ -130,6 +141,12 @@ export function routeData({ location }: RouteDataArgs) {
           before,
           first: after || !before ? PAGE_SIZE : null,
           last: before ? PAGE_SIZE : null,
+          minPublishedAt: minPublishedAt
+            ? new Date(minPublishedAt).toISOString()
+            : null,
+          maxPublishedAt: maxPublishedAt
+            ? new Date(maxPublishedAt).toISOString()
+            : null,
           channels,
         },
       );
@@ -142,6 +159,7 @@ export function routeData({ location }: RouteDataArgs) {
           location.query['focus'],
           location.query['after'],
           location.query['before'],
+          location.query['publishedAt'],
           location.query['channels']?.split(',').filter(Boolean),
         ] as const,
     },
@@ -246,24 +264,21 @@ function SearchTranscriptHitRow(
   );
 }
 
-type AggFilterProps = {
+type AggFilterProps = ParentProps<{
   title: string;
-  count: number;
-} & MergeExclusive<
-  { q: string; focus: string },
-  { valueKey: string; values: Array<{ label: string; value: string }> }
->;
+  count?: number;
+  q?: string;
+  focus?: string;
+  disabled?: boolean;
+  active?: boolean;
+}>;
 
 function AggFilter(props: AggFilterProps) {
   const loc = useLocation();
   const current = () =>
-    loc.query['focus'] === props.focus ||
-    (!loc.query['focus'] && props.focus === 'uploads');
-  const navigate = useNavigate();
-  const currentValues = () =>
-    props.valueKey
-      ? loc.query[props.valueKey]?.split(',').filter(Boolean) ?? []
-      : [];
+    props.active ??
+    (loc.query['focus'] === props.focus ||
+      (!loc.query['focus'] && props.focus === 'uploads'));
   const [showMenu, setShowMenu] = createSignal(false);
   const [reference, setReference] = createSignal<HTMLDivElement>();
   const [floating, setFloating] = createSignal<HTMLDivElement>();
@@ -272,55 +287,29 @@ function AggFilter(props: AggFilterProps) {
   });
   const menuButtonId = createUniqueId();
 
-  const isMenu = () => Boolean(props.values);
-
-  function handleClick() {
-    if (!isMenu()) {
-      return;
-    }
-
-    setShowMenu(true);
-  }
-
-  function onChange(value: string, checked: boolean) {
-    navigate(
-      `?${setQueryParams(loc.search, {
-        [props.valueKey ?? '']: checked
-          ? [...currentValues(), value]
-          : currentValues().filter((v) => v !== value),
-      })}`,
-    );
-  }
-
-  const options = () =>
-    props.values?.map(({ label, value }) => ({
-      label,
-      value,
-      checked: currentValues().includes(value),
-    })) ?? [];
+  const isMenu = () => Boolean(props.children);
 
   return (
     <Dynamic
       component={isMenu() ? 'button' : A}
-      {...(isMenu()
-        ? {
-            id: menuButtonId,
-            ref: setReference,
-            disabled: props.values?.length === 0,
-          }
-        : {
-            href: `?${new URLSearchParams({
+      ref={setReference}
+      id={menuButtonId}
+      disabled={props.disabled === true}
+      onClick={() => setShowMenu(true)}
+      href={
+        isMenu()
+          ? undefined
+          : `?${new URLSearchParams({
               q: props.q ?? '',
               focus: props.focus ?? '',
-            })}`,
-          })}
-      onClick={handleClick}
+            })}`
+      }
       class={`flex items-center whitespace-nowrap border-b-2 border-transparent py-4 px-1 text-sm font-medium ${
         current() ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-700'
       }`}
     >
       {props.title}
-      <Show when={!isMenu() || props.count > 0}>
+      <Show when={!isMenu() || (props.count ?? 0) > 0}>
         <span
           class={`ml-2 rounded-full py-0.5 px-2.5 text-xs font-medium md:inline-block ${
             current()
@@ -334,18 +323,28 @@ function AggFilter(props: AggFilterProps) {
       <Show when={isMenu()}>
         <ChevronDownIcon class="scale-75" />
       </Show>
-      <FloatingChecklist
-        ref={setFloating}
-        open={showMenu()}
-        position={position}
-        aria-labelledby={menuButtonId}
-        onClose={() => setShowMenu(false)}
-        onChange={onChange}
-        options={options()}
-        class="-m-2 w-48"
-      />
+      <Show when={props.children}>
+        <FloatingDiv
+          ref={setFloating}
+          open={showMenu()}
+          position={position}
+          aria-labelledby={menuButtonId}
+          onClose={() => setShowMenu(false)}
+          class="-m-2 w-48"
+        >
+          {props.children}
+        </FloatingDiv>
+      </Show>
     </Dynamic>
   );
+}
+
+function toDateOrNull(date?: string) {
+  if (date) {
+    return new Date(date);
+  }
+
+  return null;
 }
 
 export default function SearchRoute() {
@@ -354,9 +353,12 @@ export default function SearchRoute() {
   const channelsCount = () =>
     new URLSearchParams(loc.search).get('channels')?.split(',').length ?? 0;
   const channelsValues = () =>
-    data()?.search.aggs.channels.map((c) => ({
-      label: c.channel.name,
-      value: c.channel.id,
+    loc.query['channels']?.split(',').filter(Boolean) ?? [];
+  const channelsOptions = () =>
+    data()?.search.aggs.channels.map(({ channel }) => ({
+      label: channel.name,
+      value: channel.id,
+      checked: channelsValues().includes(channel.id),
     })) ?? [];
 
   return (
@@ -391,9 +393,25 @@ export default function SearchRoute() {
           <AggFilter
             title="Channels"
             count={channelsCount()}
-            valueKey="channels"
-            values={channelsValues()}
-          />
+            disabled={channelsOptions().length === 0}
+          >
+            <NavigatingChecklist
+              options={channelsOptions()}
+              queryKey="channels"
+            />
+          </AggFilter>
+          <AggFilter
+            title="Published Date"
+            active={Boolean(loc.query['publishedAt'])}
+          >
+            <div class="p-2">
+              <NavigatingDateRange
+                queryKey="publishedAt"
+                min={toDateOrNull(data()?.search.aggs.publishedAtRange?.min)}
+                max={toDateOrNull(data()?.search.aggs.publishedAtRange?.max)}
+              />
+            </div>
+          </AggFilter>
         </nav>
       </div>
       <For each={data()?.search.edges}>

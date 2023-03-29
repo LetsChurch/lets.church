@@ -1,12 +1,12 @@
 import { JSX, splitProps } from 'solid-js';
 
-export type Props = JSX.IntrinsicElements['input'];
+export type Props = JSX.IntrinsicElements['textarea'];
 
 export default function Input(props: Props) {
   const [localProps, restProps] = splitProps(props, ['class']);
 
   return (
-    <input
+    <textarea
       {...restProps}
       class={`block w-full rounded-md border border-gray-300 bg-white py-2 px-3 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm ${
         localProps.class ?? ''
