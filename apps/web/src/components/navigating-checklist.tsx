@@ -31,7 +31,7 @@ export default function NavigatingChecklist(props: Props) {
     <div {...others} role="menu">
       <For each={local.options}>
         {(op) => (
-          <div class="flex items-center px-4 py-2">
+          <div class="flex items-center py-2">
             <input
               id="filter-mobile-category-1"
               value={op.value}

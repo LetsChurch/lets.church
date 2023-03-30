@@ -63,7 +63,7 @@ export default function NavigatingDateRange(props: Props) {
   }
 
   return (
-    <div {...others} class={`space-y-2 ${local.class}`}>
+    <div {...others} class={`space-y-2 ${local.class ?? ''}`}>
       <Input
         type="date"
         name="min"

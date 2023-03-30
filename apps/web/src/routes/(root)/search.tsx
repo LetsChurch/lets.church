@@ -13,6 +13,7 @@ import { createServerData$ } from 'solid-start/server';
 import '@fontsource/roboto-mono/variable.css';
 import { Dynamic } from 'solid-js/web';
 import ChevronDownIcon from '@tabler/icons/chevron-down.svg?component-solid';
+import FilterIcon from '@tabler/icons/filter.svg?component-solid';
 import { useFloating } from 'solid-floating-ui';
 import type { SearchQuery, SearchQueryVariables } from './__generated__/search';
 import Pagination from '~/components/pagination';
@@ -25,6 +26,7 @@ import { formatTime } from '~/util';
 import FloatingDiv from '~/components/floating-div';
 import NavigatingChecklist from '~/components/navigating-checklist';
 import NavigatingDateRange from '~/components/navigating-date-range';
+import OffCanvasDiv from '~/components/off-canvas-div';
 
 const PAGE_SIZE = 12;
 
@@ -330,7 +332,7 @@ function AggFilter(props: AggFilterProps) {
           position={position}
           aria-labelledby={menuButtonId}
           onClose={() => setShowMenu(false)}
-          class="-m-2 w-48"
+          class="-mt-2"
         >
           {props.children}
         </FloatingDiv>
@@ -348,6 +350,7 @@ function toDateOrNull(date?: string) {
 }
 
 export default function SearchRoute() {
+  const [showFiltersMenu, setShowFiltersMenu] = createSignal(false);
   const data = useRouteData<typeof routeData>();
   const loc = useLocation();
   const channelsCount = () =>
@@ -389,7 +392,37 @@ export default function SearchRoute() {
             )}
           </For>
         </nav>
-        <nav class="flex space-x-5" aria-label="Search Filters">
+        <button
+          class="text-gray-500 hover:text-gray-700 sm:hidden"
+          aria-label="Filters"
+          onClick={() => setShowFiltersMenu(true)}
+        >
+          <FilterIcon />
+        </button>
+        <OffCanvasDiv
+          open={showFiltersMenu()}
+          onClose={() => setShowFiltersMenu(false)}
+          title="Filters"
+          class="sm:hidden"
+          backdropClass="sm:hidden"
+        >
+          <div class="space-y-2">
+            <h3 class="font-medium text-gray-900">Channels</h3>
+            <NavigatingChecklist
+              options={channelsOptions()}
+              queryKey="channels"
+            />
+          </div>
+          <div class="space-y-2">
+            <h3 class="font-medium text-gray-900">Published Date</h3>
+            <NavigatingDateRange
+              queryKey="publishedAt"
+              min={toDateOrNull(data()?.search.aggs.publishedAtRange?.min)}
+              max={toDateOrNull(data()?.search.aggs.publishedAtRange?.max)}
+            />
+          </div>
+        </OffCanvasDiv>
+        <nav class="hidden space-x-5 sm:flex" aria-label="Search Filters">
           <AggFilter
             title="Channels"
             count={channelsCount()}
@@ -398,19 +431,19 @@ export default function SearchRoute() {
             <NavigatingChecklist
               options={channelsOptions()}
               queryKey="channels"
+              class="px-2"
             />
           </AggFilter>
           <AggFilter
             title="Published Date"
             active={Boolean(loc.query['publishedAt'])}
           >
-            <div class="p-2">
-              <NavigatingDateRange
-                queryKey="publishedAt"
-                min={toDateOrNull(data()?.search.aggs.publishedAtRange?.min)}
-                max={toDateOrNull(data()?.search.aggs.publishedAtRange?.max)}
-              />
-            </div>
+            <NavigatingDateRange
+              queryKey="publishedAt"
+              min={toDateOrNull(data()?.search.aggs.publishedAtRange?.min)}
+              max={toDateOrNull(data()?.search.aggs.publishedAtRange?.max)}
+              class="p-2"
+            />
           </AggFilter>
         </nav>
       </div>
