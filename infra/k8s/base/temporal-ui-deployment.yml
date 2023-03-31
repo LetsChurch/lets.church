@@ -17,26 +17,10 @@ spec:
     spec:
       restartPolicy: Always
       containers:
-        - image: temporalio/ui:2.9.0
+        - image: temporalio/ui:2.13.3
           name: temporal-ui
           ports:
             - containerPort: 8080
           envFrom:
             - configMapRef:
                 name: temporal-client-config
-          env:
-            - name: OINKOINKMOO
-              value: 'hello' # Default value is '*'
-          # env:
-          #   - name: TEMPORAL_CORS_ORIGINS
-          #     value: '*' # Default value is '*'
-      #     volumeMounts:
-      #       - name: temporal-dynamic-config
-      #         mountPath: /etc/temporal/config/dynamicconfig
-      # volumes:
-      #   - name: temporal-dynamic-config
-      #     configMap:
-      #       name: temporal-server-dynamic-config
-      #       items:
-      #         - key: empty
-      #           path: docker.yaml
