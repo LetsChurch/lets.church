@@ -278,7 +278,7 @@ builder.prismaObject('UploadRecord', {
       cursor: 'id',
       totalCount: true,
       query: {
-        orderBy: { createdAt: Prisma.SortOrder.desc },
+        orderBy: { score: Prisma.SortOrder.desc },
         where: { replyingTo: null },
       },
     }),

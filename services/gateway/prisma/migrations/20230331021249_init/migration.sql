@@ -157,6 +157,8 @@ CREATE TABLE "upload_user_comment" (
     "upload_id" UUID NOT NULL,
     "replying_to_id" UUID,
     "text" TEXT NOT NULL,
+    "score" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "score_stale_at" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "upload_user_comment_pkey" PRIMARY KEY ("id")
 );
@@ -200,6 +202,12 @@ CREATE INDEX "upload_user_rating_app_user_id_rating_idx" ON "upload_user_rating"
 
 -- CreateIndex
 CREATE INDEX "upload_user_comment_replying_to_id_idx" ON "upload_user_comment"("replying_to_id");
+
+-- CreateIndex
+CREATE INDEX "upload_user_comment_score_idx" ON "upload_user_comment"("score");
+
+-- CreateIndex
+CREATE INDEX "upload_user_comment_score_stale_at_idx" ON "upload_user_comment"("score_stale_at");
 
 -- CreateIndex
 CREATE INDEX "upload_user_comment_rating_upload_id_rating_idx" ON "upload_user_comment_rating"("upload_id", "rating");

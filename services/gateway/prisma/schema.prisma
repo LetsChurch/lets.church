@@ -225,8 +225,12 @@ model UploadUserComment {
   replyingToId   String?                   @map("replying_to_id") @db.Uuid
   text           String
   userRatings    UploadUserCommentRating[]
+  score          Float                     @default(0)
+  scoreStaleAt   DateTime?                 @default(now()) @map("score_stale_at")
 
   @@index(replyingToId)
+  @@index(score)
+  @@index(scoreStaleAt)
   @@map("upload_user_comment")
 }
 
