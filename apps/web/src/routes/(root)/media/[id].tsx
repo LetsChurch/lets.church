@@ -240,9 +240,25 @@ export default function MediaRoute() {
   const user = useContext(UserContext);
   const params = useParams<{ id: string }>();
   const {
-    ratingState: [ratingStateData, { mutate: mutateRating }],
+    ratingState: [
+      ratingStateData,
+      { mutate: mutateRating, refetch: refetchRatingState },
+    ],
     metaData,
   } = useRouteData<typeof routeData>();
+
+  let prevMe: { id: string } | null | undefined = null;
+
+  // Refetch rating state when user logs in or out
+  createEffect(() => {
+    const next = user?.()?.me;
+
+    if (prevMe?.id !== next?.id) {
+      refetchRatingState();
+    }
+
+    prevMe = next;
+  });
 
   const [submittingSubscribe, submitSubscribe] = createServerAction$(
     async (form: FormData, { request }) => {
