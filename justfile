@@ -36,8 +36,8 @@ purge-pg:
 # Development
 #
 
-tctl:
-  docker exec temporal-admin-tools tctl
+tctl *args:
+  docker-compose exec temporal-admin-tools tctl {{args}}
 
 gateway-db-push:
   docker-compose exec gateway npm run prisma:db:push
@@ -59,7 +59,12 @@ gateway-migrate-dev:
   docker-compose exec gateway npm run prisma:migrate:dev
   cd services/gateway; npm run prisma:generate
 
-gateway-init: gateway-migrate-dev gateway-es-push-mappings
+gateway-schedule:
+  just tctl schedule create --sid update-upload-scores --interval 15s --overlap_policy skip --tq background --workflow_type updateUploadScoresWorkflow --workflow_id update-upload-scores
+gateway-schedule-delete:
+  just tctl schedule delete --sid update-upload-scores
+
+gateway-init: gateway-migrate-dev gateway-es-push-mappings gateway-schedule
 
 s3-prune-multipart-uploads:
   cd scripts; S3_BUCKET=${S3_INGEST_BUCKET} npm run s3:prune-multipart-uploads

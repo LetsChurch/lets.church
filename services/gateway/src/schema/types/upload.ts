@@ -579,9 +579,18 @@ builder.mutationFields((t) => ({
           },
         });
         // 3. If the new rating is different from any existing rating, create it
-        if (existing?.rating !== rating) {
+        const changed = existing?.rating !== rating;
+        if (changed) {
           await tx.uploadUserRating.create({
             data: { appUserId: userId, uploadRecordId, rating },
+          });
+          await tx.uploadRecord.update({
+            where: {
+              id: uploadRecordId,
+            },
+            data: {
+              scoreStaleAt: new Date(),
+            },
           });
         }
       });

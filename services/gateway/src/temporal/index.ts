@@ -1,10 +1,6 @@
 import envariant from '@knpwrs/envariant';
 import { xxh32 } from '@node-rs/xxhash';
-import {
-  Connection,
-  WorkflowClient,
-  WorkflowOptions,
-} from '@temporalio/client';
+import { Connection, Client, WorkflowOptions } from '@temporalio/client';
 import pRetry from 'p-retry';
 import PLazy from 'p-lazy';
 import waitOn from 'wait-on';
@@ -23,7 +19,7 @@ const TEMPORAL_ADDRESS = envariant('TEMPORAL_ADDRESS');
 const client = PLazy.from(async () => {
   await waitOnTemporal();
 
-  return new WorkflowClient({
+  return new Client({
     connection: await Connection.connect({
       address: TEMPORAL_ADDRESS,
     }),
@@ -45,7 +41,7 @@ export async function handleMultipartMediaUpload(
   s3UploadKey: string,
   postProcess: 'media' | 'thumbnail',
 ) {
-  return (await client).start(handleMultipartMediaUploadWorkflow, {
+  return (await client).workflow.start(handleMultipartMediaUploadWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     workflowId: makeMultipartMediaUploadWorkflowId(s3UploadId, s3UploadKey),
@@ -59,7 +55,7 @@ export async function completeMultipartMediaUpload(
   partETags: Array<string>,
   userId: string,
 ) {
-  return (await client)
+  return (await client).workflow
     .getHandle(makeMultipartMediaUploadWorkflowId(s3UploadId, s3UploadKey))
     .signal(uploadDoneSignal, partETags, userId);
 }
@@ -71,7 +67,7 @@ export async function indexDocument(
 ) {
   return pRetry(
     async () => {
-      return (await client).signalWithStart(indexDocumentWorkflow, {
+      return (await client).workflow.signalWithStart(indexDocumentWorkflow, {
         taskQueue: BACKGROUND_QUEUE,
         workflowId: `${kind}:${uploadId}`,
         args: [kind, uploadId, uploadKey],
@@ -90,7 +86,7 @@ export async function sendEmail(
   id: string,
   ...args: Parameters<typeof sendEmailWorkflow>
 ) {
-  return (await client).start(sendEmailWorkflow, {
+  return (await client).workflow.start(sendEmailWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     args,

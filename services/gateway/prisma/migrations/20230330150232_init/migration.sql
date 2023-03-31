@@ -132,6 +132,8 @@ CREATE TABLE "upload_record" (
     "published_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deleted_at" TIMESTAMP(3),
     "variants" "UploadVariant"[],
+    "score" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "score_stale_at" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "upload_record_pkey" PRIMARY KEY ("id")
 );
@@ -183,6 +185,12 @@ CREATE UNIQUE INDEX "channel_slug_key" ON "channel"("slug");
 
 -- CreateIndex
 CREATE INDEX "upload_record_created_at_id_idx" ON "upload_record"("created_at", "id");
+
+-- CreateIndex
+CREATE INDEX "upload_record_score_idx" ON "upload_record"("score");
+
+-- CreateIndex
+CREATE INDEX "upload_record_score_stale_at_idx" ON "upload_record"("score_stale_at");
 
 -- CreateIndex
 CREATE INDEX "upload_user_rating_upload_id_rating_idx" ON "upload_user_rating"("upload_id", "rating");

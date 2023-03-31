@@ -4,3 +4,4 @@ export {
 } from './handle-multipart-media-upload';
 export { indexDocumentWorkflow, indexDocumentSignal } from './index-document';
 export { sendEmailWorkflow } from './send-email';
+export { updateUploadScoresWorkflow } from './update-upload-scores';

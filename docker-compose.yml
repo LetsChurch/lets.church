@@ -98,7 +98,7 @@ services:
   # Vendor Services
   #
   temporal:
-    image: temporalio/auto-setup:1.19.0.0
+    image: temporalio/auto-setup:1.20.0.0
     environment:
       # See auto-setup.sh: https://github.com/temporalio/docker-builds/blob/a442b94edbe10bb49e2f0fc00c3154cdf0590be5/docker/auto-setup.sh
       SKIP_DB_CREATE: true # Database is already created via init script
@@ -122,7 +122,7 @@ services:
       - elasticsearch
 
   temporal-admin-tools:
-    image: temporalio/admin-tools:1.19.0.0
+    image: temporalio/admin-tools:1.20.0.0
     environment:
       - TEMPORAL_CLI_ADDRESS=temporal:7233
     stdin_open: true
@@ -131,7 +131,7 @@ services:
       - temporal
 
   temporal-ui:
-    image: temporalio/ui:2.9.0
+    image: temporalio/ui:2.13.3
     environment:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_CORS_ORIGINS: http://localhost:3000

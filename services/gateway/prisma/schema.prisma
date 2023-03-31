@@ -183,9 +183,13 @@ model UploadRecord {
   deletedAt            DateTime?           @map("deleted_at")
   variants             UploadVariant[]
   userRatings          UploadUserRating[]
+  score                Float               @default(0)
+  scoreStaleAt         DateTime?           @default(now()) @map("score_stale_at")
   userComments         UploadUserComment[]
 
   @@index([createdAt, id])
+  @@index(score)
+  @@index(scoreStaleAt)
   @@map("upload_record")
 }
 
