@@ -139,7 +139,7 @@ builder.prismaObject('UploadUserComment', {
   }),
 });
 
-builder.prismaObject('UploadRecord', {
+const UploadRecord = builder.prismaObject('UploadRecord', {
   select: {
     id: true,
     channelId: true, // For authScopes
@@ -313,18 +313,78 @@ builder.prismaObject('UploadRecord', {
 
 builder.queryFields((t) => ({
   uploadRecordById: t.prismaField({
-    type: 'UploadRecord',
+    type: UploadRecord,
     args: {
       id: t.arg({ type: 'ShortUuid', required: true }),
     },
     resolve: (query, _root, { id }, _context) =>
       prisma.uploadRecord.findUniqueOrThrow({ ...query, where: { id } }),
   }),
+  mySubscriptionUploadRecords: t.prismaConnection({
+    type: UploadRecord,
+    cursor: 'id',
+    maxSize: 20,
+    defaultSize: 20,
+    nullable: true,
+    resolve: async (query, _root, _args, context) => {
+      const userId = (await context.session)?.appUserId;
+
+      if (!userId) {
+        return null;
+      }
+
+      const records = await prisma.uploadRecord.findMany({
+        ...query,
+        where: {
+          channel: {
+            subscribers: {
+              some: {
+                appUserId: userId,
+              },
+            },
+          },
+        },
+        orderBy: {
+          publishedAt: Prisma.SortOrder.desc,
+        },
+      });
+
+      return records;
+    },
+  }),
+  uploadRecords: t.prismaConnection({
+    type: UploadRecord,
+    cursor: 'id',
+    maxSize: 20,
+    defaultSize: 20,
+    args: {
+      orderBy: t.arg({
+        type: builder.enumType('UploadRecordsOrder', {
+          values: ['trending', 'latest'] as const,
+        }),
+      }),
+    },
+    resolve: async (query, _root, args, _context) => {
+      const records = await prisma.uploadRecord.findMany({
+        ...query,
+        orderBy:
+          args.orderBy === 'trending'
+            ? {
+                score: Prisma.SortOrder.desc,
+              }
+            : {
+                publishedAt: Prisma.SortOrder.desc,
+              },
+      });
+
+      return records;
+    },
+  }),
 }));
 
 builder.mutationFields((t) => ({
   upsertUploadRecord: t.prismaField({
-    type: 'UploadRecord',
+    type: UploadRecord,
     args: {
       uploadRecordId: t.arg({ type: 'ShortUuid' }),
       title: t.arg.string(),

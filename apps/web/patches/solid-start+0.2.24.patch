@@ -62,7 +62,7 @@ index 91c1ca2..33254b0 100644
  import { $TRACK, batch, createSignal, useContext } from "solid-js";
  import { FormError, FormImpl, FormProps } from "./Form";
 diff --git a/node_modules/solid-start/data/createRouteData.tsx b/node_modules/solid-start/data/createRouteData.tsx
-index 348d454..4c7ac4a 100644
+index da0b05c..f813c84 100644
 --- a/node_modules/solid-start/data/createRouteData.tsx
 +++ b/node_modules/solid-start/data/createRouteData.tsx
 @@ -1,3 +1,4 @@
@@ -71,7 +71,7 @@ index 348d454..4c7ac4a 100644
    Resource,
    ResourceFetcher, ResourceFetcherInfo, ResourceOptions, Signal
 diff --git a/node_modules/solid-start/entry-client/StartClient.tsx b/node_modules/solid-start/entry-client/StartClient.tsx
-index c17a8e5..53915fa 100644
+index fff2560..cee362a 100644
 --- a/node_modules/solid-start/entry-client/StartClient.tsx
 +++ b/node_modules/solid-start/entry-client/StartClient.tsx
 @@ -1,3 +1,4 @@
@@ -89,7 +89,7 @@ index d4194c1..7584228 100644
  import { getOwner } from "solid-js";
  import { createComponent, getNextElement, hydrate, render } from "solid-js/web";
 diff --git a/node_modules/solid-start/entry-server/StartServer.tsx b/node_modules/solid-start/entry-server/StartServer.tsx
-index 2ded03d..97b5f2d 100644
+index c526162..75e0498 100644
 --- a/node_modules/solid-start/entry-server/StartServer.tsx
 +++ b/node_modules/solid-start/entry-server/StartServer.tsx
 @@ -1,3 +1,4 @@
@@ -143,14 +143,14 @@ index a778780..9b6e8f8 100644
  import { ssr } from "solid-js/web";
  export interface RouteDefinition {
 diff --git a/node_modules/solid-start/root/Document.tsx b/node_modules/solid-start/root/Document.tsx
-index 19a9f0a..f3e3a0f 100644
+index 58ae3f7..8f2baaa 100644
 --- a/node_modules/solid-start/root/Document.tsx
 +++ b/node_modules/solid-start/root/Document.tsx
 @@ -1,3 +1,4 @@
 +// @ts-nocheck
  import type { JSX } from "solid-js";
  import { children, ComponentProps } from "solid-js";
- import { insert, NoHydration, spread, ssrElement } from "solid-js/web";
+ import { escape, insert, NoHydration, spread, ssrElement } from "solid-js/web";
 diff --git a/node_modules/solid-start/root/InlineStyles.tsx b/node_modules/solid-start/root/InlineStyles.tsx
 index d215c4b..83114ab 100644
 --- a/node_modules/solid-start/root/InlineStyles.tsx

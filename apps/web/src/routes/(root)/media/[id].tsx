@@ -58,6 +58,7 @@ import Comment, { CommentForm } from '~/components/comment';
 import Transcript from '~/components/transcript';
 import FloatingShareMenu from '~/components/floating-share-menu';
 import { formatDateFull } from '~/util/date';
+import type { Optional } from '~/util';
 
 function UnderbarButton(props: JSX.IntrinsicElements['button']) {
   const [localProps, restProps] = splitProps(props, ['class']);
@@ -247,7 +248,7 @@ export default function MediaRoute() {
     metaData,
   } = useRouteData<typeof routeData>();
 
-  let prevMe: { id: string } | null | undefined = null;
+  let prevMe: Optional<{ id: string }> = null;
 
   // Refetch rating state when user logs in or out
   createEffect(() => {

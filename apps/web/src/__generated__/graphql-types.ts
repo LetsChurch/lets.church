@@ -421,9 +421,11 @@ export type Query = {
   __typename?: 'Query';
   channelById: Channel;
   me?: Maybe<AppUser>;
+  mySubscriptionUploadRecords?: Maybe<QueryMySubscriptionUploadRecordsConnection>;
   organizationById: Organization;
   search: SearchConnection;
   uploadRecordById: UploadRecord;
+  uploadRecords: QueryUploadRecordsConnection;
   userById: AppUser;
   usersConnection: QueryUsersConnection;
 };
@@ -431,6 +433,14 @@ export type Query = {
 
 export type QueryChannelByIdArgs = {
   id: Scalars['ShortUuid'];
+};
+
+
+export type QueryMySubscriptionUploadRecordsArgs = {
+  after?: InputMaybe<Scalars['String']>;
+  before?: InputMaybe<Scalars['String']>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
 };
 
 
@@ -457,6 +467,15 @@ export type QueryUploadRecordByIdArgs = {
 };
 
 
+export type QueryUploadRecordsArgs = {
+  after?: InputMaybe<Scalars['String']>;
+  before?: InputMaybe<Scalars['String']>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+  orderBy?: InputMaybe<UploadRecordsOrder>;
+};
+
+
 export type QueryUserByIdArgs = {
   id: Scalars['ShortUuid'];
 };
@@ -467,6 +486,30 @@ export type QueryUsersConnectionArgs = {
   before?: InputMaybe<Scalars['String']>;
   first?: InputMaybe<Scalars['Int']>;
   last?: InputMaybe<Scalars['Int']>;
+};
+
+export type QueryMySubscriptionUploadRecordsConnection = {
+  __typename?: 'QueryMySubscriptionUploadRecordsConnection';
+  edges: Array<QueryMySubscriptionUploadRecordsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type QueryMySubscriptionUploadRecordsConnectionEdge = {
+  __typename?: 'QueryMySubscriptionUploadRecordsConnectionEdge';
+  cursor: Scalars['String'];
+  node: UploadRecord;
+};
+
+export type QueryUploadRecordsConnection = {
+  __typename?: 'QueryUploadRecordsConnection';
+  edges: Array<QueryUploadRecordsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type QueryUploadRecordsConnectionEdge = {
+  __typename?: 'QueryUploadRecordsConnectionEdge';
+  cursor: Scalars['String'];
+  node: UploadRecord;
 };
 
 export type QueryUsersConnection = {
@@ -614,6 +657,11 @@ export type UploadRecordUserCommentsConnectionEdge = {
   cursor: Scalars['String'];
   node: UploadUserComment;
 };
+
+export enum UploadRecordsOrder {
+  Latest = 'latest',
+  Trending = 'trending'
+}
 
 export type UploadSearchHit = ISearchHit & {
   __typename?: 'UploadSearchHit';

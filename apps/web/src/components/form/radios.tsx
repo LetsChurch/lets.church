@@ -1,12 +1,13 @@
 import { For, Show } from 'solid-js';
+import type { Optional } from '~/util';
 
 export type Props = {
   label: string;
   id: string;
   name: string;
   options: Array<{ label: string; help?: string; value: string }>;
-  value?: string | null | undefined;
-  disabled?: boolean | null | undefined;
+  value?: Optional<string>;
+  disabled?: Optional<boolean>;
 };
 
 export default function Radios(props: Props) {

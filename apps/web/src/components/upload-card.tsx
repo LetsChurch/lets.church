@@ -1,7 +1,13 @@
+import { A } from 'solid-start';
+import Thumbnail from './thumbnail';
+import type { Optional } from '~/util';
+
 export type VideoCardProps = {
-  title: string;
-  channel: string;
+  title?: Optional<string>;
+  channel: Optional<string>;
   href: string;
+  thumbnailUrl: Optional<string>;
+  blurhash: Optional<string>;
   avatarUrl: string;
 };
 
@@ -10,14 +16,22 @@ export default function UploadCard(props: VideoCardProps) {
 
   return (
     <div class="relative space-y-3">
-      <div class="aspect-video bg-gray-100" />
+      <div class="aspect-video overflow-hidden bg-gray-100">
+        <Thumbnail
+          url={props.thumbnailUrl}
+          blurhash={props.blurhash}
+          width={488}
+          height={Math.round((488 * 9) / 16)}
+          placeholder="audio"
+        />
+      </div>
       <div class="flex items-center space-x-3 overflow-hidden">
         <img
           class="h-8 w-8 rounded-full"
           src={props.avatarUrl}
           alt={resolvedTitle()}
         />
-        <a
+        <A
           href={props.href}
           class="block min-w-0 before:absolute before:inset-0"
         >
@@ -25,7 +39,7 @@ export default function UploadCard(props: VideoCardProps) {
             {resolvedTitle()}
           </p>
           <p class="truncate text-sm text-gray-500">{props.channel}</p>
-        </a>
+        </A>
       </div>
     </div>
   );

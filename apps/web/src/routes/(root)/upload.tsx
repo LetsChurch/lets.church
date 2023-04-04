@@ -34,7 +34,7 @@ import {
   UploadVisibility,
   type Channel,
 } from '~/__generated__/graphql-types';
-import { notEmpty } from '~/util';
+import { notEmpty, Optional } from '~/util';
 import { doMultipartUpload } from '~/util/multipart-upload';
 import { Input, Select, Button, Radios, Textarea } from '~/components/form';
 import { dateToIso8601 } from '~/util/date';
@@ -43,7 +43,7 @@ type BaseField = {
   label: string;
   name: string;
   required?: boolean;
-  defaultValue?: string | undefined | null;
+  defaultValue?: Optional<string>;
   id: string;
   disabled?: boolean;
 };
@@ -84,12 +84,12 @@ function getSections(
   onDropThumbnail: FileField['onDrop'],
   // TODO: felte
   defaultValues: {
-    channelId: string | null | undefined;
-    title: string | null | undefined;
-    description: string | null | undefined;
-    publishedAt: string | null | undefined;
-    license: string | null | undefined;
-    visibility: string | null | undefined;
+    channelId: Optional<string>;
+    title: Optional<string>;
+    description: Optional<string>;
+    publishedAt: Optional<string>;
+    license: Optional<string>;
+    visibility: Optional<string>;
     uploadFinalized: boolean;
   },
 ): Array<Section> {

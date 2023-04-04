@@ -22,7 +22,7 @@ import Thumbnail, {
 } from '~/components/thumbnail';
 import { client, gql } from '~/util/gql/server';
 import { SearchFocus } from '~/__generated__/graphql-types';
-import { formatTime } from '~/util';
+import { formatTime, Optional } from '~/util';
 import FloatingDiv from '~/components/floating-div';
 import NavigatingChecklist from '~/components/navigating-checklist';
 import NavigatingDateRange from '~/components/navigating-date-range';
@@ -171,7 +171,7 @@ export function routeData({ location }: RouteDataArgs) {
 type SearchHitRowProps = Omit<ThumbnailProps, 'width' | 'height' | 'url'> &
   ParentProps<{
     href: string;
-    thumbnailUrl?: string | null | undefined;
+    thumbnailUrl?: Optional<string>;
     title: string;
     channelName: string;
     channelId: string;

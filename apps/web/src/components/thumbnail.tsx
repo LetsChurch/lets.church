@@ -3,10 +3,11 @@ import VideoIcon from '@tabler/icons/video.svg?component-solid';
 import AudioIcon from '@tabler/icons/volume.svg?component-solid';
 import { createEffect, createSignal, Match, onMount, Switch } from 'solid-js';
 import { decode } from 'blurhash';
+import type { Optional } from '~/util';
 
 export type Props = {
-  blurhash?: string | null | undefined;
-  url?: string | null | undefined;
+  blurhash?: Optional<string>;
+  url?: Optional<string>;
   width: number;
   height: number;
   placeholder?: 'video' | 'audio' | undefined;
