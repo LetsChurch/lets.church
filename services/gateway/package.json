@@ -46,7 +46,7 @@
     "@pothos/plugin-simple-objects": "^3.6.7",
     "@pothos/plugin-tracing": "^0.5.7",
     "@pothos/plugin-validation": "^3.9.0",
-    "@prisma/client": "^4.11.0",
+    "@prisma/client": "^4.12.0",
     "@sindresorhus/slugify": "^2.2.0",
     "@temporalio/activity": "^1.7.0",
     "@temporalio/client": "^1.7.0",
@@ -107,7 +107,7 @@
     "eslint-plugin-import": "^2.27.5",
     "npm-run-all": "^4.1.5",
     "prettier": "^2.8.4",
-    "prisma": "^4.11.0",
+    "prisma": "^4.12.0",
     "type-fest": "^3.6.1",
     "typescript": "^4.9.5",
     "vitest": "^0.29.2"
