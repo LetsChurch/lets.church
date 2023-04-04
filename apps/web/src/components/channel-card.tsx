@@ -4,11 +4,14 @@ import PlayIcon from '@tabler/icons/player-play.svg?component-solid';
 import MenuIcon from '@tabler/icons/dots-vertical.svg?component-solid';
 import { createSignal } from 'solid-js';
 import { useFloating } from 'solid-floating-ui';
+import humanNumber from 'human-number';
 import FloatingMenu from './floating-menu';
 
 export type Props = {
   id: string;
   name: string;
+  subscribersCount: number;
+  uploadsCount: number;
 };
 export default function ChannelCard(props: Props) {
   const [showMenu, setShowMenu] = createSignal(false);
@@ -43,14 +46,12 @@ export default function ChannelCard(props: Props) {
               />
               <span class="sr-only">Subscribers</span>
             </dt>
-            {/* TODO: Real subscribers count */}
-            <dd class="mr-2">13k</dd>
+            <dd class="mr-2">{humanNumber(props.subscribersCount)}</dd>
             <dt class="contents">
               <PlayIcon class="mr-1 inline h-4 w-4" role="presentation" />
               <span class="sr-only">Uploads</span>
             </dt>
-            {/* TODO: Real media count */}
-            <dd class="mr-2">100</dd>
+            <dd class="mr-2">{humanNumber(props.uploadsCount)}</dd>
           </dl>
         </div>
         <div class="z-10 flex-shrink-0 pr-2">

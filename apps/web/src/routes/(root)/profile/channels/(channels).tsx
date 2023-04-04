@@ -19,6 +19,12 @@ export function routeData() {
                 channel {
                   id
                   name
+                  subscribersConnection {
+                    totalCount
+                  }
+                  uploadsConnection {
+                    totalCount
+                  }
                 }
               }
             }
@@ -48,6 +54,10 @@ export default function ChannelsRoute() {
               <ChannelCard
                 id={edge.node.channel.id}
                 name={edge.node.channel.name}
+                subscribersCount={
+                  edge.node.channel.subscribersConnection.totalCount
+                }
+                uploadsCount={edge.node.channel.uploadsConnection.totalCount}
               />
             </li>
           )}
