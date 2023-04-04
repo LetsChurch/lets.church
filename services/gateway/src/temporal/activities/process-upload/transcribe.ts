@@ -45,7 +45,7 @@ export default async function transcribe(
     const vttFile = await runWhisper(
       dir,
       downloadPath,
-      cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+      cancellationSignal,
       dataHeartbeat,
     );
 

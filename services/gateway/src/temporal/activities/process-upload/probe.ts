@@ -45,11 +45,7 @@ export default async function probe(
       data: { uploadSizeBytes: stats.size },
     });
 
-    const probe = await runFfprobe(
-      dir,
-      downloadPath,
-      cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
-    );
+    const probe = await runFfprobe(dir, downloadPath, cancellationSignal);
     const probeJson = probe.stdout;
 
     const parsedProbe = ffprobeSchema.parse(JSON.parse(probeJson));

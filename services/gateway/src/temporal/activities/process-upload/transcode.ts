@@ -97,7 +97,7 @@ export default async function transcode(
           Context.current().heartbeat(`Uploading done: ${path}`);
         },
         {
-          signal: cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+          signal: cancellationSignal,
         },
       );
     });
@@ -106,7 +106,7 @@ export default async function transcode(
       dir,
       downloadPath,
       variants,
-      cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+      cancellationSignal,
     );
     encodeProc.stdout?.on('data', dataHeartbeat);
     encodeProc.stderr?.on('data', dataHeartbeat);
@@ -133,7 +133,7 @@ export default async function transcode(
         console.log(`Uploaded playlist file: ${filename}`);
       }),
       {
-        signal: cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+        signal: cancellationSignal,
       },
     );
 
@@ -156,7 +156,7 @@ export default async function transcode(
           console.log('Uploaded master playlist file');
         },
         {
-          signal: cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+          signal: cancellationSignal,
         },
       );
     } else {
@@ -180,7 +180,7 @@ export default async function transcode(
         Context.current().heartbeat('Uploaded stdout');
       },
       {
-        signal: cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+        signal: cancellationSignal,
       },
     );
 

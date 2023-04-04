@@ -40,11 +40,7 @@ export default async function createThumbnails(
 
   Context.current().heartbeat();
   try {
-    const proc = runFfmpegThumbnails(
-      dir,
-      downloadPath,
-      cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
-    );
+    const proc = runFfmpegThumbnails(dir, downloadPath, cancellationSignal);
     proc.stdout?.on('data', dataHeartbeat);
     proc.stderr?.on('data', dataHeartbeat);
     await proc;
@@ -95,7 +91,7 @@ export default async function createThumbnails(
           console.log(`Done uploading thumbnail: ${largestThumbnail}`);
         },
         {
-          signal: cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+          signal: cancellationSignal,
         },
       );
     }
@@ -120,7 +116,7 @@ export default async function createThumbnails(
         console.log(`Done uploading thumbnail: ${path}`);
       }),
       {
-        signal: cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+        signal: cancellationSignal,
       },
     );
     const chunkSize = Math.ceil(thumbnailsWithSizes.length / 5);
@@ -144,7 +140,7 @@ export default async function createThumbnails(
         console.log('Done uploading hovernail');
       },
       {
-        signal: cancellationSignal as AbortSignal, // TODO: temporal is using a non-standard AbortSignal
+        signal: cancellationSignal,
       },
     );
     await uploadQueue.onEmpty();
