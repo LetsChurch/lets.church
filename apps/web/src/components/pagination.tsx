@@ -1,5 +1,6 @@
 import { Show, type JSX } from 'solid-js';
 import { A, useLocation } from 'solid-start';
+import { setQueryParams } from '~/util/url';
 
 export type Props = {
   label: JSX.Element;
@@ -12,20 +13,6 @@ export type Props = {
 export default function Pagination(props: Props) {
   const loc = useLocation();
 
-  const withoutAfter = () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { after, ...rest } = loc.query;
-
-    return rest;
-  };
-
-  const withoutBefore = () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { before, ...rest } = loc.query;
-
-    return rest;
-  };
-
   return (
     <nav class="mt-6 flex items-center justify-between" aria-label="Pagination">
       <div class="hidden sm:block">
@@ -34,9 +21,9 @@ export default function Pagination(props: Props) {
       <div class="flex flex-1 justify-between sm:justify-end">
         <Show when={props.hasPreviousPage}>
           <A
-            href={`?${new URLSearchParams({
-              ...withoutAfter(),
+            href={`?${setQueryParams(loc.query, {
               before: props.startCursor,
+              after: null,
             })}`}
             class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
@@ -45,9 +32,9 @@ export default function Pagination(props: Props) {
         </Show>
         <Show when={props.hasNextPage}>
           <A
-            href={`?${new URLSearchParams({
-              ...withoutBefore(),
+            href={`?${setQueryParams(loc.query, {
               after: props.endCursor,
+              before: null,
             })}`}
             class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
