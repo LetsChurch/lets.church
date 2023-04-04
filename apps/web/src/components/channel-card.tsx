@@ -27,7 +27,7 @@ export default function ChannelCard(props: Props) {
           .map(([s]) => s)
           .join('')}
       </div>
-      <div class="flex flex-1 items-center justify-between truncate rounded-r-md border-t border-r border-b border-gray-200 bg-white">
+      <div class="flex flex-1 items-center justify-between truncate rounded-r-md border-b border-r border-t border-gray-200 bg-white">
         <div class="flex-1 truncate px-4 py-2 text-sm">
           <A
             href={props.id}

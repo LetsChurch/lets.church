@@ -83,7 +83,7 @@ export default function Dropzone(props: Props) {
 
   return (
     <div
-      class={`relative mt-1 flex justify-center rounded-md border-2 px-6 pt-5 pb-6 ${
+      class={`relative mt-1 flex justify-center rounded-md border-2 px-6 pb-6 pt-5 ${
         droppedRes()
           ? `border-solid ${
               (droppedRes()?.progress() ?? 0) < 1

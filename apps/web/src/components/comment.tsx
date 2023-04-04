@@ -101,7 +101,7 @@ function CommentActionButton(
 ) {
   return (
     <button
-      class={`relative mt-3 inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-gray-50 py-2 px-3 text-sm font-medium hover:bg-gray-100 ${
+      class={`relative mt-3 inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-gray-50 px-3 py-2 text-sm font-medium hover:bg-gray-100 ${
         props.active ? 'text-indigo-700' : 'text-gray-500'
       }`}
       {...props}

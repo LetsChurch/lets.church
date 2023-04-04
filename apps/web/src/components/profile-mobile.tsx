@@ -14,7 +14,7 @@ export default function ProfileMobile(props: Props) {
   const loginLocation = useLoginLocation();
 
   return (
-    <div class="border-t border-gray-200 pt-4 pb-3">
+    <div class="border-t border-gray-200 pb-3 pt-4">
       <Show
         when={props.me}
         fallback={

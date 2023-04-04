@@ -34,7 +34,7 @@ export default function ProfileLayout() {
           </For>
         </nav>
       </aside>
-      <div class="py-6 px-4 lg:col-span-9">
+      <div class="px-4 py-6 lg:col-span-9">
         <Outlet />
       </div>
     </div>

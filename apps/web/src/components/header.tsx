@@ -161,7 +161,7 @@ export default function Header() {
 
         <Show when={showMobileMenu()}>
           <div class="lg:hidden" id="mobile-menu">
-            <div class="space-y-1 pt-2 pb-3">
+            <div class="space-y-1 pb-3 pt-2">
               <NavLinkMobile href="#" active>
                 Watch
               </NavLinkMobile>

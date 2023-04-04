@@ -12,7 +12,7 @@ export function PageHeading(props: Props) {
   const local = mergeProps({ actions: [] }, props);
 
   return (
-    <div class="mt-2 mb-5 flex items-center justify-between">
+    <div class="mb-5 mt-2 flex items-center justify-between">
       <div class="flex min-w-0 flex-1 flex-row items-center">
         <Show when={local.backButton}>
           <A href=".." class="mr-2 text-gray-400 hover:text-gray-900">
@@ -23,7 +23,7 @@ export function PageHeading(props: Props) {
           {local.title}
         </h2>
       </div>
-      <div class="mt-4 flex flex-shrink-0 md:mt-0 md:ml-4">
+      <div class="mt-4 flex flex-shrink-0 md:ml-4 md:mt-0">
         <For each={local.actions}>
           {(action) => (
             <A

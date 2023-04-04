@@ -306,14 +306,14 @@ function AggFilter(props: AggFilterProps) {
               focus: props.focus ?? '',
             })}`
       }
-      class={`flex items-center whitespace-nowrap border-b-2 border-transparent py-4 px-1 text-sm font-medium ${
+      class={`flex items-center whitespace-nowrap border-b-2 border-transparent px-1 py-4 text-sm font-medium ${
         current() ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-700'
       }`}
     >
       {props.title}
       <Show when={!isMenu() || (props.count ?? 0) > 0}>
         <span
-          class={`ml-2 rounded-full py-0.5 px-2.5 text-xs font-medium md:inline-block ${
+          class={`ml-2 rounded-full px-2.5 py-0.5 text-xs font-medium md:inline-block ${
             current()
               ? 'bg-indigo-100 text-indigo-600'
               : 'bg-gray-100 text-gray-900'
