@@ -25,7 +25,7 @@ model AppUser {
   email                    String                    @unique @db.Citext
   username                 String                    @unique @db.Citext
   password                 String
-  fullName                 String?                   @db.VarChar(100)
+  fullName                 String?                   @map("full_name") @db.VarChar(100)
   createdAt                DateTime                  @default(now()) @map("created_at")
   updatedAt                DateTime                  @updatedAt @map("updated_at")
   deletedAt                DateTime?                 @map("deleted_at")

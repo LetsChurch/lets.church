@@ -23,6 +23,7 @@ export type AppUser = {
   channelSubscriptionsConnection: AppUserChannelSubscriptionsConnection;
   createdAt: Scalars['DateTime'];
   email: Scalars['String'];
+  fullName?: Maybe<Scalars['String']>;
   id: Scalars['ShortUuid'];
   organizationMemberhipsConnection: AppUserOrganizationMemberhipsConnection;
   role: AppUserRole;
@@ -226,6 +227,7 @@ export type Mutation = {
   signup: AppUser;
   subscribeToChannel: ChannelSubscription;
   unsubscribeFromChannel: Scalars['Boolean'];
+  updateUser: AppUser;
   upsertChannelMembership: ChannelMembership;
   upsertOrganizationMembership: OrganizationMembership;
   upsertUploadRecord: UploadRecord;
@@ -294,6 +296,13 @@ export type MutationSubscribeToChannelArgs = {
 
 export type MutationUnsubscribeFromChannelArgs = {
   channelId: Scalars['ShortUuid'];
+};
+
+
+export type MutationUpdateUserArgs = {
+  email: Scalars['String'];
+  fullName: Scalars['String'];
+  userId: Scalars['ShortUuid'];
 };
 
 

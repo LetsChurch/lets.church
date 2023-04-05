@@ -34,6 +34,7 @@ export const AppUser = builder.prismaObject('AppUser', {
   select: { id: true, password: true, role: true },
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
+    fullName: t.expose('fullName', { type: 'String', nullable: true }),
     email: t.exposeString('email', {
       authScopes: privateAuthScopes,
     }),
@@ -165,7 +166,7 @@ builder.mutationFields((t) => ({
     },
   }),
   signup: t.prismaField({
-    type: 'AppUser',
+    type: AppUser,
     args: {
       username: t.arg.string({ required: true }),
       password: t.arg.string({ required: true }),
@@ -222,6 +223,34 @@ builder.mutationFields((t) => ({
       });
 
       return user;
+    },
+  }),
+  updateUser: t.prismaField({
+    type: AppUser,
+    args: {
+      userId: t.arg({ type: 'ShortUuid', required: true }),
+      email: t.arg.string({ required: true }),
+      fullName: t.arg.string({ required: true }),
+    },
+    authScopes: async (_parent, { userId }, context) => {
+      const session = await context.session;
+
+      if (session?.appUser.id === userId) {
+        return true;
+      }
+
+      return { admin: true };
+    },
+    resolve: async (query, _parent, { userId, fullName, email }, _context) => {
+      // TODO: verify email
+      return prisma.appUser.update({
+        ...query,
+        where: { id: userId },
+        data: {
+          fullName,
+          email,
+        },
+      });
     },
   }),
 }));
