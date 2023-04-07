@@ -228,6 +228,7 @@ export type Mutation = {
   signup: AppUser;
   subscribeToChannel: ChannelSubscription;
   unsubscribeFromChannel: Scalars['Boolean'];
+  updateChannel: Channel;
   updateUser: AppUser;
   upsertChannelMembership: ChannelMembership;
   upsertOrganizationMembership: OrganizationMembership;
@@ -297,6 +298,12 @@ export type MutationSubscribeToChannelArgs = {
 
 export type MutationUnsubscribeFromChannelArgs = {
   channelId: Scalars['ShortUuid'];
+};
+
+
+export type MutationUpdateChannelArgs = {
+  channelId: Scalars['ShortUuid'];
+  name: Scalars['String'];
 };
 
 

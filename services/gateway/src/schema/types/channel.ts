@@ -49,7 +49,7 @@ async function channelAdminAuthScope(
   };
 }
 
-builder.prismaObject('Channel', {
+const Channel = builder.prismaObject('Channel', {
   select: { id: true },
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
@@ -133,7 +133,7 @@ const ChannelSubscription = builder.prismaObject('ChannelSubscription', {
 
 builder.queryFields((t) => ({
   channelById: t.prismaField({
-    type: 'Channel',
+    type: Channel,
     args: { id: t.arg({ type: 'ShortUuid', required: true }) },
     resolve: async (query, _root, { id }, _context, _info) => {
       return prisma.channel.findUniqueOrThrow({ ...query, where: { id } });
@@ -143,7 +143,7 @@ builder.queryFields((t) => ({
 
 builder.mutationFields((t) => ({
   createChannel: t.prismaField({
-    type: 'Channel',
+    type: Channel,
     args: {
       name: t.arg.string({ required: true }),
       slug: t.arg.string(),
@@ -176,6 +176,24 @@ builder.mutationFields((t) => ({
       indexDocument('channel', res.id);
 
       return res;
+    },
+  }),
+  updateChannel: t.prismaField({
+    type: Channel,
+    args: {
+      channelId: t.arg({ type: 'ShortUuid', required: true }),
+      name: t.arg.string({ required: true }),
+    },
+    authScopes: (_root, { channelId }, context, info) =>
+      channelAdminAuthScope({ id: channelId }, context, info),
+    resolve: async (query, _parent, { channelId, name }, _context) => {
+      return prisma.channel.update({
+        ...query,
+        where: { id: channelId },
+        data: {
+          name,
+        },
+      });
     },
   }),
   upsertChannelMembership: t.prismaField({
