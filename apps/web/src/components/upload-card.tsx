@@ -1,5 +1,6 @@
 import { A } from 'solid-start';
 import Thumbnail from './thumbnail';
+import { Avatar } from './avatar';
 import type { Optional } from '~/util';
 
 export type VideoCardProps = {
@@ -26,11 +27,7 @@ export default function UploadCard(props: VideoCardProps) {
         />
       </div>
       <div class="flex items-center space-x-3 overflow-hidden">
-        <img
-          class="h-8 w-8 rounded-full"
-          src={props.avatarUrl}
-          alt={resolvedTitle()}
-        />
+        <Avatar size="sm" src={props.avatarUrl} alt={resolvedTitle()} />
         <A
           href={props.href}
           class="block min-w-0 before:absolute before:inset-0"

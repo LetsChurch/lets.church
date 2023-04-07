@@ -34,6 +34,7 @@ export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
             channelById(id: $id) {
               id
               name
+              avatarUrl
               uploadsConnection(
                 first: $first
                 after: $after

@@ -94,6 +94,8 @@ CREATE TABLE "organization_channel_association" (
 CREATE TABLE "channel" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "name" TEXT NOT NULL,
+    "avatar_path" VARCHAR(255),
+    "avatar_blurhash" VARCHAR(255),
     "slug" TEXT NOT NULL,
     "description" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -107,16 +107,18 @@ model OrganizationChannelAssociation {
 }
 
 model Channel {
-  id            String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name          String
-  slug          String                           @unique
-  description   String?
-  memberships   ChannelMembership[]
-  associations  OrganizationChannelAssociation[]
-  createdAt     DateTime                         @default(now()) @map("created_at")
-  updatedAt     DateTime                         @updatedAt @map("updated_at")
-  uploadRecords UploadRecord[]
-  subscribers   ChannelSubscription[]
+  id             String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String
+  avatarPath     String?                          @map("avatar_path") @db.VarChar(255)
+  avatarBlurhash String?                          @map("avatar_blurhash") @db.VarChar(255)
+  slug           String                           @unique
+  description    String?
+  memberships    ChannelMembership[]
+  associations   OrganizationChannelAssociation[]
+  createdAt      DateTime                         @default(now()) @map("created_at")
+  updatedAt      DateTime                         @updatedAt @map("updated_at")
+  uploadRecords  UploadRecord[]
+  subscribers    ChannelSubscription[]
 
   @@map("channel")
 }

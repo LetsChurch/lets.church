@@ -100,6 +100,7 @@ export enum AppUserRole {
 
 export type Channel = {
   __typename?: 'Channel';
+  avatarUrl?: Maybe<Scalars['String']>;
   createdAt: Scalars['DateTime'];
   description?: Maybe<Scalars['String']>;
   id: Scalars['ShortUuid'];
@@ -622,6 +623,7 @@ export enum UploadLicense {
 }
 
 export enum UploadPostProcess {
+  ChannelAvatar = 'channelAvatar',
   Media = 'media',
   ProfileAvatar = 'profileAvatar',
   Thumbnail = 'thumbnail'

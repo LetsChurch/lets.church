@@ -17,6 +17,7 @@ const {
   transcode,
   createThumbnails,
   setUploadThumbnail,
+  setChannelAvatar,
   setProfileAvatar,
 } = proxyActivities<typeof processUploadActivities>({
   startToCloseTimeout: '60 minutes',
@@ -48,17 +49,25 @@ export async function processUpload(
         });
       }),
     ]);
-  } else if (postProcess === 'thumbnail' || postProcess === 'profileAvatar') {
+  } else if (
+    postProcess === 'thumbnail' ||
+    postProcess === 'profileAvatar' ||
+    postProcess === 'channelAvatar'
+  ) {
     const { path, blurhash } = await processImage(
       postProcess,
       targetId,
       s3UploadKey,
-      postProcess === 'profileAvatar' ? { width: 96, height: 96 } : {},
+      postProcess === 'profileAvatar' || postProcess === 'channelAvatar'
+        ? { width: 96, height: 96 }
+        : {},
     );
     if (postProcess === 'thumbnail') {
       await setUploadThumbnail(targetId, path, blurhash);
-    } else {
+    } else if (postProcess === 'profileAvatar') {
       await setProfileAvatar(targetId, path, blurhash);
+    } else if (postProcess === 'channelAvatar') {
+      await setChannelAvatar(targetId, path, blurhash);
     }
   }
 }

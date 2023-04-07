@@ -1,12 +1,13 @@
 export type Props = {
   src: string | null;
   size: 'sm' | 'md' | 'lg' | 'xl';
+  alt?: string;
 };
 
 export function Avatar(props: Props) {
   return (
     <img
-      class={`color-transparent inline-block rounded-full bg-gray-200 ${
+      class={`inline-block rounded-full bg-gray-200 text-transparent ${
         props.size === 'xl'
           ? 'h-16 w-16'
           : props.size === 'lg'
@@ -16,7 +17,7 @@ export function Avatar(props: Props) {
           : 'h-8 w-8'
       }`}
       src={props.src ?? ''}
-      alt="Avatar"
+      alt={props.alt ?? 'Avatar'}
     />
   );
 }

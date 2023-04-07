@@ -7,6 +7,7 @@ import { indexDocument } from '../../temporal';
 import type { Context } from '../../util/context';
 import prisma from '../../util/prisma';
 import builder from '../builder';
+import { getPublicMediaUrl } from '../../util/url';
 
 const orderEnum = builder.enumType('Order', {
   values: ['asc', 'desc'] as const,
@@ -54,6 +55,18 @@ const Channel = builder.prismaObject('Channel', {
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
     name: t.exposeString('name'),
+    avatarUrl: t.field({
+      type: 'String',
+      nullable: true,
+      select: { avatarPath: true },
+      resolve: ({ avatarPath }) => {
+        if (!avatarPath) {
+          return null;
+        }
+
+        return getPublicMediaUrl(avatarPath);
+      },
+    }),
     slug: t.exposeString('slug'),
     description: t.exposeString('description', { nullable: true }),
     membershipsConnection: t.relatedConnection('memberships', {

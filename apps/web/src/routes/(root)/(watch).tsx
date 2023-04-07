@@ -27,6 +27,7 @@ export function routeData() {
             channel {
               id
               name
+              avatarUrl
             }
           }
 
@@ -104,7 +105,7 @@ export default function WatchRoute() {
                     href={`/media/${edge.node.id}`}
                     thumbnailUrl={edge.node.thumbnailUrl}
                     blurhash={edge.node.thumbnailBlurhash}
-                    avatarUrl="https://images.unsplash.com/photo-1477672680933-0287a151330e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                    avatarUrl={edge.node.channel.avatarUrl ?? ''}
                   />
                 </li>
               )}
@@ -126,7 +127,7 @@ export default function WatchRoute() {
                   href={`/media/${edge.node.id}`}
                   thumbnailUrl={edge.node.thumbnailUrl}
                   blurhash={edge.node.thumbnailBlurhash}
-                  avatarUrl="https://images.unsplash.com/photo-1477672680933-0287a151330e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                  avatarUrl={edge.node.channel.avatarUrl ?? ''}
                 />
               </li>
             )}
