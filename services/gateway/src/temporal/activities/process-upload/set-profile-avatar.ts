@@ -6,7 +6,7 @@ export default async function setProfileAvatar(
   path: string,
   blurhash: string,
 ) {
-  const { avatarUrl: oldPath } = await prisma.appUser.findUniqueOrThrow({
+  const { avatarPath: oldPath } = await prisma.appUser.findUniqueOrThrow({
     where: { id: userId },
   });
 
@@ -16,6 +16,6 @@ export default async function setProfileAvatar(
 
   await prisma.appUser.update({
     where: { id: userId },
-    data: { avatarUrl: path, avatarBlurhash: blurhash },
+    data: { avatarPath: path, avatarBlurhash: blurhash },
   });
 }

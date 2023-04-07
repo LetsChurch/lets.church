@@ -43,13 +43,13 @@ export const AppUser = builder.prismaObject('AppUser', {
     avatarUrl: t.field({
       type: 'String',
       nullable: true,
-      select: { avatarUrl: true },
-      resolve: ({ avatarUrl }) => {
-        if (!avatarUrl) {
+      select: { avatarPath: true },
+      resolve: ({ avatarPath }) => {
+        if (!avatarPath) {
           return null;
         }
 
-        return getPublicMediaUrl(avatarUrl);
+        return getPublicMediaUrl(avatarPath);
       },
     }),
     role: t.field({ type: AppUserRoleEnum, resolve: ({ role }) => role }),
