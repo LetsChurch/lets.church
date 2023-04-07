@@ -2,7 +2,10 @@ import { For } from 'solid-js';
 import { RouteDataArgs, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
 import invariant from 'tiny-invariant';
-import type { ChannelQuery, ChannelQueryVariables } from './__generated__/[id]';
+import type {
+  ProfileChannelsQuery,
+  ProfileChannelsQueryVariables,
+} from './__generated__/(index)';
 import { PageHeading } from '~/components/page-heading';
 import Pagination from '~/components/pagination';
 import UploadCard from '~/components/upload-card';
@@ -17,11 +20,11 @@ export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
       const client = await createAuthenticatedClientOrRedirect(request);
 
       const { channelById } = await client.request<
-        ChannelQuery,
-        ChannelQueryVariables
+        ProfileChannelsQuery,
+        ProfileChannelsQueryVariables
       >(
         gql`
-          query Channel(
+          query ProfileChannels(
             $id: ShortUuid!
             $first: Int
             $after: String
