@@ -1,7 +1,6 @@
 import { For } from 'solid-js';
 // TODO: use filled variants on tabler 2+
 import FacebookIcon from '@tabler/icons/brand-facebook.svg?component-solid';
-import InstagramIcon from '@tabler/icons/brand-instagram.svg?component-solid';
 import TwitterIcon from '@tabler/icons/brand-twitter.svg?component-solid';
 import GithubIcon from '@tabler/icons/brand-github.svg?component-solid';
 import GitlabIcon from '@tabler/icons/brand-gitlab.svg?component-solid';
@@ -9,8 +8,7 @@ import GitlabIcon from '@tabler/icons/brand-gitlab.svg?component-solid';
 export default function Footer() {
   const links = [
     { href: '/', label: 'Watch' },
-    { href: '#', label: 'Listen' },
-    { href: '#', label: 'Read' },
+    { href: '#', label: 'Donate' },
     { href: '#', label: 'About' },
   ];
 
@@ -41,11 +39,6 @@ export default function Footer() {
           </a>
 
           <a href="#" class="text-gray-400 hover:text-gray-500">
-            <span class="sr-only">Instagram</span>
-            <InstagramIcon class="h-6 w-6" />
-          </a>
-
-          <a href="#" class="text-gray-400 hover:text-gray-500">
             <span class="sr-only">Twitter</span>
             <TwitterIcon class="h-6 w-6" />
           </a>
@@ -56,7 +49,7 @@ export default function Footer() {
           </a>
 
           <a href="#" class="text-gray-400 hover:text-gray-500">
-            <span class="sr-only">Dribbble</span>
+            <span class="sr-only">Gitlab</span>
             <GitlabIcon class="h-6 w-6" />
           </a>
         </div>

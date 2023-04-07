@@ -102,8 +102,7 @@ export default function Header() {
                 <NavLink href="/" active>
                   Watch
                 </NavLink>
-                <NavLink href="#">Listen</NavLink>
-                <NavLink href="#">Read</NavLink>
+                <NavLink href="#">Donate</NavLink>
                 <NavLink href="#">About</NavLink>
               </div>
             </div>
@@ -165,8 +164,7 @@ export default function Header() {
               <NavLinkMobile href="#" active>
                 Watch
               </NavLinkMobile>
-              <NavLinkMobile href="#">Listen</NavLinkMobile>
-              <NavLinkMobile href="#">Read</NavLinkMobile>
+              <NavLinkMobile href="#">Donate</NavLinkMobile>
               <NavLinkMobile href="#">About</NavLinkMobile>
             </div>
             <ProfileMobile me={user?.()?.me ?? null} />
