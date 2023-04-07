@@ -159,6 +159,7 @@ export function routeData({ params }: RouteDataArgs) {
             uploadRecordId
             author {
               username
+              avatarUrl
             }
             createdAt
             updatedAt

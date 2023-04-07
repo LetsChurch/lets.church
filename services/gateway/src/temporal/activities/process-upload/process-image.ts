@@ -5,29 +5,37 @@ import mkdirp from 'mkdirp';
 import mime from 'mime';
 import { throttle } from 'lodash-es';
 import rimraf from 'rimraf';
+import type { RequireAllOrNone } from 'type-fest';
+import { nanoid } from 'nanoid';
 import {
   retryablePutFile,
   S3_INGEST_BUCKET,
   S3_PUBLIC_BUCKET,
   streamObjectToFile,
 } from '../../../util/s3';
-import prisma from '../../../util/prisma';
 import {
+  croppingResize,
   imageToBlurhash,
   imgJson,
   jpegOptim,
   oxiPng,
 } from '../../../util/images';
+import type { UploadPostProcessValue } from '../../../schema/types/mutation';
 
 const WORK_DIR = '/data/process-thumbnail';
 
-export default async function processThumbnail(
-  uploadRecordId: string,
+export default async function processImage(
+  postProcess: UploadPostProcessValue,
+  targetId: string,
   s3UploadKey: string,
+  params: RequireAllOrNone<
+    { width?: number; height?: number },
+    'width' | 'height'
+  > = {},
 ) {
   Context.current().heartbeat();
 
-  const dir = join(WORK_DIR, uploadRecordId);
+  const dir = join(WORK_DIR, targetId);
   const downloadPath = join(dir, 'download');
 
   try {
@@ -49,10 +57,14 @@ export default async function processThumbnail(
 
     await retryablePutFile(
       S3_INGEST_BUCKET,
-      `${uploadRecordId}.imagemagick.json`,
+      `${targetId}.imagemagick.json`,
       'application/json',
       Buffer.from(JSON.stringify(json, null, 2)),
     );
+
+    if (params.width && params.height) {
+      await croppingResize(dir, downloadPath, params.width, params.height);
+    }
 
     if (json.format === 'JPEG') {
       console.log('Optimizing JPEG');
@@ -64,7 +76,9 @@ export default async function processThumbnail(
 
     console.log('Uploading compressed image');
 
-    const path = `${uploadRecordId}.${mime.getExtension(json.mimeType)}`;
+    const path = `${postProcess}/${targetId}-${nanoid()}.${mime.getExtension(
+      json.mimeType,
+    )}`;
 
     await retryablePutFile(
       S3_PUBLIC_BUCKET,
@@ -81,10 +95,7 @@ export default async function processThumbnail(
 
     Context.current().heartbeat();
 
-    await prisma.uploadRecord.update({
-      where: { id: uploadRecordId },
-      data: { defaultThumbnailPath: path, thumbnailBlurhash: blurhash },
-    });
+    return { path, blurhash };
   } catch (e) {
     console.log('Error!');
     console.log(e);

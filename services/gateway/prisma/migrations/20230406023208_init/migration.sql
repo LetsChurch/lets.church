@@ -26,6 +26,8 @@ CREATE TABLE "app_user" (
     "username" CITEXT NOT NULL,
     "password" TEXT NOT NULL,
     "full_name" VARCHAR(100),
+    "avatar_url" VARCHAR(255),
+    "avatar_blurhash" VARCHAR(255),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "deleted_at" TIMESTAMP(3),

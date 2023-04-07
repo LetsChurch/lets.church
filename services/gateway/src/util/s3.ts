@@ -5,6 +5,7 @@ import {
   AbortMultipartUploadCommand,
   CompleteMultipartUploadCommand,
   CreateMultipartUploadCommand,
+  DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3,
@@ -258,4 +259,12 @@ export async function retryablePutFile(
       },
     },
   );
+}
+
+export async function deleteFile(bucket: string, key: string) {
+  const cmd = new DeleteObjectCommand({
+    Bucket: bucket,
+    Key: key,
+  });
+  return s3IngestClient.send(cmd);
 }

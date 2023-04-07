@@ -1,6 +1,6 @@
 import prisma from '../../../util/prisma';
 
-export default async function finalizeUpload(
+export default async function finalizeUploadRecord(
   uploadRecordId: string,
   userId: string,
 ) {

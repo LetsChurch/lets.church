@@ -4,6 +4,7 @@ import { Connection, Client, WorkflowOptions } from '@temporalio/client';
 import pRetry from 'p-retry';
 import PLazy from 'p-lazy';
 import waitOn from 'wait-on';
+import type { UploadPostProcessValue } from '../schema/types/mutation';
 import {
   handleMultipartMediaUploadWorkflow,
   indexDocumentSignal,
@@ -39,7 +40,7 @@ export async function handleMultipartMediaUpload(
   bucket: string,
   s3UploadId: string,
   s3UploadKey: string,
-  postProcess: 'media' | 'thumbnail',
+  postProcess: UploadPostProcessValue,
 ) {
   return (await client).workflow.start(handleMultipartMediaUploadWorkflow, {
     ...retryOps,

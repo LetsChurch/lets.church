@@ -6,26 +6,12 @@ import {
   Rating as PrismaRating,
   Prisma,
 } from '@prisma/client';
-import envariant from '@knpwrs/envariant';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
-import {
-  createMultipartUpload,
-  createPresignedGetUrl,
-  createPresignedPartUploadUrls,
-  PART_SIZE,
-  S3_INGEST_BUCKET,
-  S3_PUBLIC_BUCKET,
-} from '../../util/s3';
-import {
-  completeMultipartMediaUpload,
-  handleMultipartMediaUpload,
-  indexDocument,
-} from '../../temporal';
+import { indexDocument } from '../../temporal';
 import builder from '../builder';
 import type { Context } from '../../util/context';
 import prisma from '../../util/prisma';
-
-const MEDIA_URL = envariant('MEDIA_URL');
+import { getPublicMediaUrl } from '../../util/url';
 
 async function internalAuthScopes(
   uploadRecord: { id: string; channelId: string },
@@ -73,10 +59,6 @@ const UploadVisibility = builder.enumType('UploadVisibility', {
 
 const UploadVariant = builder.enumType('UploadVariant', {
   values: Object.keys(PrismaUploadVariant),
-});
-
-const UploadPostProcess = builder.enumType('UploadPostProcess', {
-  values: ['media', 'thumbnail'] as const,
 });
 
 builder.prismaObject('UploadUserComment', {
@@ -163,7 +145,7 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
           return null;
         }
 
-        return createPresignedGetUrl(S3_PUBLIC_BUCKET, defaultThumbnailPath);
+        return getPublicMediaUrl(defaultThumbnailPath);
       },
     }),
     thumbnailBlurhash: t.exposeString('thumbnailBlurhash', { nullable: true }),
@@ -180,8 +162,7 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
       nullable: true,
       resolve: async ({ id }) => {
         try {
-          const url = new URL(MEDIA_URL);
-          url.pathname = `${id}.vtt`;
+          const url = getPublicMediaUrl(`${id}.vtt`);
           const res = await fetch(url);
 
           if (!res.ok) {
@@ -290,9 +271,7 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
           return null;
         }
 
-        const url = new URL(MEDIA_URL);
-        url.pathname = `${root.id}/master.m3u8`;
-        return url.toString();
+        return getPublicMediaUrl(`${root.id}/master.m3u8`);
       },
     }),
     audioSource: t.string({
@@ -303,9 +282,7 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
           return null;
         }
 
-        const url = new URL(MEDIA_URL);
-        url.pathname = `${root.id}/audio.m3u8`;
-        return url.toString();
+        return getPublicMediaUrl(`${root.id}/audio.m3u8`);
       },
     }),
   }),
@@ -489,125 +466,6 @@ builder.mutationFields((t) => ({
       await indexDocument('upload', res.id);
 
       return res;
-    },
-  }),
-  createMultipartMediaUpload: t.field({
-    type: builder.simpleObject('MultipartUploadMeta', {
-      fields: (sot) => ({
-        s3UploadKey: sot.string(),
-        s3UploadId: sot.string(),
-        partSize: sot.int(),
-        urls: sot.stringList(),
-      }),
-    }),
-    args: {
-      uploadRecordId: t.arg({ type: 'ShortUuid', required: true }),
-      bytes: t.arg({
-        type: 'SafeInt',
-        required: true,
-        validate: {
-          min: 0, // i.e., Positive; should we really allow the API to take an upload size of 0?
-          max: 20e9, // i.e., 20 GB, reasonably large upper limit
-        },
-      }),
-      uploadMimeType: t.arg.string({ required: true }),
-      postProcess: t.arg({ type: UploadPostProcess, required: true }),
-    },
-    resolve: async (
-      _root,
-      { uploadRecordId, uploadMimeType, bytes, postProcess },
-      _context,
-    ) => {
-      const { uploadFinalized } = await prisma.uploadRecord.findUniqueOrThrow({
-        where: { id: uploadRecordId },
-        select: { uploadFinalized: true },
-      });
-
-      if (uploadFinalized && postProcess === 'media') {
-        throw new Error('Upload is already finalized!');
-      }
-
-      const { uploadKey, uploadId } = await createMultipartUpload(
-        S3_INGEST_BUCKET,
-        uploadRecordId,
-        uploadMimeType,
-      );
-
-      await handleMultipartMediaUpload(
-        uploadRecordId,
-        S3_INGEST_BUCKET,
-        uploadId,
-        uploadKey,
-        postProcess,
-      );
-
-      const urls = await createPresignedPartUploadUrls(
-        S3_INGEST_BUCKET,
-        uploadId,
-        uploadKey,
-        bytes,
-      );
-
-      return {
-        s3UploadKey: uploadKey,
-        s3UploadId: uploadId,
-        partSize: PART_SIZE,
-        urls,
-      };
-    },
-  }),
-  finalizeUpload: t.boolean({
-    args: {
-      uploadRecordId: t.arg({ type: 'ShortUuid', required: true }),
-      s3UploadId: t.arg.string({ required: true }),
-      s3UploadKey: t.arg.string({ required: true }),
-      s3PartETags: t.arg.stringList({ required: true }),
-    },
-    authScopes: async (_root, args, context) => {
-      const userId = (await context.session)?.appUserId;
-
-      if (!userId) {
-        return false;
-      }
-
-      const record = await prisma.uploadRecord.findFirst({
-        where: {
-          id: args.uploadRecordId,
-          uploadFinalized: false,
-          channel: {
-            memberships: {
-              some: {
-                appUserId: userId,
-                OR: [{ isAdmin: true }, { canUpload: true }],
-              },
-            },
-          },
-        },
-      });
-
-      if (!record) {
-        return { admin: true };
-      }
-
-      return true;
-    },
-    resolve: async (
-      _root,
-      { s3UploadId, s3UploadKey, s3PartETags },
-      context,
-      _info,
-    ) => {
-      const userId = (await context.session)?.appUserId;
-      invariant(userId, 'No user found!');
-
-      await completeMultipartMediaUpload(
-        s3UploadId,
-        s3UploadKey,
-        s3PartETags,
-        userId,
-      );
-
-      return true;
     },
   }),
   rateUpload: t.boolean({

@@ -29,9 +29,9 @@ export type CreateMultipartMediaUploadMutationVariables = Types.Exact<{
 }>;
 
 
-export type CreateMultipartMediaUploadMutation = { __typename?: 'Mutation', createMultipartMediaUpload: { __typename?: 'MultipartUploadMeta', s3UploadKey: string, s3UploadId: string, partSize: number, urls: Array<string> } };
+export type CreateMultipartMediaUploadMutation = { __typename?: 'Mutation', createMultipartUpload: { __typename?: 'MultipartUploadMeta', s3UploadKey: string, s3UploadId: string, partSize: number, urls: Array<string> } };
 
-export type FinalizeUploadMutationVariables = Types.Exact<{
+export type FinalizeMediaUploadMutationVariables = Types.Exact<{
   uploadRecordId: Types.Scalars['ShortUuid'];
   s3UploadKey: Types.Scalars['String'];
   s3UploadId: Types.Scalars['String'];
@@ -39,4 +39,4 @@ export type FinalizeUploadMutationVariables = Types.Exact<{
 }>;
 
 
-export type FinalizeUploadMutation = { __typename?: 'Mutation', finalizeUpload: boolean };
+export type FinalizeMediaUploadMutation = { __typename?: 'Mutation', finalizeMultipartUpload: boolean };

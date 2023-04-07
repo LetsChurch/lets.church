@@ -19,6 +19,7 @@ export type Scalars = {
 
 export type AppUser = {
   __typename?: 'AppUser';
+  avatarUrl?: Maybe<Scalars['String']>;
   channelMembershipsConnection: AppUserChannelMembershipsConnection;
   channelSubscriptionsConnection: AppUserChannelSubscriptionsConnection;
   createdAt: Scalars['DateTime'];
@@ -217,9 +218,9 @@ export type MultipartUploadMeta = {
 export type Mutation = {
   __typename?: 'Mutation';
   createChannel: Channel;
-  createMultipartMediaUpload: MultipartUploadMeta;
+  createMultipartUpload: MultipartUploadMeta;
   createOrganization: Organization;
-  finalizeUpload: Scalars['Boolean'];
+  finalizeMultipartUpload: Scalars['Boolean'];
   login?: Maybe<Scalars['Jwt']>;
   logout: Scalars['Boolean'];
   rateComment: Scalars['Boolean'];
@@ -241,11 +242,11 @@ export type MutationCreateChannelArgs = {
 };
 
 
-export type MutationCreateMultipartMediaUploadArgs = {
+export type MutationCreateMultipartUploadArgs = {
   bytes: Scalars['SafeInt'];
   postProcess: UploadPostProcess;
+  targetId: Scalars['ShortUuid'];
   uploadMimeType: Scalars['String'];
-  uploadRecordId: Scalars['ShortUuid'];
 };
 
 
@@ -255,11 +256,11 @@ export type MutationCreateOrganizationArgs = {
 };
 
 
-export type MutationFinalizeUploadArgs = {
+export type MutationFinalizeMultipartUploadArgs = {
   s3PartETags: Array<Scalars['String']>;
   s3UploadId: Scalars['String'];
   s3UploadKey: Scalars['String'];
-  uploadRecordId: Scalars['ShortUuid'];
+  targetId: Scalars['ShortUuid'];
 };
 
 
@@ -615,6 +616,7 @@ export enum UploadLicense {
 
 export enum UploadPostProcess {
   Media = 'media',
+  ProfileAvatar = 'profileAvatar',
   Thumbnail = 'thumbnail'
 }
 

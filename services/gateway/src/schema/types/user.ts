@@ -9,6 +9,7 @@ import zxcvbn from '../../util/zxcvbn';
 import { sendEmail } from '../../temporal';
 import { createSessionJwt } from '../../util/jwt';
 import prisma from '../../util/prisma';
+import { getPublicMediaUrl } from '../../util/url';
 
 async function privateAuthScopes(
   appUser: Pick<PrismaAppUser, 'id'>,
@@ -39,6 +40,18 @@ export const AppUser = builder.prismaObject('AppUser', {
       authScopes: privateAuthScopes,
     }),
     username: t.exposeString('username'),
+    avatarUrl: t.field({
+      type: 'String',
+      nullable: true,
+      select: { avatarUrl: true },
+      resolve: ({ avatarUrl }) => {
+        if (!avatarUrl) {
+          return null;
+        }
+
+        return getPublicMediaUrl(avatarUrl);
+      },
+    }),
     role: t.field({ type: AppUserRoleEnum, resolve: ({ role }) => role }),
     channelSubscriptionsConnection: t.relatedConnection(
       'channelSubscriptions',

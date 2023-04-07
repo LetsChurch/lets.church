@@ -14,6 +14,7 @@ export function routeData() {
       query Me {
         me {
           id
+          avatarUrl
         }
       }
     `);

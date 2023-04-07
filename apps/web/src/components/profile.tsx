@@ -4,6 +4,7 @@ import { useFloating } from 'solid-floating-ui';
 import { useBeforeLeave, useIsRouting } from '@solidjs/router';
 import { createServerAction$ } from 'solid-start/server';
 import FloatingMenu from './floating-menu';
+import { Avatar } from './avatar';
 import logoutAction from '~/util/logout-action';
 import { useLoginLocation, useSerializedLocation } from '~/util';
 import type { MeQuery } from '~/routes/__generated__/(root)';
@@ -74,11 +75,7 @@ export default function Profile(props: Props) {
             onClick={toggleMenu}
           >
             <span class="sr-only">Open user menu</span>
-            <img
-              class="h-8 w-8 rounded-full"
-              src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-              alt="User Icon"
-            />
+            <Avatar src={props.me?.avatarUrl ?? ''} size="sm" />
           </button>
           <Form id={logoutFormId} class="hidden" onSubmit={() => closeMenu()}>
             <input

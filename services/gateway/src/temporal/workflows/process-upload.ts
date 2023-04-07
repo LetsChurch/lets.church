@@ -1,39 +1,46 @@
 import { executeChild, proxyActivities } from '@temporalio/workflow';
 import invariant from 'tiny-invariant';
-import type * as activities from '../activities/process-upload';
+import type { UploadPostProcessValue } from '../../schema/types/mutation';
+import type * as processUploadActivities from '../activities/process-upload';
 import { BACKGROUND_QUEUE } from '../queues';
 import { indexDocumentWorkflow } from './background';
 
-const { probe, processThumbnail } = proxyActivities<typeof activities>({
-  startToCloseTimeout: '1 minute',
-  heartbeatTimeout: '1 minute',
-});
+const { probe, processImage } = proxyActivities<typeof processUploadActivities>(
+  {
+    startToCloseTimeout: '1 minute',
+    heartbeatTimeout: '1 minute',
+  },
+);
 
-const { transcribe, transcode, createThumbnails } = proxyActivities<
-  typeof activities
->({
+const {
+  transcribe,
+  transcode,
+  createThumbnails,
+  setUploadThumbnail,
+  setProfileAvatar,
+} = proxyActivities<typeof processUploadActivities>({
   startToCloseTimeout: '60 minutes',
   heartbeatTimeout: '1 minute',
 });
 
 export async function processUpload(
-  uploadRecordId: string,
+  targetId: string,
   s3UploadKey: string,
-  postProcess: 'media' | 'thumbnail',
+  postProcess: UploadPostProcessValue,
 ) {
   if (postProcess === 'media') {
-    const probeRes = await probe(uploadRecordId, s3UploadKey);
+    const probeRes = await probe(targetId, s3UploadKey);
     invariant(probeRes !== null, 'Probe is null!');
 
     await Promise.allSettled([
-      transcode(uploadRecordId, s3UploadKey, probeRes),
+      transcode(targetId, s3UploadKey, probeRes),
       ...(probeRes.streams.some((s) => s.codec_type === 'video')
-        ? [createThumbnails(uploadRecordId, s3UploadKey)]
+        ? [createThumbnails(targetId, s3UploadKey)]
         : []),
-      transcribe(uploadRecordId, s3UploadKey).then((uploadKey) => {
+      transcribe(targetId, s3UploadKey).then((uploadKey) => {
         return executeChild(indexDocumentWorkflow, {
           workflowId: `transcript:${s3UploadKey}`,
-          args: ['transcript', uploadRecordId, uploadKey],
+          args: ['transcript', targetId, uploadKey],
           taskQueue: BACKGROUND_QUEUE,
           retry: {
             maximumAttempts: 8,
@@ -41,7 +48,17 @@ export async function processUpload(
         });
       }),
     ]);
-  } else if (postProcess === 'thumbnail') {
-    await processThumbnail(uploadRecordId, s3UploadKey);
+  } else if (postProcess === 'thumbnail' || postProcess === 'profileAvatar') {
+    const { path, blurhash } = await processImage(
+      postProcess,
+      targetId,
+      s3UploadKey,
+      postProcess === 'profileAvatar' ? { width: 96, height: 96 } : {},
+    );
+    if (postProcess === 'thumbnail') {
+      await setUploadThumbnail(targetId, path, blurhash);
+    } else {
+      await setProfileAvatar(targetId, path, blurhash);
+    }
   }
 }

@@ -3,6 +3,7 @@ import { A } from 'solid-start';
 import BellIcon from '@tabler/icons/bell.svg?component-solid';
 import { createServerAction$ } from 'solid-start/server';
 import { profileLinks } from './profile';
+import { Avatar } from './avatar';
 import type { MeQuery } from '~/routes/__generated__/(root)';
 import logoutAction from '~/util/logout-action';
 import { useLoginLocation, useSerializedLocation } from '~/util';
@@ -28,11 +29,7 @@ export default function ProfileMobile(props: Props) {
       >
         <div class="flex items-center px-4">
           <div class="flex-shrink-0">
-            <img
-              class="h-10 w-10 rounded-full"
-              src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-              alt=""
-            />
+            <Avatar src={props.me?.avatarUrl ?? ''} size="md" />
           </div>
           <div class="ml-3">
             <div class="text-base font-medium text-gray-800">Tom Cook</div>

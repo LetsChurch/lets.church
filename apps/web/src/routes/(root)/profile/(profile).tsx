@@ -1,10 +1,18 @@
 import { type JSX, For, createSignal, Show } from 'solid-js';
 import PencilIcon from '@tabler/icons/pencil.svg?component-solid';
 import { autofocus } from '@solid-primitives/autofocus';
-import { createServerAction$, createServerData$ } from 'solid-start/server';
-import { useRouteData } from 'solid-start';
+import server$, {
+  createServerAction$,
+  createServerData$,
+} from 'solid-start/server';
+import { refetchRouteData, useRouteData } from 'solid-start';
 import invariant from 'tiny-invariant';
+import delay from 'delay';
 import type {
+  CreateAvatarUploadMutation,
+  CreateAvatarUploadMutationVariables,
+  FinalizeAvatarUploadMutation,
+  FinalizeAvatarUploadMutationVariables,
   ProfilePageDataQuery,
   ProfilePageDataQueryVariables,
   UpdateUserMutation,
@@ -12,6 +20,9 @@ import type {
 } from './__generated__/(profile)';
 import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
 import { PageHeading } from '~/components/page-heading';
+import { UploadPostProcess } from '~/__generated__/graphql-types';
+import { doMultipartUpload } from '~/util/multipart-upload';
+import { Avatar } from '~/components/avatar';
 
 type Field = {
   label: string;
@@ -120,6 +131,7 @@ export function routeData() {
             username
             fullName
             email
+            avatarUrl
           }
         }
       `,
@@ -130,8 +142,75 @@ export function routeData() {
 }
 
 export default function ProfileRoute() {
+  const createAvatarUpload = server$(
+    async (variables: CreateAvatarUploadMutationVariables) => {
+      const client = await createAuthenticatedClientOrRedirect(server$.request);
+
+      const data = await client.request<
+        CreateAvatarUploadMutation,
+        CreateAvatarUploadMutationVariables
+      >(
+        gql`
+          mutation CreateAvatarUpload(
+            $targetId: ShortUuid!
+            $bytes: SafeInt!
+            $uploadMimeType: String!
+            $postProcess: UploadPostProcess!
+          ) {
+            createMultipartUpload(
+              targetId: $targetId
+              bytes: $bytes
+              uploadMimeType: $uploadMimeType
+              postProcess: $postProcess
+            ) {
+              s3UploadKey
+              s3UploadId
+              partSize
+              urls
+            }
+          }
+        `,
+        variables,
+      );
+
+      return data;
+    },
+  );
+
+  const finalizeUpload = server$(
+    async (variables: FinalizeAvatarUploadMutationVariables) => {
+      const client = await createAuthenticatedClientOrRedirect(server$.request);
+
+      const data = await client.request<
+        FinalizeAvatarUploadMutation,
+        FinalizeAvatarUploadMutationVariables
+      >(
+        gql`
+          mutation FinalizeAvatarUpload(
+            $targetId: ShortUuid!
+            $s3UploadKey: String!
+            $s3UploadId: String!
+            $s3PartETags: [String!]!
+          ) {
+            finalizeMultipartUpload(
+              targetId: $targetId
+              s3UploadKey: $s3UploadKey
+              s3UploadId: $s3UploadId
+              s3PartETags: $s3PartETags
+            )
+          }
+        `,
+        variables,
+      );
+
+      return data;
+    },
+  );
+
   const { data } = useRouteData<typeof routeData>();
   const [editing, setEditing] = createSignal<string | null>(null);
+  const [avatarProcessing, setAvatarProcessing] = createSignal(false);
+
   const [, submitSubscribe] = createServerAction$(
     async (form: FormData, { request }) => {
       const userId = form.get('userId');
@@ -164,11 +243,71 @@ export default function ProfileRoute() {
     },
   );
 
+  async function handleAvatarInput(e: InputEvent) {
+    if (avatarProcessing()) {
+      return;
+    }
+
+    invariant(e.target instanceof HTMLInputElement);
+    invariant(e.target.files);
+    const [file] = Array.from(e.target.files);
+    const userId = data()?.me?.id;
+    const oldUrl = data()?.me?.avatarUrl;
+
+    if (!file || !userId) {
+      return;
+    }
+
+    setAvatarProcessing(true);
+
+    const { createMultipartUpload: res } = await createAvatarUpload({
+      targetId: userId,
+      bytes: file.size,
+      uploadMimeType: file.type,
+      postProcess: UploadPostProcess.ProfileAvatar,
+    });
+
+    const upload = doMultipartUpload(file, res.urls, res.partSize);
+    upload.onProgress((i) => console.log(i));
+
+    const eTags = await upload;
+
+    await finalizeUpload({
+      targetId: userId,
+      s3UploadKey: res.s3UploadKey,
+      s3UploadId: res.s3UploadId,
+      s3PartETags: eTags,
+    });
+
+    while (data()?.me?.avatarUrl === oldUrl) {
+      await delay(2500);
+      await refetchRouteData();
+    }
+
+    setAvatarProcessing(false);
+  }
+
   // TODO: clear editing when submit succeeds
 
   return (
     <>
       <PageHeading title="My Profile" />
+      <label
+        class="flex items-center gap-3"
+        classList={{ 'cursor-pointer': !avatarProcessing() }}
+      >
+        <Avatar src={data()?.me?.avatarUrl ?? ''} size="xl" />
+        <input
+          type="file"
+          class="sr-only"
+          onInput={handleAvatarInput}
+          accept="image/png, image/jpeg"
+          disabled={avatarProcessing()}
+        />
+        <Show when={avatarProcessing()}>
+          <span>Processing...</span>
+        </Show>
+      </label>
       <submitSubscribe.Form class="mt-5 border-t border-gray-200">
         <input type="hidden" name="userId" value={data()?.me?.id ?? ''} />
         <dl class="divide-y divide-gray-200">

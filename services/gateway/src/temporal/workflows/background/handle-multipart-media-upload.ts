@@ -5,11 +5,12 @@ import {
   setHandler,
   executeChild,
 } from '@temporalio/workflow';
+import type { UploadPostProcessValue } from '../../../schema/types/mutation';
 import type * as activities from '../../activities/background';
 import { PROCESS_UPLOAD_QUEUE } from '../../queues';
 import { processUpload as processUploadWorkflow } from '../process-upload';
 
-const { abortMultipartUpload, completeMultipartUpload, finalizeUpload } =
+const { abortMultipartUpload, completeMultipartUpload, finalizeUploadRecord } =
   proxyActivities<typeof activities>({
     startToCloseTimeout: '60 minutes',
     heartbeatTimeout: '1 minute',
@@ -23,7 +24,7 @@ export async function handleMultipartMediaUploadWorkflow(
   bucket: string,
   s3UploadId: string,
   s3UploadKey: string,
-  postProcess: 'media' | 'thumbnail',
+  postProcess: UploadPostProcessValue,
 ) {
   let eTags: Array<string> | null = null;
   let finalizingUserId: string | null = null;
@@ -37,7 +38,7 @@ export async function handleMultipartMediaUploadWorkflow(
 
   if (eTags && finalizingUserId) {
     if (postProcess === 'media') {
-      await finalizeUpload(uploadRecordId, finalizingUserId);
+      await finalizeUploadRecord(uploadRecordId, finalizingUserId);
     }
 
     await completeMultipartUpload(bucket, s3UploadId, s3UploadKey, eTags);

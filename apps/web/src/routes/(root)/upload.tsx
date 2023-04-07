@@ -20,11 +20,11 @@ import type {
   UploadRouteDataQuery,
   CreateMultipartMediaUploadMutation,
   CreateMultipartMediaUploadMutationVariables,
-  FinalizeUploadMutation,
-  FinalizeUploadMutationVariables,
   UpsertUploadRecordMutation,
   UpsertUploadRecordMutationVariables,
   UploadRouteDataQueryVariables,
+  FinalizeMediaUploadMutationVariables,
+  FinalizeMediaUploadMutation,
 } from './__generated__/upload';
 import Dropzone, { DroppedRes } from '~/components/dropzone';
 import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
@@ -323,7 +323,7 @@ export default function UploadRoute() {
     },
   );
 
-  const createMultipartMediaUpload = server$(
+  const createMultipartUpload = server$(
     async (variables: CreateMultipartMediaUploadMutationVariables) => {
       const client = await createAuthenticatedClientOrRedirect(server$.request);
 
@@ -338,8 +338,8 @@ export default function UploadRoute() {
             $uploadMimeType: String!
             $postProcess: UploadPostProcess!
           ) {
-            createMultipartMediaUpload(
-              uploadRecordId: $uploadRecordId
+            createMultipartUpload(
+              targetId: $uploadRecordId
               bytes: $bytes
               uploadMimeType: $uploadMimeType
               postProcess: $postProcess
@@ -359,22 +359,22 @@ export default function UploadRoute() {
   );
 
   const finalizeUpload = server$(
-    async (variables: FinalizeUploadMutationVariables) => {
+    async (variables: FinalizeMediaUploadMutationVariables) => {
       const client = await createAuthenticatedClientOrRedirect(server$.request);
 
       const data = await client.request<
-        FinalizeUploadMutation,
-        FinalizeUploadMutationVariables
+        FinalizeMediaUploadMutation,
+        FinalizeMediaUploadMutationVariables
       >(
         gql`
-          mutation FinalizeUpload(
+          mutation FinalizeMediaUpload(
             $uploadRecordId: ShortUuid!
             $s3UploadKey: String!
             $s3UploadId: String!
             $s3PartETags: [String!]!
           ) {
-            finalizeUpload(
-              uploadRecordId: $uploadRecordId
+            finalizeMultipartUpload(
+              targetId: $uploadRecordId
               s3UploadKey: $s3UploadKey
               s3UploadId: $s3UploadId
               s3PartETags: $s3PartETags
@@ -418,13 +418,12 @@ export default function UploadRoute() {
       const uploadRecordId = resolvedId();
       invariant(uploadRecordId);
 
-      const { createMultipartMediaUpload: res } =
-        await createMultipartMediaUpload({
-          uploadRecordId: uploadRecordId,
-          bytes: file.size,
-          uploadMimeType: mime,
-          postProcess,
-        });
+      const { createMultipartUpload: res } = await createMultipartUpload({
+        uploadRecordId: uploadRecordId,
+        bytes: file.size,
+        uploadMimeType: mime,
+        postProcess,
+      });
 
       const upload = doMultipartUpload(file, res.urls, res.partSize);
       upload.onProgress((i) => setMediaUploadProgress(i));

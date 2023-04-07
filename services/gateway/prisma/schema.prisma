@@ -26,6 +26,8 @@ model AppUser {
   username                 String                    @unique @db.Citext
   password                 String
   fullName                 String?                   @map("full_name") @db.VarChar(100)
+  avatarUrl                String?                   @map("avatar_url") @db.VarChar(255)
+  avatarBlurhash           String?                   @map("avatar_blurhash") @db.VarChar(255)
   createdAt                DateTime                  @default(now()) @map("created_at")
   updatedAt                DateTime                  @updatedAt @map("updated_at")
   deletedAt                DateTime?                 @map("deleted_at")

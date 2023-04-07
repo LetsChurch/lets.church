@@ -11,6 +11,28 @@ export async function imgJson(cwd: string, inputFileNames: string[]) {
   return json.image;
 }
 
+export function croppingResize(
+  cwd: string,
+  inputFileName: string,
+  width: number,
+  height: number,
+) {
+  // mogrify -resize 200x100^ -gravity center -crop 200x100+0+0 image2.jpg
+  return execa(
+    'mogrify',
+    [
+      '-resize',
+      `${width}x${height}^`,
+      '-gravity',
+      'center',
+      '-crop',
+      `${width}x${height}+0+0`,
+      inputFileName,
+    ],
+    { cwd },
+  );
+}
+
 export function concatThumbs(cwd: string, inputFileNames: Array<string>) {
   return execa('convert', [...inputFileNames, '-append', 'hovernail.jpg'], {
     cwd,

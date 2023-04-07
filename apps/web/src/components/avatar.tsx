@@ -1,0 +1,22 @@
+export type Props = {
+  src: string | null;
+  size: 'sm' | 'md' | 'lg' | 'xl';
+};
+
+export function Avatar(props: Props) {
+  return (
+    <img
+      class={`color-transparent inline-block rounded-full bg-gray-200 ${
+        props.size === 'xl'
+          ? 'h-16 w-16'
+          : props.size === 'lg'
+          ? 'h-12 w-12'
+          : props.size === 'md'
+          ? 'h-10 w-10'
+          : 'h-8 w-8'
+      }`}
+      src={props.src ?? ''}
+      alt="Avatar"
+    />
+  );
+}

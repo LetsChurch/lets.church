@@ -13,6 +13,7 @@ import ThumbUpIcon from '@tabler/icons/thumb-up.svg?component-solid';
 import ThumbDownIcon from '@tabler/icons/thumb-down.svg?component-solid';
 import { Dynamic } from 'solid-js/web';
 import { Button } from './form';
+import { Avatar } from './avatar';
 import { Rating } from '~/__generated__/graphql-types';
 import { UserContext } from '~/routes/(root)';
 
@@ -21,6 +22,7 @@ export type CommentData = {
   uploadRecordId: string;
   author: {
     username: string;
+    avatarUrl?: string | null;
   };
   text: string;
   totalLikes: number;
@@ -159,20 +161,7 @@ export default function Comment(props: Props) {
   return (
     <div class="mt-6 flex">
       <div class="mr-4 shrink-0">
-        <svg
-          class="h-16 w-16 border border-gray-300 bg-white text-gray-300"
-          preserveAspectRatio="none"
-          stroke="currentColor"
-          fill="none"
-          viewBox="0 0 200 200"
-          aria-hidden="true"
-        >
-          <path
-            vector-effect="non-scaling-stroke"
-            stroke-width="1"
-            d="M0 0l200 200M0 200L200 0"
-          />
-        </svg>
+        <Avatar src={props.data.author.avatarUrl ?? ''} size="md" />
       </div>
       <div class="grow">
         <h4 class="text-lg font-bold">{props.data.author.username}</h4>
