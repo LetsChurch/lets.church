@@ -109,12 +109,6 @@ const Channel = builder.prismaObject('Channel', {
           return false;
         }
 
-        // Use fluent syntax for dataloader purposes: https://www.prisma.io/docs/guides/performance-and-optimization/query-optimization-performance#solving-n1-in-graphql-with-findunique-and-prismas-dataloader
-        const blah = await prisma.channel
-          .findUnique({ where: { id: channelId } })
-          .subscribers({ where: { appUserId: userId } });
-        console.log({ blah });
-
         return (
           ((
             await prisma.channel
