@@ -1,7 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import PLazy from 'p-lazy';
 import prisma from './prisma';
-import { client as esClient } from './elasticsearch';
 import { parseSessionJwt } from './jwt';
 
 export default async function context({
@@ -37,7 +36,6 @@ export default async function context({
   });
 
   return {
-    esClient,
     session,
   };
 }

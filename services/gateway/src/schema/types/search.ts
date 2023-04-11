@@ -8,6 +8,7 @@ import {
   MSearchResponseSchema,
   msearchTranscripts,
   msearchUploads,
+  client as esClient,
 } from '../../util/elasticsearch';
 import prisma from '../../util/prisma';
 import { identifiableSchema } from '../../util/zod';
@@ -229,7 +230,7 @@ builder.queryFields((t) => ({
       resolve: async (
         _root,
         { query, focus, channels, minPublishedAt, maxPublishedAt, ...args },
-        { esClient },
+        _context,
         _info,
       ) => {
         let totalCount = 0;
