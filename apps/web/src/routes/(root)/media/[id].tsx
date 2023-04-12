@@ -552,6 +552,7 @@ export default function MediaRoute() {
   });
 
   const startAt = getStartAt();
+  const [playAt, setPlayAt] = createSignal(startAt ?? 0);
   const [currentTime, setCurrentTime] = createSignal(startAt ?? 0);
 
   const [shareFloatOpen, setShareFloatOpen] = createSignal(false);
@@ -591,7 +592,7 @@ export default function MediaRoute() {
                 metaData()?.data.audioSource ??
                 ''
               }
-              startAt={startAt}
+              playAt={playAt}
               onTimeUpdate={(time) => setCurrentTime(time)}
               fluid
             />
@@ -759,6 +760,7 @@ export default function MediaRoute() {
           <Transcript
             transcript={metaData()?.data.transcript ?? []}
             currentTime={currentTime() * 1000}
+            setPlayAt={setPlayAt}
           />
         </div>
       </div>

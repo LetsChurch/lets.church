@@ -1,4 +1,4 @@
-import { createEffect, createMemo, For } from 'solid-js';
+import { createEffect, createMemo, For, Setter } from 'solid-js';
 import bSearch from 'binary-search';
 import '@fontsource/roboto-mono/variable.css';
 import { formatTime } from '~/util';
@@ -6,6 +6,7 @@ import { formatTime } from '~/util';
 export type Props = {
   transcript: Array<{ start: number; text: string }>;
   currentTime: number;
+  setPlayAt: Setter<number>;
 };
 
 export default function Transcript(props: Props) {
@@ -53,6 +54,7 @@ export default function Transcript(props: Props) {
               'bg-indigo-50': i() === currentI(),
             }}
             data-start={line.start}
+            onClick={[props.setPlayAt, line.start / 1000]}
           >
             <dt class="w-10 items-center font-mono text-sm font-medium uppercase text-gray-400 group-hover:text-gray-600">
               {formatTime(line.start)}

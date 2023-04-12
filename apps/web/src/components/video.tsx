@@ -1,4 +1,11 @@
-import { onCleanup, onMount, untrack } from 'solid-js';
+import {
+  type Accessor,
+  onCleanup,
+  onMount,
+  untrack,
+  createSignal,
+  createEffect,
+} from 'solid-js';
 import invariant from 'tiny-invariant';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
@@ -6,18 +13,17 @@ import 'video.js/dist/video-js.css';
 export type Props = {
   source: string;
   fluid?: boolean | undefined;
-  startAt?: number | undefined;
+  playAt?: Accessor<number>;
   onTimeUpdate?: (currentTime: number) => unknown;
 };
 
 export default function Video(props: Props) {
   let videoRef: HTMLVideoElement;
   let player: ReturnType<typeof videojs>;
+  const [ready, setReady] = createSignal(false);
 
   onMount(() => {
     invariant(videoRef, 'Video ref is undefined');
-
-    const startAt = untrack(() => props.startAt);
 
     player = videojs(
       videoRef,
@@ -60,11 +66,15 @@ export default function Video(props: Props) {
 
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore: https://github.com/videojs/video.js/issues/8178
-    player.one('play', () => {
-      if (typeof startAt === 'number') {
-        player.currentTime(startAt);
-      }
+    player.one('ready', () => {
+      setReady(true);
     });
+  });
+
+  createEffect(() => {
+    if (ready()) {
+      player.currentTime(props.playAt?.());
+    }
   });
 
   onCleanup(() => {
