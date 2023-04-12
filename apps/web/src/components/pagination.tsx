@@ -4,6 +4,7 @@ import { setQueryParams } from '~/util/url';
 
 export type Props = {
   label: JSX.Element;
+  queryKey?: string;
   hasPreviousPage: boolean;
   hasNextPage: boolean;
   startCursor: string;
@@ -22,8 +23,9 @@ export default function Pagination(props: Props) {
         <Show when={props.hasPreviousPage}>
           <A
             href={`?${setQueryParams(loc.query, {
-              before: props.startCursor,
-              after: null,
+              [props.queryKey ? `${props.queryKey}Before` : 'before']:
+                props.startCursor,
+              [props.queryKey ? `${props.queryKey}After` : 'after']: null,
             })}`}
             class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
@@ -33,8 +35,9 @@ export default function Pagination(props: Props) {
         <Show when={props.hasNextPage}>
           <A
             href={`?${setQueryParams(loc.query, {
-              after: props.endCursor,
-              before: null,
+              [props.queryKey ? `${props.queryKey}After` : 'after']:
+                props.endCursor,
+              [props.queryKey ? `${props.queryKey}Before` : 'before']: null,
             })}`}
             class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >

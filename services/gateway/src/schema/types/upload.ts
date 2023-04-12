@@ -7,6 +7,8 @@ import {
   Prisma,
 } from '@prisma/client';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
+import { resolveOffsetConnection } from '@pothos/plugin-relay';
+import { queryFromInfo } from '@pothos/plugin-prisma';
 import { indexDocument } from '../../temporal';
 import builder from '../builder';
 import type { Context } from '../../util/context';
@@ -61,7 +63,7 @@ const UploadVariant = builder.enumType('UploadVariant', {
   values: Object.keys(PrismaUploadVariant),
 });
 
-builder.prismaObject('UploadUserComment', {
+const UploadUserComment = builder.prismaObject('UploadUserComment', {
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
     uploadRecordId: t.expose('uploadRecordId', { type: 'ShortUuid' }),
@@ -255,14 +257,46 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
         return record.rating;
       },
     }),
-    userComments: t.relatedConnection('userComments', {
-      cursor: 'id',
-      totalCount: true,
-      query: {
-        orderBy: { score: Prisma.SortOrder.desc },
-        where: { replyingTo: null },
+    userComments: t.connection(
+      {
+        type: UploadUserComment,
+        resolve: async (root, args, context, info) => {
+          const [res, totalCount] = await Promise.all([
+            resolveOffsetConnection({ args }, async ({ offset, limit }) => {
+              const query = queryFromInfo({
+                context,
+                info,
+                path: ['edges', 'node'],
+                typeName: 'UploadUserComment',
+              });
+              return prisma.uploadUserComment.findMany({
+                ...query,
+                where: { uploadRecordId: root.id, replyingTo: null },
+                skip: offset,
+                take: limit,
+                orderBy: { score: Prisma.SortOrder.desc },
+              });
+            }),
+            prisma.uploadUserComment.count({
+              where: { uploadRecordId: root.id },
+            }),
+          ]);
+
+          return {
+            totalCount,
+            ...res,
+          };
+        },
       },
-    }),
+      {
+        name: 'UploadRecordUserCommentsConnection',
+        fields: (t) => ({
+          totalCount: t.int({
+            resolve: (root) => root.totalCount,
+          }),
+        }),
+      },
+    ),
     mediaSource: t.string({
       nullable: true,
       select: { id: true, variants: true },
@@ -517,7 +551,7 @@ builder.mutationFields((t) => ({
     },
   }),
   upsertUploadUserComment: t.prismaField({
-    type: 'UploadUserComment',
+    type: UploadUserComment,
     args: {
       uploadRecordId: t.arg({ type: 'ShortUuid', required: true }),
       replyingTo: t.arg({ type: 'ShortUuid', required: false }),

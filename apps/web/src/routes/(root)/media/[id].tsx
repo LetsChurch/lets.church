@@ -59,6 +59,9 @@ import Transcript from '~/components/transcript';
 import FloatingShareMenu from '~/components/floating-share-menu';
 import { formatDateFull } from '~/util/date';
 import type { Optional } from '~/util';
+import Pagination from '~/components/pagination';
+
+const COMMENTS_PAGE_SIZE = 12;
 
 function UnderbarButton(props: JSX.IntrinsicElements['button']) {
   const [localProps, restProps] = splitProps(props, ['class']);
@@ -113,7 +116,7 @@ function RatingButton(
   );
 }
 
-export function routeData({ params }: RouteDataArgs) {
+export function routeData({ params, location }: RouteDataArgs) {
   // Use resource rather than createRouteData or createServerData for the rating state. We don't
   // want any of the cache invalidation / automatic data refetching logic for rating. Local mutation
   // is better than refetching for rating data as numbers changing wildly when clicking like or dislike
@@ -147,9 +150,22 @@ export function routeData({ params }: RouteDataArgs) {
   const ratingState = createResource(() => fetchRatingState(id));
 
   const metaData = createServerData$(
-    async ([, id], { request }) => {
+    async (
+      [, id, , commentsAfter = null, commentsBefore = null],
+      { request },
+    ) => {
+      const vars = {
+        id,
+        commentsAfter,
+        commentsBefore,
+        commentsFirst:
+          commentsAfter || !commentsBefore ? COMMENTS_PAGE_SIZE : null,
+        commentsLast: commentsBefore ? COMMENTS_PAGE_SIZE : null,
+      } as const;
+
       const client = await createAuthenticatedClient(request);
-      const res = await client.request<
+
+      return client.request<
         MediaRouteMetaDataQuery,
         MediaRouteMetaDataQueryVariables
       >(
@@ -169,7 +185,13 @@ export function routeData({ params }: RouteDataArgs) {
             myRating
           }
 
-          query MediaRouteMetaData($id: ShortUuid!) {
+          query MediaRouteMetaData(
+            $id: ShortUuid!
+            $commentsFirst: Int
+            $commentsAfter: String
+            $commentsLast: Int
+            $commentsBefore: String
+          ) {
             data: uploadRecordById(id: $id) {
               id
               title
@@ -186,8 +208,19 @@ export function routeData({ params }: RouteDataArgs) {
                 start
                 text
               }
-              userComments {
+              userComments(
+                first: $commentsFirst
+                after: $commentsAfter
+                last: $commentsLast
+                before: $commentsBefore
+              ) {
                 totalCount
+                pageInfo {
+                  endCursor
+                  hasNextPage
+                  hasPreviousPage
+                  startCursor
+                }
                 edges {
                   node {
                     ...CommentFields
@@ -205,14 +238,19 @@ export function routeData({ params }: RouteDataArgs) {
             }
           }
         `,
-        {
-          id,
-        },
+        vars,
       );
-
-      return res;
     },
-    { key: ['media', id, 'meta'] as const },
+    {
+      key: () =>
+        [
+          'media',
+          id,
+          'meta',
+          location.query['commentsAfter'],
+          location.query['commentsBefore'],
+        ] as const,
+    },
   );
 
   return {
@@ -690,6 +728,32 @@ export default function MediaRoute() {
               />
             )}
           </For>
+          <Pagination
+            label={
+              <>
+                Showing{' '}
+                <span class="font-medium">
+                  {metaData()?.data.userComments.edges.length}
+                </span>{' '}
+                of{' '}
+                <span class="font-medium">
+                  {metaData()?.data.userComments.totalCount}
+                </span>{' '}
+                comments
+              </>
+            }
+            queryKey="comments"
+            hasNextPage={
+              metaData()?.data.userComments.pageInfo.hasNextPage ?? false
+            }
+            hasPreviousPage={
+              metaData()?.data.userComments.pageInfo.hasPreviousPage ?? false
+            }
+            startCursor={
+              metaData()?.data.userComments.pageInfo.startCursor ?? ''
+            }
+            endCursor={metaData()?.data.userComments.pageInfo.endCursor ?? ''}
+          />
         </div>
         <div class="md:col-span-1">
           <Transcript
