@@ -10,7 +10,6 @@ import { useLoginLocation, useSerializedLocation } from '~/util';
 import type { MeQuery } from '~/routes/__generated__/(root)';
 
 export const profileLinks = [
-  { href: '/upload', label: 'Upload' },
   { href: '/profile', label: 'Your Profile' },
   { href: '/settings', label: 'Settings' },
 ];
@@ -93,6 +92,9 @@ export default function Profile(props: Props) {
         aria-labelledby={menuButtonId}
         onClose={closeMenu}
         links={[
+          ...(props.me?.canUpload
+            ? [{ href: '/upload', label: 'Upload' }]
+            : []),
           ...profileLinks,
           { label: 'Logout', form: logoutFormId, pending: loggingOut.pending },
         ]}

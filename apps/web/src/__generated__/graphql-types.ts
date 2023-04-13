@@ -20,6 +20,7 @@ export type Scalars = {
 export type AppUser = {
   __typename?: 'AppUser';
   avatarUrl?: Maybe<Scalars['String']>;
+  canUpload: Scalars['Boolean'];
   channelMembershipsConnection: AppUserChannelMembershipsConnection;
   channelSubscriptionsConnection: AppUserChannelSubscriptionsConnection;
   createdAt: Scalars['DateTime'];

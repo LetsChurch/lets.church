@@ -215,6 +215,7 @@ export function routeData({ location }: RouteDataArgs) {
         gql`
           query UploadRouteData($id: ShortUuid = "", $prefetch: Boolean!) {
             me {
+              canUpload
               channelMembershipsConnection(canUpload: true) {
                 edges {
                   node {
@@ -244,8 +245,12 @@ export function routeData({ location }: RouteDataArgs) {
         { id, prefetch: Boolean(id) },
       );
 
-      // If we aren't logged in or otherwise can't mutate a given record, redirect
-      if (!res.me || (id && !res.uploadRecordById?.canMutate)) {
+      // If we aren't logged in or otherwise can't mutate a given record, or if we can't upload at all, redirect
+      if (
+        !res.me ||
+        (id && !res.uploadRecordById?.canMutate) ||
+        !res.me.canUpload
+      ) {
         throw redirect('/');
       }
 

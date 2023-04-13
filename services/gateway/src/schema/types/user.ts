@@ -53,6 +53,26 @@ export const AppUser = builder.prismaObject('AppUser', {
       },
     }),
     role: t.field({ type: AppUserRoleEnum, resolve: ({ role }) => role }),
+    canUpload: t.boolean({
+      select: { id: true },
+      authScopes: async ({ id }, _args, context) => {
+        if ((await context.session)?.appUserId === id) {
+          return true;
+        }
+
+        return { admin: true };
+      },
+      resolve: async ({ id }) => {
+        const count = await prisma.channelMembership.count({
+          where: {
+            appUserId: id,
+            OR: [{ canUpload: true }, { isAdmin: true }],
+          },
+        });
+
+        return count > 0;
+      },
+    }),
     channelSubscriptionsConnection: t.relatedConnection(
       'channelSubscriptions',
       {

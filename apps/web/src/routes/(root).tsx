@@ -15,6 +15,7 @@ export function routeData() {
         me {
           id
           avatarUrl
+          canUpload
         }
       }
     `);
