@@ -42,7 +42,8 @@ export default function ChannelsRoute() {
     <>
       <PageHeading
         title="Channels"
-        actions={[{ label: 'New Channel', variant: 'primary', href: 'new' }]}
+        /* TODO: Creating channels */
+        /* actions={[{ label: 'New Channel', variant: 'primary', href: 'new' }]} */
       />
       <ul
         role="list"
