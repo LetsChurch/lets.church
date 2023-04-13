@@ -331,43 +331,46 @@ builder.queryFields((t) => ({
     resolve: (query, _root, { id }, _context) =>
       prisma.uploadRecord.findUniqueOrThrow({ ...query, where: { id } }),
   }),
-  mySubscriptionUploadRecords: t.prismaConnection({
+  mySubscriptionUploadRecords: t.connection({
     type: UploadRecord,
-    cursor: 'id',
-    maxSize: 20,
-    defaultSize: 20,
     nullable: true,
-    resolve: async (query, _root, _args, context) => {
+    resolve: async (_root, args, context, info) => {
       const userId = (await context.session)?.appUserId;
 
       if (!userId) {
         return null;
       }
 
-      const records = await prisma.uploadRecord.findMany({
-        ...query,
-        where: {
-          channel: {
-            subscribers: {
-              some: {
-                appUserId: userId,
+      const query = queryFromInfo({
+        context,
+        info,
+        path: ['edges', 'node'],
+        typeName: 'UploadRecord',
+      });
+
+      return resolveOffsetConnection({ args }, async ({ offset, limit }) => {
+        return prisma.uploadRecord.findMany({
+          ...query,
+          skip: offset,
+          take: limit,
+          where: {
+            channel: {
+              subscribers: {
+                some: {
+                  appUserId: userId,
+                },
               },
             },
           },
-        },
-        orderBy: {
-          publishedAt: Prisma.SortOrder.desc,
-        },
+          orderBy: {
+            publishedAt: Prisma.SortOrder.desc,
+          },
+        });
       });
-
-      return records;
     },
   }),
-  uploadRecords: t.prismaConnection({
+  uploadRecords: t.connection({
     type: UploadRecord,
-    cursor: 'id',
-    maxSize: 20,
-    defaultSize: 20,
     args: {
       orderBy: t.arg({
         type: builder.enumType('UploadRecordsOrder', {
@@ -375,20 +378,29 @@ builder.queryFields((t) => ({
         }),
       }),
     },
-    resolve: async (query, _root, args, _context) => {
-      const records = await prisma.uploadRecord.findMany({
-        ...query,
-        orderBy:
-          args.orderBy === 'trending'
-            ? {
-                score: Prisma.SortOrder.desc,
-              }
-            : {
-                publishedAt: Prisma.SortOrder.desc,
-              },
+    resolve: async (_root, args, context, info) => {
+      const query = queryFromInfo({
+        context,
+        info,
+        path: ['edges', 'node'],
+        typeName: 'UploadUserComment',
       });
 
-      return records;
+      return resolveOffsetConnection({ args }, async ({ offset, limit }) => {
+        return prisma.uploadRecord.findMany({
+          ...query,
+          skip: offset,
+          take: limit,
+          orderBy:
+            args.orderBy === 'trending'
+              ? {
+                  score: Prisma.SortOrder.desc,
+                }
+              : {
+                  publishedAt: Prisma.SortOrder.desc,
+                },
+        });
+      });
     },
   }),
 }));

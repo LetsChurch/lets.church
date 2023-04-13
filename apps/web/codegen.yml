@@ -1,7 +1,7 @@
 overwrite: true
 schema: http://gateway:3000/graphql
 documents:
-  - './src/**/!(*.d).ts{,x}'
+  - './src/**/*.ts{,x}'
   - '!**/__generated__/**'
 generates:
   src/__generated__/graphql-types.ts:

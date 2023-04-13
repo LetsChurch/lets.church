@@ -3,7 +3,7 @@ import { A, useLocation } from 'solid-start';
 import { setQueryParams } from '~/util/url';
 
 export type Props = {
-  label: JSX.Element;
+  label?: JSX.Element;
   queryKey?: string;
   hasPreviousPage: boolean;
   hasNextPage: boolean;
@@ -16,9 +16,11 @@ export default function Pagination(props: Props) {
 
   return (
     <nav class="mt-6 flex items-center justify-between" aria-label="Pagination">
-      <div class="hidden sm:block">
-        <p class="text-sm text-gray-700">{props.label}</p>
-      </div>
+      <Show when={props.label}>
+        <div class="hidden sm:block">
+          <p class="text-sm text-gray-700">{props.label}</p>
+        </div>
+      </Show>
       <div class="flex flex-1 justify-between sm:justify-end">
         <Show when={props.hasPreviousPage}>
           <A

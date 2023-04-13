@@ -154,15 +154,6 @@ export function routeData({ params, location }: RouteDataArgs) {
       [, id, , commentsAfter = null, commentsBefore = null],
       { request },
     ) => {
-      const vars = {
-        id,
-        commentsAfter,
-        commentsBefore,
-        commentsFirst:
-          commentsAfter || !commentsBefore ? COMMENTS_PAGE_SIZE : null,
-        commentsLast: commentsBefore ? COMMENTS_PAGE_SIZE : null,
-      } as const;
-
       const client = await createAuthenticatedClient(request);
 
       return client.request<
@@ -238,7 +229,14 @@ export function routeData({ params, location }: RouteDataArgs) {
             }
           }
         `,
-        vars,
+        {
+          id,
+          commentsAfter,
+          commentsBefore,
+          commentsFirst:
+            commentsAfter || !commentsBefore ? COMMENTS_PAGE_SIZE : null,
+          commentsLast: commentsBefore ? COMMENTS_PAGE_SIZE : null,
+        },
       );
     },
     {
