@@ -130,17 +130,6 @@ transcribe file:
 transcribe-dir dir:
   fd . {{dir}} | xargs -o -n1 just transcribe
 
-open:
-  open http://localhost:$HOST_WEB_PORT
-open-graphiql:
-  open http://localhost:$HOST_GATEWAY_PORT/graphql
-open-kibana:
-  open http://localhost:$HOST_KIBANA_PORT
-open-temporal:
-  open http://localhost:$HOST_TEMPORAL_UI_PORT
-open-mailhog:
-  open http://localhost:$HOST_MAILHOG_WEB_PORT
-
 tf *params:
   just infra/tf {{params}}
 

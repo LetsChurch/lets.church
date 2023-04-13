@@ -6,5 +6,19 @@ just create-user <email> <password> <role>
 $ password: echo -e 'password\n'
 $ role: echo -e 'user\nadmin'
 
-# Open GraphiQL
 just open-graphiql
+
+# Open Web App
+open http://localhost:$HOST_WEB_PORT
+
+# Open GraphiQL
+open http://localhost:$HOST_GATEWAY_PORT/graphql
+
+# Open Kibana
+open http://localhost:$HOST_KIBANA_PORT
+
+# Open Temporal UI
+open http://localhost:$HOST_TEMPORAL_UI_PORT
+
+# Open Mailhog Web UI
+open http://localhost:$HOST_MAILHOG_WEB_PORT
