@@ -4,6 +4,7 @@ import { Connection, Client, WorkflowOptions } from '@temporalio/client';
 import pRetry from 'p-retry';
 import PLazy from 'p-lazy';
 import waitOn from 'wait-on';
+import type { Prisma } from '@prisma/client';
 import type { UploadPostProcessValue } from '../schema/types/mutation';
 import {
   handleMultipartMediaUploadWorkflow,
@@ -11,6 +12,8 @@ import {
   indexDocumentWorkflow,
   sendEmailWorkflow,
   uploadDoneSignal,
+  updateUploadRecordWorkflow,
+  updateUploadRecordSignal,
 } from './workflows/background';
 import { BACKGROUND_QUEUE } from './queues';
 import type { DocumentKind } from './activities/background/index-document';
@@ -31,8 +34,11 @@ const retryOps: Pick<WorkflowOptions, 'retry'> = {
   retry: { maximumAttempts: 8 },
 };
 
-function makeMultipartMediaUploadWorkflowId(uploadId: string, key: string) {
-  return `handleMultipartMediaUpload:${xxh32(uploadId)}:${key}`;
+function makeMultipartMediaUploadWorkflowId(
+  uploadRecordId: string,
+  key: string,
+) {
+  return `handleMultipartMediaUpload:${xxh32(uploadRecordId)}:${key}`;
 }
 
 export async function handleMultipartMediaUpload(
@@ -59,6 +65,30 @@ export async function completeMultipartMediaUpload(
   return (await client).workflow
     .getHandle(makeMultipartMediaUploadWorkflowId(s3UploadId, s3UploadKey))
     .signal(uploadDoneSignal, partETags, userId);
+}
+
+export async function updateUploadRecord(
+  uploadRecordId: string,
+  data: Prisma.UploadRecordUpdateArgs['data'],
+) {
+  return pRetry(
+    async () => {
+      return (await client).workflow.signalWithStart(
+        updateUploadRecordWorkflow,
+        {
+          taskQueue: BACKGROUND_QUEUE,
+          workflowId: `updateUploadRecord:${uploadRecordId}`,
+          args: [uploadRecordId],
+          signal: updateUploadRecordSignal,
+          signalArgs: [data],
+          retry: {
+            maximumAttempts: 8,
+          },
+        },
+      );
+    },
+    { retries: 8 },
+  );
 }
 
 export async function indexDocument(

@@ -17,7 +17,7 @@ import {
 } from '../../../util/s3';
 import { runFfmpegThumbnails } from '../../../util/ffmpeg';
 import { concatThumbs, imageToBlurhash } from '../../../util/images';
-import prisma from '../../../util/prisma';
+import { updateUploadRecord } from '../..';
 
 const WORK_DIR = '/data/thumbnails';
 
@@ -77,12 +77,9 @@ export default async function createThumbnails(
 
               const blurhash = await imageToBlurhash(largestThumbnail);
 
-              await prisma.uploadRecord.updateMany({
-                where: { id: uploadRecordId, defaultThumbnailPath: null },
-                data: {
-                  defaultThumbnailPath: path,
-                  thumbnailBlurhash: blurhash,
-                },
+              await updateUploadRecord(uploadRecordId, {
+                defaultThumbnailPath: path,
+                thumbnailBlurhash: blurhash,
               });
             },
             { retries: 8 },

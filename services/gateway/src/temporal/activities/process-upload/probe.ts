@@ -11,7 +11,7 @@ import {
 } from '../../../util/s3';
 import { runFfprobe } from '../../../util/ffmpeg';
 import { ffprobeSchema } from '../../../util/zod';
-import prisma from '../../../util/prisma';
+import { updateUploadRecord } from '../..';
 
 const WORK_DIR = '/data/transcode';
 
@@ -40,9 +40,8 @@ export default async function probe(
 
     const stats = await stat(downloadPath);
 
-    await prisma.uploadRecord.update({
-      where: { id: uploadRecordId },
-      data: { uploadSizeBytes: stats.size },
+    await updateUploadRecord(uploadRecordId, {
+      uploadSizeBytes: stats.size,
     });
 
     const probe = await runFfprobe(dir, downloadPath, cancellationSignal);

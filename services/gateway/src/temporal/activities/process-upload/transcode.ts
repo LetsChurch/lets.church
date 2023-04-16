@@ -19,7 +19,7 @@ import {
   S3_PUBLIC_BUCKET,
   streamObjectToFile,
 } from '../../../util/s3';
-import prisma from '../../../util/prisma';
+import { updateUploadRecord } from '../..';
 import type { Probe } from './probe';
 
 const WORK_DIR = '/data/transcode';
@@ -186,11 +186,8 @@ export default async function transcode(
 
     await uploadQueue.onEmpty();
     await watcher.close();
-    await prisma.uploadRecord.update({
-      where: { id: uploadRecordId },
-      data: {
-        variants,
-      },
+    await updateUploadRecord(uploadRecordId, {
+      variants,
     });
   } finally {
     dataHeartbeat.flush();
