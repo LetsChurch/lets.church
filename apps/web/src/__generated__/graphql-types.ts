@@ -206,6 +206,11 @@ export type ChannelUploadsConnectionEdge = {
   node: UploadRecord;
 };
 
+export type DataError = {
+  __typename?: 'DataError';
+  error: PrismaRuntimeError;
+};
+
 export type HighlightedText = {
   __typename?: 'HighlightedText';
   marked: Scalars['String'];
@@ -234,7 +239,7 @@ export type Mutation = {
   logout: Scalars['Boolean'];
   rateComment: Scalars['Boolean'];
   rateUpload: Scalars['Boolean'];
-  signup: AppUser;
+  register: MutationRegisterResult;
   subscribeToChannel: ChannelSubscription;
   unsubscribeFromChannel: Scalars['Boolean'];
   updateChannel: Channel;
@@ -292,7 +297,8 @@ export type MutationRateUploadArgs = {
 };
 
 
-export type MutationSignupArgs = {
+export type MutationRegisterArgs = {
+  agreeToTerms: Scalars['Boolean'];
   email: Scalars['String'];
   fullName?: InputMaybe<Scalars['String']>;
   password: Scalars['String'];
@@ -356,6 +362,13 @@ export type MutationUpsertUploadUserCommentArgs = {
   replyingTo?: InputMaybe<Scalars['ShortUuid']>;
   text: Scalars['String'];
   uploadRecordId: Scalars['ShortUuid'];
+};
+
+export type MutationRegisterResult = DataError | MutationRegisterSuccess | ValidationError;
+
+export type MutationRegisterSuccess = {
+  __typename?: 'MutationRegisterSuccess';
+  data: AppUser;
 };
 
 export enum Order {
@@ -441,6 +454,11 @@ export type PageInfo = {
   hasNextPage: Scalars['Boolean'];
   hasPreviousPage: Scalars['Boolean'];
   startCursor?: Maybe<Scalars['String']>;
+};
+
+export type PrismaRuntimeError = {
+  __typename?: 'PrismaRuntimeError';
+  message: Scalars['String'];
 };
 
 export type Query = {
@@ -749,3 +767,14 @@ export enum UploadVisibility {
   Public = 'PUBLIC',
   Unlisted = 'UNLISTED'
 }
+
+export type ValidationError = {
+  __typename?: 'ValidationError';
+  fieldErrors: Array<ZodFieldError>;
+};
+
+export type ZodFieldError = {
+  __typename?: 'ZodFieldError';
+  message: Scalars['String'];
+  path: Array<Scalars['String']>;
+};

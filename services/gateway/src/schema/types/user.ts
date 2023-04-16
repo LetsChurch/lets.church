@@ -1,8 +1,12 @@
-import { AppUserRole, type AppUser as PrismaAppUser } from '@prisma/client';
-import * as argon2 from 'argon2';
+import {
+  AppUserRole,
+  type AppUser as PrismaAppUser,
+  Prisma,
+} from '@prisma/client';
+import argon2 from 'argon2';
 import invariant from 'tiny-invariant';
 import * as z from 'zod';
-import { ZodIssueCode } from 'zod';
+import { ZodError, ZodIssueCode } from 'zod';
 import builder from '../builder';
 import type { Context } from '../../util/context';
 import zxcvbn from '../../util/zxcvbn';
@@ -31,14 +35,20 @@ const AppUserRoleEnum = builder.enumType('AppUserRole', {
   values: Object.keys(AppUserRole),
 });
 
+builder.prismaObject('AppUserEmail', {
+  fields: (t) => ({
+    id: t.expose('id', { type: 'ShortUuid' }),
+    email: t.exposeString('email'),
+    verified: t.exposeBoolean('verified'),
+  }),
+});
+
 export const AppUser = builder.prismaObject('AppUser', {
   select: { id: true, password: true, role: true },
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
     fullName: t.expose('fullName', { type: 'String', nullable: true }),
-    email: t.exposeString('email', {
-      authScopes: privateAuthScopes,
-    }),
+    emails: t.relation('emails'),
     username: t.exposeString('username'),
     avatarUrl: t.field({
       type: 'String',
@@ -167,7 +177,7 @@ builder.mutationFields((t) => ({
     },
     resolve: async (_parent, { id, password }, _context) => {
       const user = await prisma.appUser.findFirst({
-        where: { OR: [{ username: id }, { email: id }] },
+        where: { OR: [{ username: id }, { emails: { some: { email: id } } }] },
       });
 
       if (!user || !(await argon2.verify(user.password, password))) {
@@ -198,13 +208,14 @@ builder.mutationFields((t) => ({
       return true;
     },
   }),
-  signup: t.prismaField({
+  register: t.prismaField({
     type: AppUser,
     args: {
+      email: t.arg.string({ required: true }),
       username: t.arg.string({ required: true }),
       password: t.arg.string({ required: true }),
-      email: t.arg.string({ required: true }),
       fullName: t.arg.string(),
+      agreeToTerms: t.arg.boolean({ required: true }),
     },
     validate: {
       schema: z.object({
@@ -224,7 +235,11 @@ builder.mutationFields((t) => ({
           }),
         email: z.string().email(),
         fullName: z.string().max(100).optional(),
+        agreeToTerms: z.literal(true),
       }),
+    },
+    errors: {
+      types: [ZodError, Prisma.PrismaClientKnownRequestError],
     },
     authScopes: {
       unauthenticated: true,
@@ -238,19 +253,25 @@ builder.mutationFields((t) => ({
       const passwordHash = await argon2.hash(password, {
         type: argon2.argon2id,
       });
+
       const user = await prisma.appUser.create({
         ...query,
         data: {
           username,
-          email,
           fullName: fullName || null,
           password: passwordHash,
+          emails: {
+            create: {
+              email,
+            },
+          },
         },
       });
+
       await sendEmail(`signup:${email}`, {
         from: 'noreply@lets.church',
         to: email,
-        subject: `Welcome to Let's Church! Please confirm your email.`, // TODO: What should this say?
+        subject: `Welcome to Let's Church! Please confirm your email.`,
         text: `Welcome, ${username}!`,
         html: `Welcome, <b>${username}</b>!`,
       });
@@ -275,14 +296,15 @@ builder.mutationFields((t) => ({
       return { admin: true };
     },
     resolve: async (query, _parent, { userId, fullName, email }, _context) => {
-      // TODO: verify email
+      await prisma.appUserEmail.upsert({
+        where: { email },
+        create: { email, appUser: { connect: { id: userId } } },
+        update: {},
+      });
       return prisma.appUser.update({
         ...query,
         where: { id: userId },
-        data: {
-          fullName,
-          email,
-        },
+        data: { fullName },
       });
     },
   }),

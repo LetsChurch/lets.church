@@ -1,5 +1,4 @@
-import { createUniqueId, mergeProps } from 'solid-js';
-import { useLocation } from 'solid-start';
+import { A, useLocation } from 'solid-start';
 import { createServerAction$, redirect } from 'solid-start/server';
 import * as Z from 'zod';
 import type {
@@ -8,32 +7,13 @@ import type {
 } from './__generated__/login';
 import { gql, client } from '~/util/gql/server';
 import { storage } from '~/util/session';
+import { Button, LabeledInput } from '~/components/form';
 
 const LoginSchema = Z.object({
   id: Z.string(),
   password: Z.string(),
   redirect: Z.string(),
 });
-
-function Input(props: { name: string; label: string; type?: string }) {
-  const merged = mergeProps({ type: 'text' }, props);
-  const id = createUniqueId();
-
-  return (
-    <div>
-      <label for={id} class="block text-sm font-medium text-gray-700">
-        {merged.label}
-      </label>
-      <input
-        id={id}
-        name={merged.name}
-        type={merged.type}
-        placeholder={merged.label}
-        class="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
-      />
-    </div>
-  );
-}
 
 export default function LoginRoute() {
   const [loggingIn, { Form }] = createServerAction$(async (form: FormData) => {
@@ -67,21 +47,33 @@ export default function LoginRoute() {
   const loc = useLocation();
 
   return (
-    <Form class="mx-auto max-w-md space-y-6">
-      <input
-        type="hidden"
-        name="redirect"
-        value={loc.query['redirect'] ?? '/'}
-      />
-      <Input name="id" label="Username or Email" />
-      <Input name="password" label="Password" type="password" />
-      <button
-        type="submit"
-        class="flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-        disabled={loggingIn.pending}
-      >
-        Login
-      </button>
-    </Form>
+    <>
+      <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <h2 class="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
+          Sign in to your account
+        </h2>
+        <p class="mt-2 text-center text-sm text-gray-600">
+          Or{' '}
+          <A
+            href="../register"
+            class="font-medium text-indigo-600 hover:text-indigo-500"
+          >
+            register for a new account
+          </A>
+        </p>
+      </div>
+      <Form class="mx-auto max-w-md space-y-6">
+        <input
+          type="hidden"
+          name="redirect"
+          value={loc.query['redirect'] ?? '/'}
+        />
+        <LabeledInput name="id" label="Username or Email" />
+        <LabeledInput name="password" label="Password" type="password" />
+        <Button type="submit" class="w-full" disabled={loggingIn.pending}>
+          Login
+        </Button>
+      </Form>
+    </>
   );
 }

@@ -1,4 +1,5 @@
 import SchemaBuilder from '@pothos/core';
+import ErrorsPlugin from '@pothos/plugin-errors';
 import ScopeAuthPlugin from '@pothos/plugin-scope-auth';
 import PrismaPlugin from '@pothos/plugin-prisma';
 import RelayPlugin from '@pothos/plugin-relay';
@@ -26,7 +27,11 @@ export default new SchemaBuilder<{
   Scalars: Scalars;
 }>({
   plugins: [
-    // ScopeAuthPlugin must be listed first
+    // ErrorsPlugin must be listed before PrismaPlugin and ValidationPlugin,
+    // ahd should generally be listed first in order to catch any errors from
+    // subsequent plugins
+    ErrorsPlugin,
+    // ScopeAuthPlugin must be listed first, aside from ErrorsPlugin
     ScopeAuthPlugin,
     // The rest
     PrismaPlugin,
