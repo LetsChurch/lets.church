@@ -24,7 +24,7 @@ export type AppUser = {
   channelMembershipsConnection: AppUserChannelMembershipsConnection;
   channelSubscriptionsConnection: AppUserChannelSubscriptionsConnection;
   createdAt: Scalars['DateTime'];
-  email: Scalars['String'];
+  emails: Array<AppUserEmail>;
   fullName?: Maybe<Scalars['String']>;
   id: Scalars['ShortUuid'];
   organizationMemberhipsConnection: AppUserOrganizationMemberhipsConnection;
@@ -80,6 +80,13 @@ export type AppUserChannelSubscriptionsConnectionEdge = {
   __typename?: 'AppUserChannelSubscriptionsConnectionEdge';
   cursor: Scalars['String'];
   node: ChannelSubscription;
+};
+
+export type AppUserEmail = {
+  __typename?: 'AppUserEmail';
+  email: Scalars['String'];
+  id: Scalars['ShortUuid'];
+  verified: Scalars['Boolean'];
 };
 
 export type AppUserOrganizationMemberhipsConnection = {

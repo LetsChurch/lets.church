@@ -2,6 +2,7 @@ import { faker } from '@faker-js/faker';
 import slugify from '@sindresorhus/slugify';
 import argon2 from 'argon2';
 import type { Prisma } from '@prisma/client';
+import invariant from 'tiny-invariant';
 import { indexDocument, waitOnTemporal } from '../src/temporal';
 import prisma from '../src/util/prisma';
 
@@ -11,53 +12,65 @@ await waitOnTemporal();
 
 const password = await argon2.hash('password', { type: argon2.argon2id });
 
-await prisma.appUser.createMany({
-  data: [
-    {
-      email: 'admin@lets.church',
-      username: 'admin',
-      password,
-      role: 'ADMIN',
+const usersData: ReadonlyArray<
+  Parameters<typeof prisma.appUser.create>[0]['data']
+> = [
+  {
+    username: 'admin',
+    password,
+    role: 'ADMIN',
+    emails: {
+      create: { email: 'admin@lets.church', verified: true },
     },
-    {
-      email: 'user1@example.org',
-      username: 'user1',
-      fullName: 'User One',
-      password,
+  },
+  {
+    username: 'user1',
+    fullName: 'User One',
+    password,
+    emails: {
+      create: { email: 'user1@example.org', verified: true },
     },
-    {
-      email: 'user2@example.org',
-      username: 'user2',
-      fullName: 'User Two',
-      password,
+  },
+  {
+    username: 'user2',
+    fullName: 'User Two',
+    password,
+    emails: {
+      create: { email: 'user2@example.org', verified: true },
     },
-    ...Array(47)
-      .fill(null)
-      .map(() => {
-        const firstName = faker.name.firstName();
-        const lastName = faker.name.lastName();
-        return {
-          email: faker.internet.email(firstName, lastName),
-          username: faker.internet
-            .userName(firstName, lastName)
-            .replace(/[^a-zA-Z0-9_-]/g, '_'),
-          fullName: `${firstName} ${lastName}`,
-          password,
-        };
-      }),
-  ],
-  skipDuplicates: true,
-});
+  },
+  {
+    username: 'user3',
+    fullName: 'User Three',
+    password,
+    emails: {
+      create: { email: 'user3@example.org', verified: true },
+    },
+  },
+  {
+    username: 'user4',
+    fullName: 'User Four',
+    password,
+    emails: {
+      create: { email: 'user4@example.org', verified: true },
+    },
+  },
+  {
+    username: 'user5',
+    fullName: 'User Five',
+    password,
+    emails: {
+      create: { email: 'user5@example.org', verified: true },
+    },
+  },
+] as const;
 
-const { id: adminId } = await prisma.appUser.findUniqueOrThrow({
-  where: { username: 'admin' },
-});
-const { id: user1Id } = await prisma.appUser.findUniqueOrThrow({
-  where: { username: 'user1' },
-});
-const { id: user2Id } = await prisma.appUser.findUniqueOrThrow({
-  where: { username: 'user2' },
-});
+const [adminUser, user1, user2] = await Promise.all(
+  usersData.map((d) => prisma.appUser.create({ data: d })),
+);
+
+invariant(adminUser && user1 && user2);
+
 const otherIds = (
   await prisma.appUser.findMany({
     where: { username: { notIn: ['admin', 'user1', 'user2'] } },
@@ -76,7 +89,7 @@ const { id: lcId, associations: lcAssociations } =
         create: {
           appUser: {
             connect: {
-              id: adminId,
+              id: adminUser.id,
             },
           },
           isAdmin: true,
@@ -92,7 +105,7 @@ const { id: lcId, associations: lcAssociations } =
                 create: {
                   appUser: {
                     connect: {
-                      id: adminId,
+                      id: adminUser.id,
                     },
                   },
                   isAdmin: true,
@@ -102,7 +115,7 @@ const { id: lcId, associations: lcAssociations } =
                 create: {
                   appUser: {
                     connect: {
-                      id: adminId,
+                      id: adminUser.id,
                     },
                   },
                 },
@@ -126,7 +139,7 @@ const { id: flId, associations: flAssociations } =
         create: {
           appUser: {
             connect: {
-              id: adminId,
+              id: adminUser.id,
             },
           },
           isAdmin: true,
@@ -142,7 +155,7 @@ const { id: flId, associations: flAssociations } =
                 create: {
                   appUser: {
                     connect: {
-                      id: adminId,
+                      id: adminUser.id,
                     },
                   },
                   isAdmin: true,
@@ -152,7 +165,7 @@ const { id: flId, associations: flAssociations } =
                 create: {
                   appUser: {
                     connect: {
-                      id: adminId,
+                      id: adminUser.id,
                     },
                   },
                 },
@@ -184,7 +197,7 @@ const { id: org1Id, associations: org1Associations } =
         create: {
           appUser: {
             connect: {
-              id: user1Id,
+              id: user1.id,
             },
           },
           isAdmin: true,
@@ -200,7 +213,7 @@ const { id: org1Id, associations: org1Associations } =
                 create: {
                   appUser: {
                     connect: {
-                      id: user1Id,
+                      id: user1.id,
                     },
                   },
                   isAdmin: true,
@@ -230,7 +243,7 @@ const { id: org2Id, associations: org2Associations } =
         create: {
           appUser: {
             connect: {
-              id: user2Id,
+              id: user2.id,
             },
           },
           isAdmin: true,
@@ -246,7 +259,7 @@ const { id: org2Id, associations: org2Associations } =
                 create: {
                   appUser: {
                     connect: {
-                      id: user2Id,
+                      id: user2.id,
                     },
                   },
                   isAdmin: true,
@@ -299,7 +312,7 @@ console.log('Created example organizations and channels');
 console.log('Seeding The Dorean Principle');
 
 const baseUploadRecord = {
-  appUserId: adminId,
+  appUserId: adminUser.id,
   channelId: (
     await prisma.channel.findUniqueOrThrow({
       select: { id: true },
@@ -307,7 +320,7 @@ const baseUploadRecord = {
     })
   ).id,
   uploadFinalized: true,
-  uploadFinalizedById: adminId,
+  uploadFinalizedById: adminUser.id,
   license: 'CC0' as const,
   visibility: 'PUBLIC' as const,
   variants: ['AUDIO'],

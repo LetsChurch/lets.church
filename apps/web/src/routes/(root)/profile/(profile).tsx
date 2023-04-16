@@ -56,8 +56,10 @@ export function routeData() {
             id
             username
             fullName
-            email
             avatarUrl
+            emails {
+              email
+            }
           }
         }
       `,
@@ -235,7 +237,14 @@ export default function ProfileRoute() {
       </label>
       <submitProfile.Form class="mt-5 border-t border-gray-200">
         <input type="hidden" name="userId" value={data()?.me?.id ?? ''} />
-        <EditableDatalist fields={fields} data={data()?.me ?? {}} />
+        <EditableDatalist
+          fields={fields}
+          data={{
+            username: data()?.me?.username ?? '',
+            fullName: data()?.me?.fullName ?? '',
+            email: data()?.me?.emails[0]?.email ?? '',
+          }}
+        />
       </submitProfile.Form>
     </>
   );

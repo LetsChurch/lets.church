@@ -3,7 +3,7 @@ import * as Types from '../../../../__generated__/graphql-types';
 export type ProfilePageDataQueryVariables = Types.Exact<{ [key: string]: never; }>;
 
 
-export type ProfilePageDataQuery = { __typename?: 'Query', me?: { __typename?: 'AppUser', id: string, username: string, fullName?: string | null, email: string, avatarUrl?: string | null } | null };
+export type ProfilePageDataQuery = { __typename?: 'Query', me?: { __typename?: 'AppUser', id: string, username: string, fullName?: string | null, avatarUrl?: string | null, emails: Array<{ __typename?: 'AppUserEmail', email: string }> } | null };
 
 export type CreateAvatarUploadMutationVariables = Types.Exact<{
   targetId: Types.Scalars['ShortUuid'];

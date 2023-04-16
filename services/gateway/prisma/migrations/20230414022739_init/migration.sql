@@ -22,7 +22,6 @@ CREATE TYPE "Rating" AS ENUM ('LIKE', 'DISLIKE');
 -- CreateTable
 CREATE TABLE "app_user" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "email" CITEXT NOT NULL,
     "username" CITEXT NOT NULL,
     "password" TEXT NOT NULL,
     "full_name" VARCHAR(100),
@@ -34,6 +33,16 @@ CREATE TABLE "app_user" (
     "role" "app_user_role" NOT NULL DEFAULT 'USER',
 
     CONSTRAINT "app_user_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "app_user_email" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "app_user_id" UUID NOT NULL,
+    "email" CITEXT NOT NULL,
+    "verified" BOOLEAN NOT NULL DEFAULT false,
+
+    CONSTRAINT "app_user_email_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -178,10 +187,10 @@ CREATE TABLE "upload_user_comment_rating" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "app_user_email_key" ON "app_user"("email");
+CREATE UNIQUE INDEX "app_user_username_key" ON "app_user"("username");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "app_user_username_key" ON "app_user"("username");
+CREATE UNIQUE INDEX "app_user_email_email_key" ON "app_user_email"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "organization_slug_key" ON "organization"("slug");
@@ -218,6 +227,9 @@ CREATE INDEX "upload_user_comment_rating_upload_id_rating_idx" ON "upload_user_c
 
 -- CreateIndex
 CREATE INDEX "upload_user_comment_rating_app_user_id_rating_idx" ON "upload_user_comment_rating"("app_user_id", "rating");
+
+-- AddForeignKey
+ALTER TABLE "app_user_email" ADD CONSTRAINT "app_user_email_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "app_session" ADD CONSTRAINT "app_session_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

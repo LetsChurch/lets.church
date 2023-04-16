@@ -22,7 +22,7 @@ enum AppUserRole {
 
 model AppUser {
   id                       String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email                    String                    @unique @db.Citext
+  emails                   AppUserEmail[]
   username                 String                    @unique @db.Citext
   password                 String
   fullName                 String?                   @map("full_name") @db.VarChar(100)
@@ -43,6 +43,16 @@ model AppUser {
   uploadUserCommentRatings UploadUserCommentRating[]
 
   @@map("app_user")
+}
+
+model AppUserEmail {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  appUser   AppUser @relation(fields: [appUserId], references: [id])
+  appUserId String  @map("app_user_id") @db.Uuid
+  email     String  @unique @db.Citext
+  verified  Boolean @default(false)
+
+  @@map("app_user_email")
 }
 
 model AppSession {
