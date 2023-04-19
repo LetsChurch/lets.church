@@ -39,6 +39,7 @@ export default async function transcode(
   const dir = join(WORK_DIR, uploadRecordId);
   const uploadQueue = new PQueue({ concurrency: 1 });
   const dataHeartbeat = throttle(() => Context.current().heartbeat(), 5000);
+  const throttledUpdateUploadRecord = throttle(updateUploadRecord, 2500);
 
   await updateUploadRecord(uploadRecordId, {
     transcodingStartedAt: new Date(),
@@ -128,11 +129,14 @@ export default async function transcode(
 
       if (!isNaN(frames) && !isNaN(totalFrames)) {
         const progress = frames / totalFrames;
-        updateUploadRecord(uploadRecordId, { transcodingProgress: progress });
+        throttledUpdateUploadRecord(uploadRecordId, {
+          transcodingProgress: progress,
+        });
       }
     });
     encodeProc.stderr?.on('data', dataHeartbeat);
     const encodeProcRes = await encodeProc;
+    throttledUpdateUploadRecord.cancel();
     await updateUploadRecord(uploadRecordId, { transcodingProgress: 1 });
 
     const playlists = await fastGlob(join(dir, '*.m3u8'));
