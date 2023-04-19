@@ -40,6 +40,10 @@ export default async function transcode(
   const uploadQueue = new PQueue({ concurrency: 1 });
   const dataHeartbeat = throttle(() => Context.current().heartbeat(), 5000);
 
+  await updateUploadRecord(uploadRecordId, {
+    transcodingStartedAt: new Date(),
+  });
+
   try {
     await mkdirp(dir);
     const downloadPath = join(dir, 'download');
@@ -108,9 +112,28 @@ export default async function transcode(
       variants,
       cancellationSignal,
     );
-    encodeProc.stdout?.on('data', dataHeartbeat);
+    encodeProc.stdout?.on('data', (data) => {
+      dataHeartbeat();
+
+      const match = String(data).match(/frame=(\d+)/);
+
+      if (!match) {
+        return;
+      }
+
+      const frames = parseInt(match[1] ?? '');
+      const totalFrames = parseInt(
+        String(probe.streams.find((s) => s.nb_frames)?.nb_frames) ?? '',
+      );
+
+      if (!isNaN(frames) && !isNaN(totalFrames)) {
+        const progress = frames / totalFrames;
+        updateUploadRecord(uploadRecordId, { transcodingProgress: progress });
+      }
+    });
     encodeProc.stderr?.on('data', dataHeartbeat);
     const encodeProcRes = await encodeProc;
+    await updateUploadRecord(uploadRecordId, { transcodingProgress: 1 });
 
     const playlists = await fastGlob(join(dir, '*.m3u8'));
 
@@ -188,6 +211,12 @@ export default async function transcode(
     await watcher.close();
     await updateUploadRecord(uploadRecordId, {
       variants,
+      transcodingFinishedAt: new Date(),
+    });
+  } catch (e) {
+    await updateUploadRecord(uploadRecordId, {
+      transcodingStartedAt: null,
+      transcodingFinishedAt: null,
     });
   } finally {
     dataHeartbeat.flush();

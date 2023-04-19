@@ -5,6 +5,7 @@ import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
 import rimraf from 'rimraf';
 import { throttle } from 'lodash-es';
+import { updateUploadRecord } from '../..';
 import {
   retryablePutFile,
   S3_INGEST_BUCKET,
@@ -26,6 +27,10 @@ export default async function transcribe(
     () => Context.current().heartbeat('data'),
     5000,
   );
+
+  await updateUploadRecord(uploadRecordId, {
+    transcribingStartedAt: new Date(),
+  });
 
   try {
     console.log('downloading media');
@@ -67,9 +72,17 @@ export default async function transcribe(
     console.log('done uploading');
     Context.current().heartbeat('done uploading');
 
+    await updateUploadRecord(uploadRecordId, {
+      transcribingFinishedAt: new Date(),
+    });
+
     return key;
   } catch (e) {
     console.error(e);
+    await updateUploadRecord(uploadRecordId, {
+      transcribingStartedAt: null,
+      transcribingFinishedAt: null,
+    });
     dataHeartbeat.flush();
     throw e;
   } finally {

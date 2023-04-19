@@ -10,6 +10,7 @@ const streamUnionSchema = Z.discriminatedUnion('codec_type', [
     codec_type: Z.literal('video'),
     width: Z.number(),
     height: Z.number(),
+    nb_frames: Z.string(),
   }).passthrough(),
   Z.object({
     codec_type: Z.literal('audio'),
