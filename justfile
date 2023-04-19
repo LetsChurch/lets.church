@@ -96,8 +96,11 @@ npmci: npmci-gateway npmci-web npmci-scripts
 
 seed-db:
   docker-compose exec gateway npm run prisma:db:seed
-seed-s3:
+seed-s3-ingest:
+  rclone sync -P ./seed-data/lcdevs3/letschurch-dev-ingest lcdevs3:letschurch-dev-ingest
+seed-s3-public:
   rclone sync -P ./seed-data/lcdevs3/letschurch-dev-public lcdevs3:letschurch-dev-public
+seed-s3: seed-s3-ingest seed-s3-public
 seed: seed-s3 seed-db
 
 truncate:

@@ -454,6 +454,6 @@ await prisma.uploadRecord.createMany({
 });
 
 for (const { id } of uploadRecordData) {
-  await indexDocument('transcript', id, `${id}.vtt`);
+  await indexDocument('transcript', id, `${id}/transcript.vtt`);
   await indexDocument('upload', id);
 }

@@ -58,7 +58,7 @@ export default async function transcribe(
     Context.current().heartbeat('whisper done');
 
     console.log('uploading file');
-    const key = `${uploadRecordId}.vtt`;
+    const key = `${uploadRecordId}/transcript.vtt`;
     await retryablePutFile(
       S3_PUBLIC_BUCKET,
       key,

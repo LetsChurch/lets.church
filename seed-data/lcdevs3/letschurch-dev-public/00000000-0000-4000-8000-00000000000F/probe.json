@@ -1,0 +1,68 @@
+{
+    "streams": [
+        {
+            "index": 0,
+            "codec_name": "mp3",
+            "codec_long_name": "MP3 (MPEG audio layer 3)",
+            "codec_type": "audio",
+            "codec_time_base": "1/44100",
+            "codec_tag_string": "[0][0][0][0]",
+            "codec_tag": "0x0000",
+            "sample_fmt": "fltp",
+            "sample_rate": "44100",
+            "channels": 2,
+            "channel_layout": "stereo",
+            "bits_per_sample": 0,
+            "r_frame_rate": "0/0",
+            "avg_frame_rate": "0/0",
+            "time_base": "1/14112000",
+            "start_pts": 353600,
+            "start_time": "0.025057",
+            "duration_ts": 14485340160,
+            "duration": "1026.455510",
+            "bit_rate": "128000",
+            "disposition": {
+                "default": 0,
+                "dub": 0,
+                "original": 0,
+                "comment": 0,
+                "lyrics": 0,
+                "karaoke": 0,
+                "forced": 0,
+                "hearing_impaired": 0,
+                "visual_impaired": 0,
+                "clean_effects": 0,
+                "attached_pic": 0,
+                "timed_thumbnails": 0
+            },
+            "tags": {
+                "encoder": "LAME3.100"
+            },
+            "side_data_list": [
+                {
+                    "side_data_type": "Replay Gain"
+                }
+            ]
+        }
+    ],
+    "format": {
+        "filename": "/data/transcode/0ec095d1-d9dd-4837-8f12-de2f4bb7d215/0ec095d1-d9dd-4837-8f12-de2f4bb7d215",
+        "nb_streams": 1,
+        "nb_programs": 0,
+        "format_name": "mp3",
+        "format_long_name": "MP2/3 (MPEG audio layer 2/3)",
+        "start_time": "0.025057",
+        "duration": "1026.455510",
+        "size": "16425169",
+        "bit_rate": "128014",
+        "probe_score": 51,
+        "tags": {
+            "title": "Chapter 14 - The Path of Progress",
+            "album": "The Dorean Principle",
+            "copyright": "Creative Commons Zero",
+            "track": "16",
+            "genre": "Audio Book - Christian Religion",
+            "date": "2021"
+        }
+    }
+}

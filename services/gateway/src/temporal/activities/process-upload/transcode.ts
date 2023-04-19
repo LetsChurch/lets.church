@@ -199,7 +199,7 @@ export default async function transcode(
       async () => {
         Context.current().heartbeat('Uploading stdout');
         await retryablePutFile(
-          S3_PUBLIC_BUCKET,
+          S3_INGEST_BUCKET,
           `${uploadRecordId}/stdout.txt`,
           'text/plain',
           Buffer.from(encodeProcRes.stdout),

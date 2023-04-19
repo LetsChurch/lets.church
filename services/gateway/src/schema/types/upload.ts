@@ -164,7 +164,7 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
       nullable: true,
       resolve: async ({ id }) => {
         try {
-          const url = getPublicMediaUrl(`${id}.vtt`);
+          const url = getPublicMediaUrl(`${id}/transcript.vtt`);
           const res = await fetch(url);
 
           if (!res.ok) {

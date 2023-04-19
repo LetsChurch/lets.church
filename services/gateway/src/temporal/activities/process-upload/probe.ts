@@ -51,7 +51,7 @@ export default async function probe(
 
     await retryablePutFile(
       S3_INGEST_BUCKET,
-      `${uploadRecordId}.probe.json`,
+      `${uploadRecordId}/probe.json`,
       'application/json',
       Buffer.from(probeJson),
     );

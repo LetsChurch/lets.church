@@ -1,0 +1,117 @@
+{
+    "streams": [
+        {
+            "index": 0,
+            "codec_name": "mp3",
+            "codec_long_name": "MP3 (MPEG audio layer 3)",
+            "codec_type": "audio",
+            "codec_time_base": "1/44100",
+            "codec_tag_string": "[0][0][0][0]",
+            "codec_tag": "0x0000",
+            "sample_fmt": "fltp",
+            "sample_rate": "44100",
+            "channels": 2,
+            "channel_layout": "stereo",
+            "bits_per_sample": 0,
+            "r_frame_rate": "0/0",
+            "avg_frame_rate": "0/0",
+            "time_base": "1/14112000",
+            "start_pts": 353600,
+            "start_time": "0.025057",
+            "duration_ts": 1980702720,
+            "duration": "140.355918",
+            "bit_rate": "128000",
+            "disposition": {
+                "default": 0,
+                "dub": 0,
+                "original": 0,
+                "comment": 0,
+                "lyrics": 0,
+                "karaoke": 0,
+                "forced": 0,
+                "hearing_impaired": 0,
+                "visual_impaired": 0,
+                "clean_effects": 0,
+                "attached_pic": 0,
+                "timed_thumbnails": 0
+            },
+            "tags": {
+                "encoder": "LAME3.100"
+            },
+            "side_data_list": [
+                {
+                    "side_data_type": "Replay Gain"
+                }
+            ]
+        },
+        {
+            "index": 1,
+            "codec_name": "mjpeg",
+            "codec_long_name": "Motion JPEG",
+            "profile": "Baseline",
+            "codec_type": "video",
+            "codec_time_base": "0/1",
+            "codec_tag_string": "[0][0][0][0]",
+            "codec_tag": "0x0000",
+            "width": 3000,
+            "height": 3000,
+            "coded_width": 3000,
+            "coded_height": 3000,
+            "closed_captions": 0,
+            "has_b_frames": 0,
+            "sample_aspect_ratio": "1:1",
+            "display_aspect_ratio": "1:1",
+            "pix_fmt": "yuvj420p",
+            "level": -99,
+            "color_range": "pc",
+            "color_space": "bt470bg",
+            "chroma_location": "center",
+            "refs": 1,
+            "r_frame_rate": "90000/1",
+            "avg_frame_rate": "0/0",
+            "time_base": "1/90000",
+            "start_pts": 2255,
+            "start_time": "0.025056",
+            "duration_ts": 12632033,
+            "duration": "140.355922",
+            "bits_per_raw_sample": "8",
+            "disposition": {
+                "default": 0,
+                "dub": 0,
+                "original": 0,
+                "comment": 0,
+                "lyrics": 0,
+                "karaoke": 0,
+                "forced": 0,
+                "hearing_impaired": 0,
+                "visual_impaired": 0,
+                "clean_effects": 0,
+                "attached_pic": 1,
+                "timed_thumbnails": 0
+            },
+            "tags": {
+                "comment": "Other"
+            }
+        }
+    ],
+    "format": {
+        "filename": "/data/transcode/df10c31f-bebf-4b8b-9aa8-2f70622cda2c/df10c31f-bebf-4b8b-9aa8-2f70622cda2c",
+        "nb_streams": 2,
+        "nb_programs": 0,
+        "format_name": "mp3",
+        "format_long_name": "MP2/3 (MPEG audio layer 2/3)",
+        "start_time": "0.025056",
+        "duration": "140.355918",
+        "size": "3256996",
+        "bit_rate": "185642",
+        "probe_score": 51,
+        "tags": {
+            "title": "Appendix B - Copyright in the United States",
+            "album": "The Dorean Principle",
+            "date": "2021",
+            "track": "19",
+            "genre": "Audio Book - Christian Religion",
+            "copyright": "Creative Commons Zero"
+        }
+    }
+}
