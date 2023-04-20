@@ -1,5 +1,6 @@
 import { JSX, onMount, splitProps } from 'solid-js';
 import invariant from 'tiny-invariant';
+import type { Optional } from '~/util';
 
 type Turnstile = {
   render: (
@@ -7,8 +8,8 @@ type Turnstile = {
     options: {
       sitekey: string;
       test?: boolean;
-      theme?: 'light' | 'dark' | 'auto';
-      size?: 'normal' | 'compact';
+      theme?: Optional<'light' | 'dark' | 'auto'>;
+      size?: Optional<'normal' | 'compact'>;
     },
   ) => string;
 };
