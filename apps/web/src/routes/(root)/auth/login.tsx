@@ -8,6 +8,8 @@ import type {
 import { gql, client } from '~/util/gql/server';
 import { storage } from '~/util/session';
 import { Button, LabeledInput } from '~/components/form';
+import { Turnstile } from '~/components/turnstile';
+import validateTurnstile from '~/util/server/validate-turnstile';
 
 const LoginSchema = Z.object({
   id: Z.string(),
@@ -17,6 +19,8 @@ const LoginSchema = Z.object({
 
 export default function LoginRoute() {
   const [loggingIn, { Form }] = createServerAction$(async (form: FormData) => {
+    await validateTurnstile(form);
+
     const {
       id,
       password,
@@ -70,6 +74,7 @@ export default function LoginRoute() {
         />
         <LabeledInput name="id" label="Username or Email" />
         <LabeledInput name="password" label="Password" type="password" />
+        <Turnstile class="flex justify-center" />
         <Button type="submit" class="w-full" disabled={loggingIn.pending}>
           Login
         </Button>

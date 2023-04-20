@@ -11,6 +11,8 @@ import type {
 import { gql, client } from '~/util/gql/server';
 import { storage } from '~/util/session';
 import { Button, LabeledCheckbox, LabeledInput } from '~/components/form';
+import { Turnstile } from '~/components/turnstile';
+import validateTurnstile from '~/util/server/validate-turnstile';
 
 const LoginSchema = Z.object({
   email: Z.string().email(),
@@ -23,6 +25,8 @@ const LoginSchema = Z.object({
 export default function RegisterRoute() {
   const [registering, { Form }] = createServerAction$(
     async (form: FormData) => {
+      await validateTurnstile(form);
+
       const parseRes = LoginSchema.safeParse(
         Object.fromEntries(
           ['email', 'username', 'password', 'fullName', 'agreeToTerms'].map(
@@ -156,6 +160,7 @@ export default function RegisterRoute() {
             : null
         }
       />
+      <Turnstile class="flex justify-center" />
       <Button type="submit" class="w-full" disabled={registering.pending}>
         Register
       </Button>
