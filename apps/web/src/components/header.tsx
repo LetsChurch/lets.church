@@ -14,6 +14,7 @@ import XIcon from '@tabler/icons/x.svg?component-solid';
 import { useBeforeLeave, useIsRouting } from '@solidjs/router';
 import Profile from './profile';
 import ProfileMobile from './profile-mobile';
+import Logo from './logo';
 import { UserContext } from '~/routes/(root)';
 
 type NavLinkProps = ParentProps<{ href: string; active?: boolean }>;
@@ -96,7 +97,9 @@ export default function Header() {
           <div class="flex h-16 justify-between">
             <div class="flex px-2 lg:px-0">
               <div class="flex flex-shrink-0 items-center text-4xl">
-                <A href="/">✝️</A>
+                <A href="/">
+                  <Logo class="text-indigo-500" width="100" />
+                </A>
               </div>
               <div class="hidden lg:ml-6 lg:flex lg:space-x-8">
                 <NavLink href="/" active>
