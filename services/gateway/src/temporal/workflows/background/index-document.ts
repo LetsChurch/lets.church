@@ -1,6 +1,4 @@
 import {
-  condition,
-  continueAsNew,
   defineSignal,
   proxyActivities,
   setHandler,
@@ -21,17 +19,12 @@ export async function indexDocumentWorkflow(
   uploadRecordId: string,
   s3UploadKey?: string,
 ) {
-  let debouncing = false;
+  let receivedUpdate = false;
 
-  setHandler(indexDocumentSignal, () => void (debouncing = true));
+  setHandler(indexDocumentSignal, () => void (receivedUpdate = true));
 
-  while (await condition(() => debouncing, '15 seconds')) {
-    debouncing = false;
-  }
-
-  await indexDocumentActivity(kind, uploadRecordId, s3UploadKey);
-
-  if (debouncing) {
-    await continueAsNew(kind, uploadRecordId, s3UploadKey);
-  }
+  do {
+    receivedUpdate = false;
+    await indexDocumentActivity(kind, uploadRecordId, s3UploadKey);
+  } while (receivedUpdate);
 }
