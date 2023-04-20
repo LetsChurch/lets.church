@@ -70,10 +70,23 @@ export function msearchUploads(
       from,
       size,
       query: {
-        multi_match: {
-          query,
-          type: 'bool_prefix',
-          fields: ['title^3', 'title._2gram', 'title._3gram', 'description'],
+        bool: {
+          should: [],
+          must: [
+            { term: { visibility: 'PUBLIC' } },
+            {
+              multi_match: {
+                query,
+                type: 'bool_prefix',
+                fields: [
+                  'title^3',
+                  'title._2gram',
+                  'title._3gram',
+                  'description',
+                ],
+              },
+            },
+          ],
         },
       },
       ...makePostFilterSpread({ channels, publishedAt }),
@@ -121,54 +134,62 @@ export function msearchTranscripts(
       size,
       _source: false,
       query: {
-        nested: {
-          path: 'segments',
-          query: {
-            bool: {
-              // If there are multiple words, require at least two matches
-              minimum_should_match: words.length > 1 ? 2 : 1,
-              should: [
-                // Match any words
-                {
-                  match: {
-                    'segments.text': {
-                      query: query.trim(),
-                      fuzziness: 'AUTO',
-                      // Basic match
-                      boost: 1,
+        bool: {
+          should: [],
+          must: [
+            { term: { visibility: 'PUBLIC' } },
+            {
+              nested: {
+                path: 'segments',
+                query: {
+                  bool: {
+                    // If there are multiple words, require at least two matches
+                    minimum_should_match: words.length > 1 ? 2 : 1,
+                    should: [
+                      // Match any words
+                      {
+                        match: {
+                          'segments.text': {
+                            query: query.trim(),
+                            fuzziness: 'AUTO',
+                            // Basic match
+                            boost: 1,
+                          },
+                        },
+                      },
+                      // Match adjacent pairs of words within a certain proximity
+                      ...(words.length > 1
+                        ? adjacentPairs(words as [string, ...string[]]).map(
+                            (pair) => ({
+                              match_phrase: {
+                                'segments.text': {
+                                  query: pair.join(' '),
+                                  slop: 2,
+                                  // Adjacent pair match, double score
+                                  boost: 2,
+                                },
+                              },
+                            }),
+                          )
+                        : []),
+                    ],
+                  },
+                },
+                inner_hits: {
+                  _source: true,
+                  size: 10,
+                  highlight: {
+                    pre_tags: ['<mark>'],
+                    post_tags: ['</mark>'],
+                    encoder: 'html',
+                    fields: {
+                      'segments.text': {},
                     },
                   },
                 },
-                // Match adjacent pairs of words within a certain proximity
-                ...(words.length > 1
-                  ? adjacentPairs(words as [string, ...string[]]).map(
-                      (pair) => ({
-                        match_phrase: {
-                          'segments.text': {
-                            query: pair.join(' '),
-                            slop: 2,
-                            // Adjacent pair match, double score
-                            boost: 2,
-                          },
-                        },
-                      }),
-                    )
-                  : []),
-              ],
-            },
-          },
-          inner_hits: {
-            _source: true,
-            size: 10,
-            highlight: {
-              pre_tags: ['<mark>'],
-              post_tags: ['</mark>'],
-              encoder: 'html',
-              fields: {
-                'segments.text': {},
               },
             },
-          },
+          ],
         },
       },
       ...makePostFilterSpread({ channels, publishedAt }),

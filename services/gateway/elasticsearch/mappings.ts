@@ -50,6 +50,9 @@ const targetMappings: Record<
       publishedAt: {
         type: 'date',
       },
+      visibility: {
+        type: 'keyword',
+      },
     },
   },
   lc_transcripts: {
@@ -59,6 +62,9 @@ const targetMappings: Record<
       },
       publishedAt: {
         type: 'date',
+      },
+      visibility: {
+        type: 'keyword',
       },
       segments: {
         type: 'nested',

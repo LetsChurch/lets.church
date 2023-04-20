@@ -25,6 +25,18 @@ export async function indexDocumentWorkflow(
 
   do {
     receivedUpdate = false;
-    await indexDocumentActivity(kind, uploadRecordId, s3UploadKey);
+    await Promise.all([
+      indexDocumentActivity(kind, uploadRecordId, s3UploadKey),
+      // If this is an upload make sure we additionally index any changes to the transcript
+      ...(kind === 'upload'
+        ? [
+            indexDocumentActivity(
+              'transcript',
+              uploadRecordId,
+              `${uploadRecordId}/transcript.vtt`,
+            ),
+          ]
+        : []),
+    ]);
   } while (receivedUpdate);
 }
