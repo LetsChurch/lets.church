@@ -96,7 +96,7 @@ function getSections(
   return [
     {
       title: 'Metadata',
-      help: 'asdf',
+      /* help: 'asdf', */
       fields: [
         {
           label: 'Channel',
@@ -151,7 +151,7 @@ function getSections(
     },
     {
       title: 'Upload',
-      help: 'asdf',
+      /* help: 'asdf', */
       fields: [
         {
           label: 'Media',
@@ -176,7 +176,7 @@ function getSections(
     },
     {
       title: 'Settings',
-      help: 'asdf',
+      /* help: 'asdf', */
       fields: [
         {
           type: 'radio',
