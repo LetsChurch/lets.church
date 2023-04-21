@@ -43,7 +43,9 @@ export default function LoginRoute() {
     const session = await storage.getSession();
     session.set('jwt', data.login);
 
-    return redirect(to, {
+    const redirectTo = to.startsWith('/auth') ? '/' : to;
+
+    return redirect(redirectTo, {
       headers: { 'Set-Cookie': await storage.commitSession(session) },
     });
   });
