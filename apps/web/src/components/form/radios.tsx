@@ -8,6 +8,7 @@ export type Props = {
   options: Array<{ label: string; help?: string; value: string }>;
   value?: Optional<string>;
   disabled?: Optional<boolean>;
+  onClick?: () => void;
 };
 
 export default function Radios(props: Props) {
@@ -16,7 +17,7 @@ export default function Radios(props: Props) {
       <legend class="contents text-base font-medium text-gray-900">
         {props.label}
       </legend>
-      <div class="mt-4 space-y-4">
+      <div class="mt-4 space-y-4" onClick={() => props.onClick?.()}>
         <For each={props.options}>
           {(op) => (
             <div class={`flex ${op.help ? 'items-start' : 'items-center'}`}>

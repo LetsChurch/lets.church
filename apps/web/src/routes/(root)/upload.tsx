@@ -7,7 +7,6 @@ import {
   Show,
   Switch,
 } from 'solid-js';
-import { debounce } from '@solid-primitives/scheduled';
 import { json, RouteDataArgs, useRouteData } from 'solid-start';
 import * as Z from 'zod';
 import server$, {
@@ -404,10 +403,6 @@ export default function UploadRoute() {
     setUploadRecordId(data.upsertUploadRecord.id);
   }
 
-  const onInput = debounce(() => {
-    submitUpsert();
-  }, 200);
-
   function onDropFile(
     file: File,
     mime: string,
@@ -479,7 +474,7 @@ export default function UploadRoute() {
   });
 
   return (
-    <upsert.Form onInput={onInput} ref={(f) => void (form = f)}>
+    <upsert.Form ref={(f) => void (form = f)}>
       <Show when={resolvedId()} keyed>
         {(value) => <input type="hidden" name="uploadRecordId" value={value} />}
       </Show>
@@ -518,6 +513,7 @@ export default function UploadRoute() {
                             type={field.type}
                             disabled={field.disabled ?? false}
                             class="mt-1"
+                            onBlur={submitUpsert}
                           />
                         }
                       >
@@ -539,6 +535,7 @@ export default function UploadRoute() {
                               rows={textAreaField.rows ?? ''}
                               disabled={field.disabled ?? false}
                               class="mt-1"
+                              onBlur={submitUpsert}
                             />
                           )}
                         </Match>
@@ -551,6 +548,7 @@ export default function UploadRoute() {
                               value={selectField.defaultValue ?? ''}
                               disabled={field.disabled ?? false}
                               class="mt-1"
+                              onBlur={submitUpsert}
                             />
                           )}
                         </Match>
@@ -563,6 +561,7 @@ export default function UploadRoute() {
                               options={radioField.options}
                               value={radioField.defaultValue}
                               disabled={field.disabled ?? false}
+                              onClick={submitUpsert}
                             />
                           )}
                         </Match>
