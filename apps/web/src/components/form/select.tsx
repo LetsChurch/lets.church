@@ -1,4 +1,4 @@
-import { For, mergeProps, splitProps, type JSX } from 'solid-js';
+import { For, mergeProps, splitProps, untrack, type JSX } from 'solid-js';
 
 export type Props = Omit<JSX.IntrinsicElements['select'], 'value'> & {
   options: Array<{ label: string; value: string; disabled?: boolean }>;
@@ -7,7 +7,11 @@ export type Props = Omit<JSX.IntrinsicElements['select'], 'value'> & {
 
 export default function Select(incomingProps: Props) {
   const props = mergeProps({ value: '' }, incomingProps);
-  const [localProps, restProps] = splitProps(props, ['options', 'class']);
+  const [localProps, restProps] = splitProps(props, [
+    'options',
+    'value',
+    'class',
+  ]);
 
   return (
     <select
@@ -18,7 +22,11 @@ export default function Select(incomingProps: Props) {
     >
       <For each={localProps.options}>
         {(op) => (
-          <option value={op.value} disabled={op.disabled ?? false}>
+          <option
+            value={op.value}
+            selected={untrack(() => props.value === op.value)}
+            disabled={op.disabled ?? false}
+          >
             {op.label}
           </option>
         )}
