@@ -22,14 +22,20 @@ RUN npm run prisma:generate
 CMD npm run start:server
 
 FROM base as background-worker
+COPY --from=videah/oxipng:7.0.0 /usr/local/bin/oxipng /usr/local/bin/oxipng
 RUN npm run prisma:generate
 CMD npm run start:background-worker
 
-FROM base as process-upload-worker
+FROM base as transcode-worker
 RUN apt install -y imagemagick jpegoptim
 COPY --from=mwader/static-ffmpeg:5.1.2 /ffmpeg /ffprobe /usr/bin/
-COPY --from=videah/oxipng:7.0.0 /usr/local/bin/oxipng /usr/local/bin/oxipng
+RUN npm run prisma:generate
+CMD npm run start:transcode-worker
+
+FROM base as transcribe-worker
+RUN apt install -y imagemagick jpegoptim
+COPY --from=mwader/static-ffmpeg:5.1.2 /ffmpeg /ffprobe /usr/bin/
 COPY --from=build-whisper /home/build/whisper.cpp/main /usr/bin/whisper
 COPY --from=build-whisper /home/build/whisper.cpp/models/ggml-base.bin /opt/whisper/ggml-base.bin
 RUN npm run prisma:generate
-CMD npm run start:process-upload-worker
+CMD npm run start:transcribe-worker

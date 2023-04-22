@@ -3,13 +3,15 @@ import {
   proxyActivities,
   setHandler,
 } from '@temporalio/workflow';
-import type * as activities from '../../activities/background';
-import type { DocumentKind } from '../../activities/background/index-document';
+import type * as activities from '../activities/background';
+import type { DocumentKind } from '../activities/background/index-document';
+import { BACKGROUND_QUEUE } from '../queues';
 
 const { indexDocument: indexDocumentActivity } = proxyActivities<
   typeof activities
 >({
   startToCloseTimeout: '1 minute',
+  taskQueue: BACKGROUND_QUEUE,
 });
 
 export const indexDocumentSignal = defineSignal('indexDocument');

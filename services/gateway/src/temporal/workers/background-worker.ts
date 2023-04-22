@@ -1,17 +1,16 @@
-import { URL } from 'node:url';
 import path from 'node:path';
 import { NativeConnection, Worker } from '@temporalio/worker';
 import envariant from '@knpwrs/envariant';
-import * as activities from './activities/background';
-import { BACKGROUND_QUEUE } from './queues';
-import { waitOnTemporal } from '.';
+import * as activities from '../activities/background';
+import { BACKGROUND_QUEUE } from '../queues';
+import { waitOnTemporal } from '..';
 
 const TEMPORAL_ADDRESS = envariant('TEMPORAL_ADDRESS');
 
 await waitOnTemporal();
 
 const workflowsPath = new URL(
-  `./workflows/background/index${path.extname(import.meta.url)}`,
+  `../workflows/index${path.extname(import.meta.url)}`,
   import.meta.url,
 ).pathname;
 

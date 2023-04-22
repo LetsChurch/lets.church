@@ -20,4 +20,15 @@ A GraphQL gateway service.
 - Workers run workflows and activities. In development, Temporal uses Webpack
   to bundle workflow code for running inside V8 isolates.
 
+## Let's Church Temporal Specifics
+
+- There are three worker processes: background, transcode, and transcribe.
+- `background` handles all workflows as well as light weight activities
+- `transcode` handles all activities related to transcoding media
+- `transcribe` handles all activities related to transcribing media
+
+Splitting transcoding and transcribing activities across multiple workers makes it easy to scale those functions
+independently from each other. It also ensures that lighter background activities won't be blocked waiting for larger
+activities to finish.
+
 [Temporal]: https://temporal.io "Less plumbing, more coding"

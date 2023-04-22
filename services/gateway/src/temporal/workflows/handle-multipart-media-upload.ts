@@ -5,15 +5,17 @@ import {
   setHandler,
   executeChild,
 } from '@temporalio/workflow';
-import type { UploadPostProcessValue } from '../../../schema/types/mutation';
-import type * as activities from '../../activities/background';
-import { PROCESS_UPLOAD_QUEUE } from '../../queues';
-import { processUpload as processUploadWorkflow } from '../process-upload';
+import type { UploadPostProcessValue } from '../../schema/types/mutation';
+import type * as activities from '../activities/background';
+import { BACKGROUND_QUEUE } from '../queues';
+import { processImageWorkflow } from './process-image';
+import { processMediaWorkflow } from './process-media';
 
 const { abortMultipartUpload, completeMultipartUpload, finalizeUploadRecord } =
   proxyActivities<typeof activities>({
-    startToCloseTimeout: '60 minutes',
+    startToCloseTimeout: '1 minute',
     heartbeatTimeout: '1 minute',
+    taskQueue: BACKGROUND_QUEUE,
   });
 
 export const uploadDoneSignal =
@@ -42,14 +44,26 @@ export async function handleMultipartMediaUploadWorkflow(
     }
 
     await completeMultipartUpload(bucket, s3UploadId, s3UploadKey, eTags);
-    await executeChild(processUploadWorkflow, {
-      args: [uploadRecordId, s3UploadKey, postProcess],
-      workflowId: `processUpload:${s3UploadKey}`,
-      taskQueue: PROCESS_UPLOAD_QUEUE,
-      retry: {
-        maximumAttempts: 8,
-      },
-    });
+
+    if (postProcess === 'media') {
+      await executeChild(processMediaWorkflow, {
+        args: [uploadRecordId, s3UploadKey],
+        workflowId: `processMedia:${s3UploadKey}`,
+        taskQueue: BACKGROUND_QUEUE,
+        retry: {
+          maximumAttempts: 8,
+        },
+      });
+    } else {
+      await executeChild(processImageWorkflow, {
+        args: [uploadRecordId, s3UploadKey, postProcess],
+        workflowId: `processImage:${s3UploadKey}`,
+        taskQueue: BACKGROUND_QUEUE,
+        retry: {
+          maximumAttempts: 8,
+        },
+      });
+    }
   } else {
     await abortMultipartUpload(bucket, s3UploadId, s3UploadKey);
   }

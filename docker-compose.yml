@@ -6,7 +6,8 @@ volumes:
   es-data:
   gateway-node-modules:
   pg-data:
-  process-upload-worker-node-modules:
+  transcode-worker-node-modules:
+  transcribe-worker-node-modules:
   web-node-modules:
 
 x-s3-env: &s3-env
@@ -63,21 +64,6 @@ services:
     depends_on:
       - temporal
   
-  process-upload-worker:
-    build:
-      context: ./services/gateway
-      target: process-upload-worker
-    command: npm run dev:process-upload-worker
-    environment:
-      DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
-      TEMPORAL_ADDRESS: temporal:7233
-      TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
-      MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 2
-      <<: *s3-env
-    volumes:
-      - ./services/gateway:/home/node/app
-      - process-upload-worker-node-modules:/home/node/app/node_modules
-
   background-worker:
     build:
       context: ./services/gateway
@@ -94,6 +80,34 @@ services:
     volumes:
       - ./services/gateway:/home/node/app
       - background-worker-node-modules:/home/node/app/node_modules
+
+  transcode-worker:
+    build:
+      context: ./services/gateway
+      target: transcode-worker
+    command: npm run dev:transcode-worker
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
+      MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 1
+      <<: *s3-env
+    volumes:
+      - ./services/gateway:/home/node/app
+      - transcode-worker-node-modules:/home/node/app/node_modules
+
+  transcribe-worker:
+    build:
+      context: ./services/gateway
+      target: transcribe-worker
+    command: npm run dev:transcribe-worker
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
+      MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 1
+      <<: *s3-env
+    volumes:
+      - ./services/gateway:/home/node/app
+      - transcribe-worker-node-modules:/home/node/app/node_modules
 
   #
   # Vendor Services

@@ -14,7 +14,7 @@ import {
   uploadDoneSignal,
   updateUploadRecordWorkflow,
   updateUploadRecordSignal,
-} from './workflows/background';
+} from './workflows';
 import { BACKGROUND_QUEUE } from './queues';
 import type { DocumentKind } from './activities/background/index-document';
 
