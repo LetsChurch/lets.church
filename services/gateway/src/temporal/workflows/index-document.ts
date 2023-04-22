@@ -29,16 +29,17 @@ export async function indexDocumentWorkflow(
     receivedUpdate = false;
     await Promise.all([
       indexDocumentActivity(kind, uploadRecordId, s3UploadKey),
+      // TODO: nothing actually changes transcripts yet
       // If this is an upload make sure we additionally index any changes to the transcript
-      ...(kind === 'upload'
-        ? [
-            indexDocumentActivity(
-              'transcript',
-              uploadRecordId,
-              `${uploadRecordId}/transcript.vtt`,
-            ),
-          ]
-        : []),
+      /* ...(kind === 'upload' */
+      /*   ? [ */
+      /*       indexDocumentActivity( */
+      /*         'transcript', */
+      /*         uploadRecordId, */
+      /*         `${uploadRecordId}/transcript.vtt`, */
+      /*       ), */
+      /*     ] */
+      /*   : []), */
     ]);
   } while (receivedUpdate);
 }
