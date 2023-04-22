@@ -121,15 +121,25 @@ build-background-worker:
     - docker push registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA}
     - docker push registry.gitlab.com/letschurch/lets.church/background-worker:latest
 
-build-process-upload-worker:
+build-transcode-worker:
   <<: *build-common
   needs:
     - build-base
   script:
     - cd services/gateway
-    - docker build --target process-upload-worker -t registry.gitlab.com/letschurch/lets.church/process-upload-worker:${CI_COMMIT_SHORT_SHA} -t registry.gitlab.com/letschurch/lets.church/process-upload-worker:latest --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/process-upload-worker:latest .
-    - docker push registry.gitlab.com/letschurch/lets.church/process-upload-worker:${CI_COMMIT_SHORT_SHA}
-    - docker push registry.gitlab.com/letschurch/lets.church/process-upload-worker:latest
+    - docker build --target transcode-worker -t registry.gitlab.com/letschurch/lets.church/transcode-worker:${CI_COMMIT_SHORT_SHA} -t registry.gitlab.com/letschurch/lets.church/transcode-worker:latest --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/transcode-worker:latest .
+    - docker push registry.gitlab.com/letschurch/lets.church/transcode-worker:${CI_COMMIT_SHORT_SHA}
+    - docker push registry.gitlab.com/letschurch/lets.church/transcode-worker:latest
+
+build-transcribe-worker:
+  <<: *build-common
+  needs:
+    - build-base
+  script:
+    - cd services/gateway
+    - docker build --target transcribe-worker -t registry.gitlab.com/letschurch/lets.church/transcribe-worker:${CI_COMMIT_SHORT_SHA} -t registry.gitlab.com/letschurch/lets.church/transcribe-worker:latest --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/transcribe-worker:latest .
+    - docker push registry.gitlab.com/letschurch/lets.church/transcribe-worker:${CI_COMMIT_SHORT_SHA}
+    - docker push registry.gitlab.com/letschurch/lets.church/transcribe-worker:latest
 
 build-web:
   <<: *build-common
