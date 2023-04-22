@@ -24,7 +24,7 @@ export default function Select(incomingProps: Props) {
         {(op) => (
           <option
             value={op.value}
-            selected={untrack(() => props.value === op.value)}
+            selected={untrack(() => props.value === op.value && !op.disabled)}
             disabled={op.disabled ?? false}
           >
             {op.label}
