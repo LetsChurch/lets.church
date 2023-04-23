@@ -40,6 +40,7 @@ export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
                 after: $after
                 last: $last
                 before: $before
+                includeUnlisted: true
               ) {
                 totalCount
                 pageInfo {

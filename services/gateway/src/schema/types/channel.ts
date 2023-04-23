@@ -90,8 +90,17 @@ const Channel = builder.prismaObject('Channel', {
           type: orderEnum,
           defaultValue: 'desc',
         }),
+        includeUnlisted: t.arg({ type: 'Boolean', defaultValue: false }),
       },
-      query: ({ order }) => ({
+      authScopes: ({ id }, { includeUnlisted }, context, info) => {
+        if (includeUnlisted) {
+          channelAdminAuthScope({ id }, context, info);
+        }
+
+        return true;
+      },
+      query: ({ order, includeUnlisted }) => ({
+        where: includeUnlisted ? {} : { visibility: 'PUBLIC' },
         orderBy: [{ createdAt: order ?? 'desc' }, { id: 'asc' }],
       }),
     }),
