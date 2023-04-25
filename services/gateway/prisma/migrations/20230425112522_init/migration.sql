@@ -235,28 +235,28 @@ CREATE INDEX "upload_user_comment_rating_upload_id_rating_idx" ON "upload_user_c
 CREATE INDEX "upload_user_comment_rating_app_user_id_rating_idx" ON "upload_user_comment_rating"("app_user_id", "rating");
 
 -- AddForeignKey
-ALTER TABLE "app_user_email" ADD CONSTRAINT "app_user_email_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "app_user_email" ADD CONSTRAINT "app_user_email_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "app_session" ADD CONSTRAINT "app_session_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "app_session" ADD CONSTRAINT "app_session_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "channel_subscription" ADD CONSTRAINT "channel_subscription_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "channel_subscription" ADD CONSTRAINT "channel_subscription_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "channel_subscription" ADD CONSTRAINT "channel_subscription_channel_id_fkey" FOREIGN KEY ("channel_id") REFERENCES "channel"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "channel_subscription" ADD CONSTRAINT "channel_subscription_channel_id_fkey" FOREIGN KEY ("channel_id") REFERENCES "channel"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "organization_membership" ADD CONSTRAINT "organization_membership_channel_id_fkey" FOREIGN KEY ("channel_id") REFERENCES "organization"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "organization_membership" ADD CONSTRAINT "organization_membership_channel_id_fkey" FOREIGN KEY ("channel_id") REFERENCES "organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "organization_membership" ADD CONSTRAINT "organization_membership_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "organization_membership" ADD CONSTRAINT "organization_membership_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "organization_channel_association" ADD CONSTRAINT "organization_channel_association_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organization"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "organization_channel_association" ADD CONSTRAINT "organization_channel_association_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "organization_channel_association" ADD CONSTRAINT "organization_channel_association_channel_id_fkey" FOREIGN KEY ("channel_id") REFERENCES "channel"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "organization_channel_association" ADD CONSTRAINT "organization_channel_association_channel_id_fkey" FOREIGN KEY ("channel_id") REFERENCES "channel"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "channel_membership" ADD CONSTRAINT "channel_membership_channel_id_fkey" FOREIGN KEY ("channel_id") REFERENCES "channel"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -274,22 +274,22 @@ ALTER TABLE "upload_record" ADD CONSTRAINT "upload_record_channel_id_fkey" FOREI
 ALTER TABLE "upload_record" ADD CONSTRAINT "upload_record_upload_finalized_by_id_fkey" FOREIGN KEY ("upload_finalized_by_id") REFERENCES "app_user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "upload_user_rating" ADD CONSTRAINT "upload_user_rating_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "upload_user_rating" ADD CONSTRAINT "upload_user_rating_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "upload_user_rating" ADD CONSTRAINT "upload_user_rating_upload_id_fkey" FOREIGN KEY ("upload_id") REFERENCES "upload_record"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "upload_user_rating" ADD CONSTRAINT "upload_user_rating_upload_id_fkey" FOREIGN KEY ("upload_id") REFERENCES "upload_record"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "upload_user_comment" ADD CONSTRAINT "upload_user_comment_author_id_fkey" FOREIGN KEY ("author_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "upload_user_comment" ADD CONSTRAINT "upload_user_comment_author_id_fkey" FOREIGN KEY ("author_id") REFERENCES "app_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "upload_user_comment" ADD CONSTRAINT "upload_user_comment_upload_id_fkey" FOREIGN KEY ("upload_id") REFERENCES "upload_record"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "upload_user_comment" ADD CONSTRAINT "upload_user_comment_upload_id_fkey" FOREIGN KEY ("upload_id") REFERENCES "upload_record"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "upload_user_comment" ADD CONSTRAINT "upload_user_comment_replying_to_id_fkey" FOREIGN KEY ("replying_to_id") REFERENCES "upload_user_comment"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "upload_user_comment_rating" ADD CONSTRAINT "upload_user_comment_rating_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "upload_user_comment_rating" ADD CONSTRAINT "upload_user_comment_rating_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "upload_user_comment_rating" ADD CONSTRAINT "upload_user_comment_rating_upload_id_fkey" FOREIGN KEY ("upload_id") REFERENCES "upload_user_comment"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "upload_user_comment_rating" ADD CONSTRAINT "upload_user_comment_rating_upload_id_fkey" FOREIGN KEY ("upload_id") REFERENCES "upload_user_comment"("id") ON DELETE CASCADE ON UPDATE CASCADE;

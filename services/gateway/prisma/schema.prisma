@@ -47,7 +47,7 @@ model AppUser {
 
 model AppUserEmail {
   id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  appUser    AppUser   @relation(fields: [appUserId], references: [id])
+  appUser    AppUser   @relation(fields: [appUserId], references: [id], onDelete: Cascade)
   appUserId  String    @map("app_user_id") @db.Uuid
   email      String    @unique @db.Citext
   key        String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -59,7 +59,7 @@ model AppUserEmail {
 model AppSession {
   id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   appUserId String    @map("app_user_id") @db.Uuid
-  appUser   AppUser   @relation(fields: [appUserId], references: [id])
+  appUser   AppUser   @relation(fields: [appUserId], references: [id], onDelete: Cascade)
   expiresAt DateTime  @default(dbgenerated("(now() + '14 days'::interval)")) @map("expires_at")
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
@@ -69,9 +69,9 @@ model AppSession {
 }
 
 model ChannelSubscription {
-  appUser   AppUser @relation(fields: [appUserId], references: [id])
+  appUser   AppUser @relation(fields: [appUserId], references: [id], onDelete: Cascade)
   appUserId String  @map("app_user_id") @db.Uuid
-  channel   Channel @relation(fields: [channelId], references: [id])
+  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
   channelId String  @map("channel_id") @db.Uuid
 
   @@id([appUserId, channelId])
@@ -92,9 +92,9 @@ model Organization {
 }
 
 model OrganizationMembership {
-  organization   Organization @relation(fields: [organizationId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId String       @map("channel_id") @db.Uuid
-  appUser        AppUser      @relation(fields: [appUserId], references: [id])
+  appUser        AppUser      @relation(fields: [appUserId], references: [id], onDelete: Cascade)
   appUserId      String       @map("app_user_id") @db.Uuid
   isAdmin        Boolean      @default(false) @map("is_admin")
   canEdit        Boolean      @default(false) @map("can_edit")
@@ -106,9 +106,9 @@ model OrganizationMembership {
 }
 
 model OrganizationChannelAssociation {
-  organization   Organization @relation(fields: [organizationId], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId String       @map("organization_id") @db.Uuid
-  channel        Channel      @relation(fields: [channelId], references: [id])
+  channel        Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
   channelId      String       @map("channel_id") @db.Uuid
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
@@ -176,6 +176,7 @@ enum UploadVariant {
   AUDIO
 }
 
+// TODO: How should we handle cascading deletes?
 model UploadRecord {
   id                     String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title                  String?
@@ -219,12 +220,12 @@ enum Rating {
 }
 
 model UploadUserRating {
-  appUser        AppUser      @relation(fields: [appUserId], references: [id])
+  appUser        AppUser      @relation(fields: [appUserId], references: [id], onDelete: Cascade)
   appUserId      String       @map("app_user_id") @db.Uuid
   uploadRecordId String       @map("upload_id") @db.Uuid
   rating         Rating
   createdAt      DateTime     @default(now()) @map("created_at")
-  uploadRecord   UploadRecord @relation(fields: [uploadRecordId], references: [id])
+  uploadRecord   UploadRecord @relation(fields: [uploadRecordId], references: [id], onDelete: Cascade)
 
   @@id([appUserId, uploadRecordId])
   @@index([uploadRecordId, rating])
@@ -236,9 +237,9 @@ model UploadUserComment {
   id             String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   createdAt      DateTime                  @default(now()) @map("created_at")
   updatedAt      DateTime                  @updatedAt @map("updated_at")
-  author         AppUser                   @relation(fields: [authorId], references: [id])
+  author         AppUser                   @relation(fields: [authorId], references: [id], onDelete: Cascade)
   authorId       String                    @map("author_id") @db.Uuid
-  upload         UploadRecord              @relation(fields: [uploadRecordId], references: [id])
+  upload         UploadRecord              @relation(fields: [uploadRecordId], references: [id], onDelete: Cascade)
   uploadRecordId String                    @map("upload_id") @db.Uuid
   replies        UploadUserComment[]       @relation("ThreadComments")
   replyingTo     UploadUserComment?        @relation("ThreadComments", fields: [replyingToId], references: [id])
@@ -255,10 +256,10 @@ model UploadUserComment {
 }
 
 model UploadUserCommentRating {
-  appUser             AppUser           @relation(fields: [appUserId], references: [id])
+  appUser             AppUser           @relation(fields: [appUserId], references: [id], onDelete: Cascade)
   appUserId           String            @map("app_user_id") @db.Uuid
   uploadUserCommentId String            @map("upload_id") @db.Uuid
-  uploadUserComment   UploadUserComment @relation(fields: [uploadUserCommentId], references: [id])
+  uploadUserComment   UploadUserComment @relation(fields: [uploadUserCommentId], references: [id], onDelete: Cascade)
   rating              Rating
   createdAt           DateTime          @default(now()) @map("created_at")
 
