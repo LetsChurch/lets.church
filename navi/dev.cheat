@@ -22,3 +22,7 @@ open http://localhost:$HOST_TEMPORAL_UI_PORT
 
 # Open Mailhog Web UI
 open http://localhost:$HOST_MAILHOG_WEB_PORT
+
+# Run Prisma Studio
+DATABASE_URL=$HOST_DATABASE_URL  npm --prefix $(git rev-parse --show-toplevel)/services/gateway run prisma:studio
+

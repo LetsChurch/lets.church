@@ -49,9 +49,6 @@ gateway-db-reset:
 gateway-prisma-generate:
   docker-compose exec gateway npm run prisma:migrate:dev
 
-gateway-prisma-studio:
-  cd services/gateway; DATABASE_URL=$HOST_DATABASE_URL npm run prisma:studio
-
 gateway-es-push-mappings:
   docker-compose exec gateway npm run es:push-mappings
 
