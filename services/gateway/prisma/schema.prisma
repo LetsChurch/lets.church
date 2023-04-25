@@ -46,11 +46,12 @@ model AppUser {
 }
 
 model AppUserEmail {
-  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  appUser   AppUser @relation(fields: [appUserId], references: [id])
-  appUserId String  @map("app_user_id") @db.Uuid
-  email     String  @unique @db.Citext
-  verified  Boolean @default(false)
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  appUser    AppUser   @relation(fields: [appUserId], references: [id])
+  appUserId  String    @map("app_user_id") @db.Uuid
+  email      String    @unique @db.Citext
+  key        String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  verifiedAt DateTime?
 
   @@map("app_user_email")
 }

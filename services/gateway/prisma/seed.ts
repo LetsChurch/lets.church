@@ -20,7 +20,7 @@ const usersData: ReadonlyArray<
     password,
     role: 'ADMIN',
     emails: {
-      create: { email: 'admin@lets.church', verified: true },
+      create: { email: 'admin@lets.church', verifiedAt: new Date() },
     },
   },
   {
@@ -28,7 +28,7 @@ const usersData: ReadonlyArray<
     fullName: 'User One',
     password,
     emails: {
-      create: { email: 'user1@example.org', verified: true },
+      create: { email: 'user1@example.org', verifiedAt: new Date() },
     },
   },
   {
@@ -36,7 +36,7 @@ const usersData: ReadonlyArray<
     fullName: 'User Two',
     password,
     emails: {
-      create: { email: 'user2@example.org', verified: true },
+      create: { email: 'user2@example.org', verifiedAt: new Date() },
     },
   },
   {
@@ -44,7 +44,7 @@ const usersData: ReadonlyArray<
     fullName: 'User Three',
     password,
     emails: {
-      create: { email: 'user3@example.org', verified: true },
+      create: { email: 'user3@example.org', verifiedAt: new Date() },
     },
   },
   {
@@ -52,7 +52,7 @@ const usersData: ReadonlyArray<
     fullName: 'User Four',
     password,
     emails: {
-      create: { email: 'user4@example.org', verified: true },
+      create: { email: 'user4@example.org', verifiedAt: new Date() },
     },
   },
   {
@@ -60,7 +60,7 @@ const usersData: ReadonlyArray<
     fullName: 'User Five',
     password,
     emails: {
-      create: { email: 'user5@example.org', verified: true },
+      create: { email: 'user5@example.org', verifiedAt: new Date() },
     },
   },
 ] as const;

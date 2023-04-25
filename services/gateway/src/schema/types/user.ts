@@ -7,6 +7,8 @@ import argon2 from 'argon2';
 import invariant from 'tiny-invariant';
 import * as z from 'zod';
 import { ZodError, ZodIssueCode } from 'zod';
+import short from 'short-uuid';
+import envariant from '@knpwrs/envariant';
 import builder from '../builder';
 import type { Context } from '../../util/context';
 import zxcvbn from '../../util/zxcvbn';
@@ -14,6 +16,10 @@ import { sendEmail } from '../../temporal';
 import { createSessionJwt } from '../../util/jwt';
 import prisma from '../../util/prisma';
 import { getPublicMediaUrl } from '../../util/url';
+
+const WEB_URL = envariant('WEB_URL');
+
+const uuidTranslator = short();
 
 async function privateAuthScopes(
   appUser: Pick<PrismaAppUser, 'id'>,
@@ -39,7 +45,12 @@ builder.prismaObject('AppUserEmail', {
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
     email: t.exposeString('email'),
-    verified: t.exposeBoolean('verified'),
+    verifiedAt: t.field({
+      type: 'DateTime',
+      select: { verifiedAt: true },
+      nullable: true,
+      resolve: ({ verifiedAt }) => verifiedAt?.toISOString(),
+    }),
   }),
 });
 
@@ -268,15 +279,51 @@ builder.mutationFields((t) => ({
         },
       });
 
+      const { id: emailId, key: emailKey } =
+        await prisma.appUserEmail.findUniqueOrThrow({
+          select: { id: true, key: true },
+          where: { email },
+        });
+
+      const verifyUrl = `${WEB_URL}/auth/verify?${new URLSearchParams({
+        userId: uuidTranslator.fromUUID(user.id),
+        emailId: uuidTranslator.fromUUID(emailId),
+        emailKey: uuidTranslator.fromUUID(emailKey),
+      })}`;
+
       await sendEmail(`signup:${email}`, {
         from: 'noreply@lets.church',
         to: email,
-        subject: `Welcome to Let's Church! Please confirm your email.`,
-        text: `Welcome, ${username}!`,
-        html: `Welcome, <b>${username}</b>!`,
+        subject: `Welcome to Let's Church! Please verify your email.`,
+        text: `Welcome, ${username}! Please visit the following link to verify your email: ${verifyUrl}`,
+        html: `Welcome to Let's Church, <b>${username}</b>! Please click <a href="${verifyUrl}">here</a> to verify your email.`,
       });
 
       return user;
+    },
+  }),
+  verifyEmail: t.boolean({
+    args: {
+      userId: t.arg({ type: 'ShortUuid', required: true }),
+      emailId: t.arg({ type: 'ShortUuid', required: true }),
+      emailKey: t.arg({ type: 'ShortUuid', required: true }),
+    },
+    authScopes: (_root, { userId }, context) => {
+      return privateAuthScopes({ id: userId }, null, context);
+    },
+    resolve: async (_root, { userId, emailId, emailKey }) => {
+      const res = await prisma.appUserEmail.updateMany({
+        data: {
+          verifiedAt: new Date(),
+        },
+        where: {
+          id: emailId,
+          appUserId: userId,
+          key: emailKey,
+        },
+      });
+
+      return res.count > 0;
     },
   }),
   updateUser: t.prismaField({

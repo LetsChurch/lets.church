@@ -40,7 +40,8 @@ CREATE TABLE "app_user_email" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "app_user_id" UUID NOT NULL,
     "email" CITEXT NOT NULL,
-    "verified" BOOLEAN NOT NULL DEFAULT false,
+    "key" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "verifiedAt" TIMESTAMP(3),
 
     CONSTRAINT "app_user_email_pkey" PRIMARY KEY ("id")
 );

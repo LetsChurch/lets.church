@@ -86,7 +86,7 @@ export type AppUserEmail = {
   __typename?: 'AppUserEmail';
   email: Scalars['String'];
   id: Scalars['ShortUuid'];
-  verified: Scalars['Boolean'];
+  verifiedAt?: Maybe<Scalars['DateTime']>;
 };
 
 export type AppUserOrganizationMemberhipsConnection = {
@@ -249,6 +249,7 @@ export type Mutation = {
   upsertOrganizationMembership: OrganizationMembership;
   upsertUploadRecord: UploadRecord;
   upsertUploadUserComment: UploadUserComment;
+  verifyEmail: Scalars['Boolean'];
 };
 
 
@@ -363,6 +364,13 @@ export type MutationUpsertUploadUserCommentArgs = {
   replyingTo?: InputMaybe<Scalars['ShortUuid']>;
   text: Scalars['String'];
   uploadRecordId: Scalars['ShortUuid'];
+};
+
+
+export type MutationVerifyEmailArgs = {
+  emailId: Scalars['ShortUuid'];
+  emailKey: Scalars['ShortUuid'];
+  userId: Scalars['ShortUuid'];
 };
 
 export type MutationRegisterResult = DataError | MutationRegisterSuccess | ValidationError;
