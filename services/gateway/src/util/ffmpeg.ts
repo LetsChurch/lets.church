@@ -30,7 +30,7 @@ export function getVariants(
   inputWidth: number,
   inputHeight: number,
 ): Array<UploadVariant> {
-  const res: Array<UploadVariant> = ['AUDIO'];
+  const res: Array<UploadVariant> = [];
 
   if (inputWidth >= 3840 || inputHeight >= 2160) {
     res.push('VIDEO_4K');
@@ -51,6 +51,8 @@ export function getVariants(
   if (inputWidth >= 640 || inputHeight >= 360) {
     res.push('VIDEO_360P');
   }
+
+  res.push('AUDIO');
 
   return res;
 }
@@ -104,6 +106,10 @@ function variantToPlaylistName(variant: UploadVariant) {
   return `${variant}.m3u8`;
 }
 
+function variantToDownloadName(variant: UploadVariant, ext: 'mp4' | 'm4a') {
+  return `${variant}.${ext}`;
+}
+
 export function variantsToMasterVideoPlaylist(variants: Array<UploadVariant>) {
   return [
     '#EXTM3U',
@@ -124,7 +130,7 @@ export function variantsToMasterVideoPlaylist(variants: Array<UploadVariant>) {
 export function ffmpegEncodingOutputArgs(
   variants: Array<UploadVariant>,
 ): Array<string> {
-  return variants.flatMap((v) => {
+  return variants.flatMap((v, i) => {
     const scaleFilter = v !== 'AUDIO' ? videoVariantToFfmpegScaleFilter(v) : [];
     const bvm =
       v !== 'AUDIO'
@@ -136,6 +142,10 @@ export function ffmpegEncodingOutputArgs(
           ]
         : [];
     const playlistName = variantToPlaylistName(v);
+    const downloadName = variantToDownloadName(
+      v,
+      v === 'AUDIO' ? 'm4a' : 'mp4',
+    );
 
     switch (v) {
       case 'VIDEO_4K':
@@ -152,9 +162,25 @@ export function ffmpegEncodingOutputArgs(
           '-hls_segment_filename',
           'VIDEO_4K_%04d.ts',
           playlistName,
+          ...(i === 0
+            ? [
+                // Download
+                ...scaleFilter,
+                ...BASE_AUDIO_ARGS,
+                ...BASE_VIDEO_ARGS,
+                ...BASE_ARGS,
+                ...bvm,
+                '-bufsize',
+                '27300k',
+                '-b:a',
+                '192k',
+                downloadName,
+              ]
+            : []),
         ];
       case 'VIDEO_1080P':
         return [
+          // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
           ...BASE_VIDEO_ARGS,
@@ -167,9 +193,25 @@ export function ffmpegEncodingOutputArgs(
           '-hls_segment_filename',
           'VIDEO_1080P_%04d.ts',
           playlistName,
+          ...(i === 0
+            ? [
+                // Download
+                ...scaleFilter,
+                ...BASE_AUDIO_ARGS,
+                ...BASE_VIDEO_ARGS,
+                ...BASE_ARGS,
+                ...bvm,
+                '-bufsize',
+                '7500k',
+                '-b:a',
+                '192k',
+                downloadName,
+              ]
+            : []),
         ];
       case 'VIDEO_720P':
         return [
+          // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
           ...BASE_VIDEO_ARGS,
@@ -182,9 +224,25 @@ export function ffmpegEncodingOutputArgs(
           '-hls_segment_filename',
           'VIDEO_720P_%04d.ts',
           playlistName,
+          ...(i === 0
+            ? [
+                // Download
+                ...scaleFilter,
+                ...BASE_AUDIO_ARGS,
+                ...BASE_VIDEO_ARGS,
+                ...BASE_ARGS,
+                ...bvm,
+                '-bufsize',
+                '4200k',
+                '-b:a',
+                '128k',
+                downloadName,
+              ]
+            : []),
         ];
       case 'VIDEO_480P':
         return [
+          // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
           ...BASE_VIDEO_ARGS,
@@ -197,9 +255,25 @@ export function ffmpegEncodingOutputArgs(
           '-hls_segment_filename',
           'VIDEO_480P_%04d.ts',
           playlistName,
+          ...(i === 0
+            ? [
+                // Download
+                ...scaleFilter,
+                ...BASE_AUDIO_ARGS,
+                ...BASE_VIDEO_ARGS,
+                ...BASE_ARGS,
+                ...bvm,
+                '-bufsize',
+                '2100k',
+                '-b:a',
+                '128k',
+                downloadName,
+              ]
+            : []),
         ];
       case 'VIDEO_360P':
         return [
+          // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
           ...BASE_VIDEO_ARGS,
@@ -212,6 +286,21 @@ export function ffmpegEncodingOutputArgs(
           '-hls_segment_filename',
           'VIDEO_360P_%04d.ts',
           playlistName,
+          ...(i === 0
+            ? [
+                // Download
+                ...scaleFilter,
+                ...BASE_AUDIO_ARGS,
+                ...BASE_VIDEO_ARGS,
+                ...BASE_ARGS,
+                ...bvm,
+                '-bufsize',
+                '1200k',
+                '-b:a',
+                '96k',
+                downloadName,
+              ]
+            : []),
         ];
       case 'AUDIO':
         return [
@@ -223,6 +312,13 @@ export function ffmpegEncodingOutputArgs(
           '-hls_segment_filename',
           'AUDIO_%04d.ts',
           playlistName,
+          // Download
+          ...BASE_ARGS,
+          ...BASE_AUDIO_ARGS,
+          '-vn',
+          '-b:a',
+          '192k',
+          downloadName,
         ];
       default:
         const c: never = v;

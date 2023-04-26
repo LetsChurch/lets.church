@@ -48,6 +48,9 @@ export default async function transcode(
   try {
     await mkdirp(dir);
     const downloadPath = join(dir, 'download');
+
+    console.log(`Downloading file to ${downloadPath}`);
+
     await streamObjectToFile(
       S3_INGEST_BUCKET,
       s3UploadKey,
@@ -138,6 +141,28 @@ export default async function transcode(
     const encodeProcRes = await encodeProc;
     throttledUpdateUploadRecord.cancel();
     await updateUploadRecord(uploadRecordId, { transcodingProgress: 1 });
+
+    const downloadableFiles = await fastGlob(join(dir, '*.{mp4,m4a}'));
+
+    // Upload downloadable files
+    uploadQueue.addAll(
+      downloadableFiles.map((dl) => async () => {
+        const filename = basename(dl);
+        Context.current().heartbeat(`Uploading downloadable file`);
+        console.log(`Uploading downloadable file: ${filename}`);
+        await retryablePutFile(
+          S3_PUBLIC_BUCKET,
+          `${uploadRecordId}/${filename}`,
+          'application/x-mpegURL',
+          createReadStream(dl),
+          {
+            contentLength: (await stat(dl)).size,
+          },
+        );
+        Context.current().heartbeat(`Uploaded downloadable file: ${filename}`);
+        console.log(`Uploaded downloadable file: ${filename}`);
+      }),
+    );
 
     const playlists = await fastGlob(join(dir, '*.m3u8'));
 
