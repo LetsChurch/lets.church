@@ -1,5 +1,6 @@
-node_modules
 dist
+node_modules
+public/site.webmanifest
 .solid
 package-lock.json
 **/__generated__/**/*
