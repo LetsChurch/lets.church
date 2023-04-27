@@ -22,12 +22,12 @@ RUN npm run prisma:generate
 CMD npm run start:server
 
 FROM base as background-worker
+RUN apt install -y imagemagick jpegoptim
 COPY --from=videah/oxipng:7.0.0 /usr/local/bin/oxipng /usr/local/bin/oxipng
 RUN npm run prisma:generate
 CMD npm run start:background-worker
 
 FROM base as transcode-worker
-RUN apt install -y imagemagick jpegoptim
 COPY --from=mwader/static-ffmpeg:5.1.2 /ffmpeg /ffprobe /usr/bin/
 RUN npm run prisma:generate
 CMD npm run start:transcode-worker
