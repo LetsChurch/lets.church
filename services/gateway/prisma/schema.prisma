@@ -169,11 +169,17 @@ enum UploadVisibility {
 
 enum UploadVariant {
   VIDEO_4K
+  VIDEO_4K_DOWNLOAD
   VIDEO_1080P
+  VIDEO_1080P_DOWNLOAD
   VIDEO_720P
+  VIDEO_720P_DOWNLOAD
   VIDEO_480P
+  VIDEO_480P_DOWNLOAD
   VIDEO_360P
+  VIDEO_360P_DOWNLOAD
   AUDIO
+  AUDIO_DOWNLOAD
 }
 
 // TODO: How should we handle cascading deletes?

@@ -190,7 +190,10 @@ export default async function transcode(
     );
 
     // Upload master playlist if there is more than just audio
-    if (variants.filter((v) => v !== 'AUDIO').length > 0) {
+    if (
+      variants.filter((v) => v !== 'AUDIO' && !v.endsWith('_DOWNLOAD')).length >
+      0
+    ) {
       uploadQueue.add(
         async () => {
           console.log('Uploading master playlist file');
@@ -213,8 +216,8 @@ export default async function transcode(
       );
     } else {
       console.log(
-        `Not creating master playlist given the variants: ${variants.join(
-          ' ',
+        `Not creating master playlist given the variants: ${formatter.format(
+          variants,
         )}`,
       );
     }
