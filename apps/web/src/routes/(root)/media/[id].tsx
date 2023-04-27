@@ -29,6 +29,7 @@ import { useFloating } from 'solid-floating-ui';
 import ThumbUpIcon from '@tabler/icons/thumb-up.svg?component-solid';
 import ThumbDownIcon from '@tabler/icons/thumb-down.svg?component-solid';
 import SubscribeIcon from '@tabler/icons/rss.svg?component-solid';
+import DownloadIcon from '@tabler/icons/cloud-download.svg?component-solid';
 // TODO: use share-2 once on tabler icons v2.5+
 import ShareIcon from '@tabler/icons/share.svg?component-solid';
 import invariant from 'tiny-invariant';
@@ -61,6 +62,7 @@ import { formatDateFull } from '~/util/date';
 import type { Optional } from '~/util';
 import Pagination from '~/components/pagination';
 import { Avatar } from '~/components/avatar';
+import FloatingDownloadMenu from '~/components/floating-download-menu';
 
 const COMMENTS_PAGE_SIZE = 12;
 
@@ -197,6 +199,11 @@ export function routeData({ params, location }: RouteDataArgs) {
               }
               mediaSource
               audioSource
+              downloadUrls {
+                kind
+                label
+                url
+              }
               transcript {
                 start
                 text
@@ -555,11 +562,23 @@ export default function MediaRoute() {
   const [playAt, setPlayAt] = createSignal(startAt ?? 0);
   const [currentTime, setCurrentTime] = createSignal(startAt ?? 0);
 
+  const [downloadFloatOpen, setDownloadFloatOpen] = createSignal(false);
+  const [downloadButtonRef, setDownloadButtonRef] =
+    createSignal<HTMLButtonElement>();
+  const [floatingDownloadMenu, setFloatingDownloadMenu] =
+    createSignal<HTMLDivElement>();
+  const downloadPosition = useFloating(
+    downloadButtonRef,
+    floatingDownloadMenu,
+    {
+      placement: 'bottom',
+    },
+  );
   const [shareFloatOpen, setShareFloatOpen] = createSignal(false);
   const [shareButtonRef, setShareButtonRef] = createSignal<HTMLButtonElement>();
   const [floatingShareMenu, setFloatingShareMenu] =
     createSignal<HTMLDivElement>();
-  const position = useFloating(shareButtonRef, floatingShareMenu, {
+  const sharePosition = useFloating(shareButtonRef, floatingShareMenu, {
     placement: 'top',
   });
 
@@ -636,21 +655,41 @@ export default function MediaRoute() {
                   <span>{userIsSubscribed() ? 'Subscribed' : 'Subscribe'}</span>
                 </UnderbarButton>
               </submitSubscribe.Form>
-              <FloatingShareMenu
-                ref={setFloatingShareMenu}
-                data={getShareData()}
-                open={shareFloatOpen()}
-                onClose={() => setShareFloatOpen(false)}
-                position={position}
-              />
             </div>
             <div class="flex gap-3">
-              <UnderbarButton
-                ref={setShareButtonRef}
-                onClick={() => handleShare()}
-              >
-                <ShareIcon class="scale-90" /> <span>Share</span>
-              </UnderbarButton>
+              <Show when={metaData()?.data.downloadUrls?.length ?? 0 > 0}>
+                <div>
+                  <UnderbarButton
+                    ref={setDownloadButtonRef}
+                    onClick={() => setDownloadFloatOpen(true)}
+                  >
+                    <DownloadIcon class="scale-90" /> <span>Download</span>
+                  </UnderbarButton>
+                  <FloatingDownloadMenu
+                    ref={setFloatingDownloadMenu}
+                    data={metaData()?.data.downloadUrls ?? []}
+                    open={downloadFloatOpen()}
+                    onClose={() => setDownloadFloatOpen(false)}
+                    position={downloadPosition}
+                    class="mt-2"
+                  />
+                </div>
+              </Show>
+              <div>
+                <UnderbarButton
+                  ref={setShareButtonRef}
+                  onClick={() => handleShare()}
+                >
+                  <ShareIcon class="scale-90" /> <span>Share</span>
+                </UnderbarButton>
+                <FloatingShareMenu
+                  ref={setFloatingShareMenu}
+                  data={getShareData()}
+                  open={shareFloatOpen()}
+                  onClose={() => setShareFloatOpen(false)}
+                  position={sharePosition}
+                />
+              </div>
               <submitRating.Form
                 class="isolate inline-flex rounded-md shadow-sm"
                 replace

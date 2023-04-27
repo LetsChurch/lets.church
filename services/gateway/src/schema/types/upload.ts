@@ -319,6 +319,62 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
         return getPublicMediaUrl(`${root.id}/audio.m3u8`);
       },
     }),
+    downloadUrls: t.field({
+      nullable: true,
+      type: [
+        builder.simpleObject('MediaDownload', {
+          fields: (f) => ({
+            kind: f.field({
+              type: builder.enumType('MediaDownloadKind', {
+                values: [
+                  'VIDEO_4K',
+                  'VIDEO_1080P',
+                  'VIDEO_720P',
+                  'VIDEO_480P',
+                  'VIDEO_360P',
+                  'AUDIO',
+                ] as const,
+              }),
+            }),
+            label: f.string(),
+            url: f.string(),
+          }),
+        }),
+      ],
+      select: { id: true, variants: true },
+      resolve: (root) =>
+        root.variants
+          .filter((v) => v.endsWith('_DOWNLOAD'))
+          .map((v) => ({
+            kind:
+              v === 'VIDEO_4K_DOWNLOAD'
+                ? ('VIDEO_4K' as const)
+                : v === 'VIDEO_1080P_DOWNLOAD'
+                ? ('VIDEO_1080P' as const)
+                : v === 'VIDEO_720P_DOWNLOAD'
+                ? ('VIDEO_720P' as const)
+                : v === 'VIDEO_480P'
+                ? ('VIDEO_480P' as const)
+                : v === 'VIDEO_360P'
+                ? ('VIDEO_360P' as const)
+                : ('AUDIO' as const),
+            label:
+              v === 'VIDEO_4K_DOWNLOAD'
+                ? '4k Video'
+                : v === 'VIDEO_1080P_DOWNLOAD'
+                ? '1080p Video'
+                : v === 'VIDEO_720P_DOWNLOAD'
+                ? '720p Video'
+                : v === 'VIDEO_480P'
+                ? '480p Video'
+                : v === 'VIDEO_360P'
+                ? '360p Video'
+                : 'Audio',
+            url: getPublicMediaUrl(
+              `${root.id}/${v}.${v.startsWith('VIDEO') ? 'mp4' : 'm4a'}`,
+            ),
+          })),
+    }),
   }),
 });
 

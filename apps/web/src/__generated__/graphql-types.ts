@@ -222,6 +222,22 @@ export type ISearchHit = {
   id: Scalars['ShortUuid'];
 };
 
+export type MediaDownload = {
+  __typename?: 'MediaDownload';
+  kind: MediaDownloadKind;
+  label: Scalars['String'];
+  url: Scalars['String'];
+};
+
+export enum MediaDownloadKind {
+  Audio = 'AUDIO',
+  Video_4K = 'VIDEO_4K',
+  Video_360P = 'VIDEO_360P',
+  Video_480P = 'VIDEO_480P',
+  Video_720P = 'VIDEO_720P',
+  Video_1080P = 'VIDEO_1080P'
+}
+
 export type MultipartUploadMeta = {
   __typename?: 'MultipartUploadMeta';
   partSize: Scalars['Int'];
@@ -672,6 +688,7 @@ export type UploadRecord = {
   createdAt: Scalars['DateTime'];
   createdBy: AppUser;
   description?: Maybe<Scalars['String']>;
+  downloadUrls?: Maybe<Array<MediaDownload>>;
   id: Scalars['ShortUuid'];
   license: UploadLicense;
   mediaSource?: Maybe<Scalars['String']>;
@@ -764,11 +781,17 @@ export type UploadUserCommentRepliesConnectionEdge = {
 
 export enum UploadVariant {
   Audio = 'AUDIO',
+  AudioDownload = 'AUDIO_DOWNLOAD',
   Video_4K = 'VIDEO_4K',
+  Video_4KDownload = 'VIDEO_4K_DOWNLOAD',
   Video_360P = 'VIDEO_360P',
+  Video_360PDownload = 'VIDEO_360P_DOWNLOAD',
   Video_480P = 'VIDEO_480P',
+  Video_480PDownload = 'VIDEO_480P_DOWNLOAD',
   Video_720P = 'VIDEO_720P',
-  Video_1080P = 'VIDEO_1080P'
+  Video_720PDownload = 'VIDEO_720P_DOWNLOAD',
+  Video_1080P = 'VIDEO_1080P',
+  Video_1080PDownload = 'VIDEO_1080P_DOWNLOAD'
 }
 
 export enum UploadVisibility {
