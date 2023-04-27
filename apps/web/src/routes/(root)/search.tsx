@@ -27,6 +27,7 @@ import FloatingDiv from '~/components/floating-div';
 import NavigatingChecklist from '~/components/navigating-checklist';
 import NavigatingDateRange from '~/components/navigating-date-range';
 import OffCanvasDiv from '~/components/off-canvas-div';
+import { Avatar } from '~/components/avatar';
 
 const PAGE_SIZE = 12;
 
@@ -54,6 +55,7 @@ export function routeData({ location }: RouteDataArgs) {
             channel {
               id
               name
+              avatarUrl
             }
           }
 
@@ -175,6 +177,7 @@ type SearchHitRowProps = Omit<ThumbnailProps, 'width' | 'height' | 'url'> &
     title: string;
     channelName: string;
     channelId: string;
+    channelAvatarUrl?: Optional<string>;
     marked?: boolean;
     class?: string | undefined;
   }>;
@@ -204,10 +207,10 @@ function SearchHitRow(props: SearchHitRowProps) {
           href={`/channel/${props.channelId}`}
           class="relative z-10 inline-flex items-center space-x-2"
         >
-          <img
-            class="h-6 w-6 rounded-full"
-            src="https://images.unsplash.com/photo-1477672680933-0287a151330e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-            alt={`${props.channelName} icon`}
+          <Avatar
+            size="sm"
+            src={props.channelAvatarUrl}
+            alt={props.channelName}
           />
           <span class="text-sm text-gray-500">{props.channelName}</span>
         </A>
@@ -462,6 +465,7 @@ export default function SearchRoute() {
                   title={node.title}
                   channelName={node.uploadRecord.channel.name}
                   channelId={node.uploadRecord.channel.id}
+                  channelAvatarUrl={node.uploadRecord.channel.avatarUrl}
                   placeholder={
                     node.uploadRecord.variants.some((v) =>
                       v.startsWith('VIDEO'),
@@ -488,6 +492,7 @@ export default function SearchRoute() {
                   title={node.uploadRecord.title ?? 'Untitled'}
                   channelName={node.uploadRecord.channel.name}
                   channelId={node.uploadRecord.channel.id}
+                  channelAvatarUrl={node.uploadRecord.channel.avatarUrl}
                   placeholder={
                     node.uploadRecord.variants.some((v) =>
                       v.startsWith('VIDEO'),

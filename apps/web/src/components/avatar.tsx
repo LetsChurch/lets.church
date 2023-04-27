@@ -1,5 +1,7 @@
+import type { Optional } from '~/util';
+
 export type Props = {
-  src: string | null;
+  src?: Optional<string>;
   size: 'sm' | 'md' | 'lg' | 'xl';
   alt?: string;
 };

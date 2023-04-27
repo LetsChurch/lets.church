@@ -60,6 +60,7 @@ import FloatingShareMenu from '~/components/floating-share-menu';
 import { formatDateFull } from '~/util/date';
 import type { Optional } from '~/util';
 import Pagination from '~/components/pagination';
+import { Avatar } from '~/components/avatar';
 
 const COMMENTS_PAGE_SIZE = 12;
 
@@ -191,6 +192,7 @@ export function routeData({ params, location }: RouteDataArgs) {
               channel {
                 id
                 name
+                avatarUrl
                 userIsSubscribed
               }
               mediaSource
@@ -602,9 +604,9 @@ export default function MediaRoute() {
                 href={`/channel/${metaData()?.data.channel.id}`}
                 class="relative z-10 inline-flex min-w-0 items-center space-x-2 whitespace-nowrap"
               >
-                <img
-                  class="h-6 w-6 rounded-full"
-                  src="https://images.unsplash.com/photo-1477672680933-0287a151330e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                <Avatar
+                  size="sm"
+                  src={metaData()?.data.channel.avatarUrl}
                   alt={`${metaData()?.data.channel.name} icon`}
                 />
                 <span class="text-sm text-gray-500">
