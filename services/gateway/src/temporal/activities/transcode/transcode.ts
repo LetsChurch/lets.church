@@ -1,5 +1,4 @@
 import { basename, join } from 'node:path';
-import { createReadStream } from 'node:fs';
 import { unlink, stat } from 'node:fs/promises';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
@@ -86,16 +85,14 @@ export default async function transcode(
           Context.current().heartbeat(`Starting uplaod: ${path}`);
           console.log(`Uploading media segment: ${path}`);
 
-          await retryablePutFile(
-            S3_PUBLIC_BUCKET,
-            `${uploadRecordId}/${fileName}`,
-            'video/mp2ts',
-            createReadStream(path),
-            {
-              contentLength: (await stat(path)).size,
-              client: 'PUBLIC',
-            },
-          );
+          await retryablePutFile({
+            bucket: S3_PUBLIC_BUCKET,
+            key: `${uploadRecordId}/${fileName}`,
+            contentType: 'video/mp2ts',
+            contentLength: (await stat(path)).size,
+            path,
+            client: 'PUBLIC',
+          });
 
           console.log(`Done uploading media segment: ${path}`);
           console.log(`Deleting ${path}`);
@@ -147,20 +144,18 @@ export default async function transcode(
 
     // Upload downloadable files
     uploadQueue.addAll(
-      downloadableFiles.map((dl) => async () => {
-        const filename = basename(dl);
+      downloadableFiles.map((path) => async () => {
+        const filename = basename(path);
         Context.current().heartbeat(`Uploading downloadable file`);
         console.log(`Uploading downloadable file: ${filename}`);
-        await retryablePutFile(
-          S3_PUBLIC_BUCKET,
-          `${uploadRecordId}/${filename}`,
-          'application/x-mpegURL',
-          createReadStream(dl),
-          {
-            contentLength: (await stat(dl)).size,
-            client: 'PUBLIC',
-          },
-        );
+        await retryablePutFile({
+          bucket: S3_PUBLIC_BUCKET,
+          key: `${uploadRecordId}/${filename}`,
+          contentType: 'application/x-mpegURL',
+          path,
+          contentLength: (await stat(path)).size,
+          client: 'PUBLIC',
+        });
         Context.current().heartbeat(`Uploaded downloadable file: ${filename}`);
         console.log(`Uploaded downloadable file: ${filename}`);
       }),
@@ -170,20 +165,18 @@ export default async function transcode(
 
     // Upload playlist files
     uploadQueue.addAll(
-      playlists.map((playlist) => async () => {
-        const filename = basename(playlist);
+      playlists.map((path) => async () => {
+        const filename = basename(path);
         Context.current().heartbeat(`Uploading playlist file`);
         console.log(`Uploading playlist file: ${filename}`);
-        await retryablePutFile(
-          S3_PUBLIC_BUCKET,
-          `${uploadRecordId}/${filename}`,
-          'application/x-mpegURL',
-          createReadStream(playlist),
-          {
-            contentLength: (await stat(playlist)).size,
-            client: 'PUBLIC',
-          },
-        );
+        await retryablePutFile({
+          bucket: S3_PUBLIC_BUCKET,
+          key: `${uploadRecordId}/${filename}`,
+          contentType: 'application/x-mpegURL',
+          path,
+          contentLength: (await stat(path)).size,
+          client: 'PUBLIC',
+        });
         Context.current().heartbeat(`Uploaded playlist file: ${filename}`);
         console.log(`Uploaded playlist file: ${filename}`);
       }),
@@ -204,15 +197,13 @@ export default async function transcode(
           const playlistBuffer = Buffer.from(
             variantsToMasterVideoPlaylist(variants),
           );
-          await retryablePutFile(
-            S3_PUBLIC_BUCKET,
-            `${uploadRecordId}/master.m3u8`,
-            'application/x-mpegURL',
-            playlistBuffer,
-            {
-              client: 'PUBLIC',
-            },
-          );
+          await retryablePutFile({
+            bucket: S3_PUBLIC_BUCKET,
+            key: `${uploadRecordId}/master.m3u8`,
+            contentType: 'application/x-mpegURL',
+            body: playlistBuffer,
+            client: 'PUBLIC',
+          });
           Context.current().heartbeat('Uploaded master playlist file');
           console.log('Uploaded master playlist file');
         },
@@ -232,15 +223,13 @@ export default async function transcode(
     uploadQueue.add(
       async () => {
         Context.current().heartbeat('Uploading stdout');
-        await retryablePutFile(
-          S3_INGEST_BUCKET,
-          `${uploadRecordId}/stdout.txt`,
-          'text/plain',
-          Buffer.from(encodeProcRes.stdout),
-          {
-            client: 'INGEST',
-          },
-        );
+        await retryablePutFile({
+          bucket: S3_INGEST_BUCKET,
+          key: `${uploadRecordId}/stdout.txt`,
+          contentType: 'text/plain',
+          body: Buffer.from(encodeProcRes.stdout),
+          client: 'INGEST',
+        });
         Context.current().heartbeat('Uploaded stdout');
       },
       {

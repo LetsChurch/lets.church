@@ -1,5 +1,4 @@
 import { join } from 'node:path';
-import { createReadStream } from 'node:fs';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
 import mime from 'mime';
@@ -55,12 +54,12 @@ export default async function processImage(
 
     console.log('Uploading probe');
 
-    await retryablePutFile(
-      S3_INGEST_BUCKET,
-      `${targetId}.imagemagick.json`,
-      'application/json',
-      Buffer.from(JSON.stringify(json, null, 2)),
-    );
+    await retryablePutFile({
+      bucket: S3_INGEST_BUCKET,
+      key: `${targetId}.imagemagick.json`,
+      contentType: 'application/json',
+      body: Buffer.from(JSON.stringify(json, null, 2)),
+    });
 
     if (params.width && params.height) {
       await croppingResize(dir, downloadPath, params.width, params.height);
@@ -80,12 +79,12 @@ export default async function processImage(
       json.mimeType,
     )}`;
 
-    await retryablePutFile(
-      S3_PUBLIC_BUCKET,
-      path,
-      json.mimeType,
-      createReadStream(downloadPath),
-    );
+    await retryablePutFile({
+      bucket: S3_PUBLIC_BUCKET,
+      key: path,
+      contentType: json.mimeType,
+      path: downloadPath,
+    });
 
     Context.current().heartbeat();
 

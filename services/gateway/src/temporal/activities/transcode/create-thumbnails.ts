@@ -1,6 +1,5 @@
 import { basename, join } from 'node:path';
 import { stat } from 'node:fs/promises';
-import { createReadStream } from 'node:fs';
 import mkdirp from 'mkdirp';
 import { Context } from '@temporalio/activity';
 import PQueue from 'p-queue';
@@ -63,14 +62,14 @@ export default async function createThumbnails(
         async () => {
           Context.current().heartbeat();
           console.log(`Uploading thumbnail: ${largestThumbnail}`);
-          const path = `${uploadRecordId}/${basename(largestThumbnail)}`;
-          await retryablePutFile(
-            S3_PUBLIC_BUCKET,
-            path,
-            'image/jpeg',
-            createReadStream(largestThumbnail),
-            { contentLength: (await stat(largestThumbnail)).size },
-          );
+          const key = `${uploadRecordId}/${basename(largestThumbnail)}`;
+          await retryablePutFile({
+            bucket: S3_PUBLIC_BUCKET,
+            key,
+            contentType: 'image/jpeg',
+            path: largestThumbnail,
+            contentLength: (await stat(largestThumbnail)).size,
+          });
           await pRetry(
             async (attempt) => {
               console.log(`Setting thumbnail path: attempt ${attempt}`);
@@ -78,7 +77,7 @@ export default async function createThumbnails(
               const blurhash = await imageToBlurhash(largestThumbnail);
 
               await updateUploadRecord(uploadRecordId, {
-                defaultThumbnailPath: path,
+                defaultThumbnailPath: key,
                 thumbnailBlurhash: blurhash,
               });
             },
@@ -102,13 +101,13 @@ export default async function createThumbnails(
 
         Context.current().heartbeat();
         console.log(`Uploading thumbnail: ${path}`);
-        await retryablePutFile(
-          S3_PUBLIC_BUCKET,
-          `${uploadRecordId}/${basename(path)}`,
-          'image/jpeg',
-          createReadStream(path),
-          { contentLength: (await stat(path)).size },
-        );
+        await retryablePutFile({
+          bucket: S3_PUBLIC_BUCKET,
+          key: `${uploadRecordId}/${basename(path)}`,
+          contentType: 'image/jpeg',
+          path,
+          contentLength: (await stat(path)).size,
+        });
         Context.current().heartbeat();
         console.log(`Done uploading thumbnail: ${path}`);
       }),
@@ -127,12 +126,12 @@ export default async function createThumbnails(
     uploadQueue.add(
       async () => {
         console.log('Uploading hovernail');
-        await retryablePutFile(
-          S3_PUBLIC_BUCKET,
-          `${uploadRecordId}/hovernail.jpg`,
-          'image/jpeg',
-          createReadStream(join(dir, 'hovernail.jpg')),
-        );
+        await retryablePutFile({
+          bucket: S3_PUBLIC_BUCKET,
+          key: `${uploadRecordId}/hovernail.jpg`,
+          contentType: 'image/jpeg',
+          path: join(dir, 'hovernail.jpg'),
+        });
         Context.current().heartbeat();
         console.log('Done uploading hovernail');
       },

@@ -1,4 +1,4 @@
-import { createWriteStream } from 'node:fs';
+import { createReadStream, createWriteStream } from 'node:fs';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import {
@@ -19,6 +19,7 @@ import pRetry from 'p-retry';
 import invariant from 'tiny-invariant';
 import { v4 as uuid } from 'uuid';
 import PQueue from 'p-queue';
+import type { MergeExclusive } from 'type-fest';
 
 export const S3_INGEST_BUCKET = envariant('S3_INGEST_BUCKET');
 const S3_INGEST_REGION = envariant('S3_INGEST_REGION');
@@ -280,47 +281,48 @@ export async function backupObjects(
   await queue.onIdle();
 }
 
-export async function putFile(
-  bucket: string,
-  key: string,
-  contentType: string,
-  body: Readable | Buffer,
-  {
-    contentLength,
-    client = 'INGEST',
-  }: {
-    contentLength?: number;
-    client?: Client;
-  } = {},
-) {
+export async function putFile({
+  bucket,
+  key,
+  contentType,
+  body,
+  path,
+  contentLength,
+  client = 'INGEST',
+}: {
+  bucket: string;
+  key: string;
+  contentType: string;
+  contentLength?: number;
+  client?: Client;
+} & MergeExclusive<{ body: Readable | Buffer }, { path: string }>) {
+  invariant(body || path, 'Body or path must be provided to putFile');
+
   const cmd = new PutObjectCommand({
     Bucket: bucket,
     Key: key,
     ContentType: contentType,
-    Body: body,
+    Body: body ? body : createReadStream(path),
     ...(contentLength ? { ContentLength: contentLength } : {}),
   });
   return (client === 'INGEST' ? s3IngestClient : s3PublicClient).send(cmd);
 }
 
-export async function retryablePutFile(
-  bucket: string,
-  key: string,
-  contentType: string,
-  body: Readable | Buffer,
-  {
-    maxAttempts = 5,
-    ...otherOps
-  }: {
-    contentLength?: number;
-    maxAttempts?: number;
-    client?: Client;
-  } = {},
-) {
-  return pRetry(() => putFile(bucket, key, contentType, body, otherOps), {
+export async function retryablePutFile({
+  maxAttempts = 5,
+  ...otherOps
+}: {
+  bucket: string;
+  key: string;
+  contentType: string;
+  contentLength?: number;
+  maxAttempts?: number;
+  client?: Client;
+} & MergeExclusive<{ body: Buffer }, { path: string }>) {
+  return pRetry(() => putFile(otherOps), {
     retries: maxAttempts,
     onFailedAttempt: (error) => {
-      console.log(`Error uploading ${key}`);
+      console.log(`Error uploading ${otherOps.key}`);
       console.log(error.message);
       console.log(
         `Attempt ${error.attemptNumber} failed. There are ${error.retriesLeft} retries left.`,

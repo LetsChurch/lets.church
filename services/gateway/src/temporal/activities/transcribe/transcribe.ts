@@ -1,5 +1,4 @@
 import { join } from 'node:path';
-import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
@@ -59,15 +58,13 @@ export default async function transcribe(
 
     console.log('uploading file');
     const key = `${uploadRecordId}/transcript.vtt`;
-    await retryablePutFile(
-      S3_PUBLIC_BUCKET,
+    await retryablePutFile({
+      bucket: S3_PUBLIC_BUCKET,
       key,
-      'text/vtt',
-      createReadStream(vttFile),
-      {
-        contentLength: (await stat(vttFile)).size,
-      },
-    );
+      contentType: 'text/vtt',
+      path: vttFile,
+      contentLength: (await stat(vttFile)).size,
+    });
 
     console.log('done uploading');
     Context.current().heartbeat('done uploading');

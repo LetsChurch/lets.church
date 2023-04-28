@@ -49,12 +49,12 @@ export default async function probe(
 
     const parsedProbe = ffprobeSchema.parse(JSON.parse(probeJson));
 
-    await retryablePutFile(
-      S3_INGEST_BUCKET,
-      `${uploadRecordId}/probe.json`,
-      'application/json',
-      Buffer.from(probeJson),
-    );
+    await retryablePutFile({
+      bucket: S3_INGEST_BUCKET,
+      key: `${uploadRecordId}/probe.json`,
+      contentType: 'application/json',
+      body: Buffer.from(probeJson),
+    });
 
     return parsedProbe;
   } catch (e) {
