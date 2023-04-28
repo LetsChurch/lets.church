@@ -18,6 +18,12 @@ const { abortMultipartUpload, completeMultipartUpload, finalizeUploadRecord } =
     taskQueue: BACKGROUND_QUEUE,
   });
 
+const { backupObjects } = proxyActivities<typeof activities>({
+  startToCloseTimeout: '60 minute',
+  heartbeatTimeout: '1 minute',
+  taskQueue: BACKGROUND_QUEUE,
+});
+
 export const uploadDoneSignal =
   defineSignal<[Array<string>, string]>('uploadDone');
 
@@ -64,6 +70,9 @@ export async function handleMultipartMediaUploadWorkflow(
         },
       });
     }
+
+    await backupObjects('INGEST', uploadRecordId);
+    await backupObjects('PUBLIC', uploadRecordId);
   } else {
     await abortMultipartUpload(bucket, s3UploadId, s3UploadKey);
   }

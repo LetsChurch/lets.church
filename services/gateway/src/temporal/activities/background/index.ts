@@ -1,4 +1,5 @@
 export { default as abortMultipartUpload } from './abort-multipart-upload';
+export { default as backupObjects } from './backup-objects';
 export { default as completeMultipartUpload } from './complete-multipart-upload';
 export { default as finalizeUploadRecord } from './finalize-upload-record';
 export { default as indexDocument } from './index-document';

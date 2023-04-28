@@ -7,8 +7,10 @@ import {
   CreateMultipartUploadCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3,
+  S3Client,
   UploadPartCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -17,6 +19,7 @@ import pMap from 'p-map';
 import pRetry from 'p-retry';
 import invariant from 'tiny-invariant';
 import { v4 as uuid } from 'uuid';
+import PQueue from 'p-queue';
 
 export const S3_INGEST_BUCKET = envariant('S3_INGEST_BUCKET');
 const S3_INGEST_REGION = envariant('S3_INGEST_REGION');
@@ -30,6 +33,13 @@ const S3_PUBLIC_ENDPOINT = envariant('S3_PUBLIC_ENDPOINT');
 const S3_PUBLIC_ACCESS_KEY_ID = envariant('S3_PUBLIC_ACCESS_KEY_ID');
 const S3_PUBLIC_SECRET_ACCESS_KEY = envariant('S3_PUBLIC_SECRET_ACCESS_KEY');
 
+export const S3_BACKUP_BUCKET = envariant('S3_BACKUP_BUCKET');
+const S3_BACKUP_REGION = envariant('S3_BACKUP_REGION');
+const S3_BACKUP_ENDPOINT = envariant('S3_BACKUP_ENDPOINT');
+const S3_BACKUP_ACCESS_KEY_ID = envariant('S3_BACKUP_ACCESS_KEY_ID');
+const S3_BACKUP_SECRET_ACCESS_KEY = envariant('S3_BACKUP_SECRET_ACCESS_KEY');
+const S3_BACKUP_STORAGE_CLASS = envariant('S3_BACKUP_STORAGE_CLASS');
+
 export const s3IngestClient = new S3({
   region: S3_INGEST_REGION,
   endpoint: S3_INGEST_ENDPOINT,
@@ -39,12 +49,21 @@ export const s3IngestClient = new S3({
   },
 });
 
-export const s3ServeClient = new S3({
+export const s3PublicClient = new S3({
   region: S3_PUBLIC_REGION,
   endpoint: S3_PUBLIC_ENDPOINT,
   credentials: {
     accessKeyId: S3_PUBLIC_ACCESS_KEY_ID,
     secretAccessKey: S3_PUBLIC_SECRET_ACCESS_KEY,
+  },
+});
+
+export const s3BackupClient = new S3({
+  region: S3_BACKUP_REGION,
+  endpoint: S3_BACKUP_ENDPOINT,
+  credentials: {
+    accessKeyId: S3_BACKUP_ACCESS_KEY_ID,
+    secretAccessKey: S3_BACKUP_SECRET_ACCESS_KEY,
   },
 });
 
@@ -202,7 +221,62 @@ export async function streamObjectToFile(
     );
   }
 
-  throw new Error('Unknown resposne type');
+  throw new Error('Unknown response type');
+}
+
+export async function backupObjects(
+  source: 'INGEST' | 'PUBLIC',
+  prefix: string,
+  heartbeat: () => unknown,
+) {
+  const client = source === 'PUBLIC' ? s3PublicClient : s3IngestClient;
+  const bucket = source === 'PUBLIC' ? S3_PUBLIC_BUCKET : S3_INGEST_BUCKET;
+  const queue = new PQueue({ concurrency: 5 });
+
+  let continuationToken: string | undefined = undefined;
+
+  do {
+    const listCmd: ListObjectsV2Command = new ListObjectsV2Command({
+      Bucket: bucket,
+      Prefix: prefix,
+      ...(continuationToken ? { ContinuationToken: continuationToken } : {}),
+    });
+    const listRes = await client.send(listCmd);
+    continuationToken = listRes.IsTruncated
+      ? listRes.NextContinuationToken
+      : undefined;
+
+    queue.addAll(
+      listRes.Contents?.map((entry) => async () => {
+        console.log(`Backing up ${entry.Key} from ${bucket}`);
+        const cmd = new GetObjectCommand({ Bucket: bucket, Key: entry.Key });
+        const {
+          Body: body,
+          ContentType: contentType,
+          ContentLength: contentLength,
+        } = await client.send(cmd);
+
+        invariant(body, 'Failed to get object body');
+        invariant(contentType, 'Failed to get object content type');
+        invariant(contentLength, 'Failed to get object content length');
+
+        await s3BackupClient.send(
+          new PutObjectCommand({
+            Bucket: S3_BACKUP_BUCKET,
+            Key: `${bucket}/${entry.Key}`,
+            Body: body,
+            ContentType: contentType,
+            ContentLength: contentLength,
+            StorageClass: S3_BACKUP_STORAGE_CLASS,
+          }),
+        );
+        heartbeat();
+        console.log('Done!');
+      }) ?? [],
+    );
+  } while (continuationToken);
+
+  await queue.onIdle();
 }
 
 export async function putFile(
@@ -212,8 +286,10 @@ export async function putFile(
   body: Readable | Buffer,
   {
     contentLength,
+    client = s3IngestClient,
   }: {
     contentLength?: number;
+    client?: S3Client;
   } = {},
 ) {
   const cmd = new PutObjectCommand({
@@ -223,7 +299,7 @@ export async function putFile(
     Body: body,
     ...(contentLength ? { ContentLength: contentLength } : {}),
   });
-  return s3IngestClient.send(cmd);
+  return client.send(cmd);
 }
 
 export async function retryablePutFile(
@@ -232,33 +308,24 @@ export async function retryablePutFile(
   contentType: string,
   body: Readable | Buffer,
   {
-    contentLength,
     maxAttempts = 5,
+    ...otherOps
   }: {
     contentLength?: number;
     maxAttempts?: number;
+    client?: S3Client;
   } = {},
 ) {
-  return pRetry(
-    () =>
-      putFile(
-        bucket,
-        key,
-        contentType,
-        body,
-        contentLength ? { contentLength } : {},
-      ),
-    {
-      retries: maxAttempts,
-      onFailedAttempt: (error) => {
-        console.log(`Error uploading ${key}`);
-        console.log(error.message);
-        console.log(
-          `Attempt ${error.attemptNumber} failed. There are ${error.retriesLeft} retries left.`,
-        );
-      },
+  return pRetry(() => putFile(bucket, key, contentType, body, otherOps), {
+    retries: maxAttempts,
+    onFailedAttempt: (error) => {
+      console.log(`Error uploading ${key}`);
+      console.log(error.message);
+      console.log(
+        `Attempt ${error.attemptNumber} failed. There are ${error.retriesLeft} retries left.`,
+      );
     },
-  );
+  });
 }
 
 export async function deleteFile(bucket: string, key: string) {

@@ -15,6 +15,8 @@ import {
 } from '../../../util/ffmpeg';
 import {
   retryablePutFile,
+  s3IngestClient,
+  s3PublicClient,
   S3_INGEST_BUCKET,
   S3_PUBLIC_BUCKET,
   streamObjectToFile,
@@ -93,6 +95,7 @@ export default async function transcode(
             createReadStream(path),
             {
               contentLength: (await stat(path)).size,
+              client: s3PublicClient,
             },
           );
 
@@ -157,6 +160,7 @@ export default async function transcode(
           createReadStream(dl),
           {
             contentLength: (await stat(dl)).size,
+            client: s3PublicClient,
           },
         );
         Context.current().heartbeat(`Uploaded downloadable file: ${filename}`);
@@ -179,6 +183,7 @@ export default async function transcode(
           createReadStream(playlist),
           {
             contentLength: (await stat(playlist)).size,
+            client: s3PublicClient,
           },
         );
         Context.current().heartbeat(`Uploaded playlist file: ${filename}`);
@@ -206,6 +211,9 @@ export default async function transcode(
             `${uploadRecordId}/master.m3u8`,
             'application/x-mpegURL',
             playlistBuffer,
+            {
+              client: s3PublicClient,
+            },
           );
           Context.current().heartbeat('Uploaded master playlist file');
           console.log('Uploaded master playlist file');
@@ -231,6 +239,9 @@ export default async function transcode(
           `${uploadRecordId}/stdout.txt`,
           'text/plain',
           Buffer.from(encodeProcRes.stdout),
+          {
+            client: s3IngestClient,
+          },
         );
         Context.current().heartbeat('Uploaded stdout');
       },
@@ -239,7 +250,7 @@ export default async function transcode(
       },
     );
 
-    await uploadQueue.onEmpty();
+    await uploadQueue.onIdle();
     await watcher.close();
     await updateUploadRecord(uploadRecordId, {
       variants,
