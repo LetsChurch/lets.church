@@ -15,8 +15,6 @@ import {
 } from '../../../util/ffmpeg';
 import {
   retryablePutFile,
-  s3IngestClient,
-  s3PublicClient,
   S3_INGEST_BUCKET,
   S3_PUBLIC_BUCKET,
   streamObjectToFile,
@@ -95,7 +93,7 @@ export default async function transcode(
             createReadStream(path),
             {
               contentLength: (await stat(path)).size,
-              client: s3PublicClient,
+              client: 'PUBLIC',
             },
           );
 
@@ -160,7 +158,7 @@ export default async function transcode(
           createReadStream(dl),
           {
             contentLength: (await stat(dl)).size,
-            client: s3PublicClient,
+            client: 'PUBLIC',
           },
         );
         Context.current().heartbeat(`Uploaded downloadable file: ${filename}`);
@@ -183,7 +181,7 @@ export default async function transcode(
           createReadStream(playlist),
           {
             contentLength: (await stat(playlist)).size,
-            client: s3PublicClient,
+            client: 'PUBLIC',
           },
         );
         Context.current().heartbeat(`Uploaded playlist file: ${filename}`);
@@ -212,7 +210,7 @@ export default async function transcode(
             'application/x-mpegURL',
             playlistBuffer,
             {
-              client: s3PublicClient,
+              client: 'PUBLIC',
             },
           );
           Context.current().heartbeat('Uploaded master playlist file');
@@ -240,7 +238,7 @@ export default async function transcode(
           'text/plain',
           Buffer.from(encodeProcRes.stdout),
           {
-            client: s3IngestClient,
+            client: 'INGEST',
           },
         );
         Context.current().heartbeat('Uploaded stdout');
