@@ -77,6 +77,7 @@ services:
       target: background-worker
     command: npm run dev:background-worker
     environment:
+      IDENTITY: dev
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       ELASTICSEARCH_URL: http://elasticsearch:9200
       JWT_SECRET: ${JWT_SECRET}
@@ -94,6 +95,7 @@ services:
       target: transcode-worker
     command: npm run dev:transcode-worker
     environment:
+      IDENTITY: dev
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 1
@@ -108,6 +110,7 @@ services:
       target: transcribe-worker
     command: npm run dev:transcribe-worker
     environment:
+      IDENTITY: dev
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 1

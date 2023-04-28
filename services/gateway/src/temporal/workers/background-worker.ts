@@ -15,6 +15,7 @@ const workflowsPath = new URL(
 ).pathname;
 
 const worker = await Worker.create({
+  identity: `background-worker ${envariant('IDENTITY')}`,
   connection: await NativeConnection.connect({ address: TEMPORAL_ADDRESS }),
   // TODO: prebundle
   workflowsPath,

@@ -12,6 +12,7 @@ const MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS = envariant(
 await waitOnTemporal();
 
 const worker = await Worker.create({
+  identity: `transcribe-worker ${envariant('IDENTITY')}`,
   connection: await NativeConnection.connect({ address: TEMPORAL_ADDRESS }),
   activities,
   taskQueue: TRANSCRIBE_QUEUE,
