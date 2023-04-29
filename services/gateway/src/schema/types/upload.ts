@@ -14,6 +14,7 @@ import builder from '../builder';
 import type { Context } from '../../util/context';
 import prisma from '../../util/prisma';
 import { getPublicMediaUrl } from '../../util/url';
+import { getPublicUrlWithFilename } from '../../util/s3';
 
 async function internalAuthScopes(
   uploadRecord: { id: string; channelId: string },
@@ -341,39 +342,45 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
           }),
         }),
       ],
-      select: { id: true, variants: true },
+      select: { id: true, variants: true, title: true },
       resolve: (root) =>
-        root.variants
-          .filter((v) => v.endsWith('_DOWNLOAD'))
-          .map((v) => ({
-            kind:
-              v === 'VIDEO_4K_DOWNLOAD'
-                ? ('VIDEO_4K' as const)
-                : v === 'VIDEO_1080P_DOWNLOAD'
-                ? ('VIDEO_1080P' as const)
-                : v === 'VIDEO_720P_DOWNLOAD'
-                ? ('VIDEO_720P' as const)
-                : v === 'VIDEO_480P'
-                ? ('VIDEO_480P' as const)
-                : v === 'VIDEO_360P'
-                ? ('VIDEO_360P' as const)
-                : ('AUDIO' as const),
-            label:
-              v === 'VIDEO_4K_DOWNLOAD'
-                ? '4k Video'
-                : v === 'VIDEO_1080P_DOWNLOAD'
-                ? '1080p Video'
-                : v === 'VIDEO_720P_DOWNLOAD'
-                ? '720p Video'
-                : v === 'VIDEO_480P'
-                ? '480p Video'
-                : v === 'VIDEO_360P'
-                ? '360p Video'
-                : 'Audio',
-            url: getPublicMediaUrl(
-              `${root.id}/${v}.${v.startsWith('VIDEO') ? 'mp4' : 'm4a'}`,
-            ),
-          })),
+        Promise.all(
+          root.variants
+            .filter((v) => v.endsWith('_DOWNLOAD'))
+            .map(async (v) => {
+              const ext = v.startsWith('VIDEO') ? 'mp4' : 'm4a';
+              return {
+                kind:
+                  v === 'VIDEO_4K_DOWNLOAD'
+                    ? ('VIDEO_4K' as const)
+                    : v === 'VIDEO_1080P_DOWNLOAD'
+                    ? ('VIDEO_1080P' as const)
+                    : v === 'VIDEO_720P_DOWNLOAD'
+                    ? ('VIDEO_720P' as const)
+                    : v === 'VIDEO_480P'
+                    ? ('VIDEO_480P' as const)
+                    : v === 'VIDEO_360P'
+                    ? ('VIDEO_360P' as const)
+                    : ('AUDIO' as const),
+                label:
+                  v === 'VIDEO_4K_DOWNLOAD'
+                    ? '4k Video'
+                    : v === 'VIDEO_1080P_DOWNLOAD'
+                    ? '1080p Video'
+                    : v === 'VIDEO_720P_DOWNLOAD'
+                    ? '720p Video'
+                    : v === 'VIDEO_480P'
+                    ? '480p Video'
+                    : v === 'VIDEO_360P'
+                    ? '360p Video'
+                    : 'Audio',
+                url: await getPublicUrlWithFilename(
+                  `${root.id}/${v}.${ext}`,
+                  `${root.title ?? root.id}.${ext}`,
+                ),
+              };
+            }),
+        ),
     }),
   }),
 });

@@ -20,6 +20,7 @@ import invariant from 'tiny-invariant';
 import { v4 as uuid } from 'uuid';
 import PQueue from 'p-queue';
 import type { MergeExclusive } from 'type-fest';
+import sanitizeFilename from 'sanitize-filename';
 
 export const S3_INGEST_BUCKET = envariant('S3_INGEST_BUCKET');
 const S3_INGEST_REGION = envariant('S3_INGEST_REGION');
@@ -170,6 +171,19 @@ export async function createPresignedUploadUrl(
       ContentType: contentType,
     }),
     { expiresIn: 5 * 60 }, // 5 Minutes
+  );
+}
+
+export async function getPublicUrlWithFilename(key: string, filename: string) {
+  return getSignedUrl(
+    s3PublicClient,
+    new GetObjectCommand({
+      Bucket: S3_PUBLIC_BUCKET,
+      Key: key,
+      ResponseContentDisposition: `attachment; filename="${sanitizeFilename(
+        filename,
+      )}"`,
+    }),
   );
 }
 
