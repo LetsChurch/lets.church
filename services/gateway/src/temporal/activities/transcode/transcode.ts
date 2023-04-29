@@ -7,6 +7,8 @@ import chokidar from 'chokidar';
 import fastGlob from 'fast-glob';
 import { throttle } from 'lodash-es';
 import rimraf from 'rimraf';
+import mime from 'mime';
+import invariant from 'tiny-invariant';
 import {
   getVariants,
   runFfmpegEncode,
@@ -146,12 +148,14 @@ export default async function transcode(
     uploadQueue.addAll(
       downloadableFiles.map((path) => async () => {
         const filename = basename(path);
+        const contentType = mime.getType(filename);
+        invariant(contentType !== null, 'Mime type should not be null');
         Context.current().heartbeat(`Uploading downloadable file`);
         console.log(`Uploading downloadable file: ${filename}`);
         await retryablePutFile({
           bucket: S3_PUBLIC_BUCKET,
           key: `${uploadRecordId}/${filename}`,
-          contentType: 'application/x-mpegURL',
+          contentType,
           path,
           contentLength: (await stat(path)).size,
           client: 'PUBLIC',
