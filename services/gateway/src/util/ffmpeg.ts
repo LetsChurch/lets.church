@@ -154,7 +154,7 @@ export function ffmpegEncodingOutputArgs(
     const playlistName = variantToPlaylistName(v);
     const downloadName = variantToDownloadName(
       v,
-      v === 'AUDIO' ? 'm4a' : 'mp4',
+      v.startsWith('VIDEO') ? 'mp4' : 'm4a',
     );
 
     switch (v) {
