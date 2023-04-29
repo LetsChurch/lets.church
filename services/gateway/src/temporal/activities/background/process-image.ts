@@ -75,7 +75,7 @@ export default async function processImage(
 
     console.log('Uploading compressed image');
 
-    const path = `${postProcess}/${targetId}-${nanoid()}.${mime.getExtension(
+    const path = `${targetId}/${postProcess}-${nanoid()}.${mime.getExtension(
       json.mimeType,
     )}`;
 
