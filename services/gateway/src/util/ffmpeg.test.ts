@@ -517,7 +517,7 @@ test('ffmpegEncodingOutputArgs', () => {
       "-vn",
       "-b:a",
       "192k",
-      "AUDIO_DOWNLOAD.mp4",
+      "AUDIO_DOWNLOAD.m4a",
     ]
   `);
 });
