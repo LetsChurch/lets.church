@@ -163,6 +163,9 @@ export default async function transcode(
         Context.current().heartbeat(`Uploaded downloadable file: ${filename}`);
         console.log(`Uploaded downloadable file: ${filename}`);
       }),
+      {
+        signal: cancellationSignal,
+      },
     );
 
     const playlists = await fastGlob(join(dir, '*.m3u8'));
