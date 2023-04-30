@@ -21,6 +21,7 @@ import {
   streamObjectToFile,
 } from '../../../util/s3';
 import { updateUploadRecord } from '../..';
+import { runAudiowaveform } from '../../../util/audiowaveform';
 import type { Probe } from './probe';
 
 const WORK_DIR = '/data/transcode';
@@ -225,6 +226,43 @@ export default async function transcode(
         )}`,
       );
     }
+
+    // Generate and upload peaks
+    const peakFiles = await runAudiowaveform(
+      dir,
+      downloadPath,
+      cancellationSignal,
+    );
+    uploadQueue.addAll([
+      async () => {
+        console.log('Uploading peak json');
+        Context.current().heartbeat(`Uploading peak json`);
+        await retryablePutFile({
+          bucket: S3_PUBLIC_BUCKET,
+          key: `${uploadRecordId}/peaks.json`,
+          contentType: 'application/json',
+          path: peakFiles.json,
+          contentLength: (await stat(peakFiles.json)).size,
+          client: 'PUBLIC',
+        });
+        Context.current().heartbeat('Uploaded peak json');
+        console.log('Uploaded peak json');
+      },
+      async () => {
+        console.log('Uploading peak dat');
+        Context.current().heartbeat(`Uploading peak dat`);
+        await retryablePutFile({
+          bucket: S3_PUBLIC_BUCKET,
+          key: `${uploadRecordId}/peaks.dat`,
+          contentType: 'application/octet-stream',
+          path: peakFiles.dat,
+          contentLength: (await stat(peakFiles.dat)).size,
+          client: 'PUBLIC',
+        });
+        Context.current().heartbeat('Uploaded peak dat');
+        console.log('Uploaded peak dat');
+      },
+    ]);
 
     // Upload logs
     uploadQueue.add(
