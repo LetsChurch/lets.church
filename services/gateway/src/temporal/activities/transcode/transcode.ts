@@ -14,12 +14,7 @@ import {
   runFfmpegEncode,
   variantsToMasterVideoPlaylist,
 } from '../../../util/ffmpeg';
-import {
-  retryablePutFile,
-  S3_INGEST_BUCKET,
-  S3_PUBLIC_BUCKET,
-  streamObjectToFile,
-} from '../../../util/s3';
+import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import { updateUploadRecord } from '../..';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import type { Probe } from './probe';
@@ -54,7 +49,7 @@ export default async function transcode(
     console.log(`Downloading file to ${downloadPath}`);
 
     await streamObjectToFile(
-      S3_INGEST_BUCKET,
+      'INGEST',
       s3UploadKey,
       downloadPath,
       dataHeartbeat,
@@ -89,12 +84,11 @@ export default async function transcode(
           console.log(`Uploading media segment: ${path}`);
 
           await retryablePutFile({
-            bucket: S3_PUBLIC_BUCKET,
+            to: 'PUBLIC',
             key: `${uploadRecordId}/${fileName}`,
             contentType: 'video/mp2ts',
             contentLength: (await stat(path)).size,
             path,
-            client: 'PUBLIC',
           });
 
           console.log(`Done uploading media segment: ${path}`);
@@ -154,12 +148,11 @@ export default async function transcode(
         Context.current().heartbeat(`Uploading downloadable file`);
         console.log(`Uploading downloadable file: ${filename}`);
         await retryablePutFile({
-          bucket: S3_PUBLIC_BUCKET,
+          to: 'PUBLIC',
           key: `${uploadRecordId}/${filename}`,
           contentType,
           path,
           contentLength: (await stat(path)).size,
-          client: 'PUBLIC',
         });
         Context.current().heartbeat(`Uploaded downloadable file: ${filename}`);
         console.log(`Uploaded downloadable file: ${filename}`);
@@ -178,12 +171,11 @@ export default async function transcode(
         Context.current().heartbeat(`Uploading playlist file`);
         console.log(`Uploading playlist file: ${filename}`);
         await retryablePutFile({
-          bucket: S3_PUBLIC_BUCKET,
+          to: 'PUBLIC',
           key: `${uploadRecordId}/${filename}`,
           contentType: 'application/x-mpegURL',
           path,
           contentLength: (await stat(path)).size,
-          client: 'PUBLIC',
         });
         Context.current().heartbeat(`Uploaded playlist file: ${filename}`);
         console.log(`Uploaded playlist file: ${filename}`);
@@ -206,11 +198,10 @@ export default async function transcode(
             variantsToMasterVideoPlaylist(variants),
           );
           await retryablePutFile({
-            bucket: S3_PUBLIC_BUCKET,
+            to: 'PUBLIC',
             key: `${uploadRecordId}/master.m3u8`,
             contentType: 'application/x-mpegURL',
             body: playlistBuffer,
-            client: 'PUBLIC',
           });
           Context.current().heartbeat('Uploaded master playlist file');
           console.log('Uploaded master playlist file');
@@ -238,12 +229,11 @@ export default async function transcode(
         console.log('Uploading peak json');
         Context.current().heartbeat(`Uploading peak json`);
         await retryablePutFile({
-          bucket: S3_PUBLIC_BUCKET,
+          to: 'PUBLIC',
           key: `${uploadRecordId}/peaks.json`,
           contentType: 'application/json',
           path: peakFiles.json,
           contentLength: (await stat(peakFiles.json)).size,
-          client: 'PUBLIC',
         });
         Context.current().heartbeat('Uploaded peak json');
         console.log('Uploaded peak json');
@@ -252,12 +242,11 @@ export default async function transcode(
         console.log('Uploading peak dat');
         Context.current().heartbeat(`Uploading peak dat`);
         await retryablePutFile({
-          bucket: S3_PUBLIC_BUCKET,
+          to: 'PUBLIC',
           key: `${uploadRecordId}/peaks.dat`,
           contentType: 'application/octet-stream',
           path: peakFiles.dat,
           contentLength: (await stat(peakFiles.dat)).size,
-          client: 'PUBLIC',
         });
         Context.current().heartbeat('Uploaded peak dat');
         console.log('Uploaded peak dat');
@@ -269,11 +258,10 @@ export default async function transcode(
       async () => {
         Context.current().heartbeat('Uploading stdout');
         await retryablePutFile({
-          bucket: S3_INGEST_BUCKET,
+          to: 'INGEST',
           key: `${uploadRecordId}/stdout.txt`,
           contentType: 'text/plain',
           body: Buffer.from(encodeProcRes.stdout),
-          client: 'INGEST',
         });
         Context.current().heartbeat('Uploaded stdout');
       },

@@ -6,6 +6,7 @@ import PLazy from 'p-lazy';
 import waitOn from 'wait-on';
 import type { Prisma } from '@prisma/client';
 import type { UploadPostProcessValue } from '../schema/types/mutation';
+import type { Client as S3UtilClient } from '../util/s3';
 import {
   handleMultipartMediaUploadWorkflow,
   indexDocumentSignal,
@@ -43,7 +44,7 @@ function makeMultipartMediaUploadWorkflowId(
 
 export async function handleMultipartMediaUpload(
   uploadRecordId: string,
-  bucket: string,
+  to: S3UtilClient,
   s3UploadId: string,
   s3UploadKey: string,
   postProcess: UploadPostProcessValue,
@@ -52,7 +53,7 @@ export async function handleMultipartMediaUpload(
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     workflowId: makeMultipartMediaUploadWorkflowId(s3UploadId, s3UploadKey),
-    args: [uploadRecordId, bucket, s3UploadId, s3UploadKey, postProcess],
+    args: [uploadRecordId, to, s3UploadId, s3UploadKey, postProcess],
   });
 }
 

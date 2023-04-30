@@ -8,12 +8,7 @@ import fastGlob from 'fast-glob';
 import { chunk, compact, maxBy, throttle } from 'lodash-es';
 import pRetry from 'p-retry';
 import rimraf from 'rimraf';
-import {
-  retryablePutFile,
-  S3_INGEST_BUCKET,
-  S3_PUBLIC_BUCKET,
-  streamObjectToFile,
-} from '../../../util/s3';
+import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import { runFfmpegThumbnails } from '../../../util/ffmpeg';
 import { concatThumbs, imageToBlurhash } from '../../../util/images';
 import { updateUploadRecord } from '../..';
@@ -30,12 +25,7 @@ export default async function createThumbnails(
 
   await mkdirp(dir);
   const downloadPath = join(dir, 'download');
-  await streamObjectToFile(
-    S3_INGEST_BUCKET,
-    s3UploadKey,
-    downloadPath,
-    dataHeartbeat,
-  );
+  await streamObjectToFile('INGEST', s3UploadKey, downloadPath, dataHeartbeat);
 
   Context.current().heartbeat();
   try {
@@ -64,7 +54,7 @@ export default async function createThumbnails(
           console.log(`Uploading thumbnail: ${largestThumbnail}`);
           const key = `${uploadRecordId}/${basename(largestThumbnail)}`;
           await retryablePutFile({
-            bucket: S3_PUBLIC_BUCKET,
+            to: 'PUBLIC',
             key,
             contentType: 'image/jpeg',
             path: largestThumbnail,
@@ -102,7 +92,7 @@ export default async function createThumbnails(
         Context.current().heartbeat();
         console.log(`Uploading thumbnail: ${path}`);
         await retryablePutFile({
-          bucket: S3_PUBLIC_BUCKET,
+          to: 'PUBLIC',
           key: `${uploadRecordId}/${basename(path)}`,
           contentType: 'image/jpeg',
           path,
@@ -127,7 +117,7 @@ export default async function createThumbnails(
       async () => {
         console.log('Uploading hovernail');
         await retryablePutFile({
-          bucket: S3_PUBLIC_BUCKET,
+          to: 'PUBLIC',
           key: `${uploadRecordId}/hovernail.jpg`,
           contentType: 'image/jpeg',
           path: join(dir, 'hovernail.jpg'),

@@ -4,11 +4,7 @@ import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
 import { throttle } from 'lodash-es';
 import rimraf from 'rimraf';
-import {
-  retryablePutFile,
-  S3_INGEST_BUCKET,
-  streamObjectToFile,
-} from '../../../util/s3';
+import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import { runFfprobe } from '../../../util/ffmpeg';
 import { ffprobeSchema } from '../../../util/zod';
 import { updateUploadRecord } from '../..';
@@ -28,7 +24,7 @@ export default async function probe(
   try {
     await mkdirp(dir);
     await streamObjectToFile(
-      S3_INGEST_BUCKET,
+      'INGEST',
       s3UploadKey,
       downloadPath,
       throttle(() => Context.current().heartbeat(), 5000),
@@ -50,7 +46,7 @@ export default async function probe(
     const parsedProbe = ffprobeSchema.parse(JSON.parse(probeJson));
 
     await retryablePutFile({
-      bucket: S3_INGEST_BUCKET,
+      to: 'INGEST',
       key: `${uploadRecordId}/probe.json`,
       contentType: 'application/json',
       body: Buffer.from(probeJson),

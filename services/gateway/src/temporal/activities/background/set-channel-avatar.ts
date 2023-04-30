@@ -1,5 +1,5 @@
 import prisma from '../../../util/prisma';
-import { deleteFile, S3_PUBLIC_BUCKET } from '../../../util/s3';
+import { deleteFile } from '../../../util/s3';
 
 export default async function setChannelAvatar(
   channelid: string,
@@ -12,7 +12,7 @@ export default async function setChannelAvatar(
   });
 
   if (oldPath) {
-    await deleteFile(S3_PUBLIC_BUCKET, oldPath);
+    await deleteFile('PUBLIC', oldPath);
   }
 
   await prisma.channel.update({

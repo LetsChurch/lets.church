@@ -22,19 +22,19 @@ import PQueue from 'p-queue';
 import type { MergeExclusive } from 'type-fest';
 import sanitizeFilename from 'sanitize-filename';
 
-export const S3_INGEST_BUCKET = envariant('S3_INGEST_BUCKET');
+const S3_INGEST_BUCKET = envariant('S3_INGEST_BUCKET');
 const S3_INGEST_REGION = envariant('S3_INGEST_REGION');
 const S3_INGEST_ENDPOINT = envariant('S3_INGEST_ENDPOINT');
 const S3_INGEST_ACCESS_KEY_ID = envariant('S3_INGEST_ACCESS_KEY_ID');
 const S3_INGEST_SECRET_ACCESS_KEY = envariant('S3_INGEST_SECRET_ACCESS_KEY');
 
-export const S3_PUBLIC_BUCKET = envariant('S3_PUBLIC_BUCKET');
+const S3_PUBLIC_BUCKET = envariant('S3_PUBLIC_BUCKET');
 const S3_PUBLIC_REGION = envariant('S3_PUBLIC_REGION');
 const S3_PUBLIC_ENDPOINT = envariant('S3_PUBLIC_ENDPOINT');
 const S3_PUBLIC_ACCESS_KEY_ID = envariant('S3_PUBLIC_ACCESS_KEY_ID');
 const S3_PUBLIC_SECRET_ACCESS_KEY = envariant('S3_PUBLIC_SECRET_ACCESS_KEY');
 
-export const S3_BACKUP_BUCKET = envariant('S3_BACKUP_BUCKET');
+const S3_BACKUP_BUCKET = envariant('S3_BACKUP_BUCKET');
 const S3_BACKUP_REGION = envariant('S3_BACKUP_REGION');
 const S3_BACKUP_ENDPOINT = envariant('S3_BACKUP_ENDPOINT');
 const S3_BACKUP_ACCESS_KEY_ID = envariant('S3_BACKUP_ACCESS_KEY_ID');
@@ -68,16 +68,24 @@ const s3BackupClient = new S3({
   },
 });
 
-type Client = 'INGEST' | 'PUBLIC';
+export type Client = 'INGEST' | 'PUBLIC';
+
+function getClientAndBucket(client: Client) {
+  return {
+    client: client === 'INGEST' ? s3IngestClient : s3PublicClient,
+    bucket: client === 'INGEST' ? S3_INGEST_BUCKET : S3_PUBLIC_BUCKET,
+  };
+}
 
 export const PART_SIZE = 10_000_000;
 
 export async function createMultipartUpload(
-  bucket: string,
+  to: Client,
   key: string,
   contentType: string,
 ) {
-  const { UploadId: uploadId, Key: uploadKey } = await s3IngestClient.send(
+  const { client, bucket } = getClientAndBucket(to);
+  const { UploadId: uploadId, Key: uploadKey } = await client.send(
     new CreateMultipartUploadCommand({
       Bucket: bucket,
       Key: `${key}/${uuid()}`,
@@ -91,7 +99,7 @@ export async function createMultipartUpload(
 }
 
 export function createPresignedPartUploadUrl(
-  bucket: string,
+  to: Client,
   uploadId: string,
   uploadKey: string,
   part: number,
@@ -101,8 +109,10 @@ export function createPresignedPartUploadUrl(
     `Part number must be between 1 and 10,000 inclusive, was ${part}`,
   );
 
+  const { client, bucket } = getClientAndBucket(to);
+
   return getSignedUrl(
-    s3IngestClient,
+    client,
     new UploadPartCommand({
       Bucket: bucket,
       UploadId: uploadId,
@@ -114,25 +124,27 @@ export function createPresignedPartUploadUrl(
 }
 
 export async function createPresignedPartUploadUrls(
-  bucket: string,
+  to: Client,
   uploadId: string,
   uploadKey: string,
   size: number,
 ) {
   return pMap(
     Array(Math.ceil(size / PART_SIZE)).fill(null),
-    (_, i) => createPresignedPartUploadUrl(bucket, uploadId, uploadKey, i + 1),
+    (_, i) => createPresignedPartUploadUrl(to, uploadId, uploadKey, i + 1),
     { concurrency: 5 },
   );
 }
 
 export async function completeMultipartUpload(
-  bucket: string,
+  to: Client,
   uploadId: string,
   uploadKey: string,
   eTags: Array<string>,
 ) {
-  await s3IngestClient.send(
+  const { client, bucket } = getClientAndBucket(to);
+
+  await client.send(
     new CompleteMultipartUploadCommand({
       Bucket: bucket,
       Key: uploadKey,
@@ -145,11 +157,13 @@ export async function completeMultipartUpload(
 }
 
 export async function abortMultipartUpload(
-  bucket: string,
+  to: Client,
   uploadId: string,
   uploadKey: string,
 ) {
-  await s3IngestClient.send(
+  const { client, bucket } = getClientAndBucket(to);
+
+  await client.send(
     new AbortMultipartUploadCommand({
       Bucket: bucket,
       Key: uploadKey,
@@ -159,12 +173,14 @@ export async function abortMultipartUpload(
 }
 
 export async function createPresignedUploadUrl(
-  bucket: string,
+  to: Client,
   key: string,
   contentType: string,
 ) {
+  const { client, bucket } = getClientAndBucket(to);
+
   return getSignedUrl(
-    s3IngestClient,
+    client,
     new PutObjectCommand({
       Bucket: bucket,
       Key: key,
@@ -187,9 +203,11 @@ export async function getPublicUrlWithFilename(key: string, filename: string) {
   );
 }
 
-export async function createPresignedGetUrl(bucket: string, key: string) {
+export async function createPresignedGetUrl(to: Client, key: string) {
+  const { client, bucket } = getClientAndBucket(to);
+
   return getSignedUrl(
-    s3IngestClient,
+    client,
     new GetObjectCommand({
       Bucket: bucket,
       Key: key,
@@ -198,9 +216,11 @@ export async function createPresignedGetUrl(bucket: string, key: string) {
   );
 }
 
-export async function headObject(bucket: string, key: string) {
+export async function headObject(to: Client, key: string) {
+  const { client, bucket } = getClientAndBucket(to);
+
   try {
-    return await s3IngestClient.headObject({
+    return await client.headObject({
       Bucket: bucket,
       Key: key,
     });
@@ -210,21 +230,24 @@ export async function headObject(bucket: string, key: string) {
   }
 }
 
-export async function getObject(bucket: string, key: string) {
-  return s3IngestClient.getObject({
+export async function getObject(to: Client, key: string) {
+  const { client, bucket } = getClientAndBucket(to);
+
+  return client.getObject({
     Bucket: bucket,
     Key: key,
   });
 }
 
 export async function streamObjectToFile(
-  bucket: string,
+  to: Client,
   key: string,
   path: string,
   heartbeat: () => unknown,
 ) {
+  const { client, bucket } = getClientAndBucket(to);
   const cmd = new GetObjectCommand({ Bucket: bucket, Key: key });
-  const res = await s3IngestClient.send(cmd);
+  const res = await client.send(cmd);
 
   if (res.Body instanceof Readable) {
     return pipeline(
@@ -245,8 +268,7 @@ export async function backupObjects(
   prefix: string,
   heartbeat: () => unknown,
 ) {
-  const client = source === 'PUBLIC' ? s3PublicClient : s3IngestClient;
-  const bucket = source === 'PUBLIC' ? S3_PUBLIC_BUCKET : S3_INGEST_BUCKET;
+  const { client, bucket } = getClientAndBucket(source);
   const queue = new PQueue({ concurrency: 5 });
 
   let continuationToken: string | undefined = undefined;
@@ -296,21 +318,21 @@ export async function backupObjects(
 }
 
 export async function putFile({
-  bucket,
+  to = 'INGEST',
   key,
   contentType,
   body,
   path,
   contentLength,
-  client = 'INGEST',
 }: {
-  bucket: string;
+  to?: Client;
   key: string;
   contentType: string;
   contentLength?: number;
-  client?: Client;
 } & MergeExclusive<{ body: Readable | Buffer }, { path: string }>) {
   invariant(body || path, 'Body or path must be provided to putFile');
+
+  const { bucket, client } = getClientAndBucket(to);
 
   const cmd = new PutObjectCommand({
     Bucket: bucket,
@@ -319,19 +341,18 @@ export async function putFile({
     Body: body ? body : createReadStream(path),
     ...(contentLength ? { ContentLength: contentLength } : {}),
   });
-  return (client === 'INGEST' ? s3IngestClient : s3PublicClient).send(cmd);
+  return client.send(cmd);
 }
 
 export async function retryablePutFile({
   maxAttempts = 5,
   ...otherOps
 }: {
-  bucket: string;
+  to?: Client;
   key: string;
   contentType: string;
   contentLength?: number;
   maxAttempts?: number;
-  client?: Client;
 } & MergeExclusive<{ body: Buffer }, { path: string }>) {
   return pRetry(() => putFile(otherOps), {
     retries: maxAttempts,

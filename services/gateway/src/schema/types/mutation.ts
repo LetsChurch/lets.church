@@ -8,7 +8,6 @@ import {
   createMultipartUpload,
   createPresignedPartUploadUrls,
   PART_SIZE,
-  S3_INGEST_BUCKET,
 } from '../../util/s3';
 import builder from '../builder';
 
@@ -90,21 +89,21 @@ builder.mutationType({
         _context,
       ) => {
         const { uploadKey, uploadId } = await createMultipartUpload(
-          S3_INGEST_BUCKET,
+          'INGEST',
           targetId,
           uploadMimeType,
         );
 
         await handleMultipartMediaUpload(
           targetId,
-          S3_INGEST_BUCKET,
+          'INGEST',
           uploadId,
           uploadKey,
           postProcess,
         );
 
         const urls = await createPresignedPartUploadUrls(
-          S3_INGEST_BUCKET,
+          'INGEST',
           uploadId,
           uploadKey,
           bytes,

@@ -6,12 +6,7 @@ import { throttle } from 'lodash-es';
 import rimraf from 'rimraf';
 import type { RequireAllOrNone } from 'type-fest';
 import { nanoid } from 'nanoid';
-import {
-  retryablePutFile,
-  S3_INGEST_BUCKET,
-  S3_PUBLIC_BUCKET,
-  streamObjectToFile,
-} from '../../../util/s3';
+import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import {
   croppingResize,
   imageToBlurhash,
@@ -40,7 +35,7 @@ export default async function processImage(
   try {
     await mkdirp(dir);
     await streamObjectToFile(
-      S3_INGEST_BUCKET,
+      'INGEST',
       s3UploadKey,
       downloadPath,
       throttle(() => Context.current().heartbeat(), 5000),
@@ -55,7 +50,7 @@ export default async function processImage(
     console.log('Uploading probe');
 
     await retryablePutFile({
-      bucket: S3_INGEST_BUCKET,
+      to: 'INGEST',
       key: `${targetId}.imagemagick.json`,
       contentType: 'application/json',
       body: Buffer.from(JSON.stringify(json, null, 2)),
@@ -80,7 +75,7 @@ export default async function processImage(
     )}`;
 
     await retryablePutFile({
-      bucket: S3_PUBLIC_BUCKET,
+      to: 'PUBLIC',
       key: path,
       contentType: json.mimeType,
       path: downloadPath,

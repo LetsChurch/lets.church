@@ -1,10 +1,10 @@
-import { completeMultipartUpload } from '../../../util/s3';
+import { Client, completeMultipartUpload } from '../../../util/s3';
 
 export default async function completeMultipartUploadAction(
-  bucket: string,
+  to: Client,
   uploadId: string,
   uploadKey: string,
   eTags: Array<string>,
 ) {
-  await completeMultipartUpload(bucket, uploadId, uploadKey, eTags);
+  await completeMultipartUpload(to, uploadId, uploadKey, eTags);
 }

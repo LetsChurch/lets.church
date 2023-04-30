@@ -2,7 +2,7 @@ import invariant from 'tiny-invariant';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
 import { client, escapeDocument } from '../../../util/elasticsearch';
 import prisma from '../../../util/prisma';
-import { getObject, S3_PUBLIC_BUCKET } from '../../../util/s3';
+import { getObject } from '../../../util/s3';
 import { transcriptSegmentSchema } from '../../../util/zod';
 
 export type DocumentKind = 'transcript' | 'upload' | 'organization' | 'channel';
@@ -15,7 +15,7 @@ async function getDocument(
   switch (kind) {
     case 'transcript':
       invariant(s3UploadKey, 'uploadKey is required for transcript');
-      const res = await getObject(S3_PUBLIC_BUCKET, s3UploadKey);
+      const res = await getObject('PUBLIC', s3UploadKey);
       const body = await res.Body?.transformToString('utf-8');
       invariant(body, `No object with key ${s3UploadKey} found`);
       const parsed = parseVtt(body)

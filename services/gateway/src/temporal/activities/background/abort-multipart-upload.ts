@@ -1,9 +1,9 @@
-import { abortMultipartUpload } from '../../../util/s3';
+import { abortMultipartUpload, Client } from '../../../util/s3';
 
 export default async function abortMultipartUploadAction(
-  bucket: string,
+  to: Client,
   uploadId: string,
   uploadKey: string,
 ) {
-  await abortMultipartUpload(bucket, uploadId, uploadKey);
+  await abortMultipartUpload(to, uploadId, uploadKey);
 }

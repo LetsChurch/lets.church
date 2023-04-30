@@ -5,12 +5,7 @@ import mkdirp from 'mkdirp';
 import rimraf from 'rimraf';
 import { throttle } from 'lodash-es';
 import { updateUploadRecord } from '../..';
-import {
-  retryablePutFile,
-  S3_INGEST_BUCKET,
-  S3_PUBLIC_BUCKET,
-  streamObjectToFile,
-} from '../../../util/s3';
+import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import { runWhisper } from '../../../util/whisper';
 
 const WORK_DIR = '/data/transcribe';
@@ -37,7 +32,7 @@ export default async function transcribe(
     await mkdirp(dir);
     const downloadPath = join(dir, 'download');
     await streamObjectToFile(
-      S3_INGEST_BUCKET,
+      'INGEST',
       s3UploadKey,
       downloadPath,
       dataHeartbeat,
@@ -59,7 +54,7 @@ export default async function transcribe(
     console.log('uploading file');
     const key = `${uploadRecordId}/transcript.vtt`;
     await retryablePutFile({
-      bucket: S3_PUBLIC_BUCKET,
+      to: 'PUBLIC',
       key,
       contentType: 'text/vtt',
       path: vttFile,
