@@ -212,7 +212,9 @@ model UploadRecord {
   userRatings            UploadUserRating[]
   score                  Float               @default(0)
   scoreStaleAt           DateTime?           @default(now()) @map("score_stale_at")
+  userCommentsEnabled    Boolean             @default(true) @map("user_comments_disabled")
   userComments           UploadUserComment[]
+  downloadsEnabled       Boolean             @default(true) @map("downloads_disabled")
 
   @@index([createdAt, id])
   @@index(score)

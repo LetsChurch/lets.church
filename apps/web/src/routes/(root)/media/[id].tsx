@@ -199,6 +199,7 @@ export function routeData({ params, location }: RouteDataArgs) {
               }
               mediaSource
               audioSource
+              downloadsEnabled
               downloadUrls {
                 kind
                 label
@@ -208,6 +209,7 @@ export function routeData({ params, location }: RouteDataArgs) {
                 start
                 text
               }
+              userCommentsEnabled
               userComments(
                 first: $commentsFirst
                 after: $commentsAfter
@@ -657,7 +659,12 @@ export default function MediaRoute() {
               </submitSubscribe.Form>
             </div>
             <div class="flex gap-3">
-              <Show when={metaData()?.data.downloadUrls?.length ?? 0 > 0}>
+              <Show
+                when={
+                  metaData()?.data.downloadsEnabled &&
+                  (metaData()?.data.downloadUrls?.length ?? 0 > 0)
+                }
+              >
                 <div>
                   <UnderbarButton
                     ref={setDownloadButtonRef}
@@ -742,58 +749,70 @@ export default function MediaRoute() {
               {(desc) => <div class="whitespace-pre-line">{desc}</div>}
             </Show>
           </div>
-          <submitComment.Form onSubmit={handleSubmittingCommentForm}>
-            <input
-              type="hidden"
-              name="uploadRecordId"
-              value={metaData()?.data.id ?? ''}
-            />
-            <CommentForm
-              placeholder="Add your comment..."
-              pending={submittingComment.pending}
-            />
-          </submitComment.Form>
-          <p class="font-medium text-gray-900">
-            {metaData()?.data.userComments.totalCount} comments
-          </p>
-          <For each={metaData()?.data.userComments.edges}>
-            {(edge) => (
-              <Comment
-                data={edge.node}
-                replies={edge.node.replies.edges.map((e) => e.node)}
-                ReplyForm={submitComment.Form}
-                RateForm={submitCommentRating.Form}
-                onSubmit={handleSubmittingCommentForm}
+          <Show
+            when={metaData()?.data.userCommentsEnabled}
+            fallback={
+              <p class="rounded-md bg-gray-100 p-3 text-gray-400">
+                Comments are disabled.
+              </p>
+            }
+          >
+            <submitComment.Form onSubmit={handleSubmittingCommentForm}>
+              <input
+                type="hidden"
+                name="uploadRecordId"
+                value={metaData()?.data.id ?? ''}
+              />
+              <CommentForm
+                placeholder="Add your comment..."
                 pending={submittingComment.pending}
               />
-            )}
-          </For>
-          <Pagination
-            label={
-              <>
-                Showing{' '}
-                <span class="font-medium">
-                  {metaData()?.data.userComments.edges.length}
-                </span>{' '}
-                of{' '}
-                <span class="font-medium">
-                  {metaData()?.data.userComments.totalCount}
-                </span>{' '}
-                comments
-              </>
-            }
-            queryKey="comments"
-            hasNextPage={
-              metaData()?.data.userComments.pageInfo.hasNextPage ?? false
-            }
-            hasPreviousPage={
-              metaData()?.data.userComments.pageInfo.hasPreviousPage ?? false
-            }
-            startCursor={
-              metaData()?.data.userComments.pageInfo.startCursor ?? ''
-            }
-            endCursor={metaData()?.data.userComments.pageInfo.endCursor ?? ''}
-          />
+              <p class="font-medium text-gray-900">
+                {metaData()?.data.userComments.totalCount} comments
+              </p>
+              <For each={metaData()?.data.userComments.edges}>
+                {(edge) => (
+                  <Comment
+                    data={edge.node}
+                    replies={edge.node.replies.edges.map((e) => e.node)}
+                    ReplyForm={submitComment.Form}
+                    RateForm={submitCommentRating.Form}
+                    onSubmit={handleSubmittingCommentForm}
+                    pending={submittingComment.pending}
+                  />
+                )}
+              </For>
+              <Pagination
+                label={
+                  <>
+                    Showing{' '}
+                    <span class="font-medium">
+                      {metaData()?.data.userComments.edges.length}
+                    </span>{' '}
+                    of{' '}
+                    <span class="font-medium">
+                      {metaData()?.data.userComments.totalCount}
+                    </span>{' '}
+                    comments
+                  </>
+                }
+                queryKey="comments"
+                hasNextPage={
+                  metaData()?.data.userComments.pageInfo.hasNextPage ?? false
+                }
+                hasPreviousPage={
+                  metaData()?.data.userComments.pageInfo.hasPreviousPage ??
+                  false
+                }
+                startCursor={
+                  metaData()?.data.userComments.pageInfo.startCursor ?? ''
+                }
+                endCursor={
+                  metaData()?.data.userComments.pageInfo.endCursor ?? ''
+                }
+              />
+            </submitComment.Form>
+          </Show>
         </div>
         <div class="md:col-span-1">
           <Transcript

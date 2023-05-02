@@ -153,6 +153,8 @@ CREATE TABLE "upload_record" (
     "variants" "UploadVariant"[],
     "score" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "score_stale_at" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+    "user_comments_disabled" BOOLEAN NOT NULL DEFAULT true,
+    "downloads_disabled" BOOLEAN NOT NULL DEFAULT true,
 
     CONSTRAINT "upload_record_pkey" PRIMARY KEY ("id")
 );

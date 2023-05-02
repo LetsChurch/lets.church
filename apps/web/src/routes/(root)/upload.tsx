@@ -90,6 +90,8 @@ function getSections(
     license: Optional<string>;
     visibility: Optional<string>;
     uploadFinalized: boolean;
+    userCommentsEnabled: boolean;
+    downloadsEnabled: boolean;
   },
 ): Array<Section> {
   return [
@@ -197,6 +199,46 @@ function getSections(
           ],
           id: createUniqueId(),
         },
+        {
+          type: 'radio',
+          label: 'Comments',
+          name: 'userCommentsEnabled',
+          defaultValue: defaultValues.userCommentsEnabled
+            ? 'ENABLED'
+            : 'DISABLED',
+          options: [
+            {
+              label: 'Enabled',
+              help: 'Users can comment on this upload.',
+              value: 'ENABLED',
+            },
+            {
+              label: 'Disabled',
+              help: 'Users cannot comment on this upload.',
+              value: 'DISABLED',
+            },
+          ],
+          id: createUniqueId(),
+        },
+        {
+          type: 'radio',
+          label: 'Downloads',
+          name: 'downloadsEnabled',
+          defaultValue: defaultValues.downloadsEnabled ? 'ENABLED' : 'DISABLED',
+          options: [
+            {
+              label: 'Enabled',
+              help: 'Users can download this media.',
+              value: 'ENABLED',
+            },
+            {
+              label: 'Disabled',
+              help: 'Users cannot download this media.',
+              value: 'DISABLED',
+            },
+          ],
+          id: createUniqueId(),
+        },
       ],
     },
   ];
@@ -234,6 +276,8 @@ export function routeData({ location }: RouteDataArgs) {
               publishedAt
               license
               visibility
+              userCommentsEnabled
+              downloadsEnabled
               uploadFinalized
               channel {
                 id
@@ -269,6 +313,8 @@ const UpsertUploadRecordSchema = Z.object({
   ),
   license: Z.nativeEnum(UploadLicense),
   visibility: Z.nativeEnum(UploadVisibility),
+  userCommentsEnabled: Z.preprocess((s) => s === 'ENABLED', Z.boolean()),
+  downloadsEnabled: Z.preprocess((s) => s === 'ENABLED', Z.boolean()),
   channelId: Z.string(),
 });
 
@@ -288,6 +334,8 @@ export default function UploadRoute() {
             'publishedAt',
             'license',
             'visibility',
+            'userCommentsEnabled',
+            'downloadsEnabled',
             'channelId',
           ].map((p) => [p, form.get(p)]),
         ),
@@ -305,6 +353,8 @@ export default function UploadRoute() {
             $publishedAt: DateTime!
             $license: UploadLicense!
             $visibility: UploadVisibility!
+            $userCommentsEnabled: Boolean!
+            $downloadsEnabled: Boolean!
             $channelId: ShortUuid!
           ) {
             upsertUploadRecord(
@@ -314,6 +364,8 @@ export default function UploadRoute() {
               publishedAt: $publishedAt
               license: $license
               visibility: $visibility
+              userCommentsEnabled: $userCommentsEnabled
+              downloadsEnabled: $downloadsEnabled
               channelId: $channelId
             ) {
               id
@@ -469,6 +521,8 @@ export default function UploadRoute() {
         license: d?.uploadRecordById?.license,
         visibility: d?.uploadRecordById?.visibility ?? 'PUBLIC',
         uploadFinalized: d?.uploadRecordById?.uploadFinalized ?? false,
+        userCommentsEnabled: d?.uploadRecordById?.userCommentsEnabled ?? true,
+        downloadsEnabled: d?.uploadRecordById?.downloadsEnabled ?? true,
       },
     );
   });

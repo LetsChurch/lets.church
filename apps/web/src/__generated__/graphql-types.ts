@@ -367,10 +367,12 @@ export type MutationUpsertOrganizationMembershipArgs = {
 export type MutationUpsertUploadRecordArgs = {
   channelId: Scalars['ShortUuid'];
   description?: InputMaybe<Scalars['String']>;
+  downloadsEnabled?: InputMaybe<Scalars['Boolean']>;
   license: UploadLicense;
   publishedAt: Scalars['DateTime'];
   title?: InputMaybe<Scalars['String']>;
   uploadRecordId?: InputMaybe<Scalars['ShortUuid']>;
+  userCommentsEnabled?: InputMaybe<Scalars['Boolean']>;
   visibility: UploadVisibility;
 };
 
@@ -689,6 +691,7 @@ export type UploadRecord = {
   createdBy: AppUser;
   description?: Maybe<Scalars['String']>;
   downloadUrls?: Maybe<Array<MediaDownload>>;
+  downloadsEnabled: Scalars['Boolean'];
   id: Scalars['ShortUuid'];
   license: UploadLicense;
   mediaSource?: Maybe<Scalars['String']>;
@@ -705,6 +708,7 @@ export type UploadRecord = {
   uploadFinalizedBy: AppUser;
   uploadSizeBytes?: Maybe<Scalars['SafeInt']>;
   userComments: UploadRecordUserCommentsConnection;
+  userCommentsEnabled: Scalars['Boolean'];
   variants: Array<UploadVariant>;
   visibility: UploadVisibility;
 };

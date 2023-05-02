@@ -6,7 +6,7 @@ export type UploadRouteDataQueryVariables = Types.Exact<{
 }>;
 
 
-export type UploadRouteDataQuery = { __typename?: 'Query', me?: { __typename?: 'AppUser', canUpload: boolean, channelMembershipsConnection: { __typename?: 'AppUserChannelMembershipsConnection', edges: Array<{ __typename?: 'AppUserChannelMembershipsConnectionEdge', node: { __typename?: 'ChannelMembership', channel: { __typename?: 'Channel', id: string, name: string } } }> } } | null, uploadRecordById?: { __typename?: 'UploadRecord', canMutate: boolean, id: string, title?: string | null, description?: string | null, publishedAt?: string | null, license: Types.UploadLicense, visibility: Types.UploadVisibility, uploadFinalized: boolean, channel: { __typename?: 'Channel', id: string } } };
+export type UploadRouteDataQuery = { __typename?: 'Query', me?: { __typename?: 'AppUser', canUpload: boolean, channelMembershipsConnection: { __typename?: 'AppUserChannelMembershipsConnection', edges: Array<{ __typename?: 'AppUserChannelMembershipsConnectionEdge', node: { __typename?: 'ChannelMembership', channel: { __typename?: 'Channel', id: string, name: string } } }> } } | null, uploadRecordById?: { __typename?: 'UploadRecord', canMutate: boolean, id: string, title?: string | null, description?: string | null, publishedAt?: string | null, license: Types.UploadLicense, visibility: Types.UploadVisibility, userCommentsEnabled: boolean, downloadsEnabled: boolean, uploadFinalized: boolean, channel: { __typename?: 'Channel', id: string } } };
 
 export type UpsertUploadRecordMutationVariables = Types.Exact<{
   uploadRecordId?: Types.InputMaybe<Types.Scalars['ShortUuid']>;
@@ -15,6 +15,8 @@ export type UpsertUploadRecordMutationVariables = Types.Exact<{
   publishedAt: Types.Scalars['DateTime'];
   license: Types.UploadLicense;
   visibility: Types.UploadVisibility;
+  userCommentsEnabled: Types.Scalars['Boolean'];
+  downloadsEnabled: Types.Scalars['Boolean'];
   channelId: Types.Scalars['ShortUuid'];
 }>;
 

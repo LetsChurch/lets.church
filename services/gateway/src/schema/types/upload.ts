@@ -258,6 +258,7 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
         return record.rating;
       },
     }),
+    userCommentsEnabled: t.exposeBoolean('userCommentsEnabled'),
     userComments: t.connection(
       {
         type: UploadUserComment,
@@ -320,6 +321,7 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
         return getPublicMediaUrl(`${root.id}/audio.m3u8`);
       },
     }),
+    downloadsEnabled: t.exposeBoolean('downloadsEnabled'),
     downloadUrls: t.field({
       nullable: true,
       type: [
@@ -478,6 +480,8 @@ builder.mutationFields((t) => ({
       publishedAt: t.arg({ type: 'DateTime', required: true }),
       license: t.arg({ type: UploadLicense, required: true }),
       visibility: t.arg({ type: UploadVisibility, required: true }),
+      userCommentsEnabled: t.arg({ type: 'Boolean', required: false }),
+      downloadsEnabled: t.arg({ type: 'Boolean', required: false }),
       channelId: t.arg({ type: 'ShortUuid', required: true }),
     },
     authScopes: async (_root, args, context) => {
@@ -517,6 +521,8 @@ builder.mutationFields((t) => ({
         publishedAt,
         license,
         visibility,
+        userCommentsEnabled = true,
+        downloadsEnabled = true,
         channelId,
       },
       context,
@@ -527,6 +533,8 @@ builder.mutationFields((t) => ({
       const lice = license as PrismaUploadLicense;
       invariant(visibility in PrismaUploadVisibility, 'Invalid visibility');
       const vis = visibility as PrismaUploadVisibility;
+      invariant(typeof userCommentsEnabled === 'boolean');
+      invariant(typeof downloadsEnabled === 'boolean');
 
       if (uploadRecordId) {
         const res = await prisma.uploadRecord.update({
@@ -538,6 +546,8 @@ builder.mutationFields((t) => ({
             publishedAt,
             license: lice,
             visibility: vis,
+            userCommentsEnabled,
+            downloadsEnabled,
             channel: {
               connect: {
                 id: channelId,
@@ -559,6 +569,8 @@ builder.mutationFields((t) => ({
           publishedAt,
           license: lice,
           visibility: vis,
+          userCommentsEnabled,
+          downloadsEnabled,
           createdBy: {
             connect: {
               id: userId,
