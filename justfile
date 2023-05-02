@@ -122,10 +122,9 @@ test-gateway:
 test: test-gateway
 
 transcribe file:
-  docker-compose run -v $PWD:/host -w /host process-upload-worker /bin/bash -c 'ffmpeg -i {{file}} -ar 16000 -ac 1 {{file}}.wav'
-  docker-compose run -v $PWD:/host -w /host process-upload-worker /bin/bash -c 'whisper --print-progress --output-vtt -m /opt/whisper/ggml-base.bin {{file}}.wav'
+  docker-compose run --rm -v $PWD:/host -w /host transcribe-worker /bin/bash -c 'ffmpeg -i {{file}} -ar 16000 -ac 1 {{file}}.wav'
+  docker-compose run --rm -v $PWD:/host -w /host transcribe-worker /bin/bash -c 'whisper-ctranslate2 --model large-v2 --vad_filter True {{file}}.wav'
   rm {{file}}.wav
-  mv {{file}}.wav.vtt {{file}}.vtt
 
 transcribe-dir dir:
   fd . {{dir}} | xargs -o -n1 just transcribe

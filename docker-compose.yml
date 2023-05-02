@@ -114,6 +114,7 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 1
+      WHISPER_MODEL: tiny.en
       <<: *s3-env
     volumes:
       - ./services/gateway:/home/node/app

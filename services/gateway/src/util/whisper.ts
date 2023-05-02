@@ -1,5 +1,9 @@
 import { execa } from 'execa';
 import { noop } from 'lodash-es';
+import fastGlob from 'fast-glob';
+
+const whisperModel = process.env['WHISPER_MODEL'] ?? 'large-v2';
+const extraArgs = process.env['WHISPER_EXTRA_ARGS']?.split(' ') ?? [];
 
 export async function runWhisper(
   cwd: string,
@@ -27,15 +31,15 @@ export async function runWhisper(
   console.log('Running whisper');
 
   const proc = execa(
-    'whisper',
+    'whisper-ctranslate2',
     [
-      '-m',
-      '/opt/whisper/ggml-base.bin',
-      '--print-progress',
-      '--language',
-      'auto',
-      '--output-vtt',
-      '-f',
+      '--model_directory',
+      `/opt/whisper/models/${whisperModel}`,
+      '--output_dir',
+      'out',
+      '--vad_filter',
+      'True',
+      ...extraArgs,
       wavFile,
     ],
     { cwd, signal },
@@ -48,5 +52,7 @@ export async function runWhisper(
 
   console.log(`Whisper done: ${res.exitCode}`);
 
-  return `${wavFile}.vtt`;
+  const files = await fastGlob(`${cwd}/out/*`);
+
+  return files;
 }

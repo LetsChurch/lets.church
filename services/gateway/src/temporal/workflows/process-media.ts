@@ -37,7 +37,10 @@ export async function processMediaWorkflow(
     ...(probeRes.streams.some((s) => s.codec_type === 'video')
       ? [createThumbnails(targetId, s3UploadKey)]
       : []),
-    transcribe(targetId, s3UploadKey).then((uploadKey) => {
+    transcribe(targetId, s3UploadKey).then((uploadKeys) => {
+      const uploadKey = uploadKeys.find((k) => k.endsWith('.vtt'));
+      invariant(uploadKey, 'No vtt found!');
+
       return executeChild(indexDocumentWorkflow, {
         workflowId: `transcript:${s3UploadKey}`,
         args: ['transcript', targetId, uploadKey],

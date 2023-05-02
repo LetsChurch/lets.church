@@ -1,9 +1,10 @@
-import { join } from 'node:path';
+import { join, extname } from 'node:path';
 import { stat } from 'node:fs/promises';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
 import rimraf from 'rimraf';
 import { throttle } from 'lodash-es';
+import mime from 'mime';
 import { updateUploadRecord } from '../..';
 import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import { runWhisper } from '../../../util/whisper';
@@ -41,34 +42,42 @@ export default async function transcribe(
     console.log('media downloaded');
     Context.current().heartbeat('media downloaded');
 
-    const vttFile = await runWhisper(
+    const outputFiles = await runWhisper(
       dir,
       downloadPath,
       cancellationSignal,
       dataHeartbeat,
     );
 
-    console.log(`whisper done: ${vttFile}`);
+    console.log(`whisper done`);
     Context.current().heartbeat('whisper done');
 
-    console.log('uploading file');
-    const key = `${uploadRecordId}/transcript.vtt`;
-    await retryablePutFile({
-      to: 'PUBLIC',
-      key,
-      contentType: 'text/vtt',
-      path: vttFile,
-      contentLength: (await stat(vttFile)).size,
-    });
+    const keys = await Promise.all(
+      outputFiles.map(async (file) => {
+        console.log(`uploading file: ${file}`);
 
-    console.log('done uploading');
-    Context.current().heartbeat('done uploading');
+        const ext = extname(file).slice(1);
+        const key = `${uploadRecordId}/transcript.${ext}`;
+        await retryablePutFile({
+          to: 'PUBLIC',
+          key,
+          contentType: mime.getType(ext) ?? 'text/plain',
+          path: file,
+          contentLength: (await stat(file)).size,
+        });
+
+        console.log('done uploading');
+        Context.current().heartbeat('done uploading');
+
+        return key;
+      }),
+    );
 
     await updateUploadRecord(uploadRecordId, {
       transcribingFinishedAt: new Date(),
     });
 
-    return key;
+    return keys;
   } catch (e) {
     console.error(e);
     await updateUploadRecord(uploadRecordId, {

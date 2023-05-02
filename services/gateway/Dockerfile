@@ -1,11 +1,3 @@
-FROM debian:bullseye-slim as build-whisper
-RUN apt update && apt install -y build-essential git curl
-RUN mkdir -p /home/build
-RUN git clone https://github.com/ggerganov/whisper.cpp.git /home/build/whisper.cpp
-WORKDIR /home/build/whisper.cpp
-RUN git checkout v1.2.0 && make
-RUN ./models/download-ggml-model.sh base
-
 FROM debian:bullseye-slim as build-audiowaveform
 RUN apt update && apt install -y git wget cmake build-essential libmad0-dev libid3tag0-dev libsndfile1-dev libgd-dev libboost-filesystem-dev libboost-program-options-dev libboost-regex-dev
 RUN mkdir -p /home/build
@@ -49,7 +41,8 @@ CMD npm run start:transcode-worker
 
 FROM base as transcribe-worker
 COPY --from=mwader/static-ffmpeg:5.1.2 /ffmpeg /ffprobe /usr/bin/
-COPY --from=build-whisper /home/build/whisper.cpp/main /usr/bin/whisper
-COPY --from=build-whisper /home/build/whisper.cpp/models/ggml-base.bin /opt/whisper/ggml-base.bin
+RUN apt update && apt install -y python3 python3-pip git git-lfs && rm -rf /var/lib/apt/lists/* && apt clean
+RUN pip3 install git+https://github.com/Softcatala/whisper-ctranslate2.git@0.2.3
+RUN ./download-whisper-models.sh
 RUN npm run prisma:generate
 CMD npm run start:transcribe-worker
