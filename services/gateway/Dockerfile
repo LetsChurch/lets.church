@@ -36,7 +36,6 @@ FROM base as transcode-worker
 RUN apt install -y imagemagick jpegoptim
 COPY --from=mwader/static-ffmpeg:5.1.2 /ffmpeg /ffprobe /usr/bin/
 COPY --from=build-audiowaveform /home/build/audiowaveform/build/audiowaveform /usr/bin/
-RUN npm run prisma:generate
 CMD npm run start:transcode-worker
 
 FROM base as transcribe-worker
@@ -44,5 +43,4 @@ COPY --from=mwader/static-ffmpeg:5.1.2 /ffmpeg /ffprobe /usr/bin/
 RUN apt update && apt install -y python3 python3-pip git git-lfs && rm -rf /var/lib/apt/lists/* && apt clean
 RUN pip3 install git+https://github.com/Softcatala/whisper-ctranslate2.git@0.2.3
 RUN ./download-whisper-models.sh
-RUN npm run prisma:generate
 CMD npm run start:transcribe-worker
