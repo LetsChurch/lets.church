@@ -1,5 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import PLazy from 'p-lazy';
+import { getClientIp } from 'request-ip';
 import prisma from './prisma';
 import { parseSessionJwt } from './jwt';
 
@@ -37,6 +38,8 @@ export default async function context({
 
   return {
     session,
+    clientIp: getClientIp(req),
+    clientUserAgent: req.headers['user-agent'],
   };
 }
 

@@ -9,6 +9,7 @@ import {
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
 import { resolveOffsetConnection } from '@pothos/plugin-relay';
 import { queryFromInfo } from '@pothos/plugin-prisma';
+import { xxh32 } from '@node-rs/xxhash';
 import { indexDocument } from '../../temporal';
 import builder from '../builder';
 import type { Context } from '../../util/context';
@@ -384,6 +385,7 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
             }),
         ),
     }),
+    totalViews: t.relationCount('uploadViews'),
   }),
 });
 
@@ -756,6 +758,42 @@ builder.mutationFields((t) => ({
             data: { appUserId: userId, uploadUserCommentId, rating },
           });
         }
+      });
+
+      return true;
+    },
+  }),
+  recordUploadView: t.boolean({
+    args: {
+      uploadRecordId: t.arg({ type: 'ShortUuid', required: true }),
+    },
+    resolve: async (
+      _root,
+      { uploadRecordId },
+      { clientIp, clientUserAgent, session },
+    ) => {
+      const res = await prisma.trackingSalt.findFirst({
+        orderBy: { id: 'desc' },
+      });
+
+      if (!res || !clientIp || !clientUserAgent) {
+        return false;
+      }
+
+      // The view hash will change once daily since the salt changes once daily, this means that each user can count for one view per day
+      const viewHash = xxh32(
+        (await session)?.appUserId ?? clientIp + clientUserAgent,
+        res.salt,
+      );
+
+      await prisma.uploadView.upsert({
+        where: { uploadRecordId_viewHash: { uploadRecordId, viewHash } },
+        create: {
+          uploadRecordId,
+          viewHash,
+          appUserId: (await session)?.appUserId ?? null,
+        },
+        update: { count: { increment: 1 } },
       });
 
       return true;

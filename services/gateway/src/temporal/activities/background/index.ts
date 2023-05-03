@@ -11,3 +11,4 @@ export { default as setUploadThumbnail } from './set-upload-thumbnail';
 export { default as updateCommentScores } from './update-comment-scores';
 export { default as updateUploadRecord } from './update-upload-record';
 export { default as updateUploadScores } from './update-upload-scores';
+export { default as updateDailySalt } from './update-daily-salt';

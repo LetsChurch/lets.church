@@ -20,6 +20,15 @@ CREATE TYPE "UploadVariant" AS ENUM ('VIDEO_4K', 'VIDEO_4K_DOWNLOAD', 'VIDEO_108
 CREATE TYPE "Rating" AS ENUM ('LIKE', 'DISLIKE');
 
 -- CreateTable
+CREATE TABLE "tracking_salt" (
+    "id" SERIAL NOT NULL,
+    "salt" INTEGER NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "tracking_salt_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "app_user" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "username" CITEXT NOT NULL,
@@ -194,6 +203,17 @@ CREATE TABLE "upload_user_comment_rating" (
     CONSTRAINT "upload_user_comment_rating_pkey" PRIMARY KEY ("app_user_id","upload_id")
 );
 
+-- CreateTable
+CREATE TABLE "upload_view" (
+    "upload_record_id" UUID NOT NULL,
+    "view_hash" INTEGER NOT NULL,
+    "app_user_id" UUID,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "count" INTEGER NOT NULL DEFAULT 1,
+
+    CONSTRAINT "upload_view_pkey" PRIMARY KEY ("upload_record_id","view_hash")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "app_user_username_key" ON "app_user"("username");
 
@@ -235,6 +255,12 @@ CREATE INDEX "upload_user_comment_rating_upload_id_rating_idx" ON "upload_user_c
 
 -- CreateIndex
 CREATE INDEX "upload_user_comment_rating_app_user_id_rating_idx" ON "upload_user_comment_rating"("app_user_id", "rating");
+
+-- CreateIndex
+CREATE INDEX "upload_view_app_user_id_upload_record_id_idx" ON "upload_view"("app_user_id", "upload_record_id");
+
+-- CreateIndex
+CREATE INDEX "upload_view_created_at_idx" ON "upload_view"("created_at");
 
 -- AddForeignKey
 ALTER TABLE "app_user_email" ADD CONSTRAINT "app_user_email_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -295,3 +321,9 @@ ALTER TABLE "upload_user_comment_rating" ADD CONSTRAINT "upload_user_comment_rat
 
 -- AddForeignKey
 ALTER TABLE "upload_user_comment_rating" ADD CONSTRAINT "upload_user_comment_rating_upload_id_fkey" FOREIGN KEY ("upload_id") REFERENCES "upload_user_comment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "upload_view" ADD CONSTRAINT "upload_view_upload_record_id_fkey" FOREIGN KEY ("upload_record_id") REFERENCES "upload_record"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "upload_view" ADD CONSTRAINT "upload_view_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE SET NULL ON UPDATE CASCADE;

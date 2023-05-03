@@ -23,6 +23,7 @@ import {
   Match,
   For,
   createEffect,
+  onMount,
 } from 'solid-js';
 import { isServer } from 'solid-js/web';
 import { useFloating } from 'solid-floating-ui';
@@ -33,6 +34,8 @@ import DownloadIcon from '@tabler/icons/cloud-download.svg?component-solid';
 // TODO: use share-2 once on tabler icons v2.5+
 import ShareIcon from '@tabler/icons/share.svg?component-solid';
 import invariant from 'tiny-invariant';
+import humanFormat from 'human-format';
+import pluralize from 'pluralize';
 import type {
   MediaRouteMetaDataQuery,
   MediaRouteMetaDataQueryVariables,
@@ -120,6 +123,21 @@ function RatingButton(
 }
 
 export function routeData({ params, location }: RouteDataArgs) {
+  const recordView = server$(async (id: string) => {
+    const client = await createAuthenticatedClient(server$.request);
+
+    const res = await client.request(
+      gql`
+        mutation MediaRouteRecordView($id: ShortUuid!) {
+          recordUploadView(uploadRecordId: $id)
+        }
+      `,
+      { id },
+    );
+
+    return res;
+  });
+
   // Use resource rather than createRouteData or createServerData for the rating state. We don't
   // want any of the cache invalidation / automatic data refetching logic for rating. Local mutation
   // is better than refetching for rating data as numbers changing wildly when clicking like or dislike
@@ -191,6 +209,7 @@ export function routeData({ params, location }: RouteDataArgs) {
               title
               description
               publishedAt
+              totalViews
               channel {
                 id
                 name
@@ -263,6 +282,7 @@ export function routeData({ params, location }: RouteDataArgs) {
   );
 
   return {
+    recordView: () => recordView(id),
     ratingState,
     metaData,
   };
@@ -294,7 +314,14 @@ export default function MediaRoute() {
       { mutate: mutateRating, refetch: refetchRatingState },
     ],
     metaData,
+    recordView,
   } = useRouteData<typeof routeData>();
+
+  onMount(() => {
+    if (!isServer) {
+      recordView();
+    }
+  });
 
   let prevMe: Optional<{ id: string }> = null;
 
@@ -736,7 +763,10 @@ export default function MediaRoute() {
           </div>
           <div class="space-y-2 rounded-md bg-gray-100 p-3">
             <div class="flex items-center gap-3 text-sm">
-              <p class="font-medium text-gray-900">3.9k views</p>
+              <p class="font-medium text-gray-900">
+                {humanFormat(metaData()?.data.totalViews ?? 0)}{' '}
+                {pluralize('view', metaData()?.data.totalViews ?? 0)}
+              </p>
               <Show when={metaData()?.data.publishedAt} keyed>
                 {(date) => (
                   <time datetime={date} class="text-gray-600">

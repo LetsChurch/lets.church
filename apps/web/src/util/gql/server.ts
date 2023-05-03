@@ -2,6 +2,7 @@ import envariant from '@knpwrs/envariant';
 import { GraphQLClient } from 'graphql-request';
 import { redirect } from 'solid-start';
 import server$ from 'solid-start/server';
+import { getClientIp } from 'request-ip';
 import { getSessionJwt } from '../session';
 
 export { gql } from 'graphql-request';
@@ -12,6 +13,18 @@ export const client = new GraphQLClient(GRAPHQL_URL, {
   credentials: 'include',
 });
 
+function getForwardingHeaders(headers: Headers) {
+  const rec: Record<string, string> = {};
+
+  headers.forEach((value, key) => {
+    rec[key] = value;
+  });
+
+  const ip = getClientIp({ headers: rec });
+
+  return ip ? { 'x-client-ip': ip } : {};
+}
+
 export async function createAuthenticatedClientOrRedirect(request: Request) {
   const jwt = await getSessionJwt(request);
 
@@ -20,7 +33,10 @@ export async function createAuthenticatedClientOrRedirect(request: Request) {
   }
 
   return new GraphQLClient(GRAPHQL_URL, {
-    headers: { authorization: `Bearer ${jwt}` },
+    headers: {
+      authorization: `Bearer ${jwt}`,
+      ...getForwardingHeaders(request.headers),
+    },
   });
 }
 
@@ -29,7 +45,10 @@ export async function createAuthenticatedClient(request: Request) {
 
   if (jwt) {
     return new GraphQLClient(GRAPHQL_URL, {
-      headers: { authorization: `Bearer ${jwt}` },
+      headers: {
+        authorization: `Bearer ${jwt}`,
+        ...getForwardingHeaders(request.headers),
+      },
     });
   }
 

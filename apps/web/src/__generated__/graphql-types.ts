@@ -256,6 +256,7 @@ export type Mutation = {
   logout: Scalars['Boolean'];
   rateComment: Scalars['Boolean'];
   rateUpload: Scalars['Boolean'];
+  recordUploadView: Scalars['Boolean'];
   register: MutationRegisterResult;
   subscribeToChannel: ChannelSubscription;
   unsubscribeFromChannel: Scalars['Boolean'];
@@ -311,6 +312,11 @@ export type MutationRateCommentArgs = {
 
 export type MutationRateUploadArgs = {
   rating: Rating;
+  uploadRecordId: Scalars['ShortUuid'];
+};
+
+
+export type MutationRecordUploadViewArgs = {
   uploadRecordId: Scalars['ShortUuid'];
 };
 
@@ -702,6 +708,7 @@ export type UploadRecord = {
   title?: Maybe<Scalars['String']>;
   totalDislikes: Scalars['Int'];
   totalLikes: Scalars['Int'];
+  totalViews: Scalars['Int'];
   transcript?: Maybe<Array<TranscriptLine>>;
   updatedAt: Scalars['DateTime'];
   uploadFinalized: Scalars['Boolean'];

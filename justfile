@@ -57,9 +57,12 @@ gateway-migrate-dev:
   cd services/gateway; npm run prisma:generate
 
 gateway-schedule:
+  just tctl workflow run --tq background --workflow_type updateDailySaltWorkflow --workflow_id update-daily-salt
+  just tctl schedule create --sid update-daily-salt --cron @daily --overlap_policy skip --tq background --workflow_type updateDailySaltWorkflow --workflow_id update-daily-salt
   just tctl schedule create --sid update-upload-scores --interval 15s --overlap_policy skip --tq background --workflow_type updateUploadScoresWorkflow --workflow_id update-upload-scores
   just tctl schedule create --sid update-comment-scores --interval 15s --overlap_policy skip --tq background --workflow_type updateCommentScoresWorkflow --workflow_id update-comment-scores
 gateway-schedule-delete:
+  just tctl schedule delete --sid update-daily-salt
   just tctl schedule delete --sid update-upload-scores
   just tctl schedule delete --sid update-comment-scores
 

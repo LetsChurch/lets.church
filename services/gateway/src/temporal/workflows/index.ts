@@ -12,3 +12,4 @@ export {
   updateUploadRecordSignal,
 } from './update-upload-record';
 export { updateUploadScoresWorkflow } from './update-upload-scores';
+export { updateDailySaltWorkflow } from './update-daily-salt';

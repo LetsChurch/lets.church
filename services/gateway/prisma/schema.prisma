@@ -20,6 +20,14 @@ enum AppUserRole {
   @@map("app_user_role")
 }
 
+model TrackingSalt {
+  id        Int      @id @default(autoincrement())
+  salt      Int
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("tracking_salt")
+}
+
 model AppUser {
   id                       String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   emails                   AppUserEmail[]
@@ -41,6 +49,7 @@ model AppUser {
   uploadUserComments       UploadUserComment[]
   uploadUserRatings        UploadUserRating[]
   uploadUserCommentRatings UploadUserCommentRating[]
+  uploadViews              UploadView[]
 
   @@map("app_user")
 }
@@ -215,6 +224,7 @@ model UploadRecord {
   userCommentsEnabled    Boolean             @default(true) @map("user_comments_disabled")
   userComments           UploadUserComment[]
   downloadsEnabled       Boolean             @default(true) @map("downloads_disabled")
+  uploadViews            UploadView[]
 
   @@index([createdAt, id])
   @@index(score)
@@ -275,4 +285,19 @@ model UploadUserCommentRating {
   @@index([uploadUserCommentId, rating])
   @@index([appUserId, rating])
   @@map("upload_user_comment_rating")
+}
+
+model UploadView {
+  upload         UploadRecord @relation(fields: [uploadRecordId], references: [id])
+  uploadRecordId String       @map("upload_record_id") @db.Uuid
+  viewHash       Int          @map("view_hash")
+  user           AppUser?     @relation(fields: [appUserId], references: [id])
+  appUserId      String?      @map("app_user_id") @db.Uuid
+  createdAt      DateTime     @default(now()) @map("created_at")
+  count          Int          @default(1)
+
+  @@id([uploadRecordId, viewHash])
+  @@index([appUserId, uploadRecordId])
+  @@index([createdAt])
+  @@map("upload_view")
 }
