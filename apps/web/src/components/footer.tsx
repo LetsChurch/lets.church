@@ -12,6 +12,7 @@ export default function Footer() {
     { href: '/support', label: 'Support' },
     { href: '/about', label: 'About' },
     { href: '/about/terms', label: 'Terms' },
+    { href: '/about/privacy', label: 'Privacy' },
     { href: '/about/dmca', label: 'DMCA' },
   ];
 

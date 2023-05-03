@@ -156,7 +156,8 @@ export default function RegisterRoute() {
         name="agreeToTerms"
         label={
           <>
-            I agree to the <A href="/about/terms">terms and conditions</A>.
+            I agree to the <A href="/about/terms">Terms and Conditions</A> and{' '}
+            <A href="/about/privacy">Privacy Policy</A>.
           </>
         }
         error={
