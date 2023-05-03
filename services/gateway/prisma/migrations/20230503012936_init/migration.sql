@@ -149,6 +149,7 @@ CREATE TABLE "upload_record" (
     "upload_finalized" BOOLEAN NOT NULL DEFAULT false,
     "upload_finalized_by_id" UUID,
     "default_thumbnail_path" TEXT,
+    "length_seconds" DOUBLE PRECISION,
     "thumbnail_blurhash" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,

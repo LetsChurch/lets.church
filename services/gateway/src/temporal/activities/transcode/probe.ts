@@ -35,11 +35,6 @@ export default async function probe(
     console.log(`Probing ${downloadPath}`);
 
     const stats = await stat(downloadPath);
-
-    await updateUploadRecord(uploadRecordId, {
-      uploadSizeBytes: stats.size,
-    });
-
     const probe = await runFfprobe(dir, downloadPath, cancellationSignal);
     const probeJson = probe.stdout;
 
@@ -50,6 +45,16 @@ export default async function probe(
       key: `${uploadRecordId}/probe.json`,
       contentType: 'application/json',
       body: Buffer.from(probeJson),
+    });
+
+    const lengthStr = parsedProbe.streams.find(
+      (s) => s.codec_type === 'video' || s.codec_type === 'audio',
+    )?.duration;
+
+    await updateUploadRecord(uploadRecordId, {
+      uploadSizeBytes: stats.size,
+      lengthSeconds:
+        typeof lengthStr === 'string' ? parseFloat(lengthStr) : null,
     });
 
     return parsedProbe;
