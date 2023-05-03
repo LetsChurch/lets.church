@@ -1,9 +1,9 @@
-import { createUniqueId, Show } from 'solid-js';
+import { createUniqueId, JSX, Show } from 'solid-js';
 import type { Optional } from '~/util';
 
 export default function LabeledInput(props: {
   name: string;
-  label: string;
+  label: string | JSX.Element;
   error?: Optional<string | Array<string>>;
 }) {
   const id = createUniqueId();

@@ -1,4 +1,5 @@
 import { For } from 'solid-js';
+import { A } from 'solid-start';
 // TODO: use filled variants on tabler 2+
 import FacebookIcon from '@tabler/icons/brand-facebook.svg?component-solid';
 import TwitterIcon from '@tabler/icons/brand-twitter.svg?component-solid';
@@ -7,9 +8,11 @@ import GitlabIcon from '@tabler/icons/brand-gitlab.svg?component-solid';
 
 export default function Footer() {
   const links = [
-    { href: '/', label: 'Watch' },
-    { href: '#', label: 'Donate' },
-    { href: '#', label: 'About' },
+    { href: '/', label: 'Home' },
+    { href: '/support', label: 'Support' },
+    { href: '/about', label: 'About' },
+    { href: '/about/terms', label: 'Terms' },
+    { href: '/about/dmca', label: 'DMCA' },
   ];
 
   return (
@@ -22,12 +25,12 @@ export default function Footer() {
           <For each={links}>
             {(link) => (
               <div class="px-5 py-2">
-                <a
+                <A
                   href={link.href}
                   class="text-base text-gray-500 hover:text-gray-900"
                 >
                   {link.label}
-                </a>
+                </A>
               </div>
             )}
           </For>

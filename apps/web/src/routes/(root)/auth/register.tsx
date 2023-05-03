@@ -13,6 +13,7 @@ import { storage } from '~/util/session';
 import { Button, LabeledCheckbox, LabeledInput } from '~/components/form';
 import { Turnstile } from '~/components/turnstile';
 import validateTurnstile from '~/util/server/validate-turnstile';
+import A from '~/components/content/a';
 
 const LoginSchema = Z.object({
   email: Z.string().email(),
@@ -153,7 +154,11 @@ export default function RegisterRoute() {
       />
       <LabeledCheckbox
         name="agreeToTerms"
-        label="I agree to the terms and conditions."
+        label={
+          <>
+            I agree to the <A href="/about/terms">terms and conditions</A>.
+          </>
+        }
         error={
           registering.error?.fieldErrors?.agreeToTerms
             ? 'You must agree to the terms and conditions.'

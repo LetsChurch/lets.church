@@ -17,17 +17,15 @@ import ProfileMobile from './profile-mobile';
 import Logo from './logo';
 import { UserContext } from '~/routes/(root)';
 
-type NavLinkProps = ParentProps<{ href: string; active?: boolean }>;
+type NavLinkProps = ParentProps<{ href: string; end?: boolean }>;
 
 function NavLink(props: NavLinkProps) {
   return (
     <A
-      href={props.href}
-      class={`inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium  ${
-        props.active
-          ? 'border-indigo-500 text-gray-900'
-          : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-      }`}
+      class="inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium"
+      inactiveClass="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+      activeClass="border-indigo-500 text-gray-900"
+      {...props}
     >
       {props.children}
     </A>
@@ -37,12 +35,10 @@ function NavLink(props: NavLinkProps) {
 function NavLinkMobile(props: NavLinkProps) {
   return (
     <A
-      href={props.href}
-      class={`block border-l-4 py-2 pl-3 pr-4 text-base font-medium ${
-        props.active
-          ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-          : 'border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800'
-      }`}
+      class="block border-l-4 py-2 pl-3 pr-4 text-base font-medium"
+      inactiveClass="border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800"
+      activeClass="border-indigo-500 bg-indigo-50 text-indigo-700"
+      {...props}
     >
       {props.children}
     </A>
@@ -102,11 +98,10 @@ export default function Header() {
                 </A>
               </div>
               <div class="hidden lg:ml-6 lg:flex lg:space-x-8">
-                <NavLink href="/" active>
-                  Watch
+                <NavLink href="/support" end>
+                  Support
                 </NavLink>
-                <NavLink href="#">Donate</NavLink>
-                <NavLink href="#">About</NavLink>
+                <NavLink href="/about">About</NavLink>
               </div>
             </div>
             <div class="flex flex-1 items-center justify-center px-2 lg:ml-6 lg:justify-end">
@@ -164,11 +159,10 @@ export default function Header() {
         <Show when={showMobileMenu()}>
           <div class="lg:hidden" id="mobile-menu">
             <div class="space-y-1 pb-3 pt-2">
-              <NavLinkMobile href="#" active>
-                Watch
+              <NavLinkMobile href="/support" end>
+                Support
               </NavLinkMobile>
-              <NavLinkMobile href="#">Donate</NavLinkMobile>
-              <NavLinkMobile href="#">About</NavLinkMobile>
+              <NavLinkMobile href="/about">About</NavLinkMobile>
             </div>
             <ProfileMobile me={user?.()?.me ?? null} />
           </div>
