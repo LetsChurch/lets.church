@@ -323,6 +323,7 @@ export type MutationRecordUploadViewArgs = {
 
 export type MutationRegisterArgs = {
   agreeToTerms: Scalars['Boolean'];
+  agreeToTheology: Scalars['Boolean'];
   email: Scalars['String'];
   fullName?: InputMaybe<Scalars['String']>;
   password: Scalars['String'];

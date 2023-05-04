@@ -663,7 +663,9 @@ export default function TermsRoute() {
           quickly as possible and in any event, within the timescales provided
           by applicable data protection laws.
         </P>
-        <P>This document was last updated on May 2, 2023</P>
+        <P>
+          <small>This document was last updated on May 3, 2023</small>
+        </P>
       </div>
     </div>
   );

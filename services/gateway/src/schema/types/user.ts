@@ -227,6 +227,7 @@ builder.mutationFields((t) => ({
       password: t.arg.string({ required: true }),
       fullName: t.arg.string(),
       agreeToTerms: t.arg.boolean({ required: true }),
+      agreeToTheology: t.arg.boolean({ required: true }),
     },
     validate: {
       schema: z.object({
@@ -247,6 +248,7 @@ builder.mutationFields((t) => ({
         email: z.string().email(),
         fullName: z.string().max(100).optional(),
         agreeToTerms: z.literal(true),
+        agreeToTheology: z.literal(true),
       }),
     },
     errors: {

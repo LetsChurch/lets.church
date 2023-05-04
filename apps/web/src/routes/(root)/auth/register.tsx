@@ -15,12 +15,13 @@ import { Turnstile } from '~/components/turnstile';
 import validateTurnstile from '~/util/server/validate-turnstile';
 import A from '~/components/content/a';
 
-const LoginSchema = Z.object({
+const RegisterSchema = Z.object({
   email: Z.string().email(),
   username: Z.string().min(3).max(20),
   password: Z.string(),
   fullName: Z.string().max(100).optional(),
   agreeToTerms: Z.preprocess((input) => input === 'on', Z.literal(true)),
+  agreeToTheology: Z.preprocess((input) => input === 'on', Z.literal(true)),
 });
 
 export default function RegisterRoute() {
@@ -28,11 +29,16 @@ export default function RegisterRoute() {
     async (form: FormData) => {
       await validateTurnstile(form);
 
-      const parseRes = LoginSchema.safeParse(
+      const parseRes = RegisterSchema.safeParse(
         Object.fromEntries(
-          ['email', 'username', 'password', 'fullName', 'agreeToTerms'].map(
-            (p) => [p, form.get(p)],
-          ),
+          [
+            'email',
+            'username',
+            'password',
+            'fullName',
+            'agreeToTerms',
+            'agreeToTheology',
+          ].map((p) => [p, form.get(p)]),
         ),
       );
 
@@ -43,7 +49,8 @@ export default function RegisterRoute() {
         });
       }
 
-      const { email, username, password, agreeToTerms } = parseRes.data;
+      const { email, username, password, agreeToTerms, agreeToTheology } =
+        parseRes.data;
 
       const { register: registerRes } = await client.request<
         RegisterMutation,
@@ -56,6 +63,7 @@ export default function RegisterRoute() {
             $password: String!
             $fullName: String
             $agreeToTerms: Boolean!
+            $agreeToTheology: Boolean!
           ) {
             register(
               email: $email
@@ -63,6 +71,7 @@ export default function RegisterRoute() {
               password: $password
               fullName: $fullName
               agreeToTerms: $agreeToTerms
+              agreeToTheology: $agreeToTheology
             ) {
               __typename
               ... on ValidationError {
@@ -84,7 +93,7 @@ export default function RegisterRoute() {
             }
           }
         `,
-        { email, username, password, agreeToTerms },
+        { email, username, password, agreeToTerms, agreeToTheology },
       );
 
       if (registerRes.__typename === 'ValidationError') {
@@ -152,20 +161,36 @@ export default function RegisterRoute() {
         label="Full Name"
         error={registering.error?.fieldErrors?.fullName}
       />
-      <LabeledCheckbox
-        name="agreeToTerms"
-        label={
-          <>
-            I agree to the <A href="/about/terms">Terms and Conditions</A> and{' '}
-            <A href="/about/privacy">Privacy Policy</A>.
-          </>
-        }
-        error={
-          registering.error?.fieldErrors?.agreeToTerms
-            ? 'You must agree to the terms and conditions.'
-            : null
-        }
-      />
+      <div class="space-y-0">
+        <LabeledCheckbox
+          name="agreeToTheology"
+          label={
+            <>
+              I agree to the{' '}
+              <A href="/about/theology">Let's Church Statement of Theology</A>.
+            </>
+          }
+          error={
+            registering.error?.fieldErrors?.agreeToTheology
+              ? 'You must agree to the Statement of Theology.'
+              : null
+          }
+        />
+        <LabeledCheckbox
+          name="agreeToTerms"
+          label={
+            <>
+              I agree to the <A href="/about/terms">Terms and Conditions</A> and{' '}
+              <A href="/about/privacy">Privacy Policy</A>.
+            </>
+          }
+          error={
+            registering.error?.fieldErrors?.agreeToTerms
+              ? 'You must agree to the terms and conditions.'
+              : null
+          }
+        />
+      </div>
       <Turnstile class="flex justify-center" />
       <Button type="submit" class="w-full" disabled={registering.pending}>
         Register

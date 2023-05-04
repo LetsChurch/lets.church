@@ -277,7 +277,9 @@ export default function DmcaRoute() {
             co&#110;t&#97;c&#116;&#64;le&#116;s&#46;&#99;&#104;&#117;&#114;c&#104;
           </A>
         </P>
-        <P>This document was last updated on May 2, 2023</P>
+        <P>
+          <small>This document was last updated on May 3, 2023</small>
+        </P>
       </div>
     </div>
   );

@@ -273,7 +273,9 @@ export default function TermsRoute() {
             cont&#97;ct&#64;&#108;&#101;t&#115;&#46;&#99;h&#117;r&#99;h
           </A>
         </P>
-        <P>This document was last updated on May 2, 2023</P>
+        <P>
+          <small>This document was last updated on May 3, 2023</small>
+        </P>
       </div>
     </div>
   );

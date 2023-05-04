@@ -6,6 +6,7 @@ export type RegisterMutationVariables = Types.Exact<{
   password: Types.Scalars['String'];
   fullName?: Types.InputMaybe<Types.Scalars['String']>;
   agreeToTerms: Types.Scalars['Boolean'];
+  agreeToTheology: Types.Scalars['Boolean'];
 }>;
 
 
