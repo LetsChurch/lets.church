@@ -647,9 +647,19 @@ builder.mutationFields((t) => ({
       commentId: t.arg({ type: 'ShortUuid', required: false }),
       text: t.arg.string({ required: true }),
     },
-    authScopes: async (_root, { commentId }, context) => {
+    authScopes: async (_root, { uploadRecordId, commentId }, context) => {
       const userId = (await context.session)?.appUserId;
       invariant(userId, 'No user found!');
+
+      const upRec = await prisma.uploadRecord.findUniqueOrThrow({
+        where: { id: uploadRecordId },
+        select: { userCommentsEnabled: true },
+      });
+
+      // Only admins can comment when comments are disabled
+      if (!upRec.userCommentsEnabled) {
+        return { admin: true };
+      }
 
       // Do not allow modifying other users' comments
       if (commentId) {
