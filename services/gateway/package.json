@@ -27,7 +27,9 @@
     "prisma:db:seed": "prisma db seed",
     "prisma:db:truncate": "ts-node-esm --experimental-specifier-resolution=node prisma/truncate.ts",
     "prisma:generate": "prisma generate",
-    "es:push-mappings": "ts-node-esm --experimental-specifier-resolution=node elasticsearch/mappings.ts"
+    "es:push-mappings": "ts-node-esm --experimental-specifier-resolution=node elasticsearch/mappings.ts",
+    "admin:create-user": "ts-node-esm --experimental-specifier-resolution=node scripts/create-user.ts",
+    "admin:create-channel": "ts-node-esm --experimental-specifier-resolution=node scripts/create-channel.ts"
   },
   "prisma": {
     "seed": "node --loader ts-node/esm --experimental-specifier-resolution=node prisma/seed.ts"
@@ -39,6 +41,7 @@
     "@elastic/elasticsearch": "^8.6.0",
     "@envelop/disable-introspection": "^4.0.6",
     "@faker-js/faker": "^7.6.0",
+    "@inquirer/prompts": "^1.0.1",
     "@knpwrs/envariant": "^1.1.1",
     "@node-rs/xxhash": "^1.3.0",
     "@pothos/core": "^3.29.0",
