@@ -6,6 +6,7 @@ import { BACKGROUND_QUEUE } from '../queues';
 const { sendEmail } = proxyActivities<typeof activities>({
   startToCloseTimeout: '1 minute',
   taskQueue: BACKGROUND_QUEUE,
+  retry: { maximumAttempts: 8 },
 });
 
 export async function sendEmailWorkflow(args: EmailArgs) {

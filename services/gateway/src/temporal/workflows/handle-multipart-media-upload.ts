@@ -17,12 +17,14 @@ const { abortMultipartUpload, completeMultipartUpload, finalizeUploadRecord } =
     startToCloseTimeout: '1 minute',
     heartbeatTimeout: '1 minute',
     taskQueue: BACKGROUND_QUEUE,
+    retry: { maximumAttempts: 5 },
   });
 
 const { backupObjects } = proxyActivities<typeof activities>({
   startToCloseTimeout: '60 minute',
   heartbeatTimeout: '1 minute',
   taskQueue: BACKGROUND_QUEUE,
+  retry: { maximumAttempts: 5 },
 });
 
 export const uploadDoneSignal =

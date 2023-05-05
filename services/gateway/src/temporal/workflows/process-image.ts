@@ -8,6 +8,7 @@ const { setUploadThumbnail, setChannelAvatar, setProfileAvatar, processImage } =
     startToCloseTimeout: '60 minutes',
     heartbeatTimeout: '1 minute',
     taskQueue: BACKGROUND_QUEUE,
+    retry: { maximumAttempts: 5 },
   });
 
 export async function processImageWorkflow(

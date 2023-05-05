@@ -32,7 +32,7 @@ const client = PLazy.from(async () => {
 });
 
 const retryOps: Pick<WorkflowOptions, 'retry'> = {
-  retry: { maximumAttempts: 8 },
+  retry: { maximumAttempts: 5 },
 };
 
 function makeMultipartMediaUploadWorkflowId(

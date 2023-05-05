@@ -13,6 +13,7 @@ const { updateUploadRecord: updateUploadRecordActivity } = proxyActivities<
 >({
   startToCloseTimeout: '1 minute',
   taskQueue: BACKGROUND_QUEUE,
+  retry: { maximumAttempts: 5 },
 });
 
 export const updateUploadRecordSignal =

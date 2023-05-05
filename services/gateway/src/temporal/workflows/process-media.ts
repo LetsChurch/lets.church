@@ -9,6 +9,7 @@ const { probe } = proxyActivities<typeof transcodeActivities>({
   startToCloseTimeout: '1 minute',
   heartbeatTimeout: '1 minute',
   taskQueue: TRANSCODE_QUEUE,
+  retry: { maximumAttempts: 5 },
 });
 
 const { transcode, createThumbnails } = proxyActivities<
@@ -17,12 +18,14 @@ const { transcode, createThumbnails } = proxyActivities<
   startToCloseTimeout: '180 minutes',
   heartbeatTimeout: '1 minute',
   taskQueue: TRANSCODE_QUEUE,
+  retry: { maximumAttempts: 5 },
 });
 
 const { transcribe } = proxyActivities<typeof transcribeActivities>({
   startToCloseTimeout: '180 minutes',
   heartbeatTimeout: '1 minute',
   taskQueue: TRANSCRIBE_QUEUE,
+  retry: { maximumAttempts: 5 },
 });
 
 export async function processMediaWorkflow(

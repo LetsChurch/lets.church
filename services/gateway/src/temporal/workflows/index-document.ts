@@ -12,6 +12,7 @@ const { indexDocument: indexDocumentActivity } = proxyActivities<
 >({
   startToCloseTimeout: '1 minute',
   taskQueue: BACKGROUND_QUEUE,
+  retry: { maximumAttempts: 5 },
 });
 
 export const indexDocumentSignal = defineSignal('indexDocument');
