@@ -37,22 +37,34 @@ export default function Footer() {
           </For>
         </nav>
         <div class="mt-8 flex justify-center space-x-6">
-          <a href="#" class="text-gray-400 hover:text-gray-500">
+          <a
+            href="https://www.facebook.com/profile.php?id=100092315746719"
+            class="text-gray-400 hover:text-gray-500"
+          >
             <span class="sr-only">Facebook</span>
             <FacebookIcon class="h-6 w-6" />
           </a>
 
-          <a href="#" class="text-gray-400 hover:text-gray-500">
+          <a
+            href="https://twitter.com/lets_church"
+            class="text-gray-400 hover:text-gray-500"
+          >
             <span class="sr-only">Twitter</span>
             <TwitterIcon class="h-6 w-6" />
           </a>
 
-          <a href="#" class="text-gray-400 hover:text-gray-500">
+          <a
+            href="https://github.com/LetsChurch/"
+            class="text-gray-400 hover:text-gray-500"
+          >
             <span class="sr-only">GitHub</span>
             <GithubIcon class="h-6 w-6" />
           </a>
 
-          <a href="#" class="text-gray-400 hover:text-gray-500">
+          <a
+            href="https://gitlab.com/LetsChurch/"
+            class="text-gray-400 hover:text-gray-500"
+          >
             <span class="sr-only">Gitlab</span>
             <GitlabIcon class="h-6 w-6" />
           </a>
