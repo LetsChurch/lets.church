@@ -124,7 +124,7 @@ services:
   # Vendor Services
   #
   temporal:
-    image: temporalio/auto-setup:1.20.0.0
+    image: temporalio/auto-setup:1.20.2.0
     environment:
       # See auto-setup.sh: https://github.com/temporalio/docker-builds/blob/a442b94edbe10bb49e2f0fc00c3154cdf0590be5/docker/auto-setup.sh
       SKIP_DB_CREATE: true # Database is already created via init script
@@ -148,7 +148,7 @@ services:
       - elasticsearch
 
   temporal-admin-tools:
-    image: temporalio/admin-tools:1.20.0.0
+    image: temporalio/admin-tools:1.20.2.0
     environment:
       - TEMPORAL_CLI_ADDRESS=temporal:7233
     stdin_open: true
@@ -157,7 +157,7 @@ services:
       - temporal
 
   temporal-ui:
-    image: temporalio/ui:2.13.3
+    image: temporalio/ui:2.14.0
     environment:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_CORS_ORIGINS: http://localhost:3000
@@ -170,7 +170,7 @@ services:
   # Service Dependencies
   #
   postgres:
-    image: postgres:14.6-alpine
+    image: postgres:14.7-alpine
     environment:
       POSTGRES_USER: ${PG_USER}
       POSTGRES_PASSWORD: ${PG_PASSWORD}
@@ -190,7 +190,7 @@ services:
       ]
 
   elasticsearch:
-    image: elasticsearch:8.5.2
+    image: elasticsearch:8.7.1
     environment:
       - cluster.routing.allocation.disk.threshold_enabled=true
       - cluster.routing.allocation.disk.watermark.low=512mb
@@ -208,7 +208,7 @@ services:
   # Development
   #
   kibana:
-    image: kibana:8.5.2
+    image: kibana:8.7.1
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch:9200
     depends_on:
