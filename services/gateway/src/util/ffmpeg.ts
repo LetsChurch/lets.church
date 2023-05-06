@@ -1,5 +1,7 @@
 import type { UploadVariant } from '@prisma/client';
 import { execa } from 'execa';
+import mime from 'mime';
+import type { Probe } from '../temporal/activities/transcode/probe';
 
 const HLS_TIME = 6;
 
@@ -29,35 +31,38 @@ type VideoVariant = Exclude<UploadVariant, 'AUDIO' | 'AUDIO_DOWNLOAD'>;
 export function getVariants(
   inputWidth: number,
   inputHeight: number,
+  audioOnly = false,
 ): Array<UploadVariant> {
   const res: Array<UploadVariant> = [];
 
-  if (inputWidth >= 3840 || inputHeight >= 2160) {
-    res.push('VIDEO_4K');
-    res.push('VIDEO_4K_DOWNLOAD');
-  }
-
-  if (inputWidth >= 1920 || inputHeight >= 1080) {
-    res.push('VIDEO_1080P');
-    res.push('VIDEO_1080P_DOWNLOAD');
-  }
-
-  if (inputWidth >= 1280 || inputHeight >= 720) {
-    res.push('VIDEO_720P');
-    if (res.length === 1) {
-      res.push('VIDEO_720P_DOWNLOAD');
+  if (!audioOnly) {
+    if (inputWidth >= 3840 || inputHeight >= 2160) {
+      res.push('VIDEO_4K');
+      res.push('VIDEO_4K_DOWNLOAD');
     }
-  }
 
-  if (inputWidth >= 842 || inputHeight >= 480) {
-    res.push('VIDEO_480P');
-    if (res.length === 1) {
-      res.push('VIDEO_480P_DOWNLOAD');
+    if (inputWidth >= 1920 || inputHeight >= 1080) {
+      res.push('VIDEO_1080P');
+      res.push('VIDEO_1080P_DOWNLOAD');
     }
-  }
 
-  if (inputWidth >= 640 || inputHeight >= 360) {
-    res.push('VIDEO_360P');
+    if (inputWidth >= 1280 || inputHeight >= 720) {
+      res.push('VIDEO_720P');
+      if (res.length === 1) {
+        res.push('VIDEO_720P_DOWNLOAD');
+      }
+    }
+
+    if (inputWidth >= 842 || inputHeight >= 480) {
+      res.push('VIDEO_480P');
+      if (res.length === 1) {
+        res.push('VIDEO_480P_DOWNLOAD');
+      }
+    }
+
+    if (inputWidth >= 640 || inputHeight >= 360) {
+      res.push('VIDEO_360P');
+    }
   }
 
   res.push('AUDIO', 'AUDIO_DOWNLOAD');
@@ -399,8 +404,15 @@ export function runFfprobe(
       'json',
       '-show_format',
       '-show_streams',
+      /* '-count_frmaes', */
       inputFilename,
     ],
     { cwd, signal },
   );
+}
+
+export function probeIsAudioFile(probe: Probe) {
+  return probe.format.format_name
+    .split(',')
+    .every((f) => mime.getType(f)?.startsWith('audio/'));
 }

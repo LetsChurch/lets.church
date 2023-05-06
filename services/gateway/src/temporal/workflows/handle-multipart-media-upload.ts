@@ -3,7 +3,8 @@ import {
   condition,
   defineSignal,
   setHandler,
-  executeChild,
+  startChild,
+  ParentClosePolicy,
 } from '@temporalio/workflow';
 import type { UploadPostProcessValue } from '../../schema/types/mutation';
 import type { Client } from '../../util/s3';
@@ -55,21 +56,23 @@ export async function handleMultipartMediaUploadWorkflow(
     await completeMultipartUpload(to, s3UploadId, s3UploadKey, eTags);
 
     if (postProcess === 'media') {
-      await executeChild(processMediaWorkflow, {
+      await startChild(processMediaWorkflow, {
         args: [uploadRecordId, s3UploadKey],
         workflowId: `processMedia:${s3UploadKey}`,
         taskQueue: BACKGROUND_QUEUE,
+        parentClosePolicy: ParentClosePolicy.PARENT_CLOSE_POLICY_ABANDON,
         retry: {
-          maximumAttempts: 8,
+          maximumAttempts: 5,
         },
       });
     } else {
-      await executeChild(processImageWorkflow, {
+      await startChild(processImageWorkflow, {
         args: [uploadRecordId, s3UploadKey, postProcess],
         workflowId: `processImage:${s3UploadKey}`,
         taskQueue: BACKGROUND_QUEUE,
+        parentClosePolicy: ParentClosePolicy.PARENT_CLOSE_POLICY_ABANDON,
         retry: {
-          maximumAttempts: 8,
+          maximumAttempts: 5,
         },
       });
     }

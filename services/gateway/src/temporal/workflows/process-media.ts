@@ -1,4 +1,5 @@
 import { executeChild, proxyActivities } from '@temporalio/workflow';
+import mime from 'mime';
 import invariant from 'tiny-invariant';
 import type * as transcodeActivities from '../activities/transcode';
 import type * as transcribeActivities from '../activities/transcribe';
@@ -16,14 +17,14 @@ const { transcode, createThumbnails } = proxyActivities<
   typeof transcodeActivities
 >({
   startToCloseTimeout: '180 minutes',
-  heartbeatTimeout: '1 minute',
+  heartbeatTimeout: '5 minutes',
   taskQueue: TRANSCODE_QUEUE,
   retry: { maximumAttempts: 5 },
 });
 
 const { transcribe } = proxyActivities<typeof transcribeActivities>({
   startToCloseTimeout: '180 minutes',
-  heartbeatTimeout: '1 minute',
+  heartbeatTimeout: '5 minutes',
   taskQueue: TRANSCRIBE_QUEUE,
   retry: { maximumAttempts: 5 },
 });
@@ -37,7 +38,9 @@ export async function processMediaWorkflow(
 
   await Promise.allSettled([
     transcode(targetId, s3UploadKey, probeRes),
-    ...(probeRes.streams.some((s) => s.codec_type === 'video')
+    ...(probeRes.format.format_name
+      .split(',')
+      .some((f) => mime.getType(f)?.startsWith('video/'))
       ? [createThumbnails(targetId, s3UploadKey)]
       : []),
     transcribe(targetId, s3UploadKey).then((uploadKeys) => {

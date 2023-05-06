@@ -19,7 +19,7 @@ export default async function transcribe(
   const cancellationSignal = Context.current().cancellationSignal;
   const dir = join(WORK_DIR, uploadRecordId);
   const dataHeartbeat = throttle(
-    () => Context.current().heartbeat('data'),
+    (arg = 'data') => Context.current().heartbeat(arg),
     5000,
   );
 

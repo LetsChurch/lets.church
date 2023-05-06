@@ -21,7 +21,7 @@ import type { DocumentKind } from './activities/background/index-document';
 
 const TEMPORAL_ADDRESS = envariant('TEMPORAL_ADDRESS');
 
-const client = PLazy.from(async () => {
+export const client = PLazy.from(async () => {
   await waitOnTemporal();
 
   return new Client({

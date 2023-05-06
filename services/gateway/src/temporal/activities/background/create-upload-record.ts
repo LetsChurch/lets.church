@@ -2,13 +2,11 @@ import type { Prisma } from '@prisma/client';
 import prisma from '../../../util/prisma';
 
 export default async function updateUploadRecord(
-  uploadRecordId: string,
-  data: Prisma.UploadRecordUpdateArgs['data'],
+  data: Prisma.UploadRecordCreateArgs['data'],
 ) {
-  await prisma.uploadRecord.update({
-    where: {
-      id: uploadRecordId,
-    },
+  const rec = await prisma.uploadRecord.create({
     data,
   });
+
+  return rec.id;
 }

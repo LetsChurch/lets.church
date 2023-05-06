@@ -66,7 +66,13 @@ export default async function transcode(
       `Found ${probe.streams.length} streams. (width: ${width}, height: ${height})`,
     );
 
-    const variants = getVariants(width, height);
+    const variants = getVariants(
+      width,
+      height,
+      probe.format.format_name
+        .split(',')
+        .every((f) => mime.getType(f)?.startsWith('audio/')),
+    );
 
     console.log(
       `Will encode ${variants.length} variants: ${formatter.format(variants)}`,
@@ -122,6 +128,7 @@ export default async function transcode(
 
       const frames = parseInt(match[1] ?? '');
       const totalFrames = parseInt(
+        // TODO: get progress when nb_frames is undefined
         String(probe.streams.find((s) => s.nb_frames)?.nb_frames) ?? '',
       );
 

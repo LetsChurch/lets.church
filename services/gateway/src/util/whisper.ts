@@ -45,8 +45,8 @@ export async function runWhisper(
     { cwd, signal },
   );
 
-  proc.stdout?.on('data', () => heartbeat());
-  proc.stderr?.on('data', () => heartbeat());
+  proc.stdout?.on('data', () => heartbeat('whisper stdout'));
+  proc.stderr?.on('data', () => heartbeat('whisper stderr'));
 
   const res = await proc;
 

@@ -27,8 +27,9 @@ RUN npm run prisma:generate
 CMD npm run start:server
 
 FROM base as background-worker
-RUN apt install -y imagemagick jpegoptim
+RUN apt install -y imagemagick jpegoptim python3
 COPY --from=videah/oxipng:7.0.0 /usr/local/bin/oxipng /usr/local/bin/oxipng
+COPY --from=jauderho/yt-dlp:2023.03.04 /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
 RUN npm run prisma:generate
 CMD npm run start:background-worker
 

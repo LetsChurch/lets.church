@@ -29,7 +29,8 @@
     "prisma:generate": "prisma generate",
     "es:push-mappings": "ts-node-esm --experimental-specifier-resolution=node elasticsearch/mappings.ts",
     "admin:create-user": "ts-node-esm --experimental-specifier-resolution=node scripts/create-user.ts",
-    "admin:create-channel": "ts-node-esm --experimental-specifier-resolution=node scripts/create-channel.ts"
+    "admin:create-channel": "ts-node-esm --experimental-specifier-resolution=node scripts/create-channel.ts",
+    "admin:import": "ts-node-esm --experimental-specifier-resolution=node scripts/import.ts"
   },
   "prisma": {
     "seed": "node --loader ts-node/esm --experimental-specifier-resolution=node prisma/seed.ts"
