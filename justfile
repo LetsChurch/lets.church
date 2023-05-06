@@ -36,8 +36,8 @@ purge-pg:
 # Development
 #
 
-tctl *args:
-  docker-compose exec temporal-admin-tools tctl {{args}}
+temporal *args:
+  docker-compose exec temporal-admin-tools temporal {{args}}
 
 gateway-db-push:
   docker-compose exec gateway npm run prisma:db:push
@@ -57,14 +57,14 @@ gateway-migrate-dev:
   cd services/gateway; npm run prisma:generate
 
 gateway-schedule:
-  just tctl workflow run --tq background --workflow_type updateDailySaltWorkflow --workflow_id update-daily-salt
-  just tctl schedule create --sid update-daily-salt --cron @daily --overlap_policy skip --tq background --workflow_type updateDailySaltWorkflow --workflow_id update-daily-salt
-  just tctl schedule create --sid update-upload-scores --interval 15s --overlap_policy skip --tq background --workflow_type updateUploadScoresWorkflow --workflow_id update-upload-scores
-  just tctl schedule create --sid update-comment-scores --interval 15s --overlap_policy skip --tq background --workflow_type updateCommentScoresWorkflow --workflow_id update-comment-scores
+  just temporal workflow execute --task-queue background --type updateDailySaltWorkflow --workflow-id update-daily-salt
+  just temporal schedule create --schedule-id update-daily-salt --cron @daily --overlap-policy skip --task-queue background --workflow-type updateDailySaltWorkflow --workflow-id update-daily-salt
+  just temporal schedule create --schedule-id update-upload-scores --interval 5m --overlap-policy skip --task-queue background --workflow-type updateUploadScoresWorkflow --workflow-id update-upload-scores
+  just temporal schedule create --schedule-id update-comment-scores --interval 5m --overlap-policy skip --task-queue background --workflow-type updateCommentScoresWorkflow --workflow-id update-comment-scores
 gateway-schedule-delete:
-  just tctl schedule delete --sid update-daily-salt
-  just tctl schedule delete --sid update-upload-scores
-  just tctl schedule delete --sid update-comment-scores
+  just temporal schedule delete --schedule-id update-daily-salt
+  just temporal schedule delete --schedule-id update-upload-scores
+  just temporal schedule delete --schedule-id update-comment-scores
 
 gateway-init: gateway-migrate-dev gateway-es-push-mappings gateway-schedule
 
