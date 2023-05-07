@@ -13,6 +13,7 @@ const schema = Z.array(
     title: Z.string(),
     publishedAt: Z.string(),
     description: Z.string(),
+    commentsEnabled: Z.boolean().default(true),
   }),
 );
 
