@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: cloudflared
+  name: cloudflared-deployment
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      pod: cloudflared
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        pod: cloudflared
+    spec:
+      containers:
+      - command:
+          - cloudflared
+          - tunnel
+          # Prometheus metrics server and livenessProbe server
+          - --metrics
+          - 0.0.0.0:2000
+          - run
+        args:
+          - --token
+          - $(CF_TUNNEL_TOKEN)
+        envFrom:
+          - secretRef:
+              name: cf-tunnel-secret
+        image: cloudflare/cloudflared:latest
+        name: cloudflared
+        livenessProbe:
+          httpGet:
+            # /ready endpoint returns 200 if and only if there is an active connection to the edge.
+            path: /ready
+            port: 2000
+          failureThreshold: 1
+          initialDelaySeconds: 10
+          periodSeconds: 10

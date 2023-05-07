@@ -21,6 +21,12 @@ spec:
       containers:
         - image: registry.gitlab.com/letschurch/lets.church/background-worker:latest
           name: background-worker
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pguser-letschurch
+                  key: uri
           envFrom:
             - configMapRef:
                 name: gateway-config
@@ -28,8 +34,6 @@ spec:
                 name: temporal-client-config
             - configMapRef:
                 name: background-worker-config
-            - secretRef:
-                name: postgres-credentials
             - secretRef:
                 name: s3-secret
             - secretRef:

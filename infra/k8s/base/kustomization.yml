@@ -1,13 +1,11 @@
 resources:
-  - production-issuer.yml
   - config.yml
   - gateway-deployment.yml
   - background-worker-deployment.yml
-  - process-upload-worker-deployment.yml
+  - transcode-worker-deployment.yml
   - elasticsearch-deployment.yml
   - temporal-deployment.yml
   - temporal-ui-deployment.yml
-  - postgres-deployment.yml
   - web-deployment.yml
 configMapGenerator:
   - name: web-config
@@ -18,18 +16,18 @@ configMapGenerator:
       - POSTGRES_HOST="postgres:5432"
       - ELASTICSEARCH_URL="http://elasticsearch:9200"
       - MEDIA_URL="http://MEDIA_URL"
+      - WEB_URL="https://lets.church"
       - ZXCVBN_MINIMUM_SCORE="3"
   - name: temporal-server-config
     literals:
       - SKIP_DB_CREATE="true"
       - DB=postgresql # Database vendor
-      - DB_PORT="5432" # Database port
-      - POSTGRES_SEEDS=postgres # Database server
-      - DBNAME=temporal
-      - VISIBILITY_DBNAME=temporal
+      - SQL_TLS="true"
+      - SQL_TLS_ENABLED="true" # https://github.com/temporalio/temporal/issues/2621
+      - SQL_TLS_DISABLE_HOST_VERIFICATION="true"
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/production-sql.yml
       - ENABLE_ES="true"
-      - ES_SEEDS=elasticsearch
+      - ES_SEEDS=elasticsearch # ElasticSearch host
       - ES_VERSION=v7 # Even though we run v8, temporal only has configuration for v7
   - name: temporal-client-config
     literals:
@@ -37,10 +35,12 @@ configMapGenerator:
   - name: background-worker-config
     literals:
       - TEMPORAL_SHUTDOWN_GRACE_TIME=1m
-  - name: process-upload-worker-config
+      - IDENTITY=(CLOUD1)
+  - name: transcode-worker-config
     literals:
       - TEMPORAL_SHUTDOWN_GRACE_TIME=1h
       - MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS=1
+      - IDENTITY=(CLOUD1)
   - name: elasticsearch-config
     literals:
       - cluster.routing.allocation.disk.threshold_enabled="true"

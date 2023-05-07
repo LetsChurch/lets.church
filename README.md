@@ -2,6 +2,45 @@
 
 ## Setup
 
+### Prereqs
+
+1. Setup three S3 (or S3-compatible) buckets on your provider of choice for
+   `ingest`, `public`, and `backup`.
+2. Ensure the `ingest` bucket has the following CORS configuration:
+```json
+[
+  {
+    "AllowedOrigins": [
+      "*"
+    ],
+    "AllowedMethods": [
+      "PUT"
+    ],
+    "AllowedHeaders": [
+      "*"
+    ],
+    "ExposeHeaders": [
+      "ETag"
+    ]
+  }
+]
+```
+3. Ensure the `public` bucket has the following CORS configuration:
+```json
+[
+  {
+    "AllowedOrigins": [
+      "*"
+    ],
+    "AllowedMethods": [
+      "GET"
+    ]
+  }
+]
+```
+
+### Development Environment
+
 1. Install [`git-lfs`], [Docker](https://www.docker.com/products/docker-desktop/), and [`direnv`]
 1. Clone this repo
 1. Copy `.envrc.local.example` to `.envrc.local` and update the variables to actual values

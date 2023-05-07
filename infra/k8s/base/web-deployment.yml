@@ -26,6 +26,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: web-config
+            - secretRef:
+                name: turnstile-secret
 ---
 apiVersion: v1
 kind: Service

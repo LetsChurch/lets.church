@@ -3,16 +3,6 @@ variable "linode_token" {
   sensitive   = true
 }
 
-variable "cloudflare_account_id" {
-  description = "Cloudflare Account ID"
-  sensitive   = true
-}
-
-variable "cloudflare_api_token" {
-  description = "Cloudflare API token"
-  sensitive   = true
-}
-
 variable "cloudflare_r2_access_key" {
   description = "Cloudflare R2 Access Key"
   sensitive   = true
@@ -38,7 +28,7 @@ variable "cloudflare_r2_public_bucket" {
 
 variable "k8s_version" {
   description = "Kubernetes version to use"
-  default     = "1.25"
+  default     = "1.26"
 }
 
 variable "k8s_label" {

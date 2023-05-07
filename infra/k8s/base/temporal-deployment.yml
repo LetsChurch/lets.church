@@ -21,11 +21,40 @@ spec:
           name: temporal
           ports:
             - containerPort: 7233
+          env:
+            - name: POSTGRES_SEEDS
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pguser-temporal
+                  key: host
+            - name: DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pguser-temporal
+                  key: port
+            - name: DBNAME
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pguser-temporal
+                  key: dbname
+            - name: VISIBILITY_DBNAME
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pguser-temporal
+                  key: dbname
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pguser-temporal
+                  key: user
+            - name: POSTGRES_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pguser-temporal
+                  key: password
           envFrom:
             - configMapRef:
                 name: temporal-server-config
-            - secretRef:
-                name: temporal-server-secrets
           volumeMounts:
             - name: temporal-dynamic-config
               mountPath: /etc/temporal/config/dynamicconfig

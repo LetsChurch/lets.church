@@ -1,0 +1,42 @@
+---
+apiVersion: postgres-operator.crunchydata.com/v1beta1
+kind: PostgresCluster
+metadata:
+  name: pg
+spec:
+  image: registry.developers.crunchydata.com/crunchydata/crunchy-postgres:ubi8-14.7-0
+  postgresVersion: 14
+  users:
+    - name: letschurch
+      databases:
+        - letschurch
+    - name: temporal
+      databases:
+        - temporal
+  instances:
+    - name: instance1
+      dataVolumeClaimSpec:
+        storageClassName: linode-block-storage-retain
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 50Gi
+  backups:
+    pgbackrest:
+      image: registry.developers.crunchydata.com/crunchydata/crunchy-pgbackrest:ubi8-2.41-4
+      configuration:
+      - secret:
+          name: pgo-s3-creds
+          items:
+            - key: pgo-s3-creds.conf
+              path: s3.conf
+      global:
+        repo1-path: /pgbackrest/postgres-operator/letschurch-s3/repo1
+        repo1-cipher-type: aes-256-cbc
+      repos:
+      - name: repo1
+        s3:
+          bucket: letschurch-prod-backup-data
+          endpoint: https://s3.amazonaws.com
+          region: us-east-1

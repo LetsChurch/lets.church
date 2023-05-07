@@ -24,13 +24,17 @@ spec:
           name: gateway
           ports:
             - containerPort: 3000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pguser-letschurch
+                  key: uri
           envFrom:
             - configMapRef:
                 name: gateway-config
             - configMapRef:
                 name: temporal-client-config
-            - secretRef:
-                name: postgres-credentials
             - secretRef:
                 name: jwt-secret
             - secretRef:

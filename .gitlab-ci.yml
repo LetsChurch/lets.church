@@ -87,6 +87,8 @@ test-gateway:
 .build-common: &build-common
   image: docker:20.10.23
   stage: build
+  only:
+    - main
   services:
     - docker:20.10.23-dind
   before_script:
@@ -158,12 +160,17 @@ build-web:
 # |____/ \___| .__/|_|\___/ \__, |
 #            |_|            |___/ 
 
-# deploy-k8s:
-#   stage: deploy
-#   script:
-#     - cd infra/k8s/preview
-#     - cp $INIT_SQL init.sql
-#     - cp $S3_ENV s3.env
-#     - cp $SMTP_ENV smtp.env
-#     - just deploy-set-images preview $CI_COMMIT_SHORT_SHA
-#     - kubectl apply -k .
+deploy-k8s:
+  stage: deploy
+  only:
+    - main
+  script:
+    - cd infra/k8s/prod
+    - cp $PGO_S3_CREDS_CONF pgo-s3-creds.conf
+    - cp $S3_ENV s3.env
+    - cp $JWT_ENV jwt.env
+    - cp $SMTP_ENV smtp.env
+    - cp $CF_TUNNEL_ENV cf-tunnel.env
+    - cp $TURNSTILE_ENV turnstile.env
+    - just deploy-set-images prod $CI_COMMIT_SHORT_SHA
+    - kubectl apply -k .

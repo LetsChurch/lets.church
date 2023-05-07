@@ -11,10 +11,6 @@ terraform {
       source  = "linode/linode"
       version = "1.29.4"
     }
-    cloudflare = {
-      source  = "cloudflare/cloudflare"
-      version = "3.34.0"
-    }
     aws = {
       source  = "hashicorp/aws"
       version = "4.57.1"
@@ -24,10 +20,6 @@ terraform {
 
 provider "linode" {
   token = var.linode_token
-}
-
-provider "cloudflare" {
-  api_token = var.cloudflare_api_token
 }
 
 provider "aws" {
@@ -60,47 +52,10 @@ resource "linode_lke_cluster" "k8s" {
   }
 }
 
-# This is imported. TODO: use external dns
-resource "linode_nodebalancer" "nginx_ingress" {
-  region               = "us-central"
-  label                = "nginx-ingress"
-  client_conn_throttle = 20
-}
-
 resource "local_sensitive_file" "kubeconfig" {
   depends_on     = [linode_lke_cluster.k8s]
   filename       = var.kubeconfig_location
   content_base64 = linode_lke_cluster.k8s.kubeconfig
-}
-
-resource "kubernetes_namespace_v1" "preview" {
-  depends_on = [local_sensitive_file.kubeconfig]
-
-  metadata {
-    name = "preview"
-  }
-}
-
-resource "kubernetes_secret_v1" "image_pull" {
-  depends_on = [local_sensitive_file.kubeconfig]
-
-  metadata {
-    name      = "regcred"
-    namespace = kubernetes_namespace_v1.preview.metadata[0].name
-  }
-
-  type = "kubernetes.io/dockerconfigjson"
-
-  data = {
-    ".dockerconfigjson" = jsonencode({
-      auths = {
-        "${var.docker_registry_server}" = {
-          username = var.docker_registry_username
-          password = var.docker_registry_password
-        }
-      }
-    })
-  }
 }
 
 resource "aws_s3_bucket" "ingest_bucket" {
@@ -142,17 +97,6 @@ output "kubeconfig" {
 }
 
 output "api_endpoints" {
-  value = linode_lke_cluster.k8s.api_endpoints
-}
-
-output "status" {
-  value = linode_lke_cluster.k8s.status
-}
-
-output "id" {
-  value = linode_lke_cluster.k8s.id
-}
-
-output "pool" {
-  value = linode_lke_cluster.k8s.pool
+  value     = linode_lke_cluster.k8s.api_endpoints
+  sensitive = true
 }

@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: letschurch-prod
+resources:
+  - ../base
+  - postgres.yml
+  - tunnel.yml
+configMapGenerator:
+  - name: gateway-config
+    behavior: merge
+    literals:
+      - MEDIA_URL="https://media-preview.letschurch.cloud"
+secretGenerator:
+  - name: pgo-s3-creds
+    files:
+      - pgo-s3-creds.conf
+  - name: s3-secret
+    envs:
+      - s3.env
+  - name: jwt-secret
+    envs:
+      - jwt.env
+  - name: smtp-secret
+    envs:
+      - smtp.env
+  - name: cf-tunnel-secret
+    envs:
+      - cf-tunnel.env
+  - name: turnstile-secret
+    envs:
+      - turnstile.env
+
+generatorOptions:
+  disableNameSuffixHash: true
