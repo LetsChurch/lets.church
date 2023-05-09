@@ -3,11 +3,16 @@ import { execa } from 'execa';
 import mime from 'mime';
 import type { Probe } from '../temporal/activities/transcode/probe';
 
-const HLS_TIME = 6;
+const extraDecodeArgs =
+  process.env['FFMPEG_EXTRA_DECODE_ARGS']?.split(' ') ?? [];
+const encodeArgs = process.env['FFMPEG_ENCODE_ARGS']?.split(' ') ?? [
+  '-c:v',
+  'h264',
+];
 
+const HLS_TIME = 7;
 const BASE_AUDIO_ARGS = ['-c:a', 'aac', '-ar', '48000'];
-
-const BASE_VIDEO_ARGS = ['-c:v', 'h264', '-profile:v', 'main'];
+const BASE_VIDEO_ARGS = [...encodeArgs, '-profile:v', 'main'];
 
 const BASE_ARGS = [
   '-crf',
@@ -350,6 +355,7 @@ export function runFfmpegEncode(
       // Baseline args
       '-hide_banner',
       '-y',
+      ...extraDecodeArgs,
       '-i',
       inputFilename,
       // KV output for progress
