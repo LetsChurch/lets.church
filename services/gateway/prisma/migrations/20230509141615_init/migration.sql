@@ -8,16 +8,16 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TYPE "app_user_role" AS ENUM ('USER', 'ADMIN');
 
 -- CreateEnum
-CREATE TYPE "UploadLicense" AS ENUM ('STANDARD', 'PUBLIC_DOMAIN', 'CC_BY', 'CC_BY_SA', 'CC_BY_NC', 'CC_BY_NC_SA', 'CC_BY_ND', 'CC_BY_NC_ND', 'CC0');
+CREATE TYPE "upload_license" AS ENUM ('STANDARD', 'PUBLIC_DOMAIN', 'CC_BY', 'CC_BY_SA', 'CC_BY_NC', 'CC_BY_NC_SA', 'CC_BY_ND', 'CC_BY_NC_ND', 'CC0');
 
 -- CreateEnum
-CREATE TYPE "UploadVisibility" AS ENUM ('PUBLIC', 'PRIVATE', 'UNLISTED');
+CREATE TYPE "upload_visibility" AS ENUM ('PUBLIC', 'PRIVATE', 'UNLISTED');
 
 -- CreateEnum
-CREATE TYPE "UploadVariant" AS ENUM ('VIDEO_4K', 'VIDEO_4K_DOWNLOAD', 'VIDEO_1080P', 'VIDEO_1080P_DOWNLOAD', 'VIDEO_720P', 'VIDEO_720P_DOWNLOAD', 'VIDEO_480P', 'VIDEO_480P_DOWNLOAD', 'VIDEO_360P', 'VIDEO_360P_DOWNLOAD', 'AUDIO', 'AUDIO_DOWNLOAD');
+CREATE TYPE "upload_variant" AS ENUM ('VIDEO_4K', 'VIDEO_4K_DOWNLOAD', 'VIDEO_1080P', 'VIDEO_1080P_DOWNLOAD', 'VIDEO_720P', 'VIDEO_720P_DOWNLOAD', 'VIDEO_480P', 'VIDEO_480P_DOWNLOAD', 'VIDEO_360P', 'VIDEO_360P_DOWNLOAD', 'AUDIO', 'AUDIO_DOWNLOAD');
 
 -- CreateEnum
-CREATE TYPE "Rating" AS ENUM ('LIKE', 'DISLIKE');
+CREATE TYPE "rating" AS ENUM ('LIKE', 'DISLIKE');
 
 -- CreateTable
 CREATE TABLE "tracking_salt" (
@@ -142,9 +142,9 @@ CREATE TABLE "upload_record" (
     "title" TEXT,
     "description" TEXT,
     "app_user_id" UUID NOT NULL,
-    "license" "UploadLicense" NOT NULL,
+    "license" "upload_license" NOT NULL,
     "channel_id" UUID NOT NULL,
-    "visibility" "UploadVisibility" NOT NULL,
+    "visibility" "upload_visibility" NOT NULL,
     "upload_size_bytes" BIGINT,
     "upload_finalized" BOOLEAN NOT NULL DEFAULT false,
     "upload_finalized_by_id" UUID,
@@ -154,13 +154,13 @@ CREATE TABLE "upload_record" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
     "published_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "transcodingStartedAt" TIMESTAMP(3),
-    "transcodingFinishedAt" TIMESTAMP(3),
+    "transcoding_started_at" TIMESTAMP(3),
+    "transcoding_finished_at" TIMESTAMP(3),
     "transcodingProgress" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "transcribingStartedAt" TIMESTAMP(3),
-    "transcribingFinishedAt" TIMESTAMP(3),
+    "transcribing_started_at" TIMESTAMP(3),
+    "transcribing_finished_at" TIMESTAMP(3),
     "deleted_at" TIMESTAMP(3),
-    "variants" "UploadVariant"[],
+    "variants" "upload_variant"[],
     "score" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "score_stale_at" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
     "user_comments_disabled" BOOLEAN NOT NULL DEFAULT true,
@@ -170,10 +170,17 @@ CREATE TABLE "upload_record" (
 );
 
 -- CreateTable
+CREATE TABLE "upload_record_download_size" (
+    "uplaod_record_id" UUID NOT NULL,
+    "variant" "upload_variant" NOT NULL,
+    "size_bytes" BIGINT NOT NULL
+);
+
+-- CreateTable
 CREATE TABLE "upload_user_rating" (
     "app_user_id" UUID NOT NULL,
     "upload_id" UUID NOT NULL,
-    "rating" "Rating" NOT NULL,
+    "rating" "rating" NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "upload_user_rating_pkey" PRIMARY KEY ("app_user_id","upload_id")
@@ -198,7 +205,7 @@ CREATE TABLE "upload_user_comment" (
 CREATE TABLE "upload_user_comment_rating" (
     "app_user_id" UUID NOT NULL,
     "upload_id" UUID NOT NULL,
-    "rating" "Rating" NOT NULL,
+    "rating" "rating" NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "upload_user_comment_rating_pkey" PRIMARY KEY ("app_user_id","upload_id")
@@ -235,6 +242,9 @@ CREATE INDEX "upload_record_score_idx" ON "upload_record"("score");
 
 -- CreateIndex
 CREATE INDEX "upload_record_score_stale_at_idx" ON "upload_record"("score_stale_at");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "upload_record_download_size_uplaod_record_id_variant_key" ON "upload_record_download_size"("uplaod_record_id", "variant");
 
 -- CreateIndex
 CREATE INDEX "upload_user_rating_upload_id_rating_idx" ON "upload_user_rating"("upload_id", "rating");
@@ -301,6 +311,9 @@ ALTER TABLE "upload_record" ADD CONSTRAINT "upload_record_channel_id_fkey" FOREI
 
 -- AddForeignKey
 ALTER TABLE "upload_record" ADD CONSTRAINT "upload_record_upload_finalized_by_id_fkey" FOREIGN KEY ("upload_finalized_by_id") REFERENCES "app_user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "upload_record_download_size" ADD CONSTRAINT "upload_record_download_size_uplaod_record_id_fkey" FOREIGN KEY ("uplaod_record_id") REFERENCES "upload_record"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "upload_user_rating" ADD CONSTRAINT "upload_user_rating_app_user_id_fkey" FOREIGN KEY ("app_user_id") REFERENCES "app_user"("id") ON DELETE CASCADE ON UPDATE CASCADE;

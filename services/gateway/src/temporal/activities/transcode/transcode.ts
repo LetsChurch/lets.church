@@ -9,6 +9,7 @@ import { throttle } from 'lodash-es';
 import rimraf from 'rimraf';
 import mime from 'mime';
 import invariant from 'tiny-invariant';
+import type { UploadVariant } from '@prisma/client';
 import {
   getVariants,
   runFfmpegEncode,
@@ -154,15 +155,29 @@ export default async function transcode(
         invariant(contentType !== null, 'Mime type should not be null');
         Context.current().heartbeat(`Uploading downloadable file`);
         console.log(`Uploading downloadable file: ${filename}`);
+        const byteSize = (await stat(path)).size;
         await retryablePutFile({
           to: 'PUBLIC',
           key: `${uploadRecordId}/${filename}`,
           contentType,
           path,
-          contentLength: (await stat(path)).size,
+          contentLength: byteSize,
         });
         Context.current().heartbeat(`Uploaded downloadable file: ${filename}`);
         console.log(`Uploaded downloadable file: ${filename}`);
+        console.log('Recording download size');
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore: TODO: type safety
+        const variant: UploadVariant = filename.split('.')[0];
+        invariant(variant, 'variant should be defined');
+        await updateUploadRecord(uploadRecordId, {
+          downloadSizes: {
+            create: {
+              variant,
+              bytes: byteSize,
+            },
+          },
+        });
       }),
       {
         signal: cancellationSignal,

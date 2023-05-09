@@ -168,12 +168,16 @@ enum UploadLicense {
   CC_BY_ND
   CC_BY_NC_ND
   CC0
+
+  @@map("upload_license")
 }
 
 enum UploadVisibility {
   PUBLIC
   PRIVATE
   UNLISTED
+
+  @@map("upload_visibility")
 }
 
 enum UploadVariant {
@@ -189,42 +193,45 @@ enum UploadVariant {
   VIDEO_360P_DOWNLOAD
   AUDIO
   AUDIO_DOWNLOAD
+
+  @@map("upload_variant")
 }
 
 // TODO: How should we handle cascading deletes?
 model UploadRecord {
-  id                     String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id                     String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title                  String?
   description            String?
-  createdBy              AppUser             @relation("createdUploads", fields: [appUserId], references: [id])
-  appUserId              String              @map("app_user_id") @db.Uuid
+  createdBy              AppUser                    @relation("createdUploads", fields: [appUserId], references: [id])
+  appUserId              String                     @map("app_user_id") @db.Uuid
   license                UploadLicense
-  channel                Channel             @relation(fields: [channelId], references: [id])
-  channelId              String              @map("channel_id") @db.Uuid
+  channel                Channel                    @relation(fields: [channelId], references: [id])
+  channelId              String                     @map("channel_id") @db.Uuid
   visibility             UploadVisibility
-  uploadSizeBytes        BigInt?             @map("upload_size_bytes")
-  uploadFinalized        Boolean             @default(false) @map("upload_finalized")
-  uploadFinalizedBy      AppUser?            @relation("finalizedUploads", fields: [uploadFinalizedById], references: [id])
-  uploadFinalizedById    String?             @map("upload_finalized_by_id") @db.Uuid
-  defaultThumbnailPath   String?             @map("default_thumbnail_path")
-  lengthSeconds          Float?              @map("length_seconds")
-  thumbnailBlurhash      String?             @map("thumbnail_blurhash")
-  createdAt              DateTime            @default(now()) @map("created_at")
-  updatedAt              DateTime            @updatedAt @map("updated_at")
-  publishedAt            DateTime            @default(now()) @map("published_at")
-  transcodingStartedAt   DateTime?
-  transcodingFinishedAt  DateTime?
-  transcodingProgress    Float               @default(0)
-  transcribingStartedAt  DateTime?
-  transcribingFinishedAt DateTime?
-  deletedAt              DateTime?           @map("deleted_at")
+  uploadSizeBytes        BigInt?                    @map("upload_size_bytes")
+  uploadFinalized        Boolean                    @default(false) @map("upload_finalized")
+  uploadFinalizedBy      AppUser?                   @relation("finalizedUploads", fields: [uploadFinalizedById], references: [id])
+  uploadFinalizedById    String?                    @map("upload_finalized_by_id") @db.Uuid
+  defaultThumbnailPath   String?                    @map("default_thumbnail_path")
+  lengthSeconds          Float?                     @map("length_seconds")
+  thumbnailBlurhash      String?                    @map("thumbnail_blurhash")
+  createdAt              DateTime                   @default(now()) @map("created_at")
+  updatedAt              DateTime                   @updatedAt @map("updated_at")
+  publishedAt            DateTime                   @default(now()) @map("published_at")
+  transcodingStartedAt   DateTime?                  @map("transcoding_started_at")
+  transcodingFinishedAt  DateTime?                  @map("transcoding_finished_at")
+  transcodingProgress    Float                      @default(0)
+  transcribingStartedAt  DateTime?                  @map("transcribing_started_at")
+  transcribingFinishedAt DateTime?                  @map("transcribing_finished_at")
+  deletedAt              DateTime?                  @map("deleted_at")
   variants               UploadVariant[]
   userRatings            UploadUserRating[]
-  score                  Float               @default(0)
-  scoreStaleAt           DateTime?           @default(now()) @map("score_stale_at")
-  userCommentsEnabled    Boolean             @default(true) @map("user_comments_disabled")
+  score                  Float                      @default(0)
+  scoreStaleAt           DateTime?                  @default(now()) @map("score_stale_at")
+  userCommentsEnabled    Boolean                    @default(true) @map("user_comments_disabled")
   userComments           UploadUserComment[]
-  downloadsEnabled       Boolean             @default(true) @map("downloads_disabled")
+  downloadsEnabled       Boolean                    @default(true) @map("downloads_disabled")
+  downloadSizes          UploadRecordDownloadSize[]
   uploadViews            UploadView[]
 
   @@index([createdAt, id])
@@ -233,9 +240,21 @@ model UploadRecord {
   @@map("upload_record")
 }
 
+model UploadRecordDownloadSize {
+  uploadRecord   UploadRecord  @relation(fields: [uploadRecordId], references: [id])
+  uploadRecordId String        @map("uplaod_record_id") @db.Uuid
+  variant        UploadVariant
+  bytes          BigInt        @map("size_bytes")
+
+  @@unique([uploadRecordId, variant])
+  @@map("upload_record_download_size")
+}
+
 enum Rating {
   LIKE
   DISLIKE
+
+  @@map("rating")
 }
 
 model UploadUserRating {
