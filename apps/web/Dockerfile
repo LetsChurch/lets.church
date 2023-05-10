@@ -5,5 +5,6 @@ WORKDIR /home/node/app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+ARG VITE_TURNSTILE_SITEKEY
 RUN npm run build
 CMD npm run start

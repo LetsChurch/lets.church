@@ -149,7 +149,7 @@ build-web:
     - build-base
   script:
     - cd apps/web
-    - docker build -t registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA} -t registry.gitlab.com/letschurch/lets.church/web:latest --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/web:latest .
+    - docker build --build-arg VITE_TURNSTILE_SITEKEY=${VITE_TURNSTILE_SITEKEY} -t registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA} -t registry.gitlab.com/letschurch/lets.church/web:latest --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/web:latest .
     - docker push registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA}
     - docker push registry.gitlab.com/letschurch/lets.church/web:latest
 
