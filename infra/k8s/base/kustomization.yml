@@ -1,12 +1,13 @@
 resources:
   - config.yml
   - gateway-deployment.yml
-  - background-worker-deployment.yml
-  - transcode-worker-deployment.yml
   - elasticsearch-deployment.yml
   - temporal-deployment.yml
   - temporal-ui-deployment.yml
   - web-deployment.yml
+  # Workers
+  - background-worker-deployment.yml
+  # - transcode-worker-deployment.yml
 configMapGenerator:
   - name: web-config
     literals:

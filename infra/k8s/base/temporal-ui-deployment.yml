@@ -17,7 +17,7 @@ spec:
     spec:
       restartPolicy: Always
       containers:
-        - image: temporalio/ui:2.13.3
+        - image: temporalio/ui:2.14.0
           name: temporal-ui
           ports:
             - containerPort: 8080

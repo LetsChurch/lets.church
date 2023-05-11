@@ -9,7 +9,7 @@ configMapGenerator:
   - name: gateway-config
     behavior: merge
     literals:
-      - MEDIA_URL="https://media-preview.letschurch.cloud"
+      - MEDIA_URL="https://media.letschurch.cloud"
 secretGenerator:
   - name: pgo-s3-creds
     files:

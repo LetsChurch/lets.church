@@ -17,11 +17,15 @@ spec:
     spec:
       restartPolicy: Always
       containers:
-        - image: temporalio/auto-setup:1.20.0.0
+        - image: temporalio/auto-setup:1.20.2
           name: temporal
           ports:
             - containerPort: 7233
           env:
+            - name: BIND_ON_IP
+              value: 0.0.0.0
+            - name: TEMPORAL_BROADCAST_ADDRESS
+              value: 0.0.0.0
             - name: POSTGRES_SEEDS
               valueFrom:
                 secretKeyRef:
