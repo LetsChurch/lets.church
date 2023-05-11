@@ -18,7 +18,7 @@ const { createUploadRecord } = proxyActivities<typeof backgroundActivities>({
 });
 
 const { importMedia } = proxyActivities<typeof importActivities>({
-  startToCloseTimeout: '10 minutes',
+  startToCloseTimeout: '1 hour',
   heartbeatTimeout: '5 minutes',
   taskQueue: IMPORT_QUEUE,
   retry: { maximumAttempts: 5 },

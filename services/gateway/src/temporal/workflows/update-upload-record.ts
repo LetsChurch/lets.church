@@ -8,16 +8,15 @@ import {
 import type * as activities from '../activities/background';
 import { BACKGROUND_QUEUE } from '../queues';
 
-const { updateUploadRecord: updateUploadRecordActivity } = proxyActivities<
-  typeof activities
->({
-  startToCloseTimeout: '1 minute',
-  taskQueue: BACKGROUND_QUEUE,
-  retry: { maximumAttempts: 5 },
-});
+const { updateUploadRecord: updateUploadRecordActivity, indexDocument } =
+  proxyActivities<typeof activities>({
+    startToCloseTimeout: '1 minute',
+    taskQueue: BACKGROUND_QUEUE,
+    retry: { maximumAttempts: 5 },
+  });
 
 export const updateUploadRecordSignal =
-  defineSignal<[Prisma.UploadRecordUpdateArgs['data']]>('indexDocument');
+  defineSignal<[Prisma.UploadRecordUpdateArgs['data']]>('updateRecord');
 
 export async function updateUploadRecordWorkflow(uploadRecordId: string) {
   const queue: Array<Prisma.UploadRecordUpdateArgs['data']> = [];
@@ -32,5 +31,6 @@ export async function updateUploadRecordWorkflow(uploadRecordId: string) {
     while ((data = queue.shift())) {
       await updateUploadRecordActivity(uploadRecordId, data);
     }
+    indexDocument('upload', uploadRecordId);
   }
 }

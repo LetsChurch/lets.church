@@ -31,7 +31,7 @@ Splitting transcoding and transcribing activities across multiple workers makes 
 independently from each other. It also ensures that lighter background activities won't be blocked waiting for larger
 activities to finish.
 
-## Worker Environment Variables
+## Worker Environment Variables and Requirements
 
 All workers expect the following environment variables:
 
@@ -68,11 +68,13 @@ All workers expect the following environment variables:
   - Note `hwaccel` decoding can actually decrease performance, per `man ffmpeg`: "Note that most acceleration methods are intended for playback and will not be faster than software decoding on modern CPUs. Additionally, ffmpeg will usually need to copy the decoded frames from the GPU memory into the system memory, resulting in further performance loss. This option is thus mainly useful for testing."
   - Be sure to test!
 - `FFMPEG_ENCODE_ARGS` (e.g., `-c:v h264_nvenc -gpu 0`, defaults to `-c:v h264`)
+- If running without the container you must ensure that `ffmpeg` and `whisper-ctranslate2` are available on `PATH`
 
 ### `transcribe-worker`
 
 - `MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS`
 - `WHISPER_MODEL`
-- `WHISPER_EXTRA_ARGS`
+- `WHISPER_EXTRA_ARGS`, (e.g., `--device_index 1`)
+- If running without the container you must ensure that `ffmpeg` and `audiowaveform` are available on `PATH`
 
 [Temporal]: https://temporal.io "Less plumbing, more coding"

@@ -208,10 +208,7 @@ export default async function transcode(
     );
 
     // Upload master playlist if there is more than just audio
-    if (
-      variants.filter((v) => v !== 'AUDIO' && !v.endsWith('_DOWNLOAD')).length >
-      0
-    ) {
+    if (variants.find((v) => v.startsWith('VIDEO'))) {
       uploadQueue.add(
         async () => {
           console.log('Uploading master playlist file');

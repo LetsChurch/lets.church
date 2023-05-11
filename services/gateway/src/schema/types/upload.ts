@@ -304,7 +304,7 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
       nullable: true,
       select: { id: true, variants: true },
       resolve: async (root, _args, _context) => {
-        if (root.variants.filter((v) => v !== 'AUDIO').length === 0) {
+        if (root.variants.find((v) => v.startsWith('VIDEO'))) {
           return null;
         }
 

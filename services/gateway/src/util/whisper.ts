@@ -33,6 +33,7 @@ export async function runWhisper(
   const proc = execa(
     'whisper-ctranslate2',
     [
+      wavFile,
       '--model_directory',
       `/opt/whisper/models/${whisperModel}`,
       '--output_dir',
@@ -40,7 +41,6 @@ export async function runWhisper(
       '--vad_filter',
       'True',
       ...extraArgs,
-      wavFile,
     ],
     { cwd, signal },
   );
