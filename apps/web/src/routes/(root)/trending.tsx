@@ -60,7 +60,7 @@ export function routeData({ location }: RouteDataArgs) {
     {
       key: () =>
         [
-          'subscriptions',
+          'trending',
           location.query['after'],
           location.query['before'],
         ] as const,
@@ -68,13 +68,13 @@ export function routeData({ location }: RouteDataArgs) {
   );
 }
 
-export default function SubscriptionsRoute() {
+export default function TrendingRoute() {
   const data = useRouteData<typeof routeData>();
 
   return (
     <>
       <h3 class="mb-3 text-base font-semibold leading-6 text-gray-900">
-        Subscriptions
+        Trending
       </h3>
       <UploadGrid edges={data()?.uploadRecords?.edges ?? []} />
       <Pagination
