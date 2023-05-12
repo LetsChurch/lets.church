@@ -11,7 +11,7 @@ import invariant from 'tiny-invariant';
 import mkdirp from 'mkdirp';
 import { noop, throttle } from 'lodash-es';
 import { Context } from '@temporalio/activity';
-import { putFile } from '../../../util/s3';
+import { putFile, putFileMultipart } from '../../../util/s3';
 
 const WORK_DIR = '/data/import';
 
@@ -111,7 +111,7 @@ export default async function importMedia(uploadRecordId: string, url: string) {
 
     mediaUploadKey = `${uploadRecordId}/${uuid()}`;
 
-    await putFile({
+    await putFileMultipart({
       key: mediaUploadKey,
       contentType:
         mime.getType(extname(mediaPath)) ?? 'application/octet-stream',

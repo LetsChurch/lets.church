@@ -1,6 +1,7 @@
 import { createReadStream, createWriteStream } from 'node:fs';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import { stat } from 'node:fs/promises';
 import {
   AbortMultipartUploadCommand,
   CompleteMultipartUploadCommand,
@@ -342,6 +343,75 @@ export async function putFile({
     ...(contentLength ? { ContentLength: contentLength } : {}),
   });
   return client.send(cmd);
+}
+
+export async function putFileMultipart({
+  to = 'INGEST',
+  key,
+  contentType,
+  path,
+}: {
+  to?: Client;
+  key: string;
+  contentType: string;
+  path: string;
+}) {
+  const { bucket, client } = getClientAndBucket(to);
+
+  const fileSize = (await stat(path)).size;
+  const partSize = 3 * 1024 ** 3; // 3 GB per part
+  const numParts = Math.ceil(fileSize / partSize);
+
+  const createUpload = await client.send(
+    new CreateMultipartUploadCommand({
+      Bucket: bucket,
+      Key: key,
+      ContentType: contentType,
+    }),
+  );
+
+  const uploadId = createUpload.UploadId;
+  try {
+    const completedParts = [];
+
+    for (let i = 0; i < numParts; i++) {
+      const start = i * partSize;
+      const end = Math.min(start + partSize, fileSize) - 1;
+
+      const { ETag } = await client.send(
+        new UploadPartCommand({
+          Bucket: bucket,
+          Key: key,
+          PartNumber: i + 1,
+          UploadId: uploadId,
+          Body: createReadStream(path, { start, end }),
+        }),
+      );
+
+      invariant(ETag, 'Failed to get Etag');
+
+      completedParts.push({ PartNumber: i + 1, ETag });
+    }
+
+    await client.send(
+      new CompleteMultipartUploadCommand({
+        Bucket: bucket,
+        Key: key,
+        MultipartUpload: {
+          Parts: completedParts,
+        },
+        UploadId: uploadId,
+      }),
+    );
+  } catch (e) {
+    await client.send(
+      new AbortMultipartUploadCommand({
+        Bucket: bucket,
+        Key: key,
+        UploadId: uploadId,
+      }),
+    );
+  }
 }
 
 export async function retryablePutFile({
