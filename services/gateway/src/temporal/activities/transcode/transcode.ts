@@ -44,6 +44,8 @@ export default async function transcode(
   });
 
   try {
+    console.log(`Making work directory: ${dir}`);
+
     await mkdirp(dir);
     const downloadPath = join(dir, 'download');
 
@@ -55,6 +57,8 @@ export default async function transcode(
       downloadPath,
       dataHeartbeat,
     );
+
+    console.log(`Downloaded file to ${downloadPath}`);
 
     Context.current().heartbeat('file downloaded');
 
@@ -80,6 +84,7 @@ export default async function transcode(
     );
 
     // Watch for new video segments and upload them
+    console.log('Setting up file watcher');
     const watcher = chokidar.watch(join(dir, '*.ts')).on('add', (path) => {
       console.log(`New media segment: ${path}`);
 
@@ -112,6 +117,8 @@ export default async function transcode(
       );
     });
 
+    console.log('Running ffmpeg');
+
     const encodeProc = runFfmpegEncode(
       dir,
       downloadPath,
@@ -142,12 +149,28 @@ export default async function transcode(
     });
     encodeProc.stderr?.on('data', dataHeartbeat);
     const encodeProcRes = await encodeProc;
+
+    console.log(`ffmpeg finished with code ${encodeProcRes.exitCode}`);
+
+    console.log('Cancelling remaining upload record updates');
+
     throttledUpdateUploadRecord.cancel();
+
+    console.log('Marking transcoding progress as done');
     await updateUploadRecord(uploadRecordId, { transcodingProgress: 1 });
+
+    console.log('Finding downloadable files');
 
     const downloadableFiles = await fastGlob(join(dir, '*.{mp4,m4a}'));
 
+    console.log(
+      `Found downloadable files:\n - ${downloadableFiles.join('\n -')}`,
+    );
+
     // Upload downloadable files
+    console.log(
+      `Queueing ${downloadableFiles.length} downloadable files for upload`,
+    );
     uploadQueue.addAll(
       downloadableFiles.map((path) => async () => {
         const filename = basename(path);
@@ -184,7 +207,12 @@ export default async function transcode(
       },
     );
 
+    console.log('Finding playlist files');
+
     const playlists = await fastGlob(join(dir, '*.m3u8'));
+
+    console.log(`Found playlist files:\n - ${playlists.join('\n -')}`);
+    console.log(`Queueing ${playlists.length} playlist files for upload`);
 
     // Upload playlist files
     uploadQueue.addAll(
@@ -209,6 +237,11 @@ export default async function transcode(
 
     // Upload master playlist if there is more than just audio
     if (variants.some((v) => v.startsWith('VIDEO'))) {
+      console.log(
+        `Queueing upload of master playlist file given the variants: ${formatter.format(
+          variants,
+        )}`,
+      );
       uploadQueue.add(
         async () => {
           console.log('Uploading master playlist file');
@@ -238,11 +271,14 @@ export default async function transcode(
     }
 
     // Generate and upload peaks
+    console.log('Generating peaks');
     const peakFiles = await runAudiowaveform(
       dir,
       downloadPath,
       cancellationSignal,
     );
+
+    console.log('Queuing upload of peaks');
     uploadQueue.addAll([
       async () => {
         console.log('Uploading peak json');
@@ -273,6 +309,7 @@ export default async function transcode(
     ]);
 
     // Upload logs
+    console.log('Queing upload of logs');
     uploadQueue.add(
       async () => {
         Context.current().heartbeat('Uploading stdout');
@@ -289,19 +326,26 @@ export default async function transcode(
       },
     );
 
+    console.log('Waiting for upload queue to be idle');
     await uploadQueue.onIdle();
+    console.log('Waiting for file watcher to close');
     await watcher.close();
+    console.log('Queueing final update for upload record');
     await updateUploadRecord(uploadRecordId, {
       variants,
       transcodingFinishedAt: new Date(),
     });
   } catch (e) {
+    console.log('Error!');
+    console.log(e);
     await updateUploadRecord(uploadRecordId, {
       transcodingStartedAt: null,
       transcodingFinishedAt: null,
     });
   } finally {
+    console.log('Flushing heartbeats');
     dataHeartbeat.flush();
+    console.log(`Removing work directory: ${dir}`);
     await rimraf(dir);
   }
 }
