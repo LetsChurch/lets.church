@@ -50,7 +50,7 @@ export async function runAudiowaveform(
   proc2.stdout?.on('data', () => heartbeat());
   proc2.stderr?.on('data', () => heartbeat());
 
-  const res2 = await proc1;
+  const res2 = await proc2;
 
   console.log(`audiowaveform dat done: ${res2.exitCode}`);
 
