@@ -17,7 +17,17 @@ export async function runWhisper(
 
   const ffmpegRes = execa(
     'ffmpeg',
-    ['-i', inputFilename, '-ar', '16000', '-ac', '1', wavFile],
+    [
+      '-hide_banner',
+      '-y',
+      '-i',
+      inputFilename,
+      '-ar',
+      '16000',
+      '-ac',
+      '1',
+      wavFile,
+    ],
     { cwd, signal },
   );
 
