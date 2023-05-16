@@ -319,7 +319,7 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
           return null;
         }
 
-        return getPublicMediaUrl(`${root.id}/audio.m3u8`);
+        return getPublicMediaUrl(`${root.id}/AUDIO.m3u8`);
       },
     }),
     downloadsEnabled: t.exposeBoolean('downloadsEnabled'),
