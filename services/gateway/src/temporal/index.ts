@@ -1,7 +1,6 @@
 import envariant from '@knpwrs/envariant';
 import { xxh32 } from '@node-rs/xxhash';
 import { Connection, Client, WorkflowOptions } from '@temporalio/client';
-import pRetry from 'p-retry';
 import PLazy from 'p-lazy';
 import waitOn from 'wait-on';
 import type { Prisma } from '@prisma/client';
@@ -72,24 +71,16 @@ export async function updateUploadRecord(
   uploadRecordId: string,
   data: Prisma.UploadRecordUpdateArgs['data'],
 ) {
-  return pRetry(
-    async () => {
-      return (await client).workflow.signalWithStart(
-        updateUploadRecordWorkflow,
-        {
-          taskQueue: BACKGROUND_QUEUE,
-          workflowId: `updateUploadRecord:${uploadRecordId}`,
-          args: [uploadRecordId],
-          signal: updateUploadRecordSignal,
-          signalArgs: [data],
-          retry: {
-            maximumAttempts: 8,
-          },
-        },
-      );
+  return (await client).workflow.signalWithStart(updateUploadRecordWorkflow, {
+    taskQueue: BACKGROUND_QUEUE,
+    workflowId: `updateUploadRecord:${uploadRecordId}`,
+    args: [uploadRecordId],
+    signal: updateUploadRecordSignal,
+    signalArgs: [data],
+    retry: {
+      maximumAttempts: 8,
     },
-    { retries: 8 },
-  );
+  });
 }
 
 export async function indexDocument(
@@ -97,21 +88,16 @@ export async function indexDocument(
   uploadId: string,
   uploadKey?: string,
 ) {
-  return pRetry(
-    async () => {
-      return (await client).workflow.signalWithStart(indexDocumentWorkflow, {
-        taskQueue: BACKGROUND_QUEUE,
-        workflowId: `${kind}:${uploadId}`,
-        args: [kind, uploadId, uploadKey],
-        signal: indexDocumentSignal,
-        signalArgs: [],
-        retry: {
-          maximumAttempts: 8,
-        },
-      });
+  return (await client).workflow.signalWithStart(indexDocumentWorkflow, {
+    taskQueue: BACKGROUND_QUEUE,
+    workflowId: `${kind}:${uploadId}`,
+    args: [kind, uploadId, uploadKey],
+    signal: indexDocumentSignal,
+    signalArgs: [],
+    retry: {
+      maximumAttempts: 8,
     },
-    { retries: 8 },
-  );
+  });
 }
 
 export async function sendEmail(

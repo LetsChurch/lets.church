@@ -71,7 +71,14 @@ export default async function createThumbnails(
                 thumbnailBlurhash: blurhash,
               });
             },
-            { retries: 8 },
+            {
+              retries: 5,
+              onFailedAttempt: (e) => {
+                console.log(
+                  `${e.attemptNumber}: Failed to set thumbnail path: ${e}`,
+                );
+              },
+            },
           );
           Context.current().heartbeat();
           console.log(`Done uploading thumbnail: ${largestThumbnail}`);
