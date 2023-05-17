@@ -3,7 +3,7 @@ import { xxh32 } from '@node-rs/xxhash';
 import { Connection, Client, WorkflowOptions } from '@temporalio/client';
 import PLazy from 'p-lazy';
 import waitOn from 'wait-on';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, UploadVariant } from '@prisma/client';
 import type { UploadPostProcessValue } from '../schema/types/mutation';
 import type { Client as S3UtilClient } from '../util/s3';
 import {
@@ -17,6 +17,7 @@ import {
 } from './workflows';
 import { BACKGROUND_QUEUE } from './queues';
 import type { DocumentKind } from './activities/background/index-document';
+import { recordDownloadSizeWorkflow } from './workflows/record-download-size';
 
 const TEMPORAL_ADDRESS = envariant('TEMPORAL_ADDRESS');
 
@@ -77,6 +78,21 @@ export async function updateUploadRecord(
     args: [uploadRecordId],
     signal: updateUploadRecordSignal,
     signalArgs: [data],
+    retry: {
+      maximumAttempts: 8,
+    },
+  });
+}
+
+export async function recordDownloadSize(
+  uploadRecordId: string,
+  variant: UploadVariant,
+  bytes: number,
+) {
+  return (await client).workflow.start(recordDownloadSizeWorkflow, {
+    taskQueue: BACKGROUND_QUEUE,
+    workflowId: `recordDownloadSize:${uploadRecordId}`,
+    args: [uploadRecordId, variant, bytes],
     retry: {
       maximumAttempts: 8,
     },

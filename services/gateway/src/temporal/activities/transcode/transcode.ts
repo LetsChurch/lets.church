@@ -16,7 +16,7 @@ import {
   variantsToMasterVideoPlaylist,
 } from '../../../util/ffmpeg';
 import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
-import { updateUploadRecord } from '../..';
+import { recordDownloadSize, updateUploadRecord } from '../..';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import type { Probe } from './probe';
 
@@ -193,14 +193,7 @@ export default async function transcode(
         // @ts-ignore: TODO: type safety
         const variant: UploadVariant = filename.split('.')[0];
         invariant(variant, 'variant should be defined');
-        await updateUploadRecord(uploadRecordId, {
-          downloadSizes: {
-            create: {
-              variant,
-              bytes: byteSize,
-            },
-          },
-        });
+        await recordDownloadSize(uploadRecordId, variant, byteSize);
       }),
       {
         signal: cancellationSignal,

@@ -14,3 +14,4 @@ export {
 export { updateUploadScoresWorkflow } from './update-upload-scores';
 export { updateDailySaltWorkflow } from './update-daily-salt';
 export { importMediaWorkflow } from './import-media';
+export { recordDownloadSizeWorkflow } from './record-download-size';
