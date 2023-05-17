@@ -5,9 +5,15 @@ import mkdirp from 'mkdirp';
 import rimraf from 'rimraf';
 import { throttle } from 'lodash-es';
 import mime from 'mime';
+import invariant from 'tiny-invariant';
 import { updateUploadRecord } from '../..';
 import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
-import { runWhisper } from '../../../util/whisper';
+import {
+  joinerizeTranscript,
+  readWhisperJsonFile,
+  runWhisper,
+  whisperJsonToVtt,
+} from '../../../util/whisper';
 
 const WORK_DIR = '/data/transcribe';
 
@@ -57,7 +63,7 @@ export default async function transcribe(
         console.log(`uploading file: ${file}`);
 
         const ext = extname(file).slice(1);
-        const key = `${uploadRecordId}/transcript.${ext}`;
+        const key = `${uploadRecordId}/transcript.original.${ext}`;
         await retryablePutFile({
           to: 'PUBLIC',
           key,
@@ -66,12 +72,35 @@ export default async function transcribe(
           contentLength: (await stat(file)).size,
         });
 
-        console.log('done uploading');
-        Context.current().heartbeat('done uploading');
+        console.log(`done uploading ${file}`);
+        Context.current().heartbeat(`done uploading ${key}`);
 
         return key;
       }),
     );
+
+    Context.current().heartbeat('fixing transcript');
+
+    const jsonPath = outputFiles.find((f) => extname(f) === '.json');
+    invariant(jsonPath, 'No JSON path found!');
+
+    const whisperJson = await readWhisperJsonFile(jsonPath);
+    const fixedJson = joinerizeTranscript(whisperJson);
+    const fixedVtt = Buffer.from(whisperJsonToVtt(fixedJson));
+
+    console.log(`uploading file: transcript.vtt`);
+
+    await retryablePutFile({
+      to: 'PUBLIC',
+      key: `${uploadRecordId}/transcript.vtt`,
+      contentType: 'text/vtt',
+      body: fixedVtt,
+      contentLength: fixedVtt.length,
+    });
+
+    console.log(`done uploading transcript.vtt`);
+
+    Context.current().heartbeat('done uploading fixed transcript');
 
     await updateUploadRecord(uploadRecordId, {
       transcribingFinishedAt: new Date(),
