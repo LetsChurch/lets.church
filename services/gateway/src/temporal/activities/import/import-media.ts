@@ -76,9 +76,15 @@ async function ytdlp(url: string, dir: string, heartbeat = noop) {
     JSON.parse(thumbnailRes.stdout),
   );
 
-  const thumbnailPath = parsed.success
-    ? await downloadUrl(parsed.data.thumbnail, dir, heartbeat)
-    : null;
+  let thumbnailPath: string | null = null;
+
+  try {
+    thumbnailPath = parsed.success
+      ? await downloadUrl(parsed.data.thumbnail, dir, heartbeat)
+      : null;
+  } catch (e) {
+    console.log(`Error downloading thumbnail: ${e}`);
+  }
 
   return { mediaPath, thumbnailPath };
 }
@@ -103,8 +109,6 @@ export default async function importMedia(uploadRecordId: string, url: string) {
       mediaPath = await downloadUrl(url, dir, throttledHeartbeat);
     } else {
       const res = await ytdlp(url, dir, throttledHeartbeat);
-      {
-      }
       mediaPath = res.mediaPath;
       thumbnailPath = res.thumbnailPath;
     }
