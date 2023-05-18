@@ -24,3 +24,16 @@ spec:
           envFrom:
             - configMapRef:
                 name: temporal-client-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: temporal-ui
+spec:
+  selector:
+    app: temporal-ui
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
