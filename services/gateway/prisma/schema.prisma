@@ -241,7 +241,7 @@ model UploadRecord {
 }
 
 model UploadRecordDownloadSize {
-  uploadRecord   UploadRecord  @relation(fields: [uploadRecordId], references: [id])
+  uploadRecord   UploadRecord  @relation(fields: [uploadRecordId], references: [id], onDelete: Cascade)
   uploadRecordId String        @map("uplaod_record_id") @db.Uuid
   variant        UploadVariant
   bytes          BigInt        @map("size_bytes")

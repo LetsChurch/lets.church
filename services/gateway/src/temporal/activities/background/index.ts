@@ -1,3 +1,4 @@
+export * from './delete-upload-record';
 export { default as abortMultipartUpload } from './abort-multipart-upload';
 export { default as backupObjects } from './backup-objects';
 export { default as completeMultipartUpload } from './complete-multipart-upload';

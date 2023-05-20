@@ -1,3 +1,4 @@
+export { deleteUploadWorkflow } from './delete-upload';
 export {
   handleMultipartMediaUploadWorkflow,
   uploadDoneSignal,
@@ -11,7 +12,7 @@ export {
   updateUploadRecordWorkflow,
   updateUploadRecordSignal,
 } from './update-upload-record';
-export { updateUploadScoresWorkflow } from './update-upload-scores';
-export { updateDailySaltWorkflow } from './update-daily-salt';
 export { importMediaWorkflow } from './import-media';
 export { recordDownloadSizeWorkflow } from './record-download-size';
+export { updateDailySaltWorkflow } from './update-daily-salt';
+export { updateUploadScoresWorkflow } from './update-upload-scores';

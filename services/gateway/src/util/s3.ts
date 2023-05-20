@@ -7,6 +7,7 @@ import {
   CompleteMultipartUploadCommand,
   CreateMultipartUploadCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
@@ -22,6 +23,7 @@ import { v4 as uuid } from 'uuid';
 import PQueue from 'p-queue';
 import type { MergeExclusive } from 'type-fest';
 import sanitizeFilename from 'sanitize-filename';
+import { noop } from 'lodash-es';
 
 const S3_INGEST_BUCKET = envariant('S3_INGEST_BUCKET');
 const S3_INGEST_REGION = envariant('S3_INGEST_REGION');
@@ -264,6 +266,35 @@ export async function streamObjectToFile(
   throw new Error('Unknown response type');
 }
 
+export async function listKeys(source: 'INGEST' | 'PUBLIC', prefix: string) {
+  const { client, bucket } = getClientAndBucket(source);
+
+  let continuationToken: string | undefined = undefined;
+
+  const keys: Array<string> = [];
+
+  do {
+    const listCmd: ListObjectsV2Command = new ListObjectsV2Command({
+      Bucket: bucket,
+      Prefix: prefix,
+      ...(continuationToken ? { ContinuationToken: continuationToken } : {}),
+    });
+
+    const listRes = await client.send(listCmd);
+
+    continuationToken = listRes.IsTruncated
+      ? listRes.NextContinuationToken
+      : undefined;
+
+    keys.push(
+      ...(listRes.Contents?.map((entry) => entry.Key ?? '').filter(Boolean) ??
+        []),
+    );
+  } while (continuationToken);
+
+  return keys;
+}
+
 export async function backupObjects(
   source: 'INGEST' | 'PUBLIC',
   prefix: string,
@@ -442,4 +473,60 @@ export async function deleteFile(bucket: string, key: string) {
     Key: key,
   });
   return s3IngestClient.send(cmd);
+}
+
+export async function deletePrefix(
+  to: Client,
+  prefix: string,
+  heartbeat = noop,
+) {
+  const { client, bucket } = getClientAndBucket(to);
+
+  let totalCount = 0;
+  let currentCount = 0;
+
+  console.log(`Deleting objects from ${bucket} with prefix ${prefix}`);
+
+  do {
+    const listCmd: ListObjectsV2Command = new ListObjectsV2Command({
+      Bucket: bucket,
+      Prefix: prefix,
+    });
+
+    const listRes = await client.send(listCmd);
+
+    heartbeat();
+
+    const objects = listRes.Contents?.map((entry) => entry.Key ?? '')
+      .filter(Boolean)
+      .map((key) => ({
+        Key: key,
+      }));
+
+    currentCount = objects?.length ?? 0;
+    totalCount += currentCount;
+
+    if (currentCount > 0) {
+      console.log(
+        `Deleting ${currentCount} objects from ${bucket} with prefix ${prefix}`,
+      );
+
+      const deleteCmd = new DeleteObjectsCommand({
+        Bucket: bucket,
+        Delete: {
+          Objects: objects,
+        },
+      });
+
+      await client.send(deleteCmd);
+
+      heartbeat();
+    }
+  } while (currentCount > 0);
+
+  console.log(
+    `Done deleting ${totalCount} objects from ${bucket} with prefix ${prefix}`,
+  );
+
+  return totalCount;
 }

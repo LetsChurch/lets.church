@@ -30,7 +30,9 @@
     "es:push-mappings": "ts-node-esm --experimental-specifier-resolution=node elasticsearch/mappings.ts",
     "admin:create-user": "ts-node-esm --experimental-specifier-resolution=node scripts/create-user.ts",
     "admin:create-channel": "ts-node-esm --experimental-specifier-resolution=node scripts/create-channel.ts",
-    "admin:import": "ts-node-esm --experimental-specifier-resolution=node scripts/import.ts"
+    "admin:delete-upload": "ts-node-esm --experimental-specifier-resolution=node scripts/delete-upload.ts",
+    "admin:import": "ts-node-esm --experimental-specifier-resolution=node scripts/import.ts",
+    "admin:verify-uploads": "ts-node-esm --experimental-specifier-resolution=node scripts/verify-uploads.ts"
   },
   "prisma": {
     "seed": "node --loader ts-node/esm --experimental-specifier-resolution=node prisma/seed.ts"

@@ -1,0 +1,39 @@
+import { Context } from '@temporalio/activity';
+import prisma from '../../../util/prisma';
+import { client as esClient } from '../../../util/elasticsearch';
+import { deletePrefix } from '../../../util/s3';
+
+export async function deleteUploadRecordSearch(id: string) {
+  console.log(`Deleting upload record search entry for ${id}`);
+
+  await esClient.delete({
+    index: 'lc_uploads',
+    id,
+  });
+
+  return true;
+}
+
+export async function deleteUploadRecordDb(id: string) {
+  console.log(`Deleting upload record from database for ${id}`);
+
+  await prisma.uploadRecord.delete({ where: { id } });
+
+  return true;
+}
+
+export async function deleteUploadRecordS3Objects(id: string) {
+  console.log(`Deleting prefix ${id} from ingest bucket`);
+  const ingestCount = await deletePrefix('INGEST', id, () =>
+    Context.current().heartbeat('deleteUploadRecordS3Objects: INGEST'),
+  );
+  console.log(`Done deleting prefix ${id} from ingest bucket`);
+
+  console.log(`Deleting prefix ${id} from public bucket`);
+  const publicCount = await deletePrefix('PUBLIC', id, () =>
+    Context.current().heartbeat('deleteUploadRecordS3Objects: PUBLIC'),
+  );
+  console.log(`Done deleting prefix ${id} from public bucket`);
+
+  return [ingestCount, publicCount];
+}
