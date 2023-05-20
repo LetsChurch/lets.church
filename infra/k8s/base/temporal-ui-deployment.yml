@@ -17,13 +17,15 @@ spec:
     spec:
       restartPolicy: Always
       containers:
-        - image: temporalio/ui:2.14.0
+        - image: temporalio/ui:2.15.0
           name: temporal-ui
           ports:
             - containerPort: 8080
           envFrom:
             - configMapRef:
                 name: temporal-client-config
+            - configMapRef:
+                name: temporal-ui-config
 ---
 apiVersion: v1
 kind: Service

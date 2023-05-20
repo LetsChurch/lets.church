@@ -33,6 +33,9 @@ configMapGenerator:
   - name: temporal-client-config
     literals:
       - TEMPORAL_ADDRESS=temporal:7233
+  - name: temporal-ui-config
+    literals:
+      - TEMPORAL_UI_PORT=8080
   - name: background-worker-config
     literals:
       - TEMPORAL_SHUTDOWN_GRACE_TIME=1m
