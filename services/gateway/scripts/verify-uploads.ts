@@ -129,7 +129,9 @@ if (
 }
 
 for (const id of errors.keys()) {
-  (await client).workflow.start(deleteUploadWorkflow, {
+  await (
+    await client
+  ).workflow.start(deleteUploadWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
     workflowId: `deleteUploadRecord:${id}`,
     args: [id],
