@@ -16,7 +16,6 @@ cache:
 .setup:
   activate_hermit: source ./bin/activate-hermit
   npmci: npm ci --cache $CI_PROJECT_DIR/.npm --prefer-offline
-  docker_login: docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
 
 default:
   before_script:
@@ -85,73 +84,46 @@ test-gateway:
 # |____/ \___/|___|_____|____/
 
 .build-common: &build-common
-  image: docker:20.10.23
+  image: docker:24.0.1
+  services:
+    - docker:24.0.1-dind
   stage: build
   only:
     - main
-  services:
-    - docker:20.10.23-dind
   before_script:
-    - docker info
-    - !reference [.setup, docker_login]
+    - apk add --no-cache curl
+    - curl https://depot.dev/install-cli.sh | DEPOT_INSTALL_DIR=/usr/local/bin sh
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
 
-build-base:
+build-gateway:
   <<: *build-common
   script:
     - cd services/gateway
-    - docker build --target base -t registry.gitlab.com/letschurch/lets.church/base:${CI_COMMIT_SHORT_SHA} -t registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/base:latest .
-    - docker push registry.gitlab.com/letschurch/lets.church/base:${CI_COMMIT_SHORT_SHA}
-    - docker push registry.gitlab.com/letschurch/lets.church/base:latest
-
-build-server:
-  <<: *build-common
-  needs:
-    - build-base
-  script:
-    - cd services/gateway
-    - docker build --target server -t registry.gitlab.com/letschurch/lets.church/gateway:${CI_COMMIT_SHORT_SHA} -t registry.gitlab.com/letschurch/lets.church/gateway:latest --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/server:latest .
-    - docker push registry.gitlab.com/letschurch/lets.church/gateway:${CI_COMMIT_SHORT_SHA}
-    - docker push registry.gitlab.com/letschurch/lets.church/gateway:latest
+    - depot build --target server -t registry.gitlab.com/letschurch/lets.church/gateway:${CI_COMMIT_SHORT_SHA} . --push
 
 build-background-worker:
   <<: *build-common
-  needs:
-    - build-base
   script:
     - cd services/gateway
-    - docker build --target background-worker -t registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA} -t registry.gitlab.com/letschurch/lets.church/background-worker:latest --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/build-background-worker:latest .
-    - docker push registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA}
-    - docker push registry.gitlab.com/letschurch/lets.church/background-worker:latest
+    - depot build --target background-worker -t registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA} . --push
 
 build-transcode-worker:
   <<: *build-common
-  needs:
-    - build-base
   script:
     - cd services/gateway
-    - docker build --target transcode-worker -t registry.gitlab.com/letschurch/lets.church/transcode-worker:${CI_COMMIT_SHORT_SHA} -t registry.gitlab.com/letschurch/lets.church/transcode-worker:latest --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/transcode-worker:latest .
-    - docker push registry.gitlab.com/letschurch/lets.church/transcode-worker:${CI_COMMIT_SHORT_SHA}
-    - docker push registry.gitlab.com/letschurch/lets.church/transcode-worker:latest
+    - depot build --target transcode-worker -t registry.gitlab.com/letschurch/lets.church/transcode-worker:${CI_COMMIT_SHORT_SHA} . --push
 
 build-transcribe-worker:
   <<: *build-common
-  needs:
-    - build-base
   script:
     - cd services/gateway
-    - docker build --target transcribe-worker -t registry.gitlab.com/letschurch/lets.church/transcribe-worker:${CI_COMMIT_SHORT_SHA} -t registry.gitlab.com/letschurch/lets.church/transcribe-worker:latest --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/transcribe-worker:latest .
-    - docker push registry.gitlab.com/letschurch/lets.church/transcribe-worker:${CI_COMMIT_SHORT_SHA}
-    - docker push registry.gitlab.com/letschurch/lets.church/transcribe-worker:latest
+    - depot build --target transcribe-worker -t registry.gitlab.com/letschurch/lets.church/transcribe-worker:${CI_COMMIT_SHORT_SHA} . --push
 
 build-web:
   <<: *build-common
-  needs:
-    - build-base
   script:
     - cd apps/web
-    - docker build --build-arg VITE_TURNSTILE_SITEKEY=${VITE_TURNSTILE_SITEKEY} -t registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA} -t registry.gitlab.com/letschurch/lets.church/web:latest --cache-from registry.gitlab.com/letschurch/lets.church/base:latest --cache-from registry.gitlab.com/letschurch/lets.church/web:latest .
-    - docker push registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA}
-    - docker push registry.gitlab.com/letschurch/lets.church/web:latest
+    - depot build --build-arg VITE_TURNSTILE_SITEKEY=${VITE_TURNSTILE_SITEKEY} -t registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA} . --push
 
 #  ____             _
 # |  _ \  ___ _ __ | | ___  _   _ 
