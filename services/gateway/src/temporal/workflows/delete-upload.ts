@@ -23,6 +23,6 @@ export const uploadDoneSignal =
 
 export async function deleteUploadWorkflow(uploadRecordId: string) {
   await deleteUploadRecordSearch(uploadRecordId);
-  await deleteUploadRecordDb(uploadRecordId);
   await deleteUploadRecordS3Objects(uploadRecordId);
+  await deleteUploadRecordDb(uploadRecordId);
 }
