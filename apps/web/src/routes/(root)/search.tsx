@@ -15,6 +15,8 @@ import { Dynamic } from 'solid-js/web';
 import ChevronDownIcon from '@tabler/icons/chevron-down.svg?component-solid';
 import FilterIcon from '@tabler/icons/filter.svg?component-solid';
 import { useFloating } from 'solid-floating-ui';
+import humanFormat from 'human-format';
+import pluralize from 'pluralize';
 import type { SearchQuery, SearchQueryVariables } from './__generated__/search';
 import Pagination from '~/components/pagination';
 import Thumbnail, {
@@ -28,6 +30,7 @@ import NavigatingChecklist from '~/components/navigating-checklist';
 import NavigatingDateRange from '~/components/navigating-date-range';
 import OffCanvasDiv from '~/components/off-canvas-div';
 import { Avatar } from '~/components/avatar';
+import { formatDateFull } from '~/util/date';
 
 const PAGE_SIZE = 12;
 
@@ -49,6 +52,8 @@ export function routeData({ location }: RouteDataArgs) {
         gql`
           fragment SearchUploadRecordProps on UploadRecord {
             title
+            publishedAt
+            totalViews
             thumbnailBlurhash
             thumbnailUrl
             variants
@@ -175,6 +180,8 @@ type SearchHitRowProps = Omit<ThumbnailProps, 'width' | 'height' | 'url'> &
     href: string;
     thumbnailUrl?: Optional<string>;
     title: string;
+    totalViews: number;
+    publishedAt: string;
     channelName: string;
     channelId: string;
     channelAvatarUrl?: Optional<string>;
@@ -202,7 +209,14 @@ function SearchHitRow(props: SearchHitRowProps) {
             {props.title}
           </A>
         </h3>
-        <p class="text-xs text-gray-500">123 Views &middot; 3 Days Ago</p>
+        <p class="text-xs text-gray-500">
+          {' '}
+          {humanFormat(props.totalViews ?? 0)}{' '}
+          {pluralize('view', props.totalViews ?? 0)} &middot;{' '}
+          <time datetime={props.publishedAt} class="text-gray-600">
+            {formatDateFull(new Date(props.publishedAt))}
+          </time>
+        </p>
         <A
           href={`/channel/${props.channelId}`}
           class="relative z-10 inline-flex items-center space-x-2"
@@ -463,6 +477,8 @@ export default function SearchRoute() {
                   thumbnailUrl={node.uploadRecord.thumbnailUrl}
                   blurhash={node.uploadRecord.thumbnailBlurhash}
                   title={node.title}
+                  totalViews={node.uploadRecord.totalViews}
+                  publishedAt={node.uploadRecord.publishedAt ?? ''}
                   channelName={node.uploadRecord.channel.name}
                   channelId={node.uploadRecord.channel.id}
                   channelAvatarUrl={node.uploadRecord.channel.avatarUrl}
@@ -490,6 +506,8 @@ export default function SearchRoute() {
                   thumbnailUrl={node.uploadRecord.thumbnailUrl}
                   blurhash={node.uploadRecord.thumbnailBlurhash}
                   title={node.uploadRecord.title ?? 'Untitled'}
+                  totalViews={node.uploadRecord.totalViews}
+                  publishedAt={node.uploadRecord.publishedAt ?? ''}
                   channelName={node.uploadRecord.channel.name}
                   channelId={node.uploadRecord.channel.id}
                   channelAvatarUrl={node.uploadRecord.channel.avatarUrl}
