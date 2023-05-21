@@ -6,10 +6,15 @@ import { deletePrefix } from '../../../util/s3';
 export async function deleteUploadRecordSearch(id: string) {
   console.log(`Deleting upload record search entry for ${id}`);
 
-  await esClient.delete({
-    index: 'lc_uploads',
-    id,
-  });
+  try {
+    await esClient.delete({
+      index: 'lc_uploads',
+      id,
+    });
+  } catch (e) {
+    console.log(`Error deleting from ElasticSearch: ${e}`);
+    return false;
+  }
 
   return true;
 }
@@ -17,7 +22,12 @@ export async function deleteUploadRecordSearch(id: string) {
 export async function deleteUploadRecordDb(id: string) {
   console.log(`Deleting upload record from database for ${id}`);
 
-  await prisma.uploadRecord.delete({ where: { id } });
+  try {
+    await prisma.uploadRecord.delete({ where: { id } });
+  } catch (e) {
+    console.log(`Error deleting from database: ${e}`);
+    return false;
+  }
 
   return true;
 }
