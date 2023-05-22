@@ -45,11 +45,20 @@ async function downloadUrl(url: string, dir: string, heartbeat = noop) {
   return dest;
 }
 
+const baseYtDlpArgs = [
+  '--sleep-requests',
+  '2',
+  '--sleep-interval',
+  '10',
+  '--max-sleep-interval',
+  '60',
+];
+
 async function ytdlp(url: string, dir: string, heartbeat = noop) {
   console.log(`Running yt-dlp for URL ${url}`);
   const mainYtdlp = execa(
     'yt-dlp',
-    [url, '-o', `download.%(ext)s`, '--no-overwrites'],
+    [url, '-o', `download.%(ext)s`, '--no-overwrites', ...baseYtDlpArgs],
     {
       cwd: dir,
     },
@@ -58,7 +67,7 @@ async function ytdlp(url: string, dir: string, heartbeat = noop) {
   mainYtdlp.stderr?.on('data', () => heartbeat(`yt-dlp stdout ${url}`));
   const [, thumbnailRes] = await Promise.all([
     mainYtdlp,
-    execa('yt-dlp', [url, '--print', '%()j']),
+    execa('yt-dlp', [url, '--print', '%()j', ...baseYtDlpArgs]),
   ]);
 
   const mediaPaths = await fastGlob(`${dir}/download.*`);
