@@ -11,6 +11,11 @@ RUN mkdir build
 WORKDIR /home/build/audiowaveform/build
 RUN cmake -D BUILD_STATIC=1 .. && make
 
+FROM debian:bullseye-slim as download-whisper-models
+RUN apt update && apt install -y curl
+RUN curl https://data.letschurch.cloud/whisper-ctranslate2/models/tiny.en.tar.gz | tar -xz
+RUN curl https://data.letschurch.cloud/whisper-ctranslate2/models/large-v2.tar.gz | tar -xz
+
 # Debian Base Image currently required for Prisma and M1 Macs: https://github.com/prisma/prisma/issues/8478
 # Temporal does not support alpine: https://github.com/temporalio/sdk-typescript/issues/850
 FROM node:19.4.0-bullseye-slim as base
@@ -41,7 +46,9 @@ CMD npm run start:transcode-worker
 
 FROM base as transcribe-worker
 COPY --from=mwader/static-ffmpeg:5.1.2 /ffmpeg /ffprobe /usr/bin/
+RUN mkdir -p /opt/whisper/models/{tiny.en,large-v2}
+COPY --from=download-whisper-models tiny.en /opt/whisper/models/tiny.en/
+COPY --from=download-whisper-models large-v2 /opt/whisper/models/large-v2/
 RUN apt update && apt install -y python3 python3-pip curl git && rm -rf /var/lib/apt/lists/* && apt clean
 RUN pip3 install git+https://github.com/Softcatala/whisper-ctranslate2.git@0.2.3
-RUN ./download-whisper-models.sh
 CMD npm run start:transcribe-worker
