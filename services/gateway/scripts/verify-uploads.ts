@@ -18,7 +18,7 @@ const uploads = await prisma.uploadRecord.findMany({
       ...(endDate && { lte: new Date(endDate) }),
     },
   },
-  take: 2000,
+  take: Number.MAX_SAFE_INTEGER,
 });
 
 console.log(

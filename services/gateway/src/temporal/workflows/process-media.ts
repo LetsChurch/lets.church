@@ -49,7 +49,7 @@ export async function processMediaWorkflow(
         args: ['transcript', targetId, transcriptKey],
         taskQueue: BACKGROUND_QUEUE,
         retry: {
-          maximumAttempts: 8,
+          maximumAttempts: 5,
         },
       });
     }),

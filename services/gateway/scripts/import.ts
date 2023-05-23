@@ -38,7 +38,7 @@ if (
   process.exit(0);
 }
 
-data.forEach((input) => {
+for (const input of data) {
   queue.add(async () => {
     await c.workflow.start(importMediaWorkflow, {
       taskQueue: BACKGROUND_QUEUE,
@@ -47,6 +47,6 @@ data.forEach((input) => {
       retry: { maximumAttempts: 5 },
     });
   });
-});
+}
 
 await queue.onEmpty();

@@ -32,6 +32,7 @@
     "admin:create-channel": "ts-node-esm --experimental-specifier-resolution=node scripts/create-channel.ts",
     "admin:delete-upload": "ts-node-esm --experimental-specifier-resolution=node scripts/delete-upload.ts",
     "admin:import": "ts-node-esm --experimental-specifier-resolution=node scripts/import.ts",
+    "admin:reindex": "ts-node-esm --experimental-specifier-resolution=node scripts/reindex.ts",
     "admin:verify-uploads": "ts-node-esm --experimental-specifier-resolution=node scripts/verify-uploads.ts"
   },
   "prisma": {
