@@ -107,17 +107,17 @@ build-background-worker:
     - cd services/gateway
     - depot build --target background-worker -t registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA} . --push
 
-build-transcode-worker:
-  <<: *build-common
-  script:
-    - cd services/gateway
-    - depot build --target transcode-worker -t registry.gitlab.com/letschurch/lets.church/transcode-worker:${CI_COMMIT_SHORT_SHA} . --push
+# build-transcode-worker:
+#   <<: *build-common
+#   script:
+#     - cd services/gateway
+#     - depot build --target transcode-worker -t registry.gitlab.com/letschurch/lets.church/transcode-worker:${CI_COMMIT_SHORT_SHA} . --push
 
-build-transcribe-worker:
-  <<: *build-common
-  script:
-    - cd services/gateway
-    - depot build --target transcribe-worker -t registry.gitlab.com/letschurch/lets.church/transcribe-worker:${CI_COMMIT_SHORT_SHA} . --push
+# build-transcribe-worker:
+#   <<: *build-common
+#   script:
+#     - cd services/gateway
+#     - depot build --target transcribe-worker -t registry.gitlab.com/letschurch/lets.church/transcribe-worker:${CI_COMMIT_SHORT_SHA} . --push
 
 build-web:
   <<: *build-common
