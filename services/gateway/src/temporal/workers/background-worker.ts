@@ -33,7 +33,8 @@ const importWorker = await Worker.create({
   activities: importActivities,
   taskQueue: IMPORT_QUEUE,
   shutdownGraceTime: envariant('TEMPORAL_SHUTDOWN_GRACE_TIME'),
-  maxConcurrentWorkflowTaskExecutions: 1,
+  maxConcurrentWorkflowTaskExecutions: 2,
+  maxConcurrentActivityTaskExecutions: 2,
 });
 
 await Promise.all([backgroundWorker.run(), importWorker.run()]);
