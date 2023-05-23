@@ -90,9 +90,11 @@ export default async function transcribe(
 
     console.log(`uploading file: transcript.vtt`);
 
+    const transcriptKey = `${uploadRecordId}/transcript.vtt`;
+
     await retryablePutFile({
       to: 'PUBLIC',
-      key: `${uploadRecordId}/transcript.vtt`,
+      key: transcriptKey,
       contentType: 'text/vtt',
       body: fixedVtt,
       contentLength: fixedVtt.length,
@@ -106,7 +108,7 @@ export default async function transcribe(
       transcribingFinishedAt: new Date(),
     });
 
-    return keys;
+    return { transcriptKey, additionalKeys: keys };
   } catch (e) {
     console.error(e);
     await updateUploadRecord(uploadRecordId, {

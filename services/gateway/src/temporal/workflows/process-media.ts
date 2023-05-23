@@ -43,13 +43,10 @@ export async function processMediaWorkflow(
       .some((f) => mime.getType(f)?.startsWith('video/'))
       ? [createThumbnails(targetId, s3UploadKey)]
       : []),
-    transcribe(targetId, s3UploadKey).then((uploadKeys) => {
-      const uploadKey = uploadKeys.find((k) => k.endsWith('.vtt'));
-      invariant(uploadKey, 'No vtt found!');
-
+    transcribe(targetId, s3UploadKey).then(({ transcriptKey }) => {
       return executeChild(indexDocumentWorkflow, {
         workflowId: `transcript:${s3UploadKey}`,
-        args: ['transcript', targetId, uploadKey],
+        args: ['transcript', targetId, transcriptKey],
         taskQueue: BACKGROUND_QUEUE,
         retry: {
           maximumAttempts: 8,
