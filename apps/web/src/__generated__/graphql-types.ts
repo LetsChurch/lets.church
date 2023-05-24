@@ -537,6 +537,7 @@ export type QuerySearchArgs = {
   maxPublishedAt?: InputMaybe<Scalars['DateTime']>;
   minPublishedAt?: InputMaybe<Scalars['DateTime']>;
   query: Scalars['String'];
+  transcriptPhraseSearch?: InputMaybe<Scalars['Boolean']>;
 };
 
 

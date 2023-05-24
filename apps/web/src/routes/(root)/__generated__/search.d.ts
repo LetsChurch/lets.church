@@ -12,6 +12,7 @@ export type SearchQueryVariables = Types.Exact<{
   minPublishedAt?: Types.InputMaybe<Types.Scalars['DateTime']>;
   maxPublishedAt?: Types.InputMaybe<Types.Scalars['DateTime']>;
   channels?: Types.InputMaybe<Array<Types.Scalars['ShortUuid']> | Types.Scalars['ShortUuid']>;
+  transcriptPhraseSearch?: Types.InputMaybe<Types.Scalars['Boolean']>;
 }>;
 
 

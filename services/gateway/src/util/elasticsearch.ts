@@ -119,9 +119,11 @@ export function msearchTranscripts(
   {
     channels = [],
     publishedAt,
+    phrase = true,
   }: {
     channels?: string[] | null | undefined;
     publishedAt?: { gte?: string; lte?: string } | undefined;
+    phrase?: boolean;
   },
 ): [MsearchRequestItem, MsearchRequestItem] {
   const trimmed = query.trim();
@@ -141,40 +143,49 @@ export function msearchTranscripts(
             {
               nested: {
                 path: 'segments',
-                query: {
-                  bool: {
-                    // If there are multiple words, require at least two matches
-                    minimum_should_match: words.length > 1 ? 2 : 1,
-                    should: [
-                      // Match any words
-                      {
-                        match: {
-                          'segments.text': {
-                            query: query.trim(),
-                            fuzziness: 'AUTO',
-                            // Basic match
-                            boost: 1,
-                          },
+                query: phrase
+                  ? {
+                      match_phrase: {
+                        'segments.text': {
+                          query: trimmed,
+                          slop: words.length > 3 ? 5 : 2,
                         },
                       },
-                      // Match adjacent pairs of words within a certain proximity
-                      ...(words.length > 1
-                        ? adjacentPairs(words as [string, ...string[]]).map(
-                            (pair) => ({
-                              match_phrase: {
-                                'segments.text': {
-                                  query: pair.join(' '),
-                                  slop: 2,
-                                  // Adjacent pair match, double score
-                                  boost: 2,
-                                },
+                    }
+                  : {
+                      bool: {
+                        // If there are multiple words, require at least two matches
+                        minimum_should_match: words.length > 1 ? 2 : 1,
+                        should: [
+                          // Match any words
+                          {
+                            match: {
+                              'segments.text': {
+                                query: query.trim(),
+                                fuzziness: 'AUTO',
+                                // Basic match
+                                boost: 1,
                               },
-                            }),
-                          )
-                        : []),
-                    ],
-                  },
-                },
+                            },
+                          },
+                          // Match adjacent pairs of words within a certain proximity
+                          ...(words.length > 1
+                            ? adjacentPairs(words as [string, ...string[]]).map(
+                                (pair) => ({
+                                  match_phrase: {
+                                    'segments.text': {
+                                      query: pair.join(' '),
+                                      slop: 2,
+                                      // Adjacent pair match, double score
+                                      boost: 2,
+                                    },
+                                  },
+                                }),
+                              )
+                            : []),
+                        ],
+                      },
+                    },
                 inner_hits: {
                   _source: true,
                   size: 10,

@@ -26,6 +26,7 @@ import { client, gql } from '~/util/gql/server';
 import { SearchFocus } from '~/__generated__/graphql-types';
 import { formatTime, Optional } from '~/util';
 import FloatingDiv from '~/components/floating-div';
+import NavigatingBooleans from '~/components/navigating-booleans';
 import NavigatingChecklist from '~/components/navigating-checklist';
 import NavigatingDateRange from '~/components/navigating-date-range';
 import OffCanvasDiv from '~/components/off-canvas-div';
@@ -44,6 +45,7 @@ export function routeData({ location }: RouteDataArgs) {
       before = null,
       publishedAtRange = null,
       channels = null,
+      transcriptPhraseSearch = 'true',
     ]) => {
       const [minPublishedAt = null, maxPublishedAt = null] =
         publishedAtRange?.split('/') ?? [];
@@ -74,6 +76,7 @@ export function routeData({ location }: RouteDataArgs) {
             $minPublishedAt: DateTime
             $maxPublishedAt: DateTime
             $channels: [ShortUuid!]
+            $transcriptPhraseSearch: Boolean
           ) {
             search(
               focus: $focus
@@ -85,6 +88,7 @@ export function routeData({ location }: RouteDataArgs) {
               minPublishedAt: $minPublishedAt
               maxPublishedAt: $maxPublishedAt
               channels: $channels
+              transcriptPhraseSearch: $transcriptPhraseSearch
             ) {
               aggs {
                 uploadHitCount
@@ -157,6 +161,7 @@ export function routeData({ location }: RouteDataArgs) {
             ? new Date(maxPublishedAt).toISOString()
             : null,
           channels,
+          transcriptPhraseSearch: transcriptPhraseSearch === 'true',
         },
       );
     },
@@ -170,6 +175,7 @@ export function routeData({ location }: RouteDataArgs) {
           location.query['before'],
           location.query['publishedAt'],
           location.query['channels']?.split(',').filter(Boolean),
+          location.query['transcriptPhraseSearch'],
         ] as const,
     },
   );
@@ -380,6 +386,8 @@ export default function SearchRoute() {
       value: channel.id,
       checked: channelsValues().includes(channel.id),
     })) ?? [];
+  const transcriptPhraseSearch = () =>
+    (loc.query['transcriptPhraseSearch'] ?? 'true') === 'true';
 
   return (
     <div class="space-y-5">
@@ -440,6 +448,18 @@ export default function SearchRoute() {
           </div>
         </OffCanvasDiv>
         <nav class="hidden space-x-5 sm:flex" aria-label="Search Filters">
+          <AggFilter title="Advanced">
+            <NavigatingBooleans
+              options={[
+                {
+                  label: 'Search Phrases',
+                  queryKey: 'transcriptPhraseSearch',
+                  checked: transcriptPhraseSearch(),
+                },
+              ]}
+              class="px-2"
+            />
+          </AggFilter>
           <AggFilter
             title="Channels"
             count={channelsCount()}

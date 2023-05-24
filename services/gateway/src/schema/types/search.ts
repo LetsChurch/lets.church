@@ -208,6 +208,10 @@ builder.queryFields((t) => ({
           required: false,
           type: 'DateTime',
         }),
+        transcriptPhraseSearch: t.arg({
+          required: false,
+          type: 'Boolean',
+        }),
       },
       validate: {
         schema: Z.object({
@@ -216,6 +220,7 @@ builder.queryFields((t) => ({
           channels: Z.array(Z.string().uuid()).nullable().optional(),
           minPublishedAt: Z.string().or(Z.date()).nullable().optional(),
           maxPublishedAt: Z.string().or(Z.date()).nullable().optional(),
+          transcriptPhraseSearch: Z.boolean().nullable().optional(),
         }).refine(
           (val) =>
             val.channels?.length ?? 0 > 0
@@ -229,7 +234,15 @@ builder.queryFields((t) => ({
       },
       resolve: async (
         _root,
-        { query, focus, channels, minPublishedAt, maxPublishedAt, ...args },
+        {
+          query,
+          focus,
+          channels,
+          minPublishedAt,
+          maxPublishedAt,
+          transcriptPhraseSearch,
+          ...args
+        },
         _context,
         _info,
       ) => {
@@ -240,6 +253,8 @@ builder.queryFields((t) => ({
         let organizationHitCount = 0;
         let channelAggData: Array<{ id: string; count: number }> = [];
         let dateAggData: { min: Date; max: Date } | null = null;
+
+        console.log({ transcriptPhraseSearch });
 
         const publishedAt: { lte?: string; gte?: string } = {};
 
@@ -278,6 +293,7 @@ builder.queryFields((t) => ({
                   {
                     channels,
                     publishedAt,
+                    phrase: transcriptPhraseSearch ?? true,
                   },
                 ),
                 ...msearchChannels(
