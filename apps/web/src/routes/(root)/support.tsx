@@ -10,11 +10,11 @@ export default function SupportRoute() {
         <H1>Support Let's Church</H1>
         <P>
           <A href="/about">
-            Let's Church operates as a non-profit organization
-          </A>{' '}
-          (501c3 pending). We operate completely free of charge with no ads. We
-          plan on accepting donations through our website soon. In the iterim,
-          if you would like to support Let's Church feel free to reach out to{' '}
+            Let's Church is a 501(c)(3) non-profit organization
+          </A>
+          . We operate completely free of charge with no ads. We plan on
+          accepting donations through our website soon. In the iterim, if you
+          would like to support Let's Church feel free to reach out to{' '}
           <A href="&#109;&#097;&#105;&#108;&#116;&#111;&#058;&#99;&#111;n&#116;&#97;&#99;&#116;&#64;l&#101;t&#115;&#46;&#99;h&#117;&#114;c&#104;">
             cont&#97;ct&#64;&#108;&#101;t&#115;&#46;&#99;h&#117;r&#99;h
           </A>

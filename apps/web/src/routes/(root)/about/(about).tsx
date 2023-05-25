@@ -10,10 +10,10 @@ export default function AboutRoute() {
       <div class="mx-auto max-w-3xl text-base leading-7 text-gray-700">
         <H1>All About Let's Church</H1>
         <P>
-          Let's Church is a non-profit organization (501c3 pending) dedicated to
+          Let's Church is a 501(c)(3) non-profit organization dedicated to
           providing free technology resources to Churches and Christian
           Ministries. Our flagship offering is the site you are looking at right
-          now: sermon and podcast hosting with fully-searchable transcripts 100%
+          now: sermon and media hosting with fully-searchable transcripts, 100%
           free of charge with no ads.
         </P>
         <H2 id="accounts-and-membership">The Public Domain</H2>
