@@ -2,32 +2,28 @@ import A from '~/components/content/a';
 import H1 from '~/components/content/h1';
 import H2 from '~/components/content/h2';
 import P from '~/components/content/p';
+import { Donorbox } from '~/components/donorbox';
 
 export default function SupportRoute() {
   return (
     <div class="bg-white px-6 py-3 lg:px-8">
-      <div class="mx-auto max-w-3xl text-base leading-7 text-gray-700">
-        <H1>Support Let's Church</H1>
-        <P>
+      <div class="mx-auto flex max-w-3xl flex-col text-base leading-7 text-gray-700 md:block">
+        <Donorbox class="order-3 mb-6 mt-6 flex items-center justify-center md:float-right md:ml-6 md:mt-0" />
+        <H1 class="order-0">Support Let's Church</H1>
+        <P class="order-1">
           <A href="/about">
             Let's Church is a 501(c)(3) non-profit organization
           </A>
-          . We operate completely free of charge with no ads. We plan on
-          accepting donations through our website soon. In the iterim, if you
-          would like to support Let's Church feel free to reach out to{' '}
-          <A href="&#109;&#097;&#105;&#108;&#116;&#111;&#058;&#99;&#111;n&#116;&#97;&#99;&#116;&#64;l&#101;t&#115;&#46;&#99;h&#117;&#114;c&#104;">
-            cont&#97;ct&#64;&#108;&#101;t&#115;&#46;&#99;h&#117;r&#99;h
-          </A>
-          .
+          . We operate completely free of charge and will never run ads.
         </P>
-        <P>
+        <P class="order-2">
           Please do not let any giving to Let's Church interfere with giving to
           your local church. It is important that you first support your local
-          community of believers before considering how much you can give to
-          Let's Church.
+          community of believers before prayerfully considering how much you can
+          give to Let's Church.
         </P>
-        <H2>Spread the Word</H2>
-        <P>
+        <H2 class="order-4">Spread the Word</H2>
+        <P class="order-5">
           Another way you can support Let's Church is by spreading the word.
           Share our website, share our social media, share sermons, videos, and
           podcasts that have been helpful or edifying to you. If you know of any
