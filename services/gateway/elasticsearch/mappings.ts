@@ -53,6 +53,12 @@ const targetMappings: Record<
       visibility: {
         type: 'keyword',
       },
+      transcodingFinishedAt: {
+        type: 'date',
+      },
+      transcribingFinishedAt: {
+        type: 'date',
+      },
     },
   },
   lc_transcripts: {
@@ -93,6 +99,12 @@ const targetMappings: Record<
             },
           },
         },
+      },
+      transcodingFinishedAt: {
+        type: 'date',
+      },
+      transcribingFinishedAt: {
+        type: 'date',
       },
     },
   },

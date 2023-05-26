@@ -74,6 +74,8 @@ export function msearchUploads(
           should: [],
           must: [
             { term: { visibility: 'PUBLIC' } },
+            { exists: { field: 'transcodingFinishedAt' } },
+            { exists: { field: 'transcribingFinishedAt' } },
             {
               multi_match: {
                 query,
@@ -140,6 +142,8 @@ export function msearchTranscripts(
           should: [],
           must: [
             { term: { visibility: 'PUBLIC' } },
+            { exists: { field: 'transcodingFinishedAt' } },
+            { exists: { field: 'transcribingFinishedAt' } },
             {
               nested: {
                 path: 'segments',

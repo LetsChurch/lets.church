@@ -13,7 +13,7 @@ async function getDocument(
   s3UploadKey?: string,
 ) {
   switch (kind) {
-    case 'transcript':
+    case 'transcript': {
       invariant(s3UploadKey, 'uploadKey is required for transcript');
       const res = await getObject('PUBLIC', s3UploadKey);
       const body = await res.Body?.transformToString('utf-8');
@@ -22,11 +22,21 @@ async function getDocument(
         .filter((n): n is NodeCue => n.type === 'cue')
         .map(({ data: { start, end, text } }) => ({ start, end, text }));
 
-      const { publishedAt, ...upRec } =
-        await prisma.uploadRecord.findUniqueOrThrow({
-          where: { id: documentId },
-          select: { channelId: true, publishedAt: true, visibility: true },
-        });
+      const {
+        publishedAt,
+        transcodingFinishedAt,
+        transcribingFinishedAt,
+        ...upRec
+      } = await prisma.uploadRecord.findUniqueOrThrow({
+        where: { id: documentId },
+        select: {
+          channelId: true,
+          publishedAt: true,
+          visibility: true,
+          transcodingFinishedAt: true,
+          transcribingFinishedAt: true,
+        },
+      });
 
       return {
         index: 'lc_transcripts',
@@ -35,24 +45,41 @@ async function getDocument(
           ...upRec,
           segments: transcriptSegmentSchema.parse(parsed),
           publishedAt: publishedAt.toISOString(),
+          transcodingFinishedAt: transcodingFinishedAt?.toISOString() ?? null,
+          transcribingFinishedAt: transcribingFinishedAt?.toISOString() ?? null,
         }),
       };
-    case 'upload':
+    }
+    case 'upload': {
+      const {
+        publishedAt,
+        transcodingFinishedAt,
+        transcribingFinishedAt,
+        ...upRec
+      } = await prisma.uploadRecord.findUniqueOrThrow({
+        where: { id: documentId },
+        select: {
+          channelId: true,
+          title: true,
+          description: true,
+          visibility: true,
+          publishedAt: true,
+          transcodingFinishedAt: true,
+          transcribingFinishedAt: true,
+          // TODO: tags
+        },
+      });
       return {
         index: 'lc_uploads',
         id: documentId,
-        document: await prisma.uploadRecord.findUniqueOrThrow({
-          where: { id: documentId },
-          select: {
-            channelId: true,
-            title: true,
-            description: true,
-            visibility: true,
-            publishedAt: true,
-            // TODO: tags
-          },
+        document: escapeDocument({
+          ...upRec,
+          publishedAt: publishedAt.toISOString(),
+          transcodingFinishedAt: transcodingFinishedAt?.toISOString() ?? null,
+          transcribingFinishedAt: transcribingFinishedAt?.toISOString() ?? null,
         }),
       };
+    }
     case 'organization':
       return {
         index: 'lc_organizations',

@@ -451,6 +451,8 @@ builder.queryFields((t) => ({
           skip: offset,
           take: limit,
           where: {
+            transcodingFinishedAt: { not: null },
+            transcribingFinishedAt: { not: null },
             channel: {
               subscribers: {
                 some: {
@@ -488,6 +490,10 @@ builder.queryFields((t) => ({
           ...query,
           skip: offset,
           take: limit,
+          where: {
+            transcribingFinishedAt: { not: null },
+            transcodingFinishedAt: { not: null },
+          },
           orderBy:
             args.orderBy === 'trending'
               ? {

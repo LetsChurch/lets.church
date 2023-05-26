@@ -1,7 +1,10 @@
 import { select } from '@inquirer/prompts';
 import { client } from '../src/temporal';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
-import { indexDocumentWorkflow } from '../src/temporal/workflows';
+import {
+  indexDocumentSignal,
+  indexDocumentWorkflow,
+} from '../src/temporal/workflows';
 import prisma from '../src/util/prisma';
 
 const what = await select({
@@ -9,34 +12,45 @@ const what = await select({
   choices: [
     { name: 'Everything', value: 'all' },
     { name: 'Transcripts', value: 'transcripts' },
+    { name: 'Uploads', value: 'uploads' },
   ],
 });
 
-const selecting = await select({
-  message: 'What would you like to select for reindexing?',
-  choices: [{ name: 'Everything', value: 'all' }],
+const uploads = await prisma.uploadRecord.findMany({
+  select: { id: true },
+  take: Number.MAX_SAFE_INTEGER,
+  where: {
+    transcodingFinishedAt: { not: null },
+    transcribingFinishedAt: { not: null },
+  },
 });
 
-if ((what === 'all' || what === 'transcripts') && selecting === 'all') {
-  const uploads = await prisma.uploadRecord.findMany({
-    select: { id: true },
-    take: Number.MAX_SAFE_INTEGER,
-  });
+console.log(`Queueing documents from ${uploads.length} uploads`);
 
-  console.log(`Queueing ${uploads.length} transcripts for reindexing`);
-
-  for (const { id } of uploads) {
+for (const { id } of uploads) {
+  if (what === 'transcripts' || what === 'all') {
     await (
       await client
-    ).workflow.start(indexDocumentWorkflow, {
+    ).workflow.signalWithStart(indexDocumentWorkflow, {
       taskQueue: BACKGROUND_QUEUE,
       workflowId: `reindexTranscript:${id}`,
       args: ['transcript', id, `${id}/transcript.vtt`],
+      signal: indexDocumentSignal,
+      signalArgs: [],
     });
   }
 
-  console.log('Done!');
-} else {
-  console.log('Invalid choice');
-  process.exit(-1);
+  if (what === 'uploads' || what === 'all') {
+    await (
+      await client
+    ).workflow.signalWithStart(indexDocumentWorkflow, {
+      taskQueue: BACKGROUND_QUEUE,
+      workflowId: `reindexUpload:${id}`,
+      args: ['upload', id],
+      signal: indexDocumentSignal,
+      signalArgs: [],
+    });
+  }
 }
+
+console.log('Done!');

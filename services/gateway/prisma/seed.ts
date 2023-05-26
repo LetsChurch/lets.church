@@ -324,6 +324,8 @@ const baseUploadRecord = {
   license: 'CC0' as const,
   visibility: 'PUBLIC' as const,
   variants: ['AUDIO'],
+  transcodingFinishedAt: new Date(),
+  transcribingFinishedAt: new Date(),
 } satisfies Prisma.UploadRecordCreateManyInput;
 
 const uploadRecordData = [
