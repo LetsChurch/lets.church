@@ -19,7 +19,7 @@ export default function AboutRoute() {
         <H2 id="accounts-and-membership">The Public Domain</H2>
         <P>
           Not only is Let’s Church free to use, but{' '}
-          <ExternalLink href="https://gitlab.com/letschurch/lets.church">
+          <ExternalLink href="https://gitlab.com/letschurch">
             our code
           </ExternalLink>{' '}
           is also available and dedicated to the public domain. As Jesus said,
