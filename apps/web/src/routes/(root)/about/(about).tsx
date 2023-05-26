@@ -37,7 +37,9 @@ export default function AboutRoute() {
         </P>
         <h2 class="mt-36 flex flex-col space-y-5 text-center text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
           <small>Ready?</small>
-          <strong class="text-5xl font-bold">Let's Church</strong>
+          <strong class="text-5xl font-bold text-indigo-500">
+            Let's Church
+          </strong>
         </h2>
       </div>
     </div>
