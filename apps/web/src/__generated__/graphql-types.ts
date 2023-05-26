@@ -231,6 +231,8 @@ export type MediaDownload = {
 
 export enum MediaDownloadKind {
   Audio = 'AUDIO',
+  TranscriptTxt = 'TRANSCRIPT_TXT',
+  TranscriptVtt = 'TRANSCRIPT_VTT',
   Video_4K = 'VIDEO_4K',
   Video_360P = 'VIDEO_360P',
   Video_480P = 'VIDEO_480P',

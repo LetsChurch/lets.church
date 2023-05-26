@@ -337,6 +337,8 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
                   'VIDEO_480P',
                   'VIDEO_360P',
                   'AUDIO',
+                  'TRANSCRIPT_VTT',
+                  'TRANSCRIPT_TXT',
                 ] as const,
               }),
             }),
@@ -346,25 +348,33 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
         }),
       ],
       select: { id: true, variants: true, title: true },
-      resolve: (root) =>
-        Promise.all(
+      resolve: async (root) => {
+        type MediaDownloadKind =
+          | 'VIDEO_4K'
+          | 'VIDEO_1080P'
+          | 'VIDEO_720P'
+          | 'VIDEO_480P'
+          | 'VIDEO_360P'
+          | 'AUDIO'
+          | 'TRANSCRIPT_VTT'
+          | 'TRANSCRIPT_TXT';
+        const media = await Promise.all(
           root.variants
             .filter((v) => v.endsWith('_DOWNLOAD'))
             .map(async (v) => {
               const ext = v.startsWith('VIDEO') ? 'mp4' : 'm4a';
               return {
-                kind:
-                  v === 'VIDEO_4K_DOWNLOAD'
-                    ? ('VIDEO_4K' as const)
-                    : v === 'VIDEO_1080P_DOWNLOAD'
-                    ? ('VIDEO_1080P' as const)
-                    : v === 'VIDEO_720P_DOWNLOAD'
-                    ? ('VIDEO_720P' as const)
-                    : v === 'VIDEO_480P'
-                    ? ('VIDEO_480P' as const)
-                    : v === 'VIDEO_360P'
-                    ? ('VIDEO_360P' as const)
-                    : ('AUDIO' as const),
+                kind: (v === 'VIDEO_4K_DOWNLOAD'
+                  ? 'VIDEO_4K'
+                  : v === 'VIDEO_1080P_DOWNLOAD'
+                  ? 'VIDEO_1080P'
+                  : v === 'VIDEO_720P_DOWNLOAD'
+                  ? 'VIDEO_720P'
+                  : v === 'VIDEO_480P'
+                  ? 'VIDEO_480P'
+                  : v === 'VIDEO_360P'
+                  ? 'VIDEO_360P'
+                  : 'AUDIO') as MediaDownloadKind,
                 label:
                   v === 'VIDEO_4K_DOWNLOAD'
                     ? '4k Video'
@@ -383,7 +393,27 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
                 ),
               };
             }),
-        ),
+        );
+
+        return media.concat([
+          {
+            kind: 'TRANSCRIPT_VTT',
+            label: 'Transcript (vtt)',
+            url: await getPublicUrlWithFilename(
+              `${root.id}/transcript.vtt`,
+              `${root.title ?? root.id}.vtt`,
+            ),
+          },
+          {
+            kind: 'TRANSCRIPT_TXT',
+            label: 'Transcript (txt)',
+            url: await getPublicUrlWithFilename(
+              `${root.id}/transcript.original.txt`,
+              `${root.title ?? root.id}.txt`,
+            ),
+          },
+        ]);
+      },
     }),
     totalViews: t.relationCount('uploadViews'),
   }),
