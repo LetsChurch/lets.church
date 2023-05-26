@@ -14,11 +14,12 @@ export default function SupportRoute() {
           <A href="/about">
             Let's Church is a 501(c)(3) non-profit organization
           </A>
-          . We operate completely free of charge and will never run ads. Your
-          contribution helps pay for hosting fees, storage, and the hardware
-          necessary to encode and transcribe audio and videos for the benefit of
-          churches and ministries around the world. All donations are
-          tax-deductible in the United States.
+          . We provide our services completely free of charge and will never run
+          ads. Your contribution helps pay for improvement of our platform,
+          hosting fees, storage, and the hardware necessary to encode and
+          transcribe audio and videos for the benefit of churches and ministries
+          around the world. All donations are tax-deductible in the United
+          States.
         </P>
         <P class="order-2">
           Please do not let any giving to Let's Church interfere with giving to
