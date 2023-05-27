@@ -5,6 +5,7 @@ import {
   untrack,
   createSignal,
   createEffect,
+  Show,
 } from 'solid-js';
 import invariant from 'tiny-invariant';
 import videojs from 'video.js';
@@ -27,6 +28,11 @@ export default function Video(props: Props) {
   let player: ReturnType<typeof videojs>;
   const [ready, setReady] = createSignal(false);
 
+  const audioOnlyMode = () =>
+    !props.videoSource &&
+    props.audioSource &&
+    (props.peaksDatUrl || props.peaksJsonUrl);
+
   onMount(async () => {
     invariant(videoRef, 'Video ref is undefined');
 
@@ -46,9 +52,7 @@ export default function Video(props: Props) {
       });
     }
 
-    const audioOnlyMode = !props.videoSource;
-
-    if (audioOnlyMode) {
+    if (audioOnlyMode()) {
       invariant(peaksContainer, 'Peaks container ref is undefined');
       invariant(props.peaksDatUrl, 'Peaks source is undefined');
       invariant(props.peaksJsonUrl, 'Peaks source is undefined');
@@ -77,7 +81,7 @@ export default function Video(props: Props) {
       videoRef,
       {
         controls: true,
-        audioOnlyMode,
+        audioOnlyMode: audioOnlyMode(),
         preload: 'auto',
         fluid: props.fluid,
         sources,
@@ -126,8 +130,16 @@ export default function Video(props: Props) {
   });
 
   return (
-    <div class="[&_.video-js_.vjs-progress-control]:hidden [&_.video-js_.vjs-time-control]:ml-auto">
-      <div class="h-36" ref={(el) => void (peaksContainer = el)} />
+    <div
+      class={
+        audioOnlyMode()
+          ? '[&_.video-js_.vjs-progress-control]:hidden [&_.video-js_.vjs-time-control]:ml-auto'
+          : undefined
+      }
+    >
+      <Show when={audioOnlyMode()}>
+        <div class="h-36" ref={(el) => void (peaksContainer = el)} />
+      </Show>
       <video class="video-js" ref={(el) => void (videoRef = el)} playsinline />
     </div>
   );
