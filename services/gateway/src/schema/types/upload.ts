@@ -322,6 +322,28 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
         return getPublicMediaUrl(`${root.id}/AUDIO.m3u8`);
       },
     }),
+    peaksDatUrl: t.string({
+      nullable: true,
+      select: { id: true, variants: true },
+      resolve: async (root, _args, _context) => {
+        if (!root.variants.includes('AUDIO')) {
+          return null;
+        }
+
+        return getPublicMediaUrl(`${root.id}/peaks.dat`);
+      },
+    }),
+    peaksJsonUrl: t.string({
+      nullable: true,
+      select: { id: true, variants: true },
+      resolve: async (root, _args, _context) => {
+        if (!root.variants.includes('AUDIO')) {
+          return null;
+        }
+
+        return getPublicMediaUrl(`${root.id}/peaks.json`);
+      },
+    }),
     downloadsEnabled: t.exposeBoolean('downloadsEnabled'),
     downloadUrls: t.field({
       nullable: true,

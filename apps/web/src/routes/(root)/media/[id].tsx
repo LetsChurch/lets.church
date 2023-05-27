@@ -218,6 +218,8 @@ export function routeData({ params, location }: RouteDataArgs) {
               }
               mediaSource
               audioSource
+              peaksDatUrl
+              peaksJsonUrl
               downloadsEnabled
               downloadUrls {
                 kind
@@ -633,18 +635,15 @@ export default function MediaRoute() {
       <Title>{metaData()?.data.title ?? '...'} | Let's Church</Title>
       <div class="md:grid md:grid-cols-3 md:gap-4">
         <div class="space-y-4 md:col-span-2">
-          <div class="aspect-video w-full bg-gray-100">
-            <Video
-              source={
-                metaData()?.data.mediaSource ??
-                metaData()?.data.audioSource ??
-                ''
-              }
-              playAt={playAt}
-              onTimeUpdate={(time) => setCurrentTime(time)}
-              fluid
-            />
-          </div>
+          <Video
+            videoSource={metaData()?.data.mediaSource}
+            audioSource={metaData()?.data.audioSource}
+            peaksDatUrl={metaData()?.data.peaksDatUrl}
+            peaksJsonUrl={metaData()?.data.peaksJsonUrl}
+            playAt={playAt}
+            onTimeUpdate={setCurrentTime}
+            fluid
+          />
           <h1 class="truncate text-2xl">{metaData()?.data.title ?? '...'}</h1>
           <div class="flex justify-between gap-3 overflow-x-auto">
             <div class="flex gap-3">

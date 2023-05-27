@@ -706,6 +706,8 @@ export type UploadRecord = {
   license: UploadLicense;
   mediaSource?: Maybe<Scalars['String']>;
   myRating?: Maybe<Rating>;
+  peaksDatUrl?: Maybe<Scalars['String']>;
+  peaksJsonUrl?: Maybe<Scalars['String']>;
   publishedAt?: Maybe<Scalars['DateTime']>;
   thumbnailBlurhash?: Maybe<Scalars['String']>;
   thumbnailUrl?: Maybe<Scalars['String']>;

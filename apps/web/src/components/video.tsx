@@ -8,10 +8,15 @@ import {
 } from 'solid-js';
 import invariant from 'tiny-invariant';
 import videojs from 'video.js';
+import Peaks from 'peaks.js';
 import 'video.js/dist/video-js.css';
+import type { Optional } from '~/util';
 
 export type Props = {
-  source: string;
+  videoSource?: Optional<string>;
+  audioSource?: Optional<string>;
+  peaksDatUrl?: Optional<string>;
+  peaksJsonUrl?: Optional<string>;
   fluid?: boolean | undefined;
   playAt?: Accessor<number>;
   onTimeUpdate?: (currentTime: number) => unknown;
@@ -19,24 +24,61 @@ export type Props = {
 
 export default function Video(props: Props) {
   let videoRef: HTMLVideoElement;
+  let peaksContainer: HTMLDivElement;
   let player: ReturnType<typeof videojs>;
   const [ready, setReady] = createSignal(false);
 
   onMount(() => {
     invariant(videoRef, 'Video ref is undefined');
 
+    const sources = [];
+
+    if (props.videoSource) {
+      sources.push({
+        src: props.videoSource,
+        type: 'application/x-mpegURL',
+      });
+    }
+
+    if (props.audioSource) {
+      sources.push({
+        src: props.audioSource,
+        type: 'application/x-mpegURL',
+      });
+    }
+
+    const audioOnlyMode = !props.videoSource;
+
+    if (audioOnlyMode) {
+      invariant(peaksContainer, 'Peaks container ref is undefined');
+      invariant(props.peaksDatUrl, 'Peaks source is undefined');
+      invariant(props.peaksJsonUrl, 'Peaks source is undefined');
+      Peaks.init({
+        mediaElement: videoRef,
+        overview: {
+          container: peaksContainer,
+          waveformColor: '#818cf8',
+          playedWaveformColor: '#6366f1', // indigo-500
+          showPlayheadTime: false,
+          showAxisLabels: false,
+          axisGridlineColor: 'transparent',
+        },
+        dataUri: {
+          arraybuffer: props.peaksDatUrl,
+          json: props.peaksJsonUrl,
+        },
+        keyboard: true,
+      });
+    }
+
     player = videojs(
       videoRef,
       {
         controls: true,
+        audioOnlyMode,
         preload: 'auto',
         fluid: props.fluid,
-        sources: [
-          {
-            src: props.source,
-            type: 'application/x-mpegURL',
-          },
-        ],
+        sources,
         html5: {
           hls: {
             overrideNative: false,
@@ -82,6 +124,9 @@ export default function Video(props: Props) {
   });
 
   return (
-    <video class="video-js" ref={(el) => void (videoRef = el)} playsinline />
+    <div class="[&_.video-js_.vjs-progress-control]:hidden [&_.video-js_.vjs-time-control]:ml-auto">
+      <div class="h-36" ref={(el) => void (peaksContainer = el)} />
+      <video class="video-js" ref={(el) => void (videoRef = el)} playsinline />
+    </div>
   );
 }

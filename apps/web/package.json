@@ -34,6 +34,7 @@
     "human-number": "^2.0.1",
     "p-progress": "^0.6.0",
     "p-retry": "^5.1.2",
+    "peaks.js": "^2.1.0",
     "plausible-tracker": "^0.3.8",
     "pluralize": "^8.0.0",
     "pretty-ms": "^8.0.0",

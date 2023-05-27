@@ -38,7 +38,7 @@ export async function runAudiowaveform(
 
   const proc1 = execa(
     'audiowaveform',
-    ['-i', wavFile, '-o', `${wavFile}.json`],
+    ['-i', wavFile, '-b', '8', '-o', `${wavFile}.json`],
     { cwd, signal },
   );
 
@@ -53,7 +53,7 @@ export async function runAudiowaveform(
 
   const proc2 = execa(
     'audiowaveform',
-    ['-i', wavFile, '-o', `${wavFile}.dat`],
+    ['-i', wavFile, '-b', '8', '-o', `${wavFile}.dat`],
     { cwd, signal },
   );
 
