@@ -8,7 +8,7 @@ import {
   useContext,
 } from 'solid-js';
 import SearchIcon from '@tabler/icons/search.svg?component-solid';
-import BellIcon from '@tabler/icons/bell.svg?component-solid';
+/* import BellIcon from '@tabler/icons/bell.svg?component-solid'; */
 import MenuIcon from '@tabler/icons/menu-2.svg?component-solid';
 import XIcon from '@tabler/icons/x.svg?component-solid';
 import { useBeforeLeave, useIsRouting } from '@solidjs/router';
@@ -144,6 +144,7 @@ export default function Header() {
               </button>
             </div>
             <div class="hidden lg:ml-4 lg:flex lg:items-center">
+              {/*
               <button
                 type="button"
                 class="flex-shrink-0 rounded-full bg-white p-1 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
@@ -151,6 +152,7 @@ export default function Header() {
                 <span class="sr-only">View notifications</span>
                 <BellIcon class="h-6 w-6" />
               </button>
+              */}
               <Profile me={user?.()?.me ?? null} />
             </div>
           </div>
