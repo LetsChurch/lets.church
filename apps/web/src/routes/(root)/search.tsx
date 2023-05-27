@@ -446,6 +446,19 @@ export default function SearchRoute() {
               max={toDateOrNull(data()?.search.aggs.publishedAtRange?.max)}
             />
           </div>
+          <div>
+            <h3 class="space-y-2">Advanced</h3>
+            <NavigatingBooleans
+              options={[
+                {
+                  label: 'Search Phrases',
+                  queryKey: 'transcriptPhraseSearch',
+                  checked: transcriptPhraseSearch(),
+                },
+              ]}
+              class="px-2"
+            />
+          </div>
         </OffCanvasDiv>
         <nav class="hidden space-x-5 sm:flex" aria-label="Search Filters">
           <AggFilter title="Advanced">
