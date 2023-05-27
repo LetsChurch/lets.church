@@ -8,7 +8,6 @@ import {
 } from 'solid-js';
 import invariant from 'tiny-invariant';
 import videojs from 'video.js';
-import Peaks from 'peaks.js';
 import 'video.js/dist/video-js.css';
 import type { Optional } from '~/util';
 
@@ -28,7 +27,7 @@ export default function Video(props: Props) {
   let player: ReturnType<typeof videojs>;
   const [ready, setReady] = createSignal(false);
 
-  onMount(() => {
+  onMount(async () => {
     invariant(videoRef, 'Video ref is undefined');
 
     const sources = [];
@@ -53,6 +52,9 @@ export default function Video(props: Props) {
       invariant(peaksContainer, 'Peaks container ref is undefined');
       invariant(props.peaksDatUrl, 'Peaks source is undefined');
       invariant(props.peaksJsonUrl, 'Peaks source is undefined');
+
+      const { default: Peaks } = await import('peaks.js');
+
       Peaks.init({
         mediaElement: videoRef,
         overview: {
