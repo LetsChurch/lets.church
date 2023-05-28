@@ -2,8 +2,8 @@ import { select } from '@inquirer/prompts';
 import ora from 'ora';
 import { client } from '../src/temporal';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
+import { emptySignal } from '../src/temporal/signals';
 import {
-  indexDocumentSignal,
   indexDocumentWorkflow,
 } from '../src/temporal/workflows';
 import prisma from '../src/util/prisma';
@@ -41,7 +41,7 @@ for (const { id } of uploads) {
       taskQueue: BACKGROUND_QUEUE,
       workflowId: `reindexTranscript:${id}`,
       args: ['transcript', id, `${id}/transcript.vtt`],
-      signal: indexDocumentSignal,
+      signal: emptySignal,
       signalArgs: [],
     });
   }
@@ -53,7 +53,7 @@ for (const { id } of uploads) {
       taskQueue: BACKGROUND_QUEUE,
       workflowId: `reindexUpload:${id}`,
       args: ['upload', id],
-      signal: indexDocumentSignal,
+      signal: emptySignal,
       signalArgs: [],
     });
   }

@@ -1,10 +1,12 @@
 import { writeFile } from 'fs/promises';
 import { input, confirm } from '@inquirer/prompts';
+import all from 'it-all';
 import { client } from '../src/temporal';
 import prisma from '../src/util/prisma';
 import { headObject, listKeys } from '../src/util/s3';
 import { deleteUploadWorkflow } from '../src/temporal/workflows';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
+import { emptySignal } from '../src/temporal/signals';
 
 const startDate = await input({ message: 'Start date: ' });
 const endDate = await input({ message: 'End date: ' });
@@ -60,7 +62,7 @@ function getErrorEntry(id: string): ErrorEntry {
 for (const { id, variants } of uploads) {
   console.log(`Checking ${id}`);
 
-  const ingestKeys = await listKeys('INGEST', id);
+  const ingestKeys = await all(listKeys('INGEST', id));
 
   if (ingestKeys.length === 0) {
     console.log(`${id}: missing ingest`);
@@ -131,9 +133,11 @@ if (
 for (const id of errors.keys()) {
   await (
     await client
-  ).workflow.start(deleteUploadWorkflow, {
+  ).workflow.signalWithStart(deleteUploadWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
     workflowId: `deleteUploadRecord:${id}`,
     args: [id],
+    signal: emptySignal,
+    signalArgs: [],
   });
 }

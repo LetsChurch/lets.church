@@ -266,17 +266,15 @@ export async function streamObjectToFile(
   throw new Error('Unknown response type');
 }
 
-export async function listKeys(source: 'INGEST' | 'PUBLIC', prefix: string) {
+export async function* listKeys(source: 'INGEST' | 'PUBLIC', prefix?: string) {
   const { client, bucket } = getClientAndBucket(source);
 
   let continuationToken: string | undefined = undefined;
 
-  const keys: Array<string> = [];
-
   do {
     const listCmd: ListObjectsV2Command = new ListObjectsV2Command({
       Bucket: bucket,
-      Prefix: prefix,
+      ...(prefix ? { Prefix: prefix } : {}),
       ...(continuationToken ? { ContinuationToken: continuationToken } : {}),
     });
 
@@ -286,13 +284,26 @@ export async function listKeys(source: 'INGEST' | 'PUBLIC', prefix: string) {
       ? listRes.NextContinuationToken
       : undefined;
 
-    keys.push(
-      ...(listRes.Contents?.map((entry) => entry.Key ?? '').filter(Boolean) ??
-        []),
-    );
+    for (const key of listRes.Contents?.map((entry) => entry.Key ?? '').filter(
+      Boolean,
+    ) ?? []) {
+      yield key;
+    }
   } while (continuationToken);
+}
 
-  return keys;
+export async function* listPrefixes(source: 'INGEST' | 'PUBLIC') {
+  const seen = new Set();
+
+  for await (const key of listKeys(source)) {
+    const prefix = key.split('/').at(0);
+
+    if (prefix && !seen.has(prefix)) {
+      yield prefix;
+    }
+
+    seen.add(prefix);
+  }
 }
 
 export async function backupObjects(

@@ -8,7 +8,6 @@ import type { UploadPostProcessValue } from '../schema/types/mutation';
 import type { Client as S3UtilClient } from '../util/s3';
 import {
   handleMultipartMediaUploadWorkflow,
-  indexDocumentSignal,
   indexDocumentWorkflow,
   sendEmailWorkflow,
   uploadDoneSignal,
@@ -18,6 +17,7 @@ import {
 import { BACKGROUND_QUEUE } from './queues';
 import type { DocumentKind } from './activities/background/index-document';
 import { recordDownloadSizeWorkflow } from './workflows/record-download-size';
+import { emptySignal } from './signals';
 
 const TEMPORAL_ADDRESS = envariant('TEMPORAL_ADDRESS');
 
@@ -108,7 +108,7 @@ export async function indexDocument(
     taskQueue: BACKGROUND_QUEUE,
     workflowId: `${kind}:${uploadId}`,
     args: [kind, uploadId, uploadKey],
-    signal: indexDocumentSignal,
+    signal: emptySignal,
     signalArgs: [],
     retry: {
       maximumAttempts: 8,

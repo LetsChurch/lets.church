@@ -3,7 +3,7 @@ export {
   handleMultipartMediaUploadWorkflow,
   uploadDoneSignal,
 } from './handle-multipart-media-upload';
-export { indexDocumentWorkflow, indexDocumentSignal } from './index-document';
+export { indexDocumentWorkflow } from './index-document';
 export { processImageWorkflow } from './process-image';
 export { processMediaWorkflow } from './process-media';
 export { sendEmailWorkflow } from './send-email';

@@ -1,11 +1,8 @@
-import {
-  defineSignal,
-  proxyActivities,
-  setHandler,
-} from '@temporalio/workflow';
+import { proxyActivities, setHandler } from '@temporalio/workflow';
 import type * as activities from '../activities/background';
 import type { DocumentKind } from '../activities/background/index-document';
 import { BACKGROUND_QUEUE } from '../queues';
+import { emptySignal } from '../signals';
 
 const { indexDocument: indexDocumentActivity } = proxyActivities<
   typeof activities
@@ -15,8 +12,6 @@ const { indexDocument: indexDocumentActivity } = proxyActivities<
   retry: { maximumAttempts: 5 },
 });
 
-export const indexDocumentSignal = defineSignal('indexDocument');
-
 export async function indexDocumentWorkflow(
   kind: DocumentKind,
   uploadRecordId: string,
@@ -24,7 +19,7 @@ export async function indexDocumentWorkflow(
 ) {
   let receivedUpdate = false;
 
-  setHandler(indexDocumentSignal, () => void (receivedUpdate = true));
+  setHandler(emptySignal, () => void (receivedUpdate = true));
 
   do {
     receivedUpdate = false;
