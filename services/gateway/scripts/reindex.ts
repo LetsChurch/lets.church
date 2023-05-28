@@ -1,4 +1,5 @@
 import { select } from '@inquirer/prompts';
+import ora from 'ora';
 import { client } from '../src/temporal';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
 import {
@@ -27,6 +28,11 @@ const uploads = await prisma.uploadRecord.findMany({
 
 console.log(`Queueing documents from ${uploads.length} uploads`);
 
+const total = uploads.length;
+let queued = 0;
+
+const spinner = ora(`Queueing ${total} uploads`).start();
+
 for (const { id } of uploads) {
   if (what === 'transcripts' || what === 'all') {
     await (
@@ -51,6 +57,9 @@ for (const { id } of uploads) {
       signalArgs: [],
     });
   }
+
+  queued += 1;
+  spinner.text = `Queued ${queued}/${total} uploads`;
 }
 
-console.log('Done!');
+spinner.succeed('Done!');
