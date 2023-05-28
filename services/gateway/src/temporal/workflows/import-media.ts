@@ -42,6 +42,8 @@ export async function importMediaWorkflow({
       description,
       license,
       visibility,
+      uploadFinalized: true,
+      uploadFinalizedBy: { connect: { username } },
       createdBy: { connect: { username } },
       channel: { connect: { slug: channelSlug } },
       ...(publishedAt ? { publishedAt: new Date(publishedAt) } : {}),
