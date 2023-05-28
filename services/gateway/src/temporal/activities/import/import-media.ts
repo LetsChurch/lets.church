@@ -11,9 +11,11 @@ import invariant from 'tiny-invariant';
 import mkdirp from 'mkdirp';
 import { noop, throttle } from 'lodash-es';
 import { Context } from '@temporalio/activity';
+import type { Prisma } from '@prisma/client';
 import { putFile, putFileMultipart } from '../../../util/s3';
+import prisma from '../../../util/prisma';
 
-const WORK_DIR = '/data/import';
+const WORK_DIR = process.env['IMPORT_WORKING_DIRECTORY'] ?? '/data/import';
 
 const stdoutThumbnailSchema = Z.object({
   thumbnail: Z.string().url(),
@@ -98,13 +100,17 @@ async function ytdlp(url: string, dir: string, heartbeat = noop) {
   return { mediaPath, thumbnailPath };
 }
 
-export default async function importMedia(uploadRecordId: string, url: string) {
+export default async function importMedia(
+  url: string,
+  data: Prisma.UploadRecordCreateArgs['data'],
+) {
   const throttledHeartbeat = throttle(
     (arg: string) => Context.current().heartbeat(arg),
     5000,
   );
 
-  const dir = join(WORK_DIR, uploadRecordId);
+  let uploadRecordId: string;
+  const dir = join(WORK_DIR, uuid());
   await mkdirp(dir);
 
   let mediaUploadKey: string;
@@ -122,6 +128,9 @@ export default async function importMedia(uploadRecordId: string, url: string) {
       thumbnailPath = res.thumbnailPath;
     }
 
+    const rec = await prisma.uploadRecord.create({ data });
+
+    uploadRecordId = rec.id;
     mediaUploadKey = `${uploadRecordId}/${uuid()}`;
 
     await putFileMultipart({
@@ -148,5 +157,5 @@ export default async function importMedia(uploadRecordId: string, url: string) {
     await rimraf(dir);
   }
 
-  return { mediaUploadKey, thumbnailUploadKey };
+  return { uploadRecordId, mediaUploadKey, thumbnailUploadKey };
 }
