@@ -34,7 +34,8 @@
     "admin:import": "ts-node-esm --experimental-specifier-resolution=node scripts/import.ts",
     "admin:reindex": "ts-node-esm --experimental-specifier-resolution=node scripts/reindex.ts",
     "admin:verify-uploads": "ts-node-esm --experimental-specifier-resolution=node scripts/verify-uploads.ts",
-    "admin:verify-r2-orphans": "ts-node-esm --experimental-specifier-resolution=node scripts/verify-r2-orphans.ts"
+    "admin:verify-r2-orphans": "ts-node-esm --experimental-specifier-resolution=node scripts/verify-r2-orphans.ts",
+    "admin:verify-es-orphans": "ts-node-esm --experimental-specifier-resolution=node scripts/verify-es-orphans.ts"
   },
   "prisma": {
     "seed": "node --loader ts-node/esm --experimental-specifier-resolution=node prisma/seed.ts"

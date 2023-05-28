@@ -397,3 +397,34 @@ export const MSearchResponseSchema = Z.object({
     }),
   ),
 });
+
+export async function* listIds(
+  index: 'lc_uploads' | 'lc_transcripts' | 'lc_channels' | 'lc_organizations',
+) {
+  const searchRes = await client.search({
+    index,
+    scroll: '10m',
+    size: 1000,
+    body: {
+      query: { match_all: {} },
+    },
+  });
+
+  let scrollId = searchRes._scroll_id;
+  let hits = searchRes.hits.hits;
+
+  while (hits && hits.length && scrollId) {
+    for (const { _id: id } of hits) {
+      if (id) {
+        yield id;
+      }
+    }
+
+    const scrollRes = await client.scroll({
+      scroll_id: scrollId,
+      scroll: '10m',
+    });
+    scrollId = scrollRes._scroll_id;
+    hits = scrollRes.hits.hits;
+  }
+}
