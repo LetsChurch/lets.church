@@ -1,5 +1,6 @@
 import { basename, join } from 'node:path';
 import { unlink, stat } from 'node:fs/promises';
+import { setTimeout } from 'node:timers/promises';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
 import fastGlob from 'fast-glob';
@@ -18,12 +19,38 @@ import { recordDownloadSize, updateUploadRecord } from '../..';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import type { Probe } from './probe';
 
-const WORK_DIR = '/data/transcode';
+const WORK_DIR =
+  process.env['TRANSCODE_WORKING_DIRECTORY'] ?? '/data/transcode';
 
 const formatter = new Intl.ListFormat('en', {
   style: 'long',
   type: 'conjunction',
 });
+
+async function uploadSegments(id: string, dir: string) {
+  const segmentFiles = await fastGlob(join(dir, '*.ts'));
+
+  for (const path of segmentFiles) {
+    Context.current().heartbeat(`Starting uplaod: ${path}`);
+    console.log(`Uploading media segment: ${path}`);
+
+    await retryablePutFile({
+      to: 'PUBLIC',
+      key: `${id}/${basename(path)}`,
+      contentType: 'video/mp2ts',
+      contentLength: (await stat(path)).size,
+      path,
+    });
+
+    console.log(`Done uploading media segment: ${path}`);
+    console.log(`Deleting ${path}`);
+
+    await unlink(path);
+
+    console.log(`Deleted ${path}`);
+    Context.current().heartbeat(`Uploading done: ${path}`);
+  }
+}
 
 export default async function transcode(
   uploadRecordId: string,
@@ -111,32 +138,17 @@ export default async function transcode(
       }
     });
     encodeProc.stderr?.on('data', dataHeartbeat);
+
+    while (encodeProc.exitCode === null) {
+      await uploadSegments(uploadRecordId, dir);
+      await setTimeout(1000);
+    }
+
+    await uploadSegments(uploadRecordId, dir);
+
     const encodeProcRes = await encodeProc;
 
     console.log(`ffmpeg finished with code ${encodeProcRes.exitCode}`);
-
-    const segmentFiles = await fastGlob(join(dir, '*.ts'));
-
-    for (const path of segmentFiles) {
-      Context.current().heartbeat(`Starting uplaod: ${path}`);
-      console.log(`Uploading media segment: ${path}`);
-
-      await retryablePutFile({
-        to: 'PUBLIC',
-        key: `${uploadRecordId}/${basename(path)}`,
-        contentType: 'video/mp2ts',
-        contentLength: (await stat(path)).size,
-        path,
-      });
-
-      console.log(`Done uploading media segment: ${path}`);
-      console.log(`Deleting ${path}`);
-
-      await unlink(path);
-
-      console.log(`Deleted ${path}`);
-      Context.current().heartbeat(`Uploading done: ${path}`);
-    }
 
     console.log('Cancelling remaining upload record updates');
 
