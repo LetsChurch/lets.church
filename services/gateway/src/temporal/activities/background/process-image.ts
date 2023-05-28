@@ -16,7 +16,8 @@ import {
 } from '../../../util/images';
 import type { UploadPostProcessValue } from '../../../schema/types/mutation';
 
-const WORK_DIR = '/data/process-thumbnail';
+const WORK_DIR =
+  process.env['PROCESS_IMAGE_WORKING_DIRECTORY'] ?? '/data/process-image';
 
 export default async function processImage(
   postProcess: UploadPostProcessValue,

@@ -9,7 +9,7 @@ import { runFfprobe } from '../../../util/ffmpeg';
 import { ffprobeSchema } from '../../../util/zod';
 import { updateUploadRecord } from '../..';
 
-const WORK_DIR = '/data/transcode';
+const WORK_DIR = process.env['PROBE_WORKING_DIRECTORY'] ?? '/data/probe';
 
 export default async function probe(
   uploadRecordId: string,

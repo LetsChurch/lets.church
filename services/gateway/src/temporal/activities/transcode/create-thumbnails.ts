@@ -12,7 +12,8 @@ import { runFfmpegThumbnails } from '../../../util/ffmpeg';
 import { concatThumbs, imageToBlurhash } from '../../../util/images';
 import { updateUploadRecord } from '../..';
 
-const WORK_DIR = '/data/thumbnails';
+const WORK_DIR =
+  process.env['THUMBNAILS_WORKING_DIRECTORY'] ?? '/data/thumbnails';
 
 export default async function createThumbnails(
   uploadRecordId: string,

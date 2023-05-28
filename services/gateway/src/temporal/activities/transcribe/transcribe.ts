@@ -15,7 +15,8 @@ import {
   whisperJsonToVtt,
 } from '../../../util/whisper';
 
-const WORK_DIR = '/data/transcribe';
+const WORK_DIR =
+  process.env['TRANSCRIBE_WORKING_DIRECTORY'] ?? '/data/transcribe';
 
 export default async function transcribe(
   uploadRecordId: string,
