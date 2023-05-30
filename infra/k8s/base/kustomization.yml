@@ -7,6 +7,7 @@ resources:
   - web-deployment.yml
   # Workers
   - background-worker-deployment.yml
+  - import-worker-deployment.yml
   # - transcode-worker-deployment.yml
 configMapGenerator:
   - name: web-config
@@ -37,6 +38,10 @@ configMapGenerator:
     literals:
       - TEMPORAL_UI_PORT=8080
   - name: background-worker-config
+    literals:
+      - TEMPORAL_SHUTDOWN_GRACE_TIME=1m
+      - IDENTITY=(CLOUD1)
+  - name: import-worker-config
     literals:
       - TEMPORAL_SHUTDOWN_GRACE_TIME=1m
       - IDENTITY=(CLOUD1)

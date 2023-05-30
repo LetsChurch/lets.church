@@ -2,25 +2,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: background-worker
+  name: import-worker
   labels:
-    app: background-worker
+    app: import-worker
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
-      app: background-worker
+      app: import-worker
   template:
     metadata:
       labels:
-        app: background-worker
+        app: import-worker
     spec:
       restartPolicy: Always
       imagePullSecrets:
         - name: regcred
       containers:
-        - image: registry.gitlab.com/letschurch/lets.church/background-worker:latest
-          name: background-worker
+        - image: registry.gitlab.com/letschurch/lets.church/import-worker:latest
+          name: import-worker
           env:
             - name: DATABASE_URL
               valueFrom:
@@ -33,8 +33,6 @@ spec:
             - configMapRef:
                 name: temporal-client-config
             - configMapRef:
-                name: background-worker-config
+                name: import-worker-config
             - secretRef:
                 name: s3-secret
-            - secretRef:
-                name: smtp-secret

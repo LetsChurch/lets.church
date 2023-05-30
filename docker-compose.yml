@@ -5,6 +5,7 @@ volumes:
   background-worker-node-modules:
   es-data:
   gateway-node-modules:
+  import-worker-node-modules:
   pg-data:
   transcode-worker-node-modules:
   transcribe-worker-node-modules:
@@ -80,7 +81,6 @@ services:
       IDENTITY: dev
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       ELASTICSEARCH_URL: http://elasticsearch:9200
-      JWT_SECRET: ${JWT_SECRET}
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1m
       <<: *s3-env
@@ -119,6 +119,21 @@ services:
     volumes:
       - ./services/gateway:/home/node/app
       - transcribe-worker-node-modules:/home/node/app/node_modules
+
+  import-worker:
+    build:
+      context: ./services/gateway
+      target: import-worker
+    command: npm run dev:import-worker
+    environment:
+      IDENTITY: dev
+      DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_SHUTDOWN_GRACE_TIME: 1m
+      <<: *s3-env
+    volumes:
+      - ./services/gateway:/home/node/app
+      - import-worker-node-modules:/home/node/app/node_modules
 
   #
   # Vendor Services

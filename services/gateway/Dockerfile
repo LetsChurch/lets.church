@@ -32,9 +32,8 @@ RUN npm run prisma:generate
 CMD npm run start:server
 
 FROM base as background-worker
-RUN apt install -y imagemagick jpegoptim python3
+RUN apt install -y imagemagick jpegoptim
 COPY --from=videah/oxipng:7.0.0 /usr/local/bin/oxipng /usr/local/bin/oxipng
-COPY --from=jauderho/yt-dlp:2023.03.04 /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
 RUN npm run prisma:generate
 CMD npm run start:background-worker
 
@@ -52,3 +51,9 @@ COPY --from=download-whisper-models tiny.en /opt/whisper/models/tiny.en/
 RUN apt update && apt install -y python3 python3-pip curl git && rm -rf /var/lib/apt/lists/* && apt clean
 RUN pip3 install git+https://github.com/Softcatala/whisper-ctranslate2.git@0.2.3
 CMD npm run start:transcribe-worker
+
+FROM base as import-worker
+RUN apt install -y python3
+COPY --from=jauderho/yt-dlp:2023.03.04 /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
+RUN npm run prisma:generate
+CMD npm run start:import-worker
