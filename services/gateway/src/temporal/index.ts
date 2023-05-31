@@ -13,6 +13,7 @@ import {
   uploadDoneSignal,
   updateUploadRecordWorkflow,
   updateUploadRecordSignal,
+  createUploadRecordWorkflow,
 } from './workflows';
 import { BACKGROUND_QUEUE } from './queues';
 import type { DocumentKind } from './activities/background/index-document';
@@ -66,6 +67,21 @@ export async function completeMultipartMediaUpload(
   return (await client).workflow
     .getHandle(makeMultipartMediaUploadWorkflowId(s3UploadId, s3UploadKey))
     .signal(uploadDoneSignal, partETags, userId);
+}
+
+export async function createUploadRecord(
+  data: Prisma.UploadRecordCreateArgs['data'],
+) {
+  const res = await (
+    await client
+  ).workflow.start(createUploadRecordWorkflow, {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    workflowId: `createUploadRecord:${data.publishedAt}:${data.title}`,
+    args: [data],
+  });
+
+  return res.result();
 }
 
 export async function updateUploadRecord(

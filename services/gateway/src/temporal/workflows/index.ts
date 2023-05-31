@@ -1,3 +1,4 @@
+export { createUploadRecordWorkflow } from './create-upload-record';
 export { deleteUploadWorkflow } from './delete-upload';
 export {
   handleMultipartMediaUploadWorkflow,

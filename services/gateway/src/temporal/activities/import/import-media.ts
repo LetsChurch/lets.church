@@ -13,7 +13,7 @@ import { noop, throttle } from 'lodash-es';
 import { Context } from '@temporalio/activity';
 import type { Prisma } from '@prisma/client';
 import { putFile, putFileMultipart } from '../../../util/s3';
-import prisma from '../../../util/prisma';
+import { createUploadRecord } from '../..';
 
 const WORK_DIR = process.env['IMPORT_WORKING_DIRECTORY'] ?? '/data/import';
 
@@ -128,9 +128,7 @@ export default async function importMedia(
       thumbnailPath = res.thumbnailPath;
     }
 
-    const rec = await prisma.uploadRecord.create({ data });
-
-    uploadRecordId = rec.id;
+    uploadRecordId = await createUploadRecord(data);
     mediaUploadKey = `${uploadRecordId}/${uuid()}`;
 
     await putFileMultipart({
