@@ -38,3 +38,5 @@ spec:
                 name: s3-secret
             - secretRef:
                 name: smtp-secret
+            - secretRef:
+                name: cf-api-secret
