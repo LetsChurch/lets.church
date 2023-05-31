@@ -1,10 +1,39 @@
+import prettyBytes from 'pretty-bytes';
+import { useRouteData } from 'solid-start';
+import { createServerData$ } from 'solid-start/server';
+import type {
+  AboutPageDataQuery,
+  AboutPageDataQueryVariables,
+} from './__generated__/(about)';
 import A from '~/components/content/a';
 import H1 from '~/components/content/h1';
 import H2 from '~/components/content/h2';
 import P from '~/components/content/p';
 import ExternalLink from '~/components/external-link';
+import { client, gql } from '~/util/gql/server';
+
+export function routeData() {
+  const data = createServerData$(async () => {
+    return await client.request<
+      AboutPageDataQuery,
+      AboutPageDataQueryVariables
+    >(
+      gql`
+        query AboutPageData {
+          stats {
+            storageBytes
+          }
+        }
+      `,
+    );
+  });
+
+  return { data };
+}
 
 export default function AboutRoute() {
+  const { data } = useRouteData<typeof routeData>();
+
   return (
     <div class="bg-white px-6 py-3 lg:px-8">
       <div class="mx-auto max-w-3xl text-base leading-7 text-gray-700">
@@ -35,6 +64,26 @@ export default function AboutRoute() {
           Let's Church, as a company, will never run ads on principle. We rely
           entirely on <A href="/support">support</A> from our users.
         </P>
+        <dl class="mt-36 grid grid-cols-1 gap-x-8 gap-y-16 text-center lg:grid-cols-3">
+          <div class="mx-auto flex max-w-xs flex-col gap-y-4">
+            <dt class="text-base leading-7 text-gray-600">Hosted Content</dt>
+            <dd class="order-first text-3xl font-semibold tracking-tight text-gray-900 sm:text-5xl">
+              {prettyBytes(data()?.stats.storageBytes ?? NaN)}
+            </dd>
+          </div>
+          <div class="mx-auto flex max-w-xs flex-col gap-y-4">
+            <dt class="text-base leading-7 text-gray-600">Ads</dt>
+            <dd class="order-first text-3xl font-semibold tracking-tight text-gray-900 sm:text-5xl">
+              0
+            </dd>
+          </div>
+          <div class="mx-auto flex max-w-xs flex-col gap-y-4">
+            <dt class="text-base leading-7 text-gray-600">No Cost</dt>
+            <dd class="order-first text-3xl font-semibold tracking-tight text-gray-900 sm:text-5xl">
+              $0
+            </dd>
+          </div>
+        </dl>
         <h2 class="mt-36 flex flex-col space-y-5 text-center text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
           <small>Ready?</small>
           <strong class="text-5xl font-bold text-indigo-500">

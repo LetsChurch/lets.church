@@ -504,6 +504,7 @@ export type Query = {
   mySubscriptionUploadRecords?: Maybe<QueryMySubscriptionUploadRecordsConnection>;
   organizationById: Organization;
   search: SearchConnection;
+  stats: Stats;
   uploadRecordById: UploadRecord;
   uploadRecords: QueryUploadRecordsConnection;
   userById: AppUser;
@@ -650,6 +651,11 @@ export type SearchPublishedAtAggData = {
   __typename?: 'SearchPublishedAtAggData';
   max: Scalars['DateTime'];
   min: Scalars['DateTime'];
+};
+
+export type Stats = {
+  __typename?: 'Stats';
+  storageBytes: Scalars['SafeInt'];
 };
 
 export type TranscriptLine = {

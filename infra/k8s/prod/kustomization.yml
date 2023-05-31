@@ -23,6 +23,9 @@ secretGenerator:
   - name: smtp-secret
     envs:
       - smtp.env
+  - name: cf-api
+    envs:
+      - cf-api.env
   - name: cf-tunnel-secret
     envs:
       - cf-tunnel.env

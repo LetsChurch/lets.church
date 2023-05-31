@@ -148,6 +148,7 @@ deploy-k8s:
     - cp $S3_ENV s3.env
     - cp $JWT_ENV jwt.env
     - cp $SMTP_ENV smtp.env
+    - cp $CF_API_ENV cf-api.env
     - cp $CF_TUNNEL_ENV cf-tunnel.env
     - cp $TURNSTILE_ENV turnstile.env
     - just deploy-set-images prod $CI_COMMIT_SHORT_SHA

@@ -6,7 +6,7 @@ import { Donorbox } from '~/components/donorbox';
 
 export default function SupportRoute() {
   return (
-    <div class="bg-white px-6 py-3 lg:px-8">
+    <div class="px-6 py-3 lg:px-8">
       <div class="mx-auto flex max-w-3xl flex-col text-base leading-7 text-gray-700 md:block">
         <Donorbox class="order-3 mb-6 mt-6 flex items-center justify-center md:float-right md:ml-6 md:mt-0" />
         <H1 class="order-0">Support Let's Church</H1>

@@ -58,6 +58,9 @@ services:
     ports:
       - ${HOST_GATEWAY_PORT}:3000
     environment:
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID}
+      CLOUDFLARE_AUTH_EMAIL: ${CLOUDFLARE_AUTH_EMAIL}
+      CLOUDFLARE_AUTH_KEY: ${CLOUDFLARE_AUTH_KEY}
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       ELASTICSEARCH_URL: http://elasticsearch:9200
       JWT_SECRET: ${JWT_SECRET}
