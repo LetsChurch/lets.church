@@ -30,3 +30,5 @@ spec:
                 name: import-worker-config
             - secretRef:
                 name: s3-secret
+            - secretRef:
+                name: cf-api-secret
