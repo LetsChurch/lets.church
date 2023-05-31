@@ -21,12 +21,6 @@ spec:
       containers:
         - image: registry.gitlab.com/letschurch/lets.church/import-worker:latest
           name: import-worker
-          env:
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: pg-pguser-letschurch
-                  key: uri
           envFrom:
             - configMapRef:
                 name: gateway-config
