@@ -53,9 +53,8 @@ export default function AboutRoute() {
           <ExternalLink href="https://gitlab.com/letschurch">
             our code
           </ExternalLink>{' '}
-          is also available and dedicated to the public domain. As Jesus said,
-          "freely you received, freely give" (Matt. 10:8). Our philosophy behind
-          this approach is best captured in the book{' '}
+          is also open source and dedicated to the public domain. Our philosophy
+          behind how we operate is best captured in the book{' '}
           <ExternalLink href="https://thedoreanprinciple.org/">
             The Dorean Principle
           </ExternalLink>
