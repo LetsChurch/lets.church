@@ -656,6 +656,7 @@ export type SearchPublishedAtAggData = {
 export type Stats = {
   __typename?: 'Stats';
   storageBytes: Scalars['SafeInt'];
+  totalUploads: Scalars['Int'];
 };
 
 export type TranscriptLine = {

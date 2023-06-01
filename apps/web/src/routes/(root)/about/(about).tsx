@@ -1,4 +1,5 @@
 import prettyBytes from 'pretty-bytes';
+import humanFormat from 'human-format';
 import { useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
 import type {
@@ -22,6 +23,7 @@ export function routeData() {
         query AboutPageData {
           stats {
             storageBytes
+            totalUploads
           }
         }
       `,
@@ -72,9 +74,9 @@ export default function AboutRoute() {
             </dd>
           </div>
           <div class="mx-auto flex max-w-xs flex-col gap-y-4">
-            <dt class="text-base leading-7 text-gray-600">Ads</dt>
+            <dt class="text-base leading-7 text-gray-600">Uploads</dt>
             <dd class="order-first text-3xl font-semibold tracking-tight text-gray-900 sm:text-5xl">
-              0
+              {humanFormat(data()?.stats.totalUploads ?? 0)}
             </dd>
           </div>
           <div class="mx-auto flex max-w-xs flex-col gap-y-4">
