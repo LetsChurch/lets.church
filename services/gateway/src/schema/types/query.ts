@@ -1,4 +1,4 @@
-import { getPublicBucketStorage } from '../../util/s3';
+import { getPublicBucketStorage } from '../../util/cloudflare';
 import builder from '../builder';
 
 builder.queryType();
