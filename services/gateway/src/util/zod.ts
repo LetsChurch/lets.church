@@ -11,11 +11,9 @@ const streamUnionSchema = Z.discriminatedUnion('codec_type', [
     width: Z.number(),
     height: Z.number(),
     nb_frames: Z.string().optional(),
-    duration: Z.string(),
   }).passthrough(),
   Z.object({
     codec_type: Z.literal('audio'),
-    duration: Z.string(),
   }).passthrough(),
   Z.object({
     codec_type: Z.literal('data'),
@@ -31,6 +29,7 @@ export const ffprobeSchema = Z.object({
   format: Z.object({
     filename: Z.string(),
     format_name: Z.string(),
+    duration: Z.string(),
   }),
 });
 

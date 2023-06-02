@@ -30,7 +30,7 @@ export default async function probe(
       throttle(() => Context.current().heartbeat('probe download'), 5000),
     );
 
-    Context.current().heartbeat('done downloading');
+    Context.current().heartbeat('probe done downloading');
 
     console.log(`Probing ${downloadPath}`);
 
@@ -47,14 +47,9 @@ export default async function probe(
       body: Buffer.from(probeJson),
     });
 
-    const lengthStr = parsedProbe.streams.find(
-      (s) => s.codec_type === 'video' || s.codec_type === 'audio',
-    )?.duration;
-
     await updateUploadRecord(uploadRecordId, {
       uploadSizeBytes: stats.size,
-      lengthSeconds:
-        typeof lengthStr === 'string' ? parseFloat(lengthStr) : null,
+      lengthSeconds: parseFloat(parsedProbe.format.duration),
     });
 
     return parsedProbe;
