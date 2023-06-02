@@ -7,7 +7,7 @@ import { BACKGROUND_QUEUE, TRANSCODE_QUEUE, TRANSCRIBE_QUEUE } from '../queues';
 import { indexDocumentWorkflow } from './index-document';
 
 const { probe } = proxyActivities<typeof transcodeActivities>({
-  startToCloseTimeout: '5 minute',
+  startToCloseTimeout: '10 minute',
   heartbeatTimeout: '1 minute',
   taskQueue: TRANSCODE_QUEUE,
   retry: { maximumAttempts: 2 },

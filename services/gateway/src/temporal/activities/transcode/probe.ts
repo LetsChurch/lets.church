@@ -27,10 +27,10 @@ export default async function probe(
       'INGEST',
       s3UploadKey,
       downloadPath,
-      throttle(() => Context.current().heartbeat(), 5000),
+      throttle(() => Context.current().heartbeat('probe download'), 5000),
     );
 
-    Context.current().heartbeat();
+    Context.current().heartbeat('done downloading');
 
     console.log(`Probing ${downloadPath}`);
 
