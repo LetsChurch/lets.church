@@ -29,9 +29,11 @@ export default function Video(props: Props) {
   const [ready, setReady] = createSignal(false);
 
   const audioOnlyMode = () =>
-    !props.videoSource &&
-    props.audioSource &&
-    (props.peaksDatUrl || props.peaksJsonUrl);
+    Boolean(
+      !props.videoSource &&
+        props.audioSource &&
+        (props.peaksDatUrl || props.peaksJsonUrl),
+    );
 
   onMount(async () => {
     invariant(videoRef, 'Video ref is undefined');
