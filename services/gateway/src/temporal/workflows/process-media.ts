@@ -7,7 +7,7 @@ import { BACKGROUND_QUEUE, TRANSCODE_QUEUE, TRANSCRIBE_QUEUE } from '../queues';
 import { indexDocumentWorkflow } from './index-document';
 
 const { probe } = proxyActivities<typeof transcodeActivities>({
-  startToCloseTimeout: '15 minutes',
+  startToCloseTimeout: '20 minutes',
   heartbeatTimeout: '10 minutes',
   taskQueue: TRANSCODE_QUEUE,
   retry: { maximumAttempts: 2 },
@@ -17,14 +17,14 @@ const { transcode, createThumbnails } = proxyActivities<
   typeof transcodeActivities
 >({
   startToCloseTimeout: '180 minutes',
-  heartbeatTimeout: '5 minutes',
+  heartbeatTimeout: '10 minutes',
   taskQueue: TRANSCODE_QUEUE,
   retry: { maximumAttempts: 2 },
 });
 
 const { transcribe } = proxyActivities<typeof transcribeActivities>({
   startToCloseTimeout: '180 minutes',
-  heartbeatTimeout: '5 minutes',
+  heartbeatTimeout: '10 minutes',
   taskQueue: TRANSCRIBE_QUEUE,
   retry: { maximumAttempts: 2 },
 });

@@ -2,7 +2,6 @@ import { join } from 'node:path';
 import { stat } from 'node:fs/promises';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
-import { throttle } from 'lodash-es';
 import rimraf from 'rimraf';
 import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import { runFfprobe } from '../../../util/ffmpeg';
@@ -23,12 +22,7 @@ export default async function probe(
 
   try {
     await mkdirp(dir);
-    await streamObjectToFile(
-      'INGEST',
-      s3UploadKey,
-      downloadPath,
-      throttle(() => Context.current().heartbeat('probe download'), 5000),
-    );
+    await streamObjectToFile('INGEST', s3UploadKey, downloadPath);
 
     Context.current().heartbeat('probe done downloading');
 

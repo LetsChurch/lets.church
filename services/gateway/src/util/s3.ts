@@ -1,5 +1,5 @@
 import { createReadStream, createWriteStream } from 'node:fs';
-import { Readable } from 'node:stream';
+import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { stat } from 'node:fs/promises';
 import {
@@ -246,24 +246,13 @@ export async function streamObjectToFile(
   to: Client,
   key: string,
   path: string,
-  heartbeat: () => unknown,
 ) {
   const { client, bucket } = getClientAndBucket(to);
   const cmd = new GetObjectCommand({ Bucket: bucket, Key: key });
   const res = await client.send(cmd);
 
-  if (res.Body instanceof Readable) {
-    return pipeline(
-      res.Body,
-      function (chunk) {
-        heartbeat();
-        return chunk;
-      },
-      createWriteStream(path),
-    );
-  }
-
-  throw new Error('Unknown response type');
+  invariant(res.Body, 'No body in response!');
+  return pipeline(res.Body.transformToWebStream(), createWriteStream(path));
 }
 
 export async function* listKeys(source: 'INGEST' | 'PUBLIC', prefix?: string) {

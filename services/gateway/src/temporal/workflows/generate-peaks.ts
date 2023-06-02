@@ -3,8 +3,8 @@ import type * as transcodeActivities from '../activities/transcode';
 import { TRANSCODE_QUEUE } from '../queues';
 
 const { generatePeaks } = proxyActivities<typeof transcodeActivities>({
-  startToCloseTimeout: '10 minutes',
-  heartbeatTimeout: '1 minute',
+  startToCloseTimeout: '20 minutes',
+  heartbeatTimeout: '10 minutes',
   taskQueue: TRANSCODE_QUEUE,
   retry: { maximumAttempts: 2 },
 });

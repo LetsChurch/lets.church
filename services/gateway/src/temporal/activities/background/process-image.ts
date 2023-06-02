@@ -2,7 +2,6 @@ import { join } from 'node:path';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
 import mime from 'mime';
-import { throttle } from 'lodash-es';
 import rimraf from 'rimraf';
 import type { RequireAllOrNone } from 'type-fest';
 import { nanoid } from 'nanoid';
@@ -35,12 +34,7 @@ export default async function processImage(
 
   try {
     await mkdirp(dir);
-    await streamObjectToFile(
-      'INGEST',
-      s3UploadKey,
-      downloadPath,
-      throttle(() => Context.current().heartbeat(), 5000),
-    );
+    await streamObjectToFile('INGEST', s3UploadKey, downloadPath);
 
     Context.current().heartbeat();
 

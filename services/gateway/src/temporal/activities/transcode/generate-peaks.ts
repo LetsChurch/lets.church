@@ -27,12 +27,7 @@ export default async function generatePeaks(
 
     console.log(`Downloading file to ${downloadPath}`);
 
-    await streamObjectToFile(
-      'INGEST',
-      s3UploadKey,
-      downloadPath,
-      dataHeartbeat,
-    );
+    await streamObjectToFile('INGEST', s3UploadKey, downloadPath);
 
     console.log(`Downloaded file to ${downloadPath}`);
 

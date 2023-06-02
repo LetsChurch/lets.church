@@ -25,7 +25,7 @@ export default async function createThumbnails(
 
   await mkdirp(dir);
   const downloadPath = join(dir, 'download');
-  await streamObjectToFile('INGEST', s3UploadKey, downloadPath, dataHeartbeat);
+  await streamObjectToFile('INGEST', s3UploadKey, downloadPath);
 
   Context.current().heartbeat();
   try {

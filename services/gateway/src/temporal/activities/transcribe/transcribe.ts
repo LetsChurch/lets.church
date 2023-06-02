@@ -39,12 +39,7 @@ export default async function transcribe(
 
     await mkdirp(dir);
     const downloadPath = join(dir, 'download');
-    await streamObjectToFile(
-      'INGEST',
-      s3UploadKey,
-      downloadPath,
-      dataHeartbeat,
-    );
+    await streamObjectToFile('INGEST', s3UploadKey, downloadPath);
 
     console.log('media downloaded');
     Context.current().heartbeat('media downloaded');
