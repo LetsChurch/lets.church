@@ -10,7 +10,7 @@ import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 const WORK_DIR =
   process.env['TRANSCODE_WORKING_DIRECTORY'] ?? '/data/transcode';
 
-export default async function transcode(
+export default async function generatePeaks(
   uploadRecordId: string,
   s3UploadKey: string,
 ) {
