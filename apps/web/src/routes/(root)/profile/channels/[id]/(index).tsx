@@ -102,7 +102,7 @@ export default function ChannelRoute() {
                 title={edge.node.title}
                 channel={data()?.name}
                 href={`/upload/?id=${edge.node.id}`}
-                avatarUrl="https://images.unsplash.com/photo-1477672680933-0287a151330e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                avatarUrl={data()?.avatarUrl ?? ''}
                 thumbnailUrl={edge.node.thumbnailUrl}
                 blurhash={edge.node.thumbnailBlurhash}
               />
