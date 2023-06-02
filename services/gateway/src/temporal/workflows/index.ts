@@ -1,5 +1,6 @@
 export { createUploadRecordWorkflow } from './create-upload-record';
 export { deleteUploadWorkflow } from './delete-upload';
+export { generatePeaksWorkflow } from './generate-peaks';
 export {
   handleMultipartMediaUploadWorkflow,
   uploadDoneSignal,

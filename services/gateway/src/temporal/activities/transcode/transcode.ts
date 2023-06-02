@@ -248,6 +248,7 @@ export default async function transcode(
       dir,
       downloadPath,
       cancellationSignal,
+      dataHeartbeat,
     );
 
     console.log('Queuing upload of peaks');
