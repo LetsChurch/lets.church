@@ -11,15 +11,41 @@ const spinner = ora('Checking for missing ingest records:').start();
 
 const errorKeys = [];
 
+async function dbRecordExists(id: string) {
+  const upRec = await prisma.uploadRecord.findUnique({
+    select: { id: true },
+    where: { id },
+  });
+
+  if (upRec) {
+    return true;
+  }
+
+  const chanRec = await prisma.channel.findUnique({
+    select: { id: true },
+    where: { id },
+  });
+
+  if (chanRec) {
+    return true;
+  }
+
+  const userRec = await prisma.appUser.findUnique({
+    select: { id: true },
+    where: { id },
+  });
+
+  if (userRec) {
+    return true;
+  }
+
+  return false;
+}
+
 for await (const prefix of listPrefixes('INGEST')) {
   spinner.text = `Checking for missing ingest records: ${prefix}`;
 
-  const res = await prisma.uploadRecord.findUnique({
-    select: { id: true },
-    where: { id: prefix },
-  });
-
-  if (!res) {
+  if (!(await dbRecordExists(prefix))) {
     errorKeys.push(prefix);
   }
 }
@@ -29,12 +55,7 @@ spinner.text = 'Checking for missing public records:';
 for await (const prefix of listPrefixes('PUBLIC')) {
   spinner.text = `Checking for missing public records: ${prefix}`;
 
-  const res = await prisma.uploadRecord.findUnique({
-    select: { id: true },
-    where: { id: prefix },
-  });
-
-  if (!res) {
+  if (!(await dbRecordExists(prefix))) {
     errorKeys.push(prefix);
   }
 }
