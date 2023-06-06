@@ -8,23 +8,21 @@ import { deleteUploadWorkflow } from '../src/temporal/workflows';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
 import { emptySignal } from '../src/temporal/signals';
 
-const startDate = await input({ message: 'Start date: ' });
-const endDate = await input({ message: 'End date: ' });
-const outputFile = await input({ message: 'Output file: ' });
+const slug = await input({ message: 'Slug:' });
+const outputFile = await input({ message: 'Output file (optional):' });
 
 const uploads = await prisma.uploadRecord.findMany({
   select: { id: true, variants: true },
   where: {
-    createdAt: {
-      ...(startDate && { gte: new Date(startDate) }),
-      ...(endDate && { lte: new Date(endDate) }),
+    channel: {
+      slug,
     },
   },
   take: Number.MAX_SAFE_INTEGER,
 });
 
 console.log(
-  `Checking ${uploads.length} uploads between ${startDate} and ${endDate}`,
+  `Checking ${uploads.length} uploads for slug ${slug}`,
 );
 
 type ErrorEntry = {
@@ -112,21 +110,25 @@ for (const { id, variants } of uploads) {
   }
 }
 
-console.log(`Writing errors to ${outputFile}`);
+if (outputFile) {
+  console.log(`Writing errors to ${outputFile}`);
 
-await writeFile(
-  outputFile,
-  JSON.stringify(Object.fromEntries(errors.entries()), null, 2),
-);
+  await writeFile(
+    outputFile,
+    JSON.stringify(Object.fromEntries(errors.entries()), null, 2),
+  );
 
-console.log(`Wrote ${errors.size} errored upload records`);
+  console.log(`Wrote ${errors.size} errored upload records`);
+}
 
 if (
+  errors.size === 0 ||
   !(await confirm({
     message: `Queue ${errors.size} for deletion?`,
     default: false,
   }))
 ) {
+  console.log('Done!');
   process.exit(0);
 }
 
@@ -141,3 +143,5 @@ for (const id of errors.keys()) {
     signalArgs: [],
   });
 }
+
+console.log('Done!');
