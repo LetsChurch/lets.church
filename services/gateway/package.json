@@ -33,6 +33,7 @@
     "admin:create-user": "ts-node-esm --experimental-specifier-resolution=node scripts/create-user.ts",
     "admin:create-channel": "ts-node-esm --experimental-specifier-resolution=node scripts/create-channel.ts",
     "admin:delete-upload": "ts-node-esm --experimental-specifier-resolution=node scripts/delete-upload.ts",
+    "admin:delete-uploads": "ts-node-esm --experimental-specifier-resolution=node scripts/delete-uploads.ts",
     "admin:import": "ts-node-esm --experimental-specifier-resolution=node scripts/import.ts",
     "admin:reindex": "ts-node-esm --experimental-specifier-resolution=node scripts/reindex.ts",
     "admin:check-uploads": "ts-node-esm --experimental-specifier-resolution=node scripts/check-uploads.ts",
