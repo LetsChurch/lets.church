@@ -61,6 +61,7 @@ export function routeData({ location }: RouteDataArgs) {
             variants
             channel {
               id
+              slug
               name
               avatarUrl
             }
@@ -189,7 +190,7 @@ type SearchHitRowProps = Omit<ThumbnailProps, 'width' | 'height' | 'url'> &
     totalViews: number;
     publishedAt: string;
     channelName: string;
-    channelId: string;
+    channelSlug: string;
     channelAvatarUrl?: Optional<string>;
     marked?: boolean;
     class?: string | undefined;
@@ -224,7 +225,7 @@ function SearchHitRow(props: SearchHitRowProps) {
           </time>
         </p>
         <A
-          href={`/channel/${props.channelId}`}
+          href={`/channel/${props.channelSlug}`}
           class="relative z-10 inline-flex items-center space-x-2"
         >
           <Avatar
@@ -513,7 +514,7 @@ export default function SearchRoute() {
                   totalViews={node.uploadRecord.totalViews}
                   publishedAt={node.uploadRecord.publishedAt ?? ''}
                   channelName={node.uploadRecord.channel.name}
-                  channelId={node.uploadRecord.channel.id}
+                  channelSlug={node.uploadRecord.channel.slug}
                   channelAvatarUrl={node.uploadRecord.channel.avatarUrl}
                   placeholder={
                     node.uploadRecord.variants.some((v) =>
@@ -542,7 +543,7 @@ export default function SearchRoute() {
                   totalViews={node.uploadRecord.totalViews}
                   publishedAt={node.uploadRecord.publishedAt ?? ''}
                   channelName={node.uploadRecord.channel.name}
-                  channelId={node.uploadRecord.channel.id}
+                  channelSlug={node.uploadRecord.channel.slug}
                   channelAvatarUrl={node.uploadRecord.channel.avatarUrl}
                   placeholder={
                     node.uploadRecord.variants.some((v) =>

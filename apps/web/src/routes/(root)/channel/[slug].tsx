@@ -5,7 +5,7 @@ import { For } from 'solid-js';
 import type {
   PublicChannelQuery,
   PublicChannelQueryVariables,
-} from './__generated__/[id]';
+} from './__generated__/[slug]';
 import { createAuthenticatedClient, gql } from '~/util/gql/server';
 import { PageHeading } from '~/components/page-heading';
 import UploadCard from '~/components/upload-card';
@@ -15,23 +15,23 @@ const PAGE_SIZE = 12;
 
 export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
   return createServerData$(
-    async ([, id, after = null, before = null], { request }) => {
-      invariant(id, 'No id provided');
+    async ([, slug, after = null, before = null], { request }) => {
+      invariant(slug, 'No slug provided');
       const client = await createAuthenticatedClient(request);
 
-      const { channelById } = await client.request<
+      const { channelBySlug } = await client.request<
         PublicChannelQuery,
         PublicChannelQueryVariables
       >(
         gql`
           query PublicChannel(
-            $id: ShortUuid!
+            $slug: String!
             $first: Int
             $after: String
             $last: Int
             $before: String
           ) {
-            channelById(id: $id) {
+            channelBySlug(slug: $slug) {
               id
               name
               avatarUrl
@@ -63,7 +63,7 @@ export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
           }
         `,
         {
-          id,
+          slug,
           after,
           before,
           first: after || !before ? PAGE_SIZE : null,
@@ -71,12 +71,12 @@ export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
         },
       );
 
-      return channelById;
+      return channelBySlug;
     },
     {
       key: () => [
         'channels',
-        params['id'],
+        params['slug'],
         location.query['after'],
         location.query['before'],
       ],

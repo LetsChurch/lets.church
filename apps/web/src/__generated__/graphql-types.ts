@@ -500,6 +500,7 @@ export type PrismaRuntimeError = {
 export type Query = {
   __typename?: 'Query';
   channelById: Channel;
+  channelBySlug: Channel;
   me?: Maybe<AppUser>;
   mySubscriptionUploadRecords?: Maybe<QueryMySubscriptionUploadRecordsConnection>;
   organizationById: Organization;
@@ -514,6 +515,11 @@ export type Query = {
 
 export type QueryChannelByIdArgs = {
   id: Scalars['ShortUuid'];
+};
+
+
+export type QueryChannelBySlugArgs = {
+  slug: Scalars['String'];
 };
 
 

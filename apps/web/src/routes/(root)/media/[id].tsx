@@ -212,6 +212,7 @@ export function routeData({ params, location }: RouteDataArgs) {
               totalViews
               channel {
                 id
+                slug
                 name
                 avatarUrl
                 userIsSubscribed
@@ -648,7 +649,7 @@ export default function MediaRoute() {
           <div class="flex justify-between gap-3 overflow-x-auto">
             <div class="flex gap-3">
               <A
-                href={`/channel/${metaData()?.data.channel.id}`}
+                href={`/channel/${metaData()?.data.channel.slug}`}
                 class="relative z-10 inline-flex min-w-0 items-center space-x-2 whitespace-nowrap"
               >
                 <Avatar

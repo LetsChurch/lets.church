@@ -155,6 +155,13 @@ builder.queryFields((t) => ({
       return prisma.channel.findUniqueOrThrow({ ...query, where: { id } });
     },
   }),
+  channelBySlug: t.prismaField({
+    type: Channel,
+    args: { slug: t.arg({ type: 'String', required: true }) },
+    resolve: async (query, _root, { slug }, _context, _info) => {
+      return prisma.channel.findUniqueOrThrow({ ...query, where: { slug } });
+    },
+  }),
 }));
 
 builder.mutationFields((t) => ({
