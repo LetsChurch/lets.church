@@ -100,7 +100,7 @@ export default function ChannelRoute() {
               <UploadCard
                 title={edge.node.title}
                 channel={data()?.name}
-                href={`/upload/?id=${edge.node.id}`}
+                href={`/media/${edge.node.id}`}
                 avatarUrl={data()?.avatarUrl ?? ''}
                 thumbnailUrl={edge.node.thumbnailUrl}
                 blurhash={edge.node.thumbnailBlurhash}
