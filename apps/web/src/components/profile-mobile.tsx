@@ -32,8 +32,12 @@ export default function ProfileMobile(props: Props) {
             <Avatar src={props.me?.avatarUrl ?? ''} size="md" />
           </div>
           <div class="ml-3">
-            <div class="text-base font-medium text-gray-800">Tom Cook</div>
-            <div class="text-sm font-medium text-gray-500">tom@example.com</div>
+            <div class="text-base font-medium text-gray-800">
+              {props.me?.username}
+            </div>
+            <div class="text-sm font-medium text-gray-500">
+              {props.me?.fullName}
+            </div>
           </div>
           <button
             type="button"
