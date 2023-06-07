@@ -1,3 +1,4 @@
+import delay from 'delay';
 import {
   type Accessor,
   onCleanup,
@@ -61,22 +62,37 @@ export default function Video(props: Props) {
 
       const { default: Peaks } = await import('peaks.js');
 
-      Peaks.init({
-        mediaElement: videoRef,
-        overview: {
-          container: peaksContainer,
-          waveformColor: '#818cf8',
-          playedWaveformColor: '#6366f1', // indigo-500
-          showPlayheadTime: false,
-          showAxisLabels: false,
-          axisGridlineColor: 'transparent',
+      // Hack to work around peaks container not having width/height yet
+      while (
+        peaksContainer.clientWidth <= 0 ||
+        peaksContainer.clientHeight <= 0
+      ) {
+        await delay(10);
+      }
+
+      Peaks.init(
+        {
+          mediaElement: videoRef,
+          overview: {
+            container: peaksContainer,
+            waveformColor: '#818cf8',
+            playedWaveformColor: '#6366f1', // indigo-500
+            showPlayheadTime: false,
+            showAxisLabels: false,
+            axisGridlineColor: 'transparent',
+          },
+          dataUri: {
+            arraybuffer: props.peaksDatUrl,
+            json: props.peaksJsonUrl,
+          },
+          keyboard: true,
         },
-        dataUri: {
-          arraybuffer: props.peaksDatUrl,
-          json: props.peaksJsonUrl,
+        (err) => {
+          if (err) {
+            console.log(err);
+          }
         },
-        keyboard: true,
-      });
+      );
     }
 
     player = videojs(
