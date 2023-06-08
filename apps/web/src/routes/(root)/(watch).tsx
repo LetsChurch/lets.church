@@ -38,7 +38,7 @@ export function routeData() {
               }
             }
 
-            trendingUploads: uploadRecords(orderBy: trending) {
+            trendingUploads: uploadRecords(orderBy: trending, first: 60) {
               pageInfo {
                 hasNextPage
                 startCursor

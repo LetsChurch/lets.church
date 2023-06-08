@@ -11,7 +11,7 @@ import Pagination from '~/components/pagination';
 import UploadCard from '~/components/upload-card';
 import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 60;
 
 export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
   return createServerData$(
@@ -41,6 +41,7 @@ export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
                 last: $last
                 before: $before
                 includeUnlisted: true
+                orderBy: publishedAt
               ) {
                 totalCount
                 pageInfo {

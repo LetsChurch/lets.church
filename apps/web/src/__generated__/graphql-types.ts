@@ -144,7 +144,8 @@ export type ChannelUploadsConnectionArgs = {
   first?: InputMaybe<Scalars['Int']>;
   includeUnlisted?: InputMaybe<Scalars['Boolean']>;
   last?: InputMaybe<Scalars['Int']>;
-  order?: InputMaybe<Order>;
+  order?: Order;
+  orderBy?: UploadOrderProperty;
 };
 
 export type ChannelMembership = {
@@ -696,6 +697,11 @@ export enum UploadLicense {
   CcBySa = 'CC_BY_SA',
   PublicDomain = 'PUBLIC_DOMAIN',
   Standard = 'STANDARD'
+}
+
+export enum UploadOrderProperty {
+  CreatedAt = 'createdAt',
+  PublishedAt = 'publishedAt'
 }
 
 export enum UploadPostProcess {

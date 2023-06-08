@@ -33,7 +33,7 @@ import OffCanvasDiv from '~/components/off-canvas-div';
 import { Avatar } from '~/components/avatar';
 import { formatDateFull } from '~/util/date';
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 20;
 
 export function routeData({ location }: RouteDataArgs) {
   return createServerData$(

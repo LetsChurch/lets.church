@@ -65,6 +65,10 @@ const UploadVariant = builder.enumType('UploadVariant', {
   values: Object.keys(PrismaUploadVariant),
 });
 
+export const UploadOrderPropertyEnum = builder.enumType('UploadOrderProperty', {
+  values: ['createdAt', 'publishedAt'] as const,
+});
+
 const UploadUserComment = builder.prismaObject('UploadUserComment', {
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),

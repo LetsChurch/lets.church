@@ -8,6 +8,7 @@ import type { Context } from '../../util/context';
 import prisma from '../../util/prisma';
 import builder from '../builder';
 import { getPublicMediaUrl } from '../../util/url';
+import { UploadOrderPropertyEnum } from './upload';
 
 const orderEnum = builder.enumType('Order', {
   values: ['asc', 'desc'] as const,
@@ -89,6 +90,12 @@ const Channel = builder.prismaObject('Channel', {
         order: t.arg({
           type: orderEnum,
           defaultValue: 'desc',
+          required: true,
+        }),
+        orderBy: t.arg({
+          type: UploadOrderPropertyEnum,
+          defaultValue: 'createdAt',
+          required: true,
         }),
         includeUnlisted: t.arg({ type: 'Boolean', defaultValue: false }),
       },
@@ -99,9 +106,9 @@ const Channel = builder.prismaObject('Channel', {
 
         return true;
       },
-      query: ({ order, includeUnlisted }) => ({
+      query: ({ orderBy, order, includeUnlisted }) => ({
         where: includeUnlisted ? {} : { visibility: 'PUBLIC' },
-        orderBy: [{ createdAt: order ?? 'desc' }, { id: 'asc' }],
+        orderBy: [{ [orderBy]: order }, { id: 'asc' }],
       }),
     }),
     subscribersConnection: t.relatedConnection('subscribers', {

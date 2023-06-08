@@ -11,7 +11,7 @@ import { PageHeading } from '~/components/page-heading';
 import UploadCard from '~/components/upload-card';
 import Pagination from '~/components/pagination';
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 60;
 
 export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
   return createServerData$(
@@ -40,6 +40,7 @@ export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
                 after: $after
                 last: $last
                 before: $before
+                orderBy: publishedAt
               ) {
                 totalCount
                 pageInfo {

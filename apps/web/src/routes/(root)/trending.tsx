@@ -9,7 +9,7 @@ import { UploadCardFields } from '~/util/gql/fragments';
 import { UploadGrid } from '~/components/upload-grid';
 import Pagination from '~/components/pagination';
 
-const PAGE_SIZE = 40;
+const PAGE_SIZE = 60;
 
 export function routeData({ location }: RouteDataArgs) {
   return createServerData$(
