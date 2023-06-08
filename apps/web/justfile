@@ -1,0 +1,3 @@
+patch-solid-start:
+  fd --type f --extension tsx --extension ts --exclude '*.d.ts' --full-path node_modules/solid-start --no-ignore -x sed -i '1s/^/\/\/ @ts-nocheck\n\n/'
+  npx patch-package solid-start
