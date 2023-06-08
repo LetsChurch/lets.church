@@ -59,5 +59,3 @@ export default async function probe(
     await rimraf(dir);
   }
 }
-
-export type Probe = Exclude<Awaited<ReturnType<typeof probe>>, null>;

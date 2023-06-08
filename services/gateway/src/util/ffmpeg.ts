@@ -1,7 +1,7 @@
 import type { UploadVariant } from '@prisma/client';
 import { execa } from 'execa';
 import invariant from 'tiny-invariant';
-import type { Probe } from '../temporal/activities/transcode/probe';
+import { Probe, probeIsVideoFile } from './zod';
 
 const extraDecodeArgs =
   process.env['FFMPEG_EXTRA_DECODE_ARGS']?.split(' ') ?? [];
@@ -419,18 +419,4 @@ export function runFfprobe(
     ],
     { cwd, signal },
   );
-}
-
-export function probeIsAudioFile(probe: Probe) {
-  if (probe.format.format_name === 'mp3') {
-    return true;
-  }
-
-  return (
-    probe.format.nb_streams === 1 && probe.streams.at(0)?.codec_type === 'audio'
-  );
-}
-
-export function probeIsVideoFile(probe: Probe) {
-  return !probeIsAudioFile(probe);
 }

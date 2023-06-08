@@ -34,6 +34,8 @@ export const ffprobeSchema = Z.object({
   }),
 });
 
+export type Probe = Z.infer<typeof ffprobeSchema>;
+
 export const transcriptSegmentSchema = Z.array(
   Z.object({
     text: Z.string(),
@@ -60,3 +62,17 @@ export const imageMagickJsonSchema = Z.array(
     }),
   }).passthrough(),
 );
+
+export function probeIsAudioFile(probe: Probe) {
+  if (probe.format.format_name === 'mp3') {
+    return true;
+  }
+
+  return (
+    probe.format.nb_streams === 1 && probe.streams.at(0)?.codec_type === 'audio'
+  );
+}
+
+export function probeIsVideoFile(probe: Probe) {
+  return !probeIsAudioFile(probe);
+}

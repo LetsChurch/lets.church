@@ -1,6 +1,6 @@
 import { executeChild, proxyActivities } from '@temporalio/workflow';
 import invariant from 'tiny-invariant';
-import { probeIsVideoFile } from '../../util/ffmpeg';
+import { probeIsVideoFile } from '../../util/zod';
 import type * as transcodeActivities from '../activities/transcode';
 import type * as transcribeActivities from '../activities/transcribe';
 import { BACKGROUND_QUEUE, TRANSCODE_QUEUE, TRANSCRIBE_QUEUE } from '../queues';

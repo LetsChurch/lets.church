@@ -17,7 +17,7 @@ import {
 import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import { recordDownloadSize, updateUploadRecord } from '../..';
 import { runAudiowaveform } from '../../../util/audiowaveform';
-import type { Probe } from './probe';
+import type { Probe } from '../../../util/zod';
 
 const WORK_DIR =
   process.env['TRANSCODE_WORKING_DIRECTORY'] ?? '/data/transcode';
