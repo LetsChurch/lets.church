@@ -1,6 +1,6 @@
 import { executeChild, proxyActivities } from '@temporalio/workflow';
-import mime from 'mime';
 import invariant from 'tiny-invariant';
+import { probeIsVideoFile } from '../../util/ffmpeg';
 import type * as transcodeActivities from '../activities/transcode';
 import type * as transcribeActivities from '../activities/transcribe';
 import { BACKGROUND_QUEUE, TRANSCODE_QUEUE, TRANSCRIBE_QUEUE } from '../queues';
@@ -38,9 +38,7 @@ export async function processMediaWorkflow(
 
   await Promise.allSettled([
     transcode(targetId, s3UploadKey, probeRes),
-    ...(probeRes.format.format_name
-      .split(',')
-      .some((f) => mime.getType(f)?.startsWith('video/'))
+    ...(probeIsVideoFile(probeRes)
       ? [createThumbnails(targetId, s3UploadKey)]
       : []),
     transcribe(targetId, s3UploadKey).then(({ transcriptKey }) => {

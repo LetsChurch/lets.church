@@ -30,6 +30,7 @@ export const ffprobeSchema = Z.object({
     filename: Z.string(),
     format_name: Z.string(),
     duration: Z.string(),
+    nb_streams: Z.number(),
   }),
 });
 

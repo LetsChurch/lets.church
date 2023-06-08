@@ -1,6 +1,6 @@
 import type { UploadVariant } from '@prisma/client';
 import { execa } from 'execa';
-import mime from 'mime';
+import invariant from 'tiny-invariant';
 import type { Probe } from '../temporal/activities/transcode/probe';
 
 const extraDecodeArgs =
@@ -33,39 +33,43 @@ const BASE_ARGS = [
 
 type VideoVariant = Exclude<UploadVariant, 'AUDIO' | 'AUDIO_DOWNLOAD'>;
 
-export function getVariants(
-  inputWidth: number,
-  inputHeight: number,
-  audioOnly = false,
-): Array<UploadVariant> {
+export function getVariants(probe: Probe): Array<UploadVariant> {
   const res: Array<UploadVariant> = [];
 
-  if (!audioOnly) {
-    if (inputWidth >= 3840 || inputHeight >= 2160) {
+  const hasVideo = probeIsVideoFile(probe);
+
+  if (hasVideo) {
+    const stream = probe.streams.find(
+      (s): s is Extract<typeof s, { codec_type: 'video' }> =>
+        s.codec_type === 'video',
+    );
+    invariant(stream);
+
+    if (stream.width >= 3840 || stream.height >= 2160) {
       res.push('VIDEO_4K');
       res.push('VIDEO_4K_DOWNLOAD');
     }
 
-    if (inputWidth >= 1920 || inputHeight >= 1080) {
+    if (stream.width >= 1920 || stream.height >= 1080) {
       res.push('VIDEO_1080P');
       res.push('VIDEO_1080P_DOWNLOAD');
     }
 
-    if (inputWidth >= 1280 || inputHeight >= 720) {
+    if (stream.width >= 1280 || stream.height >= 720) {
       res.push('VIDEO_720P');
       if (res.length === 1) {
         res.push('VIDEO_720P_DOWNLOAD');
       }
     }
 
-    if (inputWidth >= 842 || inputHeight >= 480) {
+    if (stream.width >= 842 || stream.height >= 480) {
       res.push('VIDEO_480P');
       if (res.length === 1) {
         res.push('VIDEO_480P_DOWNLOAD');
       }
     }
 
-    if (inputWidth >= 640 || inputHeight >= 360) {
+    if (stream.width >= 640 || stream.height >= 360) {
       res.push('VIDEO_360P');
     }
   }
@@ -418,7 +422,15 @@ export function runFfprobe(
 }
 
 export function probeIsAudioFile(probe: Probe) {
-  return probe.format.format_name
-    .split(',')
-    .every((f) => mime.getType(f)?.startsWith('audio/'));
+  if (probe.format.format_name === 'mp3') {
+    return true;
+  }
+
+  return (
+    probe.format.nb_streams === 1 && probe.streams.at(0)?.codec_type === 'audio'
+  );
+}
+
+export function probeIsVideoFile(probe: Probe) {
+  return !probeIsAudioFile(probe);
 }

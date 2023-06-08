@@ -90,13 +90,7 @@ export default async function transcode(
       `Found ${probe.streams.length} streams. (width: ${width}, height: ${height})`,
     );
 
-    const variants = getVariants(
-      width,
-      height,
-      probe.format.format_name
-        .split(',')
-        .every((f) => mime.getType(f)?.startsWith('audio/')),
-    );
+    const variants = getVariants(probe);
 
     console.log(
       `Will encode ${variants.length} variants: ${formatter.format(variants)}`,
