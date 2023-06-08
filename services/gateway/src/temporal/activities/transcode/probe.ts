@@ -21,8 +21,11 @@ export default async function probe(
   const downloadPath = join(dir, 'download');
 
   try {
+    console.log('Making working directory');
     await mkdirp(dir);
+    console.log(`Downloading file to ${downloadPath}`);
     await streamObjectToFile('INGEST', s3UploadKey, downloadPath);
+    console.log(`Downloaded file to ${downloadPath}`);
 
     Context.current().heartbeat('probe done downloading');
 
