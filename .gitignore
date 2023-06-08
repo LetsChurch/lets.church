@@ -1,3 +1,4 @@
 .envrc.local
 .direnv
 .hermit
+gitleaks-findings.json

@@ -1,7 +1,12 @@
 #!/bin/sh
+
 if [ $(date +%u) = 7 ]; then
 	echo "It's Sunday, go to Church!"
 	exit 1
-else
-	exit 0
 fi
+
+if ! gitleaks protect --baseline-path ./gitleaks-report.json --verbose --redact --staged; then
+	exit 1
+fi
+
+exit 0

@@ -36,6 +36,9 @@ purge-pg:
 # Development
 #
 
+leaks:
+  gitleaks detect --baseline-path gitleaks-report.json --redact --report-path gitleaks-findings.json
+
 temporal *args:
   docker-compose exec temporal-admin-tools temporal {{args}}
 
