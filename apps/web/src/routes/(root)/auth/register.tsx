@@ -97,7 +97,12 @@ export default function RegisterRoute() {
       );
 
       if (registerRes.__typename === 'ValidationError') {
-        throw new FormError('', { fieldErrors: registerRes.fieldErrors });
+        throw new FormError('', {
+          fieldErrors: registerRes.fieldErrors.reduce(
+            (acc, cur) => ({ ...acc, [cur.path.at(-1) ?? '']: cur.message }),
+            {} as Record<string, Array<string> | string>,
+          ),
+        });
       }
 
       if (registerRes.__typename === 'DataError') {
