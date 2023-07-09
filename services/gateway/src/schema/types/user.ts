@@ -9,6 +9,7 @@ import * as z from 'zod';
 import { ZodError, ZodIssueCode } from 'zod';
 import short from 'short-uuid';
 import envariant from '@knpwrs/envariant';
+import { stripIndent } from 'proper-tags';
 import builder from '../builder';
 import type { Context } from '../../util/context';
 import zxcvbn from '../../util/zxcvbn';
@@ -16,6 +17,7 @@ import { sendEmail } from '../../temporal';
 import { createSessionJwt } from '../../util/jwt';
 import prisma from '../../util/prisma';
 import { getPublicMediaUrl } from '../../util/url';
+import { emailHtml } from '../../util/email';
 
 const WEB_URL = envariant('WEB_URL');
 
@@ -132,6 +134,17 @@ export const AppUser = builder.prismaObject('AppUser', {
       type: 'DateTime',
       select: { updatedAt: true },
       resolve: (channel) => channel.updatedAt.toISOString(),
+    }),
+    subscribedToNewsletter: t.field({
+      type: 'Boolean',
+      authScopes: privateAuthScopes,
+      select: { id: true, emails: { select: { email: true } } },
+      resolve: async (user) =>
+        (
+          await prisma.newsletterSubscription.findMany({
+            where: { email: { in: user.emails.map(({ email }) => email) } },
+          })
+        ).length > 0,
     }),
   }),
 });
@@ -294,11 +307,18 @@ builder.mutationFields((t) => ({
       })}`;
 
       await sendEmail(`signup:${email}`, {
-        from: 'noreply@lets.church',
+        from: 'hello@lets.church',
         to: email,
         subject: `Welcome to Let's Church! Please verify your email.`,
         text: `Welcome, ${username}! Please visit the following link to verify your email: ${verifyUrl}`,
-        html: `Welcome to Let's Church, <b>${username}</b>! Please click <a href="${verifyUrl}">here</a> to verify your email.`,
+        html: emailHtml(
+          'Welcome!',
+          stripIndent`
+            Welcome to Let's Church, <b>${username}</b>! Please click <a href="${verifyUrl}">here</a> to verify your email.
+
+            Alternatively, visit the following link to verify your email: ${verifyUrl}
+          `,
+        ).html,
       });
 
       return user;
@@ -355,6 +375,92 @@ builder.mutationFields((t) => ({
         where: { id: userId },
         data: { fullName },
       });
+    },
+  }),
+  subscribeToNewsletter: t.boolean({
+    args: {
+      email: t.arg.string({ required: true }),
+    },
+    validate: {
+      schema: z.object({
+        email: z.string().email(),
+      }),
+    },
+    errors: {
+      types: [ZodError],
+    },
+    resolve: async (_parent, { email }, context) => {
+      try {
+        const sub = await prisma.newsletterSubscription.create({
+          data: {
+            email,
+          },
+        });
+
+        const verifyUrl = `${WEB_URL}/newsletter/verify?${new URLSearchParams({
+          subscriptionId: uuidTranslator.fromUUID(sub.id),
+          emailKey: uuidTranslator.fromUUID(sub.key),
+        })}`;
+
+        const session = await context.session;
+
+        // If any of the emails associated with the currently logged-in account are being subscribed, skip sending a confirmation email
+        if (!session?.appUser.emails.some((e) => e.email === email)) {
+          await sendEmail(`subscription:${email}`, {
+            from: 'hello@lets.church',
+            to: email,
+            subject: "Please Verify Your Email for the Let's Church Newsletter",
+            text: `You have subscribed to the Let's Church Newsletter. Please visit the following link to verify your email: ${verifyUrl}`,
+            html: emailHtml(
+              "Let's Church Newsletter",
+              stripIndent`
+                You have been subscribed to the Let's Church Newsletter. Please click <a href="${verifyUrl}">here</a> to verify your email.
+
+                Alternatively, visit the following link to verify your email: ${verifyUrl}
+              `,
+            ).html,
+          });
+        }
+
+        return true;
+      } catch (e) {
+        return false;
+      }
+    },
+  }),
+  unsubscribeFromNewsletter: t.boolean({
+    args: {
+      subscriptionId: t.arg({ type: 'ShortUuid', required: true }),
+      emailKey: t.arg({ type: 'ShortUuid', required: true }),
+    },
+    resolve: async (_root, { subscriptionId, emailKey }) => {
+      const res = await prisma.appUserEmail.deleteMany({
+        where: {
+          id: subscriptionId,
+          key: emailKey,
+        },
+      });
+
+      return res.count > 0;
+    },
+  }),
+  verifyNewsletterSubscription: t.boolean({
+    args: {
+      subscriptionId: t.arg({ type: 'ShortUuid', required: true }),
+      emailKey: t.arg({ type: 'ShortUuid', required: true }),
+    },
+    resolve: async (_root, { subscriptionId, emailKey }) => {
+      const res = await prisma.appUserEmail.updateMany({
+        data: {
+          verifiedAt: new Date(),
+        },
+        where: {
+          id: subscriptionId,
+          key: emailKey,
+        },
+      });
+
+      return res.count > 0;
     },
   }),
 }));

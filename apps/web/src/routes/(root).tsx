@@ -1,10 +1,10 @@
-import { createContext, Resource } from 'solid-js';
 import { Outlet, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
 import type { MeQuery } from './__generated__/(root)';
 import Footer from '~/components/footer';
 import Header from '~/components/header';
 import { createAuthenticatedClient, gql } from '~/util/gql/server';
+import { UserContext } from '~/util/user-context';
 
 export function routeData() {
   return createServerData$(async (_, { request }) => {
@@ -18,13 +18,15 @@ export function routeData() {
           canUpload
           username
           fullName
+          subscribedToNewsletter
+          emails {
+            email
+          }
         }
       }
     `);
   });
 }
-
-export const UserContext = createContext<Resource<MeQuery | undefined>>();
 
 export default function Home() {
   const data = useRouteData<typeof routeData>();

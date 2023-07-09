@@ -30,7 +30,11 @@ export default async function context({
         expiresAt: { gt: new Date() },
         deletedAt: null,
       },
-      include: { appUser: { select: { id: true, role: true } } },
+      include: {
+        appUser: {
+          select: { id: true, role: true, emails: { select: { email: true } } },
+        },
+      },
     });
 
     return s;

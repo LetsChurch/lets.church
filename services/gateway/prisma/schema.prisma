@@ -321,3 +321,12 @@ model UploadView {
   @@index([createdAt])
   @@map("upload_view")
 }
+
+model NewsletterSubscription {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email      String    @unique @db.Citext
+  key        String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  verifiedAt DateTime?
+
+  @@map("newsletter_subscription")
+}

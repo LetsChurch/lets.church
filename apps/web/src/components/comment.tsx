@@ -6,7 +6,6 @@ import {
   ValidComponent,
   onMount,
   untrack,
-  useContext,
 } from 'solid-js';
 import MessagePlusIcon from '@tabler/icons/message-plus.svg?component-solid';
 import ThumbUpIcon from '@tabler/icons/thumb-up.svg?component-solid';
@@ -15,7 +14,7 @@ import { Dynamic } from 'solid-js/web';
 import { Button } from './form';
 import { Avatar } from './avatar';
 import { Rating } from '~/__generated__/graphql-types';
-import { UserContext } from '~/routes/(root)';
+import { useUser } from '~/util/user-context';
 
 export type CommentData = {
   id: string;
@@ -112,7 +111,7 @@ function CommentActionButton(
 }
 
 export default function Comment(props: Props) {
-  const user = useContext(UserContext);
+  const user = useUser();
   const [ratingState, setRatingState] = createSignal(
     untrack(() => ({
       totalLikes: props.data.totalLikes,
@@ -172,7 +171,7 @@ export default function Comment(props: Props) {
             class="contents"
             // eslint-disable-next-line solid/reactivity
             onSubmit={(e: SubmitEvent) => {
-              if (!user?.()?.me) {
+              if (!user) {
                 e.preventDefault();
                 // TODO: show login
                 return alert('Not logged in!');

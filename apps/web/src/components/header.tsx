@@ -5,7 +5,6 @@ import {
   createUniqueId,
   ParentProps,
   Show,
-  useContext,
 } from 'solid-js';
 import SearchIcon from '@tabler/icons/search.svg?component-solid';
 /* import BellIcon from '@tabler/icons/bell.svg?component-solid'; */
@@ -15,7 +14,7 @@ import { useBeforeLeave, useIsRouting } from '@solidjs/router';
 import Profile from './profile';
 import ProfileMobile from './profile-mobile';
 import Logo from './logo';
-import { UserContext } from '~/routes/(root)';
+import { useUser } from '~/util/user-context';
 
 type NavLinkProps = ParentProps<{ href: string; end?: boolean }>;
 
@@ -46,7 +45,7 @@ function NavLinkMobile(props: NavLinkProps) {
 }
 
 export default function Header() {
-  const user = useContext(UserContext);
+  const user = useUser();
   const [showMobileMenu, setShowMobileMenu] = createSignal(false);
 
   function toggleMobileMenu() {
@@ -153,7 +152,7 @@ export default function Header() {
                 <BellIcon class="h-6 w-6" />
               </button>
               */}
-              <Profile me={user?.()?.me ?? null} />
+              <Profile me={user()} />
             </div>
           </div>
         </div>
@@ -166,7 +165,7 @@ export default function Header() {
               </NavLinkMobile>
               <NavLinkMobile href="/about">About</NavLinkMobile>
             </div>
-            <ProfileMobile me={user?.()?.me ?? null} />
+            <ProfileMobile me={user()} />
           </div>
         </Show>
       </nav>

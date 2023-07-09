@@ -29,6 +29,7 @@ export type AppUser = {
   id: Scalars['ShortUuid'];
   organizationMemberhipsConnection: AppUserOrganizationMemberhipsConnection;
   role: AppUserRole;
+  subscribedToNewsletter: Scalars['Boolean'];
   updatedAt: Scalars['DateTime'];
   username: Scalars['String'];
 };
@@ -262,7 +263,9 @@ export type Mutation = {
   recordUploadView: Scalars['Boolean'];
   register: MutationRegisterResult;
   subscribeToChannel: ChannelSubscription;
+  subscribeToNewsletter: MutationSubscribeToNewsletterResult;
   unsubscribeFromChannel: Scalars['Boolean'];
+  unsubscribeFromNewsletter: Scalars['Boolean'];
   updateChannel: Channel;
   updateUser: AppUser;
   upsertChannelMembership: ChannelMembership;
@@ -270,6 +273,7 @@ export type Mutation = {
   upsertUploadRecord: UploadRecord;
   upsertUploadUserComment: UploadUserComment;
   verifyEmail: Scalars['Boolean'];
+  verifyNewsletterSubscription: Scalars['Boolean'];
 };
 
 
@@ -339,8 +343,19 @@ export type MutationSubscribeToChannelArgs = {
 };
 
 
+export type MutationSubscribeToNewsletterArgs = {
+  email: Scalars['String'];
+};
+
+
 export type MutationUnsubscribeFromChannelArgs = {
   channelId: Scalars['ShortUuid'];
+};
+
+
+export type MutationUnsubscribeFromNewsletterArgs = {
+  emailKey: Scalars['ShortUuid'];
+  subscriptionId: Scalars['ShortUuid'];
 };
 
 
@@ -401,11 +416,24 @@ export type MutationVerifyEmailArgs = {
   userId: Scalars['ShortUuid'];
 };
 
+
+export type MutationVerifyNewsletterSubscriptionArgs = {
+  emailKey: Scalars['ShortUuid'];
+  subscriptionId: Scalars['ShortUuid'];
+};
+
 export type MutationRegisterResult = DataError | MutationRegisterSuccess | ValidationError;
 
 export type MutationRegisterSuccess = {
   __typename?: 'MutationRegisterSuccess';
   data: AppUser;
+};
+
+export type MutationSubscribeToNewsletterResult = MutationSubscribeToNewsletterSuccess | ValidationError;
+
+export type MutationSubscribeToNewsletterSuccess = {
+  __typename?: 'MutationSubscribeToNewsletterSuccess';
+  data: Scalars['Boolean'];
 };
 
 export enum Order {

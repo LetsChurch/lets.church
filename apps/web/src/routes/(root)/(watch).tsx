@@ -10,6 +10,8 @@ import { createAuthenticatedClient, gql } from '~/util/gql/server';
 import { getSessionJwt } from '~/util/session';
 import { UploadCardFields } from '~/util/gql/fragments';
 import { UploadGrid } from '~/components/upload-grid';
+import Newsletter from '~/components/newsletter';
+import { useUser } from '~/util/user-context';
 
 export function routeData() {
   return createServerData$(
@@ -77,6 +79,7 @@ function SeeMoreLink(props: { to: 'subscriptions' | 'trending' }) {
 
 export default function WatchRoute() {
   const data = useRouteData<typeof routeData>();
+  const user = useUser();
 
   return (
     <>
@@ -103,6 +106,9 @@ export default function WatchRoute() {
       </h3>
       <UploadGrid edges={data()?.trendingUploads?.edges ?? []} />
       <SeeMoreLink to="trending" />
+      <Show when={!user()?.subscribedToNewsletter}>
+        <Newsletter />
+      </Show>
     </>
   );
 }

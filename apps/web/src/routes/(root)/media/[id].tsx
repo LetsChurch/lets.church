@@ -14,7 +14,6 @@ import server$, {
 import {
   type JSX,
   splitProps,
-  useContext,
   createResource,
   untrack,
   createSignal,
@@ -55,7 +54,6 @@ import {
   createAuthenticatedClientOrRedirect,
   gql,
 } from '~/util/gql/server';
-import { UserContext } from '~/routes/(root)';
 import { Rating } from '~/__generated__/graphql-types';
 import Video from '~/components/video';
 import Comment, { CommentForm } from '~/components/comment';
@@ -66,6 +64,7 @@ import type { Optional } from '~/util';
 import Pagination from '~/components/pagination';
 import { Avatar } from '~/components/avatar';
 import FloatingDownloadMenu from '~/components/floating-download-menu';
+import { useUser } from '~/util/user-context';
 
 const COMMENTS_PAGE_SIZE = 12;
 
@@ -309,7 +308,7 @@ function getStartAt() {
 }
 
 export default function MediaRoute() {
-  const user = useContext(UserContext);
+  const user = useUser();
   const params = useParams<{ id: string }>();
   const {
     ratingState: [
@@ -330,7 +329,7 @@ export default function MediaRoute() {
 
   // Refetch rating state when user logs in or out
   createEffect(() => {
-    const next = user?.()?.me;
+    const next = user();
 
     if (prevMe?.id !== next?.id) {
       refetchRatingState();
@@ -571,7 +570,7 @@ export default function MediaRoute() {
   let submittingCommentForm: HTMLFormElement | null = null;
 
   function handleSubmittingCommentForm(e: SubmitEvent) {
-    if (!user?.()?.me) {
+    if (!user()) {
       e.preventDefault();
       // TODO: show login
       return alert('Not logged in!');
@@ -728,7 +727,7 @@ export default function MediaRoute() {
                 class="isolate inline-flex rounded-md shadow-sm"
                 replace
                 onSubmit={(e) => {
-                  if (!user?.()?.me) {
+                  if (!user()) {
                     e.preventDefault();
                     // TODO: show login
                     return alert('Not logged in!');
