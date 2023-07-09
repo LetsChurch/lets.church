@@ -87,7 +87,7 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1m
       <<: *s3-env
-      SMTP_URL: smtp://mailhog:1025?pool=true
+      SMTP_URL: smtp://mailpit:1025?pool=true
     volumes:
       - ./services/gateway:/home/node/app
       - background-worker-node-modules:/home/node/app/node_modules
@@ -233,9 +233,9 @@ services:
       - elasticsearch
     ports:
       - ${HOST_KIBANA_PORT}:5601
-  mailhog:
-    image: mailhog/mailhog
+  mailpit:
+    image: axllent/mailpit
     restart: always
     ports:
-      - ${HOST_MAILHOG_SMTP_PORT}:1025 # smtp server
-      - ${HOST_MAILHOG_WEB_PORT}:8025 # web ui
+      - ${HOST_MAILPIT_SMTP_PORT}:1025 # smtp server
+      - ${HOST_MAILPIT_WEB_PORT}:8025 # web ui

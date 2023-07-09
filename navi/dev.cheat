@@ -20,8 +20,8 @@ open http://localhost:$HOST_KIBANA_PORT
 # Open Temporal UI
 open http://localhost:$HOST_TEMPORAL_UI_PORT
 
-# Open Mailhog Web UI
-open http://localhost:$HOST_MAILHOG_WEB_PORT
+# Open Mailpit Web UI
+open http://localhost:$HOST_MAILPIT_WEB_PORT
 
 # Run Prisma Studio
 DATABASE_URL=$HOST_DATABASE_URL  npm --prefix $(git rev-parse --show-toplevel)/services/gateway run prisma:studio
