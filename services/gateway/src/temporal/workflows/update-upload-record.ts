@@ -31,6 +31,6 @@ export async function updateUploadRecordWorkflow(uploadRecordId: string) {
     while ((data = queue.shift())) {
       await updateUploadRecordActivity(uploadRecordId, data);
     }
-    indexDocument('upload', uploadRecordId);
+    await indexDocument('upload', uploadRecordId);
   }
 }
