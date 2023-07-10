@@ -46,7 +46,7 @@ export default async function processImage(
 
     await retryablePutFile({
       to: 'INGEST',
-      key: `${targetId}.imagemagick.json`,
+      key: `${s3UploadKey}.imagemagick.json`,
       contentType: 'application/json',
       body: Buffer.from(JSON.stringify(json, null, 2)),
     });
