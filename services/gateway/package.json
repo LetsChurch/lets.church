@@ -36,6 +36,7 @@
     "admin:delete-uploads": "ts-node-esm --experimental-specifier-resolution=node scripts/delete-uploads.ts",
     "admin:import": "ts-node-esm --experimental-specifier-resolution=node scripts/import.ts",
     "admin:reindex": "ts-node-esm --experimental-specifier-resolution=node scripts/reindex.ts",
+    "admin:retry-processing": "ts-node-esm --experimental-specifier-resolution=node scripts/retry-processing.ts",
     "admin:check-uploads": "ts-node-esm --experimental-specifier-resolution=node scripts/check-uploads.ts",
     "admin:check-s3-orphans": "ts-node-esm --experimental-specifier-resolution=node scripts/check-s3-orphans.ts",
     "admin:check-es-orphans": "ts-node-esm --experimental-specifier-resolution=node scripts/check-es-orphans.ts",
