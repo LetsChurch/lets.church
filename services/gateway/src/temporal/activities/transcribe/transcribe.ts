@@ -7,7 +7,7 @@ import { throttle } from 'lodash-es';
 import mime from 'mime';
 import invariant from 'tiny-invariant';
 import { updateUploadRecord } from '../..';
-import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
+import { createPresignedGetUrl, retryablePutFile } from '../../../util/s3';
 import {
   joinerizeTranscript,
   readWhisperJsonFile,
@@ -35,18 +35,12 @@ export default async function transcribe(
   });
 
   try {
-    console.log('downloading media');
-
     await mkdirp(dir);
-    const downloadPath = join(dir, 'download');
-    await streamObjectToFile('INGEST', s3UploadKey, downloadPath);
-
-    console.log('media downloaded');
-    Context.current().heartbeat('media downloaded');
+    const downloadUrl = await createPresignedGetUrl('INGEST', s3UploadKey);
 
     const outputFiles = await runWhisper(
       dir,
-      downloadPath,
+      downloadUrl,
       cancellationSignal,
       dataHeartbeat,
     );

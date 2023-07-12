@@ -14,7 +14,7 @@ import {
   runFfmpegEncode,
   variantsToMasterVideoPlaylist,
 } from '../../../util/ffmpeg';
-import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
+import { createPresignedGetUrl, retryablePutFile } from '../../../util/s3';
 import { recordDownloadSize, updateUploadRecord } from '../..';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import type { Probe } from '../../../util/zod';
@@ -71,15 +71,7 @@ export default async function transcode(
     console.log(`Making work directory: ${dir}`);
 
     await mkdirp(dir);
-    const downloadPath = join(dir, 'download');
-
-    console.log(`Downloading file to ${downloadPath}`);
-
-    await streamObjectToFile('INGEST', s3UploadKey, downloadPath);
-
-    console.log(`Downloaded file to ${downloadPath}`);
-
-    Context.current().heartbeat('file downloaded');
+    const downloadUrl = await createPresignedGetUrl('INGEST', s3UploadKey);
 
     const { width, height } = probe.streams.find(
       (s): s is Extract<typeof s, { codec_type: 'video' }> =>
@@ -100,7 +92,7 @@ export default async function transcode(
 
     const encodeProc = runFfmpegEncode(
       dir,
-      downloadPath,
+      downloadUrl,
       variants,
       cancellationSignal,
     );
@@ -235,7 +227,7 @@ export default async function transcode(
     console.log('Generating peaks');
     const peakFiles = await runAudiowaveform(
       dir,
-      downloadPath,
+      downloadUrl,
       cancellationSignal,
       dataHeartbeat,
     );

@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { execa } from 'execa';
 import { noop } from 'lodash-es';
 import fastGlob from 'fast-glob';
@@ -14,7 +15,7 @@ export async function runWhisper(
   signal: AbortSignal,
   heartbeat = noop,
 ) {
-  const wavFile = `${inputFilename}.wav`;
+  const wavFile = join(cwd, 'download.wav');
 
   console.log('Converting file to wav');
 

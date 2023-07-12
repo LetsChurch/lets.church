@@ -1,9 +1,13 @@
 import { join } from 'node:path';
-import { stat } from 'node:fs/promises';
+import invariant from 'tiny-invariant';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
 import rimraf from 'rimraf';
-import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
+import {
+  createPresignedGetUrl,
+  headObject,
+  retryablePutFile,
+} from '../../../util/s3';
 import { runFfprobe } from '../../../util/ffmpeg';
 import { ffprobeSchema } from '../../../util/zod';
 import { updateUploadRecord } from '../..';
@@ -18,21 +22,18 @@ export default async function probe(
   const cancellationSignal = Context.current().cancellationSignal;
 
   const dir = join(WORK_DIR, uploadRecordId);
-  const downloadPath = join(dir, 'download');
 
   try {
     console.log('Making working directory');
+    const downloadUrl = await createPresignedGetUrl('INGEST', s3UploadKey);
+    const uploadSizeBytes = (await headObject('INGEST', s3UploadKey))
+      ?.ContentLength;
+    invariant(uploadSizeBytes, 'Invalid uploadSizeBytes');
     await mkdirp(dir);
-    console.log(`Downloading file to ${downloadPath}`);
-    await streamObjectToFile('INGEST', s3UploadKey, downloadPath);
-    console.log(`Downloaded file to ${downloadPath}`);
 
-    Context.current().heartbeat('probe done downloading');
+    console.log(`Probing ${downloadUrl}`);
 
-    console.log(`Probing ${downloadPath}`);
-
-    const stats = await stat(downloadPath);
-    const probe = await runFfprobe(dir, downloadPath, cancellationSignal);
+    const probe = await runFfprobe(dir, downloadUrl, cancellationSignal);
     const probeJson = probe.stdout;
 
     const parsedProbe = ffprobeSchema.parse(JSON.parse(probeJson));
@@ -45,7 +46,7 @@ export default async function probe(
     });
 
     await updateUploadRecord(uploadRecordId, {
-      uploadSizeBytes: stats.size,
+      uploadSizeBytes,
       lengthSeconds: parseFloat(parsedProbe.format.duration),
     });
 

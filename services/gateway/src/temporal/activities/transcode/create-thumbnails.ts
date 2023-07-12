@@ -7,7 +7,7 @@ import fastGlob from 'fast-glob';
 import { chunk, compact, maxBy, throttle } from 'lodash-es';
 import pRetry from 'p-retry';
 import rimraf from 'rimraf';
-import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
+import { createPresignedGetUrl, retryablePutFile } from '../../../util/s3';
 import { runFfmpegThumbnails } from '../../../util/ffmpeg';
 import { concatThumbs, imageToBlurhash } from '../../../util/images';
 import { updateUploadRecord } from '../..';
@@ -25,15 +25,12 @@ export default async function createThumbnails(
 
   console.log('Making working directory');
   await mkdirp(dir);
-  const downloadPath = join(dir, 'download');
-  console.log(`Downloading file to ${downloadPath}`);
-  await streamObjectToFile('INGEST', s3UploadKey, downloadPath);
-  console.log(`Downloaded file to ${downloadPath}`);
+  const downloadUrl = await createPresignedGetUrl('INGEST', s3UploadKey);
 
   Context.current().heartbeat();
   try {
     console.log('Creating thumbnails with ffmpeg');
-    const proc = runFfmpegThumbnails(dir, downloadPath, cancellationSignal);
+    const proc = runFfmpegThumbnails(dir, downloadUrl, cancellationSignal);
     proc.stdout?.on('data', dataHeartbeat);
     proc.stderr?.on('data', dataHeartbeat);
     await proc;

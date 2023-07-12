@@ -5,7 +5,7 @@ import mkdirp from 'mkdirp';
 import { throttle } from 'lodash-es';
 import rimraf from 'rimraf';
 import { runAudiowaveform } from '../../../util/audiowaveform';
-import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
+import { createPresignedGetUrl, retryablePutFile } from '../../../util/s3';
 
 const WORK_DIR =
   process.env['TRANSCODE_WORKING_DIRECTORY'] ?? '/data/transcode';
@@ -23,21 +23,13 @@ export default async function generatePeaks(
     console.log(`Making work directory: ${dir}`);
 
     await mkdirp(dir);
-    const downloadPath = join(dir, 'download');
-
-    console.log(`Downloading file to ${downloadPath}`);
-
-    await streamObjectToFile('INGEST', s3UploadKey, downloadPath);
-
-    console.log(`Downloaded file to ${downloadPath}`);
-
-    Context.current().heartbeat('file downloaded');
+    const downloadUrl = await createPresignedGetUrl('INGEST', s3UploadKey);
 
     // Generate and upload peaks
     console.log('Generating peaks');
     const peakFiles = await runAudiowaveform(
       dir,
-      downloadPath,
+      downloadUrl,
       cancellationSignal,
       dataHeartbeat,
     );

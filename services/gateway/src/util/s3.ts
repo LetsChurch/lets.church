@@ -206,7 +206,11 @@ export async function getPublicUrlWithFilename(key: string, filename: string) {
   );
 }
 
-export async function createPresignedGetUrl(to: Client, key: string) {
+export async function createPresignedGetUrl(
+  to: Client,
+  key: string,
+  expiresIn = 60 ** 2, // one hour
+) {
   const { client, bucket } = getClientAndBucket(to);
 
   return getSignedUrl(
@@ -215,7 +219,7 @@ export async function createPresignedGetUrl(to: Client, key: string) {
       Bucket: bucket,
       Key: key,
     }),
-    { expiresIn: 60 * 60 }, // 1 hour
+    { expiresIn }, // 1 hour
   );
 }
 
