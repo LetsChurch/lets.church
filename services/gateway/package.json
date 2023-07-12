@@ -30,7 +30,6 @@
     "prisma:db:truncate": "ts-node-esm --experimental-specifier-resolution=node prisma/truncate.ts",
     "prisma:generate": "prisma generate",
     "es:push-mappings": "ts-node-esm --experimental-specifier-resolution=node elasticsearch/mappings.ts",
-    "admin:backfill-finalized-keys": "ts-node-esm --experimental-specifier-resolution=node scripts/backfill-finalized-keys.ts",
     "admin:create-user": "ts-node-esm --experimental-specifier-resolution=node scripts/create-user.ts",
     "admin:create-channel": "ts-node-esm --experimental-specifier-resolution=node scripts/create-channel.ts",
     "admin:delete-upload": "ts-node-esm --experimental-specifier-resolution=node scripts/delete-upload.ts",
