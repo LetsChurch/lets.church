@@ -13,7 +13,7 @@ import { noop, throttle } from 'lodash-es';
 import { Context } from '@temporalio/activity';
 import type { Prisma } from '@prisma/client';
 import { putFile, putFileMultipart } from '../../../util/s3';
-import { createUploadRecord } from '../..';
+import { createUploadRecord, updateUploadRecord } from '../..';
 
 const WORK_DIR = process.env['IMPORT_WORKING_DIRECTORY'] ?? '/data/import';
 
@@ -148,6 +148,10 @@ export default async function importMedia(
         path: thumbnailPath,
       });
     }
+
+    await updateUploadRecord(uploadRecordId, {
+      finalizedUploadKey: mediaUploadKey,
+    });
   } catch (e) {
     throttledHeartbeat.flush();
     throw e;
