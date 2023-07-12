@@ -255,7 +255,10 @@ export async function streamObjectToFile(
   return pipeline(res.Body.transformToWebStream(), createWriteStream(path));
 }
 
-export async function* listKeys(source: 'INGEST' | 'PUBLIC', prefix?: string) {
+export async function* listObjects(
+  source: 'INGEST' | 'PUBLIC',
+  prefix?: string,
+) {
   const { client, bucket } = getClientAndBucket(source);
 
   let continuationToken: string | undefined = undefined;
@@ -273,12 +276,18 @@ export async function* listKeys(source: 'INGEST' | 'PUBLIC', prefix?: string) {
       ? listRes.NextContinuationToken
       : undefined;
 
-    for (const key of listRes.Contents?.map((entry) => entry.Key ?? '').filter(
-      Boolean,
-    ) ?? []) {
-      yield key;
+    for (const entry of listRes.Contents?.filter(Boolean) ?? []) {
+      yield entry;
     }
   } while (continuationToken);
+}
+
+export async function* listKeys(source: 'INGEST' | 'PUBLIC', prefix?: string) {
+  for await (const { Key } of listObjects(source, prefix)) {
+    if (Key) {
+      yield Key;
+    }
+  }
 }
 
 export async function* listPrefixes(source: 'INGEST' | 'PUBLIC') {

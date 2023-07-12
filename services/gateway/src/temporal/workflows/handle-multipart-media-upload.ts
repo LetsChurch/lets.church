@@ -51,7 +51,7 @@ export async function handleMultipartMediaUploadWorkflow(
 
   if (eTags && finalizingUserId) {
     if (postProcess === 'media') {
-      await finalizeUploadRecord(uploadRecordId, finalizingUserId);
+      await finalizeUploadRecord(uploadRecordId, finalizingUserId, s3UploadKey);
     }
 
     await completeMultipartUpload(to, s3UploadId, s3UploadKey, eTags);

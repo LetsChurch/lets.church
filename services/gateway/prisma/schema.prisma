@@ -212,6 +212,7 @@ model UploadRecord {
   uploadFinalized        Boolean                    @default(false) @map("upload_finalized")
   uploadFinalizedBy      AppUser?                   @relation("finalizedUploads", fields: [uploadFinalizedById], references: [id])
   uploadFinalizedById    String?                    @map("upload_finalized_by_id") @db.Uuid
+  finalizedUploadKey     String?                    @map("finalized_upload_key")
   defaultThumbnailPath   String?                    @map("default_thumbnail_path")
   lengthSeconds          Float?                     @map("length_seconds")
   thumbnailBlurhash      String?                    @map("thumbnail_blurhash")

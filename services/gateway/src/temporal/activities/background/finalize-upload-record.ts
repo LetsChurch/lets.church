@@ -3,6 +3,7 @@ import prisma from '../../../util/prisma';
 export default async function finalizeUploadRecord(
   uploadRecordId: string,
   userId: string,
+  uploadKey: string,
 ) {
   await prisma.uploadRecord.update({
     data: {
@@ -12,6 +13,7 @@ export default async function finalizeUploadRecord(
           id: userId,
         },
       },
+      finalizedUploadKey: uploadKey,
     },
     where: { id: uploadRecordId },
   });
