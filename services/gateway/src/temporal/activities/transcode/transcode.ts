@@ -71,7 +71,11 @@ export default async function transcode(
     console.log(`Making work directory: ${dir}`);
 
     await mkdirp(dir);
-    const downloadUrl = await createPresignedGetUrl('INGEST', s3UploadKey);
+    const downloadUrl = await createPresignedGetUrl(
+      'INGEST',
+      s3UploadKey,
+      60 * 60 * 24,
+    );
 
     const { width, height } = probe.streams.find(
       (s): s is Extract<typeof s, { codec_type: 'video' }> =>
