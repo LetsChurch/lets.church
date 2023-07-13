@@ -450,7 +450,7 @@ builder.mutationFields((t) => ({
       emailKey: t.arg({ type: 'ShortUuid', required: true }),
     },
     resolve: async (_root, { subscriptionId, emailKey }) => {
-      const res = await prisma.appUserEmail.updateMany({
+      const res = await prisma.newsletterSubscription.updateMany({
         data: {
           verifiedAt: new Date(),
         },
