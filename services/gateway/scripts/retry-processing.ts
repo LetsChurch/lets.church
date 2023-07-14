@@ -4,7 +4,7 @@ import { client } from '../src/temporal';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
 import { processMediaWorkflow } from '../src/temporal/workflows';
 
-const id = await input({ message: 'id: ' });
+const id = await input({ message: 'id:' });
 
 const { title, finalizedUploadKey } =
   await prisma.uploadRecord.findUniqueOrThrow({
