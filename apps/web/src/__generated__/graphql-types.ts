@@ -334,6 +334,7 @@ export type MutationRegisterArgs = {
   email: Scalars['String'];
   fullName?: InputMaybe<Scalars['String']>;
   password: Scalars['String'];
+  subscribeToNewsletter?: InputMaybe<Scalars['Boolean']>;
   username: Scalars['String'];
 };
 

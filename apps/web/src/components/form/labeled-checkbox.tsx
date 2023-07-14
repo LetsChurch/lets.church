@@ -5,6 +5,7 @@ export default function LabeledInput(props: {
   name: string;
   label: string | JSX.Element;
   error?: Optional<string | Array<string>>;
+  checked?: boolean;
 }) {
   const id = createUniqueId();
 
@@ -17,6 +18,7 @@ export default function LabeledInput(props: {
           name={props.name}
           type="checkbox"
           class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+          checked={props.checked || false}
         />
       </div>
       <div class="ml-3 text-sm leading-6">

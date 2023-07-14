@@ -7,7 +7,6 @@ import argon2 from 'argon2';
 import invariant from 'tiny-invariant';
 import * as z from 'zod';
 import { ZodError, ZodIssueCode } from 'zod';
-import short from 'short-uuid';
 import envariant from '@knpwrs/envariant';
 import { stripIndent } from 'proper-tags';
 import builder from '../builder';
@@ -17,11 +16,10 @@ import { sendEmail } from '../../temporal';
 import { createSessionJwt } from '../../util/jwt';
 import prisma from '../../util/prisma';
 import { getPublicMediaUrl } from '../../util/url';
-import { emailHtml } from '../../util/email';
+import { emailHtml, subscribeToNewsletter } from '../../util/email';
+import { uuidTranslator } from '../../util/uuid';
 
 const WEB_URL = envariant('WEB_URL');
-
-const uuidTranslator = short();
 
 async function privateAuthScopes(
   appUser: Pick<PrismaAppUser, 'id'>,
@@ -241,6 +239,7 @@ builder.mutationFields((t) => ({
       fullName: t.arg.string(),
       agreeToTerms: t.arg.boolean({ required: true }),
       agreeToTheology: t.arg.boolean({ required: true }),
+      subscribeToNewsletter: t.arg.boolean({ required: false }),
     },
     validate: {
       schema: z.object({
@@ -262,6 +261,7 @@ builder.mutationFields((t) => ({
         fullName: z.string().max(100).optional(),
         agreeToTerms: z.literal(true),
         agreeToTheology: z.literal(true),
+        subscribeToNewsletter: z.boolean(),
       }),
     },
     errors: {
@@ -273,7 +273,7 @@ builder.mutationFields((t) => ({
     resolve: async (
       query,
       _parent,
-      { username, password, email, fullName },
+      { username, password, email, fullName, ...args },
       _context,
     ) => {
       const passwordHash = await argon2.hash(password, {
@@ -320,6 +320,10 @@ builder.mutationFields((t) => ({
           `,
         ).html,
       });
+
+      if (args.subscribeToNewsletter) {
+        await subscribeToNewsletter(email);
+      }
 
       return user;
     },
@@ -389,39 +393,9 @@ builder.mutationFields((t) => ({
     errors: {
       types: [ZodError],
     },
-    resolve: async (_parent, { email }, context) => {
+    resolve: async (_parent, { email }) => {
       try {
-        const sub = await prisma.newsletterSubscription.create({
-          data: {
-            email,
-          },
-        });
-
-        const verifyUrl = `${WEB_URL}/newsletter/verify?${new URLSearchParams({
-          subscriptionId: uuidTranslator.fromUUID(sub.id),
-          emailKey: uuidTranslator.fromUUID(sub.key),
-        })}`;
-
-        const session = await context.session;
-
-        // If any of the emails associated with the currently logged-in account are being subscribed, skip sending a confirmation email
-        if (!session?.appUser.emails.some((e) => e.email === email)) {
-          await sendEmail(`subscription:${email}`, {
-            from: 'hello@lets.church',
-            to: email,
-            subject: "Please Verify Your Email for the Let's Church Newsletter",
-            text: `You have subscribed to the Let's Church Newsletter. Please visit the following link to verify your email: ${verifyUrl}`,
-            html: emailHtml(
-              "Let's Church Newsletter",
-              stripIndent`
-                You have been subscribed to the Let's Church Newsletter. Please click <a href="${verifyUrl}">here</a> to verify your email.
-
-                Alternatively, visit the following link to verify your email: ${verifyUrl}
-              `,
-            ).html,
-          });
-        }
-
+        await subscribeToNewsletter(email);
         return true;
       } catch (e) {
         return false;

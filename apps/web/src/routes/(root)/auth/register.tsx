@@ -22,6 +22,7 @@ const RegisterSchema = Z.object({
   fullName: Z.string().max(100).optional(),
   agreeToTerms: Z.preprocess((input) => input === 'on', Z.literal(true)),
   agreeToTheology: Z.preprocess((input) => input === 'on', Z.literal(true)),
+  subscribeToNewsletter: Z.preprocess((input) => input === 'on', Z.boolean()),
 });
 
 export default function RegisterRoute() {
@@ -38,6 +39,7 @@ export default function RegisterRoute() {
             'fullName',
             'agreeToTerms',
             'agreeToTheology',
+            'subscribeToNewsletter',
           ].map((p) => [p, form.get(p)]),
         ),
       );
@@ -49,8 +51,14 @@ export default function RegisterRoute() {
         });
       }
 
-      const { email, username, password, agreeToTerms, agreeToTheology } =
-        parseRes.data;
+      const {
+        email,
+        username,
+        password,
+        agreeToTerms,
+        agreeToTheology,
+        subscribeToNewsletter,
+      } = parseRes.data;
 
       const { register: registerRes } = await client.request<
         RegisterMutation,
@@ -64,6 +72,7 @@ export default function RegisterRoute() {
             $fullName: String
             $agreeToTerms: Boolean!
             $agreeToTheology: Boolean!
+            $subscribeToNewsletter: Boolean
           ) {
             register(
               email: $email
@@ -72,6 +81,7 @@ export default function RegisterRoute() {
               fullName: $fullName
               agreeToTerms: $agreeToTerms
               agreeToTheology: $agreeToTheology
+              subscribeToNewsletter: $subscribeToNewsletter
             ) {
               __typename
               ... on ValidationError {
@@ -93,7 +103,14 @@ export default function RegisterRoute() {
             }
           }
         `,
-        { email, username, password, agreeToTerms, agreeToTheology },
+        {
+          email,
+          username,
+          password,
+          agreeToTerms,
+          agreeToTheology,
+          subscribeToNewsletter,
+        },
       );
 
       if (registerRes.__typename === 'ValidationError') {
@@ -194,6 +211,11 @@ export default function RegisterRoute() {
               ? 'You must agree to the terms and conditions.'
               : null
           }
+        />
+        <LabeledCheckbox
+          name="subscribeToNewsletter"
+          label="Subscribe to the Let's Church Newsletter."
+          checked
         />
       </div>
       <Turnstile class="flex justify-center" />
