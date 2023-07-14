@@ -1,5 +1,5 @@
 import { readFile } from 'fs/promises';
-import { input, confirm } from '@inquirer/prompts';
+import { input, confirm, editor } from '@inquirer/prompts';
 import * as Z from 'zod';
 import invariant from 'tiny-invariant';
 import PQueue from 'p-queue';
@@ -19,7 +19,16 @@ const schema = Z.array(
 
 const filename = process.argv.at(-1);
 invariant(filename, 'Missing filename');
-const data = schema.parse(JSON.parse(await readFile(filename, 'utf-8')));
+const data = filename
+  ? schema.parse(JSON.parse(await readFile(filename, 'utf-8')))
+  : [
+      {
+        url: await input({ message: 'url:' }),
+        title: await input({ message: 'Title:' }),
+        publishedAt: await input({ message: 'Published at:' }),
+        description: await editor({ message: 'Description:' }),
+      },
+    ];
 
 const common = {
   username: await input({ message: 'Username:' }),
@@ -31,7 +40,7 @@ const queue = new PQueue({ concurrency: 5 });
 
 if (
   !(await confirm({
-    message: 'Perform import with provided details?',
+    message: `Import ${data.length} records with provided details?`,
     default: false,
   }))
 ) {
