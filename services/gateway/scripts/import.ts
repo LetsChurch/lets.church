@@ -1,7 +1,6 @@
 import { readFile } from 'fs/promises';
 import { input, confirm, editor } from '@inquirer/prompts';
 import * as Z from 'zod';
-import invariant from 'tiny-invariant';
 import PQueue from 'p-queue';
 import { client } from '../src/temporal';
 import { importMediaWorkflow } from '../src/temporal/workflows/import-media';
@@ -18,8 +17,7 @@ const schema = Z.array(
 );
 
 const filename = process.argv.at(-1);
-invariant(filename, 'Missing filename');
-const data = filename
+const data = filename?.endsWith('.json')
   ? schema.parse(JSON.parse(await readFile(filename, 'utf-8')))
   : [
       {
