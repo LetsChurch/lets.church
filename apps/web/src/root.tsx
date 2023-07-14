@@ -14,6 +14,8 @@ import {
 import '@fontsource/inter/variable-full.css';
 import './root.css';
 
+const indigo = '#6366f1';
+
 export default function Root() {
   return (
     <Html lang="en">
@@ -40,6 +42,9 @@ export default function Root() {
           href="/favicon-16x16.png"
         />
         <link rel="manifest" href="/site.webmanifest" />
+        <link rel="mask-icon" href="/favicon.svg" color={indigo} />
+        <meta name="msapplication-TileColor" content="#ffffff" />
+        <meta name="theme-color" content={indigo} />
       </Head>
       <Body>
         <Suspense>
