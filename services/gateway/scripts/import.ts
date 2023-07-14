@@ -25,6 +25,10 @@ const data = filename?.endsWith('.json')
         title: await input({ message: 'Title:' }),
         publishedAt: await input({ message: 'Published at:' }),
         description: await editor({ message: 'Description:' }),
+        commentsEnabled: await confirm({
+          message: 'Comments enabled?',
+          default: true,
+        }),
       },
     ];
 
