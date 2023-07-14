@@ -2,19 +2,21 @@ import { A, FormError } from 'solid-start';
 import { createServerAction$, redirect } from 'solid-start/server';
 import invariant from 'tiny-invariant';
 import { Button, Input } from './form';
+import { Turnstile } from './turnstile';
 import type {
   SubscribeToNewsletterMutation,
   SubscribeToNewsletterMutationVariables,
 } from './__generated__/newsletter';
 import { gql, client } from '~/util/gql/server';
 import { useUser } from '~/util/user-context';
+import validateTurnstile from '~/util/server/validate-turnstile';
 
 export default function Newsletter() {
   const [submitting, { Form }] = createServerAction$(async (form: FormData) => {
+    await validateTurnstile(form);
     const email = form.get('email')?.toString();
     invariant(email);
 
-    // TODO: doesn't appear to work
     const { subscribeToNewsletter: res } = await client.request<
       SubscribeToNewsletterMutation,
       SubscribeToNewsletterMutationVariables
@@ -61,7 +63,7 @@ export default function Newsletter() {
           <h2>Want updates about Let's Church?</h2>
           <p>Sign up for our newsletter.</p>
         </div>
-        <Form class="w-full max-w-md lg:col-span-5 lg:pt-2">
+        <Form class="w-full max-w-md space-y-4 lg:col-span-5 lg:pt-2">
           <div class="flex gap-x-4">
             <label for="email-address" class="sr-only">
               Email address
@@ -78,7 +80,7 @@ export default function Newsletter() {
               Subscribe
             </Button>
           </div>
-          <p class="mt-4 text-sm leading-6 text-gray-900">
+          <p class="text-sm leading-6 text-gray-900">
             No spam. Read our{' '}
             <A
               href="/about/privacy"
@@ -88,6 +90,7 @@ export default function Newsletter() {
             </A>
             .
           </p>
+          <Turnstile />
         </Form>
       </div>
     </div>
