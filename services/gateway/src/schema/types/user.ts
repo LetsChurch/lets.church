@@ -16,8 +16,9 @@ import { sendEmail } from '../../temporal';
 import { createSessionJwt } from '../../util/jwt';
 import prisma from '../../util/prisma';
 import { getPublicMediaUrl } from '../../util/url';
-import { emailHtml, subscribeToNewsletter } from '../../util/email';
+import { emailHtml } from '../../util/email';
 import { uuidTranslator } from '../../util/uuid';
+import { subscribeToNewsletter } from '../../util/newsletter';
 
 const WEB_URL = envariant('WEB_URL');
 
