@@ -198,7 +198,7 @@ builder.queryFields((t) => ({
         }),
         channels: t.arg({
           required: false,
-          type: ['ShortUuid'],
+          type: ['String'],
         }),
         minPublishedAt: t.arg({
           required: false,
@@ -217,7 +217,7 @@ builder.queryFields((t) => ({
         schema: Z.object({
           query: Z.string(),
           focus: Z.enum(focuses),
-          channels: Z.array(Z.string().uuid()).nullable().optional(),
+          channels: Z.array(Z.string()).max(10).nullable().optional(),
           minPublishedAt: Z.string().or(Z.date()).nullable().optional(),
           maxPublishedAt: Z.string().or(Z.date()).nullable().optional(),
           transcriptPhraseSearch: Z.boolean().nullable().optional(),
@@ -254,8 +254,6 @@ builder.queryFields((t) => ({
         let channelAggData: Array<{ id: string; count: number }> = [];
         let dateAggData: { min: Date; max: Date } | null = null;
 
-        console.log({ transcriptPhraseSearch });
-
         const publishedAt: { lte?: string; gte?: string } = {};
 
         if (minPublishedAt) {
@@ -272,6 +270,15 @@ builder.queryFields((t) => ({
               : maxPublishedAt;
         }
 
+        const channelIds = channels
+          ? (
+              await prisma.channel.findMany({
+                where: { slug: { in: channels } },
+                select: { id: true },
+              })
+            ).map(({ id }) => id)
+          : null;
+
         const res = await resolveOffsetConnection(
           { args },
           async ({ offset, limit }) => {
@@ -282,7 +289,7 @@ builder.queryFields((t) => ({
                   focus === 'UPLOADS' ? offset : 0,
                   focus === 'UPLOADS' ? limit : 0,
                   {
-                    channels,
+                    channelIds,
                     publishedAt,
                   },
                 ),
@@ -291,7 +298,7 @@ builder.queryFields((t) => ({
                   focus === 'TRANSCRIPTS' ? offset : 0,
                   focus === 'TRANSCRIPTS' ? limit : 0,
                   {
-                    channels,
+                    channelIds,
                     publishedAt,
                     phrase: transcriptPhraseSearch ?? true,
                   },

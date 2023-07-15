@@ -569,7 +569,7 @@ export type QueryOrganizationByIdArgs = {
 export type QuerySearchArgs = {
   after?: InputMaybe<Scalars['String']>;
   before?: InputMaybe<Scalars['String']>;
-  channels?: InputMaybe<Array<Scalars['ShortUuid']>>;
+  channels?: InputMaybe<Array<Scalars['String']>>;
   first?: InputMaybe<Scalars['Int']>;
   focus: SearchFocus;
   last?: InputMaybe<Scalars['Int']>;

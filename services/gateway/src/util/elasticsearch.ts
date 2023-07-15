@@ -23,22 +23,22 @@ export async function waitForElasticsearch() {
 }
 
 function makePostFilterSpread({
-  channels,
+  channelIds,
   publishedAt,
 }: {
-  channels?: Array<string> | null;
+  channelIds?: Array<string> | null;
   publishedAt?: { gte?: string; lte?: string } | undefined;
 }): MsearchMultisearchBody {
   const res: MsearchMultisearchBody = {};
 
   const must: Array<QueryDslQueryContainer> = [];
 
-  if ((Array.isArray(channels) && channels.length > 0) || publishedAt) {
+  if ((Array.isArray(channelIds) && channelIds.length > 0) || publishedAt) {
     res.post_filter = { bool: { must: [], should: [] } };
   }
 
-  if (Array.isArray(channels) && channels.length > 0) {
-    must.push({ terms: { channelId: channels } });
+  if (Array.isArray(channelIds) && channelIds.length > 0) {
+    must.push({ terms: { channelId: channelIds } });
   }
 
   if (publishedAt) {
@@ -57,10 +57,10 @@ export function msearchUploads(
   from = 0,
   size = 0,
   {
-    channels = [],
+    channelIds = [],
     publishedAt,
   }: {
-    channels?: string[] | null | undefined;
+    channelIds?: string[] | null | undefined;
     publishedAt?: { gte?: string; lte?: string } | undefined;
   },
 ): [MsearchRequestItem, MsearchRequestItem] {
@@ -91,7 +91,7 @@ export function msearchUploads(
           ],
         },
       },
-      ...makePostFilterSpread({ channels, publishedAt }),
+      ...makePostFilterSpread({ channelIds, publishedAt }),
       aggs: {
         channelIds: {
           terms: {
@@ -119,11 +119,11 @@ export function msearchTranscripts(
   from = 0,
   size = 0,
   {
-    channels = [],
+    channelIds = [],
     publishedAt,
     phrase = true,
   }: {
-    channels?: string[] | null | undefined;
+    channelIds?: string[] | null | undefined;
     publishedAt?: { gte?: string; lte?: string } | undefined;
     phrase?: boolean;
   },
@@ -207,7 +207,7 @@ export function msearchTranscripts(
           ],
         },
       },
-      ...makePostFilterSpread({ channels, publishedAt }),
+      ...makePostFilterSpread({ channelIds, publishedAt }),
       aggs: {
         channelIds: {
           terms: {

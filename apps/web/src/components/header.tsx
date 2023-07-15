@@ -1,4 +1,4 @@
-import { A, useLocation, useNavigate } from 'solid-start';
+import { A, useLocation, useNavigate, useParams, useMatch } from 'solid-start';
 import {
   createEffect,
   createSignal,
@@ -71,13 +71,18 @@ export default function Header() {
   const searchId = createUniqueId();
   const navigate = useNavigate();
   const loc = useLocation();
+  const params = useParams<{ slug?: string }>();
+  const isChannelPage = useMatch(() => `/channel/${params.slug}`);
 
   function onSearch(e: SubmitEvent) {
     e.preventDefault();
     const search = (e.target as HTMLFormElement)
       ?.elements[0] as HTMLInputElement;
-    const params = new URLSearchParams({ q: search.value });
-    navigate(`/search?${params.toString()}`);
+    const newParams: { q: string; channels?: string } = { q: search.value };
+    if (isChannelPage()) {
+      newParams.channels = params.slug ?? '';
+    }
+    navigate(`/search?${new URLSearchParams(newParams).toString()}`);
   }
 
   function defaultSearch() {
@@ -117,7 +122,7 @@ export default function Header() {
                       id={searchId}
                       name="q"
                       class="block w-full rounded-md border border-gray-300 bg-white py-2 pl-10 pr-3 leading-5 placeholder-gray-500 focus:border-indigo-500 focus:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:text-sm"
-                      placeholder="Search"
+                      placeholder={`Search${isChannelPage() ? ' Channel' : ''}`}
                       type="search"
                       value={defaultSearch()}
                     />

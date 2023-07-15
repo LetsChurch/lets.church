@@ -76,7 +76,7 @@ export function routeData({ location }: RouteDataArgs) {
             $before: String
             $minPublishedAt: DateTime
             $maxPublishedAt: DateTime
-            $channels: [ShortUuid!]
+            $channels: [String!]
             $transcriptPhraseSearch: Boolean
           ) {
             search(
@@ -99,7 +99,7 @@ export function routeData({ location }: RouteDataArgs) {
                 channels {
                   count
                   channel {
-                    id
+                    slug
                     name
                   }
                 }
@@ -384,8 +384,8 @@ export default function SearchRoute() {
   const channelsOptions = () =>
     data()?.search.aggs.channels.map(({ channel }) => ({
       label: channel.name,
-      value: channel.id,
-      checked: channelsValues().includes(channel.id),
+      value: channel.slug,
+      checked: channelsValues().includes(channel.slug),
     })) ?? [];
   const transcriptPhraseSearch = () =>
     (loc.query['transcriptPhraseSearch'] ?? 'true') === 'true';

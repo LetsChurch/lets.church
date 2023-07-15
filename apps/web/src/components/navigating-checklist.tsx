@@ -39,6 +39,7 @@ export default function NavigatingChecklist(props: Props) {
               class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
               checked={op.checked}
               onChange={() => onChange(op.value, !op.checked)}
+              disabled={currentValues().length > 10 && !op.checked}
             />
             <label
               for="filter-mobile-category-1"
