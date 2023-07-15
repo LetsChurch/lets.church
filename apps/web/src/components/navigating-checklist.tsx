@@ -17,7 +17,7 @@ export default function NavigatingChecklist(props: Props) {
   const currentValues = () =>
     loc.query[local.queryKey]?.split(',').filter(Boolean) ?? [];
 
-  function onChange(value: string, checked: boolean) {
+  function onChange({ value, checked }: { value: string; checked: boolean }) {
     navigate(
       `?${setQueryParams(loc.search, {
         [local.queryKey ?? '']: checked
@@ -38,7 +38,7 @@ export default function NavigatingChecklist(props: Props) {
               type="checkbox"
               class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
               checked={op.checked}
-              onChange={() => onChange(op.value, !op.checked)}
+              onChange={[onChange, { checked: !op.checked, value: op.value }]}
               disabled={currentValues().length > 10 && !op.checked}
             />
             <label
