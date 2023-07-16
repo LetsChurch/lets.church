@@ -107,7 +107,13 @@ const Channel = builder.prismaObject('Channel', {
         return true;
       },
       query: ({ orderBy, order, includeUnlisted }) => ({
-        where: includeUnlisted ? {} : { visibility: 'PUBLIC' },
+        where: includeUnlisted
+          ? {}
+          : {
+              visibility: 'PUBLIC',
+              transcodingFinishedAt: { not: null },
+              transcribingFinishedAt: { not: null },
+            },
         orderBy: [{ [orderBy]: order }, { id: 'asc' }],
       }),
     }),
