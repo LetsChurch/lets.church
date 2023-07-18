@@ -184,6 +184,8 @@ const focuses = [
   'ORGANIZATIONS',
 ] as const;
 
+const OrderByEnum = Z.enum(['avg', 'sum', 'date']);
+
 builder.queryFields((t) => ({
   search: t.connection(
     {
@@ -195,6 +197,13 @@ builder.queryFields((t) => ({
           type: builder.enumType('SearchFocus', {
             values: focuses,
           }),
+        }),
+        orderBy: t.arg({
+          required: false,
+          type: builder.enumType('SearchOrder', {
+            values: ['avg', 'sum', 'date'],
+          }),
+          defaultValue: 'avg',
         }),
         channels: t.arg({
           required: false,
@@ -255,6 +264,7 @@ builder.queryFields((t) => ({
         let dateAggData: { min: Date; max: Date } | null = null;
 
         const publishedAt: { lte?: string; gte?: string } = {};
+        const orderBy = OrderByEnum.parse(args.orderBy ?? 'avg');
 
         if (minPublishedAt) {
           publishedAt.gte =
@@ -300,6 +310,7 @@ builder.queryFields((t) => ({
                   {
                     channelIds,
                     publishedAt,
+                    orderBy,
                     phrase: transcriptPhraseSearch ?? true,
                   },
                 ),
@@ -316,6 +327,7 @@ builder.queryFields((t) => ({
               ],
             });
 
+            console.dir({ esRes });
             const parsed = MSearchResponseSchema.parse(esRes);
 
             totalCount = parsed.responses.reduce(

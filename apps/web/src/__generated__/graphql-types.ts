@@ -575,6 +575,7 @@ export type QuerySearchArgs = {
   last?: InputMaybe<Scalars['Int']>;
   maxPublishedAt?: InputMaybe<Scalars['DateTime']>;
   minPublishedAt?: InputMaybe<Scalars['DateTime']>;
+  orderBy?: InputMaybe<SearchOrder>;
   query: Scalars['String'];
   transcriptPhraseSearch?: InputMaybe<Scalars['Boolean']>;
 };
@@ -681,6 +682,12 @@ export enum SearchFocus {
   Organizations = 'ORGANIZATIONS',
   Transcripts = 'TRANSCRIPTS',
   Uploads = 'UPLOADS'
+}
+
+export enum SearchOrder {
+  Avg = 'avg',
+  Date = 'date',
+  Sum = 'sum'
 }
 
 export type SearchPublishedAtAggData = {

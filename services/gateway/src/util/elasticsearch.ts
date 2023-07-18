@@ -22,12 +22,16 @@ export async function waitForElasticsearch() {
   });
 }
 
+type PublishedAtRange = { gte?: string; lte?: string };
+type OrderBy = 'avg' | 'sum' | 'date';
+
 function makePostFilterSpread({
   channelIds,
   publishedAt,
 }: {
   channelIds?: Array<string> | null;
-  publishedAt?: { gte?: string; lte?: string } | undefined;
+  publishedAt?: PublishedAtRange | undefined;
+  orderBy?: OrderBy | undefined;
 }): MsearchMultisearchBody {
   const res: MsearchMultisearchBody = {};
 
@@ -59,9 +63,11 @@ export function msearchUploads(
   {
     channelIds = [],
     publishedAt,
+    orderBy,
   }: {
     channelIds?: string[] | null | undefined;
-    publishedAt?: { gte?: string; lte?: string } | undefined;
+    publishedAt?: PublishedAtRange | undefined;
+    orderBy?: OrderBy | undefined;
   },
 ): [MsearchRequestItem, MsearchRequestItem] {
   return [
@@ -92,6 +98,9 @@ export function msearchUploads(
         },
       },
       ...makePostFilterSpread({ channelIds, publishedAt }),
+      ...(orderBy === 'date'
+        ? { sort: [{ publishedAt: { order: 'asc' } }] }
+        : {}),
       aggs: {
         channelIds: {
           terms: {
@@ -121,10 +130,12 @@ export function msearchTranscripts(
   {
     channelIds = [],
     publishedAt,
+    orderBy,
     phrase = true,
   }: {
     channelIds?: string[] | null | undefined;
     publishedAt?: { gte?: string; lte?: string } | undefined;
+    orderBy?: OrderBy | undefined;
     phrase?: boolean;
   },
 ): [MsearchRequestItem, MsearchRequestItem] {
@@ -147,6 +158,7 @@ export function msearchTranscripts(
             {
               nested: {
                 path: 'segments',
+                score_mode: orderBy === 'sum' ? 'sum' : 'avg',
                 query: phrase
                   ? {
                       match_phrase: {
@@ -208,6 +220,9 @@ export function msearchTranscripts(
         },
       },
       ...makePostFilterSpread({ channelIds, publishedAt }),
+      ...(orderBy === 'date'
+        ? { sort: [{ publishedAt: { order: 'asc' } }] }
+        : {}),
       aggs: {
         channelIds: {
           terms: {
@@ -274,7 +289,7 @@ export function msearchOrganizations(
 
 export const BaseHitSchema = {
   _id: Z.string(),
-  _score: Z.number(),
+  _score: Z.number().nullable(),
 };
 
 export const UploadHitSourceSchema = Z.object({

@@ -7,10 +7,11 @@ type Link = { label: string; value: string; checked: boolean };
 export type Props = JSX.IntrinsicElements['div'] & {
   options: Array<Link>;
   queryKey: string;
+  radios?: boolean;
 };
 
 export default function NavigatingChecklist(props: Props) {
-  const [local, others] = splitProps(props, ['options', 'queryKey']);
+  const [local, others] = splitProps(props, ['options', 'queryKey', 'radios']);
   const navigate = useNavigate();
   const loc = useLocation();
 
@@ -21,7 +22,9 @@ export default function NavigatingChecklist(props: Props) {
     navigate(
       `?${setQueryParams(loc.search, {
         [local.queryKey ?? '']: checked
-          ? [...currentValues(), value]
+          ? local.radios
+            ? value
+            : [...currentValues(), value]
           : currentValues().filter((v) => v !== value),
       })}`,
     );
@@ -33,10 +36,11 @@ export default function NavigatingChecklist(props: Props) {
         {(op) => (
           <div class="flex items-center py-2">
             <input
-              id="filter-mobile-category-1"
               value={op.value}
-              type="checkbox"
-              class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              type={local.radios ? 'radio' : 'checkbox'}
+              name={local.queryKey}
+              class="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              classList={{ rounded: !local.radios }}
               checked={op.checked}
               onChange={[onChange, { checked: !op.checked, value: op.value }]}
               disabled={currentValues().length > 10 && !op.checked}

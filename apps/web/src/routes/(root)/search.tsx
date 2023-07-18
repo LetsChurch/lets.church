@@ -23,7 +23,7 @@ import Thumbnail, {
   type Props as ThumbnailProps,
 } from '~/components/thumbnail';
 import { client, gql } from '~/util/gql/server';
-import { SearchFocus } from '~/__generated__/graphql-types';
+import { SearchFocus, SearchOrder } from '~/__generated__/graphql-types';
 import { formatTime, Optional } from '~/util';
 import FloatingDiv from '~/components/floating-div';
 import NavigatingBooleans from '~/components/navigating-booleans';
@@ -44,6 +44,7 @@ export function routeData({ location }: RouteDataArgs) {
       after = null,
       before = null,
       publishedAtRange = null,
+      orderBy,
       channels = null,
       transcriptPhraseSearch = 'true',
     ]) => {
@@ -76,6 +77,7 @@ export function routeData({ location }: RouteDataArgs) {
             $before: String
             $minPublishedAt: DateTime
             $maxPublishedAt: DateTime
+            $orderBy: SearchOrder
             $channels: [String!]
             $transcriptPhraseSearch: Boolean
           ) {
@@ -88,6 +90,7 @@ export function routeData({ location }: RouteDataArgs) {
               before: $before
               minPublishedAt: $minPublishedAt
               maxPublishedAt: $maxPublishedAt
+              orderBy: $orderBy
               channels: $channels
               transcriptPhraseSearch: $transcriptPhraseSearch
             ) {
@@ -161,6 +164,14 @@ export function routeData({ location }: RouteDataArgs) {
           maxPublishedAt: maxPublishedAt
             ? new Date(maxPublishedAt).toISOString()
             : null,
+          orderBy:
+            orderBy === 'avg'
+              ? SearchOrder.Avg
+              : orderBy === 'sum'
+              ? SearchOrder.Sum
+              : orderBy === 'date'
+              ? SearchOrder.Date
+              : null,
           channels,
           transcriptPhraseSearch: transcriptPhraseSearch === 'true',
         },
@@ -175,6 +186,7 @@ export function routeData({ location }: RouteDataArgs) {
           location.query['after'],
           location.query['before'],
           location.query['publishedAt'],
+          location.query['orderBy'],
           location.query['channels']?.split(',').filter(Boolean),
           location.query['transcriptPhraseSearch'],
         ] as const,
@@ -387,6 +399,19 @@ export default function SearchRoute() {
       value: channel.slug,
       checked: channelsValues().includes(channel.slug),
     })) ?? [];
+  const orderByOptions = () => [
+    { label: 'Default', value: '', checked: loc.query['orderBy'] === 'avg' },
+    ...(loc.query['focus'] === 'transcripts'
+      ? [
+          {
+            label: 'Hits',
+            value: 'sum',
+            checked: loc.query['orderBy'] === 'sum',
+          },
+        ]
+      : []),
+    { label: 'Date', value: 'date', checked: loc.query['orderBy'] === 'date' },
+  ];
   const transcriptPhraseSearch = () =>
     (loc.query['transcriptPhraseSearch'] ?? 'true') === 'true';
 
@@ -448,6 +473,14 @@ export default function SearchRoute() {
             />
           </div>
           <div>
+            <h3 class="space-y-2">Sort</h3>
+            <NavigatingChecklist
+              radios
+              options={orderByOptions()}
+              queryKey="orderBy"
+            />
+          </div>
+          <div>
             <h3 class="space-y-2">Advanced</h3>
             <NavigatingBooleans
               options={[
@@ -482,6 +515,14 @@ export default function SearchRoute() {
             <NavigatingChecklist
               options={channelsOptions()}
               queryKey="channels"
+              class="px-2"
+            />
+          </AggFilter>
+          <AggFilter title="Sort" active={Boolean(loc.query['orderBy'])}>
+            <NavigatingChecklist
+              radios
+              options={orderByOptions()}
+              queryKey="orderBy"
               class="px-2"
             />
           </AggFilter>
