@@ -678,6 +678,12 @@ export default function MediaRoute() {
                     'border-indigo-700': userIsSubscribed(),
                   }}
                   disabled={submittingSubscribe.pending}
+                  onClick={(e) => {
+                    if (!user()) {
+                      e.preventDefault();
+                      alert('Not logged in!');
+                    }
+                  }}
                 >
                   <SubscribeIcon class="scale-90" />{' '}
                   <span>{userIsSubscribed() ? 'Subscribed' : 'Subscribe'}</span>
