@@ -2,6 +2,7 @@ resources:
   - config.yml
   - gateway-deployment.yml
   - elasticsearch-deployment.yml
+  - kibana-deployment.yml
   - temporal-deployment.yml
   - temporal-ui-deployment.yml
   - web-deployment.yml
@@ -37,6 +38,9 @@ configMapGenerator:
   - name: temporal-ui-config
     literals:
       - TEMPORAL_UI_PORT=8080
+  - name: kibana-config
+    literals:
+      - ELASTICSEARCH_HOSTS="http://elasticsearch:9200"
   - name: background-worker-config
     literals:
       - TEMPORAL_SHUTDOWN_GRACE_TIME=1m
