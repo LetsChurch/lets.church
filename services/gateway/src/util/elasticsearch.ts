@@ -23,7 +23,7 @@ export async function waitForElasticsearch() {
 }
 
 type PublishedAtRange = { gte?: string; lte?: string };
-type OrderBy = 'avg' | 'sum' | 'date';
+type OrderBy = 'avg' | 'sum' | 'date' | 'dateDesc';
 
 function makePostFilterSpread({
   channelIds,
@@ -222,6 +222,8 @@ export function msearchTranscripts(
       ...makePostFilterSpread({ channelIds, publishedAt }),
       ...(orderBy === 'date'
         ? { sort: [{ publishedAt: { order: 'asc' } }] }
+        : orderBy === 'dateDesc'
+        ? { sort: [{ publishedAt: { order: 'desc' } }] }
         : {}),
       aggs: {
         channelIds: {

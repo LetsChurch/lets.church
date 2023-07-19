@@ -687,6 +687,7 @@ export enum SearchFocus {
 export enum SearchOrder {
   Avg = 'avg',
   Date = 'date',
+  DateDesc = 'dateDesc',
   Sum = 'sum'
 }
 

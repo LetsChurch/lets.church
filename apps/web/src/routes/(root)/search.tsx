@@ -410,7 +410,16 @@ export default function SearchRoute() {
           },
         ]
       : []),
-    { label: 'Date', value: 'date', checked: loc.query['orderBy'] === 'date' },
+    {
+      label: 'Date ↑',
+      value: 'date',
+      checked: loc.query['orderBy'] === 'date',
+    },
+    {
+      label: 'Date ↓',
+      value: 'dateDesc',
+      checked: loc.query['orderBy'] === 'dateDesc',
+    },
   ];
   const transcriptPhraseSearch = () =>
     (loc.query['transcriptPhraseSearch'] ?? 'true') === 'true';

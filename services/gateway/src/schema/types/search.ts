@@ -201,7 +201,7 @@ builder.queryFields((t) => ({
         orderBy: t.arg({
           required: false,
           type: builder.enumType('SearchOrder', {
-            values: ['avg', 'sum', 'date'],
+            values: ['avg', 'sum', 'date', 'dateDesc'],
           }),
           defaultValue: 'avg',
         }),
