@@ -311,7 +311,7 @@ model UploadUserCommentRating {
 model UploadView {
   upload         UploadRecord @relation(fields: [uploadRecordId], references: [id])
   uploadRecordId String       @map("upload_record_id") @db.Uuid
-  viewHash       Int          @map("view_hash")
+  viewHash       BigInt       @map("view_hash")
   user           AppUser?     @relation(fields: [appUserId], references: [id])
   appUserId      String?      @map("app_user_id") @db.Uuid
   createdAt      DateTime     @default(now()) @map("created_at")
