@@ -9,10 +9,7 @@ import logoutAction from '~/util/logout-action';
 import { useLoginLocation, useSerializedLocation } from '~/util';
 import type { MeQuery } from '~/routes/__generated__/(root)';
 
-export const profileLinks = [
-  { href: '/profile', label: 'Your Profile' },
-  { href: '/settings', label: 'Settings' },
-];
+export const profileLinks = [{ href: '/profile', label: 'Your Profile' }];
 
 export type Props = MeQuery;
 
