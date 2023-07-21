@@ -16,5 +16,6 @@ export {
 } from './update-upload-record';
 export { importMediaWorkflow } from './import-media';
 export { recordDownloadSizeWorkflow } from './record-download-size';
+export { remakeThumbnailsWorkflow } from './remake-thumbnails';
 export { updateDailySaltWorkflow } from './update-daily-salt';
 export { updateUploadScoresWorkflow } from './update-upload-scores';
