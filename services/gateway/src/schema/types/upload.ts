@@ -147,13 +147,15 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
     variants: t.expose('variants', { type: [UploadVariant], nullable: false }),
     thumbnailUrl: t.string({
       nullable: true,
-      select: { defaultThumbnailPath: true },
-      resolve: ({ defaultThumbnailPath }) => {
-        if (!defaultThumbnailPath) {
+      select: { defaultThumbnailPath: true, overrideThumbnailPath: true },
+      resolve: ({ defaultThumbnailPath, overrideThumbnailPath }) => {
+        const from = defaultThumbnailPath ?? overrideThumbnailPath;
+
+        if (!from) {
           return null;
         }
 
-        return getPublicMediaUrl(defaultThumbnailPath);
+        return getPublicMediaUrl(from);
       },
     }),
     thumbnailBlurhash: t.exposeString('defaultThumbnailBlurhash', {
