@@ -6,7 +6,7 @@ export default async function setUploadThumbnail(
   blurhash: string,
 ) {
   await updateUploadRecord(uploadRecordId, {
-    defaultThumbnailPath: path,
-    defaultThumbnailBlurhash: blurhash,
+    overrideThumbnailPath: path,
+    overrideThumbnailBlurhash: blurhash,
   });
 }
