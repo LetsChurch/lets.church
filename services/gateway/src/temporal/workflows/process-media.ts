@@ -43,7 +43,7 @@ export async function processMediaWorkflow(
     transcribePromise,
     transcode(targetId, s3UploadKey, probeRes),
     ...(probeIsVideoFile(probeRes)
-      ? [createThumbnails(targetId, s3UploadKey)]
+      ? [createThumbnails(targetId, s3UploadKey, probeRes)]
       : []),
   ]);
 

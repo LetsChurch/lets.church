@@ -10,6 +10,7 @@ import rimraf from 'rimraf';
 import { createPresignedGetUrl, retryablePutFile } from '../../../util/s3';
 import { runFfmpegThumbnails } from '../../../util/ffmpeg';
 import { concatThumbs, imageToBlurhash } from '../../../util/images';
+import type { Probe } from '../../../util/zod';
 import { updateUploadRecord } from '../..';
 
 const WORK_DIR =
@@ -18,6 +19,7 @@ const WORK_DIR =
 export default async function createThumbnails(
   uploadRecordId: string,
   s3UploadKey: string,
+  probe: Probe,
 ) {
   const cancellationSignal = Context.current().cancellationSignal;
   const dataHeartbeat = throttle(() => Context.current().heartbeat(), 5000);
@@ -30,7 +32,12 @@ export default async function createThumbnails(
   Context.current().heartbeat();
   try {
     console.log('Creating thumbnails with ffmpeg');
-    const proc = runFfmpegThumbnails(dir, downloadUrl, cancellationSignal);
+    const proc = runFfmpegThumbnails(
+      dir,
+      downloadUrl,
+      probe,
+      cancellationSignal,
+    );
     proc.stdout?.on('data', dataHeartbeat);
     proc.stderr?.on('data', dataHeartbeat);
     await proc;
@@ -67,6 +74,7 @@ export default async function createThumbnails(
           await updateUploadRecord(uploadRecordId, {
             defaultThumbnailPath: key,
             defaultThumbnailBlurhash: blurhash,
+            thumbnailCount: thumbnailJpgs.length,
           });
         },
         {

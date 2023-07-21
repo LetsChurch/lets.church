@@ -375,8 +375,12 @@ export function runFfmpegEncode(
 export function runFfmpegThumbnails(
   cwd: string,
   inputFilename: string,
+  probe: Probe,
   signal: AbortSignal,
 ) {
+  const count = 100;
+  const rate = 1 / (parseFloat(probe.format.duration) / count);
+
   return execa(
     'ffmpeg',
     [
@@ -389,11 +393,9 @@ export function runFfmpegThumbnails(
       '-progress',
       '-',
       // Output
-      '-vsync', // '-fps_mode',
-      'vfr',
-      '-vf',
-      'fps=fps=1',
-      '%05d.jpg',
+      '-r',
+      `${rate}`,
+      'screenshot_v1_%03d.jpg',
     ],
     { cwd, signal },
   );

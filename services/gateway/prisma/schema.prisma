@@ -217,6 +217,7 @@ model UploadRecord {
   defaultThumbnailBlurhash  String?                    @map("default_thumbnail_blurhash")
   overrideThumbnailPath     String?                    @map("override_thumbnail_path")
   overrideThumbnailBlurhash String?                    @map("override_thumbnail_blurhash")
+  thumbnailCount            Int?                       @map("thumbnail_count")
   lengthSeconds             Float?                     @map("length_seconds")
   createdAt                 DateTime                   @default(now()) @map("created_at")
   updatedAt                 DateTime                   @updatedAt @map("updated_at")
