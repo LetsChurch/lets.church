@@ -156,7 +156,9 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
         return getPublicMediaUrl(defaultThumbnailPath);
       },
     }),
-    thumbnailBlurhash: t.exposeString('thumbnailBlurhash', { nullable: true }),
+    thumbnailBlurhash: t.exposeString('defaultThumbnailBlurhash', {
+      nullable: true,
+    }),
     transcript: t.field({
       type: [
         builder.simpleObject('TranscriptLine', {

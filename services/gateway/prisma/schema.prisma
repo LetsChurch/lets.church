@@ -199,41 +199,41 @@ enum UploadVariant {
 
 // TODO: How should we handle cascading deletes?
 model UploadRecord {
-  id                     String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title                  String?
-  description            String?
-  createdBy              AppUser                    @relation("createdUploads", fields: [appUserId], references: [id])
-  appUserId              String                     @map("app_user_id") @db.Uuid
-  license                UploadLicense
-  channel                Channel                    @relation(fields: [channelId], references: [id])
-  channelId              String                     @map("channel_id") @db.Uuid
-  visibility             UploadVisibility
-  uploadSizeBytes        BigInt?                    @map("upload_size_bytes")
-  uploadFinalized        Boolean                    @default(false) @map("upload_finalized")
-  uploadFinalizedBy      AppUser?                   @relation("finalizedUploads", fields: [uploadFinalizedById], references: [id])
-  uploadFinalizedById    String?                    @map("upload_finalized_by_id") @db.Uuid
-  finalizedUploadKey     String?                    @map("finalized_upload_key")
-  defaultThumbnailPath   String?                    @map("default_thumbnail_path")
-  lengthSeconds          Float?                     @map("length_seconds")
-  thumbnailBlurhash      String?                    @map("thumbnail_blurhash")
-  createdAt              DateTime                   @default(now()) @map("created_at")
-  updatedAt              DateTime                   @updatedAt @map("updated_at")
-  publishedAt            DateTime                   @default(now()) @map("published_at")
-  transcodingStartedAt   DateTime?                  @map("transcoding_started_at")
-  transcodingFinishedAt  DateTime?                  @map("transcoding_finished_at")
-  transcodingProgress    Float                      @default(0)
-  transcribingStartedAt  DateTime?                  @map("transcribing_started_at")
-  transcribingFinishedAt DateTime?                  @map("transcribing_finished_at")
-  deletedAt              DateTime?                  @map("deleted_at")
-  variants               UploadVariant[]
-  userRatings            UploadUserRating[]
-  score                  Float                      @default(0)
-  scoreStaleAt           DateTime?                  @default(now()) @map("score_stale_at")
-  userCommentsEnabled    Boolean                    @default(true) @map("user_comments_enabled")
-  userComments           UploadUserComment[]
-  downloadsEnabled       Boolean                    @default(true) @map("downloads_enabled")
-  downloadSizes          UploadRecordDownloadSize[]
-  uploadViews            UploadView[]
+  id                       String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title                    String?
+  description              String?
+  createdBy                AppUser                    @relation("createdUploads", fields: [appUserId], references: [id])
+  appUserId                String                     @map("app_user_id") @db.Uuid
+  license                  UploadLicense
+  channel                  Channel                    @relation(fields: [channelId], references: [id])
+  channelId                String                     @map("channel_id") @db.Uuid
+  visibility               UploadVisibility
+  uploadSizeBytes          BigInt?                    @map("upload_size_bytes")
+  uploadFinalized          Boolean                    @default(false) @map("upload_finalized")
+  uploadFinalizedBy        AppUser?                   @relation("finalizedUploads", fields: [uploadFinalizedById], references: [id])
+  uploadFinalizedById      String?                    @map("upload_finalized_by_id") @db.Uuid
+  finalizedUploadKey       String?                    @map("finalized_upload_key")
+  defaultThumbnailPath     String?                    @map("default_thumbnail_path")
+  defaultThumbnailBlurhash String?                    @map("default_thumbnail_blurhash")
+  lengthSeconds            Float?                     @map("length_seconds")
+  createdAt                DateTime                   @default(now()) @map("created_at")
+  updatedAt                DateTime                   @updatedAt @map("updated_at")
+  publishedAt              DateTime                   @default(now()) @map("published_at")
+  transcodingStartedAt     DateTime?                  @map("transcoding_started_at")
+  transcodingFinishedAt    DateTime?                  @map("transcoding_finished_at")
+  transcodingProgress      Float                      @default(0)
+  transcribingStartedAt    DateTime?                  @map("transcribing_started_at")
+  transcribingFinishedAt   DateTime?                  @map("transcribing_finished_at")
+  deletedAt                DateTime?                  @map("deleted_at")
+  variants                 UploadVariant[]
+  userRatings              UploadUserRating[]
+  score                    Float                      @default(0)
+  scoreStaleAt             DateTime?                  @default(now()) @map("score_stale_at")
+  userCommentsEnabled      Boolean                    @default(true) @map("user_comments_enabled")
+  userComments             UploadUserComment[]
+  downloadsEnabled         Boolean                    @default(true) @map("downloads_enabled")
+  downloadSizes            UploadRecordDownloadSize[]
+  uploadViews              UploadView[]
 
   @@index([createdAt, id])
   @@index(score)
