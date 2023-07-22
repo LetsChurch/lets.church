@@ -32,6 +32,7 @@ import NavigatingDateRange from '~/components/navigating-date-range';
 import OffCanvasDiv from '~/components/off-canvas-div';
 import { Avatar } from '~/components/avatar';
 import { formatDateFull } from '~/util/date';
+import { setQueryParams } from '~/util/url';
 
 const PAGE_SIZE = 20;
 
@@ -337,7 +338,7 @@ function AggFilter(props: AggFilterProps) {
       href={
         isMenu()
           ? undefined
-          : `?${new URLSearchParams({
+          : `?${setQueryParams(loc.search, {
               q: props.q ?? '',
               focus: props.focus ?? '',
             })}`
