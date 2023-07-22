@@ -7,8 +7,7 @@ import rimraf from 'rimraf';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import { createPresignedGetUrl, retryablePutFile } from '../../../util/s3';
 
-const WORK_DIR =
-  process.env['TRANSCODE_WORKING_DIRECTORY'] ?? '/data/transcode';
+const WORK_DIR = process.env['PEAKS_WORKING_DIRECTORY'] ?? '/data/peaks';
 
 export default async function generatePeaks(
   uploadRecordId: string,
