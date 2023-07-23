@@ -3,6 +3,10 @@ import envariant from '@knpwrs/envariant';
 import * as activities from '../activities/transcode';
 import { TRANSCODE_QUEUE } from '../queues';
 import { waitOnTemporal } from '..';
+import { checkAudiowaveform, checkFfmpeg } from '../../util/env-check';
+
+await checkFfmpeg();
+await checkAudiowaveform();
 
 const TEMPORAL_ADDRESS = envariant('TEMPORAL_ADDRESS');
 const MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS = envariant(

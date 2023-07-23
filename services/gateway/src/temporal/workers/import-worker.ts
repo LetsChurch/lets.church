@@ -3,6 +3,9 @@ import envariant from '@knpwrs/envariant';
 import { NativeConnection, Worker } from '@temporalio/worker';
 import * as importActivities from '../activities/import';
 import { IMPORT_QUEUE } from '../queues';
+import { checkYtDlp } from '../../util/env-check';
+
+await checkYtDlp();
 
 const TEMPORAL_ADDRESS = envariant('TEMPORAL_ADDRESS');
 
