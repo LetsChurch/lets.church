@@ -4,7 +4,7 @@ import {
   select,
   confirm,
 } from '@inquirer/prompts';
-import * as Z from 'zod';
+import { z } from 'zod';
 import argon2 from 'argon2';
 import short from 'short-uuid';
 import prisma from '../src/util/prisma';
@@ -12,7 +12,7 @@ import prisma from '../src/util/prisma';
 const username = await input({ message: 'Username:' });
 const email = await input({
   message: 'Email:',
-  validate: (val) => Z.string().email().safeParse(val).success,
+  validate: (val) => z.string().email().safeParse(val).success,
 });
 const password = await argon2.hash(
   await passwordInput({ message: 'Password:' }),
@@ -39,7 +39,7 @@ const user = await prisma.appUser.create({
   data: {
     username,
     password,
-    role: Z.enum(['USER', 'ADMIN'] as const).parse(role),
+    role: z.enum(['USER', 'ADMIN'] as const).parse(role),
     emails: {
       create: { email, verifiedAt: new Date() },
     },

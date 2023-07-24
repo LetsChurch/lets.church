@@ -1,15 +1,15 @@
 import { APIEvent, redirect } from 'solid-start/api';
-import * as Z from 'zod';
+import { z } from 'zod';
 import type {
   VerifyEmailMutation,
   VerifyEmailMutationVariables,
 } from './__generated__/verify';
 import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
 
-const QuerySchema = Z.object({
-  userId: Z.string(),
-  emailId: Z.string(),
-  emailKey: Z.string(),
+const QuerySchema = z.object({
+  userId: z.string(),
+  emailId: z.string(),
+  emailKey: z.string(),
 });
 
 export async function GET({ request }: APIEvent) {

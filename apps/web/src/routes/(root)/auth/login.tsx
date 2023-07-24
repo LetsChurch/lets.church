@@ -1,6 +1,6 @@
 import { A, useLocation } from 'solid-start';
 import { createServerAction$, redirect } from 'solid-start/server';
-import * as Z from 'zod';
+import { z } from 'zod';
 import type {
   LoginMutation,
   LoginMutationVariables,
@@ -11,10 +11,10 @@ import { Button, LabeledInput } from '~/components/form';
 import { Turnstile } from '~/components/turnstile';
 import validateTurnstile from '~/util/server/validate-turnstile';
 
-const LoginSchema = Z.object({
-  id: Z.string(),
-  password: Z.string(),
-  redirect: Z.string(),
+const LoginSchema = z.object({
+  id: z.string(),
+  password: z.string(),
+  redirect: z.string(),
 });
 
 export default function LoginRoute() {

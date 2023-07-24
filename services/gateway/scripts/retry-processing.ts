@@ -1,5 +1,5 @@
 import { input, confirm, select } from '@inquirer/prompts';
-import * as Z from 'zod';
+import { z } from 'zod';
 import prisma from '../src/util/prisma';
 import { client } from '../src/temporal';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
@@ -13,7 +13,7 @@ const scope = await select({
   ],
 });
 
-const subScope = Z.enum(['transcode', 'transcribe', 'everything']).parse(
+const subScope = z.enum(['transcode', 'transcribe', 'everything']).parse(
   await select({
     message: `What would you like to retry for?`,
     choices: [

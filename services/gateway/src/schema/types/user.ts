@@ -5,8 +5,7 @@ import {
 } from '@prisma/client';
 import argon2 from 'argon2';
 import invariant from 'tiny-invariant';
-import * as z from 'zod';
-import { ZodError, ZodIssueCode } from 'zod';
+import { z, ZodError, ZodIssueCode } from 'zod';
 import envariant from '@knpwrs/envariant';
 import { stripIndent } from 'proper-tags';
 import builder from '../builder';

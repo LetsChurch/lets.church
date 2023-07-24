@@ -1,18 +1,18 @@
 import { readFile } from 'fs/promises';
 import { input, confirm, editor } from '@inquirer/prompts';
-import * as Z from 'zod';
+import { z } from 'zod';
 import PQueue from 'p-queue';
 import { client } from '../src/temporal';
 import { importMediaWorkflow } from '../src/temporal/workflows/import-media';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
 
-const schema = Z.array(
-  Z.object({
-    url: Z.string().url(),
-    title: Z.string(),
-    publishedAt: Z.string(),
-    description: Z.string(),
-    commentsEnabled: Z.boolean().default(true),
+const schema = z.array(
+  z.object({
+    url: z.string().url(),
+    title: z.string(),
+    publishedAt: z.string(),
+    description: z.string(),
+    commentsEnabled: z.boolean().default(true),
   }),
 );
 

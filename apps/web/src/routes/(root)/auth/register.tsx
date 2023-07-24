@@ -1,5 +1,5 @@
 import { createServerAction$, redirect } from 'solid-start/server';
-import * as Z from 'zod';
+import { z } from 'zod';
 import { FormError } from 'solid-start';
 import { createEffect, Show } from 'solid-js';
 import type {
@@ -15,14 +15,14 @@ import { Turnstile } from '~/components/turnstile';
 import validateTurnstile from '~/util/server/validate-turnstile';
 import A from '~/components/content/a';
 
-const RegisterSchema = Z.object({
-  email: Z.string().email(),
-  username: Z.string().min(3).max(20),
-  password: Z.string(),
-  fullName: Z.string().max(100).optional(),
-  agreeToTerms: Z.preprocess((input) => input === 'on', Z.literal(true)),
-  agreeToTheology: Z.preprocess((input) => input === 'on', Z.literal(true)),
-  subscribeToNewsletter: Z.preprocess((input) => input === 'on', Z.boolean()),
+const RegisterSchema = z.object({
+  email: z.string().email(),
+  username: z.string().min(3).max(20),
+  password: z.string(),
+  fullName: z.string().max(100).optional(),
+  agreeToTerms: z.preprocess((input) => input === 'on', z.literal(true)),
+  agreeToTheology: z.preprocess((input) => input === 'on', z.literal(true)),
+  subscribeToNewsletter: z.preprocess((input) => input === 'on', z.boolean()),
 });
 
 export default function RegisterRoute() {

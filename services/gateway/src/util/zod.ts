@@ -1,66 +1,80 @@
-import * as Z from 'zod';
+import { z } from 'zod';
 import { getBibleReferences } from './bible';
 
-export const identifiableSchema = Z.object({
-  id: Z.string().uuid(),
+export const identifiableSchema = z.object({
+  id: z.string().uuid(),
 });
 
-const streamUnionSchema = Z.discriminatedUnion('codec_type', [
-  Z.object({
-    codec_type: Z.literal('video'),
-    width: Z.number(),
-    height: Z.number(),
-    nb_frames: Z.string().optional(),
-  }).passthrough(),
-  Z.object({
-    codec_type: Z.literal('audio'),
-  }).passthrough(),
-  Z.object({
-    codec_type: Z.literal('data'),
-  }).passthrough(),
-]).and(
-  Z.object({
-    index: Z.number(),
-  }).passthrough(),
-);
+const streamUnionSchema = z
+  .discriminatedUnion('codec_type', [
+    z
+      .object({
+        codec_type: z.literal('video'),
+        width: z.number(),
+        height: z.number(),
+        nb_frames: z.string().optional(),
+      })
+      .passthrough(),
+    z
+      .object({
+        codec_type: z.literal('audio'),
+      })
+      .passthrough(),
+    z
+      .object({
+        codec_type: z.literal('data'),
+      })
+      .passthrough(),
+  ])
+  .and(
+    z
+      .object({
+        index: z.number(),
+      })
+      .passthrough(),
+  );
 
-export const ffprobeSchema = Z.object({
-  streams: Z.array(streamUnionSchema),
-  format: Z.object({
-    filename: Z.string(),
-    format_name: Z.string(),
-    duration: Z.string(),
-    nb_streams: Z.number(),
+export const ffprobeSchema = z.object({
+  streams: z.array(streamUnionSchema),
+  format: z.object({
+    filename: z.string(),
+    format_name: z.string(),
+    duration: z.string(),
+    nb_streams: z.number(),
   }),
 });
 
-export type Probe = Z.infer<typeof ffprobeSchema>;
+export type Probe = z.infer<typeof ffprobeSchema>;
 
-export const transcriptSegmentSchema = Z.array(
-  Z.object({
-    text: Z.string(),
-    start: Z.number(),
-    end: Z.number(),
-  }).transform((segment) => ({
-    ...segment,
-    bibleReferences: Array.from(getBibleReferences(segment.text)).map(
-      ({ book, chapter, verse }) => ({
-        book: book as string,
-        chapter: chapter ?? null,
-        verse: verse ?? null,
-      }),
-    ),
-  })),
+export const transcriptSegmentSchema = z.array(
+  z
+    .object({
+      text: z.string(),
+      start: z.number(),
+      end: z.number(),
+    })
+    .transform((segment) => ({
+      ...segment,
+      bibleReferences: Array.from(getBibleReferences(segment.text)).map(
+        ({ book, chapter, verse }) => ({
+          book: book as string,
+          chapter: chapter ?? null,
+          verse: verse ?? null,
+        }),
+      ),
+    })),
 );
 
-export const imageMagickJsonSchema = Z.array(
-  Z.object({
-    version: Z.string(),
-    image: Z.object({
-      format: Z.string(),
-      mimeType: Z.string(),
-    }),
-  }).passthrough(),
+export const imageMagickJsonSchema = z.array(
+  z
+    .object({
+      version: z.string(),
+      image: z.object({
+        format: z.string(),
+        mimeType: z.string(),
+      }),
+    })
+    .passthrough(),
 );
 
 export function probeIsAudioFile(probe: Probe) {

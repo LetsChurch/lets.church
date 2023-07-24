@@ -1,7 +1,7 @@
 import { resolveOffsetConnection } from '@pothos/plugin-relay';
 import { getProperty as get } from 'dot-prop';
 import invariant from 'tiny-invariant';
-import * as Z from 'zod';
+import { z } from 'zod';
 import {
   msearchChannels,
   msearchOrganizations,
@@ -184,7 +184,7 @@ const focuses = [
   'ORGANIZATIONS',
 ] as const;
 
-const OrderByEnum = Z.enum(['avg', 'sum', 'date']);
+const OrderByEnum = z.enum(['avg', 'sum', 'date']);
 
 builder.queryFields((t) => ({
   search: t.connection(
@@ -223,23 +223,25 @@ builder.queryFields((t) => ({
         }),
       },
       validate: {
-        schema: Z.object({
-          query: Z.string(),
-          focus: Z.enum(focuses),
-          channels: Z.array(Z.string()).max(10).nullable().optional(),
-          minPublishedAt: Z.string().or(Z.date()).nullable().optional(),
-          maxPublishedAt: Z.string().or(Z.date()).nullable().optional(),
-          transcriptPhraseSearch: Z.boolean().nullable().optional(),
-        }).refine(
-          (val) =>
-            val.channels?.length ?? 0 > 0
-              ? val.focus === 'UPLOADS' || val.focus === 'TRANSCRIPTS'
-              : true,
-          {
-            message:
-              '`channels` can only be included if focus is `UPLOADS` or `TRANSCRIPTS`',
-          },
-        ),
+        schema: z
+          .object({
+            query: z.string(),
+            focus: z.enum(focuses),
+            channels: z.array(z.string()).max(10).nullable().optional(),
+            minPublishedAt: z.string().or(z.date()).nullable().optional(),
+            maxPublishedAt: z.string().or(z.date()).nullable().optional(),
+            transcriptPhraseSearch: z.boolean().nullable().optional(),
+          })
+          .refine(
+            (val) =>
+              val.channels?.length ?? 0 > 0
+                ? val.focus === 'UPLOADS' || val.focus === 'TRANSCRIPTS'
+                : true,
+            {
+              message:
+                '`channels` can only be included if focus is `UPLOADS` or `TRANSCRIPTS`',
+            },
+          ),
       },
       resolve: async (
         _root,

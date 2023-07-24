@@ -3,7 +3,7 @@ import { basename, extname, join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { execa } from 'execa';
 import rimraf from 'rimraf';
-import * as Z from 'zod';
+import { z } from 'zod';
 import { v4 as uuid } from 'uuid';
 import mime from 'mime';
 import fastGlob from 'fast-glob';
@@ -17,9 +17,11 @@ import { createUploadRecord, updateUploadRecord } from '../..';
 
 const WORK_DIR = process.env['IMPORT_WORKING_DIRECTORY'] ?? '/data/import';
 
-const stdoutThumbnailSchema = Z.object({
-  thumbnail: Z.string().url(),
-}).passthrough();
+const stdoutThumbnailSchema = z
+  .object({
+    thumbnail: z.string().url(),
+  })
+  .passthrough();
 
 async function downloadUrl(url: string, dir: string, heartbeat = noop) {
   console.log(`Downloading URL ${url}`);

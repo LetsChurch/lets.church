@@ -1,12 +1,12 @@
 import envariant from '@knpwrs/envariant';
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
-import * as Z from 'zod';
+import { z } from 'zod';
 
 const JWT_SECRET = envariant('JWT_SECRET');
 const jwtSecret = Buffer.from(JWT_SECRET, 'hex');
 
 function jwtFactory<S extends JWTPayload>(
-  Schema: Z.Schema<S>,
+  Schema: z.Schema<S>,
   expires?: string,
 ) {
   return {
@@ -35,8 +35,8 @@ function jwtFactory<S extends JWTPayload>(
   };
 }
 
-const SessionJwtSchema = Z.object({
-  sub: Z.string().uuid(),
+const SessionJwtSchema = z.object({
+  sub: z.string().uuid(),
 });
 
 export const { create: createSessionJwt, parse: parseSessionJwt } = jwtFactory(

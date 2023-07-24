@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { execa } from 'execa';
 import { noop } from 'lodash-es';
 import fastGlob from 'fast-glob';
-import * as Z from 'zod';
+import { z } from 'zod';
 import { stringifySync } from 'subtitle';
 
 const whisperModel = process.env['WHISPER_MODEL'] ?? 'large-v2';
@@ -71,21 +71,21 @@ export async function runWhisper(
   return files;
 }
 
-const whisperJsonSchema = Z.object({
-  text: Z.string(),
-  segments: Z.array(
-    Z.object({
-      start: Z.number(),
-      end: Z.number(),
-      text: Z.string(),
+const whisperJsonSchema = z.object({
+  text: z.string(),
+  segments: z.array(
+    z.object({
+      start: z.number(),
+      end: z.number(),
+      text: z.string(),
     }),
   ),
 });
 
 export function joinerizeTranscript(
-  transcript: Z.infer<typeof whisperJsonSchema>,
+  transcript: z.infer<typeof whisperJsonSchema>,
 ) {
-  type Segment = Z.infer<typeof whisperJsonSchema>['segments'][number];
+  type Segment = z.infer<typeof whisperJsonSchema>['segments'][number];
   const newSegments: Array<Segment> = [];
   let workingSegment: Segment | null = null;
 
@@ -119,7 +119,7 @@ export async function readWhisperJsonFile(path: string) {
 }
 
 export function whisperJsonToVtt(
-  transcript: Z.infer<typeof whisperJsonSchema>,
+  transcript: z.infer<typeof whisperJsonSchema>,
 ) {
   return stringifySync(
     transcript.segments.map((data) => ({

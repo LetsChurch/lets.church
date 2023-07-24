@@ -8,7 +8,7 @@ import {
   Switch,
 } from 'solid-js';
 import { json, RouteDataArgs, useRouteData } from 'solid-start';
-import * as Z from 'zod';
+import { z } from 'zod';
 import server$, {
   createServerAction$,
   createServerData$,
@@ -303,19 +303,19 @@ export function routeData({ location }: RouteDataArgs) {
   );
 }
 
-const UpsertUploadRecordSchema = Z.object({
-  uploadRecordId: Z.string().optional().nullable().default(null),
-  title: Z.string().optional().nullable().default(null),
-  description: Z.string().optional().nullable().default(null),
-  publishedAt: Z.preprocess(
+const UpsertUploadRecordSchema = z.object({
+  uploadRecordId: z.string().optional().nullable().default(null),
+  title: z.string().optional().nullable().default(null),
+  description: z.string().optional().nullable().default(null),
+  publishedAt: z.preprocess(
     (arg) => (typeof arg === 'string' ? new Date(arg).toISOString() : arg),
-    Z.string(),
+    z.string(),
   ),
-  license: Z.nativeEnum(UploadLicense),
-  visibility: Z.nativeEnum(UploadVisibility),
-  userCommentsEnabled: Z.preprocess((s) => s === 'ENABLED', Z.boolean()),
-  downloadsEnabled: Z.preprocess((s) => s === 'ENABLED', Z.boolean()),
-  channelId: Z.string(),
+  license: z.nativeEnum(UploadLicense),
+  visibility: z.nativeEnum(UploadVisibility),
+  userCommentsEnabled: z.preprocess((s) => s === 'ENABLED', z.boolean()),
+  downloadsEnabled: z.preprocess((s) => s === 'ENABLED', z.boolean()),
+  channelId: z.string(),
 });
 
 export default function UploadRoute() {

@@ -6,7 +6,7 @@ import type {
 } from '@elastic/elasticsearch/lib/api/types';
 import envariant from '@knpwrs/envariant';
 import waitOn from 'wait-on';
-import * as Z from 'zod';
+import { z } from 'zod';
 import { adjacentPairs } from './misc';
 export { escapeDocument } from './xss';
 
@@ -290,44 +290,44 @@ export function msearchOrganizations(
 }
 
 export const BaseHitSchema = {
-  _id: Z.string(),
-  _score: Z.number().nullable(),
+  _id: z.string(),
+  _score: z.number().nullable(),
 };
 
-export const UploadHitSourceSchema = Z.object({
-  title: Z.string(),
+export const UploadHitSourceSchema = z.object({
+  title: z.string(),
 });
 
-export const UploadHitHighlightSchema = Z.object({
-  title: Z.array(Z.string()),
+export const UploadHitHighlightSchema = z.object({
+  title: z.array(z.string()),
 });
 
-export const TranscriptHitSchema = Z.object({
+export const TranscriptHitSchema = z.object({
   ...BaseHitSchema,
-  _index: Z.literal('lc_transcripts'),
-  inner_hits: Z.object({
-    segments: Z.object({
-      hits: Z.object({
-        total: Z.object({
-          value: Z.number(),
-          relation: Z.string(),
+  _index: z.literal('lc_transcripts'),
+  inner_hits: z.object({
+    segments: z.object({
+      hits: z.object({
+        total: z.object({
+          value: z.number(),
+          relation: z.string(),
         }),
-        max_score: Z.number(),
-        hits: Z.array(
-          Z.object({
+        max_score: z.number(),
+        hits: z.array(
+          z.object({
             ...BaseHitSchema,
-            _index: Z.literal('lc_transcripts'),
-            _nested: Z.object({
-              field: Z.literal('segments'),
-              offset: Z.number(),
+            _index: z.literal('lc_transcripts'),
+            _nested: z.object({
+              field: z.literal('segments'),
+              offset: z.number(),
             }),
-            _source: Z.object({
-              start: Z.number(),
-              end: Z.number(),
-              text: Z.string(),
+            _source: z.object({
+              start: z.number(),
+              end: z.number(),
+              text: z.string(),
             }),
-            highlight: Z.object({
-              'segments.text': Z.array(Z.string()),
+            highlight: z.object({
+              'segments.text': z.array(z.string()),
             }),
           }),
         ),
@@ -336,56 +336,56 @@ export const TranscriptHitSchema = Z.object({
   }),
 });
 
-export const ChannelHitSourceSchema = Z.object({
-  name: Z.string(),
+export const ChannelHitSourceSchema = z.object({
+  name: z.string(),
 });
 
-export const ChannelHitHighlightSchema = Z.object({
-  name: Z.array(Z.string()),
+export const ChannelHitHighlightSchema = z.object({
+  name: z.array(z.string()),
 });
 
-export const OrganizationHitSourceSchema = Z.object({
-  name: Z.string(),
+export const OrganizationHitSourceSchema = z.object({
+  name: z.string(),
 });
 
-export const OrganizationHitHighlightSchema = Z.object({
-  name: Z.array(Z.string()),
+export const OrganizationHitHighlightSchema = z.object({
+  name: z.array(z.string()),
 });
 
-export const UploadHitSchema = Z.object({
+export const UploadHitSchema = z.object({
   ...BaseHitSchema,
-  _index: Z.literal('lc_uploads'),
+  _index: z.literal('lc_uploads'),
   _source: UploadHitSourceSchema,
 });
 
-export const ChannelHitSchema = Z.object({
+export const ChannelHitSchema = z.object({
   ...BaseHitSchema,
-  _index: Z.literal('lc_channels'),
+  _index: z.literal('lc_channels'),
   _source: ChannelHitSourceSchema,
 });
 
-export const OrganizationHitSchema = Z.object({
+export const OrganizationHitSchema = z.object({
   ...BaseHitSchema,
-  _index: Z.literal('lc_organizations'),
+  _index: z.literal('lc_organizations'),
   _source: OrganizationHitSourceSchema,
 });
 
-export const MSearchResponseSchema = Z.object({
-  took: Z.number(),
-  responses: Z.array(
-    Z.object({
-      took: Z.number(),
-      timed_out: Z.boolean(),
-      _shards: Z.object({
-        total: Z.number(),
-        successful: Z.number(),
-        skipped: Z.number(),
-        failed: Z.number(),
+export const MSearchResponseSchema = z.object({
+  took: z.number(),
+  responses: z.array(
+    z.object({
+      took: z.number(),
+      timed_out: z.boolean(),
+      _shards: z.object({
+        total: z.number(),
+        successful: z.number(),
+        skipped: z.number(),
+        failed: z.number(),
       }),
-      hits: Z.object({
-        total: Z.object({ value: Z.number(), relation: Z.string() }),
-        hits: Z.array(
-          Z.discriminatedUnion('_index', [
+      hits: z.object({
+        total: z.object({ value: z.number(), relation: z.string() }),
+        hits: z.array(
+          z.discriminatedUnion('_index', [
             TranscriptHitSchema,
             UploadHitSchema,
             ChannelHitSchema,
@@ -393,24 +393,32 @@ export const MSearchResponseSchema = Z.object({
           ]),
         ),
       }),
-      aggregations: Z.object({
-        channelIds: Z.object({
-          doc_count_error_upper_bound: Z.number(),
-          sum_other_doc_count: Z.number(),
-          buckets: Z.array(
-            Z.object({
-              key: Z.string().uuid(),
-              doc_count: Z.number(),
-            }),
-          ),
-        }).optional(),
-        minPublishedAt: Z.object({
-          value: Z.number().nullable(), // null when there are no matches
-        }).optional(),
-        maxPublishedAt: Z.object({
-          value: Z.number().nullable(), // null when there are no matches
-        }).optional(),
-      }).optional(),
+      aggregations: z
+        .object({
+          channelIds: z
+            .object({
+              doc_count_error_upper_bound: z.number(),
+              sum_other_doc_count: z.number(),
+              buckets: z.array(
+                z.object({
+                  key: z.string().uuid(),
+                  doc_count: z.number(),
+                }),
+              ),
+            })
+            .optional(),
+          minPublishedAt: z
+            .object({
+              value: z.number().nullable(), // null when there are no matches
+            })
+            .optional(),
+          maxPublishedAt: z
+            .object({
+              value: z.number().nullable(), // null when there are no matches
+            })
+            .optional(),
+        })
+        .optional(),
     }),
   ),
 });
