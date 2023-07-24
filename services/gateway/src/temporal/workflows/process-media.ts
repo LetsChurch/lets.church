@@ -32,17 +32,24 @@ const { transcribe } = proxyActivities<typeof transcribeActivities>({
 export async function processMediaWorkflow(
   targetId: string,
   s3UploadKey: string,
+  scope: 'transcode' | 'transcribe' | 'everything' = 'everything',
 ) {
   const probeRes = await probe(targetId, s3UploadKey);
   invariant(probeRes !== null, 'Probe is null!');
 
-  const transcribePromise = transcribe(targetId, s3UploadKey);
+  const transcribePromise =
+    scope === 'everything' || scope === 'transcribe'
+      ? transcribe(targetId, s3UploadKey)
+      : null;
 
   // Work
   await Promise.all([
     transcribePromise,
-    transcode(targetId, s3UploadKey, probeRes),
-    ...(probeIsVideoFile(probeRes)
+    scope === 'everything' || scope === 'transcode'
+      ? transcode(targetId, s3UploadKey, probeRes)
+      : null,
+    ...((scope === 'everything' || scope === 'transcode') &&
+    probeIsVideoFile(probeRes)
       ? [createThumbnails(targetId, s3UploadKey, probeRes)]
       : []),
   ]);
@@ -57,13 +64,19 @@ export async function processMediaWorkflow(
         maximumAttempts: 2,
       },
     }),
-    executeChild(indexDocumentWorkflow, {
-      workflowId: `transcript:${s3UploadKey}`,
-      args: ['transcript', targetId, (await transcribePromise).transcriptKey],
-      taskQueue: BACKGROUND_QUEUE,
-      retry: {
-        maximumAttempts: 2,
-      },
-    }),
+    transcribePromise
+      ? executeChild(indexDocumentWorkflow, {
+          workflowId: `transcript:${s3UploadKey}`,
+          args: [
+            'transcript',
+            targetId,
+            (await transcribePromise).transcriptKey,
+          ],
+          taskQueue: BACKGROUND_QUEUE,
+          retry: {
+            maximumAttempts: 2,
+          },
+        })
+      : null,
   ]);
 }
