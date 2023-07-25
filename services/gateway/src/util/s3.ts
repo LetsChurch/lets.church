@@ -259,10 +259,7 @@ export async function streamObjectToFile(
   return pipeline(res.Body.transformToWebStream(), createWriteStream(path));
 }
 
-export async function* listObjects(
-  source: 'INGEST' | 'PUBLIC',
-  prefix?: string,
-) {
+export async function* listObjects(source: Client, prefix?: string) {
   const { client, bucket } = getClientAndBucket(source);
 
   let continuationToken: string | undefined = undefined;
@@ -286,7 +283,7 @@ export async function* listObjects(
   } while (continuationToken);
 }
 
-export async function* listKeys(source: 'INGEST' | 'PUBLIC', prefix?: string) {
+export async function* listKeys(source: Client, prefix?: string) {
   for await (const { Key } of listObjects(source, prefix)) {
     if (Key) {
       yield Key;
@@ -294,7 +291,7 @@ export async function* listKeys(source: 'INGEST' | 'PUBLIC', prefix?: string) {
   }
 }
 
-export async function* listPrefixes(source: 'INGEST' | 'PUBLIC') {
+export async function* listPrefixes(source: Client) {
   const seen = new Set();
 
   for await (const key of listKeys(source)) {
@@ -309,7 +306,7 @@ export async function* listPrefixes(source: 'INGEST' | 'PUBLIC') {
 }
 
 export async function backupObjects(
-  source: 'INGEST' | 'PUBLIC',
+  source: Client,
   prefix: string,
   heartbeat: () => unknown,
 ) {
@@ -480,12 +477,14 @@ export async function retryablePutFile({
   });
 }
 
-export async function deleteFile(bucket: string, key: string) {
+export async function deleteFile(target: Client, key: string) {
+  const { client, bucket } = getClientAndBucket(target);
+
   const cmd = new DeleteObjectCommand({
     Bucket: bucket,
     Key: key,
   });
-  return s3IngestClient.send(cmd);
+  return client.send(cmd);
 }
 
 export async function deletePrefix(

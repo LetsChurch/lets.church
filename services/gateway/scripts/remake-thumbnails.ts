@@ -1,10 +1,10 @@
 import ora from 'ora';
+import { UploadVariant } from '@prisma/client';
 import { client } from '../src/temporal';
 import prisma from '../src/util/prisma';
 import { remakeThumbnailsWorkflow } from '../src/temporal/workflows';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
 import { emptySignal } from '../src/temporal/signals';
-import { UploadVariant } from '@prisma/client';
 
 const spinner = ora('Queueing videos for remaking thumbnails:').start();
 
@@ -27,7 +27,7 @@ for (const { id } of uploads) {
     await client
   ).workflow.signalWithStart(remakeThumbnailsWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
-    workflowId: `deleteUploadRecord:${id}`,
+    workflowId: `remakeThumbnails:${id}`,
     args: [id],
     signal: emptySignal,
     signalArgs: [],
