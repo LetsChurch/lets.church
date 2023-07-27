@@ -46,7 +46,12 @@ if (scope === 'ids') {
             : {}),
           ...(subScope === 'transcode' ? { transcodingFinishedAt: null } : {}),
           ...(subScope === 'everything'
-            ? { transcribingFinishedAt: null, transcodingFinishedAt: null }
+            ? {
+                OR: [
+                  { transcribingFinishedAt: null },
+                  { transcodingFinishedAt: null },
+                ],
+              }
             : {}),
         },
       })
