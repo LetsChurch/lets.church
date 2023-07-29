@@ -2,7 +2,6 @@ import A from '~/components/content/a';
 import H1 from '~/components/content/h1';
 import H2 from '~/components/content/h2';
 import P from '~/components/content/p';
-import { Button } from '~/components/form';
 
 export default function SupportRoute() {
   return (
@@ -20,14 +19,14 @@ export default function SupportRoute() {
           around the world. All donations are tax-deductible in the United
           States.
         </P>
-        <P>
-          <form
-            action="https://www.zeffy.com/en-US/donation-form/5da9e1c3-a8e2-4bb4-817a-5dbbb968ec6b"
-            class="flex items-center justify-center"
+        <P class="flex justify-center">
+          <a
+            href="https://www.zeffy.com/en-US/donation-form/5da9e1c3-a8e2-4bb4-817a-5dbbb968ec6b"
+            class="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             target="_blank"
           >
-            <Button type="submit">Donate to Let's Church</Button>
-          </form>
+            Donate to Let's Church
+          </a>
         </P>
         <P>
           Please do not let any giving to Let's Church interfere with giving to
