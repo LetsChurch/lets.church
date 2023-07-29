@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "channel" ALTER COLUMN "slug" SET DATA TYPE CITEXT;

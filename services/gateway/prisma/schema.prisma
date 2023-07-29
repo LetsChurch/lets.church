@@ -131,7 +131,7 @@ model Channel {
   name           String
   avatarPath     String?                          @map("avatar_path") @db.VarChar(255)
   avatarBlurhash String?                          @map("avatar_blurhash") @db.VarChar(255)
-  slug           String                           @unique
+  slug           String                           @unique @db.Citext
   description    String?
   memberships    ChannelMembership[]
   associations   OrganizationChannelAssociation[]
