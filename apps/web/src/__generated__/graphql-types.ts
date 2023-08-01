@@ -252,9 +252,11 @@ export type MultipartUploadMeta = {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  addUploadToList: UploadList;
   createChannel: Channel;
   createMultipartUpload: MultipartUploadMeta;
   createOrganization: Organization;
+  createUploadList: UploadList;
   finalizeMultipartUpload: Scalars['Boolean'];
   login?: Maybe<Scalars['Jwt']>;
   logout: Scalars['Boolean'];
@@ -277,6 +279,14 @@ export type Mutation = {
 };
 
 
+export type MutationAddUploadToListArgs = {
+  after?: InputMaybe<Scalars['ShortUuid']>;
+  before?: InputMaybe<Scalars['ShortUuid']>;
+  uploadListId: Scalars['ShortUuid'];
+  uploadRecordId: Scalars['ShortUuid'];
+};
+
+
 export type MutationCreateChannelArgs = {
   name: Scalars['String'];
   slug?: InputMaybe<Scalars['String']>;
@@ -294,6 +304,13 @@ export type MutationCreateMultipartUploadArgs = {
 export type MutationCreateOrganizationArgs = {
   name: Scalars['String'];
   slug?: InputMaybe<Scalars['String']>;
+};
+
+
+export type MutationCreateUploadListArgs = {
+  channelId?: InputMaybe<Scalars['ShortUuid']>;
+  title: Scalars['String'];
+  type: UploadListType;
 };
 
 
@@ -536,6 +553,7 @@ export type Query = {
   organizationById: Organization;
   search: SearchConnection;
   stats: Stats;
+  uploadListById: UploadList;
   uploadRecordById: UploadRecord;
   uploadRecords: QueryUploadRecordsConnection;
   userById: AppUser;
@@ -578,6 +596,11 @@ export type QuerySearchArgs = {
   orderBy?: InputMaybe<SearchOrder>;
   query: Scalars['String'];
   transcriptPhraseSearch?: InputMaybe<Scalars['Boolean']>;
+};
+
+
+export type QueryUploadListByIdArgs = {
+  id: Scalars['ShortUuid'];
 };
 
 
@@ -736,6 +759,47 @@ export enum UploadLicense {
   Standard = 'STANDARD'
 }
 
+export type UploadList = {
+  __typename?: 'UploadList';
+  author: AppUser;
+  id: Scalars['ShortUuid'];
+  title: Scalars['String'];
+  type: UploadListType;
+  uploads: UploadListUploadsConnection;
+};
+
+
+export type UploadListUploadsArgs = {
+  after?: InputMaybe<Scalars['String']>;
+  before?: InputMaybe<Scalars['String']>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+};
+
+export type UploadListEntry = {
+  __typename?: 'UploadListEntry';
+  rank: Scalars['String'];
+  upload: UploadRecord;
+  uploadList: UploadList;
+};
+
+export enum UploadListType {
+  Playlist = 'PLAYLIST',
+  Series = 'SERIES'
+}
+
+export type UploadListUploadsConnection = {
+  __typename?: 'UploadListUploadsConnection';
+  edges: Array<UploadListUploadsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type UploadListUploadsConnectionEdge = {
+  __typename?: 'UploadListUploadsConnectionEdge';
+  cursor: Scalars['String'];
+  node: UploadListEntry;
+};
+
 export enum UploadOrderProperty {
   CreatedAt = 'createdAt',
   PublishedAt = 'publishedAt'
@@ -764,7 +828,9 @@ export type UploadRecord = {
   myRating?: Maybe<Rating>;
   peaksDatUrl?: Maybe<Scalars['String']>;
   peaksJsonUrl?: Maybe<Scalars['String']>;
+  playlists: UploadRecordPlaylistsConnection;
   publishedAt?: Maybe<Scalars['DateTime']>;
+  series: UploadRecordSeriesConnection;
   thumbnailBlurhash?: Maybe<Scalars['String']>;
   thumbnailUrl?: Maybe<Scalars['String']>;
   title?: Maybe<Scalars['String']>;
@@ -775,6 +841,7 @@ export type UploadRecord = {
   updatedAt: Scalars['DateTime'];
   uploadFinalized: Scalars['Boolean'];
   uploadFinalizedBy: AppUser;
+  uploadListById?: Maybe<UploadList>;
   uploadSizeBytes?: Maybe<Scalars['SafeInt']>;
   userComments: UploadRecordUserCommentsConnection;
   userCommentsEnabled: Scalars['Boolean'];
@@ -783,11 +850,56 @@ export type UploadRecord = {
 };
 
 
+export type UploadRecordPlaylistsArgs = {
+  after?: InputMaybe<Scalars['String']>;
+  before?: InputMaybe<Scalars['String']>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+};
+
+
+export type UploadRecordSeriesArgs = {
+  after?: InputMaybe<Scalars['String']>;
+  before?: InputMaybe<Scalars['String']>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+};
+
+
+export type UploadRecordUploadListByIdArgs = {
+  id?: InputMaybe<Scalars['ShortUuid']>;
+};
+
+
 export type UploadRecordUserCommentsArgs = {
   after?: InputMaybe<Scalars['String']>;
   before?: InputMaybe<Scalars['String']>;
   first?: InputMaybe<Scalars['Int']>;
   last?: InputMaybe<Scalars['Int']>;
+};
+
+export type UploadRecordPlaylistsConnection = {
+  __typename?: 'UploadRecordPlaylistsConnection';
+  edges: Array<UploadRecordPlaylistsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type UploadRecordPlaylistsConnectionEdge = {
+  __typename?: 'UploadRecordPlaylistsConnectionEdge';
+  cursor: Scalars['String'];
+  node: UploadList;
+};
+
+export type UploadRecordSeriesConnection = {
+  __typename?: 'UploadRecordSeriesConnection';
+  edges: Array<UploadRecordSeriesConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type UploadRecordSeriesConnectionEdge = {
+  __typename?: 'UploadRecordSeriesConnectionEdge';
+  cursor: Scalars['String'];
+  node: UploadList;
 };
 
 export type UploadRecordUserCommentsConnection = {

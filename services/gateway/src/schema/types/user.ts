@@ -123,6 +123,19 @@ export const AppUser = builder.prismaObject('AppUser', {
         authScopes: privateAuthScopes,
       },
     ),
+    // TODO: https://github.com/hayes/pothos/issues/971
+    /* playlists: t.relatedConnection('uploadLists', { */
+    /*   cursor: 'createdAt_id', */
+    /*   authScopes: privateAuthScopes, */
+    /*   query: async (_args, context) => { */
+    /*     const userId = (await context.session)?.appUserId; */
+    /*     invariant(userId, 'No userId'); */
+    /**/
+    /*     return { */
+    /*       where: { type: UploadListType.PLAYLIST, author: { id: userId } }, */
+    /*     }; */
+    /*   }, */
+    /* }), */
     createdAt: t.field({
       type: 'DateTime',
       select: { createdAt: true },

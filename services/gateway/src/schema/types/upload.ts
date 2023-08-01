@@ -5,11 +5,14 @@ import {
   UploadVariant as PrismaUploadVariant,
   Rating as PrismaRating,
   Prisma,
+  UploadListType,
 } from '@prisma/client';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
 import { resolveOffsetConnection } from '@pothos/plugin-relay';
 import { queryFromInfo } from '@pothos/plugin-prisma';
 import { xxh32 } from '@node-rs/xxhash';
+import { LexoRank } from 'lexorank';
+import { z } from 'zod';
 import { indexDocument } from '../../temporal';
 import builder from '../builder';
 import type { Context } from '../../util/context';
@@ -125,6 +128,26 @@ const UploadUserComment = builder.prismaObject('UploadUserComment', {
 
         return record.rating;
       },
+    }),
+  }),
+});
+
+const UploadList = builder.prismaObject('UploadList', {
+  fields: (t) => ({
+    id: t.expose('id', { type: 'ShortUuid' }),
+    type: t.expose('type', { type: UploadListTypeEnum }),
+    title: t.exposeString('title'),
+    author: t.relation('author'),
+    uploads: t.prismaConnection({
+      type: UploadListEntry,
+      cursor: 'uploadListId_rank',
+      maxSize: 50,
+      defaultSize: 50,
+      resolve: (query) =>
+        prisma.uploadListEntry.findMany({
+          ...query,
+          orderBy: { rank: 'asc' },
+        }),
     }),
   }),
 });
@@ -445,7 +468,70 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
         ]);
       },
     }),
+    series: t.connection({
+      type: UploadList,
+      select: { id: true },
+      resolve: (root, args, context, info) =>
+        resolveOffsetConnection({ args }, async ({ offset, limit }) =>
+          prisma.uploadList.findMany({
+            ...queryFromInfo({ context, info, path: ['edges', 'node'] }),
+            skip: offset,
+            take: limit,
+            where: {
+              type: UploadListType.SERIES,
+              uploads: { some: { uploadRecordId: root.id } },
+            },
+          }),
+        ),
+    }),
+    playlists: t.connection({
+      type: UploadList,
+      select: { id: true },
+      resolve: (root, args, context, info) =>
+        resolveOffsetConnection({ args }, async ({ offset, limit }) => {
+          const userId = (await context.session)?.appUserId;
+
+          if (!userId) {
+            return [];
+          }
+
+          return prisma.uploadList.findMany({
+            ...queryFromInfo({ context, info, path: ['edges', 'node'] }),
+            skip: offset,
+            take: limit,
+            where: {
+              type: UploadListType.PLAYLIST,
+              authorId: userId,
+              uploads: { some: { uploadRecordId: root.id } },
+            },
+          });
+        }),
+    }),
     totalViews: t.relationCount('uploadViews'),
+    uploadListById: t.prismaField({
+      type: UploadList,
+      nullable: true,
+      args: { id: t.arg({ type: 'ShortUuid', required: false }) },
+      resolve: (query, root, { id }) =>
+        id
+          ? prisma.uploadList.findUnique({
+              ...query,
+              where: { id, uploads: { some: { uploadRecordId: root.id } } },
+            })
+          : null,
+    }),
+  }),
+});
+
+const UploadListTypeEnum = builder.enumType('UploadListType', {
+  values: Object.keys(UploadListType),
+});
+
+const UploadListEntry = builder.prismaObject('UploadListEntry', {
+  fields: (t) => ({
+    uploadList: t.relation('uploadList'),
+    upload: t.relation('upload'),
+    rank: t.exposeString('rank'),
   }),
 });
 
@@ -536,6 +622,12 @@ builder.queryFields((t) => ({
       });
     },
   }),
+  uploadListById: t.prismaField({
+    type: UploadList,
+    args: { id: t.arg({ type: 'ShortUuid', required: true }) },
+    resolve: (query, _root, { id }) =>
+      prisma.uploadList.findUniqueOrThrow({ ...query, where: { id } }),
+  }),
 }));
 
 builder.mutationFields((t) => ({
@@ -559,7 +651,6 @@ builder.mutationFields((t) => ({
         return false;
       }
 
-      // TODO: can this be done more efficiently at scale?
       const membership = await prisma.channelMembership.findUnique({
         select: {
           isAdmin: true,
@@ -873,6 +964,167 @@ builder.mutationFields((t) => ({
       });
 
       return true;
+    },
+  }),
+  createUploadList: t.prismaField({
+    type: UploadList,
+    args: {
+      type: t.arg({ type: UploadListTypeEnum, required: true }),
+      title: t.arg({ type: 'String', required: true }),
+      channelId: t.arg({ type: 'ShortUuid' }),
+    },
+    validate: {
+      schema: z.object({ title: z.string() }).and(
+        z.discriminatedUnion('type', [
+          z.object({ type: z.literal(UploadListType.PLAYLIST) }),
+          z.object({
+            type: z.literal(UploadListType.SERIES),
+            channelId: z.string().uuid(),
+          }),
+        ]),
+      ),
+    },
+    authScopes: async (_root, { type, channelId }, context) => {
+      if (type === UploadListType.PLAYLIST) {
+        return { authenticated: true };
+      }
+
+      invariant(channelId, 'No channel id');
+      const userId = (await context.session)?.appUserId;
+      invariant(userId, 'No user id');
+
+      const membership = await prisma.channelMembership.findFirst({
+        select: { isAdmin: true, canEdit: true },
+        where: { channelId, appUserId: userId },
+      });
+
+      return Boolean(membership?.isAdmin || membership?.canEdit);
+    },
+    resolve: async (query, _root, { type, title }, context) => {
+      const userId = (await context.session)?.appUserId;
+      invariant(userId, 'No user id!');
+
+      return prisma.uploadList.create({
+        ...query,
+        data: {
+          type:
+            type === 'PLAYLIST'
+              ? UploadListType.PLAYLIST
+              : UploadListType.SERIES,
+          title,
+          author: {
+            connect: { id: userId },
+          },
+        },
+      });
+    },
+  }),
+  addUploadToList: t.prismaField({
+    type: UploadList,
+    args: {
+      uploadListId: t.arg({ type: 'ShortUuid', required: true }),
+      uploadRecordId: t.arg({ type: 'ShortUuid', required: true }),
+      before: t.arg({ type: 'ShortUuid' }),
+      after: t.arg({ type: 'ShortUuid' }),
+    },
+    authScopes: async (_root, { uploadListId }, context) => {
+      const userId = (await context.session)?.appUserId;
+
+      if (!userId) {
+        return false;
+      }
+
+      const res = await prisma.uploadList.findFirst({
+        select: { type: true, authorId: true, channelId: true },
+        where: { id: uploadListId },
+      });
+
+      if (res?.type === UploadListType.PLAYLIST) {
+        return res.authorId === userId;
+      }
+
+      if (res?.type === UploadListType.SERIES && res?.channelId) {
+        const membership = await prisma.channelMembership.findFirst({
+          select: { isAdmin: true, canEdit: true },
+          where: { channelId: res.channelId, appUserId: userId },
+        });
+
+        return Boolean(membership?.isAdmin || membership?.canEdit);
+      }
+
+      return false;
+    },
+    resolve: async (
+      query,
+      _root,
+      { uploadListId, uploadRecordId, after, before },
+    ) => {
+      let newRank: string | undefined;
+
+      if (before || after) {
+        // Case 1: inserting before or after a given upload
+        const { rank } = await prisma.uploadListEntry.findUniqueOrThrow({
+          where: {
+            uploadListId_uploadRecordId: { uploadListId, uploadRecordId },
+          },
+        });
+
+        const entries = await prisma.uploadListEntry.findMany({
+          skip: 0, // Cursor is not skipped by default, this makes it explicit
+          take: 2,
+          select: { rank: true },
+          cursor: { uploadListId_rank: { uploadListId, rank } },
+          orderBy: {
+            rank: before ? Prisma.SortOrder.desc : Prisma.SortOrder.asc,
+          },
+        });
+
+        const entry = entries.at(-1);
+
+        if (entry && entries.length > 1) {
+          newRank = LexoRank.parse(rank)
+            .between(LexoRank.parse(entry.rank))
+            .toString();
+        }
+
+        if (entries.length === 1) {
+          newRank = LexoRank.parse(rank)
+            .between(before ? LexoRank.min() : LexoRank.max())
+            .toString();
+        }
+      }
+
+      if (!newRank) {
+        // Case 2: inserting at the end of a list
+        const rank = (
+          await prisma.uploadListEntry.findMany({
+            select: { rank: true },
+            where: { uploadListId },
+            orderBy: { rank: Prisma.SortOrder.desc },
+            take: 1,
+          })
+        ).at(0)?.rank;
+
+        if (rank) {
+          newRank = LexoRank.parse(rank).between(LexoRank.max()).toString();
+        } else {
+          // Case 3: no existing list entries
+          newRank = LexoRank.middle().toString();
+        }
+      }
+
+      await prisma.uploadListEntry.create({
+        data: {
+          uploadList: { connect: { id: uploadListId } },
+          upload: { connect: { id: uploadRecordId } },
+          rank: newRank,
+        },
+      });
+
+      return prisma.uploadList.findUniqueOrThrow({
+        ...query,
+        where: { id: uploadListId },
+      });
     },
   }),
 }));

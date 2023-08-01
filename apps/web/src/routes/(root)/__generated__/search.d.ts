@@ -1,7 +1,5 @@
 import * as Types from '../../../__generated__/graphql-types';
 
-export type SearchUploadRecordPropsFragment = { __typename?: 'UploadRecord', title?: string | null, publishedAt?: string | null, totalViews: number, thumbnailBlurhash?: string | null, thumbnailUrl?: string | null, variants: Array<Types.UploadVariant>, channel: { __typename?: 'Channel', id: string, slug: string, name: string, avatarUrl?: string | null } };
-
 export type SearchQueryVariables = Types.Exact<{
   query: Types.Scalars['String'];
   focus: Types.SearchFocus;

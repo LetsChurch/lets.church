@@ -164,16 +164,17 @@ export function routeData({ params, location }: RouteDataArgs) {
     return res;
   });
 
-  const id = params['id'];
-  invariant(id, 'No id provided to media route');
+  const idParam = params['id'];
+  invariant(idParam, 'No id provided to media route');
 
-  const ratingState = createResource(() => fetchRatingState(id));
+  const ratingState = createResource(() => fetchRatingState(idParam));
 
   const metaData = createServerData$(
     async (
-      [, id, , commentsAfter = null, commentsBefore = null],
+      [, id, , seriesId = null, commentsAfter = null, commentsBefore = null],
       { request },
     ) => {
+      invariant(id, 'No id provided to media route (metaData)');
       const client = await createAuthenticatedClient(request);
 
       return client.request<
@@ -198,6 +199,7 @@ export function routeData({ params, location }: RouteDataArgs) {
 
           query MediaRouteMetaData(
             $id: ShortUuid!
+            $seriesId: ShortUuid
             $commentsFirst: Int
             $commentsAfter: String
             $commentsLast: Int
@@ -225,6 +227,20 @@ export function routeData({ params, location }: RouteDataArgs) {
                 kind
                 label
                 url
+              }
+              series: uploadListById(id: $seriesId) {
+                id
+                title
+                uploads {
+                  edges {
+                    node {
+                      upload {
+                        id
+                        title
+                      }
+                    }
+                  }
+                }
               }
               transcript {
                 start
@@ -263,6 +279,7 @@ export function routeData({ params, location }: RouteDataArgs) {
         `,
         {
           id,
+          seriesId,
           commentsAfter,
           commentsBefore,
           commentsFirst:
@@ -275,8 +292,9 @@ export function routeData({ params, location }: RouteDataArgs) {
       key: () =>
         [
           'media',
-          id,
+          params['id'],
           'meta',
+          location.query['series'],
           location.query['commentsAfter'],
           location.query['commentsBefore'],
         ] as const,
@@ -284,7 +302,7 @@ export function routeData({ params, location }: RouteDataArgs) {
   );
 
   return {
-    recordView: () => recordView(id),
+    recordView: () => recordView(idParam),
     ratingState,
     metaData,
   };
@@ -310,6 +328,7 @@ function getStartAt() {
 export default function MediaRoute() {
   const user = useUser();
   const params = useParams<{ id: string }>();
+  const loc = useLocation();
   const {
     ratingState: [
       ratingStateData,
@@ -849,7 +868,43 @@ export default function MediaRoute() {
             </submitComment.Form>
           </Show>
         </div>
-        <div class="md:col-span-1">
+        <div class="space-y-4 md:col-span-1">
+          <Show when={metaData()?.data.series} keyed>
+            {(series) => (
+              <div class="relative flex h-[175px] flex-col overflow-hidden rounded-md bg-gray-50">
+                <h3 class="inset-x-0 bg-gray-50 px-4 pb-2 pt-4 text-sm font-semibold text-gray-900">
+                  {series.title}
+                </h3>
+                <div class="h-full space-y-4 overflow-y-auto p-4">
+                  <For each={series.uploads.edges}>
+                    {(edge) => (
+                      <div
+                        class={`relative rounded-md p-4 ${
+                          edge.node.upload.id === params.id
+                            ? 'bg-indigo-50'
+                            : 'bg-white'
+                        }`}
+                      >
+                        <h4 class="text-sm font-semibold text-gray-900">
+                          <A
+                            href={`/media/${edge.node.upload.id}${loc.search}`}
+                            class="before:absolute before:inset-0"
+                          >
+                            {edge.node.upload.title}
+                          </A>
+                        </h4>
+                        {/*
+                        <time class="text-xs text-gray-600" datetime="PTTODO">
+                          TODO
+                        </time>
+                        */}
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </div>
+            )}
+          </Show>
           <Transcript
             transcript={metaData()?.data.transcript ?? []}
             currentTime={currentTime() * 1000}

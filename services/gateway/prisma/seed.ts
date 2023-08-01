@@ -1,10 +1,11 @@
 import { faker } from '@faker-js/faker';
 import slugify from '@sindresorhus/slugify';
 import argon2 from 'argon2';
-import type { Prisma } from '@prisma/client';
+import { Prisma, UploadListType } from '@prisma/client';
 import invariant from 'tiny-invariant';
 import { indexDocument, waitOnTemporal } from '../src/temporal';
 import prisma from '../src/util/prisma';
+import { LexoRank } from 'lexorank';
 
 faker.seed(1337);
 
@@ -475,7 +476,41 @@ await prisma.uploadRecord.createMany({
   data: uploadRecordData,
 });
 
+const series = await prisma.uploadList.create({
+  select: {
+    id: true,
+  },
+  data: {
+    id: '00000000-0000-4000-8000-000000000000',
+    title: 'The Dorean Principle',
+    type: UploadListType.SERIES,
+    author: {
+      connect: {
+        id: adminUser.id,
+      },
+    },
+  },
+});
+
+let nextRank: string = LexoRank.middle().toString();
+
 for (const { id } of uploadRecordData) {
+  await prisma.uploadListEntry.create({
+    data: {
+      rank: nextRank,
+      upload: {
+        connect: {
+          id,
+        },
+      },
+      uploadList: {
+        connect: {
+          id: series.id,
+        },
+      },
+    },
+  });
+  nextRank = LexoRank.parse(nextRank).between(LexoRank.max()).toString();
   await indexDocument('transcript', id, `${id}/transcript.vtt`);
   await indexDocument('upload', id);
 }

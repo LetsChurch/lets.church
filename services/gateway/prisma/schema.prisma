@@ -50,6 +50,7 @@ model AppUser {
   uploadUserRatings        UploadUserRating[]
   uploadUserCommentRatings UploadUserCommentRating[]
   uploadViews              UploadView[]
+  uploadLists              UploadList[]
 
   @@map("app_user")
 }
@@ -138,6 +139,7 @@ model Channel {
   createdAt      DateTime                         @default(now()) @map("created_at")
   updatedAt      DateTime                         @updatedAt @map("updated_at")
   uploadRecords  UploadRecord[]
+  uploadLists    UploadList[]
   subscribers    ChannelSubscription[]
 
   @@map("channel")
@@ -237,6 +239,7 @@ model UploadRecord {
   downloadsEnabled          Boolean                    @default(true) @map("downloads_enabled")
   downloadSizes             UploadRecordDownloadSize[]
   uploadViews               UploadView[]
+  uploadListEntries         UploadListEntry[]
 
   @@index([createdAt, id])
   @@index(score)
@@ -324,6 +327,41 @@ model UploadView {
   @@index([appUserId, uploadRecordId])
   @@index([createdAt])
   @@map("upload_view")
+}
+
+enum UploadListType {
+  SERIES
+  PLAYLIST
+
+  @@map("upload_list_type")
+}
+
+model UploadListEntry {
+  uploadList     UploadList   @relation(fields: [uploadListId], references: [id])
+  uploadListId   String       @map("upload_list_id") @db.Uuid
+  upload         UploadRecord @relation(fields: [uploadRecordId], references: [id])
+  uploadRecordId String       @map("upload_record_id") @db.Uuid
+  rank           String       @db.VarChar(12)
+
+  @@id([uploadListId, rank])
+  @@unique([uploadListId, uploadRecordId])
+  @@map("upload_list_entry")
+}
+
+model UploadList {
+  id        String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+  title     String
+  author    AppUser           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  String            @map("author_id") @db.Uuid
+  channel   Channel?          @relation(fields: [channelId], references: [id])
+  channelId String?           @map("channel_id") @db.Uuid
+  type      UploadListType
+  uploads   UploadListEntry[]
+
+  @@map("upload_list")
+  @@unique([createdAt, id])
 }
 
 model NewsletterSubscription {

@@ -15,24 +15,22 @@ import { Dynamic } from 'solid-js/web';
 import ChevronDownIcon from '@tabler/icons/chevron-down.svg?component-solid';
 import FilterIcon from '@tabler/icons/filter.svg?component-solid';
 import { useFloating } from 'solid-floating-ui';
-import humanFormat from 'human-format';
-import pluralize from 'pluralize';
 import type { SearchQuery, SearchQueryVariables } from './__generated__/search';
 import Pagination from '~/components/pagination';
-import Thumbnail, {
-  type Props as ThumbnailProps,
-} from '~/components/thumbnail';
 import { client, gql } from '~/util/gql/server';
 import { SearchFocus, SearchOrder } from '~/__generated__/graphql-types';
-import { formatTime, Optional } from '~/util';
+import { formatTime } from '~/util';
 import FloatingDiv from '~/components/floating-div';
 import NavigatingBooleans from '~/components/navigating-booleans';
 import NavigatingChecklist from '~/components/navigating-checklist';
 import NavigatingDateRange from '~/components/navigating-date-range';
 import OffCanvasDiv from '~/components/off-canvas-div';
-import { Avatar } from '~/components/avatar';
-import { formatDateFull } from '~/util/date';
 import { setQueryParams } from '~/util/url';
+import {
+  MediaRow,
+  MediaRowFragment,
+  type Props as MediaRowProps,
+} from '~/components/media-row';
 
 const PAGE_SIZE = 20;
 
@@ -54,20 +52,7 @@ export function routeData({ location }: RouteDataArgs) {
 
       return client.request<SearchQuery, SearchQueryVariables>(
         gql`
-          fragment SearchUploadRecordProps on UploadRecord {
-            title
-            publishedAt
-            totalViews
-            thumbnailBlurhash
-            thumbnailUrl
-            variants
-            channel {
-              id
-              slug
-              name
-              avatarUrl
-            }
-          }
+          ${MediaRowFragment}
 
           query Search(
             $query: String!
@@ -126,7 +111,7 @@ export function routeData({ location }: RouteDataArgs) {
                   ... on UploadSearchHit {
                     title
                     uploadRecord {
-                      ...SearchUploadRecordProps
+                      ...MediaRowProps
                     }
                   }
                   ... on TranscriptSearchHit {
@@ -139,7 +124,7 @@ export function routeData({ location }: RouteDataArgs) {
                       }
                     }
                     uploadRecord {
-                      ...SearchUploadRecordProps
+                      ...MediaRowProps
                     }
                   }
                 }
@@ -195,67 +180,8 @@ export function routeData({ location }: RouteDataArgs) {
   );
 }
 
-type SearchHitRowProps = Omit<ThumbnailProps, 'width' | 'height' | 'url'> &
-  ParentProps<{
-    href: string;
-    thumbnailUrl?: Optional<string>;
-    title: string;
-    totalViews: number;
-    publishedAt: string;
-    channelName: string;
-    channelSlug: string;
-    channelAvatarUrl?: Optional<string>;
-    marked?: boolean;
-    class?: string | undefined;
-  }>;
-
-function SearchHitRow(props: SearchHitRowProps) {
-  return (
-    <div
-      class={`relative grid grid-cols-1 gap-5 md:grid-cols-[352px_auto] md:grid-rows-1 md:flex-row ${
-        props.class ?? ''
-      }`}
-    >
-      <Thumbnail
-        url={props.thumbnailUrl}
-        blurhash={props.blurhash}
-        width={352}
-        height={198}
-        placeholder={props.placeholder}
-      />
-      <div class="space-y-2">
-        <h3 class="text-2xl font-semibold">
-          <A href={props.href} class="before:absolute before:inset-0">
-            {props.title}
-          </A>
-        </h3>
-        <p class="text-xs text-gray-500">
-          {' '}
-          {humanFormat(props.totalViews ?? 0)}{' '}
-          {pluralize('view', props.totalViews ?? 0)} &middot;{' '}
-          <time datetime={props.publishedAt} class="text-gray-600">
-            {formatDateFull(new Date(props.publishedAt))}
-          </time>
-        </p>
-        <A
-          href={`/channel/${props.channelSlug}`}
-          class="relative z-10 inline-flex items-center space-x-2"
-        >
-          <Avatar
-            size="sm"
-            src={props.channelAvatarUrl}
-            alt={props.channelName}
-          />
-          <span class="text-sm text-gray-500">{props.channelName}</span>
-        </A>
-        {props.children}
-      </div>
-    </div>
-  );
-}
-
 function SearchTranscriptHitRow(
-  props: Omit<SearchHitRowProps, 'children'> & {
+  props: Omit<MediaRowProps, 'children'> & {
     innerHits: Array<{ start: number; end: number; text: { marked: string } }>;
   },
 ) {
@@ -263,7 +189,7 @@ function SearchTranscriptHitRow(
   const [showMore, setShowMore] = createSignal(false);
 
   return (
-    <SearchHitRow {...rest} class={showMore() ? undefined : 'group'}>
+    <MediaRow {...rest} class={showMore() ? undefined : 'group'}>
       <dl class="rounded-md bg-gray-50 p-3">
         <For
           each={local.innerHits
@@ -299,7 +225,7 @@ function SearchTranscriptHitRow(
           Show {local.innerHits.length - 1} {showMore() ? 'Less' : 'More'}
         </button>
       </Show>
-    </SearchHitRow>
+    </MediaRow>
   );
 }
 
@@ -557,16 +483,9 @@ export default function SearchRoute() {
               keyed
             >
               {(node) => (
-                <SearchHitRow
+                <MediaRow
                   href={`/media/${node.id}`}
-                  thumbnailUrl={node.uploadRecord.thumbnailUrl}
-                  blurhash={node.uploadRecord.thumbnailBlurhash}
-                  title={node.title}
-                  totalViews={node.uploadRecord.totalViews}
-                  publishedAt={node.uploadRecord.publishedAt ?? ''}
-                  channelName={node.uploadRecord.channel.name}
-                  channelSlug={node.uploadRecord.channel.slug}
-                  channelAvatarUrl={node.uploadRecord.channel.avatarUrl}
+                  uploadProps={node.uploadRecord}
                   placeholder={
                     node.uploadRecord.variants.some((v) =>
                       v.startsWith('VIDEO'),
@@ -588,14 +507,7 @@ export default function SearchRoute() {
               {(node) => (
                 <SearchTranscriptHitRow
                   href={`/media/${node.id}`}
-                  thumbnailUrl={node.uploadRecord.thumbnailUrl}
-                  blurhash={node.uploadRecord.thumbnailBlurhash}
-                  title={node.uploadRecord.title ?? 'Untitled'}
-                  totalViews={node.uploadRecord.totalViews}
-                  publishedAt={node.uploadRecord.publishedAt ?? ''}
-                  channelName={node.uploadRecord.channel.name}
-                  channelSlug={node.uploadRecord.channel.slug}
-                  channelAvatarUrl={node.uploadRecord.channel.avatarUrl}
+                  uploadProps={node.uploadRecord}
                   placeholder={
                     node.uploadRecord.variants.some((v) =>
                       v.startsWith('VIDEO'),
