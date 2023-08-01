@@ -1,13 +1,14 @@
 import { A, FormError } from 'solid-start';
 import { createServerAction$, redirect } from 'solid-start/server';
 import invariant from 'tiny-invariant';
+import { gql } from 'graphql-request';
 import { Button, Input } from './form';
 import { Turnstile } from './turnstile';
 import type {
   SubscribeToNewsletterMutation,
   SubscribeToNewsletterMutationVariables,
 } from './__generated__/newsletter';
-import { gql, client } from '~/util/gql/server';
+import { client } from '~/util/gql/server';
 import { useUser } from '~/util/user-context';
 import validateTurnstile from '~/util/server/validate-turnstile';
 

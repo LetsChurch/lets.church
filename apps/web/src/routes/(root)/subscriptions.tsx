@@ -1,10 +1,11 @@
 import { RouteDataArgs, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
+import { gql } from 'graphql-request';
 import type {
   SubscriptionsDataQuery,
   SubscriptionsDataQueryVariables,
 } from './__generated__/subscriptions';
-import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
+import { createAuthenticatedClientOrRedirect } from '~/util/gql/server';
 import { UploadCardFields } from '~/util/gql/fragments';
 import { UploadGrid } from '~/components/upload-grid';
 import Pagination from '~/components/pagination';

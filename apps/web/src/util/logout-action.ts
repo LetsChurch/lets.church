@@ -1,6 +1,7 @@
 import { redirect } from 'solid-start/server';
 import invariant from 'tiny-invariant';
-import { createAuthenticatedClientOrRedirect, gql } from './gql/server';
+import { gql } from 'graphql-request';
+import { createAuthenticatedClientOrRedirect } from './gql/server';
 import { storage } from './session';
 
 const action = async (form: FormData, { request }: { request: Request }) => {

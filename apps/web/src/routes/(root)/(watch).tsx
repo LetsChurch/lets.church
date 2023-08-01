@@ -1,12 +1,13 @@
 import { Show } from 'solid-js';
 import { createServerData$ } from 'solid-start/server';
 import { A, useRouteData } from 'solid-start';
+import { gql } from 'graphql-request';
 import SubscribeIcon from '@tabler/icons/rss.svg?component-solid';
 import type {
   HomepageDataQuery,
   HomepageDataQueryVariables,
 } from './__generated__/(watch)';
-import { createAuthenticatedClient, gql } from '~/util/gql/server';
+import { createAuthenticatedClient } from '~/util/gql/server';
 import { getSessionJwt } from '~/util/session';
 import { UploadCardFields } from '~/util/gql/fragments';
 import { UploadGrid } from '~/components/upload-grid';

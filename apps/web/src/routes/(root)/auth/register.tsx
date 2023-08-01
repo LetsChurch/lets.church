@@ -2,13 +2,14 @@ import { createServerAction$, redirect } from 'solid-start/server';
 import { z } from 'zod';
 import { FormError } from 'solid-start';
 import { createEffect, Show } from 'solid-js';
+import { gql } from 'graphql-request';
 import type {
   LoginAfterRegisterMutation,
   LoginAfterRegisterMutationVariables,
   RegisterMutation,
   RegisterMutationVariables,
 } from './__generated__/register';
-import { gql, client } from '~/util/gql/server';
+import { client } from '~/util/gql/server';
 import { storage } from '~/util/session';
 import { Button, LabeledCheckbox, LabeledInput } from '~/components/form';
 import { Turnstile } from '~/components/turnstile';

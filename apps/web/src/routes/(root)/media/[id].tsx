@@ -35,6 +35,7 @@ import ShareIcon from '@tabler/icons/share.svg?component-solid';
 import invariant from 'tiny-invariant';
 import humanFormat from 'human-format';
 import pluralize from 'pluralize';
+import { gql } from 'graphql-request';
 import type {
   MediaRouteMetaDataQuery,
   MediaRouteMetaDataQueryVariables,
@@ -52,7 +53,6 @@ import type {
 import {
   createAuthenticatedClient,
   createAuthenticatedClientOrRedirect,
-  gql,
 } from '~/util/gql/server';
 import { Rating } from '~/__generated__/graphql-types';
 import Video from '~/components/video';

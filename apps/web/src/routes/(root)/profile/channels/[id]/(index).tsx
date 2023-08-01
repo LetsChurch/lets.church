@@ -2,6 +2,7 @@ import { For } from 'solid-js';
 import { RouteDataArgs, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
 import invariant from 'tiny-invariant';
+import { gql } from 'graphql-request';
 import type {
   ProfileChannelsQuery,
   ProfileChannelsQueryVariables,
@@ -9,7 +10,7 @@ import type {
 import { PageHeading } from '~/components/page-heading';
 import Pagination from '~/components/pagination';
 import UploadCard from '~/components/upload-card';
-import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
+import { createAuthenticatedClientOrRedirect } from '~/util/gql/server';
 
 const PAGE_SIZE = 60;
 

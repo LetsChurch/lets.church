@@ -15,6 +15,7 @@ import server$, {
   redirect,
 } from 'solid-start/server';
 import invariant from 'tiny-invariant';
+import { gql } from 'graphql-request';
 import type {
   UploadRouteDataQuery,
   CreateMultipartMediaUploadMutation,
@@ -26,7 +27,7 @@ import type {
   FinalizeMediaUploadMutation,
 } from './__generated__/upload';
 import Dropzone, { DroppedRes } from '~/components/dropzone';
-import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
+import { createAuthenticatedClientOrRedirect } from '~/util/gql/server';
 import {
   UploadLicense,
   UploadPostProcess,

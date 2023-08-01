@@ -2,6 +2,7 @@ import prettyBytes from 'pretty-bytes';
 import humanFormat from 'human-format';
 import { useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
+import { gql } from 'graphql-request';
 import type {
   AboutPageDataQuery,
   AboutPageDataQueryVariables,
@@ -11,7 +12,7 @@ import H1 from '~/components/content/h1';
 import H2 from '~/components/content/h2';
 import P from '~/components/content/p';
 import ExternalLink from '~/components/external-link';
-import { client, gql } from '~/util/gql/server';
+import { client } from '~/util/gql/server';
 
 export function routeData() {
   const data = createServerData$(async () => {

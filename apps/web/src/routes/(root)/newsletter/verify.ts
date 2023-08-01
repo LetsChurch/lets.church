@@ -1,10 +1,11 @@
 import { APIEvent, redirect } from 'solid-start/api';
 import { z } from 'zod';
+import { gql } from 'graphql-request';
 import type {
   VerifyNewsletterSubscriptionMutation,
   VerifyNewsletterSubscriptionMutationVariables,
 } from './__generated__/verify';
-import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
+import { createAuthenticatedClientOrRedirect } from '~/util/gql/server';
 
 const QuerySchema = z.object({
   subscriptionId: z.string(),

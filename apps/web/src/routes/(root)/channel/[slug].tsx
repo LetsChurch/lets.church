@@ -2,11 +2,12 @@ import { RouteDataArgs, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
 import invariant from 'tiny-invariant';
 import { For } from 'solid-js';
+import { gql } from 'graphql-request';
 import type {
   PublicChannelQuery,
   PublicChannelQueryVariables,
 } from './__generated__/[slug]';
-import { createAuthenticatedClient, gql } from '~/util/gql/server';
+import { createAuthenticatedClient } from '~/util/gql/server';
 import { PageHeading } from '~/components/page-heading';
 import UploadCard from '~/components/upload-card';
 import Pagination from '~/components/pagination';

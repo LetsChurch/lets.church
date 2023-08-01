@@ -3,11 +3,11 @@ import pluralize from 'pluralize';
 import { ParentProps, Show } from 'solid-js';
 import { isServer } from 'solid-js/web';
 import { A } from 'solid-start';
+import { gql } from 'graphql-request';
 import { Avatar } from './avatar';
 import Thumbnail, { type Props as ThumbnailProps } from './thumbnail';
 import type { MediaRowPropsFragment } from './__generated__/media-row';
 import { formatDateFull } from '~/util/date';
-import { gql } from '~/util/gql/server';
 
 export const MediaRowFragment = isServer
   ? gql`

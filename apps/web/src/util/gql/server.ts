@@ -5,8 +5,6 @@ import server$ from 'solid-start/server';
 import { getClientIp } from 'request-ip';
 import { getSessionJwt } from '../session';
 
-export { gql } from 'graphql-request';
-
 const GRAPHQL_URL = envariant('GRAPHQL_URL', server$.env);
 
 export const client = new GraphQLClient(GRAPHQL_URL, {

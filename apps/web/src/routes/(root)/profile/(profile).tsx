@@ -6,6 +6,7 @@ import server$, {
 import { refetchRouteData, useRouteData } from 'solid-start';
 import invariant from 'tiny-invariant';
 import delay from 'delay';
+import { gql } from 'graphql-request';
 import type {
   CreateAvatarUploadMutation,
   CreateAvatarUploadMutationVariables,
@@ -16,7 +17,7 @@ import type {
   UpdateUserMutation,
   UpdateUserMutationVariables,
 } from './__generated__/(profile)';
-import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
+import { createAuthenticatedClientOrRedirect } from '~/util/gql/server';
 import { PageHeading } from '~/components/page-heading';
 import { UploadPostProcess } from '~/__generated__/graphql-types';
 import { doMultipartUpload } from '~/util/multipart-upload';

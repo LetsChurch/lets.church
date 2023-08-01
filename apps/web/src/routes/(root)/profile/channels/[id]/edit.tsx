@@ -6,6 +6,7 @@ import server$, {
 import invariant from 'tiny-invariant';
 import { createSignal, Show } from 'solid-js';
 import delay from 'delay';
+import { gql } from 'graphql-request';
 import type {
   CreateAvatarUploadMutation,
   CreateAvatarUploadMutationVariables,
@@ -17,7 +18,7 @@ import type {
   UpdateChannelMutationVariables,
 } from './__generated__/edit';
 import { PageHeading } from '~/components/page-heading';
-import { createAuthenticatedClientOrRedirect, gql } from '~/util/gql/server';
+import { createAuthenticatedClientOrRedirect } from '~/util/gql/server';
 import EditableDatalist, {
   DatalistField,
 } from '~/components/editable-datalist';

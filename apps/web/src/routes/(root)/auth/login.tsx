@@ -1,11 +1,12 @@
 import { A, useLocation } from 'solid-start';
 import { createServerAction$, redirect } from 'solid-start/server';
 import { z } from 'zod';
+import { gql } from 'graphql-request';
 import type {
   LoginMutation,
   LoginMutationVariables,
 } from './__generated__/login';
-import { gql, client } from '~/util/gql/server';
+import { client } from '~/util/gql/server';
 import { storage } from '~/util/session';
 import { Button, LabeledInput } from '~/components/form';
 import { Turnstile } from '~/components/turnstile';

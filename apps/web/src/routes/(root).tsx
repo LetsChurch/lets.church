@@ -1,9 +1,10 @@
 import { Outlet, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
+import { gql } from 'graphql-request';
 import type { MeQuery } from './__generated__/(root)';
 import Footer from '~/components/footer';
 import Header from '~/components/header';
-import { createAuthenticatedClient, gql } from '~/util/gql/server';
+import { createAuthenticatedClient } from '~/util/gql/server';
 import { UserContext } from '~/util/user-context';
 
 export function routeData() {

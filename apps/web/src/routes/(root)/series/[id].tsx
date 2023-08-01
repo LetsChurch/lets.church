@@ -2,12 +2,13 @@ import { For } from 'solid-js';
 import { RouteDataArgs, Title, useParams, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
 import invariant from 'tiny-invariant';
+import { gql } from 'graphql-request';
 import type {
   SeriesRouteDataQuery,
   SeriesRouteDataQueryVariables,
 } from './__generated__/[id]';
 import { MediaRow, MediaRowFragment } from '~/components/media-row';
-import { createAuthenticatedClient, gql } from '~/util/gql/server';
+import { createAuthenticatedClient } from '~/util/gql/server';
 import H1 from '~/components/content/h1';
 
 export function routeData({ params }: RouteDataArgs) {

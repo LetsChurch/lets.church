@@ -1,4 +1,4 @@
-import { gql } from './server';
+import { gql } from 'graphql-request';
 
 export const UploadCardFields = gql`
   fragment UploadCardFields on UploadRecord {
