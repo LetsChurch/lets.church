@@ -13,6 +13,10 @@ const type = await select({
 
 const title = await input({ message: 'Title:' });
 const username = await input({ message: 'Username:' });
+const channelSlug =
+  type === UploadListType.SERIES
+    ? await input({ message: 'Channel Slug:' })
+    : null;
 
 const ids: Array<string> = [];
 
@@ -28,6 +32,7 @@ const series = await prisma.uploadList.create({
     type: type as UploadListType,
     title,
     author: { connect: { username } },
+    ...(channelSlug ? { channel: { connect: { slug: channelSlug } } } : {}),
   },
 });
 
