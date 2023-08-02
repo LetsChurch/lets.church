@@ -9,7 +9,6 @@ import GitlabIcon from '@tabler/icons/brand-gitlab.svg?component-solid';
 export default function Footer() {
   const links = [
     { href: '/', label: 'Home' },
-    { href: '/support', label: 'Support' },
     { href: '/about', label: 'About' },
     { href: '/about/terms', label: 'Terms' },
     { href: '/about/privacy', label: 'Privacy' },

@@ -102,9 +102,6 @@ export default function Header() {
                 </A>
               </div>
               <div class="hidden lg:ml-6 lg:flex lg:space-x-8">
-                <NavLink href="/support" end>
-                  Support
-                </NavLink>
                 <NavLink href="/about">About</NavLink>
               </div>
             </div>
@@ -165,9 +162,6 @@ export default function Header() {
         <Show when={showMobileMenu()}>
           <div class="lg:hidden" id="mobile-menu">
             <div class="space-y-1 pb-3 pt-2">
-              <NavLinkMobile href="/support" end>
-                Support
-              </NavLinkMobile>
               <NavLinkMobile href="/about">About</NavLinkMobile>
             </div>
             <ProfileMobile me={user()} />
