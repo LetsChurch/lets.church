@@ -40,18 +40,10 @@ export default new SchemaBuilder<{
     SimpleObjectsPlugin,
     ValidationPlugin,
   ],
-  authScopes: async ({ session }) => ({
-    authenticated: async () => !!(await session),
-    unauthenticated: async () => !(await session),
-    admin: async () => {
-      const s = await session;
-
-      if (s) {
-        return s.appUser.role === 'ADMIN';
-      }
-
-      return false;
-    },
+  authScopes: ({ session }) => ({
+    authenticated: !!session,
+    unauthenticated: !session,
+    admin: session?.appUser.role === 'ADMIN',
   }),
   prisma: {
     client: prisma,

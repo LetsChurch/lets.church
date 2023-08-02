@@ -76,7 +76,7 @@ builder.mutationType({
         }
 
         if (postProcess === 'profileAvatar') {
-          if ((await session)?.appUser.id !== targetId) {
+          if (session?.appUser.id !== targetId) {
             return { admin: true };
           }
         }
@@ -133,7 +133,7 @@ builder.mutationType({
         context,
         _info,
       ) => {
-        const userId = (await context.session)?.appUserId;
+        const userId = context.session?.appUserId;
         invariant(userId, 'No user found!');
 
         await completeMultipartMediaUpload(

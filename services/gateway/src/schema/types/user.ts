@@ -2,6 +2,7 @@ import {
   AppUserRole,
   type AppUser as PrismaAppUser,
   Prisma,
+  UploadListType,
 } from '@prisma/client';
 import argon2 from 'argon2';
 import invariant from 'tiny-invariant';
@@ -21,15 +22,13 @@ import { subscribeToNewsletter } from '../../util/newsletter';
 
 const WEB_URL = envariant('WEB_URL');
 
-async function privateAuthScopes(
+function privateAuthScopes(
   appUser: Pick<PrismaAppUser, 'id'>,
   _args: unknown,
   context: Context,
 ) {
-  const session = await context.session;
-
   // Users can see their own private fields
-  if (session?.appUserId === appUser.id) {
+  if (context.session?.appUserId === appUser.id) {
     return true;
   }
 
@@ -77,7 +76,7 @@ export const AppUser = builder.prismaObject('AppUser', {
     canUpload: t.boolean({
       select: { id: true },
       authScopes: async ({ id }, _args, context) => {
-        if ((await context.session)?.appUserId === id) {
+        if (context.session?.appUserId === id) {
           return true;
         }
 
@@ -123,19 +122,18 @@ export const AppUser = builder.prismaObject('AppUser', {
         authScopes: privateAuthScopes,
       },
     ),
-    // TODO: https://github.com/hayes/pothos/issues/971
-    /* playlists: t.relatedConnection('uploadLists', { */
-    /*   cursor: 'createdAt_id', */
-    /*   authScopes: privateAuthScopes, */
-    /*   query: async (_args, context) => { */
-    /*     const userId = (await context.session)?.appUserId; */
-    /*     invariant(userId, 'No userId'); */
-    /**/
-    /*     return { */
-    /*       where: { type: UploadListType.PLAYLIST, author: { id: userId } }, */
-    /*     }; */
-    /*   }, */
-    /* }), */
+    playlists: t.relatedConnection('uploadLists', {
+      cursor: 'createdAt_id',
+      authScopes: privateAuthScopes,
+      query: (_args, context) => {
+        const userId = context.session?.appUserId;
+        invariant(userId, 'No userId');
+
+        return {
+          where: { type: UploadListType.PLAYLIST, author: { id: userId } },
+        };
+      },
+    }),
     createdAt: t.field({
       type: 'DateTime',
       select: { createdAt: true },
@@ -164,9 +162,7 @@ builder.queryFields((t) => ({
   me: t.prismaField({
     type: AppUser,
     nullable: true,
-    resolve: async (query, _root, _args, context, _info) => {
-      const session = await context.session;
-
+    resolve: (query, _root, _args, { session }, _info) => {
       if (session) {
         return prisma.appUser.findUniqueOrThrow({
           ...query,
@@ -231,12 +227,10 @@ builder.mutationFields((t) => ({
       authenticated: true,
     },
     resolve: async (_parent, _args, { session }, _info) => {
-      const s = await session;
-
-      invariant(s, 'No session!');
+      invariant(session, 'No session!');
 
       await prisma.appSession.update({
-        where: { id: s.id },
+        where: { id: session.id },
         data: { deletedAt: new Date() },
       });
 
@@ -372,9 +366,7 @@ builder.mutationFields((t) => ({
       email: t.arg.string({ required: true }),
       fullName: t.arg.string({ required: true }),
     },
-    authScopes: async (_parent, { userId }, context) => {
-      const session = await context.session;
-
+    authScopes: (_parent, { userId }, { session }) => {
       if (session?.appUser.id === userId) {
         return true;
       }

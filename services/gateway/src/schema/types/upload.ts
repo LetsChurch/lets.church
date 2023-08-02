@@ -25,7 +25,7 @@ async function internalAuthScopes(
   _args: unknown,
   context: Context,
 ) {
-  const userId = (await context.session)?.appUserId;
+  const userId = context.session?.appUserId;
 
   if (!userId) {
     return false;
@@ -107,7 +107,7 @@ const UploadUserComment = builder.prismaObject('UploadUserComment', {
       nullable: true,
       type: Rating,
       resolve: async (root, _args, context) => {
-        const userId = (await context.session)?.appUserId;
+        const userId = context.session?.appUserId;
 
         if (!userId) {
           return null;
@@ -255,7 +255,7 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
           return res;
         }
 
-        const ses = await context.session;
+        const ses = context.session;
 
         return ses?.appUser.role === 'ADMIN';
       },
@@ -268,7 +268,7 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
       nullable: true,
       type: Rating,
       resolve: async (root, _args, context) => {
-        const userId = (await context.session)?.appUserId;
+        const userId = context.session?.appUserId;
 
         if (!userId) {
           return null;
@@ -489,7 +489,7 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
       select: { id: true },
       resolve: (root, args, context, info) =>
         resolveOffsetConnection({ args }, async ({ offset, limit }) => {
-          const userId = (await context.session)?.appUserId;
+          const userId = context.session?.appUserId;
 
           if (!userId) {
             return [];
@@ -548,7 +548,7 @@ builder.queryFields((t) => ({
     type: UploadRecord,
     nullable: true,
     resolve: async (_root, args, context, info) => {
-      const userId = (await context.session)?.appUserId;
+      const userId = context.session?.appUserId;
 
       if (!userId) {
         return null;
@@ -645,7 +645,7 @@ builder.mutationFields((t) => ({
       channelId: t.arg({ type: 'ShortUuid', required: true }),
     },
     authScopes: async (_root, args, context) => {
-      const userId = (await context.session)?.appUserId;
+      const userId = context.session?.appUserId;
 
       if (!userId) {
         return false;
@@ -686,7 +686,7 @@ builder.mutationFields((t) => ({
       },
       context,
     ) => {
-      const userId = (await context.session)?.appUserId;
+      const userId = context.session?.appUserId;
       invariant(userId, 'No user found!');
       invariant(license in PrismaUploadLicense, 'Invalid license');
       const lice = license as PrismaUploadLicense;
@@ -758,7 +758,7 @@ builder.mutationFields((t) => ({
     },
     authScopes: { authenticated: true }, // TODO: restrict rating private uploads
     resolve: async (_root, { uploadRecordId, rating }, context, _info) => {
-      const userId = (await context.session)?.appUserId;
+      const userId = context.session?.appUserId;
 
       if (!userId) {
         return false;
@@ -805,7 +805,7 @@ builder.mutationFields((t) => ({
       text: t.arg.string({ required: true }),
     },
     authScopes: async (_root, { uploadRecordId, commentId }, context) => {
-      const userId = (await context.session)?.appUserId;
+      const userId = context.session?.appUserId;
       invariant(userId, 'No user found!');
 
       const upRec = await prisma.uploadRecord.findUniqueOrThrow({
@@ -840,7 +840,7 @@ builder.mutationFields((t) => ({
       context,
       _info,
     ) => {
-      const userId = (await context.session)?.appUserId;
+      const userId = context.session?.appUserId;
       invariant(userId, 'No user found!');
 
       // If we are replying, make sure the parent comment is on the same upload
@@ -901,7 +901,7 @@ builder.mutationFields((t) => ({
     },
     authScopes: { authenticated: true }, // TODO: restrict rating comments on private uploads
     resolve: async (_root, { uploadUserCommentId, rating }, context, _info) => {
-      const userId = (await context.session)?.appUserId;
+      const userId = context.session?.appUserId;
 
       if (!userId) {
         return false;
@@ -949,7 +949,7 @@ builder.mutationFields((t) => ({
 
       // The view hash will change once daily since the salt changes once daily, this means that each user can count for one view per day
       const viewHash = xxh32(
-        (await session)?.appUserId ?? clientIp + clientUserAgent,
+        session?.appUserId ?? clientIp + clientUserAgent,
         res.salt,
       );
 
@@ -958,7 +958,7 @@ builder.mutationFields((t) => ({
         create: {
           uploadRecordId,
           viewHash,
-          appUserId: (await session)?.appUserId ?? null,
+          appUserId: session?.appUserId ?? null,
         },
         update: { count: { increment: 1 } },
       });
@@ -990,7 +990,7 @@ builder.mutationFields((t) => ({
       }
 
       invariant(channelId, 'No channel id');
-      const userId = (await context.session)?.appUserId;
+      const userId = context.session?.appUserId;
       invariant(userId, 'No user id');
 
       const membership = await prisma.channelMembership.findFirst({
@@ -1001,7 +1001,7 @@ builder.mutationFields((t) => ({
       return Boolean(membership?.isAdmin || membership?.canEdit);
     },
     resolve: async (query, _root, { type, title }, context) => {
-      const userId = (await context.session)?.appUserId;
+      const userId = context.session?.appUserId;
       invariant(userId, 'No user id!');
 
       return prisma.uploadList.create({
@@ -1028,7 +1028,7 @@ builder.mutationFields((t) => ({
       after: t.arg({ type: 'ShortUuid' }),
     },
     authScopes: async (_root, { uploadListId }, context) => {
-      const userId = (await context.session)?.appUserId;
+      const userId = context.session?.appUserId;
 
       if (!userId) {
         return false;

@@ -66,7 +66,7 @@ builder.mutationFields((t) => ({
       authenticated: true,
     },
     resolve: async (query, _root, args, context, _info) => {
-      const userId = (await context.session)?.appUserId;
+      const userId = context.session?.appUserId;
       invariant(userId);
 
       const res = await prisma.organization.create({
@@ -101,7 +101,7 @@ builder.mutationFields((t) => ({
       canEdit: t.arg.boolean({ required: true }),
     },
     authScopes: async (_root, { organizationId }, context) => {
-      const userId = (await context.session)?.appUserId;
+      const userId = context.session?.appUserId;
 
       invariant(userId, 'Unauthorized');
 

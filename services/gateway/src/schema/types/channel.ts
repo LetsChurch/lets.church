@@ -30,7 +30,7 @@ async function channelAdminAuthScope(
     return true;
   }
 
-  const userId = (await context.session)?.appUserId;
+  const userId = context.session?.appUserId;
 
   invariant(userId, 'Unauthorized');
 
@@ -125,7 +125,7 @@ const Channel = builder.prismaObject('Channel', {
     }),
     userIsSubscribed: t.boolean({
       resolve: async ({ id: channelId }, _args, context) => {
-        const userId = (await context.session)?.appUserId;
+        const userId = context.session?.appUserId;
 
         if (!userId) {
           return false;
@@ -188,7 +188,7 @@ builder.mutationFields((t) => ({
       authenticated: true,
     },
     resolve: async (query, _root, args, context, _info) => {
-      const userId = (await context.session)?.appUserId;
+      const userId = context.session?.appUserId;
       invariant(userId);
 
       const res = await prisma.channel.create({
@@ -294,8 +294,8 @@ builder.mutationFields((t) => ({
       channelId: t.arg({ type: 'ShortUuid', required: true }),
     },
     authScopes: { authenticated: true },
-    resolve: async (query, _root, { channelId }, context, _info) => {
-      const userId = (await context.session)?.appUserId;
+    resolve: (query, _root, { channelId }, context, _info) => {
+      const userId = context.session?.appUserId;
       invariant(userId, 'Unauthorized');
 
       return prisma.channelSubscription.upsert({
@@ -320,7 +320,7 @@ builder.mutationFields((t) => ({
     },
     authScopes: { authenticated: true },
     resolve: async (_root, { channelId }, context, _info) => {
-      const userId = (await context.session)?.appUserId;
+      const userId = context.session?.appUserId;
       invariant(userId, 'Unauthorized');
 
       await prisma.channelSubscription.delete({

@@ -28,6 +28,7 @@ export type AppUser = {
   fullName?: Maybe<Scalars['String']>;
   id: Scalars['ShortUuid'];
   organizationMemberhipsConnection: AppUserOrganizationMemberhipsConnection;
+  playlists: AppUserPlaylistsConnection;
   role: AppUserRole;
   subscribedToNewsletter: Scalars['Boolean'];
   updatedAt: Scalars['DateTime'];
@@ -53,6 +54,14 @@ export type AppUserChannelSubscriptionsConnectionArgs = {
 
 
 export type AppUserOrganizationMemberhipsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']>;
+  before?: InputMaybe<Scalars['String']>;
+  first?: InputMaybe<Scalars['Int']>;
+  last?: InputMaybe<Scalars['Int']>;
+};
+
+
+export type AppUserPlaylistsArgs = {
   after?: InputMaybe<Scalars['String']>;
   before?: InputMaybe<Scalars['String']>;
   first?: InputMaybe<Scalars['Int']>;
@@ -100,6 +109,18 @@ export type AppUserOrganizationMemberhipsConnectionEdge = {
   __typename?: 'AppUserOrganizationMemberhipsConnectionEdge';
   cursor: Scalars['String'];
   node: OrganizationMembership;
+};
+
+export type AppUserPlaylistsConnection = {
+  __typename?: 'AppUserPlaylistsConnection';
+  edges: Array<AppUserPlaylistsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type AppUserPlaylistsConnectionEdge = {
+  __typename?: 'AppUserPlaylistsConnectionEdge';
+  cursor: Scalars['String'];
+  node: UploadList;
 };
 
 export enum AppUserRole {
