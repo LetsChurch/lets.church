@@ -1,5 +1,6 @@
 import { resolveOffsetConnection } from '@pothos/plugin-relay';
 import { getProperty as get } from 'dot-prop';
+import { max, min, uniqBy } from 'lodash-es';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';
 import {
@@ -13,6 +14,8 @@ import {
 import prisma from '../../util/prisma';
 import { identifiableSchema } from '../../util/zod';
 import builder from '../builder';
+
+// TODO: ensure all aggregates are returned for every focus
 
 const HighlightedText = builder.simpleObject('HighlightedText', {
   fields: (t) => ({ source: t.string(), marked: t.string() }),
@@ -329,7 +332,11 @@ builder.queryFields((t) => ({
               ],
             });
 
-            console.dir({ esRes });
+            const UPLOADS_MSEARCH_INDEX = 0;
+            const TRANSCRIPTS_MSEARCH_INDEX = 1;
+            const CHANNELS_MSEARCH_INDEX = 2;
+            const ORGANIZATIONS_MSEARCH_INDEX = 3;
+
             const parsed = MSearchResponseSchema.parse(esRes);
 
             totalCount = parsed.responses.reduce(
@@ -344,29 +351,53 @@ builder.queryFields((t) => ({
             const focusedResponse =
               parsed.responses[
                 focus === 'UPLOADS'
-                  ? 0
+                  ? UPLOADS_MSEARCH_INDEX
                   : focus === 'TRANSCRIPTS'
-                  ? 1
+                  ? TRANSCRIPTS_MSEARCH_INDEX
                   : focus === 'CHANNELS'
-                  ? 2
-                  : 3
+                  ? CHANNELS_MSEARCH_INDEX
+                  : ORGANIZATIONS_MSEARCH_INDEX
               ];
             invariant(focusedResponse, 'Focused response should exist');
-            const focusedAggs = focusedResponse.aggregations;
+
+            const uploadAggs =
+              parsed.responses[UPLOADS_MSEARCH_INDEX]?.aggregations;
+            const transcriptAggs =
+              parsed.responses[TRANSCRIPTS_MSEARCH_INDEX]?.aggregations;
 
             // Get focused aggregrate value
-            channelAggData = (
-              focus === 'UPLOADS' || focus === 'TRANSCRIPTS'
-                ? focusedAggs?.channelIds?.buckets ?? []
+            channelAggData = uniqBy(
+              (focus === 'UPLOADS' || focus === 'TRANSCRIPTS'
+                ? [
+                    ...(uploadAggs?.channelIds?.buckets ?? []),
+                    ...(transcriptAggs?.channelIds?.buckets ?? []),
+                  ]
                 : []
-            ).map(({ key, doc_count }) => ({ id: key, count: doc_count }));
+              )
+                .map(({ key, doc_count }) => ({ id: key, count: doc_count }))
+                // Ensure any extra channels passed in are accounted for
+                .concat(channelIds?.map((id) => ({ id, count: 0 })) ?? []),
+              'id',
+            );
+
+            const minDate = min([
+              uploadAggs?.minPublishedAt?.value,
+              transcriptAggs?.minPublishedAt?.value,
+              // Ensure out of range date is accounted for
+              minPublishedAt,
+            ]);
+            const maxDate = max([
+              uploadAggs?.maxPublishedAt?.value,
+              transcriptAggs?.maxPublishedAt?.value,
+              // Ensure out of range date is accounted for
+              maxPublishedAt,
+            ]);
 
             dateAggData =
-              focusedAggs?.minPublishedAt?.value &&
-              focusedAggs.maxPublishedAt?.value
+              minDate && maxDate
                 ? {
-                    min: new Date(focusedAggs.minPublishedAt.value),
-                    max: new Date(focusedAggs.maxPublishedAt.value),
+                    min: new Date(minDate),
+                    max: new Date(maxDate),
                   }
                 : null;
 
