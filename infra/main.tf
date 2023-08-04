@@ -47,7 +47,7 @@ resource "linode_lke_cluster" "k8s" {
   tags        = var.k8s_tags
 
   pool {
-    type  = "g6-dedicated-2"
+    type  = "g6-dedicated-4"
     count = 1
   }
 }
