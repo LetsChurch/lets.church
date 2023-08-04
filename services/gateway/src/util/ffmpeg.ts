@@ -114,12 +114,11 @@ function videoVariantToDimensions(variant: VideoVariant): [number, number] {
 }
 
 function videoVariantToFfmpegScaleFilter(v: VideoVariant) {
-  const [width, height] = videoVariantToDimensions(v);
+  const [width, _height] = videoVariantToDimensions(v);
 
-  return [
-    '-vf',
-    `scale=w=${width}:h=${height}:force_original_aspect_ratio=decrease`,
-  ];
+  // Ensure dimensions are divisible by 2
+  // https://stackoverflow.com/a/29582287/355325
+  return ['-vf', `scale=${width}:-2`];
 }
 
 function variantToPlaylistName(variant: UploadVariant) {
