@@ -44,6 +44,7 @@ export default function Footer() {
           <a
             href="https://www.facebook.com/profile.php?id=100092315746719"
             class="text-gray-400 hover:text-gray-500"
+            target="_blank"
           >
             <span class="sr-only">Facebook</span>
             <FacebookIcon class="h-6 w-6" />
@@ -52,6 +53,7 @@ export default function Footer() {
           <a
             href="https://twitter.com/lets_church"
             class="text-gray-400 hover:text-gray-500"
+            target="_blank"
           >
             <span class="sr-only">Twitter</span>
             <TwitterIcon class="h-6 w-6" />
@@ -60,6 +62,7 @@ export default function Footer() {
           <a
             href="https://github.com/LetsChurch/"
             class="text-gray-400 hover:text-gray-500"
+            target="_blank"
           >
             <span class="sr-only">GitHub</span>
             <GithubIcon class="h-6 w-6" />
@@ -68,6 +71,7 @@ export default function Footer() {
           <a
             href="https://gitlab.com/LetsChurch/"
             class="text-gray-400 hover:text-gray-500"
+            target="_blank"
           >
             <span class="sr-only">Gitlab</span>
             <GitlabIcon class="h-6 w-6" />
