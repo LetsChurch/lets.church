@@ -10,6 +10,10 @@ export default function Footer() {
   const links = [
     { href: '/', label: 'Home' },
     { href: '/about', label: 'About' },
+    {
+      href: 'https://www.zeffy.com/en-US/donation-form/5da9e1c3-a8e2-4bb4-817a-5dbbb968ec6b',
+      label: 'Donate',
+    },
     { href: '/about/terms', label: 'Terms' },
     { href: '/about/privacy', label: 'Privacy' },
     { href: '/about/dmca', label: 'DMCA' },
@@ -28,6 +32,7 @@ export default function Footer() {
                 <A
                   href={link.href}
                   class="text-base text-gray-500 hover:text-gray-900"
+                  target={link.href.startsWith('https://') ? '_blank' : ''}
                 >
                   {link.label}
                 </A>

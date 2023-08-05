@@ -16,7 +16,11 @@ import ProfileMobile from './profile-mobile';
 import Logo from './logo';
 import { useUser } from '~/util/user-context';
 
-type NavLinkProps = ParentProps<{ href: string; end?: boolean }>;
+type NavLinkProps = ParentProps<{
+  href: string;
+  end?: boolean;
+  target?: string;
+}>;
 
 function NavLink(props: NavLinkProps) {
   return (
@@ -103,6 +107,12 @@ export default function Header() {
               </div>
               <div class="hidden lg:ml-6 lg:flex lg:space-x-8">
                 <NavLink href="/about">About</NavLink>
+                <NavLink
+                  href="https://www.zeffy.com/en-US/donation-form/5da9e1c3-a8e2-4bb4-817a-5dbbb968ec6b"
+                  target="_donate"
+                >
+                  Donate
+                </NavLink>
               </div>
             </div>
             <div class="flex flex-1 items-center justify-center px-2 lg:ml-6 lg:justify-end">
@@ -163,6 +173,12 @@ export default function Header() {
           <div class="lg:hidden" id="mobile-menu">
             <div class="space-y-1 pb-3 pt-2">
               <NavLinkMobile href="/about">About</NavLinkMobile>
+              <NavLinkMobile
+                href="https://www.zeffy.com/en-US/donation-form/5da9e1c3-a8e2-4bb4-817a-5dbbb968ec6b"
+                target="_blank"
+              >
+                Donate
+              </NavLinkMobile>
             </div>
             <ProfileMobile me={user()} />
           </div>
