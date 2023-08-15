@@ -54,6 +54,6 @@ CMD npm run start:transcribe-worker
 
 FROM base as import-worker
 RUN apt install -y python3
-COPY --from=jauderho/yt-dlp:2023.03.04 /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
+COPY --from=jauderho/yt-dlp:2023.07.06 /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
 RUN npm run prisma:generate
 CMD npm run start:import-worker
