@@ -42,8 +42,10 @@ export default function Search() {
 
   // Persist search in history every 2.5 seconds
   const navWithPersist = debounce((pathname: string, search: string) => {
-    console.log('persist');
-    navigate(`${pathname}${search}`, { replace: false });
+    // Only persist if the latest call (triggered by effect) is from '/search'
+    if (pathname === '/search') {
+      navigate(`${pathname}${search}`, { replace: false, scroll: false });
+    }
   }, 2500);
 
   createEffect(() => {
