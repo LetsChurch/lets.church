@@ -1,5 +1,6 @@
-import { createUniqueId } from 'solid-js';
+import { createEffect, createUniqueId, untrack } from 'solid-js';
 import { useLocation, useMatch, useNavigate, useParams } from 'solid-start';
+import debounce from 'just-debounce';
 import SearchIcon from '@tabler/icons/search.svg?component-solid';
 
 export default function Search() {
@@ -8,19 +9,39 @@ export default function Search() {
   const isChannelPage = useMatch(() => `/channel/${params.slug}`);
   const navigate = useNavigate();
 
-  function onSearch(e: SubmitEvent) {
-    e.preventDefault();
-    const search = (e.target as HTMLFormElement)
-      ?.elements[0] as HTMLInputElement;
-    const newParams: { q: string; channels?: string } = { q: search.value };
+  function onSearch(e: SubmitEvent | InputEvent) {
+    if (e instanceof SubmitEvent) {
+      e.preventDefault();
+    }
+
+    const newParams: { q: string; channels?: string } = {
+      q:
+        e.target instanceof HTMLFormElement
+          ? (e.target.elements[0] as HTMLInputElement).value
+          : (e.target as HTMLInputElement).value,
+    };
+
     if (isChannelPage()) {
       newParams.channels = params.slug ?? '';
     }
-    navigate(`/search?${new URLSearchParams(newParams).toString()}`);
+
+    navigate(`/search?${new URLSearchParams(newParams).toString()}`, {
+      replace: true,
+    });
   }
 
+  // Persist search in history every 2.5 seconds
+  const navWithPersist = debounce((pathname: string, search: string) => {
+    console.log('persist');
+    navigate(`${pathname}${search}`, { replace: false });
+  }, 2500);
+
+  createEffect(() => {
+    navWithPersist(loc.pathname, loc.search);
+  });
+
   function defaultSearch() {
-    const params = new URLSearchParams(loc.search);
+    const params = new URLSearchParams(untrack(() => loc.search));
     return params.get('q') ?? '';
   }
 
@@ -43,6 +64,7 @@ export default function Search() {
             placeholder={`Search${isChannelPage() ? ' Channel' : ''}`}
             type="search"
             value={defaultSearch()}
+            onInput={debounce((e) => onSearch(e), 100)}
           />
         </form>
       </div>
