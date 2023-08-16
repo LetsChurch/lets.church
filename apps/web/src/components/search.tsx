@@ -10,23 +10,33 @@ export default function Search() {
   const navigate = useNavigate();
 
   function onSearch(e: SubmitEvent | InputEvent) {
-    if (e instanceof SubmitEvent) {
+    const isSubmitted = e instanceof SubmitEvent;
+
+    if (isSubmitted) {
       e.preventDefault();
     }
 
-    const newParams: { q: string; channels?: string } = {
-      q:
-        e.target instanceof HTMLFormElement
-          ? (e.target.elements[0] as HTMLInputElement).value
-          : (e.target as HTMLInputElement).value,
-    };
+    const newParams = isSubmitted
+      ? new URLSearchParams()
+      : new URLSearchParams(loc.search);
+
+    newParams.set(
+      'q',
+      e.target instanceof HTMLFormElement
+        ? (e.target.elements[0] as HTMLInputElement).value
+        : (e.target as HTMLInputElement).value,
+    );
 
     if (isChannelPage()) {
-      newParams.channels = params.slug ?? '';
+      const slug = params.slug;
+
+      if (slug) {
+        newParams.set('channels', params.slug ?? '');
+      }
     }
 
-    navigate(`/search?${new URLSearchParams(newParams).toString()}`, {
-      replace: true,
+    navigate(`/search?${newParams.toString()}`, {
+      replace: !isSubmitted,
     });
   }
 
