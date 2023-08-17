@@ -46,7 +46,7 @@ export function routeData({ location }: RouteDataArgs) {
       publishedAtRange = null,
       orderBy,
       channels = null,
-      transcriptPhraseSearch = 'true',
+      transcriptPhraseSearch,
     ]) => {
       const [minPublishedAt = null, maxPublishedAt = null] =
         publishedAtRange?.split('/') ?? [];
@@ -160,7 +160,7 @@ export function routeData({ location }: RouteDataArgs) {
               ? SearchOrder.Date
               : null,
           channels,
-          transcriptPhraseSearch: transcriptPhraseSearch === 'true',
+          transcriptPhraseSearch,
         },
       );
     },
@@ -175,7 +175,7 @@ export function routeData({ location }: RouteDataArgs) {
           location.query['publishedAt'],
           location.query['orderBy'],
           location.query['channels']?.split(',').filter(Boolean),
-          location.query['transcriptPhraseSearch'],
+          (location.query['transcriptPhraseSearch'] ?? 'true') === 'true',
         ] as const,
     },
   );
