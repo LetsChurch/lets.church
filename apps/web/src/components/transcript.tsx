@@ -56,7 +56,7 @@ export default function Transcript(props: Props) {
             data-start={line.start}
             onClick={[props.setPlayAt, line.start / 1000]}
           >
-            <dt class="w-10 items-center font-mono text-sm font-medium uppercase text-gray-400 group-hover:text-gray-600">
+            <dt class="items-center font-mono text-sm font-medium uppercase text-gray-400 group-hover:text-gray-600">
               {formatTime(line.start)}
             </dt>
             <dd class="text-sm">{line.text}</dd>

@@ -206,7 +206,7 @@ function SearchTranscriptHitRow(
                 'bg-indigo-50': showMore() && hit === local.innerHits[0],
               }}
             >
-              <dt class="w-10 items-center font-mono text-sm font-medium uppercase text-gray-400 group-hover/t-row:text-gray-600">
+              <dt class="items-center font-mono text-sm font-medium uppercase text-gray-400 group-hover/t-row:text-gray-600">
                 {formatTime(hit.start)}
               </dt>
               <dd
