@@ -187,7 +187,8 @@ const focuses = [
   'ORGANIZATIONS',
 ] as const;
 
-const OrderByEnum = z.enum(['avg', 'sum', 'date']);
+const orderByValues = ['avg', 'sum', 'date', 'dateDesc'] as const;
+const OrderByEnum = z.enum(orderByValues);
 
 builder.queryFields((t) => ({
   search: t.connection(
@@ -204,7 +205,7 @@ builder.queryFields((t) => ({
         orderBy: t.arg({
           required: false,
           type: builder.enumType('SearchOrder', {
-            values: ['avg', 'sum', 'date', 'dateDesc'],
+            values: orderByValues,
           }),
           defaultValue: 'avg',
         }),
@@ -306,6 +307,7 @@ builder.queryFields((t) => ({
                   {
                     channelIds,
                     publishedAt,
+                    orderBy,
                   },
                 ),
                 ...msearchTranscripts(

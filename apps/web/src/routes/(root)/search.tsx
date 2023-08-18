@@ -158,6 +158,8 @@ export function routeData({ location }: RouteDataArgs) {
               ? SearchOrder.Sum
               : orderBy === 'date'
               ? SearchOrder.Date
+              : orderBy === 'dateDesc'
+              ? SearchOrder.DateDesc
               : null,
           channels,
           transcriptPhraseSearch,

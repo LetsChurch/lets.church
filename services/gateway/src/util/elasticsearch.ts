@@ -100,6 +100,8 @@ export function msearchUploads(
       ...makePostFilterSpread({ channelIds, publishedAt }),
       ...(orderBy === 'date'
         ? { sort: [{ publishedAt: { order: 'asc' } }] }
+        : orderBy === 'dateDesc'
+        ? { sort: [{ publishedAt: { order: 'desc' } }] }
         : {}),
       aggs: {
         channelIds: {
