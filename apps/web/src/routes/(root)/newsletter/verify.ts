@@ -5,7 +5,8 @@ import type {
   VerifyNewsletterSubscriptionMutation,
   VerifyNewsletterSubscriptionMutationVariables,
 } from './__generated__/verify';
-import { createAuthenticatedClientOrRedirect } from '~/util/gql/server';
+import { flashSuccess } from '~/util/session';
+import { client } from '~/util/gql/server';
 
 const QuerySchema = z.object({
   subscriptionId: z.string(),
@@ -20,8 +21,6 @@ export async function GET({ request }: APIEvent) {
       ['subscriptionId', 'emailKey'].map((k) => [k, url.searchParams.get(k)]),
     ),
   );
-
-  const client = await createAuthenticatedClientOrRedirect(request);
 
   await client.request<
     VerifyNewsletterSubscriptionMutation,
@@ -41,5 +40,10 @@ export async function GET({ request }: APIEvent) {
     { subscriptionId, emailKey },
   );
 
-  return redirect('/');
+  const res = await flashSuccess(
+    request,
+    'Your newsletter subscription has been confirmed!',
+  );
+
+  return redirect('/', res);
 }

@@ -6,6 +6,7 @@ import type {
   VerifyEmailMutationVariables,
 } from './__generated__/verify';
 import { createAuthenticatedClientOrRedirect } from '~/util/gql/server';
+import { flashSuccess } from '~/util/session';
 
 const QuerySchema = z.object({
   userId: z.string(),
@@ -40,5 +41,7 @@ export async function GET({ request }: APIEvent) {
     { userId, emailId, emailKey },
   );
 
-  return redirect('/');
+  const res = await flashSuccess(request, 'Your email has been verified!');
+
+  return redirect('/', res);
 }
