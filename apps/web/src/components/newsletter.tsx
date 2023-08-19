@@ -51,7 +51,7 @@ export default function Newsletter() {
       });
     }
 
-    return redirect('/');
+    return redirect('/newsletter/subscribe');
   });
 
   const user = useUser();
