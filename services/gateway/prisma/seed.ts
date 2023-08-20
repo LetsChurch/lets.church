@@ -3,9 +3,9 @@ import slugify from '@sindresorhus/slugify';
 import argon2 from 'argon2';
 import { Prisma, UploadListType } from '@prisma/client';
 import invariant from 'tiny-invariant';
+import { LexoRank } from 'lexorank';
 import { indexDocument, waitOnTemporal } from '../src/temporal';
 import prisma from '../src/util/prisma';
-import { LexoRank } from 'lexorank';
 
 faker.seed(1337);
 
