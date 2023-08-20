@@ -1,15 +1,10 @@
 import { For } from 'solid-js';
 import UploadCard from './upload-card';
+import type { UploadCardFieldsFragment } from '~/util/gql/__generated__/fragments';
 
 export type Props = {
   edges: Array<{
-    node: {
-      id: string;
-      title?: string | null;
-      channel: { name: string; avatarUrl?: string | null };
-      thumbnailUrl?: string | null;
-      thumbnailBlurhash?: string | null;
-    };
+    node: UploadCardFieldsFragment;
   }>;
 };
 
@@ -19,14 +14,7 @@ export function UploadGrid(props: Props) {
       <For each={props.edges}>
         {(edge) => (
           <li>
-            <UploadCard
-              title={edge.node.title}
-              channel={edge.node.channel.name}
-              href={`/media/${edge.node.id}`}
-              thumbnailUrl={edge.node.thumbnailUrl}
-              blurhash={edge.node.thumbnailBlurhash}
-              avatarUrl={edge.node.channel.avatarUrl ?? ''}
-            />
+            <UploadCard href={`/media/${edge.node.id}`} data={edge.node} />
           </li>
         )}
       </For>

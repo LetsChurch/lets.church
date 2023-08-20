@@ -8,8 +8,8 @@ import { createSignal, Show } from 'solid-js';
 import delay from 'delay';
 import { gql } from 'graphql-request';
 import type {
-  CreateAvatarUploadMutation,
-  CreateAvatarUploadMutationVariables,
+  CreateChannelFileUploadMutation,
+  CreateChannelFileUploadMutationVariables,
   FinalizeAvatarUploadMutation,
   FinalizeAvatarUploadMutationVariables,
   ProfileChannelQuery,
@@ -42,6 +42,7 @@ export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
               id
               name
               avatarUrl
+              defaultThumbnailUrl
             }
           }
         `,
@@ -75,16 +76,16 @@ const fields: Array<DatalistField> = [
 ];
 
 export default function EditChannelRoute() {
-  const createAvatarUpload = server$(
-    async (variables: CreateAvatarUploadMutationVariables) => {
+  const createFileUpload = server$(
+    async (variables: CreateChannelFileUploadMutationVariables) => {
       const client = await createAuthenticatedClientOrRedirect(server$.request);
 
       const data = await client.request<
-        CreateAvatarUploadMutation,
-        CreateAvatarUploadMutationVariables
+        CreateChannelFileUploadMutation,
+        CreateChannelFileUploadMutationVariables
       >(
         gql`
-          mutation CreateAvatarUpload(
+          mutation CreateChannelFileUpload(
             $targetId: ShortUuid!
             $bytes: SafeInt!
             $uploadMimeType: String!
@@ -170,8 +171,22 @@ export default function EditChannelRoute() {
 
   const data = useRouteData<typeof routeData>();
   const [avatarProcessing, setAvatarProcessing] = createSignal(false);
+  const [defaultThumbnailProcessing, setDefaultThumbnailProcessing] =
+    createSignal(false);
 
-  async function handleAvatarInput(e: InputEvent) {
+  function checkIsProcessing(which: UploadPostProcess, oldUrl?: string | null) {
+    if (which === UploadPostProcess.ChannelAvatar) {
+      return data()?.avatarUrl === oldUrl;
+    }
+
+    if (which === UploadPostProcess.ChannelDefaultThumbnail) {
+      return data()?.defaultThumbnailUrl === oldUrl;
+    }
+
+    return false;
+  }
+
+  async function handleImageInput(which: UploadPostProcess, e: InputEvent) {
     if (avatarProcessing()) {
       return;
     }
@@ -180,19 +195,28 @@ export default function EditChannelRoute() {
     invariant(e.target.files);
     const [file] = Array.from(e.target.files);
     const channelId = data()?.id;
-    const oldUrl = data()?.avatarUrl;
+    const oldUrl =
+      which === UploadPostProcess.ChannelAvatar
+        ? data()?.avatarUrl
+        : which === UploadPostProcess.ChannelDefaultThumbnail
+        ? data()?.defaultThumbnailUrl
+        : null;
 
     if (!file || !channelId) {
       return;
     }
 
-    setAvatarProcessing(true);
+    if (which === UploadPostProcess.ChannelAvatar) {
+      setAvatarProcessing(true);
+    } else if (which === UploadPostProcess.ChannelDefaultThumbnail) {
+      setDefaultThumbnailProcessing(true);
+    }
 
-    const { createMultipartUpload: res } = await createAvatarUpload({
+    const { createMultipartUpload: res } = await createFileUpload({
       targetId: channelId,
       bytes: file.size,
       uploadMimeType: file.type,
-      postProcess: UploadPostProcess.ChannelAvatar,
+      postProcess: which,
     });
 
     const upload = doMultipartUpload(file, res.urls, res.partSize);
@@ -207,37 +231,78 @@ export default function EditChannelRoute() {
       s3PartETags: eTags,
     });
 
-    while (data()?.avatarUrl === oldUrl) {
+    while (checkIsProcessing(which, oldUrl)) {
       await delay(2500);
       await refetchRouteData();
     }
 
-    setAvatarProcessing(false);
+    if (which === UploadPostProcess.ChannelAvatar) {
+      setAvatarProcessing(false);
+    } else if (which === UploadPostProcess.ChannelDefaultThumbnail) {
+      setDefaultThumbnailProcessing(false);
+    }
   }
 
   return (
     <>
       <PageHeading title={`Edit Channel: ${data()?.name}`} backButton />
-      <label
-        class="flex items-center gap-3"
-        classList={{ 'cursor-pointer': !avatarProcessing() }}
-      >
-        <Avatar src={data()?.avatarUrl ?? ''} size="xl" />
-        <input
-          type="file"
-          class="sr-only"
-          onInput={handleAvatarInput}
-          accept="image/png, image/jpeg"
-          disabled={avatarProcessing()}
-        />
-        <Show when={avatarProcessing()}>
-          <span>Processing...</span>
-        </Show>
-      </label>
       <submitChannel.Form>
         <input type="hidden" name="channelId" value={data()?.id ?? ''} />
         <EditableDatalist fields={fields} data={data() ?? {}} />
       </submitChannel.Form>
+      <div class="py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:py-5">
+        <dt class="flex h-full items-center text-sm font-medium text-gray-500">
+          Avatar
+        </dt>
+        <dd class="mt-1 flex text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+          <label
+            class="flex items-center gap-3"
+            classList={{ 'cursor-pointer': !avatarProcessing() }}
+          >
+            <Avatar src={data()?.avatarUrl ?? ''} size="xl" />
+            <input
+              type="file"
+              class="sr-only"
+              onInput={[handleImageInput, UploadPostProcess.ChannelAvatar]}
+              accept="image/png, image/jpeg"
+              disabled={avatarProcessing()}
+            />
+            <Show when={avatarProcessing()}>
+              <span>Processing...</span>
+            </Show>
+          </label>
+        </dd>
+        <dt class="flex h-full items-center text-sm font-medium text-gray-500">
+          Default Thumbnail
+        </dt>
+        <dd class="mt-1 flex text-sm text-gray-900 sm:col-span-2 sm:mt-0">
+          <label
+            class="flex items-center gap-3"
+            classList={{ 'cursor-pointer': !avatarProcessing() }}
+          >
+            <img
+              src={
+                data()?.defaultThumbnailUrl ??
+                'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=='
+              }
+              class="aspect-video w-[300px] bg-gray-200 text-transparent"
+            />
+            <input
+              type="file"
+              class="sr-only"
+              onInput={[
+                handleImageInput,
+                UploadPostProcess.ChannelDefaultThumbnail,
+              ]}
+              accept="image/png, image/jpeg"
+              disabled={defaultThumbnailProcessing()}
+            />
+            <Show when={defaultThumbnailProcessing()}>
+              <span>Processing...</span>
+            </Show>
+          </label>
+        </dd>
+      </div>
     </>
   );
 }

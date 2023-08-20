@@ -11,6 +11,7 @@ import { createAuthenticatedClient } from '~/util/gql/server';
 import { PageHeading } from '~/components/page-heading';
 import UploadCard from '~/components/upload-card';
 import Pagination from '~/components/pagination';
+import { UploadCardFields } from '~/util/gql/fragments';
 
 const PAGE_SIZE = 60;
 
@@ -25,6 +26,8 @@ export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
         PublicChannelQueryVariables
       >(
         gql`
+          ${UploadCardFields}
+
           query PublicChannel(
             $slug: String!
             $first: Int
@@ -52,11 +55,7 @@ export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
                 }
                 edges {
                   node {
-                    id
-                    title
-                    createdAt
-                    thumbnailBlurhash
-                    thumbnailUrl
+                    ...UploadCardFields
                   }
                   cursor
                 }
@@ -99,14 +98,7 @@ export default function ChannelRoute() {
         <For each={data()?.uploadsConnection.edges}>
           {(edge) => (
             <li>
-              <UploadCard
-                title={edge.node.title}
-                channel={data()?.name}
-                href={`/media/${edge.node.id}`}
-                avatarUrl={data()?.avatarUrl ?? ''}
-                thumbnailUrl={edge.node.thumbnailUrl}
-                blurhash={edge.node.thumbnailBlurhash}
-              />
+              <UploadCard href={`/media/${edge.node.id}`} data={edge.node} />
             </li>
           )}
         </For>

@@ -12,6 +12,7 @@ export { default as processImage } from './process-image';
 export { default as recordDownloadSize } from './record-download-size';
 export { default as sendEmail } from './send-email';
 export { default as setChannelAvatar } from './set-channel-avatar';
+export { default as setChannelDefaultThumbnail } from './set-channel-default-thumbnail';
 export { default as setProfileAvatar } from './set-profile-avatar';
 export { default as setUploadThumbnail } from './set-upload-thumbnail';
 export { default as updateCommentScores } from './update-comment-scores';

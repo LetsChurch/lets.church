@@ -11,6 +11,7 @@ import { PageHeading } from '~/components/page-heading';
 import Pagination from '~/components/pagination';
 import UploadCard from '~/components/upload-card';
 import { createAuthenticatedClientOrRedirect } from '~/util/gql/server';
+import { UploadCardFields } from '~/util/gql/fragments';
 
 const PAGE_SIZE = 60;
 
@@ -25,6 +26,8 @@ export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
         ProfileChannelsQueryVariables
       >(
         gql`
+          ${UploadCardFields}
+
           query ProfileChannels(
             $id: ShortUuid!
             $first: Int
@@ -53,11 +56,7 @@ export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
                 }
                 edges {
                   node {
-                    id
-                    title
-                    createdAt
-                    thumbnailBlurhash
-                    thumbnailUrl
+                    ...UploadCardFields
                   }
                   cursor
                 }
@@ -101,12 +100,8 @@ export default function ChannelRoute() {
           {(edge) => (
             <li>
               <UploadCard
-                title={edge.node.title}
-                channel={data()?.name}
                 href={`/upload/?id=${edge.node.id}`}
-                avatarUrl={data()?.avatarUrl ?? ''}
-                thumbnailUrl={edge.node.thumbnailUrl}
-                blurhash={edge.node.thumbnailBlurhash}
+                data={edge.node}
               />
             </li>
           )}

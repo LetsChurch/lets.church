@@ -128,19 +128,21 @@ model OrganizationChannelAssociation {
 }
 
 model Channel {
-  id             String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name           String
-  avatarPath     String?                          @map("avatar_path") @db.VarChar(255)
-  avatarBlurhash String?                          @map("avatar_blurhash") @db.VarChar(255)
-  slug           String                           @unique @db.Citext
-  description    String?
-  memberships    ChannelMembership[]
-  associations   OrganizationChannelAssociation[]
-  createdAt      DateTime                         @default(now()) @map("created_at")
-  updatedAt      DateTime                         @updatedAt @map("updated_at")
-  uploadRecords  UploadRecord[]
-  uploadLists    UploadList[]
-  subscribers    ChannelSubscription[]
+  id                       String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                     String
+  avatarPath               String?                          @map("avatar_path") @db.VarChar(255)
+  avatarBlurhash           String?                          @map("avatar_blurhash") @db.VarChar(255)
+  slug                     String                           @unique @db.Citext
+  description              String?
+  memberships              ChannelMembership[]
+  associations             OrganizationChannelAssociation[]
+  createdAt                DateTime                         @default(now()) @map("created_at")
+  updatedAt                DateTime                         @updatedAt @map("updated_at")
+  uploadRecords            UploadRecord[]
+  uploadLists              UploadList[]
+  subscribers              ChannelSubscription[]
+  defaultThumbnailPath     String?                          @map("default_thumbnail_path") @db.VarChar(255)
+  defaultThumbnailBlurhash String?                          @map("default_thumbnail_blurhash") @db.VarChar(255)
 
   @@map("channel")
 }
@@ -360,8 +362,8 @@ model UploadList {
   type      UploadListType
   uploads   UploadListEntry[]
 
-  @@map("upload_list")
   @@unique([createdAt, id])
+  @@map("upload_list")
 }
 
 model NewsletterSubscription {

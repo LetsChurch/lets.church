@@ -33,7 +33,7 @@ export const uploadDoneSignal =
   defineSignal<[Array<string>, string]>('uploadDone');
 
 export async function handleMultipartMediaUploadWorkflow(
-  uploadRecordId: string,
+  targetId: string,
   to: Client,
   s3UploadId: string,
   s3UploadKey: string,
@@ -51,14 +51,14 @@ export async function handleMultipartMediaUploadWorkflow(
 
   if (eTags && finalizingUserId) {
     if (postProcess === 'media') {
-      await finalizeUploadRecord(uploadRecordId, finalizingUserId, s3UploadKey);
+      await finalizeUploadRecord(targetId, finalizingUserId, s3UploadKey);
     }
 
     await completeMultipartUpload(to, s3UploadId, s3UploadKey, eTags);
 
     if (postProcess === 'media') {
       await startChild(processMediaWorkflow, {
-        args: [uploadRecordId, s3UploadKey],
+        args: [targetId, s3UploadKey],
         workflowId: `processMedia:${s3UploadKey}`,
         taskQueue: BACKGROUND_QUEUE,
         parentClosePolicy: ParentClosePolicy.PARENT_CLOSE_POLICY_ABANDON,
@@ -68,7 +68,7 @@ export async function handleMultipartMediaUploadWorkflow(
       });
     } else {
       await startChild(processImageWorkflow, {
-        args: [uploadRecordId, s3UploadKey, postProcess],
+        args: [targetId, s3UploadKey, postProcess],
         workflowId: `processImage:${s3UploadKey}`,
         taskQueue: BACKGROUND_QUEUE,
         parentClosePolicy: ParentClosePolicy.PARENT_CLOSE_POLICY_ABANDON,

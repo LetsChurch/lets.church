@@ -10,6 +10,8 @@ export const UploadCardFields = gql`
       id
       name
       avatarUrl
+      defaultThumbnailUrl
+      defaultThumbnailBlurhash
     }
   }
 `;

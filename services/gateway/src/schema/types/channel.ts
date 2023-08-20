@@ -140,6 +140,21 @@ const Channel = builder.prismaObject('Channel', {
         );
       },
     }),
+    defaultThumbnailUrl: t.field({
+      type: 'String',
+      nullable: true,
+      select: { defaultThumbnailPath: true },
+      resolve: ({ defaultThumbnailPath }) => {
+        if (!defaultThumbnailPath) {
+          return null;
+        }
+
+        return getPublicMediaUrl(defaultThumbnailPath);
+      },
+    }),
+    defaultThumbnailBlurhash: t.exposeString('defaultThumbnailBlurhash', {
+      nullable: true,
+    }),
   }),
 });
 

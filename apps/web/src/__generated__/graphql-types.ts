@@ -132,6 +132,8 @@ export type Channel = {
   __typename?: 'Channel';
   avatarUrl?: Maybe<Scalars['String']>;
   createdAt: Scalars['DateTime'];
+  defaultThumbnailBlurhash?: Maybe<Scalars['String']>;
+  defaultThumbnailUrl?: Maybe<Scalars['String']>;
   description?: Maybe<Scalars['String']>;
   id: Scalars['ShortUuid'];
   membershipsConnection: ChannelMembershipsConnection;
@@ -828,6 +830,7 @@ export enum UploadOrderProperty {
 
 export enum UploadPostProcess {
   ChannelAvatar = 'channelAvatar',
+  ChannelDefaultThumbnail = 'channelDefaultThumbnail',
   Media = 'media',
   ProfileAvatar = 'profileAvatar',
   Thumbnail = 'thumbnail'
