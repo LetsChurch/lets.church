@@ -23,6 +23,7 @@ export const MediaRowFragment = isServer
           slug
           name
           avatarUrl
+          defaultThumbnailUrl
         }
       }
     `
@@ -45,7 +46,10 @@ export function MediaRow(props: Props) {
       }`}
     >
       <Thumbnail
-        url={props.uploadProps.thumbnailUrl}
+        url={
+          props.uploadProps.thumbnailUrl ??
+          props.uploadProps.channel.defaultThumbnailUrl
+        }
         blurhash={props.uploadProps.thumbnailBlurhash}
         width={352}
         height={198}
