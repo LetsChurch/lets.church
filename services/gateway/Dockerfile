@@ -14,7 +14,7 @@ RUN cmake -D BUILD_STATIC=1 .. && make
 FROM debian:bullseye-slim as download-whisper-models
 RUN apt update && apt install -y curl
 RUN curl https://data.letschurch.cloud/whisper-ctranslate2/models/tiny.en.tar.gz | tar -xz
-RUN curl https://data.letschurch.cloud/whisper-ctranslate2/models/large-v2.tar.gz | tar -xz
+# RUN curl https://data.letschurch.cloud/whisper-ctranslate2/models/large-v2.tar.gz | tar -xz
 
 # Debian Base Image currently required for Prisma and M1 Macs: https://github.com/prisma/prisma/issues/8478
 # Temporal does not support alpine: https://github.com/temporalio/sdk-typescript/issues/850
