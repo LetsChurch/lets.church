@@ -1,9 +1,6 @@
 default:
   @just --choose
 
-tf *params:
-  terraform {{params}}
-
 deploy-check-vars:
   #!/usr/bin/env bash
 

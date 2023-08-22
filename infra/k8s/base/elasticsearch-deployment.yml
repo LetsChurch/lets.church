@@ -32,7 +32,7 @@ spec:
         - <<: *elasticsearchContainer
           name: file-permissions
           image: busybox:1.36.0
-          command: ['chown', '-R', '1000:1000', '/usr/share/elasticsearch/data']
+          command: ["chown", "-R", "1000:1000", "/usr/share/elasticsearch/data"]
       volumes:
         - name: esdata
           persistentVolumeClaim:
@@ -50,17 +50,3 @@ spec:
     - protocol: TCP
       port: 9200
       targetPort: 9200
----
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: elasticsearch-pvc
-  labels:
-    app: elasticsearch
-spec:
-  storageClassName: linode-block-storage-retain
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 15Gi

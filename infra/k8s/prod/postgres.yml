@@ -16,27 +16,22 @@ spec:
   instances:
     - name: instance1
       dataVolumeClaimSpec:
-        storageClassName: linode-block-storage-retain
+        storageClassName: REPLACE_ME
         accessModes:
-        - ReadWriteOnce
+          - ReadWriteOnce
         resources:
           requests:
             storage: 15Gi
   backups:
     pgbackrest:
       image: registry.developers.crunchydata.com/crunchydata/crunchy-pgbackrest:ubi8-2.41-4
-      configuration:
-      - secret:
-          name: pgo-s3-creds
-          items:
-            - key: pgo-s3-creds.conf
-              path: s3.conf
       global:
         repo1-path: /pgbackrest/postgres-operator/letschurch-s3/repo1
         repo1-cipher-type: aes-256-cbc
+      configuration:
+        - secret:
+            name: pgo-backup-creds
+            items:
+              - key: pgo-backup-creds.crypt.conf
       repos:
-      - name: repo1
-        s3:
-          bucket: letschurch-prod-backup-data
-          endpoint: https://s3.amazonaws.com
-          region: us-east-1
+        - name: repo1

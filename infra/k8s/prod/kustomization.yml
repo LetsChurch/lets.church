@@ -4,34 +4,44 @@ namespace: letschurch-prod
 resources:
   - ../base
   - postgres.yml
+  - elasticsearch-pvc.crypt.yml
   - tunnel.yml
+patches:
+  - path: postgres-storage.crypt.yml
+    target:
+      kind: PostgresCluster
+      name: pg
+  - path: postgres-backup.crypt.yml
+    target:
+      kind: PostgresCluster
+      name: pg
 configMapGenerator:
   - name: gateway-config
     behavior: merge
     literals:
       - MEDIA_URL="https://media.letschurch.cloud"
 secretGenerator:
-  - name: pgo-s3-creds
+  - name: pgo-backup-creds
     files:
-      - pgo-s3-creds.conf
+      - pgo-backup-creds.crypt.conf
   - name: s3-secret
     envs:
-      - s3.env
+      - s3.crypt.env
   - name: jwt-secret
     envs:
-      - jwt.env
+      - jwt.crypt.env
   - name: smtp-secret
     envs:
-      - smtp.env
+      - smtp.crypt.env
   - name: cf-api-secret
     envs:
-      - cf-api.env
+      - cf-api.crypt.env
   - name: cf-tunnel-secret
     envs:
-      - cf-tunnel.env
+      - cf-tunnel.crypt.env
   - name: turnstile-secret
     envs:
-      - turnstile.env
+      - turnstile.crypt.env
 
 generatorOptions:
   disableNameSuffixHash: true
