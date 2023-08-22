@@ -16,8 +16,6 @@ spec:
         app: import-worker
     spec:
       restartPolicy: Always
-      imagePullSecrets:
-        - name: regcred
       containers:
         - image: registry.gitlab.com/letschurch/lets.church/import-worker:latest
           name: import-worker

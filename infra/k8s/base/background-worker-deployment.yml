@@ -16,8 +16,6 @@ spec:
         app: background-worker
     spec:
       restartPolicy: Always
-      imagePullSecrets:
-        - name: regcred
       containers:
         - image: registry.gitlab.com/letschurch/lets.church/background-worker:latest
           name: background-worker

@@ -1,1 +1,4 @@
 seed-data/lcdevs3/*/*/* filter=lfs diff=lfs merge=lfs -text
+infra/k8s/**/*.env filter=crypt diff=crypt merge=crypt
+infra/k8s/**/*.conf filter=crypt diff=crypt merge=crypt
+infra/k8s/**/*.crypt.yml filter=crypt diff=crypt merge=crypt

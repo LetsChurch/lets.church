@@ -16,8 +16,6 @@ spec:
         app: gateway
     spec:
       restartPolicy: Always
-      imagePullSecrets:
-        - name: regcred
       containers:
         - &gatewayContainer
           image: registry.gitlab.com/letschurch/lets.church/gateway:latest

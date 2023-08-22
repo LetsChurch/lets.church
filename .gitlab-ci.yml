@@ -132,24 +132,23 @@ build-web:
     - depot build --build-arg VITE_TURNSTILE_SITEKEY=${VITE_TURNSTILE_SITEKEY} -t registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA} . --push
 
 #  ____             _
-# |  _ \  ___ _ __ | | ___  _   _ 
+# |  _ \  ___ _ __ | | ___  _   _
 # | | | |/ _ \ '_ \| |/ _ \| | | |
 # | |_| |  __/ |_) | | (_) | |_| |
 # |____/ \___| .__/|_|\___/ \__, |
-#            |_|            |___/ 
+#            |_|            |___/
 
 deploy-k8s:
   stage: deploy
   only:
     - kyrios
+  image: debian:12.1
+  before_script:
+    - apt update
+    - apt install -y bsdmainutils vim git git-lfs curl
+    - source ./bin/activate-hermit
   script:
+    - transcrypt -F -y -c $TRANSCRYPT_CIPHER -p $TRANSCRYPT_PASSWORD
     - cd infra/k8s/prod
-    - cp $PGO_S3_CREDS_CONF pgo-s3-creds.conf
-    - cp $S3_ENV s3.env
-    - cp $JWT_ENV jwt.env
-    - cp $SMTP_ENV smtp.env
-    - cp $CF_API_ENV cf-api.env
-    - cp $CF_TUNNEL_ENV cf-tunnel.env
-    - cp $TURNSTILE_ENV turnstile.env
     - just deploy-set-images prod $CI_COMMIT_SHORT_SHA
     - kubectl apply -k .

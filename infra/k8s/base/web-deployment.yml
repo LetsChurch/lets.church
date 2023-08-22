@@ -16,8 +16,6 @@ spec:
         app: web
     spec:
       restartPolicy: Always
-      imagePullSecrets:
-        - name: regcred
       containers:
         - image: registry.gitlab.com/letschurch/lets.church/web:latest
           name: web

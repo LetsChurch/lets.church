@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 if [ $(date +%u) = 7 ]; then
 	echo "It's Sunday, go to Church!"
@@ -9,4 +9,7 @@ if ! gitleaks protect --baseline-path ./gitleaks-report.json --verbose --redact 
 	exit 1
 fi
 
-exit 0
+# Transcrypt pre-commit hook: fail if secret file in staging lacks the magic prefix "Salted" in B64
+RELATIVE_GIT_DIR=$(git rev-parse --git-dir 2>/dev/null || printf '')
+CRYPT_DIR=$(git config transcrypt.crypt-dir 2>/dev/null || printf '%s/crypt' "${RELATIVE_GIT_DIR}")
+"${CRYPT_DIR}/transcrypt" pre_commit

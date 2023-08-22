@@ -16,8 +16,6 @@ spec:
         app: transcode-worker
     spec:
       restartPolicy: Always
-      imagePullSecrets:
-        - name: regcred
       containers:
         - image: registry.gitlab.com/letschurch/lets.church/transcode-worker:latest
           name: process-upload-worker
