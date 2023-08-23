@@ -172,7 +172,7 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
       nullable: true,
       select: { defaultThumbnailPath: true, overrideThumbnailPath: true },
       resolve: ({ defaultThumbnailPath, overrideThumbnailPath }) => {
-        const from = defaultThumbnailPath ?? overrideThumbnailPath;
+        const from = overrideThumbnailPath ?? defaultThumbnailPath;
 
         if (!from) {
           return null;
