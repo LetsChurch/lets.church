@@ -13,6 +13,7 @@ import H2 from '~/components/content/h2';
 import P from '~/components/content/p';
 import ExternalLink from '~/components/external-link';
 import { client } from '~/util/gql/server';
+import Og from '~/components/og';
 
 export function routeData() {
   const data = createServerData$(async () => {
@@ -40,6 +41,10 @@ export default function AboutRoute() {
   return (
     <div class="bg-white px-6 py-3 lg:px-8">
       <div class="mx-auto max-w-3xl text-base leading-7 text-gray-700">
+        <Og
+          title="All About Let's Church"
+          description="Free Christian Videos with No Ads"
+        />
         <H1>All About Let's Church</H1>
         <P>
           Let's Church is a 501(c)(3) non-profit organization dedicated to

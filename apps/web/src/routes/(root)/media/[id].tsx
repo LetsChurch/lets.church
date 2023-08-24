@@ -65,6 +65,7 @@ import Pagination from '~/components/pagination';
 import { Avatar } from '~/components/avatar';
 import FloatingDownloadMenu from '~/components/floating-download-menu';
 import { useUser } from '~/util/user-context';
+import Og from '~/components/og';
 
 const COMMENTS_PAGE_SIZE = 12;
 
@@ -220,6 +221,7 @@ export function routeData({ params, location }: RouteDataArgs) {
               }
               mediaSource
               audioSource
+              thumbnailUrl
               peaksDatUrl
               peaksJsonUrl
               downloadsEnabled
@@ -652,6 +654,15 @@ export default function MediaRoute() {
   return (
     <>
       <Title>{metaData()?.data.title ?? '...'} | Let's Church</Title>
+      <Og
+        title={
+          metaData()?.data.title
+            ? `${metaData()?.data.title} | Let's Church`
+            : "Let's Church"
+        }
+        description={metaData()?.data.description ?? ''}
+        image={metaData()?.data.thumbnailUrl}
+      />
       <div class="md:grid md:grid-cols-3 md:gap-4">
         <div class="space-y-4 md:col-span-2">
           <Video

@@ -13,6 +13,7 @@ import { UploadCardFields } from '~/util/gql/fragments';
 import { UploadGrid } from '~/components/upload-grid';
 import Newsletter from '~/components/newsletter';
 import { useUser } from '~/util/user-context';
+import Og from '~/components/og';
 
 export function routeData() {
   return createServerData$(
@@ -84,6 +85,10 @@ export default function WatchRoute() {
 
   return (
     <>
+      <Og
+        title="Let's Church"
+        description="Free Christian Videos with No Ads"
+      />
       <h3 class="mb-3 text-base font-semibold leading-6 text-gray-900">
         Subscriptions
       </h3>
