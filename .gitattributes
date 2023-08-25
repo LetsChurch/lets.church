@@ -1,2 +1,2 @@
 seed-data/lcdevs3/*/*/* filter=lfs diff=lfs merge=lfs -text
-infra/k8s/**/*.crypt.* filter=crypt diff=crypt merge=crypt
+*.crypt.* filter=crypt diff=crypt merge=crypt
