@@ -129,7 +129,7 @@ build-web:
   <<: *build-common
   script:
     - cd apps/web
-    - depot build --build-arg VITE_TURNSTILE_SITEKEY=${VITE_TURNSTILE_SITEKEY} -t registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA} . --push
+    - depot build -t registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA} . --push
 
 #  ____             _
 # |  _ \  ___ _ __ | | ___  _   _
