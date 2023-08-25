@@ -73,15 +73,12 @@ export default function AboutRoute() {
         </P>
         <H2 id="support">Support Let's Church</H2>
         <P>
-          <A href="/about">
-            Let's Church is a 501(c)(3) non-profit organization
-          </A>
-          . We provide our services completely free of charge and will never run
-          ads. Your contribution helps pay for improvement of our platform,
-          hosting fees, storage, and the hardware necessary to encode and
-          transcribe audio and videos for the benefit of churches and ministries
-          around the world. All donations are tax-deductible in the United
-          States.
+          Let's Church is a 501(c)(3) non-profit organization. We provide our
+          services completely free of charge and will never run ads. Your
+          contribution helps pay for improvement of our platform, hosting fees,
+          storage, and the hardware necessary to encode and transcribe audio and
+          videos for the benefit of churches and ministries around the world.
+          All donations are tax-deductible in the United States.
         </P>
         <P class="flex justify-center">
           <a
@@ -105,6 +102,12 @@ export default function AboutRoute() {
           podcasts that have been helpful or edifying to you. If you know of any
           churches or ministires in need of free sermon or media hosting, send
           them our way!
+        </P>
+        <H2>Reach Out</H2>
+        <P>
+          Feel free to reach out to{' '}
+          <A href="mailto:contact@lets.church">contact@lets.church</A> with any
+          questions you have about Let's Church!
         </P>
         <dl class="mt-36 grid grid-cols-1 gap-x-8 gap-y-16 text-center lg:grid-cols-3">
           <div class="mx-auto flex max-w-xs flex-col gap-y-4">
