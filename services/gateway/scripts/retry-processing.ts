@@ -19,7 +19,7 @@ const subScope = z.enum(['transcode', 'transcribe', 'everything']).parse(
     choices: [
       { name: 'Transcriptions', value: 'transcribe' },
       { name: 'Transcodings', value: 'transcode' },
-      { name: 'Everything failed', value: 'everything' },
+      { name: 'Everything', value: 'everything' },
     ],
   }),
 );
