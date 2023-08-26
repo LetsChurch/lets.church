@@ -17,12 +17,13 @@ const subScope = z.enum(['transcode', 'transcribe', 'everything']).parse(
   await select({
     message: `What would you like to retry for?`,
     choices: [
-      { name: 'Failed Transcriptions', value: 'transcribe' },
-      { name: 'Failed Transcodings', value: 'transcode' },
+      { name: 'Transcriptions', value: 'transcribe' },
+      { name: 'Transcodings', value: 'transcode' },
       { name: 'Everything failed', value: 'everything' },
     ],
   }),
 );
+const onlyFailed = await confirm({ message: 'Only failed?', default: true });
 
 const ids: Array<string> = [];
 
@@ -41,11 +42,13 @@ if (scope === 'ids') {
         select: { id: true },
         where: {
           channel: { slug },
-          ...(subScope === 'transcribe'
+          ...(onlyFailed && subScope === 'transcribe'
             ? { transcribingFinishedAt: null }
             : {}),
-          ...(subScope === 'transcode' ? { transcodingFinishedAt: null } : {}),
-          ...(subScope === 'everything'
+          ...(onlyFailed && subScope === 'transcode'
+            ? { transcodingFinishedAt: null }
+            : {}),
+          ...(onlyFailed && subScope === 'everything'
             ? {
                 OR: [
                   { transcribingFinishedAt: null },
