@@ -12,7 +12,7 @@ export async function runAudiowaveform(
 
   console.log('Converting file to wav');
 
-  const ffmpegRes = execa(
+  const ffmpegProc = execa(
     'ffmpeg',
     [
       '-hide_banner',
@@ -28,12 +28,14 @@ export async function runAudiowaveform(
     { cwd, signal },
   );
 
-  ffmpegRes.stdout?.on('data', () => heartbeat());
-  ffmpegRes.stderr?.on('data', () => heartbeat());
+  console.log(`runAudiowaveform: ffmpeg ${ffmpegProc.spawnargs.join(' ')}`);
 
-  await ffmpegRes;
+  ffmpegProc.stdout?.on('data', () => heartbeat());
+  ffmpegProc.stderr?.on('data', () => heartbeat());
 
-  console.log(`ffmpeg done: ${ffmpegRes.exitCode}`);
+  await ffmpegProc;
+
+  console.log(`ffmpeg done: ${ffmpegProc.exitCode}`);
 
   console.log('Running audiowaveform json');
 
@@ -42,6 +44,8 @@ export async function runAudiowaveform(
     ['-i', wavFile, '-b', '8', '-o', `${wavFile}.json`],
     { cwd, signal },
   );
+
+  console.log(`runAudiowaveform: audiowaveform ${proc1.spawnargs.join(' ')}`);
 
   proc1.stdout?.on('data', () => heartbeat());
   proc1.stderr?.on('data', () => heartbeat());
@@ -57,6 +61,8 @@ export async function runAudiowaveform(
     ['-i', wavFile, '-b', '8', '-o', `${wavFile}.dat`],
     { cwd, signal },
   );
+
+  console.log(`runAudiowaveform: audiowaveform ${proc2.spawnargs.join(' ')}`);
 
   proc2.stdout?.on('data', () => heartbeat());
   proc2.stderr?.on('data', () => heartbeat());

@@ -352,7 +352,7 @@ export function runFfmpegEncode(
   variants: Array<UploadVariant>,
   signal: AbortSignal,
 ) {
-  return execa(
+  const proc = execa(
     'ffmpeg',
     [
       // Baseline args
@@ -369,6 +369,10 @@ export function runFfmpegEncode(
     ],
     { cwd, signal },
   );
+
+  console.log(`runFfmpegEncode: ffmpeg ${proc.spawnargs.join(' ')}`);
+
+  return proc;
 }
 
 export function runFfmpegThumbnails(
@@ -380,7 +384,7 @@ export function runFfmpegThumbnails(
   const count = 100;
   const rate = 1 / (parseFloat(probe.format.duration) / count);
 
-  return execa(
+  const proc = execa(
     'ffmpeg',
     [
       // Baseline args
@@ -398,6 +402,10 @@ export function runFfmpegThumbnails(
     ],
     { cwd, signal },
   );
+
+  console.log(`runFfmpegThumbnails: ffmpeg ${proc.spawnargs.join(' ')}`);
+
+  return proc;
 }
 
 // ffprobe -v quiet -print_format json -show_format -show_streams Stars.mp4
@@ -406,7 +414,7 @@ export function runFfprobe(
   inputFilename: string,
   signal: AbortSignal,
 ) {
-  return execa(
+  const proc = execa(
     'ffprobe',
     [
       '-v',
@@ -420,4 +428,8 @@ export function runFfprobe(
     ],
     { cwd, signal },
   );
+
+  console.log(`runFfmpegProbe: ffmpeg ${proc.spawnargs.join(' ')}`);
+
+  return proc;
 }

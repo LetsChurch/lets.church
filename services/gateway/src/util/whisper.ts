@@ -19,7 +19,7 @@ export async function runWhisper(
 
   console.log('Converting file to wav');
 
-  const ffmpegRes = execa(
+  const ffmpegProc = execa(
     'ffmpeg',
     [
       '-hide_banner',
@@ -35,12 +35,14 @@ export async function runWhisper(
     { cwd, signal },
   );
 
-  ffmpegRes.stdout?.on('data', () => heartbeat());
-  ffmpegRes.stderr?.on('data', () => heartbeat());
+  console.log(`runWhisper: ffmpeg ${ffmpegProc.spawnargs.join(' ')}`);
 
-  await ffmpegRes;
+  ffmpegProc.stdout?.on('data', () => heartbeat());
+  ffmpegProc.stderr?.on('data', () => heartbeat());
 
-  console.log(`ffmpeg done: ${ffmpegRes.exitCode}`);
+  await ffmpegProc;
+
+  console.log(`ffmpeg done: ${ffmpegProc.exitCode}`);
 
   console.log('Running whisper');
 
@@ -58,6 +60,8 @@ export async function runWhisper(
     ],
     { cwd, signal },
   );
+
+  console.log(`runWhisper: whisper-ctranslate2 ${proc.spawnargs.join(' ')}`);
 
   proc.stdout?.on('data', () => heartbeat('whisper stdout'));
   proc.stderr?.on('data', () => heartbeat('whisper stderr'));
