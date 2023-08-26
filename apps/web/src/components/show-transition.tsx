@@ -18,7 +18,7 @@ function nextFrame(fn: () => unknown) {
 
 export type Props = {
   when: boolean;
-  children: (ref: Setter<HTMLElement>) => JSX.Element;
+  children: (ref: Setter<HTMLElement | null>) => JSX.Element;
   classEnterBase: string;
   classEnterFrom: string;
   classEnterTo: string;

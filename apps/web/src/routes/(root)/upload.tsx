@@ -452,6 +452,7 @@ export default function UploadRoute() {
 
   async function submitUpsert() {
     const res = await upsert(new FormData(form));
+    invariant(res, 'Upload: Missing response from upsert!');
     const data = await res.json();
     setUploadRecordId(data.upsertUploadRecord.id);
   }

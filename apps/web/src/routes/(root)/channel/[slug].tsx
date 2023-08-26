@@ -15,7 +15,7 @@ import { UploadCardFields } from '~/util/gql/fragments';
 
 const PAGE_SIZE = 60;
 
-export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
+export function routeData({ params, location }: RouteDataArgs) {
   return createServerData$(
     async ([, slug, after = null, before = null], { request }) => {
       invariant(slug, 'No slug provided');

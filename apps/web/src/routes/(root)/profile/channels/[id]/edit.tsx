@@ -26,7 +26,7 @@ import { UploadPostProcess } from '~/__generated__/graphql-types';
 import { doMultipartUpload } from '~/util/multipart-upload';
 import { Avatar } from '~/components/avatar';
 
-export function routeData({ params, location }: RouteDataArgs<{ id: string }>) {
+export function routeData({ params, location }: RouteDataArgs) {
   return createServerData$(
     async ([, id], { request }) => {
       invariant(id, 'No id provided');
