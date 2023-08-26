@@ -270,6 +270,14 @@ export default async function transcode(
       body: Buffer.from(encodeProcRes.stdout),
     });
     Context.current().heartbeat('Uploaded stdout');
+    Context.current().heartbeat('Uploading stderr');
+    await retryablePutFile({
+      to: 'INGEST',
+      key: `${uploadRecordId}/stderr.txt`,
+      contentType: 'text/plain',
+      body: Buffer.from(encodeProcRes.stderr),
+    });
+    Context.current().heartbeat('Uploaded stderr');
     console.log('Queueing final update for upload record');
     await updateUploadRecord(uploadRecordId, {
       variants,
