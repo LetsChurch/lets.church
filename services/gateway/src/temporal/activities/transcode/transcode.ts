@@ -31,7 +31,7 @@ async function uploadSegments(id: string, dir: string) {
   const segmentFiles = await fastGlob(join(dir, '*.ts'));
 
   for (const path of segmentFiles) {
-    Context.current().heartbeat(`Starting uplaod: ${path}`);
+    Context.current().heartbeat(`Starting upload: ${path}`);
     console.log(`Uploading media segment: ${path}`);
 
     await retryablePutFile({

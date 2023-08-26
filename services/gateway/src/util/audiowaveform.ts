@@ -28,7 +28,7 @@ export async function runAudiowaveform(
     { cwd, signal },
   );
 
-  console.log(`runAudiowaveform: ffmpeg ${ffmpegProc.spawnargs.join(' ')}`);
+  console.log(`runAudiowaveform: ${ffmpegProc.spawnargs.join(' ')}`);
 
   ffmpegProc.stdout?.on('data', () => heartbeat());
   ffmpegProc.stderr?.on('data', () => heartbeat());
@@ -45,7 +45,7 @@ export async function runAudiowaveform(
     { cwd, signal },
   );
 
-  console.log(`runAudiowaveform: audiowaveform ${proc1.spawnargs.join(' ')}`);
+  console.log(`runAudiowaveform: ${proc1.spawnargs.join(' ')}`);
 
   proc1.stdout?.on('data', () => heartbeat());
   proc1.stderr?.on('data', () => heartbeat());
@@ -62,7 +62,7 @@ export async function runAudiowaveform(
     { cwd, signal },
   );
 
-  console.log(`runAudiowaveform: audiowaveform ${proc2.spawnargs.join(' ')}`);
+  console.log(`runAudiowaveform: ${proc2.spawnargs.join(' ')}`);
 
   proc2.stdout?.on('data', () => heartbeat());
   proc2.stderr?.on('data', () => heartbeat());

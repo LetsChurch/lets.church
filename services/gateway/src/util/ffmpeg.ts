@@ -370,7 +370,7 @@ export function runFfmpegEncode(
     { cwd, signal },
   );
 
-  console.log(`runFfmpegEncode: ffmpeg ${proc.spawnargs.join(' ')}`);
+  console.log(`runFfmpegEncode: ${proc.spawnargs.join(' ')}`);
 
   return proc;
 }
@@ -403,7 +403,7 @@ export function runFfmpegThumbnails(
     { cwd, signal },
   );
 
-  console.log(`runFfmpegThumbnails: ffmpeg ${proc.spawnargs.join(' ')}`);
+  console.log(`runFfmpegThumbnails: ${proc.spawnargs.join(' ')}`);
 
   return proc;
 }
@@ -429,7 +429,7 @@ export function runFfprobe(
     { cwd, signal },
   );
 
-  console.log(`runFfmpegProbe: ffmpeg ${proc.spawnargs.join(' ')}`);
+  console.log(`runFfmpegProbe: ${proc.spawnargs.join(' ')}`);
 
   return proc;
 }

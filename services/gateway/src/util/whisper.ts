@@ -35,7 +35,7 @@ export async function runWhisper(
     { cwd, signal },
   );
 
-  console.log(`runWhisper: ffmpeg ${ffmpegProc.spawnargs.join(' ')}`);
+  console.log(`runWhisper: ${ffmpegProc.spawnargs.join(' ')}`);
 
   ffmpegProc.stdout?.on('data', () => heartbeat());
   ffmpegProc.stderr?.on('data', () => heartbeat());
@@ -61,7 +61,7 @@ export async function runWhisper(
     { cwd, signal },
   );
 
-  console.log(`runWhisper: whisper-ctranslate2 ${proc.spawnargs.join(' ')}`);
+  console.log(`runWhisper: ${proc.spawnargs.join(' ')}`);
 
   proc.stdout?.on('data', () => heartbeat('whisper stdout'));
   proc.stderr?.on('data', () => heartbeat('whisper stderr'));
