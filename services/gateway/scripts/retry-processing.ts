@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { input, confirm, select } from '@inquirer/prompts';
 import { z } from 'zod';
 import prisma from '../src/util/prisma';
@@ -28,11 +29,24 @@ const onlyFailed = await confirm({ message: 'Only failed?', default: true });
 const ids: Array<string> = [];
 
 if (scope === 'ids') {
-  ids.push(
-    ...(await input({ message: 'ids (comma-separated):' }))
-      .split(/,/g)
-      .map((s) => s.trim()),
-  );
+  const source = await select({
+    message: 'IDs from:',
+    choices: [
+      { name: 'File', value: 'file' },
+      { name: 'Input', value: 'input' },
+    ],
+  });
+  if (source === 'file') {
+    const filename = await input({ message: 'File name:' });
+    const text = await readFile(filename, 'utf-8');
+    ids.push(...text.trim().split(/\n/g));
+  } else {
+    ids.push(
+      ...(await input({ message: 'ids (comma-separated):' }))
+        .split(/,/g)
+        .map((s) => s.trim()),
+    );
+  }
 } else if (scope === 'slug') {
   const slug = await input({ message: 'Slug:' });
 
