@@ -261,26 +261,25 @@ export default async function transcode(
     console.log('Uploaded peak dat');
 
     // Upload logs
-    console.log('Queing upload of logs');
-    Context.current().heartbeat(
-      `Uploading stdout: ~${encodeProcRes.stdout.length} bytes`,
-    );
+    console.log('Queueing upload of logs');
+    console.log(`Uploading stdout: ${encodeProcRes.stdout.length} characters`);
+    Context.current().heartbeat('queueing stdout upload');
     await retryablePutFile({
       to: 'INGEST',
       key: `${uploadRecordId}/stdout.txt`,
       contentType: 'text/plain',
       body: Buffer.from(encodeProcRes.stdout),
     });
-    Context.current().heartbeat('Uploaded stdout');
-    Context.current().heartbeat(
-      `Uploading stderr ~${encodeProcRes.stderr.length} bytes`,
-    );
+    console.log('Done uploading stdout');
+    Context.current().heartbeat('queueing stderr upload');
+    console.log(`Uploading stderr: ${encodeProcRes.stderr.length} characters`);
     await retryablePutFile({
       to: 'INGEST',
       key: `${uploadRecordId}/stderr.txt`,
       contentType: 'text/plain',
       body: Buffer.from(encodeProcRes.stderr),
     });
+    console.log('Done uploading stderr');
     Context.current().heartbeat('Uploaded stderr');
     console.log('Queueing final update for upload record');
     await updateUploadRecord(uploadRecordId, {
