@@ -294,6 +294,7 @@ export default async function transcode(
       transcodingStartedAt: null,
       transcodingFinishedAt: null,
     });
+    throw e;
   } finally {
     console.log('Flushing heartbeats');
     dataHeartbeat.flush();
