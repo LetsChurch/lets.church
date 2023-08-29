@@ -262,7 +262,9 @@ export default async function transcode(
 
     // Upload logs
     console.log('Queing upload of logs');
-    Context.current().heartbeat('Uploading stdout');
+    Context.current().heartbeat(
+      `Uploading stdout: ~${encodeProcRes.stdout.length} bytes`,
+    );
     await retryablePutFile({
       to: 'INGEST',
       key: `${uploadRecordId}/stdout.txt`,
@@ -270,7 +272,9 @@ export default async function transcode(
       body: Buffer.from(encodeProcRes.stdout),
     });
     Context.current().heartbeat('Uploaded stdout');
-    Context.current().heartbeat('Uploading stderr');
+    Context.current().heartbeat(
+      `Uploading stderr ~${encodeProcRes.stderr.length} bytes`,
+    );
     await retryablePutFile({
       to: 'INGEST',
       key: `${uploadRecordId}/stderr.txt`,
