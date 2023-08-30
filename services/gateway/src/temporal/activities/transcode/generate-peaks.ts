@@ -6,6 +6,7 @@ import { throttle } from 'lodash-es';
 import rimraf from 'rimraf';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import { createPresignedGetUrl, retryablePutFile } from '../../../util/s3';
+import { streamUrlToDisk } from '../../../util/node';
 
 const WORK_DIR = process.env['PEAKS_WORKING_DIRECTORY'] ?? '/data/peaks';
 
@@ -15,20 +16,29 @@ export default async function generatePeaks(
 ) {
   Context.current().heartbeat('job start');
   const cancellationSignal = Context.current().cancellationSignal;
-  const dir = join(WORK_DIR, uploadRecordId);
-  const dataHeartbeat = throttle(() => Context.current().heartbeat(), 5000);
+  const workingDir = join(WORK_DIR, uploadRecordId);
+  const dataHeartbeat = throttle(
+    (arg = 'data') => Context.current().heartbeat(arg),
+    5000,
+  );
 
   try {
-    console.log(`Making work directory: ${dir}`);
+    console.log(`Making working directory: ${workingDir}`);
 
-    await mkdirp(dir);
-    const downloadUrl = await createPresignedGetUrl('INGEST', s3UploadKey);
+    await mkdirp(workingDir);
+    const downloadPath = join(workingDir, 'download');
+
+    await streamUrlToDisk(
+      await createPresignedGetUrl('INGEST', s3UploadKey),
+      downloadPath,
+      () => dataHeartbeat('download'),
+    );
 
     // Generate and upload peaks
     console.log('Generating peaks');
     const peakFiles = await runAudiowaveform(
-      dir,
-      downloadUrl,
+      workingDir,
+      downloadPath,
       cancellationSignal,
       dataHeartbeat,
     );
@@ -62,7 +72,7 @@ export default async function generatePeaks(
   } finally {
     console.log('Flushing heartbeats');
     dataHeartbeat.flush();
-    console.log(`Removing work directory: ${dir}`);
-    await rimraf(dir);
+    console.log(`Removing work directory: ${workingDir}`);
+    await rimraf(workingDir);
   }
 }

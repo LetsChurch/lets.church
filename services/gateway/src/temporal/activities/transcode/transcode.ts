@@ -18,6 +18,7 @@ import { createPresignedGetUrl, retryablePutFile } from '../../../util/s3';
 import { recordDownloadSize, updateUploadRecord } from '../..';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import type { Probe } from '../../../util/zod';
+import { streamUrlToDisk } from '../../../util/node';
 
 const WORK_DIR =
   process.env['TRANSCODE_WORKING_DIRECTORY'] ?? '/data/transcode';
@@ -59,9 +60,9 @@ export default async function transcode(
 ) {
   Context.current().heartbeat('job start');
   const cancellationSignal = Context.current().cancellationSignal;
-  const dir = join(WORK_DIR, uploadRecordId);
+  const workingDir = join(WORK_DIR, uploadRecordId);
   const dataHeartbeat = throttle(
-    (...args) => Context.current().heartbeat(...args),
+    (arg = 'data') => Context.current().heartbeat(arg),
     5000,
   );
   const throttledUpdateUploadRecord = throttle(updateUploadRecord, 2500);
@@ -71,15 +72,15 @@ export default async function transcode(
   });
 
   try {
-    console.log(`Making work directory: ${dir}`);
+    console.log(`Making work directory: ${workingDir}`);
 
-    await mkdirp(dir);
-    const downloadUrl = await createPresignedGetUrl(
-      'INGEST',
-      s3UploadKey,
-      60 * 60 * 24,
+    await mkdirp(workingDir);
+    const downloadPath = join(workingDir, 'download');
+    await streamUrlToDisk(
+      await createPresignedGetUrl('INGEST', s3UploadKey),
+      downloadPath,
+      () => dataHeartbeat('download'),
     );
-
     const { width, height } = probe.streams.find(
       (s): s is Extract<typeof s, { codec_type: 'video' }> =>
         s.codec_type === 'video',
@@ -98,8 +99,8 @@ export default async function transcode(
     console.log('Running ffmpeg');
 
     const encodeProc = runFfmpegEncode(
-      dir,
-      downloadUrl,
+      workingDir,
+      downloadPath,
       variants,
       cancellationSignal,
     );
@@ -135,11 +136,11 @@ export default async function transcode(
 
     while (encodeProc.exitCode === null) {
       dataHeartbeat('Waiting for ffmpeg to finish');
-      await uploadSegments(uploadRecordId, dir);
+      await uploadSegments(uploadRecordId, workingDir);
       await setTimeout(1000);
     }
 
-    await uploadSegments(uploadRecordId, dir);
+    await uploadSegments(uploadRecordId, workingDir);
 
     const encodeProcRes = await encodeProc;
 
@@ -154,7 +155,7 @@ export default async function transcode(
 
     console.log('Finding downloadable files');
 
-    const downloadableFiles = await fastGlob(join(dir, '*.{mp4,m4a}'));
+    const downloadableFiles = await fastGlob(join(workingDir, '*.{mp4,m4a}'));
 
     console.log(
       `Found downloadable files:\n - ${downloadableFiles.join('\n -')}`,
@@ -189,7 +190,7 @@ export default async function transcode(
 
     console.log('Finding playlist files');
 
-    const playlists = await fastGlob(join(dir, '*.m3u8'));
+    const playlists = await fastGlob(join(workingDir, '*.m3u8'));
 
     console.log(`Found playlist files:\n - ${playlists.join('\n -')}`);
     console.log(`Uploading ${playlists.length} playlist files`);
@@ -241,8 +242,8 @@ export default async function transcode(
     // Generate and upload peaks
     console.log('Generating peaks');
     const peakFiles = await runAudiowaveform(
-      dir,
-      downloadUrl,
+      workingDir,
+      downloadPath,
       cancellationSignal,
       dataHeartbeat,
     );
@@ -308,7 +309,7 @@ export default async function transcode(
   } finally {
     console.log('Flushing heartbeats');
     dataHeartbeat.flush();
-    console.log(`Removing work directory: ${dir}`);
-    await rimraf(dir);
+    console.log(`Removing work directory: ${workingDir}`);
+    await rimraf(workingDir);
   }
 }

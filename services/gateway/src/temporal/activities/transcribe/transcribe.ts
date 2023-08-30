@@ -14,6 +14,7 @@ import {
   runWhisper,
   whisperJsonToVtt,
 } from '../../../util/whisper';
+import { streamUrlToDisk } from '../../../util/node';
 
 const WORK_DIR =
   process.env['TRANSCRIBE_WORKING_DIRECTORY'] ?? '/data/transcribe';
@@ -24,7 +25,7 @@ export default async function transcribe(
 ) {
   Context.current().heartbeat('job start');
   const cancellationSignal = Context.current().cancellationSignal;
-  const dir = join(WORK_DIR, uploadRecordId);
+  const workingDir = join(WORK_DIR, uploadRecordId);
   const dataHeartbeat = throttle(
     (arg = 'data') => Context.current().heartbeat(arg),
     5000,
@@ -35,12 +36,18 @@ export default async function transcribe(
   });
 
   try {
-    await mkdirp(dir);
-    const downloadUrl = await createPresignedGetUrl('INGEST', s3UploadKey);
+    await mkdirp(workingDir);
+    const downloadPath = join(workingDir, 'download');
+
+    await streamUrlToDisk(
+      await createPresignedGetUrl('INGEST', s3UploadKey),
+      downloadPath,
+      () => dataHeartbeat('download'),
+    );
 
     const outputFiles = await runWhisper(
-      dir,
-      downloadUrl,
+      workingDir,
+      downloadPath,
       cancellationSignal,
       dataHeartbeat,
     );
@@ -109,6 +116,6 @@ export default async function transcribe(
     throw e;
   } finally {
     console.log('Cleaning up');
-    await rimraf(dir);
+    await rimraf(workingDir);
   }
 }

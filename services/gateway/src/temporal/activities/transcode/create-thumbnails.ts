@@ -12,6 +12,7 @@ import { runFfmpegThumbnails } from '../../../util/ffmpeg';
 import { concatThumbs, imageToBlurhash } from '../../../util/images';
 import type { Probe } from '../../../util/zod';
 import { updateUploadRecord } from '../..';
+import { streamUrlToDisk } from '../../../util/node';
 
 const WORK_DIR =
   process.env['THUMBNAILS_WORKING_DIRECTORY'] ?? '/data/thumbnails';
@@ -22,26 +23,35 @@ export default async function createThumbnails(
   probe: Probe,
 ) {
   const cancellationSignal = Context.current().cancellationSignal;
-  const dataHeartbeat = throttle(() => Context.current().heartbeat(), 5000);
-  const dir = join(WORK_DIR, s3UploadKey);
+  const dataHeartbeat = throttle(
+    (arg = 'data') => Context.current().heartbeat(arg),
+    5000,
+  );
+  const workingDir = join(WORK_DIR, s3UploadKey);
 
   console.log('Making working directory');
-  await mkdirp(dir);
-  const downloadUrl = await createPresignedGetUrl('INGEST', s3UploadKey);
+  await mkdirp(workingDir);
+  const downloadPath = join(workingDir, 'download');
+
+  await streamUrlToDisk(
+    await createPresignedGetUrl('INGEST', s3UploadKey),
+    downloadPath,
+    () => dataHeartbeat('download'),
+  );
 
   Context.current().heartbeat();
   try {
     console.log('Creating thumbnails with ffmpeg');
     const proc = runFfmpegThumbnails(
-      dir,
-      downloadUrl,
+      workingDir,
+      downloadPath,
       probe,
       cancellationSignal,
     );
     proc.stdout?.on('data', dataHeartbeat);
     proc.stderr?.on('data', dataHeartbeat);
     await proc;
-    const thumbnailJpgs = (await fastGlob(join(dir, '*.jpg'))).sort();
+    const thumbnailJpgs = (await fastGlob(join(workingDir, '*.jpg'))).sort();
     const thumbnailsWithSizes = await pMap(
       thumbnailJpgs,
       async (p) => ({
@@ -115,13 +125,13 @@ export default async function createThumbnails(
     );
     Context.current().heartbeat();
     console.log({ pickedThumbnails });
-    await concatThumbs(dir, pickedThumbnails);
+    await concatThumbs(workingDir, pickedThumbnails);
     console.log('Uploading hovernail');
     await retryablePutFile({
       to: 'PUBLIC',
       key: `${uploadRecordId}/hovernail.jpg`,
       contentType: 'image/jpeg',
-      path: join(dir, 'hovernail.jpg'),
+      path: join(workingDir, 'hovernail.jpg'),
     });
     Context.current().heartbeat();
     console.log('Done uploading hovernail');
@@ -131,6 +141,6 @@ export default async function createThumbnails(
     throw e;
   } finally {
     dataHeartbeat.flush();
-    await rimraf(dir);
+    await rimraf(workingDir);
   }
 }
