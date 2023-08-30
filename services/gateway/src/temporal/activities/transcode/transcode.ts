@@ -60,7 +60,10 @@ export default async function transcode(
   Context.current().heartbeat('job start');
   const cancellationSignal = Context.current().cancellationSignal;
   const dir = join(WORK_DIR, uploadRecordId);
-  const dataHeartbeat = throttle(() => Context.current().heartbeat(), 5000);
+  const dataHeartbeat = throttle(
+    (...args) => Context.current().heartbeat(...args),
+    5000,
+  );
   const throttledUpdateUploadRecord = throttle(updateUploadRecord, 2500);
 
   await updateUploadRecord(uploadRecordId, {
@@ -100,10 +103,15 @@ export default async function transcode(
       variants,
       cancellationSignal,
     );
-    encodeProc.stdout?.on('data', (data) => {
-      dataHeartbeat();
 
-      const match = String(data).match(/frame=(\d+)/);
+    const stdout: Array<string> = [];
+    const stderr: Array<string> = [];
+
+    encodeProc.stdout?.on('data', (data) => {
+      const str = String(data);
+      stdout.push(str);
+
+      const match = str.match(/frame=(\d+)/);
 
       if (!match) {
         return;
@@ -122,9 +130,11 @@ export default async function transcode(
         });
       }
     });
-    encodeProc.stderr?.on('data', dataHeartbeat);
+
+    encodeProc.stderr?.on('data', (data) => stderr.push(String(data)));
 
     while (encodeProc.exitCode === null) {
+      dataHeartbeat('Waiting for ffmpeg to finish');
       await uploadSegments(uploadRecordId, dir);
       await setTimeout(1000);
     }
@@ -152,6 +162,7 @@ export default async function transcode(
 
     // Upload downloadable files
     console.log(`Uploading ${downloadableFiles.length} downloadable files`);
+
     for (const path of downloadableFiles) {
       const filename = basename(path);
       const contentType = mime.getType(filename);
@@ -262,22 +273,22 @@ export default async function transcode(
 
     // Upload logs
     console.log('Queueing upload of logs');
-    console.log(`Uploading stdout: ${encodeProcRes.stdout.length} characters`);
+    console.log('Uploading stdout');
     Context.current().heartbeat('queueing stdout upload');
     await retryablePutFile({
       to: 'INGEST',
       key: `${uploadRecordId}/stdout.txt`,
       contentType: 'text/plain',
-      body: Buffer.from(encodeProcRes.stdout),
+      body: Buffer.from(stdout.join('')),
     });
     console.log('Done uploading stdout');
     Context.current().heartbeat('queueing stderr upload');
-    console.log(`Uploading stderr: ${encodeProcRes.stderr.length} characters`);
+    console.log('Uploading stderr');
     await retryablePutFile({
       to: 'INGEST',
       key: `${uploadRecordId}/stderr.txt`,
       contentType: 'text/plain',
-      body: Buffer.from(encodeProcRes.stderr),
+      body: Buffer.from(stderr.join('')),
     });
     console.log('Done uploading stderr');
     Context.current().heartbeat('Uploaded stderr');
