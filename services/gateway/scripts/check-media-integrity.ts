@@ -6,7 +6,7 @@ import invariant from 'tiny-invariant';
 import { Parser } from 'm3u8-parser';
 import { input } from '@inquirer/prompts';
 import prisma from '../src/util/prisma';
-import { getPublicMediaUrl } from '../src/util/url';
+import { getObject } from '../src/util/s3';
 
 const filename = await input({ message: 'File name:', default: 'report.json' });
 
@@ -50,15 +50,16 @@ for (let i = 0; i < total; i += 1) {
       continue;
     }
 
-    const url = getPublicMediaUrl(`${id}/${variant}.m3u8`);
-    const res = await fetch(url);
+    const s3Key = `${id}/${variant}.m3u8`;
+    const res = await getObject('PUBLIC', s3Key);
 
-    if (!res.ok) {
+    if (!res.Body) {
       record.actualLengths[variant] = 0;
       continue;
     }
 
-    const text = await res.text();
+    const text = await res.Body.transformToString('utf-8');
+
     const parser = new Parser();
     parser.push(text);
     parser.end();
