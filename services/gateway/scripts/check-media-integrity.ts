@@ -74,10 +74,10 @@ for (let i = 0; i < total; i += 1) {
       );
 
       if (Math.abs(actualDuration - lengthSeconds) > 5) {
-        record.actualLengths[variant] = parsed.totalDuration;
+        record.actualLengths[String(variant)] = parsed.totalDuration;
       }
     } catch (err) {
-      console.log(err);
+      record.actualLengths[String(variant)] = 0;
       continue;
     }
   }
