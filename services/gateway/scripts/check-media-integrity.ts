@@ -51,28 +51,34 @@ for (let i = 0; i < total; i += 1) {
     }
 
     const s3Key = `${id}/${variant}.m3u8`;
-    const res = await getObject('PUBLIC', s3Key);
 
-    if (!res.Body) {
-      record.actualLengths[variant] = 0;
+    try {
+      const res = await getObject('PUBLIC', s3Key);
+
+      if (!res.Body) {
+        record.actualLengths[variant] = 0;
+        continue;
+      }
+
+      const text = await res.Body.transformToString('utf-8');
+
+      const parser = new Parser();
+      parser.push(text);
+      parser.end();
+      const parsed = parser.manifest;
+
+      const actualDuration = parsed.segments.reduce(
+        (total: number, segment: { duration: number }) =>
+          total + segment.duration,
+        0,
+      );
+
+      if (Math.abs(actualDuration - lengthSeconds) > 5) {
+        record.actualLengths[variant] = parsed.totalDuration;
+      }
+    } catch (err) {
+      console.log(err);
       continue;
-    }
-
-    const text = await res.Body.transformToString('utf-8');
-
-    const parser = new Parser();
-    parser.push(text);
-    parser.end();
-    const parsed = parser.manifest;
-
-    const actualDuration = parsed.segments.reduce(
-      (total: number, segment: { duration: number }) =>
-        total + segment.duration,
-      0,
-    );
-
-    if (Math.abs(actualDuration - lengthSeconds) > 5) {
-      record.actualLengths[variant] = parsed.totalDuration;
     }
   }
 
