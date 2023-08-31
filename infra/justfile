@@ -30,6 +30,7 @@ deploy-set-images env hash:
   kustomize edit set image registry.gitlab.com/letschurch/lets.church/gateway:{{hash}}
   kustomize edit set image registry.gitlab.com/letschurch/lets.church/background-worker:{{hash}}
   kustomize edit set image registry.gitlab.com/letschurch/lets.church/import-worker:{{hash}}
+  kustomize edit set image registry.gitlab.com/letschurch/lets.church/transcode-worker:{{hash}}
   kustomize edit set image registry.gitlab.com/letschurch/lets.church/web:{{hash}}
 
 deploy env: deploy-check-vars

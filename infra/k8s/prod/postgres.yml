@@ -15,6 +15,9 @@ spec:
         - temporal
   instances:
     - name: instance1
+      resources:
+        requests:
+          memory: 4Gi
       dataVolumeClaimSpec:
         storageClassName: REPLACE_ME
         accessModes:

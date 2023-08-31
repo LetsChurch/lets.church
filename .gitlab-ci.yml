@@ -113,11 +113,11 @@ build-import-worker:
     - cd services/gateway
     - depot build --target import-worker -t registry.gitlab.com/letschurch/lets.church/import-worker:${CI_COMMIT_SHORT_SHA} . --push
 
-# build-transcode-worker:
-#   <<: *build-common
-#   script:
-#     - cd services/gateway
-#     - depot build --target transcode-worker -t registry.gitlab.com/letschurch/lets.church/transcode-worker:${CI_COMMIT_SHORT_SHA} . --push
+build-transcode-worker:
+  <<: *build-common
+  script:
+    - cd services/gateway
+    - depot build --target transcode-worker -t registry.gitlab.com/letschurch/lets.church/transcode-worker:${CI_COMMIT_SHORT_SHA} . --push
 
 # build-transcribe-worker:
 #   <<: *build-common

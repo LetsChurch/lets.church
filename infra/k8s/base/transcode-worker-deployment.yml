@@ -6,7 +6,7 @@ metadata:
   labels:
     app: transcode-worker
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app: transcode-worker
@@ -18,7 +18,10 @@ spec:
       restartPolicy: Always
       containers:
         - image: registry.gitlab.com/letschurch/lets.church/transcode-worker:latest
-          name: process-upload-worker
+          name: transcode-worker
+          resources:
+            requests:
+              memory: 6Gi
           envFrom:
             - configMapRef:
                 name: temporal-client-config

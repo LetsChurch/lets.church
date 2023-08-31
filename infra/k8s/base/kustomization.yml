@@ -9,7 +9,7 @@ resources:
   # Workers
   - background-worker-deployment.yml
   - import-worker-deployment.yml
-  # - transcode-worker-deployment.yml
+  - transcode-worker-deployment.yml
 configMapGenerator:
   - name: web-config
     literals:
