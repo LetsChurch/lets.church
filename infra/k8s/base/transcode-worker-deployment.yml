@@ -21,7 +21,7 @@ spec:
           name: transcode-worker
           resources:
             requests:
-              memory: 6Gi
+              memory: 5Gi
           envFrom:
             - configMapRef:
                 name: temporal-client-config
