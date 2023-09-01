@@ -4,14 +4,13 @@ import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
 import rimraf from 'rimraf';
 import {
-  createPresignedGetUrl,
   headObject,
   retryablePutFile,
+  streamObjectToFile,
 } from '../../../util/s3';
 import { runFfprobe } from '../../../util/ffmpeg';
 import { ffprobeSchema } from '../../../util/zod';
 import { updateUploadRecord } from '../..';
-import { streamUrlToDisk } from '../../../util/node';
 import { dataHeartbeat } from '../../../util/temporal';
 
 const WORK_DIR = process.env['PROBE_WORKING_DIRECTORY'] ?? '/data/probe';
@@ -29,10 +28,8 @@ export default async function probe(
     await mkdirp(workingDir);
 
     const downloadPath = join(workingDir, 'download');
-    await streamUrlToDisk(
-      await createPresignedGetUrl('INGEST', s3UploadKey),
-      downloadPath,
-      () => dataHeartbeat('download'),
+    await streamObjectToFile('INGEST', s3UploadKey, downloadPath, () =>
+      dataHeartbeat('download'),
     );
     const uploadSizeBytes = (await headObject('INGEST', s3UploadKey))
       ?.ContentLength;

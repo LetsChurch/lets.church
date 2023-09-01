@@ -14,11 +14,10 @@ import {
   runFfmpegEncode,
   variantsToMasterVideoPlaylist,
 } from '../../../util/ffmpeg';
-import { createPresignedGetUrl, retryablePutFile } from '../../../util/s3';
+import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import { recordDownloadSize, updateUploadRecord } from '../..';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import type { Probe } from '../../../util/zod';
-import { streamUrlToDisk } from '../../../util/node';
 import { dataHeartbeat } from '../../../util/temporal';
 
 const WORK_DIR =
@@ -73,10 +72,8 @@ export default async function transcode(
 
     await mkdirp(workingDir);
     const downloadPath = join(workingDir, 'download');
-    await streamUrlToDisk(
-      await createPresignedGetUrl('INGEST', s3UploadKey),
-      downloadPath,
-      () => dataHeartbeat('download'),
+    await streamObjectToFile('INGEST', s3UploadKey, downloadPath, () =>
+      dataHeartbeat('download'),
     );
     const { width, height } = probe.streams.find(
       (s): s is Extract<typeof s, { codec_type: 'video' }> =>

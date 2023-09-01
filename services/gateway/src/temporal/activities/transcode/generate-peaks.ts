@@ -4,8 +4,7 @@ import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
 import rimraf from 'rimraf';
 import { runAudiowaveform } from '../../../util/audiowaveform';
-import { createPresignedGetUrl, retryablePutFile } from '../../../util/s3';
-import { streamUrlToDisk } from '../../../util/node';
+import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import { dataHeartbeat } from '../../../util/temporal';
 
 const WORK_DIR = process.env['PEAKS_WORKING_DIRECTORY'] ?? '/data/peaks';
@@ -24,10 +23,8 @@ export default async function generatePeaks(
     await mkdirp(workingDir);
     const downloadPath = join(workingDir, 'download');
 
-    await streamUrlToDisk(
-      await createPresignedGetUrl('INGEST', s3UploadKey),
-      downloadPath,
-      () => dataHeartbeat('download'),
+    await streamObjectToFile('INGEST', s3UploadKey, downloadPath, () =>
+      dataHeartbeat('download'),
     );
 
     // Generate and upload peaks

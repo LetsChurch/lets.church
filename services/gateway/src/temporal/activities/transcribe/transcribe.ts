@@ -6,14 +6,13 @@ import rimraf from 'rimraf';
 import mime from 'mime';
 import invariant from 'tiny-invariant';
 import { updateUploadRecord } from '../..';
-import { createPresignedGetUrl, retryablePutFile } from '../../../util/s3';
+import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import {
   joinerizeTranscript,
   readWhisperJsonFile,
   runWhisper,
   whisperJsonToVtt,
 } from '../../../util/whisper';
-import { streamUrlToDisk } from '../../../util/node';
 import { dataHeartbeat } from '../../../util/temporal';
 
 const WORK_DIR =
@@ -35,10 +34,8 @@ export default async function transcribe(
     await mkdirp(workingDir);
     const downloadPath = join(workingDir, 'download');
 
-    await streamUrlToDisk(
-      await createPresignedGetUrl('INGEST', s3UploadKey),
-      downloadPath,
-      () => dataHeartbeat('download'),
+    await streamObjectToFile('INGEST', s3UploadKey, downloadPath, () =>
+      dataHeartbeat('download'),
     );
 
     const outputFiles = await runWhisper(

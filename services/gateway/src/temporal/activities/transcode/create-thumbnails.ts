@@ -7,12 +7,11 @@ import fastGlob from 'fast-glob';
 import { chunk, compact, maxBy } from 'lodash-es';
 import pRetry from 'p-retry';
 import rimraf from 'rimraf';
-import { createPresignedGetUrl, retryablePutFile } from '../../../util/s3';
+import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import { runFfmpegThumbnails } from '../../../util/ffmpeg';
 import { concatThumbs, imageToBlurhash } from '../../../util/images';
 import type { Probe } from '../../../util/zod';
 import { updateUploadRecord } from '../..';
-import { streamUrlToDisk } from '../../../util/node';
 import { dataHeartbeat } from '../../../util/temporal';
 
 const WORK_DIR =
@@ -30,10 +29,8 @@ export default async function createThumbnails(
   await mkdirp(workingDir);
   const downloadPath = join(workingDir, 'download');
 
-  await streamUrlToDisk(
-    await createPresignedGetUrl('INGEST', s3UploadKey),
-    downloadPath,
-    () => dataHeartbeat('download'),
+  await streamObjectToFile('INGEST', s3UploadKey, downloadPath, () =>
+    dataHeartbeat('download'),
   );
 
   Context.current().heartbeat();

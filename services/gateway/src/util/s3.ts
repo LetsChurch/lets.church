@@ -1,5 +1,5 @@
 import { createReadStream, createWriteStream } from 'node:fs';
-import type { Readable } from 'node:stream';
+import { type Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { stat } from 'node:fs/promises';
 import {
@@ -247,16 +247,27 @@ export async function getObject(to: Client, key: string) {
 }
 
 export async function streamObjectToFile(
-  to: Client,
+  from: Client,
   key: string,
   path: string,
+  heartbeat?: (arg: string) => unknown,
 ) {
-  const { client, bucket } = getClientAndBucket(to);
+  const { client, bucket } = getClientAndBucket(from);
   const cmd = new GetObjectCommand({ Bucket: bucket, Key: key });
   const res = await client.send(cmd);
 
   invariant(res.Body, 'No body in response!');
-  return pipeline(res.Body.transformToWebStream(), createWriteStream(path));
+  return pipeline(
+    res.Body.transformToWebStream(),
+    new Transform({
+      transform(chunk, _encoding, callback) {
+        this.push(chunk);
+        heartbeat?.(`${chunk.length} bytes`);
+        callback();
+      },
+    }),
+    createWriteStream(path),
+  );
 }
 
 export async function* listObjects(source: Client, prefix?: string) {
