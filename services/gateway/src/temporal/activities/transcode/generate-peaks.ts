@@ -2,11 +2,11 @@ import { join } from 'node:path';
 import { stat } from 'node:fs/promises';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
-import { throttle } from 'lodash-es';
 import rimraf from 'rimraf';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import { createPresignedGetUrl, retryablePutFile } from '../../../util/s3';
 import { streamUrlToDisk } from '../../../util/node';
+import { dataHeartbeat } from '../../../util/temporal';
 
 const WORK_DIR = process.env['PEAKS_WORKING_DIRECTORY'] ?? '/data/peaks';
 
@@ -17,10 +17,6 @@ export default async function generatePeaks(
   Context.current().heartbeat('job start');
   const cancellationSignal = Context.current().cancellationSignal;
   const workingDir = join(WORK_DIR, uploadRecordId);
-  const dataHeartbeat = throttle(
-    (arg = 'data') => Context.current().heartbeat(arg),
-    5000,
-  );
 
   try {
     console.log(`Making working directory: ${workingDir}`);

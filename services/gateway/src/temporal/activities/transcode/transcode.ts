@@ -19,6 +19,7 @@ import { recordDownloadSize, updateUploadRecord } from '../..';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import type { Probe } from '../../../util/zod';
 import { streamUrlToDisk } from '../../../util/node';
+import { dataHeartbeat } from '../../../util/temporal';
 
 const WORK_DIR =
   process.env['TRANSCODE_WORKING_DIRECTORY'] ?? '/data/transcode';
@@ -61,10 +62,6 @@ export default async function transcode(
   Context.current().heartbeat('job start');
   const cancellationSignal = Context.current().cancellationSignal;
   const workingDir = join(WORK_DIR, uploadRecordId);
-  const dataHeartbeat = throttle(
-    (arg = 'data') => Context.current().heartbeat(arg),
-    5000,
-  );
   const throttledUpdateUploadRecord = throttle(updateUploadRecord, 2500);
 
   await updateUploadRecord(uploadRecordId, {

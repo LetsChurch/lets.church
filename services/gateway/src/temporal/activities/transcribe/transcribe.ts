@@ -3,7 +3,6 @@ import { stat } from 'node:fs/promises';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
 import rimraf from 'rimraf';
-import { throttle } from 'lodash-es';
 import mime from 'mime';
 import invariant from 'tiny-invariant';
 import { updateUploadRecord } from '../..';
@@ -15,6 +14,7 @@ import {
   whisperJsonToVtt,
 } from '../../../util/whisper';
 import { streamUrlToDisk } from '../../../util/node';
+import { dataHeartbeat } from '../../../util/temporal';
 
 const WORK_DIR =
   process.env['TRANSCRIBE_WORKING_DIRECTORY'] ?? '/data/transcribe';
@@ -26,10 +26,6 @@ export default async function transcribe(
   Context.current().heartbeat('job start');
   const cancellationSignal = Context.current().cancellationSignal;
   const workingDir = join(WORK_DIR, uploadRecordId);
-  const dataHeartbeat = throttle(
-    (arg = 'data') => Context.current().heartbeat(arg),
-    5000,
-  );
 
   await updateUploadRecord(uploadRecordId, {
     transcribingStartedAt: new Date(),

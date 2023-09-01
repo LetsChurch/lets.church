@@ -4,7 +4,7 @@ import mkdirp from 'mkdirp';
 import { Context } from '@temporalio/activity';
 import pMap from 'p-map';
 import fastGlob from 'fast-glob';
-import { chunk, compact, maxBy, throttle } from 'lodash-es';
+import { chunk, compact, maxBy } from 'lodash-es';
 import pRetry from 'p-retry';
 import rimraf from 'rimraf';
 import { createPresignedGetUrl, retryablePutFile } from '../../../util/s3';
@@ -13,6 +13,7 @@ import { concatThumbs, imageToBlurhash } from '../../../util/images';
 import type { Probe } from '../../../util/zod';
 import { updateUploadRecord } from '../..';
 import { streamUrlToDisk } from '../../../util/node';
+import { dataHeartbeat } from '../../../util/temporal';
 
 const WORK_DIR =
   process.env['THUMBNAILS_WORKING_DIRECTORY'] ?? '/data/thumbnails';
@@ -23,10 +24,6 @@ export default async function createThumbnails(
   probe: Probe,
 ) {
   const cancellationSignal = Context.current().cancellationSignal;
-  const dataHeartbeat = throttle(
-    (arg = 'data') => Context.current().heartbeat(arg),
-    5000,
-  );
   const workingDir = join(WORK_DIR, s3UploadKey);
 
   console.log('Making working directory');

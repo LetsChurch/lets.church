@@ -3,7 +3,6 @@ import invariant from 'tiny-invariant';
 import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
 import rimraf from 'rimraf';
-import { throttle } from 'lodash-es';
 import {
   createPresignedGetUrl,
   headObject,
@@ -13,6 +12,7 @@ import { runFfprobe } from '../../../util/ffmpeg';
 import { ffprobeSchema } from '../../../util/zod';
 import { updateUploadRecord } from '../..';
 import { streamUrlToDisk } from '../../../util/node';
+import { dataHeartbeat } from '../../../util/temporal';
 
 const WORK_DIR = process.env['PROBE_WORKING_DIRECTORY'] ?? '/data/probe';
 
@@ -20,10 +20,6 @@ export default async function probe(
   uploadRecordId: string,
   s3UploadKey: string,
 ) {
-  const dataHeartbeat = throttle(
-    (arg = 'data') => Context.current().heartbeat(arg),
-    5000,
-  );
   const cancellationSignal = Context.current().cancellationSignal;
 
   const workingDir = join(WORK_DIR, uploadRecordId);
