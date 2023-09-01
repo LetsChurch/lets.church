@@ -31,6 +31,7 @@ spec:
       global:
         repo1-path: /pgbackrest/postgres-operator/letschurch-s3/repo1
         repo1-cipher-type: aes-256-cbc
+        repo1-retention-full: "14"
       configuration:
         - secret:
             name: pgo-backup-creds
@@ -38,3 +39,6 @@ spec:
               - key: pgo-backup-creds.crypt.conf
       repos:
         - name: repo1
+          schedules:
+            full: "0 1 * * 6"
+            differential: "0 1 * * 1-6"
