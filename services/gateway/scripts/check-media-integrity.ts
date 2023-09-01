@@ -5,10 +5,12 @@ import invariant from 'tiny-invariant';
 // @ts-ignore
 import { Parser } from 'm3u8-parser';
 import { input } from '@inquirer/prompts';
+import pFilter from 'p-filter';
+import pOne from 'p-one';
 import prisma from '../src/util/prisma';
 import { getObject } from '../src/util/s3';
 
-const filename = await input({ message: 'File name:', default: 'report.json' });
+const filename = await input({ message: 'File name:', default: 'errors.txt' });
 
 const uploads = await prisma.uploadRecord.findMany({
   select: { id: true, variants: true, lengthSeconds: true },
@@ -23,72 +25,59 @@ const total = uploads.length;
 
 const spinner = ora(`Checking ${total} uploads`).start();
 
-const records: Array<{
-  id: string;
-  expectedLength: number;
-  actualLengths: Partial<Record<string, number>>;
-}> = [];
+const erroredIds = (
+  await pFilter(
+    uploads,
+    (upload, i) => {
+      spinner.text = `Checking upload ${i}/${total}`;
 
-for (let i = 0; i < total; i += 1) {
-  spinner.text = `Checking upload ${i}/${total}`;
-  const upload = uploads[i];
+      const { id, variants, lengthSeconds } = upload;
 
-  invariant(upload, 'Upload not found');
+      invariant(lengthSeconds, 'Invalid expected length');
+      invariant(variants.length > 0, 'Invalid variants');
 
-  const { id, variants, lengthSeconds } = upload;
+      return pOne(
+        variants.filter((v) => !v.endsWith('_DOWNLOAD')),
+        async (variant) => {
+          const s3Key = `${id}/${variant}.m3u8`;
 
-  invariant(lengthSeconds, 'Invalid expected length');
+          try {
+            const res = await getObject('PUBLIC', s3Key);
 
-  const record: (typeof records)[number] = {
-    id,
-    expectedLength: lengthSeconds,
-    actualLengths: {},
-  };
+            if (!res.Body) {
+              return true; // Error!
+            }
 
-  for (const variant of variants) {
-    if (variant.endsWith('_DOWNLOAD')) {
-      continue;
-    }
+            const text = await res.Body.transformToString('utf-8');
 
-    const s3Key = `${id}/${variant}.m3u8`;
+            const parser = new Parser();
+            parser.push(text);
+            parser.end();
+            const parsed = parser.manifest;
 
-    try {
-      const res = await getObject('PUBLIC', s3Key);
+            const actualDuration = parsed.segments.reduce(
+              (total: number, segment: { duration: number }) =>
+                total + segment.duration,
+              0,
+            );
 
-      if (!res.Body) {
-        record.actualLengths[variant] = 0;
-        continue;
-      }
+            if (Math.abs(actualDuration - lengthSeconds) > 5) {
+              return true; // Error!
+            }
 
-      const text = await res.Body.transformToString('utf-8');
-
-      const parser = new Parser();
-      parser.push(text);
-      parser.end();
-      const parsed = parser.manifest;
-
-      const actualDuration = parsed.segments.reduce(
-        (total: number, segment: { duration: number }) =>
-          total + segment.duration,
-        0,
+            return false; // All good!
+          } catch (err) {
+            return true; // Error!
+          }
+        },
       );
-
-      if (Math.abs(actualDuration - lengthSeconds) > 5) {
-        record.actualLengths[String(variant)] = parsed.totalDuration;
-      }
-    } catch (err) {
-      record.actualLengths[String(variant)] = 0;
-      continue;
-    }
-  }
-
-  if (Object.keys(record.actualLengths).length > 0) {
-    records.push(record);
-  }
-}
+    },
+    { concurrency: 10 },
+  )
+).map(({ id }) => id);
 
 spinner.succeed('Done!');
 
-console.log(`Found ${records.length} uploads with mismatched lengths`);
+console.log(`Found ${erroredIds.length} uploads with mismatched lengths`);
 
-await writeFile(filename, JSON.stringify(records, null, 2));
+await writeFile(filename, erroredIds.join('\n'));
