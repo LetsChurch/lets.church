@@ -217,6 +217,7 @@ export function routeData({ params, location }: RouteDataArgs) {
                 slug
                 name
                 avatarUrl
+                defaultThumbnailUrl
                 userIsSubscribed
               }
               mediaSource
@@ -661,7 +662,10 @@ export default function MediaRoute() {
             : "Let's Church"
         }
         description={metaData()?.data.description ?? ''}
-        image={metaData()?.data.thumbnailUrl}
+        image={
+          metaData()?.data.thumbnailUrl ??
+          metaData()?.data.channel.defaultThumbnailUrl
+        }
       />
       <div class="md:grid md:grid-cols-3 md:gap-4">
         <div class="space-y-4 md:col-span-2">
