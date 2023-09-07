@@ -192,17 +192,17 @@ services:
       POSTGRES_PASSWORD: ${PG_PASSWORD}
       POSTGRES_DB: ${PG_DATABASE}
     ports:
-      - '${HOST_PG_PORT}:5432'
+      - "${HOST_PG_PORT}:5432"
     volumes:
       - ./etc/postgres-init:/docker-entrypoint-initdb.d
       - pg-data:/var/lib/postgresql/data
     command:
       [
-        'postgres',
-        '-c',
-        'log_statement=all',
-        '-c',
-        'log_min_duration_statement=0',
+        "postgres",
+        "-c",
+        "log_statement=all",
+        "-c",
+        "log_min_duration_statement=0",
       ]
 
   elasticsearch:
