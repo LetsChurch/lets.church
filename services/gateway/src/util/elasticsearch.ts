@@ -166,7 +166,7 @@ export function msearchTranscripts(
                       match_phrase: {
                         'segments.text': {
                           query: trimmed,
-                          slop: words.length > 3 ? 5 : 2,
+                          slop: words.length <= 2 ? 0 : 2,
                         },
                       },
                     }
