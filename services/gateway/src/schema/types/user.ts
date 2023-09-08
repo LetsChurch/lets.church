@@ -15,10 +15,11 @@ import zxcvbn from '../../util/zxcvbn';
 import { sendEmail } from '../../temporal';
 import { createSessionJwt } from '../../util/jwt';
 import prisma from '../../util/prisma';
-import { getPublicMediaUrl } from '../../util/url';
+import { getPublicImageUrl } from '../../util/url';
 import { emailHtml } from '../../util/email';
 import { uuidTranslator } from '../../util/uuid';
 import { subscribeToNewsletter } from '../../util/newsletter';
+import { getS3ProtocolUri } from '../../util/s3';
 
 const WEB_URL = envariant('WEB_URL');
 
@@ -69,7 +70,9 @@ export const AppUser = builder.prismaObject('AppUser', {
           return null;
         }
 
-        return getPublicMediaUrl(avatarPath);
+        return getPublicImageUrl(getS3ProtocolUri('PUBLIC', avatarPath), {
+          resize: { width: 96, height: 96 },
+        });
       },
     }),
     role: t.field({ type: AppUserRoleEnum, resolve: ({ role }) => role }),

@@ -25,9 +25,6 @@ export async function processImageWorkflow(
     postProcess,
     targetId,
     s3UploadKey,
-    postProcess === 'profileAvatar' || postProcess === 'channelAvatar'
-      ? { width: 96, height: 96 }
-      : {},
   );
 
   if (postProcess === 'thumbnail') {

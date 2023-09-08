@@ -17,8 +17,8 @@ import { indexDocument } from '../../temporal';
 import builder from '../builder';
 import type { Context } from '../../util/context';
 import prisma from '../../util/prisma';
-import { getPublicMediaUrl } from '../../util/url';
-import { getPublicUrlWithFilename } from '../../util/s3';
+import { getPublicImageUrl, getPublicMediaUrl } from '../../util/url';
+import { getPublicUrlWithFilename, getS3ProtocolUri } from '../../util/s3';
 
 async function internalAuthScopes(
   uploadRecord: { id: string; channelId: string },
@@ -178,7 +178,7 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
           return null;
         }
 
-        return getPublicMediaUrl(from);
+        return getPublicImageUrl(getS3ProtocolUri('PUBLIC', from));
       },
     }),
     thumbnailBlurhash: t.exposeString('defaultThumbnailBlurhash', {

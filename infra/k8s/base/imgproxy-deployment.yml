@@ -1,0 +1,39 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: imgproxy
+  labels:
+    app: imgproxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: imgproxy
+  template:
+    metadata:
+      labels:
+        app: imgproxy
+    spec:
+      restartPolicy: Always
+      containers:
+        - image: darthsim/imgproxy:v3.19.0
+          name: imgproxy
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: imgproxy-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: imgproxy
+spec:
+  selector:
+    app: imgproxy
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080

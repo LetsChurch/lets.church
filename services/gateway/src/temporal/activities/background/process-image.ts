@@ -3,11 +3,9 @@ import { Context } from '@temporalio/activity';
 import mkdirp from 'mkdirp';
 import mime from 'mime';
 import rimraf from 'rimraf';
-import type { RequireAllOrNone } from 'type-fest';
 import { nanoid } from 'nanoid';
 import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import {
-  croppingResize,
   imageToBlurhash,
   imgJson,
   jpegOptim,
@@ -22,10 +20,6 @@ export default async function processImage(
   postProcess: UploadPostProcessValue,
   targetId: string,
   s3UploadKey: string,
-  params: RequireAllOrNone<
-    { width?: number; height?: number },
-    'width' | 'height'
-  > = {},
 ) {
   Context.current().heartbeat();
 
@@ -50,10 +44,6 @@ export default async function processImage(
       contentType: 'application/json',
       body: Buffer.from(JSON.stringify(json, null, 2)),
     });
-
-    if (params.width && params.height) {
-      await croppingResize(dir, downloadPath, params.width, params.height);
-    }
 
     if (json.format === 'JPEG') {
       console.log('Optimizing JPEG');

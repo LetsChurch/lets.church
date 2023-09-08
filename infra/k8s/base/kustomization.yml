@@ -2,6 +2,7 @@ resources:
   - config.yml
   - gateway-deployment.yml
   - elasticsearch-deployment.yml
+  - imgproxy-deployment.yml
   - kibana-deployment.yml
   - temporal-deployment.yml
   - temporal-ui-deployment.yml
@@ -16,9 +17,10 @@ configMapGenerator:
       - GRAPHQL_URL="http://gateway:3000/graphql"
   - name: gateway-config
     literals:
-      - POSTGRES_HOST="postgres:5432"
       - ELASTICSEARCH_URL="http://elasticsearch:9200"
+      - IMGPROXY_URL="http://IMGPROXY_URL"
       - MEDIA_URL="http://MEDIA_URL"
+      - POSTGRES_HOST="postgres:5432"
       - WEB_URL="https://lets.church"
       - ZXCVBN_MINIMUM_SCORE="3"
   - name: temporal-server-config

@@ -19,26 +19,30 @@ configMapGenerator:
   - name: gateway-config
     behavior: merge
     literals:
+      - IMGPROXY_URL="https://images.letschurch.cloud"
       - MEDIA_URL="https://media.letschurch.cloud"
 secretGenerator:
-  - name: pgo-backup-creds
-    files:
-      - pgo-backup-creds.crypt.conf
-  - name: s3-secret
-    envs:
-      - s3.crypt.env
-  - name: jwt-secret
-    envs:
-      - jwt.crypt.env
-  - name: smtp-secret
-    envs:
-      - smtp.crypt.env
   - name: cf-api-secret
     envs:
       - cf-api.crypt.env
   - name: cf-tunnel-secret
     envs:
       - cf-tunnel.crypt.env
+  - name: imgproxy-secret
+    envs:
+      - imgproxy.crypt.env
+  - name: jwt-secret
+    envs:
+      - jwt.crypt.env
+  - name: pgo-backup-creds
+    files:
+      - pgo-backup-creds.crypt.conf
+  - name: s3-secret
+    envs:
+      - s3.crypt.env
+  - name: smtp-secret
+    envs:
+      - smtp.crypt.env
   - name: turnstile-secret
     envs:
       - turnstile.crypt.env

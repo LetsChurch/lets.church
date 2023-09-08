@@ -28,6 +28,16 @@ spec:
                 secretKeyRef:
                   name: pg-pguser-letschurch
                   key: uri
+            - name: IMGPROXY_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: imgproxy-secret
+                  key: IMGPROXY_KEY
+            - name: IMGPROXY_SALT
+              valueFrom:
+                secretKeyRef:
+                  name: imgproxy-secret
+                  key: IMGPROXY_SALT
           envFrom:
             - configMapRef:
                 name: gateway-config

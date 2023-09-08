@@ -73,6 +73,12 @@ const s3BackupClient = new S3({
 
 export type Client = 'INGEST' | 'PUBLIC';
 
+export function getS3ProtocolUri(from: Client, key: string) {
+  return `s3://${
+    from === 'PUBLIC' ? S3_PUBLIC_BUCKET : S3_INGEST_BUCKET
+  }/${key}`;
+}
+
 function getClientAndBucket(client: Client) {
   return {
     client: client === 'INGEST' ? s3IngestClient : s3PublicClient,

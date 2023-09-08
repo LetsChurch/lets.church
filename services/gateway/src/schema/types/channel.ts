@@ -7,7 +7,8 @@ import { indexDocument } from '../../temporal';
 import type { Context } from '../../util/context';
 import prisma from '../../util/prisma';
 import builder from '../builder';
-import { getPublicMediaUrl } from '../../util/url';
+import { getPublicImageUrl, getPublicMediaUrl } from '../../util/url';
+import { getS3ProtocolUri } from '../../util/s3';
 import { UploadOrderPropertyEnum } from './upload';
 
 const orderEnum = builder.enumType('Order', {
@@ -65,7 +66,9 @@ const Channel = builder.prismaObject('Channel', {
           return null;
         }
 
-        return getPublicMediaUrl(avatarPath);
+        return getPublicImageUrl(getS3ProtocolUri('PUBLIC', avatarPath), {
+          resize: { width: 96, height: 96 },
+        });
       },
     }),
     slug: t.exposeString('slug'),
