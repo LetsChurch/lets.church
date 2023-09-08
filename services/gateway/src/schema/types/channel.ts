@@ -7,7 +7,7 @@ import { indexDocument } from '../../temporal';
 import type { Context } from '../../util/context';
 import prisma from '../../util/prisma';
 import builder from '../builder';
-import { getPublicImageUrl, getPublicMediaUrl } from '../../util/url';
+import { getPublicImageUrl } from '../../util/url';
 import { getS3ProtocolUri } from '../../util/s3';
 import { UploadOrderPropertyEnum } from './upload';
 
@@ -152,7 +152,9 @@ const Channel = builder.prismaObject('Channel', {
           return null;
         }
 
-        return getPublicMediaUrl(defaultThumbnailPath);
+        return getPublicImageUrl(
+          getS3ProtocolUri('PUBLIC', defaultThumbnailPath),
+        );
       },
     }),
     defaultThumbnailBlurhash: t.exposeString('defaultThumbnailBlurhash', {
