@@ -26,3 +26,7 @@ open http://localhost:$HOST_MAILPIT_WEB_PORT
 # Run Prisma Studio
 DATABASE_URL=$HOST_DATABASE_URL  npm --prefix $(git rev-parse --show-toplevel)/services/gateway run prisma:studio
 
+# View raw (encrypted) file as committed
+git show HEAD:<encrypted_file> --no-textconv
+
+$ encrypted_file: git ls-crypt
