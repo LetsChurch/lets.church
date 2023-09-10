@@ -37,6 +37,8 @@ spec:
             name: pgo-backup-creds
             items:
               - key: pgo-backup-creds.crypt.conf
+      jobs:
+        ttlSecondsAfterFinished: 1209600 # 14 days
       repos:
         - name: repo1
           schedules:
