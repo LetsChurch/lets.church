@@ -8,11 +8,6 @@ stages:
   - build
   - deploy
 
-cache:
-  key: $CI_COMMIT_REF_SLUG
-  paths:
-    - .npm/
-
 .setup:
   activate_hermit: source ./bin/activate-hermit
   npmci: npm ci --cache $CI_PROJECT_DIR/.npm --prefer-offline
@@ -20,22 +15,6 @@ cache:
 default:
   before_script:
     - !reference [.setup, activate_hermit]
-
-#  ____  _____ _____ _   _ ____
-# / ___|| ____|_   _| | | |  _ \
-# \___ \|  _|   | | | | | | |_) |
-#  ___) | |___  | | | |_| |  __/
-# |____/|_____| |_|  \___/|_|
-
-npmci:
-  stage: setup
-  script:
-    - cd $CI_PROJECT_DIR/services/gateway
-    - !reference [.setup, npmci]
-    - cd $CI_PROJECT_DIR/apps/web
-    - !reference [.setup, npmci]
-    - cd $CI_PROJECT_DIR/scripts
-    - !reference [.setup, npmci]
 
 #   ____ _   _ _____ ____ _  __
 #  / ___| | | | ____/ ___| |/ /
@@ -49,6 +28,12 @@ check-gateway:
     - cd $CI_PROJECT_DIR/services/gateway
     - !reference [.setup, npmci]
     - npm run check
+  cache:
+    key:
+      files:
+        - $CI_PROJECT_DIR/services/gateway/package-lock.json
+    paths:
+      - $CI_PROJECT_DIR/.npm
 
 check-web:
   stage: check
@@ -56,6 +41,12 @@ check-web:
     - cd $CI_PROJECT_DIR/apps/web
     - !reference [.setup, npmci]
     - npm run check
+  cache:
+    key:
+      files:
+        - $CI_PROJECT_DIR/apps/web/package-lock.json
+    paths:
+      - $CI_PROJECT_DIR/.npm
 
 check-scripts:
   stage: check
@@ -63,6 +54,12 @@ check-scripts:
     - cd $CI_PROJECT_DIR/scripts
     - !reference [.setup, npmci]
     - npm run check
+  cache:
+    key:
+      files:
+        - $CI_PROJECT_DIR/scripts/package-lock.json
+    paths:
+      - $CI_PROJECT_DIR/.npm
 
 #  _____ _____ ____ _____
 # |_   _| ____/ ___|_   _|
@@ -76,6 +73,7 @@ test-gateway:
     - cd services/gateway
     - !reference [.setup, npmci]
     - npm run test
+  cache: !reference [check-gateway, cache]
 
 #  ____  _   _ ___ _     ____
 # | __ )| | | |_ _| |   |  _ \
