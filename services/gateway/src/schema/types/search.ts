@@ -428,7 +428,7 @@ builder.queryFields((t) => ({
                         end: h._source.end,
                         text: {
                           source: h._source.text,
-                          marked: h.highlight['segments.text'][0] ?? '',
+                          marked: h.highlight['segments.text'].join(' ') ?? '',
                         },
                       })),
                     }
