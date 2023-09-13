@@ -683,7 +683,7 @@ export default function MediaRoute() {
             <div class="flex gap-3">
               <A
                 href={`/channel/${metaData()?.data.channel.slug}`}
-                class="relative z-10 inline-flex min-w-0 items-center space-x-2 whitespace-nowrap"
+                class="relative z-10 inline-flex w-max min-w-0 items-center space-x-2 whitespace-nowrap"
               >
                 <Avatar
                   size="sm"
