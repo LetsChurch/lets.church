@@ -49,7 +49,7 @@ RUN mkdir -p /opt/whisper/models/{tiny.en,large-v2}
 COPY --from=download-whisper-models tiny.en /opt/whisper/models/tiny.en/
 # COPY --from=download-whisper-models large-v2 /opt/whisper/models/large-v2/
 RUN apt update && apt install -y python3 python3-pip curl git && rm -rf /var/lib/apt/lists/* && apt clean
-RUN pip3 install git+https://github.com/Softcatala/whisper-ctranslate2.git@0.2.3
+RUN pip3 install git+https://github.com/Softcatala/whisper-ctranslate2.git@0.2.9
 CMD npm run start:transcribe-worker
 
 FROM base as import-worker

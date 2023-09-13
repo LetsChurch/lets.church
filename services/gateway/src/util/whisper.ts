@@ -1,5 +1,4 @@
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { execa } from 'execa';
 import { noop } from 'lodash-es';
 import fastGlob from 'fast-glob';
@@ -15,46 +14,19 @@ export async function runWhisper(
   signal: AbortSignal,
   heartbeat = noop,
 ) {
-  const wavFile = join(cwd, 'download.wav');
-
-  console.log('Converting file to wav');
-
-  const ffmpegProc = execa(
-    'ffmpeg',
-    [
-      '-hide_banner',
-      '-y',
-      '-i',
-      inputFilename,
-      '-ar',
-      '16000',
-      '-ac',
-      '1',
-      wavFile,
-    ],
-    { cwd, signal },
-  );
-
-  console.log(`runWhisper: ${ffmpegProc.spawnargs.join(' ')}`);
-
-  ffmpegProc.stdout?.on('data', () => heartbeat());
-  ffmpegProc.stderr?.on('data', () => heartbeat());
-
-  await ffmpegProc;
-
-  console.log(`ffmpeg done: ${ffmpegProc.exitCode}`);
-
   console.log('Running whisper');
 
   const proc = execa(
     'whisper-ctranslate2',
     [
-      wavFile,
+      inputFilename,
       '--model_directory',
       `/opt/whisper/models/${whisperModel}`,
       '--output_dir',
       'out',
       '--vad_filter',
+      'True',
+      '--word_timestamps',
       'True',
       ...extraArgs,
     ],
@@ -79,42 +51,70 @@ const whisperJsonSchema = z.object({
   text: z.string(),
   segments: z.array(
     z.object({
+      id: z.number(),
       start: z.number(),
       end: z.number(),
       text: z.string(),
+      tokens: z.array(z.number()),
+      temperature: z.number(),
+      avg_logprob: z.number(),
+      compression_ratio: z.number(),
+      no_speech_prob: z.number(),
+      words: z.array(
+        z.object({
+          start: z.number(),
+          end: z.number(),
+          word: z.string(),
+          probability: z.number(),
+        }),
+      ),
     }),
   ),
+  language: z.string(),
 });
+
+export type JoinerizedTranscript = {
+  text: string;
+  segments: Array<{
+    text: string;
+    start: number;
+    end: number;
+    words: Array<{
+      start: number;
+      end: number;
+      word: string;
+      probability: number;
+    }>;
+  }>;
+};
 
 export function joinerizeTranscript(
   transcript: z.infer<typeof whisperJsonSchema>,
-) {
-  type Segment = z.infer<typeof whisperJsonSchema>['segments'][number];
-  const newSegments: Array<Segment> = [];
-  let workingSegment: Segment | null = null;
+): JoinerizedTranscript {
+  const joinerized: JoinerizedTranscript = { text: '', segments: [] };
+  type Segment = JoinerizedTranscript['segments'][number];
+  let workingSegment: Segment = { text: '', start: 0, end: 0, words: [] };
 
-  for (const segment of transcript.segments) {
-    if (!workingSegment) {
-      workingSegment = { ...segment };
-    } else if (
-      (workingSegment.end - workingSegment.start >= 5 ||
-        workingSegment.text.length >= 120) &&
-      (segment.end - workingSegment.start >= 5 ||
-        workingSegment.text.length + segment.text.length >= 120)
-    ) {
-      newSegments.push(workingSegment);
-      workingSegment = { ...segment };
-    } else {
-      workingSegment.end = segment.end;
-      workingSegment.text = `${workingSegment.text.trim()} ${segment.text.trim()}`;
+  for (const item of transcript.segments.flatMap((s) => s.words)) {
+    workingSegment.words.push(item);
+
+    if (item.word.trim().endsWith('.')) {
+      workingSegment.text = workingSegment.words
+        .map((w) => w.word)
+        .join('')
+        .trim();
+      workingSegment.start = workingSegment.words.at(0)?.start ?? 0;
+      workingSegment.end = workingSegment.words.at(-1)?.end ?? 0;
+      joinerized.segments.push(workingSegment);
+      workingSegment = { text: '', start: 0, end: 0, words: [] };
     }
   }
 
-  if (workingSegment) {
-    newSegments.push(workingSegment);
+  if (workingSegment.text) {
+    joinerized.segments.push(workingSegment);
   }
 
-  return { ...transcript, segments: newSegments };
+  return joinerized;
 }
 
 export async function readWhisperJsonFile(path: string) {
@@ -122,13 +122,11 @@ export async function readWhisperJsonFile(path: string) {
   return whisperJsonSchema.parse(JSON.parse(json.toString()));
 }
 
-export function whisperJsonToVtt(
-  transcript: z.infer<typeof whisperJsonSchema>,
-) {
+export function whisperJsonToVtt(transcript: JoinerizedTranscript) {
   return stringifySync(
     transcript.segments.map((data) => ({
       type: 'cue',
-      data: { ...data, start: data.start * 1000, end: data.end * 1000 },
+      data: { text: data.text, start: data.start * 1000, end: data.end * 1000 },
     })),
     { format: 'WebVTT' },
   );
