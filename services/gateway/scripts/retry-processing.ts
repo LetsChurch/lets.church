@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { input, confirm, select } from '@inquirer/prompts';
 import { z } from 'zod';
+import pMap from 'p-map';
 import prisma from '../src/util/prisma';
 import { client } from '../src/temporal';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
@@ -56,6 +57,7 @@ if (scope === 'ids') {
         select: { id: true },
         where: {
           channel: { slug },
+          finalizedUploadKey: { not: null },
           ...(onlyFailed && subScope === 'transcribe'
             ? { transcribingFinishedAt: null }
             : {}),
@@ -93,28 +95,19 @@ if (
   process.exit(0);
 }
 
-let errorCount = 0;
+pMap(
+  ids,
+  async (id) => {
+    (await client).workflow.start(processMediaWorkflow, {
+      args: [id, null, subScope],
+      workflowId: `processMedia:${id}:retry${Date.now()}`,
+      taskQueue: BACKGROUND_QUEUE,
+      retry: {
+        maximumAttempts: 5,
+      },
+    });
+  },
+  { concurrency: 10 },
+);
 
-for (const id of ids) {
-  const { finalizedUploadKey } = await prisma.uploadRecord.findUniqueOrThrow({
-    select: { finalizedUploadKey: true },
-    where: { id },
-  });
-
-  if (!finalizedUploadKey) {
-    console.log(`No finalizedUploadKey found for ${id}`);
-    errorCount += 1;
-    continue;
-  }
-
-  (await client).workflow.start(processMediaWorkflow, {
-    args: [id, finalizedUploadKey, subScope],
-    workflowId: `processMedia:${finalizedUploadKey}:retry${Date.now()}`,
-    taskQueue: BACKGROUND_QUEUE,
-    retry: {
-      maximumAttempts: 5,
-    },
-  });
-}
-
-console.log(`${ids.length - errorCount} uploads queued for reprocessing!`);
+console.log(`${ids.length} uploads queued for reprocessing!`);
