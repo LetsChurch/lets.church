@@ -11,6 +11,7 @@
     "check:format": "prettier --check .",
     "check:ts": "tsc",
     "codegen": "graphql-codegen --config codegen.yml",
+    "format": "prettier --write .",
     "postinstall": "patch-package"
   },
   "type": "module",
