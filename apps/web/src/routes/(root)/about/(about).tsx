@@ -10,10 +10,12 @@ import type {
 import A from '~/components/content/a';
 import H1 from '~/components/content/h1';
 import H2 from '~/components/content/h2';
+import H3 from '~/components/content/h3';
 import P from '~/components/content/p';
+import Og from '~/components/og';
+import Ul from '~/components/content/list';
 import ExternalLink from '~/components/external-link';
 import { client } from '~/util/gql/server';
-import Og from '~/components/og';
 
 export function routeData() {
   const data = createServerData$(async () => {
@@ -103,6 +105,64 @@ export default function AboutRoute() {
           churches or ministires in need of free sermon or media hosting, send
           them our way!
         </P>
+        <H2>Roadmap (The Future of Let's Church)</H2>
+        <P>
+          We have many new technology upgrades and features in the works for
+          Let's Church.
+        </P>
+        <H3>Technology</H3>
+        <Ul>
+          <li>
+            Additional servers for creating transcriptions and transcoding
+            videos to speed up processing and onboarding. What currently takes
+            several days will soon take minutes to hours.
+          </li>
+          <li>
+            Additional transcript data to enable new features, including
+            word-level timestamps (each word will have its own timestamp) for
+            better segmentation and better search results.
+          </li>
+          <li>
+            Live streaming capabilities (this will require additional
+            specialized hardware and has its own challenges compared to standard
+            video streaming).
+          </li>
+          <li>A mobile app.</li>
+        </Ul>
+        <H3>Features and User Experience</H3>
+        <Ul>
+          <li>
+            Improved search and organization. Media will have tags so you can
+            more easily differentiate between, e.g., sermons and podcasts. We
+            will also implement channel search so you can more easily find who
+            is on the platform.
+          </li>
+          <li>We will implement the ability to search your watch history.</li>
+          <li>
+            Church search. We are working on building out a map-enabled church
+            search feature which will enable you to find and connect with local
+            churches all around the country and, Lord willing, around the world.
+          </li>
+          <li>
+            Church website builder. We want to provide churches an easy way to
+            create their own websites and easily embed the content they've
+            already uploaded to Let's Church.
+          </li>
+          <li>Bookmarks and notes.</li>
+          <li>Sermon notes.</li>
+          <li>
+            More sections, e.g., most-watched videos, most-liked videos, and
+            trending topics.
+          </li>
+          <li>
+            More content, including music, documentaries, and sermons from
+            church history.
+          </li>
+          <li>
+            Ways for you to directly support the churches and ministries on the
+            platform.
+          </li>
+        </Ul>
         <H2>Reach Out</H2>
         <P>
           Feel free to reach out to{' '}
