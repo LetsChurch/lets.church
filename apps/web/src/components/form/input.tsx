@@ -10,7 +10,9 @@ export default function Input(props: Props) {
     <input
       {...restProps}
       class={cn(
-        'block w-full rounded-md border border-gray-300 bg-white px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm',
+        'block w-full rounded-md border border-gray-300 bg-white px-3 py-2 shadow-sm',
+        'focus:border-indigo-500 focus:outline-none focus:ring-indigo-500',
+        'sm:text-sm',
         localProps.class,
       )}
     />
