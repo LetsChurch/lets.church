@@ -50,21 +50,19 @@ export function routeData() {
     return await client.request<
       ProfilePageDataQuery,
       ProfilePageDataQueryVariables
-    >(
-      gql`
-        query ProfilePageData {
-          me {
-            id
-            username
-            fullName
-            avatarUrl
-            emails {
-              email
-            }
+    >(gql`
+      query ProfilePageData {
+        me {
+          id
+          username
+          fullName
+          avatarUrl
+          emails {
+            email
           }
         }
-      `,
-    );
+      }
+    `);
   });
 
   return { data };

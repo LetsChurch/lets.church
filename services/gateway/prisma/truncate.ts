@@ -22,4 +22,4 @@ async function truncateDb() {
   console.log('Done!');
 }
 
-truncateDb()
+truncateDb();

@@ -7,6 +7,7 @@
     "check:format": "prettier --check .",
     "check:lint": "eslint --ext .ts,.tsx .",
     "check:ts": "tsc",
+    "format": "prettier --write .",
     "s3:prune-multipart-uploads": "ts-node-esm ./s3-prune-multipart-uploads.ts"
   },
   "license": "UNLICENSE",
@@ -23,7 +24,7 @@
     "eslint-import-resolver-typescript": "^3.5.3",
     "eslint-plugin-import": "^2.27.5",
     "npm-run-all": "^4.1.5",
-    "prettier": "^2.8.0",
+    "prettier": "^3.0.3",
     "ts-node": "^10.9.1",
     "typescript": "^4.9.3"
   }

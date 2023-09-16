@@ -22,16 +22,14 @@ export function routeData() {
     return await client.request<
       AboutPageDataQuery,
       AboutPageDataQueryVariables
-    >(
-      gql`
-        query AboutPageData {
-          stats {
-            storageBytes
-            totalUploads
-          }
+    >(gql`
+      query AboutPageData {
+        stats {
+          storageBytes
+          totalUploads
         }
-      `,
-    );
+      }
+    `);
   });
 
   return { data };

@@ -10,13 +10,11 @@ const action = async (form: FormData, { request }: { request: Request }) => {
   const to = form.get('redirect') ?? '/';
   invariant(typeof to === 'string');
 
-  await client.request(
-    gql`
-      mutation Logout {
-        logout
-      }
-    `,
-  );
+  await client.request(gql`
+    mutation Logout {
+      logout
+    }
+  `);
 
   const session = await storage.getSession(request.headers.get('Cookie'));
 

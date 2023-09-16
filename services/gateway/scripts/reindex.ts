@@ -3,9 +3,7 @@ import ora from 'ora';
 import { client } from '../src/temporal';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
 import { emptySignal } from '../src/temporal/signals';
-import {
-  indexDocumentWorkflow,
-} from '../src/temporal/workflows';
+import { indexDocumentWorkflow } from '../src/temporal/workflows';
 import prisma from '../src/util/prisma';
 
 const what = await select({

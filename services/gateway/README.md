@@ -77,4 +77,4 @@ All workers expect the following environment variables:
 - `WHISPER_EXTRA_ARGS`, (e.g., `--device_index 1`)
 - If running without the container you must ensure that `ffmpeg` and `audiowaveform` are available on `PATH`
 
-[Temporal]: https://temporal.io "Less plumbing, more coding"
+[Temporal]: https://temporal.io 'Less plumbing, more coding'

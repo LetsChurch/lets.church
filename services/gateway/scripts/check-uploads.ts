@@ -21,9 +21,7 @@ const uploads = await prisma.uploadRecord.findMany({
   take: Number.MAX_SAFE_INTEGER,
 });
 
-console.log(
-  `Checking ${uploads.length} uploads for slug ${slug}`,
-);
+console.log(`Checking ${uploads.length} uploads for slug ${slug}`);
 
 type ErrorEntry = {
   missingIngest: boolean;
