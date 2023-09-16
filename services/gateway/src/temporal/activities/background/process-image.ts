@@ -43,6 +43,7 @@ export default async function processImage(
       key: `${s3UploadKey}.imagemagick.json`,
       contentType: 'application/json',
       body: Buffer.from(JSON.stringify(json, null, 2)),
+      signal: Context.current().cancellationSignal,
     });
 
     if (json.format === 'JPEG') {
@@ -64,6 +65,7 @@ export default async function processImage(
       key: path,
       contentType: json.mimeType,
       path: downloadPath,
+      signal: Context.current().cancellationSignal,
     });
 
     Context.current().heartbeat();

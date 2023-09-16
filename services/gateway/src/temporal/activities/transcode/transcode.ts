@@ -30,6 +30,7 @@ const formatter = new Intl.ListFormat('en', {
 
 async function uploadSegments(id: string, dir: string) {
   const segmentFiles = await fastGlob(join(dir, '*.ts'));
+  const signal = Context.current().cancellationSignal;
 
   for (const path of segmentFiles) {
     Context.current().heartbeat(`Starting upload: ${path}`);
@@ -41,6 +42,7 @@ async function uploadSegments(id: string, dir: string) {
       contentType: 'video/mp2ts',
       contentLength: (await stat(path)).size,
       path,
+      signal,
     });
 
     console.log(`Done uploading media segment: ${path}`);
@@ -171,6 +173,7 @@ export default async function transcode(
         contentType,
         path,
         contentLength: byteSize,
+        signal: cancellationSignal,
       });
       Context.current().heartbeat(`Uploaded downloadable file: ${filename}`);
       console.log(`Uploaded downloadable file: ${filename}`);
@@ -200,6 +203,7 @@ export default async function transcode(
         contentType: 'application/x-mpegURL',
         path,
         contentLength: (await stat(path)).size,
+        signal: cancellationSignal,
       });
       Context.current().heartbeat(`Uploaded playlist file: ${filename}`);
       console.log(`Uploaded playlist file: ${filename}`);
@@ -222,6 +226,7 @@ export default async function transcode(
         key: `${uploadRecordId}/master.m3u8`,
         contentType: 'application/x-mpegURL',
         body: playlistBuffer,
+        signal: cancellationSignal,
       });
       Context.current().heartbeat('Uploaded master playlist file');
       console.log('Uploaded master playlist file');
@@ -251,6 +256,7 @@ export default async function transcode(
       contentType: 'application/json',
       path: peakFiles.json,
       contentLength: (await stat(peakFiles.json)).size,
+      signal: cancellationSignal,
     });
     Context.current().heartbeat('Uploaded peak json');
     console.log('Uploaded peak json');
@@ -262,6 +268,7 @@ export default async function transcode(
       contentType: 'application/octet-stream',
       path: peakFiles.dat,
       contentLength: (await stat(peakFiles.dat)).size,
+      signal: cancellationSignal,
     });
     Context.current().heartbeat('Uploaded peak dat');
     console.log('Uploaded peak dat');
@@ -275,6 +282,7 @@ export default async function transcode(
       key: `${uploadRecordId}/stdout.txt`,
       contentType: 'text/plain',
       body: Buffer.from(stdout.join('')),
+      signal: cancellationSignal,
     });
     console.log('Done uploading stdout');
     Context.current().heartbeat('queueing stderr upload');
@@ -284,6 +292,7 @@ export default async function transcode(
       key: `${uploadRecordId}/stderr.txt`,
       contentType: 'text/plain',
       body: Buffer.from(stderr.join('')),
+      signal: cancellationSignal,
     });
     console.log('Done uploading stderr');
     Context.current().heartbeat('Uploaded stderr');

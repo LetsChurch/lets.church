@@ -68,6 +68,7 @@ export default async function createThumbnails(
         contentType: 'image/jpeg',
         path: largestThumbnail,
         contentLength: (await stat(largestThumbnail)).size,
+        signal: Context.current().cancellationSignal,
       });
       await pRetry(
         async (attempt) => {
@@ -108,6 +109,7 @@ export default async function createThumbnails(
         contentType: 'image/jpeg',
         path,
         contentLength: (await stat(path)).size,
+        signal: Context.current().cancellationSignal,
       });
       Context.current().heartbeat();
       console.log(`Done uploading thumbnail: ${path}`);
@@ -126,6 +128,7 @@ export default async function createThumbnails(
       key: `${uploadRecordId}/hovernail.jpg`,
       contentType: 'image/jpeg',
       path: join(workingDir, 'hovernail.jpg'),
+      signal: Context.current().cancellationSignal,
     });
     Context.current().heartbeat();
     console.log('Done uploading hovernail');

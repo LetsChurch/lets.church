@@ -52,6 +52,7 @@ export default async function probe(
       key: `${uploadRecordId}/probe.json`,
       contentType: 'application/json',
       body: Buffer.from(probeJson),
+      signal: cancellationSignal,
     });
 
     await updateUploadRecord(uploadRecordId, {

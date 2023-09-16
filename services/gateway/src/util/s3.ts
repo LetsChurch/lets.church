@@ -474,6 +474,7 @@ export async function putFileMultipart({
 
 export async function retryablePutFile({
   maxAttempts = 5,
+  signal,
   ...otherOps
 }: {
   to?: Client;
@@ -481,8 +482,10 @@ export async function retryablePutFile({
   contentType: string;
   contentLength?: number;
   maxAttempts?: number;
+  signal: AbortSignal;
 } & MergeExclusive<{ body: Buffer }, { path: string }>) {
   return pRetry(() => putFile(otherOps), {
+    signal,
     retries: maxAttempts,
     onFailedAttempt: (error) => {
       console.log(`Error uploading ${otherOps.key}`);

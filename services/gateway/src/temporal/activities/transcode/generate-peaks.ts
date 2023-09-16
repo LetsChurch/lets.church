@@ -45,6 +45,7 @@ export default async function generatePeaks(
       contentType: 'application/json',
       path: peakFiles.json,
       contentLength: (await stat(peakFiles.json)).size,
+      signal: cancellationSignal,
     });
     Context.current().heartbeat('Uploaded peak json');
     console.log('Uploaded peak json');
@@ -56,6 +57,7 @@ export default async function generatePeaks(
       contentType: 'application/octet-stream',
       path: peakFiles.dat,
       contentLength: (await stat(peakFiles.dat)).size,
+      signal: cancellationSignal,
     });
     Context.current().heartbeat('Uploaded peak dat');
     console.log('Uploaded peak dat');

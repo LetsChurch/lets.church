@@ -60,6 +60,7 @@ export default async function transcribe(
           contentType: mime.getType(ext) ?? 'text/plain',
           path: file,
           contentLength: (await stat(file)).size,
+          signal: cancellationSignal,
         });
 
         console.log(`done uploading ${file}`);
@@ -88,6 +89,7 @@ export default async function transcribe(
       contentType: 'text/vtt',
       body: fixedVtt,
       contentLength: fixedVtt.length,
+      signal: cancellationSignal,
     });
 
     console.log(`done uploading transcript.vtt`);
