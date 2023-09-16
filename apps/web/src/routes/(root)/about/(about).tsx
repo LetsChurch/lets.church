@@ -78,7 +78,10 @@ export default function AboutRoute() {
           contribution helps pay for improvement of our platform, hosting fees,
           storage, and the hardware necessary to encode and transcribe audio and
           videos for the benefit of churches and ministries around the world.
-          All donations are tax-deductible in the United States.
+          All donations are tax-deductible in the United States and go directly
+          toward material costs for running the platform. All work being done on
+          Let's Church is currently voluntary and no-one is currently taking a
+          salary.
         </P>
         <P class="flex justify-center">
           <a
@@ -142,10 +145,15 @@ export default function AboutRoute() {
             churches all around the country and, Lord willing, around the world.
           </li>
           <li>
+            Creating podcasts for listing in podcast apps directly from media
+            uploaded to Let's Church.
+          </li>
+          <li>
             Church website builder. We want to provide churches an easy way to
             create their own websites and easily embed the content they've
             already uploaded to Let's Church.
           </li>
+          <li>Blogging and community features.</li>
           <li>Bookmarks and notes.</li>
           <li>Sermon notes.</li>
           <li>
