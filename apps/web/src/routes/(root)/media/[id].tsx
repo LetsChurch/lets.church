@@ -60,7 +60,7 @@ import Comment, { CommentForm } from '~/components/comment';
 import Transcript from '~/components/transcript';
 import FloatingShareMenu from '~/components/floating-share-menu';
 import { formatDateFull } from '~/util/date';
-import type { Optional } from '~/util';
+import { cn, Optional } from '~/util';
 import Pagination from '~/components/pagination';
 import { Avatar } from '~/components/avatar';
 import FloatingDownloadMenu from '~/components/floating-download-menu';
@@ -74,9 +74,10 @@ function UnderbarButton(props: JSX.IntrinsicElements['button']) {
   return (
     <button
       {...restProps}
-      class={`relative inline-flex items-center space-x-2 border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 first-of-type:rounded-l-md last-of-type:rounded-r-md only-of-type:shadow-sm hover:bg-gray-50 focus:z-10 focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-1 focus-visible:ring-indigo-500 [&:not(:first-of-type)]:-ml-px ${
-        localProps.class ?? ''
-      }`}
+      class={cn(
+        'relative inline-flex items-center space-x-2 border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 first-of-type:rounded-l-md last-of-type:rounded-r-md only-of-type:shadow-sm hover:bg-gray-50 focus:z-10 focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-1 focus-visible:ring-indigo-500 [&:not(:first-of-type)]:-ml-px',
+        localProps.class,
+      )}
     />
   );
 }

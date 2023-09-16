@@ -1,5 +1,11 @@
 import prettyMs from 'pretty-ms';
 import { useLocation } from 'solid-start';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 export function notEmpty<T>(t?: T | null): t is T {
   return t !== null && t !== undefined;

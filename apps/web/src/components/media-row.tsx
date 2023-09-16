@@ -8,6 +8,7 @@ import { Avatar } from './avatar';
 import Thumbnail, { type Props as ThumbnailProps } from './thumbnail';
 import type { MediaRowPropsFragment } from './__generated__/media-row';
 import { formatDateFull } from '~/util/date';
+import { cn } from '~/util';
 
 export const MediaRowFragment = isServer
   ? gql`
@@ -41,9 +42,10 @@ export type Props = ParentProps<
 export function MediaRow(props: Props) {
   return (
     <div
-      class={`relative grid grid-cols-1 gap-5 md:grid-cols-[352px_auto] md:grid-rows-1 md:flex-row ${
-        props.class ?? ''
-      }`}
+      class={cn(
+        'relative grid grid-cols-1 gap-5 md:grid-cols-[352px_auto] md:grid-rows-1 md:flex-row',
+        props.class,
+      )}
     >
       <Thumbnail
         url={

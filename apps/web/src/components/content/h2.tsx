@@ -1,4 +1,5 @@
 import { JSX, splitProps } from 'solid-js';
+import { cn } from '~/util';
 
 export type Props = JSX.IntrinsicElements['h2'];
 
@@ -7,9 +8,10 @@ export default function H1(props: Props) {
 
   return (
     <h2
-      class={`mt-8 text-2xl font-bold tracking-tight text-gray-900 ${
-        localProps.class ?? ''
-      }`}
+      class={cn(
+        'mt-8 text-2xl font-bold tracking-tight text-gray-900',
+        localProps.class,
+      )}
       {...restProps}
     />
   );
