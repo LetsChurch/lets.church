@@ -11,23 +11,9 @@ import server$, {
   createServerData$,
   redirect,
 } from 'solid-start/server';
-import {
-  type JSX,
-  splitProps,
-  createResource,
-  untrack,
-  createSignal,
-  Show,
-  Switch,
-  Match,
-  For,
-  createEffect,
-  onMount,
-} from 'solid-js';
+import { createSignal, Show, For, createEffect, onMount } from 'solid-js';
 import { isServer } from 'solid-js/web';
 import { useFloating } from 'solid-floating-ui';
-import ThumbUpIcon from '@tabler/icons/thumb-up.svg?component-solid';
-import ThumbDownIcon from '@tabler/icons/thumb-down.svg?component-solid';
 import SubscribeIcon from '@tabler/icons/rss.svg?component-solid';
 import DownloadIcon from '@tabler/icons/cloud-download.svg?component-solid';
 // TODO: use share-2 once on tabler icons v2.5+
@@ -39,10 +25,6 @@ import { gql } from 'graphql-request';
 import type {
   MediaRouteMetaDataQuery,
   MediaRouteMetaDataQueryVariables,
-  MediaRouteRatingStateQuery,
-  MediaRouteRatingStateQueryVariables,
-  SubmitUploadRatingMutation,
-  SubmitUploadRatingMutationVariables,
   ModifySubscriptionMutation,
   ModifySubscriptionMutationVariables,
   UpsertCommentMutation,
@@ -60,70 +42,20 @@ import Comment, { CommentForm } from '~/components/comment';
 import Transcript from '~/components/transcript';
 import FloatingShareMenu from '~/components/floating-share-menu';
 import { formatDateFull } from '~/util/date';
-import { cn, Optional } from '~/util';
 import Pagination from '~/components/pagination';
 import { Avatar } from '~/components/avatar';
 import FloatingDownloadMenu from '~/components/floating-download-menu';
 import { useUser } from '~/util/user-context';
 import Og from '~/components/og';
+import UnderbarButton from '~/components/media/underbar-button';
+import RatingButtons from '~/components/media/rating';
 
 const COMMENTS_PAGE_SIZE = 12;
 
-function UnderbarButton(props: JSX.IntrinsicElements['button']) {
-  const [localProps, restProps] = splitProps(props, ['class']);
-  return (
-    <button
-      {...restProps}
-      class={cn(
-        'relative inline-flex items-center space-x-2 border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 first-of-type:rounded-l-md last-of-type:rounded-r-md only-of-type:shadow-sm hover:bg-gray-50 focus:z-10 focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-1 focus-visible:ring-indigo-500 [&:not(:first-of-type)]:-ml-px',
-        localProps.class,
-      )}
-    />
-  );
-}
-
-function RatingButton(
-  props: {
-    count: number;
-    value: Rating;
-    active: boolean;
-  } & Omit<
-    JSX.IntrinsicElements['button'],
-    'class' | 'onClick' | 'value' | 'children'
-  >,
-) {
-  const [localProps, restProps] = splitProps(props, [
-    'count',
-    'value',
-    'active',
-  ]);
-
-  return (
-    <UnderbarButton
-      type="submit"
-      name="rating"
-      value={localProps.value}
-      class="min-w-[80px]"
-      classList={{
-        'bg-indigo-50': localProps.active,
-        'text-indigo-700': localProps.active,
-      }}
-      {...restProps}
-    >
-      <Switch>
-        <Match when={localProps.value === Rating.Like}>
-          <ThumbUpIcon class="pointer-events-none scale-90" />
-        </Match>
-        <Match when={localProps.value === Rating.Dislike}>
-          <ThumbDownIcon class="pointer-events-none -scale-x-90 scale-y-90" />
-        </Match>
-      </Switch>
-      <span>{localProps.count}</span>
-    </UnderbarButton>
-  );
-}
-
 export function routeData({ params, location }: RouteDataArgs) {
+  const idParam = params['id'];
+  invariant(idParam, 'No id provided to media route');
+
   const recordView = server$(async (id: string) => {
     const client = await createAuthenticatedClient(server$.request);
 
@@ -138,38 +70,6 @@ export function routeData({ params, location }: RouteDataArgs) {
 
     return res;
   });
-
-  // Use resource rather than createRouteData or createServerData for the rating state. We don't
-  // want any of the cache invalidation / automatic data refetching logic for rating. Local mutation
-  // is better than refetching for rating data as numbers changing wildly when clicking like or dislike
-  // can appear to be a bug. Resources have this mutation functionality built in.
-  const fetchRatingState = server$(async (id: string) => {
-    const client = await createAuthenticatedClient(server$.request);
-    invariant(id, "No id provided to routeData for '/media/[id]'");
-
-    const res = await client.request<
-      MediaRouteRatingStateQuery,
-      MediaRouteRatingStateQueryVariables
-    >(
-      gql`
-        query MediaRouteRatingState($id: ShortUuid!) {
-          data: uploadRecordById(id: $id) {
-            totalLikes
-            totalDislikes
-            myRating
-          }
-        }
-      `,
-      { id },
-    );
-
-    return res;
-  });
-
-  const idParam = params['id'];
-  invariant(idParam, 'No id provided to media route');
-
-  const ratingState = createResource(() => fetchRatingState(idParam));
 
   const metaData = createServerData$(
     async (
@@ -307,7 +207,6 @@ export function routeData({ params, location }: RouteDataArgs) {
 
   return {
     recordView: () => recordView(idParam),
-    ratingState,
     metaData,
   };
 }
@@ -333,32 +232,12 @@ export default function MediaRoute() {
   const user = useUser();
   const params = useParams<{ id: string }>();
   const loc = useLocation();
-  const {
-    ratingState: [
-      ratingStateData,
-      { mutate: mutateRating, refetch: refetchRatingState },
-    ],
-    metaData,
-    recordView,
-  } = useRouteData<typeof routeData>();
+  const { metaData, recordView } = useRouteData<typeof routeData>();
 
   onMount(() => {
     if (!isServer) {
       recordView();
     }
-  });
-
-  let prevMe: Optional<{ id: string }> = null;
-
-  // Refetch rating state when user logs in or out
-  createEffect(() => {
-    const next = user();
-
-    if (prevMe?.id !== next?.id) {
-      refetchRatingState();
-    }
-
-    prevMe = next;
   });
 
   const [submittingSubscribe, submitSubscribe] = createServerAction$(
@@ -409,41 +288,6 @@ export default function MediaRoute() {
     );
   };
 
-  const [submittingRating, submitRating] = createServerAction$(
-    async (form: FormData, { request }) => {
-      const uploadRecordId = form.get('uploadRecordId');
-      const rating =
-        form.get('rating') === 'LIKE' ? Rating.Like : Rating.Dislike;
-      invariant(
-        typeof uploadRecordId === 'string',
-        'No uploadRecordId provided to submitRating',
-      );
-
-      const client = await createAuthenticatedClientOrRedirect(request);
-
-      await client.request<
-        SubmitUploadRatingMutation,
-        SubmitUploadRatingMutationVariables
-      >(
-        gql`
-          mutation SubmitUploadRating(
-            $uploadRecordId: ShortUuid!
-            $rating: Rating!
-          ) {
-            rateUpload(uploadRecordId: $uploadRecordId, rating: $rating)
-          }
-        `,
-        {
-          uploadRecordId,
-          rating,
-        },
-      );
-
-      return redirect(`/media/${uploadRecordId}`);
-    },
-    { invalidate: [] },
-  );
-
   const [, submitCommentRating] = createServerAction$(
     async (form: FormData, { request }) => {
       const uploadRecordId = form.get('uploadRecordById');
@@ -486,54 +330,6 @@ export default function MediaRoute() {
     },
     { invalidate: [] },
   );
-
-  function handleRating(newRating: Rating) {
-    const ratingState = untrack(() => ratingStateData()?.data);
-
-    if (!ratingState) {
-      return;
-    }
-
-    // New rating
-    if (!ratingState.myRating) {
-      return mutateRating({
-        data: {
-          ...ratingState,
-          totalLikes:
-            ratingState.totalLikes + (newRating === Rating.Like ? 1 : 0),
-          totalDislikes:
-            ratingState.totalDislikes + (newRating === Rating.Dislike ? 1 : 0),
-          myRating: newRating,
-        },
-      });
-    }
-
-    // Undo rating
-    if (ratingState.myRating === newRating) {
-      return mutateRating({
-        data: {
-          ...ratingState,
-          totalLikes:
-            ratingState.totalLikes - (newRating === Rating.Like ? 1 : 0),
-          totalDislikes:
-            ratingState.totalDislikes - (newRating === Rating.Dislike ? 1 : 0),
-          myRating: null,
-        },
-      });
-    }
-
-    // Change rating
-    return mutateRating({
-      data: {
-        ...ratingState,
-        totalLikes:
-          ratingState.totalLikes + (newRating === Rating.Like ? 1 : -1),
-        totalDislikes:
-          ratingState.totalDislikes + (newRating === Rating.Dislike ? 1 : -1),
-        myRating: newRating,
-      },
-    });
-  }
 
   const [submittingComment, submitComment] = createServerAction$(
     async (form: FormData, { request }) => {
@@ -764,41 +560,7 @@ export default function MediaRoute() {
                   position={sharePosition}
                 />
               </div>
-              <submitRating.Form
-                class="isolate inline-flex rounded-md shadow-sm"
-                replace
-                onSubmit={(e) => {
-                  if (!user()) {
-                    e.preventDefault();
-                    // TODO: show login
-                    return alert('Not logged in!');
-                  }
-
-                  // Optimistic update
-                  if (
-                    e.submitter instanceof HTMLButtonElement &&
-                    e.submitter.value === 'LIKE'
-                  ) {
-                    handleRating(Rating.Like);
-                  } else {
-                    handleRating(Rating.Dislike);
-                  }
-                }}
-              >
-                <input type="hidden" name="uploadRecordId" value={params.id} />
-                <RatingButton
-                  count={ratingStateData()?.data.totalLikes ?? 0}
-                  value={Rating.Like}
-                  active={ratingStateData()?.data.myRating === Rating.Like}
-                  disabled={submittingRating.pending}
-                />
-                <RatingButton
-                  count={ratingStateData()?.data.totalDislikes ?? 0}
-                  value={Rating.Dislike}
-                  active={ratingStateData()?.data.myRating === Rating.Dislike}
-                  disabled={submittingRating.pending}
-                />
-              </submitRating.Form>
+              <RatingButtons id={params.id} />
             </div>
           </div>
           <div class="space-y-2 rounded-md bg-gray-100 p-3">

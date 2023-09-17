@@ -7,13 +7,6 @@ export type MediaRouteRecordViewMutationVariables = Types.Exact<{
 
 export type MediaRouteRecordViewMutation = { __typename?: 'Mutation', recordUploadView: boolean };
 
-export type MediaRouteRatingStateQueryVariables = Types.Exact<{
-  id: Types.Scalars['ShortUuid'];
-}>;
-
-
-export type MediaRouteRatingStateQuery = { __typename?: 'Query', data: { __typename?: 'UploadRecord', totalLikes: number, totalDislikes: number, myRating?: Types.Rating | null } };
-
 export type CommentFieldsFragment = { __typename?: 'UploadUserComment', id: string, uploadRecordId: string, createdAt: string, updatedAt: string, text: string, totalLikes: number, totalDislikes: number, myRating?: Types.Rating | null, author: { __typename?: 'AppUser', username: string, avatarUrl?: string | null } };
 
 export type MediaRouteMetaDataQueryVariables = Types.Exact<{
@@ -35,14 +28,6 @@ export type ModifySubscriptionMutationVariables = Types.Exact<{
 
 
 export type ModifySubscriptionMutation = { __typename?: 'Mutation', unsubscribeFromChannel?: boolean, subscribeToChannel?: { __typename?: 'ChannelSubscription', channel: { __typename?: 'Channel', id: string, userIsSubscribed: boolean } } };
-
-export type SubmitUploadRatingMutationVariables = Types.Exact<{
-  uploadRecordId: Types.Scalars['ShortUuid'];
-  rating: Types.Rating;
-}>;
-
-
-export type SubmitUploadRatingMutation = { __typename?: 'Mutation', rateUpload: boolean };
 
 export type SubmitUploadCommentRatingMutationVariables = Types.Exact<{
   uploadUserCommentId: Types.Scalars['ShortUuid'];
