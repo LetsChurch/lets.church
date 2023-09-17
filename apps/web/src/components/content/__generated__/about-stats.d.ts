@@ -1,4 +1,4 @@
-import * as Types from '../../../../__generated__/graphql-types';
+import * as Types from '../../../__generated__/graphql-types';
 
 export type AboutPageDataQueryVariables = Types.Exact<{ [key: string]: never; }>;
 

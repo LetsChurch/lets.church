@@ -1,83 +1,97 @@
 diff --git a/node_modules/solid-start/api/index.ts b/node_modules/solid-start/api/index.ts
-index 398dce3..693885a 100644
+index 398dce3..51fae3e 100644
 --- a/node_modules/solid-start/api/index.ts
 +++ b/node_modules/solid-start/api/index.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,7 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { registerApiRoutes } from "./internalFetch";
  import { getRouteMatches } from "./router";
  import { MatchRoute, Method, Route } from "./types";
 diff --git a/node_modules/solid-start/api/internalFetch.ts b/node_modules/solid-start/api/internalFetch.ts
-index eea745d..f24713a 100644
+index eea745d..a0fcd67 100644
 --- a/node_modules/solid-start/api/internalFetch.ts
 +++ b/node_modules/solid-start/api/internalFetch.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,7 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { FETCH_EVENT } from "../server/types";
  import { getRouteMatches } from "./router";
  import type { APIEvent, MatchRoute, Method } from "./types";
 diff --git a/node_modules/solid-start/api/middleware.ts b/node_modules/solid-start/api/middleware.ts
-index 3829de2..cdfe148 100644
+index f0c37ca..85699e3 100644
 --- a/node_modules/solid-start/api/middleware.ts
 +++ b/node_modules/solid-start/api/middleware.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,7 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { Middleware } from "../entry-server";
  import { FetchEvent, FETCH_EVENT } from "../server/types";
  import { getApiHandler } from "./index";
 diff --git a/node_modules/solid-start/api/router.ts b/node_modules/solid-start/api/router.ts
-index cc4eb7a..6de11ea 100644
+index cc4eb7a..c39860d 100644
 --- a/node_modules/solid-start/api/router.ts
 +++ b/node_modules/solid-start/api/router.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,7 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { MatchRoute, Method } from "./types";
  
  export function getRouteMatches(routes: MatchRoute[], path: string, method: Method) {
 diff --git a/node_modules/solid-start/api/types.ts b/node_modules/solid-start/api/types.ts
-index 43c0773..d0350dc 100644
+index 43c0773..10eeb65 100644
 --- a/node_modules/solid-start/api/types.ts
 +++ b/node_modules/solid-start/api/types.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,7 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { FetchEvent, FETCH_EVENT } from "../server/types";
  
  export interface APIEvent extends FetchEvent {
 diff --git a/node_modules/solid-start/data/Form.tsx b/node_modules/solid-start/data/Form.tsx
-index e908349..6e18155 100644
+index e908349..bd2bc59 100644
 --- a/node_modules/solid-start/data/Form.tsx
 +++ b/node_modules/solid-start/data/Form.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,7 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  /*!
   * Original code by Remix Sofware Inc
   * MIT Licensed, Copyright(c) 2021 Remix software Inc, see LICENSE.remix.md for details
 diff --git a/node_modules/solid-start/data/FormError.tsx b/node_modules/solid-start/data/FormError.tsx
-index f0c79c3..41b6899 100644
+index f0c79c3..1314cd6 100644
 --- a/node_modules/solid-start/data/FormError.tsx
 +++ b/node_modules/solid-start/data/FormError.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,7 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  export class ServerError extends Error {
    status: number;
    constructor(message: string, { status, stack }: { status?: number; stack?: string } = {}) {
 diff --git a/node_modules/solid-start/data/createRouteAction.tsx b/node_modules/solid-start/data/createRouteAction.tsx
-index 42c24f6..f23eecf 100644
+index 49f648a..3342f5d 100644
 --- a/node_modules/solid-start/data/createRouteAction.tsx
 +++ b/node_modules/solid-start/data/createRouteAction.tsx
 @@ -1,3 +1,5 @@
 +// @ts-nocheck
 +
- import { $TRACK, batch, createSignal } from "solid-js";
+ import { type Navigator } from "@solidjs/router";
+ import { $TRACK, batch, createSignal, type ParentComponent } from "solid-js";
  import { useNavigate, useSearchParams } from "../router";
- import { FormError, FormImpl, FormProps } from "./Form";
 diff --git a/node_modules/solid-start/data/createRouteData.tsx b/node_modules/solid-start/data/createRouteData.tsx
 index 076c2b0..fe20c2f 100644
 --- a/node_modules/solid-start/data/createRouteData.tsx
@@ -119,7 +133,7 @@ index cefaa35..3388f32 100644
    allowConcurrency?: boolean;
  }
 diff --git a/node_modules/solid-start/entry-client/StartClient.tsx b/node_modules/solid-start/entry-client/StartClient.tsx
-index 10fb957..3074e3f 100644
+index a9b6ecb..3ba229d 100644
 --- a/node_modules/solid-start/entry-client/StartClient.tsx
 +++ b/node_modules/solid-start/entry-client/StartClient.tsx
 @@ -1,3 +1,5 @@
@@ -528,15 +542,15 @@ index 79bf440..2442b2a 100644
  export { HttpStatusCode } from "./components/HttpStatusCode";
  export { createServerAction$, createServerData$, createServerMultiAction$, ServerError } from "./data";
 diff --git a/node_modules/solid-start/server/types.tsx b/node_modules/solid-start/server/types.tsx
-index a2b4b66..e37c48d 100644
+index feb685d..b6f6673 100644
 --- a/node_modules/solid-start/server/types.tsx
 +++ b/node_modules/solid-start/server/types.tsx
 @@ -1,3 +1,5 @@
 +// @ts-nocheck
 +
+ import { Server } from "http";
+ 
  export type ManifestEntry = {
-   type: string;
-   href: string;
 diff --git a/node_modules/solid-start/session/cookie.ts b/node_modules/solid-start/session/cookie.ts
 index aca7311..ccd6ca2 100644
 --- a/node_modules/solid-start/session/cookie.ts
@@ -558,7 +572,7 @@ index f403460..f66167f 100644
   * Original code by Remix Sofware Inc
   * MIT Licensed, Copyright(c) 2021 Remix software Inc, see LICENSE.remix.md for details
 diff --git a/node_modules/solid-start/session/cookieStorage.ts b/node_modules/solid-start/session/cookieStorage.ts
-index 3689da2..becd601 100644
+index 1a0d8ce..7e0927a 100644
 --- a/node_modules/solid-start/session/cookieStorage.ts
 +++ b/node_modules/solid-start/session/cookieStorage.ts
 @@ -1,3 +1,5 @@
@@ -598,7 +612,7 @@ index fac4ebe..d0cdd5e 100644
   * Original code by Remix Sofware Inc
   * MIT Licensed, Copyright(c) 2021 Remix software Inc, see LICENSE.remix.md for details
 diff --git a/node_modules/solid-start/session/sessions.ts b/node_modules/solid-start/session/sessions.ts
-index 457fb85..108d3bd 100644
+index b99f736..93eb981 100644
 --- a/node_modules/solid-start/session/sessions.ts
 +++ b/node_modules/solid-start/session/sessions.ts
 @@ -1,3 +1,5 @@

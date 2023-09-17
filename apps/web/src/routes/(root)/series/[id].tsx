@@ -63,7 +63,7 @@ export default function SeriesRoute() {
   return (
     <div class="space-y-5">
       <Title>{data()?.uploadListById.title ?? '...'} | Let's Church</Title>
-      <H1>{data()?.uploadListById.title}</H1>
+      <H1>{data()?.uploadListById.title ?? '...'}</H1>
       <For each={data()?.uploadListById.uploads.edges}>
         {(edge) => (
           <MediaRow
