@@ -476,8 +476,8 @@ export default function MediaRoute() {
             fluid
           />
           <h1 class="truncate text-2xl">{metaData()?.data.title ?? '...'}</h1>
-          <div class="flex flex-col gap-3 md:flex-row md:justify-between md:overflow-x-auto">
-            <div class="flex justify-between gap-3 overflow-x-auto md:justify-start md:overflow-x-hidden">
+          <div class="flex flex-col gap-3 lg:flex-row lg:justify-between lg:overflow-x-auto">
+            <div class="flex justify-start gap-3">
               <A
                 href={`/channel/${metaData()?.data.channel.slug}`}
                 class="relative z-10 inline-flex w-max min-w-0 items-center space-x-2 whitespace-nowrap"
@@ -521,7 +521,7 @@ export default function MediaRoute() {
                 </UnderbarButton>
               </submitSubscribe.Form>
             </div>
-            <div class="flex gap-3 overflow-x-auto md:overflow-x-hidden">
+            <div class="flex gap-3 max-lg:overflow-x-auto">
               <Show
                 when={
                   metaData()?.data.downloadsEnabled &&
