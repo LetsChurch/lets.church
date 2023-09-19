@@ -70,7 +70,7 @@ async function getDocument(
         },
       });
       return {
-        index: 'lc_uploads',
+        index: 'lc_uploads_v2',
         id: documentId,
         document: escapeDocument({
           ...upRec,

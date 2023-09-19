@@ -415,7 +415,7 @@ builder.queryFields((t) => ({
                     ? 'ChannelSearchHit'
                     : 'OrganizationSearchHit',
                 id: hit._id,
-                ...(hit._index === 'lc_uploads'
+                ...(hit._index === 'lc_uploads_v2'
                   ? {
                       uploadRecord: { id: hit._id },
                       title: hit._source.title,

@@ -24,7 +24,7 @@ export async function deleteUploadRecordSearch(id: string) {
 
   try {
     await esClient.delete({
-      index: 'lc_uploads',
+      index: 'lc_uploads_v2',
       id,
     });
   } catch (e) {

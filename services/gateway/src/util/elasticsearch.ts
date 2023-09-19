@@ -70,30 +70,47 @@ export function msearchUploads(
     orderBy?: OrderBy | undefined;
   },
 ): [MsearchRequestItem, MsearchRequestItem] {
+  const trimmed = query.trim();
+  const words = trimmed.split(/\s+/g);
+
   return [
-    { index: 'lc_uploads' },
+    { index: 'lc_uploads_v2' },
     {
       from,
       size,
       query: {
         bool: {
-          should: [],
-          must: [
-            { term: { visibility: 'PUBLIC' } },
-            { exists: { field: 'transcodingFinishedAt' } },
-            { exists: { field: 'transcribingFinishedAt' } },
+          minimum_should_match: 1,
+          should: [
+            {
+              match_phrase: {
+                title: {
+                  query: trimmed,
+                  slop: words.length <= 2 ? 0 : 2,
+                  boost: 5,
+                },
+              },
+            },
             {
               multi_match: {
                 query,
                 type: 'bool_prefix',
-                fields: [
-                  'title^3',
-                  'title._2gram',
-                  'title._3gram',
-                  'description',
-                ],
+                fields: ['title'],
               },
             },
+            {
+              match_phrase: {
+                description: {
+                  query: trimmed,
+                  slop: words.length <= 2 ? 0 : 2,
+                },
+              },
+            },
+          ],
+          must: [
+            { term: { visibility: 'PUBLIC' } },
+            { exists: { field: 'transcodingFinishedAt' } },
+            { exists: { field: 'transcribingFinishedAt' } },
           ],
         },
       },
@@ -356,7 +373,7 @@ export const OrganizationHitHighlightSchema = z.object({
 
 export const UploadHitSchema = z.object({
   ...BaseHitSchema,
-  _index: z.literal('lc_uploads'),
+  _index: z.literal('lc_uploads_v2'),
   _source: UploadHitSourceSchema,
 });
 
@@ -426,7 +443,11 @@ export const MSearchResponseSchema = z.object({
 });
 
 export async function* listIds(
-  index: 'lc_uploads' | 'lc_transcripts' | 'lc_channels' | 'lc_organizations',
+  index:
+    | 'lc_uploads_v2'
+    | 'lc_transcripts'
+    | 'lc_channels'
+    | 'lc_organizations',
 ) {
   const searchRes = await client.search({
     index,

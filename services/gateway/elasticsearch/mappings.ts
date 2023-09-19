@@ -33,19 +33,19 @@ const targetMappings: Record<
       },
     },
   },
-  lc_uploads: {
+  lc_uploads_v2: {
     properties: {
       channelId: {
         type: 'keyword',
       },
       title: {
-        type: 'search_as_you_type',
+        type: 'text',
       },
       description: {
         type: 'text',
       },
       tags: {
-        type: 'search_as_you_type',
+        type: 'text',
       },
       publishedAt: {
         type: 'date',

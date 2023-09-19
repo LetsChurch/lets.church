@@ -11,7 +11,7 @@ const spinner = ora('Checking for missing upload records:').start();
 
 const errorKeys = [];
 
-for await (const id of listIds('lc_uploads')) {
+for await (const id of listIds('lc_uploads_v2')) {
   spinner.text = `Checking for missing upload records: ${id}`;
 
   const res = await prisma.uploadRecord.findUnique({
