@@ -16,8 +16,8 @@ logs service *params:
   docker-compose logs {{params}} {{service}}
 follow service: (logs service '-f')
 
-restart service:
-  docker-compose restart {{service}}
+restart *services:
+  docker-compose restart {{services}}
 
 exec service +command:
   docker-compose exec {{service}} {{command}}
