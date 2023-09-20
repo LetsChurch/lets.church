@@ -127,7 +127,10 @@ export default function Video(props: Props) {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore: https://github.com/videojs/video.js/issues/8178
     player.on('timeupdate', () => {
-      onTimeUpdate?.(player.currentTime());
+      const time = player.currentTime();
+      if (typeof time !== 'undefined') {
+        onTimeUpdate?.(time);
+      }
     });
 
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
