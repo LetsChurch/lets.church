@@ -480,14 +480,14 @@ export default function MediaRoute() {
             <div class="flex justify-start gap-3">
               <A
                 href={`/channel/${metaData()?.data.channel.slug}`}
-                class="relative z-10 inline-flex w-max min-w-0 items-center space-x-2 whitespace-nowrap"
+                class="relative z-10 inline-flex w-max min-w-0 items-center space-x-2 overflow-hidden whitespace-nowrap"
               >
                 <Avatar
                   size="sm"
                   src={metaData()?.data.channel.avatarUrl}
                   alt={`${metaData()?.data.channel.name} icon`}
                 />
-                <span class="text-sm text-gray-500">
+                <span class="overflow-hidden text-ellipsis text-sm text-gray-500">
                   {metaData()?.data.channel.name}
                 </span>
               </A>
