@@ -317,7 +317,7 @@ model UploadUserCommentRating {
 }
 
 model UploadView {
-  upload         UploadRecord @relation(fields: [uploadRecordId], references: [id])
+  upload         UploadRecord @relation(fields: [uploadRecordId], references: [id], onDelete: Cascade)
   uploadRecordId String       @map("upload_record_id") @db.Uuid
   viewHash       BigInt       @map("view_hash")
   user           AppUser?     @relation(fields: [appUserId], references: [id])
@@ -341,7 +341,7 @@ enum UploadListType {
 model UploadListEntry {
   uploadList     UploadList   @relation(fields: [uploadListId], references: [id])
   uploadListId   String       @map("upload_list_id") @db.Uuid
-  upload         UploadRecord @relation(fields: [uploadRecordId], references: [id])
+  upload         UploadRecord @relation(fields: [uploadRecordId], references: [id], onDelete: Cascade)
   uploadRecordId String       @map("upload_record_id") @db.Uuid
   rank           String       @db.VarChar(12)
 
