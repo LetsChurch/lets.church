@@ -87,15 +87,8 @@ export function msearchUploads(
                 title: {
                   query: trimmed,
                   slop: words.length <= 2 ? 0 : 2,
-                  boost: 5,
+                  boost: 2,
                 },
-              },
-            },
-            {
-              multi_match: {
-                query,
-                type: 'bool_prefix',
-                fields: ['title'],
               },
             },
             {
