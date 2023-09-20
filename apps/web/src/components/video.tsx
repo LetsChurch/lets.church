@@ -151,13 +151,7 @@ export default function Video(props: Props) {
   });
 
   return (
-    <div
-      class={
-        audioOnlyMode()
-          ? '[&_.video-js_.vjs-progress-control]:hidden [&_.video-js_.vjs-time-control]:ml-auto'
-          : undefined
-      }
-    >
+    <div>
       <Show when={audioOnlyMode()}>
         <div class="h-36" ref={(el) => void (peaksContainer = el)} />
       </Show>
