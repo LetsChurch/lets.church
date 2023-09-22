@@ -1,3 +1,5 @@
+ARG TRANSCRIBE_MODEL=tiny.en
+
 FROM debian:bullseye-slim as build-audiowaveform
 RUN apt update && apt install -y git wget cmake build-essential libmad0-dev libid3tag0-dev libsndfile1-dev libgd-dev libboost-filesystem-dev libboost-program-options-dev libboost-regex-dev
 RUN mkdir -p /home/build
@@ -10,11 +12,6 @@ RUN ln -s googletest-release-1.12.1 googletest
 RUN mkdir build
 WORKDIR /home/build/audiowaveform/build
 RUN cmake -D BUILD_STATIC=1 .. && make
-
-FROM debian:bullseye-slim as download-whisper-models
-RUN apt update && apt install -y curl
-RUN curl https://data.letschurch.cloud/whisper-ctranslate2/models/tiny.en.tar.gz | tar -xz
-# RUN curl https://data.letschurch.cloud/whisper-ctranslate2/models/large-v2.tar.gz | tar -xz
 
 # Debian Base Image currently required for Prisma and M1 Macs: https://github.com/prisma/prisma/issues/8478
 # Temporal does not support alpine: https://github.com/temporalio/sdk-typescript/issues/850
@@ -43,12 +40,18 @@ COPY --from=mwader/static-ffmpeg:5.1.2 /ffmpeg /ffprobe /usr/bin/
 COPY --from=build-audiowaveform /home/build/audiowaveform/build/audiowaveform /usr/bin/
 CMD npm run start:transcode-worker
 
-FROM base as transcribe-worker
+FROM base as transcribe-worker-base
+RUN apt update && apt install -y curl python3 python3-pip git && rm -rf /var/lib/apt/lists/* && apt clean
+RUN mkdir -p /opt/whisper/models
+
+FROM transcribe-worker-base as transcribe-worker-tiny.en
+RUN curl https://data.letschurch.cloud/whisper-ctranslate2/models/tiny.en.tar.gz | tar -xz -C /opt/whisper/models
+
+FROM transcribe-worker-base as transcribe-worker-large-v2
+RUN curl https://data.letschurch.cloud/whisper-ctranslate2/models/large-v2.tar.gz | tar -xz -C /opt/whisper/models
+
+FROM transcribe-worker-${TRANSCRIBE_MODEL} as transcribe-worker
 COPY --from=mwader/static-ffmpeg:5.1.2 /ffmpeg /ffprobe /usr/bin/
-RUN mkdir -p /opt/whisper/models/{tiny.en,large-v2}
-COPY --from=download-whisper-models tiny.en /opt/whisper/models/tiny.en/
-# COPY --from=download-whisper-models large-v2 /opt/whisper/models/large-v2/
-RUN apt update && apt install -y python3 python3-pip curl git && rm -rf /var/lib/apt/lists/* && apt clean
 RUN pip3 install git+https://github.com/Softcatala/whisper-ctranslate2.git@0.2.9
 CMD npm run start:transcribe-worker
 
