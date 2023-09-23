@@ -121,7 +121,7 @@ build-transcribe-worker:
   <<: *build-common
   script:
     - cd services/gateway
-    - depot build --target transcribe-worker --build-arg TRANSCRIBE_MODEL=large-v2 -t registry.gitlab.com/letschurch/lets.church/transcribe-worker:${CI_COMMIT_SHORT_SHA} . --push
+    - depot build --target transcribe-worker --build-arg WHISPER_MODEL=large-v2 -t registry.gitlab.com/letschurch/lets.church/transcribe-worker:${CI_COMMIT_SHORT_SHA} . --push
 
 build-web:
   <<: *build-common

@@ -1,5 +1,3 @@
-ARG TRANSCRIBE_MODEL=tiny.en
-
 FROM debian:bullseye-slim as build-audiowaveform
 RUN apt update && apt install -y git wget cmake build-essential libmad0-dev libid3tag0-dev libsndfile1-dev libgd-dev libboost-filesystem-dev libboost-program-options-dev libboost-regex-dev
 RUN mkdir -p /home/build
@@ -40,19 +38,25 @@ COPY --from=mwader/static-ffmpeg:5.1.2 /ffmpeg /ffprobe /usr/bin/
 COPY --from=build-audiowaveform /home/build/audiowaveform/build/audiowaveform /usr/bin/
 CMD npm run start:transcode-worker
 
-FROM base as transcribe-worker-base
-RUN apt update && apt install -y curl python3 python3-pip git && rm -rf /var/lib/apt/lists/* && apt clean
-RUN mkdir -p /opt/whisper/models
-
-FROM transcribe-worker-base as transcribe-worker-tiny.en
-RUN curl https://data.letschurch.cloud/whisper-ctranslate2/models/tiny.en.tar.gz | tar -xz -C /opt/whisper/models
-
-FROM transcribe-worker-base as transcribe-worker-large-v2
-RUN curl https://data.letschurch.cloud/whisper-ctranslate2/models/large-v2.tar.gz | tar -xz -C /opt/whisper/models
-
-FROM transcribe-worker-${TRANSCRIBE_MODEL} as transcribe-worker
-COPY --from=mwader/static-ffmpeg:5.1.2 /ffmpeg /ffprobe /usr/bin/
-RUN pip3 install git+https://github.com/Softcatala/whisper-ctranslate2.git@0.2.9
+FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04 as transcribe-worker
+ARG WHISPER_MODEL=tiny.en
+RUN apt-get update && \
+  apt-get install -y ca-certificates curl gnupg python3 python3-pip git ffmpeg && \
+  mkdir -p /opt/whisper/models && \
+  curl https://data.letschurch.cloud/whisper-ctranslate2/models/${WHISPER_MODEL}.tar.gz | tar -xz -C /opt/whisper/models && \
+  mkdir -p /etc/apt/keyrings && \
+  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+  echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list && \
+  apt-get update && \
+  apt-get install -y nodejs && \
+  rm -rf /var/lib/apt/lists/* && \
+  apt clean && \
+  pip3 install git+https://github.com/Softcatala/whisper-ctranslate2.git@0.2.9 && mkdir -p /opt/whisper/models
+WORKDIR /home/node/app
+COPY package.json package-lock.json ./
+ENV NODE_ENV=production
+RUN npm ci
+COPY . .
 CMD npm run start:transcribe-worker
 
 FROM base as import-worker
