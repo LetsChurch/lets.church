@@ -1,5 +1,11 @@
 import { A } from 'solid-start';
-import { createEffect, createSignal, ParentProps, Show } from 'solid-js';
+import {
+  ComponentProps,
+  createEffect,
+  createSignal,
+  For,
+  Show,
+} from 'solid-js';
 /* import BellIcon from '@tabler/icons/bell.svg?component-solid'; */
 import MenuIcon from '@tabler/icons/menu-2.svg?component-solid';
 import XIcon from '@tabler/icons/x.svg?component-solid';
@@ -10,37 +16,15 @@ import Logo from './logo';
 import Search from './search';
 import { useUser } from '~/util/user-context';
 
-type NavLinkProps = ParentProps<{
-  href: string;
-  end?: boolean;
-  target?: string;
-}>;
-
-function NavLink(props: NavLinkProps) {
-  return (
-    <A
-      class="inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium"
-      inactiveClass="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-      activeClass="border-indigo-500 text-gray-900"
-      {...props}
-    >
-      {props.children}
-    </A>
-  );
-}
-
-function NavLinkMobile(props: NavLinkProps) {
-  return (
-    <A
-      class="block border-l-4 py-2 pl-3 pr-4 text-base font-medium"
-      inactiveClass="border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800"
-      activeClass="border-indigo-500 bg-indigo-50 text-indigo-700"
-      {...props}
-    >
-      {props.children}
-    </A>
-  );
-}
+const navLinks: Array<ComponentProps<typeof A>> = [
+  { href: '/about', children: 'About' },
+  { href: '/channels', children: 'Channels' },
+  {
+    href: 'https://www.zeffy.com/en-US/donation-form/5da9e1c3-a8e2-4bb4-817a-5dbbb968ec6b',
+    children: 'Donate',
+    target: '_blank',
+  },
+];
 
 export default function Header() {
   const user = useUser();
@@ -78,14 +62,18 @@ export default function Header() {
                 </A>
               </div>
               <div class="hidden lg:ml-6 lg:flex lg:space-x-8">
-                <NavLink href="/about">About</NavLink>
-                <NavLink href="/channels">Channels</NavLink>
-                <NavLink
-                  href="https://www.zeffy.com/en-US/donation-form/5da9e1c3-a8e2-4bb4-817a-5dbbb968ec6b"
-                  target="_donate"
-                >
-                  Donate
-                </NavLink>
+                <For each={navLinks}>
+                  {(props) => (
+                    <A
+                      class="inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium"
+                      inactiveClass="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                      activeClass="border-indigo-500 text-gray-900"
+                      {...props}
+                    >
+                      {props.children}
+                    </A>
+                  )}
+                </For>
               </div>
             </div>
             <div class="flex flex-1 items-center justify-center px-2 lg:ml-6 lg:justify-end">
@@ -126,14 +114,18 @@ export default function Header() {
         <Show when={showMobileMenu()}>
           <div class="lg:hidden" id="mobile-menu">
             <div class="space-y-1 pb-3 pt-2">
-              <NavLinkMobile href="/about">About</NavLinkMobile>
-              <NavLinkMobile href="/about">Channels</NavLinkMobile>
-              <NavLinkMobile
-                href="https://www.zeffy.com/en-US/donation-form/5da9e1c3-a8e2-4bb4-817a-5dbbb968ec6b"
-                target="_blank"
-              >
-                Donate
-              </NavLinkMobile>
+              <For each={navLinks}>
+                {(props) => (
+                  <A
+                    class="block border-l-4 py-2 pl-3 pr-4 text-base font-medium"
+                    inactiveClass="border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800"
+                    activeClass="border-indigo-500 bg-indigo-50 text-indigo-700"
+                    {...props}
+                  >
+                    {props.children}
+                  </A>
+                )}
+              </For>
             </div>
             <ProfileMobile me={user()} />
           </div>
