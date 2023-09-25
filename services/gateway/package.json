@@ -45,7 +45,8 @@
     "admin:check-s3-orphans": "ts-node-esm --experimental-specifier-resolution=node scripts/check-s3-orphans.ts",
     "admin:check-es-orphans": "ts-node-esm --experimental-specifier-resolution=node scripts/check-es-orphans.ts",
     "admin:translate-uuid": "ts-node-esm --experimental-specifier-resolution=node scripts/translate-uuid.ts",
-    "admin:generate-peaks": "ts-node-esm --experimental-specifier-resolution=node scripts/generate-peaks.ts"
+    "admin:generate-peaks": "ts-node-esm --experimental-specifier-resolution=node scripts/generate-peaks.ts",
+    "admin:fix-titles": "ts-node-esm --experimental-specifier-resolution=node scripts/fix-titles.ts"
   },
   "prisma": {
     "seed": "node --loader ts-node/esm --experimental-specifier-resolution=node prisma/seed.ts"
@@ -83,6 +84,7 @@
     "blurhash": "^2.0.5",
     "camelcase-keys": "^8.0.2",
     "dot-prop": "^7.2.0",
+    "entities": "^4.5.0",
     "execa": "^7.0.0",
     "expiry-map": "^2.0.0",
     "fast-glob": "^3.2.12",
