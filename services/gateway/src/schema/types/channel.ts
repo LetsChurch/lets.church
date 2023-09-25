@@ -195,6 +195,18 @@ builder.queryFields((t) => ({
       return prisma.channel.findUniqueOrThrow({ ...query, where: { slug } });
     },
   }),
+  channels: t.field({
+    type: [
+      builder.simpleObject('ChannelEntry', {
+        fields: (f) => ({
+          name: f.string(),
+          slug: f.string(),
+        }),
+      }),
+    ],
+    resolve: () =>
+      prisma.channel.findMany({ select: { name: true, slug: true } }),
+  }),
 }));
 
 builder.mutationFields((t) => ({

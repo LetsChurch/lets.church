@@ -172,6 +172,12 @@ export type ChannelUploadsConnectionArgs = {
   orderBy?: UploadOrderProperty;
 };
 
+export type ChannelEntry = {
+  __typename?: 'ChannelEntry';
+  name: Scalars['String'];
+  slug: Scalars['String'];
+};
+
 export type ChannelMembership = {
   __typename?: 'ChannelMembership';
   canEdit: Scalars['Boolean'];
@@ -571,6 +577,7 @@ export type Query = {
   __typename?: 'Query';
   channelById: Channel;
   channelBySlug: Channel;
+  channels: Array<ChannelEntry>;
   me?: Maybe<AppUser>;
   mySubscriptionUploadRecords?: Maybe<QueryMySubscriptionUploadRecordsConnection>;
   organizationById: Organization;
