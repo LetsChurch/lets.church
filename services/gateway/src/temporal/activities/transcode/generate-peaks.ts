@@ -5,7 +5,6 @@ import mkdirp from 'mkdirp';
 import rimraf from 'rimraf';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
-import { dataHeartbeat } from '../../../util/temporal';
 
 const WORK_DIR = process.env['PEAKS_WORKING_DIRECTORY'] ?? '/data/peaks';
 
@@ -24,7 +23,7 @@ export default async function generatePeaks(
     const downloadPath = join(workingDir, 'download');
 
     await streamObjectToFile('INGEST', s3UploadKey, downloadPath, () =>
-      dataHeartbeat('download'),
+      Context.current().heartbeat('download'),
     );
 
     // Generate and upload peaks
@@ -33,7 +32,7 @@ export default async function generatePeaks(
       workingDir,
       downloadPath,
       cancellationSignal,
-      dataHeartbeat,
+      () => Context.current().heartbeat('audiowaveform'),
     );
 
     console.log('Queuing upload of peaks');
@@ -65,8 +64,6 @@ export default async function generatePeaks(
     console.log('Error!');
     console.log(e);
   } finally {
-    console.log('Flushing heartbeats');
-    dataHeartbeat.flush();
     console.log(`Removing work directory: ${workingDir}`);
     await rimraf(workingDir);
   }

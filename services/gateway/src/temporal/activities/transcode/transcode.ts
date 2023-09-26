@@ -18,7 +18,6 @@ import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import { recordDownloadSize, updateUploadRecord } from '../..';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import type { Probe } from '../../../util/zod';
-import { dataHeartbeat } from '../../../util/temporal';
 
 const WORK_DIR =
   process.env['TRANSCODE_WORKING_DIRECTORY'] ?? '/data/transcode';
@@ -75,7 +74,7 @@ export default async function transcode(
     await mkdirp(workingDir);
     const downloadPath = join(workingDir, 'download');
     await streamObjectToFile('INGEST', s3UploadKey, downloadPath, () =>
-      dataHeartbeat('download'),
+      Context.current().heartbeat('download'),
     );
     const { width, height } = probe.streams.find(
       (s): s is Extract<typeof s, { codec_type: 'video' }> =>
@@ -131,7 +130,7 @@ export default async function transcode(
     encodeProc.stderr?.on('data', (data) => stderr.push(String(data)));
 
     while (encodeProc.exitCode === null) {
-      dataHeartbeat('Waiting for ffmpeg to finish');
+      Context.current().heartbeat('waiting for ffmpeg');
       await uploadSegments(uploadRecordId, workingDir);
       await setTimeout(1000);
     }
@@ -244,7 +243,7 @@ export default async function transcode(
       workingDir,
       downloadPath,
       cancellationSignal,
-      dataHeartbeat,
+      () => Context.current().heartbeat('audiowaveform'),
     );
 
     console.log('Queuing upload of peaks');
@@ -310,8 +309,6 @@ export default async function transcode(
     });
     throw e;
   } finally {
-    console.log('Flushing heartbeats');
-    dataHeartbeat.flush();
     console.log(`Removing work directory: ${workingDir}`);
     await rimraf(workingDir);
   }

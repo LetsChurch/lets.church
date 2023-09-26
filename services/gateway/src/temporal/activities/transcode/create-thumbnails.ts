@@ -12,7 +12,6 @@ import { runFfmpegThumbnails } from '../../../util/ffmpeg';
 import { concatThumbs, imageToBlurhash } from '../../../util/images';
 import type { Probe } from '../../../util/zod';
 import { updateUploadRecord } from '../..';
-import { dataHeartbeat } from '../../../util/temporal';
 
 const WORK_DIR =
   process.env['THUMBNAILS_WORKING_DIRECTORY'] ?? '/data/thumbnails';
@@ -30,7 +29,7 @@ export default async function createThumbnails(
   const downloadPath = join(workingDir, 'download');
 
   await streamObjectToFile('INGEST', s3UploadKey, downloadPath, () =>
-    dataHeartbeat('download'),
+    Context.current().heartbeat('download'),
   );
 
   Context.current().heartbeat();
@@ -42,8 +41,8 @@ export default async function createThumbnails(
       probe,
       cancellationSignal,
     );
-    proc.stdout?.on('data', dataHeartbeat);
-    proc.stderr?.on('data', dataHeartbeat);
+    proc.stdout?.on('data', () => Context.current().heartbeat('stdout'));
+    proc.stderr?.on('data', () => Context.current().heartbeat('stderr'));
     await proc;
     const thumbnailJpgs = (await fastGlob(join(workingDir, '*.jpg'))).sort();
     const thumbnailsWithSizes = await pMap(
@@ -137,7 +136,6 @@ export default async function createThumbnails(
     console.log(e);
     throw e;
   } finally {
-    dataHeartbeat.flush();
     await rimraf(workingDir);
   }
 }

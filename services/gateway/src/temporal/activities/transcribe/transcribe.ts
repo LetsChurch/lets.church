@@ -13,7 +13,6 @@ import {
   runWhisper,
   whisperJsonToVtt,
 } from '../../../util/whisper';
-import { dataHeartbeat } from '../../../util/temporal';
 
 const WORK_DIR =
   process.env['TRANSCRIBE_WORKING_DIRECTORY'] ?? '/data/transcribe';
@@ -34,15 +33,18 @@ export default async function transcribe(
     await mkdirp(workingDir);
     const downloadPath = join(workingDir, 'download');
 
-    await streamObjectToFile('INGEST', s3UploadKey, downloadPath, () =>
-      dataHeartbeat('download'),
+    await streamObjectToFile(
+      'INGEST',
+      s3UploadKey,
+      downloadPath,
+      () => () => Context.current().heartbeat('download'),
     );
 
     const outputFiles = await runWhisper(
       workingDir,
       downloadPath,
       cancellationSignal,
-      dataHeartbeat,
+      () => Context.current().heartbeat('whisper'),
     );
 
     console.log(`whisper done`);
@@ -107,7 +109,6 @@ export default async function transcribe(
       transcribingStartedAt: null,
       transcribingFinishedAt: null,
     });
-    dataHeartbeat.flush();
     throw e;
   } finally {
     console.log('Cleaning up');

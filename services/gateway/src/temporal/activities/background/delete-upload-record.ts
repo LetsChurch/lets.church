@@ -27,6 +27,10 @@ export async function deleteUploadRecordSearch(id: string) {
       index: 'lc_uploads_v2',
       id,
     });
+    await esClient.delete({
+      index: 'lc_transcripts',
+      id,
+    });
   } catch (e) {
     console.log(`Error deleting from ElasticSearch: ${e}`);
     return false;

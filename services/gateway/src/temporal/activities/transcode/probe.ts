@@ -11,7 +11,6 @@ import {
 import { runFfprobe } from '../../../util/ffmpeg';
 import { ffprobeSchema } from '../../../util/zod';
 import { updateUploadRecord } from '../..';
-import { dataHeartbeat } from '../../../util/temporal';
 
 const WORK_DIR = process.env['PROBE_WORKING_DIRECTORY'] ?? '/data/probe';
 
@@ -29,7 +28,7 @@ export default async function probe(
 
     const downloadPath = join(workingDir, 'download');
     await streamObjectToFile('INGEST', s3UploadKey, downloadPath, () =>
-      dataHeartbeat('download'),
+      Context.current().heartbeat('download'),
     );
     const uploadSizeBytes = (await headObject('INGEST', s3UploadKey))
       ?.ContentLength;
