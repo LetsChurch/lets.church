@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import { ZodError, ZodFormattedError } from 'zod';
+import { ZodError, type ZodFormattedError } from 'zod';
 import builder from '../builder';
 
 function flattenErrors(

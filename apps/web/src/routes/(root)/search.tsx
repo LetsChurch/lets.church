@@ -8,7 +8,7 @@ import {
   Show,
   createUniqueId,
 } from 'solid-js';
-import { A, RouteDataArgs, useLocation, useRouteData } from 'solid-start';
+import { A, type RouteDataArgs, useLocation, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
 import '@fontsource/roboto-mono/variable.css';
 import { Dynamic } from 'solid-js/web';

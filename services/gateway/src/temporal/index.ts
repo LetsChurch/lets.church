@@ -1,6 +1,6 @@
 import envariant from '@knpwrs/envariant';
 import { xxh32 } from '@node-rs/xxhash';
-import { Connection, Client, WorkflowOptions } from '@temporalio/client';
+import { Connection, Client, type WorkflowOptions } from '@temporalio/client';
 import PLazy from 'p-lazy';
 import waitOn from 'wait-on';
 import type { Prisma, UploadVariant } from '@prisma/client';

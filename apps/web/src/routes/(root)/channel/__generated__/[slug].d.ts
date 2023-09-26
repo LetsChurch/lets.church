@@ -1,11 +1,11 @@
 import * as Types from '../../../../__generated__/graphql-types';
 
 export type PublicChannelQueryVariables = Types.Exact<{
-  slug: Types.Scalars['String'];
-  first?: Types.InputMaybe<Types.Scalars['Int']>;
-  after?: Types.InputMaybe<Types.Scalars['String']>;
-  last?: Types.InputMaybe<Types.Scalars['Int']>;
-  before?: Types.InputMaybe<Types.Scalars['String']>;
+  slug: Types.Scalars['String']['input'];
+  first?: Types.InputMaybe<Types.Scalars['Int']['input']>;
+  after?: Types.InputMaybe<Types.Scalars['String']['input']>;
+  last?: Types.InputMaybe<Types.Scalars['Int']['input']>;
+  before?: Types.InputMaybe<Types.Scalars['String']['input']>;
 }>;
 
 

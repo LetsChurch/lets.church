@@ -1,4 +1,4 @@
-import { RouteDataArgs, useRouteData } from 'solid-start';
+import { type RouteDataArgs, useRouteData } from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
 import { gql } from 'graphql-request';
 import type {

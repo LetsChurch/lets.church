@@ -3,7 +3,7 @@ import {
   For,
   type JSX,
   Show,
-  ValidComponent,
+  type ValidComponent,
   onMount,
   untrack,
 } from 'solid-js';

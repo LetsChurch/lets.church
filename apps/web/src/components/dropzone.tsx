@@ -1,5 +1,5 @@
 import DragDropIcon from '@tabler/icons/drag-drop.svg?component-solid';
-import { Accessor, createSignal, createUniqueId, Show } from 'solid-js';
+import { type Accessor, createSignal, createUniqueId, Show } from 'solid-js';
 import invariant from 'tiny-invariant';
 
 export type DroppedRes = { title: string; progress: Accessor<number> };

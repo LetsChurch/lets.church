@@ -1,6 +1,6 @@
 import { A } from 'solid-start';
 import {
-  ComponentProps,
+  type ComponentProps,
   createEffect,
   createSignal,
   For,

@@ -1,4 +1,4 @@
-import { JSX, onMount, splitProps } from 'solid-js';
+import { type JSX, onMount, splitProps } from 'solid-js';
 import invariant from 'tiny-invariant';
 import type { Optional } from '~/util';
 

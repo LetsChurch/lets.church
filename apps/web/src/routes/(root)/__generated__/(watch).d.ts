@@ -1,7 +1,7 @@
 import * as Types from '../../../__generated__/graphql-types';
 
 export type HomepageDataQueryVariables = Types.Exact<{
-  loggedIn: Types.Scalars['Boolean'];
+  loggedIn: Types.Scalars['Boolean']['input'];
 }>;
 
 

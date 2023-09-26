@@ -1,5 +1,5 @@
 import type { UseFloatingResult } from 'solid-floating-ui';
-import { JSX, ParentProps, splitProps } from 'solid-js';
+import { type JSX, type ParentProps, splitProps } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import ShowTransition from './show-transition';
 import clickOutside from '~/util/click-outside';

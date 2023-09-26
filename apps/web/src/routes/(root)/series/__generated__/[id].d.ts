@@ -1,7 +1,7 @@
 import * as Types from '../../../../__generated__/graphql-types';
 
 export type SeriesRouteDataQueryVariables = Types.Exact<{
-  id: Types.Scalars['ShortUuid'];
+  id: Types.Scalars['ShortUuid']['input'];
 }>;
 
 

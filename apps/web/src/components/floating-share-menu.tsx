@@ -5,7 +5,7 @@ import CopyIcon from '@tabler/icons/copy.svg?component-solid';
 import { splitProps } from 'solid-js';
 import type { SetRequired } from 'type-fest';
 import copy from 'copy-text-to-clipboard';
-import FloatingDiv, { Props as FloatingDivProps } from './floating-div';
+import FloatingDiv, { type Props as FloatingDivProps } from './floating-div';
 
 export type Props = {
   data: SetRequired<ShareData, 'url' | 'title'>;

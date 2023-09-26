@@ -1,7 +1,10 @@
 import { Outlet } from 'solid-start';
-// For some reason eslint-plugin-import can't resolve this
-// eslint-disable-next-line import/no-unresolved
+// https://github.com/nksaraf/solid-mdx/issues/2
+/* eslint-disable import/no-unresolved */
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 import { MDXProvider } from 'solid-mdx';
+/* eslint-enable import/no-unresolved */
 import P from '~/components/content/p';
 import A from '~/components/content/a';
 import H1 from '~/components/content/h1';

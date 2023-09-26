@@ -3,69 +3,71 @@ export type InputMaybe<T> = Maybe<T>;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
+export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
+export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
-  ID: string;
-  String: string;
-  Boolean: boolean;
-  Int: number;
-  Float: number;
-  DateTime: string;
-  Jwt: string;
-  SafeInt: number;
-  ShortUuid: string;
-  Uuid: string;
+  ID: { input: string; output: string; }
+  String: { input: string; output: string; }
+  Boolean: { input: boolean; output: boolean; }
+  Int: { input: number; output: number; }
+  Float: { input: number; output: number; }
+  DateTime: { input: string; output: string; }
+  Jwt: { input: string; output: string; }
+  SafeInt: { input: number; output: number; }
+  ShortUuid: { input: string; output: string; }
+  Uuid: { input: string; output: string; }
 };
 
 export type AppUser = {
   __typename?: 'AppUser';
-  avatarUrl?: Maybe<Scalars['String']>;
-  canUpload: Scalars['Boolean'];
+  avatarUrl?: Maybe<Scalars['String']['output']>;
+  canUpload: Scalars['Boolean']['output'];
   channelMembershipsConnection: AppUserChannelMembershipsConnection;
   channelSubscriptionsConnection: AppUserChannelSubscriptionsConnection;
-  createdAt: Scalars['DateTime'];
+  createdAt: Scalars['DateTime']['output'];
   emails: Array<AppUserEmail>;
-  fullName?: Maybe<Scalars['String']>;
-  id: Scalars['ShortUuid'];
+  fullName?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ShortUuid']['output'];
   organizationMemberhipsConnection: AppUserOrganizationMemberhipsConnection;
   playlists: AppUserPlaylistsConnection;
   role: AppUserRole;
-  subscribedToNewsletter: Scalars['Boolean'];
-  updatedAt: Scalars['DateTime'];
-  username: Scalars['String'];
+  subscribedToNewsletter: Scalars['Boolean']['output'];
+  updatedAt: Scalars['DateTime']['output'];
+  username: Scalars['String']['output'];
 };
 
 
 export type AppUserChannelMembershipsConnectionArgs = {
-  after?: InputMaybe<Scalars['String']>;
-  before?: InputMaybe<Scalars['String']>;
-  canUpload?: InputMaybe<Scalars['Boolean']>;
-  first?: InputMaybe<Scalars['Int']>;
-  last?: InputMaybe<Scalars['Int']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  canUpload?: InputMaybe<Scalars['Boolean']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
 export type AppUserChannelSubscriptionsConnectionArgs = {
-  after?: InputMaybe<Scalars['String']>;
-  before?: InputMaybe<Scalars['String']>;
-  first?: InputMaybe<Scalars['Int']>;
-  last?: InputMaybe<Scalars['Int']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
 export type AppUserOrganizationMemberhipsConnectionArgs = {
-  after?: InputMaybe<Scalars['String']>;
-  before?: InputMaybe<Scalars['String']>;
-  first?: InputMaybe<Scalars['Int']>;
-  last?: InputMaybe<Scalars['Int']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
 export type AppUserPlaylistsArgs = {
-  after?: InputMaybe<Scalars['String']>;
-  before?: InputMaybe<Scalars['String']>;
-  first?: InputMaybe<Scalars['Int']>;
-  last?: InputMaybe<Scalars['Int']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type AppUserChannelMembershipsConnection = {
@@ -76,7 +78,7 @@ export type AppUserChannelMembershipsConnection = {
 
 export type AppUserChannelMembershipsConnectionEdge = {
   __typename?: 'AppUserChannelMembershipsConnectionEdge';
-  cursor: Scalars['String'];
+  cursor: Scalars['String']['output'];
   node: ChannelMembership;
 };
 
@@ -88,15 +90,15 @@ export type AppUserChannelSubscriptionsConnection = {
 
 export type AppUserChannelSubscriptionsConnectionEdge = {
   __typename?: 'AppUserChannelSubscriptionsConnectionEdge';
-  cursor: Scalars['String'];
+  cursor: Scalars['String']['output'];
   node: ChannelSubscription;
 };
 
 export type AppUserEmail = {
   __typename?: 'AppUserEmail';
-  email: Scalars['String'];
-  id: Scalars['ShortUuid'];
-  verifiedAt?: Maybe<Scalars['DateTime']>;
+  email: Scalars['String']['output'];
+  id: Scalars['ShortUuid']['output'];
+  verifiedAt?: Maybe<Scalars['DateTime']['output']>;
 };
 
 export type AppUserOrganizationMemberhipsConnection = {
@@ -107,7 +109,7 @@ export type AppUserOrganizationMemberhipsConnection = {
 
 export type AppUserOrganizationMemberhipsConnectionEdge = {
   __typename?: 'AppUserOrganizationMemberhipsConnectionEdge';
-  cursor: Scalars['String'];
+  cursor: Scalars['String']['output'];
   node: OrganizationMembership;
 };
 
@@ -119,7 +121,7 @@ export type AppUserPlaylistsConnection = {
 
 export type AppUserPlaylistsConnectionEdge = {
   __typename?: 'AppUserPlaylistsConnectionEdge';
-  cursor: Scalars['String'];
+  cursor: Scalars['String']['output'];
   node: UploadList;
 };
 
@@ -130,60 +132,60 @@ export enum AppUserRole {
 
 export type Channel = {
   __typename?: 'Channel';
-  avatarUrl?: Maybe<Scalars['String']>;
-  createdAt: Scalars['DateTime'];
-  defaultThumbnailBlurhash?: Maybe<Scalars['String']>;
-  defaultThumbnailUrl?: Maybe<Scalars['String']>;
-  description?: Maybe<Scalars['String']>;
-  id: Scalars['ShortUuid'];
+  avatarUrl?: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  defaultThumbnailBlurhash?: Maybe<Scalars['String']['output']>;
+  defaultThumbnailUrl?: Maybe<Scalars['String']['output']>;
+  description?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ShortUuid']['output'];
   membershipsConnection: ChannelMembershipsConnection;
-  name: Scalars['String'];
-  slug: Scalars['String'];
+  name: Scalars['String']['output'];
+  slug: Scalars['String']['output'];
   subscribersConnection: ChannelSubscribersConnection;
-  updatedAt: Scalars['DateTime'];
+  updatedAt: Scalars['DateTime']['output'];
   uploadsConnection: ChannelUploadsConnection;
-  userIsSubscribed: Scalars['Boolean'];
+  userIsSubscribed: Scalars['Boolean']['output'];
 };
 
 
 export type ChannelMembershipsConnectionArgs = {
-  after?: InputMaybe<Scalars['String']>;
-  before?: InputMaybe<Scalars['String']>;
-  first?: InputMaybe<Scalars['Int']>;
-  last?: InputMaybe<Scalars['Int']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
 export type ChannelSubscribersConnectionArgs = {
-  after?: InputMaybe<Scalars['String']>;
-  before?: InputMaybe<Scalars['String']>;
-  first?: InputMaybe<Scalars['Int']>;
-  last?: InputMaybe<Scalars['Int']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
 export type ChannelUploadsConnectionArgs = {
-  after?: InputMaybe<Scalars['String']>;
-  before?: InputMaybe<Scalars['String']>;
-  first?: InputMaybe<Scalars['Int']>;
-  includeUnlisted?: InputMaybe<Scalars['Boolean']>;
-  last?: InputMaybe<Scalars['Int']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  includeUnlisted?: InputMaybe<Scalars['Boolean']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
   order?: Order;
   orderBy?: UploadOrderProperty;
 };
 
 export type ChannelEntry = {
   __typename?: 'ChannelEntry';
-  name: Scalars['String'];
-  slug: Scalars['String'];
+  name: Scalars['String']['output'];
+  slug: Scalars['String']['output'];
 };
 
 export type ChannelMembership = {
   __typename?: 'ChannelMembership';
-  canEdit: Scalars['Boolean'];
-  canUpload: Scalars['Boolean'];
+  canEdit: Scalars['Boolean']['output'];
+  canUpload: Scalars['Boolean']['output'];
   channel: Channel;
-  isAdmin: Scalars['Boolean'];
+  isAdmin: Scalars['Boolean']['output'];
   user: AppUser;
 };
 
@@ -195,27 +197,27 @@ export type ChannelMembershipsConnection = {
 
 export type ChannelMembershipsConnectionEdge = {
   __typename?: 'ChannelMembershipsConnectionEdge';
-  cursor: Scalars['String'];
+  cursor: Scalars['String']['output'];
   node: ChannelMembership;
 };
 
 export type ChannelSearchHit = ISearchHit & {
   __typename?: 'ChannelSearchHit';
   channel: Channel;
-  id: Scalars['ShortUuid'];
-  name: Scalars['String'];
+  id: Scalars['ShortUuid']['output'];
+  name: Scalars['String']['output'];
 };
 
 export type ChannelSubscribersConnection = {
   __typename?: 'ChannelSubscribersConnection';
   edges: Array<ChannelSubscribersConnectionEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int'];
+  totalCount: Scalars['Int']['output'];
 };
 
 export type ChannelSubscribersConnectionEdge = {
   __typename?: 'ChannelSubscribersConnectionEdge';
-  cursor: Scalars['String'];
+  cursor: Scalars['String']['output'];
   node: ChannelSubscription;
 };
 
@@ -229,12 +231,12 @@ export type ChannelUploadsConnection = {
   __typename?: 'ChannelUploadsConnection';
   edges: Array<ChannelUploadsConnectionEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int'];
+  totalCount: Scalars['Int']['output'];
 };
 
 export type ChannelUploadsConnectionEdge = {
   __typename?: 'ChannelUploadsConnectionEdge';
-  cursor: Scalars['String'];
+  cursor: Scalars['String']['output'];
   node: UploadRecord;
 };
 
@@ -245,19 +247,19 @@ export type DataError = {
 
 export type HighlightedText = {
   __typename?: 'HighlightedText';
-  marked: Scalars['String'];
-  source: Scalars['String'];
+  marked: Scalars['String']['output'];
+  source: Scalars['String']['output'];
 };
 
 export type ISearchHit = {
-  id: Scalars['ShortUuid'];
+  id: Scalars['ShortUuid']['output'];
 };
 
 export type MediaDownload = {
   __typename?: 'MediaDownload';
   kind: MediaDownloadKind;
-  label: Scalars['String'];
-  url: Scalars['String'];
+  label: Scalars['String']['output'];
+  url: Scalars['String']['output'];
 };
 
 export enum MediaDownloadKind {
@@ -273,10 +275,10 @@ export enum MediaDownloadKind {
 
 export type MultipartUploadMeta = {
   __typename?: 'MultipartUploadMeta';
-  partSize: Scalars['Int'];
-  s3UploadId: Scalars['String'];
-  s3UploadKey: Scalars['String'];
-  urls: Array<Scalars['String']>;
+  partSize: Scalars['Int']['output'];
+  s3UploadId: Scalars['String']['output'];
+  s3UploadKey: Scalars['String']['output'];
+  urls: Array<Scalars['String']['output']>;
 };
 
 export type Mutation = {
@@ -286,187 +288,187 @@ export type Mutation = {
   createMultipartUpload: MultipartUploadMeta;
   createOrganization: Organization;
   createUploadList: UploadList;
-  finalizeMultipartUpload: Scalars['Boolean'];
-  login?: Maybe<Scalars['Jwt']>;
-  logout: Scalars['Boolean'];
-  rateComment: Scalars['Boolean'];
-  rateUpload: Scalars['Boolean'];
-  recordUploadView: Scalars['Boolean'];
+  finalizeMultipartUpload: Scalars['Boolean']['output'];
+  login?: Maybe<Scalars['Jwt']['output']>;
+  logout: Scalars['Boolean']['output'];
+  rateComment: Scalars['Boolean']['output'];
+  rateUpload: Scalars['Boolean']['output'];
+  recordUploadView: Scalars['Boolean']['output'];
   register: MutationRegisterResult;
   subscribeToChannel: ChannelSubscription;
   subscribeToNewsletter: MutationSubscribeToNewsletterResult;
-  unsubscribeFromChannel: Scalars['Boolean'];
-  unsubscribeFromNewsletter: Scalars['Boolean'];
+  unsubscribeFromChannel: Scalars['Boolean']['output'];
+  unsubscribeFromNewsletter: Scalars['Boolean']['output'];
   updateChannel: Channel;
   updateUser: AppUser;
   upsertChannelMembership: ChannelMembership;
   upsertOrganizationMembership: OrganizationMembership;
   upsertUploadRecord: UploadRecord;
   upsertUploadUserComment: UploadUserComment;
-  verifyEmail: Scalars['Boolean'];
-  verifyNewsletterSubscription: Scalars['Boolean'];
+  verifyEmail: Scalars['Boolean']['output'];
+  verifyNewsletterSubscription: Scalars['Boolean']['output'];
 };
 
 
 export type MutationAddUploadToListArgs = {
-  after?: InputMaybe<Scalars['ShortUuid']>;
-  before?: InputMaybe<Scalars['ShortUuid']>;
-  uploadListId: Scalars['ShortUuid'];
-  uploadRecordId: Scalars['ShortUuid'];
+  after?: InputMaybe<Scalars['ShortUuid']['input']>;
+  before?: InputMaybe<Scalars['ShortUuid']['input']>;
+  uploadListId: Scalars['ShortUuid']['input'];
+  uploadRecordId: Scalars['ShortUuid']['input'];
 };
 
 
 export type MutationCreateChannelArgs = {
-  name: Scalars['String'];
-  slug?: InputMaybe<Scalars['String']>;
+  name: Scalars['String']['input'];
+  slug?: InputMaybe<Scalars['String']['input']>;
 };
 
 
 export type MutationCreateMultipartUploadArgs = {
-  bytes: Scalars['SafeInt'];
+  bytes: Scalars['SafeInt']['input'];
   postProcess: UploadPostProcess;
-  targetId: Scalars['ShortUuid'];
-  uploadMimeType: Scalars['String'];
+  targetId: Scalars['ShortUuid']['input'];
+  uploadMimeType: Scalars['String']['input'];
 };
 
 
 export type MutationCreateOrganizationArgs = {
-  name: Scalars['String'];
-  slug?: InputMaybe<Scalars['String']>;
+  name: Scalars['String']['input'];
+  slug?: InputMaybe<Scalars['String']['input']>;
 };
 
 
 export type MutationCreateUploadListArgs = {
-  channelId?: InputMaybe<Scalars['ShortUuid']>;
-  title: Scalars['String'];
+  channelId?: InputMaybe<Scalars['ShortUuid']['input']>;
+  title: Scalars['String']['input'];
   type: UploadListType;
 };
 
 
 export type MutationFinalizeMultipartUploadArgs = {
-  s3PartETags: Array<Scalars['String']>;
-  s3UploadId: Scalars['String'];
-  s3UploadKey: Scalars['String'];
-  targetId: Scalars['ShortUuid'];
+  s3PartETags: Array<Scalars['String']['input']>;
+  s3UploadId: Scalars['String']['input'];
+  s3UploadKey: Scalars['String']['input'];
+  targetId: Scalars['ShortUuid']['input'];
 };
 
 
 export type MutationLoginArgs = {
-  id: Scalars['String'];
-  password: Scalars['String'];
+  id: Scalars['String']['input'];
+  password: Scalars['String']['input'];
 };
 
 
 export type MutationRateCommentArgs = {
   rating: Rating;
-  uploadUserCommentId: Scalars['ShortUuid'];
+  uploadUserCommentId: Scalars['ShortUuid']['input'];
 };
 
 
 export type MutationRateUploadArgs = {
   rating: Rating;
-  uploadRecordId: Scalars['ShortUuid'];
+  uploadRecordId: Scalars['ShortUuid']['input'];
 };
 
 
 export type MutationRecordUploadViewArgs = {
-  uploadRecordId: Scalars['ShortUuid'];
+  uploadRecordId: Scalars['ShortUuid']['input'];
 };
 
 
 export type MutationRegisterArgs = {
-  agreeToTerms: Scalars['Boolean'];
-  agreeToTheology: Scalars['Boolean'];
-  email: Scalars['String'];
-  fullName?: InputMaybe<Scalars['String']>;
-  password: Scalars['String'];
-  subscribeToNewsletter?: InputMaybe<Scalars['Boolean']>;
-  username: Scalars['String'];
+  agreeToTerms: Scalars['Boolean']['input'];
+  agreeToTheology: Scalars['Boolean']['input'];
+  email: Scalars['String']['input'];
+  fullName?: InputMaybe<Scalars['String']['input']>;
+  password: Scalars['String']['input'];
+  subscribeToNewsletter?: InputMaybe<Scalars['Boolean']['input']>;
+  username: Scalars['String']['input'];
 };
 
 
 export type MutationSubscribeToChannelArgs = {
-  channelId: Scalars['ShortUuid'];
+  channelId: Scalars['ShortUuid']['input'];
 };
 
 
 export type MutationSubscribeToNewsletterArgs = {
-  email: Scalars['String'];
+  email: Scalars['String']['input'];
 };
 
 
 export type MutationUnsubscribeFromChannelArgs = {
-  channelId: Scalars['ShortUuid'];
+  channelId: Scalars['ShortUuid']['input'];
 };
 
 
 export type MutationUnsubscribeFromNewsletterArgs = {
-  emailKey: Scalars['ShortUuid'];
-  subscriptionId: Scalars['ShortUuid'];
+  emailKey: Scalars['ShortUuid']['input'];
+  subscriptionId: Scalars['ShortUuid']['input'];
 };
 
 
 export type MutationUpdateChannelArgs = {
-  channelId: Scalars['ShortUuid'];
-  name: Scalars['String'];
+  channelId: Scalars['ShortUuid']['input'];
+  name: Scalars['String']['input'];
 };
 
 
 export type MutationUpdateUserArgs = {
-  email: Scalars['String'];
-  fullName: Scalars['String'];
-  userId: Scalars['ShortUuid'];
+  email: Scalars['String']['input'];
+  fullName: Scalars['String']['input'];
+  userId: Scalars['ShortUuid']['input'];
 };
 
 
 export type MutationUpsertChannelMembershipArgs = {
-  canEdit: Scalars['Boolean'];
-  canUpload: Scalars['Boolean'];
-  channelId: Scalars['ShortUuid'];
-  isAdmin: Scalars['Boolean'];
-  userId: Scalars['ShortUuid'];
+  canEdit: Scalars['Boolean']['input'];
+  canUpload: Scalars['Boolean']['input'];
+  channelId: Scalars['ShortUuid']['input'];
+  isAdmin: Scalars['Boolean']['input'];
+  userId: Scalars['ShortUuid']['input'];
 };
 
 
 export type MutationUpsertOrganizationMembershipArgs = {
-  canEdit: Scalars['Boolean'];
-  isAdmin: Scalars['Boolean'];
-  organizationId: Scalars['ShortUuid'];
-  userId: Scalars['ShortUuid'];
+  canEdit: Scalars['Boolean']['input'];
+  isAdmin: Scalars['Boolean']['input'];
+  organizationId: Scalars['ShortUuid']['input'];
+  userId: Scalars['ShortUuid']['input'];
 };
 
 
 export type MutationUpsertUploadRecordArgs = {
-  channelId: Scalars['ShortUuid'];
-  description?: InputMaybe<Scalars['String']>;
-  downloadsEnabled?: InputMaybe<Scalars['Boolean']>;
+  channelId: Scalars['ShortUuid']['input'];
+  description?: InputMaybe<Scalars['String']['input']>;
+  downloadsEnabled?: InputMaybe<Scalars['Boolean']['input']>;
   license: UploadLicense;
-  publishedAt: Scalars['DateTime'];
-  title?: InputMaybe<Scalars['String']>;
-  uploadRecordId?: InputMaybe<Scalars['ShortUuid']>;
-  userCommentsEnabled?: InputMaybe<Scalars['Boolean']>;
+  publishedAt: Scalars['DateTime']['input'];
+  title?: InputMaybe<Scalars['String']['input']>;
+  uploadRecordId?: InputMaybe<Scalars['ShortUuid']['input']>;
+  userCommentsEnabled?: InputMaybe<Scalars['Boolean']['input']>;
   visibility: UploadVisibility;
 };
 
 
 export type MutationUpsertUploadUserCommentArgs = {
-  commentId?: InputMaybe<Scalars['ShortUuid']>;
-  replyingTo?: InputMaybe<Scalars['ShortUuid']>;
-  text: Scalars['String'];
-  uploadRecordId: Scalars['ShortUuid'];
+  commentId?: InputMaybe<Scalars['ShortUuid']['input']>;
+  replyingTo?: InputMaybe<Scalars['ShortUuid']['input']>;
+  text: Scalars['String']['input'];
+  uploadRecordId: Scalars['ShortUuid']['input'];
 };
 
 
 export type MutationVerifyEmailArgs = {
-  emailId: Scalars['ShortUuid'];
-  emailKey: Scalars['ShortUuid'];
-  userId: Scalars['ShortUuid'];
+  emailId: Scalars['ShortUuid']['input'];
+  emailKey: Scalars['ShortUuid']['input'];
+  userId: Scalars['ShortUuid']['input'];
 };
 
 
 export type MutationVerifyNewsletterSubscriptionArgs = {
-  emailKey: Scalars['ShortUuid'];
-  subscriptionId: Scalars['ShortUuid'];
+  emailKey: Scalars['ShortUuid']['input'];
+  subscriptionId: Scalars['ShortUuid']['input'];
 };
 
 export type MutationRegisterResult = DataError | MutationRegisterSuccess | ValidationError;
@@ -480,7 +482,7 @@ export type MutationSubscribeToNewsletterResult = MutationSubscribeToNewsletterS
 
 export type MutationSubscribeToNewsletterSuccess = {
   __typename?: 'MutationSubscribeToNewsletterSuccess';
-  data: Scalars['Boolean'];
+  data: Scalars['Boolean']['output'];
 };
 
 export enum Order {
@@ -491,29 +493,29 @@ export enum Order {
 export type Organization = {
   __typename?: 'Organization';
   associationsConnection: OrganizationAssociationsConnection;
-  createdAt: Scalars['DateTime'];
-  description?: Maybe<Scalars['String']>;
-  id: Scalars['ShortUuid'];
+  createdAt: Scalars['DateTime']['output'];
+  description?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ShortUuid']['output'];
   membershipsConnection: OrganizationMembershipsConnection;
-  name: Scalars['String'];
-  slug: Scalars['String'];
-  updatedAt: Scalars['DateTime'];
+  name: Scalars['String']['output'];
+  slug: Scalars['String']['output'];
+  updatedAt: Scalars['DateTime']['output'];
 };
 
 
 export type OrganizationAssociationsConnectionArgs = {
-  after?: InputMaybe<Scalars['String']>;
-  before?: InputMaybe<Scalars['String']>;
-  first?: InputMaybe<Scalars['Int']>;
-  last?: InputMaybe<Scalars['Int']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
 export type OrganizationMembershipsConnectionArgs = {
-  after?: InputMaybe<Scalars['String']>;
-  before?: InputMaybe<Scalars['String']>;
-  first?: InputMaybe<Scalars['Int']>;
-  last?: InputMaybe<Scalars['Int']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type OrganizationAssociationsConnection = {
@@ -524,7 +526,7 @@ export type OrganizationAssociationsConnection = {
 
 export type OrganizationAssociationsConnectionEdge = {
   __typename?: 'OrganizationAssociationsConnectionEdge';
-  cursor: Scalars['String'];
+  cursor: Scalars['String']['output'];
   node: OrganizationChannelAssociation;
 };
 
@@ -537,7 +539,7 @@ export type OrganizationChannelAssociation = {
 export type OrganizationMembership = {
   __typename?: 'OrganizationMembership';
   channel: Organization;
-  isAdmin: Scalars['Boolean'];
+  isAdmin: Scalars['Boolean']['output'];
   user: AppUser;
 };
 
@@ -549,28 +551,28 @@ export type OrganizationMembershipsConnection = {
 
 export type OrganizationMembershipsConnectionEdge = {
   __typename?: 'OrganizationMembershipsConnectionEdge';
-  cursor: Scalars['String'];
+  cursor: Scalars['String']['output'];
   node: OrganizationMembership;
 };
 
 export type OrganizationSearchHit = ISearchHit & {
   __typename?: 'OrganizationSearchHit';
-  id: Scalars['ShortUuid'];
-  name: Scalars['String'];
+  id: Scalars['ShortUuid']['output'];
+  name: Scalars['String']['output'];
   organization: Organization;
 };
 
 export type PageInfo = {
   __typename?: 'PageInfo';
-  endCursor?: Maybe<Scalars['String']>;
-  hasNextPage: Scalars['Boolean'];
-  hasPreviousPage: Scalars['Boolean'];
-  startCursor?: Maybe<Scalars['String']>;
+  endCursor?: Maybe<Scalars['String']['output']>;
+  hasNextPage: Scalars['Boolean']['output'];
+  hasPreviousPage: Scalars['Boolean']['output'];
+  startCursor?: Maybe<Scalars['String']['output']>;
 };
 
 export type PrismaRuntimeError = {
   __typename?: 'PrismaRuntimeError';
-  message: Scalars['String'];
+  message: Scalars['String']['output'];
 };
 
 export type Query = {
@@ -592,72 +594,72 @@ export type Query = {
 
 
 export type QueryChannelByIdArgs = {
-  id: Scalars['ShortUuid'];
+  id: Scalars['ShortUuid']['input'];
 };
 
 
 export type QueryChannelBySlugArgs = {
-  slug: Scalars['String'];
+  slug: Scalars['String']['input'];
 };
 
 
 export type QueryMySubscriptionUploadRecordsArgs = {
-  after?: InputMaybe<Scalars['String']>;
-  before?: InputMaybe<Scalars['String']>;
-  first?: InputMaybe<Scalars['Int']>;
-  last?: InputMaybe<Scalars['Int']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
 export type QueryOrganizationByIdArgs = {
-  id: Scalars['ShortUuid'];
+  id: Scalars['ShortUuid']['input'];
 };
 
 
 export type QuerySearchArgs = {
-  after?: InputMaybe<Scalars['String']>;
-  before?: InputMaybe<Scalars['String']>;
-  channels?: InputMaybe<Array<Scalars['String']>>;
-  first?: InputMaybe<Scalars['Int']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  channels?: InputMaybe<Array<Scalars['String']['input']>>;
+  first?: InputMaybe<Scalars['Int']['input']>;
   focus: SearchFocus;
-  last?: InputMaybe<Scalars['Int']>;
-  maxPublishedAt?: InputMaybe<Scalars['DateTime']>;
-  minPublishedAt?: InputMaybe<Scalars['DateTime']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  maxPublishedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  minPublishedAt?: InputMaybe<Scalars['DateTime']['input']>;
   orderBy?: InputMaybe<SearchOrder>;
-  query: Scalars['String'];
-  transcriptPhraseSearch?: InputMaybe<Scalars['Boolean']>;
+  query: Scalars['String']['input'];
+  transcriptPhraseSearch?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 
 export type QueryUploadListByIdArgs = {
-  id: Scalars['ShortUuid'];
+  id: Scalars['ShortUuid']['input'];
 };
 
 
 export type QueryUploadRecordByIdArgs = {
-  id: Scalars['ShortUuid'];
+  id: Scalars['ShortUuid']['input'];
 };
 
 
 export type QueryUploadRecordsArgs = {
-  after?: InputMaybe<Scalars['String']>;
-  before?: InputMaybe<Scalars['String']>;
-  first?: InputMaybe<Scalars['Int']>;
-  last?: InputMaybe<Scalars['Int']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<UploadRecordsOrder>;
 };
 
 
 export type QueryUserByIdArgs = {
-  id: Scalars['ShortUuid'];
+  id: Scalars['ShortUuid']['input'];
 };
 
 
 export type QueryUsersConnectionArgs = {
-  after?: InputMaybe<Scalars['String']>;
-  before?: InputMaybe<Scalars['String']>;
-  first?: InputMaybe<Scalars['Int']>;
-  last?: InputMaybe<Scalars['Int']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QueryMySubscriptionUploadRecordsConnection = {
@@ -668,7 +670,7 @@ export type QueryMySubscriptionUploadRecordsConnection = {
 
 export type QueryMySubscriptionUploadRecordsConnectionEdge = {
   __typename?: 'QueryMySubscriptionUploadRecordsConnectionEdge';
-  cursor: Scalars['String'];
+  cursor: Scalars['String']['output'];
   node: UploadRecord;
 };
 
@@ -680,7 +682,7 @@ export type QueryUploadRecordsConnection = {
 
 export type QueryUploadRecordsConnectionEdge = {
   __typename?: 'QueryUploadRecordsConnectionEdge';
-  cursor: Scalars['String'];
+  cursor: Scalars['String']['output'];
   node: UploadRecord;
 };
 
@@ -692,7 +694,7 @@ export type QueryUsersConnection = {
 
 export type QueryUsersConnectionEdge = {
   __typename?: 'QueryUsersConnectionEdge';
-  cursor: Scalars['String'];
+  cursor: Scalars['String']['output'];
   node: AppUser;
 };
 
@@ -703,18 +705,18 @@ export enum Rating {
 
 export type SearchAggs = {
   __typename?: 'SearchAggs';
-  channelHitCount: Scalars['Int'];
+  channelHitCount: Scalars['Int']['output'];
   channels: Array<SearchChannelAgg>;
-  organizationHitCount: Scalars['Int'];
+  organizationHitCount: Scalars['Int']['output'];
   publishedAtRange?: Maybe<SearchPublishedAtAggData>;
-  transcriptHitCount: Scalars['Int'];
-  uploadHitCount: Scalars['Int'];
+  transcriptHitCount: Scalars['Int']['output'];
+  uploadHitCount: Scalars['Int']['output'];
 };
 
 export type SearchChannelAgg = {
   __typename?: 'SearchChannelAgg';
   channel: Channel;
-  count: Scalars['Int'];
+  count: Scalars['Int']['output'];
 };
 
 export type SearchConnection = {
@@ -726,7 +728,7 @@ export type SearchConnection = {
 
 export type SearchConnectionEdge = {
   __typename?: 'SearchConnectionEdge';
-  cursor: Scalars['String'];
+  cursor: Scalars['String']['output'];
   node: ISearchHit;
 };
 
@@ -746,34 +748,34 @@ export enum SearchOrder {
 
 export type SearchPublishedAtAggData = {
   __typename?: 'SearchPublishedAtAggData';
-  max: Scalars['DateTime'];
-  min: Scalars['DateTime'];
+  max: Scalars['DateTime']['output'];
+  min: Scalars['DateTime']['output'];
 };
 
 export type Stats = {
   __typename?: 'Stats';
-  storageBytes: Scalars['SafeInt'];
-  totalUploads: Scalars['Int'];
+  storageBytes: Scalars['SafeInt']['output'];
+  totalUploads: Scalars['Int']['output'];
 };
 
 export type TranscriptLine = {
   __typename?: 'TranscriptLine';
-  end: Scalars['Float'];
-  start: Scalars['Float'];
-  text: Scalars['String'];
+  end: Scalars['Float']['output'];
+  start: Scalars['Float']['output'];
+  text: Scalars['String']['output'];
 };
 
 export type TranscriptSearchHit = ISearchHit & {
   __typename?: 'TranscriptSearchHit';
   hits: Array<TranscriptSearchInnerHit>;
-  id: Scalars['ShortUuid'];
+  id: Scalars['ShortUuid']['output'];
   uploadRecord: UploadRecord;
 };
 
 export type TranscriptSearchInnerHit = {
   __typename?: 'TranscriptSearchInnerHit';
-  end: Scalars['Int'];
-  start: Scalars['Int'];
+  end: Scalars['Int']['output'];
+  start: Scalars['Int']['output'];
   text: HighlightedText;
 };
 
@@ -792,23 +794,23 @@ export enum UploadLicense {
 export type UploadList = {
   __typename?: 'UploadList';
   author: AppUser;
-  id: Scalars['ShortUuid'];
-  title: Scalars['String'];
+  id: Scalars['ShortUuid']['output'];
+  title: Scalars['String']['output'];
   type: UploadListType;
   uploads: UploadListUploadsConnection;
 };
 
 
 export type UploadListUploadsArgs = {
-  after?: InputMaybe<Scalars['String']>;
-  before?: InputMaybe<Scalars['String']>;
-  first?: InputMaybe<Scalars['Int']>;
-  last?: InputMaybe<Scalars['Int']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type UploadListEntry = {
   __typename?: 'UploadListEntry';
-  rank: Scalars['String'];
+  rank: Scalars['String']['output'];
   upload: UploadRecord;
   uploadList: UploadList;
 };
@@ -826,7 +828,7 @@ export type UploadListUploadsConnection = {
 
 export type UploadListUploadsConnectionEdge = {
   __typename?: 'UploadListUploadsConnectionEdge';
-  cursor: Scalars['String'];
+  cursor: Scalars['String']['output'];
   node: UploadListEntry;
 };
 
@@ -845,68 +847,68 @@ export enum UploadPostProcess {
 
 export type UploadRecord = {
   __typename?: 'UploadRecord';
-  audioSource?: Maybe<Scalars['String']>;
-  canMutate: Scalars['Boolean'];
+  audioSource?: Maybe<Scalars['String']['output']>;
+  canMutate: Scalars['Boolean']['output'];
   channel: Channel;
-  createdAt: Scalars['DateTime'];
+  createdAt: Scalars['DateTime']['output'];
   createdBy: AppUser;
-  description?: Maybe<Scalars['String']>;
+  description?: Maybe<Scalars['String']['output']>;
   downloadUrls?: Maybe<Array<MediaDownload>>;
-  downloadsEnabled: Scalars['Boolean'];
-  id: Scalars['ShortUuid'];
+  downloadsEnabled: Scalars['Boolean']['output'];
+  id: Scalars['ShortUuid']['output'];
   license: UploadLicense;
-  mediaSource?: Maybe<Scalars['String']>;
+  mediaSource?: Maybe<Scalars['String']['output']>;
   myRating?: Maybe<Rating>;
-  peaksDatUrl?: Maybe<Scalars['String']>;
-  peaksJsonUrl?: Maybe<Scalars['String']>;
+  peaksDatUrl?: Maybe<Scalars['String']['output']>;
+  peaksJsonUrl?: Maybe<Scalars['String']['output']>;
   playlists: UploadRecordPlaylistsConnection;
-  publishedAt?: Maybe<Scalars['DateTime']>;
+  publishedAt?: Maybe<Scalars['DateTime']['output']>;
   series: UploadRecordSeriesConnection;
-  thumbnailBlurhash?: Maybe<Scalars['String']>;
-  thumbnailUrl?: Maybe<Scalars['String']>;
-  title?: Maybe<Scalars['String']>;
-  totalDislikes: Scalars['Int'];
-  totalLikes: Scalars['Int'];
-  totalViews: Scalars['Int'];
+  thumbnailBlurhash?: Maybe<Scalars['String']['output']>;
+  thumbnailUrl?: Maybe<Scalars['String']['output']>;
+  title?: Maybe<Scalars['String']['output']>;
+  totalDislikes: Scalars['Int']['output'];
+  totalLikes: Scalars['Int']['output'];
+  totalViews: Scalars['Int']['output'];
   transcript?: Maybe<Array<TranscriptLine>>;
-  updatedAt: Scalars['DateTime'];
-  uploadFinalized: Scalars['Boolean'];
+  updatedAt: Scalars['DateTime']['output'];
+  uploadFinalized: Scalars['Boolean']['output'];
   uploadFinalizedBy: AppUser;
   uploadListById?: Maybe<UploadList>;
-  uploadSizeBytes?: Maybe<Scalars['SafeInt']>;
+  uploadSizeBytes?: Maybe<Scalars['SafeInt']['output']>;
   userComments: UploadRecordUserCommentsConnection;
-  userCommentsEnabled: Scalars['Boolean'];
+  userCommentsEnabled: Scalars['Boolean']['output'];
   variants: Array<UploadVariant>;
   visibility: UploadVisibility;
 };
 
 
 export type UploadRecordPlaylistsArgs = {
-  after?: InputMaybe<Scalars['String']>;
-  before?: InputMaybe<Scalars['String']>;
-  first?: InputMaybe<Scalars['Int']>;
-  last?: InputMaybe<Scalars['Int']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
 export type UploadRecordSeriesArgs = {
-  after?: InputMaybe<Scalars['String']>;
-  before?: InputMaybe<Scalars['String']>;
-  first?: InputMaybe<Scalars['Int']>;
-  last?: InputMaybe<Scalars['Int']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
 export type UploadRecordUploadListByIdArgs = {
-  id?: InputMaybe<Scalars['ShortUuid']>;
+  id?: InputMaybe<Scalars['ShortUuid']['input']>;
 };
 
 
 export type UploadRecordUserCommentsArgs = {
-  after?: InputMaybe<Scalars['String']>;
-  before?: InputMaybe<Scalars['String']>;
-  first?: InputMaybe<Scalars['Int']>;
-  last?: InputMaybe<Scalars['Int']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type UploadRecordPlaylistsConnection = {
@@ -917,7 +919,7 @@ export type UploadRecordPlaylistsConnection = {
 
 export type UploadRecordPlaylistsConnectionEdge = {
   __typename?: 'UploadRecordPlaylistsConnectionEdge';
-  cursor: Scalars['String'];
+  cursor: Scalars['String']['output'];
   node: UploadList;
 };
 
@@ -929,7 +931,7 @@ export type UploadRecordSeriesConnection = {
 
 export type UploadRecordSeriesConnectionEdge = {
   __typename?: 'UploadRecordSeriesConnectionEdge';
-  cursor: Scalars['String'];
+  cursor: Scalars['String']['output'];
   node: UploadList;
 };
 
@@ -937,12 +939,12 @@ export type UploadRecordUserCommentsConnection = {
   __typename?: 'UploadRecordUserCommentsConnection';
   edges: Array<UploadRecordUserCommentsConnectionEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int'];
+  totalCount: Scalars['Int']['output'];
 };
 
 export type UploadRecordUserCommentsConnectionEdge = {
   __typename?: 'UploadRecordUserCommentsConnectionEdge';
-  cursor: Scalars['String'];
+  cursor: Scalars['String']['output'];
   node: UploadUserComment;
 };
 
@@ -953,45 +955,45 @@ export enum UploadRecordsOrder {
 
 export type UploadSearchHit = ISearchHit & {
   __typename?: 'UploadSearchHit';
-  id: Scalars['ShortUuid'];
-  title: Scalars['String'];
+  id: Scalars['ShortUuid']['output'];
+  title: Scalars['String']['output'];
   uploadRecord: UploadRecord;
 };
 
 export type UploadUserComment = {
   __typename?: 'UploadUserComment';
   author: AppUser;
-  createdAt: Scalars['DateTime'];
-  id: Scalars['ShortUuid'];
+  createdAt: Scalars['DateTime']['output'];
+  id: Scalars['ShortUuid']['output'];
   myRating?: Maybe<Rating>;
   replies: UploadUserCommentRepliesConnection;
   replyingTo: UploadUserComment;
-  text: Scalars['String'];
-  totalDislikes: Scalars['Int'];
-  totalLikes: Scalars['Int'];
-  updatedAt: Scalars['DateTime'];
+  text: Scalars['String']['output'];
+  totalDislikes: Scalars['Int']['output'];
+  totalLikes: Scalars['Int']['output'];
+  updatedAt: Scalars['DateTime']['output'];
   upload: UploadRecord;
-  uploadRecordId: Scalars['ShortUuid'];
+  uploadRecordId: Scalars['ShortUuid']['output'];
 };
 
 
 export type UploadUserCommentRepliesArgs = {
-  after?: InputMaybe<Scalars['String']>;
-  before?: InputMaybe<Scalars['String']>;
-  first?: InputMaybe<Scalars['Int']>;
-  last?: InputMaybe<Scalars['Int']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type UploadUserCommentRepliesConnection = {
   __typename?: 'UploadUserCommentRepliesConnection';
   edges: Array<UploadUserCommentRepliesConnectionEdge>;
   pageInfo: PageInfo;
-  totalCount: Scalars['Int'];
+  totalCount: Scalars['Int']['output'];
 };
 
 export type UploadUserCommentRepliesConnectionEdge = {
   __typename?: 'UploadUserCommentRepliesConnectionEdge';
-  cursor: Scalars['String'];
+  cursor: Scalars['String']['output'];
   node: UploadUserComment;
 };
 
@@ -1023,6 +1025,6 @@ export type ValidationError = {
 
 export type ZodFieldError = {
   __typename?: 'ZodFieldError';
-  message: Scalars['String'];
-  path: Array<Scalars['String']>;
+  message: Scalars['String']['output'];
+  path: Array<Scalars['String']['output']>;
 };

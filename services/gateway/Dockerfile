@@ -13,13 +13,13 @@ RUN cmake -D BUILD_STATIC=1 .. && make
 
 # Debian Base Image currently required for Prisma and M1 Macs: https://github.com/prisma/prisma/issues/8478
 # Temporal does not support alpine: https://github.com/temporalio/sdk-typescript/issues/850
-FROM node:19.4.0-bullseye-slim as base
+FROM node:20.7.0-bullseye-slim as base
 # Prisma requires lbssl-dev and ca-certificates
 RUN apt update && apt install -y libssl-dev ca-certificates
 WORKDIR /home/node/app
 COPY package.json package-lock.json ./
-ENV NODE_ENV=production
 RUN npm ci
+ENV NODE_ENV=production
 COPY . .
 
 FROM base as server
@@ -33,8 +33,7 @@ RUN npm run prisma:generate
 CMD npm run start:background-worker
 
 FROM base as transcode-worker
-RUN apt install -y imagemagick jpegoptim
-COPY --from=mwader/static-ffmpeg:5.1.2 /ffmpeg /ffprobe /usr/bin/
+RUN apt install -y imagemagick jpegoptim ffmpeg
 COPY --from=build-audiowaveform /home/build/audiowaveform/build/audiowaveform /usr/bin/
 CMD npm run start:transcode-worker
 
@@ -54,9 +53,9 @@ RUN apt-get update && \
   pip3 install git+https://github.com/Softcatala/whisper-ctranslate2.git@0.2.9 && mkdir -p /opt/whisper/models
 WORKDIR /home/node/app
 COPY package.json package-lock.json ./
-ENV NODE_ENV=production
 RUN npm ci
 COPY . .
+ENV NODE_ENV=production
 CMD npm run start:transcribe-worker
 
 FROM base as import-worker

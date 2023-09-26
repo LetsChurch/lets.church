@@ -1,4 +1,4 @@
-import { createEffect, createMemo, For, Setter } from 'solid-js';
+import { createEffect, createMemo, For, type Setter } from 'solid-js';
 import bSearch from 'binary-search';
 import '@fontsource/roboto-mono/variable.css';
 import { formatTime } from '~/util';

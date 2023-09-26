@@ -1,4 +1,8 @@
-import { refetchRouteData, RouteDataArgs, useRouteData } from 'solid-start';
+import {
+  refetchRouteData,
+  type RouteDataArgs,
+  useRouteData,
+} from 'solid-start';
 import server$, {
   createServerAction$,
   createServerData$,
@@ -20,7 +24,7 @@ import type {
 import { PageHeading } from '~/components/page-heading';
 import { createAuthenticatedClientOrRedirect } from '~/util/gql/server';
 import EditableDatalist, {
-  DatalistField,
+  type DatalistField,
 } from '~/components/editable-datalist';
 import { UploadPostProcess } from '~/__generated__/graphql-types';
 import { doMultipartUpload } from '~/util/multipart-upload';

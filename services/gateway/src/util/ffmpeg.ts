@@ -1,7 +1,7 @@
 import type { UploadVariant } from '@prisma/client';
 import { execa } from 'execa';
 import invariant from 'tiny-invariant';
-import { Probe, probeIsVideoFile } from './zod';
+import { type Probe, probeIsVideoFile } from './zod';
 
 const extraDecodeArgs =
   process.env['FFMPEG_EXTRA_DECODE_ARGS']?.split(' ') ?? [];

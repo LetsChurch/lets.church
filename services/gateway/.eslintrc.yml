@@ -1,7 +1,6 @@
 extends:
   - 'plugin:import/recommended'
   - 'plugin:@typescript-eslint/recommended'
-  - 'plugin:import/recommended'
 settings:
   import/resolver:
     typescript: true

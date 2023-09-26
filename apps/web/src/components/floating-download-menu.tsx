@@ -6,7 +6,7 @@ import BadgeCcIcon from '@tabler/icons/badge-cc.svg?component-solid';
 import ArticleIcon from '@tabler/icons/article.svg?component-solid';
 import { For, Match, splitProps, Switch } from 'solid-js';
 import { A } from 'solid-start';
-import FloatingDiv, { Props as FloatingDivProps } from './floating-div';
+import FloatingDiv, { type Props as FloatingDivProps } from './floating-div';
 import type { MediaDownloadKind } from '~/__generated__/graphql-types';
 
 export type Props = {

@@ -1,11 +1,11 @@
 import * as Types from '../../../../../../__generated__/graphql-types';
 
 export type ProfileChannelsQueryVariables = Types.Exact<{
-  id: Types.Scalars['ShortUuid'];
-  first?: Types.InputMaybe<Types.Scalars['Int']>;
-  after?: Types.InputMaybe<Types.Scalars['String']>;
-  last?: Types.InputMaybe<Types.Scalars['Int']>;
-  before?: Types.InputMaybe<Types.Scalars['String']>;
+  id: Types.Scalars['ShortUuid']['input'];
+  first?: Types.InputMaybe<Types.Scalars['Int']['input']>;
+  after?: Types.InputMaybe<Types.Scalars['String']['input']>;
+  last?: Types.InputMaybe<Types.Scalars['Int']['input']>;
+  before?: Types.InputMaybe<Types.Scalars['String']['input']>;
 }>;
 
 

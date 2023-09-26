@@ -1,17 +1,17 @@
 import * as Types from '../../../__generated__/graphql-types';
 
 export type SearchQueryVariables = Types.Exact<{
-  query: Types.Scalars['String'];
+  query: Types.Scalars['String']['input'];
   focus: Types.SearchFocus;
-  first?: Types.InputMaybe<Types.Scalars['Int']>;
-  after?: Types.InputMaybe<Types.Scalars['String']>;
-  last?: Types.InputMaybe<Types.Scalars['Int']>;
-  before?: Types.InputMaybe<Types.Scalars['String']>;
-  minPublishedAt?: Types.InputMaybe<Types.Scalars['DateTime']>;
-  maxPublishedAt?: Types.InputMaybe<Types.Scalars['DateTime']>;
+  first?: Types.InputMaybe<Types.Scalars['Int']['input']>;
+  after?: Types.InputMaybe<Types.Scalars['String']['input']>;
+  last?: Types.InputMaybe<Types.Scalars['Int']['input']>;
+  before?: Types.InputMaybe<Types.Scalars['String']['input']>;
+  minPublishedAt?: Types.InputMaybe<Types.Scalars['DateTime']['input']>;
+  maxPublishedAt?: Types.InputMaybe<Types.Scalars['DateTime']['input']>;
   orderBy?: Types.InputMaybe<Types.SearchOrder>;
-  channels?: Types.InputMaybe<Array<Types.Scalars['String']> | Types.Scalars['String']>;
-  transcriptPhraseSearch?: Types.InputMaybe<Types.Scalars['Boolean']>;
+  channels?: Types.InputMaybe<Array<Types.Scalars['String']['input']> | Types.Scalars['String']['input']>;
+  transcriptPhraseSearch?: Types.InputMaybe<Types.Scalars['Boolean']['input']>;
 }>;
 
 

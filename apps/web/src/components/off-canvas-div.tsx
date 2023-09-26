@@ -1,4 +1,4 @@
-import { JSX, ParentProps, splitProps } from 'solid-js';
+import { type JSX, type ParentProps, splitProps } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import XIcon from '@tabler/icons/x.svg?component-solid';
 import ShowTransition from './show-transition';

@@ -1,4 +1,4 @@
-import { createUniqueId, JSX, Show } from 'solid-js';
+import { createUniqueId, type JSX, Show } from 'solid-js';
 import type { Optional } from '~/util';
 
 export default function LabeledInput(props: {

@@ -1,10 +1,10 @@
 import * as Types from '../../../__generated__/graphql-types';
 
 export type SubscriptionsDataQueryVariables = Types.Exact<{
-  first?: Types.InputMaybe<Types.Scalars['Int']>;
-  after?: Types.InputMaybe<Types.Scalars['String']>;
-  last?: Types.InputMaybe<Types.Scalars['Int']>;
-  before?: Types.InputMaybe<Types.Scalars['String']>;
+  first?: Types.InputMaybe<Types.Scalars['Int']['input']>;
+  after?: Types.InputMaybe<Types.Scalars['String']['input']>;
+  last?: Types.InputMaybe<Types.Scalars['Int']['input']>;
+  before?: Types.InputMaybe<Types.Scalars['String']['input']>;
 }>;
 
 

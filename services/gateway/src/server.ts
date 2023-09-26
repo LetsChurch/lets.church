@@ -1,5 +1,5 @@
 import { createYoga } from 'graphql-yoga';
-import fastify, { FastifyRequest, FastifyReply } from 'fastify';
+import fastify, { type FastifyRequest, type FastifyReply } from 'fastify';
 import { useDisableIntrospection } from '@envelop/disable-introspection';
 import context from './util/context';
 import schema from './schema';

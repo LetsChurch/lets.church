@@ -1,7 +1,7 @@
 import { For, Match, splitProps, Switch } from 'solid-js';
 import { A, useLocation } from 'solid-start';
 import type { MergeExclusive } from 'type-fest';
-import FloatingDiv, { Props as FloatingDivProps } from './floating-div';
+import FloatingDiv, { type Props as FloatingDivProps } from './floating-div';
 
 type Link = { label: string } & MergeExclusive<
   MergeExclusive<{ href: string }, { form: string; pending?: boolean }>,

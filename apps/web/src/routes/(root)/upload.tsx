@@ -7,7 +7,7 @@ import {
   Show,
   Switch,
 } from 'solid-js';
-import { json, RouteDataArgs, useRouteData } from 'solid-start';
+import { json, type RouteDataArgs, useRouteData } from 'solid-start';
 import { z } from 'zod';
 import server$, {
   createServerAction$,
@@ -26,7 +26,7 @@ import type {
   FinalizeMediaUploadMutationVariables,
   FinalizeMediaUploadMutation,
 } from './__generated__/upload';
-import Dropzone, { DroppedRes } from '~/components/dropzone';
+import Dropzone, { type DroppedRes } from '~/components/dropzone';
 import { createAuthenticatedClientOrRedirect } from '~/util/gql/server';
 import {
   UploadLicense,
@@ -34,7 +34,7 @@ import {
   UploadVisibility,
   type Channel,
 } from '~/__generated__/graphql-types';
-import { notEmpty, Optional } from '~/util';
+import { notEmpty, type Optional } from '~/util';
 import { doMultipartUpload } from '~/util/multipart-upload';
 import { Input, Select, Button, Radios, Textarea } from '~/components/form';
 import { dateToIso8601 } from '~/util/date';

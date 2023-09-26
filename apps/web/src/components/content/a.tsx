@@ -1,4 +1,4 @@
-import { ComponentProps, Show, splitProps } from 'solid-js';
+import { type ComponentProps, Show, splitProps } from 'solid-js';
 import { A } from 'solid-start';
 import ExternalLink from '../external-link';
 import { cn } from '~/util';

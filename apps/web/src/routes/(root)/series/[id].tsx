@@ -1,5 +1,10 @@
 import { For } from 'solid-js';
-import { RouteDataArgs, Title, useParams, useRouteData } from 'solid-start';
+import {
+  type RouteDataArgs,
+  Title,
+  useParams,
+  useRouteData,
+} from 'solid-start';
 import { createServerData$ } from 'solid-start/server';
 import invariant from 'tiny-invariant';
 import { gql } from 'graphql-request';

@@ -1,7 +1,7 @@
 import * as Types from '../../__generated__/graphql-types';
 
 export type SubscribeToNewsletterMutationVariables = Types.Exact<{
-  email: Types.Scalars['String'];
+  email: Types.Scalars['String']['input'];
 }>;
 
 

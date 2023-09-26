@@ -1,4 +1,4 @@
-import { Client, completeMultipartUpload } from '../../../util/s3';
+import { type Client, completeMultipartUpload } from '../../../util/s3';
 
 export default async function completeMultipartUploadAction(
   to: Client,

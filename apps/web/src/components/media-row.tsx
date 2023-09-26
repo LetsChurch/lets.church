@@ -1,6 +1,6 @@
 import humanFormat from 'human-format';
 import pluralize from 'pluralize';
-import { ParentProps, Show } from 'solid-js';
+import { type ParentProps, Show } from 'solid-js';
 import { isServer } from 'solid-js/web';
 import { A } from 'solid-start';
 import { gql } from 'graphql-request';

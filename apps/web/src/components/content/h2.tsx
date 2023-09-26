@@ -1,5 +1,5 @@
 import slugify from 'slugify';
-import { JSX, splitProps } from 'solid-js';
+import { type JSX, splitProps } from 'solid-js';
 import { cn } from '~/util';
 
 export type Props = Omit<JSX.IntrinsicElements['h2'], 'children'> & {

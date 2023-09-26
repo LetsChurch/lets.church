@@ -1,4 +1,4 @@
-import { abortMultipartUpload, Client } from '../../../util/s3';
+import { abortMultipartUpload, type Client } from '../../../util/s3';
 
 export default async function abortMultipartUploadAction(
   to: Client,
