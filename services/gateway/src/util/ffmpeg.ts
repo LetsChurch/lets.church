@@ -2,6 +2,7 @@ import type { UploadVariant } from '@prisma/client';
 import { execa } from 'execa';
 import invariant from 'tiny-invariant';
 import { type Probe, probeIsVideoFile } from './zod';
+import { disposableExeca } from './execa';
 
 const extraDecodeArgs =
   process.env['FFMPEG_EXTRA_DECODE_ARGS']?.split(' ') ?? [];
@@ -372,7 +373,7 @@ export function runFfmpegEncode(
 
   console.log(`runFfmpegEncode: ${proc.spawnargs.join(' ')}`);
 
-  return proc;
+  return disposableExeca(proc);
 }
 
 export function runFfmpegThumbnails(
@@ -405,7 +406,7 @@ export function runFfmpegThumbnails(
 
   console.log(`runFfmpegThumbnails: ${proc.spawnargs.join(' ')}`);
 
-  return proc;
+  return disposableExeca(proc);
 }
 
 // ffprobe -v quiet -print_format json -show_format -show_streams Stars.mp4
@@ -431,5 +432,5 @@ export function runFfprobe(
 
   console.log(`runFfmpegProbe: ${proc.spawnargs.join(' ')}`);
 
-  return proc;
+  return disposableExeca(proc);
 }

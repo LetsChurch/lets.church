@@ -93,7 +93,7 @@ export default async function transcode(
 
     console.log('Running ffmpeg');
 
-    const encodeProc = runFfmpegEncode(
+    using runRes = runFfmpegEncode(
       workingDir,
       downloadPath,
       variants,
@@ -103,7 +103,7 @@ export default async function transcode(
     const stdout: Array<string> = [];
     const stderr: Array<string> = [];
 
-    encodeProc.stdout?.on('data', (data) => {
+    runRes.proc.stdout?.on('data', (data) => {
       const str = String(data);
       stdout.push(str);
 
@@ -127,9 +127,9 @@ export default async function transcode(
       }
     });
 
-    encodeProc.stderr?.on('data', (data) => stderr.push(String(data)));
+    runRes.proc.stderr?.on('data', (data) => stderr.push(String(data)));
 
-    while (encodeProc.exitCode === null) {
+    while (runRes.proc.exitCode === null) {
       Context.current().heartbeat('waiting for ffmpeg');
       await uploadSegments(uploadRecordId, workingDir);
       await setTimeout(1000);
@@ -137,7 +137,7 @@ export default async function transcode(
 
     await uploadSegments(uploadRecordId, workingDir);
 
-    const encodeProcRes = await encodeProc;
+    const encodeProcRes = await runRes.proc;
 
     console.log(`ffmpeg finished with code ${encodeProcRes.exitCode}`);
 

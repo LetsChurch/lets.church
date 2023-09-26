@@ -4,6 +4,7 @@
     "@tsconfig/node20/tsconfig.json"
   ],
   "compilerOptions": {
+    "lib": ["es2021", "esnext.disposable"],
     "noEmit": true,
     "module": "ES2022",
     "moduleResolution": "Bundler"

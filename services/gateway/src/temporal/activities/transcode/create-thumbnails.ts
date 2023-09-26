@@ -35,15 +35,15 @@ export default async function createThumbnails(
   Context.current().heartbeat();
   try {
     console.log('Creating thumbnails with ffmpeg');
-    const proc = runFfmpegThumbnails(
+    using runRes = runFfmpegThumbnails(
       workingDir,
       downloadPath,
       probe,
       cancellationSignal,
     );
-    proc.stdout?.on('data', () => Context.current().heartbeat('stdout'));
-    proc.stderr?.on('data', () => Context.current().heartbeat('stderr'));
-    await proc;
+    runRes.proc.stdout?.on('data', () => Context.current().heartbeat('stdout'));
+    runRes.proc.stderr?.on('data', () => Context.current().heartbeat('stderr'));
+    await runRes.proc;
     const thumbnailJpgs = (await fastGlob(join(workingDir, '*.jpg'))).sort();
     const thumbnailsWithSizes = await pMap(
       thumbnailJpgs,
