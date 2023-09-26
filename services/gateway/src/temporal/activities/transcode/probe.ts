@@ -37,9 +37,12 @@ export default async function probe(
 
     console.log(`Probing ${downloadPath}`);
 
-    using runRes = runFfprobe(workingDir, downloadPath, cancellationSignal);
-    const proc = await runRes.proc;
-    const probeJson = proc.stdout;
+    const probe = await runFfprobe(
+      workingDir,
+      downloadPath,
+      cancellationSignal,
+    );
+    const probeJson = probe.stdout;
 
     const parsedProbe = ffprobeSchema.parse(JSON.parse(probeJson));
 

@@ -4,7 +4,6 @@ import { noop } from 'lodash-es';
 import fastGlob from 'fast-glob';
 import { z } from 'zod';
 import { stringifySync } from 'subtitle';
-import { disposableExeca } from './execa';
 
 const whisperModel = process.env['WHISPER_MODEL'] ?? 'large-v2';
 const extraArgs = process.env['WHISPER_EXTRA_ARGS']?.split(' ') ?? [];
@@ -17,31 +16,29 @@ export async function runWhisper(
 ) {
   console.log('Running whisper');
 
-  using child = disposableExeca(
-    execa(
-      'whisper-ctranslate2',
-      [
-        inputFilename,
-        '--model_directory',
-        `/opt/whisper/models/${whisperModel}`,
-        '--output_dir',
-        'out',
-        '--vad_filter',
-        'True',
-        '--word_timestamps',
-        'True',
-        ...extraArgs,
-      ],
-      { cwd, signal },
-    ),
+  const proc = execa(
+    'whisper-ctranslate2',
+    [
+      inputFilename,
+      '--model_directory',
+      `/opt/whisper/models/${whisperModel}`,
+      '--output_dir',
+      'out',
+      '--vad_filter',
+      'True',
+      '--word_timestamps',
+      'True',
+      ...extraArgs,
+    ],
+    { cwd, signal },
   );
 
-  console.log(`runWhisper: ${child.proc.spawnargs.join(' ')}`);
+  console.log(`runWhisper: ${proc.spawnargs.join(' ')}`);
 
-  child.proc.stdout?.on('data', () => heartbeat('whisper stdout'));
-  child.proc.stderr?.on('data', () => heartbeat('whisper stderr'));
+  proc.stdout?.on('data', () => heartbeat('whisper stdout'));
+  proc.stderr?.on('data', () => heartbeat('whisper stderr'));
 
-  const res = await child.proc;
+  const res = await proc;
 
   console.log(`Whisper done: ${res.exitCode}`);
 

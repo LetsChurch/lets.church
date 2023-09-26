@@ -1,7 +1,6 @@
 import { join } from 'node:path';
 import { execa } from 'execa';
 import { noop } from 'lodash-es';
-import { disposableExeca } from './execa';
 
 export async function runAudiowaveform(
   cwd: string,
@@ -13,67 +12,62 @@ export async function runAudiowaveform(
 
   console.log('Converting file to wav');
 
-  using ffmpegChild = disposableExeca(
-    execa(
-      'ffmpeg',
-      [
-        '-hide_banner',
-        '-y',
-        '-i',
-        inputFilename,
-        '-ar',
-        '16000',
-        '-ac',
-        '1',
-        wavFile,
-      ],
-      { cwd, signal },
-    ),
+  const ffmpegProc = execa(
+    'ffmpeg',
+    [
+      '-hide_banner',
+      '-y',
+      '-i',
+      inputFilename,
+      '-ar',
+      '16000',
+      '-ac',
+      '1',
+      wavFile,
+    ],
+    { cwd, signal },
   );
 
-  console.log(`runAudiowaveform: ${ffmpegChild.proc.spawnargs.join(' ')}`);
+  console.log(`runAudiowaveform: ${ffmpegProc.spawnargs.join(' ')}`);
 
-  ffmpegChild.proc.stdout?.on('data', () => heartbeat());
-  ffmpegChild.proc.stderr?.on('data', () => heartbeat());
+  ffmpegProc.stdout?.on('data', () => heartbeat());
+  ffmpegProc.stderr?.on('data', () => heartbeat());
 
-  await ffmpegChild.proc;
+  await ffmpegProc;
 
-  console.log(`ffmpeg done: ${ffmpegChild.proc.exitCode}`);
+  console.log(`ffmpeg done: ${ffmpegProc.exitCode}`);
 
   console.log('Running audiowaveform json');
 
-  using awChild1 = disposableExeca(
-    execa(
-      'audiowaveform',
-      ['-i', wavFile, '-b', '8', '-o', `${wavFile}.json`],
-      { cwd, signal },
-    ),
+  const proc1 = execa(
+    'audiowaveform',
+    ['-i', wavFile, '-b', '8', '-o', `${wavFile}.json`],
+    { cwd, signal },
   );
 
-  console.log(`runAudiowaveform: ${awChild1.proc.spawnargs.join(' ')}`);
+  console.log(`runAudiowaveform: ${proc1.spawnargs.join(' ')}`);
 
-  awChild1.proc.stdout?.on('data', () => heartbeat());
-  awChild1.proc.stderr?.on('data', () => heartbeat());
+  proc1.stdout?.on('data', () => heartbeat());
+  proc1.stderr?.on('data', () => heartbeat());
 
-  const res1 = await awChild1.proc;
+  const res1 = await proc1;
 
   console.log(`audiowaveform json done: ${res1.exitCode}`);
 
   console.log('Running audiowaveform dat');
 
-  using awChild2 = disposableExeca(
-    execa('audiowaveform', ['-i', wavFile, '-b', '8', '-o', `${wavFile}.dat`], {
-      cwd,
-      signal,
-    }),
+  const proc2 = execa(
+    'audiowaveform',
+    ['-i', wavFile, '-b', '8', '-o', `${wavFile}.dat`],
+    { cwd, signal },
   );
 
-  console.log(`runAudiowaveform: ${awChild2.proc.spawnargs.join(' ')}`);
+  console.log(`runAudiowaveform: ${proc2.spawnargs.join(' ')}`);
 
-  awChild2.proc.stdout?.on('data', () => heartbeat());
-  awChild2.proc.stderr?.on('data', () => heartbeat());
+  proc2.stdout?.on('data', () => heartbeat());
+  proc2.stderr?.on('data', () => heartbeat());
 
-  const res2 = await awChild2.proc;
+  const res2 = await proc2;
 
   console.log(`audiowaveform dat done: ${res2.exitCode}`);
 
