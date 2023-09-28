@@ -18,7 +18,7 @@ open http://localhost:${HOST_GATEWAY_PORT##*:}/graphql
 open http://localhost:${HOST_KIBANA_PORT##*:}
 
 # Open Temporal UI
-open http://localhost:${HOST_TEMPORAL_UI_PORT##:*}
+open http://localhost:${HOST_TEMPORAL_UI_PORT##*:}
 
 # Open Mailpit Web UI
 open http://localhost:${HOST_MAILPIT_WEB_PORT##*:}

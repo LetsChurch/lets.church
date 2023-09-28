@@ -61,9 +61,10 @@ gateway-migrate-dev:
 
 gateway-schedule:
   just temporal workflow execute --task-queue background --type updateDailySaltWorkflow --workflow-id update-daily-salt
-  just temporal schedule create --schedule-id update-daily-salt --cron @daily --overlap-policy skip --task-queue background --workflow-type updateDailySaltWorkflow --workflow-id update-daily-salt
-  just temporal schedule create --schedule-id update-upload-scores --interval 5m --overlap-policy skip --task-queue background --workflow-type updateUploadScoresWorkflow --workflow-id update-upload-scores
-  just temporal schedule create --schedule-id update-comment-scores --interval 5m --overlap-policy skip --task-queue background --workflow-type updateCommentScoresWorkflow --workflow-id update-comment-scores
+  -just temporal schedule create --schedule-id update-daily-salt --cron @daily --overlap-policy skip --task-queue background --workflow-type updateDailySaltWorkflow --workflow-id update-daily-salt
+  -just temporal schedule create --schedule-id update-upload-scores --interval 5m --overlap-policy skip --task-queue background --workflow-type updateUploadScoresWorkflow --workflow-id update-upload-scores
+  -just temporal schedule create --schedule-id update-comment-scores --interval 5m --overlap-policy skip --task-queue background --workflow-type updateCommentScoresWorkflow --workflow-id update-comment-scores
+
 gateway-schedule-delete:
   just temporal schedule delete --schedule-id update-daily-salt
   just temporal schedule delete --schedule-id update-upload-scores
