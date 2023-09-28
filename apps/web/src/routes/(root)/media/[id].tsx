@@ -31,6 +31,8 @@ import type {
   UpsertCommentMutationVariables,
   SubmitUploadCommentRatingMutation,
   SubmitUploadCommentRatingMutationVariables,
+  MediaRouteRecordViewMutation,
+  MediaRouteRecordViewMutationVariables,
 } from './__generated__/[id]';
 import {
   createAuthenticatedClient,
@@ -59,7 +61,10 @@ export function routeData({ params, location }: RouteDataArgs) {
   const recordView = server$(async (id: string) => {
     const client = await createAuthenticatedClient(server$.request);
 
-    const res = await client.request(
+    const res = await client.request<
+      MediaRouteRecordViewMutation,
+      MediaRouteRecordViewMutationVariables
+    >(
       gql`
         mutation MediaRouteRecordView($id: ShortUuid!) {
           recordUploadView(uploadRecordId: $id)
@@ -467,6 +472,7 @@ export default function MediaRoute() {
       <div class="md:grid md:grid-cols-3 md:gap-4">
         <div class="space-y-4 md:col-span-2">
           <Video
+            id={params.id}
             videoSource={metaData()?.data.mediaSource}
             audioSource={metaData()?.data.audioSource}
             peaksDatUrl={metaData()?.data.peaksDatUrl}

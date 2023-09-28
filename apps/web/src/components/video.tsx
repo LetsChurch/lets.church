@@ -1,4 +1,5 @@
 import delay from 'delay';
+import { gql } from 'graphql-request';
 import {
   type Accessor,
   onCleanup,
@@ -8,12 +9,47 @@ import {
   createEffect,
   Show,
 } from 'solid-js';
+import server$ from 'solid-start/server';
 import invariant from 'tiny-invariant';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
+import {
+  MediaRouteRecordUploadSegmentViewMutation,
+  MediaRouteRecordUploadSegmentViewMutationVariables,
+} from './__generated__/video';
 import type { Optional } from '~/util';
+import { createAuthenticatedClient } from '~/util/gql/server';
+
+const recordSegmentView = server$(
+  async (id: string, start: number, end: number) => {
+    const client = await createAuthenticatedClient(server$.request);
+
+    const res = await client.request<
+      MediaRouteRecordUploadSegmentViewMutation,
+      MediaRouteRecordUploadSegmentViewMutationVariables
+    >(
+      gql`
+        mutation MediaRouteRecordUploadSegmentView(
+          $id: ShortUuid!
+          $start: Float!
+          $end: Float!
+        ) {
+          recordUploadSegmentView(
+            uploadRecordId: $id
+            segmentStartTime: $start
+            segmentEndTime: $end
+          )
+        }
+      `,
+      { id, start, end },
+    );
+
+    return res;
+  },
+);
 
 export type Props = {
+  id: string;
   videoSource?: Optional<string>;
   audioSource?: Optional<string>;
   peaksDatUrl?: Optional<string>;
@@ -124,17 +160,38 @@ export default function Video(props: Props) {
 
     const onTimeUpdate = untrack(() => props.onTimeUpdate);
 
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore: https://github.com/videojs/video.js/issues/8178
-    player.on('timeupdate', () => {
-      const time = player.currentTime();
-      if (typeof time !== 'undefined') {
-        onTimeUpdate?.(time);
-      }
+    const id = untrack(() => props.id);
+    let segmentStartTime = 0;
+    let segmentEndTime = 0;
+
+    player.on('pause', () => {
+      const currentTime = player.currentTime() ?? 0;
+      recordSegmentView(id, segmentStartTime, segmentEndTime);
+      segmentStartTime = currentTime;
+      segmentEndTime = currentTime;
     });
 
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore: https://github.com/videojs/video.js/issues/8178
+    player.on('timeupdate', () => {
+      const currentTime = player.currentTime() ?? 0;
+
+      if (Math.abs(currentTime - segmentStartTime) >= 5) {
+        // If the current time is 5 seconds or more than the segment start time, this is a seek, record a segment view
+        recordSegmentView(id, segmentStartTime, segmentEndTime);
+        segmentStartTime = currentTime;
+      }
+
+      // Always update the current segment end time
+      segmentEndTime = currentTime;
+
+      if (segmentEndTime - segmentStartTime >= 5) {
+        // If the current segment is more than 5 seconds long, record a segment view
+        recordSegmentView(id, segmentStartTime, currentTime);
+        segmentStartTime = currentTime;
+      }
+
+      onTimeUpdate?.(currentTime);
+    });
+
     player.one('ready', () => {
       setReady(true);
     });

@@ -51,6 +51,7 @@ model AppUser {
   uploadUserCommentRatings UploadUserCommentRating[]
   uploadViews              UploadView[]
   uploadLists              UploadList[]
+  UploadSegmentView        UploadSegmentView[]
 
   @@map("app_user")
 }
@@ -242,6 +243,7 @@ model UploadRecord {
   downloadSizes             UploadRecordDownloadSize[]
   uploadViews               UploadView[]
   uploadListEntries         UploadListEntry[]
+  uploadSegmentViews        UploadSegmentView[]
 
   @@index([createdAt, id])
   @@index(score)
@@ -329,6 +331,21 @@ model UploadView {
   @@index([appUserId, uploadRecordId])
   @@index([createdAt])
   @@map("upload_view")
+}
+
+model UploadSegmentView {
+  upload           UploadRecord @relation(fields: [uploadRecordId], references: [id], onDelete: Cascade)
+  uploadRecordId   String       @map("upload_record_id") @db.Uuid
+  viewerHash       BigInt       @map("viewer_hash")
+  user             AppUser?     @relation(fields: [appUserId], references: [id])
+  appUserId        String?      @map("app_user_id") @db.Uuid
+  segmentStartTime Float        @map("segment_start_time")
+  segmentEndTime   Float        @map("segment_end_time")
+  segmentTotalTime Float        @map("segment_total_time")
+  viewTimestamp    DateTime     @default(now()) @map("view_timestamp")
+
+  @@id([viewTimestamp, uploadRecordId, viewerHash])
+  @@map("upload_segment_view")
 }
 
 enum UploadListType {

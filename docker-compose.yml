@@ -259,3 +259,7 @@ services:
       PGWEB_DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch?sslmode=disable
     ports:
       - ${HOST_PGWEB_PORT}:8081
+  metabase:
+    image: metabase/metabase:v0.47.2
+    ports:
+      - ${HOST_METABASE_PORT}:3000

@@ -1,0 +1,52 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metabase
+  labels:
+    app: metabase
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metabase
+  template:
+    metadata:
+      labels:
+        app: metabase
+    spec:
+      restartPolicy: Always
+      containers:
+        - image: metabase/metabase:v0.47.2
+          name: metabase
+          ports:
+            - containerPort: 3000
+          env:
+            - name: MB_DB_CONNECTION_URI
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pguser-metabase
+                  key: jdbc-uri
+            - name: MB_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pguser-metabase
+                  key: user
+            - name: MB_DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pguser-metabase
+                  key: password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: metabase
+spec:
+  selector:
+    app: metabase
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000

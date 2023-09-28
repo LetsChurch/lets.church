@@ -13,6 +13,9 @@ spec:
     - name: temporal
       databases:
         - temporal
+    - name: metabase
+      databases:
+        - metabase
   instances:
     - name: instance1
       resources:

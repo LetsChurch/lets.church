@@ -966,6 +966,45 @@ builder.mutationFields((t) => ({
       return true;
     },
   }),
+  recordUploadSegmentView: t.boolean({
+    args: {
+      uploadRecordId: t.arg({ type: 'ShortUuid', required: true }),
+      segmentStartTime: t.arg.float({ required: true }),
+      segmentEndTime: t.arg.float({ required: true }),
+    },
+    resolve: async (
+      _root,
+      { uploadRecordId, segmentStartTime, segmentEndTime },
+      { clientIp, clientUserAgent, session },
+    ) => {
+      const res = await prisma.trackingSalt.findFirst({
+        orderBy: { id: 'desc' },
+      });
+
+      if (!res || !clientIp || !clientUserAgent) {
+        return false;
+      }
+
+      // The viewer hash will change once daily since the salt changes once daily, this means that each user can count for one view per day
+      const viewerHash = xxh32(
+        session?.appUserId ?? clientIp + clientUserAgent,
+        res.salt,
+      );
+
+      await prisma.uploadSegmentView.create({
+        data: {
+          uploadRecordId,
+          viewerHash,
+          appUserId: session?.appUserId ?? null,
+          segmentStartTime,
+          segmentEndTime,
+          segmentTotalTime: segmentEndTime - segmentStartTime,
+        },
+      });
+
+      return true;
+    },
+  }),
   createUploadList: t.prismaField({
     type: UploadList,
     args: {
