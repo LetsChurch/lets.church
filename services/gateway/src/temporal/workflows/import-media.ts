@@ -51,6 +51,7 @@ export async function importMediaWorkflow({
       uploadFinalizedBy: { connect: { username } },
       createdBy: { connect: { username } },
       channel: { connect: { slug: channelSlug } },
+      userCommentsEnabled,
       ...(publishedAt ? { publishedAt: new Date(publishedAt) } : {}),
     });
 

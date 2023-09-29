@@ -21,8 +21,6 @@ spec:
           name: import-worker
           envFrom:
             - configMapRef:
-                name: gateway-config
-            - configMapRef:
                 name: temporal-client-config
             - configMapRef:
                 name: import-worker-config

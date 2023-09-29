@@ -131,7 +131,6 @@ services:
     command: npm run dev:import-worker
     environment:
       IDENTITY: dev
-      DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1m
       <<: *s3-env
