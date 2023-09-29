@@ -13,7 +13,7 @@ const schema = z.array(
     title: z.string(),
     publishedAt: z.string(),
     description: z.string(),
-    commentsEnabled: z.boolean().default(true),
+    userCommentsEnabled: z.boolean().default(true),
   }),
 );
 

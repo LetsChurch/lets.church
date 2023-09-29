@@ -12,7 +12,7 @@ const schema = z.array(
     title: z.string(),
     publishedAt: z.string(),
     description: z.string(),
-    commentsEnabled: z.boolean().default(true),
+    userCommentsEnabled: z.boolean().default(true),
   }),
 );
 
@@ -25,8 +25,8 @@ const data = filename?.endsWith('.json')
         title: await input({ message: 'Title:' }),
         publishedAt: await input({ message: 'Published at:' }),
         description: await editor({ message: 'Description:' }),
-        commentsEnabled: await confirm({
-          message: 'Comments enabled?',
+        userCommentsEnabled: await confirm({
+          message: 'User Comments enabled?',
           default: true,
         }),
       },

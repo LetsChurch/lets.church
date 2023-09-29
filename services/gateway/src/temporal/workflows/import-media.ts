@@ -25,10 +25,15 @@ export async function importMediaWorkflow({
   license = 'STANDARD',
   visibility = 'PUBLIC',
   publishedAt,
+  userCommentsEnabled = true,
 }: Partial<
   Pick<
     Prisma.UploadRecordCreateArgs['data'],
-    'license' | 'visibility' | 'description' | 'publishedAt'
+    | 'license'
+    | 'visibility'
+    | 'description'
+    | 'publishedAt'
+    | 'userCommentsEnabled'
   >
 > & {
   url: string;
