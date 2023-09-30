@@ -16,7 +16,7 @@ import 'video.js/dist/video-js.css';
 import {
   MediaRouteRecordUploadSegmentViewMutation,
   MediaRouteRecordUploadSegmentViewMutationVariables,
-} from './__generated__/video';
+} from './__generated__/player';
 import type { Optional } from '~/util';
 import { createAuthenticatedClient } from '~/util/gql/server';
 
@@ -59,7 +59,7 @@ export type Props = {
   onTimeUpdate?: (currentTime: number) => unknown;
 };
 
-export default function Video(props: Props) {
+export default function Player(props: Props) {
   let videoRef: HTMLVideoElement;
   let peaksContainer: HTMLDivElement;
   let player: ReturnType<typeof videojs>;

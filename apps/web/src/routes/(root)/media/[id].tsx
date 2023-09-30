@@ -39,7 +39,7 @@ import {
   createAuthenticatedClientOrRedirect,
 } from '~/util/gql/server';
 import { Rating } from '~/__generated__/graphql-types';
-import Video from '~/components/video';
+import Player from '~/components/media/player';
 import Comment, { CommentForm } from '~/components/comment';
 import Transcript from '~/components/transcript';
 import FloatingShareMenu from '~/components/floating-share-menu';
@@ -471,7 +471,7 @@ export default function MediaRoute() {
       />
       <div class="md:grid md:grid-cols-3 md:gap-4">
         <div class="space-y-4 md:col-span-2">
-          <Video
+          <Player
             id={params.id}
             videoSource={metaData()?.data.mediaSource}
             audioSource={metaData()?.data.audioSource}
