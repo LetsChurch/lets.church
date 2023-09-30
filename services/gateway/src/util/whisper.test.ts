@@ -9,11 +9,21 @@ describe('joinerizeTranscript', () => {
   test('empty transcript', () => {
     expect(joinerizeTranscript({ text: '', segments: [], language: 'English' }))
       .toMatchInlineSnapshot(`
-      {
-        "segments": [],
-        "text": "",
-      }
-    `);
+        {
+          "segments": [],
+          "text": "",
+        }
+      `);
+  });
+
+  test('single-segment transcript', async () => {
+    const data = await readWhisperJsonFile(
+      decodeURIComponent(
+        new URL('./__fixtures__/thankyou.json', import.meta.url).pathname,
+      ),
+    );
+
+    expect(joinerizeTranscript(data)).toMatchSnapshot();
   });
 
   test('02 - Introduction.json', async () => {

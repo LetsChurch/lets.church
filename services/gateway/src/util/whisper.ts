@@ -88,6 +88,8 @@ export type JoinerizedTranscript = {
   }>;
 };
 
+const endingSentence = /[.!?]/g;
+
 export function joinerizeTranscript(
   transcript: z.infer<typeof whisperJsonSchema>,
 ): JoinerizedTranscript {
@@ -98,7 +100,7 @@ export function joinerizeTranscript(
   for (const item of transcript.segments.flatMap((s) => s.words)) {
     workingSegment.words.push(item);
 
-    if (item.word.trim().endsWith('.')) {
+    if (endingSentence.test(item.word.trim())) {
       workingSegment.text = workingSegment.words
         .map((w) => w.word)
         .join('')
