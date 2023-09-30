@@ -847,9 +847,9 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
       ],
     },
     {
-      "end": 71.49,
+      "end": 64.27,
       "start": 58.97,
-      "text": "First Timothy 518, but at what point does the financial enterprise go too far? The modern church lacks the moral parameters necessary to identify ethical transgressions in ministry fundraising.",
+      "text": "First Timothy 518, but at what point does the financial enterprise go too far?",
       "words": [
         {
           "end": 59.21,
@@ -935,6 +935,13 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
           "start": 63.99,
           "word": " far?",
         },
+      ],
+    },
+    {
+      "end": 71.49,
+      "start": 65.37,
+      "text": "The modern church lacks the moral parameters necessary to identify ethical transgressions in ministry fundraising.",
+      "words": [
         {
           "end": 65.99,
           "probability": 0.7697895765304565,
@@ -3047,6 +3054,57 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
           "probability": 0.7080883979797363,
           "start": 201.29,
           "word": " introduction.",
+        },
+      ],
+    },
+  ],
+  "text": "",
+}
+`;
+
+exports[`joinerizeTranscript > single-segment transcript 1`] = `
+{
+  "segments": [
+    {
+      "end": 0.78,
+      "start": 0,
+      "text": "Thank you so much for watching!",
+      "words": [
+        {
+          "end": 0.78,
+          "probability": 0.0012577091110870242,
+          "start": 0,
+          "word": " Thank",
+        },
+        {
+          "end": 0.78,
+          "probability": 0.9738519787788391,
+          "start": 0.78,
+          "word": " you",
+        },
+        {
+          "end": 0.78,
+          "probability": 0.057872552424669266,
+          "start": 0.78,
+          "word": " so",
+        },
+        {
+          "end": 0.78,
+          "probability": 0.9878130555152893,
+          "start": 0.78,
+          "word": " much",
+        },
+        {
+          "end": 0.78,
+          "probability": 0.4370778501033783,
+          "start": 0.78,
+          "word": " for",
+        },
+        {
+          "end": 0.78,
+          "probability": 0.8586574196815491,
+          "start": 0.78,
+          "word": " watching!",
         },
       ],
     },

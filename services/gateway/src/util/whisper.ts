@@ -125,6 +125,10 @@ export async function readWhisperJsonFile(path: string) {
 }
 
 export function whisperJsonToVtt(transcript: JoinerizedTranscript) {
+  if (transcript.segments.length === 0) {
+    return 'WEBVTT';
+  }
+
   return stringifySync(
     transcript.segments.map((data) => ({
       type: 'cue',
