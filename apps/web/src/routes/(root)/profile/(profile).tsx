@@ -206,7 +206,7 @@ export default function ProfileRoute() {
     });
 
     while (data()?.me?.avatarUrl === oldUrl) {
-      await delay(2500);
+      await delay(1000);
       await refetchRouteData();
     }
 
