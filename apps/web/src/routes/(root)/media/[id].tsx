@@ -115,6 +115,7 @@ export function routeData({ params, location }: RouteDataArgs) {
             data: uploadRecordById(id: $id) {
               id
               title
+              lengthSeconds
               description
               publishedAt
               totalViews
@@ -479,6 +480,7 @@ export default function MediaRoute() {
             peaksJsonUrl={metaData()?.data.peaksJsonUrl}
             playAt={playAt}
             onTimeUpdate={setCurrentTime}
+            lengthSeconds={metaData()?.data.lengthSeconds ?? 0}
             fluid
           />
           <h1 class="truncate text-2xl">{metaData()?.data.title ?? '...'}</h1>

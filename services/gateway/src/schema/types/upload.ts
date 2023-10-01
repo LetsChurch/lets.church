@@ -161,6 +161,14 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
     id: t.expose('id', { type: 'ShortUuid' }),
     title: t.exposeString('title', { nullable: true }),
     description: t.exposeString('description', { nullable: true }),
+    lengthSeconds: t.field({
+      type: 'Float',
+      nullable: true,
+      select: {
+        lengthSeconds: true,
+      },
+      resolve: ({ lengthSeconds }) => lengthSeconds,
+    }),
     license: t.expose('license', { type: UploadLicense }),
     visibility: t.expose('visibility', { type: UploadVisibility }),
     createdBy: t.relation('createdBy', { authScopes: internalAuthScopes }),

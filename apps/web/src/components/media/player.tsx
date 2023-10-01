@@ -1,4 +1,3 @@
-import delay from 'delay';
 import { gql } from 'graphql-request';
 import {
   type Accessor,
@@ -8,6 +7,7 @@ import {
   createSignal,
   createEffect,
   Show,
+  createResource,
 } from 'solid-js';
 import server$ from 'solid-start/server';
 import invariant from 'tiny-invariant';
@@ -17,6 +17,7 @@ import {
   MediaRouteRecordUploadSegmentViewMutation,
   MediaRouteRecordUploadSegmentViewMutationVariables,
 } from './__generated__/player';
+import Waveform from './waveform';
 import type { Optional } from '~/util';
 import { createAuthenticatedClient } from '~/util/gql/server';
 
@@ -50,6 +51,7 @@ const recordSegmentView = server$(
 
 export type Props = {
   id: string;
+  lengthSeconds: number;
   videoSource?: Optional<string>;
   audioSource?: Optional<string>;
   peaksDatUrl?: Optional<string>;
@@ -61,9 +63,9 @@ export type Props = {
 
 export default function Player(props: Props) {
   let videoRef: HTMLVideoElement;
-  let peaksContainer: HTMLDivElement;
   let player: ReturnType<typeof videojs>;
   const [ready, setReady] = createSignal(false);
+  const [currentTime, setCurrentTime] = createSignal(0);
 
   const audioOnlyMode = () =>
     Boolean(
@@ -89,46 +91,6 @@ export default function Player(props: Props) {
         src: props.audioSource,
         type: 'application/x-mpegURL',
       });
-    }
-
-    if (audioOnlyMode()) {
-      invariant(peaksContainer, 'Peaks container ref is undefined');
-      invariant(props.peaksDatUrl, 'Peaks source is undefined');
-      invariant(props.peaksJsonUrl, 'Peaks source is undefined');
-
-      const { default: Peaks } = await import('peaks.js');
-
-      // Hack to work around peaks container not having width/height yet
-      while (
-        peaksContainer.clientWidth <= 0 ||
-        peaksContainer.clientHeight <= 0
-      ) {
-        await delay(10);
-      }
-
-      Peaks.init(
-        {
-          mediaElement: videoRef,
-          overview: {
-            container: peaksContainer,
-            waveformColor: '#818cf8',
-            playedWaveformColor: '#6366f1', // indigo-500
-            showPlayheadTime: false,
-            showAxisLabels: false,
-            axisGridlineColor: 'transparent',
-          },
-          dataUri: {
-            arraybuffer: props.peaksDatUrl,
-            json: props.peaksJsonUrl,
-          },
-          keyboard: true,
-        },
-        (err) => {
-          if (err) {
-            console.log(err);
-          }
-        },
-      );
     }
 
     player = videojs(
@@ -172,24 +134,25 @@ export default function Player(props: Props) {
     });
 
     player.on('timeupdate', () => {
-      const currentTime = player.currentTime() ?? 0;
+      const tuCurrentTime = player.currentTime() ?? 0;
 
-      if (Math.abs(currentTime - segmentStartTime) >= 5) {
+      if (Math.abs(tuCurrentTime - segmentStartTime) >= 5) {
         // If the current time is 5 seconds or more than the segment start time, this is a seek, record a segment view
         recordSegmentView(id, segmentStartTime, segmentEndTime);
-        segmentStartTime = currentTime;
+        segmentStartTime = tuCurrentTime;
       }
 
       // Always update the current segment end time
-      segmentEndTime = currentTime;
+      segmentEndTime = tuCurrentTime;
 
       if (segmentEndTime - segmentStartTime >= 5) {
         // If the current segment is more than 5 seconds long, record a segment view
-        recordSegmentView(id, segmentStartTime, currentTime);
-        segmentStartTime = currentTime;
+        recordSegmentView(id, segmentStartTime, tuCurrentTime);
+        segmentStartTime = tuCurrentTime;
       }
 
-      onTimeUpdate?.(currentTime);
+      onTimeUpdate?.(tuCurrentTime);
+      setCurrentTime(tuCurrentTime);
     });
 
     player.one('ready', () => {
@@ -207,10 +170,36 @@ export default function Player(props: Props) {
     player?.dispose();
   });
 
+  const [peaksData, { refetch: fetchPeaks }] = createResource(
+    // eslint-disable-next-line solid/reactivity
+    async () => {
+      if (!props.peaksJsonUrl) {
+        return [];
+      }
+
+      const res = await fetch(props.peaksJsonUrl);
+      if (res.ok) {
+        const json = await res.json();
+        return json.data;
+      }
+    },
+    { initialValue: [] },
+  );
+
+  createEffect(() => {
+    fetchPeaks();
+  });
+
   return (
     <div>
       <Show when={audioOnlyMode()}>
-        <div class="h-36" ref={(el) => void (peaksContainer = el)} />
+        <Waveform
+          peaks={peaksData.latest}
+          currentTime={currentTime()}
+          lengthSeconds={props.lengthSeconds}
+          class="mb-8"
+          onSeek={(time) => player.currentTime(time)}
+        />
       </Show>
       <video class="video-js" ref={(el) => void (videoRef = el)} playsinline />
     </div>

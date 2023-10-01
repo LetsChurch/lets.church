@@ -7,6 +7,17 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function chunk<T>(
+  arr: Array<T>,
+  chunkSize = 1,
+  cache: Array<typeof arr> = [],
+) {
+  const tmp = [...arr];
+  if (chunkSize <= 0) return cache;
+  while (tmp.length) cache.push(tmp.splice(0, chunkSize));
+  return cache;
+}
+
 export function notEmpty<T>(t?: T | null): t is T {
   return t !== null && t !== undefined;
 }
