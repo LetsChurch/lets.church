@@ -24,6 +24,9 @@ import PQueue from 'p-queue';
 import type { MergeExclusive } from 'type-fest';
 import sanitizeFilename from 'sanitize-filename';
 import { noop } from 'lodash-es';
+import logger from './logger';
+
+const moduleLogger = logger.child({ module: 'util/s3' });
 
 const S3_INGEST_BUCKET = envariant('S3_INGEST_BUCKET');
 const S3_INGEST_REGION = envariant('S3_INGEST_REGION');
@@ -238,7 +241,7 @@ export async function headObject(to: Client, key: string) {
       Key: key,
     });
   } catch (e) {
-    console.log(e);
+    moduleLogger.error(e);
     return null;
   }
 }
@@ -345,7 +348,7 @@ export async function backupObjects(
 
     queue.addAll(
       listRes.Contents?.map((entry) => async () => {
-        console.log(`Backing up ${entry.Key} from ${bucket}`);
+        moduleLogger.info(`Backing up ${entry.Key} from ${bucket}`);
         const cmd = new GetObjectCommand({ Bucket: bucket, Key: entry.Key });
         const {
           Body: body,
@@ -368,7 +371,7 @@ export async function backupObjects(
           }),
         );
         heartbeat();
-        console.log('Done!');
+        moduleLogger.info('Done!');
       }) ?? [],
     );
   } while (continuationToken);
@@ -488,9 +491,9 @@ export async function retryablePutFile({
     signal,
     retries: maxAttempts,
     onFailedAttempt: (error) => {
-      console.log(`Error uploading ${otherOps.key}`);
-      console.log(error.message);
-      console.log(
+      moduleLogger.warn(`Error uploading ${otherOps.key}`);
+      moduleLogger.warn(error.message);
+      moduleLogger.warn(
         `Attempt ${error.attemptNumber} failed. There are ${error.retriesLeft} retries left.`,
       );
     },
@@ -517,7 +520,7 @@ export async function deletePrefix(
   let totalCount = 0;
   let currentCount = 0;
 
-  console.log(`Deleting objects from ${bucket} with prefix ${prefix}`);
+  moduleLogger.info(`Deleting objects from ${bucket} with prefix ${prefix}`);
 
   do {
     const listCmd: ListObjectsV2Command = new ListObjectsV2Command({
@@ -539,7 +542,7 @@ export async function deletePrefix(
     totalCount += currentCount;
 
     if (currentCount > 0) {
-      console.log(
+      moduleLogger.info(
         `Deleting ${currentCount} objects from ${bucket} with prefix ${prefix}`,
       );
 
@@ -556,7 +559,7 @@ export async function deletePrefix(
     }
   } while (currentCount > 0);
 
-  console.log(
+  moduleLogger.info(
     `Done deleting ${totalCount} objects from ${bucket} with prefix ${prefix}`,
   );
 

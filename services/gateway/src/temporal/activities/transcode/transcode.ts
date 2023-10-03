@@ -18,6 +18,11 @@ import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import { recordDownloadSize, updateUploadRecord } from '../..';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import type { Probe } from '../../../util/zod';
+import logger from '../../../util/logger';
+
+const moduleLogger = logger.child({
+  module: 'temporal/activities/transcode/transcode',
+});
 
 const WORK_DIR =
   process.env['TRANSCODE_WORKING_DIRECTORY'] ?? '/data/transcode';
@@ -27,13 +32,13 @@ const formatter = new Intl.ListFormat('en', {
   type: 'conjunction',
 });
 
-async function uploadSegments(id: string, dir: string) {
+async function uploadSegments(id: string, dir: string, log: typeof logger) {
   const segmentFiles = await fastGlob(join(dir, '*.ts'));
   const signal = Context.current().cancellationSignal;
 
   for (const path of segmentFiles) {
     Context.current().heartbeat(`Starting upload: ${path}`);
-    console.log(`Uploading media segment: ${path}`);
+    log.info(`Uploading media segment: ${path}`);
 
     await retryablePutFile({
       to: 'PUBLIC',
@@ -44,12 +49,12 @@ async function uploadSegments(id: string, dir: string) {
       signal,
     });
 
-    console.log(`Done uploading media segment: ${path}`);
-    console.log(`Deleting ${path}`);
+    log.info(`Done uploading media segment: ${path}`);
+    log.info(`Deleting ${path}`);
 
     await unlink(path);
 
-    console.log(`Deleted ${path}`);
+    log.info(`Deleted ${path}`);
     Context.current().heartbeat(`Uploading done: ${path}`);
   }
 }
@@ -59,6 +64,13 @@ export default async function transcode(
   s3UploadKey: string,
   probe: Probe,
 ) {
+  const activityLogger = moduleLogger.child({
+    temporalActivity: 'transcode',
+    args: {
+      s3UploadKey,
+    },
+  });
+
   Context.current().heartbeat('job start');
   const cancellationSignal = Context.current().cancellationSignal;
   const workingDir = join(WORK_DIR, uploadRecordId);
@@ -69,7 +81,7 @@ export default async function transcode(
   });
 
   try {
-    console.log(`Making work directory: ${workingDir}`);
+    activityLogger.info(`Making work directory: ${workingDir}`);
 
     await mkdirp(workingDir);
     const downloadPath = join(workingDir, 'download');
@@ -81,17 +93,17 @@ export default async function transcode(
         s.codec_type === 'video',
     ) ?? { width: 0, height: 0 };
 
-    console.log(
+    activityLogger.info(
       `Found ${probe.streams.length} streams. (width: ${width}, height: ${height})`,
     );
 
     const variants = getVariants(probe);
 
-    console.log(
+    activityLogger.info(
       `Will encode ${variants.length} variants: ${formatter.format(variants)}`,
     );
 
-    console.log('Running ffmpeg');
+    activityLogger.info('Running ffmpeg');
 
     const encodeProc = runFfmpegEncode(
       workingDir,
@@ -131,40 +143,42 @@ export default async function transcode(
 
     while (encodeProc.exitCode === null) {
       Context.current().heartbeat('waiting for ffmpeg');
-      await uploadSegments(uploadRecordId, workingDir);
+      await uploadSegments(uploadRecordId, workingDir, activityLogger);
       await setTimeout(1000);
     }
 
-    await uploadSegments(uploadRecordId, workingDir);
+    await uploadSegments(uploadRecordId, workingDir, activityLogger);
 
     const encodeProcRes = await encodeProc;
 
-    console.log(`ffmpeg finished with code ${encodeProcRes.exitCode}`);
+    activityLogger.info(`ffmpeg finished with code ${encodeProcRes.exitCode}`);
 
-    console.log('Cancelling remaining upload record updates');
+    activityLogger.info('Cancelling remaining upload record updates');
 
     throttledUpdateUploadRecord.cancel();
 
-    console.log('Marking transcoding progress as done');
+    activityLogger.info('Marking transcoding progress as done');
     await updateUploadRecord(uploadRecordId, { transcodingProgress: 1 });
 
-    console.log('Finding downloadable files');
+    activityLogger.info('Finding downloadable files');
 
     const downloadableFiles = await fastGlob(join(workingDir, '*.{mp4,m4a}'));
 
-    console.log(
+    activityLogger.info(
       `Found downloadable files:\n - ${downloadableFiles.join('\n -')}`,
     );
 
     // Upload downloadable files
-    console.log(`Uploading ${downloadableFiles.length} downloadable files`);
+    activityLogger.info(
+      `Uploading ${downloadableFiles.length} downloadable files`,
+    );
 
     for (const path of downloadableFiles) {
       const filename = basename(path);
       const contentType = mime.getType(filename);
       invariant(contentType !== null, 'Mime type should not be null');
       Context.current().heartbeat(`Uploading downloadable file`);
-      console.log(`Uploading downloadable file: ${filename}`);
+      activityLogger.info(`Uploading downloadable file: ${filename}`);
       const byteSize = (await stat(path)).size;
       await retryablePutFile({
         to: 'PUBLIC',
@@ -175,8 +189,8 @@ export default async function transcode(
         signal: cancellationSignal,
       });
       Context.current().heartbeat(`Uploaded downloadable file: ${filename}`);
-      console.log(`Uploaded downloadable file: ${filename}`);
-      console.log('Recording download size');
+      activityLogger.info(`Uploaded downloadable file: ${filename}`);
+      activityLogger.info('Recording download size');
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore: TODO: type safety
       const variant: UploadVariant = filename.split('.')[0];
@@ -184,18 +198,18 @@ export default async function transcode(
       await recordDownloadSize(uploadRecordId, variant, byteSize);
     }
 
-    console.log('Finding playlist files');
+    activityLogger.info('Finding playlist files');
 
     const playlists = await fastGlob(join(workingDir, '*.m3u8'));
 
-    console.log(`Found playlist files:\n - ${playlists.join('\n -')}`);
-    console.log(`Uploading ${playlists.length} playlist files`);
+    activityLogger.info(`Found playlist files:\n - ${playlists.join('\n -')}`);
+    activityLogger.info(`Uploading ${playlists.length} playlist files`);
 
     // Upload playlist files
     for (const path of playlists) {
       const filename = basename(path);
       Context.current().heartbeat(`Uploading playlist file`);
-      console.log(`Uploading playlist file: ${filename}`);
+      activityLogger.info(`Uploading playlist file: ${filename}`);
       await retryablePutFile({
         to: 'PUBLIC',
         key: `${uploadRecordId}/${filename}`,
@@ -205,17 +219,17 @@ export default async function transcode(
         signal: cancellationSignal,
       });
       Context.current().heartbeat(`Uploaded playlist file: ${filename}`);
-      console.log(`Uploaded playlist file: ${filename}`);
+      activityLogger.info(`Uploaded playlist file: ${filename}`);
     }
 
     // Upload master playlist if there is more than just audio
     if (variants.some((v) => v.startsWith('VIDEO'))) {
-      console.log(
+      activityLogger.info(
         `Uploading master playlist file given the variants: ${formatter.format(
           variants,
         )}`,
       );
-      console.log('Uploading master playlist file');
+      activityLogger.info('Uploading master playlist file');
       Context.current().heartbeat(`Uploading playlist file`);
       const playlistBuffer = Buffer.from(
         variantsToMasterVideoPlaylist(variants),
@@ -228,9 +242,9 @@ export default async function transcode(
         signal: cancellationSignal,
       });
       Context.current().heartbeat('Uploaded master playlist file');
-      console.log('Uploaded master playlist file');
+      activityLogger.info('Uploaded master playlist file');
     } else {
-      console.log(
+      activityLogger.info(
         `Not creating master playlist given the variants: ${formatter.format(
           variants,
         )}`,
@@ -238,7 +252,7 @@ export default async function transcode(
     }
 
     // Generate and upload peaks
-    console.log('Generating peaks');
+    activityLogger.info('Generating peaks');
     const peakFiles = await runAudiowaveform(
       workingDir,
       downloadPath,
@@ -246,8 +260,8 @@ export default async function transcode(
       () => Context.current().heartbeat('audiowaveform'),
     );
 
-    console.log('Queuing upload of peaks');
-    console.log('Uploading peak json');
+    activityLogger.info('Queuing upload of peaks');
+    activityLogger.info('Uploading peak json');
     Context.current().heartbeat(`Uploading peak json`);
     await retryablePutFile({
       to: 'PUBLIC',
@@ -258,8 +272,8 @@ export default async function transcode(
       signal: cancellationSignal,
     });
     Context.current().heartbeat('Uploaded peak json');
-    console.log('Uploaded peak json');
-    console.log('Uploading peak dat');
+    activityLogger.info('Uploaded peak json');
+    activityLogger.info('Uploading peak dat');
     Context.current().heartbeat(`Uploading peak dat`);
     await retryablePutFile({
       to: 'PUBLIC',
@@ -270,11 +284,11 @@ export default async function transcode(
       signal: cancellationSignal,
     });
     Context.current().heartbeat('Uploaded peak dat');
-    console.log('Uploaded peak dat');
+    activityLogger.info('Uploaded peak dat');
 
     // Upload logs
-    console.log('Queueing upload of logs');
-    console.log('Uploading stdout');
+    activityLogger.info('Queueing upload of logs');
+    activityLogger.info('Uploading stdout');
     Context.current().heartbeat('queueing stdout upload');
     await retryablePutFile({
       to: 'INGEST',
@@ -283,9 +297,9 @@ export default async function transcode(
       body: Buffer.from(stdout.join('')),
       signal: cancellationSignal,
     });
-    console.log('Done uploading stdout');
+    activityLogger.info('Done uploading stdout');
     Context.current().heartbeat('queueing stderr upload');
-    console.log('Uploading stderr');
+    activityLogger.info('Uploading stderr');
     await retryablePutFile({
       to: 'INGEST',
       key: `${uploadRecordId}/stderr.txt`,
@@ -293,23 +307,22 @@ export default async function transcode(
       body: Buffer.from(stderr.join('')),
       signal: cancellationSignal,
     });
-    console.log('Done uploading stderr');
+    activityLogger.info('Done uploading stderr');
     Context.current().heartbeat('Uploaded stderr');
-    console.log('Queueing final update for upload record');
+    activityLogger.info('Queueing final update for upload record');
     await updateUploadRecord(uploadRecordId, {
       variants,
       transcodingFinishedAt: new Date(),
     });
   } catch (e) {
-    console.log('Error!');
-    console.log(e);
+    activityLogger.error(e);
     await updateUploadRecord(uploadRecordId, {
       transcodingStartedAt: null,
       transcodingFinishedAt: null,
     });
     throw e;
   } finally {
-    console.log(`Removing work directory: ${workingDir}`);
+    activityLogger.info(`Removing work directory: ${workingDir}`);
     await rimraf(workingDir);
   }
 }

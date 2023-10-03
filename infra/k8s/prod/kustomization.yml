@@ -34,6 +34,9 @@ secretGenerator:
   - name: jwt-secret
     envs:
       - jwt.crypt.env
+  - name: otel-secret
+    envs:
+      - otel.crypt.env
   - name: pgo-backup-creds
     files:
       - pgo-backup-creds.crypt.conf

@@ -6,6 +6,7 @@ import glob from 'fast-glob';
 import { client } from '../src/temporal';
 import { importMediaWorkflow } from '../src/temporal/workflows/import-media';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
+import logger from '../src/util/logger';
 
 const schema = z.array(
   z.object({
@@ -20,7 +21,7 @@ const schema = z.array(
 const files = await glob('*.new.json');
 
 if (files.length === 0) {
-  console.log('No files to import!');
+  logger.info('No files to import!');
   process.exit(0);
 }
 

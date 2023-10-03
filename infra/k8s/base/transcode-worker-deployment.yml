@@ -22,10 +22,15 @@ spec:
           resources:
             requests:
               memory: 5Gi
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: transcode-worker
           envFrom:
             - configMapRef:
                 name: temporal-client-config
             - configMapRef:
                 name: transcode-worker-config
+            - secretRef:
+                name: otel-secret
             - secretRef:
                 name: s3-secret

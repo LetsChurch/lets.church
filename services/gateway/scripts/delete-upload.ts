@@ -3,6 +3,7 @@ import prisma from '../src/util/prisma';
 import { client } from '../src/temporal';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
 import { deleteUploadWorkflow } from '../src/temporal/workflows';
+import logger from '../src/util/logger';
 
 const id = await input({ message: 'id:' });
 
@@ -11,7 +12,7 @@ const { title } = await prisma.uploadRecord.findUniqueOrThrow({
   select: { title: true },
 });
 
-console.log(`Title: ${title}`);
+logger.info(`Title: ${title}`);
 
 if (
   !(await confirm({
@@ -28,4 +29,4 @@ if (
   args: [id],
 });
 
-console.log('Upload queued for deletion!');
+logger.info('Upload queued for deletion!');

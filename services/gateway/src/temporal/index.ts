@@ -6,6 +6,7 @@ import waitOn from 'wait-on';
 import type { Prisma, UploadVariant } from '@prisma/client';
 import type { UploadPostProcessValue } from '../schema/types/mutation';
 import type { Client as S3UtilClient } from '../util/s3';
+import logger from '../util/logger';
 import {
   handleMultipartMediaUploadWorkflow,
   indexDocumentWorkflow,
@@ -19,6 +20,8 @@ import { BACKGROUND_QUEUE } from './queues';
 import type { DocumentKind } from './activities/background/index-document';
 import { recordDownloadSizeWorkflow } from './workflows/record-download-size';
 import { emptySignal } from './signals';
+
+const moduleLogger = logger.child({ module: 'temporal' });
 
 const TEMPORAL_ADDRESS = envariant('TEMPORAL_ADDRESS');
 
@@ -145,11 +148,11 @@ export async function sendEmail(
 }
 
 export async function waitOnTemporal() {
-  console.log('Waiting for Temporal');
+  moduleLogger.info('Waiting for Temporal');
 
   await waitOn({
     resources: [`tcp:${TEMPORAL_ADDRESS}`],
   });
 
-  console.log('Temporal is available!');
+  moduleLogger.info('Temporal is available!');
 }

@@ -5,8 +5,14 @@ import type {
 import { diff } from 'jest-diff';
 import pc from 'picocolors';
 import { waitForElasticsearch, client } from '../src/util/elasticsearch';
+import logger from '../src/util/logger';
 
+const moduleLogger = logger.child({ module: 'elasticsearch/mappings' });
+
+moduleLogger.info('Waiting for Elasticsearch to be ready');
 await waitForElasticsearch();
+moduleLogger.info('Elasticsearch is ready');
+moduleLogger.info('Starting index mapping deployment');
 
 // Define target mappings
 const targetMappings: Record<
@@ -139,11 +145,11 @@ const serverMappings = Object.fromEntries(
     ),
 );
 
-console.dir({ serverMappings }, { depth: null });
+moduleLogger.info({ serverMappings });
 
 // Show a preview of what will be deployed using jest-diff
-console.log('Preview of index mapping changes:');
-console.log(
+moduleLogger.info('Preview of index mapping changes:');
+moduleLogger.info(
   diff(serverMappings, targetMappings, {
     aAnnotation: 'Server',
     aColor: pc.red,
@@ -158,12 +164,12 @@ const serverIndexNames = new Set(Object.keys(serverMappings));
 for (const [name, mappings] of Object.entries(targetMappings)) {
   // If ther server doesn't have an index by the given name, create it
   if (!serverIndexNames.has(name)) {
-    console.log(`Creating index: ${name}`);
+    moduleLogger.info(`Creating index: ${name}`);
     await client.indices.create({ index: name });
   }
 
   // PUT the index mapping
-  console.log(`PUTting index mapping for ${name}`);
+  moduleLogger.info(`PUTting index mapping for ${name}`);
   await client.indices.putMapping({
     index: name,
     properties: mappings.properties,
@@ -171,4 +177,4 @@ for (const [name, mappings] of Object.entries(targetMappings)) {
 }
 
 // Done!
-console.log('All done!');
+moduleLogger.info('All done!');

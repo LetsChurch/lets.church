@@ -21,11 +21,16 @@ spec:
           name: web
           ports:
             - containerPort: 3000
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: web
           envFrom:
-            - configMapRef:
-                name: web-config
+            - secretRef:
+                name: otel-secret
             - secretRef:
                 name: turnstile-secret
+            - configMapRef:
+                name: web-config
 ---
 apiVersion: v1
 kind: Service

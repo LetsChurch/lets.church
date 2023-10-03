@@ -11,19 +11,32 @@ import {
 import { runFfprobe } from '../../../util/ffmpeg';
 import { ffprobeSchema } from '../../../util/zod';
 import { updateUploadRecord } from '../..';
+import logger from '../../../util/logger';
 
 const WORK_DIR = process.env['PROBE_WORKING_DIRECTORY'] ?? '/data/probe';
+
+const moduleLogger = logger.child({
+  module: 'temporal/activities/transcode/probe',
+});
 
 export default async function probe(
   uploadRecordId: string,
   s3UploadKey: string,
 ) {
+  const activityLogger = moduleLogger.child({
+    temporalActivity: 'probe',
+    args: {
+      uploadRecordId,
+      s3UploadKey,
+    },
+  });
+
   const cancellationSignal = Context.current().cancellationSignal;
 
   const workingDir = join(WORK_DIR, uploadRecordId);
 
   try {
-    console.log('Making working directory');
+    activityLogger.info('Making working directory');
     await mkdirp(workingDir);
 
     const downloadPath = join(workingDir, 'download');
@@ -35,7 +48,7 @@ export default async function probe(
     invariant(uploadSizeBytes, 'Invalid uploadSizeBytes');
     await mkdirp(workingDir);
 
-    console.log(`Probing ${downloadPath}`);
+    activityLogger.info(`Probing ${downloadPath}`);
 
     const probe = await runFfprobe(
       workingDir,
@@ -61,11 +74,10 @@ export default async function probe(
 
     return parsedProbe;
   } catch (e) {
-    console.log('Error!');
-    console.log(e);
+    activityLogger.error(e);
     throw e;
   } finally {
-    console.log('Removing working directory');
+    activityLogger.info('Removing working directory');
     await rimraf(workingDir);
   }
 }

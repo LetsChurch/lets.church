@@ -1,5 +1,10 @@
 import pAll from 'p-all';
 import prisma from '../../../util/prisma';
+import logger from '../../../util/logger';
+
+const moduleLogger = logger.child({
+  module: 'temporal/activities/background/update-comment-scores',
+});
 
 function confidence(likes: number, dislikes: number): number {
   const n = likes + dislikes;
@@ -19,6 +24,10 @@ function confidence(likes: number, dislikes: number): number {
 }
 
 export default async function updateCommentScores() {
+  const activityLogger = moduleLogger.child({
+    temporalActivity: 'updateCommentScores',
+  });
+
   const comments = await prisma.uploadUserComment.findMany({
     where: {
       scoreStaleAt: {
@@ -31,7 +40,7 @@ export default async function updateCommentScores() {
     },
   });
 
-  console.log(`Updating scores for ${comments.length} comments...`);
+  activityLogger.info(`Updating scores for ${comments.length} comments...`);
 
   await pAll(
     comments.map(({ id, score: oldScore }) => async () => {
@@ -47,7 +56,7 @@ export default async function updateCommentScores() {
 
         const score = confidence(likes, dislikes);
 
-        console.log(
+        activityLogger.info(
           `Comment ${id} has score ${score} (old score: ${oldScore}) (likes: ${likes}, dislikes: ${dislikes})`,
         );
 

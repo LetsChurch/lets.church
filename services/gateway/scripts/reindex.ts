@@ -6,6 +6,7 @@ import { BACKGROUND_QUEUE } from '../src/temporal/queues';
 import { emptySignal } from '../src/temporal/signals';
 import { indexDocumentWorkflow } from '../src/temporal/workflows';
 import prisma from '../src/util/prisma';
+import logger from '../src/util/logger';
 
 const what = await select({
   message: 'What would you like to reindex?',
@@ -25,7 +26,7 @@ const uploads = await prisma.uploadRecord.findMany({
   },
 });
 
-console.log(`Queueing documents from ${uploads.length} uploads`);
+logger.info(`Queueing documents from ${uploads.length} uploads`);
 
 const total = uploads.length;
 let queued = 0;

@@ -4,6 +4,9 @@ import { noop } from 'lodash-es';
 import fastGlob from 'fast-glob';
 import { z } from 'zod';
 import { stringifySync } from 'subtitle';
+import logger from './logger';
+
+const moduleLogger = logger.child({ module: 'util/whisper' });
 
 const whisperModel = process.env['WHISPER_MODEL'] ?? 'large-v2';
 const extraArgs = process.env['WHISPER_EXTRA_ARGS']?.split(' ') ?? [];
@@ -14,7 +17,7 @@ export async function runWhisper(
   signal: AbortSignal,
   heartbeat = noop,
 ) {
-  console.log('Running whisper');
+  moduleLogger.info('Running whisper');
 
   const proc = execa(
     'whisper-ctranslate2',
@@ -33,14 +36,14 @@ export async function runWhisper(
     { cwd, signal },
   );
 
-  console.log(`runWhisper: ${proc.spawnargs.join(' ')}`);
+  moduleLogger.info(`runWhisper: ${proc.spawnargs.join(' ')}`);
 
   proc.stdout?.on('data', () => heartbeat('whisper stdout'));
   proc.stderr?.on('data', () => heartbeat('whisper stderr'));
 
   const res = await proc;
 
-  console.log(`Whisper done: ${res.exitCode}`);
+  moduleLogger.info(`Whisper done: ${res.exitCode}`);
 
   const files = await fastGlob(`${cwd}/out/*`);
 

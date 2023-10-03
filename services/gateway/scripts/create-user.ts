@@ -8,6 +8,7 @@ import { z } from 'zod';
 import argon2 from 'argon2';
 import short from 'short-uuid';
 import prisma from '../src/util/prisma';
+import logger from '../src/util/logger';
 
 const username = await input({ message: 'Username:' });
 const email = await input({
@@ -48,6 +49,6 @@ const user = await prisma.appUser.create({
 
 const translator = short();
 
-console.log('User created!');
-console.log(user.id);
-console.log(translator.fromUUID(user.id));
+logger.info('User created!');
+logger.info(user.id);
+logger.info(translator.fromUUID(user.id));

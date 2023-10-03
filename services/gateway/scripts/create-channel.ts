@@ -1,6 +1,7 @@
 import { input, confirm } from '@inquirer/prompts';
 import short from 'short-uuid';
 import prisma from '../src/util/prisma';
+import logger from '../src/util/logger';
 
 const name = await input({ message: 'Name:' });
 const slug = await input({ message: 'Slug:' });
@@ -32,6 +33,6 @@ const channel = await prisma.channel.create({
 
 const translator = short();
 
-console.log('Channel created!');
-console.log(channel.id);
-console.log(translator.fromUUID(channel.id));
+logger.info('Channel created!');
+logger.info(channel.id);
+logger.info(translator.fromUUID(channel.id));

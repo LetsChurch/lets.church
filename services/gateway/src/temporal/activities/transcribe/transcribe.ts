@@ -13,6 +13,11 @@ import {
   runWhisper,
   whisperJsonToVtt,
 } from '../../../util/whisper';
+import logger from '../../../util/logger';
+
+const moduleLogger = logger.child({
+  module: 'temporal/activities/transcribe/transcribe',
+});
 
 const WORK_DIR =
   process.env['TRANSCRIBE_WORKING_DIRECTORY'] ?? '/data/transcribe';
@@ -21,6 +26,14 @@ export default async function transcribe(
   uploadRecordId: string,
   s3UploadKey: string,
 ) {
+  const activityLogger = moduleLogger.child({
+    temporalActivity: 'transcribe',
+    args: {
+      uploadRecordId,
+      s3UploadKey,
+    },
+  });
+
   Context.current().heartbeat('job start');
   const cancellationSignal = Context.current().cancellationSignal;
   const workingDir = join(WORK_DIR, uploadRecordId);
@@ -47,12 +60,12 @@ export default async function transcribe(
       () => Context.current().heartbeat('whisper'),
     );
 
-    console.log(`whisper done`);
+    activityLogger.info(`whisper done`);
     Context.current().heartbeat('whisper done');
 
     const keys = await Promise.all(
       outputFiles.map(async (file) => {
-        console.log(`uploading file: ${file}`);
+        activityLogger.info(`uploading file: ${file}`);
 
         const ext = extname(file).slice(1);
         const key = `${uploadRecordId}/transcript.original.${ext}`;
@@ -65,7 +78,7 @@ export default async function transcribe(
           signal: cancellationSignal,
         });
 
-        console.log(`done uploading ${file}`);
+        activityLogger.info(`done uploading ${file}`);
         Context.current().heartbeat(`done uploading ${key}`);
 
         return key;
@@ -81,7 +94,7 @@ export default async function transcribe(
     const fixedJson = joinerizeTranscript(whisperJson);
     const fixedVtt = Buffer.from(whisperJsonToVtt(fixedJson));
 
-    console.log(`uploading file: transcript.vtt`);
+    activityLogger.info(`uploading file: transcript.vtt`);
 
     const transcriptKey = `${uploadRecordId}/transcript.vtt`;
 
@@ -94,7 +107,7 @@ export default async function transcribe(
       signal: cancellationSignal,
     });
 
-    console.log(`done uploading transcript.vtt`);
+    activityLogger.info(`done uploading transcript.vtt`);
 
     Context.current().heartbeat('done uploading fixed transcript');
 
@@ -104,14 +117,14 @@ export default async function transcribe(
 
     return { transcriptKey, additionalKeys: keys };
   } catch (e) {
-    console.error(e);
+    activityLogger.error(e);
     await updateUploadRecord(uploadRecordId, {
       transcribingStartedAt: null,
       transcribingFinishedAt: null,
     });
     throw e;
   } finally {
-    console.log('Cleaning up');
+    activityLogger.info('Cleaning up');
     await rimraf(workingDir);
   }
 }

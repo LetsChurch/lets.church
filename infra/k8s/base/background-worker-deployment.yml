@@ -25,6 +25,8 @@ spec:
                 secretKeyRef:
                   name: pg-pguser-letschurch
                   key: uri
+            - name: OTEL_SERVICE_NAME
+              value: background-worker
           envFrom:
             - configMapRef:
                 name: gateway-config
@@ -32,6 +34,8 @@ spec:
                 name: temporal-client-config
             - configMapRef:
                 name: background-worker-config
+            - secretRef:
+                name: otel-secret
             - secretRef:
                 name: s3-secret
             - secretRef:

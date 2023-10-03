@@ -5,6 +5,11 @@ import mkdirp from 'mkdirp';
 import rimraf from 'rimraf';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
+import logger from '../../../util/logger';
+
+const moduleLogger = logger.child({
+  module: 'temporal/activities/transcode/generate-peaks',
+});
 
 const WORK_DIR = process.env['PEAKS_WORKING_DIRECTORY'] ?? '/data/peaks';
 
@@ -12,12 +17,20 @@ export default async function generatePeaks(
   uploadRecordId: string,
   s3UploadKey: string,
 ) {
+  const activityLogger = moduleLogger.child({
+    temporalActivity: 'generatePeaks',
+    args: {
+      uploadRecordId,
+      s3UploadKey,
+    },
+  });
+
   Context.current().heartbeat('job start');
   const cancellationSignal = Context.current().cancellationSignal;
   const workingDir = join(WORK_DIR, uploadRecordId);
 
   try {
-    console.log(`Making working directory: ${workingDir}`);
+    activityLogger.info(`Making working directory: ${workingDir}`);
 
     await mkdirp(workingDir);
     const downloadPath = join(workingDir, 'download');
@@ -27,7 +40,7 @@ export default async function generatePeaks(
     );
 
     // Generate and upload peaks
-    console.log('Generating peaks');
+    activityLogger.info('Generating peaks');
     const peakFiles = await runAudiowaveform(
       workingDir,
       downloadPath,
@@ -35,8 +48,8 @@ export default async function generatePeaks(
       () => Context.current().heartbeat('audiowaveform'),
     );
 
-    console.log('Queuing upload of peaks');
-    console.log('Uploading peak json');
+    activityLogger.info('Queuing upload of peaks');
+    activityLogger.info('Uploading peak json');
     Context.current().heartbeat(`Uploading peak json`);
     await retryablePutFile({
       to: 'PUBLIC',
@@ -47,8 +60,8 @@ export default async function generatePeaks(
       signal: cancellationSignal,
     });
     Context.current().heartbeat('Uploaded peak json');
-    console.log('Uploaded peak json');
-    console.log('Uploading peak dat');
+    activityLogger.info('Uploaded peak json');
+    activityLogger.info('Uploading peak dat');
     Context.current().heartbeat(`Uploading peak dat`);
     await retryablePutFile({
       to: 'PUBLIC',
@@ -59,12 +72,11 @@ export default async function generatePeaks(
       signal: cancellationSignal,
     });
     Context.current().heartbeat('Uploaded peak dat');
-    console.log('Uploaded peak dat');
+    activityLogger.info('Uploaded peak dat');
   } catch (e) {
-    console.log('Error!');
-    console.log(e);
+    activityLogger.error(e);
   } finally {
-    console.log(`Removing work directory: ${workingDir}`);
+    activityLogger.info(`Removing work directory: ${workingDir}`);
     await rimraf(workingDir);
   }
 }

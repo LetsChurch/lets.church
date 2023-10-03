@@ -1,6 +1,9 @@
 import { join } from 'node:path';
 import { execa } from 'execa';
 import { noop } from 'lodash-es';
+import logger from './logger';
+
+const moduleLogger = logger.child({ module: 'util/ffmpeg' });
 
 export async function runAudiowaveform(
   cwd: string,
@@ -10,7 +13,7 @@ export async function runAudiowaveform(
 ) {
   const wavFile = join(cwd, 'download.wav');
 
-  console.log('Converting file to wav');
+  moduleLogger.info('Converting file to wav');
 
   const ffmpegProc = execa(
     'ffmpeg',
@@ -28,16 +31,16 @@ export async function runAudiowaveform(
     { cwd, signal },
   );
 
-  console.log(`runAudiowaveform: ${ffmpegProc.spawnargs.join(' ')}`);
+  moduleLogger.info(`runAudiowaveform: ${ffmpegProc.spawnargs.join(' ')}`);
 
   ffmpegProc.stdout?.on('data', () => heartbeat());
   ffmpegProc.stderr?.on('data', () => heartbeat());
 
   await ffmpegProc;
 
-  console.log(`ffmpeg done: ${ffmpegProc.exitCode}`);
+  moduleLogger.info(`ffmpeg done: ${ffmpegProc.exitCode}`);
 
-  console.log('Running audiowaveform json');
+  moduleLogger.info('Running audiowaveform json');
 
   const proc1 = execa(
     'audiowaveform',
@@ -45,16 +48,16 @@ export async function runAudiowaveform(
     { cwd, signal },
   );
 
-  console.log(`runAudiowaveform: ${proc1.spawnargs.join(' ')}`);
+  moduleLogger.info(`runAudiowaveform: ${proc1.spawnargs.join(' ')}`);
 
   proc1.stdout?.on('data', () => heartbeat());
   proc1.stderr?.on('data', () => heartbeat());
 
   const res1 = await proc1;
 
-  console.log(`audiowaveform json done: ${res1.exitCode}`);
+  moduleLogger.info(`audiowaveform json done: ${res1.exitCode}`);
 
-  console.log('Running audiowaveform dat');
+  moduleLogger.info('Running audiowaveform dat');
 
   const proc2 = execa(
     'audiowaveform',
@@ -62,14 +65,14 @@ export async function runAudiowaveform(
     { cwd, signal },
   );
 
-  console.log(`runAudiowaveform: ${proc2.spawnargs.join(' ')}`);
+  moduleLogger.info(`runAudiowaveform: ${proc2.spawnargs.join(' ')}`);
 
   proc2.stdout?.on('data', () => heartbeat());
   proc2.stderr?.on('data', () => heartbeat());
 
   const res2 = await proc2;
 
-  console.log(`audiowaveform dat done: ${res2.exitCode}`);
+  moduleLogger.info(`audiowaveform dat done: ${res2.exitCode}`);
 
   return {
     json: `${wavFile}.json`,

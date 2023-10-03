@@ -6,6 +6,7 @@ import prisma from '../src/util/prisma';
 import { client } from '../src/temporal';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
 import { processMediaWorkflow } from '../src/temporal/workflows';
+import logger from '../src/util/logger';
 
 const scope = await select({
   message: 'What do you want to retry?',
@@ -77,12 +78,12 @@ if (scope === 'ids') {
     ).map(({ id }) => id),
   );
 } else {
-  console.log('Invalid scope!');
+  logger.info('Invalid scope!');
   process.exit(-1);
 }
 
 if (ids.length === 0) {
-  console.log('Nothing found to retry');
+  logger.info('Nothing found to retry');
   process.exit(0);
 }
 
@@ -110,4 +111,4 @@ pMap(
   { concurrency: 10 },
 );
 
-console.log(`${ids.length} uploads queued for reprocessing!`);
+logger.info(`${ids.length} uploads queued for reprocessing!`);

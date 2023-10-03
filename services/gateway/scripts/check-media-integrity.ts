@@ -9,6 +9,7 @@ import pFilter from 'p-filter';
 import pOne from 'p-one';
 import prisma from '../src/util/prisma';
 import { getObject } from '../src/util/s3';
+import logger from '../src/util/logger';
 
 const filename = await input({ message: 'File name:', default: 'errors.txt' });
 
@@ -78,6 +79,6 @@ const erroredIds = (
 
 spinner.succeed('Done!');
 
-console.log(`Found ${erroredIds.length} uploads with mismatched lengths`);
+logger.info(`Found ${erroredIds.length} uploads with mismatched lengths`);
 
 await writeFile(filename, erroredIds.join('\n'));

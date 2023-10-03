@@ -11,7 +11,7 @@ invariant(arg);
 const isUuid = z.string().uuid().safeParse(arg).success;
 
 if (isUuid) {
-  console.log(translator.fromUUID(arg));
+  process.stdout.write(translator.fromUUID(arg));
 } else {
-  console.log(translator.toUUID(arg));
+  process.stdout.write(translator.toUUID(arg));
 }

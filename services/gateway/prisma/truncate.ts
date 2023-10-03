@@ -1,3 +1,4 @@
+import logger from '../src/util/logger';
 import prisma from '../src/util/prisma';
 
 async function truncateDb() {
@@ -5,7 +6,7 @@ async function truncateDb() {
     Array<{ tablename: string }>
   >`SELECT tablename FROM pg_tables WHERE schemaname='public'`;
 
-  console.log(`Truncating ${tablenames.length} tables...`);
+  logger.warn(`Truncating ${tablenames.length} tables...`);
 
   for (const { tablename } of tablenames) {
     if (tablename !== '_prisma_migrations') {
@@ -14,12 +15,12 @@ async function truncateDb() {
           `TRUNCATE TABLE "public"."${tablename}" CASCADE;`,
         );
       } catch (error) {
-        console.log({ error });
+        logger.error(error);
       }
     }
   }
 
-  console.log('Done!');
+  logger.info('Done!');
 }
 
 truncateDb();

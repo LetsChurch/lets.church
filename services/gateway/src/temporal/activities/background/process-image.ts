@@ -12,6 +12,11 @@ import {
   oxiPng,
 } from '../../../util/images';
 import type { UploadPostProcessValue } from '../../../schema/types/mutation';
+import logger from '../../../util/logger';
+
+const moduleLogger = logger.child({
+  module: 'temporal/activities/background/process-image',
+});
 
 const WORK_DIR =
   process.env['PROCESS_IMAGE_WORKING_DIRECTORY'] ?? '/data/process-image';
@@ -21,6 +26,15 @@ export default async function processImage(
   targetId: string,
   s3UploadKey: string,
 ) {
+  const activityLogger = moduleLogger.child({
+    temporalActivity: 'processImage',
+    args: {
+      postProcess,
+      targetId,
+      s3UploadKey,
+    },
+  });
+
   Context.current().heartbeat();
 
   const dir = join(WORK_DIR, targetId);
@@ -32,11 +46,11 @@ export default async function processImage(
 
     Context.current().heartbeat();
 
-    console.log(`Probing ${downloadPath}`);
+    activityLogger.info(`Probing ${downloadPath}`);
 
     const json = await imgJson(dir, [downloadPath]);
 
-    console.log('Uploading probe');
+    activityLogger.info('Uploading probe');
 
     await retryablePutFile({
       to: 'INGEST',
@@ -47,14 +61,14 @@ export default async function processImage(
     });
 
     if (json.format === 'JPEG') {
-      console.log('Optimizing JPEG');
+      activityLogger.info('Optimizing JPEG');
       await jpegOptim(dir, [downloadPath]);
     } else if (json.format === 'PNG') {
-      console.log('Optimizing PNG');
+      activityLogger.info('Optimizing PNG');
       await oxiPng(dir, [downloadPath]);
     }
 
-    console.log('Uploading compressed image');
+    activityLogger.info('Uploading compressed image');
 
     const path = `${targetId}/${postProcess}-${nanoid()}.${mime.getExtension(
       json.mimeType,
@@ -70,7 +84,7 @@ export default async function processImage(
 
     Context.current().heartbeat();
 
-    console.log('Creating blurhash');
+    activityLogger.info('Creating blurhash');
 
     const blurhash = await imageToBlurhash(downloadPath);
 
@@ -78,11 +92,10 @@ export default async function processImage(
 
     return { path, blurhash };
   } catch (e) {
-    console.log('Error!');
-    console.log(e);
+    activityLogger.error(e);
     throw e;
   } finally {
-    console.log('Removing working directory');
+    activityLogger.info('Removing working directory');
     await rimraf(dir);
   }
 }

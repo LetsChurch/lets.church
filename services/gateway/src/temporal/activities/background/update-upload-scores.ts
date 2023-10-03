@@ -1,10 +1,19 @@
 import pAll from 'p-all';
 import { round } from 'lodash-es';
 import prisma from '../../../util/prisma';
+import logger from '../../../util/logger';
 
 const epoch = 1680145772760;
 
+const moduleLogger = logger.child({
+  module: 'temporal/activities/background/update-upload-score',
+});
+
 export default async function updateUploadScores() {
+  const activityLogger = moduleLogger.child({
+    temporalActivity: 'processImage',
+  });
+
   const uploads = await prisma.uploadRecord.findMany({
     where: {
       scoreStaleAt: {
@@ -18,7 +27,7 @@ export default async function updateUploadScores() {
     },
   });
 
-  console.log(`Updating scores for ${uploads.length} uploads...`);
+  activityLogger.info(`Updating scores for ${uploads.length} uploads...`);
 
   await pAll(
     uploads.map(({ id, publishedAt, score: oldScore }) => async () => {
@@ -39,7 +48,7 @@ export default async function updateUploadScores() {
 
         const score = round(sign * order + seconds / 45000, 7);
 
-        console.log(
+        activityLogger.info(
           `Upload ${id} has score ${score} (old score: ${oldScore}) (likes: ${likes}, dislikes: ${dislikes})`,
         );
 

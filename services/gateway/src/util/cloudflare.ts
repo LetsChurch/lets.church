@@ -2,6 +2,9 @@ import pMem from 'p-memoize';
 import ExpiryMap from 'expiry-map';
 import { z } from 'zod';
 import envariant from '@knpwrs/envariant';
+import logger from './logger';
+
+const moduleLogger = logger.child({ module: 'util/cloudflare' });
 
 const S3_PUBLIC_BUCKET = envariant('S3_PUBLIC_BUCKET');
 const CLOUDFLARE_ACCOUNT_ID = envariant('CLOUDFLARE_ACCOUNT_ID');
@@ -31,7 +34,7 @@ export const getPublicBucketStorage = pMem(
 
       return parseInt(parsed.result.payloadSize, 10);
     } catch (e) {
-      console.log(`Error fetching: ${e}`);
+      moduleLogger.error(e);
 
       return NaN;
     }

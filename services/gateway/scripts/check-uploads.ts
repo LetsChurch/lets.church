@@ -7,6 +7,7 @@ import { headObject, listKeys } from '../src/util/s3';
 import { deleteUploadWorkflow } from '../src/temporal/workflows';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
 import { emptySignal } from '../src/temporal/signals';
+import logger from '../src/util/logger';
 
 const slug = await input({ message: 'Slug:' });
 const outputFile = await input({ message: 'Output file (optional):' });
@@ -21,7 +22,7 @@ const uploads = await prisma.uploadRecord.findMany({
   take: Number.MAX_SAFE_INTEGER,
 });
 
-console.log(`Checking ${uploads.length} uploads for slug ${slug}`);
+logger.info(`Checking ${uploads.length} uploads for slug ${slug}`);
 
 type ErrorEntry = {
   missingIngest: boolean;
@@ -56,19 +57,19 @@ function getErrorEntry(id: string): ErrorEntry {
 }
 
 for (const { id, variants } of uploads) {
-  console.log(`Checking ${id}`);
+  logger.info(`Checking ${id}`);
 
   const ingestKeys = await all(listKeys('INGEST', id));
 
   if (ingestKeys.length === 0) {
-    console.log(`${id}: missing ingest`);
+    logger.info(`${id}: missing ingest`);
     getErrorEntry(id).missingIngest = true;
 
     continue;
   }
 
   if (variants.length === 0) {
-    console.log(`${id}: missing variants`);
+    logger.info(`${id}: missing variants`);
     getErrorEntry(id).missingVariants = true;
 
     continue;
@@ -80,14 +81,14 @@ for (const { id, variants } of uploads) {
     const res = await headObject('PUBLIC', `${id}/master.m3u8`);
 
     if (!res) {
-      console.log(`${id}: missing video`);
+      logger.info(`${id}: missing video`);
       getErrorEntry(id).missingVideo = true;
     }
 
     const hovernailRes = await headObject('PUBLIC', `${id}/hovernail.jpg`);
 
     if (!hovernailRes) {
-      console.log(`${id}: missing hoverail`);
+      logger.info(`${id}: missing hoverail`);
       getErrorEntry(id).missingHovernail = true;
     }
   }
@@ -95,7 +96,7 @@ for (const { id, variants } of uploads) {
   const res = await headObject('PUBLIC', `${id}/AUDIO.m3u8`);
 
   if (!res) {
-    console.log(`${id}: missing audio`);
+    logger.info(`${id}: missing audio`);
     getErrorEntry(id).missingAudio = true;
   }
 
@@ -103,20 +104,20 @@ for (const { id, variants } of uploads) {
   const peaksDatRes = await headObject('PUBLIC', `${id}/peaks.dat`);
 
   if (!peaksJsonRes || !peaksDatRes) {
-    console.log(`${id}: missing peaks`);
+    logger.info(`${id}: missing peaks`);
     getErrorEntry(id).missingPeaks = true;
   }
 }
 
 if (outputFile) {
-  console.log(`Writing errors to ${outputFile}`);
+  logger.info(`Writing errors to ${outputFile}`);
 
   await writeFile(
     outputFile,
     JSON.stringify(Object.fromEntries(errors.entries()), null, 2),
   );
 
-  console.log(`Wrote ${errors.size} errored upload records`);
+  logger.info(`Wrote ${errors.size} errored upload records`);
 }
 
 if (
@@ -126,7 +127,7 @@ if (
     default: false,
   }))
 ) {
-  console.log('Done!');
+  logger.info('Done!');
   process.exit(0);
 }
 
@@ -142,4 +143,4 @@ for (const id of errors.keys()) {
   });
 }
 
-console.log('Done!');
+logger.info('Done!');

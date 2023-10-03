@@ -9,11 +9,16 @@ import mime from 'mime';
 import fastGlob from 'fast-glob';
 import invariant from 'tiny-invariant';
 import mkdirp from 'mkdirp';
-import { noop, throttle } from 'lodash-es';
+import { noop } from 'lodash-es';
 import { Context } from '@temporalio/activity';
 import type { Prisma } from '@prisma/client';
 import { putFile, putFileMultipart } from '../../../util/s3';
 import { createUploadRecord, updateUploadRecord } from '../..';
+import logger from '../../../util/logger';
+
+const moduleLogger = logger.child({
+  module: 'temporal/activities/import/import-media',
+});
 
 const WORK_DIR = process.env['IMPORT_WORKING_DIRECTORY'] ?? '/data/import';
 
@@ -23,8 +28,13 @@ const stdoutThumbnailSchema = z
   })
   .passthrough();
 
-async function downloadUrl(url: string, dir: string, heartbeat = noop) {
-  console.log(`Downloading URL ${url}`);
+async function downloadUrl(
+  url: string,
+  dir: string,
+  log: typeof logger,
+  heartbeat = noop,
+) {
+  log.info(`Downloading URL ${url}`);
   const res = await fetch(url);
 
   if (!res.ok || !res.body) {
@@ -44,7 +54,7 @@ async function downloadUrl(url: string, dir: string, heartbeat = noop) {
     stream,
   );
 
-  console.log(`Downloaded ${url} to ${dest}`);
+  log.info(`Downloaded ${url} to ${dest}`);
 
   return dest;
 }
@@ -58,8 +68,13 @@ const baseYtDlpArgs = [
   '60',
 ];
 
-async function ytdlp(url: string, dir: string, heartbeat = noop) {
-  console.log(`Running yt-dlp for URL ${url}`);
+async function ytdlp(
+  url: string,
+  dir: string,
+  log: typeof logger,
+  heartbeat = noop,
+) {
+  log.info(`Running yt-dlp for URL ${url}`);
   const mainYtdlp = execa(
     'yt-dlp',
     [url, '-o', `download.%(ext)s`, '--no-overwrites', ...baseYtDlpArgs],
@@ -83,7 +98,7 @@ async function ytdlp(url: string, dir: string, heartbeat = noop) {
   const mediaPath = mediaPaths.at(0);
   invariant(mediaPath, 'No media path found!');
 
-  console.log(`yt-dlp downloaded ${url} to ${mediaPath}`);
+  log.info(`yt-dlp downloaded ${url} to ${mediaPath}`);
 
   const parsed = stdoutThumbnailSchema.safeParse(
     JSON.parse(thumbnailRes.stdout),
@@ -93,10 +108,10 @@ async function ytdlp(url: string, dir: string, heartbeat = noop) {
 
   try {
     thumbnailPath = parsed.success
-      ? await downloadUrl(parsed.data.thumbnail, dir, heartbeat)
+      ? await downloadUrl(parsed.data.thumbnail, dir, log, heartbeat)
       : null;
   } catch (e) {
-    console.log(`Error downloading thumbnail: ${e}`);
+    log.error(`Error downloading thumbnail: ${e}`);
   }
 
   return { mediaPath, thumbnailPath };
@@ -106,10 +121,15 @@ export default async function importMedia(
   url: string,
   data: Prisma.UploadRecordCreateArgs['data'],
 ) {
-  const throttledHeartbeat = throttle(
-    (arg: string) => Context.current().heartbeat(arg),
-    5000,
-  );
+  const activityLogger = moduleLogger.child({
+    temporalActivity: 'importMedia',
+    args: {
+      url,
+      data,
+    },
+  });
+
+  const heartbeat = (arg: string) => Context.current().heartbeat(arg);
 
   let uploadRecordId: string;
   const dir = join(WORK_DIR, uuid());
@@ -123,9 +143,9 @@ export default async function importMedia(
     let thumbnailPath: string | null = null;
 
     if (/\.(mp3|m4a|mp4)$/.test(url)) {
-      mediaPath = await downloadUrl(url, dir, throttledHeartbeat);
+      mediaPath = await downloadUrl(url, dir, activityLogger, heartbeat);
     } else {
-      const res = await ytdlp(url, dir, throttledHeartbeat);
+      const res = await ytdlp(url, dir, activityLogger, heartbeat);
       mediaPath = res.mediaPath;
       thumbnailPath = res.thumbnailPath;
     }
@@ -155,7 +175,7 @@ export default async function importMedia(
       finalizedUploadKey: mediaUploadKey,
     });
   } catch (e) {
-    throttledHeartbeat.flush();
+    activityLogger.error(e);
     throw e;
   } finally {
     await rimraf(dir);

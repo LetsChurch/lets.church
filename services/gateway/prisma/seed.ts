@@ -6,6 +6,7 @@ import invariant from 'tiny-invariant';
 import { LexoRank } from 'lexorank';
 import { indexDocument, waitOnTemporal } from '../src/temporal';
 import prisma from '../src/util/prisma';
+import logger from '../src/util/logger';
 
 faker.seed(1337);
 
@@ -308,9 +309,9 @@ for (let i = 0; i < 46; i += 1) {
   await indexDocument('organization', id);
 }
 
-console.log('Created example organizations and channels');
+logger.info('Created example organizations and channels');
 
-console.log('Seeding The Dorean Principle');
+logger.info('Seeding The Dorean Principle');
 
 const baseUploadRecord = {
   appUserId: adminUser.id,

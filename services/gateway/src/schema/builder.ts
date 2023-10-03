@@ -12,7 +12,10 @@ import TracingPlugin, {
 } from '@pothos/plugin-tracing';
 import type { Context } from '../util/context';
 import prisma from '../util/prisma';
+import logger from '../util/logger';
 import type { Scalars } from './scalars';
+
+const moduleLogger = logger.child({ module: 'schema/builder' });
 
 export default new SchemaBuilder<{
   PrismaTypes: PrismaTypes;
@@ -66,8 +69,8 @@ export default new SchemaBuilder<{
         : (config) => isRootField(config),
     wrap: (resolver, _options, config) =>
       wrapResolver(resolver, (_error, duration) => {
-        console.log(
-          `🪴 Executed resolver ${config.parentType}.${config.name} in ${duration}ms`,
+        moduleLogger.info(
+          `Executed resolver ${config.parentType}.${config.name} in ${duration}ms`,
         );
       }),
   },

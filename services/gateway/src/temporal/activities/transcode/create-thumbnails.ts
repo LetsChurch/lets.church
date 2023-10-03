@@ -12,6 +12,11 @@ import { runFfmpegThumbnails } from '../../../util/ffmpeg';
 import { concatThumbs, imageToBlurhash } from '../../../util/images';
 import type { Probe } from '../../../util/zod';
 import { updateUploadRecord } from '../..';
+import logger from '../../../util/logger';
+
+const moduleLogger = logger.child({
+  module: 'temporal/activities/transcode/create-thumbnails',
+});
 
 const WORK_DIR =
   process.env['THUMBNAILS_WORKING_DIRECTORY'] ?? '/data/thumbnails';
@@ -21,10 +26,18 @@ export default async function createThumbnails(
   s3UploadKey: string,
   probe: Probe,
 ) {
+  const activityLogger = moduleLogger.child({
+    temporalActivity: 'createThumbnails',
+    args: {
+      uploadRecordId,
+      s3UploadKey,
+    },
+  });
+
   const cancellationSignal = Context.current().cancellationSignal;
   const workingDir = join(WORK_DIR, s3UploadKey);
 
-  console.log('Making working directory');
+  activityLogger.info('Making working directory');
   await mkdirp(workingDir);
   const downloadPath = join(workingDir, 'download');
 
@@ -34,7 +47,7 @@ export default async function createThumbnails(
 
   Context.current().heartbeat();
   try {
-    console.log('Creating thumbnails with ffmpeg');
+    activityLogger.info('Creating thumbnails with ffmpeg');
     const proc = runFfmpegThumbnails(
       workingDir,
       downloadPath,
@@ -54,12 +67,12 @@ export default async function createThumbnails(
       { concurrency: 5 },
     );
     Context.current().heartbeat();
-    console.log('Uploading thumbnails');
+    activityLogger.info('Uploading thumbnails');
     const largestThumbnail = maxBy(thumbnailsWithSizes, 'size')?.path;
     if (largestThumbnail) {
       // Upload the largest thumbnail as the video thumbnail
       Context.current().heartbeat();
-      console.log(`Uploading thumbnail: ${largestThumbnail}`);
+      activityLogger.info(`Uploading thumbnail: ${largestThumbnail}`);
       const key = `${uploadRecordId}/${basename(largestThumbnail)}`;
       await retryablePutFile({
         to: 'PUBLIC',
@@ -71,7 +84,7 @@ export default async function createThumbnails(
       });
       await pRetry(
         async (attempt) => {
-          console.log(`Setting thumbnail path: attempt ${attempt}`);
+          activityLogger.info(`Setting thumbnail path: attempt ${attempt}`);
 
           const blurhash = await imageToBlurhash(largestThumbnail);
 
@@ -84,14 +97,14 @@ export default async function createThumbnails(
         {
           retries: 5,
           onFailedAttempt: (e) => {
-            console.log(
+            activityLogger.warn(
               `${e.attemptNumber}: Failed to set thumbnail path: ${e}`,
             );
           },
         },
       );
       Context.current().heartbeat();
-      console.log(`Done uploading thumbnail: ${largestThumbnail}`);
+      activityLogger.info(`Done uploading thumbnail: ${largestThumbnail}`);
     }
     // Upload the remaining thumbnails
     for (const path of thumbnailJpgs) {
@@ -101,7 +114,7 @@ export default async function createThumbnails(
       }
 
       Context.current().heartbeat();
-      console.log(`Uploading thumbnail: ${path}`);
+      activityLogger.info(`Uploading thumbnail: ${path}`);
       await retryablePutFile({
         to: 'PUBLIC',
         key: `${uploadRecordId}/${basename(path)}`,
@@ -111,7 +124,7 @@ export default async function createThumbnails(
         signal: Context.current().cancellationSignal,
       });
       Context.current().heartbeat();
-      console.log(`Done uploading thumbnail: ${path}`);
+      activityLogger.info(`Done uploading thumbnail: ${path}`);
     }
     const chunkSize = Math.ceil(thumbnailsWithSizes.length / 5);
     const thumbnailsWithSizesChunks = chunk(thumbnailsWithSizes, chunkSize);
@@ -119,9 +132,9 @@ export default async function createThumbnails(
       thumbnailsWithSizesChunks.map((chunks) => maxBy(chunks, 'size')?.path),
     );
     Context.current().heartbeat();
-    console.log({ pickedThumbnails });
+    activityLogger.info({ pickedThumbnails });
     await concatThumbs(workingDir, pickedThumbnails);
-    console.log('Uploading hovernail');
+    activityLogger.info('Uploading hovernail');
     await retryablePutFile({
       to: 'PUBLIC',
       key: `${uploadRecordId}/hovernail.jpg`,
@@ -130,10 +143,9 @@ export default async function createThumbnails(
       signal: Context.current().cancellationSignal,
     });
     Context.current().heartbeat();
-    console.log('Done uploading hovernail');
+    activityLogger.info('Done uploading hovernail');
   } catch (e) {
-    console.log('Error!');
-    console.log(e);
+    activityLogger.error(e);
     throw e;
   } finally {
     await rimraf(workingDir);

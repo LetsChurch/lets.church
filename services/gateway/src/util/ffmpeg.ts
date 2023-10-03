@@ -2,6 +2,9 @@ import type { UploadVariant } from '@prisma/client';
 import { execa } from 'execa';
 import invariant from 'tiny-invariant';
 import { type Probe, probeIsVideoFile } from './zod';
+import logger from './logger';
+
+const moduleLogger = logger.child({ module: 'util/ffmpeg' });
 
 const extraDecodeArgs =
   process.env['FFMPEG_EXTRA_DECODE_ARGS']?.split(' ') ?? [];
@@ -370,7 +373,7 @@ export function runFfmpegEncode(
     { cwd, signal },
   );
 
-  console.log(`runFfmpegEncode: ${proc.spawnargs.join(' ')}`);
+  moduleLogger.info(`runFfmpegEncode: ${proc.spawnargs.join(' ')}`);
 
   return proc;
 }
@@ -403,7 +406,7 @@ export function runFfmpegThumbnails(
     { cwd, signal },
   );
 
-  console.log(`runFfmpegThumbnails: ${proc.spawnargs.join(' ')}`);
+  moduleLogger.info(`runFfmpegThumbnails: ${proc.spawnargs.join(' ')}`);
 
   return proc;
 }
@@ -429,7 +432,7 @@ export function runFfprobe(
     { cwd, signal },
   );
 
-  console.log(`runFfmpegProbe: ${proc.spawnargs.join(' ')}`);
+  moduleLogger.info(`runFfmpegProbe: ${proc.spawnargs.join(' ')}`);
 
   return proc;
 }

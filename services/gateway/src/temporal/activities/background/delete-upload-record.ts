@@ -2,9 +2,20 @@ import { Context } from '@temporalio/activity';
 import prisma from '../../../util/prisma';
 import { client as esClient } from '../../../util/elasticsearch';
 import { deletePrefix } from '../../../util/s3';
+import logger from '../../../util/logger';
+
+const moduleLogger = logger.child({
+  module: 'temporal/activities/background/delete-upload-record',
+});
 
 export async function markUploadPrivate(id: string) {
-  console.log(`Marking upload record ${id} as private`);
+  const activityLogger = moduleLogger.child({
+    temporalActivity: 'markUploadPrivate',
+    args: {
+      id,
+    },
+  });
+  activityLogger.info(`Marking upload record ${id} as private`);
 
   try {
     await prisma.uploadRecord.update({
@@ -12,7 +23,7 @@ export async function markUploadPrivate(id: string) {
       data: { visibility: 'PRIVATE' },
     });
   } catch (e) {
-    console.log(`Error marking upload record ${id} as private: ${e}`);
+    activityLogger.error(`Error marking upload record ${id} as private: ${e}`);
     return false;
   }
 
@@ -20,7 +31,11 @@ export async function markUploadPrivate(id: string) {
 }
 
 export async function deleteUploadRecordSearch(id: string) {
-  console.log(`Deleting upload record search entry for ${id}`);
+  const activityLogger = moduleLogger.child({
+    temporalActivity: 'deleteUploadRecordSearch',
+    id,
+  });
+  activityLogger.info(`Marking upload record ${id} as private`);
 
   try {
     await esClient.delete({
@@ -32,7 +47,7 @@ export async function deleteUploadRecordSearch(id: string) {
       id,
     });
   } catch (e) {
-    console.log(`Error deleting from ElasticSearch: ${e}`);
+    activityLogger.error(`Error deleting from ElasticSearch: ${e}`);
     return false;
   }
 
@@ -40,12 +55,16 @@ export async function deleteUploadRecordSearch(id: string) {
 }
 
 export async function deleteUploadRecordDb(id: string) {
-  console.log(`Deleting upload record from database for ${id}`);
+  const activityLogger = moduleLogger.child({
+    temporalActivity: 'deleteUploadRecordDb',
+    id,
+  });
+  activityLogger.info(`Deleting upload record from database for ${id}`);
 
   try {
     await prisma.uploadRecord.delete({ where: { id } });
   } catch (e) {
-    console.log(`Error deleting from database: ${e}`);
+    activityLogger.info(`Error deleting from database: ${e}`);
     return false;
   }
 
@@ -53,17 +72,21 @@ export async function deleteUploadRecordDb(id: string) {
 }
 
 export async function deleteUploadRecordS3Objects(id: string) {
-  console.log(`Deleting prefix ${id} from ingest bucket`);
-  const ingestCount = await deletePrefix('INGEST', id, () =>
-    Context.current().heartbeat('deleteUploadRecordS3Objects: INGEST'),
-  );
-  console.log(`Done deleting prefix ${id} from ingest bucket`);
+  const activityLogger = moduleLogger.child({
+    temporalActivity: 'deleteUploadRecordS3Objects',
+    id,
+  });
 
-  console.log(`Deleting prefix ${id} from public bucket`);
+  const ingestCount = await deletePrefix('INGEST', id, () => {
+    Context.current().heartbeat('deleteUploadRecordS3Objects: INGEST');
+  });
+  activityLogger.info(`Done deleting prefix ${id} from ingest bucket`);
+
+  activityLogger.info(`Deleting prefix ${id} from public bucket`);
   const publicCount = await deletePrefix('PUBLIC', id, () =>
     Context.current().heartbeat('deleteUploadRecordS3Objects: PUBLIC'),
   );
-  console.log(`Done deleting prefix ${id} from public bucket`);
+  activityLogger.info(`Done deleting prefix ${id} from public bucket`);
 
   return [ingestCount, publicCount];
 }

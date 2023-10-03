@@ -38,6 +38,8 @@ spec:
                 secretKeyRef:
                   name: imgproxy-secret
                   key: IMGPROXY_SALT
+            - name: OTEL_SERVICE_NAME
+              value: gateway
           envFrom:
             - configMapRef:
                 name: gateway-config
@@ -45,6 +47,8 @@ spec:
                 name: temporal-client-config
             - secretRef:
                 name: jwt-secret
+            - secretRef:
+                name: otel-secret
             - secretRef:
                 name: s3-secret
             - secretRef:

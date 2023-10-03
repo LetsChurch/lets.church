@@ -4,6 +4,7 @@ import prisma from '../src/util/prisma';
 import { client } from '../src/temporal';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
 import { deleteUploadWorkflow } from '../src/temporal/workflows';
+import logger from '../src/util/logger';
 
 const source = await select({
   message: 'What do you want to delete?',
@@ -54,7 +55,7 @@ if (
 }
 
 for (const id of ids) {
-  console.log(`Queueing ${id} for deletion`);
+  logger.info(`Queueing ${id} for deletion`);
 
   await (
     await client
@@ -65,4 +66,4 @@ for (const id of ids) {
   });
 }
 
-console.log(`${ids.length} uploads queued for deletion!`);
+logger.info(`${ids.length} uploads queued for deletion!`);

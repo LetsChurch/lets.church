@@ -4,16 +4,23 @@ import { client, escapeDocument } from '../../../util/elasticsearch';
 import prisma from '../../../util/prisma';
 import { getObject } from '../../../util/s3';
 import { transcriptSegmentSchema } from '../../../util/zod';
+import logger from '../../../util/logger';
+
+const moduleLogger = logger.child({
+  module: 'temporal/activities/background/index-document',
+});
 
 export type DocumentKind = 'transcript' | 'upload' | 'organization' | 'channel';
 
 async function getDocument(
   kind: DocumentKind,
   documentId: string,
+  log: typeof logger,
   s3UploadKey?: string,
 ) {
   switch (kind) {
     case 'transcript': {
+      log.info('Fetching transcript');
       invariant(s3UploadKey, 'uploadKey is required for transcript');
       const res = await getObject('PUBLIC', s3UploadKey);
       const body = await res.Body?.transformToString('utf-8');
@@ -22,6 +29,7 @@ async function getDocument(
         .filter((n): n is NodeCue => n.type === 'cue')
         .map(({ data: { start, end, text } }) => ({ start, end, text }));
 
+      log.info('Fetching metadata');
       const {
         publishedAt,
         transcodingFinishedAt,
@@ -51,6 +59,7 @@ async function getDocument(
       };
     }
     case 'upload': {
+      log.info('Fetching metadata');
       const {
         publishedAt,
         transcodingFinishedAt,
@@ -81,6 +90,7 @@ async function getDocument(
       };
     }
     case 'organization':
+      log.info('Fetching metadata');
       return {
         index: 'lc_organizations',
         id: documentId,
@@ -90,6 +100,7 @@ async function getDocument(
         }),
       };
     case 'channel':
+      log.info('Fetching metadata');
       return {
         index: 'lc_channels',
         id: documentId,
@@ -109,7 +120,21 @@ export default async function indexDocument(
   uploadRecordId: string,
   s3UploadKey?: string,
 ) {
-  const doc = await getDocument(kind, uploadRecordId, s3UploadKey);
+  const activityLogger = moduleLogger.child({
+    temporalActivity: 'indexDocument',
+    args: {
+      kind,
+      uploadRecordId,
+      s3UploadKey,
+    },
+  });
+
+  const doc = await getDocument(
+    kind,
+    uploadRecordId,
+    activityLogger,
+    s3UploadKey,
+  );
 
   const indexRes = await client.index(doc);
 
@@ -118,5 +143,5 @@ export default async function indexDocument(
     `Document not indexed`,
   );
 
-  console.log('Done!');
+  activityLogger.info('Done!');
 }
