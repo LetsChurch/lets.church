@@ -10,6 +10,7 @@ export { default as getProbe } from './get-probe';
 export { default as indexDocument } from './index-document';
 export { default as processImage } from './process-image';
 export { default as recordDownloadSize } from './record-download-size';
+export { default as restitchTranscript } from './restitch-transcript';
 export { default as sendEmail } from './send-email';
 export { default as setChannelAvatar } from './set-channel-avatar';
 export { default as setChannelDefaultThumbnail } from './set-channel-default-thumbnail';
