@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
+exports[`stitchTranscript > 02 - Introduction.json 1`] = `
 {
   "segments": [
     {
@@ -95,9 +95,9 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
       ],
     },
     {
-      "end": 12.19,
+      "end": 17.67,
       "start": 9.23,
-      "text": "Introduction, a call for discernment.",
+      "text": "Introduction, a call for discernment. Consider the sheer quantity of wealth that changes hands in the name of Christ.",
       "words": [
         {
           "end": 10.19,
@@ -129,13 +129,6 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
           "start": 11.65,
           "word": " discernment.",
         },
-      ],
-    },
-    {
-      "end": 17.67,
-      "start": 13.33,
-      "text": "Consider the sheer quantity of wealth that changes hands in the name of Christ.",
-      "words": [
         {
           "end": 14.23,
           "probability": 0.8381524085998535,
@@ -223,9 +216,9 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
       ],
     },
     {
-      "end": 21.93,
+      "end": 28.97,
       "start": 18.65,
-      "text": "Christian book sales climb into the hundreds of millions of dollars.",
+      "text": "Christian book sales climb into the hundreds of millions of dollars. Parachurch ministries amass sizable revenues with organizations like Cruz surpassing 600 million dollars.",
       "words": [
         {
           "end": 18.95,
@@ -293,13 +286,6 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
           "start": 21.53,
           "word": " dollars.",
         },
-      ],
-    },
-    {
-      "end": 28.97,
-      "start": 22.69,
-      "text": "Parachurch ministries amass sizable revenues with organizations like Cruz surpassing 600 million dollars.",
-      "words": [
         {
           "end": 23.19,
           "probability": 0.7829002141952515,
@@ -383,7 +369,7 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
     {
       "end": 38.51,
       "start": 30.05,
-      "text": "Seminaries often collect tuition upwards of $60,000 for a standard degree with loan payments leaving many pastors financially shackled for years.",
+      "text": "Seminaries often collect tuition upwards of $60 ,000 for a standard degree with loan payments leaving many pastors financially shackled for years.",
       "words": [
         {
           "end": 30.69,
@@ -520,9 +506,9 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
       ],
     },
     {
-      "end": 42.73,
+      "end": 52.69,
       "start": 39.07,
-      "text": "Even small dollar transactions impose their own heavy burdens.",
+      "text": "Even small dollar transactions impose their own heavy burdens. For example, church leaders exhaust countless hours wrestling to understand and purchase the appropriate licenses to worship music in order to accommodate the needs of their congregation.",
       "words": [
         {
           "end": 39.97,
@@ -578,13 +564,6 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
           "start": 42.37,
           "word": " burdens.",
         },
-      ],
-    },
-    {
-      "end": 52.69,
-      "start": 43.53,
-      "text": "For example, church leaders exhaust countless hours wrestling to understand and purchase the appropriate licenses to worship music in order to accommodate the needs of their congregation.",
-      "words": [
         {
           "end": 43.63,
           "probability": 0.9133343696594238,
@@ -750,9 +729,9 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
       ],
     },
     {
-      "end": 58.51,
+      "end": 64.27,
       "start": 54.07,
-      "text": "Certainly, money fuels the work of ministry and the worker is worthy of his wages.",
+      "text": "Certainly, money fuels the work of ministry and the worker is worthy of his wages. First Timothy 518, but at what point does the financial enterprise go too far?",
       "words": [
         {
           "end": 54.49,
@@ -844,13 +823,6 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
           "start": 58.19,
           "word": " wages.",
         },
-      ],
-    },
-    {
-      "end": 64.27,
-      "start": 58.97,
-      "text": "First Timothy 518, but at what point does the financial enterprise go too far?",
-      "words": [
         {
           "end": 59.21,
           "probability": 0.024651948362588882,
@@ -1660,7 +1632,7 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
     {
       "end": 126.83,
       "start": 117.55,
-      "text": "The Dorian principle characterizes godly financial activity in the name of the gospel and acts of co-labor and contradistinction to acts of reciprocity.",
+      "text": "The Dorian principle characterizes godly financial activity in the name of the gospel and acts of co -labor and contradistinction to acts of reciprocity.",
       "words": [
         {
           "end": 117.89,
@@ -1809,9 +1781,9 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
       ],
     },
     {
-      "end": 130.29,
+      "end": 137.67,
       "start": 128.05,
-      "text": "Ministry should be supported not sold.",
+      "text": "Ministry should be supported not sold. Our primary instruction comes from the words of Jesus, Paul, and other apostles as they teach the",
       "words": [
         {
           "end": 128.35,
@@ -1849,13 +1821,6 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
           "start": 129.89,
           "word": " sold.",
         },
-      ],
-    },
-    {
-      "end": 138.37,
-      "start": 131.89,
-      "text": "Our primary instruction comes from the words of Jesus, Paul, and other apostles as they teach the Dorian principle.",
-      "words": [
         {
           "end": 132.25,
           "probability": 0.8977301716804504,
@@ -1958,6 +1923,13 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
           "start": 137.47,
           "word": " the",
         },
+      ],
+    },
+    {
+      "end": 143.25,
+      "start": 137.67,
+      "text": "Dorian principle. The early church corroborates our findings by practicing in accord with its dictates.",
+      "words": [
         {
           "end": 137.95,
           "probability": 0.8798341155052185,
@@ -1970,13 +1942,6 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
           "start": 137.95,
           "word": " principle.",
         },
-      ],
-    },
-    {
-      "end": 143.25,
-      "start": 139.09,
-      "text": "The early church corroborates our findings by practicing in accord with its dictates.",
-      "words": [
         {
           "end": 139.35,
           "probability": 0.8071651458740234,
@@ -2831,9 +2796,9 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
       ],
     },
     {
-      "end": 190.11,
+      "end": 193.45,
       "start": 187.83,
-      "text": "May God guide your thoughts as you read.",
+      "text": "May God guide your thoughts as you read. One gives freely yet grows all the richer.",
       "words": [
         {
           "end": 188.29,
@@ -2883,13 +2848,6 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
           "start": 189.83,
           "word": " read.",
         },
-      ],
-    },
-    {
-      "end": 193.45,
-      "start": 191.21,
-      "text": "One gives freely yet grows all the richer.",
-      "words": [
         {
           "end": 191.59,
           "probability": 0.19389282166957855,
@@ -2941,9 +2899,9 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
       ],
     },
     {
-      "end": 197.21,
+      "end": 201.85,
       "start": 194.13,
-      "text": "Another withholds what he should give and only suffers want.",
+      "text": "Another withholds what he should give and only suffers want. Proverbs 11 24. End of introduction.",
       "words": [
         {
           "end": 194.45,
@@ -3005,13 +2963,6 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
           "start": 196.91,
           "word": " want.",
         },
-      ],
-    },
-    {
-      "end": 198.79,
-      "start": 197.63,
-      "text": "Proverbs 11 24.",
-      "words": [
         {
           "end": 198.07,
           "probability": 0.8120653033256531,
@@ -3030,13 +2981,6 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
           "start": 198.33,
           "word": " 24.",
         },
-      ],
-    },
-    {
-      "end": 201.85,
-      "start": 200.13,
-      "text": "End of introduction.",
-      "words": [
         {
           "end": 201.11,
           "probability": 0.6649616360664368,
@@ -3058,57 +3002,13 @@ exports[`joinerizeTranscript > 02 - Introduction.json 1`] = `
       ],
     },
   ],
-  "text": "",
+  "text": " The Dorian Principle, a biblical response to the commercialization of Christianity by Conley Owens. Introduction, a call for discernment. Consider the sheer quantity of wealth that changes hands in the name of Christ. Christian book sales climb into the hundreds of millions of dollars. Parachurch ministries amass sizable revenues with organizations like Cruz surpassing 600 million dollars. Seminaries often collect tuition upwards of $60 ,000 for a standard degree with loan payments leaving many pastors financially shackled for years. Even small dollar transactions impose their own heavy burdens. For example, church leaders exhaust countless hours wrestling to understand and purchase the appropriate licenses to worship music in order to accommodate the needs of their congregation. Certainly, money fuels the work of ministry and the worker is worthy of his wages. First Timothy 518, but at what point does the financial enterprise go too far? The modern church lacks the moral parameters necessary to identify ethical transgressions in ministry fundraising. Of course, who wouldn't object to the money grubbing solicitations of prosperity gospel preachers and aberrant televangelists. But our judgment must extend beyond the ability to detect the most egregious infractions. In a context where biblical discernment is limited ministry leaders operate without guidance or real accountability. Now more than ever the church must turn to the Word of God to find wisdom on these matters and develop the clarity required for true discernment. The goal of this brief book is to establish the Dorian principle, a biblical precept that distinguishes ethical ministry fundraising from unethical ministry fundraising. The Dorian principle characterizes godly financial activity in the name of the gospel and acts of co -labor and contradistinction to acts of reciprocity. Ministry should be supported not sold. Our primary instruction comes from the words of Jesus, Paul, and other apostles as they teach the Dorian principle. The early church corroborates our findings by practicing in accord with its dictates. Finally, we will make some practical applications and chart a path forward to resist the commercialization of Christianity. In the end, I hope this study will be as enlightening for you as it was for me and that you will find yourself closer to answering the enigma that intersects ministry and money. I write these words in order to address a topic that for too long has not received the attention it deserves, a topic often outright avoided. This book is not the final word on the matter, but rather a first attempt at capturing a biblical ethic of ministry fundraising. If the Lord chooses to bless this work, it will only be a launching pad for further biblical exploration, application, and discussion. May God guide your thoughts as you read. One gives freely yet grows all the richer. Another withholds what he should give and only suffers want. Proverbs 11 24. End of introduction.",
 }
 `;
 
-exports[`joinerizeTranscript > single-segment transcript 1`] = `
+exports[`stitchTranscript > single-segment transcript 1`] = `
 {
-  "segments": [
-    {
-      "end": 0.78,
-      "start": 0,
-      "text": "Thank you so much for watching!",
-      "words": [
-        {
-          "end": 0.78,
-          "probability": 0.0012577091110870242,
-          "start": 0,
-          "word": " Thank",
-        },
-        {
-          "end": 0.78,
-          "probability": 0.9738519787788391,
-          "start": 0.78,
-          "word": " you",
-        },
-        {
-          "end": 0.78,
-          "probability": 0.057872552424669266,
-          "start": 0.78,
-          "word": " so",
-        },
-        {
-          "end": 0.78,
-          "probability": 0.9878130555152893,
-          "start": 0.78,
-          "word": " much",
-        },
-        {
-          "end": 0.78,
-          "probability": 0.4370778501033783,
-          "start": 0.78,
-          "word": " for",
-        },
-        {
-          "end": 0.78,
-          "probability": 0.8586574196815491,
-          "start": 0.78,
-          "word": " watching!",
-        },
-      ],
-    },
-  ],
+  "segments": [],
   "text": "",
 }
 `;

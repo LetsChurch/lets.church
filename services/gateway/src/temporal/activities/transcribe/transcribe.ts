@@ -8,7 +8,7 @@ import invariant from 'tiny-invariant';
 import { updateUploadRecord } from '../..';
 import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import {
-  joinerizeTranscript,
+  stitchTranscript,
   readWhisperJsonFile,
   runWhisper,
   whisperJsonToVtt,
@@ -91,7 +91,7 @@ export default async function transcribe(
     invariant(jsonPath, 'No JSON path found!');
 
     const whisperJson = await readWhisperJsonFile(jsonPath);
-    const fixedJson = joinerizeTranscript(whisperJson);
+    const fixedJson = stitchTranscript(whisperJson);
     const fixedVtt = Buffer.from(whisperJsonToVtt(fixedJson));
 
     activityLogger.info(`uploading file: transcript.vtt`);

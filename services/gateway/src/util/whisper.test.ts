@@ -1,13 +1,13 @@
 import { expect, test, describe } from 'vitest';
 import {
-  joinerizeTranscript,
+  stitchTranscript,
   readWhisperJsonFile,
   whisperJsonToVtt,
 } from './whisper';
 
-describe('joinerizeTranscript', () => {
+describe('stitchTranscript', () => {
   test('empty transcript', () => {
-    expect(joinerizeTranscript({ text: '', segments: [], language: 'English' }))
+    expect(stitchTranscript({ text: '', segments: [], language: 'English' }))
       .toMatchInlineSnapshot(`
         {
           "segments": [],
@@ -23,7 +23,7 @@ describe('joinerizeTranscript', () => {
       ),
     );
 
-    expect(joinerizeTranscript(data)).toMatchSnapshot();
+    expect(stitchTranscript(data)).toMatchSnapshot();
   });
 
   test('02 - Introduction.json', async () => {
@@ -34,7 +34,7 @@ describe('joinerizeTranscript', () => {
       ),
     );
 
-    expect(joinerizeTranscript(data)).toMatchSnapshot();
+    expect(stitchTranscript(data)).toMatchSnapshot();
   });
 });
 

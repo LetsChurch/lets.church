@@ -5,6 +5,7 @@ import fastGlob from 'fast-glob';
 import { z } from 'zod';
 import { stringifySync } from 'subtitle';
 import logger from './logger';
+import { isAdjective, isConjunction, isPreposition } from './words';
 
 const moduleLogger = logger.child({ module: 'util/whisper' });
 
@@ -50,7 +51,7 @@ export async function runWhisper(
   return files;
 }
 
-const whisperJsonSchema = z.object({
+export const whisperJsonSchema = z.object({
   text: z.string(),
   segments: z.array(
     z.object({
@@ -76,7 +77,7 @@ const whisperJsonSchema = z.object({
   language: z.string(),
 });
 
-export type JoinerizedTranscript = {
+export type StitchedTranscript = {
   text: string;
   segments: Array<{
     text: string;
@@ -92,34 +93,56 @@ export type JoinerizedTranscript = {
 };
 
 const endingSentence = /[.!?]/g;
+const startCap = /^[A-Z]/;
 
-export function joinerizeTranscript(
+export function stitchTranscript(
   transcript: z.infer<typeof whisperJsonSchema>,
-): JoinerizedTranscript {
-  const joinerized: JoinerizedTranscript = { text: '', segments: [] };
-  type Segment = JoinerizedTranscript['segments'][number];
-  let workingSegment: Segment = { text: '', start: 0, end: 0, words: [] };
+): StitchedTranscript {
+  const stitched: StitchedTranscript = { text: '', segments: [] };
+  const flatWords = transcript.segments.flatMap((s) => s.words);
 
-  for (const item of transcript.segments.flatMap((s) => s.words)) {
-    workingSegment.words.push(item);
+  // Each segment should be at least 5 seconds long and end a sentence.
+  for (let i = 0; i < flatWords.length; i += 1) {
+    for (let j = i; j < flatWords.length; j += 1) {
+      // Greater than 5 seconds
+      if ((flatWords[j]?.end ?? 0) - (flatWords[i]?.start ?? 0) >= 5) {
+        const thisWord = flatWords[j]?.word.trim() ?? '';
+        const nextWord = flatWords[j + 1]?.word.trim() ?? '';
+        // Current word ends a sentence or next word starts a sentence
+        if (
+          endingSentence.test(thisWord) ||
+          (!startCap.test(thisWord) &&
+            startCap.test(nextWord) &&
+            !(
+              isConjunction(thisWord) ||
+              isPreposition(thisWord) ||
+              isAdjective(thisWord)
+            ))
+        ) {
+          stitched.segments.push({
+            start: flatWords[i]?.start ?? 0,
+            end: flatWords[j]?.end ?? 0,
+            text: flatWords
+              .slice(i, j + 1)
+              .map((w) => w.word.trim())
+              .join(' '),
+            words: flatWords.slice(i, j + 1),
+          });
 
-    if (endingSentence.test(item.word.trim())) {
-      workingSegment.text = workingSegment.words
-        .map((w) => w.word)
-        .join('')
-        .trim();
-      workingSegment.start = workingSegment.words.at(0)?.start ?? 0;
-      workingSegment.end = workingSegment.words.at(-1)?.end ?? 0;
-      joinerized.segments.push(workingSegment);
-      workingSegment = { text: '', start: 0, end: 0, words: [] };
+          stitched.text += ` ${flatWords
+            .slice(i, j + 1)
+            .map((w) => w.word.trim())
+            .join(' ')}`.trimEnd();
+
+          // Continue with next word
+          i = j;
+          break;
+        }
+      }
     }
   }
 
-  if (workingSegment.text) {
-    joinerized.segments.push(workingSegment);
-  }
-
-  return joinerized;
+  return stitched;
 }
 
 export async function readWhisperJsonFile(path: string) {
@@ -127,7 +150,7 @@ export async function readWhisperJsonFile(path: string) {
   return whisperJsonSchema.parse(JSON.parse(json.toString()));
 }
 
-export function whisperJsonToVtt(transcript: JoinerizedTranscript) {
+export function whisperJsonToVtt(transcript: StitchedTranscript) {
   if (transcript.segments.length === 0) {
     return 'WEBVTT';
   }
