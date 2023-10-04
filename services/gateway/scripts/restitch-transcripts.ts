@@ -17,7 +17,7 @@ const ids: Array<string> = recs.map(({ id }) => id);
 
 const tc = await client;
 
-pMap(
+await pMap(
   ids,
   async (id) => {
     await tc.workflow.start(restitchTranscriptWorkflow, {
