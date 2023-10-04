@@ -15,10 +15,12 @@ const recs = await prisma.uploadRecord.findMany({
 
 const ids: Array<string> = recs.map(({ id }) => id);
 
+const tc = await client;
+
 pMap(
   ids,
   async (id) => {
-    (await client).workflow.start(restitchTranscriptWorkflow, {
+    await tc.workflow.start(restitchTranscriptWorkflow, {
       args: [id],
       workflowId: `restitchTranscript:${id}`,
       taskQueue: BACKGROUND_QUEUE,

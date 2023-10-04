@@ -1,6 +1,5 @@
 import { Context } from '@temporalio/activity';
 import invariant from 'tiny-invariant';
-import { executeChild } from '@temporalio/workflow';
 import { updateUploadRecord } from '../..';
 import { getObject, retryablePutFile } from '../../../util/s3';
 import {
@@ -9,8 +8,6 @@ import {
   whisperJsonToVtt,
 } from '../../../util/whisper';
 import logger from '../../../util/logger';
-import { indexDocumentWorkflow } from '../../workflows';
-import { BACKGROUND_QUEUE } from '../../queues';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/transcribe/transcribe',
@@ -55,14 +52,5 @@ export default async function restitchTranscript(uploadRecordId: string) {
     transcribingFinishedAt: new Date(),
   });
 
-  await executeChild(indexDocumentWorkflow, {
-    workflowId: `transcript:restitch:${uploadRecordId}`,
-    args: ['transcript', uploadRecordId, transcriptKey],
-    taskQueue: BACKGROUND_QUEUE,
-    retry: {
-      maximumAttempts: 2,
-    },
-  });
-
-  return true;
+  return transcriptKey;
 }

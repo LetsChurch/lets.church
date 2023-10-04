@@ -1,6 +1,7 @@
-import { proxyActivities } from '@temporalio/workflow';
+import { executeChild, proxyActivities } from '@temporalio/workflow';
 import type * as backgroundActivities from '../activities/background';
 import { BACKGROUND_QUEUE } from '../queues';
+import { indexDocumentWorkflow } from './index-document';
 
 const { restitchTranscript } = proxyActivities<typeof backgroundActivities>({
   startToCloseTimeout: '5 minutes',
@@ -10,5 +11,13 @@ const { restitchTranscript } = proxyActivities<typeof backgroundActivities>({
 });
 
 export async function restitchTranscriptWorkflow(targetId: string) {
-  await restitchTranscript(targetId);
+  const transcriptKey = await restitchTranscript(targetId);
+  await executeChild(indexDocumentWorkflow, {
+    workflowId: `transcript:restitch:${targetId}`,
+    args: ['transcript', targetId, transcriptKey],
+    taskQueue: BACKGROUND_QUEUE,
+    retry: {
+      maximumAttempts: 2,
+    },
+  });
 }
