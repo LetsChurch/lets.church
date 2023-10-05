@@ -60,6 +60,9 @@ export default function Waveform(props: Props) {
             style={{
               'clip-path': i === 0 ? 'none' : `inset(0 0 0 ${percentage()}%)`,
             }}
+            aria-valuemin={0}
+            aria-valuemax={props.lengthSeconds}
+            aria-valuenow={props.currentTime}
           >
             <For each={reducedPeaks()}>
               {(peak) => (
@@ -69,7 +72,6 @@ export default function Waveform(props: Props) {
                     'flex-1 rounded-sm',
                     i === 0 ? 'bg-indigo-500' : 'bg-indigo-200',
                   )}
-                  role="presentation"
                 />
               )}
             </For>
