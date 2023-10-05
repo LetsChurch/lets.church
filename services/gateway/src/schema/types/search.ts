@@ -236,6 +236,7 @@ builder.queryFields((t) => ({
             maxPublishedAt: z.string().or(z.date()).nullable().optional(),
             transcriptPhraseSearch: z.boolean().nullable().optional(),
           })
+          .passthrough()
           .refine(
             (val) =>
               val.channels?.length ?? 0 > 0
