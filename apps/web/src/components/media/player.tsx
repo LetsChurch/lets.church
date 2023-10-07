@@ -1,48 +1,67 @@
 import { gql } from 'graphql-request';
 import {
   type Accessor,
-  onCleanup,
   onMount,
   untrack,
   createSignal,
   createEffect,
   Show,
   createResource,
+  onCleanup,
 } from 'solid-js';
 import server$ from 'solid-start/server';
 import invariant from 'tiny-invariant';
-import videojs from 'video.js';
-import 'video.js/dist/video-js.css';
+import Hls from 'hls.js';
+import { isServer } from 'solid-js/web';
 import {
-  MediaRouteRecordUploadSegmentViewMutation,
-  MediaRouteRecordUploadSegmentViewMutationVariables,
+  MediaRouteRecordViewRangesMutation,
+  MediaRouteRecordViewRangesMutationVariables,
 } from './__generated__/player';
 import Waveform from './waveform';
-import type { Optional } from '~/util';
+import { cn, type Optional } from '~/util';
 import { createAuthenticatedClient } from '~/util/gql/server';
 
-const recordSegmentView = server$(
-  async (id: string, start: number, end: number) => {
+const HLS_MIME = 'application/x-mpegURL';
+// const HLS_MIME = 'application/vnd.apple.mpegURL';
+
+export function serializeTimeRanges(
+  ranges: TimeRanges,
+): Array<{ start: number; end: number }> {
+  const res: ReturnType<typeof serializeTimeRanges> = new Array(ranges.length);
+
+  for (let i = 0; i < ranges.length; i += 1) {
+    res[i] = { start: ranges.start(i), end: ranges.end(i) };
+  }
+
+  return res;
+}
+
+const recordViewRanges = server$(
+  async (
+    id: string,
+    ranges: ReturnType<typeof serializeTimeRanges>,
+    viewId: string | null,
+  ) => {
     const client = await createAuthenticatedClient(server$.request);
 
     const res = await client.request<
-      MediaRouteRecordUploadSegmentViewMutation,
-      MediaRouteRecordUploadSegmentViewMutationVariables
+      MediaRouteRecordViewRangesMutation,
+      MediaRouteRecordViewRangesMutationVariables
     >(
       gql`
-        mutation MediaRouteRecordUploadSegmentView(
+        mutation MediaRouteRecordViewRanges(
           $id: ShortUuid!
-          $start: Float!
-          $end: Float!
+          $ranges: [TimeRange!]!
+          $viewId: Uuid
         ) {
-          recordUploadSegmentView(
+          viewId: recordUploadRangesView(
             uploadRecordId: $id
-            segmentStartTime: $start
-            segmentEndTime: $end
+            ranges: $ranges
+            viewId: $viewId
           )
         }
       `,
-      { id, start, end },
+      { id, ranges, viewId },
     );
 
     return res;
@@ -63,8 +82,6 @@ export type Props = {
 
 export default function Player(props: Props) {
   let videoRef: HTMLVideoElement;
-  let player: ReturnType<typeof videojs>;
-  const [ready, setReady] = createSignal(false);
   const [currentTime, setCurrentTime] = createSignal(0);
 
   const audioOnlyMode = () =>
@@ -74,100 +91,79 @@ export default function Player(props: Props) {
         (props.peaksDatUrl || props.peaksJsonUrl),
     );
 
+  let hls: Hls | null = null;
+
+  function startVideo() {
+    invariant(videoRef, 'Video ref is undefined');
+    videoRef.currentTime = untrack(() => props.playAt?.() ?? 0);
+    videoRef.play();
+  }
+
+  const id = untrack(() => props.id);
+  let reportRangesTimer: number | undefined = undefined;
+  let viewId: string | null = null;
+
+  async function reportTimeRanges() {
+    if (isServer) {
+      return;
+    }
+
+    try {
+      invariant(videoRef, 'reportTimeRanges: videoRef is undefined');
+      const res = await recordViewRanges(
+        id,
+        serializeTimeRanges(videoRef.played),
+        viewId,
+      );
+      viewId = res.viewId;
+    } finally {
+      reportRangesTimer = window.setTimeout(reportTimeRanges, 5000);
+    }
+  }
+
   onMount(async () => {
     invariant(videoRef, 'Video ref is undefined');
+    reportRangesTimer = window.setTimeout(reportTimeRanges, 5000);
 
-    const sources = [];
+    const src = props.videoSource ?? props.audioSource;
 
-    if (props.videoSource) {
-      sources.push({
-        src: props.videoSource,
-        type: 'application/x-mpegURL',
-      });
+    if (!src) {
+      console.log('Error! No source!');
+      // TODO: show error, offer download
+      return;
     }
 
-    if (props.audioSource) {
-      sources.push({
-        src: props.audioSource,
-        type: 'application/x-mpegURL',
+    if (videoRef.canPlayType(HLS_MIME)) {
+      videoRef.src = src;
+      videoRef.addEventListener('canplay', function () {
+        startVideo();
       });
+    } else if (Hls.isSupported()) {
+      hls = new Hls();
+      hls.loadSource(src);
+      hls.attachMedia(videoRef);
+      hls.on(Hls.Events.MEDIA_ATTACHED, function () {
+        startVideo();
+      });
+    } else {
+      console.log('Error! Cannot play video.');
+      // TODO: show error, offer download
+      return;
     }
-
-    player = videojs(
-      videoRef,
-      {
-        controls: true,
-        audioOnlyMode: audioOnlyMode(),
-        preload: 'auto',
-        fluid: props.fluid,
-        sources,
-        html5: {
-          hls: {
-            overrideNative: false,
-          },
-          nativeVideoTracks: true,
-          nativeAudioTracks: true,
-          nativeTextTracks: true,
-        },
-      },
-      async () => {
-        try {
-          await player.play();
-        } catch (e) {
-          // The play method is not allowed by the user agent or the platform in the current context, possibly because the user denied permission.
-          console.warn('Could not automatically play video', e);
-        }
-      },
-    );
 
     const onTimeUpdate = untrack(() => props.onTimeUpdate);
 
-    const id = untrack(() => props.id);
-    let segmentStartTime = 0;
-    let segmentEndTime = 0;
-
-    player.on('pause', () => {
-      const currentTime = player.currentTime() ?? 0;
-      recordSegmentView(id, segmentStartTime, segmentEndTime);
-      segmentStartTime = currentTime;
-      segmentEndTime = currentTime;
-    });
-
-    player.on('timeupdate', () => {
-      const tuCurrentTime = player.currentTime() ?? 0;
-
-      if (Math.abs(tuCurrentTime - segmentStartTime) >= 5) {
-        // If the current time is 5 seconds or more than the segment start time, this is a seek, record a segment view
-        recordSegmentView(id, segmentStartTime, segmentEndTime);
-        segmentStartTime = tuCurrentTime;
-      }
-
-      // Always update the current segment end time
-      segmentEndTime = tuCurrentTime;
-
-      if (segmentEndTime - segmentStartTime >= 5) {
-        // If the current segment is more than 5 seconds long, record a segment view
-        recordSegmentView(id, segmentStartTime, tuCurrentTime);
-        segmentStartTime = tuCurrentTime;
-      }
-
+    videoRef.addEventListener('timeupdate', () => {
+      const tuCurrentTime = videoRef.currentTime ?? 0;
       onTimeUpdate?.(tuCurrentTime);
       setCurrentTime(tuCurrentTime);
     });
-
-    player.one('ready', () => {
-      setReady(true);
-    });
-  });
-
-  createEffect(() => {
-    if (ready()) {
-      player.currentTime(props.playAt?.());
-    }
   });
 
   onCleanup(() => {
-    player?.dispose();
+    hls?.destroy();
+    clearTimeout(reportRangesTimer);
+    reportTimeRanges();
   });
 
   const [peaksData, { refetch: fetchPeaks }] = createResource(
@@ -197,11 +193,16 @@ export default function Player(props: Props) {
           peaks={peaksData.latest}
           currentTime={currentTime()}
           lengthSeconds={props.lengthSeconds}
-          class="mb-8"
-          onSeek={(time) => player.currentTime(time)}
+          class="mb-2"
+          onSeek={(time) => void (videoRef.currentTime = time)}
         />
       </Show>
-      <video class="video-js" ref={(el) => void (videoRef = el)} playsinline />
+      <video
+        class={cn('w-full', audioOnlyMode() && 'h-[40px]')}
+        ref={(el) => void (videoRef = el)}
+        playsinline
+        controls
+      />
     </div>
   );
 }

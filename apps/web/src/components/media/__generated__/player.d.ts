@@ -1,10 +1,10 @@
 import * as Types from '../../../__generated__/graphql-types';
 
-export type MediaRouteRecordUploadSegmentViewMutationVariables = Types.Exact<{
+export type MediaRouteRecordViewRangesMutationVariables = Types.Exact<{
   id: Types.Scalars['ShortUuid']['input'];
-  start: Types.Scalars['Float']['input'];
-  end: Types.Scalars['Float']['input'];
+  ranges: Array<Types.TimeRange> | Types.TimeRange;
+  viewId?: Types.InputMaybe<Types.Scalars['Uuid']['input']>;
 }>;
 
 
-export type MediaRouteRecordUploadSegmentViewMutation = { __typename?: 'Mutation', recordUploadSegmentView: boolean };
+export type MediaRouteRecordViewRangesMutation = { __typename?: 'Mutation', viewId: string };

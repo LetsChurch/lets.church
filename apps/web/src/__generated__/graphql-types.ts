@@ -293,6 +293,7 @@ export type Mutation = {
   logout: Scalars['Boolean']['output'];
   rateComment: Scalars['Boolean']['output'];
   rateUpload: Scalars['Boolean']['output'];
+  recordUploadRangesView: Scalars['Uuid']['output'];
   recordUploadSegmentView: Scalars['Boolean']['output'];
   recordUploadView: Scalars['Boolean']['output'];
   register: MutationRegisterResult;
@@ -369,6 +370,13 @@ export type MutationRateCommentArgs = {
 export type MutationRateUploadArgs = {
   rating: Rating;
   uploadRecordId: Scalars['ShortUuid']['input'];
+};
+
+
+export type MutationRecordUploadRangesViewArgs = {
+  ranges: Array<TimeRange>;
+  uploadRecordId: Scalars['ShortUuid']['input'];
+  viewId?: InputMaybe<Scalars['Uuid']['input']>;
 };
 
 
@@ -764,6 +772,11 @@ export type Stats = {
   __typename?: 'Stats';
   storageBytes: Scalars['SafeInt']['output'];
   totalUploads: Scalars['Int']['output'];
+};
+
+export type TimeRange = {
+  end: Scalars['Float']['input'];
+  start: Scalars['Float']['input'];
 };
 
 export type TranscriptLine = {

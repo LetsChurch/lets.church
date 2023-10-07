@@ -1013,6 +1013,74 @@ builder.mutationFields((t) => ({
       return true;
     },
   }),
+  recordUploadRangesView: t.field({
+    type: 'Uuid',
+    args: {
+      uploadRecordId: t.arg({ type: 'ShortUuid', required: true }),
+      ranges: t.arg({
+        type: [
+          builder.inputType('TimeRange', {
+            fields: (f) => ({
+              start: f.float({ required: true }),
+              end: f.float({ required: true }),
+            }),
+          }),
+        ],
+        required: true,
+      }),
+      viewId: t.arg({ type: 'Uuid', required: false }),
+    },
+    resolve: async (
+      _root,
+      { uploadRecordId, ranges, viewId },
+      { clientIp, clientUserAgent, session },
+    ) => {
+      const res = await prisma.trackingSalt.findFirst({
+        orderBy: { id: 'desc' },
+      });
+
+      invariant(res, 'Missing tracking salt');
+      invariant(clientIp, 'Missing client ip');
+      invariant(clientUserAgent, 'Missing client user agent');
+
+      const totalTime = ranges.reduce(
+        (sum, range) => sum + (range.end - range.start),
+        0,
+      );
+
+      if (viewId) {
+        // Given a viewId, update it directly (since the view hash can change when the day turns)
+        await prisma.uploadViewRanges.update({
+          where: { id: viewId },
+          data: { ranges, totalTime },
+        });
+
+        return viewId;
+      }
+
+      // The viewer hash will change once daily since the salt changes once daily, this means that each user can count for one view per day
+      const viewHash = xxh32(
+        session?.appUserId ?? clientIp + clientUserAgent,
+        res.salt,
+      );
+
+      // Refreshing can cause duplicate views, but as long as viewing time is not overridden then that's okay
+      const { id } = await prisma.uploadViewRanges.create({
+        select: {
+          id: true,
+        },
+        data: {
+          uploadRecordId,
+          viewHash,
+          appUserId: session?.appUserId ?? null,
+          ranges,
+          totalTime,
+        },
+      });
+
+      return id;
+    },
+  }),
   createUploadList: t.prismaField({
     type: UploadList,
     args: {
