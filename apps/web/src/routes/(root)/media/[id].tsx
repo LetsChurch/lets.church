@@ -441,7 +441,6 @@ export default function MediaRoute() {
   function getShareData() {
     return {
       title: metaData()?.data.title ?? 'No title',
-      text: metaData()?.data.description?.split(/\n+/g)?.[0] ?? '',
       url: location.href,
     };
   }
