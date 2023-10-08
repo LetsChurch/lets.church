@@ -13,6 +13,10 @@ import server$ from 'solid-start/server';
 import invariant from 'tiny-invariant';
 import Hls from 'hls.js';
 import { isServer } from 'solid-js/web';
+import IconPlayerPlay from '@tabler/icons/player-play.svg?component-solid';
+import IconPlayerPause from '@tabler/icons/player-pause.svg?component-solid';
+import IconMaximize from '@tabler/icons/maximize.svg?component-solid';
+import formatDuration from 'format-duration';
 import {
   MediaRouteRecordViewRangesMutation,
   MediaRouteRecordViewRangesMutationVariables,
@@ -81,7 +85,10 @@ export type Props = {
 };
 
 export default function Player(props: Props) {
+  let rootRef: HTMLDivElement;
   let videoRef: HTMLVideoElement;
+  const [hasPlayed, setHasPlayed] = createSignal(false);
+  const [playingState, setPlayingState] = createSignal(false);
   const [currentTime, setCurrentTime] = createSignal(0);
 
   const audioOnlyMode = () =>
@@ -158,6 +165,15 @@ export default function Player(props: Props) {
       onTimeUpdate?.(tuCurrentTime);
       setCurrentTime(tuCurrentTime);
     });
+
+    videoRef.addEventListener('play', () => {
+      setHasPlayed(true);
+      setPlayingState(true);
+    });
+
+    videoRef.addEventListener('pause', () => {
+      setPlayingState(false);
+    });
   });
 
   onCleanup(() => {
@@ -186,23 +202,79 @@ export default function Player(props: Props) {
     fetchPeaks();
   });
 
+  function handleTogglePlay() {
+    if (playingState()) {
+      setPlayingState(false);
+      videoRef.pause();
+    } else {
+      setPlayingState(true);
+      videoRef.play();
+    }
+  }
+
   return (
-    <div>
+    <div
+      class="group relative flex items-center"
+      ref={(el) => void (rootRef = el)}
+    >
       <Show when={audioOnlyMode()}>
         <Waveform
           peaks={peaksData.latest}
           currentTime={currentTime()}
           lengthSeconds={props.lengthSeconds}
-          class="mb-2"
+          class="mb-10 w-full"
           onSeek={(time) => void (videoRef.currentTime = time)}
         />
       </Show>
       <video
-        class={cn('w-full', audioOnlyMode() && 'h-[40px]')}
+        class={cn('cursor-pointer', audioOnlyMode() && 'hidden')}
         ref={(el) => void (videoRef = el)}
         playsinline
-        controls
+        controls={false}
+        onClick={handleTogglePlay}
       />
+      <div
+        class={cn(
+          hasPlayed() && !audioOnlyMode() && 'opacity-0',
+          'absolute inset-x-0 bottom-0 flex h-8 items-center gap-2 bg-black/75 px-2 text-white transition-opacity group-hover:opacity-100',
+        )}
+      >
+        <button class="shrink" onClick={handleTogglePlay}>
+          <Show when={playingState()} fallback={<IconPlayerPlay />}>
+            <IconPlayerPause />
+          </Show>
+        </button>
+        <div
+          role="progressbar"
+          class="h-2 grow cursor-pointer rounded-sm bg-white/30"
+          aria-valuemin={0}
+          aria-valuemax={props.lengthSeconds}
+          aria-valuenow={currentTime()}
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const percentage = x / rect.width;
+            videoRef.currentTime = percentage * props.lengthSeconds;
+          }}
+        >
+          <div
+            class="h-2 grow rounded-sm bg-white"
+            style={{ width: `${(currentTime() / props.lengthSeconds) * 100}%` }}
+          />
+        </div>
+        <div class="shrink font-mono">
+          {formatDuration(currentTime() * 1000)}/
+          {formatDuration(props.lengthSeconds * 1000)}
+        </div>
+        <Show when={!audioOnlyMode()}>
+          <button
+            class="shrink"
+            onClick={() => void rootRef.requestFullscreen()}
+          >
+            <IconMaximize />
+          </button>
+        </Show>
+      </div>
     </div>
   );
 }
