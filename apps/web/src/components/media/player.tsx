@@ -1,34 +1,28 @@
 import { gql } from 'graphql-request';
 import {
   type Accessor,
+  onCleanup,
   onMount,
   untrack,
   createSignal,
   createEffect,
   Show,
   createResource,
-  onCleanup,
 } from 'solid-js';
 import server$ from 'solid-start/server';
 import invariant from 'tiny-invariant';
-import Hls from 'hls.js';
+import videojs from 'video.js';
+import 'video.js/dist/video-js.css';
 import { isServer } from 'solid-js/web';
-import IconPlayerPlay from '@tabler/icons/player-play.svg?component-solid';
-import IconPlayerPause from '@tabler/icons/player-pause.svg?component-solid';
-import IconMaximize from '@tabler/icons/maximize.svg?component-solid';
-import formatDuration from 'format-duration';
 import {
   MediaRouteRecordViewRangesMutation,
   MediaRouteRecordViewRangesMutationVariables,
 } from './__generated__/player';
 import Waveform from './waveform';
-import { cn, type Optional } from '~/util';
+import type { Optional } from '~/util';
 import { createAuthenticatedClient } from '~/util/gql/server';
 
-const HLS_MIME = 'application/x-mpegURL';
-// const HLS_MIME = 'application/vnd.apple.mpegURL';
-
-export function serializeTimeRanges(
+function serializeTimeRanges(
   ranges: TimeRanges,
 ): Array<{ start: number; end: number }> {
   const res: ReturnType<typeof serializeTimeRanges> = new Array(ranges.length);
@@ -85,10 +79,9 @@ export type Props = {
 };
 
 export default function Player(props: Props) {
-  let rootRef: HTMLDivElement;
   let videoRef: HTMLVideoElement;
-  const [hasPlayed, setHasPlayed] = createSignal(false);
-  const [playingState, setPlayingState] = createSignal(false);
+  let player: ReturnType<typeof videojs>;
+  const [ready, setReady] = createSignal(false);
   const [currentTime, setCurrentTime] = createSignal(0);
 
   const audioOnlyMode = () =>
@@ -97,14 +90,6 @@ export default function Player(props: Props) {
         props.audioSource &&
         (props.peaksDatUrl || props.peaksJsonUrl),
     );
-
-  let hls: Hls | null = null;
-
-  function startVideo() {
-    invariant(videoRef, 'Video ref is undefined');
-    videoRef.currentTime = untrack(() => props.playAt?.() ?? 0);
-    videoRef.play();
-  }
 
   const id = untrack(() => props.id);
   let reportRangesTimer: number | undefined = undefined;
@@ -132,54 +117,72 @@ export default function Player(props: Props) {
     invariant(videoRef, 'Video ref is undefined');
     reportRangesTimer = window.setTimeout(reportTimeRanges, 5000);
 
-    const src = props.videoSource ?? props.audioSource;
+    const sources = [];
 
-    if (!src) {
-      console.log('Error! No source!');
-      // TODO: show error, offer download
-      return;
+    if (props.videoSource) {
+      sources.push({
+        src: props.videoSource,
+        type: 'application/x-mpegURL',
+      });
     }
 
-    if (videoRef.canPlayType(HLS_MIME)) {
-      videoRef.src = src;
-      videoRef.addEventListener('canplay', function () {
-        startVideo();
+    if (props.audioSource) {
+      sources.push({
+        src: props.audioSource,
+        type: 'application/x-mpegURL',
       });
-    } else if (Hls.isSupported()) {
-      hls = new Hls();
-      hls.loadSource(src);
-      hls.attachMedia(videoRef);
-      hls.on(Hls.Events.MEDIA_ATTACHED, function () {
-        startVideo();
-      });
-    } else {
-      console.log('Error! Cannot play video.');
-      // TODO: show error, offer download
-      return;
     }
+
+    player = videojs(
+      videoRef,
+      {
+        controls: true,
+        audioOnlyMode: audioOnlyMode(),
+        preload: 'auto',
+        fluid: props.fluid,
+        sources,
+        html5: {
+          hls: {
+            overrideNative: false,
+          },
+          nativeVideoTracks: true,
+          nativeAudioTracks: true,
+          nativeTextTracks: true,
+        },
+      },
+      async () => {
+        try {
+          await player.play();
+        } catch (e) {
+          // The play method is not allowed by the user agent or the platform in the current context, possibly because the user denied permission.
+          console.warn('Could not automatically play video', e);
+        }
+      },
+    );
 
     const onTimeUpdate = untrack(() => props.onTimeUpdate);
 
-    videoRef.addEventListener('timeupdate', () => {
-      const tuCurrentTime = videoRef.currentTime ?? 0;
+    player.on('timeupdate', () => {
+      const tuCurrentTime = player.currentTime() ?? 0;
       onTimeUpdate?.(tuCurrentTime);
       setCurrentTime(tuCurrentTime);
     });
 
-    videoRef.addEventListener('play', () => {
-      setHasPlayed(true);
-      setPlayingState(true);
-    });
-
-    videoRef.addEventListener('pause', () => {
-      setPlayingState(false);
+    player.one('ready', () => {
+      setReady(true);
     });
   });
 
+  createEffect(() => {
+    if (ready()) {
+      player.currentTime(props.playAt?.());
+    }
+  });
+
   onCleanup(() => {
-    hls?.destroy();
     clearTimeout(reportRangesTimer);
     reportTimeRanges();
+    player?.dispose();
   });
 
   const [peaksData, { refetch: fetchPeaks }] = createResource(
@@ -202,79 +205,18 @@ export default function Player(props: Props) {
     fetchPeaks();
   });
 
-  function handleTogglePlay() {
-    if (playingState()) {
-      setPlayingState(false);
-      videoRef.pause();
-    } else {
-      setPlayingState(true);
-      videoRef.play();
-    }
-  }
-
   return (
-    <div
-      class="group relative flex items-center"
-      ref={(el) => void (rootRef = el)}
-    >
+    <div>
       <Show when={audioOnlyMode()}>
         <Waveform
           peaks={peaksData.latest}
           currentTime={currentTime()}
           lengthSeconds={props.lengthSeconds}
-          class="mb-10 w-full"
-          onSeek={(time) => void (videoRef.currentTime = time)}
+          class="mb-2"
+          onSeek={(time) => player.currentTime(time)}
         />
       </Show>
-      <video
-        class={cn('cursor-pointer', audioOnlyMode() && 'hidden')}
-        ref={(el) => void (videoRef = el)}
-        playsinline
-        controls={false}
-        onClick={handleTogglePlay}
-      />
-      <div
-        class={cn(
-          hasPlayed() && !audioOnlyMode() && 'opacity-0',
-          'absolute inset-x-0 bottom-0 flex h-8 items-center gap-2 bg-black/75 px-2 text-white transition-opacity group-hover:opacity-100',
-        )}
-      >
-        <button class="shrink" onClick={handleTogglePlay}>
-          <Show when={playingState()} fallback={<IconPlayerPlay />}>
-            <IconPlayerPause />
-          </Show>
-        </button>
-        <div
-          role="progressbar"
-          class="h-2 grow cursor-pointer rounded-sm bg-white/30"
-          aria-valuemin={0}
-          aria-valuemax={props.lengthSeconds}
-          aria-valuenow={currentTime()}
-          onClick={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const percentage = x / rect.width;
-            videoRef.currentTime = percentage * props.lengthSeconds;
-          }}
-        >
-          <div
-            class="h-2 grow rounded-sm bg-white"
-            style={{ width: `${(currentTime() / props.lengthSeconds) * 100}%` }}
-          />
-        </div>
-        <div class="shrink font-mono">
-          {formatDuration(currentTime() * 1000)}/
-          {formatDuration(props.lengthSeconds * 1000)}
-        </div>
-        <Show when={!audioOnlyMode()}>
-          <button
-            class="shrink"
-            onClick={() => void rootRef.requestFullscreen()}
-          >
-            <IconMaximize />
-          </button>
-        </Show>
-      </div>
+      <video class="video-js" ref={(el) => void (videoRef = el)} playsinline />
     </div>
   );
 }
