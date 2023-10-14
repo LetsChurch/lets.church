@@ -1,4 +1,4 @@
-import { executeChild, patched, proxyActivities } from '@temporalio/workflow';
+import { executeChild, proxyActivities } from '@temporalio/workflow';
 import invariant from 'tiny-invariant';
 import { probeIsVideoFile } from '../../util/zod';
 import type * as backgroundActivities from '../activities/background';
@@ -39,12 +39,9 @@ const { getFinalizedUploadKey } = proxyActivities<typeof backgroundActivities>({
 
 export async function processMediaWorkflow(
   targetId: string,
-  s3UploadKey: string | null | undefined, // TODO: remove this parameter
   scope: 'transcode' | 'transcribe' | 'everything' = 'everything',
 ) {
-  if (!s3UploadKey && patched('fetchS3UploadKeyInWorkflow')) {
-    s3UploadKey = await getFinalizedUploadKey(targetId);
-  }
+  const s3UploadKey = await getFinalizedUploadKey(targetId);
   invariant(s3UploadKey, 'missing s3UploadKey');
 
   const probeRes = await probe(targetId, s3UploadKey);

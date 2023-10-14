@@ -58,7 +58,7 @@ export async function handleMultipartMediaUploadWorkflow(
 
     if (postProcess === 'media') {
       await startChild(processMediaWorkflow, {
-        args: [targetId, s3UploadKey],
+        args: [targetId],
         workflowId: `processMedia:${s3UploadKey}`,
         taskQueue: BACKGROUND_QUEUE,
         parentClosePolicy: ParentClosePolicy.PARENT_CLOSE_POLICY_ABANDON,

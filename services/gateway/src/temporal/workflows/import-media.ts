@@ -58,7 +58,7 @@ export async function importMediaWorkflow({
   await startChild(processMediaWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
     workflowId: `processMedia:${mediaUploadKey}`,
-    args: [uploadRecordId, mediaUploadKey],
+    args: [uploadRecordId],
     parentClosePolicy: ParentClosePolicy.PARENT_CLOSE_POLICY_ABANDON,
     retry: { maximumAttempts: 5 },
   });

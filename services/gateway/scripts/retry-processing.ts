@@ -100,7 +100,7 @@ pMap(
   ids,
   async (id) => {
     (await client).workflow.start(processMediaWorkflow, {
-      args: [id, null, subScope],
+      args: [id, subScope],
       workflowId: `processMedia:${id}:retry${Date.now()}`,
       taskQueue: BACKGROUND_QUEUE,
       retry: {
