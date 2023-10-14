@@ -1,5 +1,5 @@
 FROM debian:bullseye-slim as build-audiowaveform
-RUN apt update && apt install -y git wget cmake build-essential libmad0-dev libid3tag0-dev libsndfile1-dev libgd-dev libboost-filesystem-dev libboost-program-options-dev libboost-regex-dev
+RUN apt-get update && apt-get install -y git wget cmake build-essential libmad0-dev libid3tag0-dev libsndfile1-dev libgd-dev libboost-filesystem-dev libboost-program-options-dev libboost-regex-dev
 RUN mkdir -p /home/build
 RUN git clone https://github.com/bbc/audiowaveform.git /home/build/audiowaveform
 WORKDIR /home/build/audiowaveform
@@ -15,7 +15,7 @@ RUN cmake -D BUILD_STATIC=1 .. && make
 # Temporal does not support alpine: https://github.com/temporalio/sdk-typescript/issues/850
 FROM node:20.7.0-bullseye-slim as base
 # Prisma requires lbssl-dev and ca-certificates
-RUN apt update && apt install -y libssl-dev ca-certificates
+RUN apt-get update && apt-get install -y libssl-dev ca-certificates
 WORKDIR /home/node/app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -27,13 +27,13 @@ RUN npm run prisma:generate
 CMD npm run start:server
 
 FROM base as background-worker
-RUN apt install -y imagemagick jpegoptim
+RUN apt-get install -y imagemagick jpegoptim
 COPY --from=videah/oxipng:7.0.0 /usr/local/bin/oxipng /usr/local/bin/oxipng
 RUN npm run prisma:generate
 CMD npm run start:background-worker
 
 FROM base as transcode-worker
-RUN apt install -y imagemagick jpegoptim ffmpeg
+RUN apt-get install -y imagemagick jpegoptim ffmpeg
 COPY --from=build-audiowaveform /home/build/audiowaveform/build/audiowaveform /usr/bin/
 CMD npm run start:transcode-worker
 
@@ -49,7 +49,7 @@ RUN apt-get update && \
   apt-get update && \
   apt-get install -y nodejs && \
   rm -rf /var/lib/apt/lists/* && \
-  apt clean && \
+  apt-get clean && \
   pip3 install git+https://github.com/Softcatala/whisper-ctranslate2.git@0.2.9 && mkdir -p /opt/whisper/models
 WORKDIR /home/node/app
 COPY package.json package-lock.json ./
@@ -59,7 +59,7 @@ ENV NODE_ENV=production
 CMD npm run start:transcribe-worker
 
 FROM base as import-worker
-RUN apt install -y python3
+RUN apt-get install -y python3
 COPY --from=jauderho/yt-dlp:2023.07.06 /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
 RUN npm run prisma:generate
 CMD npm run start:import-worker
