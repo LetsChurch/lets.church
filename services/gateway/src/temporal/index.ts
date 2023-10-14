@@ -4,6 +4,7 @@ import { Connection, Client, type WorkflowOptions } from '@temporalio/client';
 import PLazy from 'p-lazy';
 import waitOn from 'wait-on';
 import type { Prisma, UploadVariant } from '@prisma/client';
+import { OpenTelemetryWorkflowClientInterceptor } from '@temporalio/interceptors-opentelemetry';
 import type { UploadPostProcessValue } from '../schema/types/mutation';
 import type { Client as S3UtilClient } from '../util/s3';
 import logger from '../util/logger';
@@ -32,6 +33,9 @@ export const client = PLazy.from(async () => {
     connection: await Connection.connect({
       address: TEMPORAL_ADDRESS,
     }),
+    interceptors: {
+      workflow: [new OpenTelemetryWorkflowClientInterceptor()],
+    },
   });
 });
 
