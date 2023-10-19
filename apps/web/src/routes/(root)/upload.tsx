@@ -258,7 +258,7 @@ export function routeData({ location }: RouteDataArgs) {
           query UploadRouteData($id: ShortUuid = "", $prefetch: Boolean!) {
             me {
               canUpload
-              channelMembershipsConnection(canUpload: true) {
+              channelMembershipsConnection(canUpload: true, first: 100) {
                 edges {
                   node {
                     channel {
