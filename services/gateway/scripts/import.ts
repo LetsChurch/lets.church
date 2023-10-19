@@ -2,6 +2,7 @@ import { readFile } from 'fs/promises';
 import { input, confirm, editor } from '@inquirer/prompts';
 import { z } from 'zod';
 import PQueue from 'p-queue';
+import { truncate } from 'lodash-es';
 import { client } from '../src/temporal';
 import { importMediaWorkflow } from '../src/temporal/workflows/import-media';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
@@ -51,9 +52,11 @@ if (
 
 for (const input of data) {
   queue.add(async () => {
+    const url = new URL(input.url);
+    const bareUrl = `${url.origin}${url.pathname}`;
     await c.workflow.start(importMediaWorkflow, {
       taskQueue: BACKGROUND_QUEUE,
-      workflowId: `importMedia:${input.url}`,
+      workflowId: truncate(`importMedia:${bareUrl}`, { length: 1000 }),
       args: [{ ...common, ...input }],
       retry: { maximumAttempts: 5 },
     });
