@@ -289,6 +289,7 @@ export type Mutation = {
   createOrganization: Organization;
   createUploadList: UploadList;
   finalizeMultipartUpload: Scalars['Boolean']['output'];
+  forgotPassword: Scalars['Boolean']['output'];
   login?: Maybe<Scalars['Jwt']['output']>;
   logout: Scalars['Boolean']['output'];
   rateComment: Scalars['Boolean']['output'];
@@ -297,6 +298,7 @@ export type Mutation = {
   recordUploadSegmentView: Scalars['Boolean']['output'];
   recordUploadView: Scalars['Boolean']['output'];
   register: MutationRegisterResult;
+  resetPassword: Scalars['Boolean']['output'];
   subscribeToChannel: ChannelSubscription;
   subscribeToNewsletter: MutationSubscribeToNewsletterResult;
   unsubscribeFromChannel: Scalars['Boolean']['output'];
@@ -355,6 +357,11 @@ export type MutationFinalizeMultipartUploadArgs = {
 };
 
 
+export type MutationForgotPasswordArgs = {
+  email: Scalars['String']['input'];
+};
+
+
 export type MutationLoginArgs = {
   id: Scalars['String']['input'];
   password: Scalars['String']['input'];
@@ -400,6 +407,12 @@ export type MutationRegisterArgs = {
   password: Scalars['String']['input'];
   subscribeToNewsletter?: InputMaybe<Scalars['Boolean']['input']>;
   username: Scalars['String']['input'];
+};
+
+
+export type MutationResetPasswordArgs = {
+  id: Scalars['Uuid']['input'];
+  password: Scalars['String']['input'];
 };
 
 

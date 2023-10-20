@@ -9,10 +9,15 @@ import invariant from 'tiny-invariant';
 import { z, ZodError, ZodIssueCode } from 'zod';
 import envariant from '@knpwrs/envariant';
 import { stripIndent } from 'proper-tags';
+import { v4 as uuid } from 'uuid';
 import builder from '../builder';
 import type { Context } from '../../util/context';
 import zxcvbn from '../../util/zxcvbn';
-import { sendEmail } from '../../temporal';
+import {
+  completeResetPassword,
+  resetPassword,
+  sendEmail,
+} from '../../temporal';
 import { createSessionJwt } from '../../util/jwt';
 import prisma from '../../util/prisma';
 import { getPublicImageUrl } from '../../util/url';
@@ -360,6 +365,73 @@ builder.mutationFields((t) => ({
       });
 
       return res.count > 0;
+    },
+  }),
+  forgotPassword: t.boolean({
+    args: {
+      email: t.arg.string({ required: true }),
+    },
+    authScopes: { admin: true, unauthenticated: true },
+    resolve: async (_parent, { email }) => {
+      const user = await prisma.appUser.findFirst({
+        select: { id: true, username: true },
+        where: {
+          emails: { some: { email } },
+        },
+      });
+
+      if (!user) {
+        return true;
+      }
+
+      const resetId = uuid();
+
+      const resetUrl = `${WEB_URL}/auth/reset-password?${new URLSearchParams({
+        id: resetId,
+      })}`;
+
+      await resetPassword(
+        resetId,
+        user.id,
+        email,
+        stripIndent`
+          Hello, ${user.username}! Please visit the following link to reset your password: ${resetUrl}
+
+          This link will expire in 15 minutes.
+
+          If you did not request a password reset, please ignore this email.
+        `,
+        emailHtml(
+          'Reset Password',
+          stripIndent`
+            Hello, <b>${user.username}</b>! Please click <a href="${resetUrl}">here</a> to reset your password.
+
+            This link will expire in 15 minutes.
+
+            Alternatively, visit the following link to verify your email: ${resetUrl}
+
+            If you did not request a password reset, please ignore this email.
+          `,
+        ).html,
+      );
+
+      return true;
+    },
+  }),
+  resetPassword: t.boolean({
+    args: {
+      id: t.arg({ type: 'Uuid', required: true }),
+      password: t.arg.string({ required: true }),
+    },
+    authScopes: { admin: true, unauthenticated: true },
+    resolve: async (_parent, { id, password }) => {
+      const passwordHash = await argon2.hash(password, {
+        type: argon2.argon2id,
+      });
+
+      await completeResetPassword(id, passwordHash);
+
+      return true;
     },
   }),
   updateUser: t.prismaField({

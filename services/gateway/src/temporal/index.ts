@@ -21,6 +21,10 @@ import { BACKGROUND_QUEUE } from './queues';
 import type { DocumentKind } from './activities/background/index-document';
 import { recordDownloadSizeWorkflow } from './workflows/record-download-size';
 import { emptySignal } from './signals';
+import {
+  completeResetPasswordSignal,
+  resetPasswordWorkflow,
+} from './workflows/reset-password';
 
 const moduleLogger = logger.child({ module: 'temporal' });
 
@@ -149,6 +153,24 @@ export async function sendEmail(
     args,
     workflowId: id,
   });
+}
+
+export async function resetPassword(
+  id: string,
+  ...args: Parameters<typeof resetPasswordWorkflow>
+) {
+  return (await client).workflow.start(resetPasswordWorkflow, {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    args,
+    workflowId: `resetPassword:${id}`,
+  });
+}
+
+export async function completeResetPassword(id: string, hash: string) {
+  return (await client).workflow
+    .getHandle(`resetPassword:${id}`)
+    .signal(completeResetPasswordSignal, hash);
 }
 
 export async function waitOnTemporal() {

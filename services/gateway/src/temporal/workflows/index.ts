@@ -23,6 +23,7 @@ export {
 export { importMediaWorkflow } from './import-media';
 export { recordDownloadSizeWorkflow } from './record-download-size';
 export { remakeThumbnailsWorkflow } from './remake-thumbnails';
+export { resetPasswordWorkflow } from './reset-password';
 export { restitchTranscriptWorkflow } from './restitch-transcript';
 export { updateDailySaltWorkflow } from './update-daily-salt';
 export { updateUploadScoresWorkflow } from './update-upload-scores';

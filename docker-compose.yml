@@ -68,7 +68,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       MEDIA_URL: ${MEDIA_URL}
       TEMPORAL_ADDRESS: temporal:7233
-      WEB_URL: http://localhost:${HOST_WEB_PORT}
+      WEB_URL: ${WEB_URL}
       ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
       <<: *s3-env
     volumes:

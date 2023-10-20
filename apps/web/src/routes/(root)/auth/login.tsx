@@ -81,6 +81,14 @@ export default function LoginRoute() {
         <Button type="submit" class="w-full" disabled={loggingIn.pending}>
           Login
         </Button>
+        <p class="text-center text-xs">
+          <A
+            href="../forgot-password"
+            class="text-xs text-gray-500 hover:text-gray-900"
+          >
+            Forgot your password?
+          </A>
+        </p>
       </Form>
     </>
   );
