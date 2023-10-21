@@ -141,6 +141,7 @@ export default function Player(props: Props) {
         preload: 'auto',
         fluid: props.fluid,
         sources,
+        playbackRates: [1, 1.25, 1.5, 1.75, 2],
         html5: {
           hls: {
             overrideNative: false,
