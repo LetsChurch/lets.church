@@ -24,7 +24,7 @@ export const MediaRowFragment = isServer
           slug
           name
           avatarUrl(resize: { width: 96, height: 96 })
-          defaultThumbnailUrl
+          defaultThumbnailUrl(resize: { width: 704, height: 396 })
         }
       }
     `
