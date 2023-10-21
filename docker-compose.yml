@@ -64,7 +64,7 @@ services:
       ELASTICSEARCH_URL: http://elasticsearch:9200
       IMGPROXY_KEY: ${IMGPROXY_KEY}
       IMGPROXY_SALT: ${IMGPROXY_SALT}
-      IMGPROXY_URL: http://localhost:${HOST_IMGPROXY_PORT}
+      IMGPROXY_URL: ${IMGPROXY_URL}
       JWT_SECRET: ${JWT_SECRET}
       MEDIA_URL: ${MEDIA_URL}
       TEMPORAL_ADDRESS: temporal:7233
