@@ -17,13 +17,13 @@ export const MediaRowFragment = isServer
         publishedAt
         totalViews
         thumbnailBlurhash
-        thumbnailUrl
+        thumbnailUrl(resize: { width: 704, height: 396 })
         variants
         channel {
           id
           slug
           name
-          avatarUrl
+          avatarUrl(resize: { width: 96, height: 96 })
           defaultThumbnailUrl
         }
       }

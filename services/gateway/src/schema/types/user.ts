@@ -25,6 +25,7 @@ import { emailHtml } from '../../util/email';
 import { uuidTranslator } from '../../util/uuid';
 import { subscribeToNewsletter } from '../../util/newsletter';
 import { getS3ProtocolUri } from '../../util/s3';
+import { ResizeParams } from './misc';
 
 const WEB_URL = envariant('WEB_URL');
 
@@ -45,6 +46,20 @@ function privateAuthScopes(
 const AppUserRoleEnum = builder.enumType('AppUserRole', {
   values: Object.keys(AppUserRole),
 });
+
+const passwordSchema = z
+  .string()
+  .max(100)
+  .superRefine((val, ctx) => {
+    const message = zxcvbn(val);
+
+    if (message) {
+      ctx.addIssue({
+        code: ZodIssueCode.custom,
+        message,
+      });
+    }
+  });
 
 builder.prismaObject('AppUserEmail', {
   fields: (t) => ({
@@ -69,15 +84,22 @@ export const AppUser = builder.prismaObject('AppUser', {
     avatarUrl: t.field({
       type: 'String',
       nullable: true,
+      args: {
+        resize: t.arg({
+          required: false,
+          type: ResizeParams,
+        }),
+      },
       select: { avatarPath: true },
-      resolve: ({ avatarPath }) => {
+      resolve: ({ avatarPath }, { resize }) => {
         if (!avatarPath) {
           return null;
         }
 
-        return getPublicImageUrl(getS3ProtocolUri('PUBLIC', avatarPath), {
-          resize: { width: 96, height: 96 },
-        });
+        return getPublicImageUrl(
+          getS3ProtocolUri('PUBLIC', avatarPath),
+          resize ? { resize } : undefined,
+        );
       },
     }),
     role: t.field({ type: AppUserRoleEnum, resolve: ({ role }) => role }),
@@ -259,19 +281,7 @@ builder.mutationFields((t) => ({
     validate: {
       schema: z.object({
         username: z.string().min(3).max(20),
-        password: z
-          .string()
-          .max(100)
-          .superRefine((val, ctx) => {
-            const message = zxcvbn(val);
-
-            if (message) {
-              ctx.addIssue({
-                code: ZodIssueCode.custom,
-                message,
-              });
-            }
-          }),
+        password: passwordSchema,
         email: z.string().email(),
         fullName: z.string().max(100).optional(),
         agreeToTerms: z.literal(true),
@@ -422,6 +432,12 @@ builder.mutationFields((t) => ({
     args: {
       id: t.arg({ type: 'Uuid', required: true }),
       password: t.arg.string({ required: true }),
+    },
+    validate: {
+      schema: z.object({
+        id: z.string().uuid(),
+        password: passwordSchema,
+      }),
     },
     authScopes: { admin: true, unauthenticated: true },
     resolve: async (_parent, { id, password }) => {

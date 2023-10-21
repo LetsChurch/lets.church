@@ -45,7 +45,7 @@ export function routeData({ params, location }: RouteDataArgs) {
             channelById(id: $id) {
               id
               name
-              avatarUrl
+              avatarUrl(resize: { width: 96, height: 96 })
               defaultThumbnailUrl
             }
           }

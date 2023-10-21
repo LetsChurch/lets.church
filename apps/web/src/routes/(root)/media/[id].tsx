@@ -94,7 +94,7 @@ export function routeData({ params, location }: RouteDataArgs) {
             uploadRecordId
             author {
               username
-              avatarUrl
+              avatarUrl(resize: { width: 96, height: 96 })
             }
             createdAt
             updatedAt
@@ -123,7 +123,7 @@ export function routeData({ params, location }: RouteDataArgs) {
                 id
                 slug
                 name
-                avatarUrl
+                avatarUrl(resize: { width: 96, height: 96 })
                 defaultThumbnailUrl
                 userIsSubscribed
               }

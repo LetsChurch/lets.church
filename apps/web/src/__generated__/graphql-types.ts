@@ -38,6 +38,11 @@ export type AppUser = {
 };
 
 
+export type AppUserAvatarUrlArgs = {
+  resize?: InputMaybe<ResizeParams>;
+};
+
+
 export type AppUserChannelMembershipsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -145,6 +150,16 @@ export type Channel = {
   updatedAt: Scalars['DateTime']['output'];
   uploadsConnection: ChannelUploadsConnection;
   userIsSubscribed: Scalars['Boolean']['output'];
+};
+
+
+export type ChannelAvatarUrlArgs = {
+  resize?: InputMaybe<ResizeParams>;
+};
+
+
+export type ChannelDefaultThumbnailUrlArgs = {
+  resize?: InputMaybe<ResizeParams>;
 };
 
 
@@ -724,6 +739,11 @@ export enum Rating {
   Like = 'LIKE'
 }
 
+export type ResizeParams = {
+  height: Scalars['Int']['input'];
+  width: Scalars['Int']['input'];
+};
+
 export type SearchAggs = {
   __typename?: 'SearchAggs';
   channelHitCount: Scalars['Int']['output'];
@@ -923,6 +943,11 @@ export type UploadRecordSeriesArgs = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type UploadRecordThumbnailUrlArgs = {
+  resize?: InputMaybe<ResizeParams>;
 };
 
 

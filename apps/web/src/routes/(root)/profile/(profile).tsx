@@ -56,7 +56,7 @@ export function routeData() {
           id
           username
           fullName
-          avatarUrl
+          avatarUrl(resize: { width: 96, height: 96 })
           emails {
             email
           }

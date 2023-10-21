@@ -5,12 +5,12 @@ export const UploadCardFields = gql`
     id
     title
     thumbnailBlurhash
-    thumbnailUrl
+    thumbnailUrl(resize: { width: 512, height: 288 })
     channel {
       id
       name
-      avatarUrl
-      defaultThumbnailUrl
+      avatarUrl(resize: { width: 96, height: 96 })
+      defaultThumbnailUrl(resize: { width: 512, height: 288 })
       defaultThumbnailBlurhash
     }
   }

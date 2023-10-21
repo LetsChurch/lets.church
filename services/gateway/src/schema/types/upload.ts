@@ -19,6 +19,7 @@ import type { Context } from '../../util/context';
 import prisma from '../../util/prisma';
 import { getPublicImageUrl, getPublicMediaUrl } from '../../util/url';
 import { getPublicUrlWithFilename, getS3ProtocolUri } from '../../util/s3';
+import { ResizeParams } from './misc';
 
 async function internalAuthScopes(
   uploadRecord: { id: string; channelId: string },
@@ -178,15 +179,27 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
     variants: t.expose('variants', { type: [UploadVariant], nullable: false }),
     thumbnailUrl: t.string({
       nullable: true,
+      args: {
+        resize: t.arg({
+          required: false,
+          type: ResizeParams,
+        }),
+      },
       select: { defaultThumbnailPath: true, overrideThumbnailPath: true },
-      resolve: ({ defaultThumbnailPath, overrideThumbnailPath }) => {
+      resolve: (
+        { defaultThumbnailPath, overrideThumbnailPath },
+        { resize },
+      ) => {
         const from = overrideThumbnailPath ?? defaultThumbnailPath;
 
         if (!from) {
           return null;
         }
 
-        return getPublicImageUrl(getS3ProtocolUri('PUBLIC', from));
+        return getPublicImageUrl(
+          getS3ProtocolUri('PUBLIC', from),
+          resize ? { resize } : undefined,
+        );
       },
     }),
     thumbnailBlurhash: t.exposeString('defaultThumbnailBlurhash', {

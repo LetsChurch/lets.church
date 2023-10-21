@@ -10,6 +10,7 @@ import builder from '../builder';
 import { getPublicImageUrl } from '../../util/url';
 import { getS3ProtocolUri } from '../../util/s3';
 import { UploadOrderPropertyEnum } from './upload';
+import { ResizeParams } from './misc';
 
 const orderEnum = builder.enumType('Order', {
   values: ['asc', 'desc'] as const,
@@ -60,15 +61,22 @@ const Channel = builder.prismaObject('Channel', {
     avatarUrl: t.field({
       type: 'String',
       nullable: true,
+      args: {
+        resize: t.arg({
+          required: false,
+          type: ResizeParams,
+        }),
+      },
       select: { avatarPath: true },
-      resolve: ({ avatarPath }) => {
+      resolve: ({ avatarPath }, { resize }) => {
         if (!avatarPath) {
           return null;
         }
 
-        return getPublicImageUrl(getS3ProtocolUri('PUBLIC', avatarPath), {
-          resize: { width: 96, height: 96 },
-        });
+        return getPublicImageUrl(
+          getS3ProtocolUri('PUBLIC', avatarPath),
+          resize ? { resize } : undefined,
+        );
       },
     }),
     slug: t.exposeString('slug'),
@@ -146,14 +154,21 @@ const Channel = builder.prismaObject('Channel', {
     defaultThumbnailUrl: t.field({
       type: 'String',
       nullable: true,
+      args: {
+        resize: t.arg({
+          required: false,
+          type: ResizeParams,
+        }),
+      },
       select: { defaultThumbnailPath: true },
-      resolve: ({ defaultThumbnailPath }) => {
+      resolve: ({ defaultThumbnailPath }, { resize }) => {
         if (!defaultThumbnailPath) {
           return null;
         }
 
         return getPublicImageUrl(
           getS3ProtocolUri('PUBLIC', defaultThumbnailPath),
+          resize ? { resize } : undefined,
         );
       },
     }),
