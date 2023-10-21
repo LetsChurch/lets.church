@@ -1,4 +1,4 @@
-import * as Types from '../../../__generated__/graphql-types';
+import * as Types from '../../../../__generated__/graphql-types';
 
 export type MediaRouteRecordViewRangesMutationVariables = Types.Exact<{
   id: Types.Scalars['ShortUuid']['input'];
