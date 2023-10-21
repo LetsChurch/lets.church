@@ -50,7 +50,6 @@ model AppUser {
   uploadUserRatings        UploadUserRating[]
   uploadUserCommentRatings UploadUserCommentRating[]
   uploadViews              UploadView[]
-  uploadSegmentViews       UploadSegmentView[]
   uploadViewRanges         UploadViewRanges[]
   uploadLists              UploadList[]
 
@@ -243,7 +242,6 @@ model UploadRecord {
   downloadsEnabled          Boolean                    @default(true) @map("downloads_enabled")
   downloadSizes             UploadRecordDownloadSize[]
   uploadViews               UploadView[]
-  uploadSegmentViews        UploadSegmentView[]
   uploadViewRanges          UploadViewRanges[]
   uploadListEntries         UploadListEntry[]
 
@@ -333,21 +331,6 @@ model UploadView {
   @@index([appUserId, uploadRecordId])
   @@index([createdAt])
   @@map("upload_view")
-}
-
-model UploadSegmentView {
-  upload           UploadRecord @relation(fields: [uploadRecordId], references: [id], onDelete: Cascade)
-  uploadRecordId   String       @map("upload_record_id") @db.Uuid
-  viewerHash       BigInt       @map("viewer_hash")
-  user             AppUser?     @relation(fields: [appUserId], references: [id])
-  appUserId        String?      @map("app_user_id") @db.Uuid
-  segmentStartTime Float        @map("segment_start_time")
-  segmentEndTime   Float        @map("segment_end_time")
-  segmentTotalTime Float        @map("segment_total_time")
-  viewTimestamp    DateTime     @default(now()) @map("view_timestamp")
-
-  @@id([viewTimestamp, uploadRecordId, viewerHash])
-  @@map("upload_segment_view")
 }
 
 model UploadViewRanges {

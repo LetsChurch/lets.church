@@ -295,7 +295,6 @@ export type Mutation = {
   rateComment: Scalars['Boolean']['output'];
   rateUpload: Scalars['Boolean']['output'];
   recordUploadRangesView: Scalars['Uuid']['output'];
-  recordUploadSegmentView: Scalars['Boolean']['output'];
   recordUploadView: Scalars['Boolean']['output'];
   register: MutationRegisterResult;
   resetPassword: Scalars['Boolean']['output'];
@@ -384,13 +383,6 @@ export type MutationRecordUploadRangesViewArgs = {
   ranges: Array<TimeRange>;
   uploadRecordId: Scalars['ShortUuid']['input'];
   viewId?: InputMaybe<Scalars['Uuid']['input']>;
-};
-
-
-export type MutationRecordUploadSegmentViewArgs = {
-  segmentEndTime: Scalars['Float']['input'];
-  segmentStartTime: Scalars['Float']['input'];
-  uploadRecordId: Scalars['ShortUuid']['input'];
 };
 
 
