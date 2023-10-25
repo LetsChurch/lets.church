@@ -19,6 +19,7 @@
     "node": ">=16"
   },
   "dependencies": {
+    "@axiomhq/pino": "^1.0.0-rc.1",
     "@fontsource/inter": "^4.5.15",
     "@fontsource/roboto-mono": "^4.5.10",
     "@knpwrs/envariant": "^1.1.1",
@@ -41,6 +42,7 @@
     "just-sort-by": "^3.2.0",
     "p-progress": "^0.6.0",
     "p-retry": "^5.1.2",
+    "pino": "^8.16.1",
     "plausible-tracker": "^0.3.8",
     "pluralize": "^8.0.0",
     "pretty-bytes": "^6.1.0",

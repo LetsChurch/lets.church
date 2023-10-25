@@ -1,6 +1,9 @@
 import envariant from '@knpwrs/envariant';
 import server$ from 'solid-start/server';
 import invariant from 'tiny-invariant';
+import logger from '../logger';
+
+const moduleLogger = logger.child({ module: 'util/server/validate-turnstile' });
 
 const SECRET_KEY = envariant('TURNSTILE_SECRET_KEY', server$.env);
 
@@ -23,6 +26,7 @@ export default async function validateTurnstile(form: FormData) {
   const json = await result.json();
 
   if (!json.success) {
+    moduleLogger.error({ result: json });
     throw new Error('Turnstile validation failed');
   }
 
