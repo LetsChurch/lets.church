@@ -40,6 +40,11 @@ spec:
                   key: IMGPROXY_SALT
             - name: OTEL_SERVICE_NAME
               value: gateway
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: sentry-secret
+                  key: SENTRY_GATEWAY_DSN
           envFrom:
             - configMapRef:
                 name: gateway-config

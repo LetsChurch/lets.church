@@ -78,6 +78,7 @@
     "@pothos/plugin-tracing": "^0.5.8",
     "@pothos/plugin-validation": "^3.9.2",
     "@prisma/client": "^5.0.0",
+    "@sentry/node": "^7.75.0",
     "@sindresorhus/slugify": "^2.2.0",
     "@temporalio/activity": "^1.7.0",
     "@temporalio/client": "^1.7.0",

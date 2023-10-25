@@ -27,6 +27,11 @@ spec:
                   key: uri
             - name: OTEL_SERVICE_NAME
               value: background-worker
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: sentry-secret
+                  key: SENTRY_BACKGROUND_WORKER_DSN
           envFrom:
             - configMapRef:
                 name: gateway-config

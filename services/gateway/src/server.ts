@@ -1,8 +1,15 @@
 import { createYoga } from 'graphql-yoga';
 import fastify, { type FastifyRequest, type FastifyReply } from 'fastify';
 import { useDisableIntrospection } from '@envelop/disable-introspection';
+import * as Sentry from '@sentry/node';
+import envariant from '@knpwrs/envariant';
 import context from './util/context';
 import schema from './schema';
+
+Sentry.init({
+  dsn: envariant('SENTRY_DSN'),
+  environment: process.env['NODE_ENV'] ?? 'default',
+});
 
 const app = fastify({ logger: true });
 

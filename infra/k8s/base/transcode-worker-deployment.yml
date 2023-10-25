@@ -25,6 +25,11 @@ spec:
           env:
             - name: OTEL_SERVICE_NAME
               value: transcode-worker
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: sentry-secret
+                  key: SENTRY_TRANSCODE_WORKER_DSN
           envFrom:
             - configMapRef:
                 name: temporal-client-config

@@ -12,9 +12,15 @@ import {
   OpenTelemetryActivityInboundInterceptor,
   makeWorkflowExporter,
 } from '@temporalio/interceptors-opentelemetry/lib/worker';
+import * as Sentry from '@sentry/node';
 import * as backgroundctivities from '../activities/background';
 import { BACKGROUND_QUEUE } from '../queues';
 import { waitOnTemporal } from '..';
+
+Sentry.init({
+  dsn: envariant('SENTRY_DSN'),
+  environment: process.env['NODE_ENV'] ?? 'default',
+});
 
 const TEMPORAL_ADDRESS = envariant('TEMPORAL_ADDRESS');
 

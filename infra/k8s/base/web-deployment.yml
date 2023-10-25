@@ -24,6 +24,11 @@ spec:
           env:
             - name: OTEL_SERVICE_NAME
               value: web
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: sentry-secret
+                  key: SENTRY_WEB_SERVER_DSN
           envFrom:
             - secretRef:
                 name: otel-secret

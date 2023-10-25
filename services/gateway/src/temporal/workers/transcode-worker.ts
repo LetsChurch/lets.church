@@ -10,10 +10,16 @@ import {
   makeWorkflowExporter,
 } from '@temporalio/interceptors-opentelemetry/lib/worker';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import * as Sentry from '@sentry/node';
 import * as activities from '../activities/transcode';
 import { TRANSCODE_QUEUE } from '../queues';
 import { waitOnTemporal } from '..';
 import { checkAudiowaveform, checkFfmpeg } from '../../util/env-check';
+
+Sentry.init({
+  dsn: envariant('SENTRY_DSN'),
+  environment: process.env['NODE_ENV'] ?? 'default',
+});
 
 await checkFfmpeg();
 await checkAudiowaveform();

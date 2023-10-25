@@ -10,9 +10,15 @@ import {
   makeWorkflowExporter,
 } from '@temporalio/interceptors-opentelemetry/lib/worker';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import * as Sentry from '@sentry/node';
 import * as importActivities from '../activities/import';
 import { IMPORT_QUEUE } from '../queues';
 import { checkYtDlp } from '../../util/env-check';
+
+Sentry.init({
+  dsn: envariant('SENTRY_DSN'),
+  environment: process.env['NODE_ENV'] ?? 'default',
+});
 
 await checkYtDlp();
 

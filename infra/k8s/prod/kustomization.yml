@@ -43,6 +43,9 @@ secretGenerator:
   - name: s3-secret
     envs:
       - s3.crypt.env
+  - name: sentry-secret
+    envs:
+      - sentry.crypt.env
   - name: smtp-secret
     envs:
       - smtp.crypt.env

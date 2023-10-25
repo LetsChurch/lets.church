@@ -1,5 +1,12 @@
 export ZXCVBN_MINIMUM_SCORE=0
 
+export SENTRY_WEB_SERVER_DSN=https://foo@bar.ingest.sentry.io/baz
+export SENTRY_GATEWAY_DSN=https://foo@bar.ingest.sentry.io/baz
+export SENTRY_BACKGROUND_WORKER_DSN=https://foo@bar.ingest.sentry.io/baz
+export SENTRY_TRANSCODE_WORKER_DSN=https://foo@bar.ingest.sentry.io/baz
+export SENTRY_TRANSCRIBE_WORKER=https://foo@bar.ingest.sentry.io/baz
+export SENTRY_IMPORT_WORKER=https://foo@bar.ingest.sentry.io/baz
+
 export S3_INGEST_ENDPOINT=
 export S3_INGEST_BUCKET=
 export S3_INGEST_ACCESS_KEY_ID=

@@ -22,6 +22,7 @@
     "@fontsource/inter": "^4.5.15",
     "@fontsource/roboto-mono": "^4.5.10",
     "@knpwrs/envariant": "^1.1.1",
+    "@sentry/browser": "^7.75.0",
     "@solid-primitives/autofocus": "^0.0.108",
     "@solidjs/meta": "^0.28.6",
     "@solidjs/router": "^0.8.3",
