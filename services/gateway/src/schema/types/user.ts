@@ -25,7 +25,10 @@ import { emailHtml } from '../../util/email';
 import { uuidTranslator } from '../../util/uuid';
 import { subscribeToNewsletter } from '../../util/newsletter';
 import { getS3ProtocolUri } from '../../util/s3';
+import logger from '../../util/logger';
 import { ResizeParams } from './misc';
+
+const moduleLogger = logger.child({ module: 'schema/types/user' });
 
 const WEB_URL = envariant('WEB_URL');
 
@@ -242,6 +245,10 @@ builder.mutationFields((t) => ({
       });
 
       if (!user || !(await argon2.verify(user.password, password))) {
+        moduleLogger.warn(
+          { id, user: user ? user : null },
+          'User not found or password does not match',
+        );
         throw new Error('Error logging in. Please try again.');
       }
 
