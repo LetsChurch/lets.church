@@ -68,10 +68,24 @@ export default new SchemaBuilder<{
         ? true
         : (config) => isRootField(config),
     wrap: (resolver, _options, config) =>
-      wrapResolver(resolver, (_error, duration) => {
-        moduleLogger.info(
-          `Executed resolver ${config.parentType}.${config.name} in ${duration}ms`,
-        );
+      wrapResolver(resolver, (error, duration) => {
+        const bindings = {
+          kind: config.kind,
+          graphqlKind: config.graphqlKind,
+          parentType: config.parentType,
+          args: Object.fromEntries(
+            Object.entries(config.args).map(([key, value]) =>
+              key === 'password' ? [key, '********'] : [key, value],
+            ),
+          ),
+          duration,
+        };
+
+        if (error) {
+          moduleLogger.error({ error, ...bindings });
+        } else {
+          moduleLogger.info(bindings);
+        }
       }),
   },
 });
