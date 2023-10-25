@@ -1,7 +1,6 @@
 /*
   Warnings:
 
-  - You are about to drop the column `uplaod_record_id` on the `upload_record_download_size` table. All the data in the column will be lost.
   - A unique constraint covering the columns `[upload_record_id,variant]` on the table `upload_record_download_size` will be added. If there are existing duplicate values, this will fail.
   - Added the required column `upload_record_id` to the `upload_record_download_size` table without a default value. This is not possible if the table is not empty.
 

@@ -229,7 +229,7 @@ model UploadRecord {
   publishedAt               DateTime                   @default(now()) @map("published_at")
   transcodingStartedAt      DateTime?                  @map("transcoding_started_at")
   transcodingFinishedAt     DateTime?                  @map("transcoding_finished_at")
-  transcodingProgress       Float                      @default(0)
+  transcodingProgress       Float                      @default(0) @map("transcoding_progress")
   transcribingStartedAt     DateTime?                  @map("transcribing_started_at")
   transcribingFinishedAt    DateTime?                  @map("transcribing_finished_at")
   deletedAt                 DateTime?                  @map("deleted_at")
