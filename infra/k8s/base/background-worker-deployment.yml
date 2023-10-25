@@ -25,13 +25,13 @@ spec:
                 secretKeyRef:
                   name: pg-pguser-letschurch
                   key: uri
-            - name: OTEL_SERVICE_NAME
-              value: background-worker
             - name: SENTRY_DSN
               valueFrom:
                 secretKeyRef:
                   name: sentry-secret
                   key: SENTRY_BACKGROUND_WORKER_DSN
+            - name: SERVICE_NAME
+              value: background-worker
           envFrom:
             - configMapRef:
                 name: gateway-config
@@ -40,7 +40,7 @@ spec:
             - configMapRef:
                 name: background-worker-config
             - secretRef:
-                name: otel-secret
+                name: axiom-secret
             - secretRef:
                 name: s3-secret
             - secretRef:

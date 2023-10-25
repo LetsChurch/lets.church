@@ -20,19 +20,19 @@ spec:
         - image: registry.gitlab.com/letschurch/lets.church/import-worker:latest
           name: import-worker
           env:
-            - name: OTEL_SERVICE_NAME
-              value: import-worker
             - name: SENTRY_DSN
               valueFrom:
                 secretKeyRef:
                   name: sentry-secret
                   key: SENTRY_IMPORT_WORKER_DSN
+            - name: SERVICE_NAME
+              value: import-worker
           envFrom:
             - configMapRef:
                 name: temporal-client-config
             - configMapRef:
                 name: import-worker-config
             - secretRef:
-                name: otel-secret
+                name: axiom-secret
             - secretRef:
                 name: s3-secret

@@ -22,16 +22,14 @@ spec:
           ports:
             - containerPort: 3000
           env:
-            - name: OTEL_SERVICE_NAME
-              value: web
             - name: SENTRY_DSN
               valueFrom:
                 secretKeyRef:
                   name: sentry-secret
                   key: SENTRY_WEB_SERVER_DSN
+            - name: SERVICE_NAME
+              value: web
           envFrom:
-            - secretRef:
-                name: otel-secret
             - secretRef:
                 name: turnstile-secret
             - configMapRef:

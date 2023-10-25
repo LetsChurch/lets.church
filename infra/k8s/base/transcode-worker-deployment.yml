@@ -23,19 +23,19 @@ spec:
             requests:
               memory: 5Gi
           env:
-            - name: OTEL_SERVICE_NAME
-              value: transcode-worker
             - name: SENTRY_DSN
               valueFrom:
                 secretKeyRef:
                   name: sentry-secret
                   key: SENTRY_TRANSCODE_WORKER_DSN
+            - name: SERVICE_NAME
+              value: transcode-worker
           envFrom:
             - configMapRef:
                 name: temporal-client-config
             - configMapRef:
                 name: transcode-worker-config
             - secretRef:
-                name: otel-secret
+                name: axiom-secret
             - secretRef:
                 name: s3-secret

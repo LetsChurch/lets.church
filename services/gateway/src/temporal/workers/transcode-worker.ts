@@ -1,15 +1,5 @@
-import { NativeConnection, Worker, defaultSinks } from '@temporalio/worker';
+import { NativeConnection, Worker } from '@temporalio/worker';
 import envariant from '@knpwrs/envariant';
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
-import { ConsoleSpanExporter } from '@opentelemetry/sdk-trace-base';
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
-import { Resource } from '@opentelemetry/resources';
-import {
-  OpenTelemetryActivityInboundInterceptor,
-  makeWorkflowExporter,
-} from '@temporalio/interceptors-opentelemetry/lib/worker';
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import * as Sentry from '@sentry/node';
 import * as activities from '../activities/transcode';
 import { TRANSCODE_QUEUE } from '../queues';
@@ -29,29 +19,6 @@ const MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS = envariant(
   'MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS',
 );
 
-const exporter = process.env['OTEL_EXPORTER_OTLP_ENDPOINT']
-  ? new OTLPTraceExporter({
-      url: envariant('OTEL_EXPORTER_OTLP_ENDPOINT'), // TODO: get from env
-      headers: Object.fromEntries(
-        envariant('OTEL_EXPORTER_OTLP_HEADERS')
-          .split(',')
-          .map((keyval) => keyval.split('=')),
-      ),
-    })
-  : new ConsoleSpanExporter();
-
-const resource = new Resource({
-  [SemanticResourceAttributes.SERVICE_NAME]: envariant('OTEL_SERVICE_NAME'),
-});
-
-const otel = new NodeSDK({
-  traceExporter: exporter,
-  resource,
-  instrumentations: getNodeAutoInstrumentations(),
-});
-
-otel.start();
-
 await waitOnTemporal();
 
 const worker = await Worker.create({
@@ -63,19 +30,6 @@ const worker = await Worker.create({
     MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS,
     10,
   ),
-  sinks: {
-    ...defaultSinks,
-    exporter: makeWorkflowExporter(exporter, resource),
-  },
-  interceptors: {
-    activityInbound: [
-      (ctx) => new OpenTelemetryActivityInboundInterceptor(ctx),
-    ],
-  },
 });
 
-try {
-  await worker.run();
-} finally {
-  await otel.shutdown();
-}
+await worker.run();

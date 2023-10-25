@@ -60,7 +60,7 @@ services:
     environment:
       NODE_ENV: development
       SENTRY_DSN: ${SENTRY_GATEWAY_DSN}
-      OTEL_SERVICE_NAME: gateway
+      SERVICE_NAME: gateway
       CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID}
       CLOUDFLARE_AUTH_EMAIL: ${CLOUDFLARE_AUTH_EMAIL}
       CLOUDFLARE_AUTH_KEY: ${CLOUDFLARE_AUTH_KEY}
@@ -89,7 +89,7 @@ services:
     environment:
       NODE_ENV: development
       SENTRY_DSN: ${SENTRY_BACKGROUND_WORKER_DSN}
-      OTEL_SERVICE_NAME: background-worker
+      SERVICE_NAME: background-worker
       IDENTITY: dev
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       ELASTICSEARCH_URL: http://elasticsearch:9200
@@ -109,7 +109,7 @@ services:
     environment:
       NODE_ENV: development
       SENTRY_DSN: ${SENTRY_TRANSCODE_WORKER_DSN}
-      OTEL_SERVICE_NAME: transcode-worker
+      SERVICE_NAME: transcode-worker
       IDENTITY: dev
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
@@ -127,7 +127,7 @@ services:
     environment:
       NODE_ENV: development
       SENTRY_DSN: ${SENTRY_TRANSCRIBE_WORKER_DSN}
-      OTEL_SERVICE_NAME: transcribe-worker
+      SERVICE_NAME: transcribe-worker
       IDENTITY: dev
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
@@ -146,7 +146,7 @@ services:
     environment:
       NODE_ENV: development
       SENTRY_DSN: ${SENTRY_IMPORT_WORKER_DSN}
-      OTEL_SERVICE_NAME: import-worker
+      SERVICE_NAME: import-worker
       IDENTITY: dev
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1m

@@ -38,22 +38,22 @@ spec:
                 secretKeyRef:
                   name: imgproxy-secret
                   key: IMGPROXY_SALT
-            - name: OTEL_SERVICE_NAME
-              value: gateway
             - name: SENTRY_DSN
               valueFrom:
                 secretKeyRef:
                   name: sentry-secret
                   key: SENTRY_GATEWAY_DSN
+            - name: SERVICE_NAME
+              value: gateway
           envFrom:
             - configMapRef:
                 name: gateway-config
             - configMapRef:
                 name: temporal-client-config
             - secretRef:
-                name: jwt-secret
+                name: axiom-secret
             - secretRef:
-                name: otel-secret
+                name: jwt-secret
             - secretRef:
                 name: s3-secret
             - secretRef:

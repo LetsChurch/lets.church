@@ -22,6 +22,9 @@ configMapGenerator:
       - IMGPROXY_URL="https://images.letschurch.cloud"
       - MEDIA_URL="https://media.letschurch.cloud"
 secretGenerator:
+  - name: axiom-secret
+    envs:
+      - axiom.crypt.env
   - name: cf-api-secret
     envs:
       - cf-api.crypt.env
@@ -34,9 +37,6 @@ secretGenerator:
   - name: jwt-secret
     envs:
       - jwt.crypt.env
-  - name: otel-secret
-    envs:
-      - otel.crypt.env
   - name: pgo-backup-creds
     files:
       - pgo-backup-creds.crypt.conf

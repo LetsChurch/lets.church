@@ -1,4 +1,5 @@
 infra/k8s/local/kustomization.yml:generic-api-key:17
+infra/k8s/prod/axiom.crypt.env:generic-api-key:2
 infra/k8s/prod/cf-api.crypt.env:generic-api-key:3
 infra/k8s/prod/imgproxy.crypt.env:generic-api-key:1
 infra/k8s/prod/imgproxy.crypt.env:generic-api-key:5
