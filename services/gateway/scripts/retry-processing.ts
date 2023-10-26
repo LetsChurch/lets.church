@@ -13,6 +13,7 @@ const scope = await select({
   choices: [
     { name: 'List of IDs', value: 'ids' },
     { name: 'Channel Slug', value: 'slug' },
+    { name: 'Failed Uploads', value: 'failed' },
   ],
 });
 
@@ -26,7 +27,10 @@ const subScope = z.enum(['transcode', 'transcribe', 'everything']).parse(
     ],
   }),
 );
-const onlyFailed = await confirm({ message: 'Only failed?', default: true });
+
+const onlyFailed =
+  scope === 'failed' ||
+  (await confirm({ message: 'Only failed?', default: true }));
 
 const ids: Array<string> = [];
 
@@ -73,6 +77,21 @@ if (scope === 'ids') {
                 ],
               }
             : {}),
+        },
+      })
+    ).map(({ id }) => id),
+  );
+} else if (scope === 'failed') {
+  ids.push(
+    ...(
+      await prisma.uploadRecord.findMany({
+        select: { id: true },
+        where: {
+          finalizedUploadKey: { not: null },
+          OR: [
+            { transcribingFinishedAt: null },
+            { transcodingFinishedAt: null },
+          ],
         },
       })
     ).map(({ id }) => id),
