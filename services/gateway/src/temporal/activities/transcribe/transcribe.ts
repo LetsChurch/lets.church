@@ -117,7 +117,7 @@ export default async function transcribe(
 
     return { transcriptKey, additionalKeys: keys };
   } catch (e) {
-    activityLogger.error(e);
+    activityLogger.error(e instanceof Error ? e.message : e);
     await updateUploadRecord(uploadRecordId, {
       transcribingStartedAt: null,
       transcribingFinishedAt: null,

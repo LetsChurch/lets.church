@@ -145,7 +145,7 @@ export default async function createThumbnails(
     Context.current().heartbeat();
     activityLogger.info('Done uploading hovernail');
   } catch (e) {
-    activityLogger.error(e);
+    activityLogger.error(e instanceof Error ? e.message : e);
     throw e;
   } finally {
     await rimraf(workingDir);

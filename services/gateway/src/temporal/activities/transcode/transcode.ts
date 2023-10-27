@@ -315,7 +315,7 @@ export default async function transcode(
       transcodingFinishedAt: new Date(),
     });
   } catch (e) {
-    activityLogger.error(e);
+    activityLogger.error(e instanceof Error ? e.message : e);
     await updateUploadRecord(uploadRecordId, {
       transcodingStartedAt: null,
       transcodingFinishedAt: null,

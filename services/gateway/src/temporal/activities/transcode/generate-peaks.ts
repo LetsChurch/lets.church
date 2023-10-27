@@ -74,7 +74,7 @@ export default async function generatePeaks(
     Context.current().heartbeat('Uploaded peak dat');
     activityLogger.info('Uploaded peak dat');
   } catch (e) {
-    activityLogger.error(e);
+    activityLogger.error(e instanceof Error ? e.message : e);
   } finally {
     activityLogger.info(`Removing work directory: ${workingDir}`);
     await rimraf(workingDir);

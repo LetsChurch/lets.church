@@ -175,7 +175,7 @@ export default async function importMedia(
       finalizedUploadKey: mediaUploadKey,
     });
   } catch (e) {
-    activityLogger.error(e);
+    activityLogger.error(e instanceof Error ? e.message : e);
     throw e;
   } finally {
     await rimraf(dir);

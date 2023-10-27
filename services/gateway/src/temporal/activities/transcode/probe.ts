@@ -74,7 +74,7 @@ export default async function probe(
 
     return parsedProbe;
   } catch (e) {
-    activityLogger.error(e);
+    activityLogger.error(e instanceof Error ? e.message : e);
     throw e;
   } finally {
     activityLogger.info('Removing working directory');
