@@ -8,19 +8,20 @@ const moduleLogger = logger.child({
 });
 
 export default async function updateUserActivity(
-  appUserId: string,
+  targetId: string,
   data: Prisma.AppUserUpdateArgs['data'],
 ) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'updateUserActivity',
-    args: { appUserId, data },
+    args: { targetId },
+    meta: JSON.stringify({ data }),
   });
 
   activityLogger.info('Updating user');
 
   await prisma.appUser.update({
     where: {
-      id: appUserId,
+      id: targetId,
     },
     data,
   });

@@ -125,9 +125,9 @@ export default async function importMedia(
     temporalActivity: 'importMedia',
     args: {
       url,
-      title: data.title,
-      slug: data.channel?.connect?.slug,
+      channelSlug: data.channel?.connect?.slug,
     },
+    meta: JSON.stringify({ data }),
   });
 
   const heartbeat = (arg: string) => Context.current().heartbeat(arg);

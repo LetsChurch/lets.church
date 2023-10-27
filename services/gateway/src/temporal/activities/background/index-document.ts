@@ -123,10 +123,10 @@ export default async function indexDocument(
   const activityLogger = moduleLogger.child({
     temporalActivity: 'indexDocument',
     args: {
-      kind,
       uploadRecordId,
       s3UploadKey,
     },
+    meta: JSON.stringify({ kind }),
   });
 
   const doc = await getDocument(

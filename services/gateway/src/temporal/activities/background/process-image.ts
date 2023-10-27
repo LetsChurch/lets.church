@@ -29,10 +29,10 @@ export default async function processImage(
   const activityLogger = moduleLogger.child({
     temporalActivity: 'processImage',
     args: {
-      postProcess,
       targetId,
       s3UploadKey,
     },
+    meta: JSON.stringify({ postProcess }),
   });
 
   Context.current().heartbeat();
