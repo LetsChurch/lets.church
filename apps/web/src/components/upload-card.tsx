@@ -31,11 +31,12 @@ export default function UploadCard(props: Props) {
         <Avatar
           size="sm"
           src={props.data.channel.avatarUrl}
-          alt={resolvedTitle()}
+          alt={props.data.channel.name}
         />
         <A
           href={props.href}
           class="block min-w-0 before:absolute before:inset-0"
+          title={resolvedTitle()}
         >
           <p class="truncate text-sm font-medium text-gray-900">
             {resolvedTitle()}
