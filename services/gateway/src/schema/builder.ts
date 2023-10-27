@@ -70,19 +70,18 @@ export default new SchemaBuilder<{
     wrap: (resolver, _options, config) =>
       wrapResolver(resolver, (error, duration) => {
         const bindings = {
-          kind: config.kind,
-          graphqlKind: config.graphqlKind,
-          parentType: config.parentType,
-          args: Object.fromEntries(
-            Object.entries(config.args).map(([key, value]) =>
-              key === 'password' ? [key, '********'] : [key, value],
-            ),
-          ),
+          graphql: {
+            kind: config.kind,
+            parentType: config.parentType,
+          },
           duration,
         };
 
         if (error) {
-          moduleLogger.error({ error, ...bindings });
+          moduleLogger.error(
+            bindings,
+            error instanceof Error ? error.message : `${error}`,
+          );
         } else {
           moduleLogger.info(bindings);
         }
