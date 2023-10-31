@@ -14,7 +14,7 @@ export function routeData() {
     return client.request<MyChannelsQuery>(gql`
       query MyChannels {
         me {
-          channelMembershipsConnection {
+          channelMembershipsConnection(first: 100) {
             edges {
               node {
                 channel {

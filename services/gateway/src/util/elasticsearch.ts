@@ -117,7 +117,7 @@ export function msearchUploads(
         channelIds: {
           terms: {
             field: 'channelId',
-            size: 10,
+            size: 100,
           },
         },
         minPublishedAt: {
@@ -241,7 +241,7 @@ export function msearchTranscripts(
         channelIds: {
           terms: {
             field: 'channelId',
-            size: 10,
+            size: 100,
           },
         },
         minPublishedAt: {
