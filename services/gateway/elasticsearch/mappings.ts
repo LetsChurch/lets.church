@@ -1,5 +1,6 @@
 import type {
   MappingProperty,
+  IndicesIndexSettings,
   PropertyName,
 } from '@elastic/elasticsearch/lib/api/types';
 import { diff } from 'jest-diff';
@@ -17,7 +18,10 @@ moduleLogger.info('Starting index mapping deployment');
 // Define target mappings
 const targetMappings: Record<
   string, // index name
-  { properties: Record<PropertyName, MappingProperty> }
+  {
+    properties: Record<PropertyName, MappingProperty>;
+    settings?: IndicesIndexSettings;
+  }
 > = {
   lc_channels: {
     properties: {
@@ -114,6 +118,46 @@ const targetMappings: Record<
       },
     },
   },
+  lc_transcripts_v2: {
+    properties: {
+      channelId: {
+        type: 'keyword',
+      },
+      publishedAt: {
+        type: 'date',
+      },
+      visibility: {
+        type: 'keyword',
+      },
+      html: {
+        type: 'text',
+        analyzer: 'ignore_html_tags',
+      },
+      transcodingFinishedAt: {
+        type: 'date',
+      },
+      transcribingFinishedAt: {
+        type: 'date',
+      },
+    },
+    settings: {
+      analysis: {
+        char_filter: {
+          ignore_html_tags: {
+            type: 'html_strip',
+          },
+        },
+        analyzer: {
+          ignore_html_tags: {
+            tokenizer: 'standard',
+            filter: ['lowercase', 'stop', 'apostrophe', 'porter_stem'],
+            char_filter: ['ignore_html_tags'],
+            type: 'custom',
+          },
+        },
+      },
+    },
+  },
 };
 
 // Get server mappings and transform into expected format
@@ -150,12 +194,21 @@ moduleLogger.info({ serverMappings });
 // Show a preview of what will be deployed using jest-diff
 moduleLogger.info('Preview of index mapping changes:');
 moduleLogger.info(
-  diff(serverMappings, targetMappings, {
-    aAnnotation: 'Server',
-    aColor: pc.red,
-    bAnnotation: 'Target',
-    bColor: pc.green,
-  }),
+  diff(
+    serverMappings,
+    Object.fromEntries(
+      Object.entries(targetMappings).map(([k, { properties }]) => [
+        k,
+        { properties },
+      ]),
+    ),
+    {
+      aAnnotation: 'Server',
+      aColor: pc.red,
+      bAnnotation: 'Target',
+      bColor: pc.green,
+    },
+  ),
 );
 
 const serverIndexNames = new Set(Object.keys(serverMappings));
@@ -165,7 +218,7 @@ for (const [name, mappings] of Object.entries(targetMappings)) {
   // If ther server doesn't have an index by the given name, create it
   if (!serverIndexNames.has(name)) {
     moduleLogger.info(`Creating index: ${name}`);
-    await client.indices.create({ index: name });
+    await client.indices.create({ index: name, settings: mappings.settings });
   }
 
   // PUT the index mapping

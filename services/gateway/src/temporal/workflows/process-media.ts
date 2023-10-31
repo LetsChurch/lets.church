@@ -65,28 +65,35 @@ export async function processMediaWorkflow(
   ]);
 
   // Index
-  await Promise.all([
-    executeChild(indexDocumentWorkflow, {
-      workflowId: `upload:${s3UploadKey}`,
-      args: ['upload', targetId],
+
+  if (transcribePromise) {
+    const res = await transcribePromise;
+
+    await executeChild(indexDocumentWorkflow, {
+      workflowId: `transcript:${s3UploadKey}`,
+      args: ['transcript', targetId, res.transcriptKey],
       taskQueue: BACKGROUND_QUEUE,
       retry: {
         maximumAttempts: 2,
       },
-    }),
-    transcribePromise
-      ? executeChild(indexDocumentWorkflow, {
-          workflowId: `transcript:${s3UploadKey}`,
-          args: [
-            'transcript',
-            targetId,
-            (await transcribePromise).transcriptKey,
-          ],
-          taskQueue: BACKGROUND_QUEUE,
-          retry: {
-            maximumAttempts: 2,
-          },
-        })
-      : null,
-  ]);
+    });
+
+    await executeChild(indexDocumentWorkflow, {
+      workflowId: `transcriptHtml:${s3UploadKey}`,
+      args: ['transcriptHtml', targetId, res.transcriptJsonKey],
+      taskQueue: BACKGROUND_QUEUE,
+      retry: {
+        maximumAttempts: 2,
+      },
+    });
+  }
+
+  await executeChild(indexDocumentWorkflow, {
+    workflowId: `upload:${s3UploadKey}`,
+    args: ['upload', targetId],
+    taskQueue: BACKGROUND_QUEUE,
+    retry: {
+      maximumAttempts: 2,
+    },
+  });
 }

@@ -97,6 +97,7 @@ export default async function transcribe(
     activityLogger.info(`uploading file: transcript.vtt`);
 
     const transcriptKey = `${uploadRecordId}/transcript.vtt`;
+    const transcriptJsonKey = `${uploadRecordId}/transcript.original.json`;
 
     await retryablePutFile({
       to: 'PUBLIC',
@@ -115,7 +116,7 @@ export default async function transcribe(
       transcribingFinishedAt: new Date(),
     });
 
-    return { transcriptKey, additionalKeys: keys };
+    return { transcriptKey, transcriptJsonKey, additionalKeys: keys };
   } catch (e) {
     activityLogger.error(e instanceof Error ? e.message : e);
     await updateUploadRecord(uploadRecordId, {

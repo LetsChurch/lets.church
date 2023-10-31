@@ -145,6 +145,24 @@ export function stitchTranscript(
   return stitched;
 }
 
+const nonWhitespace = /(\w+)/;
+
+export function stitchToHtml(
+  transcript: z.infer<typeof whisperJsonSchema>,
+): string {
+  return transcript.segments
+    .flatMap((s) =>
+      s.words.map((w) =>
+        w.word.replace(
+          nonWhitespace,
+          `<span data-start="${w.start}" data-end="${w.end}">$1</span>`,
+        ),
+      ),
+    )
+    .join('')
+    .trim();
+}
+
 export async function readWhisperJsonFile(path: string) {
   const json = await readFile(path);
   return whisperJsonSchema.parse(JSON.parse(json.toString()));

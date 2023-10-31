@@ -5,12 +5,18 @@ import prisma from '../../../util/prisma';
 import { getObject } from '../../../util/s3';
 import { transcriptSegmentSchema } from '../../../util/zod';
 import logger from '../../../util/logger';
+import { stitchToHtml, whisperJsonSchema } from '../../../util/whisper';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/index-document',
 });
 
-export type DocumentKind = 'transcript' | 'upload' | 'organization' | 'channel';
+export type DocumentKind =
+  | 'transcript'
+  | 'transcriptHtml'
+  | 'upload'
+  | 'organization'
+  | 'channel';
 
 async function getDocument(
   kind: DocumentKind,
@@ -56,6 +62,43 @@ async function getDocument(
           transcodingFinishedAt: transcodingFinishedAt?.toISOString() ?? null,
           transcribingFinishedAt: transcribingFinishedAt?.toISOString() ?? null,
         }),
+      };
+    }
+    case 'transcriptHtml': {
+      log.info('Fetching transcript');
+      invariant(s3UploadKey, 'uploadKey is required for transcript');
+      const res = await getObject('PUBLIC', s3UploadKey);
+      const body = await res.Body?.transformToString('utf-8');
+      invariant(body, `No object with key ${s3UploadKey} found`);
+      const html = stitchToHtml(whisperJsonSchema.parse(JSON.parse(body)));
+
+      log.info('Fetching metadata');
+      const {
+        publishedAt,
+        transcodingFinishedAt,
+        transcribingFinishedAt,
+        ...upRec
+      } = await prisma.uploadRecord.findUniqueOrThrow({
+        where: { id: documentId },
+        select: {
+          channelId: true,
+          publishedAt: true,
+          visibility: true,
+          transcodingFinishedAt: true,
+          transcribingFinishedAt: true,
+        },
+      });
+
+      return {
+        index: 'lc_transcripts_v2',
+        id: documentId,
+        document: {
+          ...upRec,
+          html,
+          publishedAt: publishedAt.toISOString(),
+          transcodingFinishedAt: transcodingFinishedAt?.toISOString() ?? null,
+          transcribingFinishedAt: transcribingFinishedAt?.toISOString() ?? null,
+        },
       };
     }
     case 'upload': {

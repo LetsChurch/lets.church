@@ -46,6 +46,16 @@ await pMap(
         signal: emptySignal,
         signalArgs: [],
       });
+
+      await (
+        await client
+      ).workflow.signalWithStart(indexDocumentWorkflow, {
+        taskQueue: BACKGROUND_QUEUE,
+        workflowId: `reindexTranscriptHtml:${id}`,
+        args: ['transcriptHtml', id, `${id}/transcript.original.json`],
+        signal: emptySignal,
+        signalArgs: [],
+      });
     }
 
     if (what === 'uploads' || what === 'all') {
