@@ -21,14 +21,6 @@ const { abortMultipartUpload, completeMultipartUpload, finalizeUploadRecord } =
     retry: { maximumAttempts: 5 },
   });
 
-// TODO: see note below
-/* const { backupObjects } = proxyActivities<typeof activities>({ */
-/*   startToCloseTimeout: '60 minute', */
-/*   heartbeatTimeout: '1 minute', */
-/*   taskQueue: BACKGROUND_QUEUE, */
-/*   retry: { maximumAttempts: 5 }, */
-/* }); */
-
 export const uploadDoneSignal =
   defineSignal<[Array<string>, string]>('uploadDone');
 
@@ -77,11 +69,6 @@ export async function handleMultipartMediaUploadWorkflow(
         },
       });
     }
-
-    // TODO: A more thoughtful approach is necessary. This can lead to duplicate work, e.g., when an image is uploaded
-    // after a video there will be two backup jobs that backup the entire prefix.
-    /* await backupObjects('INGEST', uploadRecordId); */
-    /* await backupObjects('PUBLIC', uploadRecordId); */
   } else {
     await abortMultipartUpload(to, s3UploadId, s3UploadKey);
   }

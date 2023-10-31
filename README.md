@@ -5,7 +5,7 @@
 ### Prereqs
 
 1. Setup three S3 (or S3-compatible) buckets on your provider of choice for
-   `ingest`, `public`, and `backup`.
+   `ingest` and `public`
 2. Ensure the `ingest` bucket has the following CORS configuration:
 ```json
 [
