@@ -35,17 +35,26 @@ export async function deleteUploadRecordSearch(id: string) {
     temporalActivity: 'deleteUploadRecordSearch',
     id,
   });
-  activityLogger.info(`Marking upload record ${id} as private`);
 
   try {
+    activityLogger.info('Deleting from index lc_uploads_v2');
     await esClient.delete({
       index: 'lc_uploads_v2',
       id,
     });
+    activityLogger.info('Done!');
+    activityLogger.info('Deleting from index lc_transcripts');
     await esClient.delete({
       index: 'lc_transcripts',
       id,
     });
+    activityLogger.info('Done!');
+    activityLogger.info('Deleting from index lc_transcripts_v2');
+    await esClient.delete({
+      index: 'lc_transcripts_v2',
+      id,
+    });
+    activityLogger.info('Done!');
   } catch (e) {
     activityLogger.error(`Error deleting from ElasticSearch: ${e}`);
     return false;
