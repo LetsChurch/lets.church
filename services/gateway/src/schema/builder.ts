@@ -7,8 +7,8 @@ import SimpleObjectsPlugin from '@pothos/plugin-simple-objects';
 import ValidationPlugin from '@pothos/plugin-validation';
 import type PrismaTypes from '@pothos/plugin-prisma/generated';
 import TracingPlugin, {
-  wrapResolver,
   isRootField,
+  runFunction,
 } from '@pothos/plugin-tracing';
 import type { Context } from '../util/context';
 import prisma from '../util/prisma';
@@ -67,24 +67,35 @@ export default new SchemaBuilder<{
       process.env['NODE_ENV'] === 'development'
         ? true
         : (config) => isRootField(config),
-    wrap: (resolver, _options, config) =>
-      wrapResolver(resolver, (error, duration) => {
-        const bindings = {
-          graphql: {
-            kind: config.kind,
-            parentType: config.parentType,
-          },
-          duration,
-        };
+    wrap: (resolver, _options, config) => (source, args, context, info) =>
+      runFunction(
+        () => resolver(source, args, context, info),
+        (error, duration) => {
+          const bindings = {
+            graphql: {
+              kind: config.kind,
+              parentType: config.parentType,
+              args: JSON.stringify(
+                Object.fromEntries(
+                  Object.entries(args).map(([key, value]) => [
+                    key,
+                    key === 'password' ? '********' : value,
+                  ]),
+                ),
+              ),
+            },
+            duration,
+          };
 
-        if (error) {
-          moduleLogger.error(
-            bindings,
-            error instanceof Error ? error.message : `${error}`,
-          );
-        } else {
-          moduleLogger.info(bindings);
-        }
-      }),
+          if (error) {
+            moduleLogger.error(
+              bindings,
+              error instanceof Error ? error.message : `${error}`,
+            );
+          } else {
+            moduleLogger.info(bindings);
+          }
+        },
+      ),
   },
 });
