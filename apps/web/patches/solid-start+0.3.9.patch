@@ -1,8 +1,10 @@
 diff --git a/node_modules/solid-start/api/index.ts b/node_modules/solid-start/api/index.ts
-index 398dce3..51fae3e 100644
+index 398dce3..915638f 100644
 --- a/node_modules/solid-start/api/index.ts
 +++ b/node_modules/solid-start/api/index.ts
-@@ -1,3 +1,7 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
 +// @ts-nocheck
@@ -11,10 +13,12 @@ index 398dce3..51fae3e 100644
  import { getRouteMatches } from "./router";
  import { MatchRoute, Method, Route } from "./types";
 diff --git a/node_modules/solid-start/api/internalFetch.ts b/node_modules/solid-start/api/internalFetch.ts
-index eea745d..a0fcd67 100644
+index eea745d..c047a12 100644
 --- a/node_modules/solid-start/api/internalFetch.ts
 +++ b/node_modules/solid-start/api/internalFetch.ts
-@@ -1,3 +1,7 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
 +// @ts-nocheck
@@ -23,10 +27,12 @@ index eea745d..a0fcd67 100644
  import { getRouteMatches } from "./router";
  import type { APIEvent, MatchRoute, Method } from "./types";
 diff --git a/node_modules/solid-start/api/middleware.ts b/node_modules/solid-start/api/middleware.ts
-index f0c37ca..85699e3 100644
+index f0c37ca..5c16627 100644
 --- a/node_modules/solid-start/api/middleware.ts
 +++ b/node_modules/solid-start/api/middleware.ts
-@@ -1,3 +1,7 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
 +// @ts-nocheck
@@ -35,10 +41,12 @@ index f0c37ca..85699e3 100644
  import { FetchEvent, FETCH_EVENT } from "../server/types";
  import { getApiHandler } from "./index";
 diff --git a/node_modules/solid-start/api/router.ts b/node_modules/solid-start/api/router.ts
-index cc4eb7a..c39860d 100644
+index cc4eb7a..c05d512 100644
 --- a/node_modules/solid-start/api/router.ts
 +++ b/node_modules/solid-start/api/router.ts
-@@ -1,3 +1,7 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
 +// @ts-nocheck
@@ -47,10 +55,12 @@ index cc4eb7a..c39860d 100644
  
  export function getRouteMatches(routes: MatchRoute[], path: string, method: Method) {
 diff --git a/node_modules/solid-start/api/types.ts b/node_modules/solid-start/api/types.ts
-index 43c0773..10eeb65 100644
+index 43c0773..47456d9 100644
 --- a/node_modules/solid-start/api/types.ts
 +++ b/node_modules/solid-start/api/types.ts
-@@ -1,3 +1,7 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
 +// @ts-nocheck
@@ -59,10 +69,12 @@ index 43c0773..10eeb65 100644
  
  export interface APIEvent extends FetchEvent {
 diff --git a/node_modules/solid-start/data/Form.tsx b/node_modules/solid-start/data/Form.tsx
-index e908349..bd2bc59 100644
+index e908349..d986605 100644
 --- a/node_modules/solid-start/data/Form.tsx
 +++ b/node_modules/solid-start/data/Form.tsx
-@@ -1,3 +1,7 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
 +// @ts-nocheck
@@ -71,10 +83,12 @@ index e908349..bd2bc59 100644
   * Original code by Remix Sofware Inc
   * MIT Licensed, Copyright(c) 2021 Remix software Inc, see LICENSE.remix.md for details
 diff --git a/node_modules/solid-start/data/FormError.tsx b/node_modules/solid-start/data/FormError.tsx
-index f0c79c3..1314cd6 100644
+index f0c79c3..272cb27 100644
 --- a/node_modules/solid-start/data/FormError.tsx
 +++ b/node_modules/solid-start/data/FormError.tsx
-@@ -1,3 +1,7 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
 +// @ts-nocheck
@@ -83,86 +97,102 @@ index f0c79c3..1314cd6 100644
    status: number;
    constructor(message: string, { status, stack }: { status?: number; stack?: string } = {}) {
 diff --git a/node_modules/solid-start/data/createRouteAction.tsx b/node_modules/solid-start/data/createRouteAction.tsx
-index 49f648a..3342f5d 100644
+index 49f648a..4513153 100644
 --- a/node_modules/solid-start/data/createRouteAction.tsx
 +++ b/node_modules/solid-start/data/createRouteAction.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,7 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { type Navigator } from "@solidjs/router";
  import { $TRACK, batch, createSignal, type ParentComponent } from "solid-js";
  import { useNavigate, useSearchParams } from "../router";
 diff --git a/node_modules/solid-start/data/createRouteData.tsx b/node_modules/solid-start/data/createRouteData.tsx
-index 076c2b0..fe20c2f 100644
+index 495b04a..6d5ba6d 100644
 --- a/node_modules/solid-start/data/createRouteData.tsx
 +++ b/node_modules/solid-start/data/createRouteData.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,7 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import type {
    Accessor, Resource,
    ResourceFetcher, ResourceFetcherInfo, ResourceOptions, Setter
 diff --git a/node_modules/solid-start/data/index.ts b/node_modules/solid-start/data/index.ts
-index 2cf7e43..fe9cd75 100644
+index 2cf7e43..ef9cecd 100644
 --- a/node_modules/solid-start/data/index.ts
 +++ b/node_modules/solid-start/data/index.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,7 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  export { useRouteData } from "@solidjs/router";
  export { createRouteAction, createRouteMultiAction } from "./createRouteAction";
  export { createRouteData, refetchRouteData } from "./createRouteData";
 diff --git a/node_modules/solid-start/dev/CsrRoot.tsx b/node_modules/solid-start/dev/CsrRoot.tsx
-index 0c55cf1..e91b072 100644
+index 0c55cf1..34202e8 100644
 --- a/node_modules/solid-start/dev/CsrRoot.tsx
 +++ b/node_modules/solid-start/dev/CsrRoot.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,7 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { Body, Html, Scripts } from "solid-start";
  
  export default function Root() {
 diff --git a/node_modules/solid-start/durable-object/index.ts b/node_modules/solid-start/durable-object/index.ts
-index cefaa35..3388f32 100644
+index cefaa35..8aa7f84 100644
 --- a/node_modules/solid-start/durable-object/index.ts
 +++ b/node_modules/solid-start/durable-object/index.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,7 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  interface DurableObjectGetAlarmOptions {
    allowConcurrency?: boolean;
  }
 diff --git a/node_modules/solid-start/entry-client/StartClient.tsx b/node_modules/solid-start/entry-client/StartClient.tsx
-index a9b6ecb..3ba229d 100644
+index a9b6ecb..217cdc3 100644
 --- a/node_modules/solid-start/entry-client/StartClient.tsx
 +++ b/node_modules/solid-start/entry-client/StartClient.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,7 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { MetaProvider } from "@solidjs/meta";
  import { Router, RouterProps } from "@solidjs/router";
  // @ts-ignore
 diff --git a/node_modules/solid-start/entry-client/index.tsx b/node_modules/solid-start/entry-client/index.tsx
-index e869653..2f927e3 100644
+index e869653..6d00412 100644
 --- a/node_modules/solid-start/entry-client/index.tsx
 +++ b/node_modules/solid-start/entry-client/index.tsx
-@@ -1,2 +1,4 @@
+@@ -1,2 +1,6 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  export { default as mount } from "./mount";
  export { default as StartClient } from "./StartClient";
 diff --git a/node_modules/solid-start/entry-client/mount.tsx b/node_modules/solid-start/entry-client/mount.tsx
-index 05bb2ba..6306b15 100644
+index 8107fec..a20e43f 100644
 --- a/node_modules/solid-start/entry-client/mount.tsx
 +++ b/node_modules/solid-start/entry-client/mount.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,7 @@
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import type { JSX } from "solid-js";
  import { hydrate, render } from "solid-js/web";
  
 diff --git a/node_modules/solid-start/entry-server/StartServer.tsx b/node_modules/solid-start/entry-server/StartServer.tsx
-index f382f2b..6b36317 100644
+index b3a0ce3..a6c16be 100644
 --- a/node_modules/solid-start/entry-server/StartServer.tsx
 +++ b/node_modules/solid-start/entry-server/StartServer.tsx
 @@ -1,3 +1,5 @@
@@ -170,7 +200,7 @@ index f382f2b..6b36317 100644
 +
  import { MetaProvider } from "@solidjs/meta";
  import { RouteDataFunc, Router, RouterProps } from "@solidjs/router";
- import { ComponentProps, sharedConfig } from "solid-js";
+ import { sharedConfig } from "solid-js";
 diff --git a/node_modules/solid-start/entry-server/index.ts b/node_modules/solid-start/entry-server/index.ts
 index 25a1c2a..9c7929f 100644
 --- a/node_modules/solid-start/entry-server/index.ts
@@ -302,7 +332,7 @@ index 6df53ca..0c66d70 100644
  import { $PROXY } from "solid-js";
  
 diff --git a/node_modules/solid-start/root/Document.tsx b/node_modules/solid-start/root/Document.tsx
-index 58ae3f7..f8e250e 100644
+index 09ab915..6ed3eeb 100644
 --- a/node_modules/solid-start/root/Document.tsx
 +++ b/node_modules/solid-start/root/Document.tsx
 @@ -1,3 +1,5 @@
@@ -341,18 +371,8 @@ index 0ddb92d..fda236a 100644
  import { JSX } from "solid-js";
  import { useAssets } from "solid-js/web";
  import { useRequest } from "../server/ServerContext";
-diff --git a/node_modules/solid-start/root/Meta.tsx b/node_modules/solid-start/root/Meta.tsx
-index 11decaa..6a461d3 100644
---- a/node_modules/solid-start/root/Meta.tsx
-+++ b/node_modules/solid-start/root/Meta.tsx
-@@ -1,3 +1,5 @@
-+// @ts-nocheck
-+
- import { renderTags } from "@solidjs/meta";
- import { useContext } from "solid-js";
- import { ssr, useAssets } from "solid-js/web";
 diff --git a/node_modules/solid-start/root/Scripts.tsx b/node_modules/solid-start/root/Scripts.tsx
-index cc1828e..ad1a1df 100644
+index 505f412..4b8fceb 100644
 --- a/node_modules/solid-start/root/Scripts.tsx
 +++ b/node_modules/solid-start/root/Scripts.tsx
 @@ -1,3 +1,5 @@
@@ -372,7 +392,7 @@ index 52d76be..353606c 100644
  import { routeLayouts } from "./routeLayouts";
  
 diff --git a/node_modules/solid-start/root/index.tsx b/node_modules/solid-start/root/index.tsx
-index 91039c5..e53227c 100644
+index 4f94dc0..a10de6e 100644
 --- a/node_modules/solid-start/root/index.tsx
 +++ b/node_modules/solid-start/root/index.tsx
 @@ -1,3 +1,5 @@
@@ -472,7 +492,7 @@ index b605421..cebd699 100644
  import { ContentTypeHeader, XSolidStartContentTypeHeader, XSolidStartOrigin } from "./responses";
  import { handleServerRequest, server$ } from "./server-functions/server";
 diff --git a/node_modules/solid-start/server/render.ts b/node_modules/solid-start/server/render.ts
-index 8b2e8dc..ecaf193 100644
+index 90c8e78..39ac560 100644
 --- a/node_modules/solid-start/server/render.ts
 +++ b/node_modules/solid-start/server/render.ts
 @@ -1,3 +1,5 @@
@@ -480,7 +500,7 @@ index 8b2e8dc..ecaf193 100644
 +
  import { JSX } from "solid-js";
  import { renderToStream, renderToString, renderToStringAsync } from "solid-js/web";
- import { apiRoutes } from "../api/middleware";
+ import { redirect } from "../server/responses";
 diff --git a/node_modules/solid-start/server/responses.ts b/node_modules/solid-start/server/responses.ts
 index be467f2..2202140 100644
 --- a/node_modules/solid-start/server/responses.ts
