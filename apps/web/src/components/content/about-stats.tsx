@@ -31,7 +31,7 @@ export default function AboutStats() {
           <dt class="text-base leading-7 text-gray-600">Days of Content</dt>
           <dd class="order-first text-3xl font-semibold tracking-tight text-gray-900 sm:text-5xl">
             {humanFormat(
-              (data()?.stats.totalUploadSeconds ?? 0) / (60 * 60 * 24 * 365),
+              (data()?.stats.totalUploadSeconds ?? 0) / (60 ** 2 * 24),
             )}
           </dd>
         </div>
