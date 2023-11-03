@@ -795,7 +795,7 @@ export type SearchPublishedAtAggData = {
 
 export type Stats = {
   __typename?: 'Stats';
-  storageBytes: Scalars['SafeInt']['output'];
+  totalUploadSeconds: Scalars['Float']['output'];
   totalUploads: Scalars['Int']['output'];
 };
 

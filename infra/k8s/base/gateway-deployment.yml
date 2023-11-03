@@ -56,8 +56,6 @@ spec:
                 name: jwt-secret
             - secretRef:
                 name: s3-secret
-            - secretRef:
-                name: cf-api-secret
       initContainers:
         - <<: *gatewayContainer
           name: gateway-init-migrations

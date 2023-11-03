@@ -1,6 +1,5 @@
 import { gql } from 'graphql-request';
 import humanFormat from 'human-format';
-import prettyBytes from 'pretty-bytes';
 import { createResource } from 'solid-js';
 import server$ from 'solid-start/server';
 import type {
@@ -14,7 +13,7 @@ const getData = server$(async () => {
     gql`
       query AboutPageData {
         stats {
-          storageBytes
+          totalUploadSeconds
           totalUploads
         }
       }
@@ -29,9 +28,11 @@ export default function AboutStats() {
     <>
       <dl class="mt-36 grid grid-cols-1 gap-x-8 gap-y-16 text-center lg:grid-cols-3">
         <div class="mx-auto flex max-w-xs flex-col gap-y-4">
-          <dt class="text-base leading-7 text-gray-600">Hosted Content</dt>
+          <dt class="text-base leading-7 text-gray-600">Days of Content</dt>
           <dd class="order-first text-3xl font-semibold tracking-tight text-gray-900 sm:text-5xl">
-            {prettyBytes(data()?.stats.storageBytes ?? 0)}
+            {humanFormat(
+              (data()?.stats.totalUploadSeconds ?? 0) / (60 * 60 * 24 * 365),
+            )}
           </dd>
         </div>
         <div class="mx-auto flex max-w-xs flex-col gap-y-4">

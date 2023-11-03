@@ -1,6 +1,5 @@
 import ExpiryMap from 'expiry-map';
 import pMem from 'p-memoize';
-import { getPublicBucketStorage } from '../../util/cloudflare';
 import prisma from '../../util/prisma';
 import builder from '../builder';
 
@@ -8,9 +7,25 @@ builder.queryType();
 
 const cache = new ExpiryMap(1000 * 60 * 60);
 
+const getUploadSeconds = pMem(async () => {
+  return prisma.uploadRecord.aggregate({
+    _sum: { lengthSeconds: true },
+    where: {
+      transcodingFinishedAt: { not: null },
+      transcribingFinishedAt: { not: null },
+    },
+  });
+});
+
 const getUploadCount = pMem(
   async () => {
-    return prisma.uploadRecord.count({ where: { visibility: 'PUBLIC' } });
+    return prisma.uploadRecord.count({
+      where: {
+        visibility: 'PUBLIC',
+        transcodingFinishedAt: { not: null },
+        transcribingFinishedAt: { not: null },
+      },
+    });
   },
   { cache },
 );
@@ -19,18 +34,20 @@ builder.queryField('stats', (t) =>
   t.field({
     type: builder.simpleObject('Stats', {
       fields: (f) => ({
-        storageBytes: f.field({ type: 'SafeInt' }),
+        totalUploadSeconds: f.field({ type: 'Float' }),
         totalUploads: f.field({ type: 'Int' }),
       }),
     }),
     resolve: async () => {
-      const [storageBytes, totalUploads] = await Promise.all([
-        getPublicBucketStorage(),
-        getUploadCount(),
-      ]);
+      const [
+        {
+          _sum: { lengthSeconds },
+        },
+        totalUploads,
+      ] = await Promise.all([getUploadSeconds(), getUploadCount()]);
 
       return {
-        storageBytes,
+        totalUploadSeconds: lengthSeconds ?? 0,
         totalUploads,
       };
     },

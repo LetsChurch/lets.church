@@ -25,9 +25,6 @@ secretGenerator:
   - name: axiom-secret
     envs:
       - axiom.crypt.env
-  - name: cf-api-secret
-    envs:
-      - cf-api.crypt.env
   - name: cf-tunnel-secret
     envs:
       - cf-tunnel.crypt.env
