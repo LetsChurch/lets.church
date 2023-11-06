@@ -27,58 +27,48 @@ import logger from './logger';
 
 const moduleLogger = logger.child({ module: 'util/s3' });
 
-const s3Clients = new Map<string, S3>();
+const S3_INGEST_BUCKET = envariant('S3_INGEST_BUCKET');
+const S3_INGEST_REGION = envariant('S3_INGEST_REGION');
+const S3_INGEST_ENDPOINT = envariant('S3_INGEST_ENDPOINT');
+const S3_INGEST_ACCESS_KEY_ID = envariant('S3_INGEST_ACCESS_KEY_ID');
+const S3_INGEST_SECRET_ACCESS_KEY = envariant('S3_INGEST_SECRET_ACCESS_KEY');
 
-function ensure(arg?: string): string {
-  if (!arg) {
-    throw new Error('Missing required argument');
-  }
+const S3_PUBLIC_BUCKET = envariant('S3_PUBLIC_BUCKET');
+const S3_PUBLIC_REGION = envariant('S3_PUBLIC_REGION');
+const S3_PUBLIC_ENDPOINT = envariant('S3_PUBLIC_ENDPOINT');
+const S3_PUBLIC_ACCESS_KEY_ID = envariant('S3_PUBLIC_ACCESS_KEY_ID');
+const S3_PUBLIC_SECRET_ACCESS_KEY = envariant('S3_PUBLIC_SECRET_ACCESS_KEY');
 
-  return arg;
-}
+const s3IngestClient = new S3({
+  region: S3_INGEST_REGION,
+  endpoint: S3_INGEST_ENDPOINT,
+  credentials: {
+    accessKeyId: S3_INGEST_ACCESS_KEY_ID,
+    secretAccessKey: S3_INGEST_SECRET_ACCESS_KEY,
+  },
+});
 
-for (const k of new Set(
-  Object.keys(process.env)
-    .filter((k) => k.startsWith('LC_S3_'))
-    .map((k) => k.split('_').at(2)),
-)) {
-  invariant(k, 'Failed to create s3 client');
-  s3Clients.set(
-    k,
-    new S3({
-      region: ensure(process.env[`LC_S3_${k}_REGION`]),
-      endpoint: ensure(process.env[`LC_S3_${k}_ENDPOINT`]),
-      credentials: {
-        accessKeyId: ensure(process.env[`LC_S3_${k}_ACCESS_KEY_ID`]),
-        secretAccessKey: ensure(process.env[`LC_S3_${k}_SECRET_ACCESS_KEY`]),
-      },
-    }),
-  );
-}
-
-const S3_PRIMARY_PUBLIC_BUCKET = envariant('LC_S3_PUBLIC_BUCKET');
-const S3_PRIMARY_INGEST_BUCKET = envariant('LC_S3_INGEST_BUCKET');
-const primaryIngestClient = s3Clients.get(envariant('LC_S3_INGEST_PRIMARY'));
-const primaryPublicClient = s3Clients.get(envariant('LC_S3_PUBLIC_PRIMARY'));
+const s3PublicClient = new S3({
+  region: S3_PUBLIC_REGION,
+  endpoint: S3_PUBLIC_ENDPOINT,
+  credentials: {
+    accessKeyId: S3_PUBLIC_ACCESS_KEY_ID,
+    secretAccessKey: S3_PUBLIC_SECRET_ACCESS_KEY,
+  },
+});
 
 export type Client = 'INGEST' | 'PUBLIC';
 
 export function getS3ProtocolUri(from: Client, key: string) {
   return `s3://${
-    from === 'PUBLIC' ? S3_PRIMARY_PUBLIC_BUCKET : S3_PRIMARY_INGEST_BUCKET
+    from === 'PUBLIC' ? S3_PUBLIC_BUCKET : S3_INGEST_BUCKET
   }/${key}`;
 }
 
 function getClientAndBucket(client: Client) {
-  invariant(
-    primaryIngestClient && primaryPublicClient,
-    'Missing primary s3 clients',
-  );
-
   return {
-    client: client === 'INGEST' ? primaryIngestClient : primaryPublicClient,
-    bucket:
-      client === 'INGEST' ? S3_PRIMARY_INGEST_BUCKET : S3_PRIMARY_PUBLIC_BUCKET,
+    client: client === 'INGEST' ? s3IngestClient : s3PublicClient,
+    bucket: client === 'INGEST' ? S3_INGEST_BUCKET : S3_PUBLIC_BUCKET,
   };
 }
 
@@ -196,15 +186,10 @@ export async function createPresignedUploadUrl(
 }
 
 export async function getPublicUrlWithFilename(key: string, filename: string) {
-  invariant(
-    primaryIngestClient && primaryPublicClient,
-    'Missing primary s3 clients',
-  );
-
   return getSignedUrl(
-    primaryPublicClient,
+    s3PublicClient,
     new GetObjectCommand({
-      Bucket: S3_PRIMARY_PUBLIC_BUCKET,
+      Bucket: S3_PUBLIC_BUCKET,
       Key: key,
       ResponseContentDisposition: `attachment; filename="${sanitizeFilename(
         filename,
