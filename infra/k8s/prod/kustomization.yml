@@ -20,7 +20,7 @@ configMapGenerator:
     behavior: merge
     literals:
       - IMGPROXY_URL="https://images.letschurch.cloud"
-      - MEDIA_URL="https://media.letschurch.cloud"
+      - MEDIA_URL="https://letschurch-media.b-cdn.net"
 secretGenerator:
   - name: axiom-secret
     envs:

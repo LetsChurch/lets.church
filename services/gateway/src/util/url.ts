@@ -8,7 +8,7 @@ const IMGPROXY_SALT = envariant('IMGPROXY_SALT');
 
 export function getPublicMediaUrl(path: string) {
   const url = new URL(MEDIA_URL);
-  url.pathname = path;
+  url.pathname += `/${path}`;
   return url.toString();
 }
 

@@ -7,6 +7,8 @@ export SENTRY_TRANSCODE_WORKER_DSN=https://foo@bar.ingest.sentry.io/baz
 export SENTRY_TRANSCRIBE_WORKER=https://foo@bar.ingest.sentry.io/baz
 export SENTRY_IMPORT_WORKER=https://foo@bar.ingest.sentry.io/baz
 
+export MEDIA_URL=https://public_media_url
+
 export S3_INGEST_ENDPOINT=
 export S3_INGEST_BUCKET=
 export S3_INGEST_ACCESS_KEY_ID=
@@ -16,9 +18,6 @@ export S3_PUBLIC_ENDPOINT=
 export S3_PUBLIC_BUCKET=
 export S3_PUBLIC_ACCESS_KEY_ID=
 export S3_PUBLIC_SECRET_ACCESS_KEY=
-
-export CLOUDFLARE_ACCOUNT_ID=
-export CLOUDFLARE_API_TOKEN=
 
 KUBECONFIG=$PWD/infra/kubeconfig.yaml
 
