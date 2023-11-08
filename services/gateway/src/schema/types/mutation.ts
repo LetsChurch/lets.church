@@ -53,7 +53,7 @@ builder.mutationType({
         const appUserId = session?.appUserId;
 
         if (!appUserId) {
-          return { admin: true };
+          return false;
         }
 
         if (postProcess === 'media') {
