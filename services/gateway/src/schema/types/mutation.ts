@@ -50,6 +50,12 @@ builder.mutationType({
         postProcess: t.arg({ type: UploadPostProcess, required: true }),
       },
       authScopes: async (_root, { postProcess, targetId }, { session }) => {
+        const appUserId = session?.appUserId;
+
+        if (!appUserId) {
+          return { admin: true };
+        }
+
         if (postProcess === 'media') {
           const record = await prisma.uploadRecord.findFirst({
             where: {
@@ -58,7 +64,7 @@ builder.mutationType({
               channel: {
                 memberships: {
                   some: {
-                    appUserId: targetId,
+                    appUserId,
                     OR: [{ isAdmin: true }, { canUpload: true }],
                   },
                 },
