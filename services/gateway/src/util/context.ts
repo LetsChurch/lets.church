@@ -1,5 +1,5 @@
-import type { FastifyRequest, FastifyReply } from 'fastify';
-import { getClientIp } from 'request-ip';
+import type { Context as HonoContext } from 'hono';
+import { getClientIpAddress } from './request-ip';
 import prisma from './prisma';
 import { parseSessionJwt } from './jwt';
 
@@ -30,20 +30,16 @@ async function getSession(sessionJwt?: string) {
   return s;
 }
 
-export default async function context({
-  req,
-  reply: _reply,
-}: {
-  req: FastifyRequest;
-  reply: FastifyReply;
-}) {
-  const sessionJwt = req.headers.authorization?.split(' ')[1];
+export default async function context({ c }: { c: HonoContext }) {
+  const sessionJwt = c.req.header('authorization')?.split(' ')[1];
   const session = await getSession(sessionJwt);
+
+  console.log(getClientIpAddress(c.req.headers));
 
   return {
     session,
-    clientIp: getClientIp(req),
-    clientUserAgent: req.headers['user-agent'],
+    clientIp: getClientIpAddress(c.req.headers),
+    clientUserAgent: c.req.header('user-agent'),
   };
 }
 

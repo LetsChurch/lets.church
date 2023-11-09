@@ -1,5 +1,6 @@
 import { createYoga } from 'graphql-yoga';
-import fastify, { type FastifyRequest, type FastifyReply } from 'fastify';
+import { Hono, Context } from 'hono';
+import { serve } from '@hono/node-server';
 import { useDisableIntrospection } from '@envelop/disable-introspection';
 import * as Sentry from '@sentry/node';
 import envariant from '@knpwrs/envariant';
@@ -13,41 +14,28 @@ if (process.env['NODE_ENV'] !== 'development') {
   });
 }
 
-const app = fastify({ logger: true });
+const app = new Hono();
 
 const graphqlPlugins = [
   process.env['NODE_ENV'] !== 'development' && useDisableIntrospection,
 ];
 
 const graphqlHandler = createYoga<{
-  req: FastifyRequest;
-  reply: FastifyReply;
+  c: Context;
 }>({
   schema,
   context,
   plugins: graphqlPlugins,
-});
-
-app.route({
-  url: '/graphql',
-  method: ['GET', 'POST', 'OPTIONS'],
-  async handler(req, reply) {
-    const response = await graphqlHandler.handleNodeRequest(req, {
-      req,
-      reply,
-    });
-
-    response.headers.forEach((value, key) => {
-      // TODO: https://github.com/prisma-labs/graphql-request/issues/373
-      reply.header(key, value.replace('graphql-response+', ''));
-    });
-
-    reply.status(response.status);
-
-    reply.send(response.body);
-
-    return reply;
+  fetchAPI: {
+    fetch,
+    Request,
+    ReadableStream,
+    Response,
   },
 });
 
-await app.listen({ host: '0.0.0.0', port: 3000 });
+app.on(['GET', 'POST', 'OPTIONS'], '/graphql', async (c) => {
+  return graphqlHandler.fetch(c.req.raw, { c });
+});
+
+serve(app);
