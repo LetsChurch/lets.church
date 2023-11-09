@@ -5,10 +5,12 @@ import * as importActivities from '../activities/import';
 import { IMPORT_QUEUE } from '../queues';
 import { checkYtDlp } from '../../util/env-check';
 
-Sentry.init({
-  dsn: envariant('SENTRY_DSN'),
-  environment: process.env['NODE_ENV'] ?? 'default',
-});
+if (process.env['NODE_ENV'] !== 'development') {
+  Sentry.init({
+    dsn: envariant('SENTRY_DSN'),
+    environment: process.env['NODE_ENV'] ?? 'default',
+  });
+}
 
 await checkYtDlp();
 

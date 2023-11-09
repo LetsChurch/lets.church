@@ -6,10 +6,12 @@ import envariant from '@knpwrs/envariant';
 import context from './util/context';
 import schema from './schema';
 
-Sentry.init({
-  dsn: envariant('SENTRY_DSN'),
-  environment: process.env['NODE_ENV'] ?? 'default',
-});
+if (process.env['NODE_ENV'] !== 'development') {
+  Sentry.init({
+    dsn: envariant('SENTRY_DSN'),
+    environment: process.env['NODE_ENV'] ?? 'default',
+  });
+}
 
 const app = fastify({ logger: true });
 

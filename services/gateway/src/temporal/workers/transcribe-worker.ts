@@ -6,10 +6,12 @@ import { TRANSCRIBE_QUEUE } from '../queues';
 import { waitOnTemporal } from '..';
 import { checkWhisper } from '../../util/env-check';
 
-Sentry.init({
-  dsn: envariant('SENTRY_DSN'),
-  environment: process.env['NODE_ENV'] ?? 'default',
-});
+if (process.env['NODE_ENV'] !== 'development') {
+  Sentry.init({
+    dsn: envariant('SENTRY_DSN'),
+    environment: process.env['NODE_ENV'] ?? 'default',
+  });
+}
 
 await checkWhisper();
 
