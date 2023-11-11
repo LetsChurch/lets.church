@@ -3,6 +3,7 @@ import { input } from '@inquirer/prompts';
 import { z } from 'zod';
 import PQueue from 'p-queue';
 import glob from 'fast-glob';
+import { xxh32 } from '@node-rs/xxhash';
 import { client } from '../src/temporal';
 import { importMediaWorkflow } from '../src/temporal/workflows/import-media';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
@@ -31,6 +32,8 @@ const common = {
 
 const queue = new PQueue({ concurrency: 5 });
 
+const importDate = new Date().toISOString();
+
 for (const file of files) {
   const channelSlug = file.replace('.new.json', '');
   const data = schema.parse(JSON.parse(await readFile(file, 'utf-8')));
@@ -38,9 +41,12 @@ for (const file of files) {
 
   for (const datum of data) {
     queue.add(async () => {
+      const url = new URL(datum.url);
       await c.workflow.start(importMediaWorkflow, {
         taskQueue: BACKGROUND_QUEUE,
-        workflowId: `importMedia:${datum.url}`,
+        workflowId: `importMedia:${importDate}:${url.origin}:${xxh32(
+          datum.url,
+        )}`,
         args: [{ ...common, ...datum, channelSlug }],
         retry: { maximumAttempts: 5 },
       });
