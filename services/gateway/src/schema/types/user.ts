@@ -82,7 +82,15 @@ export const AppUser = builder.prismaObject('AppUser', {
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
     fullName: t.expose('fullName', { type: 'String', nullable: true }),
-    emails: t.relation('emails'),
+    emails: t.relation('emails', {
+      authScopes: async ({ id }, _args, context) => {
+        if (context.session?.appUserId === id) {
+          return true;
+        }
+
+        return { admin: true };
+      },
+    }),
     username: t.exposeString('username'),
     avatarUrl: t.field({
       type: 'String',
