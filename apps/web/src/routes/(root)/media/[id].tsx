@@ -628,19 +628,6 @@ export default function MediaRoute() {
                 )}
               </For>
               <Pagination
-                label={
-                  <>
-                    Showing{' '}
-                    <span class="font-medium">
-                      {metaData()?.data.userComments.edges.length}
-                    </span>{' '}
-                    of{' '}
-                    <span class="font-medium">
-                      {metaData()?.data.userComments.totalCount}
-                    </span>{' '}
-                    comments
-                  </>
-                }
                 queryKey="comments"
                 hasNextPage={
                   metaData()?.data.userComments.pageInfo.hasNextPage ?? false

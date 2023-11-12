@@ -110,19 +110,6 @@ export default function ChannelRoute() {
         hasNextPage={data()?.uploadsConnection.pageInfo.hasNextPage ?? false}
         startCursor={data()?.uploadsConnection.pageInfo.startCursor ?? ''}
         endCursor={data()?.uploadsConnection.pageInfo.endCursor ?? ''}
-        label={
-          <>
-            Showing{' '}
-            <span class="font-medium">
-              {data()?.uploadsConnection.edges.length}
-            </span>{' '}
-            of{' '}
-            <span class="font-medium">
-              {data()?.uploadsConnection.totalCount}
-            </span>{' '}
-            uploads
-          </>
-        }
       />
     </>
   );

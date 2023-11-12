@@ -534,20 +534,6 @@ export default function SearchRoute() {
         hasNextPage={data()?.search.pageInfo.hasNextPage ?? false}
         startCursor={data()?.search.pageInfo.startCursor ?? ''}
         endCursor={data()?.search.pageInfo.endCursor ?? ''}
-        label={
-          <>
-            Showing{' '}
-            <span class="font-medium">{data()?.search.edges.length}</span> of{' '}
-            <span class="font-medium">
-              <Switch fallback={data()?.search.aggs.uploadHitCount}>
-                <Match when={loc.query['focus'] === 'transcripts'}>
-                  {data()?.search.aggs.transcriptHitCount}
-                </Match>
-              </Switch>
-            </span>{' '}
-            results
-          </>
-        }
       />
     </div>
   );
