@@ -81,105 +81,103 @@ export function routeData({ params, location }: RouteDataArgs) {
       [, id, , seriesId = null, commentsAfter = null, commentsBefore = null],
       { request },
     ) => {
-      try {
-        invariant(id, 'No id provided to media route (metaData)');
-        const client = await createAuthenticatedClient(request);
+      invariant(id, 'No id provided to media route (metaData)');
+      const client = await createAuthenticatedClient(request);
 
-        const res = await client.request<
-          MediaRouteMetaDataQuery,
-          MediaRouteMetaDataQueryVariables
-        >(
-          gql`
-            fragment CommentFields on UploadUserComment {
-              id
-              uploadRecordId
-              author {
-                username
-                avatarUrl(resize: { width: 96, height: 96 })
-              }
-              createdAt
-              updatedAt
-              text
-              totalLikes
-              totalDislikes
-              myRating
+      const { data, errors } = await client.rawRequest<
+        MediaRouteMetaDataQuery,
+        MediaRouteMetaDataQueryVariables
+      >(
+        gql`
+          fragment CommentFields on UploadUserComment {
+            id
+            uploadRecordId
+            author {
+              username
+              avatarUrl(resize: { width: 96, height: 96 })
             }
+            createdAt
+            updatedAt
+            text
+            totalLikes
+            totalDislikes
+            myRating
+          }
 
-            query MediaRouteMetaData(
-              $id: ShortUuid!
-              $seriesId: ShortUuid
-              $commentsFirst: Int
-              $commentsAfter: String
-              $commentsLast: Int
-              $commentsBefore: String
-            ) {
-              data: uploadRecordById(id: $id) {
+          query MediaRouteMetaData(
+            $id: ShortUuid!
+            $seriesId: ShortUuid
+            $commentsFirst: Int
+            $commentsAfter: String
+            $commentsLast: Int
+            $commentsBefore: String
+          ) {
+            data: uploadRecordById(id: $id) {
+              id
+              title
+              lengthSeconds
+              description
+              publishedAt
+              totalViews
+              channel {
+                id
+                slug
+                name
+                avatarUrl(resize: { width: 96, height: 96 })
+                defaultThumbnailUrl
+                userIsSubscribed
+              }
+              mediaSource
+              audioSource
+              thumbnailUrl
+              peaksDatUrl
+              peaksJsonUrl
+              downloadsEnabled
+              downloadUrls {
+                kind
+                label
+                url
+              }
+              series: uploadListById(id: $seriesId) {
                 id
                 title
-                lengthSeconds
-                description
-                publishedAt
-                totalViews
-                channel {
-                  id
-                  slug
-                  name
-                  avatarUrl(resize: { width: 96, height: 96 })
-                  defaultThumbnailUrl
-                  userIsSubscribed
-                }
-                mediaSource
-                audioSource
-                thumbnailUrl
-                peaksDatUrl
-                peaksJsonUrl
-                downloadsEnabled
-                downloadUrls {
-                  kind
-                  label
-                  url
-                }
-                series: uploadListById(id: $seriesId) {
-                  id
-                  title
-                  uploads {
-                    edges {
-                      node {
-                        upload {
-                          id
-                          title
-                        }
+                uploads {
+                  edges {
+                    node {
+                      upload {
+                        id
+                        title
                       }
                     }
                   }
                 }
-                transcript {
-                  start
-                  text
+              }
+              transcript {
+                start
+                text
+              }
+              userCommentsEnabled
+              userComments(
+                first: $commentsFirst
+                after: $commentsAfter
+                last: $commentsLast
+                before: $commentsBefore
+              ) {
+                totalCount
+                pageInfo {
+                  endCursor
+                  hasNextPage
+                  hasPreviousPage
+                  startCursor
                 }
-                userCommentsEnabled
-                userComments(
-                  first: $commentsFirst
-                  after: $commentsAfter
-                  last: $commentsLast
-                  before: $commentsBefore
-                ) {
-                  totalCount
-                  pageInfo {
-                    endCursor
-                    hasNextPage
-                    hasPreviousPage
-                    startCursor
-                  }
-                  edges {
-                    node {
-                      ...CommentFields
-                      replies {
-                        totalCount
-                        edges {
-                          node {
-                            ...CommentFields
-                          }
+                edges {
+                  node {
+                    ...CommentFields
+                    replies {
+                      totalCount
+                      edges {
+                        node {
+                          ...CommentFields
                         }
                       }
                     }
@@ -187,22 +185,24 @@ export function routeData({ params, location }: RouteDataArgs) {
                 }
               }
             }
-          `,
-          {
-            id,
-            seriesId,
-            commentsAfter,
-            commentsBefore,
-            commentsFirst:
-              commentsAfter || !commentsBefore ? COMMENTS_PAGE_SIZE : null,
-            commentsLast: commentsBefore ? COMMENTS_PAGE_SIZE : null,
-          },
-        );
+          }
+        `,
+        {
+          id,
+          seriesId,
+          commentsAfter,
+          commentsBefore,
+          commentsFirst:
+            commentsAfter || !commentsBefore ? COMMENTS_PAGE_SIZE : null,
+          commentsLast: commentsBefore ? COMMENTS_PAGE_SIZE : null,
+        },
+      );
 
-        return res;
-      } catch (e) {
+      if (errors && errors.length > 0) {
         throw redirect('/404');
       }
+
+      return data;
     },
     {
       key: () =>
