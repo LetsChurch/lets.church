@@ -8,6 +8,7 @@ import { Avatar } from './avatar';
 import logoutAction from '~/util/logout-action';
 import { useLoginLocation, useSerializedLocation } from '~/util';
 import type { MeQuery } from '~/routes/__generated__/(root)';
+import { AppUserRole } from '~/__generated__/graphql-types';
 
 export const profileLinks = [{ href: '/profile', label: 'Your Profile' }];
 
@@ -89,6 +90,9 @@ export default function Profile(props: Props) {
         aria-labelledby={menuButtonId}
         onClose={closeMenu}
         links={[
+          ...(props.me?.role === AppUserRole.Admin
+            ? [{ href: '/admin', label: 'Admin' }]
+            : []),
           ...(props.me?.canUpload
             ? [{ href: '/upload', label: 'Upload' }]
             : []),

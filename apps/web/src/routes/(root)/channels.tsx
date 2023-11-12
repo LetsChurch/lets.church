@@ -15,15 +15,19 @@ export function routeData() {
   return createServerData$(async () => {
     const res = await client.request<ChannelsListQuery>(gql`
       query ChannelsList {
-        channels {
-          name
-          slug
+        channelsConnection(first: 100) {
+          edges {
+            node {
+              name
+              slug
+            }
+          }
         }
       }
     `);
 
     const groups = groupBy(
-      res.channels,
+      res.channelsConnection.edges.map((e) => e.node),
       (ch) => ch.name.at(0)?.toUpperCase() ?? '???',
     );
     const entries = Object.entries(groups);

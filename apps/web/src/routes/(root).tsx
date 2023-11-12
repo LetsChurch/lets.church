@@ -15,6 +15,7 @@ export function routeData() {
       query Me {
         me {
           id
+          role
           avatarUrl(resize: { width: 96, height: 96 })
           canUpload
           username

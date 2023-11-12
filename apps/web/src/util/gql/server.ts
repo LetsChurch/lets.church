@@ -1,9 +1,14 @@
 import envariant from '@knpwrs/envariant';
-import { GraphQLClient } from 'graphql-request';
+import { GraphQLClient, gql } from 'graphql-request';
 import { redirect } from 'solid-start';
 import server$ from 'solid-start/server';
 import { getClientIp } from 'request-ip';
 import { getSessionJwt } from '../session';
+import {
+  AdminClientMeQuery,
+  AdminClientMeQueryVariables,
+} from './__generated__/server';
+import { AppUserRole } from '~/__generated__/graphql-types';
 
 const GRAPHQL_URL = envariant('GRAPHQL_URL', server$.env);
 
@@ -48,6 +53,38 @@ export async function createAuthenticatedClient(request: Request) {
         ...getForwardingHeaders(request.headers),
       },
     });
+  }
+
+  return client;
+}
+
+export async function createAdminClientOrRedirect(request: Request) {
+  const jwt = await getSessionJwt(request);
+
+  if (!jwt) {
+    throw redirect('/');
+  }
+
+  const client = new GraphQLClient(GRAPHQL_URL, {
+    headers: {
+      authorization: `Bearer ${jwt}`,
+      ...getForwardingHeaders(request.headers),
+    },
+  });
+
+  const { data } = await client.rawRequest<
+    AdminClientMeQuery,
+    AdminClientMeQueryVariables
+  >(gql`
+    query AdminClientMe {
+      me {
+        role
+      }
+    }
+  `);
+
+  if (data.me?.role !== AppUserRole.Admin) {
+    throw redirect('/');
   }
 
   return client;

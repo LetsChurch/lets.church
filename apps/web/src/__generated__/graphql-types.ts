@@ -189,12 +189,6 @@ export type ChannelUploadsConnectionArgs = {
   orderBy?: UploadOrderProperty;
 };
 
-export type ChannelEntry = {
-  __typename?: 'ChannelEntry';
-  name: Scalars['String']['output'];
-  slug: Scalars['String']['output'];
-};
-
 export type ChannelMembership = {
   __typename?: 'ChannelMembership';
   canEdit: Scalars['Boolean']['output'];
@@ -615,7 +609,7 @@ export type Query = {
   __typename?: 'Query';
   channelById: Channel;
   channelBySlug: Channel;
-  channels: Array<ChannelEntry>;
+  channelsConnection: QueryChannelsConnection;
   me?: Maybe<AppUser>;
   mySubscriptionUploadRecords?: Maybe<QueryMySubscriptionUploadRecordsConnection>;
   organizationById: Organization;
@@ -636,6 +630,14 @@ export type QueryChannelByIdArgs = {
 
 export type QueryChannelBySlugArgs = {
   slug: Scalars['String']['input'];
+};
+
+
+export type QueryChannelsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -696,6 +698,18 @@ export type QueryUsersConnectionArgs = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QueryChannelsConnection = {
+  __typename?: 'QueryChannelsConnection';
+  edges: Array<QueryChannelsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type QueryChannelsConnectionEdge = {
+  __typename?: 'QueryChannelsConnectionEdge';
+  cursor: Scalars['String']['output'];
+  node: Channel;
 };
 
 export type QueryMySubscriptionUploadRecordsConnection = {
