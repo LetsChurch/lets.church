@@ -9,12 +9,12 @@ import type {
   RegisterMutation,
   RegisterMutationVariables,
 } from './__generated__/register';
-import { client } from '~/util/gql/server';
 import { storage } from '~/util/session';
 import { Button, LabeledCheckbox, LabeledInput } from '~/components/form';
 import { Turnstile } from '~/components/turnstile';
 import validateTurnstile from '~/util/server/validate-turnstile';
 import A from '~/components/content/a';
+import { createAuthenticatedClient } from '~/util/gql/server';
 
 const RegisterSchema = z.object({
   email: z.string().email(),
@@ -28,8 +28,9 @@ const RegisterSchema = z.object({
 
 export default function RegisterRoute() {
   const [registering, { Form }] = createServerAction$(
-    async (form: FormData) => {
+    async (form: FormData, { request }) => {
       await validateTurnstile(form);
+      const client = await createAuthenticatedClient(request);
 
       const parseRes = RegisterSchema.safeParse(
         Object.fromEntries(

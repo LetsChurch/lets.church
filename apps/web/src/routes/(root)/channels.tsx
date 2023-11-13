@@ -9,10 +9,11 @@ import A from '~/components/content/a';
 import H1 from '~/components/content/h1';
 import H2 from '~/components/content/h2';
 import { Ul } from '~/components/content/list';
-import { client } from '~/util/gql/server';
+import { createAuthenticatedClient } from '~/util/gql/server';
 
 export function routeData() {
-  return createServerData$(async () => {
+  return createServerData$(async (_, { request }) => {
+    const client = await createAuthenticatedClient(request);
     const res = await client.request<ChannelsListQuery>(gql`
       query ChannelsList {
         channelsConnection(first: 100) {

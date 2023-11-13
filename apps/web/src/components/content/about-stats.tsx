@@ -6,9 +6,11 @@ import type {
   AboutPageDataQuery,
   AboutPageDataQueryVariables,
 } from './__generated__/about-stats';
-import { client } from '~/util/gql/server';
+import { createAuthenticatedClient } from '~/util/gql/server';
 
 const getData = server$(async () => {
+  const client = await createAuthenticatedClient(server$.request);
+
   return await client.request<AboutPageDataQuery, AboutPageDataQueryVariables>(
     gql`
       query AboutPageData {

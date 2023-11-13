@@ -34,11 +34,9 @@ export default async function context({ c }: { c: HonoContext }) {
   const sessionJwt = c.req.header('authorization')?.split(' ')[1];
   const session = await getSession(sessionJwt);
 
-  console.log(getClientIpAddress(c.req.headers));
-
   return {
     session,
-    clientIp: getClientIpAddress(c.req.headers),
+    clientIp: getClientIpAddress(c.req.raw.headers),
     clientUserAgent: c.req.header('user-agent'),
   };
 }

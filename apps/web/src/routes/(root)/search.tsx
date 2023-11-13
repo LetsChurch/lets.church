@@ -18,7 +18,6 @@ import { useFloating } from 'solid-floating-ui';
 import { gql } from 'graphql-request';
 import type { SearchQuery, SearchQueryVariables } from './__generated__/search';
 import Pagination from '~/components/pagination';
-import { client } from '~/util/gql/server';
 import { SearchFocus, SearchOrder } from '~/__generated__/graphql-types';
 import { formatTime } from '~/util';
 import FloatingDiv from '~/components/floating-div';
@@ -32,22 +31,27 @@ import {
   MediaRowFragment,
   type Props as MediaRowProps,
 } from '~/components/media-row';
+import { createAuthenticatedClient } from '~/util/gql/server';
 
 const PAGE_SIZE = 20;
 
 export function routeData({ location }: RouteDataArgs) {
   return createServerData$(
-    async ([
-      ,
-      q = '',
-      focus = 'uploads',
-      after = null,
-      before = null,
-      publishedAtRange = null,
-      orderBy,
-      channels = null,
-      transcriptPhraseSearch,
-    ]) => {
+    async (
+      [
+        ,
+        q = '',
+        focus = 'uploads',
+        after = null,
+        before = null,
+        publishedAtRange = null,
+        orderBy,
+        channels = null,
+        transcriptPhraseSearch,
+      ],
+      { request },
+    ) => {
+      const client = await createAuthenticatedClient(request);
       const [minPublishedAt = null, maxPublishedAt = null] =
         publishedAtRange?.split('/') ?? [];
 

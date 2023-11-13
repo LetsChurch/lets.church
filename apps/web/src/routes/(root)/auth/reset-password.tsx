@@ -13,7 +13,7 @@ import {
 import { Button, LabeledInput } from '~/components/form';
 import { Turnstile } from '~/components/turnstile';
 import validateTurnstile from '~/util/server/validate-turnstile';
-import { client } from '~/util/gql/server';
+import { createAuthenticatedClient } from '~/util/gql/server';
 
 const ResetPasswordSchema = z.object({
   id: z.string().uuid(),
@@ -36,31 +36,34 @@ export function routeData({ location }: RouteDataArgs) {
 export default function ResetPasswordRoute() {
   const data = useRouteData<typeof routeData>();
 
-  const [submitting, { Form }] = createServerAction$(async (form: FormData) => {
-    await validateTurnstile(form);
+  const [submitting, { Form }] = createServerAction$(
+    async (form: FormData, { request }) => {
+      const client = await createAuthenticatedClient(request);
+      await validateTurnstile(form);
 
-    const { id, password } = ResetPasswordSchema.parse(
-      Object.fromEntries(['id', 'password'].map((p) => [p, form.get(p)])),
-    );
+      const { id, password } = ResetPasswordSchema.parse(
+        Object.fromEntries(['id', 'password'].map((p) => [p, form.get(p)])),
+      );
 
-    const res = await client.request<
-      ResetPasswordMutation,
-      ResetPasswordMutationVariables
-    >(
-      gql`
-        mutation ResetPassword($id: Uuid!, $password: String!) {
-          resetPassword(id: $id, password: $password)
-        }
-      `,
-      { id, password },
-    );
+      const res = await client.request<
+        ResetPasswordMutation,
+        ResetPasswordMutationVariables
+      >(
+        gql`
+          mutation ResetPassword($id: Uuid!, $password: String!) {
+            resetPassword(id: $id, password: $password)
+          }
+        `,
+        { id, password },
+      );
 
-    if (!res.resetPassword) {
-      throw redirect('/');
-    }
+      if (!res.resetPassword) {
+        throw redirect('/');
+      }
 
-    return redirect('/auth/login');
-  });
+      return redirect('/auth/login');
+    },
+  );
 
   return (
     <>

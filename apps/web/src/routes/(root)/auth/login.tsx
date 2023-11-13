@@ -6,11 +6,11 @@ import type {
   LoginMutation,
   LoginMutationVariables,
 } from './__generated__/login';
-import { client } from '~/util/gql/server';
 import { storage } from '~/util/session';
 import { Button, LabeledInput } from '~/components/form';
 import { Turnstile } from '~/components/turnstile';
 import validateTurnstile from '~/util/server/validate-turnstile';
+import { createAuthenticatedClient } from '~/util/gql/server';
 
 const LoginSchema = z.object({
   id: z.string(),
@@ -19,37 +19,40 @@ const LoginSchema = z.object({
 });
 
 export default function LoginRoute() {
-  const [loggingIn, { Form }] = createServerAction$(async (form: FormData) => {
-    await validateTurnstile(form);
+  const [loggingIn, { Form }] = createServerAction$(
+    async (form: FormData, { request }) => {
+      await validateTurnstile(form);
+      const client = await createAuthenticatedClient(request);
 
-    const {
-      id,
-      password,
-      redirect: to,
-    } = LoginSchema.parse(
-      Object.fromEntries(
-        ['id', 'password', 'redirect'].map((p) => [p, form.get(p)]),
-      ),
-    );
+      const {
+        id,
+        password,
+        redirect: to,
+      } = LoginSchema.parse(
+        Object.fromEntries(
+          ['id', 'password', 'redirect'].map((p) => [p, form.get(p)]),
+        ),
+      );
 
-    const data = await client.request<LoginMutation, LoginMutationVariables>(
-      gql`
-        mutation Login($id: String!, $password: String!) {
-          login(id: $id, password: $password)
-        }
-      `,
-      { id, password },
-    );
+      const data = await client.request<LoginMutation, LoginMutationVariables>(
+        gql`
+          mutation Login($id: String!, $password: String!) {
+            login(id: $id, password: $password)
+          }
+        `,
+        { id, password },
+      );
 
-    const session = await storage.getSession();
-    session.set('jwt', data.login);
+      const session = await storage.getSession();
+      session.set('jwt', data.login);
 
-    const redirectTo = to.startsWith('/auth') ? '/' : to;
+      const redirectTo = to.startsWith('/auth') ? '/' : to;
 
-    return redirect(redirectTo, {
-      headers: { 'Set-Cookie': await storage.commitSession(session) },
-    });
-  });
+      return redirect(redirectTo, {
+        headers: { 'Set-Cookie': await storage.commitSession(session) },
+      });
+    },
+  );
 
   const loc = useLocation();
 

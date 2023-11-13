@@ -8,51 +8,55 @@ import type {
   SubscribeToNewsletterMutation,
   SubscribeToNewsletterMutationVariables,
 } from './__generated__/newsletter';
-import { client } from '~/util/gql/server';
 import { useUser } from '~/util/user-context';
 import validateTurnstile from '~/util/server/validate-turnstile';
+import { createAuthenticatedClient } from '~/util/gql/server';
 
 export default function Newsletter() {
-  const [submitting, { Form }] = createServerAction$(async (form: FormData) => {
-    await validateTurnstile(form);
-    const email = form.get('email')?.toString();
-    invariant(email);
+  const [submitting, { Form }] = createServerAction$(
+    async (form: FormData, { request }) => {
+      await validateTurnstile(form);
+      const email = form.get('email')?.toString();
+      invariant(email);
 
-    const { subscribeToNewsletter: res } = await client.request<
-      SubscribeToNewsletterMutation,
-      SubscribeToNewsletterMutationVariables
-    >(
-      gql`
-        mutation SubscribeToNewsletter($email: String!) {
-          subscribeToNewsletter(email: $email) {
-            ... on MutationSubscribeToNewsletterSuccess {
-              __typename
-              data
-            }
-            ... on ValidationError {
-              __typename
-              fieldErrors {
-                message
-                path
+      const client = await createAuthenticatedClient(request);
+
+      const { subscribeToNewsletter: res } = await client.request<
+        SubscribeToNewsletterMutation,
+        SubscribeToNewsletterMutationVariables
+      >(
+        gql`
+          mutation SubscribeToNewsletter($email: String!) {
+            subscribeToNewsletter(email: $email) {
+              ... on MutationSubscribeToNewsletterSuccess {
+                __typename
+                data
+              }
+              ... on ValidationError {
+                __typename
+                fieldErrors {
+                  message
+                  path
+                }
               }
             }
           }
-        }
-      `,
-      { email },
-    );
+        `,
+        { email },
+      );
 
-    if (res.__typename === 'ValidationError') {
-      throw new FormError('', {
-        fieldErrors: res.fieldErrors.reduce(
-          (acc, cur) => ({ ...acc, [cur.path.at(-1) ?? '']: cur.message }),
-          {} as Record<string, Array<string> | string>,
-        ),
-      });
-    }
+      if (res.__typename === 'ValidationError') {
+        throw new FormError('', {
+          fieldErrors: res.fieldErrors.reduce(
+            (acc, cur) => ({ ...acc, [cur.path.at(-1) ?? '']: cur.message }),
+            {} as Record<string, Array<string> | string>,
+          ),
+        });
+      }
 
-    return redirect('/newsletter/subscribe');
-  });
+      return redirect('/newsletter/subscribe');
+    },
+  );
 
   const user = useUser();
   const email = () => user()?.emails.at(0)?.email ?? '';

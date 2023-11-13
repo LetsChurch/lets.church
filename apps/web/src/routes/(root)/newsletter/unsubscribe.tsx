@@ -7,9 +7,9 @@ import type {
   UnsubscribeFromNewsletterMutation,
   UnsubscribeFromNewsletterMutationVariables,
 } from './__generated__/unsubscribe';
-import { client } from '~/util/gql/server';
 import H1 from '~/components/content/h1';
 import P from '~/components/content/p';
+import { createAuthenticatedClient } from '~/util/gql/server';
 
 const QuerySchema = z.object({
   subscriptionId: z.string(),
@@ -18,6 +18,7 @@ const QuerySchema = z.object({
 
 export function routeData() {
   return createServerData$(async (_, { request }) => {
+    const client = await createAuthenticatedClient(request);
     const url = new URL(request.url);
 
     const { subscriptionId, emailKey } = QuerySchema.parse(
