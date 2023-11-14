@@ -1,665 +1,975 @@
 diff --git a/node_modules/solid-start/api/index.ts b/node_modules/solid-start/api/index.ts
-index 398dce3..693885a 100644
+index 398dce3..cfd39ab 100644
 --- a/node_modules/solid-start/api/index.ts
 +++ b/node_modules/solid-start/api/index.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,13 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { registerApiRoutes } from "./internalFetch";
  import { getRouteMatches } from "./router";
  import { MatchRoute, Method, Route } from "./types";
 diff --git a/node_modules/solid-start/api/internalFetch.ts b/node_modules/solid-start/api/internalFetch.ts
-index eea745d..f24713a 100644
+index eea745d..2927412 100644
 --- a/node_modules/solid-start/api/internalFetch.ts
 +++ b/node_modules/solid-start/api/internalFetch.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,13 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { FETCH_EVENT } from "../server/types";
  import { getRouteMatches } from "./router";
  import type { APIEvent, MatchRoute, Method } from "./types";
 diff --git a/node_modules/solid-start/api/middleware.ts b/node_modules/solid-start/api/middleware.ts
-index f0c37ca..0722cca 100644
+index f0c37ca..299d959 100644
 --- a/node_modules/solid-start/api/middleware.ts
 +++ b/node_modules/solid-start/api/middleware.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,13 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { Middleware } from "../entry-server";
  import { FetchEvent, FETCH_EVENT } from "../server/types";
  import { getApiHandler } from "./index";
 diff --git a/node_modules/solid-start/api/router.ts b/node_modules/solid-start/api/router.ts
-index cc4eb7a..6de11ea 100644
+index cc4eb7a..8fd42f9 100644
 --- a/node_modules/solid-start/api/router.ts
 +++ b/node_modules/solid-start/api/router.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,13 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { MatchRoute, Method } from "./types";
  
  export function getRouteMatches(routes: MatchRoute[], path: string, method: Method) {
 diff --git a/node_modules/solid-start/api/types.ts b/node_modules/solid-start/api/types.ts
-index 43c0773..d0350dc 100644
+index 43c0773..d2abb20 100644
 --- a/node_modules/solid-start/api/types.ts
 +++ b/node_modules/solid-start/api/types.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,13 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { FetchEvent, FETCH_EVENT } from "../server/types";
  
  export interface APIEvent extends FetchEvent {
 diff --git a/node_modules/solid-start/data/Form.tsx b/node_modules/solid-start/data/Form.tsx
-index e908349..6e18155 100644
+index e908349..bc70e3c 100644
 --- a/node_modules/solid-start/data/Form.tsx
 +++ b/node_modules/solid-start/data/Form.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,13 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  /*!
   * Original code by Remix Sofware Inc
   * MIT Licensed, Copyright(c) 2021 Remix software Inc, see LICENSE.remix.md for details
 diff --git a/node_modules/solid-start/data/FormError.tsx b/node_modules/solid-start/data/FormError.tsx
-index f0c79c3..41b6899 100644
+index f0c79c3..376b962 100644
 --- a/node_modules/solid-start/data/FormError.tsx
 +++ b/node_modules/solid-start/data/FormError.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,13 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  export class ServerError extends Error {
    status: number;
    constructor(message: string, { status, stack }: { status?: number; stack?: string } = {}) {
 diff --git a/node_modules/solid-start/data/createRouteAction.tsx b/node_modules/solid-start/data/createRouteAction.tsx
-index 49f648a..3342f5d 100644
+index 49f648a..4b701d4 100644
 --- a/node_modules/solid-start/data/createRouteAction.tsx
 +++ b/node_modules/solid-start/data/createRouteAction.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { type Navigator } from "@solidjs/router";
  import { $TRACK, batch, createSignal, type ParentComponent } from "solid-js";
  import { useNavigate, useSearchParams } from "../router";
 diff --git a/node_modules/solid-start/data/createRouteData.tsx b/node_modules/solid-start/data/createRouteData.tsx
-index 495b04a..5c689b7 100644
+index 076c2b0..03a90ea 100644
 --- a/node_modules/solid-start/data/createRouteData.tsx
 +++ b/node_modules/solid-start/data/createRouteData.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import type {
    Accessor, Resource,
    ResourceFetcher, ResourceFetcherInfo, ResourceOptions, Setter
 diff --git a/node_modules/solid-start/data/index.ts b/node_modules/solid-start/data/index.ts
-index 2cf7e43..fe9cd75 100644
+index 2cf7e43..ec600a7 100644
 --- a/node_modules/solid-start/data/index.ts
 +++ b/node_modules/solid-start/data/index.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  export { useRouteData } from "@solidjs/router";
  export { createRouteAction, createRouteMultiAction } from "./createRouteAction";
  export { createRouteData, refetchRouteData } from "./createRouteData";
 diff --git a/node_modules/solid-start/dev/CsrRoot.tsx b/node_modules/solid-start/dev/CsrRoot.tsx
-index 0c55cf1..e91b072 100644
+index 0c55cf1..8002f51 100644
 --- a/node_modules/solid-start/dev/CsrRoot.tsx
 +++ b/node_modules/solid-start/dev/CsrRoot.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { Body, Html, Scripts } from "solid-start";
  
  export default function Root() {
 diff --git a/node_modules/solid-start/durable-object/index.ts b/node_modules/solid-start/durable-object/index.ts
-index cefaa35..3388f32 100644
+index cefaa35..b7f1fa6 100644
 --- a/node_modules/solid-start/durable-object/index.ts
 +++ b/node_modules/solid-start/durable-object/index.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  interface DurableObjectGetAlarmOptions {
    allowConcurrency?: boolean;
  }
 diff --git a/node_modules/solid-start/entry-client/StartClient.tsx b/node_modules/solid-start/entry-client/StartClient.tsx
-index a9b6ecb..3ba229d 100644
+index a9b6ecb..ee2770b 100644
 --- a/node_modules/solid-start/entry-client/StartClient.tsx
 +++ b/node_modules/solid-start/entry-client/StartClient.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { MetaProvider } from "@solidjs/meta";
  import { Router, RouterProps } from "@solidjs/router";
  // @ts-ignore
 diff --git a/node_modules/solid-start/entry-client/index.tsx b/node_modules/solid-start/entry-client/index.tsx
-index e869653..2f927e3 100644
+index e869653..e5bf569 100644
 --- a/node_modules/solid-start/entry-client/index.tsx
 +++ b/node_modules/solid-start/entry-client/index.tsx
-@@ -1,2 +1,4 @@
+@@ -1,2 +1,8 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  export { default as mount } from "./mount";
  export { default as StartClient } from "./StartClient";
 diff --git a/node_modules/solid-start/entry-client/mount.tsx b/node_modules/solid-start/entry-client/mount.tsx
-index 8107fec..5603c95 100644
+index 05bb2ba..31dfceb 100644
 --- a/node_modules/solid-start/entry-client/mount.tsx
 +++ b/node_modules/solid-start/entry-client/mount.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import type { JSX } from "solid-js";
  import { hydrate, render } from "solid-js/web";
  
 diff --git a/node_modules/solid-start/entry-server/StartServer.tsx b/node_modules/solid-start/entry-server/StartServer.tsx
-index b3a0ce3..a6c16be 100644
+index f382f2b..c2b758b 100644
 --- a/node_modules/solid-start/entry-server/StartServer.tsx
 +++ b/node_modules/solid-start/entry-server/StartServer.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { MetaProvider } from "@solidjs/meta";
  import { RouteDataFunc, Router, RouterProps } from "@solidjs/router";
- import { sharedConfig } from "solid-js";
+ import { ComponentProps, sharedConfig } from "solid-js";
 diff --git a/node_modules/solid-start/entry-server/index.ts b/node_modules/solid-start/entry-server/index.ts
-index 25a1c2a..9c7929f 100644
+index 25a1c2a..9c0d30a 100644
 --- a/node_modules/solid-start/entry-server/index.ts
 +++ b/node_modules/solid-start/entry-server/index.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  export { composeMiddleware, createHandler, default as StartServer } from "./StartServer";
  export type { Middleware, MiddlewareFn, MiddlewareInput } from "./StartServer";
  
 diff --git a/node_modules/solid-start/error-boundary/ErrorBoundary.tsx b/node_modules/solid-start/error-boundary/ErrorBoundary.tsx
-index 35f3961..9dffb16 100644
+index 35f3961..4661bcd 100644
 --- a/node_modules/solid-start/error-boundary/ErrorBoundary.tsx
 +++ b/node_modules/solid-start/error-boundary/ErrorBoundary.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import {
    createEffect,
    ErrorBoundary as ErrorBoundaryBase,
 diff --git a/node_modules/solid-start/error-boundary/index.tsx b/node_modules/solid-start/error-boundary/index.tsx
-index d640eda..19a5c12 100644
+index d640eda..bdaa2c7 100644
 --- a/node_modules/solid-start/error-boundary/index.tsx
 +++ b/node_modules/solid-start/error-boundary/index.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { ErrorBoundary } from "./ErrorBoundary";
  export { ErrorMessage } from "./ErrorBoundary";
  export { ErrorBoundary };
 diff --git a/node_modules/solid-start/index.tsx b/node_modules/solid-start/index.tsx
-index 76441de..60b4a2b 100644
+index 76441de..a83170f 100644
 --- a/node_modules/solid-start/index.tsx
 +++ b/node_modules/solid-start/index.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  export { Link, Meta, Style, Stylesheet, Title } from "@solidjs/meta";
  export {
    Navigate,
 diff --git a/node_modules/solid-start/islands/A.tsx b/node_modules/solid-start/islands/A.tsx
-index d94208a..f35a41d 100644
+index d94208a..7374134 100644
 --- a/node_modules/solid-start/islands/A.tsx
 +++ b/node_modules/solid-start/islands/A.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  "use client";
  import type { A as BaseA } from "@solidjs/router";
  import { ComponentProps, splitProps } from "solid-js";
 diff --git a/node_modules/solid-start/islands/clientOnly.tsx b/node_modules/solid-start/islands/clientOnly.tsx
-index a6d1b21..d8cf839 100644
+index a6d1b21..b5d6fbe 100644
 --- a/node_modules/solid-start/islands/clientOnly.tsx
 +++ b/node_modules/solid-start/islands/clientOnly.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import type { Component, ComponentProps, JSX } from "solid-js";
  import { createMemo, createSignal, onMount, sharedConfig, splitProps, untrack } from "solid-js";
  import { isServer } from "solid-js/web";
 diff --git a/node_modules/solid-start/islands/entry-client.ts b/node_modules/solid-start/islands/entry-client.ts
-index f14b573..b22d219 100644
+index f14b573..bad3689 100644
 --- a/node_modules/solid-start/islands/entry-client.ts
 +++ b/node_modules/solid-start/islands/entry-client.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import StartClient from "../entry-client/StartClient";
  
  StartClient();
 diff --git a/node_modules/solid-start/islands/index.tsx b/node_modules/solid-start/islands/index.tsx
-index 5913feb..74cdb01 100644
+index 5913feb..dc8d688 100644
 --- a/node_modules/solid-start/islands/index.tsx
 +++ b/node_modules/solid-start/islands/index.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { Component, ComponentProps, lazy, sharedConfig } from "solid-js";
  import { Hydration, NoHydration } from "solid-js/web";
  import { useRequest } from "../server/ServerContext";
 diff --git a/node_modules/solid-start/islands/mount.tsx b/node_modules/solid-start/islands/mount.tsx
-index 5e49995..29cafc7 100644
+index 5e49995..089812a 100644
 --- a/node_modules/solid-start/islands/mount.tsx
 +++ b/node_modules/solid-start/islands/mount.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { diff, Patch } from "micromorph";
  import { createStore } from "solid-js/store";
  import { createComponent, getHydrationKey, getOwner, hydrate } from "solid-js/web";
 diff --git a/node_modules/solid-start/islands/router.ts b/node_modules/solid-start/islands/router.ts
-index fa15659..adc691b 100644
+index fa15659..43d5ede 100644
 --- a/node_modules/solid-start/islands/router.ts
 +++ b/node_modules/solid-start/islands/router.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import type { Location, Params } from "@solidjs/router";
  import { createEffect, createSignal } from "solid-js";
  
 diff --git a/node_modules/solid-start/islands/server-router.tsx b/node_modules/solid-start/islands/server-router.tsx
-index 4d960c4..ffbbbb7 100644
+index 4d960c4..c3956f2 100644
 --- a/node_modules/solid-start/islands/server-router.tsx
 +++ b/node_modules/solid-start/islands/server-router.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { createContext, JSX, useContext } from "solid-js";
  import { ssr } from "solid-js/web";
  import { getAssetsFromManifest } from "../root/assets";
 diff --git a/node_modules/solid-start/islands/useLocation.tsx b/node_modules/solid-start/islands/useLocation.tsx
-index 8a4dea5..e5ee7c3 100644
+index 8a4dea5..5bc4178 100644
 --- a/node_modules/solid-start/islands/useLocation.tsx
 +++ b/node_modules/solid-start/islands/useLocation.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { useLocation as useBaseLocation, type Location } from "@solidjs/router";
  
  function getLocation() {
 diff --git a/node_modules/solid-start/islands/utils.tsx b/node_modules/solid-start/islands/utils.tsx
-index 6df53ca..0c66d70 100644
+index 6df53ca..de94343 100644
 --- a/node_modules/solid-start/islands/utils.tsx
 +++ b/node_modules/solid-start/islands/utils.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  // @ts-nocheck
  import { $PROXY } from "solid-js";
  
 diff --git a/node_modules/solid-start/root/Document.tsx b/node_modules/solid-start/root/Document.tsx
-index 09ab915..6ed3eeb 100644
+index 58ae3f7..630e463 100644
 --- a/node_modules/solid-start/root/Document.tsx
 +++ b/node_modules/solid-start/root/Document.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import type { JSX } from "solid-js";
  import { children, ComponentProps } from "solid-js";
  import { escape, insert, NoHydration, spread, ssrElement } from "solid-js/web";
 diff --git a/node_modules/solid-start/root/FileRoutes.tsx b/node_modules/solid-start/root/FileRoutes.tsx
-index d0adbb2..a55cd7f 100644
+index d0adbb2..9042a03 100644
 --- a/node_modules/solid-start/root/FileRoutes.tsx
 +++ b/node_modules/solid-start/root/FileRoutes.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  /// <reference path="../server/types.tsx" />
  
  // @ts-expect-error
 diff --git a/node_modules/solid-start/root/InlineStyles.tsx b/node_modules/solid-start/root/InlineStyles.tsx
-index 6ae94e1..5d4c272 100644
+index 6ae94e1..8b4433d 100644
 --- a/node_modules/solid-start/root/InlineStyles.tsx
 +++ b/node_modules/solid-start/root/InlineStyles.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { Style } from "@solidjs/meta";
  import { createResource, Show, Suspense } from "solid-js";
  import type { PageEvent } from "../server";
 diff --git a/node_modules/solid-start/root/Links.tsx b/node_modules/solid-start/root/Links.tsx
-index 0ddb92d..fda236a 100644
+index 0ddb92d..58d68d0 100644
 --- a/node_modules/solid-start/root/Links.tsx
 +++ b/node_modules/solid-start/root/Links.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { JSX } from "solid-js";
  import { useAssets } from "solid-js/web";
  import { useRequest } from "../server/ServerContext";
+diff --git a/node_modules/solid-start/root/Meta.tsx b/node_modules/solid-start/root/Meta.tsx
+index 11decaa..d7eefab 100644
+--- a/node_modules/solid-start/root/Meta.tsx
++++ b/node_modules/solid-start/root/Meta.tsx
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
++// @ts-nocheck
++
+ import { renderTags } from "@solidjs/meta";
+ import { useContext } from "solid-js";
+ import { ssr, useAssets } from "solid-js/web";
 diff --git a/node_modules/solid-start/root/Scripts.tsx b/node_modules/solid-start/root/Scripts.tsx
-index 505f412..4b8fceb 100644
+index cc1828e..ce2bba5 100644
 --- a/node_modules/solid-start/root/Scripts.tsx
 +++ b/node_modules/solid-start/root/Scripts.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { HydrationScript, isServer, NoHydration } from "solid-js/web";
  import { useRequest } from "../server/ServerContext";
  import { InlineStyles } from "./InlineStyles";
 diff --git a/node_modules/solid-start/root/assets.tsx b/node_modules/solid-start/root/assets.tsx
-index 52d76be..353606c 100644
+index 52d76be..a621047 100644
 --- a/node_modules/solid-start/root/assets.tsx
 +++ b/node_modules/solid-start/root/assets.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { ManifestEntry, PageEvent, StartManifest } from "../server/types";
  import { routeLayouts } from "./routeLayouts";
  
 diff --git a/node_modules/solid-start/root/index.tsx b/node_modules/solid-start/root/index.tsx
-index 4f94dc0..a10de6e 100644
+index 91039c5..fb9ebd3 100644
 --- a/node_modules/solid-start/root/index.tsx
 +++ b/node_modules/solid-start/root/index.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  // isomorphic exports
  
  export { Body, Head, Html } from "./Document";
 diff --git a/node_modules/solid-start/root/routeLayouts.tsx b/node_modules/solid-start/root/routeLayouts.tsx
-index 1821b8b..4c1f025 100644
+index 1821b8b..6244a7e 100644
 --- a/node_modules/solid-start/root/routeLayouts.tsx
 +++ b/node_modules/solid-start/root/routeLayouts.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  // @ts-expect-error
  var routeLayouts = $ROUTE_LAYOUTS;
  
 diff --git a/node_modules/solid-start/router.tsx b/node_modules/solid-start/router.tsx
-index 9d03179..e1fcbfe 100644
+index 9d03179..c2979cb 100644
 --- a/node_modules/solid-start/router.tsx
 +++ b/node_modules/solid-start/router.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import {
    A as BaseA,
    Location,
 diff --git a/node_modules/solid-start/server/ServerContext.tsx b/node_modules/solid-start/server/ServerContext.tsx
-index 2c99d54..4b2a22e 100644
+index 2c99d54..5367b0e 100644
 --- a/node_modules/solid-start/server/ServerContext.tsx
 +++ b/node_modules/solid-start/server/ServerContext.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { FETCH_EVENT, PageEvent } from "./types";
  
  import { createContext, useContext } from "solid-js";
 diff --git a/node_modules/solid-start/server/browser.ts b/node_modules/solid-start/server/browser.ts
-index 7e7c111..de98980 100644
+index 7e7c111..380b863 100644
 --- a/node_modules/solid-start/server/browser.ts
 +++ b/node_modules/solid-start/server/browser.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  export { server$ as default } from "./server-functions/browser";
  export * from "./shared";
  
 diff --git a/node_modules/solid-start/server/components/HttpHeader.tsx b/node_modules/solid-start/server/components/HttpHeader.tsx
-index e60305b..1018e96 100644
+index e60305b..3e10aef 100644
 --- a/node_modules/solid-start/server/components/HttpHeader.tsx
 +++ b/node_modules/solid-start/server/components/HttpHeader.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { onCleanup } from "solid-js";
  import { isServer } from "solid-js/web";
  import { useRequest } from "../ServerContext";
 diff --git a/node_modules/solid-start/server/components/HttpStatusCode.tsx b/node_modules/solid-start/server/components/HttpStatusCode.tsx
-index 379a169..eb9717c 100644
+index 379a169..4ad67ef 100644
 --- a/node_modules/solid-start/server/components/HttpStatusCode.tsx
 +++ b/node_modules/solid-start/server/components/HttpStatusCode.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { onCleanup } from "solid-js";
  import { isServer } from "solid-js/web";
  import { useRequest } from "../ServerContext";
 diff --git a/node_modules/solid-start/server/data.ts b/node_modules/solid-start/server/data.ts
-index d65e422..f470809 100644
+index d65e422..84d8d0a 100644
 --- a/node_modules/solid-start/server/data.ts
 +++ b/node_modules/solid-start/server/data.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { createRouteAction, createRouteData, createRouteMultiAction } from "../data";
  export { ServerError } from "../data";
  export const createServerData$ = createRouteData;
 diff --git a/node_modules/solid-start/server/index.ts b/node_modules/solid-start/server/index.ts
-index e3a17c6..512470b 100644
+index e3a17c6..684d521 100644
 --- a/node_modules/solid-start/server/index.ts
 +++ b/node_modules/solid-start/server/index.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  // This file only exists to make the TypeScript tsconfig setting `"moduleResolution": "node"` work.
  // See ./server.ts for the server entrypoint and ./browser.ts for the browser entrypoint
  import server$ from "./server";
 diff --git a/node_modules/solid-start/server/middleware.ts b/node_modules/solid-start/server/middleware.ts
-index b605421..cebd699 100644
+index b605421..1919033 100644
 --- a/node_modules/solid-start/server/middleware.ts
 +++ b/node_modules/solid-start/server/middleware.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { Middleware as ServerMiddleware } from "../entry-server/StartServer";
  import { ContentTypeHeader, XSolidStartContentTypeHeader, XSolidStartOrigin } from "./responses";
  import { handleServerRequest, server$ } from "./server-functions/server";
 diff --git a/node_modules/solid-start/server/render.ts b/node_modules/solid-start/server/render.ts
-index 90c8e78..39ac560 100644
+index 8b2e8dc..ffe9895 100644
 --- a/node_modules/solid-start/server/render.ts
 +++ b/node_modules/solid-start/server/render.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { JSX } from "solid-js";
  import { renderToStream, renderToString, renderToStringAsync } from "solid-js/web";
- import { redirect } from "../server/responses";
+ import { apiRoutes } from "../api/middleware";
 diff --git a/node_modules/solid-start/server/responses.ts b/node_modules/solid-start/server/responses.ts
-index be467f2..2202140 100644
+index be467f2..5784142 100644
 --- a/node_modules/solid-start/server/responses.ts
 +++ b/node_modules/solid-start/server/responses.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  export const XSolidStartStatusCodeHeader = "x-solidstart-status-code";
  export const XSolidStartLocationHeader = "x-solidstart-location";
  export const LocationHeader = "Location";
 diff --git a/node_modules/solid-start/server/server-functions/browser.ts b/node_modules/solid-start/server/server-functions/browser.ts
-index c35fcb0..4ad2f16 100644
+index c35fcb0..59349da 100644
 --- a/node_modules/solid-start/server/server-functions/browser.ts
 +++ b/node_modules/solid-start/server/server-functions/browser.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import {
    ContentTypeHeader,
    JSONResponseType,
 diff --git a/node_modules/solid-start/server/server-functions/server.ts b/node_modules/solid-start/server/server-functions/server.ts
-index ccf967b..06187de 100644
+index ccf967b..0637131 100644
 --- a/node_modules/solid-start/server/server-functions/server.ts
 +++ b/node_modules/solid-start/server/server-functions/server.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { sharedConfig } from "solid-js";
  import { internalFetch } from "../../api/internalFetch";
  import { FormError } from "../../data";
 diff --git a/node_modules/solid-start/server/server-functions/types.ts b/node_modules/solid-start/server/server-functions/types.ts
-index c577105..c793062 100644
+index c577105..f37d895 100644
 --- a/node_modules/solid-start/server/server-functions/types.ts
 +++ b/node_modules/solid-start/server/server-functions/types.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { FetchEvent } from "../types";
  
  export type ServerFunction<E extends any[], T extends (...args: [...E]) => void> = ((
 diff --git a/node_modules/solid-start/server/server.ts b/node_modules/solid-start/server/server.ts
-index 832b5cb..5eca045 100644
+index 832b5cb..d32ffa0 100644
 --- a/node_modules/solid-start/server/server.ts
 +++ b/node_modules/solid-start/server/server.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { server$ } from "./server-functions/server";
  
  export default server$;
 diff --git a/node_modules/solid-start/server/shared.ts b/node_modules/solid-start/server/shared.ts
-index 79bf440..2442b2a 100644
+index 79bf440..808b139 100644
 --- a/node_modules/solid-start/server/shared.ts
 +++ b/node_modules/solid-start/server/shared.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  export { HttpHeader } from "./components/HttpHeader";
  export { HttpStatusCode } from "./components/HttpStatusCode";
  export { createServerAction$, createServerData$, createServerMultiAction$, ServerError } from "./data";
 diff --git a/node_modules/solid-start/server/types.tsx b/node_modules/solid-start/server/types.tsx
-index feb685d..b6f6673 100644
+index feb685d..7a9dac0 100644
 --- a/node_modules/solid-start/server/types.tsx
 +++ b/node_modules/solid-start/server/types.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { Server } from "http";
  
  export type ManifestEntry = {
 diff --git a/node_modules/solid-start/session/cookie.ts b/node_modules/solid-start/session/cookie.ts
-index aca7311..ccd6ca2 100644
+index aca7311..29006a3 100644
 --- a/node_modules/solid-start/session/cookie.ts
 +++ b/node_modules/solid-start/session/cookie.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  /*!
   * cookie
   * Copyright(c) 2012-2014 Roman Shtylman
 diff --git a/node_modules/solid-start/session/cookieSigning.ts b/node_modules/solid-start/session/cookieSigning.ts
-index f403460..f66167f 100644
+index f403460..03c79da 100644
 --- a/node_modules/solid-start/session/cookieSigning.ts
 +++ b/node_modules/solid-start/session/cookieSigning.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  /*!
   * Original code by Remix Sofware Inc
   * MIT Licensed, Copyright(c) 2021 Remix software Inc, see LICENSE.remix.md for details
 diff --git a/node_modules/solid-start/session/cookieStorage.ts b/node_modules/solid-start/session/cookieStorage.ts
-index 1a0d8ce..7e0927a 100644
+index 1a0d8ce..e1c2bce 100644
 --- a/node_modules/solid-start/session/cookieStorage.ts
 +++ b/node_modules/solid-start/session/cookieStorage.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  /*!
   * Original code by Remix Sofware Inc
   * MIT Licensed, Copyright(c) 2021 Remix software Inc, see LICENSE.remix.md for details
 diff --git a/node_modules/solid-start/session/cookies.ts b/node_modules/solid-start/session/cookies.ts
-index bfde0bb..e439d9d 100644
+index bfde0bb..f9928db 100644
 --- a/node_modules/solid-start/session/cookies.ts
 +++ b/node_modules/solid-start/session/cookies.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  /*!
   * Original code by Remix Sofware Inc
   * MIT Licensed, Copyright(c) 2021 Remix software Inc, see LICENSE.remix.md for details
 diff --git a/node_modules/solid-start/session/index.ts b/node_modules/solid-start/session/index.ts
-index d5d9380..7c05352 100644
+index d5d9380..d5b197e 100644
 --- a/node_modules/solid-start/session/index.ts
 +++ b/node_modules/solid-start/session/index.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  /*!
   * Original code by Remix Sofware Inc
   * MIT Licensed, Copyright(c) 2021 Remix software Inc, see LICENSE.remix.md for details
 diff --git a/node_modules/solid-start/session/memoryStorage.ts b/node_modules/solid-start/session/memoryStorage.ts
-index fac4ebe..d0cdd5e 100644
+index fac4ebe..6f602cc 100644
 --- a/node_modules/solid-start/session/memoryStorage.ts
 +++ b/node_modules/solid-start/session/memoryStorage.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  /*!
   * Original code by Remix Sofware Inc
   * MIT Licensed, Copyright(c) 2021 Remix software Inc, see LICENSE.remix.md for details
 diff --git a/node_modules/solid-start/session/sessions.ts b/node_modules/solid-start/session/sessions.ts
-index b99f736..93eb981 100644
+index b99f736..e9b9701 100644
 --- a/node_modules/solid-start/session/sessions.ts
 +++ b/node_modules/solid-start/session/sessions.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  /*!
   * Original code by Remix Sofware Inc
   * MIT Licensed, Copyright(c) 2021 Remix software Inc, see LICENSE.remix.md for details
 diff --git a/node_modules/solid-start/types.ts b/node_modules/solid-start/types.ts
-index f6617cd..d12b19c 100644
+index f6617cd..4481d8c 100644
 --- a/node_modules/solid-start/types.ts
 +++ b/node_modules/solid-start/types.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import type { Debugger } from "debug";
  import type { Component } from "solid-js";
  
 diff --git a/node_modules/solid-start/virtual/entry-client.tsx b/node_modules/solid-start/virtual/entry-client.tsx
-index ba4824e..0e148ea 100644
+index ba4824e..744b4be 100644
 --- a/node_modules/solid-start/virtual/entry-client.tsx
 +++ b/node_modules/solid-start/virtual/entry-client.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { mount, StartClient } from "../entry-client";
  
  mount(() => <StartClient />, document);
 diff --git a/node_modules/solid-start/virtual/entry-server.tsx b/node_modules/solid-start/virtual/entry-server.tsx
-index 4e4a3ce..21d88e5 100644
+index 4e4a3ce..66f1978 100644
 --- a/node_modules/solid-start/virtual/entry-server.tsx
 +++ b/node_modules/solid-start/virtual/entry-server.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { createHandler, renderAsync, StartServer } from "../entry-server";
  
  export default createHandler(renderAsync(event => <StartServer event={event} />));
 diff --git a/node_modules/solid-start/virtual/root.tsx b/node_modules/solid-start/virtual/root.tsx
-index c329426..fb23d7f 100644
+index c329426..5a24b62 100644
 --- a/node_modules/solid-start/virtual/root.tsx
 +++ b/node_modules/solid-start/virtual/root.tsx
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  // @refresh reload
  import { Suspense } from "solid-js";
  import { Body, ErrorBoundary, FileRoutes, Head, Html, Meta, Routes, Scripts } from "../";
 diff --git a/node_modules/solid-start/websocket/handler.ts b/node_modules/solid-start/websocket/handler.ts
-index aeff465..2393f4f 100644
+index aeff465..86e2171 100644
 --- a/node_modules/solid-start/websocket/handler.ts
 +++ b/node_modules/solid-start/websocket/handler.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import type { DurableObjectContext } from "../durable-object";
  import { webSocketHandlers } from "./handlers";
  
 diff --git a/node_modules/solid-start/websocket/handlers.ts b/node_modules/solid-start/websocket/handlers.ts
-index aac5b95..192a072 100644
+index aac5b95..5252cb2 100644
 --- a/node_modules/solid-start/websocket/handlers.ts
 +++ b/node_modules/solid-start/websocket/handlers.ts
-@@ -1 +1,3 @@
+@@ -1 +1,7 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  export const webSocketHandlers: { url: string; handler: any }[] = [];
 diff --git a/node_modules/solid-start/websocket/index.ts b/node_modules/solid-start/websocket/index.ts
-index d3265b0..e8d6257 100644
+index d3265b0..aaab437 100644
 --- a/node_modules/solid-start/websocket/index.ts
 +++ b/node_modules/solid-start/websocket/index.ts
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,9 @@
++// @ts-nocheck
++
++// @ts-nocheck
++
 +// @ts-nocheck
 +
  import { ServerFunction } from "../server/server-functions/types";
