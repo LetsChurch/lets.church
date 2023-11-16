@@ -465,30 +465,68 @@ builder.mutationFields((t) => ({
       return true;
     },
   }),
-  updateUser: t.prismaField({
+  upsertUser: t.prismaField({
     type: AppUser,
     args: {
-      userId: t.arg({ type: 'ShortUuid', required: true }),
+      userId: t.arg({ type: 'ShortUuid', required: false }),
+      username: t.arg.string({ required: false }),
+      fullName: t.arg.string({ required: false }),
       email: t.arg.string({ required: true }),
-      fullName: t.arg.string({ required: true }),
+      role: t.arg({ type: AppUserRoleEnum, required: false }),
+      newPassword: t.arg.string({ required: false }),
     },
-    authScopes: (_parent, { userId }, { session }) => {
+    // Only allow admin to update role and other users
+    authScopes: (_parent, { userId, username, role }, { session }) => {
+      if (username || role) {
+        return { admin: true };
+      }
+
       if (session?.appUser.id === userId) {
         return true;
       }
 
       return { admin: true };
     },
-    resolve: async (query, _parent, { userId, fullName, email }, _context) => {
-      await prisma.appUserEmail.upsert({
-        where: { email },
-        create: { email, appUser: { connect: { id: userId } } },
-        update: {},
-      });
-      return prisma.appUser.update({
+    resolve: async (
+      query,
+      _parent,
+      { userId, username, fullName, email, role, newPassword },
+      _context,
+    ) => {
+      if (userId) {
+        await prisma.appUserEmail.upsert({
+          where: { email },
+          create: { email, appUser: { connect: { id: userId } } },
+          update: {},
+        });
+
+        return prisma.appUser.update({
+          ...query,
+          where: { id: userId },
+          data: {
+            ...(username ? { username } : {}),
+            ...(fullName ? { fullName } : {}),
+            ...(role ? { role: role as 'ADMIN' | 'USER' } : {}),
+          },
+        });
+      }
+
+      invariant(username, 'Missing new username');
+      invariant(newPassword, 'Missing new password');
+
+      return prisma.appUser.create({
         ...query,
-        where: { id: userId },
-        data: { fullName },
+        data: {
+          username,
+          ...(fullName ? { fullName } : {}),
+          ...(role ? { role: role as 'ADMIN' | 'USER' } : {}),
+          password: await argon2.hash(newPassword, { type: argon2.argon2id }),
+          emails: {
+            create: {
+              email,
+            },
+          },
+        },
       });
     },
   }),

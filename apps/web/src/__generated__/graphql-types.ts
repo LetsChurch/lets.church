@@ -312,11 +312,11 @@ export type Mutation = {
   unsubscribeFromChannel: Scalars['Boolean']['output'];
   unsubscribeFromNewsletter: Scalars['Boolean']['output'];
   updateChannel: Channel;
-  updateUser: AppUser;
   upsertChannelMembership: ChannelMembership;
   upsertOrganizationMembership: OrganizationMembership;
   upsertUploadRecord: UploadRecord;
   upsertUploadUserComment: UploadUserComment;
+  upsertUser: AppUser;
   verifyEmail: Scalars['Boolean']['output'];
   verifyNewsletterSubscription: Scalars['Boolean']['output'];
 };
@@ -444,13 +444,6 @@ export type MutationUpdateChannelArgs = {
 };
 
 
-export type MutationUpdateUserArgs = {
-  email: Scalars['String']['input'];
-  fullName: Scalars['String']['input'];
-  userId: Scalars['ShortUuid']['input'];
-};
-
-
 export type MutationUpsertChannelMembershipArgs = {
   canEdit: Scalars['Boolean']['input'];
   canUpload: Scalars['Boolean']['input'];
@@ -486,6 +479,16 @@ export type MutationUpsertUploadUserCommentArgs = {
   replyingTo?: InputMaybe<Scalars['ShortUuid']['input']>;
   text: Scalars['String']['input'];
   uploadRecordId: Scalars['ShortUuid']['input'];
+};
+
+
+export type MutationUpsertUserArgs = {
+  email: Scalars['String']['input'];
+  fullName?: InputMaybe<Scalars['String']['input']>;
+  newPassword?: InputMaybe<Scalars['String']['input']>;
+  role?: InputMaybe<AppUserRole>;
+  userId?: InputMaybe<Scalars['ShortUuid']['input']>;
+  username?: InputMaybe<Scalars['String']['input']>;
 };
 
 

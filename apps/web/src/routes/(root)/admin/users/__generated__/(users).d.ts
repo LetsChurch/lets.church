@@ -1,4 +1,4 @@
-import * as Types from '../../../../__generated__/graphql-types';
+import * as Types from '../../../../../__generated__/graphql-types';
 
 export type AdminUsersRouteRowPropsFragment = { __typename?: 'AppUser', id: string, username: string, role: Types.AppUserRole, fullName?: string | null, emails: Array<{ __typename?: 'AppUserEmail', email: string }> };
 

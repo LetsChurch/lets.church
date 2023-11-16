@@ -32,4 +32,4 @@ export type UpdateUserMutationVariables = Types.Exact<{
 }>;
 
 
-export type UpdateUserMutation = { __typename?: 'Mutation', updateUser: { __typename?: 'AppUser', id: string } };
+export type UpdateUserMutation = { __typename?: 'Mutation', upsertUser: { __typename?: 'AppUser', id: string } };

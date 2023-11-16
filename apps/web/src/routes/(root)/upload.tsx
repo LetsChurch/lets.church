@@ -82,7 +82,6 @@ function getSections(
   channels: Array<Pick<Channel, 'id' | 'name'>> = [],
   onDropMedia: FileField['onDrop'],
   onDropThumbnail: FileField['onDrop'],
-  // TODO: felte
   defaultValues: {
     channelId: Optional<string>;
     title: Optional<string>;

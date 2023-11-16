@@ -155,7 +155,7 @@ export default function ProfileRoute() {
             $fullName: String!
             $email: String!
           ) {
-            updateUser(userId: $userId, fullName: $fullName, email: $email) {
+            upsertUser(userId: $userId, fullName: $fullName, email: $email) {
               id
             }
           }

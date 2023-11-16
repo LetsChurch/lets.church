@@ -2,13 +2,13 @@ import { gql } from 'graphql-request';
 import { createServerData$ } from 'solid-start/server';
 import { RouteDataArgs, useRouteData } from 'solid-start';
 import {
-  AdminChannelsRouteQuery,
-  AdminChannelsRouteQueryVariables,
-  AdminChannelsRouteRowPropsFragment,
-} from './__generated__/channels';
+  AdminUsersRouteQuery,
+  AdminUsersRouteQueryVariables,
+  AdminUsersRouteRowPropsFragment,
+} from './__generated__/(users)';
 import { PageHeading } from '~/components/page-heading';
 import { createAdminClientOrRedirect } from '~/util/gql/server';
-import Table from '~/components/table';
+import Table from '~/components/admin/table';
 import Pagination from '~/components/pagination';
 
 const PAGE_SIZE = 60;
@@ -19,23 +19,27 @@ export function routeData({ location }: RouteDataArgs) {
       const client = await createAdminClientOrRedirect(request);
 
       const res = await client.request<
-        AdminChannelsRouteQuery,
-        AdminChannelsRouteQueryVariables
+        AdminUsersRouteQuery,
+        AdminUsersRouteQueryVariables
       >(
         gql`
-          fragment AdminChannelsRouteRowProps on Channel {
+          fragment AdminUsersRouteRowProps on AppUser {
             id
-            name
-            slug
+            username
+            role
+            fullName
+            emails {
+              email
+            }
           }
 
-          query AdminChannelsRoute(
+          query AdminUsersRoute(
             $after: String
             $before: String
             $first: Int
             $last: Int
           ) {
-            channelsConnection(
+            usersConnection(
               after: $after
               before: $before
               first: $first
@@ -49,7 +53,7 @@ export function routeData({ location }: RouteDataArgs) {
               }
               edges {
                 node {
-                  ...AdminChannelsRouteRowProps
+                  ...AdminUsersRouteRowProps
                 }
               }
             }
@@ -67,7 +71,7 @@ export function routeData({ location }: RouteDataArgs) {
     },
     {
       key: () => [
-        'adminChannels',
+        'adminUsers',
         location.query['after'],
         location.query['before'],
       ],
@@ -77,35 +81,45 @@ export function routeData({ location }: RouteDataArgs) {
   return metaData;
 }
 
-export default function AdminChannelsRoute() {
+export default function AdminUsersRoute() {
   const data = useRouteData<typeof routeData>();
 
   return (
     <div>
-      <PageHeading title="Admin: Channels" />
-      <Table<{ node: AdminChannelsRouteRowPropsFragment }>
+      <PageHeading
+        title="Admin: Users"
+        actions={[
+          { variant: 'primary', label: 'New User', href: '/admin/users/edit' },
+        ]}
+      />
+      <Table<{ node: AdminUsersRouteRowPropsFragment }>
         columns={[
-          { title: 'Name', render: (d) => d.node.name },
-          { title: 'Slug', render: (d) => d.node.slug },
+          { title: 'Username', render: (d) => d.node.username },
+          { title: 'Role', render: (d) => d.node.role },
+          { title: 'Full Name', render: (d) => d.node.fullName },
+          { title: 'Email', render: (d) => d.node.emails[0]?.email },
           {
             title: 'Edit',
             titleSrOnly: true,
             render: (d) => (
-              <a href="#" class="text-indigo-600 hover:text-indigo-900">
-                Edit<span class="sr-only">, {d.node.name}</span>
+              <a
+                href={`/admin/users/edit?id=${d.node.id}`}
+                class="text-indigo-600 hover:text-indigo-900"
+              >
+                Edit <span class="sr-only">{d.node.username}</span>
               </a>
             ),
           },
         ]}
-        data={data()?.channelsConnection.edges ?? []}
+        data={data()?.usersConnection.edges ?? []}
       />
       <Pagination
         hasPreviousPage={
-          data()?.channelsConnection.pageInfo.hasPreviousPage ?? false
+          data()?.usersConnection.pageInfo.hasPreviousPage ?? false
         }
-        hasNextPage={data()?.channelsConnection.pageInfo.hasNextPage ?? false}
-        startCursor={data()?.channelsConnection.pageInfo.startCursor ?? ''}
-        endCursor={data()?.channelsConnection.pageInfo.endCursor ?? ''}
+        hasNextPage={data()?.usersConnection.pageInfo.hasNextPage ?? false}
+        startCursor={data()?.usersConnection.pageInfo.startCursor ?? ''}
+        endCursor={data()?.usersConnection.pageInfo.endCursor ?? ''}
       />
     </div>
   );

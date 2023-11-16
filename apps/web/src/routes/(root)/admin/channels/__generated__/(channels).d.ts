@@ -1,4 +1,4 @@
-import * as Types from '../../../../__generated__/graphql-types';
+import * as Types from '../../../../../__generated__/graphql-types';
 
 export type AdminChannelsRouteRowPropsFragment = { __typename?: 'Channel', id: string, name: string, slug: string };
 
