@@ -84,7 +84,13 @@ export default function AdminChannelsRoute() {
     <div>
       <PageHeading
         title="Admin: Channels"
-        actions={[{ variant: 'primary', label: 'New Channel', href: 'new' }]}
+        actions={[
+          {
+            variant: 'primary',
+            label: 'New Channel',
+            href: '/admin/channels/edit',
+          },
+        ]}
       />
       <Table<{ node: AdminChannelsRouteRowPropsFragment }>
         columns={[
@@ -94,7 +100,10 @@ export default function AdminChannelsRoute() {
             title: 'Edit',
             titleSrOnly: true,
             render: (d) => (
-              <a href="#" class="text-indigo-600 hover:text-indigo-900">
+              <a
+                href={`/admin/channels/edit?id=${d.node.id}`}
+                class="text-indigo-600 hover:text-indigo-900"
+              >
                 Edit<span class="sr-only">, {d.node.name}</span>
               </a>
             ),

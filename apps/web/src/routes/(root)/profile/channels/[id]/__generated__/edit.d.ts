@@ -33,4 +33,4 @@ export type UpdateChannelMutationVariables = Types.Exact<{
 }>;
 
 
-export type UpdateChannelMutation = { __typename?: 'Mutation', updateChannel: { __typename?: 'Channel', id: string } };
+export type UpdateChannelMutation = { __typename?: 'Mutation', upsertChannel: { __typename?: 'Channel', id: string } };

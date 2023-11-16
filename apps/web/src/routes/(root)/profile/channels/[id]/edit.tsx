@@ -160,7 +160,7 @@ export default function EditChannelRoute() {
       >(
         gql`
           mutation UpdateChannel($channelId: ShortUuid!, $name: String!) {
-            updateChannel(channelId: $channelId, name: $name) {
+            upsertChannel(channelId: $channelId, name: $name) {
               id
             }
           }

@@ -256,20 +256,44 @@ builder.mutationFields((t) => ({
       return res;
     },
   }),
-  updateChannel: t.prismaField({
+  upsertChannel: t.prismaField({
     type: Channel,
     args: {
-      channelId: t.arg({ type: 'ShortUuid', required: true }),
-      name: t.arg.string({ required: true }),
+      channelId: t.arg({ type: 'ShortUuid', required: false }),
+      name: t.arg.string({ required: false }),
+      slug: t.arg.string({ required: false }),
+      description: t.arg.string({ required: false }),
     },
     authScopes: (_root, { channelId }, context, info) =>
-      channelAdminAuthScope({ id: channelId }, context, info),
-    resolve: async (query, _parent, { channelId, name }, _context) => {
-      return prisma.channel.update({
-        ...query,
-        where: { id: channelId },
+      channelId
+        ? channelAdminAuthScope({ id: channelId }, context, info)
+        : { admin: true },
+    resolve: async (
+      query,
+      _parent,
+      { channelId, name, slug, description },
+      _context,
+    ) => {
+      if (channelId) {
+        return prisma.channel.update({
+          ...query,
+          where: { id: channelId },
+          data: {
+            ...(typeof name === 'string' ? { name } : {}),
+            ...(typeof slug === 'string' ? { slug } : {}),
+            ...(typeof description === 'string' ? { description } : {}),
+          },
+        });
+      }
+
+      invariant(name, 'Must provide name');
+      invariant(slug, 'Must provide description');
+
+      return prisma.channel.create({
         data: {
           name,
+          slug,
+          ...(typeof description === 'string' ? { description } : {}),
         },
       });
     },

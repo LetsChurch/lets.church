@@ -311,7 +311,7 @@ export type Mutation = {
   subscribeToNewsletter: MutationSubscribeToNewsletterResult;
   unsubscribeFromChannel: Scalars['Boolean']['output'];
   unsubscribeFromNewsletter: Scalars['Boolean']['output'];
-  updateChannel: Channel;
+  upsertChannel: Channel;
   upsertChannelMembership: ChannelMembership;
   upsertOrganizationMembership: OrganizationMembership;
   upsertUploadRecord: UploadRecord;
@@ -438,9 +438,11 @@ export type MutationUnsubscribeFromNewsletterArgs = {
 };
 
 
-export type MutationUpdateChannelArgs = {
-  channelId: Scalars['ShortUuid']['input'];
-  name: Scalars['String']['input'];
+export type MutationUpsertChannelArgs = {
+  channelId?: InputMaybe<Scalars['ShortUuid']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  slug?: InputMaybe<Scalars['String']['input']>;
 };
 
 
