@@ -3,6 +3,8 @@ import { A } from 'solid-start';
 export default function NotFound() {
   return (
     <div class="min-h-full bg-white px-4 py-16 sm:px-6 sm:py-24 md:grid md:place-items-center lg:px-8">
+      <Title>Not Found | Let's Church</Title>
+      <HttpStatusCode code={404} />
       <div class="mx-auto max-w-max">
         <main class="sm:flex">
           <p class="text-4xl font-bold tracking-tight text-indigo-600 sm:text-5xl">
