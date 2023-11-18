@@ -55,6 +55,8 @@ spec:
             - secretRef:
                 name: jwt-secret
             - secretRef:
+                name: ps-secret
+            - secretRef:
                 name: s3-secret
       initContainers:
         - <<: *gatewayContainer
