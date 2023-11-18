@@ -1,0 +1,7 @@
+# Copy *.new.json files to gateway
+
+for f in *.new.json; do
+  kubectl cp --namespace letschurch-prod ${f} <gateway_pod>:.
+done
+
+$ gateway_pod: kubectl get --namespace letschurch-prod pods | grep gateway | cut -d ' ' -f 1
