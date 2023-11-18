@@ -9,6 +9,8 @@ export SENTRY_IMPORT_WORKER=https://foo@bar.ingest.sentry.io/baz
 
 export MEDIA_URL=https://public_media_url
 
+PS_ACCESS_KEY=
+
 export S3_INGEST_ENDPOINT=
 export S3_INGEST_BUCKET=
 export S3_INGEST_ACCESS_KEY_ID=

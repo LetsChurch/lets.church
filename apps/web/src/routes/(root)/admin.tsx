@@ -2,6 +2,7 @@ import { Outlet } from 'solid-start';
 import ClipboardData from '@tabler/icons/clipboard-data.svg?component-solid';
 import ProfileIcon from '@tabler/icons/user-circle.svg?component-solid';
 import AntennaIcon from '@tabler/icons/antenna.svg?component-solid';
+import ChurchIcon from '@tabler/icons/building-church.svg?component-solid';
 import Sidenav from '~/components/sidenav';
 
 const links = [
@@ -12,6 +13,7 @@ const links = [
     icon: ProfileIcon,
   },
   { title: 'Channels', href: '/admin/channels', icon: AntennaIcon },
+  { title: 'Organizations', href: '/admin/organizations', icon: ChurchIcon },
 ];
 
 export default function ProfileLayout() {

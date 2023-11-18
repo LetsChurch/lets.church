@@ -89,10 +89,19 @@ model ChannelSubscription {
   @@map("channel_subscription")
 }
 
+enum OrganizationType {
+  CHURCH
+  MINISTRY
+
+  @@map("organization_type")
+}
+
 model Organization {
   id           String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type         OrganizationType                 @default(MINISTRY)
   name         String
   slug         String                           @unique @db.Citext
+  addresses    OrganizationAddress[]
   description  String?
   memberships  OrganizationMembership[]
   associations OrganizationChannelAssociation[]
@@ -100,6 +109,39 @@ model Organization {
   updatedAt    DateTime                         @updatedAt @map("updated_at")
 
   @@map("organization")
+}
+
+model OrganizationAddress {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  organizationId String?       @db.Uuid
+
+  @@map("organization_address")
+}
+
+enum AddressType {
+  MAILING
+  MEETING
+  OFFICE
+  OTHER
+
+  @@map("address_type")
+}
+
+model Address {
+  id                  String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type                AddressType
+  name                String?
+  query               String?
+  geocodingJson       Json?
+  country             String? // e.g., United States
+  locality            String? // e.g., Boston
+  region              String? // e.g., Massachusetts
+  postOfficeBoxNumber String?
+  postalCode          String?
+  streetAddress       String?
+
+  @@map("address")
 }
 
 model OrganizationMembership {

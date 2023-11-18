@@ -254,6 +254,28 @@ export type DataError = {
   error: PrismaRuntimeError;
 };
 
+export type GeocodeResult = {
+  __typename?: 'GeocodeResult';
+  administrativeArea?: Maybe<Scalars['String']['output']>;
+  confidence: Scalars['Float']['output'];
+  continent: Scalars['String']['output'];
+  country: Scalars['String']['output'];
+  countryCode: Scalars['String']['output'];
+  county?: Maybe<Scalars['String']['output']>;
+  label: Scalars['String']['output'];
+  latitude: Scalars['Float']['output'];
+  locality?: Maybe<Scalars['String']['output']>;
+  longitude: Scalars['Float']['output'];
+  name: Scalars['String']['output'];
+  neighborhood?: Maybe<Scalars['String']['output']>;
+  number?: Maybe<Scalars['String']['output']>;
+  postalCode?: Maybe<Scalars['String']['output']>;
+  region: Scalars['String']['output'];
+  regionCode: Scalars['String']['output'];
+  street?: Maybe<Scalars['String']['output']>;
+  type: Scalars['String']['output'];
+};
+
 export type HighlightedText = {
   __typename?: 'HighlightedText';
   marked: Scalars['String']['output'];
@@ -313,6 +335,7 @@ export type Mutation = {
   unsubscribeFromNewsletter: Scalars['Boolean']['output'];
   upsertChannel: Channel;
   upsertChannelMembership: ChannelMembership;
+  upsertOrganization: Organization;
   upsertOrganizationMembership: OrganizationMembership;
   upsertUploadRecord: UploadRecord;
   upsertUploadUserComment: UploadUserComment;
@@ -455,6 +478,14 @@ export type MutationUpsertChannelMembershipArgs = {
 };
 
 
+export type MutationUpsertOrganizationArgs = {
+  description?: InputMaybe<Scalars['String']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  organizationId?: InputMaybe<Scalars['ShortUuid']['input']>;
+  slug?: InputMaybe<Scalars['String']['input']>;
+};
+
+
 export type MutationUpsertOrganizationMembershipArgs = {
   canEdit: Scalars['Boolean']['input'];
   isAdmin: Scalars['Boolean']['input'];
@@ -534,6 +565,7 @@ export type Organization = {
   membershipsConnection: OrganizationMembershipsConnection;
   name: Scalars['String']['output'];
   slug: Scalars['String']['output'];
+  type: OrganizationType;
   updatedAt: Scalars['DateTime']['output'];
 };
 
@@ -597,6 +629,11 @@ export type OrganizationSearchHit = ISearchHit & {
   organization: Organization;
 };
 
+export enum OrganizationType {
+  Church = 'CHURCH',
+  Ministry = 'MINISTRY'
+}
+
 export type PageInfo = {
   __typename?: 'PageInfo';
   endCursor?: Maybe<Scalars['String']['output']>;
@@ -615,9 +652,12 @@ export type Query = {
   channelById: Channel;
   channelBySlug: Channel;
   channelsConnection: QueryChannelsConnection;
+  geocode: Array<GeocodeResult>;
+  geocodeJwt: Array<Scalars['Jwt']['output']>;
   me?: Maybe<AppUser>;
   mySubscriptionUploadRecords?: Maybe<QueryMySubscriptionUploadRecordsConnection>;
   organizationById: Organization;
+  organizationsConnection: QueryOrganizationsConnection;
   search: SearchConnection;
   stats: Stats;
   uploadListById: UploadList;
@@ -646,6 +686,16 @@ export type QueryChannelsConnectionArgs = {
 };
 
 
+export type QueryGeocodeArgs = {
+  query: Scalars['String']['input'];
+};
+
+
+export type QueryGeocodeJwtArgs = {
+  query: Scalars['String']['input'];
+};
+
+
 export type QueryMySubscriptionUploadRecordsArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -656,6 +706,14 @@ export type QueryMySubscriptionUploadRecordsArgs = {
 
 export type QueryOrganizationByIdArgs = {
   id: Scalars['ShortUuid']['input'];
+};
+
+
+export type QueryOrganizationsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -727,6 +785,18 @@ export type QueryMySubscriptionUploadRecordsConnectionEdge = {
   __typename?: 'QueryMySubscriptionUploadRecordsConnectionEdge';
   cursor: Scalars['String']['output'];
   node: UploadRecord;
+};
+
+export type QueryOrganizationsConnection = {
+  __typename?: 'QueryOrganizationsConnection';
+  edges: Array<QueryOrganizationsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type QueryOrganizationsConnectionEdge = {
+  __typename?: 'QueryOrganizationsConnectionEdge';
+  cursor: Scalars['String']['output'];
+  node: Organization;
 };
 
 export type QueryUploadRecordsConnection = {

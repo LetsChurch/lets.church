@@ -293,6 +293,7 @@ for (let i = 0; i < 46; i += 1) {
     data: {
       name,
       slug: slugify(name),
+      type: 'CHURCH',
       memberships: {
         create: {
           appUser: {

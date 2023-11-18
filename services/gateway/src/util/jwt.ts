@@ -1,6 +1,7 @@
 import envariant from '@knpwrs/envariant';
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
 import { z } from 'zod';
+import { geocodeResultSchema } from './geo';
 
 const JWT_SECRET = envariant('JWT_SECRET');
 const jwtSecret = Buffer.from(JWT_SECRET, 'hex');
@@ -35,11 +36,16 @@ function jwtFactory<S extends JWTPayload>(
   };
 }
 
-const SessionJwtSchema = z.object({
+const sessionJwtSchema = z.object({
   sub: z.string().uuid(),
 });
 
 export const { create: createSessionJwt, parse: parseSessionJwt } = jwtFactory(
-  SessionJwtSchema,
+  sessionJwtSchema,
   '2w',
+);
+
+export const { create: createGeocodeJwt, parse: parseGeocodeJwt } = jwtFactory(
+  geocodeResultSchema,
+  '1d',
 );

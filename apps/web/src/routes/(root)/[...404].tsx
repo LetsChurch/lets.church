@@ -1,4 +1,5 @@
-import { A } from 'solid-start';
+import { A, Title } from 'solid-start';
+import { HttpStatusCode } from 'solid-start/server';
 
 export default function NotFound() {
   return (

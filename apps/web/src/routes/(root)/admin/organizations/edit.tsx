@@ -8,17 +8,17 @@ import {
 import * as z from 'zod';
 import { Show } from 'solid-js';
 import {
-  AdminChannelEditRouteDataQuery,
-  AdminChannelEditRouteDataQueryVariables,
-  AdminUpsertChannelMutation,
-  AdminUpsertChannelMutationVariables,
+  AdminOrganizationEditRouteDataQuery,
+  AdminOrganizationEditRouteDataQueryVariables,
+  AdminUpsertOrganizationMutation,
+  AdminUpsertOrganizationMutationVariables,
 } from './__generated__/edit';
 import { UpsertForm } from '~/components/admin/upsert-form';
 import { PageHeading } from '~/components/page-heading';
 import { createAdminClientOrRedirect } from '~/util/gql/server';
 
-const UpsertChannelSchema = z.object({
-  channelId: z.string().nullable(),
+const UpsertOrganizationSchema = z.object({
+  organizationId: z.string().nullable(),
   name: z.string(),
   slug: z.string(),
   description: z.string().nullable(),
@@ -30,19 +30,19 @@ export function routeData({ location }: RouteDataArgs) {
       const client = await createAdminClientOrRedirect(request);
 
       const res = await client.request<
-        AdminChannelEditRouteDataQuery,
-        AdminChannelEditRouteDataQueryVariables
+        AdminOrganizationEditRouteDataQuery,
+        AdminOrganizationEditRouteDataQueryVariables
       >(
         gql`
-          query AdminChannelEditRouteData(
+          query AdminOrganizationEditRouteData(
             $id: ShortUuid = ""
             $prefetch: Boolean!
           ) {
-            channelById(id: $id) @include(if: $prefetch) {
+            organizationById(id: $id) @include(if: $prefetch) {
               id
+              type
               name
               slug
-              description
             }
           }
         `,
@@ -62,9 +62,9 @@ export default function AdminNewUserRoute() {
     async (form: FormData, event) => {
       const client = await createAdminClientOrRedirect(event.request);
 
-      const variables = UpsertChannelSchema.parse(
+      const variables = UpsertOrganizationSchema.parse(
         Object.fromEntries(
-          ['channelId', 'name', 'slug', 'description'].map((p) => [
+          ['organizationId', 'name', 'slug', 'description'].map((p) => [
             p,
             form.get(p),
           ]),
@@ -72,18 +72,18 @@ export default function AdminNewUserRoute() {
       );
 
       await client.request<
-        AdminUpsertChannelMutation,
-        AdminUpsertChannelMutationVariables
+        AdminUpsertOrganizationMutation,
+        AdminUpsertOrganizationMutationVariables
       >(
         gql`
-          mutation AdminUpsertChannel(
-            $channelId: ShortUuid
+          mutation AdminUpsertOrganization(
+            $organizationId: ShortUuid
             $name: String!
             $slug: String!
             $description: String
           ) {
-            upsertChannel(
-              channelId: $channelId
+            upsertOrganization(
+              organizationId: $organizationId
               name: $name
               slug: $slug
               description: $description
@@ -95,19 +95,19 @@ export default function AdminNewUserRoute() {
         variables,
       );
 
-      return redirect('/admin/channels');
+      return redirect('/admin/organizations');
     },
   );
 
   return (
     <>
       <PageHeading
-        title={`${data()?.channelById?.id ? 'Edit' : 'New'} Channel`}
+        title={`${data()?.organizationById?.id ? 'Edit' : 'New'} Organization`}
         backButton
       />
       <upsert.Form>
-        <Show when={data()?.channelById?.id} keyed>
-          {(id) => <input type="hidden" name="channelId" value={id} />}
+        <Show when={data()?.organizationById?.id} keyed>
+          {(id) => <input type="hidden" name="organizationId" value={id} />}
         </Show>
         <UpsertForm
           sections={[
@@ -115,20 +115,23 @@ export default function AdminNewUserRoute() {
               title: 'Meta',
               fields: [
                 { type: 'text', name: 'name', label: 'Name' },
-                { type: 'text', name: 'slug', label: 'Slug' },
                 {
-                  type: 'text',
-                  rows: 5,
-                  name: 'description',
-                  label: 'Description',
+                  type: 'select',
+                  name: 'type',
+                  label: 'Type',
+                  options: [
+                    { label: 'Church', value: 'CHURCH' },
+                    { label: 'Ministry', value: 'MINISTRY' },
+                  ],
                 },
+                { type: 'text', name: 'slug', label: 'Slug' },
               ],
             },
           ]}
           defaultValues={{
-            name: data()?.channelById?.name ?? '',
-            slug: data()?.channelById?.slug ?? '',
-            description: data()?.channelById?.description ?? '',
+            name: data()?.organizationById?.name ?? '',
+            type: data()?.organizationById?.type ?? 'MINISTRY',
+            slug: data()?.organizationById?.slug ?? '',
           }}
           submitting={upserting.pending}
         />
