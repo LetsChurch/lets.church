@@ -1,13 +1,16 @@
 import { gql } from 'graphql-request';
 import { RouteDataArgs, useRouteData } from 'solid-start';
-import {
+import server$, {
   createServerAction$,
   createServerData$,
   redirect,
 } from 'solid-start/server';
 import * as z from 'zod';
 import { Show } from 'solid-js';
+import { decodeJwt } from 'jose';
 import {
+  AdminOrganizationEditRouteAddressCompletionQuery,
+  AdminOrganizationEditRouteAddressCompletionQueryVariables,
   AdminOrganizationEditRouteDataQuery,
   AdminOrganizationEditRouteDataQueryVariables,
   AdminUpsertOrganizationMutation,
@@ -22,7 +25,17 @@ const UpsertOrganizationSchema = z.object({
   name: z.string(),
   slug: z.string(),
   description: z.string().nullable(),
+  addressJwt: z.string().nullable(),
 });
+
+const ParseJwtSchema = z.object({
+  label: z.string(),
+});
+
+function renderLabelFromJwt(jwt: string) {
+  const decoded = decodeJwt(jwt);
+  return ParseJwtSchema.parse(decoded).label;
+}
 
 export function routeData({ location }: RouteDataArgs) {
   return createServerData$(
@@ -55,6 +68,24 @@ export function routeData({ location }: RouteDataArgs) {
   );
 }
 
+const getAddressCompletionOptions = server$(async (query: string) => {
+  const client = await createAdminClientOrRedirect(server$.request);
+
+  const res = await client.request<
+    AdminOrganizationEditRouteAddressCompletionQuery,
+    AdminOrganizationEditRouteAddressCompletionQueryVariables
+  >(
+    gql`
+      query AdminOrganizationEditRouteAddressCompletion($query: String!) {
+        geocodeJwt(query: $query)
+      }
+    `,
+    { query },
+  );
+
+  return res.geocodeJwt;
+});
+
 export default function AdminNewUserRoute() {
   const data = useRouteData<typeof routeData>();
 
@@ -64,10 +95,9 @@ export default function AdminNewUserRoute() {
 
       const variables = UpsertOrganizationSchema.parse(
         Object.fromEntries(
-          ['organizationId', 'name', 'slug', 'description'].map((p) => [
-            p,
-            form.get(p),
-          ]),
+          ['organizationId', 'name', 'slug', 'description', 'addressJwt'].map(
+            (p) => [p, form.get(p)],
+          ),
         ),
       );
 
@@ -81,12 +111,14 @@ export default function AdminNewUserRoute() {
             $name: String!
             $slug: String!
             $description: String
+            $addressJwt: Jwt
           ) {
             upsertOrganization(
               organizationId: $organizationId
               name: $name
               slug: $slug
               description: $description
+              addressJwt: $addressJwt
             ) {
               id
             }
@@ -125,6 +157,15 @@ export default function AdminNewUserRoute() {
                   ],
                 },
                 { type: 'text', name: 'slug', label: 'Slug' },
+                {
+                  type: 'autocomplete',
+                  name: 'addressJwt',
+                  label: 'New Address (tmp: move to own page)',
+                  getOptions: getAddressCompletionOptions,
+                  // TODO: maybe just one prop: valueAsString?
+                  renderValue: (val) => (val ? renderLabelFromJwt(val) : ''),
+                  renderMenuValue: (val) => renderLabelFromJwt(val),
+                },
               ],
             },
           ]}

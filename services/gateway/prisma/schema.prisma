@@ -111,14 +111,6 @@ model Organization {
   @@map("organization")
 }
 
-model OrganizationAddress {
-  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-  organizationId String?       @db.Uuid
-
-  @@map("organization_address")
-}
-
 enum AddressType {
   MAILING
   MEETING
@@ -128,25 +120,27 @@ enum AddressType {
   @@map("address_type")
 }
 
-model Address {
-  id                  String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+model OrganizationAddress {
+  id                  String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organization        Organization @relation(fields: [organizationId], references: [id])
+  organizationId      String       @map("organization_id") @db.Uuid
   type                AddressType
   name                String?
   query               String?
-  geocodingJson       Json?
+  geocodingJson       Json?        @map("geocoding_json")
   country             String? // e.g., United States
   locality            String? // e.g., Boston
   region              String? // e.g., Massachusetts
-  postOfficeBoxNumber String?
-  postalCode          String?
-  streetAddress       String?
+  postOfficeBoxNumber String?      @map("post_office_box_number")
+  postalCode          String?      @map("postal_code")
+  streetAddress       String?      @map("street_address")
 
-  @@map("address")
+  @@map("organization_address")
 }
 
 model OrganizationMembership {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  organizationId String       @map("channel_id") @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
   appUser        AppUser      @relation(fields: [appUserId], references: [id], onDelete: Cascade)
   appUserId      String       @map("app_user_id") @db.Uuid
   isAdmin        Boolean      @default(false) @map("is_admin")

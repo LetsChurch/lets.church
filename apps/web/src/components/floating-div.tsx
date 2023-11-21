@@ -3,6 +3,7 @@ import { type JSX, type ParentProps, splitProps } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import ShowTransition from './show-transition';
 import clickOutside from '~/util/click-outside';
+import { cn } from '~/util';
 
 export type Props = ParentProps<
   JSX.HTMLAttributes<HTMLDivElement> & {
@@ -35,9 +36,10 @@ export default function FloatingDiv(props: Props) {
       {(tref) => (
         <Portal>
           <div
-            class={`z-10 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none ${
-              local.class ?? ''
-            }`}
+            class={cn(
+              `z-10 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none`,
+              local.class,
+            )}
             aria-orientation="vertical"
             tabindex="-1"
             ref={(el) => {

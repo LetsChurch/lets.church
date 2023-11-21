@@ -1,6 +1,7 @@
 import slugify from '@sindresorhus/slugify';
 import invariant from 'tiny-invariant';
 import {
+  AddressType,
   OrganizationType,
   Organization as PrismaOrganization,
 } from '@prisma/client';
@@ -8,6 +9,7 @@ import { indexDocument } from '../../temporal';
 import prisma from '../../util/prisma';
 import builder from '../builder';
 import { Context } from '../../util/context';
+import { parseGeocodeJwt } from '../../util/jwt';
 
 async function organizationAdminAuthScope(
   appOrganization: Pick<PrismaOrganization, 'id'>,
@@ -141,6 +143,8 @@ builder.mutationFields((t) => ({
       name: t.arg.string({ required: false }),
       slug: t.arg.string({ required: false }),
       description: t.arg.string({ required: false }),
+      // TODO: multiple addresses, maybe just make an organization address API
+      addressJwt: t.arg({ type: 'Jwt', required: false }),
     },
     authScopes: (_root, { organizationId }, context, _info) =>
       organizationId
@@ -149,30 +153,93 @@ builder.mutationFields((t) => ({
     resolve: async (
       query,
       _parent,
-      { organizationId, name, slug, description },
+      { organizationId, name, slug, description, addressJwt },
       _context,
     ) => {
-      if (organizationId) {
-        return prisma.organization.update({
+      return prisma.$transaction(async (tx) => {
+        if (organizationId) {
+          // TODO: better logic for updating address
+          if (addressJwt) {
+            await tx.organizationAddress.deleteMany({
+              where: { organizationId },
+            });
+            const parsed = await parseGeocodeJwt(addressJwt);
+            if (parsed) {
+              await tx.organizationAddress.create({
+                data: {
+                  type: AddressType.MAILING,
+                  name: 'Default',
+                  query: parsed?.name,
+                  geocodingJson: parsed,
+                  country: parsed?.country,
+                  locality: parsed?.locality,
+                  region: parsed?.region,
+                  // postOfficeBoxNumber: 0,
+                  postalCode: parsed?.postalCode,
+                  streetAddress: parsed?.street,
+                  organization: {
+                    connect: {
+                      id: organizationId,
+                    },
+                  },
+                },
+              });
+            }
+          }
+
+          return tx.organization.update({
+            ...query,
+            where: { id: organizationId },
+            data: {
+              ...(typeof name === 'string' ? { name } : {}),
+              ...(typeof slug === 'string' ? { slug } : {}),
+              ...(typeof description === 'string' ? { description } : {}),
+            },
+          });
+        }
+
+        invariant(name, 'Must provide name');
+        invariant(slug, 'Must provide description');
+
+        const res = await tx.organization.create({
           ...query,
-          where: { id: organizationId },
           data: {
-            ...(typeof name === 'string' ? { name } : {}),
-            ...(typeof slug === 'string' ? { slug } : {}),
+            name,
+            slug,
             ...(typeof description === 'string' ? { description } : {}),
           },
         });
-      }
 
-      invariant(name, 'Must provide name');
-      invariant(slug, 'Must provide description');
+        if (addressJwt) {
+          const parsed = await parseGeocodeJwt(addressJwt);
 
-      return prisma.organization.create({
-        data: {
-          name,
-          slug,
-          ...(typeof description === 'string' ? { description } : {}),
-        },
+          if (parsed) {
+            await tx.organizationAddress.create({
+              data: {
+                type: AddressType.MAILING,
+                name: 'Default',
+                query: parsed?.name,
+                geocodingJson: parsed,
+                country: parsed?.country,
+                locality: parsed?.locality,
+                region: parsed?.region,
+                // postOfficeBoxNumber: 0,
+                postalCode: parsed?.postalCode,
+                streetAddress: parsed?.street,
+                organization: {
+                  connect: {
+                    id: res.id,
+                  },
+                },
+              },
+            });
+          }
+        }
+
+        return tx.organization.findUniqueOrThrow({
+          ...query,
+          where: { id: res.id },
+        });
       });
     },
   }),

@@ -1,14 +1,22 @@
 import { For, Match, Show, Switch, createUniqueId } from 'solid-js';
 import Dropzone, { DroppedRes } from '../dropzone';
 import { Button, Input, Radios, Select, Textarea } from '../form';
+import AutoComplete from '../form/autocomplete';
 import { Optional } from '~/util';
 
-type BaseField<N extends string> = {
+type BaseField<N extends string, V = string> = {
   label: string;
   name: N;
   required?: boolean;
-  defaultValue?: Optional<string>;
+  defaultValue?: Optional<V>;
   disabled?: boolean;
+};
+
+type AutoCompleteField<N extends string = string> = BaseField<N> & {
+  type: 'autocomplete';
+  renderValue?: (value?: string) => string;
+  renderMenuValue?: (value: string) => string;
+  getOptions: (query: string) => Promise<Array<string>>;
 };
 
 type TextField<N extends string = string> = BaseField<N> & {
@@ -39,6 +47,7 @@ type RadioField<N extends string = string> = BaseField<N> & {
 
 type Field<N extends string> =
   | TextField<N>
+  | AutoCompleteField<N>
   | DateField<N>
   | FileField<N>
   | SelectField<N>
@@ -113,6 +122,20 @@ export function UpsertForm<N extends string>(props: Props<N>) {
                                 rows={textAreaField.rows ?? ''}
                                 disabled={field.disabled ?? false}
                                 class="mt-1"
+                              />
+                            )}
+                          </Match>
+                          <Match when={field.type === 'autocomplete' && field}>
+                            {(autoCompleteField) => (
+                              <AutoComplete
+                                id={id}
+                                name={field.name}
+                                value={props.defaultValues?.[field.name] ?? ''}
+                                renderValue={autoCompleteField().renderValue}
+                                renderMenuValue={
+                                  autoCompleteField().renderMenuValue
+                                }
+                                getOptions={autoCompleteField().getOptions}
                               />
                             )}
                           </Match>

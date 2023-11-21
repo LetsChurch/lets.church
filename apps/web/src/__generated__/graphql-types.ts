@@ -258,9 +258,9 @@ export type GeocodeResult = {
   __typename?: 'GeocodeResult';
   administrativeArea?: Maybe<Scalars['String']['output']>;
   confidence: Scalars['Float']['output'];
-  continent: Scalars['String']['output'];
-  country: Scalars['String']['output'];
-  countryCode: Scalars['String']['output'];
+  continent?: Maybe<Scalars['String']['output']>;
+  country?: Maybe<Scalars['String']['output']>;
+  countryCode?: Maybe<Scalars['String']['output']>;
   county?: Maybe<Scalars['String']['output']>;
   label: Scalars['String']['output'];
   latitude: Scalars['Float']['output'];
@@ -270,8 +270,8 @@ export type GeocodeResult = {
   neighborhood?: Maybe<Scalars['String']['output']>;
   number?: Maybe<Scalars['String']['output']>;
   postalCode?: Maybe<Scalars['String']['output']>;
-  region: Scalars['String']['output'];
-  regionCode: Scalars['String']['output'];
+  region?: Maybe<Scalars['String']['output']>;
+  regionCode?: Maybe<Scalars['String']['output']>;
   street?: Maybe<Scalars['String']['output']>;
   type: Scalars['String']['output'];
 };
@@ -479,6 +479,7 @@ export type MutationUpsertChannelMembershipArgs = {
 
 
 export type MutationUpsertOrganizationArgs = {
+  addressJwt?: InputMaybe<Scalars['Jwt']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   organizationId?: InputMaybe<Scalars['ShortUuid']['input']>;
