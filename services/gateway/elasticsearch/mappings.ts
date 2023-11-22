@@ -41,6 +41,12 @@ const targetMappings: Record<
       description: {
         type: 'text',
       },
+      type: {
+        type: 'keyword',
+      },
+      meetingLocation: {
+        type: 'geo_point',
+      },
     },
   },
   lc_uploads_v2: {

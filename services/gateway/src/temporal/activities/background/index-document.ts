@@ -1,5 +1,6 @@
 import invariant from 'tiny-invariant';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
+import { AddressType } from '@prisma/client';
 import { client, escapeDocument } from '../../../util/elasticsearch';
 import prisma from '../../../util/prisma';
 import { getObject } from '../../../util/s3';
@@ -134,13 +135,29 @@ async function getDocument(
     }
     case 'organization':
       log.info('Fetching metadata');
+      const rec = await prisma.organization.findUniqueOrThrow({
+        where: { id: documentId },
+        select: {
+          name: true,
+          description: true,
+          addresses: { where: { type: AddressType.MEETING } },
+          type: true,
+        },
+      });
+
+      const loc = rec.addresses[0];
+
       return {
         index: 'lc_organizations',
         id: documentId,
-        document: await prisma.organization.findUniqueOrThrow({
-          where: { id: documentId },
-          select: { name: true },
-        }),
+        document: {
+          name: rec.name,
+          description: rec.description,
+          type: rec.type,
+          ...(loc
+            ? { meetingLocation: { lat: loc.latitude, lon: loc.longitude } }
+            : {}),
+        },
       };
     case 'channel':
       log.info('Fetching metadata');

@@ -134,6 +134,8 @@ model OrganizationAddress {
   postOfficeBoxNumber String?      @map("post_office_box_number")
   postalCode          String?      @map("postal_code")
   streetAddress       String?      @map("street_address")
+  latitude            Float?       @map("latitude")
+  longitude           Float?       @map("longitude")
 
   @@map("organization_address")
 }

@@ -167,7 +167,7 @@ builder.mutationFields((t) => ({
             if (parsed) {
               await tx.organizationAddress.create({
                 data: {
-                  type: AddressType.MAILING,
+                  type: AddressType.MEETING,
                   name: 'Default',
                   query: parsed?.name,
                   geocodingJson: parsed,
@@ -177,6 +177,8 @@ builder.mutationFields((t) => ({
                   // postOfficeBoxNumber: 0,
                   postalCode: parsed?.postalCode,
                   streetAddress: parsed?.street,
+                  latitude: parsed?.latitude,
+                  longitude: parsed?.longitude,
                   organization: {
                     connect: {
                       id: organizationId,
@@ -187,7 +189,7 @@ builder.mutationFields((t) => ({
             }
           }
 
-          return tx.organization.update({
+          const res = await tx.organization.update({
             ...query,
             where: { id: organizationId },
             data: {
@@ -196,6 +198,10 @@ builder.mutationFields((t) => ({
               ...(typeof description === 'string' ? { description } : {}),
             },
           });
+
+          indexDocument('organization', organizationId);
+
+          return res;
         }
 
         invariant(name, 'Must provide name');
@@ -216,7 +222,7 @@ builder.mutationFields((t) => ({
           if (parsed) {
             await tx.organizationAddress.create({
               data: {
-                type: AddressType.MAILING,
+                type: AddressType.MEETING,
                 name: 'Default',
                 query: parsed?.name,
                 geocodingJson: parsed,
@@ -226,6 +232,8 @@ builder.mutationFields((t) => ({
                 // postOfficeBoxNumber: 0,
                 postalCode: parsed?.postalCode,
                 streetAddress: parsed?.street,
+                latitude: parsed?.latitude,
+                longitude: parsed?.longitude,
                 organization: {
                   connect: {
                     id: res.id,
@@ -235,6 +243,8 @@ builder.mutationFields((t) => ({
             });
           }
         }
+
+        indexDocument('organization', res.id);
 
         return tx.organization.findUniqueOrThrow({
           ...query,
