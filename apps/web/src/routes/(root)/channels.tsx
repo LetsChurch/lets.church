@@ -31,7 +31,9 @@ export function routeData() {
       res.channelsConnection.edges.map((e) => e.node),
       (ch) => ch.name.at(0)?.toUpperCase() ?? '???',
     );
-    const entries = Object.entries(groups);
+    const entries = Object.entries(groups).map(
+      ([k, v]) => [k, sortBy(v, ({ name }) => name)] as const,
+    );
     return sortBy(entries, ([k]) => k);
   });
 }
