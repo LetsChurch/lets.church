@@ -18,9 +18,9 @@ export default function UploadCard(props: Props) {
           url={
             props.data.thumbnailUrl ?? props.data.channel.defaultThumbnailUrl
           }
-          blurhash={
-            props.data.thumbnailBlurhash ??
-            props.data.channel.defaultThumbnailBlurhash
+          lqUrl={
+            props.data.thumbnailLqUrl ??
+            props.data.channel.defaultThumbnailLqUrl
           }
           width={488}
           height={Math.round((488 * 9) / 16)}

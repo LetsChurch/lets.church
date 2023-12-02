@@ -16,8 +16,11 @@ export const MediaRowFragment = isServer
         title
         publishedAt
         totalViews
-        thumbnailBlurhash
         thumbnailUrl(resize: { width: 704, height: 396 })
+        thumbnailLqUrl: thumbnailUrl(
+          resize: { width: 704, height: 396 }
+          quality: 20
+        )
         variants
         channel {
           id
@@ -25,13 +28,17 @@ export const MediaRowFragment = isServer
           name
           avatarUrl(resize: { width: 96, height: 96 })
           defaultThumbnailUrl(resize: { width: 704, height: 396 })
+          defaultThumbnailLqUrl: defaultThumbnailUrl(
+            resize: { width: 704, height: 396 }
+            quality: 20
+          )
         }
       }
     `
   : null;
 
 export type Props = ParentProps<
-  Omit<ThumbnailProps, 'width' | 'height' | 'url' | 'blurhash'> & {
+  Omit<ThumbnailProps, 'width' | 'height' | 'url'> & {
     href: string;
     uploadProps: MediaRowPropsFragment;
     marked?: boolean;
@@ -52,7 +59,7 @@ export function MediaRow(props: Props) {
           props.uploadProps.thumbnailUrl ??
           props.uploadProps.channel.defaultThumbnailUrl
         }
-        blurhash={props.uploadProps.thumbnailBlurhash}
+        lqUrl={props.uploadProps.thumbnailLqUrl}
         width={352}
         height={198}
         placeholder={props.placeholder}

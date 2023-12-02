@@ -12,14 +12,26 @@ export function getPublicMediaUrl(path: string) {
   return url.toString();
 }
 
+type Optional<T> = T | undefined | null;
+
 export function getPublicImageUrl(
   path: string,
-  { resize }: Partial<{ resize: ResizeOptions }> = {},
+  {
+    resize,
+    quality,
+  }: Partial<{
+    resize: Optional<ResizeOptions>;
+    quality: Optional<number>;
+  }> = {},
 ) {
   const builder = pb();
 
   if (resize) {
     builder.resize(resize);
+  }
+
+  if (quality) {
+    builder.quality(quality);
   }
 
   return builder.build({

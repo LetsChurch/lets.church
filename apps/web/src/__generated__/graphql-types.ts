@@ -159,6 +159,7 @@ export type ChannelAvatarUrlArgs = {
 
 
 export type ChannelDefaultThumbnailUrlArgs = {
+  quality?: InputMaybe<Scalars['Int']['input']>;
   resize?: InputMaybe<ResizeParams>;
 };
 
@@ -1037,6 +1038,7 @@ export type UploadRecordSeriesArgs = {
 
 
 export type UploadRecordThumbnailUrlArgs = {
+  quality?: InputMaybe<Scalars['Int']['input']>;
   resize?: InputMaybe<ResizeParams>;
 };
 

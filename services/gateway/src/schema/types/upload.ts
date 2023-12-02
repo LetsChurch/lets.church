@@ -184,22 +184,17 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
           required: false,
           type: ResizeParams,
         }),
+        quality: t.arg.int({ required: false }),
       },
       select: { defaultThumbnailPath: true, overrideThumbnailPath: true },
-      resolve: (
-        { defaultThumbnailPath, overrideThumbnailPath },
-        { resize },
-      ) => {
+      resolve: ({ defaultThumbnailPath, overrideThumbnailPath }, args) => {
         const from = overrideThumbnailPath ?? defaultThumbnailPath;
 
         if (!from) {
           return null;
         }
 
-        return getPublicImageUrl(
-          getS3ProtocolUri('PUBLIC', from),
-          resize ? { resize } : undefined,
-        );
+        return getPublicImageUrl(getS3ProtocolUri('PUBLIC', from), args);
       },
     }),
     thumbnailBlurhash: t.exposeString('defaultThumbnailBlurhash', {

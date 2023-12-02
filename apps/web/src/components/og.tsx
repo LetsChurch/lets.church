@@ -6,6 +6,7 @@ export type Props = {
   title: string;
   description: string;
   image?: Optional<string>;
+  // TODO: try feeding in url without location
 };
 
 export default function Og(props: Props) {

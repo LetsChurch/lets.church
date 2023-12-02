@@ -159,16 +159,17 @@ const Channel = builder.prismaObject('Channel', {
           required: false,
           type: ResizeParams,
         }),
+        quality: t.arg.int({ required: false }),
       },
       select: { defaultThumbnailPath: true },
-      resolve: ({ defaultThumbnailPath }, { resize }) => {
+      resolve: ({ defaultThumbnailPath }, args) => {
         if (!defaultThumbnailPath) {
           return null;
         }
 
         return getPublicImageUrl(
           getS3ProtocolUri('PUBLIC', defaultThumbnailPath),
-          resize ? { resize } : undefined,
+          args,
         );
       },
     }),
