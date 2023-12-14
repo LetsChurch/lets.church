@@ -16,9 +16,7 @@ export default function Search() {
       e.preventDefault();
     }
 
-    const newParams = isSubmitted
-      ? new URLSearchParams()
-      : new URLSearchParams(loc.search);
+    const newParams = new URLSearchParams(loc.search);
 
     newParams.set(
       'q',
