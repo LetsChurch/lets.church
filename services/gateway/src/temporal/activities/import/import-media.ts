@@ -159,6 +159,8 @@ export default async function importMedia(
       contentType:
         mime.getType(extname(mediaPath)) ?? 'application/octet-stream',
       path: mediaPath,
+      onProgress: (progress) =>
+        heartbeat(`uploading ${Math.round(progress * 1000) / 10}%`),
     });
 
     if (thumbnailPath) {
