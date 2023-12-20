@@ -14,7 +14,11 @@ import {
   runFfmpegEncode,
   variantsToMasterVideoPlaylist,
 } from '../../../util/ffmpeg';
-import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
+import {
+  putFileMultipart,
+  retryablePutFile,
+  streamObjectToFile,
+} from '../../../util/s3';
 import { recordDownloadSize, updateUploadRecord } from '../..';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import type { Probe } from '../../../util/zod';
@@ -180,12 +184,15 @@ export default async function transcode(
       Context.current().heartbeat(`Uploading downloadable file`);
       activityLogger.info(`Uploading downloadable file: ${filename}`);
       const byteSize = (await stat(path)).size;
-      await retryablePutFile({
+      await putFileMultipart({
         to: 'PUBLIC',
         key: `${uploadRecordId}/${filename}`,
         contentType,
         path,
-        contentLength: byteSize,
+        onProgress: (progress) =>
+          Context.current().heartbeat(
+            `upload ${Math.round(progress * 1000) / 10}%`,
+          ),
         signal: cancellationSignal,
       });
       Context.current().heartbeat(`Uploaded downloadable file: ${filename}`);

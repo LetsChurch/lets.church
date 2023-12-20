@@ -340,16 +340,20 @@ export async function putFileMultipart({
   key,
   contentType,
   path,
+  onProgress,
+  signal,
 }: {
   to?: Client;
   key: string;
   contentType: string;
   path: string;
+  onProgress?: (progress: number) => unknown;
+  signal?: AbortSignal;
 }) {
   const { bucket, client } = getClientAndBucket(to);
 
   const fileSize = (await stat(path)).size;
-  const partSize = 3 * 1024 ** 3; // 3 GB per part
+  const partSize = 100 * 1024 ** 2; // 100 MB per part
   const numParts = Math.ceil(fileSize / partSize);
 
   const createUpload = await client.send(
@@ -365,6 +369,7 @@ export async function putFileMultipart({
     const completedParts = [];
 
     for (let i = 0; i < numParts; i++) {
+      signal?.throwIfAborted();
       const start = i * partSize;
       const end = Math.min(start + partSize, fileSize) - 1;
 
@@ -381,6 +386,7 @@ export async function putFileMultipart({
       invariant(ETag, 'Failed to get Etag');
 
       completedParts.push({ PartNumber: i + 1, ETag });
+      onProgress?.(i / numParts);
     }
 
     await client.send(
