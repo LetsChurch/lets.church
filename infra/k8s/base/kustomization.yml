@@ -9,6 +9,7 @@ resources:
   - temporal-deployment.yml
   - temporal-ui-deployment.yml
   - web-deployment.yml
+  - web-next-deployment.yml
   # Workers
   - background-worker-deployment.yml
   - import-worker-deployment.yml
@@ -17,6 +18,9 @@ configMapGenerator:
   - name: web-config
     literals:
       - GRAPHQL_URL="http://gateway:3000/graphql"
+  - name: web-next-config
+    literals:
+      - HOST="0.0.0.0"
   - name: gateway-config
     literals:
       - ELASTICSEARCH_URL="http://elasticsearch:9200"

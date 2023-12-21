@@ -2,43 +2,45 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: web
+  name: web-next
   labels:
-    app: web
+    app: web-next
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: web
+      app: web-next
   template:
     metadata:
       labels:
-        app: web
+        app: web-next
     spec:
       restartPolicy: Always
       containers:
-        - image: registry.gitlab.com/letschurch/lets.church/web:latest
-          name: web
+        - image: registry.gitlab.com/letschurch/lets.church/web-next:latest
+          name: web-next
           ports:
-            - containerPort: 3000
+            - containerPort: 4321
           env:
             - name: SERVICE_NAME
-              value: web
+              value: web-next
           envFrom:
             - secretRef:
                 name: turnstile-secret
             - configMapRef:
                 name: web-config
+            - configMapRef:
+                name: web-next-config
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: web
+  name: web-next
 spec:
   selector:
-    app: web
+    app: web-next
   type: ClusterIP
   ports:
     - protocol: TCP
       port: 80
-      targetPort: 3000
+      targetPort: 4321

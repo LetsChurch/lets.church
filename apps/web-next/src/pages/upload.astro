@@ -1,0 +1,18 @@
+---
+import Layout from '../layouts/layout.astro';
+import { type MeQuery, type MeQueryVariables, meQuery } from '../queries/auth';
+import { createClient } from '../util/server/gql';
+
+const client = await createClient(
+  Astro.request.headers,
+  Astro.cookies.get('lcSession')?.value,
+);
+
+const data = await client.request<MeQuery, MeQueryVariables>(meQuery);
+
+if (!data.me) {
+  return Astro.redirect('/');
+}
+---
+
+<Layout title="Upload" padded>Upload</Layout>

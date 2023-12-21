@@ -10,6 +10,7 @@ volumes:
   transcode-worker-node-modules:
   transcribe-worker-node-modules:
   web-node-modules:
+  web-next-node-modules:
 
 x-s3-env: &s3-env
   S3_INGEST_REGION: ${S3_INGEST_REGION}
@@ -37,10 +38,24 @@ services:
     environment:
       NODE_ENV: development
       GRAPHQL_URL: http://gateway:3000/graphql
-      SENTRY_DSN: ${SENTRY_WEB_SERVER_DSN}
     volumes:
       - ./apps/web:/home/node/app
       - web-node-modules:/home/node/app/node_modules
+    depends_on:
+      - gateway
+  web-next:
+    build:
+      context: ./apps/web-next
+      dockerfile: Dockerfile
+    command: npm run dev
+    ports:
+      - ${HOST_WEB_NEXT_PORT}:4321
+    environment:
+      NODE_ENV: development
+      GRAPHQL_URL: http://gateway:3000/graphql
+    volumes:
+      - ./apps/web-next:/home/node/app
+      - web-next-node-modules:/home/node/app/node_modules
     depends_on:
       - gateway
 

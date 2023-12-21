@@ -1,0 +1,238 @@
+---
+import TvIcon from '@tabler/icons/device-tv.svg?sprite';
+import ChurchIcon from '@tabler/icons/building-church.svg?sprite';
+import UserIcon from '@tabler/icons/user-circle.svg?sprite';
+import SearchIcon from '@tabler/icons/search.svg?sprite';
+import InfoIcon from '@tabler/icons/info-circle.svg?sprite';
+import MenuIcon from '@tabler/icons/menu-2.svg?sprite';
+import XIcon from '@tabler/icons/x.svg?sprite';
+import LogoutIcon from '@tabler/icons/lock.svg?sprite';
+import LogoIcon from '../components/icon.svg?sprite';
+import { cn } from '../util';
+import { createClient } from '../util/server/gql';
+import { meQuery, type MeQuery, type MeQueryVariables } from '../queries/auth';
+import Profile from '../components/profile';
+import Root from './root.astro';
+
+interface Props {
+  title: string;
+  padded?: boolean;
+}
+
+const { title, padded } = Astro.props;
+const pathname = new URL(Astro.request.url).pathname;
+
+const navLinks = [
+  {
+    href: '/',
+    icon: TvIcon,
+    title: 'Videos',
+    active: !pathname.startsWith('/churches') && !pathname.startsWith('/about'),
+    class: 'mt-5',
+  },
+  {
+    href: '/churches',
+    icon: ChurchIcon,
+    title: 'Find a Church',
+    active: pathname.startsWith('/churches'),
+  },
+  {
+    href: '/auth/login',
+    icon: UserIcon,
+    title: 'Login',
+    active: false,
+    class: 'mt-auto',
+  },
+  {
+    href: '/about',
+    icon: InfoIcon,
+    title: 'About',
+    active: pathname.startsWith('/about'),
+  },
+];
+
+const client = await createClient(
+  Astro.request.headers,
+  Astro.cookies.get('lcSession')?.value,
+);
+
+const data = await client.request<MeQuery, MeQueryVariables>(meQuery);
+---
+
+<Root title={title}>
+  <!-- Mobile Drawer -->
+  <div
+    id="lc-mobile-drawer"
+    class="relative z-50 hidden lg:!hidden"
+    role="dialog"
+    aria-modal="true"
+  >
+    <div class="fixed inset-0 bg-gray-900/80"></div>
+    <div class="fixed inset-0 flex">
+      <div class="relative mr-16 flex w-full max-w-xs flex-1">
+        <div class="absolute left-full top-0 flex w-16 justify-center pt-5">
+          <button
+            type="button"
+            class="-m-2.5 p-2.5 text-white [&_svg]:h-6 [&_svg]:w-6"
+            data-lc-drawer-toggle
+          >
+            <span class="sr-only">Close sidebar</span>
+            <Fragment set:html={XIcon} />
+          </button>
+        </div>
+        <div
+          class="flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 pb-2 ring-1 ring-white/10"
+        >
+          <div class="flex h-16 shrink-0 items-center">
+            <a href="/" class="[&_svg]:h-8 [&_svg]:w-auto" title="Let's Church">
+              <Fragment set:html={LogoIcon} />
+              <span class="sr-only">Let's Church</span>
+            </a>
+          </div>
+          <nav class="flex flex-1 flex-col">
+            <ul role="list" class="-mx-2 flex-1 space-y-1">
+              {
+                navLinks.flatMap(({ href, title, active, icon }) =>
+                  href === '/auth/login' && data.me ? (
+                    [
+                      <li>
+                        <a
+                          href="/profile"
+                          class={cn(
+                            'flex items-center gap-x-3 rounded-md p-2',
+                            Astro.url.pathname.startsWith('/profile') &&
+                              'bg-gray-100',
+                          )}
+                        >
+                          <Fragment set:html={UserIcon} />
+                          Your Profile
+                        </a>
+                      </li>,
+                      <li>
+                        <form method="post" action="/auth/logout">
+                          <button
+                            type="submit"
+                            class="flex items-center gap-x-3 rounded-md p-2"
+                          >
+                            <Fragment set:html={LogoutIcon} />
+                            Logout
+                          </button>
+                        </form>
+                      </li>,
+                    ]
+                  ) : (
+                    <li>
+                      <a
+                        href={href}
+                        title={title}
+                        class={cn(
+                          'flex items-center gap-x-3 rounded-md p-2',
+                          active && 'bg-gray-100',
+                        )}
+                      >
+                        <Fragment set:html={icon} />
+                        {title}
+                      </a>
+                    </li>
+                  ),
+                )
+              }
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Desktop Static Sidebar -->
+  <div
+    class="hidden border-r border-gray-200 lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:flex lg:w-20 lg:flex-col lg:overflow-y-auto lg:bg-white lg:pb-4"
+  >
+    <div class="flex h-16 shrink-0 items-center justify-center">
+      <a href="/" class="[&_svg]:h-8 [&_svg]:w-auto" title="Let's Church">
+        <Fragment set:html={LogoIcon} />
+        <span class="sr-only">Let's Church</span>
+      </a>
+    </div>
+    <nav class="mt-2 grow">
+      <ul class="flex h-full flex-col items-center gap-1">
+        {
+          navLinks.map(({ href, icon, title, active, class: className }) => (
+            <li class={className}>
+              {href === '/auth/login' && data.me ? (
+                <Profile me={data.me} client:visible />
+              ) : (
+                <a
+                  href={href}
+                  title={title}
+                  class={cn(
+                    'inline-flex h-12 w-12 items-center justify-center rounded-md p-2',
+                    active && 'bg-gray-100',
+                  )}
+                >
+                  <Fragment set:html={icon} />
+                </a>
+              )}
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+  </div>
+  <div class="lg:pl-20">
+    <header
+      class="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8"
+    >
+      <button
+        class="-m-2.5 p-2.5 text-gray-700 lg:hidden"
+        data-lc-drawer-toggle
+      >
+        <Fragment set:html={MenuIcon} />
+      </button>
+      <form
+        method="get"
+        class="relative flex flex-1 [&_svg]:pointer-events-none [&_svg]:absolute [&_svg]:inset-y-0 [&_svg]:left-0 [&_svg]:h-full [&_svg]:w-5 [&_svg]:text-gray-400"
+      >
+        <label for="search-field" class="sr-only">Search</label>
+        <Fragment set:html={SearchIcon} />
+        <input
+          id="search-field"
+          class="block h-full w-full border-0 py-0 pl-8 pr-0 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm"
+          placeholder="Search..."
+          type="search"
+          name="search"
+        />
+      </form>
+      <button
+        type="button"
+        class="ml-auto rounded-full bg-green-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+      >
+        Donate
+      </button>
+    </header>
+    <div class={padded ? 'p-2' : null}>
+      <slot />
+    </div>
+  </div>
+  <script>
+    document.addEventListener('astro:page-load', () => {
+      const toggles = document.querySelectorAll('[data-lc-drawer-toggle]');
+      const drawer = document.getElementById('lc-mobile-drawer');
+
+      function toggleDrawer() {
+        if (!drawer) {
+          return;
+        }
+
+        if (!drawer.style.display) {
+          drawer.style.display = 'block';
+        } else {
+          drawer.style.display = '';
+        }
+      }
+
+      for (const toggle of toggles) {
+        toggle.addEventListener('click', toggleDrawer);
+      }
+    });
+  </script>
+</Root>

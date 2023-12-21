@@ -48,6 +48,19 @@ check-web:
     paths:
       - $CI_PROJECT_DIR/.npm
 
+check-web-next:
+  stage: check
+  script:
+    - cd $CI_PROJECT_DIR/apps/web-next
+    - !reference [.setup, npmci]
+    - npm run check
+  cache:
+    key:
+      files:
+        - $CI_PROJECT_DIR/apps/web-next/package-lock.json
+    paths:
+      - $CI_PROJECT_DIR/.npm
+
 check-scripts:
   stage: check
   script:
@@ -128,6 +141,12 @@ build-web:
   script:
     - cd apps/web
     - depot build -t registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA} . --push
+
+build-web-next:
+  <<: *build-common
+  script:
+    - cd apps/web-next
+    - depot build -t registry.gitlab.com/letschurch/lets.church/web-next:${CI_COMMIT_SHORT_SHA} . --push
 
 #  ____             _
 # |  _ \  ___ _ __ | | ___  _   _

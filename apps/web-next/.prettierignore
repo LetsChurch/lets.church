@@ -1,0 +1,6 @@
+dist
+node_modules
+public/site.webmanifest
+.astro
+package-lock.json
+**/__generated__/**/*
