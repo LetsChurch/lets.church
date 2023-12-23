@@ -178,7 +178,7 @@ const data = await client.request<MeQuery, MeQueryVariables>(meQuery);
       </ul>
     </nav>
   </div>
-  <div class="lg:pl-20">
+  <div class="flex min-h-screen flex-col lg:pl-20">
     <header
       class="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8"
     >
@@ -209,7 +209,7 @@ const data = await client.request<MeQuery, MeQueryVariables>(meQuery);
         Donate
       </button>
     </header>
-    <div class={padded ? 'p-2' : null}>
+    <div class={cn('grow bg-gray-50', padded ? 'p-2' : null)}>
       <slot />
     </div>
   </div>

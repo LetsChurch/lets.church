@@ -3,7 +3,7 @@ import { useFloating } from 'solid-floating-ui';
 import type { MeQuery } from '../queries/auth';
 import { AppUserRole } from '../__generated__/graphql-types';
 import FloatingMenu from './floating-menu';
-import { Avatar } from './avatar';
+import Avatar from './avatar';
 
 export const profileLinks = [{ href: '/profile', label: 'Your Profile' }];
 

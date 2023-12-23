@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "run-p dev:*",
     "dev:astro": "astro dev --host 0.0.0.0",
-    "dev:codegen": "npm run codegen -- -w src/routes/**/*.ts",
+    "dev:codegen": "npm run codegen -- -w 'src/**/*.ts'",
     "start": "node ./dist/server/entry.mjs",
     "build": "astro check && astro build",
     "preview": "astro preview",
@@ -25,6 +25,7 @@
     "@tabler/icons": "^2.44.0",
     "astro": "^4.0.7",
     "clsx": "^2.0.0",
+    "date-fns": "^3.0.6",
     "graphql-request": "^6.1.0",
     "is-ip": "^5.0.1",
     "solid-floating-ui": "^0.2.1",

@@ -1,0 +1,45 @@
+---
+import { formatDistanceToNow } from 'date-fns';
+import Avatar from '../avatar';
+import { formatSeconds } from '../../util';
+import { type UploadCardFieldsFragment } from './__generated__/upload-card.queries';
+
+type Props = {
+  href: string;
+  data: UploadCardFieldsFragment;
+};
+
+const {
+  href,
+  data: { lengthSeconds, publishedAt, ...data },
+} = Astro.props;
+---
+
+<div class="relative flex flex-col gap-2">
+  <div class="relative aspect-video bg-gray-500">
+    {
+      lengthSeconds ? (
+        <span class="absolute bottom-2 right-2 inline-flex items-center rounded-md bg-gray-900 px-1.5 py-0.5 text-xs font-medium text-white">
+          {formatSeconds(lengthSeconds)}
+        </span>
+      ) : null
+    }
+  </div>
+  <div class="flex flex-row gap-2">
+    <Avatar size="md" src={data.channel.avatarUrl} class="shrink-0" />
+    <div class="flex flex-col">
+      <a
+        class="line-clamp-2 font-bold before:absolute before:inset-0"
+        href={href}>{data.title || 'Untitled'}</a
+      >
+      <span>{data.channel.name}</span>
+      {
+        publishedAt ? (
+          <span class="text-xs text-gray-800">
+            {formatDistanceToNow(publishedAt, { addSuffix: true })}
+          </span>
+        ) : null
+      }
+    </div>
+  </div>
+</div>

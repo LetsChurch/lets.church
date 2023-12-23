@@ -1,5 +1,35 @@
 ---
 import Layout from '../layouts/layout.astro';
+import UploadCard from '../components/media/upload-card.astro';
+import { createClient } from '../util/server/gql';
+import { homepageQuery } from './_index.queries';
+import type {
+  HomepageDataQuery,
+  HomepageDataQueryVariables,
+} from './__generated__/_index.queries';
+
+const client = await createClient(
+  Astro.request.headers,
+  Astro.cookies.get('lcSession')?.value,
+);
+
+const data = await client.request<
+  HomepageDataQuery,
+  HomepageDataQueryVariables
+>(homepageQuery, { loggedIn: false });
 ---
 
-<Layout title="Free Christian Videos With No Ads" padded>Hello</Layout>
+<Layout title="Free Christian Videos With No Ads" padded>
+  <h3 class="mb-3 text-lg font-semibold leading-6 text-gray-900">Trending</h3>
+  <ul
+    class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+  >
+    {
+      data.trendingUploads.edges.map((edge) => (
+        <li>
+          <UploadCard href={`/media/${edge.node.id}`} data={edge.node} />
+        </li>
+      ))
+    }
+  </ul>
+</Layout>
