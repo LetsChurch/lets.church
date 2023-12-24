@@ -2,25 +2,26 @@
 import UnknownIcon from '@tabler/icons/3d-cube-sphere.svg?sprite';
 import VideoIcon from '@tabler/icons/video.svg?sprite';
 import AudioIcon from '@tabler/icons/volume.svg?sprite';
-import type { Optional } from '../../util';
+import { formatSeconds, type Optional } from '../../util';
 
 type Props = {
   lqUrl?: Optional<string>;
   url?: Optional<string>;
   placeholder?: 'video' | 'audio' | undefined;
+  lengthSeconds?: Optional<number>;
 };
 
-const { lqUrl, url, placeholder } = Astro.props;
+const { lqUrl, url, placeholder, lengthSeconds } = Astro.props;
 ---
 
-<>
+<div class="relative">
   {
     url ? (
       <img
         src={url}
-        class="aspect-video w-full bg-contain bg-center bg-no-repeat object-contain"
+        class="aspect-video w-full bg-gray-200 bg-contain bg-center bg-no-repeat object-contain"
         style={{
-          backgroundImage: `url(${lqUrl})` ?? '#EEE',
+          backgroundImage: `url(${lqUrl})`,
         }}
       />
     ) : (
@@ -37,4 +38,11 @@ const { lqUrl, url, placeholder } = Astro.props;
       </div>
     )
   }
-</>
+  {
+    lengthSeconds ? (
+      <span class="absolute bottom-2 right-2 inline-flex items-center rounded-md bg-gray-900 px-1.5 py-0.5 text-xs font-medium text-white">
+        {formatSeconds(lengthSeconds)}
+      </span>
+    ) : null
+  }
+</div>
