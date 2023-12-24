@@ -177,6 +177,16 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
       authScopes: internalAuthScopes,
     }),
     variants: t.expose('variants', { type: [UploadVariant], nullable: false }),
+    hasVideo: t.field({
+      type: 'Boolean',
+      select: { variants: true },
+      resolve: ({ variants }) => variants.some((v) => v.startsWith('VIDEO')),
+    }),
+    hasAudio: t.field({
+      type: 'Boolean',
+      select: { variants: true },
+      resolve: ({ variants }) => variants.some((v) => v.startsWith('AUDIO')),
+    }),
     thumbnailUrl: t.string({
       nullable: true,
       args: {

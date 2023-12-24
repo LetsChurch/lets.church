@@ -2,6 +2,7 @@
 import { formatDistanceToNow } from 'date-fns';
 import Avatar from '../avatar';
 import { formatSeconds } from '../../util';
+import Thumbnail from './thumbnail.astro';
 import { type UploadCardFieldsFragment } from './__generated__/upload-card.queries';
 
 type Props = {
@@ -17,6 +18,15 @@ const {
 
 <div class="relative flex flex-col gap-2">
   <div class="relative aspect-video bg-gray-500">
+    <Thumbnail
+      url={data.thumbnailUrl ?? data.channel.defaultThumbnailUrl}
+      lqUrl={data.thumbnailLqUrl ?? data.channel.defaultThumbnailLqUrl}
+      placeholder={data.hasVideo
+        ? 'video'
+        : data.hasAudio
+          ? 'audio'
+          : undefined}
+    />
     {
       lengthSeconds ? (
         <span class="absolute bottom-2 right-2 inline-flex items-center rounded-md bg-gray-900 px-1.5 py-0.5 text-xs font-medium text-white">

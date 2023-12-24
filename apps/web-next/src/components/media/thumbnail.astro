@@ -1,0 +1,38 @@
+---
+import UnknownIcon from '@tabler/icons/3d-cube-sphere.svg?sprite';
+import VideoIcon from '@tabler/icons/video.svg?sprite';
+import AudioIcon from '@tabler/icons/volume.svg?sprite';
+import type { Optional } from '../../util';
+
+type Props = {
+  lqUrl?: Optional<string>;
+  url?: Optional<string>;
+  placeholder?: 'video' | 'audio' | undefined;
+};
+
+const { lqUrl, url, placeholder } = Astro.props;
+---
+
+<>
+  {
+    url ? (
+      <img
+        src={url}
+        class="w-full bg-cover bg-center bg-no-repeat"
+        style={{ background: `url(${lqUrl})` ?? '#EEE' }}
+      />
+    ) : (
+      <div class="flex aspect-video w-full items-center justify-center bg-gray-100 text-gray-300 [&_svg]:scale-[3]">
+        <Fragment
+          set:html={
+            placeholder === 'video'
+              ? VideoIcon
+              : placeholder === 'audio'
+                ? AudioIcon
+                : UnknownIcon
+          }
+        />
+      </div>
+    )
+  }
+</>
