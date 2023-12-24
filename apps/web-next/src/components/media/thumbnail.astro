@@ -18,8 +18,10 @@ const { lqUrl, url, placeholder } = Astro.props;
     url ? (
       <img
         src={url}
-        class="w-full bg-cover bg-center bg-no-repeat"
-        style={{ background: `url(${lqUrl})` ?? '#EEE' }}
+        class="aspect-video w-full bg-contain bg-center bg-no-repeat object-contain"
+        style={{
+          backgroundImage: `url(${lqUrl})` ?? '#EEE',
+        }}
       />
     ) : (
       <div class="flex aspect-video w-full items-center justify-center bg-gray-100 text-gray-300 [&_svg]:scale-[3]">
