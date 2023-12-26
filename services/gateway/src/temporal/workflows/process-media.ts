@@ -42,7 +42,6 @@ export async function processMediaWorkflow(
   scope: 'transcode' | 'transcribe' | 'everything' = 'everything',
 ) {
   const s3UploadKey = await getFinalizedUploadKey(targetId);
-  invariant(s3UploadKey, 'missing s3UploadKey');
 
   const probeRes = await probe(targetId, s3UploadKey);
   invariant(probeRes !== null, 'Probe is null!');

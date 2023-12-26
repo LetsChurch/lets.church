@@ -1,9 +1,16 @@
+import invariant from 'tiny-invariant';
 import prisma from '../../../util/prisma';
 
-export default async function getProbe(uploadRecordId: string) {
-  const res = await prisma.uploadRecord.findUnique({
+export default async function getFinalizedUploadKey(uploadRecordId: string) {
+  const { finalizedUploadKey } = await prisma.uploadRecord.findUniqueOrThrow({
     select: { finalizedUploadKey: true },
     where: { id: uploadRecordId },
   });
-  return res?.finalizedUploadKey;
+
+  invariant(
+    finalizedUploadKey,
+    `No finalized upload key found for upload record ${uploadRecordId}`,
+  );
+
+  return finalizedUploadKey;
 }
