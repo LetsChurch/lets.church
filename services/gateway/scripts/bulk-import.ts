@@ -52,6 +52,7 @@ for (const file of files) {
             title: datum.title,
             publishedAt: new Date(datum.publishedAt),
             channel: { slug: channelSlug },
+            finalizedUploadKey: { not: null },
           },
         });
 

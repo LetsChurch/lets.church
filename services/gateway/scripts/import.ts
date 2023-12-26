@@ -68,6 +68,7 @@ for (const input of data) {
           title: input.title,
           publishedAt: new Date(input.publishedAt),
           channel: { slug: common.channelSlug },
+          finalizedUploadKey: { not: null },
         },
       });
 
