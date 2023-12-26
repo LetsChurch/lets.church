@@ -78,13 +78,16 @@ export async function completeMultipartMediaUpload(
 
 export async function createUploadRecord(
   data: Prisma.UploadRecordCreateArgs['data'],
+  importId?: string,
 ) {
   const res = await (
     await client
   ).workflow.start(createUploadRecordWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
-    workflowId: `createUploadRecord:${data.publishedAt}:${data.title}`,
+    workflowId: `createUploadRecord:${
+      importId ? `${importId}` : `${data.publishedAt}:${data.title}`
+    }`,
     args: [data],
   });
 

@@ -151,7 +151,10 @@ export default async function importMedia(
       thumbnailPath = res.thumbnailPath;
     }
 
-    uploadRecordId = await createUploadRecord(data);
+    uploadRecordId = await createUploadRecord(
+      data,
+      Context.current().info.workflowExecution.workflowId,
+    );
     mediaUploadKey = `${uploadRecordId}/${uuid()}`;
 
     await putFileMultipart({
