@@ -1,9 +1,10 @@
 import { readFile } from 'fs/promises';
-import { input } from '@inquirer/prompts';
+import { input, confirm } from '@inquirer/prompts';
 import { z } from 'zod';
 import PQueue from 'p-queue';
 import glob from 'fast-glob';
 import { xxh32 } from '@node-rs/xxhash';
+import prisma from '../src/util/prisma';
 import { client } from '../src/temporal';
 import { importMediaWorkflow } from '../src/temporal/workflows/import-media';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
@@ -30,9 +31,13 @@ const common = {
   username: await input({ message: 'Username:' }),
 };
 
+const skipDupes = await confirm({ message: 'Skip duplicates?', default: true });
+
 const queue = new PQueue({ concurrency: 5 });
 
 const importDate = new Date().toISOString();
+
+let dupes = 0;
 
 for (const file of files) {
   const channelSlug = file.replace('.new.json', '');
@@ -41,6 +46,26 @@ for (const file of files) {
 
   for (const datum of data) {
     queue.add(async () => {
+      if (skipDupes) {
+        const count = await prisma.uploadRecord.count({
+          where: {
+            title: datum.title,
+            publishedAt: new Date(datum.publishedAt),
+            channel: { slug: channelSlug },
+          },
+        });
+
+        if (count > 0) {
+          dupes += 1;
+
+          console.log(
+            `Skipping duplicate from ${datum.publishedAt}: ${datum.title}`,
+          );
+
+          return;
+        }
+      }
+
       const url = new URL(datum.url);
       await c.workflow.start(importMediaWorkflow, {
         taskQueue: BACKGROUND_QUEUE,
@@ -55,3 +80,7 @@ for (const file of files) {
 }
 
 await queue.onEmpty();
+
+if (skipDupes) {
+  console.log(`Skipped ${dupes} duplicates`);
+}
