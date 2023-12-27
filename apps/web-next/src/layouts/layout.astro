@@ -17,9 +17,10 @@ import Root from './root.astro';
 interface Props {
   title: string;
   padded?: boolean;
+  frontmatter?: { title?: string; description?: string };
 }
 
-const { title, padded } = Astro.props;
+const { title, padded, frontmatter } = Astro.props;
 const pathname = new URL(Astro.request.url).pathname;
 
 const navLinks = [
@@ -59,7 +60,7 @@ const client = await createClient(
 const data = await client.request<MeQuery, MeQueryVariables>(meQuery);
 ---
 
-<Root title={title}>
+<Root title={frontmatter?.title ?? title}>
   <!-- Mobile Drawer -->
   <div
     id="lc-mobile-drawer"
@@ -209,7 +210,7 @@ const data = await client.request<MeQuery, MeQueryVariables>(meQuery);
         Donate
       </button>
     </header>
-    <div class={cn('grow bg-gray-50', padded ? 'p-2' : null)}>
+    <div class={cn('grow bg-gray-50', padded || frontmatter ? 'p-2' : null)}>
       <slot />
     </div>
   </div>
