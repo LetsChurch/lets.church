@@ -992,6 +992,8 @@ export type UploadRecord = {
   description?: Maybe<Scalars['String']['output']>;
   downloadUrls?: Maybe<Array<MediaDownload>>;
   downloadsEnabled: Scalars['Boolean']['output'];
+  hasAudio: Scalars['Boolean']['output'];
+  hasVideo: Scalars['Boolean']['output'];
   id: Scalars['ShortUuid']['output'];
   lengthSeconds?: Maybe<Scalars['Float']['output']>;
   license: UploadLicense;

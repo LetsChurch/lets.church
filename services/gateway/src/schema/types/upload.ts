@@ -624,7 +624,7 @@ builder.queryFields((t) => ({
         context,
         info,
         path: ['edges', 'node'],
-        typeName: 'UploadUserComment',
+        typeName: 'UploadRecord',
       });
 
       return resolveOffsetConnection({ args }, async ({ offset, limit }) => {

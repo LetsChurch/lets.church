@@ -1,6 +1,6 @@
 import { Show } from 'solid-js';
 import { createServerData$ } from 'solid-start/server';
-import { A, useRouteData } from 'solid-start';
+import { A, Link, useRouteData } from 'solid-start';
 import { gql } from 'graphql-request';
 import SubscribeIcon from '@tabler/icons/rss.svg?component-solid';
 import type {
@@ -88,6 +88,12 @@ export default function WatchRoute() {
       <Og
         title="Let's Church"
         description="Free Christian Videos with No Ads"
+      />
+      <Link
+        rel="alternate"
+        type="application/rss+xml"
+        title="RSS 2.0"
+        href="/media/rss.xml"
       />
       <h3 class="mb-3 text-base font-semibold leading-6 text-gray-900">
         Subscriptions
