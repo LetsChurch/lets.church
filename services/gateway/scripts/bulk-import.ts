@@ -1,5 +1,5 @@
 import { readFile } from 'fs/promises';
-import { input, confirm } from '@inquirer/prompts';
+import { input, confirm, select } from '@inquirer/prompts';
 import { z } from 'zod';
 import PQueue from 'p-queue';
 import glob from 'fast-glob';
@@ -7,7 +7,10 @@ import { xxh32 } from '@node-rs/xxhash';
 import prisma from '../src/util/prisma';
 import { client } from '../src/temporal';
 import { importMediaWorkflow } from '../src/temporal/workflows/import-media';
-import { BACKGROUND_QUEUE } from '../src/temporal/queues';
+import {
+  BACKGROUND_LOW_PRIORITY_QUEUE,
+  BACKGROUND_QUEUE,
+} from '../src/temporal/queues';
 import logger from '../src/util/logger';
 
 const schema = z.array(
@@ -32,6 +35,13 @@ const common = {
 };
 
 const skipDupes = await confirm({ message: 'Skip duplicates?', default: true });
+const taskQueue = await select({
+  message: 'Queue',
+  choices: [
+    { value: BACKGROUND_LOW_PRIORITY_QUEUE, name: 'Background (Low Priority)' },
+    { value: BACKGROUND_QUEUE, name: 'Background' },
+  ],
+});
 
 const queue = new PQueue({ concurrency: 5 });
 
@@ -69,11 +79,11 @@ for (const file of files) {
 
       const url = new URL(datum.url);
       await c.workflow.start(importMediaWorkflow, {
-        taskQueue: BACKGROUND_QUEUE,
+        taskQueue,
         workflowId: `importMedia:${importDate}:${url.origin}:${xxh32(
           datum.url,
         )}`,
-        args: [{ ...common, ...datum, channelSlug }],
+        args: [{ ...common, ...datum, channelSlug, taskQueue }],
         retry: { maximumAttempts: 5 },
       });
     });

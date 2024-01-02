@@ -1,0 +1,49 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: background-low-priority-worker
+  labels:
+    app: background-low-priority-worker
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: background-low-priority-worker
+  template:
+    metadata:
+      labels:
+        app: background-low-priority-worker
+    spec:
+      restartPolicy: Always
+      containers:
+        - image: registry.gitlab.com/letschurch/lets.church/background-worker:latest
+          name: background-low-priority-worker
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pguser-letschurch
+                  key: uri
+            - name: SENTRY_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: sentry-secret
+                  key: SENTRY_BACKGROUND_WORKER_DSN
+            - name: SERVICE_NAME
+              value: background-low-priority-worker
+          envFrom:
+            - configMapRef:
+                name: gateway-config
+            - configMapRef:
+                name: temporal-client-config
+            - configMapRef:
+                name: background-worker-config
+            - configMapRef:
+                name: background-low-priority-worker-config
+            - secretRef:
+                name: axiom-secret
+            - secretRef:
+                name: s3-secret
+            - secretRef:
+                name: smtp-secret

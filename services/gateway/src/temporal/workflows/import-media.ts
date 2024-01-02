@@ -5,7 +5,7 @@ import {
   ParentClosePolicy,
 } from '@temporalio/workflow';
 import type * as importActivities from '../activities/import';
-import { BACKGROUND_QUEUE, IMPORT_QUEUE } from '../queues';
+import { IMPORT_QUEUE } from '../queues';
 import { processImageWorkflow } from './process-image';
 import { processMediaWorkflow } from './process-media';
 
@@ -26,6 +26,7 @@ export async function importMediaWorkflow({
   visibility = 'PUBLIC',
   publishedAt,
   userCommentsEnabled = true,
+  taskQueue,
 }: Partial<
   Pick<
     Prisma.UploadRecordCreateArgs['data'],
@@ -40,6 +41,7 @@ export async function importMediaWorkflow({
   username: string;
   channelSlug: string;
   title: string;
+  taskQueue: string;
 }) {
   const { uploadRecordId, mediaUploadKey, thumbnailUploadKey } =
     await importMedia(url, {
@@ -56,7 +58,7 @@ export async function importMediaWorkflow({
     });
 
   await startChild(processMediaWorkflow, {
-    taskQueue: BACKGROUND_QUEUE,
+    taskQueue,
     workflowId: `processMedia:${mediaUploadKey}`,
     args: [uploadRecordId],
     parentClosePolicy: ParentClosePolicy.PARENT_CLOSE_POLICY_ABANDON,
@@ -65,7 +67,7 @@ export async function importMediaWorkflow({
 
   if (thumbnailUploadKey) {
     await startChild(processImageWorkflow, {
-      taskQueue: BACKGROUND_QUEUE,
+      taskQueue,
       workflowId: `processImage:${thumbnailUploadKey}`,
       args: [uploadRecordId, thumbnailUploadKey, 'thumbnail'],
       parentClosePolicy: ParentClosePolicy.PARENT_CLOSE_POLICY_ABANDON,

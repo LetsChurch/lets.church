@@ -3,7 +3,7 @@ import { NativeConnection, Worker } from '@temporalio/worker';
 import envariant from '@knpwrs/envariant';
 import * as Sentry from '@sentry/node';
 import * as backgroundctivities from '../activities/background';
-import { BACKGROUND_QUEUE } from '../queues';
+import { BACKGROUND_QUEUE, BACKGROUND_LOW_PRIORITY_QUEUE } from '../queues';
 import { waitOnTemporal } from '..';
 
 if (process.env['NODE_ENV'] !== 'development') {
@@ -14,6 +14,10 @@ if (process.env['NODE_ENV'] !== 'development') {
 }
 
 const TEMPORAL_ADDRESS = envariant('TEMPORAL_ADDRESS');
+const taskQueue =
+  process.env['LC_QUEUE'] === BACKGROUND_LOW_PRIORITY_QUEUE
+    ? BACKGROUND_LOW_PRIORITY_QUEUE
+    : BACKGROUND_QUEUE;
 
 await waitOnTemporal();
 
@@ -28,7 +32,7 @@ const backgroundWorker = await Worker.create({
   // TODO: prebundle
   workflowsPath,
   activities: backgroundctivities,
-  taskQueue: BACKGROUND_QUEUE,
+  taskQueue,
   shutdownGraceTime: envariant('TEMPORAL_SHUTDOWN_GRACE_TIME'),
 });
 
