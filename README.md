@@ -41,7 +41,7 @@
 
 ### Development Environment
 
-1. Install [`git-lfs`], [Docker](https://www.docker.com/products/docker-desktop/), and [`direnv`]
+1. Install [`git-lfs`], [Docker](https://www.docker.com/products/docker-desktop/), [`nix`], and [`direnv`]
 1. Clone this repo
 1. Copy `.envrc.local.example` to `.envrc.local` and update the variables to actual values
 1. Run `direnv allow` to load the shell environment
@@ -54,3 +54,4 @@
 [Docker]: https://www.docker.com/products/docker-desktop/
 [`direnv`]: https://direnv.net/
 [`git-lfs`]: https://git-lfs.github.com/
+[`nix`]: https://nixos.org/download.html

@@ -9,12 +9,11 @@ stages:
   - deploy
 
 .setup:
-  activate_hermit: source ./bin/activate-hermit
-  npmci: npm ci --cache $CI_PROJECT_DIR/.npm --prefer-offline
+  npmci: nix-shell $CI_PROJECT_DIR/shell.nix --run "npm ci --cache $CI_PROJECT_DIR/.npm --prefer-offline"
+  npmcheck: nix-shell $CI_PROJECT_DIR/shell.nix --run "npm run check"
 
 default:
-  before_script:
-    - !reference [.setup, activate_hermit]
+  image: nixos/nix:2.19.2
 
 #   ____ _   _ _____ ____ _  __
 #  / ___| | | | ____/ ___| |/ /
@@ -27,7 +26,7 @@ check-gateway:
   script:
     - cd $CI_PROJECT_DIR/services/gateway
     - !reference [.setup, npmci]
-    - npm run check
+    - !reference [.setup, npmcheck]
   cache:
     key:
       files:
@@ -40,7 +39,7 @@ check-web:
   script:
     - cd $CI_PROJECT_DIR/apps/web
     - !reference [.setup, npmci]
-    - npm run check
+    - !reference [.setup, npmcheck]
   cache:
     key:
       files:
@@ -53,7 +52,7 @@ check-web-next:
   script:
     - cd $CI_PROJECT_DIR/apps/web-next
     - !reference [.setup, npmci]
-    - npm run check
+    - !reference [.setup, npmcheck]
   cache:
     key:
       files:
@@ -66,7 +65,7 @@ check-scripts:
   script:
     - cd $CI_PROJECT_DIR/scripts
     - !reference [.setup, npmci]
-    - npm run check
+    - !reference [.setup, npmcheck]
   cache:
     key:
       files:
@@ -85,7 +84,7 @@ test-gateway:
   script:
     - cd services/gateway
     - !reference [.setup, npmci]
-    - npm run test
+    - !reference [.setup, npmcheck]
   cache: !reference [check-gateway, cache]
 
 #  ____  _   _ ___ _     ____
@@ -159,13 +158,8 @@ deploy-k8s:
   stage: deploy
   only:
     - kyrios
-  image: debian:12.1
-  before_script:
-    - apt update
-    - apt install -y bsdmainutils vim git git-lfs curl
-    - source ./bin/activate-hermit
   script:
-    - transcrypt -F -y -c $TRANSCRYPT_CIPHER -p $TRANSCRYPT_PASSWORD
+    - nix-shell shell.nix --run "transcrypt -F -y -c $TRANSCRYPT_CIPHER -p $TRANSCRYPT_PASSWORD"
     - cd infra/k8s/prod
-    - just deploy-set-images prod $CI_COMMIT_SHORT_SHA
-    - kubectl apply -k .
+    - nix-shell $CI_PROJECT_DIR/shell.nix --run "just deploy-set-images prod $CI_COMMIT_SHORT_SHA"
+    - nix-shell $CI_PROJECT_DIR/shell.nix --run 'kubectl apply -k .'
