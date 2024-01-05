@@ -15,7 +15,7 @@ export default function Profile(props: Props) {
   const [reference, setReference] = createSignal<HTMLDivElement>();
   const [floating, setFloating] = createSignal<HTMLDivElement>();
   const position = useFloating(reference, floating, {
-    placement: 'top-start',
+    placement: 'bottom-end',
   });
 
   function toggleMenu() {
@@ -66,7 +66,7 @@ export default function Profile(props: Props) {
           ...profileLinks,
           { label: 'Logout', form: logoutFormId },
         ]}
-        class="translate-x-10 translate-y-5"
+        class="translate-y-2"
       />
     </>
   );

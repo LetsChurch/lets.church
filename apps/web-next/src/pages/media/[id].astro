@@ -1,0 +1,121 @@
+---
+import { invariant } from '../../util';
+import Layout from '../../layouts/layout.astro';
+import { createClient } from '../../util/server/gql';
+import {
+  mediaPageMetaDataQuery,
+  type MediaPageMetaDataQuery,
+  type MediaPageMetaDataQueryVariables,
+} from '../../queries/media';
+
+const { id } = Astro.params;
+invariant(id, 'id is required');
+
+const client = await createClient(
+  Astro.request.headers,
+  Astro.cookies.get('lcSession')?.value,
+);
+
+const { data } = await client.request<
+  MediaPageMetaDataQuery,
+  MediaPageMetaDataQueryVariables
+>(mediaPageMetaDataQuery, {
+  id,
+  seriesId: null, // TODO: seriesId
+  commentsFirst: null, // TODO: comments
+  commentsAfter: null, // TODO: comments
+  commentsLast: null, // TODO: comments
+  commentsBefore: null, // TODO: comments
+});
+---
+
+<Layout title={data.title ?? 'Untitled'}>
+  <lc-splitter
+    class="grid h-full grid-cols-1 grid-rows-2 lg:grid-cols-[1fr_auto] lg:grid-rows-1"
+  >
+    <!-- TODO: perhaps the scrollbar semantically belongs in the left window and therefore this large margin is wrong -->
+    <!-- TODO: that would certainly prevent any issues with double scrollbars on the right side for long transcripts -->
+    <!-- TODO: split-pane custom element as the root -->
+    <div class="p-2">
+      <div class="aspect-video w-full bg-red-400"></div>
+      <h1 class="mt-2 line-clamp-2 text-2xl">{data.title}</h1>
+      <p>{data.description}</p>
+    </div>
+    <aside
+      class="relative overflow-auto bg-gray-100 p-2 max-lg:bottom-0 max-lg:left-0 max-lg:w-full lg:right-0 lg:max-h-full lg:w-72 lg:min-w-72"
+    >
+      <div
+        role="separator"
+        aria-label="Resize sidebar"
+        class="absolute cursor-ew-resize rounded-full bg-gray-400 lg:-left-3 lg:top-1/2 lg:h-12 lg:w-1 lg:-translate-y-1/2"
+        tabindex="0"
+      >
+      </div>
+       Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis tempus,
+      neque et efficitur mattis, velit velit commodo leo, in imperdiet urna
+      massa et mi. Ut et tortor id est ultricies luctus vel a lorem. Vestibulum
+      vulputate nunc sed ex fermentum laoreet. Sed et sem dapibus, placerat
+      lorem ac, faucibus quam. Suspendisse potenti. Vivamus eget viverra magna.
+      Nam pellentesque eros ut libero tempor, finibus dictum lorem luctus. Sed
+      faucibus turpis velit, nec tristique est imperdiet non. Donec suscipit
+      lobortis neque sed commodo. Curabitur eget ligula sit amet risus gravida
+      maximus eu et elit. Curabitur gravida dolor lectus, non posuere nisl
+      luctus nec. Curabitur blandit tellus ut sapien tempor lacinia. Mauris quis
+      nibh enim. Fusce ac sem a eros consequat tempor. Maecenas tincidunt, ante
+      ac consequat maximus, velit libero placerat libero, efficitur aliquet
+      lorem est finibus erat. Fusce sit amet purus ut mauris eleifend lacinia
+      vel id turpis. Cras vitae sagittis ligula, in bibendum orci. Aenean
+      rhoncus diam gravida, feugiat urna non, condimentum nibh. Nulla ac blandit
+      justo. Sed euismod felis ipsum, eget semper tortor accumsan eget. In erat
+      orci, pellentesque in enim sit amet, maximus pellentesque arcu. Nulla
+      facilisi. Pellentesque vel nulla at ex lobortis fermentum. Vestibulum
+      pharetra, dui et dictum vestibulum, diam turpis laoreet enim, nec
+      facilisis urna elit a justo. Etiam volutpat pulvinar massa in fringilla.
+      Mauris congue ut mauris ut sagittis. Sed congue sagittis nisi nec finibus.
+      Interdum et malesuada fames ac ante ipsum primis in faucibus. Vivamus
+      consectetur lorem at risus volutpat, id porttitor est vulputate. Aliquam a
+      rhoncus dolor. Nunc finibus malesuada ipsum, non laoreet leo fermentum
+      mollis. Donec finibus felis eget eros iaculis, nec laoreet sapien
+      consequat. Integer elementum tortor ex, nec dictum ligula commodo at.
+      Curabitur lobortis quam est, quis tincidunt risus feugiat sit amet. Sed
+      pharetra sapien sit amet urna rutrum tempor. Sed mollis odio elit, in
+      auctor lacus aliquet ac. Vestibulum ut lorem id libero vehicula congue
+      quis quis augue. Curabitur imperdiet eros libero. Aenean venenatis eu
+      magna vulputate luctus. Suspendisse potenti. Sed condimentum erat diam, ac
+      tincidunt nisi tempor sit amet. Aenean egestas ante in velit sodales, sit
+      amet laoreet risus ornare. Phasellus in tellus malesuada, dictum massa
+      sed, ornare arcu. Suspendisse in erat at metus imperdiet ullamcorper.
+      Morbi a libero iaculis, pretium urna ac, mollis quam. Aliquam in lectus et
+      velit consequat euismod eget a quam. Nulla lobortis, mi ac iaculis
+      convallis, sapien nulla bibendum ligula, sit amet ultricies enim erat ut
+      quam. Pellentesque lacinia leo quis sapien accumsan vehicula. Integer
+      mattis ex nisi. Pellentesque ultricies iaculis velit vitae eleifend.
+      Praesent ac consequat sem. Mauris lobortis luctus odio, eget blandit
+      libero. Aenean condimentum ligula et elementum sodales. Suspendisse nec
+      venenatis diam. Nam volutpat venenatis neque, in luctus lacus congue vel.
+      In non lectus quam. Cras at tellus nec lorem semper posuere nec ac sapien.
+      Sed venenatis egestas tincidunt. Proin aliquam lectus iaculis ligula
+      pharetra, nec vulputate justo rhoncus. Aliquam erat volutpat. Maecenas eu
+      turpis porttitor, faucibus nisl ut, semper nunc.
+    </aside>
+  </lc-splitter>
+</Layout>
+
+<script>
+  class LcSplitter extends HTMLElement {
+    seperator: HTMLElement | null = null;
+    sidebar: HTMLElement | null = null;
+
+    constructor() {
+      super();
+      this.seperator = this.querySelector('[role="separator"]');
+      this.sidebar = this.querySelector('aside');
+    }
+
+    connectedCallback() {
+      console.log(this.seperator);
+    }
+  }
+
+  customElements.define('lc-splitter', LcSplitter);
+</script>

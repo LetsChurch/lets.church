@@ -1,52 +1,34 @@
 ---
-import TvIcon from '@tabler/icons/device-tv.svg?sprite';
-import ChurchIcon from '@tabler/icons/building-church.svg?sprite';
-import UserIcon from '@tabler/icons/user-circle.svg?sprite';
-import SearchIcon from '@tabler/icons/search.svg?sprite';
-import InfoIcon from '@tabler/icons/info-circle.svg?sprite';
 import MenuIcon from '@tabler/icons/menu-2.svg?sprite';
 import XIcon from '@tabler/icons/x.svg?sprite';
-import LogoutIcon from '@tabler/icons/lock.svg?sprite';
-import LogoIcon from '../components/icon.svg?sprite';
-import { cn } from '../util';
 import { createClient } from '../util/server/gql';
 import { meQuery, type MeQuery, type MeQueryVariables } from '../queries/auth';
 import Profile from '../components/profile';
+import HeaderDonate from '../components/header-donate.astro';
+import { cn } from '../util';
 import Root from './root.astro';
 
 interface Props {
   title: string;
-  padded?: boolean;
   frontmatter?: { title?: string; description?: string };
 }
 
-const { title, padded, frontmatter } = Astro.props;
+const { title, frontmatter } = Astro.props;
 const pathname = new URL(Astro.request.url).pathname;
 
 const navLinks = [
   {
     href: '/',
-    icon: TvIcon,
-    title: 'Videos',
+    title: 'Media',
     active: !pathname.startsWith('/churches') && !pathname.startsWith('/about'),
-    class: 'mt-5',
   },
   {
     href: '/churches',
-    icon: ChurchIcon,
     title: 'Find a Church',
     active: pathname.startsWith('/churches'),
   },
   {
-    href: '/auth/login',
-    icon: UserIcon,
-    title: 'Login',
-    active: false,
-    class: 'mt-auto',
-  },
-  {
     href: '/about',
-    icon: InfoIcon,
     title: 'About',
     active: pathname.startsWith('/about'),
   },
@@ -61,179 +43,159 @@ const data = await client.request<MeQuery, MeQueryVariables>(meQuery);
 ---
 
 <Root title={frontmatter?.title ?? title}>
-  <!-- Mobile Drawer -->
-  <div
-    id="lc-mobile-drawer"
-    class="relative z-50 hidden lg:!hidden"
-    role="dialog"
-    aria-modal="true"
-  >
-    <div class="fixed inset-0 bg-gray-900/80"></div>
-    <div class="fixed inset-0 flex">
-      <div class="relative mr-16 flex w-full max-w-xs flex-1">
-        <div class="absolute left-full top-0 flex w-16 justify-center pt-5">
-          <button
-            type="button"
-            class="-m-2.5 p-2.5 text-white [&_svg]:h-6 [&_svg]:w-6"
-            data-lc-drawer-toggle
-          >
-            <span class="sr-only">Close sidebar</span>
-            <Fragment set:html={XIcon} />
-          </button>
-        </div>
-        <div
-          class="flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 pb-2 ring-1 ring-white/10"
-        >
-          <div class="flex h-16 shrink-0 items-center">
-            <a href="/" class="[&_svg]:h-8 [&_svg]:w-auto" title="Let's Church">
-              <Fragment set:html={LogoIcon} />
-              <span class="sr-only">Let's Church</span>
-            </a>
-          </div>
-          <nav class="flex flex-1 flex-col">
-            <ul role="list" class="-mx-2 flex-1 space-y-1">
+  <header class="bg-white shadow">
+    <nav>
+      <div class="mx-auto max-w-7xl px-2 sm:px-4 lg:px-8">
+        <div class="flex h-16 justify-between">
+          <div class="flex px-2 lg:px-0">
+            <div class="flex flex-shrink-0 items-center text-indigo-500">
+              <a href="/" title="Let's Church Home">
+                <svg viewBox="0 0 1000 563" class="h-14">
+                  <path
+                    fill="currentColor"
+                    d="M113.03 321.34c25.53 0 40.16 13.08 41.4 14.32v-9.96h26.15v55.41h-26.15c-3.11-19.61-16.19-33.31-38.91-33.31-26.15 0-43.58 20.24-43.58 49.81 0 31.13 18.06 52.92 44.83 52.92 12.45 0 33-4.67 44.21-28.95l23.97 11.21C172.19 461.74 147.9 477 115.84 477c-52.3 0-75.03-43.58-75.03-79.07-.01-42.35 32.06-76.59 72.22-76.59zM251.25 261.26v81.25c21.79-17.74 37.05-21.17 48.88-21.17 26.15 0 40.47 15.25 40.47 43.27v82.5h25.22v25.53h-54.48V371.15c0-15.57-5.92-23.97-18.06-23.97-10.9 0-25.84 7.16-42.03 19.3v80.63h25.22v25.53h-81.25v-25.53h26.77V286.78h-26.46v-25.53h55.72zM416.24 325.7v103.36c0 13.39 5.92 20.55 17.43 20.55 12.14 0 28.95-7.16 42.03-18.68v-79.7h-25.22V325.7h54.48v121.41h25.22v25.53H475.7v-16.81c-17.74 14.01-33.62 19.3-47.94 19.3-26.77 0-40.78-15.25-40.78-44.21v-79.7h-20.86V325.7h50.12z"
+                  ></path>
+                  <path
+                    fill="currentColor"
+                    d="M643.19 323.21v29.26h-16.81c-30.2 0-42.96 16.81-42.96 51.06v43.58h31.75v25.53H525.2v-25.53h28.95v-95.88h-29.57V325.7h52.61v33h.62c10.9-27.71 31.75-35.49 45.45-35.49h19.93zM715.1 321.34c25.53 0 40.16 13.08 41.4 14.32v-9.96h26.15v55.41H756.5c-3.11-19.61-16.19-33.31-38.91-33.31-26.15 0-43.58 20.24-43.58 49.81 0 31.13 18.06 52.92 44.83 52.92 12.45 0 33-4.67 44.21-28.95l23.97 11.21C774.26 461.74 749.97 477 717.91 477c-52.3 0-75.03-43.58-75.03-79.07 0-42.35 32.06-76.59 72.22-76.59zM847.1 261.26v81.25c21.79-17.74 37.05-21.17 48.88-21.17 26.15 0 40.47 15.25 40.47 43.27v82.5h25.22v25.53h-54.48V371.15c0-15.57-5.92-23.97-18.06-23.97-10.9 0-25.84 7.16-42.03 19.3v80.63h25.22v25.53h-81.25v-25.53h26.77V286.78h-26.46v-25.53h55.72zM336.81 73.9v185.85h22.73v25.53h-78.76v-25.53h26.77V99.43H281.4V73.9h55.41zM443.27 133.98c40.78 0 78.45 31.13 78.45 84.99H398.13c4.05 25.53 19.61 45.14 50.43 45.14 18.68 0 36.11-8.09 47.63-23.97l25.53 11.21c-15.57 24.28-42.03 38.29-73.78 38.29-47.63 0-81.87-32.38-81.87-77.83 0-47.63 39.22-77.83 77.2-77.83zm-44.2 63.82h93.08c-4.36-22.1-23.97-40.47-48.56-40.47-23.67 0-40.17 16.5-44.52 40.47zM575.27 89.16v49.19h27.08v25.53h-27.08v85.61c0 7.16 4.05 11.21 11.83 11.21 4.05 0 8.41-.93 15.25-3.11v26.15c-10.27 3.11-17.12 4.05-21.48 4.05-22.73 0-34.87-11.83-34.87-33.93v-89.97h-18.99v-25.53H546v-22.73l29.27-26.47zM654.03 73.9v38.6c0 29.57-13.7 40.47-37.36 40.78v-15.57c15.57-3.42 18.68-12.14 18.68-26.46h-18.68V73.9h37.36zM695.43 135.85c12.14 0 24.9 2.8 35.8 8.41v-5.92h25.53v48.56h-25.53v-9.03c-8.09-12.14-18.99-18.06-34.24-18.06-15.88 0-25.84 7.47-25.84 18.06 0 12.45 13.7 14.94 33.62 17.74 17.12 2.49 37.05 5.6 48.88 18.37 6.54 6.85 10.9 18.37 10.9 28.95 0 26.46-22.41 44.83-56.35 44.83-25.53 0-38.29-10.27-38.6-10.58v8.09h-25.84v-50.43h25.84v4.98c2.49 14.94 16.19 23.66 35.18 23.66 18.06 0 30.2-6.85 30.2-18.37 0-14.01-13.08-16.19-33.31-19.3-15.57-2.49-29.89-5.92-41.09-14.01-9.96-7.47-16.81-18.99-16.81-32.69-.02-24.89 21.46-43.26 51.66-43.26z"
+                  ></path>
+                </svg>
+              </a>
+            </div>
+            <div class="hidden lg:ml-6 lg:flex lg:space-x-8">
               {
-                navLinks.flatMap(({ href, title, active, icon }) =>
-                  href === '/auth/login' && data.me ? (
-                    [
-                      <li>
-                        <a
-                          href="/profile"
-                          class={cn(
-                            'flex items-center gap-x-3 rounded-md p-2',
-                            Astro.url.pathname.startsWith('/profile') &&
-                              'bg-gray-100',
-                          )}
-                        >
-                          <Fragment set:html={UserIcon} />
-                          Your Profile
-                        </a>
-                      </li>,
-                      <li>
-                        <form method="post" action="/auth/logout">
-                          <button
-                            type="submit"
-                            class="flex items-center gap-x-3 rounded-md p-2"
-                          >
-                            <Fragment set:html={LogoutIcon} />
-                            Logout
-                          </button>
-                        </form>
-                      </li>,
-                    ]
-                  ) : (
-                    <li>
-                      <a
-                        href={href}
-                        title={title}
-                        class={cn(
-                          'flex items-center gap-x-3 rounded-md p-2',
-                          active && 'bg-gray-100',
-                        )}
-                      >
-                        <Fragment set:html={icon} />
-                        {title}
-                      </a>
-                    </li>
-                  ),
-                )
+                navLinks.map((link) => (
+                  <a
+                    href={link.href}
+                    class={cn(
+                      'inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium',
+                      link.active
+                        ? 'border-indigo-500 text-gray-900'
+                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700',
+                    )}
+                  >
+                    {link.title}
+                  </a>
+                ))
               }
-            </ul>
-          </nav>
+            </div>
+          </div>
+          <div class="flex items-center lg:hidden">
+            <HeaderDonate />
+            <button
+              type="button"
+              class="relative inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+              aria-controls="mobile-menu"
+              aria-expanded="false"
+              id="mobile-menu-button"
+            >
+              <span class="absolute -inset-0.5"></span>
+              <span class="sr-only">Open main menu</span>
+              <div class="icon-menu block">
+                <Fragment set:html={MenuIcon} />
+              </div>
+              <div class="icon-close hidden">
+                <Fragment set:html={XIcon} />
+              </div>
+            </button>
+          </div>
+          <div class="hidden gap-4 lg:ml-4 lg:flex lg:items-center">
+            <HeaderDonate />
+            <Profile me={data.me} client:visible />
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-  <!-- Desktop Static Sidebar -->
-  <div
-    class="hidden border-r border-gray-200 lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:flex lg:w-20 lg:flex-col lg:overflow-y-auto lg:bg-white lg:pb-4"
-  >
-    <div class="flex h-16 shrink-0 items-center justify-center">
-      <a href="/" class="[&_svg]:h-8 [&_svg]:w-auto" title="Let's Church">
-        <Fragment set:html={LogoIcon} />
-        <span class="sr-only">Let's Church</span>
-      </a>
-    </div>
-    <nav class="mt-2 grow">
-      <ul class="flex h-full flex-col items-center gap-1">
-        {
-          navLinks.map(({ href, icon, title, active, class: className }) => (
-            <li class={className}>
-              {href === '/auth/login' && data.me ? (
-                <Profile me={data.me} client:visible />
-              ) : (
+      <!-- Mobile menu -->
+      <div class="hidden lg:hidden" id="mobile-menu">
+        <div class="space-y-1 pb-3 pt-2">
+          {
+            navLinks.map((link) => (
+              <a
+                href={link.href}
+                class={cn(
+                  'block border-l-4 py-2 pl-3 pr-4 text-base font-medium',
+                  link.active
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                    : 'border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800',
+                )}
+              >
+                {link.title}
+              </a>
+            ))
+          }
+        </div>
+        <div class="border-t border-gray-200 pb-3 pt-4">
+          {
+            data.me ? (
+              <>
+                <div class="flex items-center px-4">
+                  <div class="flex-shrink-0">
+                    <img
+                      class="h-10 w-10 rounded-full"
+                      src={data.me?.avatarUrl}
+                      alt="Avatar"
+                    />
+                  </div>
+                  <div class="ml-3">
+                    <div class="text-base font-medium text-gray-800">
+                      {data.me?.username}
+                    </div>
+                    <div class="text-sm font-medium text-gray-500">
+                      {data.me?.fullName}
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-3 space-y-1">
+                  <a
+                    href="#"
+                    class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                  >
+                    Your Profile
+                  </a>
+                  <form method="post" action="/auth/logout">
+                    <button
+                      type="submit"
+                      class="block w-full px-4 py-2 text-left text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                    >
+                      Logout
+                    </button>
+                  </form>
+                </div>
+              </>
+            ) : (
+              <div>
                 <a
-                  href={href}
-                  title={title}
-                  class={cn(
-                    'inline-flex h-12 w-12 items-center justify-center rounded-md p-2',
-                    active && 'bg-gray-100',
-                  )}
+                  href="/auth/login"
+                  class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
                 >
-                  <Fragment set:html={icon} />
+                  Login
                 </a>
-              )}
-            </li>
-          ))
-        }
-      </ul>
+              </div>
+            )
+          }
+        </div>
+      </div>
     </nav>
-  </div>
-  <div class="flex min-h-screen flex-col lg:pl-20">
-    <header
-      class="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8"
-    >
-      <button
-        class="-m-2.5 p-2.5 text-gray-700 lg:hidden"
-        data-lc-drawer-toggle
-      >
-        <Fragment set:html={MenuIcon} />
-      </button>
-      <form
-        method="get"
-        class="relative flex flex-1 [&_svg]:pointer-events-none [&_svg]:absolute [&_svg]:inset-y-0 [&_svg]:left-0 [&_svg]:h-5 [&_svg]:w-5 [&_svg]:text-gray-400"
-      >
-        <label for="search-field" class="sr-only">Search</label>
-        <Fragment set:html={SearchIcon} />
-        <input
-          id="search-field"
-          class="block h-full w-full border-0 py-0 pl-8 pr-0 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm"
-          placeholder="Search..."
-          type="search"
-          name="search"
-        />
-      </form>
-      <button
-        type="button"
-        class="ml-auto rounded-full bg-green-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-      >
-        Donate
-      </button>
-    </header>
-    <div class={cn('grow bg-gray-50', padded || frontmatter ? 'p-2' : null)}>
-      <slot />
-    </div>
-  </div>
-  <script>
-    document.addEventListener('astro:page-load', () => {
-      const toggles = document.querySelectorAll('[data-lc-drawer-toggle]');
-      const drawer = document.getElementById('lc-mobile-drawer');
-
-      function toggleDrawer() {
-        if (!drawer) {
-          return;
-        }
-
-        if (!drawer.style.display) {
-          drawer.style.display = 'block';
-        } else {
-          drawer.style.display = '';
-        }
-      }
-
-      for (const toggle of toggles) {
-        toggle.addEventListener('click', toggleDrawer);
-      }
-    });
-  </script>
+  </header>
+  <main class="px-2 sm:px-4 lg:px-8">
+    <slot />
+  </main>
 </Root>
+
+<script>
+  document.addEventListener('astro:page-load', () => {
+    const mobileMenu = document.getElementById('mobile-menu');
+    const menuButton = document.getElementById('mobile-menu-button');
+    const menuIcon = menuButton?.querySelector('.icon-menu');
+    const closeIcon = menuButton?.querySelector('.icon-close');
+
+    menuButton?.addEventListener('click', () => {
+      menuIcon?.classList.toggle('hidden');
+      menuIcon?.classList.toggle('block');
+      closeIcon?.classList.toggle('hidden');
+      closeIcon?.classList.toggle('block');
+      mobileMenu?.classList.toggle('hidden');
+      mobileMenu?.classList.toggle('block');
+    });
+  });
+</script>

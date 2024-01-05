@@ -6,8 +6,8 @@ type Props = {
 };
 ---
 
-<Layout padded title={Astro.props.frontmatter.title}>
-  <div class="mx-auto max-w-3xl text-base leading-7 text-gray-700">
+<Layout title={Astro.props.frontmatter.title}>
+  <div class="mx-auto mt-5 max-w-3xl text-base leading-7 text-gray-700">
     <slot />
   </div>
 </Layout>
