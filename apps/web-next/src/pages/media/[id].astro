@@ -1,12 +1,16 @@
 ---
+import humanFormat from 'human-format';
+import pluralize from 'pluralize';
 import { invariant } from '../../util';
 import Layout from '../../layouts/layout.astro';
 import { createClient } from '../../util/server/gql';
+import { formatDateFull } from '../../util/date';
 import {
   mediaPageMetaDataQuery,
   type MediaPageMetaDataQuery,
   type MediaPageMetaDataQueryVariables,
 } from '../../queries/media';
+import Avatar from '../../components/avatar';
 
 const { id } = Astro.params;
 invariant(id, 'id is required');
@@ -30,92 +34,114 @@ const { data } = await client.request<
 ---
 
 <Layout title={data.title ?? 'Untitled'}>
-  <lc-splitter
-    class="grid h-full grid-cols-1 grid-rows-2 lg:grid-cols-[1fr_auto] lg:grid-rows-1"
+  <div
+    class="mx-auto mt-5 flex max-w-7xl flex-1 items-center justify-center lg:justify-between"
   >
-    <!-- TODO: perhaps the scrollbar semantically belongs in the left window and therefore this large margin is wrong -->
-    <!-- TODO: that would certainly prevent any issues with double scrollbars on the right side for long transcripts -->
-    <!-- TODO: split-pane custom element as the root -->
-    <div class="p-2">
-      <div class="aspect-video w-full bg-red-400"></div>
-      <h1 class="mt-2 line-clamp-2 text-2xl">{data.title}</h1>
-      <p>{data.description}</p>
-    </div>
-    <aside
-      class="relative overflow-auto bg-gray-100 p-2 max-lg:bottom-0 max-lg:left-0 max-lg:w-full lg:right-0 lg:max-h-full lg:w-72 lg:min-w-72"
-    >
-      <div
-        role="separator"
-        aria-label="Resize sidebar"
-        class="absolute cursor-ew-resize rounded-full bg-gray-400 lg:-left-3 lg:top-1/2 lg:h-12 lg:w-1 lg:-translate-y-1/2"
-        tabindex="0"
-      >
+    <div class="md:grid md:grid-cols-3 md:gap-4">
+      <div class="space-y-4 md:col-span-2">
+        <div>Player</div>
+        <h1 class="truncate text-balance text-2xl">{data.title ?? '...'}</h1>
+        <div
+          class="flex flex-col gap-3 lg:flex-row lg:justify-between lg:overflow-x-auto"
+        >
+          <div class="flex justify-start gap-3">
+            <a
+              href={`/channel/${data.channel.slug}`}
+              class="relative z-10 inline-flex w-max min-w-0 items-center space-x-2 overflow-hidden whitespace-nowrap"
+            >
+              <Avatar
+                size="sm"
+                src={data.channel.avatarUrl}
+                alt={`${data.channel.name} icon`}
+              />
+              <span class="overflow-hidden text-ellipsis text-sm text-gray-500">
+                {data.channel.name}
+              </span>
+            </a>
+            <form class="isolate inline-flex rounded-md shadow-sm">
+              <input
+                type="hidden"
+                name="channelId"
+                value={data.channel.id ?? ''}
+              />
+              <button
+                >{
+                  data.channel.userIsSubscribed ? 'Subscribed' : 'Subscribe'
+                }</button
+              >
+            </form>
+          </div>
+          <div class="flex gap-3 max-lg:overflow-x-auto">
+            {
+              data.downloadsEnabled && (data.downloadUrls?.length ?? 0 > 0) ? (
+                <div>
+                  <button>Download</button>
+                </div>
+              ) : null
+            }
+            <div>
+              <div>Share</div>
+            </div>
+            <div>Rate</div>
+          </div>
+        </div>
+        <div class="space-y-2 rounded-md bg-gray-100 p-3">
+          <div class="flex items-center gap-3 text-sm">
+            <p class="font-medium text-gray-900">
+              {humanFormat(data.totalViews ?? 0)}{' '}
+              {pluralize('view', data.totalViews ?? 0)}
+            </p>
+            {
+              data.publishedAt ? (
+                <time datetime={data.publishedAt} class="text-gray-600">
+                  {formatDateFull(new Date(data.publishedAt))}
+                </time>
+              ) : null
+            }
+          </div>
+          {
+            data.description ? (
+              <div class="whitespace-pre-line">{data.description}</div>
+            ) : null
+          }
+        </div>
+        {
+          data.userCommentsEnabled ? (
+            <form>
+              <input
+                type="hidden"
+                name="uploadRecordId"
+                value={data.id ?? ''}
+              />
+              <div>comment form</div>
+              <p class="font-medium text-gray-900">
+                {data.userComments.totalCount} comments
+              </p>
+              <div>comments</div>
+              <div>pagination</div>
+            </form>
+          ) : (
+            <p class="rounded-md bg-gray-100 p-3 text-gray-400">
+              Comments are disabled.
+            </p>
+          )
+        }
       </div>
-       Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis tempus,
-      neque et efficitur mattis, velit velit commodo leo, in imperdiet urna
-      massa et mi. Ut et tortor id est ultricies luctus vel a lorem. Vestibulum
-      vulputate nunc sed ex fermentum laoreet. Sed et sem dapibus, placerat
-      lorem ac, faucibus quam. Suspendisse potenti. Vivamus eget viverra magna.
-      Nam pellentesque eros ut libero tempor, finibus dictum lorem luctus. Sed
-      faucibus turpis velit, nec tristique est imperdiet non. Donec suscipit
-      lobortis neque sed commodo. Curabitur eget ligula sit amet risus gravida
-      maximus eu et elit. Curabitur gravida dolor lectus, non posuere nisl
-      luctus nec. Curabitur blandit tellus ut sapien tempor lacinia. Mauris quis
-      nibh enim. Fusce ac sem a eros consequat tempor. Maecenas tincidunt, ante
-      ac consequat maximus, velit libero placerat libero, efficitur aliquet
-      lorem est finibus erat. Fusce sit amet purus ut mauris eleifend lacinia
-      vel id turpis. Cras vitae sagittis ligula, in bibendum orci. Aenean
-      rhoncus diam gravida, feugiat urna non, condimentum nibh. Nulla ac blandit
-      justo. Sed euismod felis ipsum, eget semper tortor accumsan eget. In erat
-      orci, pellentesque in enim sit amet, maximus pellentesque arcu. Nulla
-      facilisi. Pellentesque vel nulla at ex lobortis fermentum. Vestibulum
-      pharetra, dui et dictum vestibulum, diam turpis laoreet enim, nec
-      facilisis urna elit a justo. Etiam volutpat pulvinar massa in fringilla.
-      Mauris congue ut mauris ut sagittis. Sed congue sagittis nisi nec finibus.
-      Interdum et malesuada fames ac ante ipsum primis in faucibus. Vivamus
-      consectetur lorem at risus volutpat, id porttitor est vulputate. Aliquam a
-      rhoncus dolor. Nunc finibus malesuada ipsum, non laoreet leo fermentum
-      mollis. Donec finibus felis eget eros iaculis, nec laoreet sapien
-      consequat. Integer elementum tortor ex, nec dictum ligula commodo at.
-      Curabitur lobortis quam est, quis tincidunt risus feugiat sit amet. Sed
-      pharetra sapien sit amet urna rutrum tempor. Sed mollis odio elit, in
-      auctor lacus aliquet ac. Vestibulum ut lorem id libero vehicula congue
-      quis quis augue. Curabitur imperdiet eros libero. Aenean venenatis eu
-      magna vulputate luctus. Suspendisse potenti. Sed condimentum erat diam, ac
-      tincidunt nisi tempor sit amet. Aenean egestas ante in velit sodales, sit
-      amet laoreet risus ornare. Phasellus in tellus malesuada, dictum massa
-      sed, ornare arcu. Suspendisse in erat at metus imperdiet ullamcorper.
-      Morbi a libero iaculis, pretium urna ac, mollis quam. Aliquam in lectus et
-      velit consequat euismod eget a quam. Nulla lobortis, mi ac iaculis
-      convallis, sapien nulla bibendum ligula, sit amet ultricies enim erat ut
-      quam. Pellentesque lacinia leo quis sapien accumsan vehicula. Integer
-      mattis ex nisi. Pellentesque ultricies iaculis velit vitae eleifend.
-      Praesent ac consequat sem. Mauris lobortis luctus odio, eget blandit
-      libero. Aenean condimentum ligula et elementum sodales. Suspendisse nec
-      venenatis diam. Nam volutpat venenatis neque, in luctus lacus congue vel.
-      In non lectus quam. Cras at tellus nec lorem semper posuere nec ac sapien.
-      Sed venenatis egestas tincidunt. Proin aliquam lectus iaculis ligula
-      pharetra, nec vulputate justo rhoncus. Aliquam erat volutpat. Maecenas eu
-      turpis porttitor, faucibus nisl ut, semper nunc.
-    </aside>
-  </lc-splitter>
+      <div class="space-y-4 md:col-span-1">
+        {
+          data.series ? (
+            <div class="relative flex h-[175px] flex-col overflow-hidden rounded-md bg-gray-50">
+              <h3 class="inset-x-0 bg-gray-50 px-4 pb-2 pt-4 text-sm font-semibold text-gray-900">
+                {data.series.title}
+              </h3>
+              <div class="h-full space-y-4 overflow-y-auto p-4">
+                series stuff
+              </div>
+            </div>
+          ) : null
+        }
+        <div>transcript</div>
+      </div>
+    </div>
+  </div>
 </Layout>
-
-<script>
-  class LcSplitter extends HTMLElement {
-    seperator: HTMLElement | null = null;
-    sidebar: HTMLElement | null = null;
-
-    constructor() {
-      super();
-      this.seperator = this.querySelector('[role="separator"]');
-      this.sidebar = this.querySelector('aside');
-    }
-
-    connectedCallback() {
-      console.log(this.seperator);
-    }
-  }
-
-  customElements.define('lc-splitter', LcSplitter);
-</script>
