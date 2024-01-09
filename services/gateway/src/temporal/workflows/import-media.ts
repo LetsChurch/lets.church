@@ -26,6 +26,7 @@ export async function importMediaWorkflow({
   visibility = 'PUBLIC',
   publishedAt,
   userCommentsEnabled = true,
+  trimSilence = false,
   taskQueue,
 }: Partial<
   Pick<
@@ -42,6 +43,7 @@ export async function importMediaWorkflow({
   channelSlug: string;
   title: string;
   taskQueue: string;
+  trimSilence: boolean;
 }) {
   const { uploadRecordId, mediaUploadKey, thumbnailUploadKey } =
     await importMedia(url, {
@@ -54,6 +56,7 @@ export async function importMediaWorkflow({
       createdBy: { connect: { username } },
       channel: { connect: { slug: channelSlug } },
       userCommentsEnabled,
+      trimSilence,
       ...(publishedAt ? { publishedAt: new Date(publishedAt) } : {}),
     });
 

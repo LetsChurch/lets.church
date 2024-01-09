@@ -19,6 +19,7 @@ const schema = z.array(
     publishedAt: z.string(),
     description: z.string(),
     userCommentsEnabled: z.boolean().default(true),
+    trimSilence: z.boolean().default(false),
   }),
 );
 
@@ -34,6 +35,10 @@ const data = filename?.endsWith('.json')
         userCommentsEnabled: await confirm({
           message: 'User Comments enabled?',
           default: true,
+        }),
+        trimSilence: await confirm({
+          message: 'Trim silence?',
+          default: false,
         }),
       },
     ];
