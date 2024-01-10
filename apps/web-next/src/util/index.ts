@@ -21,4 +21,15 @@ export function formatSeconds(seconds: number): string {
   return formattedHours + formattedMinutes + formattedSeconds;
 }
 
+export function chunk<T>(
+  arr: Array<T>,
+  chunkSize = 1,
+  cache: Array<typeof arr> = [],
+) {
+  const tmp = [...arr];
+  if (chunkSize <= 0) return cache;
+  while (tmp.length) cache.push(tmp.splice(0, chunkSize));
+  return cache;
+}
+
 export type Optional<T> = T | null | undefined;

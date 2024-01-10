@@ -2,6 +2,8 @@ import { gql } from 'graphql-request';
 export type {
   MediaPageMetaDataQuery,
   MediaPageMetaDataQueryVariables,
+  MediaRouteRecordViewMutation,
+  MediaRouteRecordViewMutationVariables,
 } from './__generated__/media';
 
 export const mediaPageMetaDataQuery = gql`
@@ -101,5 +103,11 @@ export const mediaPageMetaDataQuery = gql`
         }
       }
     }
+  }
+`;
+
+export const recordViewMutation = gql`
+  mutation MediaRouteRecordView($id: ShortUuid!) {
+    recordUploadView(uploadRecordId: $id)
   }
 `;

@@ -1019,7 +1019,6 @@ builder.mutationFields((t) => ({
       });
 
       invariant(res, 'Missing tracking salt');
-      invariant(clientIp, 'Missing client ip');
       invariant(clientUserAgent, 'Missing client user agent');
 
       const totalTime = ranges.reduce(
@@ -1039,7 +1038,7 @@ builder.mutationFields((t) => ({
 
       // The viewer hash will change once daily since the salt changes once daily, this means that each user can count for one view per day
       const viewHash = xxh32(
-        session?.appUserId ?? clientIp + clientUserAgent,
+        session?.appUserId ?? `${clientIp}${clientUserAgent}`,
         res.salt,
       );
 

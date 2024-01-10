@@ -6,6 +6,7 @@ extends:
 parser: '@typescript-eslint/parser'
 plugins:
   - astro
+  - solid
 settings:
   import/resolver:
     typescript: true
@@ -19,3 +20,6 @@ overrides:
     parserOptions:
       parser: '@typescript-eslint/parser'
       extraFileExtensions: ['.astro']
+  - files: ['*.tsx', '*.ts']
+    extends:
+      - 'plugin:solid/typescript'
