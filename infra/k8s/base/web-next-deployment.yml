@@ -29,8 +29,6 @@ spec:
                 name: turnstile-secret
             - configMapRef:
                 name: web-config
-            - configMapRef:
-                name: web-next-config
 ---
 apiVersion: v1
 kind: Service
