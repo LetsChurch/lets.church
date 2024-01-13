@@ -81,13 +81,19 @@ npmi-host-scripts:
   cd scripts; npm i
 npmi-host-gateway:
   cd services/gateway; npm i
+npmi-host-web-next:
+  cd apps/web-next; npm i
+npmi-host-web-qwik:
+  cd apps/web-qwik; npm i
 npmi-host-web:
   cd apps/web; npm i
-npmi-host: npmi-host-gateway npmi-host-web npmi-host-scripts
+npmi-host: npmi-host-gateway npmi-host-web npmi-host-web-next npmi-host-web-qwik npmi-host-scripts
 
 npmi-gateway: (exec 'gateway' 'npm' 'i')
 npmi-web: (exec 'web' 'npm' 'i')
-npmi: npmi-gateway npmi-web
+npmi-web-next: (exec 'web-next' 'npm' 'i')
+npmi-web-qwik: (exec 'web-qwik' 'npm' 'i')
+npmi: npmi-gateway npmi-web npmi-web-next npmi-web-qwik
 
 # npmci scripts always run on host (except during docker build)
 npmci-scripts:
@@ -96,7 +102,11 @@ npmci-gateway:
   cd services/gateway; npm ci
 npmci-web:
   cd apps/web; npm ci
-npmci: npmci-gateway npmci-web npmci-scripts
+npmci-web-next:
+  cd apps/web-next; npm ci
+npmci-web-qwik:
+  cd apps/web-qwik; npm ci
+npmci: npmci-gateway npmci-web npmci-web-next npmci-web-qwik npmci-scripts
 
 seed-db:
   docker-compose exec gateway npm run prisma:db:seed

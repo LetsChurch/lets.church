@@ -10,6 +10,7 @@ resources:
   - temporal-ui-deployment.yml
   - web-deployment.yml
   - web-next-deployment.yml
+  - web-qwik-deployment.yml
   # Workers
   - background-worker-deployment.yml
   - background-low-priority-worker-deployment.yml

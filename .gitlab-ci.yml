@@ -147,6 +147,12 @@ build-web-next:
     - cd apps/web-next
     - depot build -t registry.gitlab.com/letschurch/lets.church/web-next:${CI_COMMIT_SHORT_SHA} . --push
 
+build-web-qwik:
+  <<: *build-common
+  script:
+    - cd apps/web-qwik
+    - depot build -t registry.gitlab.com/letschurch/lets.church/web-qwik:${CI_COMMIT_SHORT_SHA} . --push
+
 #  ____             _
 # |  _ \  ___ _ __ | | ___  _   _
 # | | | |/ _ \ '_ \| |/ _ \| | | |

@@ -11,6 +11,7 @@ volumes:
   transcribe-worker-node-modules:
   web-node-modules:
   web-next-node-modules:
+  web-qwik-node-modules:
 
 x-s3-env: &s3-env
   S3_INGEST_REGION: ${S3_INGEST_REGION}
@@ -56,6 +57,21 @@ services:
     volumes:
       - ./apps/web-next:/home/node/app
       - web-next-node-modules:/home/node/app/node_modules
+    depends_on:
+      - gateway
+  web-qwik:
+    build:
+      context: ./apps/web-qwik
+      dockerfile: Dockerfile
+    command: npm run dev
+    ports:
+      - ${HOST_WEB_QWIK_PORT}:5173
+    environment:
+      NODE_ENV: development
+      GRAPHQL_URL: http://gateway:3000/graphql
+    volumes:
+      - ./apps/web-qwik:/home/node/app
+      - web-qwik-node-modules:/home/node/app/node_modules
     depends_on:
       - gateway
 
