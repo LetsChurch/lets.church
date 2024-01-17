@@ -5,7 +5,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig((): UserConfig => {
   return {
-    plugins: [qwikCity(), qwikVite(), tsconfigPaths()],
+    plugins: [qwikCity({ trailingSlash: false }), qwikVite(), tsconfigPaths()],
     server: {
       host: '0.0.0.0',
       headers: {
