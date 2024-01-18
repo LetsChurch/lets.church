@@ -1,0 +1,320 @@
+diff --git a/node_modules/@solidjs/start/client/StartClient.tsx b/node_modules/@solidjs/start/client/StartClient.tsx
+index 74b1ea0..2e02a63 100644
+--- a/node_modules/@solidjs/start/client/StartClient.tsx
++++ b/node_modules/@solidjs/start/client/StartClient.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ // @ts-ignore
+ import App from "#start/app";
+ import { ErrorBoundary } from "../shared/ErrorBoundary";
+diff --git a/node_modules/@solidjs/start/client/index.tsx b/node_modules/@solidjs/start/client/index.tsx
+index af5239f..54d38ce 100644
+--- a/node_modules/@solidjs/start/client/index.tsx
++++ b/node_modules/@solidjs/start/client/index.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import "vinxi/client";
+ export { StartClient } from "./StartClient";
+ export { mount } from "./mount";
+diff --git a/node_modules/@solidjs/start/client/islands.tsx b/node_modules/@solidjs/start/client/islands.tsx
+index 80346f8..8111747 100644
+--- a/node_modules/@solidjs/start/client/islands.tsx
++++ b/node_modules/@solidjs/start/client/islands.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import "vinxi/client";
+ export function StartClient() {
+   return null;
+diff --git a/node_modules/@solidjs/start/client/mount.ts b/node_modules/@solidjs/start/client/mount.ts
+index 854f2dd..104390a 100644
+--- a/node_modules/@solidjs/start/client/mount.ts
++++ b/node_modules/@solidjs/start/client/mount.ts
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import { createStore } from "solid-js/store";
+ import { createComponent, getHydrationKey, getOwner, hydrate } from "solid-js/web";
+ 
+diff --git a/node_modules/@solidjs/start/client/spa/index.tsx b/node_modules/@solidjs/start/client/spa/index.tsx
+index 2e32a2f..45906b2 100644
+--- a/node_modules/@solidjs/start/client/spa/index.tsx
++++ b/node_modules/@solidjs/start/client/spa/index.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import { render } from "solid-js/web";
+ import "vinxi/client";
+ 
+diff --git a/node_modules/@solidjs/start/entry/index.ts b/node_modules/@solidjs/start/entry/index.ts
+index b242fcd..a118507 100644
+--- a/node_modules/@solidjs/start/entry/index.ts
++++ b/node_modules/@solidjs/start/entry/index.ts
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import { sharedConfig } from "solid-js";
+ import { renderToStream } from "solid-js/web";
+ /* @ts-ignore */
+diff --git a/node_modules/@solidjs/start/entry/spa/index.ts b/node_modules/@solidjs/start/entry/spa/index.ts
+index 4a6fd06..c776706 100644
+--- a/node_modules/@solidjs/start/entry/spa/index.ts
++++ b/node_modules/@solidjs/start/entry/spa/index.ts
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import { createBaseHandler } from "..";
+ import { FetchEvent, PageEvent } from "../../server/types";
+ 
+diff --git a/node_modules/@solidjs/start/server/StartServer.tsx b/node_modules/@solidjs/start/server/StartServer.tsx
+index 835ef19..533bfa8 100644
+--- a/node_modules/@solidjs/start/server/StartServer.tsx
++++ b/node_modules/@solidjs/start/server/StartServer.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ // @ts-ignore
+ import App from "#start/app";
+ import type { Component } from "solid-js";
+diff --git a/node_modules/@solidjs/start/server/index.tsx b/node_modules/@solidjs/start/server/index.tsx
+index 6e44e32..d53bf5c 100644
+--- a/node_modules/@solidjs/start/server/index.tsx
++++ b/node_modules/@solidjs/start/server/index.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ export * from "vinxi/server";
+ export { StartServer } from "./StartServer";
+ export * from "./middleware";
+diff --git a/node_modules/@solidjs/start/server/islands/index.tsx b/node_modules/@solidjs/start/server/islands/index.tsx
+index d12b81f..c97c275 100644
+--- a/node_modules/@solidjs/start/server/islands/index.tsx
++++ b/node_modules/@solidjs/start/server/islands/index.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import { Component, ComponentProps, lazy, sharedConfig } from "solid-js";
+ import { getRequestEvent, Hydration, NoHydration } from "solid-js/web";
+ // import { IslandManifest } from "./types";
+diff --git a/node_modules/@solidjs/start/server/islands/utils.tsx b/node_modules/@solidjs/start/server/islands/utils.tsx
+index 7829801..814b15b 100644
+--- a/node_modules/@solidjs/start/server/islands/utils.tsx
++++ b/node_modules/@solidjs/start/server/islands/utils.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ // @ts-nocheck
+ import { $PROXY } from "solid-js";
+ 
+diff --git a/node_modules/@solidjs/start/server/middleware.ts b/node_modules/@solidjs/start/server/middleware.ts
+index 2e0fa83..0aa2020 100644
+--- a/node_modules/@solidjs/start/server/middleware.ts
++++ b/node_modules/@solidjs/start/server/middleware.ts
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import {
+   defineMiddleware,
+   getRequestIP,
+diff --git a/node_modules/@solidjs/start/server/page-event.tsx b/node_modules/@solidjs/start/server/page-event.tsx
+index 0aa89c4..8ad9e14 100644
+--- a/node_modules/@solidjs/start/server/page-event.tsx
++++ b/node_modules/@solidjs/start/server/page-event.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import {
+   appendResponseHeader,
+   getCookie,
+diff --git a/node_modules/@solidjs/start/server/renderAsset.tsx b/node_modules/@solidjs/start/server/renderAsset.tsx
+index 127099b..fe99b86 100644
+--- a/node_modules/@solidjs/start/server/renderAsset.tsx
++++ b/node_modules/@solidjs/start/server/renderAsset.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ const assetMap = {
+ 	style: (props) => <style {...props.attrs}>{props.children}</style>,
+ 	link: (props) => <link {...props.attrs} />,
+diff --git a/node_modules/@solidjs/start/server/spa/StartServer.tsx b/node_modules/@solidjs/start/server/spa/StartServer.tsx
+index f8d7f31..a926386 100644
+--- a/node_modules/@solidjs/start/server/spa/StartServer.tsx
++++ b/node_modules/@solidjs/start/server/spa/StartServer.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ // @ts-ignore
+ import { NoHydration, getRequestEvent, ssr } from "solid-js/web";
+ import { renderAsset } from "../renderAsset";
+diff --git a/node_modules/@solidjs/start/server/spa/index.tsx b/node_modules/@solidjs/start/server/spa/index.tsx
+index 4a66421..7dc1848 100644
+--- a/node_modules/@solidjs/start/server/spa/index.tsx
++++ b/node_modules/@solidjs/start/server/spa/index.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ export * from "vinxi/server";
+ export * from "../middleware";
+ export * from "../types";
+diff --git a/node_modules/@solidjs/start/server/types.ts b/node_modules/@solidjs/start/server/types.ts
+index bdb490f..94efaea 100644
+--- a/node_modules/@solidjs/start/server/types.ts
++++ b/node_modules/@solidjs/start/server/types.ts
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import type { JSX } from "solid-js";
+ import type { EventHandlerRequest, H3Event } from "vinxi/server";
+ 
+diff --git a/node_modules/@solidjs/start/shared/ErrorBoundary.tsx b/node_modules/@solidjs/start/shared/ErrorBoundary.tsx
+index 3743e32..b813b87 100644
+--- a/node_modules/@solidjs/start/shared/ErrorBoundary.tsx
++++ b/node_modules/@solidjs/start/shared/ErrorBoundary.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import {
+   ErrorBoundary as DefaultErrorBoundary,
+   ParentProps,
+diff --git a/node_modules/@solidjs/start/shared/FileRoutes.tsx b/node_modules/@solidjs/start/shared/FileRoutes.tsx
+index ccd2ca1..5aa6d3e 100644
+--- a/node_modules/@solidjs/start/shared/FileRoutes.tsx
++++ b/node_modules/@solidjs/start/shared/FileRoutes.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ /* @refresh skip */
+ import { getRequestEvent, isServer } from "solid-js/web";
+ import lazyRoute from "./lazyRoute";
+diff --git a/node_modules/@solidjs/start/shared/HttpHeader.tsx b/node_modules/@solidjs/start/shared/HttpHeader.tsx
+index 1f33566..835e3c9 100644
+--- a/node_modules/@solidjs/start/shared/HttpHeader.tsx
++++ b/node_modules/@solidjs/start/shared/HttpHeader.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import { onCleanup } from "solid-js";
+ import { getRequestEvent, isServer } from "solid-js/web";
+ 
+diff --git a/node_modules/@solidjs/start/shared/HttpStatusCode.tsx b/node_modules/@solidjs/start/shared/HttpStatusCode.tsx
+index 415ee9e..5a54524 100644
+--- a/node_modules/@solidjs/start/shared/HttpStatusCode.tsx
++++ b/node_modules/@solidjs/start/shared/HttpStatusCode.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import { onCleanup } from "solid-js";
+ import { getRequestEvent, isServer } from "solid-js/web";
+ 
+diff --git a/node_modules/@solidjs/start/shared/clientOnly.tsx b/node_modules/@solidjs/start/shared/clientOnly.tsx
+index a6d1b21..d8cf839 100644
+--- a/node_modules/@solidjs/start/shared/clientOnly.tsx
++++ b/node_modules/@solidjs/start/shared/clientOnly.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import type { Component, ComponentProps, JSX } from "solid-js";
+ import { createMemo, createSignal, onMount, sharedConfig, splitProps, untrack } from "solid-js";
+ import { isServer } from "solid-js/web";
+diff --git a/node_modules/@solidjs/start/shared/dev-overlay/CodeView.tsx b/node_modules/@solidjs/start/shared/dev-overlay/CodeView.tsx
+index 1248373..eb740f9 100644
+--- a/node_modules/@solidjs/start/shared/dev-overlay/CodeView.tsx
++++ b/node_modules/@solidjs/start/shared/dev-overlay/CodeView.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import type { BuiltinLanguage, Highlighter } from 'shikiji';
+ import { getHighlighterCore, loadWasm } from 'shikiji/core';
+ import { createEffect, createResource, type JSX } from 'solid-js';
+diff --git a/node_modules/@solidjs/start/shared/dev-overlay/DevOverlayDialog.tsx b/node_modules/@solidjs/start/shared/dev-overlay/DevOverlayDialog.tsx
+index e6d9e7a..9bc9d55 100644
+--- a/node_modules/@solidjs/start/shared/dev-overlay/DevOverlayDialog.tsx
++++ b/node_modules/@solidjs/start/shared/dev-overlay/DevOverlayDialog.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import ErrorStackParser from 'error-stack-parser';
+ import * as htmlToImage from 'html-to-image';
+ import type { JSX } from 'solid-js';
+diff --git a/node_modules/@solidjs/start/shared/dev-overlay/createStackFrame.ts b/node_modules/@solidjs/start/shared/dev-overlay/createStackFrame.ts
+index 1b72472..01a5a67 100644
+--- a/node_modules/@solidjs/start/shared/dev-overlay/createStackFrame.ts
++++ b/node_modules/@solidjs/start/shared/dev-overlay/createStackFrame.ts
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import { Accessor, createMemo, createResource } from "solid-js";
+ import getSourceMap from "./get-source-map";
+ 
+diff --git a/node_modules/@solidjs/start/shared/dev-overlay/download.ts b/node_modules/@solidjs/start/shared/dev-overlay/download.ts
+index 8e8834b..2762352 100644
+--- a/node_modules/@solidjs/start/shared/dev-overlay/download.ts
++++ b/node_modules/@solidjs/start/shared/dev-overlay/download.ts
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ export default function download(dataurl: string, filename: string) {
+   const link = document.createElement("a");
+   link.href = dataurl;
+diff --git a/node_modules/@solidjs/start/shared/dev-overlay/get-source-map.ts b/node_modules/@solidjs/start/shared/dev-overlay/get-source-map.ts
+index 829c03f..d02a413 100644
+--- a/node_modules/@solidjs/start/shared/dev-overlay/get-source-map.ts
++++ b/node_modules/@solidjs/start/shared/dev-overlay/get-source-map.ts
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import { RawSourceMap, SourceMapConsumer } from 'source-map-js';
+ 
+ const INLINE_SOURCEMAP_REGEX = /^data:application\/json[^,]+base64,/;
+diff --git a/node_modules/@solidjs/start/shared/dev-overlay/icons.tsx b/node_modules/@solidjs/start/shared/dev-overlay/icons.tsx
+index 815d8e6..1281bbc 100644
+--- a/node_modules/@solidjs/start/shared/dev-overlay/icons.tsx
++++ b/node_modules/@solidjs/start/shared/dev-overlay/icons.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import type { JSX } from 'solid-js';
+ 
+ export function ArrowRightIcon(
+diff --git a/node_modules/@solidjs/start/shared/dev-overlay/index.tsx b/node_modules/@solidjs/start/shared/dev-overlay/index.tsx
+index 1e26d97..01500f8 100644
+--- a/node_modules/@solidjs/start/shared/dev-overlay/index.tsx
++++ b/node_modules/@solidjs/start/shared/dev-overlay/index.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import {
+   ErrorBoundary,
+   Show,
+diff --git a/node_modules/@solidjs/start/shared/index.tsx b/node_modules/@solidjs/start/shared/index.tsx
+index c803075..7c916f2 100644
+--- a/node_modules/@solidjs/start/shared/index.tsx
++++ b/node_modules/@solidjs/start/shared/index.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ export { default as clientOnly } from "./clientOnly";
+ export { FileRoutes } from "./FileRoutes";
+ export { HttpHeader } from "./HttpHeader";
+diff --git a/node_modules/@solidjs/start/shared/lazyRoute.tsx b/node_modules/@solidjs/start/shared/lazyRoute.tsx
+index 39033bc..611da33 100644
+--- a/node_modules/@solidjs/start/shared/lazyRoute.tsx
++++ b/node_modules/@solidjs/start/shared/lazyRoute.tsx
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ /// <reference types="vinxi/types/client" />
+ import { createComponent, lazy, onCleanup } from "solid-js";
+ import { appendStyles, cleanupStyles, updateStyles, preloadStyles } from "vinxi/css";
+diff --git a/node_modules/@solidjs/start/shared/routes.ts b/node_modules/@solidjs/start/shared/routes.ts
+index 4b8def9..4337797 100644
+--- a/node_modules/@solidjs/start/shared/routes.ts
++++ b/node_modules/@solidjs/start/shared/routes.ts
+@@ -1,3 +1,5 @@
++// @ts-nocheck
++
+ import fileRoutes from "vinxi/routes";
+ import { HTTPMethod } from "vinxi/server";
+ 
