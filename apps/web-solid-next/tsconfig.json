@@ -14,8 +14,8 @@
     "allowJs": true,
     "noEmit": true,
     "strict": true,
-    "types": ["vinxi/client"],
-    "lib": ["dom"],
+    "types": ["vinxi/client", "vite-plugin-solid-svg/types"],
+    "lib": ["dom", "esnext"],
     "isolatedModules": true,
     "paths": {
       "~/*": ["./src/*"],

@@ -1,0 +1,27 @@
+overwrite: true
+schema: http://gateway:3000/graphql
+documents:
+  - './src/**/*.ts{,x}'
+  - '!**/__generated__/**'
+generates:
+  src/__generated__/graphql-types.ts:
+    plugins:
+      - typescript
+    config:
+      scalars: &scalars
+        DateTime: string
+        Jwt: string
+        SafeInt: number
+        ShortUuid: string
+        Uuid: string
+  src/:
+    preset: near-operation-file
+    presetConfig:
+      baseTypesPath: '__generated__/graphql-types.ts'
+      folder: __generated__
+      extension: '.d.ts'
+    config:
+      avoidOptionals: false
+      scalars: *scalars
+    plugins:
+      - typescript-operations
