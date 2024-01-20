@@ -2,7 +2,7 @@ import { For } from 'solid-js';
 import { gql } from 'graphql-request';
 import groupBy from 'just-group-by';
 import sortBy from 'just-sort-by';
-import { cache, createAsync } from '@solidjs/router';
+import { createAsync } from '@solidjs/router';
 import type { ChannelsListQuery } from './__generated__/channels';
 import A from '~/components/content/a';
 import H1 from '~/components/content/h1';
@@ -10,7 +10,7 @@ import H2 from '~/components/content/h2';
 import { Ul } from '~/components/content/list';
 import { getAuthenticatedClient } from '~/util/gql/server';
 
-const loadChannels = cache(async () => {
+const loadChannels = async () => {
   'use server';
   const client = await getAuthenticatedClient();
   const res = await client.request<ChannelsListQuery>(gql`
@@ -35,10 +35,6 @@ const loadChannels = cache(async () => {
   );
 
   return sortBy(entries, ([k]) => k);
-}, 'channels');
-
-export const route = {
-  load: () => loadChannels(),
 };
 
 export default function AboutLayout() {

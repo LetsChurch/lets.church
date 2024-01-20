@@ -2,7 +2,7 @@ import { Show } from 'solid-js';
 import { z } from 'zod';
 import { gql } from 'graphql-request';
 import { getRequestEvent } from 'solid-js/web';
-import { cache, createAsync } from '@solidjs/router';
+import { createAsync } from '@solidjs/router';
 import type {
   VerifyEmailMutation,
   VerifyEmailMutationVariables,
@@ -17,7 +17,7 @@ const QuerySchema = z.object({
   emailKey: z.string(),
 });
 
-const routeData = cache(async () => {
+const routeData = async () => {
   'use server';
   const event = getRequestEvent();
   const url = new URL(event?.request.url ?? '');
@@ -50,10 +50,6 @@ const routeData = cache(async () => {
   );
 
   return res.verifyEmail;
-}, 'verify');
-
-export const route = {
-  load: () => routeData(),
 };
 
 export default function EmailVerifyRoute() {

@@ -1,5 +1,5 @@
 import { gql } from 'graphql-request';
-import { cache, createAsync } from '@solidjs/router';
+import { createAsync } from '@solidjs/router';
 import { getRequestEvent } from 'solid-js/web';
 import {
   AdminChannelsRouteQuery,
@@ -13,7 +13,7 @@ import Pagination from '~/components/pagination';
 
 const PAGE_SIZE = 60;
 
-const getAdminChannels = cache(async () => {
+const getAdminChannels = async () => {
   'use server';
   const event = getRequestEvent();
   const url = new URL(event?.request.url ?? '');
@@ -67,10 +67,6 @@ const getAdminChannels = cache(async () => {
   );
 
   return res;
-}, 'adminChannels');
-
-export const route = {
-  load: () => getAdminChannels(),
 };
 
 export default function AdminChannelsRoute() {

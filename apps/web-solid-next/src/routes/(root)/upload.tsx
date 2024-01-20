@@ -16,8 +16,9 @@ import {
   createAsync,
   action,
   useSubmission,
+  type RouteDefinition,
+  useLocation,
 } from '@solidjs/router';
-import { getRequestEvent } from 'solid-js/web';
 import type {
   UploadRouteDataQuery,
   CreateMultipartMediaUploadMutation,
@@ -246,11 +247,8 @@ function getSections(
   ];
 }
 
-const routeData = cache(async () => {
+const routeData = cache(async (id: string | null = null) => {
   'use server';
-  const url = new URL(getRequestEvent()?.request.url ?? '');
-  const id = url.searchParams.get('id');
-
   const client = await getAuthenticatedClientOrRedirect();
   const res = await client.request<
     UploadRouteDataQuery,
@@ -303,8 +301,8 @@ const routeData = cache(async () => {
   return res;
 }, 'upload');
 
-export const route = {
-  load: () => routeData(),
+export const route: RouteDefinition = {
+  load: ({ location }) => routeData(location.query['id']),
 };
 
 const UpsertUploadRecordSchema = z.object({
@@ -445,7 +443,8 @@ async function finalizeUpload(variables: FinalizeMediaUploadMutationVariables) {
 }
 
 export default function UploadRoute() {
-  const data = createAsync(routeData);
+  const location = useLocation();
+  const data = createAsync(() => routeData(location.query['id']));
   const upsertSubmission = useSubmission(upsert);
 
   const [uploadRecordId, setUploadRecordId] = createSignal<string>();

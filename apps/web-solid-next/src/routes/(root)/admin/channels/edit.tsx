@@ -1,13 +1,14 @@
 import { gql } from 'graphql-request';
 import * as z from 'zod';
 import { Show } from 'solid-js';
-import { getRequestEvent } from 'solid-js/web';
 import {
+  type RouteDefinition,
   action,
   cache,
   createAsync,
   redirect,
   useSubmission,
+  useLocation,
 } from '@solidjs/router';
 import {
   AdminChannelEditRouteDataQuery,
@@ -26,12 +27,8 @@ const UpsertChannelSchema = z.object({
   description: z.string().nullable(),
 });
 
-const loadChannel = cache(async () => {
+const loadChannel = cache(async (id: string | null = null) => {
   'use server';
-  const event = getRequestEvent();
-  const url = new URL(event?.request.url ?? '');
-  const id = url.searchParams.get('id');
-
   const client = await getAdminClientOrRedirect();
 
   const res = await client.request<
@@ -57,8 +54,8 @@ const loadChannel = cache(async () => {
   return res;
 }, 'adminLoadChannel');
 
-export const route = {
-  load: () => loadChannel(),
+export const route: RouteDefinition = {
+  load: ({ location }) => loadChannel(location.query['id']),
 };
 
 const upsertChannel = action(async (form: FormData) => {
@@ -99,7 +96,8 @@ const upsertChannel = action(async (form: FormData) => {
 });
 
 export default function AdminNewUserRoute() {
-  const data = createAsync(loadChannel);
+  const location = useLocation();
+  const data = createAsync(() => loadChannel(location.query['id']));
   const submission = useSubmission(upsertChannel);
 
   return (

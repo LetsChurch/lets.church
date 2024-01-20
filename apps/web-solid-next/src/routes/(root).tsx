@@ -1,6 +1,6 @@
 import { gql } from 'graphql-request';
 import { ParentProps } from 'solid-js';
-import { cache, createAsync } from '@solidjs/router';
+import { type RouteDefinition, cache, createAsync } from '@solidjs/router';
 import type { MeQuery } from './__generated__/(root)';
 import Footer from '~/components/footer';
 import Header from '~/components/header';
@@ -29,7 +29,7 @@ const getMe = cache(async function () {
   `);
 }, 'me');
 
-export const route = {
+export const route: RouteDefinition = {
   load: () => getMe(),
 };
 

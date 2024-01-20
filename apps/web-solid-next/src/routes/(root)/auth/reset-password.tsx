@@ -2,12 +2,11 @@ import { gql } from 'graphql-request';
 import * as z from 'zod';
 import {
   action,
-  cache,
   createAsync,
   redirect,
   useSubmission,
+  useLocation,
 } from '@solidjs/router';
-import { getRequestEvent } from 'solid-js/web';
 import {
   ResetPasswordMutation,
   ResetPasswordMutationVariables,
@@ -22,20 +21,13 @@ const ResetPasswordSchema = z.object({
   password: z.string(),
 });
 
-const routeData = cache(async () => {
+const routeData = async (id?: string) => {
   'use server';
-  const event = getRequestEvent();
-  const id = new URL(event?.request.url ?? '').searchParams.get('id');
-
   if (!id) {
     throw redirect('/');
   }
 
   return id;
-}, 'reset-password');
-
-export const route = {
-  load: () => routeData(),
 };
 
 const resetPassword = action(async (form: FormData) => {
@@ -67,7 +59,8 @@ const resetPassword = action(async (form: FormData) => {
 });
 
 export default function ResetPasswordRoute() {
-  const data = createAsync(routeData);
+  const location = useLocation();
+  const data = createAsync(() => routeData(location.query['id']));
   const submission = useSubmission(resetPassword);
 
   return (

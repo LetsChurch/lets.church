@@ -1,6 +1,6 @@
 import { Show } from 'solid-js';
 import { gql } from 'graphql-request';
-import { cache, createAsync } from '@solidjs/router';
+import { createAsync } from '@solidjs/router';
 import { Link } from '@solidjs/meta';
 import SubscribeIcon from '@tabler/icons/rss.svg?component-solid';
 import type {
@@ -15,7 +15,7 @@ import Newsletter from '~/components/newsletter';
 import { useUser } from '~/util/user-context';
 import Og from '~/components/og';
 
-const getHomepageData = cache(async function () {
+const getHomepageData = async function () {
   'use server';
   const client = await getAuthenticatedClient();
   const res = await client.request<
@@ -60,10 +60,6 @@ const getHomepageData = cache(async function () {
   );
 
   return res;
-}, 'home');
-
-export const route = {
-  load: () => getHomepageData(),
 };
 
 function SeeMoreLink(props: { to: 'subscriptions' | 'trending' }) {

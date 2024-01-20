@@ -13,6 +13,10 @@ console.log('process.env.NODE_ENV', process.env.NODE_ENV);
 
 // https://astro.build/config
 export default defineConfig({
+  build: {
+    assets: 'build-hash',
+    assetsPrefix: 'https://assets.letschurch.cloud',
+  },
   integrations: [
     tailwind(),
     solidJs(),

@@ -1,5 +1,5 @@
 import { gql } from 'graphql-request';
-import { cache, createAsync } from '@solidjs/router';
+import { createAsync } from '@solidjs/router';
 import { getRequestEvent } from 'solid-js/web';
 import {
   AdminOrganizationsRouteQuery,
@@ -13,7 +13,7 @@ import Pagination from '~/components/pagination';
 
 const PAGE_SIZE = 60;
 
-const loadOrganizations = cache(async () => {
+const loadOrganizations = async () => {
   'use server';
   const event = getRequestEvent();
   const url = new URL(event?.request.url ?? '');
@@ -69,10 +69,6 @@ const loadOrganizations = cache(async () => {
   );
 
   return res;
-}, 'adminOrganizations');
-
-export const route = {
-  load: () => loadOrganizations(),
 };
 
 export default function AdminOrganizationsRoute() {

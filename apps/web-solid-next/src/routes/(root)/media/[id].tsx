@@ -70,11 +70,10 @@ const recordView = async (id: string) => {
   return res;
 };
 
-const loadMediaMetadata = cache(async () => {
+const loadMediaMetadata = cache(async (id: string) => {
   'use server';
   const event = getRequestEvent();
   const url = new URL(event?.request.url ?? '');
-  const id = url.pathname.split('/').at(-1);
 
   invariant(id, 'Missing id');
 
@@ -206,7 +205,11 @@ const loadMediaMetadata = cache(async () => {
 }, 'media-meta');
 
 export const route: RouteDefinition = {
-  load: () => loadMediaMetadata(),
+  load: ({ params }) => {
+    const id = params['id'];
+    invariant(id, 'Missing id');
+    return loadMediaMetadata(id);
+  },
 };
 
 function getStartAt() {
@@ -352,7 +355,7 @@ export default function MediaRoute() {
   const user = useUser();
   const params = useParams<{ id: string }>();
   const loc = useLocation();
-  const metadata = createAsync(loadMediaMetadata);
+  const metadata = createAsync(() => loadMediaMetadata(params.id));
 
   onMount(() => {
     if (!isServer) {
