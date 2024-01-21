@@ -1,6 +1,6 @@
 import { Show } from 'solid-js';
 import { gql } from 'graphql-request';
-import { createAsync } from '@solidjs/router';
+import { A, createAsync } from '@solidjs/router';
 import { Link } from '@solidjs/meta';
 import SubscribeIcon from '@tabler/icons/rss.svg?component-solid';
 import type {
@@ -65,12 +65,12 @@ const getHomepageData = async function () {
 function SeeMoreLink(props: { to: 'subscriptions' | 'trending' }) {
   return (
     <div class="mt-6 flex justify-end">
-      <a
+      <A
         href={`/${props.to}`}
         class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
       >
         See More
-      </a>
+      </A>
     </div>
   );
 }

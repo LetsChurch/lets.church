@@ -1,4 +1,5 @@
 import { Show, splitProps, type JSX } from 'solid-js';
+import { A } from '@solidjs/router';
 import ExternalLink from '../external-link';
 import { cn } from '~/util';
 
@@ -10,7 +11,7 @@ export default function ContentLink(props: JSX.IntrinsicElements['a']) {
       when={!/^(https?|mailto):/.test(localProps.href ?? '')}
       fallback={<ExternalLink href={localProps.href ?? ''} {...restProps} />}
     >
-      <a
+      <A
         class={cn('text-indigo-500', localProps.class)}
         href={localProps.href ?? ''}
         {...restProps}

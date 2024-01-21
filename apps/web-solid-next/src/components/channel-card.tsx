@@ -4,6 +4,7 @@ import MenuIcon from '@tabler/icons/dots-vertical.svg?component-solid';
 import { createSignal } from 'solid-js';
 import { useFloating } from 'solid-floating-ui';
 import humanNumber from 'human-number';
+import { A } from '@solidjs/router';
 import FloatingMenu from './floating-menu';
 
 export type Props = {
@@ -31,12 +32,12 @@ export default function ChannelCard(props: Props) {
       </div>
       <div class="flex flex-1 items-center justify-between truncate rounded-r-md border-b border-r border-t border-gray-200 bg-white">
         <div class="flex-1 truncate px-4 py-2 text-sm">
-          <a
+          <A
             href={props.id}
             class="font-medium text-gray-900 before:absolute before:inset-0 hover:text-gray-600"
           >
             {props.name}
-          </a>
+          </A>
           <dl class="flex items-center text-gray-500">
             <dt class="contents">
               <SubscribersIcon class="h-5 w-5" />

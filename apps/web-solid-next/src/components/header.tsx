@@ -1,15 +1,21 @@
-import { createEffect, createSignal, For, Show, JSX } from 'solid-js';
+import {
+  createEffect,
+  createSignal,
+  For,
+  Show,
+  type ComponentProps,
+} from 'solid-js';
 // import BellIcon from '@tabler/icons/bell.svg?component-solid';
 import MenuIcon from '@tabler/icons/menu-2.svg?component-solid';
 import XIcon from '@tabler/icons/x.svg?component-solid';
-import { useBeforeLeave, useIsRouting } from '@solidjs/router';
+import { A, useBeforeLeave, useIsRouting } from '@solidjs/router';
 import Profile from './profile';
 import ProfileMobile from './profile-mobile';
 import Logo from './logo';
 import Search from './search';
 import { useUser } from '~/util/user-context';
 
-const navLinks: Array<JSX.IntrinsicElements['a']> = [
+const navLinks: Array<ComponentProps<typeof A>> = [
   { href: '/about', children: 'About' },
   { href: '/channels', children: 'Channels' },
   {
@@ -50,23 +56,21 @@ export default function Header() {
           <div class="flex h-16 justify-between">
             <div class="flex px-2 lg:px-0">
               <div class="flex flex-shrink-0 items-center text-4xl">
-                <a href="/">
+                <A href="/">
                   <Logo class="text-indigo-500" width="100" />
-                </a>
+                </A>
               </div>
               <div class="hidden lg:ml-6 lg:flex lg:space-x-8">
                 <For each={navLinks}>
                   {(props) => (
-                    <a
+                    <A
                       class="inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium"
-                      // TODO: port
-                      // inactiveClass="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                      // TODO: port
-                      // activeClass="border-indigo-500 text-gray-900"
+                      inactiveClass="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                      activeClass="border-indigo-500 text-gray-900"
                       {...props}
                     >
                       {props.children}
-                    </a>
+                    </A>
                   )}
                 </For>
               </div>
@@ -108,16 +112,14 @@ export default function Header() {
             <div class="space-y-1 pb-3 pt-2">
               <For each={navLinks}>
                 {(props) => (
-                  <a
+                  <A
                     class="block border-l-4 py-2 pl-3 pr-4 text-base font-medium"
-                    // TODO: port
-                    // inactiveClass="border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800"
-                    // TODO: port
-                    // activeClass="border-indigo-500 bg-indigo-50 text-indigo-700"
+                    inactiveClass="border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800"
+                    activeClass="border-indigo-500 bg-indigo-50 text-indigo-700"
                     {...props}
                   >
                     {props.children}
-                  </a>
+                  </A>
                 )}
               </For>
             </div>

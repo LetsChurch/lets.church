@@ -1,6 +1,11 @@
 import { createEffect, createSignal, createUniqueId, Show } from 'solid-js';
 import { useFloating } from 'solid-floating-ui';
-import { useBeforeLeave, useIsRouting, useSubmission } from '@solidjs/router';
+import {
+  A,
+  useBeforeLeave,
+  useIsRouting,
+  useSubmission,
+} from '@solidjs/router';
 import FloatingMenu from './floating-menu';
 import { Avatar } from './avatar';
 import logoutAction from '~/util/logout-action';
@@ -51,12 +56,12 @@ export default function Profile(props: Props) {
         <Show
           when={props.me}
           fallback={
-            <a
+            <A
               href={loginLocation}
               class="ml-6 inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             >
               Login
-            </a>
+            </A>
           }
         >
           <button

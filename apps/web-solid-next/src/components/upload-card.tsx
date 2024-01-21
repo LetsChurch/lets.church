@@ -1,3 +1,4 @@
+import { A } from '@solidjs/router';
 import Thumbnail from './thumbnail';
 import { Avatar } from './avatar';
 import type { UploadCardFieldsFragment } from '~/util/gql/__generated__/fragments';
@@ -32,7 +33,7 @@ export default function UploadCard(props: Props) {
           src={props.data.channel.avatarUrl}
           alt={props.data.channel.name}
         />
-        <a
+        <A
           href={props.href}
           class="block min-w-0 before:absolute before:inset-0"
           title={resolvedTitle()}
@@ -43,7 +44,7 @@ export default function UploadCard(props: Props) {
           <p class="truncate text-sm text-gray-500">
             {props.data.channel.name}
           </p>
-        </a>
+        </A>
       </div>
     </div>
   );

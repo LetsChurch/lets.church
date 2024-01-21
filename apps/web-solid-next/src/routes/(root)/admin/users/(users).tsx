@@ -1,5 +1,5 @@
 import { gql } from 'graphql-request';
-import { type RouteDefinition, cache, createAsync } from '@solidjs/router';
+import { type RouteDefinition, cache, createAsync, A } from '@solidjs/router';
 import { getRequestEvent } from 'solid-js/web';
 import {
   AdminUsersRouteQuery,
@@ -99,12 +99,12 @@ export default function AdminUsersRoute() {
             title: 'Edit',
             titleSrOnly: true,
             render: (d) => (
-              <a
+              <A
                 href={`/admin/users/edit?id=${d.node.id}`}
                 class="text-indigo-600 hover:text-indigo-900"
               >
                 Edit <span class="sr-only">{d.node.username}</span>
-              </a>
+              </A>
             ),
           },
         ]}

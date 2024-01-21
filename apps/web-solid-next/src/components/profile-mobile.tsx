@@ -1,6 +1,6 @@
 import { For, Show } from 'solid-js';
 // import BellIcon from '@tabler/icons/bell.svg?component-solid';
-import { useSubmission } from '@solidjs/router';
+import { A, useSubmission } from '@solidjs/router';
 import { profileLinks } from './profile';
 import { Avatar } from './avatar';
 import type { MeQuery } from '~/routes/__generated__/(root)';
@@ -18,12 +18,12 @@ export default function ProfileMobile(props: Props) {
       <Show
         when={props.me}
         fallback={
-          <a
+          <A
             href={loginLocation}
             class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
           >
             Login
-          </a>
+          </A>
         }
       >
         <div class="flex items-center px-4">
@@ -49,14 +49,13 @@ export default function ProfileMobile(props: Props) {
         <div class="mt-3 space-y-1">
           <For each={profileLinks}>
             {(link) => (
-              <a
+              <A
                 href={link.href}
                 class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
-                // TODO: port
-                // activeClass="bg-gray-100 text-gray-800"
+                activeClass="bg-gray-100 text-gray-800"
               >
                 {link.label}
-              </a>
+              </A>
             )}
           </For>
           <form action={logoutAction} method="post">

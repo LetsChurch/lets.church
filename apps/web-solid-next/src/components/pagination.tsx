@@ -1,4 +1,4 @@
-import { useLocation } from '@solidjs/router';
+import { A, useLocation } from '@solidjs/router';
 import { Show, type JSX } from 'solid-js';
 import { setQueryParams } from '~/util/url';
 
@@ -23,7 +23,7 @@ export default function Pagination(props: Props) {
       </Show>
       <div class="flex flex-1 justify-between sm:justify-end">
         <Show when={props.hasPreviousPage}>
-          <a
+          <A
             href={`?${setQueryParams(loc.query, {
               [props.queryKey ? `${props.queryKey}Before` : 'before']:
                 props.startCursor,
@@ -32,10 +32,10 @@ export default function Pagination(props: Props) {
             class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Previous Page
-          </a>
+          </A>
         </Show>
         <Show when={props.hasNextPage}>
-          <a
+          <A
             href={`?${setQueryParams(loc.query, {
               [props.queryKey ? `${props.queryKey}After` : 'after']:
                 props.endCursor,
@@ -44,7 +44,7 @@ export default function Pagination(props: Props) {
             class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             Next Page
-          </a>
+          </A>
         </Show>
       </div>
     </nav>

@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { gql } from 'graphql-request';
-import { action, redirect, useLocation, useSubmission } from '@solidjs/router';
+import {
+  A,
+  action,
+  redirect,
+  useLocation,
+  useSubmission,
+} from '@solidjs/router';
 import invariant from 'tiny-invariant';
 import type {
   LoginMutation,
@@ -65,12 +71,12 @@ export default function LoginRoute() {
         </h2>
         <p class="mt-2 text-center text-sm text-gray-600">
           Or{' '}
-          <a
+          <A
             href="/auth/register"
             class="font-medium text-indigo-600 hover:text-indigo-500"
           >
             register for a new account
-          </a>
+          </A>
         </p>
       </div>
       <form action={login} method="post" class="mx-auto max-w-md space-y-6">
@@ -86,12 +92,12 @@ export default function LoginRoute() {
           Login
         </Button>
         <p class="text-center text-xs">
-          <a
-            href="../forgot-password"
+          <A
+            href="/auth/forgot-password"
             class="text-xs text-gray-500 hover:text-gray-900"
           >
             Forgot your password?
-          </a>
+          </A>
         </p>
       </form>
     </>

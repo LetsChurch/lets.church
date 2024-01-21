@@ -1,6 +1,6 @@
 import invariant from 'tiny-invariant';
 import { gql } from 'graphql-request';
-import { action, redirect, useSubmission } from '@solidjs/router';
+import { A, action, redirect, useSubmission } from '@solidjs/router';
 import { Button, Input } from './form';
 import { Turnstile } from './turnstile';
 import type {
@@ -87,12 +87,12 @@ export default function Newsletter() {
           </div>
           <p class="text-sm leading-6 text-gray-900">
             No spam. Read our{' '}
-            <a
+            <A
               href="/about/privacy"
               class="font-semibold text-indigo-600 hover:text-indigo-500"
             >
               privacy&nbsp;policy
-            </a>
+            </A>
             .
           </p>
           <Turnstile />

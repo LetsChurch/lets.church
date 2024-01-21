@@ -3,6 +3,7 @@ import FacebookIcon from '@tabler/icons/brand-facebook.svg?component-solid';
 import XIcon from '@tabler/icons/brand-x.svg?component-solid';
 import GithubIcon from '@tabler/icons/brand-github.svg?component-solid';
 import GitlabIcon from '@tabler/icons/brand-gitlab.svg?component-solid';
+import { A } from '@solidjs/router';
 
 export default function Footer() {
   const links = [
@@ -27,13 +28,13 @@ export default function Footer() {
           <For each={links}>
             {(link) => (
               <div class="px-5 py-2">
-                <a
+                <A
                   href={link.href}
                   class="text-base text-gray-500 hover:text-gray-900"
                   target={link.href.startsWith('https://') ? '_blank' : ''}
                 >
                   {link.label}
-                </a>
+                </A>
               </div>
             )}
           </For>

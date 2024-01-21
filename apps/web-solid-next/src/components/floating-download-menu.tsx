@@ -5,6 +5,7 @@ import DeviceTvOldIcon from '@tabler/icons/device-tv-old.svg?component-solid';
 import BadgeCcIcon from '@tabler/icons/badge-cc.svg?component-solid';
 import ArticleIcon from '@tabler/icons/article.svg?component-solid';
 import { For, Match, splitProps, Switch } from 'solid-js';
+import { A } from '@solidjs/router';
 import FloatingDiv, { type Props as FloatingDivProps } from './floating-div';
 import type { MediaDownloadKind } from '~/__generated__/graphql-types';
 
@@ -19,7 +20,7 @@ export default function FloatingDownloadMenu(props: Props) {
     <FloatingDiv {...otherProps} role="menu">
       <For each={localProps.data}>
         {(link) => (
-          <a
+          <A
             href={link.url ?? ''}
             class="flex flex-row items-center gap-3 px-4 py-2 text-sm text-gray-700"
             role="menuitem"
@@ -46,7 +47,7 @@ export default function FloatingDownloadMenu(props: Props) {
               </Match>
             </Switch>
             {link.label}
-          </a>
+          </A>
         )}
       </For>
     </FloatingDiv>

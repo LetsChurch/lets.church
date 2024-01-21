@@ -17,6 +17,7 @@ import {
   useLocation,
   useParams,
   useSubmission,
+  A,
 } from '@solidjs/router';
 import { Title } from '@solidjs/meta';
 import type {
@@ -467,7 +468,7 @@ export default function MediaRoute() {
           <h1 class="truncate text-2xl">{metadata()?.data.title ?? '...'}</h1>
           <div class="flex flex-col gap-3 lg:flex-row lg:justify-between lg:overflow-x-auto">
             <div class="flex justify-start gap-3">
-              <a
+              <A
                 href={`/channel/${metadata()?.data.channel.slug}`}
                 class="relative z-10 inline-flex w-max min-w-0 items-center space-x-2 overflow-hidden whitespace-nowrap"
               >
@@ -479,7 +480,7 @@ export default function MediaRoute() {
                 <span class="overflow-hidden text-ellipsis text-sm text-gray-500">
                   {metadata()?.data.channel.name}
                 </span>
-              </a>
+              </A>
               <form
                 action={submitSubscribe}
                 method="post"
@@ -647,12 +648,12 @@ export default function MediaRoute() {
                         }`}
                       >
                         <h4 class="text-sm font-semibold text-gray-900">
-                          <a
+                          <A
                             href={`/media/${edge.node.upload.id}${loc.search}`}
                             class="before:absolute before:inset-0"
                           >
                             {edge.node.upload.title}
-                          </a>
+                          </A>
                         </h4>
                         {/*
                         <time class="text-xs text-gray-600" datetime="PTTODO">

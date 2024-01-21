@@ -1,5 +1,5 @@
 import { gql } from 'graphql-request';
-import { createAsync } from '@solidjs/router';
+import { A, createAsync } from '@solidjs/router';
 import { getRequestEvent } from 'solid-js/web';
 import {
   AdminChannelsRouteQuery,
@@ -92,12 +92,12 @@ export default function AdminChannelsRoute() {
             title: 'Edit',
             titleSrOnly: true,
             render: (d) => (
-              <a
+              <A
                 href={`/admin/channels/edit?id=${d.node.id}`}
                 class="text-indigo-600 hover:text-indigo-900"
               >
                 Edit<span class="sr-only">, {d.node.name}</span>
-              </a>
+              </A>
             ),
           },
         ]}
