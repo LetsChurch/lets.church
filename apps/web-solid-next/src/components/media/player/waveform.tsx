@@ -18,12 +18,10 @@ export default function Waveform(props: Props) {
     chunk(props.peaks, Math.floor(props.peaks.length / barCount())).map(
       (chunk) => Math.max(...chunk),
     );
-  let container: HTMLDivElement | null;
+  let container: HTMLDivElement;
   let rob: ResizeObserver | null = null;
 
   onMount(() => {
-    invariant(container, 'Container ref is undefined');
-
     rob = new ResizeObserver((entries) => {
       const entry = entries.at(0);
       invariant(entry, 'Resize observer entry is undefined');
@@ -44,7 +42,7 @@ export default function Waveform(props: Props) {
     <div
       role="progressbar"
       class={cn('relative h-16 cursor-pointer', props.class)}
-      ref={(el) => void (container = el)}
+      ref={container!}
       onClick={(e) => {
         const rect = e.currentTarget.getBoundingClientRect();
         const x = e.clientX - rect.left;

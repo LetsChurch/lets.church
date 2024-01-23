@@ -51,5 +51,5 @@ export function Turnstile(
     window.onloadTurnstileCallback = ready;
   });
 
-  return <div {...otherProps} ref={(el) => void (element = el)} />;
+  return <div {...otherProps} ref={element!} />;
 }

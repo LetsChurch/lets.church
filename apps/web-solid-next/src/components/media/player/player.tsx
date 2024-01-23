@@ -9,7 +9,6 @@ import {
   Show,
   createResource,
 } from 'solid-js';
-import invariant from 'tiny-invariant';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
 import { isServer } from 'solid-js/web';
@@ -100,7 +99,6 @@ export default function Player(props: Props) {
     }
 
     try {
-      invariant(videoRef, 'reportTimeRanges: videoRef is undefined');
       const res = await recordViewRanges(
         id,
         serializeTimeRanges(videoRef.played),
@@ -113,7 +111,6 @@ export default function Player(props: Props) {
   }
 
   onMount(async () => {
-    invariant(videoRef, 'Video ref is undefined');
     reportRangesTimer = window.setTimeout(reportTimeRanges, 5000);
 
     const sources = [];
@@ -216,7 +213,7 @@ export default function Player(props: Props) {
           onSeek={(time) => player.currentTime(time)}
         />
       </Show>
-      <video class="video-js" ref={(el) => void (videoRef = el)} playsinline />
+      <video class="video-js" ref={videoRef!} playsinline />
     </div>
   );
 }

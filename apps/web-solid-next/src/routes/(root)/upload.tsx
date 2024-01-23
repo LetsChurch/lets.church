@@ -530,7 +530,7 @@ export default function UploadRoute() {
   });
 
   return (
-    <form ref={(f) => void (formRef = f)}>
+    <form ref={formRef!}>
       <Show when={resolvedId()} keyed>
         {(value) => <input type="hidden" name="uploadRecordId" value={value} />}
       </Show>

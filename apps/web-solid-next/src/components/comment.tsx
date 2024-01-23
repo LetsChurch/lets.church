@@ -67,7 +67,7 @@ export function CommentForm(props: {
         rows="5"
         placeholder={props.placeholder}
         onKeyDown={handleKeyDown}
-        ref={(el) => void (ref = el)}
+        ref={ref!}
       />
       <div class="mt-2 flex justify-end gap-1">
         <Show when={props.onCancel} keyed>
