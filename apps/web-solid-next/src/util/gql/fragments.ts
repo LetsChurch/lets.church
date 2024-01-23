@@ -9,6 +9,7 @@ export const UploadCardFields = gql`
       resize: { width: 512, height: 288 }
       quality: 20
     )
+    lengthSeconds
     channel {
       id
       name

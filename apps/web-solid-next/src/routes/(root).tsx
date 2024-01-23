@@ -39,7 +39,7 @@ export default function Home(props: ParentProps) {
   return (
     <UserContext.Provider value={data}>
       <Header />
-      <main class="mt-5 px-2 sm:px-4 lg:px-8">
+      <main class="px-2 sm:px-4 lg:px-8">
         <div class="mx-auto max-w-7xl">{props.children}</div>
       </main>
       <Footer />

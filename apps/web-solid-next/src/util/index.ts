@@ -30,6 +30,21 @@ export function formatTime(ms: number) {
   return res.padStart(sections * 2 + sections - 1, '0');
 }
 
+export function formatSeconds(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = Math.round(seconds % 60);
+
+  const formattedHours = hours > 0 ? hours.toString() + ':' : '';
+  const formattedMinutes =
+    hours > 0
+      ? minutes.toString().padStart(2, '0') + ':'
+      : minutes.toString() + ':';
+  const formattedSeconds = remainingSeconds.toString().padStart(2, '0');
+
+  return formattedHours + formattedMinutes + formattedSeconds;
+}
+
 export function useSerializedLocation() {
   const loc = useLocation();
   return `${loc.pathname}${loc.search}`;

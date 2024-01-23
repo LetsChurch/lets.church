@@ -25,6 +25,7 @@ export default function UploadCard(props: Props) {
           width={488}
           height={Math.round((488 * 9) / 16)}
           placeholder="audio"
+          lengthSeconds={props.data.lengthSeconds}
         />
       </div>
       <div class="flex items-center space-x-3 overflow-hidden">
