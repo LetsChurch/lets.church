@@ -18,6 +18,7 @@ import {
   useParams,
   useSubmission,
   A,
+  useAction,
 } from '@solidjs/router';
 import { Title } from '@solidjs/meta';
 import type {
@@ -365,6 +366,8 @@ export default function MediaRoute() {
   });
 
   const subscribeSubmission = useSubmission(submitSubscribe);
+  // This is used to prevent a history entry from being added when the user clicks the subscribe button
+  const submitSubscribeAction = useAction(submitSubscribe);
 
   const userIsSubscribed = () => {
     return (
@@ -485,8 +488,13 @@ export default function MediaRoute() {
                 action={submitSubscribe}
                 method="post"
                 class="isolate inline-flex rounded-md shadow-sm"
-                // TODO: port
-                // replace
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  submitSubscribeAction(
+                    new FormData(e.target as HTMLFormElement, e.submitter),
+                  );
+                }}
               >
                 <input
                   type="hidden"

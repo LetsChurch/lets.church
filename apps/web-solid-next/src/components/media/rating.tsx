@@ -11,7 +11,7 @@ import {
 import ThumbUpIcon from '@tabler/icons/thumb-up.svg?component-solid';
 import ThumbDownIcon from '@tabler/icons/thumb-down.svg?component-solid';
 import invariant from 'tiny-invariant';
-import { action, redirect, useSubmission } from '@solidjs/router';
+import { action, redirect, useAction, useSubmission } from '@solidjs/router';
 import type {
   MediaRouteRatingStateQuery,
   MediaRouteRatingStateQueryVariables,
@@ -197,15 +197,19 @@ export default function RatingButtons(props: { id: string }) {
   }
 
   const submission = useSubmission(submitRating);
+  // This is used to prevent a history entry from being added when the user clicks a rating button
+  const submitRatingAction = useAction(submitRating);
 
   return (
     <form
+      action={submitRating}
+      method="post"
       class="isolate inline-flex rounded-md shadow-sm"
-      // TODO: port
-      // replace
       onSubmit={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
         if (!user()) {
-          e.preventDefault();
           // TODO: show login
           return alert('Not logged in!');
         }
@@ -219,6 +223,11 @@ export default function RatingButtons(props: { id: string }) {
         } else {
           handleRating(Rating.Dislike);
         }
+
+        // Real submission
+        submitRatingAction(
+          new FormData(e.target as HTMLFormElement, e.submitter),
+        );
       }}
     >
       <input type="hidden" name="uploadRecordId" value={props.id} />

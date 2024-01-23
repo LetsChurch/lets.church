@@ -45,8 +45,7 @@ const subscribe = action(async (form: FormData) => {
   );
 
   if (res.__typename === 'ValidationError') {
-    // TODO: port
-    throw new Error('Validation error');
+    return { error: res.fieldErrors[0]?.message ?? 'Error' };
   }
 
   throw redirect('/newsletter/subscribe');

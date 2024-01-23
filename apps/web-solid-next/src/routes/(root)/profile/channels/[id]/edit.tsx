@@ -230,7 +230,6 @@ export default function EditChannelRoute() {
 
     while (checkIsProcessing(which, oldUrl)) {
       await delay(2500);
-      // TODO: port ensure this works
       await loadChannel();
     }
 

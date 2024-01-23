@@ -210,7 +210,6 @@ export default function ProfileRoute() {
 
     while (data()?.me?.avatarUrl === oldUrl) {
       await delay(1000);
-      // TODO: port (try this out)
       loadData();
     }
 
