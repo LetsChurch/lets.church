@@ -18,6 +18,7 @@ import {
   useSubmission,
   type RouteDefinition,
   useLocation,
+  useAction,
 } from '@solidjs/router';
 import type {
   UploadRouteDataQuery,
@@ -445,6 +446,7 @@ async function finalizeUpload(variables: FinalizeMediaUploadMutationVariables) {
 export default function UploadRoute() {
   const location = useLocation();
   const data = createAsync(() => routeData(location.query['id']));
+  const upsertAction = useAction(upsert);
   const upsertSubmission = useSubmission(upsert);
 
   const [uploadRecordId, setUploadRecordId] = createSignal<string>();
@@ -453,7 +455,7 @@ export default function UploadRoute() {
   let formRef: HTMLFormElement;
 
   async function submitUpsert() {
-    const res = await upsert(new FormData(formRef));
+    const res = await upsertAction(new FormData(formRef));
     setUploadRecordId(res.upsertUploadRecord.id);
   }
 
