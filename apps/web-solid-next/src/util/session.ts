@@ -1,15 +1,26 @@
+import envariant from '@knpwrs/envariant';
 import { useSession } from '@solidjs/start/server';
-import { getRequestEvent, type RequestEvent } from 'solid-js/web';
+import { getRequestEvent } from 'solid-js/web';
 import invariant from 'tiny-invariant';
 
-export async function getSessionJwt(event?: RequestEvent) {
+const COOKIE_SECRET = envariant('COOKIE_SECRET');
+
+async function useConfiguredSession() {
   'use server';
+  const event = getRequestEvent();
+  invariant(event, 'event should be defined');
 
-  if (!event) return null;
-
-  const session = await useSession(event, {
-    password: 'TODO: port port port port port port port port',
+  return useSession(event, {
+    password: COOKIE_SECRET,
+    cookie: {
+      sameSite: 'lax',
+    },
   });
+}
+
+export async function getSessionJwt() {
+  'use server';
+  const session = await useConfiguredSession();
 
   const jwt: string = session.data['jwt'];
 
@@ -20,13 +31,7 @@ export async function getSessionJwt(event?: RequestEvent) {
 
 export async function setSessionJwt(jwt: string) {
   'use server';
-  const event = getRequestEvent();
-
-  invariant(event, 'Event should be defined');
-
-  const session = await useSession(event, {
-    password: 'TODO: port port port port port port port port',
-  });
+  const session = await useConfiguredSession();
 
   await session.update((d) => {
     d['jwt'] = jwt;
@@ -35,13 +40,7 @@ export async function setSessionJwt(jwt: string) {
 
 export async function clearSessionJwt() {
   'use server';
-  const event = getRequestEvent();
-
-  invariant(event, 'Event should be defined');
-
-  const session = await useSession(event, {
-    password: 'TODO: port port port port port port port port',
-  });
+  const session = await useConfiguredSession();
 
   await session.update((d) => {
     d['jwt'] = undefined;

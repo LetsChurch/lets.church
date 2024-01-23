@@ -13,7 +13,9 @@ import { AppUserRole } from '~/__generated__/graphql-types';
 
 const GRAPHQL_URL = envariant('GRAPHQL_URL');
 
-function getForwardingHeaders(headers?: Headers) {
+function getForwardingHeaders() {
+  'use server';
+  const headers = getRequestEvent()?.headers;
   if (!headers) return {};
 
   const ip = getClientIpAddress(headers);
@@ -22,8 +24,7 @@ function getForwardingHeaders(headers?: Headers) {
 }
 
 export async function getAuthenticatedClientOrRedirect() {
-  const event = getRequestEvent();
-  const jwt = await getSessionJwt(event);
+  const jwt = await getSessionJwt();
 
   if (!jwt) {
     throw redirect('/');
@@ -32,26 +33,24 @@ export async function getAuthenticatedClientOrRedirect() {
   return new GraphQLClient(GRAPHQL_URL, {
     headers: {
       authorization: `Bearer ${jwt}`,
-      ...getForwardingHeaders(event?.request.headers),
+      ...getForwardingHeaders(),
     },
   });
 }
 
 export async function getAuthenticatedClient() {
-  const event = getRequestEvent();
-  const jwt = await getSessionJwt(event);
+  const jwt = await getSessionJwt();
 
   return new GraphQLClient(GRAPHQL_URL, {
     headers: {
       ...(jwt ? { authorization: `Bearer ${jwt}` } : {}),
-      ...getForwardingHeaders(event?.request.headers),
+      ...getForwardingHeaders(),
     },
   });
 }
 
 export async function getAdminClientOrRedirect() {
-  const event = getRequestEvent();
-  const jwt = await getSessionJwt(event);
+  const jwt = await getSessionJwt();
 
   if (!jwt) {
     throw redirect('/');
@@ -60,7 +59,7 @@ export async function getAdminClientOrRedirect() {
   const client = new GraphQLClient(GRAPHQL_URL, {
     headers: {
       authorization: `Bearer ${jwt}`,
-      ...getForwardingHeaders(event?.request.headers),
+      ...getForwardingHeaders(),
     },
   });
 
