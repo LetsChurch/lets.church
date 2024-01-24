@@ -37,7 +37,6 @@ import {
   type Props as MediaRowProps,
 } from '~/components/media-row';
 import { getAuthenticatedClient } from '~/util/gql/server';
-import Header from '~/components/media/header';
 
 const PAGE_SIZE = 20;
 
@@ -384,194 +383,189 @@ export default function SearchRoute() {
     (location.query['transcriptPhraseSearch'] ?? 'true') === 'true';
 
   return (
-    <>
-      <Header />
-      <div class="space-y-5">
-        <div class="flex justify-between">
-          <nav class="flex space-x-5" aria-label="Search Focus">
-            <For
-              each={[
+    <div class="space-y-5">
+      <div class="flex justify-between">
+        <nav class="flex space-x-5" aria-label="Search Focus">
+          <For
+            each={[
+              {
+                title: 'Media',
+                focus: 'uploads',
+                count: data()?.search.aggs.uploadHitCount ?? 0,
+              },
+              {
+                title: 'Transcripts',
+                focus: 'transcripts',
+                count: data()?.search.aggs.transcriptHitCount ?? 0,
+              },
+            ]}
+          >
+            {({ title, focus, count }) => (
+              <AggFilterLink
+                q={location.query['q'] ?? ''}
+                focus={focus}
+                title={title}
+                count={count}
+              />
+            )}
+          </For>
+        </nav>
+        <button
+          class="text-gray-500 hover:text-gray-700 sm:hidden"
+          aria-label="Filters"
+          onClick={() => setShowFiltersMenu(true)}
+        >
+          <FilterIcon />
+        </button>
+        <OffCanvasDiv
+          open={showFiltersMenu()}
+          onClose={() => setShowFiltersMenu(false)}
+          title="Filters"
+          class="sm:hidden"
+          backdropClass="sm:hidden"
+        >
+          <div class="space-y-2">
+            <h3 class="font-medium text-gray-900">Channels</h3>
+            <NavigatingChecklist
+              options={channelsOptions()}
+              queryKey="channels"
+            />
+          </div>
+          <div class="space-y-2">
+            <h3 class="font-medium text-gray-900">Published Date</h3>
+            <NavigatingDateRange
+              queryKey="publishedAt"
+              min={toDateOrNull(data()?.search.aggs.publishedAtRange?.min)}
+              max={toDateOrNull(data()?.search.aggs.publishedAtRange?.max)}
+            />
+          </div>
+          <div>
+            <h3 class="space-y-2">Sort</h3>
+            <NavigatingChecklist
+              radios
+              options={orderByOptions()}
+              queryKey="orderBy"
+            />
+          </div>
+          <div>
+            <h3 class="space-y-2">Advanced</h3>
+            <NavigatingBooleans
+              options={[
                 {
-                  title: 'Media',
-                  focus: 'uploads',
-                  count: data()?.search.aggs.uploadHitCount ?? 0,
-                },
-                {
-                  title: 'Transcripts',
-                  focus: 'transcripts',
-                  count: data()?.search.aggs.transcriptHitCount ?? 0,
+                  label: 'Search Phrases',
+                  queryKey: 'transcriptPhraseSearch',
+                  checked: transcriptPhraseSearch(),
                 },
               ]}
+              class="px-2"
+            />
+          </div>
+        </OffCanvasDiv>
+        <nav class="hidden space-x-5 sm:flex" aria-label="Search Filters">
+          <AggFilterDropdown title="Advanced">
+            <NavigatingBooleans
+              options={[
+                {
+                  label: 'Search Phrases',
+                  queryKey: 'transcriptPhraseSearch',
+                  checked: transcriptPhraseSearch(),
+                },
+              ]}
+              class="px-2"
+            />
+          </AggFilterDropdown>
+          <AggFilterDropdown
+            title="Channels"
+            count={channelsCount()}
+            disabled={channelsOptions().length === 0}
+          >
+            <NavigatingChecklist
+              options={channelsOptions()}
+              queryKey="channels"
+              class="px-2"
+            />
+          </AggFilterDropdown>
+          <AggFilterDropdown
+            title="Sort"
+            active={Boolean(location.query['orderBy'])}
+          >
+            <NavigatingChecklist
+              radios
+              options={orderByOptions()}
+              queryKey="orderBy"
+              class="px-2"
+            />
+          </AggFilterDropdown>
+          <AggFilterDropdown
+            title="Published Date"
+            active={Boolean(location.query['publishedAt'])}
+          >
+            <NavigatingDateRange
+              queryKey="publishedAt"
+              min={toDateOrNull(data()?.search.aggs.publishedAtRange?.min)}
+              max={toDateOrNull(data()?.search.aggs.publishedAtRange?.max)}
+              class="p-2"
+            />
+          </AggFilterDropdown>
+        </nav>
+      </div>
+      <For each={data()?.search.edges}>
+        {(edge) => (
+          <Switch>
+            <Match
+              when={edge.node.__typename === 'UploadSearchHit' && edge.node}
+              keyed
             >
-              {({ title, focus, count }) => (
-                <AggFilterLink
-                  q={location.query['q'] ?? ''}
-                  focus={focus}
-                  title={title}
-                  count={count}
+              {(node) => (
+                <MediaRow
+                  href={`/media/${node.id}`}
+                  uploadProps={node.uploadRecord}
+                  placeholder={
+                    node.uploadRecord.variants.some((v) =>
+                      v.startsWith('VIDEO'),
+                    )
+                      ? 'video'
+                      : node.uploadRecord.variants.some((v) =>
+                            v.startsWith('AUDIO'),
+                          )
+                        ? 'audio'
+                        : undefined
+                  }
                 />
               )}
-            </For>
-          </nav>
-          <button
-            class="text-gray-500 hover:text-gray-700 sm:hidden"
-            aria-label="Filters"
-            onClick={() => setShowFiltersMenu(true)}
-          >
-            <FilterIcon />
-          </button>
-          <OffCanvasDiv
-            open={showFiltersMenu()}
-            onClose={() => setShowFiltersMenu(false)}
-            title="Filters"
-            class="sm:hidden"
-            backdropClass="sm:hidden"
-          >
-            <div class="space-y-2">
-              <h3 class="font-medium text-gray-900">Channels</h3>
-              <NavigatingChecklist
-                options={channelsOptions()}
-                queryKey="channels"
-              />
-            </div>
-            <div class="space-y-2">
-              <h3 class="font-medium text-gray-900">Published Date</h3>
-              <NavigatingDateRange
-                queryKey="publishedAt"
-                min={toDateOrNull(data()?.search.aggs.publishedAtRange?.min)}
-                max={toDateOrNull(data()?.search.aggs.publishedAtRange?.max)}
-              />
-            </div>
-            <div>
-              <h3 class="space-y-2">Sort</h3>
-              <NavigatingChecklist
-                radios
-                options={orderByOptions()}
-                queryKey="orderBy"
-              />
-            </div>
-            <div>
-              <h3 class="space-y-2">Advanced</h3>
-              <NavigatingBooleans
-                options={[
-                  {
-                    label: 'Search Phrases',
-                    queryKey: 'transcriptPhraseSearch',
-                    checked: transcriptPhraseSearch(),
-                  },
-                ]}
-                class="px-2"
-              />
-            </div>
-          </OffCanvasDiv>
-          <nav class="hidden space-x-5 sm:flex" aria-label="Search Filters">
-            <AggFilterDropdown title="Advanced">
-              <NavigatingBooleans
-                options={[
-                  {
-                    label: 'Search Phrases',
-                    queryKey: 'transcriptPhraseSearch',
-                    checked: transcriptPhraseSearch(),
-                  },
-                ]}
-                class="px-2"
-              />
-            </AggFilterDropdown>
-            <AggFilterDropdown
-              title="Channels"
-              count={channelsCount()}
-              disabled={channelsOptions().length === 0}
+            </Match>
+            <Match
+              when={edge.node.__typename === 'TranscriptSearchHit' && edge.node}
+              keyed
             >
-              <NavigatingChecklist
-                options={channelsOptions()}
-                queryKey="channels"
-                class="px-2"
-              />
-            </AggFilterDropdown>
-            <AggFilterDropdown
-              title="Sort"
-              active={Boolean(location.query['orderBy'])}
-            >
-              <NavigatingChecklist
-                radios
-                options={orderByOptions()}
-                queryKey="orderBy"
-                class="px-2"
-              />
-            </AggFilterDropdown>
-            <AggFilterDropdown
-              title="Published Date"
-              active={Boolean(location.query['publishedAt'])}
-            >
-              <NavigatingDateRange
-                queryKey="publishedAt"
-                min={toDateOrNull(data()?.search.aggs.publishedAtRange?.min)}
-                max={toDateOrNull(data()?.search.aggs.publishedAtRange?.max)}
-                class="p-2"
-              />
-            </AggFilterDropdown>
-          </nav>
-        </div>
-        <For each={data()?.search.edges}>
-          {(edge) => (
-            <Switch>
-              <Match
-                when={edge.node.__typename === 'UploadSearchHit' && edge.node}
-                keyed
-              >
-                {(node) => (
-                  <MediaRow
-                    href={`/media/${node.id}`}
-                    uploadProps={node.uploadRecord}
-                    placeholder={
-                      node.uploadRecord.variants.some((v) =>
-                        v.startsWith('VIDEO'),
-                      )
-                        ? 'video'
-                        : node.uploadRecord.variants.some((v) =>
-                              v.startsWith('AUDIO'),
-                            )
-                          ? 'audio'
-                          : undefined
-                    }
-                  />
-                )}
-              </Match>
-              <Match
-                when={
-                  edge.node.__typename === 'TranscriptSearchHit' && edge.node
-                }
-                keyed
-              >
-                {(node) => (
-                  <SearchTranscriptHitRow
-                    href={`/media/${node.id}`}
-                    uploadProps={node.uploadRecord}
-                    placeholder={
-                      node.uploadRecord.variants.some((v) =>
-                        v.startsWith('VIDEO'),
-                      )
-                        ? 'video'
-                        : node.uploadRecord.variants.some((v) =>
-                              v.startsWith('AUDIO'),
-                            )
-                          ? 'audio'
-                          : undefined
-                    }
-                    innerHits={node.hits}
-                  />
-                )}
-              </Match>
-            </Switch>
-          )}
-        </For>
-        <Pagination
-          hasPreviousPage={data()?.search.pageInfo.hasPreviousPage ?? false}
-          hasNextPage={data()?.search.pageInfo.hasNextPage ?? false}
-          startCursor={data()?.search.pageInfo.startCursor ?? ''}
-          endCursor={data()?.search.pageInfo.endCursor ?? ''}
-        />
-      </div>
-    </>
+              {(node) => (
+                <SearchTranscriptHitRow
+                  href={`/media/${node.id}`}
+                  uploadProps={node.uploadRecord}
+                  placeholder={
+                    node.uploadRecord.variants.some((v) =>
+                      v.startsWith('VIDEO'),
+                    )
+                      ? 'video'
+                      : node.uploadRecord.variants.some((v) =>
+                            v.startsWith('AUDIO'),
+                          )
+                        ? 'audio'
+                        : undefined
+                  }
+                  innerHits={node.hits}
+                />
+              )}
+            </Match>
+          </Switch>
+        )}
+      </For>
+      <Pagination
+        hasPreviousPage={data()?.search.pageInfo.hasPreviousPage ?? false}
+        hasNextPage={data()?.search.pageInfo.hasNextPage ?? false}
+        startCursor={data()?.search.pageInfo.startCursor ?? ''}
+        endCursor={data()?.search.pageInfo.endCursor ?? ''}
+      />
+    </div>
   );
 }

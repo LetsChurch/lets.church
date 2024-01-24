@@ -14,7 +14,6 @@ import { UploadGrid } from '~/components/upload-grid';
 import Newsletter from '~/components/newsletter';
 import { useUser } from '~/util/user-context';
 import Og from '~/components/og';
-import MediaHeader from '~/components/media/header';
 
 const getHomepageData = async function () {
   'use server';
@@ -92,7 +91,6 @@ export default function WatchRoute() {
         title="RSS 2.0"
         href="/media/rss.xml"
       />
-      <MediaHeader />
       <h3 class="mb-3 mt-5 text-base font-semibold leading-6 text-gray-900">
         Subscriptions
       </h3>

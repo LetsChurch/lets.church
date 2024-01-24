@@ -6,6 +6,7 @@ import Footer from '~/components/footer';
 import Header from '~/components/header';
 import { getAuthenticatedClient } from '~/util/gql/server';
 import { UserContext } from '~/util/user-context';
+import MediaHeader from '~/components/media/header';
 
 const getMe = cache(async function () {
   'use server';
@@ -40,6 +41,7 @@ export default function Home(props: ParentProps) {
     <UserContext.Provider value={data}>
       <Header />
       <main class="px-2 sm:px-4 lg:px-8">
+        <MediaHeader />
         <div class="mx-auto max-w-7xl">{props.children}</div>
       </main>
       <Footer />

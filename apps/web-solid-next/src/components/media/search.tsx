@@ -2,6 +2,7 @@ import { createEffect, createUniqueId, untrack } from 'solid-js';
 import debounce from 'just-debounce';
 import { useLocation, useMatch, useNavigate, useParams } from '@solidjs/router';
 import SearchIcon from '@tabler/icons/search.svg?component-solid';
+import { autofocus } from '@solid-primitives/autofocus';
 
 export default function Search() {
   const params = useParams<{ slug?: string }>();
@@ -75,6 +76,8 @@ export default function Search() {
             type="search"
             value={defaultSearch()}
             onInput={debounce((e) => onSearch(e), 100)}
+            autofocus
+            ref={(el) => autofocus(el)}
           />
         </form>
       </div>
