@@ -21,11 +21,10 @@ import { UploadCardFields } from '~/util/gql/fragments';
 
 const PAGE_SIZE = 60;
 
-const loadChannel = cache(async () => {
+const loadChannel = cache(async (slug: string) => {
   'use server';
   const event = getRequestEvent();
   const url = new URL(event?.request.url ?? '');
-  const slug = url.pathname.split('/').at(-1);
 
   invariant(slug, 'Missing slug');
 
@@ -89,12 +88,20 @@ const loadChannel = cache(async () => {
 }, 'loadChannel');
 
 export const route: RouteDefinition = {
-  load: () => loadChannel(),
+  load: ({ params }) => {
+    const { slug } = params;
+    invariant(slug, 'Missing channel slug');
+    return loadChannel(slug);
+  },
 };
 
 export default function ChannelRoute() {
-  const data = createAsync(loadChannel);
   const params = useParams();
+  const data = createAsync(() => {
+    const { slug } = params;
+    invariant(slug);
+    return loadChannel(slug);
+  });
 
   return (
     <>

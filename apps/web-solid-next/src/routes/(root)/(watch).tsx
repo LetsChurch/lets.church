@@ -1,4 +1,4 @@
-import { Show, For } from 'solid-js';
+import { Show } from 'solid-js';
 import { gql } from 'graphql-request';
 import { A, createAsync } from '@solidjs/router';
 import { Link } from '@solidjs/meta';
@@ -14,18 +14,7 @@ import { UploadGrid } from '~/components/upload-grid';
 import Newsletter from '~/components/newsletter';
 import { useUser } from '~/util/user-context';
 import Og from '~/components/og';
-import Search from '~/components/search';
-
-const mediaLinks = [
-  {
-    href: '/',
-    title: 'Explore',
-  },
-  {
-    href: '/channels',
-    title: 'Channels',
-  },
-];
+import MediaHeader from '~/components/media/header';
 
 const getHomepageData = async function () {
   'use server';
@@ -103,27 +92,7 @@ export default function WatchRoute() {
         title="RSS 2.0"
         href="/media/rss.xml"
       />
-      <div class="mx-auto mt-5 flex max-w-7xl flex-1 items-center justify-center lg:justify-between">
-        <div class="hidden sm:block">
-          <nav class="hidden space-x-4 lg:flex" aria-label="Tabs">
-            <For each={mediaLinks}>
-              {(link) => (
-                <A
-                  href={link.href}
-                  class="rounded-md px-3 py-2 text-sm font-medium"
-                  activeClass="bg-gray-100 text-gray-700"
-                  inactiveClass="text-gray-500 hover:text-gray-700"
-                >
-                  {link.title}
-                </A>
-              )}
-            </For>
-          </nav>
-        </div>
-        <div class="w-full max-w-lg lg:max-w-xs">
-          <Search />
-        </div>
-      </div>
+      <MediaHeader />
       <h3 class="mb-3 mt-5 text-base font-semibold leading-6 text-gray-900">
         Subscriptions
       </h3>
