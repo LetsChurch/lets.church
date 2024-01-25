@@ -170,7 +170,7 @@ services:
   # Vendor Services
   #
   imgproxy:
-    image: darthsim/imgproxy:v3.19.0
+    image: darthsim/imgproxy:v3.21.0
     environment:
       IMGPROXY_KEY: ${IMGPROXY_KEY}
       IMGPROXY_SALT: ${IMGPROXY_SALT}
@@ -183,7 +183,7 @@ services:
       - ${HOST_IMGPROXY_PORT}:8080
 
   temporal:
-    image: temporalio/auto-setup:1.20.2.0
+    image: temporalio/auto-setup:1.22.4.0
     environment:
       # See auto-setup.sh: https://github.com/temporalio/docker-builds/blob/a442b94edbe10bb49e2f0fc00c3154cdf0590be5/docker/auto-setup.sh
       SKIP_DB_CREATE: true # Database is already created via init script
@@ -207,7 +207,7 @@ services:
       - elasticsearch
 
   temporal-admin-tools:
-    image: temporalio/admin-tools:1.20.2.0
+    image: temporalio/admin-tools:1.22.4.0
     environment:
       - TEMPORAL_CLI_ADDRESS=temporal:7233
     stdin_open: true
@@ -216,7 +216,7 @@ services:
       - temporal
 
   temporal-ui:
-    image: temporalio/ui:2.15.0
+    image: temporalio/ui:2.22.2
     environment:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_CORS_ORIGINS: http://localhost:3000
@@ -249,7 +249,7 @@ services:
       ]
 
   elasticsearch:
-    image: elasticsearch:8.7.1
+    image: elasticsearch:8.12.0
     environment:
       - cluster.routing.allocation.disk.threshold_enabled=true
       - cluster.routing.allocation.disk.watermark.low=512mb
@@ -267,7 +267,7 @@ services:
   # Development
   #
   kibana:
-    image: kibana:8.7.1
+    image: kibana:8.12.0
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch:9200
     depends_on:
@@ -275,18 +275,18 @@ services:
     ports:
       - ${HOST_KIBANA_PORT}:5601
   mailpit:
-    image: axllent/mailpit
+    image: axllent/mailpit:v1.13.0
     restart: always
     ports:
       - ${HOST_MAILPIT_SMTP_PORT}:1025 # smtp server
       - ${HOST_MAILPIT_WEB_PORT}:8025 # web ui
   pgweb:
-    image: sosedoff/pgweb:0.14.1
+    image: sosedoff/pgweb:0.14.2
     environment:
       PGWEB_DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch?sslmode=disable
     ports:
       - ${HOST_PGWEB_PORT}:8081
   metabase:
-    image: metabase/metabase:v0.47.2
+    image: metabase/metabase:v0.48.3
     ports:
       - ${HOST_METABASE_PORT}:3000

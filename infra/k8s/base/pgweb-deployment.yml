@@ -17,7 +17,7 @@ spec:
     spec:
       restartPolicy: Always
       containers:
-        - image: sosedoff/pgweb:0.14.1
+        - image: sosedoff/pgweb:0.14.2
           name: pgweb
           ports:
             - containerPort: 8081

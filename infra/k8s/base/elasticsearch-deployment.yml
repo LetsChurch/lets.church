@@ -18,7 +18,7 @@ spec:
       restartPolicy: Always
       containers:
         - &elasticsearchContainer
-          image: elasticsearch:8.5.2
+          image: elasticsearch:8.12.0
           name: elasticsearch
           ports:
             - containerPort: 9200

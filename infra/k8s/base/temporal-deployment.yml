@@ -17,7 +17,7 @@ spec:
     spec:
       restartPolicy: Always
       containers:
-        - image: temporalio/auto-setup:1.20.2
+        - image: temporalio/auto-setup:1.22.4.0
           name: temporal
           ports:
             - containerPort: 7233

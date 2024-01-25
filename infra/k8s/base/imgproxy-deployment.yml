@@ -17,7 +17,7 @@ spec:
     spec:
       restartPolicy: Always
       containers:
-        - image: darthsim/imgproxy:v3.19.0
+        - image: darthsim/imgproxy:v3.21.0
           name: imgproxy
           ports:
             - containerPort: 8080
