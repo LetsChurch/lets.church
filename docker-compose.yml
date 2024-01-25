@@ -249,7 +249,7 @@ services:
       ]
 
   elasticsearch:
-    image: elasticsearch:8.12.0
+    image: elasticsearch:8.5.2
     environment:
       - cluster.routing.allocation.disk.threshold_enabled=true
       - cluster.routing.allocation.disk.watermark.low=512mb
