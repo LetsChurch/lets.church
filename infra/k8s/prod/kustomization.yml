@@ -52,6 +52,9 @@ secretGenerator:
   - name: turnstile-secret
     envs:
       - turnstile.crypt.env
+  - name: web-secret
+    envs:
+      - web.crypt.env
 
 generatorOptions:
   disableNameSuffixHash: true

@@ -1,6 +1,8 @@
 // Official transition group doesn't support Portal: https://github.com/solidjs/solid-transition-group/issues/8
 // This is a Show-esque implementation of the same concept
 
+// TODO: use cn function and just set total className string
+
 import {
   createEffect,
   createSignal,

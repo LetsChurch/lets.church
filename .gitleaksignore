@@ -14,3 +14,4 @@ infra/k8s/prod/s3.crypt.env:generic-api-key:10
 infra/k8s/prod/s3.crypt.env:generic-api-key:4
 infra/k8s/prod/s3.crypt.env:generic-api-key:5
 infra/k8s/prod/s3.crypt.env:generic-api-key:9
+infra/k8s/prod/web.crypt.env:generic-api-key:1

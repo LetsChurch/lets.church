@@ -1,17 +1,19 @@
-import { createEffect, createMemo, For } from 'solid-js';
+import { createEffect, createMemo, For, type Setter } from 'solid-js';
 import bSearch from 'binary-search';
-import { formatSeconds } from '../../util';
-import { currentTime, setSeekTime } from './signals';
+import '@fontsource-variable/roboto-mono';
+import { formatTime } from '~/util';
 
 export type Props = {
   transcript: Array<{ start: number; text: string }>;
+  currentTime: number;
+  setPlayAt: Setter<number>;
 };
 
 export default function Transcript(props: Props) {
   const currentI = createMemo(() => {
     const i = bSearch(
       props.transcript,
-      currentTime() * 1000,
+      props.currentTime,
       (tl, ct) => tl.start - ct,
     );
 
@@ -45,23 +47,20 @@ export default function Transcript(props: Props) {
     <dl class="max-h-[500px] space-y-2 overflow-auto scroll-smooth rounded-md bg-gray-100">
       <For each={props.transcript}>
         {(line, i) => (
-          <a
-            href={`#t=${line.start / 1000}`}
+          <div
+            role="button"
+            class="group flex gap-2 px-2 py-1 hover:cursor-pointer"
+            classList={{
+              'bg-indigo-50': i() === currentI(),
+            }}
             data-start={line.start}
-            onClick={() => setSeekTime(line.start / 1000)}
+            onClick={[props.setPlayAt, line.start / 1000]}
           >
-            <dl
-              class="group flex gap-2 px-2 py-1 hover:cursor-pointer"
-              classList={{
-                'bg-indigo-50': i() === currentI(),
-              }}
-            >
-              <dt class="select-none items-center font-mono text-sm font-medium uppercase text-gray-400 group-hover:text-gray-600">
-                {formatSeconds(line.start / 1000)}
-              </dt>
-              <dd class="text-sm">{line.text}</dd>
-            </dl>
-          </a>
+            <dt class="select-none items-center font-mono text-sm font-medium uppercase text-gray-400 group-hover:text-gray-600">
+              {formatTime(line.start)}
+            </dt>
+            <dd class="text-sm">{line.text}</dd>
+          </div>
         )}
       </For>
     </dl>

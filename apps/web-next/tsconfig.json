@@ -1,8 +1,24 @@
 {
-  "extends": "astro/tsconfigs/strict",
+  "extends": [
+    "@tsconfig/strictest/tsconfig.json",
+    "@tsconfig/node20/tsconfig.json",
+  ],
   "compilerOptions": {
-    "types": ["vite-plugin-svg-sprite-components-core/client"],
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "jsx": "preserve",
-    "jsxImportSource": "solid-js"
-  }
+    "jsxImportSource": "solid-js",
+    "allowJs": true,
+    "noEmit": true,
+    "strict": true,
+    "types": ["vinxi/client", "vite-plugin-solid-svg/types"],
+    "lib": ["dom", "esnext"],
+    "isolatedModules": true,
+    "paths": {
+      "~/*": ["./src/*"],
+    },
+  },
 }

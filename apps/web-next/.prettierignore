@@ -1,6 +1,5 @@
-dist
 node_modules
-public/site.webmanifest
-.astro
+.output
+.vinxi
 package-lock.json
 **/__generated__/**/*

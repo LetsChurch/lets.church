@@ -1,5 +1,6 @@
 import { For, Match, splitProps, Switch } from 'solid-js';
 import type { MergeExclusive } from 'type-fest';
+import { A, useLocation } from '@solidjs/router';
 import FloatingDiv, { type Props as FloatingDivProps } from './floating-div';
 
 type Link = { label: string } & MergeExclusive<
@@ -13,6 +14,7 @@ export type Props = FloatingDivProps & {
 
 export default function FloatingMenu(props: Props) {
   const [local, others] = splitProps(props, ['links']);
+  const loc = useLocation();
 
   return (
     <FloatingDiv {...others} role="menu">
@@ -21,17 +23,17 @@ export default function FloatingMenu(props: Props) {
           <Switch>
             <Match when={'href' in link && link} keyed>
               {(l) => (
-                <a
+                <A
                   href={l.href ?? ''}
                   class="block px-4 py-2 text-sm text-gray-700"
-                  // class:bg-gray-100={
-                  //   'href' in link && loc.pathname === link.href
-                  // }
+                  class:bg-gray-100={
+                    'href' in link && loc.pathname === link.href
+                  }
                   role="menuitem"
                   tabindex="-1"
                 >
                   {link.label}
-                </a>
+                </A>
               )}
             </Match>
             <Match when={'form' in link && link} keyed>

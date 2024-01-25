@@ -11,8 +11,6 @@ volumes:
   transcribe-worker-node-modules:
   web-node-modules:
   web-next-node-modules:
-  web-solid-next-node-modules:
-  web-qwik-node-modules:
 
 x-s3-env: &s3-env
   S3_INGEST_REGION: ${S3_INGEST_REGION}
@@ -45,13 +43,13 @@ services:
       - web-node-modules:/home/node/app/node_modules
     depends_on:
       - gateway
-  web-solid-next:
+  web-next:
     build:
-      context: ./apps/web-solid-next
+      context: ./apps/web-next
       dockerfile: Dockerfile
     command: npm run dev
     ports:
-      - ${HOST_WEB_SOLID_NEXT_PORT}:3000
+      - ${HOST_WEB_NEXT_PORT}:3000
     environment:
       NODE_ENV: development
       COOKIE_SECRET: ${WEB_COOKIE_SECRET}
@@ -59,38 +57,8 @@ services:
       TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA"
       VITE_TURNSTILE_SITEKEY: "1x00000000000000000000AA"
     volumes:
-      - ./apps/web-solid-next:/home/node/app
-      - web-solid-next-node-modules:/home/node/app/node_modules
-    depends_on:
-      - gateway
-  web-next:
-    build:
-      context: ./apps/web-next
-      dockerfile: Dockerfile
-    command: npm run dev
-    ports:
-      - ${HOST_WEB_NEXT_PORT}:4321
-    environment:
-      NODE_ENV: development
-      GRAPHQL_URL: http://gateway:3000/graphql
-    volumes:
       - ./apps/web-next:/home/node/app
       - web-next-node-modules:/home/node/app/node_modules
-    depends_on:
-      - gateway
-  web-qwik:
-    build:
-      context: ./apps/web-qwik
-      dockerfile: Dockerfile
-    command: npm run dev
-    ports:
-      - ${HOST_WEB_QWIK_PORT}:5173
-    environment:
-      NODE_ENV: development
-      GRAPHQL_URL: http://gateway:3000/graphql
-    volumes:
-      - ./apps/web-qwik:/home/node/app
-      - web-qwik-node-modules:/home/node/app/node_modules
     depends_on:
       - gateway
 
