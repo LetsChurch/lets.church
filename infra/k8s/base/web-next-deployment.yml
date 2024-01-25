@@ -20,7 +20,7 @@ spec:
         - image: registry.gitlab.com/letschurch/lets.church/web-next:latest
           name: web-next
           ports:
-            - containerPort: 4321
+            - containerPort: 3000
           env:
             - name: SERVICE_NAME
               value: web-next
@@ -43,4 +43,4 @@ spec:
   ports:
     - protocol: TCP
       port: 80
-      targetPort: 4321
+      targetPort: 3000
