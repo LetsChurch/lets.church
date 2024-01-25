@@ -130,7 +130,7 @@ const upsertOrganization = action(async (form: FormData) => {
   throw redirect('/admin/organizations');
 });
 
-export default function AdminNewUserRoute() {
+export default function AdminOrganizationsEditRoute() {
   const data = createAsync(loadOrganization);
   const submission = useSubmission(upsertOrganization);
 

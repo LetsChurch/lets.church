@@ -29,7 +29,7 @@ const links = [
   },
 ];
 
-export default function ProfileLayout(props: ParentProps) {
+export default function AdminLayout(props: ParentProps) {
   return (
     <div class="lg:grid lg:grid-cols-12">
       <Sidenav class="lg:col-span-3" links={links} />

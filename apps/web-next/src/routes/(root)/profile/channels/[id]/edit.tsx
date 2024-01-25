@@ -165,7 +165,7 @@ const fields: Array<DatalistField> = [
   },
 ];
 
-export default function EditChannelRoute() {
+export default function ProfileChannelEditRoute() {
   const data = createAsync(loadChannel);
   const [avatarProcessing, setAvatarProcessing] = createSignal(false);
   const [defaultThumbnailProcessing, setDefaultThumbnailProcessing] =

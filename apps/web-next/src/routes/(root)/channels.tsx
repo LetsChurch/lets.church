@@ -37,7 +37,7 @@ const loadChannels = async () => {
   return sortBy(entries, ([k]) => k);
 };
 
-export default function AboutLayout() {
+export default function ChannelsRoute() {
   const data = createAsync(loadChannels);
 
   return (

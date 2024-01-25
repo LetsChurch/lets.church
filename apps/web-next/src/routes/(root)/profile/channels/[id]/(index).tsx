@@ -87,7 +87,7 @@ export const route: RouteDefinition = {
   load: () => loadChannel(),
 };
 
-export default function ChannelRoute() {
+export default function ProfileChannelRoute() {
   const data = createAsync(loadChannel);
 
   return (

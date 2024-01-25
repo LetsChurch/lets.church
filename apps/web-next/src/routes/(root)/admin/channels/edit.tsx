@@ -95,7 +95,7 @@ const upsertChannel = action(async (form: FormData) => {
   throw redirect('/admin/channels');
 });
 
-export default function AdminNewUserRoute() {
+export default function AdminChannelsEditRoute() {
   const location = useLocation();
   const data = createAsync(() => loadChannel(location.query['id']));
   const submission = useSubmission(upsertChannel);

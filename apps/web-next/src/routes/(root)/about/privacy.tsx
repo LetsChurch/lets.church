@@ -4,7 +4,7 @@ import H2 from '~/components/content/h2';
 import H3 from '~/components/content/h3';
 import P from '~/components/content/p';
 
-export default function TermsRoute() {
+export default function PrivacyRoute() {
   return (
     <>
       <H1>Privacy policy</H1>

@@ -34,7 +34,7 @@ export const route: RouteDefinition = {
   load: () => getMe(),
 };
 
-export default function Home(props: ParentProps) {
+export default function RootLayout(props: ParentProps) {
   const data = createAsync(getMe);
 
   return (

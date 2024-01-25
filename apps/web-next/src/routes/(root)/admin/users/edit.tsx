@@ -108,7 +108,7 @@ const upsertUser = action(async (form: FormData) => {
   throw redirect('/admin/users');
 });
 
-export default function AdminNewUserRoute() {
+export default function AdminUsersEditRoute() {
   const data = createAsync(loadUser);
   const submission = useSubmission(upsertUser);
 

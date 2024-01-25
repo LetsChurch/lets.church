@@ -2,7 +2,7 @@ import { Title } from '@solidjs/meta';
 import { A } from '@solidjs/router';
 import { HttpStatusCode } from '@solidjs/start';
 
-export default function NotFound() {
+export default function NotFoundRoute() {
   return (
     <div class="min-h-full bg-white px-4 py-16 sm:px-6 sm:py-24 md:grid md:place-items-center lg:px-8">
       <Title>Not Found | Let's Church</Title>
