@@ -55,7 +55,6 @@ services:
       COOKIE_SECRET: ${WEB_COOKIE_SECRET}
       GRAPHQL_URL: http://gateway:3000/graphql
       TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA"
-      VITE_TURNSTILE_SITEKEY: "1x00000000000000000000AA"
     volumes:
       - ./apps/web-next:/home/node/app
       - web-next-node-modules:/home/node/app/node_modules
