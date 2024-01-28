@@ -74,6 +74,8 @@ apiVersion: v1
 kind: Service
 metadata:
   name: temporal
+  annotations:
+    tailscale.com/expose: "true"
 spec:
   selector:
     app: temporal
