@@ -22,9 +22,9 @@ spec:
   instances:
     - name: instance1
       metadata:
-      annotations:
-        tailscale.com/expose: "true"
-        tailscale.com/hostname: "letschurch-prod-pg-1"
+        annotations:
+          tailscale.com/expose: "true"
+          tailscale.com/hostname: "letschurch-prod-pg-1"
       resources:
         requests:
           memory: 4Gi
