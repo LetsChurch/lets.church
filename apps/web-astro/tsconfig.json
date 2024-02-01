@@ -1,0 +1,15 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "types": ["vite-plugin-svg-sprite-components-core/client"],
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "plugins": [
+      {
+        "name": "@0no-co/graphqlsp",
+        "schema": "http://localhost:4100/graphql",
+        "tadaOutputLocation": "./src/graphql-env.d.ts",
+      },
+    ],
+  },
+}

@@ -1,0 +1,25 @@
+extends:
+  - 'eslint:recommended'
+  - 'plugin:import/recommended'
+  - 'plugin:@typescript-eslint/recommended'
+  - 'plugin:astro/recommended'
+parser: '@typescript-eslint/parser'
+plugins:
+  - astro
+  - solid
+settings:
+  import/resolver:
+    typescript: true
+    node: true
+rules:
+  import/order: error
+  import/no-unresolved: ['error', { ignore: ['^astro:'] }]
+overrides:
+  - files: ['*.astro']
+    parser: 'astro-eslint-parser'
+    parserOptions:
+      parser: '@typescript-eslint/parser'
+      extraFileExtensions: ['.astro']
+  - files: ['*.tsx', '*.ts']
+    extends:
+      - 'plugin:solid/typescript'

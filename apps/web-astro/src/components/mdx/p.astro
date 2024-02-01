@@ -1,0 +1,11 @@
+---
+export type Props = {
+  id: string;
+};
+
+const { id } = Astro.props;
+---
+
+<p id={id} class="mt-8">
+  <slot />
+</p>

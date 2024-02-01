@@ -1,0 +1,430 @@
+---
+import MenuIcon from '@tabler/icons/menu-2.svg?sprite';
+import XIcon from '@tabler/icons/x.svg?sprite';
+import BrandFacebookIcon from '@tabler/icons/brand-facebook.svg?sprite';
+import BrandXIcon from '@tabler/icons/brand-x.svg?sprite';
+import BrandLinkedInIcon from '@tabler/icons/brand-linkedin.svg?sprite';
+import BrandGithubIcon from '@tabler/icons/brand-github.svg?sprite';
+import BrandGitlabIcon from '@tabler/icons/brand-gitlab.svg?sprite';
+import { createClient } from '../util/server/gql';
+import { meQuery, type MeQuery, type MeQueryVariables } from '../queries/auth';
+import Profile from '../components/profile';
+import LogoIcon from '../components/icon.svg?sprite';
+import HeaderDonate from '../components/header-donate.astro';
+import { cn } from '../util';
+import Root from './root.astro';
+
+interface Props {
+  title: string;
+  frontmatter?: { title?: string; description?: string };
+  padded?: boolean;
+}
+
+const { title, frontmatter } = Astro.props;
+const pathname = new URL(Astro.request.url).pathname;
+
+const navLinks = [
+  {
+    href: '/',
+    title: 'Media',
+    active: !pathname.startsWith('/churches') && !pathname.startsWith('/about'),
+  },
+  {
+    href: '/churches',
+    title: 'Find a Church',
+    active: pathname.startsWith('/churches'),
+  },
+  {
+    href: '/about',
+    title: 'About',
+    active: pathname.startsWith('/about'),
+  },
+];
+
+const client = await createClient(
+  Astro.request.headers,
+  Astro.cookies.get('lcSession')?.value,
+);
+
+const data = await client.request<MeQuery, MeQueryVariables>(meQuery);
+---
+
+<Root title={frontmatter?.title ?? title}>
+  <header class="bg-white shadow">
+    <nav>
+      <div class="mx-auto max-w-7xl px-2 sm:px-4 lg:px-8">
+        <div class="flex h-16 justify-between">
+          <div class="flex px-2 lg:px-0">
+            <div class="flex flex-shrink-0 items-center text-indigo-500">
+              <a href="/" title="Let's Church Home">
+                <svg viewBox="0 0 1000 563" class="h-14">
+                  <path
+                    fill="currentColor"
+                    d="M113.03 321.34c25.53 0 40.16 13.08 41.4 14.32v-9.96h26.15v55.41h-26.15c-3.11-19.61-16.19-33.31-38.91-33.31-26.15 0-43.58 20.24-43.58 49.81 0 31.13 18.06 52.92 44.83 52.92 12.45 0 33-4.67 44.21-28.95l23.97 11.21C172.19 461.74 147.9 477 115.84 477c-52.3 0-75.03-43.58-75.03-79.07-.01-42.35 32.06-76.59 72.22-76.59zM251.25 261.26v81.25c21.79-17.74 37.05-21.17 48.88-21.17 26.15 0 40.47 15.25 40.47 43.27v82.5h25.22v25.53h-54.48V371.15c0-15.57-5.92-23.97-18.06-23.97-10.9 0-25.84 7.16-42.03 19.3v80.63h25.22v25.53h-81.25v-25.53h26.77V286.78h-26.46v-25.53h55.72zM416.24 325.7v103.36c0 13.39 5.92 20.55 17.43 20.55 12.14 0 28.95-7.16 42.03-18.68v-79.7h-25.22V325.7h54.48v121.41h25.22v25.53H475.7v-16.81c-17.74 14.01-33.62 19.3-47.94 19.3-26.77 0-40.78-15.25-40.78-44.21v-79.7h-20.86V325.7h50.12z"
+                  ></path>
+                  <path
+                    fill="currentColor"
+                    d="M643.19 323.21v29.26h-16.81c-30.2 0-42.96 16.81-42.96 51.06v43.58h31.75v25.53H525.2v-25.53h28.95v-95.88h-29.57V325.7h52.61v33h.62c10.9-27.71 31.75-35.49 45.45-35.49h19.93zM715.1 321.34c25.53 0 40.16 13.08 41.4 14.32v-9.96h26.15v55.41H756.5c-3.11-19.61-16.19-33.31-38.91-33.31-26.15 0-43.58 20.24-43.58 49.81 0 31.13 18.06 52.92 44.83 52.92 12.45 0 33-4.67 44.21-28.95l23.97 11.21C774.26 461.74 749.97 477 717.91 477c-52.3 0-75.03-43.58-75.03-79.07 0-42.35 32.06-76.59 72.22-76.59zM847.1 261.26v81.25c21.79-17.74 37.05-21.17 48.88-21.17 26.15 0 40.47 15.25 40.47 43.27v82.5h25.22v25.53h-54.48V371.15c0-15.57-5.92-23.97-18.06-23.97-10.9 0-25.84 7.16-42.03 19.3v80.63h25.22v25.53h-81.25v-25.53h26.77V286.78h-26.46v-25.53h55.72zM336.81 73.9v185.85h22.73v25.53h-78.76v-25.53h26.77V99.43H281.4V73.9h55.41zM443.27 133.98c40.78 0 78.45 31.13 78.45 84.99H398.13c4.05 25.53 19.61 45.14 50.43 45.14 18.68 0 36.11-8.09 47.63-23.97l25.53 11.21c-15.57 24.28-42.03 38.29-73.78 38.29-47.63 0-81.87-32.38-81.87-77.83 0-47.63 39.22-77.83 77.2-77.83zm-44.2 63.82h93.08c-4.36-22.1-23.97-40.47-48.56-40.47-23.67 0-40.17 16.5-44.52 40.47zM575.27 89.16v49.19h27.08v25.53h-27.08v85.61c0 7.16 4.05 11.21 11.83 11.21 4.05 0 8.41-.93 15.25-3.11v26.15c-10.27 3.11-17.12 4.05-21.48 4.05-22.73 0-34.87-11.83-34.87-33.93v-89.97h-18.99v-25.53H546v-22.73l29.27-26.47zM654.03 73.9v38.6c0 29.57-13.7 40.47-37.36 40.78v-15.57c15.57-3.42 18.68-12.14 18.68-26.46h-18.68V73.9h37.36zM695.43 135.85c12.14 0 24.9 2.8 35.8 8.41v-5.92h25.53v48.56h-25.53v-9.03c-8.09-12.14-18.99-18.06-34.24-18.06-15.88 0-25.84 7.47-25.84 18.06 0 12.45 13.7 14.94 33.62 17.74 17.12 2.49 37.05 5.6 48.88 18.37 6.54 6.85 10.9 18.37 10.9 28.95 0 26.46-22.41 44.83-56.35 44.83-25.53 0-38.29-10.27-38.6-10.58v8.09h-25.84v-50.43h25.84v4.98c2.49 14.94 16.19 23.66 35.18 23.66 18.06 0 30.2-6.85 30.2-18.37 0-14.01-13.08-16.19-33.31-19.3-15.57-2.49-29.89-5.92-41.09-14.01-9.96-7.47-16.81-18.99-16.81-32.69-.02-24.89 21.46-43.26 51.66-43.26z"
+                  ></path>
+                </svg>
+              </a>
+            </div>
+            <div class="hidden lg:ml-6 lg:flex lg:space-x-8">
+              {
+                navLinks.map((link) => (
+                  <a
+                    href={link.href}
+                    class={cn(
+                      'inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium',
+                      link.active
+                        ? 'border-indigo-500 text-gray-900'
+                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700',
+                    )}
+                  >
+                    {link.title}
+                  </a>
+                ))
+              }
+            </div>
+          </div>
+          <div class="flex items-center lg:hidden">
+            <HeaderDonate />
+            <button
+              type="button"
+              class="relative inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+              aria-controls="mobile-menu"
+              aria-expanded="false"
+              id="mobile-menu-button"
+            >
+              <span class="absolute -inset-0.5"></span>
+              <span class="sr-only">Open main menu</span>
+              <div class="icon-menu block">
+                <Fragment set:html={MenuIcon} />
+              </div>
+              <div class="icon-close hidden">
+                <Fragment set:html={XIcon} />
+              </div>
+            </button>
+          </div>
+          <div class="hidden gap-4 lg:ml-4 lg:flex lg:items-center">
+            <HeaderDonate />
+            <Profile me={data.me} client:visible />
+          </div>
+        </div>
+      </div>
+      <!-- Mobile menu -->
+      <div class="hidden lg:hidden" id="mobile-menu">
+        <div class="space-y-1 pb-3 pt-2">
+          {
+            navLinks.map((link) => (
+              <a
+                href={link.href}
+                class={cn(
+                  'block border-l-4 py-2 pl-3 pr-4 text-base font-medium',
+                  link.active
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                    : 'border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800',
+                )}
+              >
+                {link.title}
+              </a>
+            ))
+          }
+        </div>
+        <div class="border-t border-gray-200 pb-3 pt-4">
+          {
+            data.me ? (
+              <>
+                <div class="flex items-center px-4">
+                  <div class="flex-shrink-0">
+                    <img
+                      class="h-10 w-10 rounded-full"
+                      src={data.me?.avatarUrl}
+                      alt="Avatar"
+                    />
+                  </div>
+                  <div class="ml-3">
+                    <div class="text-base font-medium text-gray-800">
+                      {data.me?.username}
+                    </div>
+                    <div class="text-sm font-medium text-gray-500">
+                      {data.me?.fullName}
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-3 space-y-1">
+                  <a
+                    href="#"
+                    class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                  >
+                    Your Profile
+                  </a>
+                  <form method="post" action="/auth/logout">
+                    <button
+                      type="submit"
+                      class="block w-full px-4 py-2 text-left text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                    >
+                      Logout
+                    </button>
+                  </form>
+                </div>
+              </>
+            ) : (
+              <div>
+                <a
+                  href="/auth/login"
+                  class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                >
+                  Login
+                </a>
+              </div>
+            )
+          }
+        </div>
+      </div>
+    </nav>
+  </header>
+  <main class={Astro.props.padded ? 'lg:px-8 px-2 sm:px-4' : null}>
+    <slot />
+  </main>
+  <footer class="bg-white" aria-labelledby="footer-heading">
+    <h2 id="footer-heading" class="sr-only">Footer</h2>
+    <div class="mx-auto max-w-7xl px-6 pb-8 pt-16 sm:pt-24 lg:px-8 lg:pt-32">
+      <div class="xl:grid xl:grid-cols-3 xl:gap-8 [&_svg]:h-8">
+        <Fragment set:html={LogoIcon} />
+        <div class="mt-16 grid grid-cols-2 gap-8 xl:col-span-2 xl:mt-0">
+          <div class="md:grid md:grid-cols-2 md:gap-8">
+            <div>
+              <h3 class="text-sm font-semibold leading-6 text-gray-900">
+                Media
+              </h3>
+              <ul role="list" class="mt-6 space-y-4">
+                <li>
+                  <a
+                    href="/"
+                    class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+                    >Explore</a
+                  >
+                </li>
+                <li>
+                  <a
+                    href="/channels"
+                    class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+                    >Channels</a
+                  >
+                </li>
+                <li>
+                  <a
+                    href="/"
+                    class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+                    >Sermons</a
+                  >
+                </li>
+                <li>
+                  <a
+                    href="/"
+                    class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+                    >Podcasts</a
+                  >
+                </li>
+              </ul>
+            </div>
+            <div class="mt-10 md:mt-0">
+              <h3 class="text-sm font-semibold leading-6 text-gray-900">
+                Find a Church
+              </h3>
+              <ul role="list" class="mt-6 space-y-4">
+                <li>
+                  <a
+                    href="/churches"
+                    class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+                    >Search</a
+                  >
+                </li>
+                <li>
+                  <a
+                    href="/churches"
+                    class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+                    >Reformed Churches</a
+                  >
+                </li>
+                <li>
+                  <a
+                    href="/churches"
+                    class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+                    >Family Integrated Churches</a
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="md:grid md:grid-cols-2 md:gap-8">
+            <div>
+              <h3 class="text-sm font-semibold leading-6 text-gray-900">
+                Company
+              </h3>
+              <ul role="list" class="mt-6 space-y-4">
+                <li>
+                  <a
+                    href="/about"
+                    class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+                    >About</a
+                  >
+                </li>
+                <li>
+                  <a
+                    href="/about/theology"
+                    class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+                    >Theology</a
+                  >
+                </li>
+                <li>
+                  <a
+                    href="/about/dorean"
+                    class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+                    >The Dorean Principle</a
+                  >
+                </li>
+                <li>
+                  <a
+                    href="https://www.zeffy.com/en-US/donation-form/5da9e1c3-a8e2-4bb4-817a-5dbbb968ec6b"
+                    class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+                    target="_blank">Donate</a
+                  >
+                </li>
+              </ul>
+            </div>
+            <div class="mt-10 md:mt-0">
+              <h3 class="text-sm font-semibold leading-6 text-gray-900">
+                Legal
+              </h3>
+              <ul role="list" class="mt-6 space-y-4">
+                <li>
+                  <a
+                    href="/about/terms"
+                    class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+                    >Terms</a
+                  >
+                </li>
+                <li>
+                  <a
+                    href="/about/privacy"
+                    class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+                    >Privacy</a
+                  >
+                </li>
+                <li>
+                  <a
+                    href="/about/dmca"
+                    class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+                    >DMCA</a
+                  >
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="mt-16 border-t border-gray-900/10 pt-8 sm:mt-20 lg:mt-24 lg:flex lg:items-center lg:justify-between"
+      >
+        <div>
+          <h3 class="text-sm font-semibold leading-6 text-gray-900">
+            Subscribe to our newsletter
+          </h3>
+          <p class="mt-2 text-sm leading-6 text-gray-600">
+            No spam. Read our <a
+              href="/about/privacy"
+              class="inactive font-semibold text-indigo-600 hover:text-indigo-500"
+              >privacy policy</a
+            >.
+          </p>
+        </div>
+        <form class="mt-6 sm:flex sm:max-w-md lg:mt-0">
+          <label for="email-address" class="sr-only">Email address</label>
+          <input
+            type="email"
+            name="email-address"
+            id="email-address"
+            autocomplete="email"
+            required
+            class="w-full min-w-0 appearance-none rounded-md border-0 bg-white px-3 py-1.5 text-base text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:w-56 sm:text-sm sm:leading-6"
+            placeholder="Enter your email"
+          />
+          <div class="mt-4 sm:ml-4 sm:mt-0 sm:flex-shrink-0">
+            <button
+              type="submit"
+              class="flex w-full items-center justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              >Subscribe</button
+            >
+          </div>
+        </form>
+      </div>
+      <div
+        class="mt-8 border-t border-gray-900/10 pt-8 md:flex md:items-center md:justify-between"
+      >
+        <div class="flex space-x-6 md:order-2">
+          <a
+            href="https://www.facebook.com/profile.php?id=100092315746719"
+            class="text-gray-400 hover:text-gray-500"
+          >
+            <span class="sr-only [&_svg]:h-6">Facebook</span>
+            <Fragment set:html={BrandFacebookIcon} />
+          </a>
+          <a
+            href="https://twitter.com/lets_church"
+            class="text-gray-400 hover:text-gray-500"
+          >
+            <span class="sr-only [&_svg]:h-6">X</span>
+            <Fragment set:html={BrandXIcon} />
+          </a>
+          <a
+            href="https://www.linkedin.com/company/96956517"
+            class="text-gray-400 hover:text-gray-500"
+          >
+            <span class="sr-only [&_svg]:h-6">Linkedin</span>
+            <Fragment set:html={BrandLinkedInIcon} />
+          </a>
+          <a
+            href="https://github.com/LetsChurch"
+            class="text-gray-400 hover:text-gray-500"
+          >
+            <span class="sr-only [&_svg]:h-6">Github</span>
+            <Fragment set:html={BrandGithubIcon} />
+          </a>
+          <a
+            href="https://gitlab.com/LetsChurch"
+            class="text-gray-400 hover:text-gray-500"
+          >
+            <span class="sr-only [&_svg]:h-6">GitLab</span>
+            <Fragment set:html={BrandGitlabIcon} />
+          </a>
+        </div>
+        <p class="mt-8 text-xs leading-5 text-gray-500 md:order-1 md:mt-0">
+          Let's Church is in the public domain and is a 501(c)(3) non-profit. <a
+            href="/about"
+            class="underline decoration-indigo-100">Learn more.</a
+          >
+        </p>
+      </div>
+    </div>
+  </footer>
+</Root>
+
+<script>
+  document.addEventListener('astro:page-load', () => {
+    const mobileMenu = document.getElementById('mobile-menu');
+    const menuButton = document.getElementById('mobile-menu-button');
+    const menuIcon = menuButton?.querySelector('.icon-menu');
+    const closeIcon = menuButton?.querySelector('.icon-close');
+
+    menuButton?.addEventListener('click', () => {
+      menuIcon?.classList.toggle('hidden');
+      menuIcon?.classList.toggle('block');
+      closeIcon?.classList.toggle('hidden');
+      closeIcon?.classList.toggle('block');
+      mobileMenu?.classList.toggle('hidden');
+      mobileMenu?.classList.toggle('block');
+    });
+  });
+</script>
