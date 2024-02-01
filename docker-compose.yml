@@ -10,7 +10,7 @@ volumes:
   transcode-worker-node-modules:
   transcribe-worker-node-modules:
   web-node-modules:
-  web-next-node-modules:
+  web-astro-node-modules:
 
 x-s3-env: &s3-env
   S3_INGEST_REGION: ${S3_INGEST_REGION}
@@ -43,21 +43,21 @@ services:
       - web-node-modules:/home/node/app/node_modules
     depends_on:
       - gateway
-  web-next:
+  web-astro:
     build:
-      context: ./apps/web-next
+      context: ./apps/web-astro
       dockerfile: Dockerfile
     command: npm run dev
     ports:
-      - ${HOST_WEB_NEXT_PORT}:3000
+      - ${HOST_WEB_NEXT_PORT}:4321
     environment:
       NODE_ENV: development
       COOKIE_SECRET: ${WEB_COOKIE_SECRET}
       GRAPHQL_URL: http://gateway:3000/graphql
       TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA"
     volumes:
-      - ./apps/web-next:/home/node/app
-      - web-next-node-modules:/home/node/app/node_modules
+      - ./apps/web-astro:/home/node/app
+      - web-astro-node-modules:/home/node/app/node_modules
     depends_on:
       - gateway
 
