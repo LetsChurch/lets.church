@@ -591,7 +591,9 @@ export default function MediaRoute() {
               </Show>
             </div>
             <Show when={metaData()?.data.description} keyed>
-              {(desc) => <div class="whitespace-pre-line">{desc}</div>}
+              {(desc) => (
+                <div class="overflow-x-scroll whitespace-pre-line">{desc}</div>
+              )}
             </Show>
           </div>
           <Show
