@@ -7,6 +7,7 @@ stages:
   - test
   - build
   - deploy
+  - notify
 
 .setup:
   npmci: nix-shell $CI_PROJECT_DIR/shell.nix --run "npm ci --cache $CI_PROJECT_DIR/.npm --prefer-offline"
@@ -163,3 +164,19 @@ deploy-k8s:
     - cd infra/k8s/prod
     - nix-shell $CI_PROJECT_DIR/shell.nix --run "just deploy-set-images prod $CI_COMMIT_SHORT_SHA"
     - nix-shell $CI_PROJECT_DIR/shell.nix --run 'kubectl apply -k .'
+
+# _   _  ____ _______ _____ ________     __
+# | \ | |/ __ \__   __|_   _|  ____\ \   / /
+# |  \| | |  | | | |    | | | |__   \ \_/ /
+# | . ` | |  | | | |    | | |  __|   \   /
+# | |\  | |__| | | |   _| |_| |       | |
+# |_| \_|\____/  |_|  |_____|_|       |_|
+
+notify-pagerduty:
+  image: alpine/httpie:3.2.2
+  stage: notify
+  only:
+    - kyrios
+  when: on_failure
+  script:
+    - http POST https://events.pagerduty.com/v2/enqueue routing_key="$PAGERDUTY_ROUTING_KEY" event_action="trigger" 'payload[summary]'="Pipeline $CI_PIPELINE_IID failed in project $CI_PROJECT_NAME" 'payload[timestamp]'="$(date --utc +%Y-%m-%dT%H:%M:%SZ)" 'payload[source]'="GitLab CI" 'payload[severity]'="error" 'payload[custom_details][project]'="$CI_PROJECT_NAME" 'payload[custom_details][pipeline]'="$CI_PIPELINE_URL" 'payload[custom_details][job_name]'="$CI_JOB_NAME" 'payload[custom_details][commit]'="$CI_COMMIT_SHORT_SHA"
