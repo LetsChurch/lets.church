@@ -2,9 +2,9 @@ import envariant from '@knpwrs/envariant';
 import camelcaseKeys from 'camelcase-keys';
 import * as z from 'zod';
 
-const PS_API_URL = envariant('PS_API_URL');
+const PS_API_URL = envariant('MAPBOX_GEOCODING_TOKEN');
 const PS_BASE_PARAMS = {
-  access_key: envariant('PS_ACCESS_KEY'),
+  access_key: envariant('MAPBOX_GEOCODING_TOKEN'),
   output: 'json',
 };
 

@@ -28,6 +28,9 @@ const targetMappings: Record<
       name: {
         type: 'search_as_you_type',
       },
+      visibility: {
+        type: 'keyword',
+      },
       description: {
         type: 'text',
       },
@@ -69,6 +72,9 @@ const targetMappings: Record<
       visibility: {
         type: 'keyword',
       },
+      channelVisibility: {
+        type: 'keyword',
+      },
       transcodingFinishedAt: {
         type: 'date',
       },
@@ -86,6 +92,9 @@ const targetMappings: Record<
         type: 'date',
       },
       visibility: {
+        type: 'keyword',
+      },
+      channelVisibility: {
         type: 'keyword',
       },
       segments: {
@@ -133,6 +142,9 @@ const targetMappings: Record<
         type: 'date',
       },
       visibility: {
+        type: 'keyword',
+      },
+      channelVisibility: {
         type: 'keyword',
       },
       html: {

@@ -41,15 +41,16 @@ async function getDocument(
         publishedAt,
         transcodingFinishedAt,
         transcribingFinishedAt,
+        channel,
         ...upRec
       } = await prisma.uploadRecord.findUniqueOrThrow({
         where: { id: documentId },
         select: {
-          channelId: true,
           publishedAt: true,
           visibility: true,
           transcodingFinishedAt: true,
           transcribingFinishedAt: true,
+          channel: true,
         },
       });
 
@@ -62,6 +63,7 @@ async function getDocument(
           publishedAt: publishedAt.toISOString(),
           transcodingFinishedAt: transcodingFinishedAt?.toISOString() ?? null,
           transcribingFinishedAt: transcribingFinishedAt?.toISOString() ?? null,
+          channelVisibility: channel.visibility,
         }),
       };
     }
@@ -78,6 +80,7 @@ async function getDocument(
         publishedAt,
         transcodingFinishedAt,
         transcribingFinishedAt,
+        channel,
         ...upRec
       } = await prisma.uploadRecord.findUniqueOrThrow({
         where: { id: documentId },
@@ -87,6 +90,7 @@ async function getDocument(
           visibility: true,
           transcodingFinishedAt: true,
           transcribingFinishedAt: true,
+          channel: true,
         },
       });
 
@@ -99,6 +103,7 @@ async function getDocument(
           publishedAt: publishedAt.toISOString(),
           transcodingFinishedAt: transcodingFinishedAt?.toISOString() ?? null,
           transcribingFinishedAt: transcribingFinishedAt?.toISOString() ?? null,
+          channelVisibility: channel.visibility,
         },
       };
     }
@@ -108,6 +113,7 @@ async function getDocument(
         publishedAt,
         transcodingFinishedAt,
         transcribingFinishedAt,
+        channel,
         ...upRec
       } = await prisma.uploadRecord.findUniqueOrThrow({
         where: { id: documentId },
@@ -119,6 +125,7 @@ async function getDocument(
           publishedAt: true,
           transcodingFinishedAt: true,
           transcribingFinishedAt: true,
+          channel: true,
           // TODO: tags
         },
       });
@@ -130,6 +137,7 @@ async function getDocument(
           publishedAt: publishedAt.toISOString(),
           transcodingFinishedAt: transcodingFinishedAt?.toISOString() ?? null,
           transcribingFinishedAt: transcribingFinishedAt?.toISOString() ?? null,
+          channelVisibility: channel.visibility,
         }),
       };
     }
@@ -166,7 +174,7 @@ async function getDocument(
         id: documentId,
         document: await prisma.channel.findUniqueOrThrow({
           where: { id: documentId },
-          select: { name: true },
+          select: { name: true, visibility: true },
         }),
       };
     default:

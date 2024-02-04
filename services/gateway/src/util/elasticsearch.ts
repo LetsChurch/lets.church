@@ -73,6 +73,8 @@ export function msearchUploads(
   const trimmed = query.trim();
   const words = trimmed.split(/\s+/g);
 
+  const hasChannels = (channelIds?.length ?? 0) > 0;
+
   return [
     { index: 'lc_uploads_v2' },
     {
@@ -104,6 +106,8 @@ export function msearchUploads(
             { term: { visibility: 'PUBLIC' } },
             { exists: { field: 'transcodingFinishedAt' } },
             { exists: { field: 'transcribingFinishedAt' } },
+            // Only select channels that are public, unless channels are provided
+            ...(hasChannels ? [] : [{ term: { channelVisibility: 'PUBLIC' } }]),
           ],
         },
       },
@@ -154,6 +158,8 @@ export function msearchTranscripts(
   const trimmed = query.trim();
   const words = trimmed.split(/\s+/g);
 
+  const hasChannels = (channelIds?.length ?? 0) > 0;
+
   return [
     { index: 'lc_transcripts' },
     {
@@ -167,6 +173,8 @@ export function msearchTranscripts(
             { term: { visibility: 'PUBLIC' } },
             { exists: { field: 'transcodingFinishedAt' } },
             { exists: { field: 'transcribingFinishedAt' } },
+            // Only select channels that are public, unless channels are provided
+            ...(hasChannels ? [] : [{ term: { channelVisibility: 'PUBLIC' } }]),
             {
               nested: {
                 path: 'segments',
@@ -270,10 +278,18 @@ export function msearchChannels(
       from,
       size,
       query: {
-        multi_match: {
-          query,
-          type: 'bool_prefix',
-          fields: ['name^3', 'name._2gram', 'name._3gram'],
+        bool: {
+          should: [],
+          must: [
+            {
+              multi_match: {
+                query,
+                type: 'bool_prefix',
+                fields: ['name^3', 'name._2gram', 'name._3gram'],
+              },
+            },
+            { term: { visibility: 'PUBLIC' } },
+          ],
         },
       },
     },

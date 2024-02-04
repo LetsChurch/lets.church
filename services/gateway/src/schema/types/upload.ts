@@ -156,8 +156,34 @@ const UploadList = builder.prismaObject('UploadList', {
 const UploadRecord = builder.prismaObject('UploadRecord', {
   select: {
     id: true,
-    channelId: true, // For authScopes
+    // authscopes params
+    visibility: true,
+    channelId: true,
   },
+  // TODO: for some reason visibility and channelId are not present
+  // authScopes: async (upload, context) => {
+  //   // As designed, this allows public and unlisted videos on a private channel
+  //   if (
+  //     !upload.visibility ||
+  //     upload.visibility === PrismaUploadVisibility.PUBLIC ||
+  //     upload.visibility === PrismaUploadVisibility.UNLISTED
+  //   ) {
+  //     return true;
+  //   }
+  //
+  //   const appUserId = context.session?.appUserId;
+  //
+  //   if (
+  //     appUserId &&
+  //     (await prisma.channelMembership.findFirst({
+  //       where: { channelId: upload.channelId, appUserId },
+  //     }))
+  //   ) {
+  //     return true;
+  //   }
+  //
+  //   return { admin: true };
+  // },
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
     title: t.exposeString('title', { nullable: true }),

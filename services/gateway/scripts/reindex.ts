@@ -11,32 +11,41 @@ import logger from '../src/util/logger';
 const what = await select({
   message: 'What would you like to reindex?',
   choices: [
-    { name: 'Everything', value: 'all' },
-    { name: 'Transcripts', value: 'transcripts' },
-    { name: 'Uploads', value: 'uploads' },
+    {
+      name: 'Uploads and Transcript',
+      value: 'uploads-and-transcripts' as const,
+    },
+    { name: 'Uploads', value: 'uploads' as const },
+    { name: 'Transcripts', value: 'transcripts' as const },
+    { name: 'Channels', value: 'channels' as const },
   ],
 });
 
-const uploads = await prisma.uploadRecord.findMany({
-  select: { id: true },
-  take: Number.MAX_SAFE_INTEGER,
-  where: {
-    transcodingFinishedAt: { not: null },
-    transcribingFinishedAt: { not: null },
-  },
-});
+const documents = await (what === 'channels'
+  ? prisma.channel.findMany({
+      select: { id: true },
+      take: Number.MAX_SAFE_INTEGER,
+    })
+  : prisma.uploadRecord.findMany({
+      select: { id: true },
+      take: Number.MAX_SAFE_INTEGER,
+      where: {
+        transcodingFinishedAt: { not: null },
+        transcribingFinishedAt: { not: null },
+      },
+    }));
 
-logger.info(`Queueing documents from ${uploads.length} uploads`);
+logger.info(`Queueing documents from ${documents.length} uploads`);
 
-const total = uploads.length;
+const total = documents.length;
 let queued = 0;
 
 const spinner = ora(`Queueing ${total} uploads`).start();
 
 await pMap(
-  uploads,
+  documents,
   async ({ id }) => {
-    if (what === 'transcripts' || what === 'all') {
+    if (what === 'transcripts' || what === 'uploads-and-transcripts') {
       await (
         await client
       ).workflow.signalWithStart(indexDocumentWorkflow, {
@@ -58,13 +67,25 @@ await pMap(
       });
     }
 
-    if (what === 'uploads' || what === 'all') {
+    if (what === 'uploads' || what === 'uploads-and-transcripts') {
       await (
         await client
       ).workflow.signalWithStart(indexDocumentWorkflow, {
         taskQueue: BACKGROUND_QUEUE,
         workflowId: `reindexUpload:${id}`,
         args: ['upload', id],
+        signal: emptySignal,
+        signalArgs: [],
+      });
+    }
+
+    if (what === 'channels') {
+      await (
+        await client
+      ).workflow.signalWithStart(indexDocumentWorkflow, {
+        taskQueue: BACKGROUND_QUEUE,
+        workflowId: `reindexChannel:${id}`,
+        args: ['channel', id],
         signal: emptySignal,
         signalArgs: [],
       });

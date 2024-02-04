@@ -166,9 +166,18 @@ model OrganizationChannelAssociation {
   @@map("organization_channel_association")
 }
 
+enum ChannelVisibility {
+  PUBLIC
+  PRIVATE
+  UNLISTED
+
+  @@map("channel_visibility")
+}
+
 model Channel {
   id                       String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                     String
+  visibility               ChannelVisibility                @default(PUBLIC)
   avatarPath               String?                          @map("avatar_path") @db.VarChar(255)
   avatarBlurhash           String?                          @map("avatar_blurhash") @db.VarChar(255)
   slug                     String                           @unique @db.Citext

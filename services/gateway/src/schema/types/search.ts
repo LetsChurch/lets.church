@@ -3,6 +3,7 @@ import { getProperty as get } from 'dot-prop';
 import { max, min, uniqBy } from 'lodash-es';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';
+import pFilter from 'p-filter';
 import {
   msearchChannels,
   msearchOrganizations,
@@ -259,7 +260,7 @@ builder.queryFields((t) => ({
           transcriptPhraseSearch,
           ...args
         },
-        _context,
+        context,
         _info,
       ) => {
         let totalCount = 0;
@@ -287,12 +288,30 @@ builder.queryFields((t) => ({
               : maxPublishedAt;
         }
 
+        const appUserId = context.session?.appUserId;
         const channelIds = channels
           ? (
-              await prisma.channel.findMany({
-                where: { slug: { in: channels } },
-                select: { id: true },
-              })
+              await pFilter(
+                await prisma.channel.findMany({
+                  where: { slug: { in: channels } },
+                  select: { id: true, visibility: true },
+                }),
+                async (channel) => {
+                  if (
+                    channel.visibility === 'PUBLIC' ||
+                    channel.visibility === 'UNLISTED'
+                  ) {
+                    return true;
+                  }
+
+                  return Boolean(
+                    appUserId &&
+                      (await prisma.channelMembership.findFirst({
+                        where: { channelId: channel.id, appUserId },
+                      })),
+                  );
+                },
+              )
             ).map(({ id }) => id)
           : null;
 

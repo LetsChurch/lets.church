@@ -1,4 +1,7 @@
-import type { Channel as PrismaChannel } from '@prisma/client';
+import {
+  ChannelVisibility as PrismaChannelVisibility,
+  type Channel as PrismaChannel,
+} from '@prisma/client';
 import type { GraphQLResolveInfo } from 'graphql';
 import slugify from '@sindresorhus/slugify';
 import invariant from 'tiny-invariant';
@@ -14,6 +17,10 @@ import { ResizeParams } from './misc';
 
 const orderEnum = builder.enumType('Order', {
   values: ['asc', 'desc'] as const,
+});
+
+const ChannelVisibility = builder.enumType('ChannelVisibility', {
+  values: Object.keys(PrismaChannelVisibility),
 });
 
 async function channelAdminAuthScope(
@@ -54,10 +61,32 @@ async function channelAdminAuthScope(
 }
 
 const Channel = builder.prismaObject('Channel', {
-  select: { id: true },
+  select: { id: true, visibility: true },
+  authScopes: async (channel, context) => {
+    if (
+      channel.visibility === PrismaChannelVisibility.PUBLIC ||
+      channel.visibility === PrismaChannelVisibility.UNLISTED
+    ) {
+      return true;
+    }
+
+    const appUserId = context.session?.appUserId;
+
+    if (
+      appUserId &&
+      (await prisma.channelMembership.findFirst({
+        where: { channelId: channel.id, appUserId },
+      }))
+    ) {
+      return true;
+    }
+
+    return { admin: true };
+  },
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
     name: t.exposeString('name'),
+    visibility: t.expose('visibility', { type: ChannelVisibility }),
     avatarUrl: t.field({
       type: 'String',
       nullable: true,
@@ -216,7 +245,11 @@ builder.queryFields((t) => ({
     cursor: 'id',
     maxSize: 50,
     defaultSize: 50,
-    resolve: (query) => prisma.channel.findMany(query),
+    resolve: (query) =>
+      prisma.channel.findMany({
+        ...query,
+        where: { visibility: PrismaChannelVisibility.PUBLIC },
+      }),
   }),
 }));
 
