@@ -34,12 +34,12 @@ secretGenerator:
   - name: jwt-secret
     envs:
       - jwt.crypt.env
+  - name: mapbox-secret
+    envs:
+      - mapbox.crypt.env
   - name: pgo-backup-creds
     files:
       - pgo-backup-creds.crypt.conf
-  - name: ps-secret
-    envs:
-      - ps.crypt.env
   - name: s3-secret
     envs:
       - s3.crypt.env
