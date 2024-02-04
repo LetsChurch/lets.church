@@ -50,6 +50,7 @@ async function getDocument(
           visibility: true,
           transcodingFinishedAt: true,
           transcribingFinishedAt: true,
+          channelId: true,
           channel: true,
         },
       });
@@ -85,11 +86,11 @@ async function getDocument(
       } = await prisma.uploadRecord.findUniqueOrThrow({
         where: { id: documentId },
         select: {
-          channelId: true,
           publishedAt: true,
           visibility: true,
           transcodingFinishedAt: true,
           transcribingFinishedAt: true,
+          channelId: true,
           channel: true,
         },
       });
