@@ -661,6 +661,10 @@ builder.queryFields((t) => ({
           where: {
             transcribingFinishedAt: { not: null },
             transcodingFinishedAt: { not: null },
+            visibility: 'PUBLIC',
+            channel: {
+              visibility: 'PUBLIC',
+            },
           },
           orderBy:
             args.orderBy === 'trending'
