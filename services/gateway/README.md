@@ -58,17 +58,14 @@ All workers expect the following environment variables:
 ### `transcode-worker`
 
 - `MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS`
-- `FFMPEG_EXTRA_DECODE_ARGS` (e.g., `-hwaccel auto -hwaccel_device 0`)
-  - Note `hwaccel` decoding can actually decrease performance, per `man ffmpeg`: "Note that most acceleration methods are intended for playback and will not be faster than software decoding on modern CPUs. Additionally, ffmpeg will usually need to copy the decoded frames from the GPU memory into the system memory, resulting in further performance loss. This option is thus mainly useful for testing."
-  - Be sure to test!
-- `FFMPEG_ENCODE_ARGS` (e.g., `-c:v h264_nvenc -gpu 0`, defaults to `-c:v h264`)
-- If running without the container you must ensure that `ffmpeg` and `whisper-ctranslate2` are available on `PATH`
+- `TRANSCODE_HW_ACCEL`, (e.g., `ama`)
+- If running without the container you must ensure that `ffmpeg` and `audiowaveform` are available on `PATH`
 
 ### `transcribe-worker`
 
 - `MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS`
 - `WHISPER_MODEL`
 - `WHISPER_EXTRA_ARGS`, (e.g., `--device_index 1`)
-- If running without the container you must ensure that `ffmpeg` and `audiowaveform` are available on `PATH`
+- If running without the container you must ensure that `ffmpeg` and `whisper-ctranslate2` are available on `PATH`
 
 [Temporal]: https://temporal.io 'Less plumbing, more coding'

@@ -28,6 +28,8 @@ const moduleLogger = logger.child({
   module: 'temporal/activities/transcode/transcode',
 });
 
+const HW_ACCEL = process.env['TRANSCODE_HW_ACCEL'] === 'ama' ? 'ama' : 'none';
+
 const WORK_DIR =
   process.env['TRANSCODE_WORKING_DIRECTORY'] ?? '/data/transcode';
 
@@ -109,12 +111,14 @@ export default async function transcode(
 
     activityLogger.info('Running ffmpeg');
 
-    const encodeProc = runFfmpegEncode(
-      workingDir,
-      downloadPath,
+    const encodeProc = runFfmpegEncode({
+      cwd: workingDir,
+      inputFilename: downloadPath,
+      probe,
       variants,
-      cancellationSignal,
-    );
+      signal: cancellationSignal,
+      hwAccel: HW_ACCEL,
+    });
 
     const stdout: Array<string> = [];
     const stderr: Array<string> = [];

@@ -6,20 +6,10 @@ import logger from './logger';
 
 const moduleLogger = logger.child({ module: 'util/ffmpeg' });
 
-const extraDecodeArgs =
-  process.env['FFMPEG_EXTRA_DECODE_ARGS']?.split(' ') ?? [];
-const encodeArgs = process.env['FFMPEG_ENCODE_ARGS']?.split(' ') ?? [
-  '-c:v',
-  'h264',
-];
-
 const HLS_TIME = 7;
 const BASE_AUDIO_ARGS = ['-c:a', 'aac', '-ar', '48000'];
-const BASE_VIDEO_ARGS = [...encodeArgs, '-profile:v', 'main'];
 
 const BASE_ARGS = [
-  '-crf',
-  '20',
   '-sc_threshold',
   '0',
   '-g',
@@ -35,6 +25,8 @@ const BASE_ARGS = [
 ];
 
 type VideoVariant = Exclude<UploadVariant, 'AUDIO' | 'AUDIO_DOWNLOAD'>;
+
+export type HwAccel = 'none' | 'ama';
 
 export function getVariants(probe: Probe): Array<UploadVariant> {
   const res: Array<UploadVariant> = [];
@@ -128,8 +120,94 @@ function variantToPlaylistName(variant: UploadVariant) {
   return `${variant}.m3u8`;
 }
 
-function variantToDownloadName(variant: UploadVariant, ext: 'mp4' | 'm4a') {
-  return `${variant}.${ext}`;
+function variantToDownloadName(variant: UploadVariant) {
+  return `${variant}.${variant.startsWith('VIDEO') ? 'mp4' : 'm4a'}`;
+}
+
+function variantIsVideo(
+  v: UploadVariant,
+): v is Exclude<UploadVariant, `AUDIO${string}`> {
+  return v.startsWith('VIDEO');
+}
+
+function variantIsAudio(
+  v: UploadVariant,
+): v is Extract<UploadVariant, `AUDIO${string}`> {
+  return v.startsWith('AUDIO');
+}
+
+function videoVariantToBufSize(
+  variant: Exclude<UploadVariant, `AUDIO${string}`>,
+): string {
+  switch (variant) {
+    case 'VIDEO_4K':
+    case 'VIDEO_4K_DOWNLOAD':
+      return '27300k';
+    case 'VIDEO_1080P':
+    case 'VIDEO_1080P_DOWNLOAD':
+      return '7500k';
+    case 'VIDEO_720P':
+    case 'VIDEO_720P_DOWNLOAD':
+      return '4200k';
+    case 'VIDEO_480P':
+    case 'VIDEO_480P_DOWNLOAD':
+      return '2100k';
+    case 'VIDEO_360P':
+    case 'VIDEO_360P_DOWNLOAD':
+      return '1200k';
+  }
+}
+
+function variantToAudioBitRate(variant: UploadVariant): string {
+  switch (variant) {
+    case 'VIDEO_4K':
+    case 'VIDEO_4K_DOWNLOAD':
+    case 'VIDEO_1080P':
+    case 'VIDEO_1080P_DOWNLOAD':
+    case 'AUDIO':
+    case 'AUDIO_DOWNLOAD':
+      return '192k';
+    case 'VIDEO_720P':
+    case 'VIDEO_720P_DOWNLOAD':
+    case 'VIDEO_480P':
+    case 'VIDEO_480P_DOWNLOAD':
+      return '128k';
+    case 'VIDEO_360P':
+    case 'VIDEO_360P_DOWNLOAD':
+      return '96k';
+  }
+}
+
+function variantToOutputArgs(variant: UploadVariant) {
+  const outputName = variant.endsWith('_DOWNLOAD')
+    ? variantToDownloadName(variant)
+    : variantToPlaylistName(variant);
+  const bvm = variantIsVideo(variant)
+    ? [
+        '-b:v',
+        `${videoVariantToKbps(variant)}k`,
+        '-maxrate',
+        `${Math.floor(videoVariantToKbps(variant) * 1.07)}k`,
+      ]
+    : [];
+  const bufsize = variantIsVideo(variant)
+    ? ['-bufsize', videoVariantToBufSize(variant)]
+    : [];
+  const audioOnlyOutput = variantIsAudio(variant) ? ['-vn'] : [];
+  const segmentFilename = !variant.endsWith('_DOWNLOAD')
+    ? ['-hls_segment_filename', `${variant}_%04d.ts`]
+    : [];
+
+  return [
+    ...BASE_ARGS,
+    ...bvm,
+    ...bufsize,
+    ...audioOnlyOutput,
+    '-b:a',
+    variantToAudioBitRate(variant),
+    ...segmentFilename,
+    outputName,
+  ];
 }
 
 export function variantsToMasterVideoPlaylist(variants: Array<UploadVariant>) {
@@ -152,196 +230,140 @@ export function variantsToMasterVideoPlaylist(variants: Array<UploadVariant>) {
   ].join('\n');
 }
 
+export function extraDecodeArgs(probe: Probe, hwAccel: HwAccel) {
+  if (hwAccel === 'ama') {
+    const base = ['-hwaccel', 'ama'];
+
+    if (probe.streams.some((s) => s.codec_name === 'h264')) {
+      return [...base, '-c:v', 'h264_ama'];
+    }
+
+    if (probe.streams.some((s) => s.codec_name === 'hevc')) {
+      return [...base, '-c:v', 'hevc_ama'];
+    }
+
+    if (probe.streams.some((s) => s.codec_name === 'av1')) {
+      return [...base, '-c:v', 'av1_ama'];
+    }
+
+    return base;
+  }
+
+  return [];
+}
+
 // TODO: 60fps and portrait
-export function ffmpegEncodingOutputArgs(
+export function ffmpegSoftwareEncodingOutputArgs(
   variants: Array<UploadVariant>,
 ): Array<string> {
+  const videoCodec = ['-c:v', 'h264', '-profile:v', 'main'];
   return variants.flatMap((v) => {
     const isVideo = v !== 'AUDIO' && v !== 'AUDIO_DOWNLOAD';
     const scaleFilter = isVideo ? videoVariantToFfmpegScaleFilter(v) : [];
-    const bvm = isVideo
-      ? [
-          '-b:v',
-          `${videoVariantToKbps(v)}k`,
-          '-maxrate',
-          `${Math.floor(videoVariantToKbps(v) * 1.07)}k`,
-        ]
-      : [];
-    const playlistName = variantToPlaylistName(v);
-    const downloadName = variantToDownloadName(
-      v,
-      v.startsWith('VIDEO') ? 'mp4' : 'm4a',
-    );
 
     switch (v) {
       case 'VIDEO_4K':
         return [
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...BASE_VIDEO_ARGS,
-          ...BASE_ARGS,
-          ...bvm,
-          '-bufsize',
-          '27300k',
-          '-b:a',
-          '192k',
-          '-hls_segment_filename',
-          'VIDEO_4K_%04d.ts',
-          playlistName,
+          ...videoCodec,
+          '-crf',
+          '20',
+          ...variantToOutputArgs(v),
         ];
       case 'VIDEO_4K_DOWNLOAD':
         return [
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...BASE_VIDEO_ARGS,
-          ...BASE_ARGS,
-          ...bvm,
-          '-bufsize',
-          '27300k',
-          '-b:a',
-          '192k',
-          downloadName,
+          ...videoCodec,
+          '-crf',
+          '20',
+          ...variantToOutputArgs(v),
         ];
       case 'VIDEO_1080P':
         return [
           // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...BASE_VIDEO_ARGS,
-          ...BASE_ARGS,
-          ...bvm,
-          '-bufsize',
-          '7500k',
-          '-b:a',
-          '192k',
-          '-hls_segment_filename',
-          'VIDEO_1080P_%04d.ts',
-          playlistName,
+          ...videoCodec,
+          '-crf',
+          '20',
+          ...variantToOutputArgs(v),
         ];
       case 'VIDEO_1080P_DOWNLOAD':
         return [
           // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...BASE_VIDEO_ARGS,
-          ...BASE_ARGS,
-          ...bvm,
-          '-bufsize',
-          '7500k',
-          '-b:a',
-          '192k',
-          downloadName,
+          ...videoCodec,
+          '-crf',
+          '20',
+          ...variantToOutputArgs(v),
         ];
       case 'VIDEO_720P':
         return [
           // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...BASE_VIDEO_ARGS,
-          ...BASE_ARGS,
-          ...bvm,
-          '-bufsize',
-          '4200k',
-          '-b:a',
-          '128k',
-          '-hls_segment_filename',
-          'VIDEO_720P_%04d.ts',
-          playlistName,
+          ...videoCodec,
+          '-crf',
+          '20',
+          ...variantToOutputArgs(v),
         ];
       case 'VIDEO_720P_DOWNLOAD':
         return [
           // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...BASE_VIDEO_ARGS,
-          ...BASE_ARGS,
-          ...bvm,
-          '-bufsize',
-          '4200k',
-          '-b:a',
-          '128k',
-          downloadName,
+          ...videoCodec,
+          '-crf',
+          '20',
+          ...variantToOutputArgs(v),
         ];
       case 'VIDEO_480P':
         return [
           // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...BASE_VIDEO_ARGS,
-          ...BASE_ARGS,
-          ...bvm,
-          '-bufsize',
-          '2100k',
-          '-b:a',
-          '128k',
-          '-hls_segment_filename',
-          'VIDEO_480P_%04d.ts',
-          playlistName,
+          ...videoCodec,
+          '-crf',
+          '20',
+          ...variantToOutputArgs(v),
         ];
       case 'VIDEO_480P_DOWNLOAD':
         return [
           // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...BASE_VIDEO_ARGS,
-          ...BASE_ARGS,
-          ...bvm,
-          '-bufsize',
-          '2100k',
-          '-b:a',
-          '128k',
-          downloadName,
+          ...videoCodec,
+          '-crf',
+          '20',
+          ...variantToOutputArgs(v),
         ];
       case 'VIDEO_360P':
         return [
           // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...BASE_VIDEO_ARGS,
-          ...BASE_ARGS,
-          ...bvm,
-          '-bufsize',
-          '1200k',
-          '-b:a',
-          '96k',
-          '-hls_segment_filename',
-          'VIDEO_360P_%04d.ts',
-          playlistName,
+          ...videoCodec,
+          '-crf',
+          '20',
+          ...variantToOutputArgs(v),
         ];
       case 'VIDEO_360P_DOWNLOAD':
         return [
           // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...BASE_VIDEO_ARGS,
-          ...BASE_ARGS,
-          ...bvm,
-          '-bufsize',
-          '1200k',
-          '-b:a',
-          '96k',
-          downloadName,
+          ...videoCodec,
+          '-crf',
+          '20',
+          ...variantToOutputArgs(v),
         ];
       case 'AUDIO':
-        return [
-          ...BASE_ARGS,
-          ...BASE_AUDIO_ARGS,
-          '-vn',
-          '-b:a',
-          '192k',
-          '-hls_segment_filename',
-          'AUDIO_%04d.ts',
-          playlistName,
-        ];
+        return ['-crf', '20', ...BASE_AUDIO_ARGS, ...variantToOutputArgs(v)];
       case 'AUDIO_DOWNLOAD':
-        return [
-          ...BASE_ARGS,
-          ...BASE_AUDIO_ARGS,
-          '-vn',
-          '-b:a',
-          '192k',
-          downloadName,
-        ];
+        return ['-crf', '20', ...BASE_AUDIO_ARGS, ...variantToOutputArgs(v)];
       default:
         const c: never = v;
         throw new Error(`Unknown variant kind: ${c}`);
@@ -349,26 +371,108 @@ export function ffmpegEncodingOutputArgs(
   });
 }
 
-export function runFfmpegEncode(
-  cwd: string,
-  inputFilename: string,
+// TODO: 60fps and portrait
+export function ffmpegAmaEncodingOutputArgs(
   variants: Array<UploadVariant>,
-  signal: AbortSignal,
-) {
+  probe: Probe,
+): Array<string> {
+  const videoVariants = variants.filter(
+    (v): v is Exclude<UploadVariant, `AUDIO${string}`> => v.startsWith('VIDEO'),
+  );
+
+  if (videoVariants.length === 0) {
+    return [];
+  }
+
+  // Construct filter_complex
+  const hwUpload = probe.streams.some((s) =>
+    ['h264', 'hevc', 'av1'].includes(s.codec_name as string),
+  )
+    ? ''
+    : 'hwupload,';
+
+  const resolutions = videoVariants.filter(
+    (v): v is Exclude<(typeof videoVariants)[number], `${string}_DOWNLOAD`> =>
+      !v.endsWith('_DOWNLOAD'),
+  );
+
+  const filterComplex = `${hwUpload}scaler_ama=outputs=${
+    resolutions.length
+  }:out_res=${resolutions
+    .map((r) => videoVariantToDimensions(r))
+    .map((d) => `(${d[0]}x${d[1]})`)} ${resolutions.map((r) => `[${r}]`)}`;
+
+  // Construct output maps
+  const maps = videoVariants.flatMap((v) =>
+    v.startsWith('VIDEO')
+      ? [
+          '-map',
+          `[${v.replace('_DOWNLOAD', '')}]`,
+          '-map',
+          '0:a',
+          ...BASE_AUDIO_ARGS,
+          '-c:v',
+          'h264_ama',
+          '-profile:v',
+          'main',
+          ...BASE_ARGS,
+          ...variantToOutputArgs(v),
+        ]
+      : [
+          '-map',
+          '0:a',
+          ...BASE_AUDIO_ARGS,
+          ...BASE_ARGS,
+          ...variantToOutputArgs(v),
+        ],
+  );
+
+  return ['-filter_complex', filterComplex, ...maps];
+}
+
+export function ffmpegEncodingOutputArgs(
+  variants: Array<UploadVariant>,
+  probe: Probe,
+  hwAccel: HwAccel,
+): Array<string> {
+  const videoOutputArgs =
+    hwAccel === 'ama'
+      ? ffmpegAmaEncodingOutputArgs(variants, probe)
+      : ffmpegSoftwareEncodingOutputArgs(variants);
+  const audioOutputArgs: string[] = [];
+
+  return [...videoOutputArgs, ...audioOutputArgs];
+}
+
+export function runFfmpegEncode({
+  cwd,
+  inputFilename,
+  probe,
+  variants,
+  hwAccel = 'none',
+  signal,
+}: {
+  cwd: string;
+  inputFilename: string;
+  probe: Probe;
+  variants: Array<UploadVariant>;
+  hwAccel?: HwAccel;
+  signal: AbortSignal;
+}) {
   const proc = execa(
     'ffmpeg',
     [
       // Baseline args
       '-hide_banner',
       '-y',
-      ...extraDecodeArgs,
+      ...extraDecodeArgs(probe, hwAccel),
       '-i',
       inputFilename,
       // KV output for progress
       '-progress',
       '-',
       // Outputs
-      ...ffmpegEncodingOutputArgs(variants),
+      ...ffmpegEncodingOutputArgs(variants, probe, hwAccel),
     ],
     { cwd, signal },
   );
@@ -426,7 +530,7 @@ export function runFfprobe(
       'json',
       '-show_format',
       '-show_streams',
-      /* '-count_frmaes', */
+      /* '-count_frames', */
       inputFilename,
     ],
     { cwd, signal },

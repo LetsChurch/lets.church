@@ -10,6 +10,7 @@ const streamUnionSchema = z
     z
       .object({
         codec_type: z.literal('video'),
+        codec_name: z.string(),
         width: z.number(),
         height: z.number(),
         nb_frames: z.string().optional(),
