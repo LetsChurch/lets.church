@@ -22,7 +22,14 @@ const BASE_ARGS = [
   'temp_file',
 ];
 
-type VideoVariant = Exclude<UploadVariant, 'AUDIO' | 'AUDIO_DOWNLOAD'>;
+// TODO: remove 360P in future job:
+// 1. Delete from database and from object storage
+// 2. Remove the value in a migration afterward
+// 3. Remove shorts for the time being (the platform is more suited toward long-form content)
+type VideoVariant = Exclude<
+  UploadVariant,
+  'AUDIO' | 'AUDIO_DOWNLOAD' | 'VIDEO_360P' | 'VIDEO_360P_DOWNLOAD'
+>;
 
 export type HwAccel = 'none' | 'ama';
 
@@ -55,15 +62,11 @@ export function getVariants(probe: Probe): Array<UploadVariant> {
       }
     }
 
-    if (stream.width >= 842 || stream.height >= 480) {
+    if (stream.width >= 720 || stream.height >= 480) {
       res.push('VIDEO_480P');
       if (res.length === 1) {
         res.push('VIDEO_480P_DOWNLOAD');
       }
-    }
-
-    if (stream.width >= 640 || stream.height >= 360) {
-      res.push('VIDEO_360P');
     }
   }
 
@@ -81,8 +84,6 @@ function videoVariantToKbps(variant: VideoVariant) {
     return 2800;
   } else if (variant === 'VIDEO_480P' || variant === 'VIDEO_480P_DOWNLOAD') {
     return 1400;
-  } else if (variant === 'VIDEO_360P' || variant === 'VIDEO_360P_DOWNLOAD') {
-    return 800;
   } else {
     const nope: never = variant;
     throw new Error(`Invalid variant: ${nope}`);
@@ -97,9 +98,7 @@ function videoVariantToDimensions(variant: VideoVariant): [number, number] {
   } else if (variant === 'VIDEO_720P' || variant === 'VIDEO_720P_DOWNLOAD') {
     return [1280, 720];
   } else if (variant === 'VIDEO_480P' || variant === 'VIDEO_480P_DOWNLOAD') {
-    return [842, 480];
-  } else if (variant === 'VIDEO_360P' || variant === 'VIDEO_360P_DOWNLOAD') {
-    return [640, 360];
+    return [720, 480];
   } else {
     const nope: never = variant;
     throw new Error(`Invalid variant: ${nope}`);
@@ -134,9 +133,7 @@ function variantIsAudio(
   return v.startsWith('AUDIO');
 }
 
-function videoVariantToBufSize(
-  variant: Exclude<UploadVariant, `AUDIO${string}`>,
-): string {
+function videoVariantToBufSize(variant: VideoVariant): string {
   switch (variant) {
     case 'VIDEO_4K':
     case 'VIDEO_4K_DOWNLOAD':
@@ -150,13 +147,13 @@ function videoVariantToBufSize(
     case 'VIDEO_480P':
     case 'VIDEO_480P_DOWNLOAD':
       return '2100k';
-    case 'VIDEO_360P':
-    case 'VIDEO_360P_DOWNLOAD':
-      return '1200k';
   }
 }
 
-function variantToAudioBitRate(variant: UploadVariant): string {
+// TODO: remove 360P, see above
+function variantToAudioBitRate(
+  variant: Exclude<UploadVariant, 'VIDEO_360P' | 'VIDEO_360P_DOWNLOAD'>,
+): string {
   switch (variant) {
     case 'VIDEO_4K':
     case 'VIDEO_4K_DOWNLOAD':
@@ -170,13 +167,13 @@ function variantToAudioBitRate(variant: UploadVariant): string {
     case 'VIDEO_480P':
     case 'VIDEO_480P_DOWNLOAD':
       return '128k';
-    case 'VIDEO_360P':
-    case 'VIDEO_360P_DOWNLOAD':
-      return '96k';
   }
 }
 
-function variantToOutputArgs(variant: UploadVariant) {
+// TODO: remove 360P, see above
+function variantToOutputArgs(
+  variant: Exclude<UploadVariant, 'VIDEO_360P' | 'VIDEO_360P_DOWNLOAD'>,
+) {
   const outputName = variant.endsWith('_DOWNLOAD')
     ? variantToDownloadName(variant)
     : variantToPlaylistName(variant);
@@ -216,8 +213,13 @@ export function variantsToMasterVideoPlaylist(variants: Array<UploadVariant>) {
       // Audio must not be included in the master playlist: https://developer.apple.com/documentation/http_live_streaming/http_live_streaming_hls_authoring_specification_for_apple_devices
       // Don't include downloads in master playlist
       .filter(
-        (v): v is Exclude<UploadVariant, 'AUDIO' | `${string}_DOWNLOAD`> =>
-          v !== 'AUDIO' && !v.endsWith('_DOWNLOAD'),
+        // TODO: remove 360P, see above
+        (
+          v,
+        ): v is Exclude<
+          UploadVariant,
+          'AUDIO' | `${string}_DOWNLOAD` | 'VIDEO_360P'
+        > => v !== 'AUDIO' && !v.endsWith('_DOWNLOAD') && !v.includes('360P'),
       )
       .flatMap((v) => [
         `#EXT-X-STREAM-INF:BANDWIDTH=${
@@ -250,112 +252,108 @@ export function extraDecodeArgs(probe: Probe, hwAccel: HwAccel) {
   return [];
 }
 
-// TODO: 60fps and portrait
+// TODO: portrait
+// TODO: pad videos: https://superuser.com/a/991412
 export function ffmpegSoftwareEncodingOutputArgs(
   variants: Array<UploadVariant>,
 ): Array<string> {
   const videoCommon = ['-c:v', 'h264', '-crf', '20', '-sc_threshold', '0'];
-  return variants.flatMap((v) => {
-    const isVideo = v !== 'AUDIO' && v !== 'AUDIO_DOWNLOAD';
-    const scaleFilter = isVideo ? videoVariantToFfmpegScaleFilter(v) : [];
+  return variants
+    .filter(
+      // TODO: remove 360P, see above
+      (v): v is Exclude<UploadVariant, `VIDEO_360P${string}`> =>
+        !v.includes('360P'),
+    )
+    .flatMap((v) => {
+      const isVideo = v !== 'AUDIO' && v !== 'AUDIO_DOWNLOAD';
+      const scaleFilter = isVideo ? videoVariantToFfmpegScaleFilter(v) : [];
 
-    switch (v) {
-      case 'VIDEO_4K':
-        return [
-          ...scaleFilter,
-          ...BASE_AUDIO_ARGS,
-          ...videoCommon,
-          ...variantToOutputArgs(v),
-        ];
-      case 'VIDEO_4K_DOWNLOAD':
-        return [
-          ...scaleFilter,
-          ...BASE_AUDIO_ARGS,
-          ...videoCommon,
-          ...variantToOutputArgs(v),
-        ];
-      case 'VIDEO_1080P':
-        return [
-          // Download
-          ...scaleFilter,
-          ...BASE_AUDIO_ARGS,
-          ...videoCommon,
-          ...variantToOutputArgs(v),
-        ];
-      case 'VIDEO_1080P_DOWNLOAD':
-        return [
-          // Download
-          ...scaleFilter,
-          ...BASE_AUDIO_ARGS,
-          ...videoCommon,
-          ...variantToOutputArgs(v),
-        ];
-      case 'VIDEO_720P':
-        return [
-          // Download
-          ...scaleFilter,
-          ...BASE_AUDIO_ARGS,
-          ...videoCommon,
-          ...variantToOutputArgs(v),
-        ];
-      case 'VIDEO_720P_DOWNLOAD':
-        return [
-          // Download
-          ...scaleFilter,
-          ...BASE_AUDIO_ARGS,
-          ...videoCommon,
-          ...variantToOutputArgs(v),
-        ];
-      case 'VIDEO_480P':
-        return [
-          // Download
-          ...scaleFilter,
-          ...BASE_AUDIO_ARGS,
-          ...videoCommon,
-          ...variantToOutputArgs(v),
-        ];
-      case 'VIDEO_480P_DOWNLOAD':
-        return [
-          // Download
-          ...scaleFilter,
-          ...BASE_AUDIO_ARGS,
-          ...videoCommon,
-          ...variantToOutputArgs(v),
-        ];
-      case 'VIDEO_360P':
-        return [
-          // Download
-          ...scaleFilter,
-          ...BASE_AUDIO_ARGS,
-          ...videoCommon,
-          ...variantToOutputArgs(v),
-        ];
-      case 'VIDEO_360P_DOWNLOAD':
-        return [
-          // Download
-          ...scaleFilter,
-          ...BASE_AUDIO_ARGS,
-          ...videoCommon,
-          ...variantToOutputArgs(v),
-        ];
-      case 'AUDIO':
-        return ['-crf', '20', ...BASE_AUDIO_ARGS, ...variantToOutputArgs(v)];
-      case 'AUDIO_DOWNLOAD':
-        return ['-crf', '20', ...BASE_AUDIO_ARGS, ...variantToOutputArgs(v)];
-      default:
-        const c: never = v;
-        throw new Error(`Unknown variant kind: ${c}`);
-    }
-  });
+      switch (v) {
+        case 'VIDEO_4K':
+          return [
+            ...scaleFilter,
+            ...BASE_AUDIO_ARGS,
+            ...videoCommon,
+            ...variantToOutputArgs(v),
+          ];
+        case 'VIDEO_4K_DOWNLOAD':
+          return [
+            ...scaleFilter,
+            ...BASE_AUDIO_ARGS,
+            ...videoCommon,
+            ...variantToOutputArgs(v),
+          ];
+        case 'VIDEO_1080P':
+          return [
+            // Download
+            ...scaleFilter,
+            ...BASE_AUDIO_ARGS,
+            ...videoCommon,
+            ...variantToOutputArgs(v),
+          ];
+        case 'VIDEO_1080P_DOWNLOAD':
+          return [
+            // Download
+            ...scaleFilter,
+            ...BASE_AUDIO_ARGS,
+            ...videoCommon,
+            ...variantToOutputArgs(v),
+          ];
+        case 'VIDEO_720P':
+          return [
+            // Download
+            ...scaleFilter,
+            ...BASE_AUDIO_ARGS,
+            ...videoCommon,
+            ...variantToOutputArgs(v),
+          ];
+        case 'VIDEO_720P_DOWNLOAD':
+          return [
+            // Download
+            ...scaleFilter,
+            ...BASE_AUDIO_ARGS,
+            ...videoCommon,
+            ...variantToOutputArgs(v),
+          ];
+        case 'VIDEO_480P':
+          return [
+            // Download
+            ...scaleFilter,
+            ...BASE_AUDIO_ARGS,
+            ...videoCommon,
+            ...variantToOutputArgs(v),
+          ];
+        case 'VIDEO_480P_DOWNLOAD':
+          return [
+            // Download
+            ...scaleFilter,
+            ...BASE_AUDIO_ARGS,
+            ...videoCommon,
+            ...variantToOutputArgs(v),
+          ];
+        case 'AUDIO':
+          return ['-crf', '20', ...BASE_AUDIO_ARGS, ...variantToOutputArgs(v)];
+        case 'AUDIO_DOWNLOAD':
+          return ['-crf', '20', ...BASE_AUDIO_ARGS, ...variantToOutputArgs(v)];
+        default:
+          const c: never = v;
+          throw new Error(`Unknown variant kind: ${c}`);
+      }
+    });
 }
 
-// TODO: 60fps and portrait
+// TODO: portrait
+// TODO: pad https://superuser.com/a/991412
 export function ffmpegAmaEncodingOutputArgs(
   variants: Array<UploadVariant>,
   probe: Probe,
 ): Array<string> {
+  // TODO: remove 360P, see above
   const videoVariants = variants.filter(
-    (v): v is Exclude<UploadVariant, `AUDIO${string}`> => v.startsWith('VIDEO'),
+    (
+      v,
+    ): v is Exclude<UploadVariant, `AUDIO${string}` | `VIDEO_360P${string}`> =>
+      v.startsWith('VIDEO') && !v.includes('360P'),
   );
 
   if (videoVariants.length === 0) {

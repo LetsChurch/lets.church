@@ -17,7 +17,6 @@ const uploads = await prisma.uploadRecord.findMany({
       { variants: { has: UploadVariant.VIDEO_1080P } },
       { variants: { has: UploadVariant.VIDEO_720P } },
       { variants: { has: UploadVariant.VIDEO_480P } },
-      { variants: { has: UploadVariant.VIDEO_360P } },
     ],
   },
 });

@@ -37,7 +37,6 @@ describe('getVariants', () => {
         "VIDEO_1080P_DOWNLOAD",
         "VIDEO_720P",
         "VIDEO_480P",
-        "VIDEO_360P",
         "AUDIO",
         "AUDIO_DOWNLOAD",
       ]
@@ -48,7 +47,6 @@ describe('getVariants', () => {
         "VIDEO_1080P_DOWNLOAD",
         "VIDEO_720P",
         "VIDEO_480P",
-        "VIDEO_360P",
         "AUDIO",
         "AUDIO_DOWNLOAD",
       ]
@@ -58,7 +56,6 @@ describe('getVariants', () => {
         "VIDEO_720P",
         "VIDEO_720P_DOWNLOAD",
         "VIDEO_480P",
-        "VIDEO_360P",
         "AUDIO",
         "AUDIO_DOWNLOAD",
       ]
@@ -67,14 +64,6 @@ describe('getVariants', () => {
       [
         "VIDEO_480P",
         "VIDEO_480P_DOWNLOAD",
-        "VIDEO_360P",
-        "AUDIO",
-        "AUDIO_DOWNLOAD",
-      ]
-    `);
-    expect(getVariants(mockProbe(640, 360))).toMatchInlineSnapshot(`
-      [
-        "VIDEO_360P",
         "AUDIO",
         "AUDIO_DOWNLOAD",
       ]
@@ -90,7 +79,6 @@ describe('getVariants', () => {
         "VIDEO_1080P_DOWNLOAD",
         "VIDEO_720P",
         "VIDEO_480P",
-        "VIDEO_360P",
         "AUDIO",
         "AUDIO_DOWNLOAD",
       ]
@@ -101,7 +89,6 @@ describe('getVariants', () => {
         "VIDEO_1080P_DOWNLOAD",
         "VIDEO_720P",
         "VIDEO_480P",
-        "VIDEO_360P",
         "AUDIO",
         "AUDIO_DOWNLOAD",
       ]
@@ -111,7 +98,6 @@ describe('getVariants', () => {
         "VIDEO_720P",
         "VIDEO_720P_DOWNLOAD",
         "VIDEO_480P",
-        "VIDEO_360P",
         "AUDIO",
         "AUDIO_DOWNLOAD",
       ]
@@ -120,7 +106,6 @@ describe('getVariants', () => {
       [
         "VIDEO_480P",
         "VIDEO_480P_DOWNLOAD",
-        "VIDEO_360P",
         "AUDIO",
         "AUDIO_DOWNLOAD",
       ]
@@ -276,7 +261,6 @@ describe('getVariants', () => {
           "VIDEO_1080P_DOWNLOAD",
           "VIDEO_720P",
           "VIDEO_480P",
-          "VIDEO_360P",
           "AUDIO",
           "AUDIO_DOWNLOAD",
         ]
@@ -411,7 +395,6 @@ describe('getVariants', () => {
           "VIDEO_1080P_DOWNLOAD",
           "VIDEO_720P",
           "VIDEO_480P",
-          "VIDEO_360P",
           "AUDIO",
           "AUDIO_DOWNLOAD",
         ]
@@ -648,12 +631,7 @@ test('variantsToMasterVideoPlaylist', () => {
     `);
 
   expect(
-    variantsToMasterVideoPlaylist([
-      'VIDEO_1080P',
-      'VIDEO_720P',
-      'VIDEO_480P',
-      'VIDEO_360P',
-    ]),
+    variantsToMasterVideoPlaylist(['VIDEO_1080P', 'VIDEO_720P', 'VIDEO_480P']),
   ).toMatchInlineSnapshot(`
     "#EXTM3U
     #EXT-X-VERSION:3
@@ -661,10 +639,8 @@ test('variantsToMasterVideoPlaylist', () => {
     VIDEO_1080P.m3u8
     #EXT-X-STREAM-INF:BANDWIDTH=2800000,RESOLUTION=1280x720
     VIDEO_720P.m3u8
-    #EXT-X-STREAM-INF:BANDWIDTH=1400000,RESOLUTION=842x480
-    VIDEO_480P.m3u8
-    #EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=640x360
-    VIDEO_360P.m3u8"
+    #EXT-X-STREAM-INF:BANDWIDTH=1400000,RESOLUTION=720x480
+    VIDEO_480P.m3u8"
   `);
 });
 
@@ -895,7 +871,6 @@ test('ffmpegEncodingOutputArgs', () => {
         'VIDEO_1080P_DOWNLOAD',
         'VIDEO_720P',
         'VIDEO_480P',
-        'VIDEO_360P',
         'AUDIO',
         'AUDIO_DOWNLOAD',
       ],
@@ -1002,7 +977,7 @@ test('ffmpegEncodingOutputArgs', () => {
       "VIDEO_720P_%04d.ts",
       "VIDEO_720P.m3u8",
       "-vf",
-      "scale=842:-2",
+      "scale=720:-2",
       "-c:a",
       "aac",
       "-ar",
@@ -1034,39 +1009,6 @@ test('ffmpegEncodingOutputArgs', () => {
       "-hls_segment_filename",
       "VIDEO_480P_%04d.ts",
       "VIDEO_480P.m3u8",
-      "-vf",
-      "scale=640:-2",
-      "-c:a",
-      "aac",
-      "-ar",
-      "48000",
-      "-c:v",
-      "h264",
-      "-crf",
-      "20",
-      "-sc_threshold",
-      "0",
-      "-g",
-      "48",
-      "-keyint_min",
-      "48",
-      "-hls_time",
-      "7",
-      "-hls_playlist_type",
-      "vod",
-      "-hls_flags",
-      "temp_file",
-      "-b:v",
-      "800k",
-      "-maxrate",
-      "856k",
-      "-bufsize",
-      "1200k",
-      "-b:a",
-      "96k",
-      "-hls_segment_filename",
-      "VIDEO_360P_%04d.ts",
-      "VIDEO_360P.m3u8",
       "-crf",
       "20",
       "-c:a",
@@ -1292,7 +1234,6 @@ test('ffmpegEncodingOutputArgs', () => {
         'VIDEO_1080P_DOWNLOAD',
         'VIDEO_720P',
         'VIDEO_480P',
-        'VIDEO_360P',
         'AUDIO',
         'AUDIO_DOWNLOAD',
       ],
@@ -1302,7 +1243,7 @@ test('ffmpegEncodingOutputArgs', () => {
   ).toMatchInlineSnapshot(`
     [
       "-filter_complex",
-      "\\"scaler_ama=outputs=4:out_res=(1920x1080)(1280x720)(842x480)(640x360) [VIDEO_1080P][VIDEO_720P][VIDEO_480P][VIDEO_360P];[VIDEO_1080P]split[VIDEO_1080P_DOWNLOAD][VIDEO_1080P]\\"",
+      "\\"scaler_ama=outputs=3:out_res=(1920x1080)(1280x720)(720x480) [VIDEO_1080P][VIDEO_720P][VIDEO_480P];[VIDEO_1080P]split[VIDEO_1080P_DOWNLOAD][VIDEO_1080P]\\"",
       "-map",
       "[VIDEO_1080P]",
       "-map",
@@ -1465,47 +1406,6 @@ test('ffmpegEncodingOutputArgs', () => {
       "-hls_segment_filename",
       "VIDEO_480P_%04d.ts",
       "VIDEO_480P.m3u8",
-      "-map",
-      "[VIDEO_360P]",
-      "-map",
-      "0:a",
-      "-c:a",
-      "aac",
-      "-ar",
-      "48000",
-      "-c:v",
-      "h264_ama",
-      "-g",
-      "48",
-      "-keyint_min",
-      "48",
-      "-hls_time",
-      "7",
-      "-hls_playlist_type",
-      "vod",
-      "-hls_flags",
-      "temp_file",
-      "-g",
-      "48",
-      "-keyint_min",
-      "48",
-      "-hls_time",
-      "7",
-      "-hls_playlist_type",
-      "vod",
-      "-hls_flags",
-      "temp_file",
-      "-b:v",
-      "800k",
-      "-maxrate",
-      "856k",
-      "-bufsize",
-      "1200k",
-      "-b:a",
-      "96k",
-      "-hls_segment_filename",
-      "VIDEO_360P_%04d.ts",
-      "VIDEO_360P.m3u8",
     ]
   `);
 
@@ -1689,7 +1589,6 @@ test('ffmpegEncodingOutputArgs', () => {
         'VIDEO_1080P_DOWNLOAD',
         'VIDEO_720P',
         'VIDEO_480P',
-        'VIDEO_360P',
         'AUDIO',
         'AUDIO_DOWNLOAD',
       ],
@@ -1699,7 +1598,7 @@ test('ffmpegEncodingOutputArgs', () => {
   ).toMatchInlineSnapshot(`
     [
       "-filter_complex",
-      "\\"hwupload,scaler_ama=outputs=4:out_res=(1920x1080)(1280x720)(842x480)(640x360) [VIDEO_1080P][VIDEO_720P][VIDEO_480P][VIDEO_360P];[VIDEO_1080P]split[VIDEO_1080P_DOWNLOAD][VIDEO_1080P]\\"",
+      "\\"hwupload,scaler_ama=outputs=3:out_res=(1920x1080)(1280x720)(720x480) [VIDEO_1080P][VIDEO_720P][VIDEO_480P];[VIDEO_1080P]split[VIDEO_1080P_DOWNLOAD][VIDEO_1080P]\\"",
       "-map",
       "[VIDEO_1080P]",
       "-map",
@@ -1862,47 +1761,6 @@ test('ffmpegEncodingOutputArgs', () => {
       "-hls_segment_filename",
       "VIDEO_480P_%04d.ts",
       "VIDEO_480P.m3u8",
-      "-map",
-      "[VIDEO_360P]",
-      "-map",
-      "0:a",
-      "-c:a",
-      "aac",
-      "-ar",
-      "48000",
-      "-c:v",
-      "h264_ama",
-      "-g",
-      "48",
-      "-keyint_min",
-      "48",
-      "-hls_time",
-      "7",
-      "-hls_playlist_type",
-      "vod",
-      "-hls_flags",
-      "temp_file",
-      "-g",
-      "48",
-      "-keyint_min",
-      "48",
-      "-hls_time",
-      "7",
-      "-hls_playlist_type",
-      "vod",
-      "-hls_flags",
-      "temp_file",
-      "-b:v",
-      "800k",
-      "-maxrate",
-      "856k",
-      "-bufsize",
-      "1200k",
-      "-b:a",
-      "96k",
-      "-hls_segment_filename",
-      "VIDEO_360P_%04d.ts",
-      "VIDEO_360P.m3u8",
     ]
   `);
 });

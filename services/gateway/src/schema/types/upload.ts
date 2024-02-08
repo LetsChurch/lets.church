@@ -440,7 +440,6 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
                   'VIDEO_1080P',
                   'VIDEO_720P',
                   'VIDEO_480P',
-                  'VIDEO_360P',
                   'AUDIO',
                   'TRANSCRIPT_VTT',
                   'TRANSCRIPT_TXT',
@@ -459,13 +458,13 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
           | 'VIDEO_1080P'
           | 'VIDEO_720P'
           | 'VIDEO_480P'
-          | 'VIDEO_360P'
           | 'AUDIO'
           | 'TRANSCRIPT_VTT'
           | 'TRANSCRIPT_TXT';
         const media = await Promise.all(
           root.variants
-            .filter((v) => v.endsWith('_DOWNLOAD'))
+            // TODO: remove 360P, see ffmpeg.ts
+            .filter((v) => v.endsWith('_DOWNLOAD') && !v.includes('360P'))
             .map(async (v) => {
               const ext = v.startsWith('VIDEO') ? 'mp4' : 'm4a';
               return {
@@ -477,8 +476,6 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
                   ? 'VIDEO_720P'
                   : v === 'VIDEO_480P'
                   ? 'VIDEO_480P'
-                  : v === 'VIDEO_360P'
-                  ? 'VIDEO_360P'
                   : 'AUDIO') as MediaDownloadKind,
                 label:
                   v === 'VIDEO_4K_DOWNLOAD'
@@ -489,8 +486,6 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
                     ? '720p Video'
                     : v === 'VIDEO_480P'
                     ? '480p Video'
-                    : v === 'VIDEO_360P'
-                    ? '360p Video'
                     : 'Audio',
                 url: await getPublicUrlWithFilename(
                   `${root.id}/${v}.${ext}`,

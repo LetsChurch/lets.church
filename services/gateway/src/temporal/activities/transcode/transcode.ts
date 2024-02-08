@@ -86,6 +86,9 @@ export default async function transcode(
     transcodingStartedAt: new Date(),
   });
 
+  const stdout: Array<string> = [];
+  const stderr: Array<string> = [];
+
   try {
     activityLogger.info(`Making work directory: ${workingDir}`);
 
@@ -119,9 +122,6 @@ export default async function transcode(
       signal: cancellationSignal,
       hwAccel: HW_ACCEL,
     });
-
-    const stdout: Array<string> = [];
-    const stderr: Array<string> = [];
 
     encodeProc.stdout?.on('data', (data) => {
       const str = String(data);
@@ -326,7 +326,11 @@ export default async function transcode(
       transcodingFinishedAt: new Date(),
     });
   } catch (e) {
-    activityLogger.error(e instanceof Error ? e.message : e);
+    activityLogger.error(
+      `${e instanceof Error ? e.message : e}\n\nstdout:\n\n${stdout.join(
+        '',
+      )}\n\nstderr:\n\n${stderr.join('')}`,
+    );
     await updateUploadRecord(uploadRecordId, {
       transcodingStartedAt: null,
       transcodingFinishedAt: null,
