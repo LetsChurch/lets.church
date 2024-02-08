@@ -254,16 +254,7 @@ export function extraDecodeArgs(probe: Probe, hwAccel: HwAccel) {
 export function ffmpegSoftwareEncodingOutputArgs(
   variants: Array<UploadVariant>,
 ): Array<string> {
-  const videoCommon = [
-    '-c:v',
-    'h264',
-    '-profile:v',
-    'main',
-    '-crf',
-    '20',
-    '-sc_threshold',
-    '0',
-  ];
+  const videoCommon = ['-c:v', 'h264', '-crf', '20', '-sc_threshold', '0'];
   return variants.flatMap((v) => {
     const isVideo = v !== 'AUDIO' && v !== 'AUDIO_DOWNLOAD';
     const scaleFilter = isVideo ? videoVariantToFfmpegScaleFilter(v) : [];
@@ -387,7 +378,7 @@ export function ffmpegAmaEncodingOutputArgs(
       v.endsWith('_DOWNLOAD'),
   );
 
-  const filterComplex = `${hwUpload}scaler_ama=outputs=${
+  const filterComplex = `"${hwUpload}scaler_ama=outputs=${
     resolutions.length
   }:out_res=${resolutions
     .map((r) => videoVariantToDimensions(r))
@@ -400,7 +391,7 @@ export function ffmpegAmaEncodingOutputArgs(
           '',
         )}]`,
     )
-    .join(';')}`;
+    .join(';')}"`;
 
   // Construct output maps
   const maps = videoVariants.flatMap((v) =>
@@ -413,8 +404,6 @@ export function ffmpegAmaEncodingOutputArgs(
           ...BASE_AUDIO_ARGS,
           '-c:v',
           'h264_ama',
-          '-profile:v',
-          'main',
           ...BASE_ARGS,
           ...variantToOutputArgs(v),
         ]
