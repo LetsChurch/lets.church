@@ -10,8 +10,6 @@ const HLS_TIME = 7;
 const BASE_AUDIO_ARGS = ['-c:a', 'aac', '-ar', '48000'];
 
 const BASE_ARGS = [
-  '-sc_threshold',
-  '0',
   '-g',
   '48',
   '-keyint_min',
@@ -256,7 +254,16 @@ export function extraDecodeArgs(probe: Probe, hwAccel: HwAccel) {
 export function ffmpegSoftwareEncodingOutputArgs(
   variants: Array<UploadVariant>,
 ): Array<string> {
-  const videoCodec = ['-c:v', 'h264', '-profile:v', 'main'];
+  const videoCommon = [
+    '-c:v',
+    'h264',
+    '-profile:v',
+    'main',
+    '-crf',
+    '20',
+    '-sc_threshold',
+    '0',
+  ];
   return variants.flatMap((v) => {
     const isVideo = v !== 'AUDIO' && v !== 'AUDIO_DOWNLOAD';
     const scaleFilter = isVideo ? videoVariantToFfmpegScaleFilter(v) : [];
@@ -266,18 +273,14 @@ export function ffmpegSoftwareEncodingOutputArgs(
         return [
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...videoCodec,
-          '-crf',
-          '20',
+          ...videoCommon,
           ...variantToOutputArgs(v),
         ];
       case 'VIDEO_4K_DOWNLOAD':
         return [
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...videoCodec,
-          '-crf',
-          '20',
+          ...videoCommon,
           ...variantToOutputArgs(v),
         ];
       case 'VIDEO_1080P':
@@ -285,9 +288,7 @@ export function ffmpegSoftwareEncodingOutputArgs(
           // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...videoCodec,
-          '-crf',
-          '20',
+          ...videoCommon,
           ...variantToOutputArgs(v),
         ];
       case 'VIDEO_1080P_DOWNLOAD':
@@ -295,9 +296,7 @@ export function ffmpegSoftwareEncodingOutputArgs(
           // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...videoCodec,
-          '-crf',
-          '20',
+          ...videoCommon,
           ...variantToOutputArgs(v),
         ];
       case 'VIDEO_720P':
@@ -305,9 +304,7 @@ export function ffmpegSoftwareEncodingOutputArgs(
           // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...videoCodec,
-          '-crf',
-          '20',
+          ...videoCommon,
           ...variantToOutputArgs(v),
         ];
       case 'VIDEO_720P_DOWNLOAD':
@@ -315,9 +312,7 @@ export function ffmpegSoftwareEncodingOutputArgs(
           // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...videoCodec,
-          '-crf',
-          '20',
+          ...videoCommon,
           ...variantToOutputArgs(v),
         ];
       case 'VIDEO_480P':
@@ -325,9 +320,7 @@ export function ffmpegSoftwareEncodingOutputArgs(
           // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...videoCodec,
-          '-crf',
-          '20',
+          ...videoCommon,
           ...variantToOutputArgs(v),
         ];
       case 'VIDEO_480P_DOWNLOAD':
@@ -335,9 +328,7 @@ export function ffmpegSoftwareEncodingOutputArgs(
           // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...videoCodec,
-          '-crf',
-          '20',
+          ...videoCommon,
           ...variantToOutputArgs(v),
         ];
       case 'VIDEO_360P':
@@ -345,9 +336,7 @@ export function ffmpegSoftwareEncodingOutputArgs(
           // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...videoCodec,
-          '-crf',
-          '20',
+          ...videoCommon,
           ...variantToOutputArgs(v),
         ];
       case 'VIDEO_360P_DOWNLOAD':
@@ -355,9 +344,7 @@ export function ffmpegSoftwareEncodingOutputArgs(
           // Download
           ...scaleFilter,
           ...BASE_AUDIO_ARGS,
-          ...videoCodec,
-          '-crf',
-          '20',
+          ...videoCommon,
           ...variantToOutputArgs(v),
         ];
       case 'AUDIO':
@@ -395,19 +382,32 @@ export function ffmpegAmaEncodingOutputArgs(
     (v): v is Exclude<(typeof videoVariants)[number], `${string}_DOWNLOAD`> =>
       !v.endsWith('_DOWNLOAD'),
   );
+  const downloads = videoVariants.filter(
+    (v): v is Extract<(typeof videoVariants)[number], `${string}_DOWNLOAD`> =>
+      v.endsWith('_DOWNLOAD'),
+  );
 
   const filterComplex = `${hwUpload}scaler_ama=outputs=${
     resolutions.length
   }:out_res=${resolutions
     .map((r) => videoVariantToDimensions(r))
-    .map((d) => `(${d[0]}x${d[1]})`)} ${resolutions.map((r) => `[${r}]`)}`;
+    .map((d) => `(${d[0]}x${d[1]})`)
+    .join('')} ${resolutions.map((r) => `[${r}]`).join('')};${downloads
+    .map(
+      (d) =>
+        `[${d.replace('_DOWNLOAD', '')}]split[${d}][${d.replace(
+          '_DOWNLOAD',
+          '',
+        )}]`,
+    )
+    .join(';')}`;
 
   // Construct output maps
   const maps = videoVariants.flatMap((v) =>
     v.startsWith('VIDEO')
       ? [
           '-map',
-          `[${v.replace('_DOWNLOAD', '')}]`,
+          `[${v}]`,
           '-map',
           '0:a',
           ...BASE_AUDIO_ARGS,
