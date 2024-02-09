@@ -255,7 +255,7 @@ builder.mutationFields((t) => ({
       if (!user || !(await argon2.verify(user.password, password))) {
         moduleLogger.warn(
           { id, user: user ? user : null },
-          'User not found or password does not match',
+          !user ? 'User not found' : 'Invalid password',
         );
         throw new Error('Error logging in. Please try again.');
       }
