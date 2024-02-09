@@ -376,7 +376,7 @@ export function ffmpegAmaEncodingOutputArgs(
       v.endsWith('_DOWNLOAD'),
   );
 
-  const filterComplex = `"${hwUpload}scaler_ama=outputs=${
+  const filterComplex = `${hwUpload}scaler_ama=outputs=${
     resolutions.length
   }:out_res=${resolutions
     .map((r) => videoVariantToDimensions(r))
@@ -389,7 +389,7 @@ export function ffmpegAmaEncodingOutputArgs(
           '',
         )}]`,
     )
-    .join(';')}"`;
+    .join(';')}`;
 
   // Construct output maps
   const maps = videoVariants.flatMap((v) =>
