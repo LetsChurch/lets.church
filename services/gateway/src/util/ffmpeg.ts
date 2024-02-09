@@ -247,7 +247,7 @@ export function extraDecodeArgs(probe: Probe, hwAccel: HwAccel) {
 
 // TODO: portrait
 // TODO: pad videos: https://superuser.com/a/991412
-export function ffmpegSoftwareEncodingOutputArgs(
+export function ffmpegSoftwareFilterComplex(
   variants: Array<UploadVariant>,
 ): Array<string> {
   // TODO: remove 360P, see above
@@ -285,35 +285,12 @@ export function ffmpegSoftwareEncodingOutputArgs(
     )
     .join(';')}`;
 
-  // Construct output maps
-  const maps = videoVariants.flatMap((v) =>
-    v.startsWith('VIDEO')
-      ? [
-          '-map',
-          `[${v}]`,
-          '-map',
-          '0:a',
-          ...BASE_AUDIO_ARGS,
-          '-c:v',
-          'h264',
-          ...BASE_ARGS,
-          ...variantToOutputArgs(v),
-        ]
-      : [
-          '-map',
-          '0:a',
-          ...BASE_AUDIO_ARGS,
-          ...BASE_ARGS,
-          ...variantToOutputArgs(v),
-        ],
-  );
-
-  return ['-filter_complex', filterComplex, ...maps];
+  return ['-filter_complex', filterComplex];
 }
 
 // TODO: portrait
 // TODO: pad https://superuser.com/a/991412
-export function ffmpegAmaEncodingOutputArgs(
+export function ffmpegAmaFilterComplex(
   variants: Array<UploadVariant>,
   probe: Probe,
 ): Array<string> {
@@ -361,43 +338,55 @@ export function ffmpegAmaEncodingOutputArgs(
     .join(';')}`;
 
   // Construct output maps
-  const maps = videoVariants.flatMap((v) =>
-    v.startsWith('VIDEO')
-      ? [
-          '-map',
-          `[${v}]`,
-          '-map',
-          '0:a',
-          ...BASE_AUDIO_ARGS,
-          '-c:v',
-          'h264_ama',
-          ...BASE_ARGS,
-          ...variantToOutputArgs(v),
-        ]
-      : [
-          '-map',
-          '0:a',
-          ...BASE_AUDIO_ARGS,
-          ...BASE_ARGS,
-          ...variantToOutputArgs(v),
-        ],
-  );
 
-  return ['-filter_complex', filterComplex, ...maps];
+  return ['-filter_complex', filterComplex];
 }
 
-export function ffmpegEncodingOutputArgs(
+function variantsToOutputMaps(
+  variants: Array<UploadVariant>,
+  hwAccel: HwAccel,
+) {
+  // TODO: remove 360P, see above
+  return variants
+    .filter(
+      (v): v is Exclude<UploadVariant, `VIDEO_360P${string}`> =>
+        !v.includes('360P'),
+    )
+    .flatMap((v) =>
+      v.startsWith('VIDEO')
+        ? [
+            '-map',
+            `[${v}]`,
+            '-map',
+            '0:a',
+            ...BASE_AUDIO_ARGS,
+            '-c:v',
+            hwAccel === 'ama' ? 'h264_ama' : 'h264',
+            ...BASE_ARGS,
+            ...variantToOutputArgs(v),
+          ]
+        : [
+            '-map',
+            '0:a',
+            ...BASE_AUDIO_ARGS,
+            ...BASE_ARGS,
+            ...variantToOutputArgs(v),
+          ],
+    );
+}
+
+export function ffmpegEncodingArgs(
   variants: Array<UploadVariant>,
   probe: Probe,
   hwAccel: HwAccel,
 ): Array<string> {
-  const videoOutputArgs =
+  const filterComplex =
     hwAccel === 'ama'
-      ? ffmpegAmaEncodingOutputArgs(variants, probe)
-      : ffmpegSoftwareEncodingOutputArgs(variants);
-  const audioOutputArgs: string[] = [];
+      ? ffmpegAmaFilterComplex(variants, probe)
+      : ffmpegSoftwareFilterComplex(variants);
+  const outputMaps = variantsToOutputMaps(variants, hwAccel);
 
-  return [...videoOutputArgs, ...audioOutputArgs];
+  return [...filterComplex, ...outputMaps];
 }
 
 export function runFfmpegEncode({
@@ -428,7 +417,7 @@ export function runFfmpegEncode({
       '-progress',
       '-',
       // Outputs
-      ...ffmpegEncodingOutputArgs(variants, probe, hwAccel),
+      ...ffmpegEncodingArgs(variants, probe, hwAccel),
     ],
     { cwd, signal },
   );
