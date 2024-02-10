@@ -326,11 +326,14 @@ export default async function transcode(
       transcodingFinishedAt: new Date(),
     });
   } catch (e) {
-    activityLogger.error(
-      `${e instanceof Error ? e.message : e}\n\nstdout:\n\n${stdout.join(
-        '',
-      )}\n\nstderr:\n\n${stderr.join('')}`,
-    );
+    activityLogger
+      .child({
+        meta: JSON.stringify({
+          stdout: stdout.join(''),
+          stderr: stderr.join(''),
+        }),
+      })
+      .error(e instanceof Error ? e.message : e);
     await updateUploadRecord(uploadRecordId, {
       transcodingStartedAt: null,
       transcodingFinishedAt: null,
