@@ -277,6 +277,15 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
     uploadFinalized: t.exposeBoolean('uploadFinalized', {
       authScopes: internalAuthScopes,
     }),
+    uploadFinalizedAt: t.field({
+      type: 'DateTime',
+      nullable: true,
+      authScopes: internalAuthScopes,
+      select: {
+        uploadFinalizedAt: true,
+      },
+      resolve: ({ uploadFinalizedAt }) => uploadFinalizedAt?.toISOString(),
+    }),
     createdAt: t.field({
       type: 'DateTime',
       select: {

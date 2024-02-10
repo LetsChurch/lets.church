@@ -13,6 +13,7 @@ export default async function finalizeUploadRecord(
           id: userId,
         },
       },
+      uploadFinalizedAt: new Date(),
       finalizedUploadKey: uploadKey,
     },
     where: { id: uploadRecordId },

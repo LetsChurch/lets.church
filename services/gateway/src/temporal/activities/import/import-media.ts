@@ -247,6 +247,7 @@ export default async function importMedia(
 
     await updateUploadRecord(uploadRecordId, {
       finalizedUploadKey: mediaUploadKey,
+      uploadFinalizedAt: new Date(),
     });
   } catch (e) {
     activityLogger.error(e instanceof Error ? e.message : e);

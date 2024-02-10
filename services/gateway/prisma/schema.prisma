@@ -262,6 +262,7 @@ model UploadRecord {
   visibility                UploadVisibility
   uploadSizeBytes           BigInt?                    @map("upload_size_bytes")
   uploadFinalized           Boolean                    @default(false) @map("upload_finalized")
+  uploadFinalizedAt         DateTime?                  @map("upload_finalized_at")
   uploadFinalizedBy         AppUser?                   @relation("finalizedUploads", fields: [uploadFinalizedById], references: [id])
   uploadFinalizedById       String?                    @map("upload_finalized_by_id") @db.Uuid
   finalizedUploadKey        String?                    @map("finalized_upload_key")
