@@ -13,6 +13,8 @@ const getUploadSeconds = pMem(async () => {
   return prisma.uploadRecord.aggregate({
     _sum: { lengthSeconds: true },
     where: {
+      visibility: 'PUBLIC',
+      channel: { visibility: 'PUBLIC' },
       transcodingFinishedAt: { not: null },
       transcribingFinishedAt: { not: null },
     },
@@ -26,6 +28,7 @@ const getUploadCount = pMem(
         visibility: 'PUBLIC',
         transcodingFinishedAt: { not: null },
         transcribingFinishedAt: { not: null },
+        channel: { visibility: 'PUBLIC' },
       },
     });
   },
