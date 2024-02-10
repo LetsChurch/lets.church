@@ -1,5 +1,15 @@
 import pino from 'pino';
 
+/**
+ * Logger fields:
+ *   - serviceName: Name of the service
+ *   - level: The log level
+ *   - module: The relative path to the JavaScript module that emitted the log
+ *   - args: Arguments sent to a file
+ *   - args.targetId: The id of the resource that was targeted
+ *   - meta: Stringified JSON for additional data that won't be indexed as a field
+ */
+
 const isProduction = process.env['NODE_ENV'] === 'production';
 
 const logger = pino({
