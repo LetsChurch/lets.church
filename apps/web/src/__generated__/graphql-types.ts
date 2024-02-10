@@ -150,6 +150,7 @@ export type Channel = {
   updatedAt: Scalars['DateTime']['output'];
   uploadsConnection: ChannelUploadsConnection;
   userIsSubscribed: Scalars['Boolean']['output'];
+  visibility: ChannelVisibility;
 };
 
 
@@ -250,6 +251,12 @@ export type ChannelUploadsConnectionEdge = {
   node: UploadRecord;
 };
 
+export enum ChannelVisibility {
+  Private = 'PRIVATE',
+  Public = 'PUBLIC',
+  Unlisted = 'UNLISTED'
+}
+
 export type DataError = {
   __typename?: 'DataError';
   error: PrismaRuntimeError;
@@ -299,7 +306,6 @@ export enum MediaDownloadKind {
   TranscriptTxt = 'TRANSCRIPT_TXT',
   TranscriptVtt = 'TRANSCRIPT_VTT',
   Video_4K = 'VIDEO_4K',
-  Video_360P = 'VIDEO_360P',
   Video_480P = 'VIDEO_480P',
   Video_720P = 'VIDEO_720P',
   Video_1080P = 'VIDEO_1080P'
