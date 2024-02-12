@@ -1,6 +1,6 @@
 import { resolveOffsetConnection } from '@pothos/plugin-relay';
 import { getProperty as get } from 'dot-prop';
-import { max, min, uniqBy } from 'lodash-es';
+import { max, min } from 'lodash-es';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';
 import pFilter from 'p-filter';
@@ -388,19 +388,48 @@ builder.queryFields((t) => ({
               parsed.responses[TRANSCRIPTS_MSEARCH_INDEX]?.aggregations;
 
             // Get focused aggregrate value
-            channelAggData = uniqBy(
-              (focus === 'UPLOADS' || focus === 'TRANSCRIPTS'
+            const allChannelAggData = (
+              focus === 'UPLOADS' || focus === 'TRANSCRIPTS'
                 ? [
                     ...(uploadAggs?.channelIds?.buckets ?? []),
                     ...(transcriptAggs?.channelIds?.buckets ?? []),
                   ]
                 : []
-              )
-                .map(({ key, doc_count }) => ({ id: key, count: doc_count }))
-                // Ensure any extra channels passed in are accounted for
-                .concat(channelIds?.map((id) => ({ id, count: 0 })) ?? []),
-              'id',
-            );
+            )
+              .map(({ key, doc_count }) => ({ id: key, count: doc_count }))
+              // Ensure any extra channels passed in are accounted for
+              .concat(channelIds?.map((id) => ({ id, count: 0 })) ?? []);
+
+            // Filter out private or unlisted channels
+            const validChannels = await prisma.channel.findMany({
+              select: { id: true },
+              where: {
+                id: { in: allChannelAggData.map(({ id }) => id) },
+                OR: [
+                  {
+                    visibility: 'PUBLIC',
+                  },
+                  ...(appUserId
+                    ? [
+                        {
+                          memberships: {
+                            some: {
+                              appUserId,
+                            },
+                          },
+                        },
+                      ]
+                    : []),
+                ],
+              },
+            });
+
+            channelAggData = validChannels.map((channel) => ({
+              ...channel,
+              count:
+                allChannelAggData.find((agg) => agg.id === channel.id)?.count ??
+                0,
+            }));
 
             const minDate = min([
               uploadAggs?.minPublishedAt?.value,
