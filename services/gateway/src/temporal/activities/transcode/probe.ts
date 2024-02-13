@@ -72,6 +72,12 @@ export default async function probe(
       probe: probeJson,
       uploadSizeBytes,
       lengthSeconds: parseFloat(schemaParsedProbe.format.duration),
+      // TODO: temporarily set portrait videos to private
+      ...(schemaParsedProbe.streams.some(
+        (s) => s.codec_type === 'video' && s.height > s.width,
+      )
+        ? { visibility: 'PRIVATE' }
+        : {}),
     });
 
     return schemaParsedProbe;
