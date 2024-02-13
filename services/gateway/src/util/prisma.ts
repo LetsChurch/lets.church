@@ -9,3 +9,13 @@ export default new PrismaClient({
     },
   },
 });
+
+export function getLoglessClient() {
+  return new PrismaClient({
+    datasources: {
+      db: {
+        url: envariant('DATABASE_URL'),
+      },
+    },
+  });
+}

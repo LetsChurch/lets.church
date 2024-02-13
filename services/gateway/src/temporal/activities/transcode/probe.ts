@@ -57,7 +57,8 @@ export default async function probe(
     );
     const probeJson = probe.stdout;
 
-    const parsedProbe = ffprobeSchema.parse(JSON.parse(probeJson));
+    const parsedProbe = JSON.parse(probeJson);
+    const schemaParsedProbe = ffprobeSchema.parse(parsedProbe);
 
     await retryablePutFile({
       to: 'INGEST',
@@ -68,11 +69,12 @@ export default async function probe(
     });
 
     await updateUploadRecord(uploadRecordId, {
+      probe: probeJson,
       uploadSizeBytes,
-      lengthSeconds: parseFloat(parsedProbe.format.duration),
+      lengthSeconds: parseFloat(schemaParsedProbe.format.duration),
     });
 
-    return parsedProbe;
+    return schemaParsedProbe;
   } catch (e) {
     activityLogger.error(e instanceof Error ? e.message : e);
     throw e;

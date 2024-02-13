@@ -266,6 +266,7 @@ model UploadRecord {
   uploadFinalizedBy         AppUser?                   @relation("finalizedUploads", fields: [uploadFinalizedById], references: [id])
   uploadFinalizedById       String?                    @map("upload_finalized_by_id") @db.Uuid
   finalizedUploadKey        String?                    @map("finalized_upload_key")
+  probe                     Json?
   defaultThumbnailPath      String?                    @map("default_thumbnail_path")
   defaultThumbnailBlurhash  String?                    @map("default_thumbnail_blurhash")
   overrideThumbnailPath     String?                    @map("override_thumbnail_path")
