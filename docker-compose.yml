@@ -209,6 +209,7 @@ services:
     image: temporalio/admin-tools:1.22.4.0
     environment:
       TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CLI_ADDRESS: temporal:7233
     stdin_open: true
     tty: true
     depends_on:
