@@ -32,7 +32,6 @@
     "prisma:db:truncate": "tsx prisma/truncate.ts",
     "prisma:generate": "prisma generate",
     "es:push-mappings": "tsx elasticsearch/mappings.ts",
-    "admin:backfill-probes": "tsx scripts/backfill-probes.ts",
     "admin:bulk-import": "tsx scripts/bulk-import.ts",
     "admin:create-user": "tsx scripts/create-user.ts",
     "admin:create-channel": "tsx scripts/create-channel.ts",
