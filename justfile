@@ -77,6 +77,13 @@ s3-prune-multipart-uploads:
 
 init: gateway-init
 
+reset:
+  just stop
+  docker volume prune --all --force
+  just start
+  sleep 10
+  just init seed
+
 npmi-host-scripts:
   cd scripts; npm i
 npmi-host-gateway:
