@@ -9,7 +9,9 @@ export SENTRY_IMPORT_WORKER=https://foo@bar.ingest.sentry.io/baz
 
 export MEDIA_URL=https://public_media_url
 
-export PS_ACCESS_KEY=
+export MAPBOX_GEOCODING_TOKEN=
+export MAPBOX_MAP_TOKEN=
+export MAPBOX_SEARCHBOX_TOKEN=
 
 export S3_INGEST_ENDPOINT=
 export S3_INGEST_BUCKET=

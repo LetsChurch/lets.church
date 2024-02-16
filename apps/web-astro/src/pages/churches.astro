@@ -1,8 +1,24 @@
 ---
 import Layout from '../layouts/layout.astro';
-import Map from '../components/map';
+import ChurchSearch from '../components/church-search';
+import { createClient } from '../util/server/gql';
+import { churchesQuery } from '../queries/churches';
+
+if (Astro.request.method === 'POST') {
+  const client = await createClient(
+    Astro.request.headers,
+    Astro.cookies.get('lcSession')?.value,
+  );
+
+  const data = await client.request(churchesQuery);
+
+  return new Response(JSON.stringify(data), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
 ---
 
-<Layout title="Find a Church">
-  <Map client:visible />
+<Layout title="Find a Church" fixedHeader>
+  <ChurchSearch client:only />
 </Layout>

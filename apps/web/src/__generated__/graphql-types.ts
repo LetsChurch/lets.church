@@ -262,6 +262,12 @@ export type DataError = {
   error: PrismaRuntimeError;
 };
 
+export type GeoInput = {
+  lat: Scalars['Float']['input'];
+  lon: Scalars['Float']['input'];
+  miles: Scalars['Float']['input'];
+};
+
 export type GeocodeResult = {
   __typename?: 'GeocodeResult';
   administrativeArea?: Maybe<Scalars['String']['output']>;
@@ -566,6 +572,7 @@ export enum Order {
 
 export type Organization = {
   __typename?: 'Organization';
+  addresses: OrganizationAddressesConnection;
   associationsConnection: OrganizationAssociationsConnection;
   createdAt: Scalars['DateTime']['output'];
   description?: Maybe<Scalars['String']['output']>;
@@ -575,6 +582,15 @@ export type Organization = {
   slug: Scalars['String']['output'];
   type: OrganizationType;
   updatedAt: Scalars['DateTime']['output'];
+};
+
+
+export type OrganizationAddressesArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  type?: InputMaybe<OrganizationAddressType>;
 };
 
 
@@ -591,6 +607,39 @@ export type OrganizationMembershipsConnectionArgs = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type OrganizationAddress = {
+  __typename?: 'OrganizationAddress';
+  country?: Maybe<Scalars['String']['output']>;
+  latitude?: Maybe<Scalars['Float']['output']>;
+  locality?: Maybe<Scalars['String']['output']>;
+  longitude?: Maybe<Scalars['Float']['output']>;
+  name?: Maybe<Scalars['String']['output']>;
+  postOfficeBoxNumber?: Maybe<Scalars['String']['output']>;
+  postalCode?: Maybe<Scalars['String']['output']>;
+  region?: Maybe<Scalars['String']['output']>;
+  streetAddress?: Maybe<Scalars['String']['output']>;
+  type: OrganizationAddressType;
+};
+
+export enum OrganizationAddressType {
+  Mailing = 'MAILING',
+  Meeting = 'MEETING',
+  Office = 'OFFICE',
+  Other = 'OTHER'
+}
+
+export type OrganizationAddressesConnection = {
+  __typename?: 'OrganizationAddressesConnection';
+  edges: Array<OrganizationAddressesConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type OrganizationAddressesConnectionEdge = {
+  __typename?: 'OrganizationAddressesConnectionEdge';
+  cursor: Scalars['String']['output'];
+  node: OrganizationAddress;
 };
 
 export type OrganizationAssociationsConnection = {
@@ -731,6 +780,7 @@ export type QuerySearchArgs = {
   channels?: InputMaybe<Array<Scalars['String']['input']>>;
   first?: InputMaybe<Scalars['Int']['input']>;
   focus: SearchFocus;
+  geo?: InputMaybe<GeoInput>;
   last?: InputMaybe<Scalars['Int']['input']>;
   maxPublishedAt?: InputMaybe<Scalars['DateTime']['input']>;
   minPublishedAt?: InputMaybe<Scalars['DateTime']['input']>;
@@ -1019,6 +1069,7 @@ export type UploadRecord = {
   transcript?: Maybe<Array<TranscriptLine>>;
   updatedAt: Scalars['DateTime']['output'];
   uploadFinalized: Scalars['Boolean']['output'];
+  uploadFinalizedAt?: Maybe<Scalars['DateTime']['output']>;
   uploadFinalizedBy: AppUser;
   uploadListById?: Maybe<UploadList>;
   uploadSizeBytes?: Maybe<Scalars['SafeInt']['output']>;

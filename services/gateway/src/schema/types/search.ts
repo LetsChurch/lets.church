@@ -226,6 +226,16 @@ builder.queryFields((t) => ({
           required: false,
           type: 'Boolean',
         }),
+        geo: t.arg({
+          required: false,
+          type: builder.inputType('GeoInput', {
+            fields: (t) => ({
+              lat: t.float({ required: true }),
+              lon: t.float({ required: true }),
+              miles: t.float({ required: true }),
+            }),
+          }),
+        }),
       },
       validate: {
         schema: z
@@ -258,6 +268,7 @@ builder.queryFields((t) => ({
           minPublishedAt,
           maxPublishedAt,
           transcriptPhraseSearch,
+          geo,
           ...args
         },
         context,
@@ -350,6 +361,7 @@ builder.queryFields((t) => ({
                   query,
                   focus === 'ORGANIZATIONS' ? offset : 0,
                   focus === 'ORGANIZATIONS' ? limit : 0,
+                  geo ? { geo } : {},
                 ),
               ],
             });

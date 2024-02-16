@@ -18,6 +18,7 @@ interface Props {
   title: string;
   frontmatter?: { title?: string; description?: string };
   padded?: boolean;
+  fixedHeader?: boolean;
 }
 
 const { title, frontmatter } = Astro.props;
@@ -50,7 +51,12 @@ const data = await client.request<MeQuery, MeQueryVariables>(meQuery);
 ---
 
 <Root title={frontmatter?.title ?? title}>
-  <header class="bg-white shadow">
+  <header
+    class={cn(
+      'bg-white shadow',
+      Astro.props.fixedHeader ? 'sticky top-0 z-10' : null,
+    )}
+  >
     <nav>
       <div class="mx-auto max-w-7xl px-2 sm:px-4 lg:px-8">
         <div class="flex h-16 justify-between">
@@ -184,7 +190,7 @@ const data = await client.request<MeQuery, MeQueryVariables>(meQuery);
       </div>
     </nav>
   </header>
-  <main class={Astro.props.padded ? 'lg:px-8 px-2 sm:px-4' : null}>
+  <main class={Astro.props.padded ? 'px-2 sm:px-4 lg:px-8' : null}>
     <slot />
   </main>
   <footer class="bg-white" aria-labelledby="footer-heading">

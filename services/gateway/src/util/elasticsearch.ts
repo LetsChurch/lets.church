@@ -300,6 +300,7 @@ export function msearchOrganizations(
   query: string,
   from = 0,
   size = 0,
+  params?: { geo?: { miles: number; lat: number; lon: number } },
 ): [MsearchRequestItem, MsearchRequestItem] {
   return [
     { index: 'lc_organizations' },
@@ -307,10 +308,35 @@ export function msearchOrganizations(
       from,
       size,
       query: {
-        multi_match: {
-          query,
-          type: 'bool_prefix',
-          fields: ['name^3', 'name._2gram', 'name._3gram'],
+        bool: {
+          must: [
+            { term: { type: 'CHURCH' } }, // TODO: input
+            ...(query
+              ? [
+                  {
+                    multi_match: {
+                      query,
+                      type: 'bool_prefix' as const,
+                      fields: ['name^3', 'name._2gram', 'name._3gram'],
+                    },
+                  },
+                ]
+              : []),
+          ],
+          should: [],
+          filter: params?.geo
+            ? [
+                {
+                  geo_distance: {
+                    distance: `${params.geo.miles}mi`,
+                    meetingLocation: {
+                      lat: params.geo.lat,
+                      lon: params.geo.lon,
+                    },
+                  },
+                },
+              ]
+            : [],
         },
       },
     },

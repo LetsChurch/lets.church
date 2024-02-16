@@ -7,6 +7,9 @@ import { LexoRank } from 'lexorank';
 import { indexDocument, waitOnTemporal } from '../src/temporal';
 import prisma from '../src/util/prisma';
 import logger from '../src/util/logger';
+import baptistLa from './geocoding/baptist-la';
+import desertDebaters from './geocoding/desert-debaters';
+import gwgh from './geocoding/gwgh';
 
 faker.seed(1337);
 
@@ -279,7 +282,143 @@ await Promise.all(
   org2Associations.map(({ channel }) => indexDocument('channel', channel.id)),
 );
 
-for (let i = 0; i < 46; i += 1) {
+const org4 = await prisma.organization.create({
+  data: {
+    name: 'Baptist, But Not Too Baptist, Community Church',
+    slug: 'baptist-la',
+    type: 'CHURCH',
+    addresses: {
+      create: {
+        type: 'MEETING',
+        query: '13248 Roscoe Blvd, Sun Valley, CA 91352',
+        country: 'United States',
+        locality: 'Sun Valley',
+        region: 'California',
+        postalCode: '91352',
+        streetAddress: '13248 Roscoe Boulevard',
+        latitude: 34.220299,
+        longitude: -118.422009,
+        geocodingJson: baptistLa,
+      },
+    },
+    memberships: {
+      create: {
+        appUser: {
+          connect: {
+            id: adminUser.id,
+          },
+        },
+        isAdmin: true,
+      },
+    },
+  },
+});
+
+await indexDocument('organization', org4.id);
+
+const org5 = await prisma.organization.create({
+  data: {
+    name: 'Desert Debaters Society',
+    slug: 'desert-debaters',
+    type: 'CHURCH',
+    addresses: {
+      create: {
+        type: 'MEETING',
+        query: '717 N Stapley Dr Mesa AZ, 85203',
+        country: 'United States',
+        locality: 'Mesa',
+        region: 'Arizona',
+        postalCode: '85203',
+        streetAddress: '717 North Stapley Drive',
+        latitude: 33.428472,
+        longitude: -111.804779,
+        geocodingJson: desertDebaters,
+      },
+    },
+    memberships: {
+      create: {
+        appUser: {
+          connect: {
+            id: adminUser.id,
+          },
+        },
+        isAdmin: true,
+      },
+    },
+  },
+});
+
+await indexDocument('organization', org5.id);
+
+const org6 = await prisma.organization.create({
+  data: {
+    name: 'Moss Cows',
+    slug: 'moss-cows',
+    type: 'CHURCH',
+    addresses: {
+      create: {
+        type: 'MEETING',
+        query: '417 S. Jackson St Moscow ID 83843',
+        country: 'United States',
+        locality: 'Moscow',
+        region: 'Idaho',
+        postalCode: '83843',
+        streetAddress: '417 South Jackson Street',
+        latitude: 46.731083,
+        longitude: -117.003105,
+        geocodingJson: desertDebaters,
+      },
+    },
+    memberships: {
+      create: {
+        appUser: {
+          connect: {
+            id: adminUser.id,
+          },
+        },
+        isAdmin: true,
+      },
+    },
+  },
+});
+
+await indexDocument('organization', org6.id);
+
+const org7 = await prisma.organization.create({
+  data: {
+    name: 'Gopher Wood Gospel Hall',
+    slug: 'gwgh',
+    type: 'CHURCH',
+    addresses: {
+      create: {
+        type: 'MEETING',
+        query: '1 Ark Encounter Dr, Williamstown, KY 41097',
+        country: 'United States',
+        locality: 'Williamstown',
+        region: 'Kentucky',
+        postalCode: '41097',
+        streetAddress: '1 Ark Encounter Drive',
+        latitude: 38.628008,
+        longitude: -84.580878,
+        geocodingJson: gwgh,
+      },
+    },
+    memberships: {
+      create: {
+        appUser: {
+          connect: {
+            id: adminUser.id,
+          },
+        },
+        isAdmin: true,
+      },
+    },
+  },
+});
+
+await indexDocument('organization', org7.id);
+
+for (let i = 0; i < 25; i += 1) {
   const name = `${faker.helpers.arrayElement([
     'Second Baptist',
     'Covenant',
@@ -287,13 +426,26 @@ for (let i = 0; i < 46; i += 1) {
     'Covenant Presbyterian',
     'Redeemer Presbyterian',
     'Grace Fellowship Assembly',
-  ])} Church ${faker.address.cityName()}`.trim();
+  ])} Church ${faker.location.city()}`.trim();
 
   const { id } = await prisma.organization.create({
     data: {
       name,
       slug: slugify(name),
       type: 'CHURCH',
+      addresses: {
+        create: {
+          type: 'MEETING',
+          latitude: faker.location.latitude({
+            min: 31.915916,
+            max: 49.4515636581924,
+          }),
+          longitude: faker.location.longitude({
+            min: -111.878045,
+            max: -84.2539813003493,
+          }),
+        },
+      },
       memberships: {
         create: {
           appUser: {

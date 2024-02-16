@@ -1,0 +1,226 @@
+export default {
+  type: 'FeatureCollection',
+  query: ['13248', 'roscoe', 'blvd', 'sun', 'valley', 'ca', '91352'],
+  features: [
+    {
+      id: 'address.1670044645814082',
+      type: 'Feature',
+      place_type: ['address'],
+      relevance: 0.815873,
+      properties: {
+        accuracy: 'rooftop',
+        mapbox_id:
+          'dXJuOm1ieGFkcjo4OTdlMjZjMi03MmViLTRlNjctYWIzZi0yYTBlNGYwZmFmMDc',
+      },
+      text: 'Roscoe Boulevard',
+      place_name:
+        '13248 Roscoe Boulevard, North Hollywood, California 91352, United States',
+      center: [-118.422009, 34.220299],
+      geometry: { type: 'Point', coordinates: [-118.422009, 34.220299] },
+      address: '13248',
+      context: [
+        { id: 'postcode.1670044645814082', text: '91352' },
+        {
+          id: 'place.237054188',
+          mapbox_id: 'dXJuOm1ieHBsYzpEaUVvN0E',
+          wikidata: 'Q1319697',
+          text: 'sun valley',
+        },
+        {
+          id: 'district.14051052',
+          mapbox_id: 'dXJuOm1ieHBsYzoxbWJz',
+          wikidata: 'Q104994',
+          text: 'Los Angeles County',
+        },
+        {
+          id: 'region.419052',
+          mapbox_id: 'dXJuOm1ieHBsYzpCbVRz',
+          wikidata: 'Q99',
+          short_code: 'US-CA',
+          text: 'California',
+        },
+        {
+          id: 'country.8940',
+          mapbox_id: 'dXJuOm1ieHBsYzpJdXc',
+          wikidata: 'Q30',
+          short_code: 'us',
+          text: 'United States',
+        },
+      ],
+    },
+    {
+      id: 'address.7026815694002220',
+      type: 'Feature',
+      place_type: ['address'],
+      relevance: 0.992063,
+      properties: {
+        accuracy: 'street',
+        mapbox_id:
+          'dXJuOm1ieGFkcjo1YmUzZWYxMS01NTYxLTRkNWYtOTVlYS0wNmI1NDMxOGQ5MWE',
+      },
+      text: 'Roscoe Boulevard',
+      place_name:
+        'Roscoe Boulevard, Sun Valley, California 91352, United States',
+      center: [-118.36264165, 34.221283],
+      geometry: {
+        type: 'Point',
+        coordinates: [-118.36264165, 34.221283],
+      },
+      context: [
+        {
+          id: 'postcode.303075052',
+          mapbox_id: 'dXJuOm1ieHBsYzpFaENPN0E',
+          text: '91352',
+        },
+        {
+          id: 'place.319981804',
+          mapbox_id: 'dXJuOm1ieHBsYzpFeEtJN0E',
+          wikidata: 'Q14684044',
+          text: 'Sun Valley',
+        },
+        {
+          id: 'district.14051052',
+          mapbox_id: 'dXJuOm1ieHBsYzoxbWJz',
+          wikidata: 'Q104994',
+          text: 'Los Angeles County',
+        },
+        {
+          id: 'region.419052',
+          mapbox_id: 'dXJuOm1ieHBsYzpCbVRz',
+          wikidata: 'Q99',
+          short_code: 'US-CA',
+          text: 'California',
+        },
+        {
+          id: 'country.8940',
+          mapbox_id: 'dXJuOm1ieHBsYzpJdXc',
+          wikidata: 'Q30',
+          short_code: 'us',
+          text: 'United States',
+        },
+      ],
+    },
+    {
+      id: 'address.8600124479721398',
+      type: 'Feature',
+      place_type: ['address'],
+      relevance: 0.762579,
+      properties: {
+        accuracy: 'street',
+        mapbox_id:
+          'dXJuOm1ieGFkcjozN2I3ZGU3Mi1mYTFlLTQyZTMtOWRmZS01M2NiZGFkNGYwZDg',
+      },
+      text: 'Roscoe Blvd',
+      place_name: 'Roscoe Blvd, Arleta, California 91402, United States',
+      center: [-118.43376, 34.227955],
+      geometry: { type: 'Point', coordinates: [-118.43376, 34.227955] },
+      context: [
+        { id: 'postcode.8600124479721398', text: '91402' },
+        {
+          id: 'place.10938604',
+          mapbox_id: 'dXJuOm1ieHBsYzpwdWpz',
+          text: 'Arleta',
+        },
+        {
+          id: 'district.14051052',
+          mapbox_id: 'dXJuOm1ieHBsYzoxbWJz',
+          wikidata: 'Q104994',
+          text: 'Los Angeles County',
+        },
+        {
+          id: 'region.419052',
+          mapbox_id: 'dXJuOm1ieHBsYzpCbVRz',
+          wikidata: 'Q99',
+          short_code: 'US-CA',
+          text: 'California',
+        },
+        {
+          id: 'country.8940',
+          mapbox_id: 'dXJuOm1ieHBsYzpJdXc',
+          wikidata: 'Q30',
+          short_code: 'us',
+          text: 'United States',
+        },
+      ],
+    },
+    {
+      id: 'postcode.303075052',
+      type: 'Feature',
+      place_type: ['postcode'],
+      relevance: 0.670635,
+      properties: { mapbox_id: 'dXJuOm1ieHBsYzpFaENPN0E' },
+      text: '91352',
+      place_name: 'Sun Valley, California 91352, United States',
+      bbox: [-118.42262, 34.198722, -118.2797131, 34.257208],
+      center: [-118.370358, 34.217504],
+      geometry: { type: 'Point', coordinates: [-118.370358, 34.217504] },
+      context: [
+        {
+          id: 'place.319981804',
+          mapbox_id: 'dXJuOm1ieHBsYzpFeEtJN0E',
+          wikidata: 'Q14684044',
+          text: 'Sun Valley',
+        },
+        {
+          id: 'district.14051052',
+          mapbox_id: 'dXJuOm1ieHBsYzoxbWJz',
+          wikidata: 'Q104994',
+          text: 'Los Angeles County',
+        },
+        {
+          id: 'region.419052',
+          mapbox_id: 'dXJuOm1ieHBsYzpCbVRz',
+          wikidata: 'Q99',
+          short_code: 'US-CA',
+          text: 'California',
+        },
+        {
+          id: 'country.8940',
+          mapbox_id: 'dXJuOm1ieHBsYzpJdXc',
+          wikidata: 'Q30',
+          short_code: 'us',
+          text: 'United States',
+        },
+      ],
+    },
+    {
+      id: 'place.319981804',
+      type: 'Feature',
+      place_type: ['place'],
+      relevance: 0.560847,
+      properties: {
+        mapbox_id: 'dXJuOm1ieHBsYzpFeEtJN0E',
+        wikidata: 'Q14684044',
+      },
+      text: 'Sun Valley',
+      place_name: 'Sun Valley, California, United States',
+      bbox: [-118.422619, 34.198722, -118.279714, 34.257207],
+      center: [-118.370358, 34.217504],
+      geometry: { type: 'Point', coordinates: [-118.370358, 34.217504] },
+      context: [
+        {
+          id: 'district.14051052',
+          mapbox_id: 'dXJuOm1ieHBsYzoxbWJz',
+          wikidata: 'Q104994',
+          text: 'Los Angeles County',
+        },
+        {
+          id: 'region.419052',
+          mapbox_id: 'dXJuOm1ieHBsYzpCbVRz',
+          wikidata: 'Q99',
+          short_code: 'US-CA',
+          text: 'California',
+        },
+        {
+          id: 'country.8940',
+          mapbox_id: 'dXJuOm1ieHBsYzpJdXc',
+          wikidata: 'Q30',
+          short_code: 'us',
+          text: 'United States',
+        },
+      ],
+    },
+  ],
+  attribution:
+    '© 2024 Mapbox and its suppliers. All rights reserved. Use of this data is subject to the Mapbox Terms of Service. (https://www.mapbox.com/about/maps/)',
+} as const;

@@ -973,6 +973,18 @@ export type introspection = {
               }
             },
             "args": []
+          },
+          {
+            "name": "visibility",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "ENUM",
+                "name": "ChannelVisibility",
+                "ofType": null
+              }
+            },
+            "args": []
           }
         ],
         "interfaces": []
@@ -1352,6 +1364,21 @@ export type introspection = {
         "interfaces": []
       },
       {
+        "kind": "ENUM",
+        "name": "ChannelVisibility",
+        "enumValues": [
+          {
+            "name": "PRIVATE"
+          },
+          {
+            "name": "PUBLIC"
+          },
+          {
+            "name": "UNLISTED"
+          }
+        ]
+      },
+      {
         "kind": "OBJECT",
         "name": "DataError",
         "fields": [
@@ -1377,6 +1404,45 @@ export type introspection = {
       {
         "kind": "SCALAR",
         "name": "Float"
+      },
+      {
+        "kind": "INPUT_OBJECT",
+        "name": "GeoInput",
+        "inputFields": [
+          {
+            "name": "lat",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Float",
+                "ofType": null
+              }
+            }
+          },
+          {
+            "name": "lon",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Float",
+                "ofType": null
+              }
+            }
+          },
+          {
+            "name": "miles",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Float",
+                "ofType": null
+              }
+            }
+          }
+        ]
       },
       {
         "kind": "OBJECT",
@@ -1703,9 +1769,6 @@ export type introspection = {
           },
           {
             "name": "VIDEO_4K"
-          },
-          {
-            "name": "VIDEO_360P"
           },
           {
             "name": "VIDEO_480P"
@@ -3104,6 +3167,59 @@ export type introspection = {
         "name": "Organization",
         "fields": [
           {
+            "name": "addresses",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "OrganizationAddressesConnection",
+                "ofType": null
+              }
+            },
+            "args": [
+              {
+                "name": "after",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              {
+                "name": "before",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              {
+                "name": "first",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              {
+                "name": "last",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              {
+                "name": "type",
+                "type": {
+                  "kind": "ENUM",
+                  "name": "OrganizationAddressType",
+                  "ofType": null
+                }
+              }
+            ]
+          },
+          {
             "name": "associationsConnection",
             "type": {
               "kind": "NON_NULL",
@@ -3269,6 +3385,192 @@ export type introspection = {
               "ofType": {
                 "kind": "SCALAR",
                 "name": "DateTime",
+                "ofType": null
+              }
+            },
+            "args": []
+          }
+        ],
+        "interfaces": []
+      },
+      {
+        "kind": "OBJECT",
+        "name": "OrganizationAddress",
+        "fields": [
+          {
+            "name": "country",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "args": []
+          },
+          {
+            "name": "latitude",
+            "type": {
+              "kind": "SCALAR",
+              "name": "Float",
+              "ofType": null
+            },
+            "args": []
+          },
+          {
+            "name": "locality",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "args": []
+          },
+          {
+            "name": "longitude",
+            "type": {
+              "kind": "SCALAR",
+              "name": "Float",
+              "ofType": null
+            },
+            "args": []
+          },
+          {
+            "name": "name",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "args": []
+          },
+          {
+            "name": "postOfficeBoxNumber",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "args": []
+          },
+          {
+            "name": "postalCode",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "args": []
+          },
+          {
+            "name": "region",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "args": []
+          },
+          {
+            "name": "streetAddress",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "args": []
+          },
+          {
+            "name": "type",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "ENUM",
+                "name": "OrganizationAddressType",
+                "ofType": null
+              }
+            },
+            "args": []
+          }
+        ],
+        "interfaces": []
+      },
+      {
+        "kind": "ENUM",
+        "name": "OrganizationAddressType",
+        "enumValues": [
+          {
+            "name": "MAILING"
+          },
+          {
+            "name": "MEETING"
+          },
+          {
+            "name": "OFFICE"
+          },
+          {
+            "name": "OTHER"
+          }
+        ]
+      },
+      {
+        "kind": "OBJECT",
+        "name": "OrganizationAddressesConnection",
+        "fields": [
+          {
+            "name": "edges",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "LIST",
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "OrganizationAddressesConnectionEdge",
+                    "ofType": null
+                  }
+                }
+              }
+            },
+            "args": []
+          },
+          {
+            "name": "pageInfo",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "PageInfo",
+                "ofType": null
+              }
+            },
+            "args": []
+          }
+        ],
+        "interfaces": []
+      },
+      {
+        "kind": "OBJECT",
+        "name": "OrganizationAddressesConnectionEdge",
+        "fields": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "args": []
+          },
+          {
+            "name": "node",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "OrganizationAddress",
                 "ofType": null
               }
             },
@@ -3950,6 +4252,14 @@ export type introspection = {
                     "name": "SearchFocus",
                     "ofType": null
                   }
+                }
+              },
+              {
+                "name": "geo",
+                "type": {
+                  "kind": "INPUT_OBJECT",
+                  "name": "GeoInput",
+                  "ofType": null
                 }
               },
               {
@@ -5735,6 +6045,15 @@ export type introspection = {
                 "name": "Boolean",
                 "ofType": null
               }
+            },
+            "args": []
+          },
+          {
+            "name": "uploadFinalizedAt",
+            "type": {
+              "kind": "SCALAR",
+              "name": "DateTime",
+              "ofType": null
             },
             "args": []
           },

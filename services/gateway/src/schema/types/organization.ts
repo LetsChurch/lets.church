@@ -48,6 +48,12 @@ const Organization = builder.prismaObject('Organization', {
     slug: t.exposeString('slug'),
     type: t.expose('type', { type: OrganizationTypeEnum }),
     description: t.exposeString('description', { nullable: true }),
+    addresses: t.relatedConnection('addresses', {
+      cursor: 'id',
+      args: { type: t.arg({ type: AddressTypeEnum, required: false }) },
+      query: (args) =>
+        args.type ? { where: { type: args.type as AddressType } } : {},
+    }),
     membershipsConnection: t.relatedConnection('memberships', {
       cursor: 'organizationId_appUserId',
     }),
@@ -71,6 +77,27 @@ builder.prismaObject('OrganizationChannelAssociation', {
   fields: (t) => ({
     organization: t.relation('organization'),
     channel: t.relation('channel'),
+  }),
+});
+
+const AddressTypeEnum = builder.enumType('OrganizationAddressType', {
+  values: Object.keys(AddressType),
+});
+
+builder.prismaObject('OrganizationAddress', {
+  fields: (t) => ({
+    type: t.expose('type', { type: AddressTypeEnum }),
+    name: t.exposeString('name', { nullable: true }),
+    country: t.exposeString('country', { nullable: true }),
+    locality: t.exposeString('locality', { nullable: true }),
+    region: t.exposeString('region', { nullable: true }),
+    postOfficeBoxNumber: t.exposeString('postOfficeBoxNumber', {
+      nullable: true,
+    }),
+    postalCode: t.exposeString('postalCode', { nullable: true }),
+    streetAddress: t.exposeString('streetAddress', { nullable: true }),
+    latitude: t.exposeFloat('latitude', { nullable: true }),
+    longitude: t.exposeFloat('longitude', { nullable: true }),
   }),
 });
 
