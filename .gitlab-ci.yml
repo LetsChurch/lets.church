@@ -74,14 +74,8 @@ check-scripts:
     paths:
       - $CI_PROJECT_DIR/.npm
 
-#  _____ _____ ____ _____
-# |_   _| ____/ ___|_   _|
-#   | | |  _| \___ \ | |
-#   | | | |___ ___) || |
-#   |_| |_____|____/ |_|
-
 test-gateway:
-  stage: test
+  stage: check
   script:
     - cd services/gateway
     - !reference [.setup, npmci]
