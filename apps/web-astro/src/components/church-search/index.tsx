@@ -1,10 +1,18 @@
 import mapboxgl from 'mapbox-gl';
 // import { debounce } from '@solid-primitives/scheduled';
-import { createSignal, onMount, For, Show, batch } from 'solid-js';
+import {
+  createSignal,
+  onMount,
+  For,
+  Show,
+  batch,
+  createEffect,
+} from 'solid-js';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import invariant from 'tiny-invariant';
-import type { ResultOf } from '../util/graphql';
-import type { churchesQuery } from '../queries/churches';
+import type { ResultOf } from '../../util/graphql';
+import type { churchesQuery } from '../../queries/churches';
+import Filter from './filter';
 
 mapboxgl.accessToken = import.meta.env.PUBLIC_MAPBOX_MAP_TOKEN;
 
@@ -15,6 +23,16 @@ export default function ChurchSearch() {
   const [results, setResults] = createSignal<
     ResultOf<typeof churchesQuery>['search']['edges']
   >([]);
+
+  const [center, setCenter] = createSignal<[number, number] | null>(null);
+
+  createEffect(() => {
+    const c = center();
+
+    if (c) {
+      map?.easeTo({ center: c, duration: 4000, zoom: 7 });
+    }
+  });
 
   function updateData(data: GeoJSON.FeatureCollection<GeoJSON.Geometry>) {
     const source = map?.getSource('churches');
@@ -72,14 +90,6 @@ export default function ChurchSearch() {
 
     map.on('load', () => {
       invariant(map, 'Map should be defined');
-
-      navigator.geolocation.getCurrentPosition((pos) => {
-        map?.easeTo({
-          center: [pos.coords.longitude, pos.coords.latitude],
-          zoom: 7,
-          duration: 4000,
-        });
-      });
 
       map.setFog({
         range: [0.8, 8],
@@ -223,6 +233,19 @@ export default function ChurchSearch() {
   return (
     <div class="relative grid w-full grid-cols-3">
       <div class="pointer-events-auto col-span-1 space-y-2 p-2">
+        <div>
+          <Filter label="Location">
+            <button
+              onClick={() => {
+                navigator.geolocation.getCurrentPosition((pos) => {
+                  setCenter([pos.coords.longitude, pos.coords.latitude]);
+                });
+              }}
+            >
+              Geo-Locate
+            </button>
+          </Filter>
+        </div>
         <Show when={!loading()} fallback={<p>Loading</p>}>
           <For each={results()}>
             {(res) => (

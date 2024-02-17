@@ -1,7 +1,10 @@
 {
   "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
-    "types": ["vite-plugin-svg-sprite-components-core/client"],
+    "types": [
+      "vite-plugin-svg-sprite-components-core/client",
+      "vite-plugin-svg-sprite-components-solid/client",
+    ],
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
     "plugins": [
