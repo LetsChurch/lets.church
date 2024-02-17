@@ -66,12 +66,20 @@ export default function ChurchSearch() {
     map = new mapboxgl.Map({
       container: mapNode,
       style: 'mapbox://styles/mapbox/streets-v12',
-      center: [-103.5917, 40.6699],
+      center: [-97.9222112121185, 39.3812661305678],
       zoom: 4,
     });
 
     map.on('load', () => {
       invariant(map, 'Map should be defined');
+
+      navigator.geolocation.getCurrentPosition((pos) => {
+        map?.easeTo({
+          center: [pos.coords.longitude, pos.coords.latitude],
+          zoom: 7,
+          duration: 4000,
+        });
+      });
 
       map.setFog({
         range: [0.8, 8],
