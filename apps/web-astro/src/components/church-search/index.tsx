@@ -1,5 +1,4 @@
 import mapboxgl from 'mapbox-gl';
-// import { debounce } from '@solid-primitives/scheduled';
 import {
   createSignal,
   onMount,
@@ -12,7 +11,9 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import invariant from 'tiny-invariant';
 import type { ResultOf } from '../../util/graphql';
 import type { churchesQuery } from '../../queries/churches';
-import Filter from './filter';
+import LocationFilter from './filters/location';
+
+const murica = [-97.9222112121185, 39.3812661305678] as [number, number];
 
 mapboxgl.accessToken = import.meta.env.PUBLIC_MAPBOX_MAP_TOKEN;
 
@@ -24,13 +25,15 @@ export default function ChurchSearch() {
     ResultOf<typeof churchesQuery>['search']['edges']
   >([]);
 
-  const [center, setCenter] = createSignal<[number, number] | null>(null);
+  const [center, setCenter] = createSignal<[number, number] | null>(murica);
 
   createEffect(() => {
     const c = center();
 
     if (c) {
       map?.easeTo({ center: c, duration: 4000, zoom: 7 });
+    } else {
+      map?.easeTo({ center: murica, duration: 1000, zoom: 4 });
     }
   });
 
@@ -84,7 +87,7 @@ export default function ChurchSearch() {
     map = new mapboxgl.Map({
       container: mapNode,
       style: 'mapbox://styles/mapbox/streets-v12',
-      center: [-97.9222112121185, 39.3812661305678],
+      center: murica,
       zoom: 4,
     });
 
@@ -234,17 +237,7 @@ export default function ChurchSearch() {
     <div class="relative grid w-full grid-cols-3">
       <div class="pointer-events-auto col-span-1 space-y-2 p-2">
         <div>
-          <Filter label="Location">
-            <button
-              onClick={() => {
-                navigator.geolocation.getCurrentPosition((pos) => {
-                  setCenter([pos.coords.longitude, pos.coords.latitude]);
-                });
-              }}
-            >
-              Geo-Locate
-            </button>
-          </Filter>
+          <LocationFilter setCenter={setCenter} />
         </div>
         <Show when={!loading()} fallback={<p>Loading</p>}>
           <For each={results()}>

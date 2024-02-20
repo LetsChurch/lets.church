@@ -26,6 +26,7 @@
     "@fontsource-variable/roboto-mono": "^5.0.17",
     "@knpwrs/envariant": "^1.1.1",
     "@sentry/astro": "^7.99.0",
+    "@solid-primitives/autofocus": "^0.0.109",
     "@solid-primitives/scheduled": "^1.4.2",
     "@tabler/icons": "^2.46.0",
     "astro": "^4.2.8",
