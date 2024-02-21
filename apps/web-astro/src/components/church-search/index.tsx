@@ -11,6 +11,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import invariant from 'tiny-invariant';
 import type { ResultOf } from '../../util/graphql';
 import type { churchesQuery } from '../../queries/churches';
+import { easeOutExpo } from '../../util';
 import LocationFilter from './filters/location';
 
 const murica = [-97.9222112121185, 39.3812661305678] as [number, number];
@@ -26,15 +27,13 @@ export default function ChurchSearch() {
   >([]);
 
   const [center, setCenter] = createSignal<[number, number] | null>(murica);
+  const [range, setRange] = createSignal<string>('100 mi');
 
   createEffect(() => {
     const c = center();
+    const r = range();
 
-    if (c) {
-      map?.easeTo({ center: c, duration: 4000, zoom: 7 });
-    } else {
-      map?.easeTo({ center: murica, duration: 1000, zoom: 4 });
-    }
+    fetchData(c, r);
   });
 
   function updateData(data: GeoJSON.FeatureCollection<GeoJSON.Geometry>) {
@@ -46,8 +45,13 @@ export default function ChurchSearch() {
     }
   }
 
-  async function fetchData() {
-    const res = await fetch('', { method: 'POST' });
+  async function fetchData(c = center(), r = range()) {
+    const res = await fetch('/churches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ center: c ?? murica, range: r }),
+    });
+
     const data = (await res.json()) as ResultOf<typeof churchesQuery>;
 
     const featureCollection = {
@@ -76,6 +80,32 @@ export default function ChurchSearch() {
     };
 
     updateData(featureCollection);
+
+    if (data.search.edges.length > 0) {
+      const bounds = new mapboxgl.LngLatBounds();
+
+      data.search.edges.forEach((res) => {
+        if (res.node.__typename === 'OrganizationSearchHit') {
+          const node = res.node.organization.addresses.edges[0].node;
+          if (node.longitude && node.latitude) {
+            bounds.extend([node.longitude, node.latitude]);
+          }
+        }
+      });
+
+      map?.fitBounds(bounds, {
+        padding: 150,
+        duration: 4000,
+        easing: easeOutExpo,
+      });
+    } else {
+      map?.easeTo({
+        center: murica,
+        zoom: 4,
+        duration: 1000,
+        easing: easeOutExpo,
+      });
+    }
 
     batch(() => {
       setLoading(false);
@@ -237,13 +267,39 @@ export default function ChurchSearch() {
     <div class="relative grid w-full grid-cols-3">
       <div class="pointer-events-auto col-span-1 space-y-2 p-2">
         <div>
-          <LocationFilter setCenter={setCenter} />
+          <LocationFilter setCenter={setCenter} setRange={setRange} />
         </div>
         <Show when={!loading()} fallback={<p>Loading</p>}>
           <For each={results()}>
             {(res) => (
-              <div class="flex h-20 w-full items-center justify-center rounded-md bg-gray-200">
-                {'name' in res.node ? res.node.name : null}
+              <div class="sm:flex">
+                <div class="mb-4 flex-shrink-0 sm:mb-0 sm:mr-4">
+                  <svg
+                    class="h-32 w-full border border-gray-300 bg-white text-gray-300 sm:w-32"
+                    preserveAspectRatio="none"
+                    stroke="currentColor"
+                    fill="none"
+                    viewBox="0 0 200 200"
+                    aria-hidden="true"
+                  >
+                    <path
+                      vector-effect="non-scaling-stroke"
+                      stroke-width="1"
+                      d="M0 0l200 200M0 200L200 0"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h4 class="text-lg font-bold">
+                    {'name' in res.node ? res.node.name : null}
+                  </h4>
+                  <p class="mt-1">
+                    {'organization' in res.node
+                      ? res.node.organization.addresses.edges[0].node
+                          .streetAddress
+                      : null}
+                  </p>
+                </div>
               </div>
             )}
           </For>

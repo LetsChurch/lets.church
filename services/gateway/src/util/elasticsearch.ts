@@ -300,7 +300,7 @@ export function msearchOrganizations(
   query: string,
   from = 0,
   size = 0,
-  params?: { geo?: { miles: number; lat: number; lon: number } },
+  params?: { geo?: { range: string; lat: number; lon: number } },
 ): [MsearchRequestItem, MsearchRequestItem] {
   return [
     { index: 'lc_organizations' },
@@ -328,7 +328,7 @@ export function msearchOrganizations(
             ? [
                 {
                   geo_distance: {
-                    distance: `${params.geo.miles}mi`,
+                    distance: params.geo.range,
                     meetingLocation: {
                       lat: params.geo.lat,
                       lon: params.geo.lon,

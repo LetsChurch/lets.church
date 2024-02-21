@@ -1,7 +1,12 @@
 import LocationIcon from '@tabler/icons/map-2.svg?sprite-solid';
+import MountainIcon from '@tabler/icons/mountain.svg?sprite-solid';
+import BuildingIcon from '@tabler/icons/building-skyscraper.svg?sprite-solid';
+import RoadIcon from '@tabler/icons/road.svg?sprite-solid';
+import MailIcon from '@tabler/icons/mail.svg?sprite-solid';
+import MapPinIcon from '@tabler/icons/map-pin.svg?sprite-solid';
 import GeoLocateIcon from '@tabler/icons/current-location.svg?sprite-solid';
 import ClearIcon from '@tabler/icons/x.svg?sprite-solid';
-import { createSignal, Show, For } from 'solid-js';
+import { createSignal, Show, For, Switch, Match } from 'solid-js';
 import { throttle } from '@solid-primitives/scheduled';
 import { createAutofocus } from '@solid-primitives/autofocus';
 import Filter from './base';
@@ -50,6 +55,7 @@ async function retrieve(id: string): Promise<{
 
 export default function LocationFilter(props: {
   setCenter: (coords: [number, number] | null) => unknown;
+  setRange: (range: string) => unknown;
 }) {
   const [inputEl, setInputEl] = createSignal<HTMLInputElement | null>(null);
   createAutofocus(inputEl);
@@ -131,11 +137,28 @@ export default function LocationFilter(props: {
           }}
         >
           <div class="relative rounded-md shadow-sm">
+            <div class="absolute inset-y-0 left-0 flex items-center">
+              <select
+                name="range"
+                aria-label="Range"
+                class="h-full rounded-md border-0 bg-transparent py-0 pl-3 pr-7 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+                onChange={(e) => props.setRange(e.target.value)}
+              >
+                <option>5 mi</option>
+                <option>10 mi</option>
+                <option>25 mi</option>
+                <option>50 mi</option>
+                <option>100 mi</option>
+                <option>200 mi</option>
+                <option>500 mi</option>
+                <option>1000 mi</option>
+              </select>
+            </div>
             <input
               type="text"
               name="account-number"
               id="account-number"
-              class="block w-full rounded-md border-0 py-1.5 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+              class="block w-full rounded-md border-0 py-1.5 pl-24 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
               placeholder={label()}
               onInput={(e) => handleInput(e.target.value)}
               ref={setInputEl}
@@ -174,7 +197,37 @@ export default function LocationFilter(props: {
                     onClick={[onClickSuggestion, [res, closeFloat]]}
                   >
                     <div class="flex gap-2 [&_svg]:shrink-0">
-                      <LocationIcon />
+                      <Switch fallback={<LocationIcon />}>
+                        <Match when={res.type === 'place'}>
+                          <MapPinIcon />
+                        </Match>
+                        <Match
+                          when={res.type === 'country' || res.type === 'region'}
+                        >
+                          <MountainIcon />
+                        </Match>
+                        <Match
+                          when={
+                            res.type === 'city' ||
+                            res.type === 'locality' ||
+                            res.type === 'neighborhood'
+                          }
+                        >
+                          <BuildingIcon />
+                        </Match>
+                        <Match
+                          when={
+                            res.type === 'block' ||
+                            res.type === 'street' ||
+                            res.type === 'address'
+                          }
+                        >
+                          <RoadIcon />
+                        </Match>
+                        <Match when={res.type === 'postcode'}>
+                          <MailIcon />
+                        </Match>
+                      </Switch>
                       <dl class="min-w-0">
                         <dt class="block overflow-hidden text-ellipsis whitespace-nowrap font-bold">
                           {res.name}

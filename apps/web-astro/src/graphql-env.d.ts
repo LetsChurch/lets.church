@@ -1432,12 +1432,12 @@ export type introspection = {
             }
           },
           {
-            "name": "miles",
+            "name": "range",
             "type": {
               "kind": "NON_NULL",
               "ofType": {
                 "kind": "SCALAR",
-                "name": "Float",
+                "name": "String",
                 "ofType": null
               }
             }

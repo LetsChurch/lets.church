@@ -1,11 +1,12 @@
+import * as z from 'zod';
 import { graphql } from '../util/graphql';
 
 export const churchesQuery = graphql(`
-  query MyQuery {
+  query ChurchesQuery($lon: Float!, $lat: Float!, $range: String!) {
     search(
       focus: ORGANIZATIONS
       query: ""
-      geo: { lat: 42.57894, lon: -71.337634, miles: 10000 }
+      geo: { lon: $lon, lat: $lat, range: $range }
       first: 100
     ) {
       edges {
@@ -38,3 +39,17 @@ export const churchesQuery = graphql(`
     }
   }
 `);
+
+export const churchesPayloadSchema = z.object({
+  center: z.array(z.number()).length(2),
+  range: z.enum([
+    '5 mi',
+    '10 mi',
+    '25 mi',
+    '50 mi',
+    '100 mi',
+    '200 mi',
+    '500 mi',
+    '1000 mi',
+  ]),
+});

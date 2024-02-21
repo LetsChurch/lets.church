@@ -232,7 +232,7 @@ builder.queryFields((t) => ({
             fields: (t) => ({
               lat: t.float({ required: true }),
               lon: t.float({ required: true }),
-              miles: t.float({ required: true }),
+              range: t.string({ required: true }),
             }),
           }),
         }),

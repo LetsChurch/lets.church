@@ -2,15 +2,24 @@
 import Layout from '../layouts/layout.astro';
 import ChurchSearch from '../components/church-search';
 import { createClient } from '../util/server/gql';
-import { churchesQuery } from '../queries/churches';
+import { churchesQuery, churchesPayloadSchema } from '../queries/churches';
 
-if (Astro.request.method === 'POST') {
+if (
+  Astro.request.method === 'POST' &&
+  Astro.request.headers.get('content-type') === 'application/json'
+) {
   const client = await createClient(
     Astro.request.headers,
     Astro.cookies.get('lcSession')?.value,
   );
 
-  const data = await client.request(churchesQuery);
+  const body = churchesPayloadSchema.parse(await Astro.request.json());
+
+  const data = await client.request(churchesQuery, {
+    lon: body.center[0],
+    lat: body.center[1],
+    range: body.range,
+  });
 
   return new Response(JSON.stringify(data), {
     status: 200,
