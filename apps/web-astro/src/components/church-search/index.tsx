@@ -12,6 +12,7 @@ import invariant from 'tiny-invariant';
 import type { ResultOf } from '../../util/graphql';
 import type { churchesQuery } from '../../queries/churches';
 import { easeOutExpo } from '../../util';
+import { pushQueryParams, query } from '../../util/history';
 import LocationFilter from './filters/location';
 
 const murica = [-97.9222112121185, 39.3812661305678] as [number, number];
@@ -19,33 +20,43 @@ const murica = [-97.9222112121185, 39.3812661305678] as [number, number];
 mapboxgl.accessToken = import.meta.env.PUBLIC_MAPBOX_MAP_TOKEN;
 
 export default function ChurchSearch() {
-  let map: mapboxgl.Map | null = null;
+  const [map, setMap] = createSignal<mapboxgl.Map | null>(null);
+  const [source, setSource] = createSignal<mapboxgl.AnySourceImpl | null>(null);
   let mapNode: HTMLDivElement;
   const [loading, setLoading] = createSignal(true);
   const [results, setResults] = createSignal<
     ResultOf<typeof churchesQuery>['search']['edges']
   >([]);
 
-  const [center, setCenter] = createSignal<[number, number] | null>(murica);
-  const [range, setRange] = createSignal<string>('100 mi');
+  const parsedCenter = () =>
+    query().get('center')?.split(',').map(parseFloat).slice(0, 2) as [
+      number,
+      number,
+    ];
 
   createEffect(() => {
-    const c = center();
-    const r = range();
+    const m = map();
+    const s = source();
+    const q = query();
+    const center = parsedCenter();
 
-    fetchData(c, r);
+    console.log({ m, s, q, center, range: q.get('range') });
+
+    if (m && s) {
+      fetchData(center ? center : murica, q.get('range') ?? '100 mi');
+    }
   });
 
   function updateData(data: GeoJSON.FeatureCollection<GeoJSON.Geometry>) {
-    const source = map?.getSource('churches');
-    invariant(source, 'Source not yet set up');
+    const s = source();
+    invariant(s, 'Source not yet set up');
 
-    if (source?.type === 'geojson') {
-      source.setData(data);
+    if (s?.type === 'geojson') {
+      s.setData(data);
     }
   }
 
-  async function fetchData(c = center(), r = range()) {
+  async function fetchData(c: [number, number] = murica, r: string = '100 mi') {
     const res = await fetch('/churches', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -83,6 +94,7 @@ export default function ChurchSearch() {
 
     if (data.search.edges.length > 0) {
       const bounds = new mapboxgl.LngLatBounds();
+      bounds.extend(c);
 
       data.search.edges.forEach((res) => {
         if (res.node.__typename === 'OrganizationSearchHit') {
@@ -93,13 +105,14 @@ export default function ChurchSearch() {
         }
       });
 
-      map?.fitBounds(bounds, {
+      map()?.fitBounds(bounds, {
         padding: 150,
         duration: 4000,
         easing: easeOutExpo,
+        maxZoom: 9,
       });
     } else {
-      map?.easeTo({
+      map()?.easeTo({
         center: murica,
         zoom: 4,
         duration: 1000,
@@ -114,12 +127,14 @@ export default function ChurchSearch() {
   }
 
   onMount(() => {
-    map = new mapboxgl.Map({
+    const map = new mapboxgl.Map({
       container: mapNode,
       style: 'mapbox://styles/mapbox/streets-v12',
       center: murica,
       zoom: 4,
     });
+
+    setMap(map);
 
     map.on('load', () => {
       invariant(map, 'Map should be defined');
@@ -141,6 +156,7 @@ export default function ChurchSearch() {
         clusterMaxZoom: 14,
         clusterRadius: 50, // defaults to 50
       });
+      setSource(map.getSource('churches')!);
 
       map.addLayer({
         id: 'clusters',
@@ -208,9 +224,9 @@ export default function ChurchSearch() {
           layers: ['clusters'],
         });
         const clusterId = features[0].properties?.cluster_id;
-        const churches = map.getSource('churches');
+        const churches = source();
 
-        if (churches.type === 'geojson') {
+        if (churches?.type === 'geojson') {
           churches.getClusterExpansionZoom(clusterId, (err, zoom) => {
             if (err) return;
             const geometry = features[0].geometry;
@@ -258,8 +274,6 @@ export default function ChurchSearch() {
         invariant(map, 'Map should be defined');
         map.getCanvas().style.cursor = '';
       });
-
-      fetchData();
     });
   });
 
@@ -267,7 +281,16 @@ export default function ChurchSearch() {
     <div class="relative grid w-full grid-cols-3">
       <div class="pointer-events-auto col-span-1 space-y-2 p-2">
         <div>
-          <LocationFilter setCenter={setCenter} setRange={setRange} />
+          <LocationFilter
+            center={parsedCenter()}
+            setCenter={(center) => {
+              if (center) {
+                pushQueryParams({ center: center.join(',') });
+              }
+            }}
+            range={query().get('range') ?? '100 mi'}
+            setRange={(range) => pushQueryParams({ range })}
+          />
         </div>
         <Show when={!loading()} fallback={<p>Loading</p>}>
           <For each={results()}>

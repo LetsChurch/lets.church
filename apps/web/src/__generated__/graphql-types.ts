@@ -265,7 +265,7 @@ export type DataError = {
 export type GeoInput = {
   lat: Scalars['Float']['input'];
   lon: Scalars['Float']['input'];
-  miles: Scalars['Float']['input'];
+  range: Scalars['String']['input'];
 };
 
 export type GeocodeResult = {
