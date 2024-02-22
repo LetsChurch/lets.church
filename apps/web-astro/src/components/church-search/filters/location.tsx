@@ -190,7 +190,6 @@ export default function LocationFilter(props: {
                 class="absolute inset-y-0 right-0 -mr-2 flex items-center pr-3 [&_svg]:scale-75 [&_svg]:text-gray-400"
                 onClick={() => {
                   reset();
-                  closeFloat();
                 }}
               >
                 <ClearIcon />

@@ -10,10 +10,14 @@ window.addEventListener('popstate', () => {
   setQuery(new URLSearchParams(window.location.search));
 });
 
-export function pushQueryParams(p: Record<string, string>) {
+export function pushQueryParams(p: Record<string, string | null>) {
   const params = new URLSearchParams(window.location.search);
   for (const [key, val] of Object.entries(p)) {
-    params.set(key, val);
+    if (val) {
+      params.set(key, val);
+    } else {
+      params.delete(key);
+    }
   }
 
   const search = `?${params.toString()}`;

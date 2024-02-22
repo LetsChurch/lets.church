@@ -40,8 +40,6 @@ export default function ChurchSearch() {
     const q = query();
     const center = parsedCenter();
 
-    console.log({ m, s, q, center, range: q.get('range') });
-
     if (m && s) {
       fetchData(center ? center : murica, q.get('range') ?? '100 mi');
     }
@@ -283,11 +281,9 @@ export default function ChurchSearch() {
         <div>
           <LocationFilter
             center={parsedCenter()}
-            setCenter={(center) => {
-              if (center) {
-                pushQueryParams({ center: center.join(',') });
-              }
-            }}
+            setCenter={(center) =>
+              pushQueryParams({ center: center?.join(',') ?? null })
+            }
             range={query().get('range') ?? '100 mi'}
             setRange={(range) => pushQueryParams({ range })}
           />
