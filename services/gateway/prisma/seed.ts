@@ -10,6 +10,15 @@ import logger from '../src/util/logger';
 import baptistLa from './geocoding/baptist-la';
 import desertDebaters from './geocoding/desert-debaters';
 import gwgh from './geocoding/gwgh';
+import bananarama from './geocoding/bananarama-bible-church';
+import clapback from './geocoding/clapback-chapel';
+import cotton from './geocoding/cottons-finger-lutheran-church';
+import harbor from './geocoding/harbor-faith-tabernacle';
+import mariners from './geocoding/mariners-metanoia-manor';
+import ppp from './geocoding/prosperitys-pitfall-pavilion';
+import screwtape from './geocoding/screwtape-sanctuary';
+import solas from './geocoding/solas-sanctuary';
+import sovereignJoy from './geocoding/sovereign-joy-sanctuary';
 
 faker.seed(1337);
 
@@ -190,7 +199,7 @@ await Promise.all([
   ...flAssociations.map(({ channel }) => indexDocument('channel', channel.id)),
 ]);
 
-const { id: org1Id, associations: org1Associations } =
+const { id: org01id, associations: org01Associations } =
   await prisma.organization.create({
     include: {
       associations: { include: { channel: { select: { id: true } } } },
@@ -231,12 +240,12 @@ const { id: org1Id, associations: org1Associations } =
     },
   });
 
-await indexDocument('organization', org1Id);
+await indexDocument('organization', org01id);
 await Promise.all(
-  org1Associations.map(({ channel }) => indexDocument('channel', channel.id)),
+  org01Associations.map(({ channel }) => indexDocument('channel', channel.id)),
 );
 
-const { id: org2Id, associations: org2Associations } =
+const { id: org03Id, associations: org03Associations } =
   await prisma.organization.create({
     include: {
       associations: { include: { channel: { select: { id: true } } } },
@@ -277,12 +286,12 @@ const { id: org2Id, associations: org2Associations } =
     },
   });
 
-await indexDocument('organization', org2Id);
+await indexDocument('organization', org03Id);
 await Promise.all(
-  org2Associations.map(({ channel }) => indexDocument('channel', channel.id)),
+  org03Associations.map(({ channel }) => indexDocument('channel', channel.id)),
 );
 
-const org4 = await prisma.organization.create({
+const org04 = await prisma.organization.create({
   data: {
     name: 'Baptist, But Not Too Baptist, Community Church',
     slug: 'baptist-la',
@@ -296,8 +305,8 @@ const org4 = await prisma.organization.create({
         region: 'California',
         postalCode: '91352',
         streetAddress: '13248 Roscoe Boulevard',
-        latitude: 34.220299,
         longitude: -118.422009,
+        latitude: 34.220299,
         geocodingJson: baptistLa,
       },
     },
@@ -314,9 +323,9 @@ const org4 = await prisma.organization.create({
   },
 });
 
-await indexDocument('organization', org4.id);
+await indexDocument('organization', org04.id);
 
-const org5 = await prisma.organization.create({
+const org05 = await prisma.organization.create({
   data: {
     name: 'Desert Debaters Society',
     slug: 'desert-debaters',
@@ -330,8 +339,8 @@ const org5 = await prisma.organization.create({
         region: 'Arizona',
         postalCode: '85203',
         streetAddress: '717 North Stapley Drive',
-        latitude: 33.428472,
         longitude: -111.804779,
+        latitude: 33.428472,
         geocodingJson: desertDebaters,
       },
     },
@@ -348,9 +357,9 @@ const org5 = await prisma.organization.create({
   },
 });
 
-await indexDocument('organization', org5.id);
+await indexDocument('organization', org05.id);
 
-const org6 = await prisma.organization.create({
+const org06 = await prisma.organization.create({
   data: {
     name: 'Moss Cows',
     slug: 'moss-cows',
@@ -364,8 +373,8 @@ const org6 = await prisma.organization.create({
         region: 'Idaho',
         postalCode: '83843',
         streetAddress: '417 South Jackson Street',
-        latitude: 46.731083,
         longitude: -117.003105,
+        latitude: 46.731083,
         geocodingJson: desertDebaters,
       },
     },
@@ -382,9 +391,9 @@ const org6 = await prisma.organization.create({
   },
 });
 
-await indexDocument('organization', org6.id);
+await indexDocument('organization', org06.id);
 
-const org7 = await prisma.organization.create({
+const org07 = await prisma.organization.create({
   data: {
     name: 'Gopher Wood Gospel Hall',
     slug: 'gwgh',
@@ -398,8 +407,8 @@ const org7 = await prisma.organization.create({
         region: 'Kentucky',
         postalCode: '41097',
         streetAddress: '1 Ark Encounter Drive',
-        latitude: 38.628008,
         longitude: -84.580878,
+        latitude: 38.628008,
         geocodingJson: gwgh,
       },
     },
@@ -416,7 +425,313 @@ const org7 = await prisma.organization.create({
   },
 });
 
-await indexDocument('organization', org7.id);
+await indexDocument('organization', org07.id);
+
+const org08 = await prisma.organization.create({
+  data: {
+    name: 'Bananarama Bible Church',
+    slug: 'banana',
+    type: 'CHURCH',
+    addresses: {
+      create: {
+        type: 'MEETING',
+        query: '9818 Arkansas Street, Bellflower, California 90706',
+        country: 'United States',
+        locality: 'Bellflower',
+        region: 'California',
+        postalCode: '90706',
+        streetAddress: '9818 Arkansas Street',
+        longitude: -118.124494,
+        latitude: 33.879147,
+        geocodingJson: bananarama,
+      },
+    },
+    memberships: {
+      create: {
+        appUser: {
+          connect: {
+            id: adminUser.id,
+          },
+        },
+        isAdmin: true,
+      },
+    },
+  },
+});
+
+await indexDocument('organization', org08.id);
+
+const org09 = await prisma.organization.create({
+  data: {
+    name: "Cotton's Finger Lutheran Church",
+    slug: 'cotton',
+    type: 'CHURCH',
+    addresses: {
+      create: {
+        type: 'MEETING',
+        query: '15950 County Highway 22, Oslo, Minnesota 56744',
+        country: 'United States',
+        locality: 'Oslo',
+        region: 'Minesota',
+        postalCode: '56744',
+        streetAddress: null,
+        longitude: -97.063182,
+        latitude: 48.107127,
+        geocodingJson: cotton,
+      },
+    },
+    memberships: {
+      create: {
+        appUser: {
+          connect: {
+            id: adminUser.id,
+          },
+        },
+        isAdmin: true,
+      },
+    },
+  },
+});
+
+await indexDocument('organization', org09.id);
+
+const org10 = await prisma.organization.create({
+  data: {
+    name: 'Harbor Faith Tabernacle',
+    slug: 'harbor',
+    type: 'CHURCH',
+    addresses: {
+      create: {
+        type: 'MEETING',
+        query: '13773 Main Street, Jacksonville, Florida 32218',
+        country: 'United States',
+        locality: 'Jacksonville',
+        region: 'Florida',
+        postalCode: '32218',
+        streetAddress: null,
+        longitude: -81.625352,
+        latitude: 30.486745,
+        geocodingJson: harbor,
+      },
+    },
+    memberships: {
+      create: {
+        appUser: {
+          connect: {
+            id: adminUser.id,
+          },
+        },
+        isAdmin: true,
+      },
+    },
+  },
+});
+
+await indexDocument('organization', org10.id);
+
+const org11 = await prisma.organization.create({
+  data: {
+    name: 'Mariners Metanoia Manor',
+    slug: 'mariners',
+    type: 'CHURCH',
+    addresses: {
+      create: {
+        type: 'MEETING',
+        query: '1076 Harkrider Street, Conway, Arkansas 72032',
+        country: 'United States',
+        locality: 'Conway',
+        region: 'Arkansas',
+        postalCode: '72032',
+        streetAddress: null,
+        longitude: -92.436278,
+        latitude: 35.093419,
+        geocodingJson: mariners,
+      },
+    },
+    memberships: {
+      create: {
+        appUser: {
+          connect: {
+            id: adminUser.id,
+          },
+        },
+        isAdmin: true,
+      },
+    },
+  },
+});
+
+await indexDocument('organization', org11.id);
+
+const org12 = await prisma.organization.create({
+  data: {
+    name: "Prosperity's Pitfall Pavilion",
+    slug: 'ppp',
+    type: 'CHURCH',
+    addresses: {
+      create: {
+        type: 'MEETING',
+        query: '477 North Main Street, Kootenai, Idaho 83840',
+        country: 'United States',
+        locality: 'Kootenai',
+        region: 'Idaho',
+        postalCode: '83840',
+        streetAddress: null,
+        longitude: -116.51474,
+        latitude: 48.31366,
+        geocodingJson: ppp,
+      },
+    },
+    memberships: {
+      create: {
+        appUser: {
+          connect: {
+            id: adminUser.id,
+          },
+        },
+        isAdmin: true,
+      },
+    },
+  },
+});
+
+await indexDocument('organization', org12.id);
+
+const org13 = await prisma.organization.create({
+  data: {
+    name: 'Screwtape Sanctuary',
+    slug: 'screwtape',
+    type: 'CHURCH',
+    addresses: {
+      create: {
+        type: 'MEETING',
+        query: '150 West 83rd Street, New York, New York 10024',
+        country: 'United States',
+        locality: 'New York',
+        region: 'New York',
+        postalCode: '10024',
+        streetAddress: null,
+        longitude: -73.975655,
+        latitude: 40.785179,
+        geocodingJson: screwtape,
+      },
+    },
+    memberships: {
+      create: {
+        appUser: {
+          connect: {
+            id: adminUser.id,
+          },
+        },
+        isAdmin: true,
+      },
+    },
+  },
+});
+
+await indexDocument('organization', org13.id);
+
+const org14 = await prisma.organization.create({
+  data: {
+    name: 'Solas Sanctuary',
+    slug: 'solas',
+    type: 'CHURCH',
+    addresses: {
+      create: {
+        type: 'MEETING',
+        query: '5525 Wayside Drive, Sanford, Florida 32771',
+        country: 'United States',
+        locality: 'Sanford',
+        region: 'Florida',
+        postalCode: '32771',
+        streetAddress: null,
+        longitude: -81.358549,
+        latitude: 28.807633,
+        geocodingJson: solas,
+      },
+    },
+    memberships: {
+      create: {
+        appUser: {
+          connect: {
+            id: adminUser.id,
+          },
+        },
+        isAdmin: true,
+      },
+    },
+  },
+});
+
+await indexDocument('organization', org14.id);
+
+const org15 = await prisma.organization.create({
+  data: {
+    name: 'Sovereign Joy Sanctuary',
+    slug: 'sovereign-joy',
+    type: 'CHURCH',
+    addresses: {
+      create: {
+        type: 'MEETING',
+        query: '720 13th Avenue South, Minneapolis, Minnesota 55415',
+        country: 'United States',
+        locality: 'Minneapolis',
+        region: 'Minnesota',
+        postalCode: '55415',
+        streetAddress: null,
+        longitude: -93.255447,
+        latitude: 44.968956,
+        geocodingJson: sovereignJoy,
+      },
+    },
+    memberships: {
+      create: {
+        appUser: {
+          connect: {
+            id: adminUser.id,
+          },
+        },
+        isAdmin: true,
+      },
+    },
+  },
+});
+
+await indexDocument('organization', org15.id);
+
+const org16 = await prisma.organization.create({
+  data: {
+    name: 'Clapback Chapel',
+    slug: 'clapback',
+    type: 'CHURCH',
+    addresses: {
+      create: {
+        type: 'MEETING',
+        query: 'Roanoke, Virginia, United States',
+        country: 'United States',
+        locality: 'Roanoke',
+        region: 'Virginia',
+        postalCode: null,
+        streetAddress: null,
+        longitude: -79.941431,
+        latitude: 37.270973,
+        geocodingJson: clapback,
+      },
+    },
+    memberships: {
+      create: {
+        appUser: {
+          connect: {
+            id: adminUser.id,
+          },
+        },
+        isAdmin: true,
+      },
+    },
+  },
+});
+
+await indexDocument('organization', org16.id);
 
 for (let i = 0; i < 25; i += 1) {
   const name = `${faker.helpers.arrayElement([
