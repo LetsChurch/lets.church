@@ -96,6 +96,32 @@ enum OrganizationType {
   @@map("organization_type")
 }
 
+enum OrganizationDenomination {
+  NON
+  CHRISTIAN
+  PROTESTANT
+  BAPTIST
+  REFORMED_BAPTIST
+  PARTICULAR_BAPTIST
+  SOUTHERN_BAPTIST
+  INDEPENDENT_BAPTIST
+  REFORMED
+  INDEPENDENT
+  PRESBYTERIAN
+  PRESBYTERIAN_ARP
+  PRESBYTERIAN_PCA
+  PRESBYTERIAN_RPCUS
+  PRESBYTERIAN_RPCNA
+  PRESBYTERIAN_OPC
+  PRESBYTERIAN_CREC
+  LUTHERAN
+  LUTHERAN_TAALC
+  INTERDENOMINATIONAL
+  EVANGELICAL_FREE
+
+  @@map("organization_denomination")
+}
+
 model Organization {
   id           String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   type         OrganizationType                 @default(MINISTRY)
@@ -103,6 +129,7 @@ model Organization {
   slug         String                           @unique @db.Citext
   addresses    OrganizationAddress[]
   description  String?
+  denomination OrganizationDenomination?
   memberships  OrganizationMembership[]
   associations OrganizationChannelAssociation[]
   createdAt    DateTime                         @default(now()) @map("created_at")

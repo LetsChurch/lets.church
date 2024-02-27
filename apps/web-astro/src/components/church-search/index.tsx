@@ -14,6 +14,7 @@ import type { churchesQuery } from '../../queries/churches';
 import { easeOutExpo } from '../../util';
 import { pushQueryParams, query } from '../../util/history';
 import LocationFilter from './filters/location';
+import DenominationFilter from './filters/denomination';
 
 const murica = [-97.9222112121185, 39.3812661305678] as [number, number];
 
@@ -34,6 +35,8 @@ export default function ChurchSearch() {
       number,
     ];
 
+  const parsedDenominations = () => query().get('denomination')?.split(',');
+
   createEffect(() => {
     const m = map();
     const s = source();
@@ -41,7 +44,11 @@ export default function ChurchSearch() {
     const center = parsedCenter();
 
     if (m && s) {
-      fetchData(center ? center : murica, q.get('range') ?? '100 mi');
+      fetchData(
+        center ? center : murica,
+        q.get('range') ?? '100 mi',
+        q.get('denomination')?.split(',') ?? [],
+      );
     }
   });
 
@@ -54,11 +61,15 @@ export default function ChurchSearch() {
     }
   }
 
-  async function fetchData(c: [number, number] = murica, r: string = '100 mi') {
+  async function fetchData(
+    c: [number, number] = murica,
+    r: string = '100 mi',
+    d: Array<string>,
+  ) {
     const res = await fetch('/churches', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ center: c ?? murica, range: r }),
+      body: JSON.stringify({ center: c ?? murica, range: r, denomination: d }),
     });
 
     const data = (await res.json()) as ResultOf<typeof churchesQuery>;
@@ -278,7 +289,7 @@ export default function ChurchSearch() {
   return (
     <div class="relative grid w-full grid-cols-3">
       <div class="pointer-events-auto col-span-1 space-y-2 p-2">
-        <div>
+        <div class="flex gap-2">
           <LocationFilter
             center={parsedCenter()}
             setCenter={(center) =>
@@ -286,6 +297,12 @@ export default function ChurchSearch() {
             }
             range={query().get('range') ?? '100 mi'}
             setRange={(range) => pushQueryParams({ range })}
+          />
+          <DenominationFilter
+            denominations={parsedDenominations() ?? []}
+            setDenominations={(d) =>
+              pushQueryParams({ denomination: d.join(',') })
+            }
           />
         </div>
         <Show when={!loading()} fallback={<p>Loading</p>}>

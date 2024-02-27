@@ -575,6 +575,7 @@ export type Organization = {
   addresses: OrganizationAddressesConnection;
   associationsConnection: OrganizationAssociationsConnection;
   createdAt: Scalars['DateTime']['output'];
+  denomination?: Maybe<OrganizationDenomination>;
   description?: Maybe<Scalars['String']['output']>;
   id: Scalars['ShortUuid']['output'];
   membershipsConnection: OrganizationMembershipsConnection;
@@ -659,6 +660,30 @@ export type OrganizationChannelAssociation = {
   channel: Channel;
   organization: Organization;
 };
+
+export enum OrganizationDenomination {
+  Baptist = 'BAPTIST',
+  Christian = 'CHRISTIAN',
+  EvangelicalFree = 'EVANGELICAL_FREE',
+  Independent = 'INDEPENDENT',
+  IndependentBaptist = 'INDEPENDENT_BAPTIST',
+  Interdenominational = 'INTERDENOMINATIONAL',
+  Lutheran = 'LUTHERAN',
+  LutheranTaalc = 'LUTHERAN_TAALC',
+  Non = 'NON',
+  ParticularBaptist = 'PARTICULAR_BAPTIST',
+  Presbyterian = 'PRESBYTERIAN',
+  PresbyterianArp = 'PRESBYTERIAN_ARP',
+  PresbyterianCrec = 'PRESBYTERIAN_CREC',
+  PresbyterianOpc = 'PRESBYTERIAN_OPC',
+  PresbyterianPca = 'PRESBYTERIAN_PCA',
+  PresbyterianRpcna = 'PRESBYTERIAN_RPCNA',
+  PresbyterianRpcus = 'PRESBYTERIAN_RPCUS',
+  Protestant = 'PROTESTANT',
+  Reformed = 'REFORMED',
+  ReformedBaptist = 'REFORMED_BAPTIST',
+  SouthernBaptist = 'SOUTHERN_BAPTIST'
+}
 
 export type OrganizationMembership = {
   __typename?: 'OrganizationMembership';

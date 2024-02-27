@@ -4,6 +4,7 @@ import { max, min } from 'lodash-es';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';
 import pFilter from 'p-filter';
+import { OrganizationDenomination } from '@prisma/client';
 import {
   msearchChannels,
   msearchOrganizations,
@@ -15,6 +16,7 @@ import {
 import prisma from '../../util/prisma';
 import { identifiableSchema } from '../../util/zod';
 import builder from '../builder';
+import { OrganizationDenominationEnum } from './organization';
 
 // TODO: ensure all aggregates are returned for every focus
 
@@ -236,6 +238,10 @@ builder.queryFields((t) => ({
             }),
           }),
         }),
+        denomination: t.arg({
+          required: false,
+          type: [OrganizationDenominationEnum],
+        }),
       },
       validate: {
         schema: z
@@ -246,8 +252,13 @@ builder.queryFields((t) => ({
             minPublishedAt: z.string().or(z.date()).nullable().optional(),
             maxPublishedAt: z.string().or(z.date()).nullable().optional(),
             transcriptPhraseSearch: z.boolean().nullable().optional(),
+            denomination: z
+              .array(z.nativeEnum(OrganizationDenomination))
+              .nullable()
+              .optional(),
           })
           .passthrough()
+          // TODO: validate geo and denomination against focus
           .refine(
             (val) =>
               val.channels?.length ?? 0 > 0
@@ -269,6 +280,7 @@ builder.queryFields((t) => ({
           maxPublishedAt,
           transcriptPhraseSearch,
           geo,
+          denomination,
           ...args
         },
         context,
@@ -361,7 +373,10 @@ builder.queryFields((t) => ({
                   query,
                   focus === 'ORGANIZATIONS' ? offset : 0,
                   focus === 'ORGANIZATIONS' ? limit : 0,
-                  geo ? { geo } : {},
+                  {
+                    geo: geo ? geo : null,
+                    denomination: denomination ? denomination : null,
+                  },
                 ),
               ],
             });

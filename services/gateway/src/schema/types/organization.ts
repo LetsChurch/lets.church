@@ -3,6 +3,7 @@ import invariant from 'tiny-invariant';
 import {
   AddressType,
   OrganizationType,
+  OrganizationDenomination,
   Organization as PrismaOrganization,
 } from '@prisma/client';
 import { indexDocument } from '../../temporal';
@@ -40,6 +41,13 @@ const OrganizationTypeEnum = builder.enumType('OrganizationType', {
   values: Object.keys(OrganizationType),
 });
 
+export const OrganizationDenominationEnum = builder.enumType(
+  'OrganizationDenomination',
+  {
+    values: Object.keys(OrganizationDenomination),
+  },
+);
+
 const Organization = builder.prismaObject('Organization', {
   select: { id: true },
   fields: (t) => ({
@@ -48,6 +56,10 @@ const Organization = builder.prismaObject('Organization', {
     slug: t.exposeString('slug'),
     type: t.expose('type', { type: OrganizationTypeEnum }),
     description: t.exposeString('description', { nullable: true }),
+    denomination: t.expose('denomination', {
+      type: OrganizationDenominationEnum,
+      nullable: true,
+    }),
     addresses: t.relatedConnection('addresses', {
       cursor: 'id',
       args: { type: t.arg({ type: AddressTypeEnum, required: false }) },

@@ -47,6 +47,9 @@ const targetMappings: Record<
       type: {
         type: 'keyword',
       },
+      denomination: {
+        type: 'keyword',
+      },
       meetingLocation: {
         type: 'geo_point',
       },

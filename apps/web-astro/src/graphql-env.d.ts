@@ -3277,6 +3277,15 @@ export type introspection = {
             "args": []
           },
           {
+            "name": "denomination",
+            "type": {
+              "kind": "ENUM",
+              "name": "OrganizationDenomination",
+              "ofType": null
+            },
+            "args": []
+          },
+          {
             "name": "description",
             "type": {
               "kind": "SCALAR",
@@ -3677,6 +3686,75 @@ export type introspection = {
           }
         ],
         "interfaces": []
+      },
+      {
+        "kind": "ENUM",
+        "name": "OrganizationDenomination",
+        "enumValues": [
+          {
+            "name": "BAPTIST"
+          },
+          {
+            "name": "CHRISTIAN"
+          },
+          {
+            "name": "EVANGELICAL_FREE"
+          },
+          {
+            "name": "INDEPENDENT"
+          },
+          {
+            "name": "INDEPENDENT_BAPTIST"
+          },
+          {
+            "name": "INTERDENOMINATIONAL"
+          },
+          {
+            "name": "LUTHERAN"
+          },
+          {
+            "name": "LUTHERAN_TAALC"
+          },
+          {
+            "name": "NON"
+          },
+          {
+            "name": "PARTICULAR_BAPTIST"
+          },
+          {
+            "name": "PRESBYTERIAN"
+          },
+          {
+            "name": "PRESBYTERIAN_ARP"
+          },
+          {
+            "name": "PRESBYTERIAN_CREC"
+          },
+          {
+            "name": "PRESBYTERIAN_OPC"
+          },
+          {
+            "name": "PRESBYTERIAN_PCA"
+          },
+          {
+            "name": "PRESBYTERIAN_RPCNA"
+          },
+          {
+            "name": "PRESBYTERIAN_RPCUS"
+          },
+          {
+            "name": "PROTESTANT"
+          },
+          {
+            "name": "REFORMED"
+          },
+          {
+            "name": "REFORMED_BAPTIST"
+          },
+          {
+            "name": "SOUTHERN_BAPTIST"
+          }
+        ]
       },
       {
         "kind": "OBJECT",
@@ -4230,6 +4308,20 @@ export type introspection = {
                     "ofType": {
                       "kind": "SCALAR",
                       "name": "String",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              {
+                "name": "denomination",
+                "type": {
+                  "kind": "LIST",
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "ofType": {
+                      "kind": "ENUM",
+                      "name": "OrganizationDenomination",
                       "ofType": null
                     }
                   }

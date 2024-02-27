@@ -300,7 +300,10 @@ export function msearchOrganizations(
   query: string,
   from = 0,
   size = 0,
-  params?: { geo?: { range: string; lat: number; lon: number } },
+  params?: {
+    geo?: { range: string; lat: number; lon: number } | null;
+    denomination?: Array<string> | null;
+  },
 ): [MsearchRequestItem, MsearchRequestItem] {
   return [
     { index: 'lc_organizations' },
@@ -311,6 +314,9 @@ export function msearchOrganizations(
         bool: {
           must: [
             { term: { type: 'CHURCH' } }, // TODO: input
+            ...((params?.denomination?.length ?? 0) > 0
+              ? [{ terms: { denomination: params?.denomination ?? [] } }]
+              : []),
             ...(query
               ? [
                   {

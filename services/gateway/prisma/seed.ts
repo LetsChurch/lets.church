@@ -1,7 +1,11 @@
 import { faker } from '@faker-js/faker';
 import slugify from '@sindresorhus/slugify';
 import argon2 from 'argon2';
-import { Prisma, UploadListType } from '@prisma/client';
+import {
+  OrganizationDenomination,
+  Prisma,
+  UploadListType,
+} from '@prisma/client';
 import invariant from 'tiny-invariant';
 import { LexoRank } from 'lexorank';
 import { indexDocument, waitOnTemporal } from '../src/temporal';
@@ -296,6 +300,7 @@ const org04 = await prisma.organization.create({
     name: 'Baptist, But Not Too Baptist, Community Church',
     slug: 'baptist-la',
     type: 'CHURCH',
+    denomination: OrganizationDenomination.BAPTIST,
     addresses: {
       create: {
         type: 'MEETING',
@@ -330,6 +335,7 @@ const org05 = await prisma.organization.create({
     name: 'Desert Debaters Society',
     slug: 'desert-debaters',
     type: 'CHURCH',
+    denomination: OrganizationDenomination.REFORMED_BAPTIST,
     addresses: {
       create: {
         type: 'MEETING',
@@ -364,6 +370,7 @@ const org06 = await prisma.organization.create({
     name: 'Moss Cows',
     slug: 'moss-cows',
     type: 'CHURCH',
+    denomination: OrganizationDenomination.PRESBYTERIAN_CREC,
     addresses: {
       create: {
         type: 'MEETING',
@@ -398,6 +405,7 @@ const org07 = await prisma.organization.create({
     name: 'Gopher Wood Gospel Hall',
     slug: 'gwgh',
     type: 'CHURCH',
+    denomination: OrganizationDenomination.NON,
     addresses: {
       create: {
         type: 'MEETING',
@@ -432,6 +440,7 @@ const org08 = await prisma.organization.create({
     name: 'Bananarama Bible Church',
     slug: 'banana',
     type: 'CHURCH',
+    denomination: OrganizationDenomination.NON,
     addresses: {
       create: {
         type: 'MEETING',
@@ -466,6 +475,7 @@ const org09 = await prisma.organization.create({
     name: "Cotton's Finger Lutheran Church",
     slug: 'cotton',
     type: 'CHURCH',
+    denomination: OrganizationDenomination.LUTHERAN_TAALC,
     addresses: {
       create: {
         type: 'MEETING',
@@ -500,6 +510,7 @@ const org10 = await prisma.organization.create({
     name: 'Harbor Faith Tabernacle',
     slug: 'harbor',
     type: 'CHURCH',
+    denomination: OrganizationDenomination.REFORMED_BAPTIST,
     addresses: {
       create: {
         type: 'MEETING',
@@ -534,6 +545,7 @@ const org11 = await prisma.organization.create({
     name: 'Mariners Metanoia Manor',
     slug: 'mariners',
     type: 'CHURCH',
+    denomination: OrganizationDenomination.REFORMED_BAPTIST,
     addresses: {
       create: {
         type: 'MEETING',
@@ -568,6 +580,7 @@ const org12 = await prisma.organization.create({
     name: "Prosperity's Pitfall Pavilion",
     slug: 'ppp',
     type: 'CHURCH',
+    denomination: OrganizationDenomination.BAPTIST,
     addresses: {
       create: {
         type: 'MEETING',
@@ -602,6 +615,7 @@ const org13 = await prisma.organization.create({
     name: 'Screwtape Sanctuary',
     slug: 'screwtape',
     type: 'CHURCH',
+    denomination: OrganizationDenomination.PRESBYTERIAN_PCA,
     addresses: {
       create: {
         type: 'MEETING',
@@ -636,6 +650,7 @@ const org14 = await prisma.organization.create({
     name: 'Solas Sanctuary',
     slug: 'solas',
     type: 'CHURCH',
+    denomination: OrganizationDenomination.PRESBYTERIAN,
     addresses: {
       create: {
         type: 'MEETING',
@@ -670,6 +685,7 @@ const org15 = await prisma.organization.create({
     name: 'Sovereign Joy Sanctuary',
     slug: 'sovereign-joy',
     type: 'CHURCH',
+    denomination: OrganizationDenomination.BAPTIST,
     addresses: {
       create: {
         type: 'MEETING',
@@ -704,6 +720,7 @@ const org16 = await prisma.organization.create({
     name: 'Clapback Chapel',
     slug: 'clapback',
     type: 'CHURCH',
+    denomination: OrganizationDenomination.BAPTIST,
     addresses: {
       create: {
         type: 'MEETING',
@@ -734,20 +751,25 @@ const org16 = await prisma.organization.create({
 await indexDocument('organization', org16.id);
 
 for (let i = 0; i < 25; i += 1) {
-  const name = `${faker.helpers.arrayElement([
-    'Second Baptist',
-    'Covenant',
-    'Redeemer',
-    'Covenant Presbyterian',
-    'Redeemer Presbyterian',
-    'Grace Fellowship Assembly',
-  ])} Church ${faker.location.city()}`.trim();
+  const [nameSegment, denomination] = faker.helpers.arrayElement<
+    [string, OrganizationDenomination]
+  >([
+    ['Second Baptist', OrganizationDenomination.BAPTIST],
+    ['Covenant', OrganizationDenomination.REFORMED_BAPTIST],
+    ['Redeemer', OrganizationDenomination.EVANGELICAL_FREE],
+    ['Covenant Presbyterian', OrganizationDenomination.PRESBYTERIAN],
+    ['Redeemer Presbyterian', OrganizationDenomination.PRESBYTERIAN],
+    ['Grace Fellowship Assembly', OrganizationDenomination.INDEPENDENT],
+  ]);
+
+  const name = `${nameSegment} Church ${faker.location.city()}`.trim();
 
   const { id } = await prisma.organization.create({
     data: {
       name,
       slug: slugify(name),
       type: 'CHURCH',
+      denomination,
       addresses: {
         create: {
           type: 'MEETING',

@@ -151,6 +151,7 @@ async function getDocument(
           description: true,
           addresses: { where: { type: AddressType.MEETING } },
           type: true,
+          denomination: true,
         },
       });
 
@@ -163,6 +164,7 @@ async function getDocument(
           name: rec.name,
           description: rec.description,
           type: rec.type,
+          denomination: rec.denomination,
           ...(loc
             ? { meetingLocation: { lat: loc.latitude, lon: loc.longitude } }
             : {}),
