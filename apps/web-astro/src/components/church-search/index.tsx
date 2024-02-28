@@ -197,8 +197,11 @@ export default function ChurchSearch() {
         filter: ['has', 'point_count'],
         layout: {
           'text-field': ['get', 'point_count_abbreviated'],
-          'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+          'text-font': ['DIN Offc Pro Bold', 'Arial Unicode MS Bold'],
           'text-size': 12,
+        },
+        paint: {
+          'text-color': '#fff',
         },
       });
 
