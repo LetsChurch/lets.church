@@ -38,4 +38,9 @@ app.on(['GET', 'POST', 'OPTIONS'], '/graphql', async (c) => {
   return graphqlHandler.fetch(c.req.raw, { c });
 });
 
+app.all('/health', async (c) => {
+  c.status(204);
+  return c.body(null);
+});
+
 serve(app);
