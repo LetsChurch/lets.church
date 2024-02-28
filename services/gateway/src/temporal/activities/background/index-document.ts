@@ -152,6 +152,18 @@ async function getDocument(
           addresses: { where: { type: AddressType.MEETING } },
           type: true,
           denomination: true,
+          upstreamOrganizationAssociations: {
+            where: {
+              upstreamApproved: true,
+              downstreamApproved: true,
+            },
+          },
+          downstreamOrganizationAssociations: {
+            where: {
+              upstreamApproved: true,
+              downstreamApproved: true,
+            },
+          },
         },
       });
 
@@ -168,6 +180,14 @@ async function getDocument(
           ...(loc
             ? { meetingLocation: { lat: loc.latitude, lon: loc.longitude } }
             : {}),
+          upstreamOrganizationAssociations:
+            rec.upstreamOrganizationAssociations.map(
+              (assoc) => assoc.upstreamOrganizationId,
+            ),
+          downstreamOrganizationAssociations:
+            rec.downstreamOrganizationAssociations.map(
+              (assoc) => assoc.downstreamOrganizationId,
+            ),
         },
       };
     case 'channel':

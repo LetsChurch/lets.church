@@ -123,17 +123,19 @@ enum OrganizationDenomination {
 }
 
 model Organization {
-  id           String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  type         OrganizationType                 @default(MINISTRY)
-  name         String
-  slug         String                           @unique @db.Citext
-  addresses    OrganizationAddress[]
-  description  String?
-  denomination OrganizationDenomination?
-  memberships  OrganizationMembership[]
-  associations OrganizationChannelAssociation[]
-  createdAt    DateTime                         @default(now()) @map("created_at")
-  updatedAt    DateTime                         @updatedAt @map("updated_at")
+  id                                 String                                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type                               OrganizationType                      @default(MINISTRY)
+  name                               String
+  slug                               String                                @unique @db.Citext
+  addresses                          OrganizationAddress[]
+  description                        String?
+  denomination                       OrganizationDenomination?
+  memberships                        OrganizationMembership[]
+  associations                       OrganizationChannelAssociation[]
+  createdAt                          DateTime                              @default(now()) @map("created_at")
+  updatedAt                          DateTime                              @updatedAt @map("updated_at")
+  upstreamOrganizationAssociations   OrganizationOrganizationAssociation[] @relation("downstreamOrganization")
+  downstreamOrganizationAssociations OrganizationOrganizationAssociation[] @relation("upstreamOrganization")
 
   @@map("organization")
 }
@@ -179,6 +181,20 @@ model OrganizationMembership {
 
   @@id([organizationId, appUserId])
   @@map("organization_membership")
+}
+
+model OrganizationOrganizationAssociation {
+  upstreamOrganization     Organization @relation("upstreamOrganization", fields: [upstreamOrganizationId], references: [id], onDelete: Cascade)
+  upstreamOrganizationId   String       @map("upstream_organization_id") @db.Uuid
+  downstreamOrganization   Organization @relation("downstreamOrganization", fields: [downstreamOrganizationId], references: [id], onDelete: Cascade)
+  downstreamOrganizationId String       @map("downstream_organization_id") @db.Uuid
+  upstreamApproved         Boolean      @default(false) @map("upstream_approved")
+  downstreamApproved       Boolean      @default(false) @map("downstream_approved")
+  createdAt                DateTime     @default(now()) @map("created_at")
+  updatedAt                DateTime     @updatedAt @map("updated_at")
+
+  @@id([upstreamOrganizationId, downstreamOrganizationId])
+  @@map("organization_organization_association")
 }
 
 model OrganizationChannelAssociation {

@@ -53,6 +53,12 @@ const targetMappings: Record<
       meetingLocation: {
         type: 'geo_point',
       },
+      upstreamOrganizationAssociations: {
+        type: 'keyword',
+      },
+      downstreamOrganizationAssociations: {
+        type: 'keyword',
+      },
     },
   },
   lc_uploads_v2: {

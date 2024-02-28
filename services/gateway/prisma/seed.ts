@@ -101,6 +101,7 @@ const { id: lcId, associations: lcAssociations } =
       associations: { include: { channel: { select: { id: true } } } },
     },
     data: {
+      id: '00000000-0000-4000-8000-000000000000',
       name: "Let's Church",
       slug: 'letschurch',
       memberships: {
@@ -287,6 +288,13 @@ const { id: org03Id, associations: org03Associations } =
           },
         },
       },
+      upstreamOrganizationAssociations: {
+        create: {
+          upstreamOrganization: { connect: { id: lcId } },
+          upstreamApproved: true,
+          downstreamApproved: true,
+        },
+      },
     },
   });
 
@@ -325,6 +333,13 @@ const org04 = await prisma.organization.create({
         isAdmin: true,
       },
     },
+    upstreamOrganizationAssociations: {
+      create: {
+        upstreamOrganization: { connect: { id: lcId } },
+        upstreamApproved: true,
+        downstreamApproved: true,
+      },
+    },
   },
 });
 
@@ -358,6 +373,13 @@ const org05 = await prisma.organization.create({
           },
         },
         isAdmin: true,
+      },
+    },
+    upstreamOrganizationAssociations: {
+      create: {
+        upstreamOrganization: { connect: { id: lcId } },
+        upstreamApproved: true,
+        downstreamApproved: true,
       },
     },
   },
@@ -395,6 +417,13 @@ const org06 = await prisma.organization.create({
         isAdmin: true,
       },
     },
+    upstreamOrganizationAssociations: {
+      create: {
+        upstreamOrganization: { connect: { id: lcId } },
+        upstreamApproved: true,
+        downstreamApproved: true,
+      },
+    },
   },
 });
 
@@ -428,6 +457,13 @@ const org07 = await prisma.organization.create({
           },
         },
         isAdmin: true,
+      },
+    },
+    upstreamOrganizationAssociations: {
+      create: {
+        upstreamOrganization: { connect: { id: lcId } },
+        upstreamApproved: true,
+        downstreamApproved: true,
       },
     },
   },
@@ -465,6 +501,13 @@ const org08 = await prisma.organization.create({
         isAdmin: true,
       },
     },
+    upstreamOrganizationAssociations: {
+      create: {
+        upstreamOrganization: { connect: { id: lcId } },
+        upstreamApproved: true,
+        downstreamApproved: true,
+      },
+    },
   },
 });
 
@@ -498,6 +541,13 @@ const org09 = await prisma.organization.create({
           },
         },
         isAdmin: true,
+      },
+    },
+    upstreamOrganizationAssociations: {
+      create: {
+        upstreamOrganization: { connect: { id: lcId } },
+        upstreamApproved: true,
+        downstreamApproved: true,
       },
     },
   },
@@ -535,6 +585,13 @@ const org10 = await prisma.organization.create({
         isAdmin: true,
       },
     },
+    upstreamOrganizationAssociations: {
+      create: {
+        upstreamOrganization: { connect: { id: lcId } },
+        upstreamApproved: true,
+        downstreamApproved: true,
+      },
+    },
   },
 });
 
@@ -568,6 +625,13 @@ const org11 = await prisma.organization.create({
           },
         },
         isAdmin: true,
+      },
+    },
+    upstreamOrganizationAssociations: {
+      create: {
+        upstreamOrganization: { connect: { id: lcId } },
+        upstreamApproved: true,
+        downstreamApproved: true,
       },
     },
   },
@@ -605,6 +669,13 @@ const org12 = await prisma.organization.create({
         isAdmin: true,
       },
     },
+    upstreamOrganizationAssociations: {
+      create: {
+        upstreamOrganization: { connect: { id: lcId } },
+        upstreamApproved: true,
+        downstreamApproved: true,
+      },
+    },
   },
 });
 
@@ -638,6 +709,13 @@ const org13 = await prisma.organization.create({
           },
         },
         isAdmin: true,
+      },
+    },
+    upstreamOrganizationAssociations: {
+      create: {
+        upstreamOrganization: { connect: { id: lcId } },
+        upstreamApproved: true,
+        downstreamApproved: true,
       },
     },
   },
@@ -675,6 +753,13 @@ const org14 = await prisma.organization.create({
         isAdmin: true,
       },
     },
+    upstreamOrganizationAssociations: {
+      create: {
+        upstreamOrganization: { connect: { id: lcId } },
+        upstreamApproved: true,
+        downstreamApproved: true,
+      },
+    },
   },
 });
 
@@ -710,6 +795,13 @@ const org15 = await prisma.organization.create({
         isAdmin: true,
       },
     },
+    upstreamOrganizationAssociations: {
+      create: {
+        upstreamOrganization: { connect: { id: lcId } },
+        upstreamApproved: true,
+        downstreamApproved: true,
+      },
+    },
   },
 });
 
@@ -743,6 +835,13 @@ const org16 = await prisma.organization.create({
           },
         },
         isAdmin: true,
+      },
+    },
+    upstreamOrganizationAssociations: {
+      create: {
+        upstreamOrganization: { connect: { id: lcId } },
+        upstreamApproved: true,
+        downstreamApproved: true,
       },
     },
   },
@@ -798,6 +897,8 @@ for (let i = 0; i < 25; i += 1) {
 
   await indexDocument('organization', id);
 }
+
+await indexDocument('organization', lcId);
 
 logger.info('Created example organizations and channels');
 
