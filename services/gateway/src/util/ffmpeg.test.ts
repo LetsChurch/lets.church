@@ -683,39 +683,45 @@ describe('extraDecodeArgs', () => {
 
   describe('hwAccel ma35d', () => {
     test('h264', () => {
-      expect(extraDecodeArgs(mockProbe(1920, 1080, 'h264'), 'ama'))
+      expect(extraDecodeArgs(mockProbe(1920, 1080, 'h264'), 'ama:0'))
         .toMatchInlineSnapshot(`
-        [
-          "-hwaccel",
-          "ama",
-          "-c:v",
-          "h264_ama",
-        ]
-      `);
+          [
+            "-hwaccel",
+            "ama",
+            "-hwaccel_device",
+            "/dev/ama_transcoder0",
+            "-c:v",
+            "h264_ama",
+          ]
+        `);
     });
 
     test('hevc', () => {
-      expect(extraDecodeArgs(mockProbe(1920, 1080, 'hevc'), 'ama'))
+      expect(extraDecodeArgs(mockProbe(1920, 1080, 'hevc'), 'ama:0'))
         .toMatchInlineSnapshot(`
-        [
-          "-hwaccel",
-          "ama",
-          "-c:v",
-          "hevc_ama",
-        ]
-      `);
+          [
+            "-hwaccel",
+            "ama",
+            "-hwaccel_device",
+            "/dev/ama_transcoder0",
+            "-c:v",
+            "hevc_ama",
+          ]
+        `);
     });
 
     test('av1', () => {
-      expect(extraDecodeArgs(mockProbe(1920, 1080, 'av1'), 'ama'))
+      expect(extraDecodeArgs(mockProbe(1920, 1080, 'av1'), 'ama:0'))
         .toMatchInlineSnapshot(`
-        [
-          "-hwaccel",
-          "ama",
-          "-c:v",
-          "av1_ama",
-        ]
-      `);
+          [
+            "-hwaccel",
+            "ama",
+            "-hwaccel_device",
+            "/dev/ama_transcoder0",
+            "-c:v",
+            "av1_ama",
+          ]
+        `);
     });
   });
 });
@@ -1142,7 +1148,7 @@ test('ffmpegEncodingArgs', () => {
     ffmpegEncodingArgs(
       ['VIDEO_4K', 'VIDEO_4K_DOWNLOAD', 'VIDEO_1080P', 'VIDEO_1080P_DOWNLOAD'],
       mockProbe(3840, 2160),
-      'ama',
+      'ama:0',
     ),
   ).toMatchInlineSnapshot(`
     [
@@ -1322,7 +1328,7 @@ test('ffmpegEncodingArgs', () => {
         'AUDIO_DOWNLOAD',
       ],
       mockProbe(1920, 1080),
-      'ama',
+      'ama:0',
     ),
   ).toMatchInlineSnapshot(`
     [
@@ -1559,7 +1565,7 @@ test('ffmpegEncodingArgs', () => {
     ffmpegEncodingArgs(
       ['VIDEO_4K', 'VIDEO_4K_DOWNLOAD', 'VIDEO_1080P', 'VIDEO_1080P_DOWNLOAD'],
       mockProbe(3840, 2160, 'vp9'),
-      'ama',
+      'ama:0',
     ),
   ).toMatchInlineSnapshot(`
     [
@@ -1739,7 +1745,7 @@ test('ffmpegEncodingArgs', () => {
         'AUDIO_DOWNLOAD',
       ],
       mockProbe(1920, 1080, 'vp9'),
-      'ama',
+      'ama:0',
     ),
   ).toMatchInlineSnapshot(`
     [

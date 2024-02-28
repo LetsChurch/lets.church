@@ -31,7 +31,7 @@ type VideoVariant = Exclude<
   'AUDIO' | 'AUDIO_DOWNLOAD' | 'VIDEO_360P' | 'VIDEO_360P_DOWNLOAD'
 >;
 
-export type HwAccel = 'none' | 'ama';
+export type HwAccel = 'none' | `ama:${number}`;
 
 export function getVariants(probe: Probe): Array<UploadVariant> {
   const res: Array<UploadVariant> = [];
@@ -224,8 +224,13 @@ export function variantsToMasterVideoPlaylist(variants: Array<UploadVariant>) {
 }
 
 export function extraDecodeArgs(probe: Probe, hwAccel: HwAccel) {
-  if (hwAccel === 'ama') {
-    const base = ['-hwaccel', 'ama'];
+  if (hwAccel.startsWith('ama:')) {
+    const base = [
+      '-hwaccel',
+      'ama',
+      '-hwaccel_device',
+      `/dev/ama_transcoder${hwAccel.split(':').at(-1)}`,
+    ];
 
     if (probe.streams.some((s) => s.codec_name === 'h264')) {
       return [...base, '-c:v', 'h264_ama'];
@@ -361,7 +366,7 @@ function variantsToOutputMaps(
             '0:a',
             ...BASE_AUDIO_ARGS,
             '-c:v',
-            hwAccel === 'ama' ? 'h264_ama' : 'h264',
+            hwAccel.startsWith('ama:') ? 'h264_ama' : 'h264',
             ...BASE_ARGS,
             ...variantToOutputArgs(v),
           ]
@@ -380,10 +385,9 @@ export function ffmpegEncodingArgs(
   probe: Probe,
   hwAccel: HwAccel,
 ): Array<string> {
-  const filterComplex =
-    hwAccel === 'ama'
-      ? ffmpegAmaFilterComplex(variants, probe)
-      : ffmpegSoftwareFilterComplex(variants);
+  const filterComplex = hwAccel.startsWith('ama:')
+    ? ffmpegAmaFilterComplex(variants, probe)
+    : ffmpegSoftwareFilterComplex(variants);
   const outputMaps = variantsToOutputMaps(variants, hwAccel);
 
   return [...filterComplex, ...outputMaps];

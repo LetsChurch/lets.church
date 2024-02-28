@@ -10,6 +10,7 @@ import mime from 'mime';
 import invariant from 'tiny-invariant';
 import type { UploadVariant } from '@prisma/client';
 import {
+  HwAccel,
   getVariants,
   runFfmpegEncode,
   variantsToMasterVideoPlaylist,
@@ -28,7 +29,10 @@ const moduleLogger = logger.child({
   module: 'temporal/activities/transcode/transcode',
 });
 
-const HW_ACCEL = process.env['TRANSCODE_HW_ACCEL'] === 'ama' ? 'ama' : 'none';
+const hwAccelEnv = process.env['TRANSCODE_HW_ACCEL'];
+const HW_ACCEL: HwAccel = hwAccelEnv?.startsWith('ama')
+  ? (hwAccelEnv as HwAccel)
+  : 'none';
 
 const WORK_DIR =
   process.env['TRANSCODE_WORKING_DIRECTORY'] ?? '/data/transcode';
