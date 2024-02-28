@@ -12,11 +12,14 @@ import invariant from 'tiny-invariant';
 import type { ResultOf } from '../../util/graphql';
 import type { churchesQuery } from '../../queries/churches';
 import { easeOutExpo } from '../../util';
-import { pushQueryParams, query } from '../../util/history';
-import LocationFilter from './filters/location';
-import DenominationFilter from './filters/denomination';
-
-const murica = [-97.9222112121185, 39.3812661305678] as [number, number];
+import LocationFilter, {
+  murica,
+  parsedCenter,
+  parsedRange,
+} from './filters/location';
+import DenominationFilter, {
+  parsedDenominations,
+} from './filters/denomination';
 
 mapboxgl.accessToken = import.meta.env.PUBLIC_MAPBOX_MAP_TOKEN;
 
@@ -29,26 +32,13 @@ export default function ChurchSearch() {
     ResultOf<typeof churchesQuery>['search']['edges']
   >([]);
 
-  const parsedCenter = () =>
-    query().get('center')?.split(',').map(parseFloat).slice(0, 2) as [
-      number,
-      number,
-    ];
-
-  const parsedDenominations = () => query().get('denomination')?.split(',');
-
   createEffect(() => {
     const m = map();
     const s = source();
-    const q = query();
     const center = parsedCenter();
 
     if (m && s) {
-      fetchData(
-        center ? center : murica,
-        q.get('range') ?? '100 mi',
-        q.get('denomination')?.split(',') ?? [],
-      );
+      fetchData(center ? center : murica, parsedRange(), parsedDenominations());
     }
   });
 
@@ -290,20 +280,8 @@ export default function ChurchSearch() {
     <div class="relative grid w-full grid-cols-3">
       <div class="pointer-events-auto col-span-1 space-y-2 p-2">
         <div class="flex gap-2">
-          <LocationFilter
-            center={parsedCenter()}
-            setCenter={(center) =>
-              pushQueryParams({ center: center?.join(',') ?? null })
-            }
-            range={query().get('range') ?? '100 mi'}
-            setRange={(range) => pushQueryParams({ range })}
-          />
-          <DenominationFilter
-            denominations={parsedDenominations() ?? []}
-            setDenominations={(d) =>
-              pushQueryParams({ denomination: d.join(',') })
-            }
-          />
+          <LocationFilter />
+          <DenominationFilter />
         </div>
         <Show when={!loading()} fallback={<p>Loading</p>}>
           <For each={results()}>

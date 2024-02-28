@@ -9,7 +9,10 @@ import ClearIcon from '@tabler/icons/x.svg?sprite-solid';
 import { createSignal, Show, For, Switch, Match, onMount } from 'solid-js';
 import { throttle } from '@solid-primitives/scheduled';
 import { createAutofocus } from '@solid-primitives/autofocus';
+import { pushQueryParams, query } from '../../../util/history';
 import Filter from './base';
+
+export const murica = [-97.9222112121185, 39.3812661305678] as [number, number];
 
 const mbAccessToken = import.meta.env.PUBLIC_MAPBOX_SEARCHBOX_TOKEN;
 const sessionToken = window.crypto.randomUUID();
@@ -53,12 +56,20 @@ async function retrieve(id: string): Promise<{
   return res.json();
 }
 
-export default function LocationFilter(props: {
-  center?: [number, number] | null;
-  setCenter: (coords: [number, number] | null) => unknown;
-  range?: string;
-  setRange: (range: string) => unknown;
-}) {
+export const parsedCenter = (): [number, number] =>
+  (query().get('center')?.split(',').map(parseFloat).slice(0, 2) as [
+    number,
+    number,
+  ]) ?? murica;
+
+export const parsedRange = () => query().get('range') ?? '100 mi';
+
+const setCenter = (center: [number, number] | null) =>
+  pushQueryParams({ center: center?.join(',') ?? null });
+
+const setRange = (range: string) => pushQueryParams({ range });
+
+export default function LocationFilter() {
   const [inputEl, setInputEl] = createSignal<HTMLInputElement | null>(null);
   createAutofocus(inputEl);
   const [geocodeRes, setGeocodeRes] = createSignal<{ name: string } | null>(
@@ -96,7 +107,7 @@ export default function LocationFilter(props: {
   ]) {
     const res = await retrieve(suggestion.mapboxId);
     const coordinates = res.features[0].properties.coordinates;
-    props.setCenter([coordinates.longitude, coordinates.latitude]);
+    setCenter([coordinates.longitude, coordinates.latitude]);
     setGeocodeRes({
       name: suggestion.location,
     });
@@ -105,7 +116,7 @@ export default function LocationFilter(props: {
   }
 
   async function onGeoLocate(pos: GeolocationPosition) {
-    props.setCenter([pos.coords.longitude, pos.coords.latitude]);
+    setCenter([pos.coords.longitude, pos.coords.latitude]);
     const res = await reverseGeocode([
       pos.coords.longitude,
       pos.coords.latitude,
@@ -114,14 +125,15 @@ export default function LocationFilter(props: {
   }
 
   onMount(async () => {
-    if (props.center) {
-      const res = await reverseGeocode(props.center);
+    const center = parsedCenter();
+    if (center) {
+      const res = await reverseGeocode(center);
       setGeocodeRes({ name: res.features[0].place_name });
     }
   });
 
   function reset() {
-    props.setCenter(null);
+    setCenter(null);
     setGeocodeRes(null);
     setSearchRes([]);
     const ie = inputEl();
@@ -151,8 +163,8 @@ export default function LocationFilter(props: {
                 name="range"
                 aria-label="Range"
                 class="h-full rounded-md border-0 bg-transparent py-0 pl-3 pr-7 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
-                onChange={(e) => props.setRange(e.target.value)}
-                value={props.range}
+                onChange={(e) => setRange(e.target.value)}
+                value={parsedRange()}
               >
                 <option>5 mi</option>
                 <option>10 mi</option>

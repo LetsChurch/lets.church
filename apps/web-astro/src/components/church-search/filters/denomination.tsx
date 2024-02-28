@@ -1,5 +1,6 @@
 import AffiliateIcon from '@tabler/icons/affiliate.svg?sprite-solid';
 import { For } from 'solid-js';
+import { pushQueryParams, query } from '../../../util/history';
 import Filter from './base';
 
 const values = [
@@ -26,10 +27,13 @@ const values = [
   { val: 'EVANGELICAL_FREE', label: 'Evangelical Free' },
 ];
 
-export default function DenominationFilter(props: {
-  denominations: string[];
-  setDenominations: (d: string[]) => void;
-}) {
+export const parsedDenominations = () =>
+  query().get('denomination')?.split(',') ?? [];
+
+const setDenominations = (d: Array<string>) =>
+  pushQueryParams({ denomination: d.join(',') });
+
+export default function DenominationFilter() {
   return (
     <Filter label="Denomination" Icon={AffiliateIcon}>
       {() => (
@@ -41,16 +45,16 @@ export default function DenominationFilter(props: {
                   <input
                     type="checkbox"
                     class="mr-2"
-                    checked={props.denominations.includes(value.val)}
+                    checked={parsedDenominations().includes(value.val)}
                     value={value.val}
                     onClick={(e) => {
                       if (e.currentTarget.checked) {
-                        props.setDenominations(
-                          props.denominations.concat(value.val),
+                        setDenominations(
+                          parsedDenominations().concat(value.val),
                         );
                       } else {
-                        props.setDenominations(
-                          props.denominations.filter((d) => d !== value.val),
+                        setDenominations(
+                          parsedDenominations().filter((d) => d !== value.val),
                         );
                       }
                     }}
