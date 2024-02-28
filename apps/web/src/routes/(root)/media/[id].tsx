@@ -465,46 +465,46 @@ export default function MediaRoute() {
 
   return (
     <>
-      <Title>{metaData()?.data.title ?? '...'} | Let's Church</Title>
+      <Title>{metaData()?.data?.title ?? '...'} | Let's Church</Title>
       <Og
         title={
-          metaData()?.data.title
-            ? `${metaData()?.data.title} | Let's Church`
+          metaData()?.data?.title
+            ? `${metaData()?.data?.title} | Let's Church`
             : "Let's Church"
         }
-        description={metaData()?.data.description ?? ''}
+        description={metaData()?.data?.description ?? ''}
         image={
-          metaData()?.data.thumbnailUrl ??
-          metaData()?.data.channel.defaultThumbnailUrl
+          metaData()?.data?.thumbnailUrl ??
+          metaData()?.data?.channel.defaultThumbnailUrl
         }
       />
       <div class="md:grid md:grid-cols-3 md:gap-4">
         <div class="space-y-4 md:col-span-2">
           <Player
             id={params.id}
-            videoSource={metaData()?.data.mediaSource}
-            audioSource={metaData()?.data.audioSource}
-            peaksDatUrl={metaData()?.data.peaksDatUrl}
-            peaksJsonUrl={metaData()?.data.peaksJsonUrl}
+            videoSource={metaData()?.data?.mediaSource}
+            audioSource={metaData()?.data?.audioSource}
+            peaksDatUrl={metaData()?.data?.peaksDatUrl}
+            peaksJsonUrl={metaData()?.data?.peaksJsonUrl}
             playAt={playAt}
             onTimeUpdate={setCurrentTime}
-            lengthSeconds={metaData()?.data.lengthSeconds ?? 0}
+            lengthSeconds={metaData()?.data?.lengthSeconds ?? 0}
             fluid
           />
-          <h1 class="truncate text-2xl">{metaData()?.data.title ?? '...'}</h1>
+          <h1 class="truncate text-2xl">{metaData()?.data?.title ?? '...'}</h1>
           <div class="flex flex-col gap-3 lg:flex-row lg:justify-between lg:overflow-x-auto">
             <div class="flex justify-start gap-3">
               <A
-                href={`/channel/${metaData()?.data.channel.slug}`}
+                href={`/channel/${metaData()?.data?.channel.slug}`}
                 class="relative z-10 inline-flex w-max min-w-0 items-center space-x-2 overflow-hidden whitespace-nowrap"
               >
                 <Avatar
                   size="sm"
-                  src={metaData()?.data.channel.avatarUrl}
-                  alt={`${metaData()?.data.channel.name} icon`}
+                  src={metaData()?.data?.channel.avatarUrl}
+                  alt={`${metaData()?.data?.channel.name} icon`}
                 />
                 <span class="overflow-hidden text-ellipsis text-sm text-gray-500">
-                  {metaData()?.data.channel.name}
+                  {metaData()?.data?.channel.name}
                 </span>
               </A>
               <submitSubscribe.Form
@@ -514,7 +514,7 @@ export default function MediaRoute() {
                 <input
                   type="hidden"
                   name="channelId"
-                  value={metaData()?.data.channel.id ?? ''}
+                  value={metaData()?.data?.channel.id ?? ''}
                 />
                 <UnderbarButton
                   type="submit"
@@ -540,8 +540,8 @@ export default function MediaRoute() {
             <div class="flex gap-3 max-lg:overflow-x-auto">
               <Show
                 when={
-                  metaData()?.data.downloadsEnabled &&
-                  (metaData()?.data.downloadUrls?.length ?? 0 > 0)
+                  metaData()?.data?.downloadsEnabled &&
+                  (metaData()?.data?.downloadUrls?.length ?? 0 > 0)
                 }
               >
                 <div>
@@ -553,7 +553,7 @@ export default function MediaRoute() {
                   </UnderbarButton>
                   <FloatingDownloadMenu
                     ref={setFloatingDownloadMenu}
-                    data={metaData()?.data.downloadUrls ?? []}
+                    data={metaData()?.data?.downloadUrls ?? []}
                     open={downloadFloatOpen()}
                     onClose={() => setDownloadFloatOpen(false)}
                     position={downloadPosition}
@@ -582,10 +582,10 @@ export default function MediaRoute() {
           <div class="space-y-2 rounded-md bg-gray-100 p-3">
             <div class="flex items-center gap-3 text-sm">
               <p class="font-medium text-gray-900">
-                {humanFormat(metaData()?.data.totalViews ?? 0)}{' '}
-                {pluralize('view', metaData()?.data.totalViews ?? 0)}
+                {humanFormat(metaData()?.data?.totalViews ?? 0)}{' '}
+                {pluralize('view', metaData()?.data?.totalViews ?? 0)}
               </p>
-              <Show when={metaData()?.data.publishedAt} keyed>
+              <Show when={metaData()?.data?.publishedAt} keyed>
                 {(date) => (
                   <time datetime={date} class="text-gray-600">
                     {formatDateFull(new Date(date))}
@@ -593,14 +593,14 @@ export default function MediaRoute() {
                 )}
               </Show>
             </div>
-            <Show when={metaData()?.data.description} keyed>
+            <Show when={metaData()?.data?.description} keyed>
               {(desc) => (
                 <div class="overflow-x-scroll whitespace-pre-line">{desc}</div>
               )}
             </Show>
           </div>
           <Show
-            when={metaData()?.data.userCommentsEnabled}
+            when={metaData()?.data?.userCommentsEnabled}
             fallback={
               <p class="rounded-md bg-gray-100 p-3 text-gray-400">
                 Comments are disabled.
@@ -611,16 +611,16 @@ export default function MediaRoute() {
               <input
                 type="hidden"
                 name="uploadRecordId"
-                value={metaData()?.data.id ?? ''}
+                value={metaData()?.data?.id ?? ''}
               />
               <CommentForm
                 placeholder="Add your comment..."
                 pending={submittingComment.pending}
               />
               <p class="font-medium text-gray-900">
-                {metaData()?.data.userComments.totalCount} comments
+                {metaData()?.data?.userComments.totalCount} comments
               </p>
-              <For each={metaData()?.data.userComments.edges}>
+              <For each={metaData()?.data?.userComments.edges}>
                 {(edge) => (
                   <Comment
                     data={edge.node}
@@ -635,24 +635,24 @@ export default function MediaRoute() {
               <Pagination
                 queryKey="comments"
                 hasNextPage={
-                  metaData()?.data.userComments.pageInfo.hasNextPage ?? false
+                  metaData()?.data?.userComments.pageInfo.hasNextPage ?? false
                 }
                 hasPreviousPage={
-                  metaData()?.data.userComments.pageInfo.hasPreviousPage ??
+                  metaData()?.data?.userComments.pageInfo.hasPreviousPage ??
                   false
                 }
                 startCursor={
-                  metaData()?.data.userComments.pageInfo.startCursor ?? ''
+                  metaData()?.data?.userComments.pageInfo.startCursor ?? ''
                 }
                 endCursor={
-                  metaData()?.data.userComments.pageInfo.endCursor ?? ''
+                  metaData()?.data?.userComments.pageInfo.endCursor ?? ''
                 }
               />
             </submitComment.Form>
           </Show>
         </div>
         <div class="space-y-4 md:col-span-1">
-          <Show when={metaData()?.data.series} keyed>
+          <Show when={metaData()?.data?.series} keyed>
             {(series) => (
               <div class="relative flex h-[175px] flex-col overflow-hidden rounded-md bg-gray-50">
                 <h3 class="inset-x-0 bg-gray-50 px-4 pb-2 pt-4 text-sm font-semibold text-gray-900">
@@ -689,7 +689,7 @@ export default function MediaRoute() {
             )}
           </Show>
           <Transcript
-            transcript={metaData()?.data.transcript ?? []}
+            transcript={metaData()?.data?.transcript ?? []}
             currentTime={currentTime() * 1000}
             setPlayAt={setPlayAt}
           />
