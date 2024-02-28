@@ -17,12 +17,11 @@ spec:
     spec:
       restartPolicy: Always
       containers:
-        - &gatewayContainer
-          image: registry.gitlab.com/letschurch/lets.church/gateway:latest
+        - image: registry.gitlab.com/letschurch/lets.church/gateway:latest
           name: gateway
           ports:
             - containerPort: 3000
-          env:
+          env: &gatewayEnv
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
@@ -45,7 +44,7 @@ spec:
                   key: SENTRY_GATEWAY_DSN
             - name: SERVICE_NAME
               value: gateway
-          envFrom:
+          envFrom: &gatewayEnvFrom
             - configMapRef:
                 name: gateway-config
             - configMapRef:
@@ -68,12 +67,16 @@ spec:
             successThreshold: 1
             failureThreshold: 5
       initContainers:
-        - <<: *gatewayContainer
-          name: gateway-init-migrations
+        - name: gateway-init-migrations
+          image: registry.gitlab.com/letschurch/lets.church/gateway:latest
           command: ["npm", "run", "prisma:migrate:deploy"]
-        - <<: *gatewayContainer
-          name: gateway-init-es-mappings
+          env: *gatewayEnv
+          envFrom: *gatewayEnvFrom
+        - name: gateway-init-es-mappings
+          image: registry.gitlab.com/letschurch/lets.church/gateway:latest
           command: ["npm", "run", "es:push-mappings"]
+          env: *gatewayEnv
+          envFrom: *gatewayEnvFrom
 ---
 apiVersion: v1
 kind: Service
