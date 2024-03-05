@@ -632,6 +632,7 @@ builder.queryFields((t) => ({
                 },
               },
             },
+            visibility: PrismaUploadVisibility.PUBLIC,
           },
           orderBy: {
             publishedAt: Prisma.SortOrder.desc,
