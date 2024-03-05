@@ -35,6 +35,9 @@ export default async function probe(
 
   const workingDir = join(WORK_DIR, uploadRecordId);
 
+  const stdErrLines: Array<string> = [];
+  const stdOutLines: Array<string> = [];
+
   try {
     activityLogger.info('Making working directory');
     await mkdirp(workingDir);
@@ -50,21 +53,27 @@ export default async function probe(
 
     activityLogger.info(`Probing ${downloadPath}`);
 
-    const probe = await runFfprobe(
-      workingDir,
-      downloadPath,
-      cancellationSignal,
-    );
-    const probeJson = probe.stdout;
+    const proc = runFfprobe(workingDir, downloadPath, cancellationSignal);
 
-    const parsedProbe = JSON.parse(probeJson);
-    const schemaParsedProbe = ffprobeSchema.parse(parsedProbe);
+    proc.stdout?.on('data', (data) => {
+      stdOutLines.push(String(data));
+    });
+
+    proc.stderr?.on('data', (data) => {
+      stdErrLines.push(String(data));
+    });
+
+    await proc;
+
+    const probeJson = stdOutLines.join('');
+    const parsedProbeJson = JSON.parse(probeJson);
+    const schemaParsedProbe = ffprobeSchema.parse(parsedProbeJson);
 
     await retryablePutFile({
       to: 'INGEST',
       key: `${uploadRecordId}/probe.json`,
       contentType: 'application/json',
-      body: Buffer.from(probeJson),
+      body: Buffer.from(parsedProbeJson),
       signal: cancellationSignal,
     });
 
@@ -82,7 +91,14 @@ export default async function probe(
 
     return schemaParsedProbe;
   } catch (e) {
-    activityLogger.error(e instanceof Error ? e.message : e);
+    activityLogger
+      .child({
+        meta: JSON.stringify({
+          stdout: stdOutLines.join(''),
+          stderr: stdErrLines.join(''),
+        }),
+      })
+      .error(e instanceof Error ? e.message : e);
     throw e;
   } finally {
     activityLogger.info('Removing working directory');
