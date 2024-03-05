@@ -5,11 +5,13 @@
   "scripts": {
     "dev:server": "NODE_ENV=development tsx watch src/server.ts",
     "dev:background-worker": "NODE_ENV=development tsx watch src/temporal/workers/background-worker.ts",
+    "dev:probe-worker": "NODE_ENV=development tsx watch src/temporal/workers/probe-worker.ts",
     "dev:transcode-worker": "NODE_ENV=development tsx watch src/temporal/workers/transcode-worker.ts",
     "dev:transcribe-worker": "NODE_ENV=development tsx watch src/temporal/workers/transcribe-worker.ts",
     "dev:import-worker": "NODE_ENV=development tsx watch src/temporal/workers/import-worker.ts",
     "start:server": "NODE_ENV=production tsx src/server.ts",
     "start:background-worker": "NODE_ENV=production tsx src/temporal/workers/background-worker.ts",
+    "start:probe-worker": "NODE_ENV=production tsx src/temporal/workers/probe-worker.ts",
     "start:transcode-worker": "NODE_ENV=production tsx src/temporal/workers/transcode-worker.ts",
     "start:transcribe-worker": "NODE_ENV=production tsx src/temporal/workers/transcribe-worker.ts",
     "start:import-worker": "NODE_ENV=production tsx src/temporal/workers/import-worker.ts",

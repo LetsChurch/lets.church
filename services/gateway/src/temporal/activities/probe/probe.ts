@@ -16,7 +16,7 @@ import logger from '../../../util/logger';
 const WORK_DIR = process.env['PROBE_WORKING_DIRECTORY'] ?? '/data/probe';
 
 const moduleLogger = logger.child({
-  module: 'temporal/activities/transcode/probe',
+  module: 'temporal/activities/probe/probe',
 });
 
 export default async function probe(
@@ -73,7 +73,7 @@ export default async function probe(
       to: 'INGEST',
       key: `${uploadRecordId}/probe.json`,
       contentType: 'application/json',
-      body: Buffer.from(parsedProbeJson),
+      body: Buffer.from(probeJson),
       signal: cancellationSignal,
     });
 

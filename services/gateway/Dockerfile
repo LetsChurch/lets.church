@@ -32,6 +32,10 @@ COPY --from=videah/oxipng:7.0.0 /usr/local/bin/oxipng /usr/local/bin/oxipng
 RUN npm run prisma:generate
 CMD npm run start:background-worker
 
+FROM base as probe-worker
+RUN apt-get install -y ffmpeg
+CMD npm run start:probe-worker
+
 FROM base as transcode-worker
 RUN apt-get install -y imagemagick jpegoptim ffmpeg
 COPY --from=build-audiowaveform /home/build/audiowaveform/build/audiowaveform /usr/bin/

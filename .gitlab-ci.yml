@@ -112,6 +112,12 @@ build-background-worker:
     - cd services/gateway
     - depot build --target background-worker -t registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA} . --push
 
+build-probe-worker:
+  <<: *build-common
+  script:
+    - cd services/gateway
+    - depot build --target probe-worker -t registry.gitlab.com/letschurch/lets.church/probe-worker:${CI_COMMIT_SHORT_SHA} . --push
+
 build-import-worker:
   <<: *build-common
   script:

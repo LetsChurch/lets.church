@@ -112,6 +112,24 @@ services:
       - ./services/gateway:/home/node/app
       - background-worker-node-modules:/home/node/app/node_modules
 
+  probe-worker:
+    build:
+      context: ./services/gateway
+      target: probe-worker
+    command: npm run dev:probe-worker
+    environment:
+      NODE_ENV: development
+      SENTRY_DSN: ${SENTRY_TRANSCODE_WORKER_DSN}
+      SERVICE_NAME: transcode-worker
+      IDENTITY: dev
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
+      MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 5
+      <<: *s3-env
+    volumes:
+      - ./services/gateway:/home/node/app
+      - transcode-worker-node-modules:/home/node/app/node_modules
+
   transcode-worker:
     build:
       context: ./services/gateway

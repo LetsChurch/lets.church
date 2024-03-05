@@ -2,15 +2,21 @@ import { executeChild, proxyActivities } from '@temporalio/workflow';
 import invariant from 'tiny-invariant';
 import { probeIsVideoFile } from '../../util/zod';
 import type * as backgroundActivities from '../activities/background';
+import type * as probeActivities from '../activities/probe';
 import type * as transcodeActivities from '../activities/transcode';
 import type * as transcribeActivities from '../activities/transcribe';
-import { BACKGROUND_QUEUE, TRANSCODE_QUEUE, TRANSCRIBE_QUEUE } from '../queues';
+import {
+  BACKGROUND_QUEUE,
+  PROBE_QUEUE,
+  TRANSCODE_QUEUE,
+  TRANSCRIBE_QUEUE,
+} from '../queues';
 import { indexDocumentWorkflow } from './index-document';
 
-const { probe } = proxyActivities<typeof transcodeActivities>({
+const { probe } = proxyActivities<typeof probeActivities>({
   startToCloseTimeout: '20 minutes',
   heartbeatTimeout: '10 minutes',
-  taskQueue: TRANSCODE_QUEUE,
+  taskQueue: PROBE_QUEUE,
   retry: { maximumAttempts: 2 },
 });
 
