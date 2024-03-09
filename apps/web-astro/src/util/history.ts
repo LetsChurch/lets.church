@@ -25,3 +25,30 @@ export function pushQueryParams(p: Record<string, string | null>) {
 
   setQuery(params);
 }
+
+export function pushArrayQueryParam(key: string, value: string) {
+  const params = new URLSearchParams(window.location.search);
+
+  params.append(key, value);
+
+  const search = `?${params.toString()}`;
+  history.pushState(null, '', search);
+
+  setQuery(params);
+}
+
+export function removeArrayQueryParam(key: string, value: string) {
+  const params = new URLSearchParams(window.location.search);
+
+  const values = params.getAll(key).filter((v) => v !== value);
+  params.delete(key);
+
+  for (const v of values) {
+    params.append(key, v);
+  }
+
+  const search = `?${params.toString()}`;
+  history.pushState(null, '', search);
+
+  setQuery(params);
+}

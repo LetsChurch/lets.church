@@ -2,8 +2,6 @@ import ExpiryMap from 'expiry-map';
 import pMem from 'p-memoize';
 import prisma from '../../util/prisma';
 import builder from '../builder';
-import { geocode } from '../../util/geo';
-import { createGeocodeJwt } from '../../util/jwt';
 
 builder.queryType();
 
@@ -55,64 +53,6 @@ builder.queryField('stats', (t) =>
         totalUploadSeconds: lengthSeconds ?? 0,
         totalUploads,
       };
-    },
-  }),
-);
-
-builder.queryField('geocode', (t) =>
-  t.field({
-    type: [
-      builder.simpleObject('GeocodeResult', {
-        fields: (f) => ({
-          name: f.string(),
-          label: f.string(),
-          type: f.string(),
-          confidence: f.float(),
-          latitude: f.float(),
-          longitude: f.float(),
-          number: f.string({ nullable: true }),
-          postalCode: f.string({ nullable: true }),
-          street: f.string({ nullable: true }),
-          region: f.string({ nullable: true }),
-          regionCode: f.string({ nullable: true }),
-          county: f.string({ nullable: true }),
-          locality: f.string({ nullable: true }),
-          administrativeArea: f.string({ nullable: true }),
-          neighborhood: f.string({ nullable: true }),
-          country: f.string({ nullable: true }),
-          countryCode: f.string({ nullable: true }),
-          continent: f.string({ nullable: true }),
-        }),
-      }),
-    ],
-    args: { query: t.arg.string({ required: true }) },
-    // TODO: rate limit
-    resolve: async (_root, { query }) => {
-      const res = await geocode(query);
-
-      if ('data' in res) {
-        return res.data;
-      }
-
-      return [];
-    },
-  }),
-);
-
-builder.queryField('geocodeJwt', (t) =>
-  t.field({
-    type: ['Jwt'],
-    args: { query: t.arg.string({ required: true }) },
-    authScopes: { authenticated: true },
-    // TODO: rate limit
-    resolve: async (_root, { query }) => {
-      const res = await geocode(query);
-
-      if ('data' in res) {
-        return res.data.map((obj) => createGeocodeJwt(obj));
-      }
-
-      return [];
     },
   }),
 );

@@ -301,10 +301,14 @@ export function msearchOrganizations(
   from = 0,
   size = 0,
   params?: {
+    orgType?: string | null;
     geo?: { range: string; lat: number; lon: number } | null;
-    denomination?: Array<string> | null;
+    organization?: string | null;
+    tags?: string[] | null;
   },
 ): [MsearchRequestItem, MsearchRequestItem] {
+  const trimmed = query.trim();
+
   return [
     { index: 'lc_organizations' },
     {
@@ -313,10 +317,7 @@ export function msearchOrganizations(
       query: {
         bool: {
           must: [
-            { term: { type: 'CHURCH' } }, // TODO: input
-            ...((params?.denomination?.length ?? 0) > 0
-              ? [{ terms: { denomination: params?.denomination ?? [] } }]
-              : []),
+            { term: { type: params?.orgType ?? 'CHURCH' } },
             ...(query
               ? [
                   {
@@ -328,8 +329,44 @@ export function msearchOrganizations(
                   },
                 ]
               : []),
+            ...(params?.organization
+              ? [
+                  {
+                    term: {
+                      upstreamOrganizationAssociations: params?.organization,
+                    },
+                  },
+                ]
+              : []),
+            ...(trimmed
+              ? [
+                  {
+                    match: {
+                      name: {
+                        query: trimmed,
+                        boost: 2,
+                      },
+                    },
+                  },
+                ]
+              : []),
           ],
-          should: [],
+          should: [
+            ...(trimmed
+              ? [
+                  {
+                    match: {
+                      description: {
+                        query: trimmed,
+                      },
+                    },
+                  },
+                ]
+              : []),
+            ...(params?.tags?.map((tag) => ({ term: { tags: tag } })) ?? []),
+          ],
+          minimum_should_match:
+            ((params?.tags?.length ?? 0) > 0 ? 1 : 0) + (trimmed ? 1 : 0),
           filter: params?.geo
             ? [
                 {

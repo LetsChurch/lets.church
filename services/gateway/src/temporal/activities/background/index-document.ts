@@ -151,7 +151,7 @@ async function getDocument(
           description: true,
           addresses: { where: { type: AddressType.MEETING } },
           type: true,
-          denomination: true,
+          tags: true,
           upstreamOrganizationAssociations: {
             where: {
               upstreamApproved: true,
@@ -176,7 +176,7 @@ async function getDocument(
           name: rec.name,
           description: rec.description,
           type: rec.type,
-          denomination: rec.denomination,
+          tags: rec.tags.map((tag) => tag.tagSlug),
           ...(loc
             ? { meetingLocation: { lat: loc.latitude, lon: loc.longitude } }
             : {}),

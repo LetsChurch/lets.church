@@ -89,6 +89,17 @@ model ChannelSubscription {
   @@map("channel_subscription")
 }
 
+enum TagColor {
+  GRAY
+  RED
+  YELLOW
+  GREEN
+  BLUE
+  INDIGO
+  PURPLE
+  PINK
+}
+
 enum OrganizationType {
   CHURCH
   MINISTRY
@@ -96,30 +107,50 @@ enum OrganizationType {
   @@map("organization_type")
 }
 
-enum OrganizationDenomination {
-  NON
-  CHRISTIAN
-  PROTESTANT
-  BAPTIST
-  REFORMED_BAPTIST
-  PARTICULAR_BAPTIST
-  SOUTHERN_BAPTIST
-  INDEPENDENT_BAPTIST
-  REFORMED
-  INDEPENDENT
-  PRESBYTERIAN
-  PRESBYTERIAN_ARP
-  PRESBYTERIAN_PCA
-  PRESBYTERIAN_RPCUS
-  PRESBYTERIAN_RPCNA
-  PRESBYTERIAN_OPC
-  PRESBYTERIAN_CREC
-  LUTHERAN
-  LUTHERAN_TAALC
-  INTERDENOMINATIONAL
-  EVANGELICAL_FREE
+enum OrganizationTagCategory {
+  DENOMINATION
+  DOCTRINE
+  ESCHATOLOGY
+  WORSHIP
+  CONFESSION
+  GOVERNMENT
+  OTHER
 
-  @@map("organization_denomination")
+  @@map("organization_tag_category")
+}
+
+model OrganizationTag {
+  slug          String                      @unique @db.Citext
+  label         String
+  description   String?
+  moreInfoLink  String?                     @map("more_info_link")
+  category      OrganizationTagCategory
+  color         TagColor                    @default(GRAY)
+  organizations OrganizationTagInstance[]
+  suggestedBy   OrganizationTagSuggestion[] @relation("SuggestedBy")
+  suggests      OrganizationTagSuggestion[] @relation("Suggests")
+
+  @@map("organization_tag")
+}
+
+model OrganizationTagSuggestion {
+  parent        OrganizationTag @relation("SuggestedBy", fields: [parentSlug], references: [slug])
+  parentSlug    String          @map("parent_slug") @db.Citext
+  suggested     OrganizationTag @relation("Suggests", fields: [suggestedSlug], references: [slug])
+  suggestedSlug String          @map("recommended_slug") @db.Citext
+
+  @@id([parentSlug, suggestedSlug])
+  @@map("organization_tag_suggestion")
+}
+
+model OrganizationTagInstance {
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  organizationId String          @map("organization_id") @db.Uuid
+  tag            OrganizationTag @relation(fields: [tagSlug], references: [slug])
+  tagSlug        String          @map("tag_slug") @db.Citext
+
+  @@id([organizationId, tagSlug])
+  @@map("organization_tag_instance")
 }
 
 model Organization {
@@ -129,9 +160,9 @@ model Organization {
   slug                               String                                @unique @db.Citext
   addresses                          OrganizationAddress[]
   description                        String?
-  denomination                       OrganizationDenomination?
   memberships                        OrganizationMembership[]
   associations                       OrganizationChannelAssociation[]
+  tags                               OrganizationTagInstance[]
   createdAt                          DateTime                              @default(now()) @map("created_at")
   updatedAt                          DateTime                              @updatedAt @map("updated_at")
   upstreamOrganizationAssociations   OrganizationOrganizationAssociation[] @relation("downstreamOrganization")

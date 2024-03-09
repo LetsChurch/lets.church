@@ -6,13 +6,15 @@ export const churchesQuery = graphql(`
     $lon: Float!
     $lat: Float!
     $range: String!
-    $denomination: [OrganizationDenomination!]
+    $organization: ShortUuid
+    $tags: [String!]
   ) {
     search(
       focus: ORGANIZATIONS
       query: ""
       geo: { lon: $lon, lat: $lat, range: $range }
-      denomination: $denomination
+      organization: $organization
+      tags: $tags
       first: 100
     ) {
       edges {
@@ -57,6 +59,46 @@ export const churchesPayloadSchema = z.object({
     '200 mi',
     '500 mi',
     '1000 mi',
+    '25000 mi',
   ]),
-  denomination: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
+  organization: z.string().nullable().optional(),
 });
+
+export const ministriesQuery = graphql(`
+  query MinistriesQuery($query: String!) {
+    search(focus: ORGANIZATIONS, query: $query, orgType: MINISTRY) {
+      edges {
+        organization: node {
+          ... on OrganizationSearchHit {
+            id
+            name
+          }
+        }
+      }
+    }
+  }
+`);
+
+export const organizationQuery = graphql(`
+  query OrganizationById($id: ShortUuid!) {
+    organizationById(id: $id) {
+      name
+    }
+  }
+`);
+
+export const organizationTagsQuery = graphql(`
+  query OrganizationTags {
+    organizationTagsConnection(first: 1024) {
+      edges {
+        node {
+          category
+          slug
+          label
+          color
+        }
+      }
+    }
+  }
+`);

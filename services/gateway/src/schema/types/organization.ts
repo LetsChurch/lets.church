@@ -2,15 +2,15 @@ import slugify from '@sindresorhus/slugify';
 import invariant from 'tiny-invariant';
 import {
   AddressType,
+  OrganizationTagCategory,
   OrganizationType,
-  OrganizationDenomination,
   Organization as PrismaOrganization,
+  TagColor,
 } from '@prisma/client';
 import { indexDocument } from '../../temporal';
 import prisma from '../../util/prisma';
 import builder from '../builder';
 import { Context } from '../../util/context';
-import { parseGeocodeJwt } from '../../util/jwt';
 
 async function organizationAdminAuthScope(
   appOrganization: Pick<PrismaOrganization, 'id'>,
@@ -37,16 +37,54 @@ async function organizationAdminAuthScope(
   };
 }
 
-const OrganizationTypeEnum = builder.enumType('OrganizationType', {
-  values: Object.keys(OrganizationType),
+const TagColorEnum = builder.enumType('TagColor', {
+  values: Object.keys(TagColor),
 });
 
-export const OrganizationDenominationEnum = builder.enumType(
-  'OrganizationDenomination',
+const OrganizationTagCategoryEnum = builder.enumType(
+  'OrganizationTagCategory',
   {
-    values: Object.keys(OrganizationDenomination),
+    values: Object.keys(OrganizationTagCategory),
   },
 );
+
+builder.prismaObject('OrganizationTag', {
+  fields: (t) => ({
+    slug: t.exposeString('slug'),
+    label: t.exposeString('label'),
+    description: t.exposeString('description', { nullable: true }),
+    moreInfoLink: t.exposeString('moreInfoLink', { nullable: true }),
+    category: t.expose('category', { type: OrganizationTagCategoryEnum }),
+    color: t.expose('color', { type: TagColorEnum }),
+    suggests: t.relatedConnection('suggests', {
+      cursor: 'parentSlug_suggestedSlug',
+    }),
+    organizations: t.relatedConnection('organizations', {
+      cursor: 'organizationId_tagSlug',
+    }),
+  }),
+});
+
+builder.prismaObject('OrganizationTagSuggestion', {
+  fields: (t) => ({
+    parent: t.relation('parent'),
+    suggested: t.relation('suggested'),
+  }),
+});
+
+const OrganizationTagInstance = builder.prismaObject(
+  'OrganizationTagInstance',
+  {
+    fields: (t) => ({
+      organization: t.relation('organization'),
+      tag: t.relation('tag'),
+    }),
+  },
+);
+
+export const OrganizationTypeEnum = builder.enumType('OrganizationType', {
+  values: Object.keys(OrganizationType),
+});
 
 const Organization = builder.prismaObject('Organization', {
   select: { id: true },
@@ -56,9 +94,9 @@ const Organization = builder.prismaObject('Organization', {
     slug: t.exposeString('slug'),
     type: t.expose('type', { type: OrganizationTypeEnum }),
     description: t.exposeString('description', { nullable: true }),
-    denomination: t.expose('denomination', {
-      type: OrganizationDenominationEnum,
-      nullable: true,
+    tags: t.relatedConnection('tags', {
+      type: OrganizationTagInstance,
+      cursor: 'organizationId_tagSlug',
     }),
     addresses: t.relatedConnection('addresses', {
       cursor: 'id',
@@ -136,6 +174,13 @@ builder.queryFields((t) => ({
       return prisma.organization.findMany(query);
     },
   }),
+  organizationTagsConnection: t.prismaConnection({
+    type: 'OrganizationTag',
+    cursor: 'slug',
+    resolve: (query, _root, _args, _context, _info) => {
+      return prisma.organizationTag.findMany(query);
+    },
+  }),
 }));
 
 builder.mutationFields((t) => ({
@@ -182,8 +227,6 @@ builder.mutationFields((t) => ({
       name: t.arg.string({ required: false }),
       slug: t.arg.string({ required: false }),
       description: t.arg.string({ required: false }),
-      // TODO: multiple addresses, maybe just make an organization address API
-      addressJwt: t.arg({ type: 'Jwt', required: false }),
     },
     authScopes: (_root, { organizationId }, context, _info) =>
       organizationId
@@ -192,42 +235,11 @@ builder.mutationFields((t) => ({
     resolve: async (
       query,
       _parent,
-      { organizationId, name, slug, description, addressJwt },
+      { organizationId, name, slug, description },
       _context,
     ) => {
       return prisma.$transaction(async (tx) => {
         if (organizationId) {
-          // TODO: better logic for updating address
-          if (addressJwt) {
-            await tx.organizationAddress.deleteMany({
-              where: { organizationId },
-            });
-            const parsed = await parseGeocodeJwt(addressJwt);
-            if (parsed) {
-              await tx.organizationAddress.create({
-                data: {
-                  type: AddressType.MEETING,
-                  name: 'Default',
-                  query: parsed?.name,
-                  geocodingJson: parsed,
-                  country: parsed?.country,
-                  locality: parsed?.locality,
-                  region: parsed?.region,
-                  // postOfficeBoxNumber: 0,
-                  postalCode: parsed?.postalCode,
-                  streetAddress: parsed?.street,
-                  latitude: parsed?.latitude,
-                  longitude: parsed?.longitude,
-                  organization: {
-                    connect: {
-                      id: organizationId,
-                    },
-                  },
-                },
-              });
-            }
-          }
-
           const res = await tx.organization.update({
             ...query,
             where: { id: organizationId },
@@ -254,34 +266,6 @@ builder.mutationFields((t) => ({
             ...(typeof description === 'string' ? { description } : {}),
           },
         });
-
-        if (addressJwt) {
-          const parsed = await parseGeocodeJwt(addressJwt);
-
-          if (parsed) {
-            await tx.organizationAddress.create({
-              data: {
-                type: AddressType.MEETING,
-                name: 'Default',
-                query: parsed?.name,
-                geocodingJson: parsed,
-                country: parsed?.country,
-                locality: parsed?.locality,
-                region: parsed?.region,
-                // postOfficeBoxNumber: 0,
-                postalCode: parsed?.postalCode,
-                streetAddress: parsed?.street,
-                latitude: parsed?.latitude,
-                longitude: parsed?.longitude,
-                organization: {
-                  connect: {
-                    id: res.id,
-                  },
-                },
-              },
-            });
-          }
-        }
 
         indexDocument('organization', res.id);
 

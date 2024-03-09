@@ -4,7 +4,7 @@ import { max, min } from 'lodash-es';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';
 import pFilter from 'p-filter';
-import { OrganizationDenomination } from '@prisma/client';
+import { OrganizationType } from '@prisma/client';
 import {
   msearchChannels,
   msearchOrganizations,
@@ -16,7 +16,7 @@ import {
 import prisma from '../../util/prisma';
 import { identifiableSchema } from '../../util/zod';
 import builder from '../builder';
-import { OrganizationDenominationEnum } from './organization';
+import { OrganizationTypeEnum } from './organization';
 
 // TODO: ensure all aggregates are returned for every focus
 
@@ -238,10 +238,16 @@ builder.queryFields((t) => ({
             }),
           }),
         }),
-        denomination: t.arg({
+        orgType: t.arg({
           required: false,
-          type: [OrganizationDenominationEnum],
+          type: OrganizationTypeEnum,
+          defaultValue: 'CHURCH',
         }),
+        organization: t.arg({
+          required: false,
+          type: 'ShortUuid',
+        }),
+        tags: t.arg({ type: ['String'], required: false }),
       },
       validate: {
         schema: z
@@ -252,10 +258,7 @@ builder.queryFields((t) => ({
             minPublishedAt: z.string().or(z.date()).nullable().optional(),
             maxPublishedAt: z.string().or(z.date()).nullable().optional(),
             transcriptPhraseSearch: z.boolean().nullable().optional(),
-            denomination: z
-              .array(z.nativeEnum(OrganizationDenomination))
-              .nullable()
-              .optional(),
+            orgType: z.nativeEnum(OrganizationType).nullable().optional(),
           })
           .passthrough()
           // TODO: validate geo and denomination against focus
@@ -280,7 +283,9 @@ builder.queryFields((t) => ({
           maxPublishedAt,
           transcriptPhraseSearch,
           geo,
-          denomination,
+          orgType,
+          organization,
+          tags,
           ...args
         },
         context,
@@ -375,7 +380,9 @@ builder.queryFields((t) => ({
                   focus === 'ORGANIZATIONS' ? limit : 0,
                   {
                     geo: geo ? geo : null,
-                    denomination: denomination ? denomination : null,
+                    orgType: orgType ? orgType : null,
+                    organization: organization ? organization : null,
+                    tags: Array.isArray(tags) && tags.length > 0 ? tags : null,
                   },
                 ),
               ],

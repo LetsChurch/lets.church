@@ -12,14 +12,11 @@ import invariant from 'tiny-invariant';
 import type { ResultOf } from '../../util/graphql';
 import type { churchesQuery } from '../../queries/churches';
 import { easeOutExpo } from '../../util';
-import LocationFilter, {
+import Searchbox, {
   murica,
-  parsedCenter,
-  parsedRange,
-} from './filters/location';
-import DenominationFilter, {
-  parsedDenominations,
-} from './filters/denomination';
+  parsedFilters,
+  type Filters,
+} from './searchbox/searchbox';
 
 mapboxgl.accessToken = import.meta.env.PUBLIC_MAPBOX_MAP_TOKEN;
 
@@ -31,14 +28,15 @@ export default function ChurchSearch() {
   const [results, setResults] = createSignal<
     ResultOf<typeof churchesQuery>['search']['edges']
   >([]);
+  const filters = parsedFilters();
 
   createEffect(() => {
     const m = map();
     const s = source();
-    const center = parsedCenter();
+    const f = filters();
 
     if (m && s) {
-      fetchData(center ? center : murica, parsedRange(), parsedDenominations());
+      fetchData(f);
     }
   });
 
@@ -51,15 +49,11 @@ export default function ChurchSearch() {
     }
   }
 
-  async function fetchData(
-    c: [number, number] = murica,
-    r: string = '100 mi',
-    d: Array<string>,
-  ) {
+  async function fetchData(f: Filters) {
     const res = await fetch('/churches', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ center: c ?? murica, range: r, denomination: d }),
+      body: JSON.stringify(f),
     });
 
     const data = (await res.json()) as ResultOf<typeof churchesQuery>;
@@ -93,7 +87,7 @@ export default function ChurchSearch() {
 
     if (data.search.edges.length > 0) {
       const bounds = new mapboxgl.LngLatBounds();
-      bounds.extend(c);
+      bounds.extend(f.center);
 
       data.search.edges.forEach((res) => {
         if (res.node.__typename === 'OrganizationSearchHit') {
@@ -219,6 +213,7 @@ export default function ChurchSearch() {
       });
 
       // inspect a cluster on click
+      // eslint-disable-next-line solid/reactivity
       map.on('click', 'clusters', (e) => {
         invariant(map, 'Map should be defined');
 
@@ -282,10 +277,7 @@ export default function ChurchSearch() {
   return (
     <div class="relative grid w-full grid-cols-3">
       <div class="pointer-events-auto col-span-1 space-y-2 p-2">
-        <div class="flex gap-2">
-          <LocationFilter />
-          <DenominationFilter />
-        </div>
+        <Searchbox />
         <Show when={!loading()} fallback={<p>Loading</p>}>
           <For each={results()}>
             {(res) => (

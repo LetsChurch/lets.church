@@ -575,12 +575,12 @@ export type Organization = {
   addresses: OrganizationAddressesConnection;
   associationsConnection: OrganizationAssociationsConnection;
   createdAt: Scalars['DateTime']['output'];
-  denomination?: Maybe<OrganizationDenomination>;
   description?: Maybe<Scalars['String']['output']>;
   id: Scalars['ShortUuid']['output'];
   membershipsConnection: OrganizationMembershipsConnection;
   name: Scalars['String']['output'];
   slug: Scalars['String']['output'];
+  tags: OrganizationTagsConnection;
   type: OrganizationType;
   updatedAt: Scalars['DateTime']['output'];
 };
@@ -604,6 +604,14 @@ export type OrganizationAssociationsConnectionArgs = {
 
 
 export type OrganizationMembershipsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type OrganizationTagsArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
@@ -661,30 +669,6 @@ export type OrganizationChannelAssociation = {
   organization: Organization;
 };
 
-export enum OrganizationDenomination {
-  Baptist = 'BAPTIST',
-  Christian = 'CHRISTIAN',
-  EvangelicalFree = 'EVANGELICAL_FREE',
-  Independent = 'INDEPENDENT',
-  IndependentBaptist = 'INDEPENDENT_BAPTIST',
-  Interdenominational = 'INTERDENOMINATIONAL',
-  Lutheran = 'LUTHERAN',
-  LutheranTaalc = 'LUTHERAN_TAALC',
-  Non = 'NON',
-  ParticularBaptist = 'PARTICULAR_BAPTIST',
-  Presbyterian = 'PRESBYTERIAN',
-  PresbyterianArp = 'PRESBYTERIAN_ARP',
-  PresbyterianCrec = 'PRESBYTERIAN_CREC',
-  PresbyterianOpc = 'PRESBYTERIAN_OPC',
-  PresbyterianPca = 'PRESBYTERIAN_PCA',
-  PresbyterianRpcna = 'PRESBYTERIAN_RPCNA',
-  PresbyterianRpcus = 'PRESBYTERIAN_RPCUS',
-  Protestant = 'PROTESTANT',
-  Reformed = 'REFORMED',
-  ReformedBaptist = 'REFORMED_BAPTIST',
-  SouthernBaptist = 'SOUTHERN_BAPTIST'
-}
-
 export type OrganizationMembership = {
   __typename?: 'OrganizationMembership';
   channel: Organization;
@@ -709,6 +693,92 @@ export type OrganizationSearchHit = ISearchHit & {
   id: Scalars['ShortUuid']['output'];
   name: Scalars['String']['output'];
   organization: Organization;
+};
+
+export type OrganizationTag = {
+  __typename?: 'OrganizationTag';
+  category: OrganizationTagCategory;
+  color: TagColor;
+  description?: Maybe<Scalars['String']['output']>;
+  label: Scalars['String']['output'];
+  moreInfoLink?: Maybe<Scalars['String']['output']>;
+  organizations: OrganizationTagOrganizationsConnection;
+  slug: Scalars['String']['output'];
+  suggests: OrganizationTagSuggestsConnection;
+};
+
+
+export type OrganizationTagOrganizationsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type OrganizationTagSuggestsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export enum OrganizationTagCategory {
+  Confession = 'CONFESSION',
+  Denomination = 'DENOMINATION',
+  Doctrine = 'DOCTRINE',
+  Eschatology = 'ESCHATOLOGY',
+  Government = 'GOVERNMENT',
+  Other = 'OTHER',
+  Worship = 'WORSHIP'
+}
+
+export type OrganizationTagInstance = {
+  __typename?: 'OrganizationTagInstance';
+  organization: Organization;
+  tag: OrganizationTag;
+};
+
+export type OrganizationTagOrganizationsConnection = {
+  __typename?: 'OrganizationTagOrganizationsConnection';
+  edges: Array<OrganizationTagOrganizationsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type OrganizationTagOrganizationsConnectionEdge = {
+  __typename?: 'OrganizationTagOrganizationsConnectionEdge';
+  cursor: Scalars['String']['output'];
+  node: OrganizationTagInstance;
+};
+
+export type OrganizationTagSuggestion = {
+  __typename?: 'OrganizationTagSuggestion';
+  parent: OrganizationTag;
+  suggested: OrganizationTag;
+};
+
+export type OrganizationTagSuggestsConnection = {
+  __typename?: 'OrganizationTagSuggestsConnection';
+  edges: Array<OrganizationTagSuggestsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type OrganizationTagSuggestsConnectionEdge = {
+  __typename?: 'OrganizationTagSuggestsConnectionEdge';
+  cursor: Scalars['String']['output'];
+  node: OrganizationTagSuggestion;
+};
+
+export type OrganizationTagsConnection = {
+  __typename?: 'OrganizationTagsConnection';
+  edges: Array<OrganizationTagsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type OrganizationTagsConnectionEdge = {
+  __typename?: 'OrganizationTagsConnectionEdge';
+  cursor: Scalars['String']['output'];
+  node: OrganizationTagInstance;
 };
 
 export enum OrganizationType {
@@ -739,6 +809,7 @@ export type Query = {
   me?: Maybe<AppUser>;
   mySubscriptionUploadRecords?: Maybe<QueryMySubscriptionUploadRecordsConnection>;
   organizationById: Organization;
+  organizationTagsConnection: QueryOrganizationTagsConnection;
   organizationsConnection: QueryOrganizationsConnection;
   search: SearchConnection;
   stats: Stats;
@@ -791,6 +862,14 @@ export type QueryOrganizationByIdArgs = {
 };
 
 
+export type QueryOrganizationTagsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
 export type QueryOrganizationsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -810,7 +889,10 @@ export type QuerySearchArgs = {
   maxPublishedAt?: InputMaybe<Scalars['DateTime']['input']>;
   minPublishedAt?: InputMaybe<Scalars['DateTime']['input']>;
   orderBy?: InputMaybe<SearchOrder>;
+  orgType?: InputMaybe<OrganizationType>;
+  organization?: InputMaybe<Scalars['ShortUuid']['input']>;
   query: Scalars['String']['input'];
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
   transcriptPhraseSearch?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
@@ -868,6 +950,18 @@ export type QueryMySubscriptionUploadRecordsConnectionEdge = {
   __typename?: 'QueryMySubscriptionUploadRecordsConnectionEdge';
   cursor: Scalars['String']['output'];
   node: UploadRecord;
+};
+
+export type QueryOrganizationTagsConnection = {
+  __typename?: 'QueryOrganizationTagsConnection';
+  edges: Array<QueryOrganizationTagsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type QueryOrganizationTagsConnectionEdge = {
+  __typename?: 'QueryOrganizationTagsConnectionEdge';
+  cursor: Scalars['String']['output'];
+  node: OrganizationTag;
 };
 
 export type QueryOrganizationsConnection = {
@@ -970,6 +1064,17 @@ export type Stats = {
   totalUploadSeconds: Scalars['Float']['output'];
   totalUploads: Scalars['Int']['output'];
 };
+
+export enum TagColor {
+  Blue = 'BLUE',
+  Gray = 'GRAY',
+  Green = 'GREEN',
+  Indigo = 'INDIGO',
+  Pink = 'PINK',
+  Purple = 'PURPLE',
+  Red = 'RED',
+  Yellow = 'YELLOW'
+}
 
 export type TimeRange = {
   end: Scalars['Float']['input'];

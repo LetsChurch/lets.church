@@ -19,7 +19,8 @@ if (
     lon: body.center[0],
     lat: body.center[1],
     range: body.range,
-    denomination: body.denomination,
+    organization: body.organization,
+    tags: body.tags,
   });
 
   return new Response(JSON.stringify(data), {

@@ -54,7 +54,7 @@ const data = await client.request<MeQuery, MeQueryVariables>(meQuery);
   <header
     class={cn(
       'bg-white shadow',
-      Astro.props.fixedHeader ? 'sticky top-0 z-10' : null,
+      Astro.props.fixedHeader ? 'sticky top-0 z-[100]' : null,
     )}
   >
     <nav>

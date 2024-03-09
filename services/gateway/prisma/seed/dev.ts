@@ -1,16 +1,26 @@
 import { faker } from '@faker-js/faker';
 import slugify from '@sindresorhus/slugify';
 import argon2 from 'argon2';
-import {
-  OrganizationDenomination,
-  Prisma,
-  UploadListType,
-} from '@prisma/client';
+import { Prisma, UploadListType } from '@prisma/client';
 import invariant from 'tiny-invariant';
 import { LexoRank } from 'lexorank';
-import { indexDocument, waitOnTemporal } from '../src/temporal';
-import prisma from '../src/util/prisma';
-import logger from '../src/util/logger';
+import { indexDocument, waitOnTemporal } from '../../src/temporal';
+import prisma from '../../src/util/prisma';
+import logger from '../../src/util/logger';
+import {
+  augsburgConfessionTagSlug,
+  baptistTagSlug,
+  calvinisticBaptistTagSlug,
+  evangelicalFreeTagSlug,
+  independentTagSlug,
+  lutheranAalcTagSlug,
+  lutheranTagSlug,
+  presbyterianCrecTagSlug,
+  presbyterianPcaTagSlug,
+  presbyterianTagSlug,
+  reformedBaptistTagSlug,
+  reformedTagSlug,
+} from './tags';
 import baptistLa from './geocoding/baptist-la';
 import desertDebaters from './geocoding/desert-debaters';
 import gwgh from './geocoding/gwgh';
@@ -308,7 +318,18 @@ const org04 = await prisma.organization.create({
     name: 'Baptist, But Not Too Baptist, Community Church',
     slug: 'baptist-la',
     type: 'CHURCH',
-    denomination: OrganizationDenomination.BAPTIST,
+    tags: {
+      createMany: {
+        data: [
+          {
+            tagSlug: baptistTagSlug,
+          },
+          {
+            tagSlug: calvinisticBaptistTagSlug,
+          },
+        ],
+      },
+    },
     addresses: {
       create: {
         type: 'MEETING',
@@ -350,7 +371,21 @@ const org05 = await prisma.organization.create({
     name: 'Desert Debaters Society',
     slug: 'desert-debaters',
     type: 'CHURCH',
-    denomination: OrganizationDenomination.REFORMED_BAPTIST,
+    tags: {
+      createMany: {
+        data: [
+          {
+            tagSlug: baptistTagSlug,
+          },
+          {
+            tagSlug: reformedBaptistTagSlug,
+          },
+          {
+            tagSlug: reformedTagSlug,
+          },
+        ],
+      },
+    },
     addresses: {
       create: {
         type: 'MEETING',
@@ -392,7 +427,21 @@ const org06 = await prisma.organization.create({
     name: 'Moss Cows',
     slug: 'moss-cows',
     type: 'CHURCH',
-    denomination: OrganizationDenomination.PRESBYTERIAN_CREC,
+    tags: {
+      createMany: {
+        data: [
+          {
+            tagSlug: presbyterianTagSlug,
+          },
+          {
+            tagSlug: presbyterianCrecTagSlug,
+          },
+          {
+            tagSlug: reformedTagSlug,
+          },
+        ],
+      },
+    },
     addresses: {
       create: {
         type: 'MEETING',
@@ -434,7 +483,15 @@ const org07 = await prisma.organization.create({
     name: 'Gopher Wood Gospel Hall',
     slug: 'gwgh',
     type: 'CHURCH',
-    denomination: OrganizationDenomination.NON,
+    tags: {
+      createMany: {
+        data: [
+          {
+            tagSlug: independentTagSlug,
+          },
+        ],
+      },
+    },
     addresses: {
       create: {
         type: 'MEETING',
@@ -476,7 +533,15 @@ const org08 = await prisma.organization.create({
     name: 'Bananarama Bible Church',
     slug: 'banana',
     type: 'CHURCH',
-    denomination: OrganizationDenomination.NON,
+    tags: {
+      createMany: {
+        data: [
+          {
+            tagSlug: independentTagSlug,
+          },
+        ],
+      },
+    },
     addresses: {
       create: {
         type: 'MEETING',
@@ -518,7 +583,21 @@ const org09 = await prisma.organization.create({
     name: "Cotton's Finger Lutheran Church",
     slug: 'cotton',
     type: 'CHURCH',
-    denomination: OrganizationDenomination.LUTHERAN_TAALC,
+    tags: {
+      createMany: {
+        data: [
+          {
+            tagSlug: augsburgConfessionTagSlug,
+          },
+          {
+            tagSlug: lutheranTagSlug,
+          },
+          {
+            tagSlug: lutheranAalcTagSlug,
+          },
+        ],
+      },
+    },
     addresses: {
       create: {
         type: 'MEETING',
@@ -560,7 +639,21 @@ const org10 = await prisma.organization.create({
     name: 'Harbor Faith Tabernacle',
     slug: 'harbor',
     type: 'CHURCH',
-    denomination: OrganizationDenomination.REFORMED_BAPTIST,
+    tags: {
+      createMany: {
+        data: [
+          {
+            tagSlug: baptistTagSlug,
+          },
+          {
+            tagSlug: reformedBaptistTagSlug,
+          },
+          {
+            tagSlug: reformedTagSlug,
+          },
+        ],
+      },
+    },
     addresses: {
       create: {
         type: 'MEETING',
@@ -602,7 +695,21 @@ const org11 = await prisma.organization.create({
     name: 'Mariners Metanoia Manor',
     slug: 'mariners',
     type: 'CHURCH',
-    denomination: OrganizationDenomination.REFORMED_BAPTIST,
+    tags: {
+      createMany: {
+        data: [
+          {
+            tagSlug: baptistTagSlug,
+          },
+          {
+            tagSlug: reformedBaptistTagSlug,
+          },
+          {
+            tagSlug: reformedTagSlug,
+          },
+        ],
+      },
+    },
     addresses: {
       create: {
         type: 'MEETING',
@@ -644,7 +751,18 @@ const org12 = await prisma.organization.create({
     name: "Prosperity's Pitfall Pavilion",
     slug: 'ppp',
     type: 'CHURCH',
-    denomination: OrganizationDenomination.BAPTIST,
+    tags: {
+      createMany: {
+        data: [
+          {
+            tagSlug: baptistTagSlug,
+          },
+          {
+            tagSlug: calvinisticBaptistTagSlug,
+          },
+        ],
+      },
+    },
     addresses: {
       create: {
         type: 'MEETING',
@@ -686,7 +804,21 @@ const org13 = await prisma.organization.create({
     name: 'Screwtape Sanctuary',
     slug: 'screwtape',
     type: 'CHURCH',
-    denomination: OrganizationDenomination.PRESBYTERIAN_PCA,
+    tags: {
+      createMany: {
+        data: [
+          {
+            tagSlug: presbyterianPcaTagSlug,
+          },
+          {
+            tagSlug: presbyterianTagSlug,
+          },
+          {
+            tagSlug: reformedTagSlug,
+          },
+        ],
+      },
+    },
     addresses: {
       create: {
         type: 'MEETING',
@@ -728,7 +860,18 @@ const org14 = await prisma.organization.create({
     name: 'Solas Sanctuary',
     slug: 'solas',
     type: 'CHURCH',
-    denomination: OrganizationDenomination.PRESBYTERIAN,
+    tags: {
+      createMany: {
+        data: [
+          {
+            tagSlug: presbyterianTagSlug,
+          },
+          {
+            tagSlug: reformedTagSlug,
+          },
+        ],
+      },
+    },
     addresses: {
       create: {
         type: 'MEETING',
@@ -770,7 +913,15 @@ const org15 = await prisma.organization.create({
     name: 'Sovereign Joy Sanctuary',
     slug: 'sovereign-joy',
     type: 'CHURCH',
-    denomination: OrganizationDenomination.BAPTIST,
+    tags: {
+      createMany: {
+        data: [
+          {
+            tagSlug: baptistTagSlug,
+          },
+        ],
+      },
+    },
     addresses: {
       create: {
         type: 'MEETING',
@@ -812,7 +963,15 @@ const org16 = await prisma.organization.create({
     name: 'Clapback Chapel',
     slug: 'clapback',
     type: 'CHURCH',
-    denomination: OrganizationDenomination.BAPTIST,
+    tags: {
+      createMany: {
+        data: [
+          {
+            tagSlug: baptistTagSlug,
+          },
+        ],
+      },
+    },
     addresses: {
       create: {
         type: 'MEETING',
@@ -851,14 +1010,14 @@ await indexDocument('organization', org16.id);
 
 for (let i = 0; i < 25; i += 1) {
   const [nameSegment, denomination] = faker.helpers.arrayElement<
-    [string, OrganizationDenomination]
+    [string, Array<string>]
   >([
-    ['Second Baptist', OrganizationDenomination.BAPTIST],
-    ['Covenant', OrganizationDenomination.REFORMED_BAPTIST],
-    ['Redeemer', OrganizationDenomination.EVANGELICAL_FREE],
-    ['Covenant Presbyterian', OrganizationDenomination.PRESBYTERIAN],
-    ['Redeemer Presbyterian', OrganizationDenomination.PRESBYTERIAN],
-    ['Grace Fellowship Assembly', OrganizationDenomination.INDEPENDENT],
+    ['Second Baptist', [baptistTagSlug]],
+    ['Covenant', [reformedTagSlug, baptistTagSlug, reformedBaptistTagSlug]],
+    ['Redeemer', [evangelicalFreeTagSlug]],
+    ['Covenant Presbyterian', [reformedTagSlug, presbyterianTagSlug]],
+    ['Redeemer Presbyterian', [reformedTagSlug, presbyterianTagSlug]],
+    ['Grace Fellowship Assembly', [independentTagSlug]],
   ]);
 
   const name = `${nameSegment} Church ${faker.location.city()}`.trim();
@@ -868,7 +1027,11 @@ for (let i = 0; i < 25; i += 1) {
       name,
       slug: slugify(name),
       type: 'CHURCH',
-      denomination,
+      tags: {
+        createMany: {
+          data: denomination.map((tagSlug) => ({ tagSlug })),
+        },
+      },
       addresses: {
         create: {
           type: 'MEETING',
