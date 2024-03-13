@@ -1,5 +1,5 @@
 import * as z from 'zod';
-import { graphql } from '../util/graphql';
+import { graphql, type ResultOf } from '../util/graphql';
 
 export const churchesQuery = graphql(`
   query ChurchesQuery(
@@ -102,3 +102,7 @@ export const organizationTagsQuery = graphql(`
     }
   }
 `);
+
+export type OrgTagQueryNode = ResultOf<
+  typeof organizationTagsQuery
+>['organizationTagsConnection']['edges'][number]['node'];

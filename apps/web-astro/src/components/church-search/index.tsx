@@ -12,11 +12,7 @@ import invariant from 'tiny-invariant';
 import type { ResultOf } from '../../util/graphql';
 import type { churchesQuery } from '../../queries/churches';
 import { easeOutExpo } from '../../util';
-import Searchbox, {
-  murica,
-  parsedFilters,
-  type Filters,
-} from './searchbox/searchbox';
+import Searchbox, { murica, parsedFilters, type Filters } from './searchbox';
 
 mapboxgl.accessToken = import.meta.env.PUBLIC_MAPBOX_MAP_TOKEN;
 

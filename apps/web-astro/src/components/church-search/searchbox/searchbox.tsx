@@ -1,7 +1,6 @@
 import {
   For,
   Show,
-  batch,
   createEffect,
   createMemo,
   createSignal,
@@ -11,17 +10,11 @@ import type { ResultOf } from 'gql.tada';
 import { useFloating } from 'solid-floating-ui';
 import { size, shift } from '@floating-ui/dom';
 import { throttle } from '@solid-primitives/scheduled';
-import {
-  array,
-  number,
-  object,
-  optional,
-  parse,
-  string,
-  unknown,
-  type Input,
-} from 'valibot';
-import type { organizationTagsQuery } from '../../../queries/churches';
+import { array, object, parse, string, type Input } from 'valibot';
+import type {
+  OrgTagQueryNode,
+  organizationTagsQuery,
+} from '../../../queries/churches';
 import FloatingDiv from '../../floating-div';
 import { cn } from '../../../util';
 import {
@@ -30,80 +23,10 @@ import {
   query,
   removeArrayQueryParam,
 } from '../../../util/history';
-import Chiclet, { type Color } from './chiclet';
-
-const mbAccessToken = import.meta.env.PUBLIC_MAPBOX_SEARCHBOX_TOKEN;
-const sessionToken = window.crypto.randomUUID();
-
-type OrgTagQueryNode = ResultOf<
-  typeof organizationTagsQuery
->['organizationTagsConnection']['edges'][number]['node'];
-
-function getOrgTagCategoryLabel(category: OrgTagQueryNode['category']): string {
-  switch (category) {
-    case 'CONFESSION':
-      return 'Confession';
-    case 'DENOMINATION':
-      return 'Denomination';
-    case 'DOCTRINE':
-      return 'Doctrine';
-    case 'ESCHATOLOGY':
-      return 'Eschatology';
-    case 'GOVERNMENT':
-      return 'Government';
-    case 'OTHER':
-      return 'Other';
-    case 'WORSHIP':
-      return 'Worship';
-  }
-}
-
-function getMenuColorClass(color: Color | Uppercase<Color>): string {
-  switch (color.toLowerCase() as Color) {
-    case 'gray':
-      return 'bg-gray-300';
-    case 'red':
-      return 'bg-red-300';
-    case 'yellow':
-      return 'bg-yellow-300';
-    case 'green':
-      return 'bg-green-300';
-    case 'blue':
-      return 'bg-blue-300';
-    case 'indigo':
-      return 'bg-indigo-300';
-    case 'purple':
-      return 'bg-purple-300';
-    case 'pink':
-      return 'bg-pink-300';
-  }
-}
-
-export const murica = [-97.9222112121185, 39.3812661305678] as [number, number];
-
-const reverseGeocodeSchema = object(
-  {
-    features: array(
-      object(
-        {
-          place_name: string(),
-        },
-        unknown(),
-      ),
-    ),
-  },
-  unknown(),
-);
-
-async function reverseGeocode([long, lat]: [number, number]): Promise<
-  Input<typeof reverseGeocodeSchema>
-> {
-  const res = await fetch(
-    `https://api.mapbox.com/geocoding/v5/mapbox.places/${long},${lat}.json?access_token=${mbAccessToken}`,
-  );
-
-  return parse(reverseGeocodeSchema, await res.json());
-}
+import Chiclet from './chiclet';
+import { LocationMenuItem, locationState, locationFilters } from './location';
+import ListHeading from './list-heading';
+import { getMenuColorClass, getOrgTagCategoryLabel } from './util';
 
 const fetchOrgSchema = object({ name: string() });
 
@@ -113,35 +36,6 @@ async function fetchOrg(id: string) {
   });
 
   return parse(fetchOrgSchema, await res.json());
-}
-
-const suggestionSchema = object(
-  {
-    name: string(),
-    feature_type: string(),
-    address: optional(string()),
-    full_address: optional(string()),
-    place_formatted: string(),
-    mapbox_id: string(),
-  },
-  unknown(),
-);
-
-const locationSuggestSchema = object(
-  {
-    suggestions: array(suggestionSchema),
-  },
-  unknown(),
-);
-
-async function getLocationSuggestions(
-  input: string,
-): Promise<Input<typeof locationSuggestSchema>> {
-  const res = await fetch(
-    `https://api.mapbox.com/search/searchbox/v1/suggest?q=${encodeURIComponent(input)}&language=en&types=country,region,prefecture,postcode,district,place,city,locality,neighborhood,block,street,address&session_token=${sessionToken}&access_token=${mbAccessToken}`,
-  );
-
-  return parse(locationSuggestSchema, await res.json());
 }
 
 const suggestedOrgSchema = object({
@@ -158,46 +52,14 @@ async function getOrganizationSuggestions(q: string) {
   return parse(orgSuggestSchema, await res.json());
 }
 
-const retrieveSchema = object(
-  {
-    features: array(
-      object(
-        {
-          properties: object(
-            {
-              coordinates: object({ longitude: number(), latitude: number() }),
-            },
-            unknown(),
-          ),
-        },
-        unknown(),
-      ),
-    ),
-  },
-  unknown(),
-);
-
-async function retrieve(id: string): Promise<Input<typeof retrieveSchema>> {
-  const res = await fetch(
-    `https://api.mapbox.com/search/searchbox/v1/retrieve/${id}?session_token=${sessionToken}&access_token=${mbAccessToken}`,
-  );
-
-  return parse(retrieveSchema, await res.json());
-}
-
-const defaultRange = '100 mi';
+const parsedLocationFilters = locationFilters();
 
 export const parsedFilters = () => {
   const memo = createMemo(() => {
     const q = query();
 
     return {
-      range: q.get('range') ?? (q.get('center') ? defaultRange : '25000 mi'),
-      center:
-        (q.get('center')?.split(',').map(parseFloat).slice(0, 2) as [
-          number,
-          number,
-        ]) ?? murica,
+      ...parsedLocationFilters(),
       organization: q.get('organization'),
       tags: q.getAll('tag'),
     };
@@ -208,20 +70,21 @@ export const parsedFilters = () => {
 
 export type Filters = ReturnType<ReturnType<typeof parsedFilters>>;
 
-function ListHeading(props: { children: string }) {
-  return (
-    <h2 class="sticky top-0 bg-white px-2 pt-1 text-xs font-semibold text-gray-900">
-      {props.children}
-    </h2>
-  );
-}
-
 export default function Searchbox() {
-  let inputEl: HTMLInputElement;
+  const [inputEl, setInputEl] = createSignal<HTMLInputElement>();
   const [reference, setReference] = createSignal<HTMLDivElement>();
   const [float, setFloat] = createSignal<HTMLDivElement>();
   const [floatOpen, setFloatOpen] = createSignal(false);
-  const [locationLabel, setLocationLabel] = createSignal<string | null>(null);
+  const {
+    locationLabel,
+    setLocationLabel,
+    locationChiclet,
+    locationSuggestions,
+    fetchLocationSuggestions,
+    addLocationFromSuggestion,
+    clearLocationSuggestions,
+    // eslint-disable-next-line solid/reactivity
+  } = locationState(inputEl);
   const [orgLabel, setOrgLabel] = createSignal<string | null>(null);
   const [rawTagData, setRawTagData] = createSignal<Array<OrgTagQueryNode>>([]);
   const filters = parsedFilters();
@@ -232,27 +95,13 @@ export default function Searchbox() {
       .filter(Boolean)
       .sort((a, b) => a.label.length - b.label.length);
 
-    const locLab = locationLabel();
-    const q = query();
-    const range = q.get('range') ?? defaultRange;
-
-    const locChiclet = locLab
-      ? [
-          {
-            color: 'YELLOW' as const,
-            slug: 'location',
-            label: `${range} of ${locLab}`,
-          },
-        ]
-      : [];
-
     const orgLab = orgLabel();
 
     const orgChiclet = orgLab
       ? [{ color: 'INDIGO' as const, slug: 'organization', label: orgLab }]
       : [];
 
-    return [...locChiclet, ...orgChiclet, ...filterChiclets];
+    return [...locationChiclet(), ...orgChiclet, ...filterChiclets];
   });
 
   const floatPosition = useFloating(reference, float, {
@@ -320,18 +169,6 @@ export default function Searchbox() {
 
   onMount(async () => {
     const q = query();
-    const center = q.get('center');
-
-    if (center) {
-      const res = await reverseGeocode(
-        center.split(',').slice(0, 2).map(parseFloat) as [number, number],
-      );
-      setLocationLabel(res.features[0].place_name ?? null);
-    }
-  });
-
-  onMount(async () => {
-    const q = query();
     const orgId = q.get('organization');
 
     if (orgId) {
@@ -340,15 +177,6 @@ export default function Searchbox() {
     }
   });
 
-  type LocationSuggestion = {
-    name: string;
-    location: string;
-    type: string;
-    mapboxId: string;
-  };
-
-  const [locationSuggestions, setLocationSuggestions] =
-    createSignal<null | Array<LocationSuggestion>>();
   const [orgSuggestions, setOrgSuggestions] = createSignal<null | Input<
     typeof orgSuggestSchema
   >>(null);
@@ -356,45 +184,20 @@ export default function Searchbox() {
   // eslint-disable-next-line solid/reactivity
   const throttledRemoteSearch = throttle(async (text: string) => {
     if (!text) {
-      setLocationSuggestions(null);
+      clearLocationSuggestions();
     }
 
-    const [locationRes, orgsRes] = await Promise.all([
-      locationLabel() ? null : getLocationSuggestions(text),
+    const [, orgsRes] = await Promise.all([
+      fetchLocationSuggestions(text),
       orgLabel() ? null : getOrganizationSuggestions(text),
     ] as const);
 
-    batch(() => {
-      setLocationSuggestions(
-        locationRes?.suggestions.map((r) => ({
-          name: r.name,
-          location: r.place_formatted,
-          type: r.feature_type,
-          mapboxId: r.mapbox_id,
-        })),
-      );
-
-      setOrgSuggestions(orgsRes);
-    });
+    setOrgSuggestions(orgsRes);
   }, 200);
 
   createEffect(() => {
     throttledRemoteSearch(inputText());
   });
-
-  async function addLocationFromSuggestion(suggestion: LocationSuggestion) {
-    const res = await retrieve(suggestion.mapboxId);
-    const coordinates = res.features[0].properties.coordinates;
-
-    pushQueryParams({
-      center: [coordinates.longitude, coordinates.latitude].join(','),
-    });
-    setLocationSuggestions(null);
-    setLocationLabel(suggestion.location);
-
-    inputEl.value = '';
-    inputEl.focus();
-  }
 
   async function addOrgFromSuggestion({
     organization,
@@ -405,19 +208,23 @@ export default function Searchbox() {
     setOrgSuggestions(null);
     setOrgLabel(organization.name);
 
-    inputEl.value = '';
-    inputEl.focus();
+    const el = inputEl();
+
+    if (el) {
+      el.value = '';
+      el.focus();
+    }
   }
 
   function addTag(tag: OrgTagQueryNode) {
     pushArrayQueryParam('tag', tag.slug);
 
-    inputEl.value = '';
-    inputEl.focus();
-  }
+    const el = inputEl();
 
-  function onSelectRange(range: string) {
-    pushQueryParams({ range });
+    if (el) {
+      el.value = '';
+      el.focus();
+    }
   }
 
   function onClearLocation() {
@@ -445,7 +252,7 @@ export default function Searchbox() {
       ref={setReference}
       class="flex cursor-text flex-wrap gap-2 rounded-md px-3 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-600"
       onClick={() => {
-        inputEl.focus();
+        inputEl()?.focus();
         setFloatOpen((o) => !o);
       }}
     >
@@ -461,7 +268,7 @@ export default function Searchbox() {
         )}
       </For>
       <input
-        ref={inputEl!}
+        ref={setInputEl}
         class="w-0 min-w-16 shrink grow rounded-md border-0 p-0 text-gray-900 focus:ring-0 sm:text-sm sm:leading-6"
         placeholder={chiclets().length === 0 ? 'Search' : ''}
         onKeyDown={(e) => {
@@ -497,82 +304,12 @@ export default function Searchbox() {
       >
         <ul>
           <li>
-            <Show
-              when={locationLabel()}
-              keyed
-              fallback={
-                <>
-                  <ListHeading>Location</ListHeading>
-                  <Show
-                    when={locationSuggestions()}
-                    keyed
-                    fallback={
-                      <h2 class="pl-4 text-sm text-gray-950">Type to search</h2>
-                    }
-                  >
-                    {(results) => (
-                      <ul class="text-sm text-gray-700">
-                        <For each={results} fallback={<li>No results</li>}>
-                          {(result) => (
-                            <li
-                              class="group flex cursor-pointer select-none items-center py-2 hover:bg-gray-200 focus:bg-gray-200"
-                              role="button"
-                              onClick={[addLocationFromSuggestion, result]}
-                            >
-                              <div
-                                class={cn(
-                                  'ml-2 size-2 rounded-full',
-                                  getMenuColorClass('YELLOW'),
-                                )}
-                                role="presentation"
-                              />
-                              <dl class="min-w-0 pl-2">
-                                <dt class="block overflow-hidden text-ellipsis whitespace-nowrap font-bold">
-                                  {result.name}
-                                </dt>
-                                <dd class="block overflow-hidden text-ellipsis whitespace-nowrap text-sm text-gray-950">
-                                  {result.location}
-                                </dd>
-                              </dl>
-                            </li>
-                          )}
-                        </For>
-                      </ul>
-                    )}
-                  </Show>
-                </>
-              }
-            >
-              {(label) => (
-                <>
-                  <ListHeading>{label}</ListHeading>
-                  <div class="my-2 flex flex-row gap-2 px-2">
-                    <select
-                      class="block shrink rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                      onChange={(e) => onSelectRange(e.target.value)}
-                      value={filters().range ?? defaultRange}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <option>5 mi</option>
-                      <option>10 mi</option>
-                      <option>25 mi</option>
-                      <option>50 mi</option>
-                      <option>100 mi</option>
-                      <option>200 mi</option>
-                      <option>500 mi</option>
-                      <option>1000 mi</option>
-                    </select>
-                    <button
-                      type="button"
-                      class="grow rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                      onClick={onClearLocation}
-                    >
-                      Clear Location
-                    </button>
-                  </div>
-                </>
-              )}
-            </Show>
+            <LocationMenuItem
+              locationLabel={locationLabel()}
+              locationSuggestions={locationSuggestions()}
+              addLocationFromSuggestion={addLocationFromSuggestion}
+              onClearLocation={onClearLocation}
+            />
           </li>
           <Show when={(orgSuggestions()?.length ?? 0) > 0}>
             <li>

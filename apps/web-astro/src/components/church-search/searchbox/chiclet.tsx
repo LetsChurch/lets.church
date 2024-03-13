@@ -1,15 +1,6 @@
 import { Show } from 'solid-js';
 import { cn } from '../../../util';
-
-export type Color =
-  | 'gray'
-  | 'red'
-  | 'yellow'
-  | 'green'
-  | 'blue'
-  | 'indigo'
-  | 'purple'
-  | 'pink';
+import type { Color } from './util';
 
 export type Props = {
   children: string;
