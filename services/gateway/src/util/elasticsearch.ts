@@ -322,7 +322,7 @@ export function msearchOrganizations(
               ? [
                   {
                     multi_match: {
-                      query,
+                      query: trimmed,
                       type: 'bool_prefix' as const,
                       fields: ['name^3', 'name._2gram', 'name._3gram'],
                     },
@@ -338,35 +338,10 @@ export function msearchOrganizations(
                   },
                 ]
               : []),
-            ...(trimmed
-              ? [
-                  {
-                    match: {
-                      name: {
-                        query: trimmed,
-                        boost: 2,
-                      },
-                    },
-                  },
-                ]
-              : []),
           ],
           should: [
-            ...(trimmed
-              ? [
-                  {
-                    match: {
-                      description: {
-                        query: trimmed,
-                      },
-                    },
-                  },
-                ]
-              : []),
             ...(params?.tags?.map((tag) => ({ term: { tags: tag } })) ?? []),
           ],
-          minimum_should_match:
-            ((params?.tags?.length ?? 0) > 0 ? 1 : 0) + (trimmed ? 1 : 0),
           filter: params?.geo
             ? [
                 {
