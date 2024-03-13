@@ -10,7 +10,6 @@ import type { ResultOf } from 'gql.tada';
 import { useFloating } from 'solid-floating-ui';
 import { size, shift } from '@floating-ui/dom';
 import { throttle } from '@solid-primitives/scheduled';
-import { array, object, parse, string, type Input } from 'valibot';
 import type {
   OrgTagQueryNode,
   organizationTagsQuery,
@@ -24,35 +23,18 @@ import {
   removeArrayQueryParam,
 } from '../../../util/history';
 import Chiclet from './chiclet';
-import { LocationMenuItem, locationState, locationFilters } from './location';
+import { LocationMenu, locationState, locationFilters } from './location';
 import ListHeading from './list-heading';
 import { getMenuColorClass, getOrgTagCategoryLabel } from './util';
-
-const fetchOrgSchema = object({ name: string() });
-
-async function fetchOrg(id: string) {
-  const res = await fetch(`/organizations?${new URLSearchParams({ id })}`, {
-    headers: { accept: 'application/json' },
-  });
-
-  return parse(fetchOrgSchema, await res.json());
-}
-
-const suggestedOrgSchema = object({
-  organization: object({ id: string(), name: string() }),
-});
-
-const orgSuggestSchema = array(suggestedOrgSchema);
-
-async function getOrganizationSuggestions(q: string) {
-  const res = await fetch(`/organizations?${new URLSearchParams({ q })}`, {
-    headers: { accept: 'application/json' },
-  });
-
-  return parse(orgSuggestSchema, await res.json());
-}
+import ResultRow from './result-row';
+import {
+  OrganizationMenu,
+  organizationFilters,
+  organizationState,
+} from './organization';
 
 const parsedLocationFilters = locationFilters();
+const parsedOrganizationFilters = organizationFilters();
 
 export const parsedFilters = () => {
   const memo = createMemo(() => {
@@ -60,7 +42,7 @@ export const parsedFilters = () => {
 
     return {
       ...parsedLocationFilters(),
-      organization: q.get('organization'),
+      ...parsedOrganizationFilters(),
       tags: q.getAll('tag'),
     };
   });
@@ -71,7 +53,15 @@ export const parsedFilters = () => {
 export type Filters = ReturnType<ReturnType<typeof parsedFilters>>;
 
 export default function Searchbox() {
-  const [inputEl, setInputEl] = createSignal<HTMLInputElement>();
+  let inputEl: HTMLInputElement;
+
+  function clearInput() {
+    if (inputEl) {
+      inputEl.value = '';
+      inputEl.focus();
+    }
+  }
+
   const [reference, setReference] = createSignal<HTMLDivElement>();
   const [float, setFloat] = createSignal<HTMLDivElement>();
   const [floatOpen, setFloatOpen] = createSignal(false);
@@ -83,9 +73,15 @@ export default function Searchbox() {
     fetchLocationSuggestions,
     addLocationFromSuggestion,
     clearLocationSuggestions,
-    // eslint-disable-next-line solid/reactivity
-  } = locationState(inputEl);
-  const [orgLabel, setOrgLabel] = createSignal<string | null>(null);
+  } = locationState(clearInput);
+  const {
+    organizationChiclet,
+    setOrganizationLabel,
+    organizationSuggestions,
+    fetchOrganizationSuggestions,
+    addOrganizationFromSuggestion,
+    clearOrganizationSuggestions,
+  } = organizationState(clearInput);
   const [rawTagData, setRawTagData] = createSignal<Array<OrgTagQueryNode>>([]);
   const filters = parsedFilters();
 
@@ -95,13 +91,7 @@ export default function Searchbox() {
       .filter(Boolean)
       .sort((a, b) => a.label.length - b.label.length);
 
-    const orgLab = orgLabel();
-
-    const orgChiclet = orgLab
-      ? [{ color: 'INDIGO' as const, slug: 'organization', label: orgLab }]
-      : [];
-
-    return [...locationChiclet(), ...orgChiclet, ...filterChiclets];
+    return [...locationChiclet(), ...organizationChiclet(), ...filterChiclets];
   });
 
   const floatPosition = useFloating(reference, float, {
@@ -167,64 +157,26 @@ export default function Searchbox() {
     setTagOptionsByCategory(groups);
   });
 
-  onMount(async () => {
-    const q = query();
-    const orgId = q.get('organization');
-
-    if (orgId) {
-      const res = await fetchOrg(orgId);
-      setOrgLabel(res.name);
-    }
-  });
-
-  const [orgSuggestions, setOrgSuggestions] = createSignal<null | Input<
-    typeof orgSuggestSchema
-  >>(null);
-
   // eslint-disable-next-line solid/reactivity
   const throttledRemoteSearch = throttle(async (text: string) => {
     if (!text) {
       clearLocationSuggestions();
+      clearOrganizationSuggestions();
     }
 
-    const [, orgsRes] = await Promise.all([
+    await Promise.all([
       fetchLocationSuggestions(text),
-      orgLabel() ? null : getOrganizationSuggestions(text),
-    ] as const);
-
-    setOrgSuggestions(orgsRes);
+      fetchOrganizationSuggestions(text),
+    ]);
   }, 200);
 
   createEffect(() => {
     throttledRemoteSearch(inputText());
   });
 
-  async function addOrgFromSuggestion({
-    organization,
-  }: Input<typeof suggestedOrgSchema>) {
-    pushQueryParams({
-      org: organization.id,
-    });
-    setOrgSuggestions(null);
-    setOrgLabel(organization.name);
-
-    const el = inputEl();
-
-    if (el) {
-      el.value = '';
-      el.focus();
-    }
-  }
-
   function addTag(tag: OrgTagQueryNode) {
     pushArrayQueryParam('tag', tag.slug);
-
-    const el = inputEl();
-
-    if (el) {
-      el.value = '';
-      el.focus();
-    }
+    clearInput();
   }
 
   function onClearLocation() {
@@ -232,16 +184,16 @@ export default function Searchbox() {
     setLocationLabel(null);
   }
 
-  function onClearOrg() {
+  function onClearOrganization() {
     pushQueryParams({ organization: null });
-    setOrgLabel(null);
+    setOrganizationLabel(null);
   }
 
   function removeChiclet(chiclet: Pick<OrgTagQueryNode, 'slug'>) {
     if (chiclet.slug === 'location') {
       onClearLocation();
     } else if (chiclet.slug === 'organization') {
-      onClearOrg();
+      onClearOrganization();
     } else {
       removeArrayQueryParam('tag', chiclet.slug);
     }
@@ -252,7 +204,7 @@ export default function Searchbox() {
       ref={setReference}
       class="flex cursor-text flex-wrap gap-2 rounded-md px-3 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-600"
       onClick={() => {
-        inputEl()?.focus();
+        inputEl?.focus();
         setFloatOpen((o) => !o);
       }}
     >
@@ -268,7 +220,7 @@ export default function Searchbox() {
         )}
       </For>
       <input
-        ref={setInputEl}
+        ref={inputEl!}
         class="w-0 min-w-16 shrink grow rounded-md border-0 p-0 text-gray-900 focus:ring-0 sm:text-sm sm:leading-6"
         placeholder={chiclets().length === 0 ? 'Search' : ''}
         onKeyDown={(e) => {
@@ -282,7 +234,7 @@ export default function Searchbox() {
             if (slug === 'location') {
               onClearLocation();
             } else if (slug === 'organization') {
-              onClearOrg();
+              onClearOrganization();
             } else if (slug) {
               removeArrayQueryParam('tag', slug);
             }
@@ -303,41 +255,16 @@ export default function Searchbox() {
         class="relative max-h-64 overflow-y-auto py-0"
       >
         <ul>
-          <li>
-            <LocationMenuItem
-              locationLabel={locationLabel()}
-              locationSuggestions={locationSuggestions()}
-              addLocationFromSuggestion={addLocationFromSuggestion}
-              onClearLocation={onClearLocation}
-            />
-          </li>
-          <Show when={(orgSuggestions()?.length ?? 0) > 0}>
-            <li>
-              <ListHeading>Associated Organizations</ListHeading>
-              <ul class="text-sm text-gray-700">
-                <For each={orgSuggestions() ?? []}>
-                  {(suggestion) => (
-                    <li
-                      class="group flex cursor-pointer select-none items-center py-2 hover:bg-gray-200 focus:bg-gray-200"
-                      role="button"
-                      onClick={[addOrgFromSuggestion, suggestion]}
-                    >
-                      <div
-                        class={cn(
-                          'ml-2 size-2 rounded-full',
-                          getMenuColorClass('INDIGO'),
-                        )}
-                        role="presentation"
-                      />
-                      <span class="flex-auto truncate pl-2">
-                        {suggestion.organization.name}
-                      </span>
-                    </li>
-                  )}
-                </For>
-              </ul>
-            </li>
-          </Show>
+          <LocationMenu
+            locationLabel={locationLabel()}
+            locationSuggestions={locationSuggestions()}
+            addLocationFromSuggestion={addLocationFromSuggestion}
+            onClearLocation={onClearLocation}
+          />
+          <OrganizationMenu
+            organizationSuggestions={organizationSuggestions()}
+            addOrganizationFromSuggestion={addOrganizationFromSuggestion}
+          />
           <For
             each={
               filteredTags().length > 0 ? filteredTags() : tagOptionByCategory()
@@ -353,11 +280,7 @@ export default function Searchbox() {
                   <ul class="text-sm text-gray-700">
                     <For each={group.tags}>
                       {(tag) => (
-                        <li
-                          class="group flex cursor-pointer select-none items-center py-2 hover:bg-gray-200 focus:bg-gray-200"
-                          role="button"
-                          onClick={[addTag, tag]}
-                        >
+                        <ResultRow onClick={[addTag, tag]}>
                           <div
                             class={cn(
                               'ml-2 size-2 rounded-full',
@@ -368,7 +291,7 @@ export default function Searchbox() {
                           <span class="flex-auto truncate pl-2">
                             {tag.label}
                           </span>
-                        </li>
+                        </ResultRow>
                       )}
                     </For>
                   </ul>

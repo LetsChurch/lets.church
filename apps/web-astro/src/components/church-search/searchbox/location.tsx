@@ -1,11 +1,4 @@
-import {
-  For,
-  Show,
-  createMemo,
-  createSignal,
-  onMount,
-  type Accessor,
-} from 'solid-js';
+import { For, Show, createMemo, createSignal, onMount } from 'solid-js';
 import {
   array,
   number,
@@ -20,6 +13,7 @@ import { pushQueryParams, query } from '../../../util/history';
 import { cn } from '../../../util';
 import ListHeading from './list-heading';
 import { getMenuColorClass } from './util';
+import ResultRow from './result-row';
 
 const mbAccessToken = import.meta.env.PUBLIC_MAPBOX_SEARCHBOX_TOKEN;
 const sessionToken = window.crypto.randomUUID();
@@ -125,7 +119,7 @@ type LocationSuggestion = {
   mapboxId: string;
 };
 
-export function locationState(inputEl: Accessor<HTMLInputElement | undefined>) {
+export function locationState(clearInput: () => unknown) {
   const [locationLabel, setLocationLabel] = createSignal<string | null>(null);
   const [locationSuggestions, setLocationSuggestions] =
     createSignal<null | Array<LocationSuggestion>>(null);
@@ -190,12 +184,7 @@ export function locationState(inputEl: Accessor<HTMLInputElement | undefined>) {
     setLocationSuggestions(null);
     setLocationLabel(suggestion.location);
 
-    const el = inputEl();
-
-    if (el) {
-      el.value = '';
-      el.focus();
-    }
+    clearInput();
   }
 
   return {
@@ -209,7 +198,7 @@ export function locationState(inputEl: Accessor<HTMLInputElement | undefined>) {
   };
 }
 
-export function LocationMenuItem(props: {
+export function LocationMenu(props: {
   locationLabel: string | null;
   locationSuggestions: Array<LocationSuggestion> | null;
   addLocationFromSuggestion: (suggestion: LocationSuggestion) => unknown;
@@ -221,7 +210,7 @@ export function LocationMenuItem(props: {
       when={props.locationLabel}
       keyed
       fallback={
-        <>
+        <li>
           <ListHeading>Location</ListHeading>
           <Show
             when={props.locationSuggestions}
@@ -234,9 +223,7 @@ export function LocationMenuItem(props: {
               <ul class="text-sm text-gray-700">
                 <For each={results} fallback={<li>No results</li>}>
                   {(result) => (
-                    <li
-                      class="group flex cursor-pointer select-none items-center py-2 hover:bg-gray-200 focus:bg-gray-200"
-                      role="button"
+                    <ResultRow
                       onClick={[props.addLocationFromSuggestion, result]}
                     >
                       <div
@@ -254,13 +241,13 @@ export function LocationMenuItem(props: {
                           {result.location}
                         </dd>
                       </dl>
-                    </li>
+                    </ResultRow>
                   )}
                 </For>
               </ul>
             )}
           </Show>
-        </>
+        </li>
       }
     >
       {(label) => (
