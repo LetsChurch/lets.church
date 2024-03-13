@@ -61,6 +61,8 @@ export const brotherhoodTagSlug = 'brotherhood';
 export const familyIntegratedTagSlug = 'family-integrated';
 export const weeklyCommunionTagSlug = 'weekly-lords-supper';
 export const monthlyCommunionTagSlug = 'monthly-lords-supper';
+export const weeklyFellowshipMealTagSlug = 'weekly-fellowship-meal';
+export const monthlyFellowshipMealTagSlug = 'monthly-fellowship-meal';
 
 const tagsData: ReadonlyArray<
   Parameters<typeof prisma.organizationTag.upsert>[0]['create'] & {
@@ -427,6 +429,18 @@ const tagsData: ReadonlyArray<
     slug: monthlyCommunionTagSlug,
     label: 'Monthly Communion',
     description: "The Lord's Supper is celebrated once a month",
+  },
+  {
+    category: OrganizationTagCategory.OTHER,
+    color: 'GRAY',
+    slug: weeklyFellowshipMealTagSlug,
+    label: 'Weekly Fellowship Meal',
+  },
+  {
+    category: OrganizationTagCategory.OTHER,
+    color: 'GRAY',
+    slug: monthlyFellowshipMealTagSlug,
+    label: 'Monthly Fellowship Meal',
   },
 ];
 
