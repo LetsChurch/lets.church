@@ -91,22 +91,18 @@ async function retrieve(id: string): Promise<Input<typeof retrieveSchema>> {
   return parse(retrieveSchema, await res.json());
 }
 
-export const locationFilters = () => {
-  const memo = createMemo(() => {
-    const q = query();
+export const parsedLocation = createMemo(() => {
+  const q = query();
 
-    return {
-      range: q.get('range') ?? (q.get('center') ? defaultRange : '25000 mi'),
-      center:
-        (q.get('center')?.split(',').map(parseFloat).slice(0, 2) as [
-          number,
-          number,
-        ]) ?? murica,
-    };
-  });
-
-  return memo;
-};
+  return {
+    range: q.get('range') ?? (q.get('center') ? defaultRange : '25000 mi'),
+    center:
+      (q.get('center')?.split(',').map(parseFloat).slice(0, 2) as [
+        number,
+        number,
+      ]) ?? murica,
+  };
+});
 
 function onSelectRange(range: string) {
   pushQueryParams({ range });

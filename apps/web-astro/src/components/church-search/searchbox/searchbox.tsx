@@ -1,21 +1,9 @@
-import {
-  For,
-  Show,
-  createEffect,
-  createMemo,
-  createSignal,
-  onMount,
-} from 'solid-js';
-import type { ResultOf } from 'gql.tada';
+import { For, createEffect, createMemo, createSignal } from 'solid-js';
 import { useFloating } from 'solid-floating-ui';
 import { size, shift } from '@floating-ui/dom';
 import { throttle } from '@solid-primitives/scheduled';
-import type {
-  OrgTagQueryNode,
-  organizationTagsQuery,
-} from '../../../queries/churches';
+import type { OrgTagQueryNode } from '../../../queries/churches';
 import FloatingDiv from '../../floating-div';
-import { cn } from '../../../util';
 import {
   pushArrayQueryParam,
   pushQueryParams,
@@ -23,34 +11,23 @@ import {
   removeArrayQueryParam,
 } from '../../../util/history';
 import Chiclet from './chiclet';
-import { LocationMenu, locationState, locationFilters } from './location';
-import ListHeading from './list-heading';
-import { getMenuColorClass, getOrgTagCategoryLabel } from './util';
-import ResultRow from './result-row';
+import { LocationMenu, locationState, parsedLocation } from './location';
 import {
   OrganizationMenu,
-  organizationFilters,
   organizationState,
+  parsedOrganization,
 } from './organization';
+import { TagsMenu, parsedTags, tagsState } from './tags';
 
-const parsedLocationFilters = locationFilters();
-const parsedOrganizationFilters = organizationFilters();
+export const parsedFilters = createMemo(() => {
+  return {
+    ...parsedLocation(),
+    ...parsedOrganization(),
+    ...parsedTags(),
+  };
+});
 
-export const parsedFilters = () => {
-  const memo = createMemo(() => {
-    const q = query();
-
-    return {
-      ...parsedLocationFilters(),
-      ...parsedOrganizationFilters(),
-      tags: q.getAll('tag'),
-    };
-  });
-
-  return memo;
-};
-
-export type Filters = ReturnType<ReturnType<typeof parsedFilters>>;
+export type Filters = ReturnType<typeof parsedFilters>;
 
 export default function Searchbox() {
   let inputEl: HTMLInputElement;
@@ -82,16 +59,11 @@ export default function Searchbox() {
     addOrganizationFromSuggestion,
     clearOrganizationSuggestions,
   } = organizationState(clearInput);
-  const [rawTagData, setRawTagData] = createSignal<Array<OrgTagQueryNode>>([]);
-  const filters = parsedFilters();
+  const { tagChiclets, filteredTags, filterTags, tagOptionByCategory } =
+    tagsState();
 
   const chiclets = createMemo(() => {
-    const filterChiclets = filters()
-      .tags.map((slug) => rawTagData().find((t) => t.slug === slug))
-      .filter(Boolean)
-      .sort((a, b) => a.label.length - b.label.length);
-
-    return [...locationChiclet(), ...organizationChiclet(), ...filterChiclets];
+    return [...locationChiclet(), ...organizationChiclet(), ...tagChiclets()];
   });
 
   const floatPosition = useFloating(reference, float, {
@@ -114,48 +86,6 @@ export default function Searchbox() {
   });
 
   const [inputText, setInputText] = createSignal('');
-  const [tagOptionByCategory, setTagOptionsByCategory] =
-    createSignal<null | Array<{
-      category: OrgTagQueryNode['category'];
-      tags: Array<OrgTagQueryNode>;
-    }>>(null);
-
-  const filteredTags = () => {
-    const needle = inputText().toLowerCase();
-    const chics = chiclets();
-
-    if (!needle && chics.length === 0) {
-      return [];
-    }
-
-    return (
-      tagOptionByCategory()?.map((group) => ({
-        ...group,
-        tags: group.tags
-          .filter((t) => t.label.includes(needle) || t.slug.includes(needle))
-          .filter((t) => !chics.some((c) => c.slug === t.slug)),
-      })) ?? []
-    );
-  };
-
-  onMount(async () => {
-    const res = await fetch('/organization-tags', {
-      headers: { accept: 'application/json' },
-    });
-    const data = (await res.json()) as ResultOf<typeof organizationTagsQuery>;
-    setRawTagData(
-      data.organizationTagsConnection.edges.map((edge) => edge.node),
-    );
-
-    const grouped = Object.groupBy(rawTagData(), (node) => node.category);
-    const groups = Object.keys(grouped)
-      .sort()
-      .map((category) => ({
-        category: category as OrgTagQueryNode['category'],
-        tags: grouped[category as OrgTagQueryNode['category']] ?? [],
-      }));
-    setTagOptionsByCategory(groups);
-  });
 
   // eslint-disable-next-line solid/reactivity
   const throttledRemoteSearch = throttle(async (text: string) => {
@@ -171,7 +101,9 @@ export default function Searchbox() {
   }, 200);
 
   createEffect(() => {
-    throttledRemoteSearch(inputText());
+    const text = inputText();
+    filterTags(text);
+    throttledRemoteSearch(text);
   });
 
   function addTag(tag: OrgTagQueryNode) {
@@ -265,40 +197,11 @@ export default function Searchbox() {
             organizationSuggestions={organizationSuggestions()}
             addOrganizationFromSuggestion={addOrganizationFromSuggestion}
           />
-          <For
-            each={
-              filteredTags().length > 0 ? filteredTags() : tagOptionByCategory()
-            }
-            fallback={<dt>Loading</dt>}
-          >
-            {(group) => (
-              <Show when={group.tags.length > 0}>
-                <li>
-                  <ListHeading>
-                    {getOrgTagCategoryLabel(group.category)}
-                  </ListHeading>
-                  <ul class="text-sm text-gray-700">
-                    <For each={group.tags}>
-                      {(tag) => (
-                        <ResultRow onClick={[addTag, tag]}>
-                          <div
-                            class={cn(
-                              'ml-2 size-2 rounded-full',
-                              getMenuColorClass(tag.color),
-                            )}
-                            role="presentation"
-                          />
-                          <span class="flex-auto truncate pl-2">
-                            {tag.label}
-                          </span>
-                        </ResultRow>
-                      )}
-                    </For>
-                  </ul>
-                </li>
-              </Show>
-            )}
-          </For>
+          <TagsMenu
+            tagOptionsByCategory={tagOptionByCategory()}
+            filteredTags={filteredTags()}
+            addTag={addTag}
+          />
         </ul>
       </FloatingDiv>
     </div>

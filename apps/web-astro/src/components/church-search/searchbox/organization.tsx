@@ -16,17 +16,13 @@ async function fetchOrg(id: string) {
   return parse(fetchOrgSchema, await res.json());
 }
 
-export const organizationFilters = () => {
-  const memo = createMemo(() => {
-    const q = query();
+export const parsedOrganization = createMemo(() => {
+  const q = query();
 
-    return {
-      organization: q.get('organization'),
-    };
-  });
-
-  return memo;
-};
+  return {
+    organization: q.get('organization'),
+  };
+});
 
 const suggestedOrgSchema = object({
   organization: object({ id: string(), name: string() }),

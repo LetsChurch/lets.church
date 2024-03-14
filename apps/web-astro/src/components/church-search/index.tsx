@@ -24,12 +24,11 @@ export default function ChurchSearch() {
   const [results, setResults] = createSignal<
     ResultOf<typeof churchesQuery>['search']['edges']
   >([]);
-  const filters = parsedFilters();
 
   createEffect(() => {
     const m = map();
     const s = source();
-    const f = filters();
+    const f = parsedFilters();
 
     if (m && s) {
       fetchData(f);
