@@ -12,8 +12,10 @@ import {
 import { pushQueryParams, query } from '../../../util/history';
 import { cn } from '../../../util';
 import ListHeading from './list-heading';
-import { getMenuColorClass } from './util';
+import { getMenuColorClass, optionId } from './util';
 import ResultRow from './result-row';
+
+export const locationSlug = 'location';
 
 const mbAccessToken = import.meta.env.PUBLIC_MAPBOX_SEARCHBOX_TOKEN;
 const sessionToken = window.crypto.randomUUID();
@@ -141,7 +143,7 @@ export function locationState(clearInput: () => unknown) {
       ? [
           {
             color: 'YELLOW' as const,
-            slug: 'location',
+            slug: locationSlug,
             label: `${range} of ${locLab}`,
           },
         ]
@@ -200,6 +202,8 @@ export function LocationMenu(props: {
   addLocationFromSuggestion: (suggestion: LocationSuggestion) => unknown;
   range?: string;
   onClearLocation: () => unknown;
+  optionPrefix: string;
+  activeOptionId: string | null;
 }) {
   return (
     <Show
@@ -218,8 +222,10 @@ export function LocationMenu(props: {
             {(results) => (
               <ul class="text-sm text-gray-700">
                 <For each={results} fallback={<li>No results</li>}>
-                  {(result) => (
+                  {(result, i) => (
                     <ResultRow
+                      id={optionId(props.optionPrefix, locationSlug, i())}
+                      activeId={props.activeOptionId}
                       onClick={[props.addLocationFromSuggestion, result]}
                     >
                       <div

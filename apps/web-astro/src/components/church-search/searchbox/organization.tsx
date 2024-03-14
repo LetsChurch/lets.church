@@ -4,7 +4,9 @@ import { pushQueryParams, query } from '../../../util/history';
 import { cn } from '../../../util';
 import ListHeading from './list-heading';
 import ResultRow from './result-row';
-import { getMenuColorClass } from './util';
+import { getMenuColorClass, optionId } from './util';
+
+export const organizationSlug = 'organization';
 
 const fetchOrgSchema = object({ name: string() });
 
@@ -20,7 +22,7 @@ export const parsedOrganization = createMemo(() => {
   const q = query();
 
   return {
-    organization: q.get('organization'),
+    organization: q.get(organizationSlug),
   };
 });
 
@@ -39,7 +41,7 @@ export function organizationState(clearInput: () => unknown) {
 
   onMount(async () => {
     const q = query();
-    const orgId = q.get('organization');
+    const orgId = q.get(organizationSlug);
 
     if (orgId) {
       const res = await fetchOrg(orgId);
@@ -81,7 +83,7 @@ export function organizationState(clearInput: () => unknown) {
     const orgLab = organizationLabel();
 
     const orgChiclet = orgLab
-      ? [{ color: 'INDIGO' as const, slug: 'organization', label: orgLab }]
+      ? [{ color: 'INDIGO' as const, slug: organizationSlug, label: orgLab }]
       : [];
 
     return orgChiclet;
@@ -103,6 +105,8 @@ export function OrganizationMenu(props: {
   addOrganizationFromSuggestion: (
     suggestion: Input<typeof suggestedOrgSchema>,
   ) => unknown;
+  optionPrefix: string;
+  activeOptionId: string | null;
 }) {
   return (
     <Show when={(props.organizationSuggestions?.length ?? 0) > 0}>
@@ -110,8 +114,10 @@ export function OrganizationMenu(props: {
         <ListHeading>Associated Organizations</ListHeading>
         <ul class="text-sm text-gray-700">
           <For each={props.organizationSuggestions ?? []}>
-            {(suggestion) => (
+            {(suggestion, i) => (
               <ResultRow
+                id={optionId(props.optionPrefix, organizationSlug, i())}
+                activeId={props.activeOptionId}
                 onClick={[props.addOrganizationFromSuggestion, suggestion]}
               >
                 <div

@@ -51,3 +51,7 @@ export function getMenuColorClass(color: Color | Uppercase<Color>): string {
       return 'bg-pink-300';
   }
 }
+
+export function optionId(prefix: string, slug: string, i: number) {
+  return `${prefix}:${slug}:${i}`;
+}

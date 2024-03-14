@@ -1,5 +1,5 @@
 import { For, Show, createMemo, createSignal, onMount } from 'solid-js';
-import { query } from '../../../util/history';
+import { pushArrayQueryParam, query } from '../../../util/history';
 import type {
   OrgTagQueryNode,
   organizationTagsQuery,
@@ -7,8 +7,10 @@ import type {
 import type { ResultOf } from '../../../util/graphql';
 import { cn } from '../../../util';
 import ListHeading from './list-heading';
-import { getMenuColorClass, getOrgTagCategoryLabel } from './util';
+import { getMenuColorClass, getOrgTagCategoryLabel, optionId } from './util';
 import ResultRow from './result-row';
+
+export const tagSlug = 'tag';
 
 export const parsedTags = createMemo(() => {
   const q = query();
@@ -25,7 +27,7 @@ type TagsGroup = {
 
 export function tagsState() {
   const [rawTagData, setRawTagData] = createSignal<Array<OrgTagQueryNode>>([]);
-  const [tagOptionByCategory, setTagOptionsByCategory] =
+  const [tagOptionsByCategory, setTagOptionsByCategory] =
     createSignal<null | Array<TagsGroup>>(null);
   // const [filteredTags, setFilteredTags] = createSignal<null | Array<TagsGroup>>(
   //   null,
@@ -67,7 +69,7 @@ export function tagsState() {
     }
 
     return (
-      tagOptionByCategory()?.map((group) => ({
+      tagOptionsByCategory()?.map((group) => ({
         ...group,
         tags: group.tags
           .filter((t) => t.label.includes(needle) || t.slug.includes(needle))
@@ -76,36 +78,48 @@ export function tagsState() {
     );
   });
 
+  const renderedOptions = createMemo(() => {
+    return (filteredTags()?.length ?? 0) > 0
+      ? filteredTags()
+      : tagOptionsByCategory();
+  });
+
   return {
     tagChiclets,
     filterTags: setFilterText,
-    filteredTags,
-    tagOptionByCategory,
+    tagOptionsByCategory: renderedOptions,
   };
 }
 
 export function TagsMenu(props: {
   tagOptionsByCategory: Array<TagsGroup> | null;
-  filteredTags: Array<TagsGroup> | null;
-  addTag: (tag: OrgTagQueryNode) => unknown;
+  clearInput: () => unknown;
+  optionPrefix: string;
+  activeOptionId: string | null;
 }) {
+  function addTag(tag: OrgTagQueryNode) {
+    pushArrayQueryParam(tagSlug, tag.slug);
+    props.clearInput();
+  }
+
   return (
-    <For
-      each={
-        (props.filteredTags?.length ?? 0) > 0
-          ? props.filteredTags
-          : props.tagOptionsByCategory
-      }
-      fallback={<dt>Loading</dt>}
-    >
-      {(group) => (
+    <For each={props.tagOptionsByCategory} fallback={<dt>Loading</dt>}>
+      {(group, groupIndex) => (
         <Show when={group.tags.length > 0}>
           <li>
             <ListHeading>{getOrgTagCategoryLabel(group.category)}</ListHeading>
             <ul class="text-sm text-gray-700">
               <For each={group.tags}>
-                {(tag) => (
-                  <ResultRow onClick={[props.addTag, tag]}>
+                {(tag, tagIndex) => (
+                  <ResultRow
+                    id={optionId(
+                      props.optionPrefix,
+                      `${tagSlug}:${groupIndex()}`,
+                      tagIndex(),
+                    )}
+                    activeId={props.activeOptionId}
+                    onClick={[addTag, tag]}
+                  >
                     <div
                       class={cn(
                         'ml-2 size-2 rounded-full',
