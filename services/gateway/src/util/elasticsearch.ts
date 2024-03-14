@@ -342,6 +342,7 @@ export function msearchOrganizations(
           should: [
             ...(params?.tags?.map((tag) => ({ term: { tags: tag } })) ?? []),
           ],
+          minimum_should_match: params?.tags?.length ? 1 : 0,
           filter: params?.geo
             ? [
                 {
