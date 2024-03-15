@@ -16,6 +16,15 @@ import Searchbox, { murica, parsedFilters, type Filters } from './searchbox';
 
 mapboxgl.accessToken = import.meta.env.PUBLIC_MAPBOX_MAP_TOKEN;
 
+const unclusteredColor = '#6366f1';
+const clusterSmallColor = '#818cf8';
+const clusterMediumColor = '#a5b4fc';
+const clusterLargeColor = '#c7d2fe';
+const hoverColor = '#d946ef';
+
+const unclusteredRadius = 7;
+const unclusteredHoverRadius = 10;
+
 export default function ChurchSearch() {
   const [map, setMap] = createSignal<mapboxgl.Map | null>(null);
   const [source, setSource] = createSignal<mapboxgl.AnySourceImpl | null>(null);
@@ -156,13 +165,13 @@ export default function ChurchSearch() {
             'step',
             ['get', 'point_count'],
             // count < 100
-            '#818cf8',
+            clusterSmallColor,
             100,
             // 100 <= count < 750
-            '#a5b4fc',
+            clusterMediumColor,
             750,
             // count >= 750
-            '#c7d2fe',
+            clusterLargeColor,
           ],
           'circle-radius': [
             'step',
@@ -200,8 +209,8 @@ export default function ChurchSearch() {
         source: 'churches',
         filter: ['!', ['has', 'point_count']],
         paint: {
-          'circle-color': '#6366f1',
-          'circle-radius': 7,
+          'circle-color': unclusteredColor,
+          'circle-radius': unclusteredRadius,
           'circle-stroke-width': 1,
           'circle-stroke-color': '#fff',
         },
@@ -269,6 +278,58 @@ export default function ChurchSearch() {
     });
   });
 
+  let hoverPopup: mapboxgl.Popup | null = null;
+
+  function handleMouseEnter({
+    node,
+  }: ResultOf<typeof churchesQuery>['search']['edges'][number]) {
+    invariant('id' in node);
+    const m = map();
+    invariant(m, 'Map should be defined');
+
+    m.setPaintProperty('unclustered-point', 'circle-color', [
+      'case',
+      ['==', ['get', 'id'], node.id], // Check if it's the hovered feature
+      hoverColor, // If it is, set the color to the hover color
+      unclusteredColor, // Otherwise, set the color to the default color
+    ]);
+
+    m.setPaintProperty('unclustered-point', 'circle-radius', [
+      'case',
+      ['==', ['get', 'id'], node.id], // Check if it's the hovered feature
+      unclusteredHoverRadius, // If it is, set the radius larger
+      unclusteredRadius, // Otherwise, set the radius to the default
+    ]);
+
+    if (hoverPopup?.isOpen()) {
+      hoverPopup.remove();
+    }
+
+    const addr = node.organization.addresses.edges[0].node;
+    hoverPopup = new mapboxgl.Popup()
+      .setLngLat([addr.longitude as number, addr.latitude as number]) // TODO: handle missing coords
+      .setHTML(node.name)
+      .addTo(m);
+  }
+
+  function handleMouseLeave() {
+    map()?.setPaintProperty(
+      'unclustered-point',
+      'circle-color',
+      unclusteredColor,
+    );
+
+    map()?.setPaintProperty(
+      'unclustered-point',
+      'circle-radius',
+      unclusteredRadius,
+    );
+
+    if (hoverPopup?.isOpen()) {
+      hoverPopup.remove();
+    }
+  }
+
   return (
     <div class="relative grid w-full grid-cols-3">
       <div class="pointer-events-auto col-span-1 space-y-2 p-2">
@@ -276,7 +337,11 @@ export default function ChurchSearch() {
         <Show when={!loading()} fallback={<p>Loading</p>}>
           <For each={results()}>
             {(res) => (
-              <div class="sm:flex">
+              <div
+                class="sm:flex"
+                onMouseEnter={[handleMouseEnter, res]}
+                onMouseLeave={handleMouseLeave}
+              >
                 <div class="mb-4 flex-shrink-0 sm:mb-0 sm:mr-4">
                   <svg
                     class="h-32 w-full border border-gray-300 bg-white text-gray-300 sm:w-32"
