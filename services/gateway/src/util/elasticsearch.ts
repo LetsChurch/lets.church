@@ -342,7 +342,8 @@ export function msearchOrganizations(
           should: [
             ...(params?.tags?.map((tag) => ({ term: { tags: tag } })) ?? []),
           ],
-          minimum_should_match: params?.tags?.length ? 1 : 0,
+          // If there are three or fewer tags, they all must match. If there are four or more tags, 75% must match.
+          minimum_should_match: '3<75%',
           filter: params?.geo
             ? [
                 {
