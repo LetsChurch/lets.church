@@ -9,7 +9,7 @@ export default function ResultRow(
   let el: HTMLLIElement;
 
   createEffect(() => {
-    if (props.id === props.activeId) {
+    if (props.activeId === props.id) {
       el.scrollIntoView({ block: 'nearest' });
     }
   });
@@ -17,6 +17,7 @@ export default function ResultRow(
   return (
     <li
       ref={el!}
+      id={props.id}
       class={cn(
         'group flex cursor-pointer select-none items-center py-2 hover:bg-gray-200 focus:bg-gray-200',
         props.activeId === props.id ? 'bg-gray-200' : null,

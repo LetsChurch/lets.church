@@ -174,9 +174,13 @@ export default function Searchbox() {
     e: KeyboardEvent & { currentTarget: HTMLInputElement },
   ) {
     if (e.key === 'Enter') {
-      e.currentTarget.value = '';
-      setActiveOptionIndex(-1);
-      setArrowPressed(false);
+      const activeId = activeOptionId();
+      if (activeId) {
+        document.getElementById(activeId)?.click();
+        e.currentTarget.value = '';
+        setActiveOptionIndex(-1);
+        setArrowPressed(false);
+      }
     }
 
     if (e.key === 'ArrowDown' && allOptionIds().length > 0) {
