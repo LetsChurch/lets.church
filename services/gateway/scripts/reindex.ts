@@ -1,4 +1,4 @@
-import { select } from '@inquirer/prompts';
+import { input, select, confirm } from '@inquirer/prompts';
 import ora from 'ora';
 import pMap from 'p-map';
 import { client } from '../src/temporal';
@@ -21,6 +21,24 @@ const what = await select({
   ],
 });
 
+const scope =
+  what === 'uploads' ||
+  what === 'transcripts' ||
+  what === 'uploads-and-transcripts'
+    ? await select({
+        message: 'What scope would you like to reindex?',
+        choices: [
+          { name: 'Channel Slugs', value: 'slugs' as const },
+          { name: 'All', value: 'all' as const },
+        ],
+      })
+    : null;
+
+const slugs =
+  scope === 'slugs'
+    ? (await input({ message: 'Slugs (comma-seperated):' })).split(',')
+    : null;
+
 const documents = await (what === 'channels'
   ? prisma.channel.findMany({
       select: { id: true },
@@ -32,15 +50,30 @@ const documents = await (what === 'channels'
       where: {
         transcodingFinishedAt: { not: null },
         transcribingFinishedAt: { not: null },
+        ...(slugs
+          ? {
+              channel: {
+                slug: { in: slugs },
+              },
+            }
+          : {}),
       },
     }));
 
-logger.info(`Queueing documents from ${documents.length} uploads`);
+if (
+  !(await confirm({
+    message: `Queue ${documents.length} documents for reindexing?`,
+  }))
+) {
+  process.exit(0);
+}
+
+logger.info(`Queueing documents from ${documents.length} documents`);
 
 const total = documents.length;
 let queued = 0;
 
-const spinner = ora(`Queueing ${total} uploads`).start();
+const spinner = ora(`Queueing ${total} documents`).start();
 
 await pMap(
   documents,
