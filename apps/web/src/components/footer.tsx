@@ -51,11 +51,11 @@ export default function Footer() {
           </a>
 
           <a
-            href="https://twitter.com/lets_church"
+            href="https://twitter.com/LetsChurchOrg"
             class="text-gray-400 hover:text-gray-500"
             target="_blank"
           >
-            <span class="sr-only">Twitter</span>
+            <span class="sr-only">X</span>
             <TwitterIcon class="h-6 w-6" />
           </a>
 

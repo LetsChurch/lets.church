@@ -204,14 +204,14 @@ export default function Footer() {
         <div class="mt-8 border-t border-gray-900/10 pt-8 md:flex md:items-center md:justify-between">
           <div class="flex space-x-6 md:order-2">
             <a
-              href="https://www.facebook.com/profile.php?id=100092315746719"
+              href="https://fb.me/LetsChurchOrg"
               class="text-gray-400 hover:text-gray-500"
             >
               <span class="sr-only">Facebook</span>
               <BrandFacebookIcon class="h-6" />
             </a>
             <a
-              href="https://twitter.com/lets_church"
+              href="https://twitter.com/LetsChurchOrg"
               class="text-gray-400 hover:text-gray-500"
             >
               <span class="sr-only">X</span>
