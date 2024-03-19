@@ -414,6 +414,25 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
         return getPublicMediaUrl(`${root.id}/AUDIO.m3u8`);
       },
     }),
+    podcastSource: t.string({
+      select: { variants: true },
+      resolve: async (root) => {
+        const variant = root.variants.find((v) => v === 'AUDIO_DOWNLOAD');
+        invariant(variant, 'No audio download variant found');
+        return getPublicMediaUrl(`${root.id}/AUDIO_DOWNLOAD.m4a`);
+      },
+    }),
+    podcastSizeBytes: t.field({
+      type: 'SafeInt',
+      select: { downloadSizes: true },
+      resolve: async (root) => {
+        const size = root.downloadSizes.find(
+          (v) => v.variant === 'AUDIO_DOWNLOAD',
+        );
+        invariant(size, 'No audio download variant found');
+        return Number(size.bytes.valueOf());
+      },
+    }),
     peaksDatUrl: t.string({
       nullable: true,
       select: { id: true, variants: true },

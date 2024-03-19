@@ -268,28 +268,6 @@ export type GeoInput = {
   range: Scalars['String']['input'];
 };
 
-export type GeocodeResult = {
-  __typename?: 'GeocodeResult';
-  administrativeArea?: Maybe<Scalars['String']['output']>;
-  confidence: Scalars['Float']['output'];
-  continent?: Maybe<Scalars['String']['output']>;
-  country?: Maybe<Scalars['String']['output']>;
-  countryCode?: Maybe<Scalars['String']['output']>;
-  county?: Maybe<Scalars['String']['output']>;
-  label: Scalars['String']['output'];
-  latitude: Scalars['Float']['output'];
-  locality?: Maybe<Scalars['String']['output']>;
-  longitude: Scalars['Float']['output'];
-  name: Scalars['String']['output'];
-  neighborhood?: Maybe<Scalars['String']['output']>;
-  number?: Maybe<Scalars['String']['output']>;
-  postalCode?: Maybe<Scalars['String']['output']>;
-  region?: Maybe<Scalars['String']['output']>;
-  regionCode?: Maybe<Scalars['String']['output']>;
-  street?: Maybe<Scalars['String']['output']>;
-  type: Scalars['String']['output'];
-};
-
 export type HighlightedText = {
   __typename?: 'HighlightedText';
   marked: Scalars['String']['output'];
@@ -492,7 +470,6 @@ export type MutationUpsertChannelMembershipArgs = {
 
 
 export type MutationUpsertOrganizationArgs = {
-  addressJwt?: InputMaybe<Scalars['Jwt']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   organizationId?: InputMaybe<Scalars['ShortUuid']['input']>;
@@ -804,8 +781,6 @@ export type Query = {
   channelById: Channel;
   channelBySlug: Channel;
   channelsConnection: QueryChannelsConnection;
-  geocode: Array<GeocodeResult>;
-  geocodeJwt: Array<Scalars['Jwt']['output']>;
   me?: Maybe<AppUser>;
   mySubscriptionUploadRecords?: Maybe<QueryMySubscriptionUploadRecordsConnection>;
   organizationById: Organization;
@@ -836,16 +811,6 @@ export type QueryChannelsConnectionArgs = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
-};
-
-
-export type QueryGeocodeArgs = {
-  query: Scalars['String']['input'];
-};
-
-
-export type QueryGeocodeJwtArgs = {
-  query: Scalars['String']['input'];
 };
 
 
@@ -1188,6 +1153,8 @@ export type UploadRecord = {
   peaksDatUrl?: Maybe<Scalars['String']['output']>;
   peaksJsonUrl?: Maybe<Scalars['String']['output']>;
   playlists: UploadRecordPlaylistsConnection;
+  podcastSizeBytes: Scalars['SafeInt']['output'];
+  podcastSource: Scalars['String']['output'];
   publishedAt?: Maybe<Scalars['DateTime']['output']>;
   series: UploadRecordSeriesConnection;
   thumbnailBlurhash?: Maybe<Scalars['String']['output']>;
