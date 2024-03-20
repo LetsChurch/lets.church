@@ -158,7 +158,7 @@ export function locationState(clearInput: () => unknown) {
     }
 
     const res = await fetch(
-      `https://api.mapbox.com/search/searchbox/v1/suggest?q=${encodeURIComponent(input)}&language=en&types=country,region,prefecture,postcode,district,place,city,locality,neighborhood,block,street,address&session_token=${sessionToken}&access_token=${mbAccessToken}`,
+      `https://api.mapbox.com/search/searchbox/v1/suggest?q=${encodeURIComponent(input)}&limit=3&language=en&types=country,region,prefecture,postcode,district,place,city,locality,neighborhood,block,street,address&session_token=${sessionToken}&access_token=${mbAccessToken}`,
     );
 
     const data = parse(locationSuggestSchema, await res.json());
