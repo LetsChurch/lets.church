@@ -1,13 +1,12 @@
-import mapboxgl from 'mapbox-gl';
+import mapboxgl, { GeoJSONSource } from 'mapbox-gl';
 import {
   createSignal,
   onMount,
   For,
-  Show,
   batch,
   createEffect,
+  Show,
 } from 'solid-js';
-import 'mapbox-gl/dist/mapbox-gl.css';
 import invariant from 'tiny-invariant';
 import type { ResultOf } from '../../util/graphql';
 import type { churchesQuery } from '../../queries/churches';
@@ -30,9 +29,21 @@ export default function ChurchSearch() {
   const [source, setSource] = createSignal<mapboxgl.AnySourceImpl | null>(null);
   let mapNode: HTMLDivElement;
   const [loading, setLoading] = createSignal(true);
+  const [interacted, setInteracted] = createSignal(false);
+  const [visibleIds, setVisibleIds] = createSignal<Set<string>>(new Set());
   const [results, setResults] = createSignal<
     ResultOf<typeof churchesQuery>['search']['edges']
   >([]);
+
+  const renderedResults = () => {
+    const res = results();
+    if (interacted()) {
+      const vis = visibleIds();
+      return res.filter((r) => vis.has(r.node.id));
+    }
+
+    return res;
+  };
 
   createEffect(() => {
     const m = map();
@@ -49,6 +60,7 @@ export default function ChurchSearch() {
     invariant(s, 'Source not yet set up');
 
     if (s?.type === 'geojson') {
+      setInteracted(false);
       s.setData(data);
     }
   }
@@ -129,6 +141,71 @@ export default function ChurchSearch() {
       style: 'mapbox://styles/mapbox/streets-v12',
       center: murica,
       zoom: 4,
+    });
+
+    map.on('mousedown', () => setInteracted(true));
+    map.on('touchstart', () => setInteracted(true));
+    map.on('wheel', () => setInteracted(true));
+
+    function getRenderedUnclusteredChurches() {
+      const renderedPoints = map.queryRenderedFeatures(undefined, {
+        layers: ['unclustered-point'],
+      });
+
+      const seen = new Set();
+
+      return renderedPoints.filter((p) => {
+        if (seen.has(p.properties?.id)) {
+          return false;
+        }
+
+        seen.add(p.properties?.id);
+
+        return true;
+      });
+    }
+
+    async function getRenderedClusteredChurches() {
+      const source = map.getSource('churches') as GeoJSONSource;
+      const renderedClusters = map.queryRenderedFeatures(undefined, {
+        layers: ['clusters'],
+      });
+
+      const clusterIds = Array.from(
+        new Set(renderedClusters.map((f) => f.properties?.cluster_id)),
+      );
+
+      type ClusterPoints = Parameters<
+        Parameters<(typeof source)['getClusterLeaves']>[3]
+      >[1];
+
+      const clusterPoints = await Promise.all(
+        clusterIds.map(
+          (id) =>
+            new Promise<ClusterPoints>((resolve, reject) => {
+              source.getClusterLeaves(id, 100, 0, (err, features) => {
+                if (err) {
+                  reject(err);
+                } else {
+                  resolve(features);
+                }
+              });
+            }),
+        ),
+      );
+
+      return clusterPoints.flat();
+    }
+
+    map.on('moveend', async () => {
+      setVisibleIds(
+        new Set(
+          [
+            ...getRenderedUnclusteredChurches(),
+            ...(await getRenderedClusteredChurches()),
+          ].map((p) => p.properties?.id),
+        ),
+      );
     });
 
     setMap(map);
@@ -283,7 +360,7 @@ export default function ChurchSearch() {
   function handleMouseEnter({
     node,
   }: ResultOf<typeof churchesQuery>['search']['edges'][number]) {
-    invariant('id' in node);
+    invariant('organization' in node);
     const m = map();
     invariant(m, 'Map should be defined');
 
@@ -335,7 +412,7 @@ export default function ChurchSearch() {
       <div class="pointer-events-auto col-span-1 space-y-2 p-2">
         <Searchbox />
         <Show when={!loading()} fallback={<p>Loading</p>}>
-          <For each={results()}>
+          <For each={renderedResults()}>
             {(res) => (
               <div
                 class="sm:flex"

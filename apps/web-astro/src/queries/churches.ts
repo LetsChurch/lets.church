@@ -20,11 +20,12 @@ export const churchesQuery = graphql(`
       edges {
         node {
           __typename
+          id
           ... on OrganizationSearchHit {
-            id
             name
             organization {
               id
+              slug
               type
               addresses(type: MEETING) {
                 edges {

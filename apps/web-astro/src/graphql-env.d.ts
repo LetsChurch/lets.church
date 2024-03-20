@@ -6295,6 +6295,30 @@ export type introspection = {
             ]
           },
           {
+            "name": "podcastSizeBytes",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "SafeInt",
+                "ofType": null
+              }
+            },
+            "args": []
+          },
+          {
+            "name": "podcastSource",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "args": []
+          },
+          {
             "name": "publishedAt",
             "type": {
               "kind": "SCALAR",
