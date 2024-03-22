@@ -6,9 +6,9 @@ const IMGPROXY_URL = envariant('IMGPROXY_URL');
 const IMGPROXY_KEY = envariant('IMGPROXY_KEY');
 const IMGPROXY_SALT = envariant('IMGPROXY_SALT');
 
-export function getPublicMediaUrl(path: string) {
+export function getPublicMediaUrl(key: string) {
   const url = new URL(MEDIA_URL);
-  url.pathname += path;
+  url.pathname += `/${key}`;
   return url.toString();
 }
 
