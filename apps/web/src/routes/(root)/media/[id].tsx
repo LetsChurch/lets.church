@@ -18,6 +18,7 @@ import SubscribeIcon from '@tabler/icons/rss.svg?component-solid';
 import DownloadIcon from '@tabler/icons/cloud-download.svg?component-solid';
 // TODO: use share-2 once on tabler icons v2.5+
 import ShareIcon from '@tabler/icons/share.svg?component-solid';
+import NextIcon from '@tabler/icons/chevron-right.svg?component-solid';
 import invariant from 'tiny-invariant';
 import humanFormat from 'human-format';
 import pluralize from 'pluralize';
@@ -133,6 +134,11 @@ export function routeData({ params, location }: RouteDataArgs) {
               kind
               label
               url
+            }
+            nextInSeries {
+              id
+              title
+              thumbnailUrl
             }
             series: uploadListById(id: $seriesId) {
               id
@@ -652,6 +658,32 @@ export default function MediaRoute() {
           </Show>
         </div>
         <div class="space-y-4 md:col-span-1">
+          <Show when={metaData()?.data?.nextInSeries} keyed>
+            {(next) => (
+              <article class="relative flex">
+                <Show when={next.thumbnailUrl} keyed>
+                  {(turl) => (
+                    <div class="mr-4 flex-shrink-0">
+                      <img
+                        class="aspect-video w-24 object-cover"
+                        src={turl}
+                        alt={next.title ?? ''}
+                      />
+                    </div>
+                  )}
+                </Show>
+                <div class="flex min-w-0 flex-grow flex-col justify-between">
+                  <h4 class="truncate text-lg font-medium">{next.title}</h4>
+                  <A
+                    href={`/media/${next.id}`}
+                    class="text-gray-400 before:absolute before:inset-0 hover:text-indigo-600"
+                  >
+                    <NextIcon class="-mr-2 ml-auto" />
+                  </A>
+                </div>
+              </article>
+            )}
+          </Show>
           <Show when={metaData()?.data?.series} keyed>
             {(series) => (
               <div class="relative flex h-[175px] flex-col overflow-hidden rounded-md bg-gray-50">

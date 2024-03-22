@@ -543,6 +543,49 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
         ]);
       },
     }),
+    nextInSeries: t.prismaField({
+      type: 'UploadRecord',
+      nullable: true,
+      select: {
+        title: true,
+        channelId: true,
+        publishedAt: true,
+        createdAt: true,
+      },
+      resolve: (query, root, _args, _context, _info) => {
+        const ordPattern =
+          /(?:part|chapter) (?<ord1>\d+)|(?<ord2>\d+) of \d+|^(?<ord3>\d+)/i;
+        const match = root.title?.match(ordPattern);
+
+        if (!match) {
+          return null;
+        }
+
+        const contains = match[0].replace(ordPattern, (m, ord1, ord2, ord3) => {
+          const ordString = ord1 ?? ord2 ?? ord3;
+          invariant(typeof ordString === 'string', 'No match found');
+          const ord = parseInt(ordString, 10);
+          return m.replace(ordString, `${ord + 1}`);
+        });
+
+        return prisma.uploadRecord.findFirst({
+          ...query,
+          where: {
+            channelId: root.channelId,
+            publishedAt: { gte: root.publishedAt },
+            title: { contains },
+          },
+          orderBy: [
+            {
+              publishedAt: Prisma.SortOrder.asc,
+            },
+            {
+              createdAt: Prisma.SortOrder.asc,
+            },
+          ],
+        });
+      },
+    }),
     series: t.connection({
       type: UploadList,
       select: { id: true },
