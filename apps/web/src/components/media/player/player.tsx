@@ -189,7 +189,9 @@ export default function Player(props: Props) {
       setReady(true);
     });
 
-    document.addEventListener('visibilitychange', playWhenHidden);
+    if (!isServer) {
+      document.addEventListener('visibilitychange', playWhenHidden);
+    }
   });
 
   createEffect(() => {
@@ -202,7 +204,10 @@ export default function Player(props: Props) {
     clearTimeout(reportRangesTimer);
     reportTimeRanges();
     player?.dispose();
-    document.removeEventListener('visibilitychange', playWhenHidden);
+
+    if (!isServer) {
+      document.removeEventListener('visibilitychange', playWhenHidden);
+    }
   });
 
   const [peaksData, { refetch: fetchPeaks }] = createResource(
