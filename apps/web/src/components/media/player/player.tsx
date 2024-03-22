@@ -113,6 +113,14 @@ export default function Player(props: Props) {
     }
   }
 
+  let userPaused = false;
+
+  function playWhenHidden() {
+    if (document.visibilityState === 'hidden' && !userPaused) {
+      player.play();
+    }
+  }
+
   onMount(async () => {
     invariant(videoRef, 'Video ref is undefined');
     reportRangesTimer = window.setTimeout(reportTimeRanges, 5000);
@@ -144,7 +152,7 @@ export default function Player(props: Props) {
         playbackRates: [1, 1.25, 1.5, 1.75, 2],
         html5: {
           hls: {
-            overrideNative: false,
+            overrideNative: true,
           },
           nativeVideoTracks: true,
           nativeAudioTracks: true,
@@ -163,6 +171,14 @@ export default function Player(props: Props) {
 
     const onTimeUpdate = untrack(() => props.onTimeUpdate);
 
+    player.on('pause', () => {
+      userPaused = Boolean(player.userActive());
+    });
+
+    player.on('playing', () => {
+      userPaused = false;
+    });
+
     player.on('timeupdate', () => {
       const tuCurrentTime = player.currentTime() ?? 0;
       onTimeUpdate?.(tuCurrentTime);
@@ -172,6 +188,8 @@ export default function Player(props: Props) {
     player.one('ready', () => {
       setReady(true);
     });
+
+    document.addEventListener('visibilitychange', playWhenHidden);
   });
 
   createEffect(() => {
@@ -184,6 +202,7 @@ export default function Player(props: Props) {
     clearTimeout(reportRangesTimer);
     reportTimeRanges();
     player?.dispose();
+    document.removeEventListener('visibilitychange', playWhenHidden);
   });
 
   const [peaksData, { refetch: fetchPeaks }] = createResource(
@@ -217,7 +236,13 @@ export default function Player(props: Props) {
           onSeek={(time) => player.currentTime(time)}
         />
       </Show>
-      <video class="video-js" ref={(el) => void (videoRef = el)} playsinline />
+      <video
+        class="video-js"
+        ref={(el) => void (videoRef = el)}
+        playsinline
+        autoplay
+        preload="auto"
+      />
     </div>
   );
 }
