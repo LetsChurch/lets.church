@@ -117,7 +117,11 @@ export default function Player(props: Props) {
 
   function playWhenHidden() {
     if (document.visibilityState === 'hidden' && !userPaused) {
-      player.play();
+      try {
+        player.play();
+      } catch (e) {
+        console.warn('Could not play video when hidden', e);
+      }
     }
   }
 
