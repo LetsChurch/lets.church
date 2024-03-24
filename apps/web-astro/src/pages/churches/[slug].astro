@@ -1,0 +1,292 @@
+---
+import MailIcon from '@tabler/icons/mail.svg?sprite';
+import PhoneIcon from '@tabler/icons/phone.svg?sprite';
+import WorldIcon from '@tabler/icons/world.svg?sprite';
+import Avatar from '../../components/avatar.tsx';
+import Layout from '../../layouts/layout.astro';
+import { graphql } from '../../util/graphql';
+import { createClient } from '../../util/server/gql';
+import Chiclet from '../../components/church-search/searchbox/chiclet.tsx';
+
+const { slug } = Astro.params;
+
+if (!slug) {
+  throw new Error('slug is required');
+}
+
+export const churchQuery = graphql(`
+  query OrganizationBySlug($slug: String!) {
+    organizationBySlug(slug: $slug) {
+      name
+      type
+      description
+      avatarUrl
+      coverUrl
+      tags {
+        edges {
+          node {
+            tag {
+              category
+              color
+              label
+              description
+              slug
+            }
+          }
+        }
+      }
+      primaryPhoneNumber
+      primaryPhoneUri
+      primaryEmail
+      websiteUrl
+      addresses {
+        edges {
+          node {
+            type
+            name
+            streetAddress
+            locality
+            region
+            postalCode
+            postOfficeBoxNumber
+            country
+          }
+        }
+      }
+    }
+  }
+`);
+
+const client = await createClient(
+  Astro.request.headers,
+  Astro.cookies.get('lcSession')?.value,
+);
+
+const data = await client.request(churchQuery, {
+  slug,
+});
+
+if (data.organizationBySlug?.type !== 'CHURCH') {
+  return new Response('Church not found', {
+    status: 404,
+  });
+}
+---
+
+<Layout title={`Church: ${slug}`}>
+  <article>
+    <!-- Profile header -->
+    <div>
+      <div>
+        <img
+          class="h-32 w-full object-cover lg:h-48"
+          style="object-position: center 70%;"
+          src="https://images.unsplash.com/photo-1508985307703-52d13b2b06b3?q=80&w=3270&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+          alt=""
+        />
+      </div>
+      <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+        <div class="-mt-12 sm:-mt-16 sm:flex sm:items-end sm:space-x-5">
+          <div class="flex">
+            <Avatar
+              class="ring-4 ring-white sm:h-32 sm:w-32"
+              src={data.organizationBySlug.avatarUrl}
+              name={data.organizationBySlug.name}
+              size="2xl"
+            />
+          </div>
+          <div
+            class="mt-6 sm:flex sm:min-w-0 sm:flex-1 sm:items-center sm:justify-end sm:space-x-6 sm:pb-1"
+          >
+            <div class="mt-6 min-w-0 flex-1 sm:hidden 2xl:block">
+              <h1 class="truncate text-2xl font-bold text-gray-900">
+                {data.organizationBySlug.name}
+              </h1>
+            </div>
+            <div
+              class="mt-6 flex flex-col justify-stretch space-y-3 sm:flex-row sm:space-x-4 sm:space-y-0"
+            >
+              <a
+                href={data.organizationBySlug.websiteUrl}
+                class="inline-flex justify-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 [&_svg]:relative [&_svg]:h-5 [&_svg]:scale-[80%] [&_svg]:overflow-visible [&_svg]:text-gray-400"
+                target="_blank"
+              >
+                <Fragment set:html={WorldIcon} />
+                Website
+              </a>
+              <a
+                href={`mailto:${data.organizationBySlug.primaryEmail}`}
+                class="inline-flex justify-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 [&_svg]:relative [&_svg]:h-5 [&_svg]:scale-[80%] [&_svg]:overflow-visible [&_svg]:text-gray-400"
+              >
+                <Fragment set:html={MailIcon} />
+                Email
+              </a>
+              <a
+                href={data.organizationBySlug.primaryPhoneUri}
+                class="inline-flex justify-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 [&_svg]:relative [&_svg]:h-5 [&_svg]:scale-[80%] [&_svg]:overflow-visible [&_svg]:text-gray-400"
+              >
+                <Fragment set:html={PhoneIcon} />
+                Call
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="mt-6 hidden min-w-0 flex-1 sm:block 2xl:hidden">
+          <h1 class="truncate text-2xl font-bold text-gray-900">
+            {data.organizationBySlug.name}
+          </h1>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="mx-auto mt-6 flex max-w-5xl flex-wrap gap-2 px-4 sm:px-6 lg:px-8"
+    >
+      {
+        data.organizationBySlug.tags.edges.map(({ node }) => (
+          <a href={`/churches?tag=${node.tag.slug}`}>
+            <Chiclet color={node.tag.color}>{node.tag.label}</Chiclet>
+          </a>
+        ))
+      }
+    </div>
+    <!-- Description list -->
+    <div class="mx-auto mt-6 max-w-5xl px-4 sm:px-6 lg:px-8">
+      <dl class="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2">
+        <div class="sm:col-span-1">
+          <dt class="text-sm font-medium text-gray-500">Phone</dt>
+          <dd class="mt-1 text-sm text-gray-900">
+            {data.organizationBySlug.primaryPhoneNumber}
+          </dd>
+        </div>
+        <div class="sm:col-span-1">
+          <dt class="text-sm font-medium text-gray-500">Email</dt>
+          <dd class="mt-1 text-sm text-gray-900">
+            {data.organizationBySlug.primaryEmail}
+          </dd>
+        </div>
+
+        {
+          data.organizationBySlug.description ? (
+            <div class="sm:col-span-2">
+              <dt class="text-sm font-medium text-gray-500">About</dt>
+              <dd class="mt-1 max-w-prose space-y-5 text-sm text-gray-900">
+                {data.organizationBySlug.description.split('\n\n').map((p) => (
+                  <p>{p}</p>
+                ))}
+              </dd>
+            </div>
+          ) : null
+        }
+      </dl>
+    </div>
+
+    <!-- Channels List -->
+    <div class="mx-auto mt-8 max-w-5xl px-4 sm:px-6 lg:px-8">
+      <h2 class="text-sm font-medium text-gray-500">Official Channels</h2>
+      <div class="mt-1 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div
+          class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:border-gray-400"
+        >
+          <div class="flex-shrink-0">
+            <Avatar
+              src="https://images.unsplash.com/flagged/photo-1557896279-080cb03b9ca6?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cGFzdG9yfGVufDB8fDB8fHww"
+              size="md"
+              name="Baptist, But Not Too Baptist, Sermons"
+            />
+          </div>
+          <div class="min-w-0 flex-1">
+            <a href="#" class="focus:outline-none">
+              <span class="absolute inset-0" aria-hidden="true"></span>
+              <p class="text-sm font-medium text-gray-900">
+                Baptist, But Not Too Baptist, Sermons
+              </p>
+              <p class="truncate text-sm text-gray-500">Subtitle</p>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mx-auto mt-8 max-w-5xl px-4 sm:px-6 lg:px-8">
+      <h2 class="text-sm font-medium text-gray-500">Endorsed Channels</h2>
+      <div class="mt-1 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div
+          class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:border-gray-400"
+        >
+          <div class="flex-shrink-0">
+            <Avatar
+              src="https://images.unsplash.com/flagged/photo-1557896279-080cb03b9ca6?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cGFzdG9yfGVufDB8fDB8fHww"
+              size="md"
+              name="Alpha and Omega Ministries"
+            />
+          </div>
+          <div class="min-w-0 flex-1">
+            <a href="#" class="focus:outline-none">
+              <span class="absolute inset-0" aria-hidden="true"></span>
+              <p class="text-sm font-medium text-gray-900">
+                Alpha and Omega Ministries
+              </p>
+            </a>
+          </div>
+        </div>
+        <div
+          class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:border-gray-400"
+        >
+          <div class="flex-shrink-0">
+            <Avatar
+              src="https://images.unsplash.com/flagged/photo-1557896279-080cb03b9ca6?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cGFzdG9yfGVufDB8fDB8fHww"
+              size="md"
+              name="Conversations That Matter"
+            />
+          </div>
+          <div class="min-w-0 flex-1">
+            <a href="#" class="focus:outline-none">
+              <span class="absolute inset-0" aria-hidden="true"></span>
+              <p class="text-sm font-medium text-gray-900">
+                Conversations That Matter
+              </p>
+            </a>
+          </div>
+        </div>
+        <div
+          class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:border-gray-400"
+        >
+          <div class="flex-shrink-0">
+            <Avatar
+              src="https://images.unsplash.com/flagged/photo-1557896279-080cb03b9ca6?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cGFzdG9yfGVufDB8fDB8fHww"
+              size="md"
+              name="Conversations That Don't Matter"
+            />
+          </div>
+          <div class="min-w-0 flex-1">
+            <a href="#" class="focus:outline-none">
+              <span class="absolute inset-0" aria-hidden="true"></span>
+              <p class="text-sm font-medium text-gray-900">
+                Conversations That Don't Matter
+              </p>
+            </a>
+          </div>
+        </div>
+        <div
+          class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:border-gray-400"
+        >
+          <div class="flex-shrink-0">
+            <Avatar
+              src="https://images.unsplash.com/flagged/photo-1557896279-080cb03b9ca6?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cGFzdG9yfGVufDB8fDB8fHww"
+              size="md"
+              name="Conversations That Kinda Matter"
+            />
+          </div>
+          <div class="min-w-0 flex-1">
+            <a href="#" class="focus:outline-none">
+              <span class="absolute inset-0" aria-hidden="true"></span>
+              <p class="text-sm font-medium text-gray-900">
+                Conversations That Kinda Matter
+              </p>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+</Layout>

@@ -1,4 +1,5 @@
 import { faker } from '@faker-js/faker';
+import parsePhoneNumber from 'libphonenumber-js';
 import slugify from '@sindresorhus/slugify';
 import argon2 from 'argon2';
 import { Prisma, UploadListType } from '@prisma/client';
@@ -330,6 +331,10 @@ const org04 = await prisma.organization.create({
         ],
       },
     },
+    primaryEmail: faker.internet.email(),
+    primaryPhoneNumber:
+      parsePhoneNumber(faker.phone.number(), 'US')?.number ?? null,
+    websiteUrl: faker.internet.url(),
     addresses: {
       create: {
         type: 'MEETING',
@@ -344,6 +349,7 @@ const org04 = await prisma.organization.create({
         geocodingJson: baptistLa,
       },
     },
+    description: 'We are a church that is baptist, but not too baptist.',
     memberships: {
       create: {
         appUser: {
@@ -386,6 +392,10 @@ const org05 = await prisma.organization.create({
         ],
       },
     },
+    primaryEmail: faker.internet.email(),
+    primaryPhoneNumber:
+      parsePhoneNumber(faker.phone.number(), 'US')?.number ?? null,
+    websiteUrl: faker.internet.url(),
     addresses: {
       create: {
         type: 'MEETING',
@@ -400,6 +410,7 @@ const org05 = await prisma.organization.create({
         geocodingJson: desertDebaters,
       },
     },
+    description: 'We are a church that is all about debating in the desert.',
     memberships: {
       create: {
         appUser: {
@@ -442,6 +453,10 @@ const org06 = await prisma.organization.create({
         ],
       },
     },
+    primaryEmail: faker.internet.email(),
+    primaryPhoneNumber:
+      parsePhoneNumber(faker.phone.number(), 'US')?.number ?? null,
+    websiteUrl: faker.internet.url(),
     addresses: {
       create: {
         type: 'MEETING',
@@ -456,6 +471,7 @@ const org06 = await prisma.organization.create({
         geocodingJson: desertDebaters,
       },
     },
+    description: 'We are a church that is all about moss and all about cows.',
     memberships: {
       create: {
         appUser: {
@@ -492,6 +508,10 @@ const org07 = await prisma.organization.create({
         ],
       },
     },
+    primaryEmail: faker.internet.email(),
+    primaryPhoneNumber:
+      parsePhoneNumber(faker.phone.number(), 'US')?.number ?? null,
+    websiteUrl: faker.internet.url(),
     addresses: {
       create: {
         type: 'MEETING',
@@ -506,6 +526,8 @@ const org07 = await prisma.organization.create({
         geocodingJson: gwgh,
       },
     },
+    description:
+      'We are a church that is all about large structures made of gopher wood.',
     memberships: {
       create: {
         appUser: {
@@ -542,6 +564,10 @@ const org08 = await prisma.organization.create({
         ],
       },
     },
+    primaryEmail: faker.internet.email(),
+    primaryPhoneNumber:
+      parsePhoneNumber(faker.phone.number(), 'US')?.number ?? null,
+    websiteUrl: faker.internet.url(),
     addresses: {
       create: {
         type: 'MEETING',
@@ -556,6 +582,8 @@ const org08 = await prisma.organization.create({
         geocodingJson: bananarama,
       },
     },
+    description:
+      'We are a church that is all about bananas and all about the Bible.',
     memberships: {
       create: {
         appUser: {
@@ -598,6 +626,10 @@ const org09 = await prisma.organization.create({
         ],
       },
     },
+    primaryEmail: faker.internet.email(),
+    primaryPhoneNumber:
+      parsePhoneNumber(faker.phone.number(), 'US')?.number ?? null,
+    websiteUrl: faker.internet.url(),
     addresses: {
       create: {
         type: 'MEETING',
@@ -612,6 +644,7 @@ const org09 = await prisma.organization.create({
         geocodingJson: cotton,
       },
     },
+    description: 'We are a church that is all about baumwollfinger.',
     memberships: {
       create: {
         appUser: {
@@ -654,6 +687,10 @@ const org10 = await prisma.organization.create({
         ],
       },
     },
+    primaryEmail: faker.internet.email(),
+    primaryPhoneNumber:
+      parsePhoneNumber(faker.phone.number(), 'US')?.number ?? null,
+    websiteUrl: faker.internet.url(),
     addresses: {
       create: {
         type: 'MEETING',
@@ -668,6 +705,8 @@ const org10 = await prisma.organization.create({
         geocodingJson: harbor,
       },
     },
+    description:
+      'We are a church that is all about harbors and #superiortheology.',
     memberships: {
       create: {
         appUser: {
@@ -710,6 +749,10 @@ const org11 = await prisma.organization.create({
         ],
       },
     },
+    primaryEmail: faker.internet.email(),
+    primaryPhoneNumber:
+      parsePhoneNumber(faker.phone.number(), 'US')?.number ?? null,
+    websiteUrl: faker.internet.url(),
     addresses: {
       create: {
         type: 'MEETING',
@@ -724,6 +767,8 @@ const org11 = await prisma.organization.create({
         geocodingJson: mariners,
       },
     },
+    description:
+      'We are a church that is all about ships that change direction.',
     memberships: {
       create: {
         appUser: {
@@ -763,6 +808,10 @@ const org12 = await prisma.organization.create({
         ],
       },
     },
+    primaryEmail: faker.internet.email(),
+    primaryPhoneNumber:
+      parsePhoneNumber(faker.phone.number(), 'US')?.number ?? null,
+    websiteUrl: faker.internet.url(),
     addresses: {
       create: {
         type: 'MEETING',
@@ -777,6 +826,8 @@ const org12 = await prisma.organization.create({
         geocodingJson: ppp,
       },
     },
+    description:
+      'We are a church where you will learn about the pitfalls of the prosperity gospel, which is not a gospel.',
     memberships: {
       create: {
         appUser: {
@@ -819,6 +870,10 @@ const org13 = await prisma.organization.create({
         ],
       },
     },
+    primaryEmail: faker.internet.email(),
+    primaryPhoneNumber:
+      parsePhoneNumber(faker.phone.number(), 'US')?.number ?? null,
+    websiteUrl: faker.internet.url(),
     addresses: {
       create: {
         type: 'MEETING',
@@ -833,6 +888,7 @@ const org13 = await prisma.organization.create({
         geocodingJson: screwtape,
       },
     },
+    description: 'We like C.S. Lewis.',
     memberships: {
       create: {
         appUser: {
@@ -872,6 +928,10 @@ const org14 = await prisma.organization.create({
         ],
       },
     },
+    primaryEmail: faker.internet.email(),
+    primaryPhoneNumber:
+      parsePhoneNumber(faker.phone.number(), 'US')?.number ?? null,
+    websiteUrl: faker.internet.url(),
     addresses: {
       create: {
         type: 'MEETING',
@@ -886,6 +946,7 @@ const org14 = await prisma.organization.create({
         geocodingJson: solas,
       },
     },
+    description: 'We are a church that is all about the five solas.',
     memberships: {
       create: {
         appUser: {
@@ -922,6 +983,10 @@ const org15 = await prisma.organization.create({
         ],
       },
     },
+    primaryEmail: faker.internet.email(),
+    primaryPhoneNumber:
+      parsePhoneNumber(faker.phone.number(), 'US')?.number ?? null,
+    websiteUrl: faker.internet.url(),
     addresses: {
       create: {
         type: 'MEETING',
@@ -936,6 +1001,8 @@ const org15 = await prisma.organization.create({
         geocodingJson: sovereignJoy,
       },
     },
+    description:
+      'We are a church that is all about the sovereignty of God and the joy of the saints.',
     memberships: {
       create: {
         appUser: {
@@ -972,6 +1039,10 @@ const org16 = await prisma.organization.create({
         ],
       },
     },
+    primaryEmail: faker.internet.email(),
+    primaryPhoneNumber:
+      parsePhoneNumber(faker.phone.number(), 'US')?.number ?? null,
+    websiteUrl: faker.internet.url(),
     addresses: {
       create: {
         type: 'MEETING',
@@ -986,6 +1057,8 @@ const org16 = await prisma.organization.create({
         geocodingJson: clapback,
       },
     },
+    description:
+      'We are a church that is all about clapping back at the world.',
     memberships: {
       create: {
         appUser: {
@@ -1032,6 +1105,10 @@ for (let i = 0; i < 25; i += 1) {
           data: denomination.map((tagSlug) => ({ tagSlug })),
         },
       },
+      primaryEmail: faker.internet.email(),
+      primaryPhoneNumber:
+        parsePhoneNumber(faker.phone.number(), 'US')?.number ?? null,
+      websiteUrl: faker.internet.url(),
       addresses: {
         create: {
           type: 'MEETING',
@@ -1045,6 +1122,7 @@ for (let i = 0; i < 25; i += 1) {
           }),
         },
       },
+      description: faker.lorem.paragraph(),
       memberships: {
         create: {
           appUser: {

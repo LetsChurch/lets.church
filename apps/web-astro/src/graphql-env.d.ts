@@ -3070,6 +3070,24 @@ export type introspection = {
             ]
           },
           {
+            "name": "avatarUrl",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "args": []
+          },
+          {
+            "name": "coverUrl",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "args": []
+          },
+          {
             "name": "createdAt",
             "type": {
               "kind": "NON_NULL",
@@ -3160,6 +3178,33 @@ export type introspection = {
             "args": []
           },
           {
+            "name": "primaryEmail",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "args": []
+          },
+          {
+            "name": "primaryPhoneNumber",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "args": []
+          },
+          {
+            "name": "primaryPhoneUri",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "args": []
+          },
+          {
             "name": "slug",
             "type": {
               "kind": "NON_NULL",
@@ -3237,6 +3282,15 @@ export type introspection = {
                 "name": "DateTime",
                 "ofType": null
               }
+            },
+            "args": []
+          },
+          {
+            "name": "websiteUrl",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
             },
             "args": []
           }
@@ -4389,6 +4443,30 @@ export type introspection = {
                   "ofType": {
                     "kind": "SCALAR",
                     "name": "ShortUuid",
+                    "ofType": null
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "organizationBySlug",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "Organization",
+                "ofType": null
+              }
+            },
+            "args": [
+              {
+                "name": "slug",
+                "type": {
+                  "kind": "NON_NULL",
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "String",
                     "ofType": null
                   }
                 }
@@ -6227,6 +6305,15 @@ export type introspection = {
             "type": {
               "kind": "ENUM",
               "name": "Rating",
+              "ofType": null
+            },
+            "args": []
+          },
+          {
+            "name": "nextInSeries",
+            "type": {
+              "kind": "OBJECT",
+              "name": "UploadRecord",
               "ofType": null
             },
             "args": []

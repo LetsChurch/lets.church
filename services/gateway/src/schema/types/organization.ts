@@ -7,6 +7,7 @@ import {
   Organization as PrismaOrganization,
   TagColor,
 } from '@prisma/client';
+import { parsePhoneNumber } from 'libphonenumber-js';
 import { indexDocument } from '../../temporal';
 import prisma from '../../util/prisma';
 import builder from '../builder';
@@ -98,6 +99,28 @@ const Organization = builder.prismaObject('Organization', {
       type: OrganizationTagInstance,
       cursor: 'organizationId_tagSlug',
     }),
+    avatarUrl: t.exposeString('avatarPath', { nullable: true }),
+    coverUrl: t.exposeString('coverPath', { nullable: true }),
+    primaryPhoneNumber: t.string({
+      nullable: true,
+      select: { primaryPhoneNumber: true },
+      resolve: ({ primaryPhoneNumber }) =>
+        primaryPhoneNumber
+          ? parsePhoneNumber(primaryPhoneNumber).formatNational()
+          : null,
+    }),
+    primaryPhoneUri: t.string({
+      select: { primaryPhoneNumber: true },
+      nullable: true,
+      resolve: ({ primaryPhoneNumber }) =>
+        primaryPhoneNumber
+          ? parsePhoneNumber(primaryPhoneNumber).getURI()
+          : null,
+    }),
+    primaryEmail: t.exposeString('primaryEmail', {
+      nullable: true,
+    }),
+    websiteUrl: t.exposeString('websiteUrl', { nullable: true }),
     addresses: t.relatedConnection('addresses', {
       cursor: 'id',
       args: { type: t.arg({ type: AddressTypeEnum, required: false }) },
@@ -165,6 +188,16 @@ builder.queryFields((t) => ({
     args: { id: t.arg({ type: 'ShortUuid', required: true }) },
     resolve: async (query, _root, { id }, _context, _info) => {
       return prisma.organization.findUniqueOrThrow({ ...query, where: { id } });
+    },
+  }),
+  organizationBySlug: t.prismaField({
+    type: 'Organization',
+    args: { slug: t.arg({ type: 'String', required: true }) },
+    resolve: async (query, _root, { slug }, _context, _info) => {
+      return prisma.organization.findUniqueOrThrow({
+        ...query,
+        where: { slug },
+      });
     },
   }),
   organizationsConnection: t.prismaConnection({

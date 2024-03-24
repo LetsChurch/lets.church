@@ -415,7 +415,7 @@ export default function ChurchSearch() {
           <For each={renderedResults()}>
             {(res) => (
               <div
-                class="sm:flex"
+                class="relative sm:flex"
                 onMouseEnter={[handleMouseEnter, res]}
                 onMouseLeave={handleMouseLeave}
               >
@@ -437,7 +437,12 @@ export default function ChurchSearch() {
                 </div>
                 <div>
                   <h4 class="text-lg font-bold">
-                    {'name' in res.node ? res.node.name : null}
+                    <a
+                      href={`/churches/${'organization' in res.node ? res.node.organization.slug : null}`}
+                      class="before:absolute before:inset-0"
+                    >
+                      {'name' in res.node ? res.node.name : null}
+                    </a>
                   </h4>
                   <p class="mt-1">
                     {'organization' in res.node

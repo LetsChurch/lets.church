@@ -556,10 +556,14 @@ export type Organization = {
   id: Scalars['ShortUuid']['output'];
   membershipsConnection: OrganizationMembershipsConnection;
   name: Scalars['String']['output'];
+  primaryEmail?: Maybe<Scalars['String']['output']>;
+  primaryPhoneNumber?: Maybe<Scalars['String']['output']>;
+  primaryPhoneUri?: Maybe<Scalars['String']['output']>;
   slug: Scalars['String']['output'];
   tags: OrganizationTagsConnection;
   type: OrganizationType;
   updatedAt: Scalars['DateTime']['output'];
+  websiteUrl?: Maybe<Scalars['String']['output']>;
 };
 
 
@@ -784,6 +788,7 @@ export type Query = {
   me?: Maybe<AppUser>;
   mySubscriptionUploadRecords?: Maybe<QueryMySubscriptionUploadRecordsConnection>;
   organizationById: Organization;
+  organizationBySlug: Organization;
   organizationTagsConnection: QueryOrganizationTagsConnection;
   organizationsConnection: QueryOrganizationsConnection;
   search: SearchConnection;
@@ -824,6 +829,11 @@ export type QueryMySubscriptionUploadRecordsArgs = {
 
 export type QueryOrganizationByIdArgs = {
   id: Scalars['ShortUuid']['input'];
+};
+
+
+export type QueryOrganizationBySlugArgs = {
+  slug: Scalars['String']['input'];
 };
 
 
@@ -1150,6 +1160,7 @@ export type UploadRecord = {
   license: UploadLicense;
   mediaSource?: Maybe<Scalars['String']['output']>;
   myRating?: Maybe<Rating>;
+  nextInSeries?: Maybe<UploadRecord>;
   peaksDatUrl?: Maybe<Scalars['String']['output']>;
   peaksJsonUrl?: Maybe<Scalars['String']['output']>;
   playlists: UploadRecordPlaylistsConnection;

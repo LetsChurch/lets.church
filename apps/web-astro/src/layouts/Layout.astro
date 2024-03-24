@@ -7,7 +7,7 @@ import BrandLinkedInIcon from '@tabler/icons/brand-linkedin.svg?sprite';
 import BrandGithubIcon from '@tabler/icons/brand-github.svg?sprite';
 import BrandGitlabIcon from '@tabler/icons/brand-gitlab.svg?sprite';
 import { createClient } from '../util/server/gql';
-import { meQuery, type MeQuery, type MeQueryVariables } from '../queries/auth';
+import { meQuery } from '../queries/auth';
 import Profile from '../components/profile';
 import LogoIcon from '../components/icon.svg?sprite';
 import HeaderDonate from '../components/header-donate.astro';
@@ -47,7 +47,7 @@ const client = await createClient(
   Astro.cookies.get('lcSession')?.value,
 );
 
-const data = await client.request<MeQuery, MeQueryVariables>(meQuery);
+const data = await client.request(meQuery);
 ---
 
 <Root title={frontmatter?.title ?? title}>

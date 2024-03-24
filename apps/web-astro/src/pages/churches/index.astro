@@ -1,8 +1,9 @@
 ---
-import Layout from '../layouts/layout.astro';
-import ChurchSearch from '../components/church-search';
-import { createClient } from '../util/server/gql';
-import { churchesQuery, churchesPayloadSchema } from '../queries/churches';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import Layout from '../../layouts/layout.astro';
+import ChurchSearch from '../../components/church-search';
+import { createClient } from '../../util/server/gql';
+import { churchesQuery, churchesPayloadSchema } from '../../queries/churches';
 
 if (
   Astro.request.method === 'POST' &&
@@ -31,5 +32,5 @@ if (
 ---
 
 <Layout title="Find a Church" fixedHeader>
-  <ChurchSearch client:only />
+  <ChurchSearch client:only="solid-js" />
 </Layout>
