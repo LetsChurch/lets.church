@@ -486,17 +486,21 @@ export default function MediaRoute() {
       />
       <div class="md:grid md:grid-cols-3 md:gap-4">
         <div class="space-y-4 md:col-span-2">
-          <Player
-            id={params.id}
-            videoSource={metaData()?.data?.mediaSource}
-            audioSource={metaData()?.data?.audioSource}
-            peaksDatUrl={metaData()?.data?.peaksDatUrl}
-            peaksJsonUrl={metaData()?.data?.peaksJsonUrl}
-            playAt={playAt}
-            onTimeUpdate={setCurrentTime}
-            lengthSeconds={metaData()?.data?.lengthSeconds ?? 0}
-            fluid
-          />
+          <Show when={params.id} keyed>
+            {(id) => (
+              <Player
+                id={id}
+                videoSource={metaData()?.data?.mediaSource}
+                audioSource={metaData()?.data?.audioSource}
+                peaksDatUrl={metaData()?.data?.peaksDatUrl}
+                peaksJsonUrl={metaData()?.data?.peaksJsonUrl}
+                playAt={playAt}
+                onTimeUpdate={setCurrentTime}
+                lengthSeconds={metaData()?.data?.lengthSeconds ?? 0}
+                fluid
+              />
+            )}
+          </Show>
           <h1 class="truncate text-2xl">{metaData()?.data?.title ?? '...'}</h1>
           <div class="flex flex-col gap-3 lg:flex-row lg:justify-between lg:overflow-x-auto">
             <div class="flex justify-start gap-3">
