@@ -53,6 +53,28 @@ export const churchQuery = graphql(`
           }
         }
       }
+      officialChannelsConnection {
+        edges {
+          node {
+            ...ChannelProps
+          }
+        }
+      }
+      endorsedChannelsConnection {
+        edges {
+          node {
+            ...ChannelProps
+          }
+        }
+      }
+    }
+  }
+
+  fragment ChannelProps on OrganizationChannelAssociation {
+    channel {
+      slug
+      name
+      avatarUrl
     }
   }
 `);
@@ -181,112 +203,72 @@ if (data.organizationBySlug?.type !== 'CHURCH') {
       </dl>
     </div>
 
-    <!-- Channels List -->
-    <div class="mx-auto mt-8 max-w-5xl px-4 sm:px-6 lg:px-8">
-      <h2 class="text-sm font-medium text-gray-500">Official Channels</h2>
-      <div class="mt-1 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div
-          class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:border-gray-400"
-        >
-          <div class="flex-shrink-0">
-            <Avatar
-              src="https://images.unsplash.com/flagged/photo-1557896279-080cb03b9ca6?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cGFzdG9yfGVufDB8fDB8fHww"
-              size="md"
-              name="Baptist, But Not Too Baptist, Sermons"
-            />
-          </div>
-          <div class="min-w-0 flex-1">
-            <a href="#" class="focus:outline-none">
-              <span class="absolute inset-0" aria-hidden="true"></span>
-              <p class="text-sm font-medium text-gray-900">
-                Baptist, But Not Too Baptist, Sermons
-              </p>
-              <p class="truncate text-sm text-gray-500">Subtitle</p>
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="mx-auto mt-8 max-w-5xl px-4 sm:px-6 lg:px-8">
-      <h2 class="text-sm font-medium text-gray-500">Endorsed Channels</h2>
-      <div class="mt-1 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div
-          class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:border-gray-400"
-        >
-          <div class="flex-shrink-0">
-            <Avatar
-              src="https://images.unsplash.com/flagged/photo-1557896279-080cb03b9ca6?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cGFzdG9yfGVufDB8fDB8fHww"
-              size="md"
-              name="Alpha and Omega Ministries"
-            />
-          </div>
-          <div class="min-w-0 flex-1">
-            <a href="#" class="focus:outline-none">
-              <span class="absolute inset-0" aria-hidden="true"></span>
-              <p class="text-sm font-medium text-gray-900">
-                Alpha and Omega Ministries
-              </p>
-            </a>
+    <!-- Channels Lists -->
+    {
+      data.organizationBySlug.officialChannelsConnection.edges.length > 0 ? (
+        <div class="mx-auto mt-8 max-w-5xl px-4 sm:px-6 lg:px-8">
+          <h2 class="text-sm font-medium text-gray-500">Official Channels</h2>
+          <div class="mt-1 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {data.organizationBySlug.officialChannelsConnection.edges.map(
+              ({ node }) => (
+                <div class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:border-gray-400">
+                  <div class="flex-shrink-0">
+                    <Avatar
+                      src={node.channel.avatarUrl}
+                      size="md"
+                      name={node.channel.name}
+                    />
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <a
+                      href={`/channel/${node.channel.slug}`}
+                      class="focus:outline-none"
+                    >
+                      <span class="absolute inset-0" aria-hidden="true" />
+                      <p class="text-sm font-medium text-gray-900">
+                        {node.channel.name}
+                      </p>
+                    </a>
+                  </div>
+                </div>
+              ),
+            )}
           </div>
         </div>
-        <div
-          class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:border-gray-400"
-        >
-          <div class="flex-shrink-0">
-            <Avatar
-              src="https://images.unsplash.com/flagged/photo-1557896279-080cb03b9ca6?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cGFzdG9yfGVufDB8fDB8fHww"
-              size="md"
-              name="Conversations That Matter"
-            />
-          </div>
-          <div class="min-w-0 flex-1">
-            <a href="#" class="focus:outline-none">
-              <span class="absolute inset-0" aria-hidden="true"></span>
-              <p class="text-sm font-medium text-gray-900">
-                Conversations That Matter
-              </p>
-            </a>
-          </div>
-        </div>
-        <div
-          class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:border-gray-400"
-        >
-          <div class="flex-shrink-0">
-            <Avatar
-              src="https://images.unsplash.com/flagged/photo-1557896279-080cb03b9ca6?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cGFzdG9yfGVufDB8fDB8fHww"
-              size="md"
-              name="Conversations That Don't Matter"
-            />
-          </div>
-          <div class="min-w-0 flex-1">
-            <a href="#" class="focus:outline-none">
-              <span class="absolute inset-0" aria-hidden="true"></span>
-              <p class="text-sm font-medium text-gray-900">
-                Conversations That Don't Matter
-              </p>
-            </a>
+      ) : null
+    }
+    {
+      data.organizationBySlug.endorsedChannelsConnection.edges.length > 0 ? (
+        <div class="mx-auto mt-8 max-w-5xl px-4 sm:px-6 lg:px-8">
+          <h2 class="text-sm font-medium text-gray-500">Official Channels</h2>
+          <div class="mt-1 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {data.organizationBySlug.officialChannelsConnection.edges.map(
+              ({ node }) => (
+                <div class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:border-gray-400">
+                  <div class="flex-shrink-0">
+                    <Avatar
+                      src={node.channel.avatarUrl}
+                      size="md"
+                      name={node.channel.name}
+                    />
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <a
+                      href={`/channel/${node.channel.slug}`}
+                      class="focus:outline-none"
+                    >
+                      <span class="absolute inset-0" aria-hidden="true" />
+                      <p class="text-sm font-medium text-gray-900">
+                        {node.channel.name}
+                      </p>
+                    </a>
+                  </div>
+                </div>
+              ),
+            )}
           </div>
         </div>
-        <div
-          class="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:border-gray-400"
-        >
-          <div class="flex-shrink-0">
-            <Avatar
-              src="https://images.unsplash.com/flagged/photo-1557896279-080cb03b9ca6?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nnx8cGFzdG9yfGVufDB8fDB8fHww"
-              size="md"
-              name="Conversations That Kinda Matter"
-            />
-          </div>
-          <div class="min-w-0 flex-1">
-            <a href="#" class="focus:outline-none">
-              <span class="absolute inset-0" aria-hidden="true"></span>
-              <p class="text-sm font-medium text-gray-900">
-                Conversations That Kinda Matter
-              </p>
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
+      ) : null
+    }
   </article>
 </Layout>

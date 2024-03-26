@@ -106,10 +106,10 @@ const otherIds = (
   })
 ).map(({ id }) => id);
 
-const { id: lcId, associations: lcAssociations } =
+const { id: lcId, channelAssociations: lcAssociations } =
   await prisma.organization.create({
     include: {
-      associations: { include: { channel: { select: { id: true } } } },
+      channelAssociations: { include: { channel: { select: { id: true } } } },
     },
     data: {
       id: '00000000-0000-4000-8000-000000000000',
@@ -125,8 +125,9 @@ const { id: lcId, associations: lcAssociations } =
           isAdmin: true,
         },
       },
-      associations: {
+      channelAssociations: {
         create: {
+          officialChannel: true,
           channel: {
             create: {
               name: "Let's Church",
@@ -157,10 +158,10 @@ const { id: lcId, associations: lcAssociations } =
     },
   });
 
-const { id: flId, associations: flAssociations } =
+const { id: flId, channelAssociations: flAssociations } =
   await prisma.organization.create({
     include: {
-      associations: { include: { channel: { select: { id: true } } } },
+      channelAssociations: { include: { channel: { select: { id: true } } } },
     },
     data: {
       name: 'FirstLove Publications',
@@ -175,8 +176,9 @@ const { id: flId, associations: flAssociations } =
           isAdmin: true,
         },
       },
-      associations: {
+      channelAssociations: {
         create: {
+          officialChannel: true,
           channel: {
             create: {
               name: 'FirstLove Publications',
@@ -215,10 +217,10 @@ await Promise.all([
   ...flAssociations.map(({ channel }) => indexDocument('channel', channel.id)),
 ]);
 
-const { id: org01id, associations: org01Associations } =
+const { id: org01id, channelAssociations: org01Associations } =
   await prisma.organization.create({
     include: {
-      associations: { include: { channel: { select: { id: true } } } },
+      channelAssociations: { include: { channel: { select: { id: true } } } },
     },
     data: {
       name: 'Organization 1',
@@ -233,8 +235,9 @@ const { id: org01id, associations: org01Associations } =
           isAdmin: true,
         },
       },
-      associations: {
+      channelAssociations: {
         create: {
+          officialChannel: true,
           channel: {
             create: {
               name: 'Channel 1',
@@ -261,10 +264,10 @@ await Promise.all(
   org01Associations.map(({ channel }) => indexDocument('channel', channel.id)),
 );
 
-const { id: org03Id, associations: org03Associations } =
+const { id: org03Id, channelAssociations: org03Associations } =
   await prisma.organization.create({
     include: {
-      associations: { include: { channel: { select: { id: true } } } },
+      channelAssociations: { include: { channel: { select: { id: true } } } },
     },
     data: {
       name: 'Organization 3',
@@ -279,8 +282,9 @@ const { id: org03Id, associations: org03Associations } =
           isAdmin: true,
         },
       },
-      associations: {
+      channelAssociations: {
         create: {
+          officialChannel: true,
           channel: {
             create: {
               name: 'Channel 3',
@@ -318,6 +322,7 @@ const org04 = await prisma.organization.create({
   data: {
     name: 'Baptist, But Not Too Baptist, Community Church',
     slug: 'baptist-la',
+    description: 'We are a church that is baptist, but not too baptist.',
     type: 'CHURCH',
     tags: {
       createMany: {
@@ -349,7 +354,17 @@ const org04 = await prisma.organization.create({
         geocodingJson: baptistLa,
       },
     },
-    description: 'We are a church that is baptist, but not too baptist.',
+    channelAssociations: {
+      create: {
+        officialChannel: true,
+        channel: {
+          create: {
+            name: 'Baptist, But Not Too Baptist, Sermons',
+            slug: 'baptist-la',
+          },
+        },
+      },
+    },
     memberships: {
       create: {
         appUser: {
@@ -376,6 +391,7 @@ const org05 = await prisma.organization.create({
   data: {
     name: 'Desert Debaters Society',
     slug: 'desert-debaters',
+    description: 'We are a church that is all about debating in the desert.',
     type: 'CHURCH',
     tags: {
       createMany: {
@@ -410,7 +426,17 @@ const org05 = await prisma.organization.create({
         geocodingJson: desertDebaters,
       },
     },
-    description: 'We are a church that is all about debating in the desert.',
+    channelAssociations: {
+      create: {
+        officialChannel: true,
+        channel: {
+          create: {
+            name: 'Desert Debates',
+            slug: 'desert-debates',
+          },
+        },
+      },
+    },
     memberships: {
       create: {
         appUser: {
@@ -437,6 +463,7 @@ const org06 = await prisma.organization.create({
   data: {
     name: 'Moss Cows',
     slug: 'moss-cows',
+    description: 'We are a church that is all about moss and all about cows.',
     type: 'CHURCH',
     tags: {
       createMany: {
@@ -471,7 +498,17 @@ const org06 = await prisma.organization.create({
         geocodingJson: desertDebaters,
       },
     },
-    description: 'We are a church that is all about moss and all about cows.',
+    channelAssociations: {
+      create: {
+        officialChannel: true,
+        channel: {
+          create: {
+            name: 'Paint Dries, Moss Cows',
+            slug: 'pdmc',
+          },
+        },
+      },
+    },
     memberships: {
       create: {
         appUser: {
@@ -498,6 +535,8 @@ const org07 = await prisma.organization.create({
   data: {
     name: 'Gopher Wood Gospel Hall',
     slug: 'gwgh',
+    description:
+      'We are a church that is all about large structures made of gopher wood.',
     type: 'CHURCH',
     tags: {
       createMany: {
@@ -526,8 +565,17 @@ const org07 = await prisma.organization.create({
         geocodingJson: gwgh,
       },
     },
-    description:
-      'We are a church that is all about large structures made of gopher wood.',
+    channelAssociations: {
+      create: {
+        officialChannel: true,
+        channel: {
+          create: {
+            name: '40 Days',
+            slug: '40days',
+          },
+        },
+      },
+    },
     memberships: {
       create: {
         appUser: {
@@ -554,6 +602,8 @@ const org08 = await prisma.organization.create({
   data: {
     name: 'Bananarama Bible Church',
     slug: 'banana',
+    description:
+      'We are a church that is all about bananas and all about the Bible.',
     type: 'CHURCH',
     tags: {
       createMany: {
@@ -582,8 +632,17 @@ const org08 = await prisma.organization.create({
         geocodingJson: bananarama,
       },
     },
-    description:
-      'We are a church that is all about bananas and all about the Bible.',
+    channelAssociations: {
+      create: {
+        officialChannel: true,
+        channel: {
+          create: {
+            name: 'Potassium Carb Sticks',
+            slug: 'pc-sticks',
+          },
+        },
+      },
+    },
     memberships: {
       create: {
         appUser: {
@@ -610,6 +669,7 @@ const org09 = await prisma.organization.create({
   data: {
     name: "Cotton's Finger Lutheran Church",
     slug: 'cotton',
+    description: 'We are a church that is all about baumwollfinger.',
     type: 'CHURCH',
     tags: {
       createMany: {
@@ -644,7 +704,17 @@ const org09 = await prisma.organization.create({
         geocodingJson: cotton,
       },
     },
-    description: 'We are a church that is all about baumwollfinger.',
+    channelAssociations: {
+      create: {
+        officialChannel: true,
+        channel: {
+          create: {
+            name: 'T-Shirts and Theology',
+            slug: 't-shirts-and-theology',
+          },
+        },
+      },
+    },
     memberships: {
       create: {
         appUser: {
@@ -670,6 +740,8 @@ await indexDocument('organization', org09.id);
 const org10 = await prisma.organization.create({
   data: {
     name: 'Harbor Faith Tabernacle',
+    description:
+      'We are a church that is all about harbors and #superiortheology.',
     slug: 'harbor',
     type: 'CHURCH',
     tags: {
@@ -705,8 +777,17 @@ const org10 = await prisma.organization.create({
         geocodingJson: harbor,
       },
     },
-    description:
-      'We are a church that is all about harbors and #superiortheology.',
+    channelAssociations: {
+      create: {
+        officialChannel: true,
+        channel: {
+          create: {
+            name: 'Harbor Faith Tabernacle Sermons',
+            slug: 'harbor-faith',
+          },
+        },
+      },
+    },
     memberships: {
       create: {
         appUser: {
@@ -733,6 +814,8 @@ const org11 = await prisma.organization.create({
   data: {
     name: 'Mariners Metanoia Manor',
     slug: 'mariners',
+    description:
+      'We are a church that is all about ships that change direction.',
     type: 'CHURCH',
     tags: {
       createMany: {
@@ -767,8 +850,17 @@ const org11 = await prisma.organization.create({
         geocodingJson: mariners,
       },
     },
-    description:
-      'We are a church that is all about ships that change direction.',
+    channelAssociations: {
+      create: {
+        officialChannel: true,
+        channel: {
+          create: {
+            name: 'About Face',
+            slug: 'about-face',
+          },
+        },
+      },
+    },
     memberships: {
       create: {
         appUser: {
@@ -794,6 +886,8 @@ await indexDocument('organization', org11.id);
 const org12 = await prisma.organization.create({
   data: {
     name: "Prosperity's Pitfall Pavilion",
+    description:
+      'We are a church where you will learn about the pitfalls of the prosperity gospel, which is not a gospel.',
     slug: 'ppp',
     type: 'CHURCH',
     tags: {
@@ -826,8 +920,17 @@ const org12 = await prisma.organization.create({
         geocodingJson: ppp,
       },
     },
-    description:
-      'We are a church where you will learn about the pitfalls of the prosperity gospel, which is not a gospel.',
+    channelAssociations: {
+      create: {
+        officialChannel: true,
+        channel: {
+          create: {
+            name: 'Kootny',
+            slug: 'kootny',
+          },
+        },
+      },
+    },
     memberships: {
       create: {
         appUser: {
@@ -854,6 +957,7 @@ const org13 = await prisma.organization.create({
   data: {
     name: 'Screwtape Sanctuary',
     slug: 'screwtape',
+    description: 'We like C.S. Lewis.',
     type: 'CHURCH',
     tags: {
       createMany: {
@@ -888,7 +992,17 @@ const org13 = await prisma.organization.create({
         geocodingJson: screwtape,
       },
     },
-    description: 'We like C.S. Lewis.',
+    channelAssociations: {
+      create: {
+        officialChannel: true,
+        channel: {
+          create: {
+            name: 'Screwtape Sermons',
+            slug: 'screwtape',
+          },
+        },
+      },
+    },
     memberships: {
       create: {
         appUser: {
@@ -915,6 +1029,7 @@ const org14 = await prisma.organization.create({
   data: {
     name: 'Solas Sanctuary',
     slug: 'solas',
+    description: 'We are a church that is all about the five solas.',
     type: 'CHURCH',
     tags: {
       createMany: {
@@ -946,7 +1061,17 @@ const org14 = await prisma.organization.create({
         geocodingJson: solas,
       },
     },
-    description: 'We are a church that is all about the five solas.',
+    channelAssociations: {
+      create: {
+        officialChannel: true,
+        channel: {
+          create: {
+            name: 'Grace Sermons',
+            slug: 'grace',
+          },
+        },
+      },
+    },
     memberships: {
       create: {
         appUser: {
@@ -973,6 +1098,8 @@ const org15 = await prisma.organization.create({
   data: {
     name: 'Sovereign Joy Sanctuary',
     slug: 'sovereign-joy',
+    description:
+      'We are a church that is all about the sovereignty of God and the joy of the saints.',
     type: 'CHURCH',
     tags: {
       createMany: {
@@ -1001,8 +1128,17 @@ const org15 = await prisma.organization.create({
         geocodingJson: sovereignJoy,
       },
     },
-    description:
-      'We are a church that is all about the sovereignty of God and the joy of the saints.',
+    channelAssociations: {
+      create: {
+        officialChannel: true,
+        channel: {
+          create: {
+            name: 'Happy Sermons',
+            slug: 'happy',
+          },
+        },
+      },
+    },
     memberships: {
       create: {
         appUser: {
@@ -1029,6 +1165,8 @@ const org16 = await prisma.organization.create({
   data: {
     name: 'Clapback Chapel',
     slug: 'clapback',
+    description:
+      'We are a church that is all about clapping back at the world.',
     type: 'CHURCH',
     tags: {
       createMany: {
@@ -1057,8 +1195,17 @@ const org16 = await prisma.organization.create({
         geocodingJson: clapback,
       },
     },
-    description:
-      'We are a church that is all about clapping back at the world.',
+    channelAssociations: {
+      create: {
+        officialChannel: true,
+        channel: {
+          create: {
+            name: 'Clapback Sermons',
+            slug: 'clapback',
+          },
+        },
+      },
+    },
     memberships: {
       create: {
         appUser: {
@@ -1099,6 +1246,7 @@ for (let i = 0; i < 25; i += 1) {
     data: {
       name,
       slug: slugify(name),
+      description: faker.lorem.paragraph(),
       type: 'CHURCH',
       tags: {
         createMany: {
@@ -1122,7 +1270,17 @@ for (let i = 0; i < 25; i += 1) {
           }),
         },
       },
-      description: faker.lorem.paragraph(),
+      channelAssociations: {
+        create: {
+          officialChannel: true,
+          channel: {
+            create: {
+              name: faker.internet.domainWord(),
+              slug: faker.internet.domainWord(),
+            },
+          },
+        },
+      },
       memberships: {
         create: {
           appUser: {

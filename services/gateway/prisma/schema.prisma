@@ -166,7 +166,7 @@ model Organization {
   addresses                          OrganizationAddress[]
   description                        String?
   memberships                        OrganizationMembership[]
-  associations                       OrganizationChannelAssociation[]
+  channelAssociations                OrganizationChannelAssociation[]
   tags                               OrganizationTagInstance[]
   createdAt                          DateTime                              @default(now()) @map("created_at")
   updatedAt                          DateTime                              @updatedAt @map("updated_at")
@@ -234,12 +234,13 @@ model OrganizationOrganizationAssociation {
 }
 
 model OrganizationChannelAssociation {
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  organizationId String       @map("organization_id") @db.Uuid
-  channel        Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  channelId      String       @map("channel_id") @db.Uuid
-  createdAt      DateTime     @default(now()) @map("created_at")
-  updatedAt      DateTime     @updatedAt @map("updated_at")
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId  String       @map("organization_id") @db.Uuid
+  channel         Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channelId       String       @map("channel_id") @db.Uuid
+  officialChannel Boolean      @default(false)
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
 
   @@id([organizationId, channelId])
   @@map("organization_channel_association")
@@ -262,7 +263,7 @@ model Channel {
   slug                     String                           @unique @db.Citext
   description              String?
   memberships              ChannelMembership[]
-  associations             OrganizationChannelAssociation[]
+  organizationAssociations OrganizationChannelAssociation[]
   createdAt                DateTime                         @default(now()) @map("created_at")
   updatedAt                DateTime                         @updatedAt @map("updated_at")
   uploadRecords            UploadRecord[]

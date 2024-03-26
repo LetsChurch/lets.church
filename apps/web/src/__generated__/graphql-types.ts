@@ -550,12 +550,15 @@ export enum Order {
 export type Organization = {
   __typename?: 'Organization';
   addresses: OrganizationAddressesConnection;
-  associationsConnection: OrganizationAssociationsConnection;
+  avatarUrl?: Maybe<Scalars['String']['output']>;
+  coverUrl?: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['DateTime']['output'];
   description?: Maybe<Scalars['String']['output']>;
+  endorsedChannelsConnection: OrganizationEndorsedChannelsConnection;
   id: Scalars['ShortUuid']['output'];
   membershipsConnection: OrganizationMembershipsConnection;
   name: Scalars['String']['output'];
+  officialChannelsConnection: OrganizationOfficialChannelsConnection;
   primaryEmail?: Maybe<Scalars['String']['output']>;
   primaryPhoneNumber?: Maybe<Scalars['String']['output']>;
   primaryPhoneUri?: Maybe<Scalars['String']['output']>;
@@ -576,7 +579,7 @@ export type OrganizationAddressesArgs = {
 };
 
 
-export type OrganizationAssociationsConnectionArgs = {
+export type OrganizationEndorsedChannelsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
@@ -585,6 +588,14 @@ export type OrganizationAssociationsConnectionArgs = {
 
 
 export type OrganizationMembershipsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type OrganizationOfficialChannelsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
@@ -632,22 +643,22 @@ export type OrganizationAddressesConnectionEdge = {
   node: OrganizationAddress;
 };
 
-export type OrganizationAssociationsConnection = {
-  __typename?: 'OrganizationAssociationsConnection';
-  edges: Array<OrganizationAssociationsConnectionEdge>;
-  pageInfo: PageInfo;
-};
-
-export type OrganizationAssociationsConnectionEdge = {
-  __typename?: 'OrganizationAssociationsConnectionEdge';
-  cursor: Scalars['String']['output'];
-  node: OrganizationChannelAssociation;
-};
-
 export type OrganizationChannelAssociation = {
   __typename?: 'OrganizationChannelAssociation';
   channel: Channel;
   organization: Organization;
+};
+
+export type OrganizationEndorsedChannelsConnection = {
+  __typename?: 'OrganizationEndorsedChannelsConnection';
+  edges: Array<OrganizationEndorsedChannelsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type OrganizationEndorsedChannelsConnectionEdge = {
+  __typename?: 'OrganizationEndorsedChannelsConnectionEdge';
+  cursor: Scalars['String']['output'];
+  node: OrganizationChannelAssociation;
 };
 
 export type OrganizationMembership = {
@@ -667,6 +678,18 @@ export type OrganizationMembershipsConnectionEdge = {
   __typename?: 'OrganizationMembershipsConnectionEdge';
   cursor: Scalars['String']['output'];
   node: OrganizationMembership;
+};
+
+export type OrganizationOfficialChannelsConnection = {
+  __typename?: 'OrganizationOfficialChannelsConnection';
+  edges: Array<OrganizationOfficialChannelsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type OrganizationOfficialChannelsConnectionEdge = {
+  __typename?: 'OrganizationOfficialChannelsConnectionEdge';
+  cursor: Scalars['String']['output'];
+  node: OrganizationChannelAssociation;
 };
 
 export type OrganizationSearchHit = ISearchHit & {

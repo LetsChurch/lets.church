@@ -130,8 +130,13 @@ const Organization = builder.prismaObject('Organization', {
     membershipsConnection: t.relatedConnection('memberships', {
       cursor: 'organizationId_appUserId',
     }),
-    associationsConnection: t.relatedConnection('associations', {
+    officialChannelsConnection: t.relatedConnection('channelAssociations', {
       cursor: 'organizationId_channelId',
+      query: { where: { officialChannel: true } },
+    }),
+    endorsedChannelsConnection: t.relatedConnection('channelAssociations', {
+      cursor: 'organizationId_channelId',
+      query: { where: { officialChannel: false } },
     }),
     createdAt: t.field({
       type: 'DateTime',
