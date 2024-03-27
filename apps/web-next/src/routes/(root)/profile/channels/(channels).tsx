@@ -34,12 +34,14 @@ const loadChannels = cache(async () => {
   `);
 }, 'profileLoadChannels');
 
-export const route: RouteDefinition = {
-  load: () => loadChannels(),
-};
+export const route = {
+  load: () => {
+    void loadChannels();
+  },
+} satisfies RouteDefinition;
 
 export default function ProfileChannelsRoute() {
-  const data = createAsync(loadChannels);
+  const data = createAsync(() => loadChannels());
 
   return (
     <>

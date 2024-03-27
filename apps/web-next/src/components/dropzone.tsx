@@ -1,4 +1,4 @@
-import DragDropIcon from '@tabler/icons/drag-drop.svg?component-solid';
+import DragDropIcon from '@tabler/icons/outline/drag-drop.svg?component-solid';
 import { type Accessor, createSignal, createUniqueId, Show } from 'solid-js';
 import invariant from 'tiny-invariant';
 

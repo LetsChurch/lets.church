@@ -1,9 +1,9 @@
 import { createSignal, Show, For, createEffect, onMount } from 'solid-js';
 import { getRequestEvent, isServer } from 'solid-js/web';
 import { useFloating } from 'solid-floating-ui';
-import SubscribeIcon from '@tabler/icons/rss.svg?component-solid';
-import DownloadIcon from '@tabler/icons/cloud-download.svg?component-solid';
-import ShareIcon from '@tabler/icons/share-2.svg?component-solid';
+import SubscribeIcon from '@tabler/icons/outline/rss.svg?component-solid';
+import DownloadIcon from '@tabler/icons/outline/cloud-download.svg?component-solid';
+import ShareIcon from '@tabler/icons/outline/share-2.svg?component-solid';
 import invariant from 'tiny-invariant';
 import humanFormat from 'human-format';
 import pluralize from 'pluralize';
@@ -206,13 +206,13 @@ const loadMediaMetadata = cache(async (id: string) => {
   return data;
 }, 'media-meta');
 
-export const route: RouteDefinition = {
+export const route = {
   load: ({ params }) => {
     const id = params['id'];
     invariant(id, 'Missing id');
-    return loadMediaMetadata(id);
+    void loadMediaMetadata(id);
   },
-};
+} satisfies RouteDefinition;
 
 function getStartAt() {
   if (isServer) {

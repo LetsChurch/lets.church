@@ -66,9 +66,11 @@ const loadData = cache(async () => {
   `);
 }, 'profile');
 
-export const route: RouteDefinition = {
-  load: () => loadData(),
-};
+export const route = {
+  load: () => {
+    void loadData();
+  },
+} satisfies RouteDefinition;
 
 const createAvatarUpload = async (
   variables: CreateAvatarUploadMutationVariables,
@@ -169,7 +171,7 @@ const submitProfile = action(async (form: FormData) => {
 });
 
 export default function ProfileRoute() {
-  const data = createAsync(loadData);
+  const data = createAsync(() => loadData());
   const [avatarProcessing, setAvatarProcessing] = createSignal(false);
 
   async function handleAvatarInput(e: InputEvent) {

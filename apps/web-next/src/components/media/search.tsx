@@ -1,7 +1,7 @@
 import { createEffect, createUniqueId, untrack } from 'solid-js';
 import debounce from 'just-debounce';
 import { useLocation, useMatch, useNavigate, useParams } from '@solidjs/router';
-import SearchIcon from '@tabler/icons/search.svg?component-solid';
+import SearchIcon from '@tabler/icons/outline/search.svg?component-solid';
 import { autofocus } from '@solid-primitives/autofocus';
 
 export default function Search() {

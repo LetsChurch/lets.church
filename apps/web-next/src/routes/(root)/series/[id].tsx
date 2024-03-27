@@ -47,13 +47,13 @@ const loadData = cache(async function (id: string) {
   );
 }, 'series');
 
-export const route: RouteDefinition = {
+export const route = {
   load: ({ params }) => {
     const { id } = params;
     invariant(id, 'No id provided to series route');
-    return loadData(id);
+    void loadData(id);
   },
-};
+} satisfies RouteDefinition;
 
 export default function SeriesRoute() {
   const params = useParams<{ id: string }>();

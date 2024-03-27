@@ -4,6 +4,9 @@ extends:
   - 'plugin:@typescript-eslint/recommended'
   - 'plugin:solid/typescript'
 parser: '@typescript-eslint/parser'
+env:
+  node: true
+  browser: true
 plugins:
   - solid
 settings:

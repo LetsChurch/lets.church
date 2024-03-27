@@ -26,7 +26,7 @@ const loadMetaData = cache(async () => {
 }, 'adminRoot');
 
 export default function AdminRoute() {
-  const metaData = createAsync(loadMetaData);
+  const metaData = createAsync(() => loadMetaData());
 
   return (
     <div>

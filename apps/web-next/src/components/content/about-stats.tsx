@@ -27,7 +27,7 @@ const getData = cache(async () => {
 }, 'about-stats');
 
 export default function AboutStats() {
-  const data = createAsync(getData);
+  const data = createAsync(() => getData());
 
   return (
     <>

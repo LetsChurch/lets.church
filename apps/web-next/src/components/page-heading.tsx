@@ -1,5 +1,5 @@
 import { A } from '@solidjs/router';
-import ChevronLeft from '@tabler/icons/chevron-left.svg?component-solid';
+import ChevronLeft from '@tabler/icons/outline/chevron-left.svg?component-solid';
 import { For, mergeProps, Show } from 'solid-js';
 
 export type Props = {

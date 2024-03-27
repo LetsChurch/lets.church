@@ -74,12 +74,12 @@ const loadUsers = cache(async () => {
   return res;
 }, 'adminUsers');
 
-export const route: RouteDefinition = {
+export const route = {
   load: () => loadUsers(),
-};
+} satisfies RouteDefinition;
 
 export default function AdminUsersRoute() {
-  const data = createAsync(loadUsers);
+  const data = createAsync(() => loadUsers());
 
   return (
     <div>

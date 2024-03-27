@@ -27,7 +27,7 @@ const UpsertChannelSchema = z.object({
   description: z.string().nullable(),
 });
 
-const loadChannel = cache(async (id: string | null = null) => {
+const loadChannel = cache(async (id: string | null) => {
   'use server';
   const client = await getAdminClientOrRedirect();
 
@@ -54,9 +54,11 @@ const loadChannel = cache(async (id: string | null = null) => {
   return res;
 }, 'adminLoadChannel');
 
-export const route: RouteDefinition = {
-  load: ({ location }) => loadChannel(location.query['id']),
-};
+export const route = {
+  load: ({ location }) => {
+    void loadChannel(location.query['id'] ?? null);
+  },
+} satisfies RouteDefinition;
 
 const upsertChannel = action(async (form: FormData) => {
   'use server';
@@ -97,7 +99,7 @@ const upsertChannel = action(async (form: FormData) => {
 
 export default function AdminChannelsEditRoute() {
   const location = useLocation();
-  const data = createAsync(() => loadChannel(location.query['id']));
+  const data = createAsync(() => loadChannel(location.query['id'] ?? null));
   const submission = useSubmission(upsertChannel);
 
   return (

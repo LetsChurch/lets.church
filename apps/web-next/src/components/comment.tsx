@@ -1,7 +1,7 @@
 import { createSignal, For, type JSX, Show, onMount, untrack } from 'solid-js';
-import MessagePlusIcon from '@tabler/icons/message-plus.svg?component-solid';
-import ThumbUpIcon from '@tabler/icons/thumb-up.svg?component-solid';
-import ThumbDownIcon from '@tabler/icons/thumb-down.svg?component-solid';
+import MessagePlusIcon from '@tabler/icons/outline/message-plus.svg?component-solid';
+import ThumbUpIcon from '@tabler/icons/outline/thumb-up.svg?component-solid';
+import ThumbDownIcon from '@tabler/icons/outline/thumb-down.svg?component-solid';
 import { type Action } from '@solidjs/router';
 import { Button } from './form';
 import { Avatar } from './avatar';

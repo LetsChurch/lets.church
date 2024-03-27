@@ -2,7 +2,7 @@ import { Show } from 'solid-js';
 import { gql } from 'graphql-request';
 import { A, cache, createAsync } from '@solidjs/router';
 import { Link } from '@solidjs/meta';
-import SubscribeIcon from '@tabler/icons/rss.svg?component-solid';
+import SubscribeIcon from '@tabler/icons/outline/rss.svg?component-solid';
 import type {
   HomepageDataQuery,
   HomepageDataQueryVariables,
@@ -76,7 +76,7 @@ function SeeMoreLink(props: { to: 'subscriptions' | 'trending' }) {
 }
 
 export default function WatchRoute() {
-  const data = createAsync(getHomepageData);
+  const data = createAsync(() => getHomepageData());
   const user = useUser();
 
   return (

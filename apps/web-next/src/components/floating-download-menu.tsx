@@ -1,9 +1,9 @@
-import Badge4kIcon from '@tabler/icons/badge-4k.svg?component-solid';
-import BadgeHdIcon from '@tabler/icons/badge-hd.svg?component-solid';
-import VolumeIcon from '@tabler/icons/volume.svg?component-solid';
-import DeviceTvOldIcon from '@tabler/icons/device-tv-old.svg?component-solid';
-import BadgeCcIcon from '@tabler/icons/badge-cc.svg?component-solid';
-import ArticleIcon from '@tabler/icons/article.svg?component-solid';
+import Badge4kIcon from '@tabler/icons/outline/badge-4k.svg?component-solid';
+import BadgeHdIcon from '@tabler/icons/outline/badge-hd.svg?component-solid';
+import VolumeIcon from '@tabler/icons/outline/volume.svg?component-solid';
+import DeviceTvOldIcon from '@tabler/icons/outline/device-tv-old.svg?component-solid';
+import BadgeCcIcon from '@tabler/icons/outline/badge-cc.svg?component-solid';
+import ArticleIcon from '@tabler/icons/outline/article.svg?component-solid';
 import { For, Match, splitProps, Switch } from 'solid-js';
 import { A } from '@solidjs/router';
 import FloatingDiv, { type Props as FloatingDivProps } from './floating-div';

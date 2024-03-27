@@ -1,5 +1,5 @@
-import ProfileIcon from '@tabler/icons/user-circle.svg?component-solid';
-import AntennaIcon from '@tabler/icons/antenna.svg?component-solid';
+import ProfileIcon from '@tabler/icons/outline/user-circle.svg?component-solid';
+import AntennaIcon from '@tabler/icons/outline/antenna.svg?component-solid';
 import { ParentProps } from 'solid-js';
 import Sidenav from '~/components/sidenav';
 

@@ -1,6 +1,6 @@
-import FacebookIcon from '@tabler/icons/brand-facebook.svg?component-solid';
-import XIcon from '@tabler/icons/brand-x.svg?component-solid';
-import CopyIcon from '@tabler/icons/copy.svg?component-solid';
+import FacebookIcon from '@tabler/icons/outline/brand-facebook.svg?component-solid';
+import XIcon from '@tabler/icons/outline/brand-x.svg?component-solid';
+import CopyIcon from '@tabler/icons/outline/copy.svg?component-solid';
 import { splitProps } from 'solid-js';
 import type { SetRequired } from 'type-fest';
 import copy from 'copy-text-to-clipboard';

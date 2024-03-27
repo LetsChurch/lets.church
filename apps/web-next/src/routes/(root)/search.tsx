@@ -9,8 +9,8 @@ import {
   createUniqueId,
 } from 'solid-js';
 import '@fontsource-variable/roboto-mono';
-import ChevronDownIcon from '@tabler/icons/chevron-down.svg?component-solid';
-import FilterIcon from '@tabler/icons/filter.svg?component-solid';
+import ChevronDownIcon from '@tabler/icons/outline/chevron-down.svg?component-solid';
+import FilterIcon from '@tabler/icons/outline/filter.svg?component-solid';
 import { useFloating } from 'solid-floating-ui';
 import { gql } from 'graphql-request';
 import {
@@ -184,9 +184,11 @@ function getRouteArgs(location: Location) {
   ] as const;
 }
 
-export const route: RouteDefinition = {
-  load: ({ location }) => loadData(...getRouteArgs(location)),
-};
+export const route = {
+  load: ({ location }) => {
+    void loadData(...getRouteArgs(location));
+  },
+} satisfies RouteDefinition;
 
 function SearchTranscriptHitRow(
   props: Omit<MediaRowProps, 'children'> & {

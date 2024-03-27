@@ -83,12 +83,14 @@ const loadChannel = cache(async function () {
   return channelById;
 }, 'loadProfile');
 
-export const route: RouteDefinition = {
-  load: () => loadChannel(),
-};
+export const route = {
+  load: () => {
+    void loadChannel();
+  },
+} satisfies RouteDefinition;
 
 export default function ProfileChannelRoute() {
-  const data = createAsync(loadChannel);
+  const data = createAsync(() => loadChannel());
 
   return (
     <>

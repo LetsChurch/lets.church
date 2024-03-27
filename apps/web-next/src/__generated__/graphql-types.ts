@@ -150,6 +150,7 @@ export type Channel = {
   updatedAt: Scalars['DateTime']['output'];
   uploadsConnection: ChannelUploadsConnection;
   userIsSubscribed: Scalars['Boolean']['output'];
+  visibility: ChannelVisibility;
 };
 
 
@@ -250,31 +251,21 @@ export type ChannelUploadsConnectionEdge = {
   node: UploadRecord;
 };
 
+export enum ChannelVisibility {
+  Private = 'PRIVATE',
+  Public = 'PUBLIC',
+  Unlisted = 'UNLISTED'
+}
+
 export type DataError = {
   __typename?: 'DataError';
   error: PrismaRuntimeError;
 };
 
-export type GeocodeResult = {
-  __typename?: 'GeocodeResult';
-  administrativeArea?: Maybe<Scalars['String']['output']>;
-  confidence: Scalars['Float']['output'];
-  continent?: Maybe<Scalars['String']['output']>;
-  country?: Maybe<Scalars['String']['output']>;
-  countryCode?: Maybe<Scalars['String']['output']>;
-  county?: Maybe<Scalars['String']['output']>;
-  label: Scalars['String']['output'];
-  latitude: Scalars['Float']['output'];
-  locality?: Maybe<Scalars['String']['output']>;
-  longitude: Scalars['Float']['output'];
-  name: Scalars['String']['output'];
-  neighborhood?: Maybe<Scalars['String']['output']>;
-  number?: Maybe<Scalars['String']['output']>;
-  postalCode?: Maybe<Scalars['String']['output']>;
-  region?: Maybe<Scalars['String']['output']>;
-  regionCode?: Maybe<Scalars['String']['output']>;
-  street?: Maybe<Scalars['String']['output']>;
-  type: Scalars['String']['output'];
+export type GeoInput = {
+  lat: Scalars['Float']['input'];
+  lon: Scalars['Float']['input'];
+  range: Scalars['String']['input'];
 };
 
 export type HighlightedText = {
@@ -299,7 +290,6 @@ export enum MediaDownloadKind {
   TranscriptTxt = 'TRANSCRIPT_TXT',
   TranscriptVtt = 'TRANSCRIPT_VTT',
   Video_4K = 'VIDEO_4K',
-  Video_360P = 'VIDEO_360P',
   Video_480P = 'VIDEO_480P',
   Video_720P = 'VIDEO_720P',
   Video_1080P = 'VIDEO_1080P'
@@ -480,7 +470,6 @@ export type MutationUpsertChannelMembershipArgs = {
 
 
 export type MutationUpsertOrganizationArgs = {
-  addressJwt?: InputMaybe<Scalars['Jwt']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   organizationId?: InputMaybe<Scalars['ShortUuid']['input']>;
@@ -560,19 +549,37 @@ export enum Order {
 
 export type Organization = {
   __typename?: 'Organization';
-  associationsConnection: OrganizationAssociationsConnection;
+  addresses: OrganizationAddressesConnection;
+  avatarUrl?: Maybe<Scalars['String']['output']>;
+  coverUrl?: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['DateTime']['output'];
   description?: Maybe<Scalars['String']['output']>;
+  endorsedChannelsConnection: OrganizationEndorsedChannelsConnection;
   id: Scalars['ShortUuid']['output'];
   membershipsConnection: OrganizationMembershipsConnection;
   name: Scalars['String']['output'];
+  officialChannelsConnection: OrganizationOfficialChannelsConnection;
+  primaryEmail?: Maybe<Scalars['String']['output']>;
+  primaryPhoneNumber?: Maybe<Scalars['String']['output']>;
+  primaryPhoneUri?: Maybe<Scalars['String']['output']>;
   slug: Scalars['String']['output'];
+  tags: OrganizationTagsConnection;
   type: OrganizationType;
   updatedAt: Scalars['DateTime']['output'];
+  websiteUrl?: Maybe<Scalars['String']['output']>;
 };
 
 
-export type OrganizationAssociationsConnectionArgs = {
+export type OrganizationAddressesArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  type?: InputMaybe<OrganizationAddressType>;
+};
+
+
+export type OrganizationEndorsedChannelsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
@@ -587,22 +594,71 @@ export type OrganizationMembershipsConnectionArgs = {
   last?: InputMaybe<Scalars['Int']['input']>;
 };
 
-export type OrganizationAssociationsConnection = {
-  __typename?: 'OrganizationAssociationsConnection';
-  edges: Array<OrganizationAssociationsConnectionEdge>;
+
+export type OrganizationOfficialChannelsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type OrganizationTagsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type OrganizationAddress = {
+  __typename?: 'OrganizationAddress';
+  country?: Maybe<Scalars['String']['output']>;
+  latitude?: Maybe<Scalars['Float']['output']>;
+  locality?: Maybe<Scalars['String']['output']>;
+  longitude?: Maybe<Scalars['Float']['output']>;
+  name?: Maybe<Scalars['String']['output']>;
+  postOfficeBoxNumber?: Maybe<Scalars['String']['output']>;
+  postalCode?: Maybe<Scalars['String']['output']>;
+  region?: Maybe<Scalars['String']['output']>;
+  streetAddress?: Maybe<Scalars['String']['output']>;
+  type: OrganizationAddressType;
+};
+
+export enum OrganizationAddressType {
+  Mailing = 'MAILING',
+  Meeting = 'MEETING',
+  Office = 'OFFICE',
+  Other = 'OTHER'
+}
+
+export type OrganizationAddressesConnection = {
+  __typename?: 'OrganizationAddressesConnection';
+  edges: Array<OrganizationAddressesConnectionEdge>;
   pageInfo: PageInfo;
 };
 
-export type OrganizationAssociationsConnectionEdge = {
-  __typename?: 'OrganizationAssociationsConnectionEdge';
+export type OrganizationAddressesConnectionEdge = {
+  __typename?: 'OrganizationAddressesConnectionEdge';
   cursor: Scalars['String']['output'];
-  node: OrganizationChannelAssociation;
+  node: OrganizationAddress;
 };
 
 export type OrganizationChannelAssociation = {
   __typename?: 'OrganizationChannelAssociation';
   channel: Channel;
   organization: Organization;
+};
+
+export type OrganizationEndorsedChannelsConnection = {
+  __typename?: 'OrganizationEndorsedChannelsConnection';
+  edges: Array<OrganizationEndorsedChannelsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type OrganizationEndorsedChannelsConnectionEdge = {
+  __typename?: 'OrganizationEndorsedChannelsConnectionEdge';
+  cursor: Scalars['String']['output'];
+  node: OrganizationChannelAssociation;
 };
 
 export type OrganizationMembership = {
@@ -624,11 +680,109 @@ export type OrganizationMembershipsConnectionEdge = {
   node: OrganizationMembership;
 };
 
+export type OrganizationOfficialChannelsConnection = {
+  __typename?: 'OrganizationOfficialChannelsConnection';
+  edges: Array<OrganizationOfficialChannelsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type OrganizationOfficialChannelsConnectionEdge = {
+  __typename?: 'OrganizationOfficialChannelsConnectionEdge';
+  cursor: Scalars['String']['output'];
+  node: OrganizationChannelAssociation;
+};
+
 export type OrganizationSearchHit = ISearchHit & {
   __typename?: 'OrganizationSearchHit';
   id: Scalars['ShortUuid']['output'];
   name: Scalars['String']['output'];
   organization: Organization;
+};
+
+export type OrganizationTag = {
+  __typename?: 'OrganizationTag';
+  category: OrganizationTagCategory;
+  color: TagColor;
+  description?: Maybe<Scalars['String']['output']>;
+  label: Scalars['String']['output'];
+  moreInfoLink?: Maybe<Scalars['String']['output']>;
+  organizations: OrganizationTagOrganizationsConnection;
+  slug: Scalars['String']['output'];
+  suggests: OrganizationTagSuggestsConnection;
+};
+
+
+export type OrganizationTagOrganizationsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type OrganizationTagSuggestsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export enum OrganizationTagCategory {
+  Confession = 'CONFESSION',
+  Denomination = 'DENOMINATION',
+  Doctrine = 'DOCTRINE',
+  Eschatology = 'ESCHATOLOGY',
+  Government = 'GOVERNMENT',
+  Other = 'OTHER',
+  Worship = 'WORSHIP'
+}
+
+export type OrganizationTagInstance = {
+  __typename?: 'OrganizationTagInstance';
+  organization: Organization;
+  tag: OrganizationTag;
+};
+
+export type OrganizationTagOrganizationsConnection = {
+  __typename?: 'OrganizationTagOrganizationsConnection';
+  edges: Array<OrganizationTagOrganizationsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type OrganizationTagOrganizationsConnectionEdge = {
+  __typename?: 'OrganizationTagOrganizationsConnectionEdge';
+  cursor: Scalars['String']['output'];
+  node: OrganizationTagInstance;
+};
+
+export type OrganizationTagSuggestion = {
+  __typename?: 'OrganizationTagSuggestion';
+  parent: OrganizationTag;
+  suggested: OrganizationTag;
+};
+
+export type OrganizationTagSuggestsConnection = {
+  __typename?: 'OrganizationTagSuggestsConnection';
+  edges: Array<OrganizationTagSuggestsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type OrganizationTagSuggestsConnectionEdge = {
+  __typename?: 'OrganizationTagSuggestsConnectionEdge';
+  cursor: Scalars['String']['output'];
+  node: OrganizationTagSuggestion;
+};
+
+export type OrganizationTagsConnection = {
+  __typename?: 'OrganizationTagsConnection';
+  edges: Array<OrganizationTagsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type OrganizationTagsConnectionEdge = {
+  __typename?: 'OrganizationTagsConnectionEdge';
+  cursor: Scalars['String']['output'];
+  node: OrganizationTagInstance;
 };
 
 export enum OrganizationType {
@@ -654,11 +808,11 @@ export type Query = {
   channelById: Channel;
   channelBySlug: Channel;
   channelsConnection: QueryChannelsConnection;
-  geocode: Array<GeocodeResult>;
-  geocodeJwt: Array<Scalars['Jwt']['output']>;
   me?: Maybe<AppUser>;
   mySubscriptionUploadRecords?: Maybe<QueryMySubscriptionUploadRecordsConnection>;
   organizationById: Organization;
+  organizationBySlug: Organization;
+  organizationTagsConnection: QueryOrganizationTagsConnection;
   organizationsConnection: QueryOrganizationsConnection;
   search: SearchConnection;
   stats: Stats;
@@ -688,16 +842,6 @@ export type QueryChannelsConnectionArgs = {
 };
 
 
-export type QueryGeocodeArgs = {
-  query: Scalars['String']['input'];
-};
-
-
-export type QueryGeocodeJwtArgs = {
-  query: Scalars['String']['input'];
-};
-
-
 export type QueryMySubscriptionUploadRecordsArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -708,6 +852,19 @@ export type QueryMySubscriptionUploadRecordsArgs = {
 
 export type QueryOrganizationByIdArgs = {
   id: Scalars['ShortUuid']['input'];
+};
+
+
+export type QueryOrganizationBySlugArgs = {
+  slug: Scalars['String']['input'];
+};
+
+
+export type QueryOrganizationTagsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -725,11 +882,15 @@ export type QuerySearchArgs = {
   channels?: InputMaybe<Array<Scalars['String']['input']>>;
   first?: InputMaybe<Scalars['Int']['input']>;
   focus: SearchFocus;
+  geo?: InputMaybe<GeoInput>;
   last?: InputMaybe<Scalars['Int']['input']>;
   maxPublishedAt?: InputMaybe<Scalars['DateTime']['input']>;
   minPublishedAt?: InputMaybe<Scalars['DateTime']['input']>;
   orderBy?: InputMaybe<SearchOrder>;
+  orgType?: InputMaybe<OrganizationType>;
+  organization?: InputMaybe<Scalars['ShortUuid']['input']>;
   query: Scalars['String']['input'];
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
   transcriptPhraseSearch?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
@@ -787,6 +948,18 @@ export type QueryMySubscriptionUploadRecordsConnectionEdge = {
   __typename?: 'QueryMySubscriptionUploadRecordsConnectionEdge';
   cursor: Scalars['String']['output'];
   node: UploadRecord;
+};
+
+export type QueryOrganizationTagsConnection = {
+  __typename?: 'QueryOrganizationTagsConnection';
+  edges: Array<QueryOrganizationTagsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type QueryOrganizationTagsConnectionEdge = {
+  __typename?: 'QueryOrganizationTagsConnectionEdge';
+  cursor: Scalars['String']['output'];
+  node: OrganizationTag;
 };
 
 export type QueryOrganizationsConnection = {
@@ -889,6 +1062,17 @@ export type Stats = {
   totalUploadSeconds: Scalars['Float']['output'];
   totalUploads: Scalars['Int']['output'];
 };
+
+export enum TagColor {
+  Blue = 'BLUE',
+  Gray = 'GRAY',
+  Green = 'GREEN',
+  Indigo = 'INDIGO',
+  Pink = 'PINK',
+  Purple = 'PURPLE',
+  Red = 'RED',
+  Yellow = 'YELLOW'
+}
 
 export type TimeRange = {
   end: Scalars['Float']['input'];
@@ -999,9 +1183,12 @@ export type UploadRecord = {
   license: UploadLicense;
   mediaSource?: Maybe<Scalars['String']['output']>;
   myRating?: Maybe<Rating>;
+  nextInSeries?: Maybe<UploadRecord>;
   peaksDatUrl?: Maybe<Scalars['String']['output']>;
   peaksJsonUrl?: Maybe<Scalars['String']['output']>;
   playlists: UploadRecordPlaylistsConnection;
+  podcastSizeBytes: Scalars['SafeInt']['output'];
+  podcastSource: Scalars['String']['output'];
   publishedAt?: Maybe<Scalars['DateTime']['output']>;
   series: UploadRecordSeriesConnection;
   thumbnailBlurhash?: Maybe<Scalars['String']['output']>;
@@ -1013,6 +1200,7 @@ export type UploadRecord = {
   transcript?: Maybe<Array<TranscriptLine>>;
   updatedAt: Scalars['DateTime']['output'];
   uploadFinalized: Scalars['Boolean']['output'];
+  uploadFinalizedAt?: Maybe<Scalars['DateTime']['output']>;
   uploadFinalizedBy: AppUser;
   uploadListById?: Maybe<UploadList>;
   uploadSizeBytes?: Maybe<Scalars['SafeInt']['output']>;

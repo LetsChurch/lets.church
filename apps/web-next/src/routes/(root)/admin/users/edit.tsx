@@ -61,9 +61,11 @@ const loadUser = cache(async () => {
   return res;
 }, 'adminUser');
 
-export const route: RouteDefinition = {
-  load: () => loadUser(),
-};
+export const route = {
+  load: () => {
+    void loadUser();
+  },
+} satisfies RouteDefinition;
 
 const upsertUser = action(async (form: FormData) => {
   'use server';
@@ -109,7 +111,7 @@ const upsertUser = action(async (form: FormData) => {
 });
 
 export default function AdminUsersEditRoute() {
-  const data = createAsync(loadUser);
+  const data = createAsync(() => loadUser());
   const submission = useSubmission(upsertUser);
 
   return (

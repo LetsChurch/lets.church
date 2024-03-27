@@ -1,7 +1,7 @@
 {
   "extends": [
     "@tsconfig/strictest/tsconfig.json",
-    "@tsconfig/node20/tsconfig.json",
+    "@tsconfig/node20/tsconfig.json"
   ],
   "compilerOptions": {
     "target": "ESNext",
@@ -14,11 +14,11 @@
     "allowJs": true,
     "noEmit": true,
     "strict": true,
-    "types": ["vinxi/client", "vite-plugin-solid-svg/types"],
+    "types": ["vinxi/client", "vite/client", "vite-plugin-solid-svg/types"],
     "lib": ["dom", "esnext"],
     "isolatedModules": true,
     "paths": {
-      "~/*": ["./src/*"],
-    },
-  },
+      "~/*": ["./src/*"]
+    }
+  }
 }

@@ -1,8 +1,8 @@
-import BrandFacebookIcon from '@tabler/icons/brand-facebook.svg?component-solid';
-import BrandXIcon from '@tabler/icons/brand-x.svg?component-solid';
-import BrandLinkedInIcon from '@tabler/icons/brand-linkedin.svg?component-solid';
-import BrandGithubIcon from '@tabler/icons/brand-github.svg?component-solid';
-import BrandGitlabIcon from '@tabler/icons/brand-gitlab.svg?component-solid';
+import BrandFacebookIcon from '@tabler/icons/outline/brand-facebook.svg?component-solid';
+import BrandXIcon from '@tabler/icons/outline/brand-x.svg?component-solid';
+import BrandLinkedInIcon from '@tabler/icons/outline/brand-linkedin.svg?component-solid';
+import BrandGithubIcon from '@tabler/icons/outline/brand-github.svg?component-solid';
+import BrandGitlabIcon from '@tabler/icons/outline/brand-gitlab.svg?component-solid';
 import { Icon as LogoIcon } from '~/components/logo';
 
 export default function Footer() {

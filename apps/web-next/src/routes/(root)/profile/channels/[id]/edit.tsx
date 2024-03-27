@@ -28,44 +28,42 @@ import { UploadPostProcess } from '~/__generated__/graphql-types';
 import { doMultipartUpload } from '~/util/multipart-upload';
 import { Avatar } from '~/components/avatar';
 
-const loadChannel = cache(
-  async () => {
-    'use server';
-    const event = getRequestEvent();
-    const url = new URL(event?.request.url ?? '');
-    const id = url.searchParams.get('id');
-    invariant(id, 'No id provided');
+const loadChannel = cache(async () => {
+  'use server';
+  const event = getRequestEvent();
+  const url = new URL(event?.request.url ?? '');
+  const id = url.searchParams.get('id');
+  invariant(id, 'No id provided');
 
-    const client = await getAuthenticatedClientOrRedirect();
+  const client = await getAuthenticatedClientOrRedirect();
 
-    const { channelById } = await client.request<
-      ProfileChannelQuery,
-      ProfileChannelQueryVariables
-    >(
-      gql`
-        query ProfileChannel($id: ShortUuid!) {
-          channelById(id: $id) {
-            id
-            name
-            avatarUrl(resize: { width: 96, height: 96 })
-            defaultThumbnailUrl
-          }
+  const { channelById } = await client.request<
+    ProfileChannelQuery,
+    ProfileChannelQueryVariables
+  >(
+    gql`
+      query ProfileChannel($id: ShortUuid!) {
+        channelById(id: $id) {
+          id
+          name
+          avatarUrl(resize: { width: 96, height: 96 })
+          defaultThumbnailUrl
         }
-      `,
-      {
-        id,
-      },
-    );
+      }
+    `,
+    {
+      id,
+    },
+  );
 
-    return channelById;
+  return channelById;
+}, 'profileLoadChannel');
+
+export const route = {
+  load: () => {
+    void loadChannel();
   },
-  'profileLoadChannel',
-  {},
-);
-
-export const route: RouteDefinition = {
-  load: () => loadChannel(),
-};
+} satisfies RouteDefinition;
 
 const createFileUpload = async (
   variables: CreateChannelFileUploadMutationVariables,
@@ -166,7 +164,7 @@ const fields: Array<DatalistField> = [
 ];
 
 export default function ProfileChannelEditRoute() {
-  const data = createAsync(loadChannel);
+  const data = createAsync(() => loadChannel());
   const [avatarProcessing, setAvatarProcessing] = createSignal(false);
   const [defaultThumbnailProcessing, setDefaultThumbnailProcessing] =
     createSignal(false);

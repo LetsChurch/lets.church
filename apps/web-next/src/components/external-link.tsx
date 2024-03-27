@@ -1,4 +1,4 @@
-import ExternalLinkIcon from '@tabler/icons/external-link.svg?component-solid';
+import ExternalLinkIcon from '@tabler/icons/outline/external-link.svg?component-solid';
 import type { ParentProps } from 'solid-js';
 
 export default function ExternalLink(props: ParentProps<{ href: string }>) {

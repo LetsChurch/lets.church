@@ -1,5 +1,5 @@
 import { type JSX, For, createSignal, Show } from 'solid-js';
-import PencilIcon from '@tabler/icons/pencil.svg?component-solid';
+import PencilIcon from '@tabler/icons/outline/pencil.svg?component-solid';
 import { autofocus } from '@solid-primitives/autofocus';
 
 export type DatalistField = {

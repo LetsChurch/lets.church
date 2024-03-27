@@ -30,12 +30,14 @@ const getMe = cache(async function () {
   `);
 }, 'me');
 
-export const route: RouteDefinition = {
-  load: () => getMe(),
-};
+export const route = {
+  load: () => {
+    void getMe();
+  },
+} satisfies RouteDefinition;
 
 export default function RootLayout(props: ParentProps) {
-  const data = createAsync(getMe);
+  const data = createAsync(() => getMe());
 
   return (
     <UserContext.Provider value={data}>

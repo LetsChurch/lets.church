@@ -50,12 +50,14 @@ const loadData = cache(async function () {
   return res.unsubscribeFromNewsletter;
 }, 'newsletter-unsubscribe');
 
-export const route: RouteDefinition = {
-  load: () => loadData(),
-};
+export const route = {
+  load: () => {
+    void loadData();
+  },
+} satisfies RouteDefinition;
 
 export default function NewsletterUnsubscribeRoute() {
-  const data = createAsync(loadData);
+  const data = createAsync(() => loadData());
 
   return (
     <div class="bg-white px-6 py-3 lg:px-8">

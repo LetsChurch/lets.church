@@ -17,8 +17,8 @@ import Pagination from '~/components/pagination';
 const PAGE_SIZE = 60;
 
 const loadData = cache(async function (
-  after: string | null = null,
-  before: string | null = null,
+  after: string | null,
+  before: string | null,
 ) {
   'use server';
   const client = await getAuthenticatedClientOrRedirect();
@@ -65,15 +65,19 @@ const loadData = cache(async function (
   );
 }, 'trending');
 
-export const route: RouteDefinition = {
-  load: ({ location }) =>
-    loadData(location.query['after'], location.query['before']),
-};
+export const route = {
+  load: ({ location }) => {
+    void loadData(
+      location.query['after'] ?? null,
+      location.query['before'] ?? null,
+    );
+  },
+} satisfies RouteDefinition;
 
 export default function TrendingRoute() {
   const location = useLocation();
   const data = createAsync(() =>
-    loadData(location.query['after'], location.query['before']),
+    loadData(location.query['after'] ?? null, location.query['before'] ?? null),
   );
 
   return (

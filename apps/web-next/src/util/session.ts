@@ -1,5 +1,5 @@
 import envariant from '@knpwrs/envariant';
-import { useSession } from '@solidjs/start/server';
+import { useSession } from 'vinxi/http';
 import { getRequestEvent } from 'solid-js/web';
 import invariant from 'tiny-invariant';
 
@@ -10,7 +10,7 @@ async function useConfiguredSession() {
   const event = getRequestEvent();
   invariant(event, 'event should be defined');
 
-  return useSession(event, {
+  return useSession({
     password: COOKIE_SECRET,
     cookie: {
       sameSite: 'lax',

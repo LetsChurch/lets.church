@@ -5,9 +5,9 @@ import {
   Show,
   type ComponentProps,
 } from 'solid-js';
-// import BellIcon from '@tabler/icons/bell.svg?component-solid';
-import MenuIcon from '@tabler/icons/menu-2.svg?component-solid';
-import XIcon from '@tabler/icons/x.svg?component-solid';
+// import BellIcon from '@tabler/icons/outline/bell.svg?component-solid';
+import MenuIcon from '@tabler/icons/outline/menu-2.svg?component-solid';
+import XIcon from '@tabler/icons/outline/x.svg?component-solid';
 import { A, useBeforeLeave, useIsRouting } from '@solidjs/router';
 import Profile from './profile';
 import ProfileMobile from './profile-mobile';

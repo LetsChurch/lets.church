@@ -87,13 +87,13 @@ const loadChannel = cache(async (slug: string) => {
   return channelBySlug;
 }, 'loadChannel');
 
-export const route: RouteDefinition = {
+export const route = {
   load: ({ params }) => {
     const { slug } = params;
     invariant(slug, 'Missing channel slug');
-    return loadChannel(slug);
+    void loadChannel(slug);
   },
-};
+} satisfies RouteDefinition;
 
 export default function ChannelRoute() {
   const params = useParams();

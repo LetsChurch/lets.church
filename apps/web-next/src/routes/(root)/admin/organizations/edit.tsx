@@ -11,8 +11,6 @@ import {
 } from '@solidjs/router';
 import { getRequestEvent } from 'solid-js/web';
 import {
-  AdminOrganizationEditRouteAddressCompletionQuery,
-  AdminOrganizationEditRouteAddressCompletionQueryVariables,
   AdminOrganizationEditRouteDataQuery,
   AdminOrganizationEditRouteDataQueryVariables,
   AdminUpsertOrganizationMutation,
@@ -70,24 +68,24 @@ const loadOrganization = cache(async () => {
   return res;
 }, 'adminOrganization');
 
-const getAddressCompletionOptions = async (query: string) => {
-  'use server';
-  const client = await getAdminClientOrRedirect();
-
-  const res = await client.request<
-    AdminOrganizationEditRouteAddressCompletionQuery,
-    AdminOrganizationEditRouteAddressCompletionQueryVariables
-  >(
-    gql`
-      query AdminOrganizationEditRouteAddressCompletion($query: String!) {
-        geocodeJwt(query: $query)
-      }
-    `,
-    { query },
-  );
-
-  return res.geocodeJwt;
-};
+// const getAddressCompletionOptions = async (query: string) => {
+//   'use server';
+//   const client = await getAdminClientOrRedirect();
+//
+//   const res = await client.request<
+//     AdminOrganizationEditRouteAddressCompletionQuery,
+//     AdminOrganizationEditRouteAddressCompletionQueryVariables
+//   >(
+//     gql`
+//       query AdminOrganizationEditRouteAddressCompletion($query: String!) {
+//         geocodeJwt(query: $query)
+//       }
+//     `,
+//     { query },
+//   );
+//
+//   return res.geocodeJwt;
+// };
 
 const upsertOrganization = action(async (form: FormData) => {
   'use server';
@@ -95,9 +93,10 @@ const upsertOrganization = action(async (form: FormData) => {
 
   const variables = UpsertOrganizationSchema.parse(
     Object.fromEntries(
-      ['organizationId', 'name', 'slug', 'description', 'addressJwt'].map(
-        (p) => [p, form.get(p)],
-      ),
+      ['organizationId', 'name', 'slug', 'description'].map((p) => [
+        p,
+        form.get(p),
+      ]),
     ),
   );
 
@@ -111,14 +110,12 @@ const upsertOrganization = action(async (form: FormData) => {
         $name: String!
         $slug: String!
         $description: String
-        $addressJwt: Jwt
       ) {
         upsertOrganization(
           organizationId: $organizationId
           name: $name
           slug: $slug
           description: $description
-          addressJwt: $addressJwt
         ) {
           id
         }
@@ -131,7 +128,7 @@ const upsertOrganization = action(async (form: FormData) => {
 });
 
 export default function AdminOrganizationsEditRoute() {
-  const data = createAsync(loadOrganization);
+  const data = createAsync(() => loadOrganization());
   const submission = useSubmission(upsertOrganization);
 
   return (
@@ -164,7 +161,7 @@ export default function AdminOrganizationsEditRoute() {
                   type: 'autocomplete',
                   name: 'addressJwt',
                   label: 'New Address (tmp: move to own page)',
-                  getOptions: getAddressCompletionOptions,
+                  getOptions: async () => [],
                   // TODO: maybe just one prop: valueAsString?
                   renderValue: (val) => (val ? renderLabelFromJwt(val) : ''),
                   renderMenuValue: (val) => renderLabelFromJwt(val),

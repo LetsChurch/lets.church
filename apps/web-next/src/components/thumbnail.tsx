@@ -1,6 +1,6 @@
-import UnknownIcon from '@tabler/icons/3d-cube-sphere.svg?component-solid';
-import VideoIcon from '@tabler/icons/video.svg?component-solid';
-import AudioIcon from '@tabler/icons/volume.svg?component-solid';
+import UnknownIcon from '@tabler/icons/outline/cube-3d-sphere.svg?component-solid';
+import VideoIcon from '@tabler/icons/outline/video.svg?component-solid';
+import AudioIcon from '@tabler/icons/outline/volume.svg?component-solid';
 import { Match, Switch } from 'solid-js';
 import { formatSeconds, type Optional } from '~/util';
 

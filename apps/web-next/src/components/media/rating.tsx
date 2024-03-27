@@ -8,8 +8,8 @@ import {
   Switch,
   Match,
 } from 'solid-js';
-import ThumbUpIcon from '@tabler/icons/thumb-up.svg?component-solid';
-import ThumbDownIcon from '@tabler/icons/thumb-down.svg?component-solid';
+import ThumbUpIcon from '@tabler/icons/outline/thumb-up.svg?component-solid';
+import ThumbDownIcon from '@tabler/icons/outline/thumb-down.svg?component-solid';
 import invariant from 'tiny-invariant';
 import { action, redirect, useAction, useSubmission } from '@solidjs/router';
 import type {

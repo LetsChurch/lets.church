@@ -1,6 +1,6 @@
-import SubscribersIcon from '@tabler/icons/rss.svg?component-solid';
-import PlayIcon from '@tabler/icons/player-play.svg?component-solid';
-import MenuIcon from '@tabler/icons/dots-vertical.svg?component-solid';
+import SubscribersIcon from '@tabler/icons/outline/rss.svg?component-solid';
+import PlayIcon from '@tabler/icons/outline/player-play.svg?component-solid';
+import MenuIcon from '@tabler/icons/outline/dots-vertical.svg?component-solid';
 import { createSignal } from 'solid-js';
 import { useFloating } from 'solid-floating-ui';
 import humanNumber from 'human-number';

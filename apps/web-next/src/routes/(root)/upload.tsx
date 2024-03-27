@@ -248,7 +248,7 @@ function getSections(
   ];
 }
 
-const routeData = cache(async (id: string | null = null) => {
+const routeData = cache(async (id: string | null) => {
   'use server';
   const client = await getAuthenticatedClientOrRedirect();
   const res = await client.request<
@@ -302,9 +302,11 @@ const routeData = cache(async (id: string | null = null) => {
   return res;
 }, 'upload');
 
-export const route: RouteDefinition = {
-  load: ({ location }) => routeData(location.query['id']),
-};
+export const route = {
+  load: ({ location }) => {
+    void routeData(location.query['id'] ?? null);
+  },
+} satisfies RouteDefinition;
 
 const UpsertUploadRecordSchema = z.object({
   uploadRecordId: z.string().optional().nullable().default(null),
@@ -445,7 +447,7 @@ async function finalizeUpload(variables: FinalizeMediaUploadMutationVariables) {
 
 export default function UploadRoute() {
   const location = useLocation();
-  const data = createAsync(() => routeData(location.query['id']));
+  const data = createAsync(() => routeData(location.query['id'] ?? null));
   const upsertAction = useAction(upsert);
   const upsertSubmission = useSubmission(upsert);
 

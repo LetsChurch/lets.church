@@ -1,7 +1,7 @@
-import ClipboardIcon from '@tabler/icons/clipboard-data.svg?component-solid';
-import ProfileIcon from '@tabler/icons/user-circle.svg?component-solid';
-import AntennaIcon from '@tabler/icons/antenna.svg?component-solid';
-import ChurchIcon from '@tabler/icons/building-church.svg?component-solid';
+import ClipboardIcon from '@tabler/icons/outline/clipboard-data.svg?component-solid';
+import ProfileIcon from '@tabler/icons/outline/user-circle.svg?component-solid';
+import AntennaIcon from '@tabler/icons/outline/antenna.svg?component-solid';
+import ChurchIcon from '@tabler/icons/outline/building-church.svg?component-solid';
 import { ParentProps } from 'solid-js';
 import Sidenav from '~/components/sidenav';
 

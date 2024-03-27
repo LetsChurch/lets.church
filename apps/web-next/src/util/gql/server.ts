@@ -15,7 +15,7 @@ const GRAPHQL_URL = envariant('GRAPHQL_URL');
 
 function getForwardingHeaders() {
   'use server';
-  const headers = getRequestEvent()?.headers;
+  const headers = getRequestEvent()?.request.headers;
   if (!headers) return {};
 
   const ip = getClientIpAddress(headers);

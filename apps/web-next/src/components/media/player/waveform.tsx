@@ -1,4 +1,5 @@
 import { createSignal, onCleanup, onMount, For } from 'solid-js';
+import { isServer } from 'solid-js/web';
 import invariant from 'tiny-invariant';
 import { chunk, cn } from '~/util';
 
@@ -22,6 +23,10 @@ export default function Waveform(props: Props) {
   let rob: ResizeObserver | null = null;
 
   onMount(() => {
+    if (isServer) {
+      return;
+    }
+
     rob = new ResizeObserver((entries) => {
       const entry = entries.at(0);
       invariant(entry, 'Resize observer entry is undefined');
