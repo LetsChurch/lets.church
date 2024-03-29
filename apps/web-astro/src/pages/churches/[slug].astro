@@ -4,7 +4,7 @@ import PhoneIcon from '@tabler/icons/phone.svg?sprite';
 import WorldIcon from '@tabler/icons/world.svg?sprite';
 import Avatar from '../../components/avatar.tsx';
 import Layout from '../../layouts/layout.astro';
-import { graphql } from '../../util/graphql';
+import { churchQuery } from '../../queries/churches';
 import { createClient } from '../../util/server/gql';
 import Chiclet from '../../components/church-search/searchbox/chiclet.tsx';
 
@@ -13,71 +13,6 @@ const { slug } = Astro.params;
 if (!slug) {
   throw new Error('slug is required');
 }
-
-export const churchQuery = graphql(`
-  query OrganizationBySlug($slug: String!) {
-    organizationBySlug(slug: $slug) {
-      name
-      type
-      description
-      avatarUrl
-      coverUrl
-      tags {
-        edges {
-          node {
-            tag {
-              category
-              color
-              label
-              description
-              slug
-            }
-          }
-        }
-      }
-      primaryPhoneNumber
-      primaryPhoneUri
-      primaryEmail
-      websiteUrl
-      addresses {
-        edges {
-          node {
-            type
-            name
-            streetAddress
-            locality
-            region
-            postalCode
-            postOfficeBoxNumber
-            country
-          }
-        }
-      }
-      officialChannelsConnection {
-        edges {
-          node {
-            ...ChannelProps
-          }
-        }
-      }
-      endorsedChannelsConnection {
-        edges {
-          node {
-            ...ChannelProps
-          }
-        }
-      }
-    }
-  }
-
-  fragment ChannelProps on OrganizationChannelAssociation {
-    channel {
-      slug
-      name
-      avatarUrl
-    }
-  }
-`);
 
 const client = await createClient(
   Astro.request.headers,

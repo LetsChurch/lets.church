@@ -49,6 +49,71 @@ export const churchesQuery = graphql(`
   }
 `);
 
+export const churchQuery = graphql(`
+  query OrganizationBySlug($slug: String!) {
+    organizationBySlug(slug: $slug) {
+      name
+      type
+      description
+      avatarUrl
+      coverUrl
+      tags {
+        edges {
+          node {
+            tag {
+              category
+              color
+              label
+              description
+              slug
+            }
+          }
+        }
+      }
+      primaryPhoneNumber
+      primaryPhoneUri
+      primaryEmail
+      websiteUrl
+      addresses {
+        edges {
+          node {
+            type
+            name
+            streetAddress
+            locality
+            region
+            postalCode
+            postOfficeBoxNumber
+            country
+          }
+        }
+      }
+      officialChannelsConnection {
+        edges {
+          node {
+            ...ChannelProps
+          }
+        }
+      }
+      endorsedChannelsConnection {
+        edges {
+          node {
+            ...ChannelProps
+          }
+        }
+      }
+    }
+  }
+
+  fragment ChannelProps on OrganizationChannelAssociation {
+    channel {
+      slug
+      name
+      avatarUrl
+    }
+  }
+`);
+
 export const churchesPayloadSchema = z.object({
   center: z.array(z.number()).length(2),
   range: z.enum([
