@@ -1,9 +1,11 @@
-import { onCleanup } from 'solid-js';
+import { useCleanupSignal } from './cleanup-signal';
 
 export default function clickOutside(
   node: HTMLElement,
   fn: (event: MouseEvent) => unknown,
 ) {
+  const cleanupSignal = useCleanupSignal();
+
   const handleClick = (event: MouseEvent) => {
     if (
       node &&
@@ -15,9 +17,8 @@ export default function clickOutside(
     }
   };
 
-  document.addEventListener('click', handleClick, true);
-
-  onCleanup(() => {
-    document.removeEventListener('click', handleClick, true);
+  document.addEventListener('click', handleClick, {
+    capture: true,
+    signal: cleanupSignal,
   });
 }

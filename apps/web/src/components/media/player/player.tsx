@@ -21,6 +21,7 @@ import {
 import Waveform from './waveform';
 import type { Optional } from '~/util';
 import { createAuthenticatedClient } from '~/util/gql/server';
+import { useCleanupSignal } from '~/util/cleanup-signal';
 
 function serializeTimeRanges(
   ranges: TimeRanges,
@@ -83,6 +84,7 @@ export default function Player(props: Props) {
   let player: ReturnType<typeof videojs>;
   const [ready, setReady] = createSignal(false);
   const [currentTime, setCurrentTime] = createSignal(0);
+  const cleanupSignal = useCleanupSignal(!isServer);
 
   const audioOnlyMode = () =>
     Boolean(
@@ -194,7 +196,9 @@ export default function Player(props: Props) {
     });
 
     if (!isServer) {
-      document.addEventListener('visibilitychange', playWhenHidden);
+      document.addEventListener('visibilitychange', playWhenHidden, {
+        signal: cleanupSignal,
+      });
     }
   });
 
@@ -208,10 +212,6 @@ export default function Player(props: Props) {
     clearTimeout(reportRangesTimer);
     reportTimeRanges();
     player?.dispose();
-
-    if (!isServer) {
-      document.removeEventListener('visibilitychange', playWhenHidden);
-    }
   });
 
   const [peaksData, { refetch: fetchPeaks }] = createResource(
