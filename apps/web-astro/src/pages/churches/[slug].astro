@@ -95,7 +95,7 @@ if (data.organizationBySlug?.type !== 'CHURCH') {
 }
 ---
 
-<Layout title={`Church: ${slug}`}>
+<Layout title={data.organizationBySlug.name}>
   <article>
     <!-- Profile header -->
     <div>

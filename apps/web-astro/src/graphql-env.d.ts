@@ -3025,51 +3025,6 @@ export type introspection = {
             ]
           },
           {
-            "name": "associationsConnection",
-            "type": {
-              "kind": "NON_NULL",
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "OrganizationAssociationsConnection",
-                "ofType": null
-              }
-            },
-            "args": [
-              {
-                "name": "after",
-                "type": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              {
-                "name": "before",
-                "type": {
-                  "kind": "SCALAR",
-                  "name": "String",
-                  "ofType": null
-                }
-              },
-              {
-                "name": "first",
-                "type": {
-                  "kind": "SCALAR",
-                  "name": "Int",
-                  "ofType": null
-                }
-              },
-              {
-                "name": "last",
-                "type": {
-                  "kind": "SCALAR",
-                  "name": "Int",
-                  "ofType": null
-                }
-              }
-            ]
-          },
-          {
             "name": "avatarUrl",
             "type": {
               "kind": "SCALAR",
@@ -3107,6 +3062,51 @@ export type introspection = {
               "ofType": null
             },
             "args": []
+          },
+          {
+            "name": "endorsedChannelsConnection",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "OrganizationEndorsedChannelsConnection",
+                "ofType": null
+              }
+            },
+            "args": [
+              {
+                "name": "after",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              {
+                "name": "before",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              {
+                "name": "first",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              {
+                "name": "last",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              }
+            ]
           },
           {
             "name": "id",
@@ -3176,6 +3176,51 @@ export type introspection = {
               }
             },
             "args": []
+          },
+          {
+            "name": "officialChannelsConnection",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "OrganizationOfficialChannelsConnection",
+                "ofType": null
+              }
+            },
+            "args": [
+              {
+                "name": "after",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              {
+                "name": "before",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              {
+                "name": "first",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              {
+                "name": "last",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              }
+            ]
           },
           {
             "name": "primaryEmail",
@@ -3485,7 +3530,38 @@ export type introspection = {
       },
       {
         "kind": "OBJECT",
-        "name": "OrganizationAssociationsConnection",
+        "name": "OrganizationChannelAssociation",
+        "fields": [
+          {
+            "name": "channel",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "Channel",
+                "ofType": null
+              }
+            },
+            "args": []
+          },
+          {
+            "name": "organization",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "Organization",
+                "ofType": null
+              }
+            },
+            "args": []
+          }
+        ],
+        "interfaces": []
+      },
+      {
+        "kind": "OBJECT",
+        "name": "OrganizationEndorsedChannelsConnection",
         "fields": [
           {
             "name": "edges",
@@ -3497,7 +3573,7 @@ export type introspection = {
                   "kind": "NON_NULL",
                   "ofType": {
                     "kind": "OBJECT",
-                    "name": "OrganizationAssociationsConnectionEdge",
+                    "name": "OrganizationEndorsedChannelsConnectionEdge",
                     "ofType": null
                   }
                 }
@@ -3522,7 +3598,7 @@ export type introspection = {
       },
       {
         "kind": "OBJECT",
-        "name": "OrganizationAssociationsConnectionEdge",
+        "name": "OrganizationEndorsedChannelsConnectionEdge",
         "fields": [
           {
             "name": "cursor",
@@ -3543,37 +3619,6 @@ export type introspection = {
               "ofType": {
                 "kind": "OBJECT",
                 "name": "OrganizationChannelAssociation",
-                "ofType": null
-              }
-            },
-            "args": []
-          }
-        ],
-        "interfaces": []
-      },
-      {
-        "kind": "OBJECT",
-        "name": "OrganizationChannelAssociation",
-        "fields": [
-          {
-            "name": "channel",
-            "type": {
-              "kind": "NON_NULL",
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "Channel",
-                "ofType": null
-              }
-            },
-            "args": []
-          },
-          {
-            "name": "organization",
-            "type": {
-              "kind": "NON_NULL",
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "Organization",
                 "ofType": null
               }
             },
@@ -3685,6 +3730,74 @@ export type introspection = {
               "ofType": {
                 "kind": "OBJECT",
                 "name": "OrganizationMembership",
+                "ofType": null
+              }
+            },
+            "args": []
+          }
+        ],
+        "interfaces": []
+      },
+      {
+        "kind": "OBJECT",
+        "name": "OrganizationOfficialChannelsConnection",
+        "fields": [
+          {
+            "name": "edges",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "LIST",
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "OrganizationOfficialChannelsConnectionEdge",
+                    "ofType": null
+                  }
+                }
+              }
+            },
+            "args": []
+          },
+          {
+            "name": "pageInfo",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "PageInfo",
+                "ofType": null
+              }
+            },
+            "args": []
+          }
+        ],
+        "interfaces": []
+      },
+      {
+        "kind": "OBJECT",
+        "name": "OrganizationOfficialChannelsConnectionEdge",
+        "fields": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "args": []
+          },
+          {
+            "name": "node",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "OrganizationChannelAssociation",
                 "ofType": null
               }
             },

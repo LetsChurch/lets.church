@@ -54,7 +54,7 @@ const data = await client.request(meQuery);
   <header
     class={cn(
       'bg-white shadow',
-      Astro.props.fixedHeader ? 'sticky top-0 z-[100]' : null,
+      Astro.props.fixedHeader ? 'sticky top-0 z-[100]' : 'relative',
     )}
   >
     <nav>
@@ -259,6 +259,13 @@ const data = await client.request(meQuery);
                     href="/churches"
                     class="text-sm leading-6 text-gray-600 hover:text-gray-900"
                     >Family Integrated Churches</a
+                  >
+                </li>
+                <li>
+                  <a
+                    href="/churches/add"
+                    class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+                    >Add Your Church</a
                   >
                 </li>
               </ul>
