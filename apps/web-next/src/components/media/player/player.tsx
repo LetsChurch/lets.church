@@ -9,7 +9,7 @@ import {
   Show,
   createResource,
 } from 'solid-js';
-import videojs from 'video.js';
+import type VideoJsPlayer from 'video.js/dist/types/player';
 import 'video.js/dist/video-js.css';
 import { isServer } from 'solid-js/web';
 import {
@@ -38,7 +38,6 @@ const recordViewRanges = async (
   viewId: string | null,
 ) => {
   'use server';
-  console.log(id, ranges, viewId);
   const client = await getAuthenticatedClient();
 
   const res = await client.request<
@@ -78,7 +77,7 @@ export type Props = {
 
 export default function Player(props: Props) {
   let videoRef: HTMLVideoElement;
-  let player: ReturnType<typeof videojs>;
+  let player: VideoJsPlayer;
   const [ready, setReady] = createSignal(false);
   const [currentTime, setCurrentTime] = createSignal(0);
 
@@ -111,6 +110,12 @@ export default function Player(props: Props) {
   }
 
   onMount(async () => {
+    if (isServer) {
+      return;
+    }
+
+    const { default: videojs } = await import('video.js');
+
     reportRangesTimer = window.setTimeout(reportTimeRanges, 5000);
 
     const sources = [];
