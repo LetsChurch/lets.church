@@ -4,6 +4,7 @@ import { useFloating } from 'solid-floating-ui';
 import SubscribeIcon from '@tabler/icons/outline/rss.svg?component-solid';
 import DownloadIcon from '@tabler/icons/outline/cloud-download.svg?component-solid';
 import ShareIcon from '@tabler/icons/outline/share-2.svg?component-solid';
+import NextIcon from '@tabler/icons/outline/chevron-right.svg?component-solid';
 import invariant from 'tiny-invariant';
 import humanFormat from 'human-format';
 import pluralize from 'pluralize';
@@ -138,6 +139,11 @@ const loadMediaMetadata = cache(async (id: string) => {
             kind
             label
             url
+          }
+          nextInSeries {
+            id
+            title
+            thumbnailUrl
           }
           series: uploadListById(id: $seriesId) {
             id
@@ -457,17 +463,21 @@ export default function MediaRoute() {
       />
       <div class="md:grid md:grid-cols-3 md:gap-4">
         <div class="space-y-4 md:col-span-2">
-          <Player
-            id={params.id}
-            videoSource={metadata()?.data.mediaSource}
-            audioSource={metadata()?.data.audioSource}
-            peaksDatUrl={metadata()?.data.peaksDatUrl}
-            peaksJsonUrl={metadata()?.data.peaksJsonUrl}
-            playAt={playAt}
-            onTimeUpdate={setCurrentTime}
-            lengthSeconds={metadata()?.data.lengthSeconds ?? 0}
-            fluid
-          />
+          <Show when={params.id} keyed>
+            {(id) => (
+              <Player
+                id={id}
+                videoSource={metadata()?.data.mediaSource}
+                audioSource={metadata()?.data.audioSource}
+                peaksDatUrl={metadata()?.data.peaksDatUrl}
+                peaksJsonUrl={metadata()?.data.peaksJsonUrl}
+                playAt={playAt}
+                onTimeUpdate={setCurrentTime}
+                lengthSeconds={metadata()?.data.lengthSeconds ?? 0}
+                fluid
+              />
+            )}
+          </Show>
           <h1 class="truncate text-2xl">{metadata()?.data.title ?? '...'}</h1>
           <div class="flex flex-col gap-3 lg:flex-row lg:justify-between lg:overflow-x-auto">
             <div class="flex justify-start gap-3">
@@ -639,6 +649,32 @@ export default function MediaRoute() {
           </Show>
         </div>
         <div class="space-y-4 md:col-span-1">
+          <Show when={metadata()?.data?.nextInSeries} keyed>
+            {(next) => (
+              <article class="relative flex">
+                <Show when={next.thumbnailUrl} keyed>
+                  {(turl) => (
+                    <div class="mr-4 flex-shrink-0">
+                      <img
+                        class="aspect-video w-24 object-cover"
+                        src={turl}
+                        alt={next.title ?? ''}
+                      />
+                    </div>
+                  )}
+                </Show>
+                <div class="flex min-w-0 flex-grow flex-col justify-between">
+                  <h4 class="truncate text-lg font-medium">{next.title}</h4>
+                  <A
+                    href={`/media/${next.id}`}
+                    class="text-gray-400 before:absolute before:inset-0 hover:text-indigo-600 [&_svg]:-mr-2 [&_svg]:ml-auto"
+                  >
+                    <NextIcon />
+                  </A>
+                </div>
+              </article>
+            )}
+          </Show>
           <Show when={metadata()?.data.series} keyed>
             {(series) => (
               <div class="relative flex h-[175px] flex-col overflow-hidden rounded-md bg-gray-50">
