@@ -7,8 +7,6 @@ import type {
   VerifyNewsletterSubscriptionMutation,
   VerifyNewsletterSubscriptionMutationVariables,
 } from './__generated__/verify';
-import H1 from '~/components/content/h1';
-import P from '~/components/content/p';
 import { getAuthenticatedClient } from '~/util/gql/server';
 
 const QuerySchema = z.object({
@@ -58,18 +56,18 @@ export default function NewsletterVerifyRoute() {
 
   return (
     <div class="bg-white px-6 py-3 lg:px-8">
-      <div class="mx-auto max-w-3xl text-base leading-7 text-gray-700">
+      <div class="prose mx-auto max-w-3xl text-base leading-7 text-gray-700">
         <Show
           when={data()}
           fallback={
             <>
-              <H1>Error!</H1>
-              <P>There was an error confirming your newsletter subscription.</P>
+              <h1>Error!</h1>
+              <p>There was an error confirming your newsletter subscription.</p>
             </>
           }
         >
-          <H1>Subscription Confirmed!</H1>
-          <P>Your newsletter subscription has been confirmed!</P>
+          <h1>Subscription Confirmed!</h1>
+          <p>Your newsletter subscription has been confirmed!</p>
         </Show>
       </div>
     </div>

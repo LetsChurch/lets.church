@@ -1,14 +1,10 @@
 import A from '~/components/content/a';
-import H1 from '~/components/content/h1';
-import H2 from '~/components/content/h2';
-import H3 from '~/components/content/h3';
-import P from '~/components/content/p';
 
 export default function PrivacyRoute() {
   return (
     <>
-      <H1>Privacy policy</H1>
-      <P>
+      <h1>Privacy policy</h1>
+      <p>
         We respect your privacy and are committed to protecting it through our
         compliance with this privacy policy (&#8220;Policy&#8221;). This Policy
         describes the types of information we may collect from you or that you
@@ -20,8 +16,8 @@ export default function PrivacyRoute() {
         that Personal Information. It also describes the choices available to
         you regarding our use of your Personal Information and how you can
         access and update it.
-      </P>
-      <P>
+      </p>
+      <p>
         This Policy is a legally binding agreement between you
         (&#8220;User&#8221;, &#8220;you&#8221; or &#8220;your&#8221;) and Let's
         Church Inc. (&#8220;Let's Church Inc.&#8221;, &#8220;we&#8221;,
@@ -37,9 +33,9 @@ export default function PrivacyRoute() {
         terms of this Policy. This Policy does not apply to the practices of
         companies that we do not own or control, or to individuals that we do
         not employ or manage.
-      </P>
+      </p>
       <div>
-        <H3>Table of contents</H3>
+        <h3>Table of contents</h3>
         <ol>
           <li>
             <A href="#automatic-collection-of-information">
@@ -116,10 +112,10 @@ export default function PrivacyRoute() {
           </li>
         </ol>
       </div>
-      <H2 id="automatic-collection-of-information">
+      <h2 id="automatic-collection-of-information">
         Automatic collection of information
-      </H2>
-      <P>
+      </h2>
+      <p>
         When you open the Website, our servers automatically record information
         that your browser sends. This data may include information such as your
         device&#8217;s IP address, browser type, and version, operating system
@@ -127,30 +123,30 @@ export default function PrivacyRoute() {
         before you came to the Website and Services, pages of the Website and
         Services that you visit, the time spent on those pages, information you
         search for on the Website, access times and dates, and other statistics.
-      </P>
-      <P>
+      </p>
+      <p>
         Information collected automatically is used only to identify potential
         cases of abuse and establish statistical information regarding the usage
         and traffic of the Website and Services. This statistical information is
         not otherwise aggregated in such a way that would identify any
         particular User of the system.
-      </P>
-      <H2 id="collection-of-personal-information">
+      </p>
+      <h2 id="collection-of-personal-information">
         Collection of personal information
-      </H2>
-      <P>
+      </h2>
+      <p>
         You can access and use the Website and Services without telling us who
         you are or revealing any information by which someone could identify you
         as a specific, identifiable individual. If, however, you wish to use
         some of the features offered on the Website, you may be asked to provide
         certain Personal Information (for example, your name and e-mail
         address).
-      </P>
-      <P>
+      </p>
+      <p>
         We receive and store any information you knowingly provide to us when
         you create an account, publish content, or fill any forms on the
         Website. When required, this information may include the following:
-      </P>
+      </p>
       <ul>
         <li>
           Account details (such as user name, unique user ID, password, etc)
@@ -167,14 +163,14 @@ export default function PrivacyRoute() {
           images, feedback, etc)
         </li>
       </ul>
-      <P>
+      <p>
         You can choose not to provide us with your Personal Information, but
         then you may not be able to take advantage of some of the features on
         the Website. Users who are uncertain about what information is mandatory
         are welcome to contact us.
-      </P>
-      <H2 id="privacy-of-children">Privacy of children</H2>
-      <P>
+      </p>
+      <h2 id="privacy-of-children">Privacy of children</h2>
+      <p>
         We do not knowingly collect any Personal Information from children under
         the age of 18. If you are under the age of 18, please do not submit any
         Personal Information through the Website and Services. If you have
@@ -182,8 +178,8 @@ export default function PrivacyRoute() {
         Information to us through the Website and Services, please contact us to
         request that we delete that child&#8217;s Personal Information from our
         Services.
-      </P>
-      <P>
+      </p>
+      <p>
         We encourage parents and legal guardians to monitor their
         children&#8217;s Internet usage and to help enforce this Policy by
         instructing their children never to provide Personal Information through
@@ -192,17 +188,17 @@ export default function PrivacyRoute() {
         necessary precautions to ensure that their children are instructed to
         never give out Personal Information when online without their
         permission.
-      </P>
-      <H2 id="use-and-processing-of-collected-information">
+      </p>
+      <h2 id="use-and-processing-of-collected-information">
         Use and processing of collected information
-      </H2>
-      <P>
+      </h2>
+      <p>
         We act as a data controller and a data processor in terms of the GDPR
         when handling Personal Information, unless we have entered into a data
         processing agreement with you in which case you would be the data
         controller and we would be the data processor.
-      </P>
-      <P>
+      </p>
+      <p>
         Our role may also differ depending on the specific situation involving
         Personal Information. We act in the capacity of a data controller when
         we ask you to submit your Personal Information that is necessary to
@@ -210,23 +206,23 @@ export default function PrivacyRoute() {
         instances, we are a data controller because we determine the purposes
         and means of the processing of Personal Information and we comply with
         data controllers&#8217; obligations set forth in the GDPR.
-      </P>
-      <P>
+      </p>
+      <p>
         We act in the capacity of a data processor in situations when you submit
         Personal Information through the Website and Services. We do not own,
         control, or make decisions about the submitted Personal Information, and
         such Personal Information is processed only in accordance with your
         instructions. In such instances, the User providing Personal Information
         acts as a data controller in terms of the GDPR.
-      </P>
-      <P>
+      </p>
+      <p>
         In order to make the Website and Services available to you, or to meet a
         legal obligation, we may need to collect and use certain Personal
         Information. If you do not provide the information that we request, we
         may not be able to provide you with the requested products or services.
         Any of the information we collect from you may be used for the following
         purposes:
-      </P>
+      </p>
       <ul>
         <li>Create and manage user accounts</li>
         <li>Improve products and services</li>
@@ -239,7 +235,7 @@ export default function PrivacyRoute() {
         <li>Respond to legal requests and prevent harm</li>
         <li>Run and operate the Website and Services</li>
       </ul>
-      <P>
+      <p>
         Processing your Personal Information depends on how you interact with
         the Website and Services, where you are located in the world and if one
         of the following applies: (i) you have given your consent for one or
@@ -253,12 +249,12 @@ export default function PrivacyRoute() {
         public interest or in the exercise of official authority vested in us;
         (v) processing is necessary for the purposes of the legitimate interests
         pursued by us or by a third party.
-      </P>
-      <P>
+      </p>
+      <p>
         We rely on user&#8217;s consent as a legal base as defined in the GDPR
         upon which we collect and process your Personal Information.
-      </P>
-      <P>
+      </p>
+      <p>
         Note that under some legislations we may be allowed to process
         information until you object to such processing by opting out, without
         having to rely on consent or any other of the legal bases above. In any
@@ -266,9 +262,9 @@ export default function PrivacyRoute() {
         to the processing, and in particular whether the provision of Personal
         Information is a statutory or contractual requirement, or a requirement
         necessary to enter into a contract.
-      </P>
-      <H2 id="managing-information">Managing information</H2>
-      <P>
+      </p>
+      <h2 id="managing-information">Managing information</h2>
+      <p>
         You are able to delete certain Personal Information we have about you.
         The Personal Information you can delete may change as the Website and
         Services change. When you delete Personal Information, however, we may
@@ -277,9 +273,9 @@ export default function PrivacyRoute() {
         and partners, and for the purposes described below. If you would like to
         delete your Personal Information or permanently delete your account, you
         can do so by contacting us.
-      </P>
-      <H2 id="disclosure-of-information">Disclosure of information</H2>
-      <P>
+      </p>
+      <h2 id="disclosure-of-information">Disclosure of information</h2>
+      <p>
         Depending on the requested Services or as necessary to complete any
         transaction or provide any Service you have requested, we may share your
         information with our affiliates, contracted companies, and service
@@ -288,8 +284,8 @@ export default function PrivacyRoute() {
         and whose privacy policies are consistent with ours or who agree to
         abide by our policies with respect to Personal Information. We will not
         share any information with unaffiliated third parties.
-      </P>
-      <P>
+      </p>
+      <p>
         Service Providers are not authorized to use or disclose your information
         except as necessary to perform services on our behalf or comply with
         legal requirements. Service Providers are given the information they
@@ -297,32 +293,32 @@ export default function PrivacyRoute() {
         authorize them to use or disclose any of the provided information for
         their own marketing or other purposes. We will share and disclose your
         information only with the following categories of Service Providers:
-      </P>
+      </p>
       <ul>
         <li>Payment processors</li>
       </ul>
-      <P>
+      <p>
         We may also disclose any Personal Information we collect, use or receive
         if required or permitted by law, such as to comply with a subpoena or
         similar legal process, and when we believe in good faith that disclosure
         is necessary to protect our rights, protect your safety or the safety of
         others, investigate fraud, or respond to a government request.
-      </P>
-      <P>
+      </p>
+      <p>
         In the event we go through a business transition, such as a merger or
         acquisition by another company, or sale of all or a portion of its
         assets, your user account, and your Personal Information will likely be
         among the assets transferred.
-      </P>
-      <H2 id="retention-of-information">Retention of information</H2>
-      <P>
+      </p>
+      <h2 id="retention-of-information">Retention of information</h2>
+      <p>
         We will retain and use your Personal Information for the period
         necessary to comply with our legal obligations, as long as your user
         account remains active, until our and our affiliates and partners
         obligations are fulfilled, to enforce our agreements, resolve disputes,
         and unless a longer retention period is required or permitted by law.
-      </P>
-      <P>
+      </p>
+      <p>
         We may use any aggregated data derived from or incorporating your
         Personal Information after you update or delete it, but not in a manner
         that would identify you personally. Once the retention period expires,
@@ -330,17 +326,17 @@ export default function PrivacyRoute() {
         the right to erasure, the right to rectification, and the right to data
         portability cannot be enforced after the expiration of the retention
         period.
-      </P>
-      <H2 id="transfer-of-information">Transfer of information</H2>
-      <P>
+      </p>
+      <h2 id="transfer-of-information">Transfer of information</h2>
+      <p>
         Depending on your location, data transfers may involve transferring and
         storing your information in a country other than your own, including the
         United States. The transfer of your Personal Information to countries
         outside the European Union will be made only if you have explicitly
         consented to it or in the cases provided for by the GDPR and will be
         processed in your interest.
-      </P>
-      <P>
+      </p>
+      <p>
         You are entitled to learn about the legal basis of information transfers
         to a country outside the European Union or to any international
         organization governed by public international law or set up by two or
@@ -348,11 +344,11 @@ export default function PrivacyRoute() {
         us to safeguard your information. If any such transfer takes place, you
         can find out more by checking the relevant sections of this Policy or
         inquire with us using the information provided in the contact section.
-      </P>
-      <H2 id="data-protection-rights-under-the-gdpr">
+      </p>
+      <h2 id="data-protection-rights-under-the-gdpr">
         Data protection rights under the GDPR
-      </H2>
-      <P>
+      </h2>
+      <p>
         If you are a resident of the European Economic Area (&#8220;EEA&#8221;),
         you have certain data protection rights and we aim to take reasonable
         steps to allow you to correct, amend, delete, or limit the use of your
@@ -360,28 +356,28 @@ export default function PrivacyRoute() {
         Information we hold about you and if you want it to be removed from our
         systems, please contact us. In certain circumstances, you have the
         following data protection rights:
-      </P>
-      <P>
+      </p>
+      <p>
         (i) You have the right to withdraw consent where you have previously
         given your consent to the processing of your Personal Information. To
         the extent that the legal basis for our processing of your Personal
         Information is consent, you have the right to withdraw that consent at
         any time. Withdrawal will not affect the lawfulness of processing before
         the withdrawal.
-      </P>
-      <P>
+      </p>
+      <p>
         (ii) You have the right to learn if your Personal Information is being
         processed by us, obtain disclosure regarding certain aspects of the
         processing, and obtain a copy of your Personal Information undergoing
         processing.
-      </P>
-      <P>
+      </p>
+      <p>
         (iii) You have the right to verify the accuracy of your information and
         ask for it to be updated or corrected. You also have the right to
         request us to complete the Personal Information you believe is
         incomplete.
-      </P>
-      <P>
+      </p>
+      <p>
         (iv) You have the right to object to the processing of your information
         if the processing is carried out on a legal basis other than consent.
         Where Personal Information is processed for the public interest, in the
@@ -389,8 +385,8 @@ export default function PrivacyRoute() {
         the legitimate interests pursued by us, you may object to such
         processing by providing a ground related to your particular situation to
         justify the objection.
-      </P>
-      <P>
+      </p>
+      <p>
         (v) You have the right, under certain circumstances, to restrict the
         processing of your Personal Information. These circumstances include:
         the accuracy of your Personal Information is contested by you and we
@@ -405,8 +401,8 @@ export default function PrivacyRoute() {
         processed only with your consent or for the establishment, to exercise
         or defense of legal claims, for the protection of the rights of another
         natural, or legal person or for reasons of important public interest.
-      </P>
-      <P>
+      </p>
+      <p>
         (vi) You have the right, under certain circumstances, to obtain the
         erasure of your Personal Information from us. These circumstances
         include: the Personal Information is no longer necessary in relation to
@@ -419,16 +415,16 @@ export default function PrivacyRoute() {
         of freedom of expression and information; for compliance with a legal
         obligation; or for the establishment, to exercise or defense of legal
         claims.
-      </P>
-      <P>
+      </p>
+      <p>
         (vii) You have the right to receive your Personal Information that you
         have provided to us in a structured, commonly used, and machine-readable
         format and, if technically feasible, to have it transmitted to another
         controller without any hindrance from us, provided that such
         transmission does not adversely affect the rights and freedoms of
         others.
-      </P>
-      <P>
+      </p>
+      <p>
         (viii) You have the right to complain to a data protection authority
         about our collection and use of your Personal Information. If you are
         not satisfied with the outcome of your complaint directly with us, you
@@ -438,32 +434,32 @@ export default function PrivacyRoute() {
         that your Personal Information is processed by automated means and that
         the processing is based on your consent, on a contract which you are
         part of, or on pre-contractual obligations thereof.
-      </P>
-      <H2 id="california-privacy-rights">California privacy rights</H2>
-      <P>
+      </p>
+      <h2 id="california-privacy-rights">California privacy rights</h2>
+      <p>
         Consumers residing in California are afforded certain additional rights
         with respect to their Personal Information under the California Consumer
         Privacy Act (&#8220;CCPA&#8221;). If you are a California resident, this
         section applies to you.
-      </P>
-      <P>
+      </p>
+      <p>
         In addition to the rights as explained in this Policy, California
         residents who provide Personal Information as defined in the statute to
         obtain Services for personal, family, or household use are entitled to
         request and obtain from us, once a calendar year, information about the
         categories and specific pieces of Personal Information we have collected
         and disclosed.
-      </P>
-      <P>
+      </p>
+      <p>
         Furthermore, California residents have the right to request deletion of
         their Personal Information or opt-out of the sale of their Personal
         Information which may include selling, disclosing, or transferring
         Personal Information to another business or a third party for monetary
         or other valuable consideration. To do so, simply contact us. We will
         not discriminate against you if you exercise your rights under the CCPA.
-      </P>
-      <H2 id="how-to-exercise-your-rights">How to exercise your rights</H2>
-      <P>
+      </p>
+      <h2 id="how-to-exercise-your-rights">How to exercise your rights</h2>
+      <p>
         Any requests to exercise your rights can be directed to us through the
         contact details provided in this document. Please note that we may ask
         you to verify your identity before responding to such requests. Your
@@ -474,16 +470,16 @@ export default function PrivacyRoute() {
         provided such an authorized representative with power of attorney or
         that the authorized representative otherwise has valid written authority
         to submit requests on your behalf.
-      </P>
-      <P>
+      </p>
+      <p>
         You must include sufficient details to allow us to properly understand
         the request and respond to it. We cannot respond to your request or
         provide you with Personal Information unless we first verify your
         identity or authority to make such a request and confirm that the
         Personal Information relates to you.
-      </P>
-      <H2 id="cookies">Cookies</H2>
-      <P>
+      </p>
+      <h2 id="cookies">Cookies</h2>
+      <p>
         Our Website and Services use &#8220;cookies&#8221; to help personalize
         your online experience. A cookie is a text file that is placed on your
         hard disk by a web page server. Cookies cannot be used to run programs
@@ -491,17 +487,17 @@ export default function PrivacyRoute() {
         you, and can only be read by a web server in the domain that issued the
         cookie to you. If you choose to decline cookies, you may not be able to
         fully experience the features of the Website and Services.
-      </P>
-      <P>
+      </p>
+      <p>
         We may use cookies to collect, store, and track information for security
         and personalization, to operate the Website and Services, and for
         statistical purposes. Please note that you have the ability to accept or
         decline cookies. Most web browsers automatically accept cookies by
         default, but you can modify your browser settings to decline cookies if
         you prefer.
-      </P>
-      <H2 id="data-analytics">Data analytics</H2>
-      <P>
+      </p>
+      <h2 id="data-analytics">Data analytics</h2>
+      <p>
         Our Website and Services may use third-party analytics tools that use
         cookies, web beacons, or other similar information-gathering
         technologies to collect standard internet activity and usage
@@ -514,9 +510,9 @@ export default function PrivacyRoute() {
         identifiable information of our Users and we will not associate any
         information gathered from the statistical reports with any individual
         User.
-      </P>
-      <H2 id="do-not-track-signals">Do Not Track signals</H2>
-      <P>
+      </p>
+      <h2 id="do-not-track-signals">Do Not Track signals</h2>
+      <p>
         Some browsers incorporate a Do Not Track feature that signals to
         websites you visit that you do not want to have your online activity
         tracked. Tracking is not the same as using or collecting information in
@@ -533,9 +529,9 @@ export default function PrivacyRoute() {
         <a href="https://www.internetcookies.com" target="_blank">
           internetcookies.com
         </a>
-      </P>
-      <H2 id="social-media-features">Social media features</H2>
-      <P>
+      </p>
+      <h2 id="social-media-features">Social media features</h2>
+      <p>
         Our Website and Services may include social media features, such as the
         Facebook and Twitter buttons, Share This buttons, etc (collectively,
         &#8220;Social Media Features&#8221;). These Social Media Features may
@@ -545,18 +541,18 @@ export default function PrivacyRoute() {
         respective providers or directly on our Website and Services. Your
         interactions with these Social Media Features are governed by the
         privacy policy of their respective providers.
-      </P>
-      <H2 id="links-to-other-resources">Links to other resources</H2>
-      <P>
+      </p>
+      <h2 id="links-to-other-resources">Links to other resources</h2>
+      <p>
         The Website and Services contain links to other resources that are not
         owned or controlled by us. Please be aware that we are not responsible
         for the privacy practices of such other resources or third parties. We
         encourage you to be aware when you leave the Website and Services and to
         read the privacy statements of each and every resource that may collect
         Personal Information.
-      </P>
-      <H2 id="information-security">Information security</H2>
-      <P>
+      </p>
+      <h2 id="information-security">Information security</h2>
+      <p>
         We secure information you provide on computer servers in a controlled,
         secure environment, protected from unauthorized access, use, or
         disclosure. We maintain reasonable administrative, technical, and
@@ -564,8 +560,8 @@ export default function PrivacyRoute() {
         use, modification, and disclosure of Personal Information in our control
         and custody. However, no data transmission over the Internet or wireless
         network can be guaranteed.
-      </P>
-      <P>
+      </p>
+      <p>
         Therefore, while we strive to protect your Personal Information, you
         acknowledge that (i) there are security and privacy limitations of the
         Internet which are beyond our control; (ii) the security, integrity, and
@@ -573,15 +569,15 @@ export default function PrivacyRoute() {
         the Website and Services cannot be guaranteed; and (iii) any such
         information and data may be viewed or tampered with in transit by a
         third party, despite best efforts.
-      </P>
-      <P>
+      </p>
+      <p>
         As the security of Personal Information depends in part on the security
         of the device you use to communicate with us and the security you use to
         protect your credentials, please take appropriate measures to protect
         this information.
-      </P>
-      <H2 id="data-breach">Data breach</H2>
-      <P>
+      </p>
+      <h2 id="data-breach">Data breach</h2>
+      <p>
         In the event we become aware that the security of the Website and
         Services has been compromised or Users&#8217; Personal Information has
         been disclosed to unrelated third parties as a result of external
@@ -593,16 +589,16 @@ export default function PrivacyRoute() {
         individuals if we believe that there is a reasonable risk of harm to the
         User as a result of the breach or if notice is otherwise required by
         law. When we do, we will send you an email.
-      </P>
-      <H2 id="changes-and-amendments">Changes and amendments</H2>
-      <P>
+      </p>
+      <h2 id="changes-and-amendments">Changes and amendments</h2>
+      <p>
         We reserve the right to modify this Policy or its terms related to the
         Website and Services at any time at our discretion. When we do, we will
         revise the updated date at the bottom of this page, send you an email to
         notify you. We may also provide notice to you in other ways at our
         discretion, such as through the contact information you have provided.
-      </P>
-      <P>
+      </p>
+      <p>
         An updated version of this Policy will be effective immediately upon the
         posting of the revised Policy unless otherwise specified. Your continued
         use of the Website and Services after the effective date of the revised
@@ -610,22 +606,22 @@ export default function PrivacyRoute() {
         consent to those changes. However, we will not, without your consent,
         use your Personal Information in a manner materially different than what
         was stated at the time your Personal Information was collected.
-      </P>
-      <H2 id="acceptance-of-this-policy">Acceptance of this policy</H2>
-      <P>
+      </p>
+      <h2 id="acceptance-of-this-policy">Acceptance of this policy</h2>
+      <p>
         You acknowledge that you have read this Policy and agree to all its
         terms and conditions. By accessing and using the Website and Services
         and submitting your information you agree to be bound by this Policy. If
         you do not agree to abide by the terms of this Policy, you are not
         authorized to access or use the Website and Services.
-      </P>
-      <H2 id="contacting-us">Contacting us</H2>
-      <P>
+      </p>
+      <h2 id="contacting-us">Contacting us</h2>
+      <p>
         If you have any questions regarding the information we may hold about
         you or if you wish to exercise your rights, you may use the following
         data subject request form to submit your request:
-      </P>
-      <P>
+      </p>
+      <p>
         <A
           href="https://app.websitepolicies.com/dsar/view/jgslzas4"
           target="_blank"
@@ -633,25 +629,25 @@ export default function PrivacyRoute() {
         >
           Submit a data access request
         </A>
-      </P>
-      <P>
+      </p>
+      <p>
         If you have any other questions, concerns, or complaints regarding this
         Policy, we encourage you to contact us using the details below:
-      </P>
-      <P>
+      </p>
+      <p>
         <A href="&#109;&#097;&#105;&#108;&#116;&#111;&#058;c&#111;&#110;&#116;a&#99;&#116;&#64;l&#101;t&#115;&#46;&#99;&#104;u&#114;&#99;h">
           c&#111;&#110;&#116;&#97;ct&#64;l&#101;ts.&#99;hu&#114;&#99;&#104;
         </A>
-      </P>
-      <P>
+      </p>
+      <p>
         We will attempt to resolve complaints and disputes and make every
         reasonable effort to honor your wish to exercise your rights as quickly
         as possible and in any event, within the timescales provided by
         applicable data protection laws.
-      </P>
-      <P>
+      </p>
+      <p>
         <small>This document was last updated on May 3, 2023</small>
-      </P>
+      </p>
     </>
   );
 }

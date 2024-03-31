@@ -1,14 +1,10 @@
 import A from '~/components/content/a';
-import H1 from '~/components/content/h1';
-import H2 from '~/components/content/h2';
-import H3 from '~/components/content/h3';
-import P from '~/components/content/p';
 
 export default function TermsRoute() {
   return (
     <>
-      <H1>Terms and conditions</H1>
-      <P>
+      <h1>Terms and conditions</h1>
+      <p>
         These terms and conditions (&#8220;Agreement&#8221;) set forth the
         general terms and conditions of your use of the{' '}
         <a href="https://lets.church">lets.church</a> website
@@ -30,9 +26,9 @@ export default function TermsRoute() {
         and Let's Church Inc., even though it is electronic and is not
         physically signed by you, and it governs your use of the Website and
         Services.
-      </P>
+      </p>
       <div>
-        <H3>Table of contents</H3>
+        <h3>Table of contents</h3>
         <ol class="mt-4 max-w-xl space-y-2 text-gray-600">
           <li>
             <A href="#accounts-and-membership">Accounts and membership</A>
@@ -78,8 +74,8 @@ export default function TermsRoute() {
           </li>
         </ol>
       </div>
-      <H2 id="accounts-and-membership">Accounts and membership</H2>
-      <P>
+      <h2 id="accounts-and-membership">Accounts and membership</h2>
+      <p>
         If you create an account on the Website, you are responsible for
         maintaining the security of your account and you are fully responsible
         for all activities that occur under the account and any other actions
@@ -96,9 +92,9 @@ export default function TermsRoute() {
         goodwill. If we delete your account for the foregoing reasons, you may
         not re-register for our Services. We may block your email address and
         Internet protocol address to prevent further registration.
-      </P>
-      <H2 id="user-content">User content</H2>
-      <P>
+      </p>
+      <h2 id="user-content">User content</h2>
+      <p>
         We do not own any data, information or material (collectively,
         &#8220;Content&#8221;) that you submit on the Website in the course of
         using the Service. You shall have sole responsibility for the accuracy,
@@ -117,9 +113,9 @@ export default function TermsRoute() {
         the license to use, reproduce, adapt, modify, publish or distribute the
         Content created by you or stored in your user account for commercial,
         marketing or any similar purpose.
-      </P>
-      <H2 id="backups">Backups</H2>
-      <P>
+      </p>
+      <h2 id="backups">Backups</h2>
+      <p>
         We perform regular backups of the Website and its Content, however,
         these backups are for our own administrative purposes only and are in no
         way guaranteed. You are responsible for maintaining your own backups of
@@ -127,9 +123,9 @@ export default function TermsRoute() {
         incomplete data in the event that backups do not function properly. We
         will do our best to ensure complete and accurate backups, but assume no
         responsibility for this duty.
-      </P>
-      <H2 id="links-to-other-resources">Links to other resources</H2>
-      <P>
+      </p>
+      <h2 id="links-to-other-resources">Links to other resources</h2>
+      <p>
         Although the Website and Services may link to other resources (such as
         websites, mobile applications, etc.), we are not, directly or
         indirectly, implying any approval, association, sponsorship,
@@ -142,9 +138,9 @@ export default function TermsRoute() {
         legal statements and other conditions of use of any resource which you
         access through a link on the Website. Your linking to any other off-site
         resources is at your own risk.
-      </P>
-      <H2 id="prohibited-uses">Prohibited uses</H2>
-      <P>
+      </p>
+      <h2 id="prohibited-uses">Prohibited uses</h2>
+      <p>
         In addition to other terms as set forth in the Agreement, you are
         prohibited from using the Website and Services or Content: (a) for any
         unlawful purpose; (b) to solicit others to perform or participate in any
@@ -162,9 +158,9 @@ export default function TermsRoute() {
         party products and services, or the Internet. We reserve the right to
         terminate your use of the Website and Services for violating any of the
         prohibited uses.
-      </P>
-      <H2 id="disclaimer-of-warranty">Disclaimer of warranty</H2>
-      <P>
+      </p>
+      <h2 id="disclaimer-of-warranty">Disclaimer of warranty</h2>
+      <p>
         You agree that such Service is provided on an &#8220;as is&#8221; and
         &#8220;as available&#8221; basis and that your use of the Website and
         Services is solely at your own risk. We expressly disclaim all
@@ -185,9 +181,9 @@ export default function TermsRoute() {
         into through the Service unless stated otherwise. No advice or
         information, whether oral or written, obtained by you from us or through
         the Service shall create any warranty not expressly made herein.
-      </P>
-      <H2 id="indemnification">Indemnification</H2>
-      <P>
+      </p>
+      <h2 id="indemnification">Indemnification</h2>
+      <p>
         You agree to indemnify and hold Let's Church Inc. and its affiliates,
         directors, officers, employees, agents, suppliers and licensors harmless
         from and against any liabilities, losses, damages or costs, including
@@ -196,9 +192,9 @@ export default function TermsRoute() {
         asserted against any of them as a result of or relating to your Content,
         your use of the Website and Services or any willful misconduct on your
         part.
-      </P>
-      <H2 id="severability">Severability</H2>
-      <P>
+      </p>
+      <h2 id="severability">Severability</h2>
+      <p>
         All rights and restrictions contained in this Agreement may be exercised
         and shall be applicable and binding only to the extent that they do not
         violate any applicable laws and are intended to be limited to the extent
@@ -210,9 +206,9 @@ export default function TermsRoute() {
         agreement with respect to the subject matter hereof, and all such
         remaining provisions or portions thereof shall remain in full force and
         effect.
-      </P>
-      <H2 id="dispute-resolution">Dispute resolution</H2>
-      <P>
+      </p>
+      <h2 id="dispute-resolution">Dispute resolution</h2>
+      <p>
         The formation, interpretation, and performance of this Agreement and any
         disputes arising out of it shall be governed by the substantive and
         procedural laws of Delaware, United States without regard to its rules
@@ -224,9 +220,9 @@ export default function TermsRoute() {
         proceeding arising out of or related to this Agreement. The United
         Nations Convention on Contracts for the International Sale of Goods does
         not apply to this Agreement.
-      </P>
-      <H2 id="assignment">Assignment</H2>
-      <P>
+      </p>
+      <h2 id="assignment">Assignment</h2>
+      <p>
         You may not assign, resell, sub-license or otherwise transfer or
         delegate any of your rights or obligations hereunder, in whole or in
         part, without our prior written consent, which consent shall be at our
@@ -235,44 +231,44 @@ export default function TermsRoute() {
         or obligations hereunder, in whole or in part, to any third party as
         part of the sale of all or substantially all of its assets or stock or
         as part of a merger.
-      </P>
-      <H2 id="changes-and-amendments">Changes and amendments</H2>
-      <P>
+      </p>
+      <h2 id="changes-and-amendments">Changes and amendments</h2>
+      <p>
         We reserve the right to modify this Agreement or its terms related to
         the Website and Services at any time at our discretion. When we do, we
         will revise the updated date at the bottom of this page and send you an
         email to notify you. We may also provide notice to you in other ways at
         our discretion, such as through the contact information you have
         provided.
-      </P>
-      <P>
+      </p>
+      <p>
         An updated version of this Agreement will be effective immediately upon
         the posting of the revised Agreement unless otherwise specified. Your
         continued use of the Website and Services after the effective date of
         the revised Agreement (or such other act specified at that time) will
         constitute your consent to those changes.
-      </P>
-      <H2 id="acceptance-of-these-terms">Acceptance of these terms</H2>
-      <P>
+      </p>
+      <h2 id="acceptance-of-these-terms">Acceptance of these terms</h2>
+      <p>
         You acknowledge that you have read this Agreement and agree to all its
         terms and conditions. By accessing and using the Website and Services
         you agree to be bound by this Agreement. If you do not agree to abide by
         the terms of this Agreement, you are not authorized to access or use the
         Website and Services.
-      </P>
-      <H2 id="contacting-us">Contacting us</H2>
-      <P>
+      </p>
+      <h2 id="contacting-us">Contacting us</h2>
+      <p>
         If you have any questions, concerns, or complaints regarding this
         Agreement, we encourage you to contact us using the details below:
-      </P>
-      <P>
+      </p>
+      <p>
         <A href="&#109;&#097;&#105;&#108;&#116;&#111;&#058;&#99;&#111;n&#116;&#97;&#99;&#116;&#64;l&#101;t&#115;&#46;&#99;h&#117;&#114;c&#104;">
           cont&#97;ct&#64;&#108;&#101;t&#115;&#46;&#99;h&#117;r&#99;h
         </A>
-      </P>
-      <P>
+      </p>
+      <p>
         <small>This document was last updated on May 3, 2023</small>
-      </P>
+      </p>
     </>
   );
 }

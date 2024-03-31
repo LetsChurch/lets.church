@@ -6,7 +6,7 @@ export type Props = Omit<JSX.IntrinsicElements['h4'], 'children'> & {
   children: string;
 };
 
-export default function H1(props: Props) {
+export default function H4(props: Props) {
   const [localProps, restProps] = splitProps(props, ['class', 'children']);
 
   return (

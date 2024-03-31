@@ -57,7 +57,7 @@ export default function Header() {
   });
 
   return (
-    <header class="bg-white shadow">
+    <header class="relative bg-white shadow">
       <nav>
         <div class="mx-auto max-w-7xl px-2 sm:px-4 lg:px-8">
           <div class="flex h-16 justify-between">

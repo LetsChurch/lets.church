@@ -5,9 +5,6 @@ import sortBy from 'just-sort-by';
 import { createAsync } from '@solidjs/router';
 import type { ChannelsListQuery } from './__generated__/channels';
 import A from '~/components/content/a';
-import H1 from '~/components/content/h1';
-import H2 from '~/components/content/h2';
-import { Ul } from '~/components/content/list';
 import { getAuthenticatedClient } from '~/util/gql/server';
 
 const loadChannels = async () => {
@@ -42,13 +39,13 @@ export default function ChannelsRoute() {
 
   return (
     <div class="bg-white px-6 py-3 lg:px-8">
-      <div class="mx-auto max-w-3xl text-base leading-7 text-gray-700">
-        <H1>Channels</H1>
+      <div class="prose mx-auto max-w-3xl text-base leading-7 text-gray-700">
+        <h1>Channels</h1>
         <For each={data()}>
           {(group) => (
             <>
-              <H2>{group[0] ?? ''}</H2>
-              <Ul>
+              <h2>{group[0] ?? ''}</h2>
+              <ul>
                 <For each={group[1]}>
                   {(ch) => (
                     <li>
@@ -56,7 +53,7 @@ export default function ChannelsRoute() {
                     </li>
                   )}
                 </For>
-              </Ul>
+              </ul>
             </>
           )}
         </For>

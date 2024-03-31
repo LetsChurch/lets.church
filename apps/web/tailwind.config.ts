@@ -15,7 +15,7 @@ const config: Config = {
       mono: ['Roboto MonoVariable', 'monospace'],
     },
   },
-  plugins: [require('@tailwindcss/forms')],
+  plugins: [require('@tailwindcss/forms'), require('@tailwindcss/typography')],
 };
 
 export default config;

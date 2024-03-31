@@ -7,8 +7,6 @@ import type {
   UnsubscribeFromNewsletterMutation,
   UnsubscribeFromNewsletterMutationVariables,
 } from './__generated__/unsubscribe';
-import H1 from '~/components/content/h1';
-import P from '~/components/content/p';
 import { createAuthenticatedClient } from '~/util/gql/server';
 
 const QuerySchema = z.object({
@@ -59,16 +57,16 @@ export default function NewsletterUnsubscribeRoute() {
           when={data()}
           fallback={
             <>
-              <H1>Error!</H1>
-              <P>
+              <h1>Error!</h1>
+              <p>
                 There was an error unsubscribing from the Let's Church
                 newsletter.
-              </P>
+              </p>
             </>
           }
         >
-          <H1>Unsubscribed!</H1>
-          <P>You have been unsubscribed from the Let's Church newsletter.</P>
+          <h1>Unsubscribed!</h1>
+          <p>You have been unsubscribed from the Let's Church newsletter.</p>
         </Show>
       </div>
     </div>

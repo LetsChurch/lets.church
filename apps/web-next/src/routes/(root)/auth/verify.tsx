@@ -8,8 +8,6 @@ import type {
   VerifyEmailMutationVariables,
 } from './__generated__/verify';
 import { getAuthenticatedClientOrRedirect } from '~/util/gql/server';
-import H1 from '~/components/content/h1';
-import P from '~/components/content/p';
 
 const QuerySchema = z.object({
   userId: z.string(),
@@ -57,18 +55,18 @@ export default function EmailVerifyRoute() {
 
   return (
     <div class="bg-white px-6 py-3 lg:px-8">
-      <div class="mx-auto max-w-3xl text-base leading-7 text-gray-700">
+      <div class="prose mx-auto max-w-3xl text-base leading-7 text-gray-700">
         <Show
           when={data()}
           fallback={
             <>
-              <H1>Error!</H1>
-              <P>There was an error verifying your email address.</P>
+              <h1>Error!</h1>
+              <p>There was an error verifying your email address.</p>
             </>
           }
         >
-          <H1>Email Verified!</H1>
-          <P>Your email address has been verified!</P>
+          <h1>Email Verified!</h1>
+          <p>Your email address has been verified!</p>
         </Show>
       </div>
     </div>

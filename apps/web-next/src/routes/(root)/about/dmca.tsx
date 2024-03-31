@@ -1,14 +1,10 @@
 import A from '~/components/content/a';
-import H1 from '~/components/content/h1';
-import H2 from '~/components/content/h2';
-import H3 from '~/components/content/h3';
-import P from '~/components/content/p';
 
 export default function DmcaRoute() {
   return (
     <>
-      <H1>DMCA policy</H1>
-      <P>
+      <h1>DMCA policy</h1>
+      <p>
         This Digital Millennium Copyright Act policy (&#8220;Policy&#8221;)
         applies to the <a href="https://lets.church">lets.church</a> website
         (&#8220;Website&#8221; or &#8220;Service&#8221;) and any of its related
@@ -17,8 +13,8 @@ export default function DmcaRoute() {
         &#8220;we&#8221;, &#8220;us&#8221; or &#8220;our&#8221;) addresses
         copyright infringement notifications and how you (&#8220;you&#8221; or
         &#8220;your&#8221;) may submit a copyright infringement complaint.
-      </P>
-      <P>
+      </p>
+      <p>
         Protection of intellectual property is of utmost importance to us and we
         ask our users and their authorized agents to do the same. It is our
         policy to expeditiously respond to clear notifications of alleged
@@ -33,9 +29,9 @@ export default function DmcaRoute() {
           website
         </a>
         .
-      </P>
+      </p>
       <div>
-        <H3>Table of contents</H3>
+        <h3>Table of contents</h3>
         <ol class="mt-4 max-w-xl space-y-2 text-gray-600">
           <li>
             <A href="#what-to-consider-before-submitting-a-copyright-complaint">
@@ -60,10 +56,10 @@ export default function DmcaRoute() {
           </li>
         </ol>
       </div>
-      <H2 id="what-to-consider-before-submitting-a-copyright-complaint">
+      <h2 id="what-to-consider-before-submitting-a-copyright-complaint">
         What to consider before submitting a copyright complaint
-      </H2>
-      <P>
+      </h2>
+      <p>
         Before submitting a copyright complaint to us, consider whether the use
         could be considered fair use. Fair use states that brief excerpts of
         copyrighted material may, under certain circumstances, be quoted
@@ -73,16 +69,16 @@ export default function DmcaRoute() {
         continue with a copyright complaint, you may want to first reach out to
         the user in question to see if you can resolve the matter directly with
         the user.
-      </P>
-      <P>
+      </p>
+      <p>
         Please note that under 17 U.S.C. § 512(f), you may be liable for any
         damages, including costs and attorneys&#8217; fees incurred by us or our
         users, if you knowingly misrepresent that the material or activity is
         infringing. If you are unsure whether the material you are reporting is
         in fact infringing, you may wish to contact an attorney before filing a
         notification with us.
-      </P>
-      <P>
+      </p>
+      <p>
         We may, at our discretion or as required by law, share a copy of your
         notification or counter-notification with third parties. This may
         include sharing the information with the account holder engaged in the
@@ -95,15 +91,15 @@ export default function DmcaRoute() {
           hire an agent
         </a>{' '}
         to report infringing material for you.
-      </P>
-      <H2 id="notifications-of-infringement">Notifications of infringement</H2>
-      <P>
+      </p>
+      <h2 id="notifications-of-infringement">Notifications of infringement</h2>
+      <p>
         If you are a copyright owner or an agent thereof, and you believe that
         any material available on our Services infringes your copyrights, then
         you may submit a written copyright infringement notification
         (&#8220;Notification&#8221;) using the contact details below pursuant to
         the DMCA by providing us with the following information:
-      </P>
+      </p>
       <ul>
         <li>
           Identification of the copyrighted work that you claim has been
@@ -137,7 +133,7 @@ export default function DmcaRoute() {
           behalf.
         </li>
       </ul>
-      <P>
+      <p>
         All such Notifications must comply with the DMCA requirements. You may
         refer to a{' '}
         <a
@@ -148,31 +144,31 @@ export default function DmcaRoute() {
         </a>{' '}
         or other similar services to avoid making mistake and ensure compliance
         of your Notification.
-      </P>
-      <P>
+      </p>
+      <p>
         Filing a DMCA complaint is the start of a pre-defined legal process.
         Your complaint will be reviewed for accuracy, validity, and
         completeness. If your complaint has satisfied these requirements, our
         response may include the removal or restriction of access to allegedly
         infringing material as well as a permanent termination of repeat
         infringers&#8217; accounts.
-      </P>
-      <P>
+      </p>
+      <p>
         If we remove or restrict access to materials or terminate an account in
         response to a Notification of alleged infringement, we will make a good
         faith effort to contact the affected user with information concerning
         the removal or restriction of access, which may include a full copy of
         your Notification (including your name, address, phone, and email
         address), along with instructions for filing a counter-notification.
-      </P>
-      <P>
+      </p>
+      <p>
         Notwithstanding anything to the contrary contained in any portion of
         this Policy, Let's Church Inc. reserves the right to take no action upon
         receipt of a DMCA copyright infringement notification if it fails to
         comply with all the requirements of the DMCA for such notifications.
-      </P>
-      <H2 id="counter-notifications">Counter-notifications</H2>
-      <P>
+      </p>
+      <h2 id="counter-notifications">Counter-notifications</h2>
+      <p>
         A user who receives a copyright infringement Notification may make a
         counter-Notification pursuant to sections 512(g)(2) and (3) of the US
         Copyright Act. If you receive a copyright infringement Notification, it
@@ -181,11 +177,11 @@ export default function DmcaRoute() {
         take the time to read through the Notification, which includes
         information on the Notification we received as well as instructions on
         how to file a counter-notifications.
-      </P>
-      <P>
+      </p>
+      <p>
         To file a counter-notification with us, you must provide a written
         communication that sets out the information specified in the list below:
-      </P>
+      </p>
       <ul>
         <li>
           Identification of the material that has been removed or to which
@@ -216,7 +212,7 @@ export default function DmcaRoute() {
           behalf.
         </li>
       </ul>
-      <P>
+      <p>
         Please note that you may be liable for, including costs and
         attorneys&#8217; fees incurred by us or our users, if you knowingly
         misrepresent that the material or activity is not infringing the
@@ -226,48 +222,48 @@ export default function DmcaRoute() {
         the material or activity was removed or restricted by mistake or
         misidentification, you may wish to contact an attorney before filing a
         counter-notification.
-      </P>
-      <P>
+      </p>
+      <p>
         Notwithstanding anything to the contrary contained in any portion of
         this Policy, Let's Church Inc. reserves the right to take no action upon
         receipt of a counter-notification. If we receive a counter-notification
         that complies with the terms of 17 U.S.C. § 512(g), we may forward it to
         the person who filed the original Notification.
-      </P>
-      <P>
+      </p>
+      <p>
         The process described in this Policy does not limit our ability to
         pursue any other remedies we may have to address suspected infringement.
-      </P>
-      <H2 id="changes-and-amendments">Changes and amendments</H2>
-      <P>
+      </p>
+      <h2 id="changes-and-amendments">Changes and amendments</h2>
+      <p>
         We reserve the right to modify this Policy or its terms related to the
         Website and Services at any time at our discretion. When we do, we will
         revise the updated date at the bottom of this page. We may also provide
         notice to you in other ways at our discretion, such as through the
         contact information you have provided.
-      </P>
-      <P>
+      </p>
+      <p>
         An updated version of this Policy will be effective immediately upon the
         posting of the revised Policy unless otherwise specified. Your continued
         use of the Website and Services after the effective date of the revised
         Policy (or such other act specified at that time) will constitute your
         consent to those changes.
-      </P>
-      <H2 id="reporting-copyright-infringement">
+      </p>
+      <h2 id="reporting-copyright-infringement">
         Reporting copyright infringement
-      </H2>
-      <P>
+      </h2>
+      <p>
         If you would like to notify us of the infringing material or activity,
         we encourage you to contact us using the details below:
-      </P>
-      <P>
+      </p>
+      <p>
         <A href="&#109;&#097;&#105;&#108;&#116;&#111;&#058;c&#111;&#110;t&#97;&#99;&#116;&#64;l&#101;ts&#46;&#99;hur&#99;&#104;">
           co&#110;t&#97;c&#116;&#64;le&#116;s&#46;&#99;&#104;&#117;&#114;c&#104;
         </A>
-      </P>
-      <P>
+      </p>
+      <p>
         <small>This document was last updated on May 3, 2023</small>
-      </P>
+      </p>
     </>
   );
 }
