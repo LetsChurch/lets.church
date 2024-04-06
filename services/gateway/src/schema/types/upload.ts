@@ -554,7 +554,7 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
       },
       resolve: (query, root, _args, _context, _info) => {
         const ordPattern =
-          /(?:part|chapter) (?<ord1>\d+)|(?<ord2>\d+) of \d+|^(?<ord3>\d+)/i;
+          /(?:part|pt\.?|week|chapter) (?<ord1>\d+)|(?<ord2>\d+) of \d+|^(?<ord3>\d+)/i;
         const match = root.title?.match(ordPattern);
 
         if (!match) {
