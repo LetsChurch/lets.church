@@ -7,6 +7,8 @@ import Header from '~/components/header';
 import { getAuthenticatedClient } from '~/util/gql/server';
 import { UserContext } from '~/util/user-context';
 import MediaHeader from '~/components/media/header';
+import { isChurchesPage } from '~/util/routing';
+import { cn } from '~/util';
 
 const getMe = cache(async function () {
   'use server';
@@ -42,9 +44,11 @@ export default function RootLayout(props: ParentProps) {
   return (
     <UserContext.Provider value={data}>
       <Header />
-      <main class="px-2 sm:px-4 lg:px-8">
+      <main class={cn(isChurchesPage() ? null : 'px-2 sm:px-4 lg:px-8')}>
         <MediaHeader />
-        <div class="mx-auto max-w-7xl">{props.children}</div>
+        <div class={cn(isChurchesPage() ? null : 'mx-auto max-w-7xl')}>
+          {props.children}
+        </div>
       </main>
       <Footer />
     </UserContext.Provider>

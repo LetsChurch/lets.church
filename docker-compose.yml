@@ -46,45 +46,47 @@ services:
       - web-node-modules:/home/node/app/node_modules
     depends_on:
       - gateway
-  # web-next:
-  #   build:
-  #     context: ./apps/web-next
-  #     dockerfile: Dockerfile
-  #   command: npm run dev
-  #   ports:
-  #     - ${HOST_WEB_PORT}:3000
-  #     - ${HOST_WEB_HMR_PORT}:${INTERNAL_WEB_HMR_PORT}
-  #   environment:
-  #     NODE_ENV: development
-  #     COOKIE_SECRET: ${WEB_COOKIE_SECRET}
-  #     GRAPHQL_URL: http://gateway:3000/graphql
-  #     INTERNAL_WEB_HMR_PORT: ${INTERNAL_WEB_HMR_PORT}
-  #   volumes:
-  #     - ./apps/web-next:/home/node/app
-  #     - web-next-node-modules:/home/node/app/node_modules
-  #     - web-next-dot-vinxi:/home/node/app/.vinxi
-  #     - web-next-dot-output:/home/node/app/.output
-  #   depends_on:
-  #     - gateway
-  web-astro:
+  web-next:
     build:
-      context: ./apps/web-astro
+      context: ./apps/web-next
       dockerfile: Dockerfile
     command: npm run dev
     ports:
-      - ${HOST_WEB_NEXT_PORT}:4321
+      - ${HOST_WEB_NEXT_PORT}:3000
+      - ${HOST_WEB_HMR_PORT}:${INTERNAL_WEB_HMR_PORT}
     environment:
       NODE_ENV: development
       COOKIE_SECRET: ${WEB_COOKIE_SECRET}
       GRAPHQL_URL: http://gateway:3000/graphql
-      PUBLIC_MAPBOX_MAP_TOKEN: ${MAPBOX_MAP_TOKEN}
-      PUBLIC_MAPBOX_SEARCHBOX_TOKEN: ${MAPBOX_SEARCHBOX_TOKEN}
-      TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA"
+      INTERNAL_WEB_HMR_PORT: ${INTERNAL_WEB_HMR_PORT}
+      VITE_MAPBOX_MAP_TOKEN: ${MAPBOX_MAP_TOKEN}
+      VITE_MAPBOX_SEARCHBOX_TOKEN: ${MAPBOX_SEARCHBOX_TOKEN}
     volumes:
-      - ./apps/web-astro:/home/node/app
-      - web-astro-node-modules:/home/node/app/node_modules
+      - ./apps/web-next:/home/node/app
+      - web-next-node-modules:/home/node/app/node_modules
+      - web-next-dot-vinxi:/home/node/app/.vinxi
+      - web-next-dot-output:/home/node/app/.output
     depends_on:
       - gateway
+  # web-astro:
+  #   build:
+  #     context: ./apps/web-astro
+  #     dockerfile: Dockerfile
+  #   command: npm run dev
+  #   ports:
+  #     - ${HOST_WEB_NEXT_PORT}:4321
+  #   environment:
+  #     NODE_ENV: development
+  #     COOKIE_SECRET: ${WEB_COOKIE_SECRET}
+  #     GRAPHQL_URL: http://gateway:3000/graphql
+  #     PUBLIC_MAPBOX_MAP_TOKEN: ${MAPBOX_MAP_TOKEN}
+  #     PUBLIC_MAPBOX_SEARCHBOX_TOKEN: ${MAPBOX_SEARCHBOX_TOKEN}
+  #     TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA"
+  #   volumes:
+  #     - ./apps/web-astro:/home/node/app
+  #     - web-astro-node-modules:/home/node/app/node_modules
+  #   depends_on:
+  #     - gateway
 
   gateway:
     build:

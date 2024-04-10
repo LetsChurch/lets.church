@@ -13,6 +13,8 @@ import Profile from './profile';
 import ProfileMobile from './profile-mobile';
 import Logo from './logo';
 import { useUser } from '~/util/user-context';
+import { isChurchesPage } from '~/util/routing';
+import { cn } from '~/util';
 
 const navLinks: Array<ComponentProps<typeof A>> = [
   { href: '/', children: 'Media', end: true },
@@ -57,7 +59,12 @@ export default function Header() {
   });
 
   return (
-    <header class="relative bg-white shadow">
+    <header
+      class={cn(
+        'relative z-10 bg-white shadow',
+        isChurchesPage() ? 'sticky top-0' : null,
+      )}
+    >
       <nav>
         <div class="mx-auto max-w-7xl px-2 sm:px-4 lg:px-8">
           <div class="flex h-16 justify-between">
