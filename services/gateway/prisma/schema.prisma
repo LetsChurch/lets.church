@@ -154,24 +154,25 @@ model OrganizationTagInstance {
 }
 
 model Organization {
-  id                                 String                                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  type                               OrganizationType                      @default(MINISTRY)
-  name                               String
-  slug                               String                                @unique @db.Citext
-  avatarPath                         String?                               @map("avatar_path")
-  coverPath                          String?                               @map("cover_path")
-  primaryEmail                       String?                               @map("primary_email")
-  primaryPhoneNumber                 String?                               @map("primary_phone_number")
-  websiteUrl                         String?                               @map("website_url")
-  addresses                          OrganizationAddress[]
-  description                        String?
-  memberships                        OrganizationMembership[]
-  channelAssociations                OrganizationChannelAssociation[]
-  tags                               OrganizationTagInstance[]
-  createdAt                          DateTime                              @default(now()) @map("created_at")
-  updatedAt                          DateTime                              @updatedAt @map("updated_at")
-  upstreamOrganizationAssociations   OrganizationOrganizationAssociation[] @relation("downstreamOrganization")
-  downstreamOrganizationAssociations OrganizationOrganizationAssociation[] @relation("upstreamOrganization")
+  id                                           String                                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type                                         OrganizationType                      @default(MINISTRY)
+  name                                         String
+  slug                                         String                                @unique @db.Citext
+  avatarPath                                   String?                               @map("avatar_path")
+  coverPath                                    String?                               @map("cover_path")
+  primaryEmail                                 String?                               @map("primary_email")
+  primaryPhoneNumber                           String?                               @map("primary_phone_number")
+  websiteUrl                                   String?                               @map("website_url")
+  addresses                                    OrganizationAddress[]
+  description                                  String?
+  memberships                                  OrganizationMembership[]
+  channelAssociations                          OrganizationChannelAssociation[]
+  upstreamOrganizationAssociations             OrganizationOrganizationAssociation[] @relation("downstreamOrganization")
+  downstreamOrganizationAssociations           OrganizationOrganizationAssociation[] @relation("upstreamOrganization")
+  automaticallyApproveOrganizationAssociations Boolean                               @default(false) @map("automatically_approve_organization_associations")
+  tags                                         OrganizationTagInstance[]
+  createdAt                                    DateTime                              @default(now()) @map("created_at")
+  updatedAt                                    DateTime                              @updatedAt @map("updated_at")
 
   @@map("organization")
 }
