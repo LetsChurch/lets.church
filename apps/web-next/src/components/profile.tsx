@@ -52,45 +52,43 @@ export default function Profile(props: Props) {
 
   return (
     <div class="relative ml-4 flex-shrink-0">
-      <div>
-        <Show
-          when={props.me}
-          fallback={
-            <A
-              href={loginLocation}
-              class="ml-6 inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-            >
-              Login
-            </A>
-          }
+      <Show
+        when={props.me}
+        fallback={
+          <A
+            href={loginLocation}
+            class="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          >
+            Login
+          </A>
+        }
+      >
+        <button
+          type="button"
+          class="flex rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          id={menuButtonId}
+          aria-expanded="false"
+          aria-haspopup="true"
+          ref={setReference}
+          onClick={toggleMenu}
         >
-          <button
-            type="button"
-            class="flex rounded-full bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-            id={menuButtonId}
-            aria-expanded="false"
-            aria-haspopup="true"
-            ref={setReference}
-            onClick={toggleMenu}
-          >
-            <span class="sr-only">Open user menu</span>
-            <Avatar src={props.me?.avatarUrl ?? ''} size="sm" />
-          </button>
-          <form
-            id={logoutFormId}
-            action={logoutAction}
-            method="post"
-            class="hidden"
-            onSubmit={() => closeMenu()}
-          >
-            <input
-              type="hidden"
-              name="redirect"
-              value={useSerializedLocation()}
-            />
-          </form>
-        </Show>
-      </div>
+          <span class="sr-only">Open user menu</span>
+          <Avatar src={props.me?.avatarUrl ?? ''} size="sm" />
+        </button>
+        <form
+          id={logoutFormId}
+          action={logoutAction}
+          method="post"
+          class="hidden"
+          onSubmit={() => closeMenu()}
+        >
+          <input
+            type="hidden"
+            name="redirect"
+            value={useSerializedLocation()}
+          />
+        </form>
+      </Show>
       <FloatingMenu
         ref={setFloating}
         open={showMenu()}
