@@ -84,6 +84,14 @@ export default function Footer() {
                       Family Integrated Churches
                     </a>
                   </li>
+                  <li>
+                    <a
+                      href="/churches/add"
+                      class="text-sm leading-6 text-gray-600 hover:text-gray-900"
+                    >
+                      Add Your Church
+                    </a>
+                  </li>
                 </ul>
               </div>
             </div>
