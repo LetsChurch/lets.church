@@ -27,6 +27,7 @@ import { subscribeToNewsletter } from '../../util/newsletter';
 import { getS3ProtocolUri } from '../../util/s3';
 import logger from '../../util/logger';
 import { ResizeParams } from './misc';
+import { OrganizationTypeEnum } from './organization';
 
 const moduleLogger = logger.child({ module: 'schema/types/user' });
 
@@ -159,6 +160,10 @@ export const AppUser = builder.prismaObject('AppUser', {
       {
         cursor: 'organizationId_appUserId',
         authScopes: privateAuthScopes,
+        args: {
+          type: t.arg({ type: OrganizationTypeEnum, required: true }),
+        },
+        query: ({ type }) => ({ where: { organization: { type } } }),
       },
     ),
     playlists: t.relatedConnection('uploadLists', {

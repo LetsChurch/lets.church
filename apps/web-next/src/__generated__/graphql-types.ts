@@ -75,6 +75,7 @@ export type AppUserOrganizationMemberhipsConnectionArgs = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+  type: OrganizationType;
 };
 
 
@@ -721,8 +722,8 @@ export type OrganizationLeadersConnectionEdge = {
 
 export type OrganizationMembership = {
   __typename?: 'OrganizationMembership';
-  channel: Organization;
   isAdmin: Scalars['Boolean']['output'];
+  organization: Organization;
   user: AppUser;
 };
 

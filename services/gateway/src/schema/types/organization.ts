@@ -242,7 +242,7 @@ builder.prismaObject('OrganizationLeader', {
 const OrganizationMembership = builder.prismaObject('OrganizationMembership', {
   fields: (t) => ({
     user: t.relation('appUser'),
-    channel: t.relation('organization'),
+    organization: t.relation('organization'),
     isAdmin: t.exposeBoolean('isAdmin'),
   }),
 });
