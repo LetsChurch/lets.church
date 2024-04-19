@@ -23,9 +23,9 @@ declare global {
 
 let scriptEl: HTMLScriptElement | undefined;
 
-export function Turnstile(
+export default function TurnstileClient(
   props: { size?: 'normal' | 'compact' } & JSX.HTMLAttributes<HTMLDivElement>,
-) {
+): JSX.Element {
   const [localProps, otherProps] = splitProps(props, ['size']);
 
   let element: HTMLDivElement;
