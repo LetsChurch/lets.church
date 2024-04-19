@@ -306,8 +306,10 @@ builder.mutationFields((t) => ({
       query,
       _parent,
       { channelId, name, slug, description },
-      _context,
+      { session },
     ) => {
+      invariant(session, 'Unauthorized');
+
       if (channelId) {
         return prisma.channel.update({
           ...query,
@@ -327,6 +329,12 @@ builder.mutationFields((t) => ({
         data: {
           name,
           slug,
+          memberships: {
+            create: {
+              appUserId: session.appUserId,
+              isAdmin: true,
+            },
+          },
           ...(typeof description === 'string' ? { description } : {}),
         },
       });

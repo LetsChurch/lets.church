@@ -355,8 +355,10 @@ builder.mutationFields((t) => ({
         addresses,
         leaders,
       },
-      _context,
+      { session },
     ) => {
+      invariant(session, 'Unauthorized');
+
       return prisma.$transaction(async (tx) => {
         if (organizationId) {
           await tx.organization.update({
@@ -415,6 +417,12 @@ builder.mutationFields((t) => ({
             type,
             name,
             slug,
+            memberships: {
+              create: {
+                appUserId: session.appUserId,
+                isAdmin: true,
+              },
+            },
             ...(typeof description === 'string' ? { description } : {}),
             ...(typeof primaryEmail === 'string' ? { primaryEmail } : {}),
             ...(typeof primaryPhoneNumber === 'string'
