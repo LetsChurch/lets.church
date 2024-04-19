@@ -24,13 +24,7 @@ import {
   remove,
 } from '@modular-forms/solid';
 import { gql } from 'graphql-request';
-import {
-  type RouteDefinition,
-  action,
-  redirect,
-  useAction,
-  createAsync,
-} from '@solidjs/router';
+import { action, redirect, useAction } from '@solidjs/router';
 import {
   UpsertOrganizationMutation,
   UpsertOrganizationMutationVariables,
@@ -42,17 +36,7 @@ import {
   OrganizationAddressType,
   OrganizationLeaderType,
 } from '~/__generated__/graphql-types';
-
-const routeData = async () => {
-  'use server';
-  await getAuthenticatedClientOrRedirect();
-};
-
-export const route = {
-  load: () => {
-    void routeData();
-  },
-} satisfies RouteDefinition;
+import { RequireUser } from '~/util/user-context';
 
 const formSchema = object({
   name: string([minLength(1, 'Please enter a name for your church.')]),
@@ -157,8 +141,6 @@ function AddressForm(props: {
   store: FormStore<FormSchema, undefined>;
   index: number;
 }) {
-  createAsync(() => routeData());
-
   return (
     <div class="relative mt-2 grid grid-cols-1 gap-x-6 gap-y-8 rounded-lg border border-dashed border-gray-900/25 p-4 sm:grid-cols-6">
       <button
@@ -362,181 +344,191 @@ export default function ProfileNewChurchesRoute() {
   }
 
   return (
-    <>
-      <PageHeading title="Add New Church" backButton />
-      <For each={errors()}>
-        {(error) => <p class="text-red-500">{error.message}</p>}
-      </For>
-      <Form of={store} onSubmit={handleSubmit}>
-        <div class="space-y-12">
-          <div class="border-b border-gray-900/10 pb-12">
-            <h2 class="text-base font-semibold leading-7 text-gray-900">
-              Profile
-            </h2>
-            <p class="mt-1 text-sm leading-6 text-gray-600">
-              This information will be displayed publicly.
-            </p>
+    <RequireUser>
+      {() => (
+        <>
+          <PageHeading title="Add New Church" backButton />
+          <For each={errors()}>
+            {(error) => <p class="text-red-500">{error.message}</p>}
+          </For>
+          <Form of={store} onSubmit={handleSubmit}>
+            <div class="space-y-12">
+              <div class="border-b border-gray-900/10 pb-12">
+                <h2 class="text-base font-semibold leading-7 text-gray-900">
+                  Profile
+                </h2>
+                <p class="mt-1 text-sm leading-6 text-gray-600">
+                  This information will be displayed publicly.
+                </p>
 
-            <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-              <Field of={store} name="name">
-                {(field, props) => (
-                  <LabeledInput
-                    {...props}
-                    name={field.name}
-                    label="Name"
-                    error={field.error}
-                    class="sm:col-span-4"
-                  />
-                )}
-              </Field>
+                <div class="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+                  <Field of={store} name="name">
+                    {(field, props) => (
+                      <LabeledInput
+                        {...props}
+                        name={field.name}
+                        label="Name"
+                        error={field.error}
+                        class="sm:col-span-4"
+                      />
+                    )}
+                  </Field>
 
-              <Field of={store} name="slug">
-                {(field, props) => (
-                  <LabeledInput
-                    {...props}
-                    name={field.name}
-                    label="URL"
-                    prefix="lets.church/churches/"
-                    placeholder="my-church"
-                    error={field.error}
-                    class="sm:col-span-4"
-                  />
-                )}
-              </Field>
+                  <Field of={store} name="slug">
+                    {(field, props) => (
+                      <LabeledInput
+                        {...props}
+                        name={field.name}
+                        label="URL"
+                        prefix="lets.church/churches/"
+                        placeholder="my-church"
+                        error={field.error}
+                        class="sm:col-span-4"
+                      />
+                    )}
+                  </Field>
 
-              <Field of={store} name="about">
-                {(field, props) => (
-                  <LabeledInput
-                    type="textarea"
-                    {...props}
-                    name={field.name}
-                    label="About"
-                    placeholder="Write a few sentences about your church."
-                    error={field.error}
-                    class="col-span-full"
-                  />
-                )}
-              </Field>
-            </div>
-          </div>
+                  <Field of={store} name="about">
+                    {(field, props) => (
+                      <LabeledInput
+                        type="textarea"
+                        {...props}
+                        name={field.name}
+                        label="About"
+                        placeholder="Write a few sentences about your church."
+                        error={field.error}
+                        class="col-span-full"
+                      />
+                    )}
+                  </Field>
+                </div>
+              </div>
 
-          <div class="pb-12">
-            <h2 class="text-base font-semibold leading-7 text-gray-900">
-              Contact
-            </h2>
-            <p class="mt-1 text-sm leading-6 text-gray-600">
-              Contact and meeting information for your church.
-            </p>
+              <div class="pb-12">
+                <h2 class="text-base font-semibold leading-7 text-gray-900">
+                  Contact
+                </h2>
+                <p class="mt-1 text-sm leading-6 text-gray-600">
+                  Contact and meeting information for your church.
+                </p>
 
-            <Field of={store} name="primaryEmail">
-              {(field, props) => (
-                <LabeledInput
-                  {...props}
-                  name={field.name}
-                  label="Primary Email"
-                  placeholder="pastor@church.com"
-                  error={field.error}
-                  class="mt-6 sm:col-span-4"
-                />
-              )}
-            </Field>
-
-            <Field of={store} name="primaryPhoneNumber">
-              {(field, props) => (
-                <LabeledInput
-                  type="tel"
-                  {...props}
-                  name={field.name}
-                  label="Primary Phone Number"
-                  placeholder="+1 (555) 555-5555"
-                  error={field.error}
-                  class="mt-6 sm:col-span-4"
-                />
-              )}
-            </Field>
-
-            <label class="mt-6 block text-sm font-medium leading-6 text-gray-900">
-              Addresses
-            </label>
-
-            <FieldArray of={store} name="addresses">
-              {(fieldArray) => (
-                <For
-                  each={fieldArray.items}
-                  fallback={<EmptyState>No addresses added yet.</EmptyState>}
-                >
-                  {(_, index) => <AddressForm store={store} index={index()} />}
-                </For>
-              )}
-            </FieldArray>
-
-            <Button
-              variant="secondary"
-              class="mt-4"
-              onClick={() =>
-                insert(store, 'addresses', {
-                  value: {
-                    type: 'Meeting',
-                    country: '',
-                    locality: '',
-                    region: '',
-                    // postOfficeBoxNumber: '',
-                    postalCode: '',
-                    streetAddress: '',
-                  },
-                })
-              }
-            >
-              <AddIcon class="-ml-2 mr-2 text-gray-400" />
-              Add address
-            </Button>
-
-            <label class="mt-6 block text-sm font-medium leading-6 text-gray-900">
-              Leadership
-            </label>
-
-            <FieldArray of={store} name="leadership">
-              {(fieldArray) => (
-                <For
-                  each={fieldArray.items}
-                  fallback={<EmptyState>No leadership added yet.</EmptyState>}
-                >
-                  {(_, index) => (
-                    <LeadershipForm store={store} index={index()} />
+                <Field of={store} name="primaryEmail">
+                  {(field, props) => (
+                    <LabeledInput
+                      {...props}
+                      name={field.name}
+                      label="Primary Email"
+                      placeholder="pastor@church.com"
+                      error={field.error}
+                      class="mt-6 sm:col-span-4"
+                    />
                   )}
-                </For>
-              )}
-            </FieldArray>
+                </Field>
 
-            <Button
-              variant="secondary"
-              class="mt-4"
-              onClick={() =>
-                insert(store, 'leadership', {
-                  value: {
-                    name: '',
-                    type: 'Elder',
-                    phoneNumber: '',
-                    email: '',
-                  },
-                })
-              }
-            >
-              <AddIcon class="-ml-2 mr-2 text-gray-400" />
-              Add leader
-            </Button>
-          </div>
-        </div>
+                <Field of={store} name="primaryPhoneNumber">
+                  {(field, props) => (
+                    <LabeledInput
+                      type="tel"
+                      {...props}
+                      name={field.name}
+                      label="Primary Phone Number"
+                      placeholder="+1 (555) 555-5555"
+                      error={field.error}
+                      class="mt-6 sm:col-span-4"
+                    />
+                  )}
+                </Field>
 
-        <div class="mt-6 flex items-center justify-end gap-x-6">
-          <button
-            type="submit"
-            class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-          >
-            Save
-          </button>
-        </div>
-      </Form>
-    </>
+                <label class="mt-6 block text-sm font-medium leading-6 text-gray-900">
+                  Addresses
+                </label>
+
+                <FieldArray of={store} name="addresses">
+                  {(fieldArray) => (
+                    <For
+                      each={fieldArray.items}
+                      fallback={
+                        <EmptyState>No addresses added yet.</EmptyState>
+                      }
+                    >
+                      {(_, index) => (
+                        <AddressForm store={store} index={index()} />
+                      )}
+                    </For>
+                  )}
+                </FieldArray>
+
+                <Button
+                  variant="secondary"
+                  class="mt-4"
+                  onClick={() =>
+                    insert(store, 'addresses', {
+                      value: {
+                        type: 'Meeting',
+                        country: '',
+                        locality: '',
+                        region: '',
+                        // postOfficeBoxNumber: '',
+                        postalCode: '',
+                        streetAddress: '',
+                      },
+                    })
+                  }
+                >
+                  <AddIcon class="-ml-2 mr-2 text-gray-400" />
+                  Add address
+                </Button>
+
+                <label class="mt-6 block text-sm font-medium leading-6 text-gray-900">
+                  Leadership
+                </label>
+
+                <FieldArray of={store} name="leadership">
+                  {(fieldArray) => (
+                    <For
+                      each={fieldArray.items}
+                      fallback={
+                        <EmptyState>No leadership added yet.</EmptyState>
+                      }
+                    >
+                      {(_, index) => (
+                        <LeadershipForm store={store} index={index()} />
+                      )}
+                    </For>
+                  )}
+                </FieldArray>
+
+                <Button
+                  variant="secondary"
+                  class="mt-4"
+                  onClick={() =>
+                    insert(store, 'leadership', {
+                      value: {
+                        name: '',
+                        type: 'Elder',
+                        phoneNumber: '',
+                        email: '',
+                      },
+                    })
+                  }
+                >
+                  <AddIcon class="-ml-2 mr-2 text-gray-400" />
+                  Add leader
+                </Button>
+              </div>
+            </div>
+
+            <div class="mt-6 flex items-center justify-end gap-x-6">
+              <button
+                type="submit"
+                class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              >
+                Save
+              </button>
+            </div>
+          </Form>
+        </>
+      )}
+    </RequireUser>
   );
 }
