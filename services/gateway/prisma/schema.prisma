@@ -164,6 +164,7 @@ model Organization {
   primaryPhoneNumber                           String?                               @map("primary_phone_number")
   websiteUrl                                   String?                               @map("website_url")
   addresses                                    OrganizationAddress[]
+  leaders                                      OrganizationLeader[]
   description                                  String?
   memberships                                  OrganizationMembership[]
   channelAssociations                          OrganizationChannelAssociation[]
@@ -204,6 +205,26 @@ model OrganizationAddress {
   longitude           Float?       @map("longitude")
 
   @@map("organization_address")
+}
+
+enum OrganizationLeaderType {
+  ELDER
+  DEACON
+  OTHER
+
+  @@map("organization_leader_type")
+}
+
+model OrganizationLeader {
+  id             String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organization   Organization           @relation(fields: [organizationId], references: [id])
+  organizationId String                 @map("organization_id") @db.Uuid
+  type           OrganizationLeaderType
+  name           String?
+  email          String?                @map("email")
+  phoneNumber    String?                @map("phone_number")
+
+  @@map("organization_leader")
 }
 
 model OrganizationMembership {

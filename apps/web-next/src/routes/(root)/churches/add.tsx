@@ -1,8 +1,14 @@
+import { Show } from 'solid-js';
 import HeadphonesIcon from '@tabler/icons/outline/headphones.svg?component-solid';
 import ListSearchIcon from '@tabler/icons/outline/list-search.svg?component-solid';
 import MapPinIcon from '@tabler/icons/outline/map-pin.svg?component-solid';
+import { useUser } from '~/util/user-context';
+import { useLoginLocation } from '~/util';
 
 export default function AddChurchRoute() {
+  const user = useUser();
+  const loginLocation = useLoginLocation();
+
   return (
     <>
       <div class="py-24 sm:py-32">
@@ -61,12 +67,24 @@ export default function AddChurchRoute() {
         </div>
       </div>
       <div class="mt-6 flex items-center justify-center gap-x-6">
-        <a
-          href="#"
-          class="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+        <Show
+          when={user()}
+          fallback={
+            <a
+              href={loginLocation}
+              class="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            >
+              Sign In
+            </a>
+          }
         >
-          Sign In
-        </a>
+          <a
+            href={loginLocation}
+            class="rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+          >
+            Go to Profile
+          </a>
+        </Show>
       </div>
     </>
   );

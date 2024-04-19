@@ -3,11 +3,13 @@ import invariant from 'tiny-invariant';
 import {
   AddressType,
   OrganizationTagCategory,
+  OrganizationLeaderType,
   OrganizationType,
   Organization as PrismaOrganization,
   TagColor,
 } from '@prisma/client';
 import { parsePhoneNumber } from 'libphonenumber-js';
+import { z } from 'zod';
 import { indexDocument } from '../../temporal';
 import prisma from '../../util/prisma';
 import builder from '../builder';
@@ -83,9 +85,59 @@ const OrganizationTagInstance = builder.prismaObject(
   },
 );
 
+const AddressTypeEnum = builder.enumType('OrganizationAddressType', {
+  values: Object.keys(AddressType),
+});
+
+const AddressInput = builder.inputType('AddressInput', {
+  fields: (t) => ({
+    type: t.field({ type: AddressTypeEnum, required: true }),
+    query: t.string({ required: false }),
+    country: t.string({ required: false }),
+    streetAddress: t.string({ required: false }),
+    locality: t.string({ required: false }),
+    region: t.string({ required: false }),
+    postalCode: t.string({ required: false }),
+  }),
+});
+
+const AddressInputSchema = z.object({
+  type: z.nativeEnum(AddressType),
+  query: z.string().nullable().default(null),
+  country: z.string().nullable().default(null),
+  streetAddress: z.string().nullable().default(null),
+  locality: z.string().nullable().default(null),
+  region: z.string().nullable().default(null),
+  postalCode: z.string().nullable().default(null),
+});
+
+const AddressInputsSchema = z.array(AddressInputSchema);
+
 export const OrganizationTypeEnum = builder.enumType('OrganizationType', {
   values: Object.keys(OrganizationType),
 });
+
+const OrganizationLeaderTypeEnum = builder.enumType('OrganizationLeaderType', {
+  values: Object.keys(OrganizationLeaderType),
+});
+
+const OrganizationLeaderInput = builder.inputType('OrganizationLeaderInput', {
+  fields: (t) => ({
+    type: t.field({ type: OrganizationLeaderTypeEnum, required: true }),
+    name: t.string({ required: true }),
+    phoneNumber: t.string({ required: false }),
+    email: t.string({ required: false }),
+  }),
+});
+
+const OrganizationLeaderInputSchema = z.object({
+  type: z.nativeEnum(OrganizationLeaderType),
+  name: z.string(),
+  phoneNumber: z.string().nullable().default(null),
+  email: z.string().nullable().default(null),
+});
+
+const OrganizationLeaderInputsSchema = z.array(OrganizationLeaderInputSchema);
 
 const Organization = builder.prismaObject('Organization', {
   select: { id: true },
@@ -121,7 +173,19 @@ const Organization = builder.prismaObject('Organization', {
       nullable: true,
     }),
     websiteUrl: t.exposeString('websiteUrl', { nullable: true }),
+    leaders: t.relatedConnection('leaders', {
+      // TODO: orderable
+      cursor: 'id',
+      args: {
+        type: t.arg({ type: OrganizationLeaderTypeEnum, required: false }),
+      },
+      query: (args) =>
+        args.type
+          ? { where: { type: args.type as OrganizationLeaderType } }
+          : {},
+    }),
     addresses: t.relatedConnection('addresses', {
+      // TODO: orderable
       cursor: 'id',
       args: { type: t.arg({ type: AddressTypeEnum, required: false }) },
       query: (args) =>
@@ -158,10 +222,6 @@ builder.prismaObject('OrganizationChannelAssociation', {
   }),
 });
 
-const AddressTypeEnum = builder.enumType('OrganizationAddressType', {
-  values: Object.keys(AddressType),
-});
-
 builder.prismaObject('OrganizationAddress', {
   fields: (t) => ({
     type: t.expose('type', { type: AddressTypeEnum }),
@@ -176,6 +236,15 @@ builder.prismaObject('OrganizationAddress', {
     streetAddress: t.exposeString('streetAddress', { nullable: true }),
     latitude: t.exposeFloat('latitude', { nullable: true }),
     longitude: t.exposeFloat('longitude', { nullable: true }),
+  }),
+});
+
+builder.prismaObject('OrganizationLeader', {
+  fields: (t) => ({
+    type: t.expose('type', { type: OrganizationLeaderTypeEnum }),
+    name: t.exposeString('name', { nullable: true }),
+    phoneNumber: t.exposeString('phoneNumber', { nullable: true }),
+    email: t.exposeString('email', { nullable: true }),
   }),
 });
 
@@ -262,9 +331,20 @@ builder.mutationFields((t) => ({
     type: Organization,
     args: {
       organizationId: t.arg({ type: 'ShortUuid', required: false }),
+      type: t.arg({ type: OrganizationTypeEnum, required: false }),
       name: t.arg.string({ required: false }),
       slug: t.arg.string({ required: false }),
       description: t.arg.string({ required: false }),
+      primaryEmail: t.arg.string({ required: false }),
+      primaryPhoneNumber: t.arg.string({ required: false }),
+      addresses: t.arg({
+        type: [AddressInput],
+        required: false,
+      }),
+      leaders: t.arg({
+        type: [OrganizationLeaderInput],
+        required: false,
+      }),
     },
     authScopes: (_root, { organizationId }, context, _info) =>
       organizationId
@@ -273,35 +353,98 @@ builder.mutationFields((t) => ({
     resolve: async (
       query,
       _parent,
-      { organizationId, name, slug, description },
+      {
+        organizationId,
+        type,
+        name,
+        slug,
+        description,
+        primaryEmail,
+        primaryPhoneNumber,
+        addresses,
+        leaders,
+      },
       _context,
     ) => {
       return prisma.$transaction(async (tx) => {
         if (organizationId) {
-          const res = await tx.organization.update({
+          await tx.organization.update({
             ...query,
             where: { id: organizationId },
             data: {
               ...(typeof name === 'string' ? { name } : {}),
               ...(typeof slug === 'string' ? { slug } : {}),
               ...(typeof description === 'string' ? { description } : {}),
+              ...(typeof primaryEmail === 'string' ? { primaryEmail } : {}),
+              ...(typeof primaryPhoneNumber === 'string'
+                ? { primaryPhoneNumber }
+                : {}),
             },
           });
 
+          if (addresses) {
+            await tx.organizationAddress.deleteMany({
+              where: { organizationId },
+            });
+            await tx.organizationAddress.createMany({
+              data: AddressInputsSchema.parse(addresses).map((a) => ({
+                ...a,
+                organizationId,
+              })),
+            });
+          }
+
+          if (leaders) {
+            await tx.organizationLeader.deleteMany({
+              where: { organizationId },
+            });
+            await tx.organizationLeader.createMany({
+              data: OrganizationLeaderInputsSchema.parse(leaders).map((l) => ({
+                ...l,
+                organizationId,
+              })),
+            });
+          }
+
           indexDocument('organization', organizationId);
 
-          return res;
+          return tx.organization.findUniqueOrThrow({
+            ...query,
+            where: { id: organizationId },
+          });
         }
 
+        invariant(type, 'Must provide type');
         invariant(name, 'Must provide name');
         invariant(slug, 'Must provide description');
 
         const res = await tx.organization.create({
           ...query,
           data: {
+            type: type as OrganizationType,
             name,
             slug,
             ...(typeof description === 'string' ? { description } : {}),
+            ...(typeof primaryEmail === 'string' ? { primaryEmail } : {}),
+            ...(typeof primaryPhoneNumber === 'string'
+              ? { primaryPhoneNumber }
+              : {}),
+            ...(addresses
+              ? {
+                  addresses: {
+                    createMany: { data: AddressInputsSchema.parse(addresses) },
+                  },
+                }
+              : {}),
+            ...(leaders
+              ? {
+                  leaders: {
+                    createMany: {
+                      data: OrganizationLeaderInputsSchema.parse(leaders),
+                    },
+                  },
+                }
+              : {}),
           },
         });
 

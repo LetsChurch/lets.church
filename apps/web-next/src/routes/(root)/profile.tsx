@@ -1,5 +1,6 @@
 import ProfileIcon from '@tabler/icons/outline/user-circle.svg?component-solid';
 import AntennaIcon from '@tabler/icons/outline/antenna.svg?component-solid';
+import ChurchIcon from '@tabler/icons/outline/building-church.svg?component-solid';
 import { ParentProps } from 'solid-js';
 import Sidenav from '~/components/sidenav';
 
@@ -14,6 +15,11 @@ const links = [
     title: 'Channels',
     href: '/profile/channels',
     icon: AntennaIcon,
+  },
+  {
+    title: 'Churches',
+    href: '/profile/churches',
+    icon: ChurchIcon,
   },
 ];
 

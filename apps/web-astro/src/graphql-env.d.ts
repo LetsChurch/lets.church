@@ -20,6 +20,71 @@ export type introspection = {
     "subscriptionType": null,
     "types": [
       {
+        "kind": "INPUT_OBJECT",
+        "name": "AddressInput",
+        "inputFields": [
+          {
+            "name": "country",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            }
+          },
+          {
+            "name": "locality",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            }
+          },
+          {
+            "name": "postalCode",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            }
+          },
+          {
+            "name": "query",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            }
+          },
+          {
+            "name": "region",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            }
+          },
+          {
+            "name": "streetAddress",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            }
+          },
+          {
+            "name": "type",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "ENUM",
+                "name": "OrganizationAddressType",
+                "ofType": null
+              }
+            }
+          }
+        ]
+      },
+      {
         "kind": "OBJECT",
         "name": "AppUser",
         "fields": [
@@ -2499,11 +2564,39 @@ export type introspection = {
             },
             "args": [
               {
+                "name": "addresses",
+                "type": {
+                  "kind": "LIST",
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "AddressInput",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              {
                 "name": "description",
                 "type": {
                   "kind": "SCALAR",
                   "name": "String",
                   "ofType": null
+                }
+              },
+              {
+                "name": "leaders",
+                "type": {
+                  "kind": "LIST",
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "OrganizationLeaderInput",
+                      "ofType": null
+                    }
+                  }
                 }
               },
               {
@@ -2523,10 +2616,34 @@ export type introspection = {
                 }
               },
               {
+                "name": "primaryEmail",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              {
+                "name": "primaryPhoneNumber",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              {
                 "name": "slug",
                 "type": {
                   "kind": "SCALAR",
                   "name": "String",
+                  "ofType": null
+                }
+              },
+              {
+                "name": "type",
+                "type": {
+                  "kind": "ENUM",
+                  "name": "OrganizationType",
                   "ofType": null
                 }
               }
@@ -3121,6 +3238,59 @@ export type introspection = {
             "args": []
           },
           {
+            "name": "leaders",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "OrganizationLeadersConnection",
+                "ofType": null
+              }
+            },
+            "args": [
+              {
+                "name": "after",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              {
+                "name": "before",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "String",
+                  "ofType": null
+                }
+              },
+              {
+                "name": "first",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              {
+                "name": "last",
+                "type": {
+                  "kind": "SCALAR",
+                  "name": "Int",
+                  "ofType": null
+                }
+              },
+              {
+                "name": "type",
+                "type": {
+                  "kind": "ENUM",
+                  "name": "OrganizationLeaderType",
+                  "ofType": null
+                }
+              }
+            ]
+          },
+          {
             "name": "membershipsConnection",
             "type": {
               "kind": "NON_NULL",
@@ -3619,6 +3789,179 @@ export type introspection = {
               "ofType": {
                 "kind": "OBJECT",
                 "name": "OrganizationChannelAssociation",
+                "ofType": null
+              }
+            },
+            "args": []
+          }
+        ],
+        "interfaces": []
+      },
+      {
+        "kind": "OBJECT",
+        "name": "OrganizationLeader",
+        "fields": [
+          {
+            "name": "email",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "args": []
+          },
+          {
+            "name": "name",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "args": []
+          },
+          {
+            "name": "phoneNumber",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            },
+            "args": []
+          },
+          {
+            "name": "type",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "ENUM",
+                "name": "OrganizationLeaderType",
+                "ofType": null
+              }
+            },
+            "args": []
+          }
+        ],
+        "interfaces": []
+      },
+      {
+        "kind": "INPUT_OBJECT",
+        "name": "OrganizationLeaderInput",
+        "inputFields": [
+          {
+            "name": "email",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            }
+          },
+          {
+            "name": "name",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            }
+          },
+          {
+            "name": "phoneNumber",
+            "type": {
+              "kind": "SCALAR",
+              "name": "String",
+              "ofType": null
+            }
+          },
+          {
+            "name": "type",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "ENUM",
+                "name": "OrganizationLeaderType",
+                "ofType": null
+              }
+            }
+          }
+        ]
+      },
+      {
+        "kind": "ENUM",
+        "name": "OrganizationLeaderType",
+        "enumValues": [
+          {
+            "name": "DEACON"
+          },
+          {
+            "name": "ELDER"
+          },
+          {
+            "name": "OTHER"
+          }
+        ]
+      },
+      {
+        "kind": "OBJECT",
+        "name": "OrganizationLeadersConnection",
+        "fields": [
+          {
+            "name": "edges",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "LIST",
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "OrganizationLeadersConnectionEdge",
+                    "ofType": null
+                  }
+                }
+              }
+            },
+            "args": []
+          },
+          {
+            "name": "pageInfo",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "PageInfo",
+                "ofType": null
+              }
+            },
+            "args": []
+          }
+        ],
+        "interfaces": []
+      },
+      {
+        "kind": "OBJECT",
+        "name": "OrganizationLeadersConnectionEdge",
+        "fields": [
+          {
+            "name": "cursor",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "args": []
+          },
+          {
+            "name": "node",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "OrganizationLeader",
                 "ofType": null
               }
             },
