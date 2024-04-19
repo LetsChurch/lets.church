@@ -6,6 +6,7 @@ import {
   Rating as PrismaRating,
   Prisma,
   UploadListType,
+  Rating,
 } from '@prisma/client';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
 import { resolveOffsetConnection } from '@pothos/plugin-relay';
@@ -53,20 +54,18 @@ async function internalAuthScopes(
   return { admin: true };
 }
 
-const Rating = builder.enumType('Rating', {
-  values: ['LIKE', 'DISLIKE'] as const,
+const RatingEnum = builder.enumType(Rating, { name: 'Rating' });
+
+const UploadLicenseEnum = builder.enumType(PrismaUploadLicense, {
+  name: 'UploadLicense',
 });
 
-const UploadLicense = builder.enumType('UploadLicense', {
-  values: Object.keys(PrismaUploadLicense),
+const UploadVisibilityEnum = builder.enumType(PrismaUploadVisibility, {
+  name: 'UploadVisibility',
 });
 
-const UploadVisibility = builder.enumType('UploadVisibility', {
-  values: Object.keys(PrismaUploadVisibility),
-});
-
-const UploadVariant = builder.enumType('UploadVariant', {
-  values: Object.keys(PrismaUploadVariant),
+const UploadVariantEnum = builder.enumType(PrismaUploadVariant, {
+  name: 'UploadVariant',
 });
 
 export const UploadOrderPropertyEnum = builder.enumType('UploadOrderProperty', {
@@ -106,7 +105,7 @@ const UploadUserComment = builder.prismaObject('UploadUserComment', {
     }),
     myRating: t.field({
       nullable: true,
-      type: Rating,
+      type: RatingEnum,
       resolve: async (root, _args, context) => {
         const userId = context.session?.appUserId;
 
@@ -196,13 +195,16 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
       },
       resolve: ({ lengthSeconds }) => lengthSeconds,
     }),
-    license: t.expose('license', { type: UploadLicense }),
-    visibility: t.expose('visibility', { type: UploadVisibility }),
+    license: t.expose('license', { type: UploadLicenseEnum }),
+    visibility: t.expose('visibility', { type: UploadVisibilityEnum }),
     createdBy: t.relation('createdBy', { authScopes: internalAuthScopes }),
     uploadFinalizedBy: t.relation('uploadFinalizedBy', {
       authScopes: internalAuthScopes,
     }),
-    variants: t.expose('variants', { type: [UploadVariant], nullable: false }),
+    variants: t.expose('variants', {
+      type: [UploadVariantEnum],
+      nullable: false,
+    }),
     hasVideo: t.field({
       type: 'Boolean',
       select: { variants: true },
@@ -327,7 +329,7 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
     }),
     myRating: t.field({
       nullable: true,
-      type: Rating,
+      type: RatingEnum,
       resolve: async (root, _args, context) => {
         const userId = context.session?.appUserId;
 
@@ -641,8 +643,8 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
   }),
 });
 
-const UploadListTypeEnum = builder.enumType('UploadListType', {
-  values: Object.keys(UploadListType),
+const UploadListTypeEnum = builder.enumType(UploadListType, {
+  name: 'UploadListType',
 });
 
 const UploadListEntry = builder.prismaObject('UploadListEntry', {
@@ -761,8 +763,8 @@ builder.mutationFields((t) => ({
       title: t.arg.string(),
       description: t.arg.string(),
       publishedAt: t.arg({ type: 'DateTime', required: true }),
-      license: t.arg({ type: UploadLicense, required: true }),
-      visibility: t.arg({ type: UploadVisibility, required: true }),
+      license: t.arg({ type: UploadLicenseEnum, required: true }),
+      visibility: t.arg({ type: UploadVisibilityEnum, required: true }),
       userCommentsEnabled: t.arg({ type: 'Boolean', required: false }),
       downloadsEnabled: t.arg({ type: 'Boolean', required: false }),
       channelId: t.arg({ type: 'ShortUuid', required: true }),
@@ -875,7 +877,7 @@ builder.mutationFields((t) => ({
     args: {
       uploadRecordId: t.arg({ type: 'ShortUuid', required: true }),
       rating: t.arg({
-        type: Rating,
+        type: RatingEnum,
         required: true,
       }),
     },
@@ -1018,7 +1020,7 @@ builder.mutationFields((t) => ({
     args: {
       uploadUserCommentId: t.arg({ type: 'ShortUuid', required: true }),
       rating: t.arg({
-        type: Rating,
+        type: RatingEnum,
         required: true,
       }),
     },

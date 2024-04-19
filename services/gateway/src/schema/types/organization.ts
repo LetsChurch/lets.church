@@ -40,16 +40,11 @@ async function organizationAdminAuthScope(
   };
 }
 
-const TagColorEnum = builder.enumType('TagColor', {
-  values: Object.keys(TagColor),
-});
+const TagColorEnum = builder.enumType(TagColor, { name: 'TagColor' });
 
-const OrganizationTagCategoryEnum = builder.enumType(
-  'OrganizationTagCategory',
-  {
-    values: Object.keys(OrganizationTagCategory),
-  },
-);
+const OrganizationTagCategoryEnum = builder.enumType(OrganizationTagCategory, {
+  name: 'OrganizationTagCategory',
+});
 
 builder.prismaObject('OrganizationTag', {
   fields: (t) => ({
@@ -85,8 +80,8 @@ const OrganizationTagInstance = builder.prismaObject(
   },
 );
 
-const AddressTypeEnum = builder.enumType('OrganizationAddressType', {
-  values: Object.keys(AddressType),
+const AddressTypeEnum = builder.enumType(AddressType, {
+  name: 'OrganizationAddressType',
 });
 
 const AddressInput = builder.inputType('AddressInput', {
@@ -113,12 +108,12 @@ const AddressInputSchema = z.object({
 
 const AddressInputsSchema = z.array(AddressInputSchema);
 
-export const OrganizationTypeEnum = builder.enumType('OrganizationType', {
-  values: Object.keys(OrganizationType),
+export const OrganizationTypeEnum = builder.enumType(OrganizationType, {
+  name: 'OrganizationType',
 });
 
-const OrganizationLeaderTypeEnum = builder.enumType('OrganizationLeaderType', {
-  values: Object.keys(OrganizationLeaderType),
+const OrganizationLeaderTypeEnum = builder.enumType(OrganizationLeaderType, {
+  name: 'OrganizationLeaderType',
 });
 
 const OrganizationLeaderInput = builder.inputType('OrganizationLeaderInput', {
@@ -179,17 +174,13 @@ const Organization = builder.prismaObject('Organization', {
       args: {
         type: t.arg({ type: OrganizationLeaderTypeEnum, required: false }),
       },
-      query: (args) =>
-        args.type
-          ? { where: { type: args.type as OrganizationLeaderType } }
-          : {},
+      query: (args) => (args.type ? { where: { type: args.type } } : {}),
     }),
     addresses: t.relatedConnection('addresses', {
       // TODO: orderable
       cursor: 'id',
       args: { type: t.arg({ type: AddressTypeEnum, required: false }) },
-      query: (args) =>
-        args.type ? { where: { type: args.type as AddressType } } : {},
+      query: (args) => (args.type ? { where: { type: args.type } } : {}),
     }),
     membershipsConnection: t.relatedConnection('memberships', {
       cursor: 'organizationId_appUserId',
@@ -421,7 +412,7 @@ builder.mutationFields((t) => ({
         const res = await tx.organization.create({
           ...query,
           data: {
-            type: type as OrganizationType,
+            type,
             name,
             slug,
             ...(typeof description === 'string' ? { description } : {}),

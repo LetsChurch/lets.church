@@ -46,9 +46,7 @@ function privateAuthScopes(
   return { admin: true };
 }
 
-const AppUserRoleEnum = builder.enumType('AppUserRole', {
-  values: Object.keys(AppUserRole),
-});
+const AppUserRoleEnum = builder.enumType(AppUserRole, { name: 'AppUserRole' });
 
 const passwordSchema = z
   .string()
@@ -506,7 +504,7 @@ builder.mutationFields((t) => ({
           data: {
             ...(username ? { username } : {}),
             ...(fullName ? { fullName } : {}),
-            ...(role ? { role: role as 'ADMIN' | 'USER' } : {}),
+            ...(role ? { role } : {}),
           },
         });
       }
@@ -519,7 +517,7 @@ builder.mutationFields((t) => ({
         data: {
           username,
           ...(fullName ? { fullName } : {}),
-          ...(role ? { role: role as 'ADMIN' | 'USER' } : {}),
+          ...(role ? { role } : {}),
           password: await argon2.hash(newPassword, { type: argon2.argon2id }),
           emails: {
             create: {

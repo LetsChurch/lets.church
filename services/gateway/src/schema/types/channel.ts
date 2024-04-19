@@ -1,5 +1,5 @@
 import {
-  ChannelVisibility as PrismaChannelVisibility,
+  ChannelVisibility,
   type Channel as PrismaChannel,
 } from '@prisma/client';
 import type { GraphQLResolveInfo } from 'graphql';
@@ -19,8 +19,8 @@ const orderEnum = builder.enumType('Order', {
   values: ['asc', 'desc'] as const,
 });
 
-const ChannelVisibility = builder.enumType('ChannelVisibility', {
-  values: Object.keys(PrismaChannelVisibility),
+const ChannelVisibilityEnum = builder.enumType(ChannelVisibility, {
+  name: 'ChannelVisibility',
 });
 
 async function channelAdminAuthScope(
@@ -64,8 +64,8 @@ const Channel = builder.prismaObject('Channel', {
   select: { id: true, visibility: true },
   authScopes: async (channel, context) => {
     if (
-      channel.visibility === PrismaChannelVisibility.PUBLIC ||
-      channel.visibility === PrismaChannelVisibility.UNLISTED
+      channel.visibility === ChannelVisibility.PUBLIC ||
+      channel.visibility === ChannelVisibility.UNLISTED
     ) {
       return true;
     }
@@ -86,7 +86,7 @@ const Channel = builder.prismaObject('Channel', {
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
     name: t.exposeString('name'),
-    visibility: t.expose('visibility', { type: ChannelVisibility }),
+    visibility: t.expose('visibility', { type: ChannelVisibilityEnum }),
     avatarUrl: t.field({
       type: 'String',
       nullable: true,
@@ -248,7 +248,7 @@ builder.queryFields((t) => ({
     resolve: (query) =>
       prisma.channel.findMany({
         ...query,
-        where: { visibility: PrismaChannelVisibility.PUBLIC },
+        where: { visibility: ChannelVisibility.PUBLIC },
       }),
   }),
 }));
