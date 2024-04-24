@@ -17,11 +17,13 @@ function typeToTag(type: string) {
 }
 
 export default function LabeledInput(
-  props: Omit<JSX.IntrinsicElements['input'], 'id'> & {
+  props: Omit<JSX.IntrinsicElements['input'], 'id' | 'value'> & {
     name: string;
     label: string;
     prefix?: string;
     placeholder?: string;
+    value?: Optional<string>;
+    touched?: boolean;
     error?: Optional<string | Array<string>>;
     type?: string;
     class?: string;
@@ -34,6 +36,7 @@ export default function LabeledInput(
     'error',
     'class',
     'inputClass',
+    'value',
   ]);
   const merged = mergeProps({ type: 'text' }, inputProps);
   const id = createUniqueId();
@@ -57,6 +60,7 @@ export default function LabeledInput(
           component={typeToTag(merged.type)}
           id={id}
           placeholder={merged.placeholder ?? otherProps.label}
+          value={otherProps.value ?? ''}
           aria-invalid={Boolean(props.error)}
           {...merged}
           class={cn(

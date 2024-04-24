@@ -119,7 +119,7 @@ const OrganizationLeaderTypeEnum = builder.enumType(OrganizationLeaderType, {
 const OrganizationLeaderInput = builder.inputType('OrganizationLeaderInput', {
   fields: (t) => ({
     type: t.field({ type: OrganizationLeaderTypeEnum, required: true }),
-    name: t.string({ required: true }),
+    name: t.string({ required: false }), // TODO: make name required
     phoneNumber: t.string({ required: false }),
     email: t.string({ required: false }),
   }),
@@ -153,7 +153,7 @@ const Organization = builder.prismaObject('Organization', {
       select: { primaryPhoneNumber: true },
       resolve: ({ primaryPhoneNumber }) =>
         primaryPhoneNumber
-          ? parsePhoneNumber(primaryPhoneNumber).formatNational()
+          ? parsePhoneNumber(primaryPhoneNumber, 'US').formatNational()
           : null,
     }),
     primaryPhoneUri: t.string({
@@ -161,7 +161,7 @@ const Organization = builder.prismaObject('Organization', {
       nullable: true,
       resolve: ({ primaryPhoneNumber }) =>
         primaryPhoneNumber
-          ? parsePhoneNumber(primaryPhoneNumber).getURI()
+          ? parsePhoneNumber(primaryPhoneNumber, 'US').getURI()
           : null,
     }),
     primaryEmail: t.exposeString('primaryEmail', {
@@ -234,7 +234,14 @@ builder.prismaObject('OrganizationLeader', {
   fields: (t) => ({
     type: t.expose('type', { type: OrganizationLeaderTypeEnum }),
     name: t.exposeString('name', { nullable: true }),
-    phoneNumber: t.exposeString('phoneNumber', { nullable: true }),
+    phoneNumber: t.string({
+      nullable: true,
+      select: { phoneNumber: true },
+      resolve: ({ phoneNumber }) =>
+        phoneNumber
+          ? parsePhoneNumber(phoneNumber, 'US').formatNational()
+          : null,
+    }),
     email: t.exposeString('email', { nullable: true }),
   }),
 });
@@ -370,7 +377,12 @@ builder.mutationFields((t) => ({
               ...(typeof description === 'string' ? { description } : {}),
               ...(typeof primaryEmail === 'string' ? { primaryEmail } : {}),
               ...(typeof primaryPhoneNumber === 'string'
-                ? { primaryPhoneNumber }
+                ? {
+                    primaryPhoneNumber: parsePhoneNumber(
+                      primaryPhoneNumber,
+                      'US',
+                    ).number,
+                  }
                 : {}),
             },
           });
@@ -395,6 +407,9 @@ builder.mutationFields((t) => ({
               data: OrganizationLeaderInputsSchema.parse(leaders).map((l) => ({
                 ...l,
                 organizationId,
+                phoneNumber: l.phoneNumber
+                  ? parsePhoneNumber(l.phoneNumber, 'US').number
+                  : l.phoneNumber,
               })),
             });
           }
@@ -426,7 +441,10 @@ builder.mutationFields((t) => ({
             ...(typeof description === 'string' ? { description } : {}),
             ...(typeof primaryEmail === 'string' ? { primaryEmail } : {}),
             ...(typeof primaryPhoneNumber === 'string'
-              ? { primaryPhoneNumber }
+              ? {
+                  primaryPhoneNumber: parsePhoneNumber(primaryPhoneNumber, 'US')
+                    .number,
+                }
               : {}),
             ...(addresses
               ? {

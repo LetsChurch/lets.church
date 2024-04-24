@@ -8,7 +8,7 @@ import {
 } from './__generated__/(organizations)';
 import { PageHeading } from '~/components/page-heading';
 import { getAdminClientOrRedirect } from '~/util/gql/server';
-import Table from '~/components/admin/table';
+import Table from '~/components/settings/table';
 import Pagination from '~/components/pagination';
 
 const PAGE_SIZE = 60;

@@ -697,7 +697,7 @@ export type OrganizationLeader = {
 
 export type OrganizationLeaderInput = {
   email?: InputMaybe<Scalars['String']['input']>;
-  name: Scalars['String']['input'];
+  name?: InputMaybe<Scalars['String']['input']>;
   phoneNumber?: InputMaybe<Scalars['String']['input']>;
   type: OrganizationLeaderType;
 };

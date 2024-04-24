@@ -1,5 +1,5 @@
 import { For } from 'solid-js';
-import { type RouteDefinition, cache, createAsync } from '@solidjs/router';
+import { type RouteDefinition, cache, createAsync, A } from '@solidjs/router';
 import { gql } from 'graphql-request';
 import type {
   MyChurchesQuery,
@@ -49,7 +49,13 @@ export default function ProfileChurchesRoute() {
       />
       <ul>
         <For each={data()?.me?.churches.edges}>
-          {({ node }) => <li>{node.organization.name}</li>}
+          {({ node }) => (
+            <li>
+              <A href={`edit?id=${node.organization.id}`}>
+                {node.organization.name}
+              </A>
+            </li>
+          )}
         </For>
       </ul>
     </>
