@@ -490,7 +490,7 @@ export default function ChurchForm(props: { initialValues?: FormSchema }) {
                 insert(store, 'addresses', {
                   value: {
                     type: OrganizationAddressType.Meeting,
-                    country: '',
+                    country: 'United States',
                     locality: '',
                     region: '',
                     // postOfficeBoxNumber: '',
