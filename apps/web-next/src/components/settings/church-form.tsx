@@ -337,6 +337,7 @@ function LeadershipForm(props: {
 }
 
 export default function ChurchForm(props: { initialValues?: FormSchema }) {
+  // TODO: Why do the initial values not render properly on refresh even though they do on navigation?
   const store = createFormStore({
     validate: valiForm(formSchema),
     ...(props.initialValues ? { initialValues: props.initialValues } : {}),
