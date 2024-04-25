@@ -14,40 +14,6 @@ import {
 import { getAdminClientOrRedirect } from '~/util/gql/server';
 import { PageHeading } from '~/components/page-heading';
 import ChurchForm from '~/components/settings/church-form';
-import {
-  OrganizationAddressType,
-  OrganizationLeaderType,
-} from '~/__generated__/graphql-types';
-
-function transformAddress(
-  address: ProfileChurchEditRouteDataQuery['organizationById']['addresses']['edges'][number]['node'],
-) {
-  return {
-    ...address,
-    type:
-      address.type === OrganizationAddressType.Meeting
-        ? ('Meeting' as const)
-        : address.type === OrganizationAddressType.Office
-          ? ('Office' as const)
-          : address.type === OrganizationAddressType.Mailing
-            ? ('Mailing' as const)
-            : ('Other' as const),
-  };
-}
-
-function transformLeader(
-  leader: ProfileChurchEditRouteDataQuery['organizationById']['leaders']['edges'][number]['node'],
-) {
-  return {
-    ...leader,
-    type:
-      leader.type === OrganizationLeaderType.Elder
-        ? ('Elder' as const)
-        : leader.type === OrganizationLeaderType.Deacon
-          ? ('Deacon' as const)
-          : ('Other' as const),
-  };
-}
 
 const loadChurch = cache(async (id: string) => {
   'use server';
@@ -99,12 +65,8 @@ const loadChurch = cache(async (id: string) => {
 
   return {
     ...res.organizationById,
-    addresses: res.organizationById?.addresses.edges.map((e) =>
-      transformAddress(e.node),
-    ),
-    leaders: res.organizationById?.leaders.edges.map((e) =>
-      transformLeader(e.node),
-    ),
+    addresses: res.organizationById?.addresses.edges.map((e) => e.node),
+    leaders: res.organizationById?.leaders.edges.map((e) => e.node),
   };
 }, 'profileChurch');
 

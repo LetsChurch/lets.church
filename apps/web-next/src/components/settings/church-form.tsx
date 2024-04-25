@@ -5,12 +5,12 @@ import { gql } from 'graphql-request';
 import {
   array,
   email,
+  enum_,
   minLength,
   nullable,
   object,
   optional,
   parse,
-  picklist,
   string,
   type Input as VInput,
 } from 'valibot';
@@ -47,7 +47,7 @@ export const formSchema = object({
     array(
       object({
         name: optional(nullable(string())),
-        type: picklist(['Elder', 'Deacon', 'Other']),
+        type: enum_(OrganizationLeaderType),
         email: optional(nullable(string([email()]))),
         phoneNumber: optional(nullable(string())),
       }),
@@ -57,7 +57,7 @@ export const formSchema = object({
   addresses: optional(
     array(
       object({
-        type: picklist(['Mailing', 'Meeting', 'Office', 'Other']),
+        type: enum_(OrganizationAddressType),
         country: optional(nullable(string()), null),
         locality: optional(nullable(string()), null),
         region: optional(nullable(string()), null),
@@ -114,8 +114,6 @@ const upsertChurch = action(async (data: FormSchema) => {
       addresses:
         data.addresses?.map((a) => ({
           ...a,
-          // TODO: try enum_ with default value?
-          type: OrganizationAddressType[a.type],
           country: a.country ?? null,
           locality: a.locality ?? null,
           postalCode: a.postalCode ?? null,
@@ -125,7 +123,6 @@ const upsertChurch = action(async (data: FormSchema) => {
       leaders:
         data.leaders?.map((l) => ({
           ...l,
-          type: OrganizationLeaderType[l.type],
           name: l.name ?? null,
           email: l.email ?? null,
           phoneNumber: l.phoneNumber ?? null,
@@ -174,10 +171,10 @@ function AddressForm(props: {
             error={field.error}
             class="sm:col-span-2"
           >
-            <option value="Mailing">Mailing</option>
-            <option value="Meeting">Meeting</option>
-            <option value="Office">Office</option>
-            <option value="Other">Other</option>
+            <option value={OrganizationAddressType.Mailing}>Mailing</option>
+            <option value={OrganizationAddressType.Meeting}>Meeting</option>
+            <option value={OrganizationAddressType.Office}>Office</option>
+            <option value={OrganizationAddressType.Other}>Other</option>
           </LabeledInput>
         )}
       </Field>
@@ -300,8 +297,8 @@ function LeadershipForm(props: {
             error={field.error}
             class="sm:col-span-4"
           >
-            <option value="Elder">Elder</option>
-            <option value="Deacon">Deacon</option>
+            <option value={OrganizationLeaderType.Elder}>Elder</option>
+            <option value={OrganizationLeaderType.Deacon}>Deacon</option>
           </LabeledInput>
         )}
       </Field>
@@ -492,7 +489,7 @@ export default function ChurchForm(props: { initialValues?: FormSchema }) {
               onClick={() =>
                 insert(store, 'addresses', {
                   value: {
-                    type: 'Meeting',
+                    type: OrganizationAddressType.Meeting,
                     country: '',
                     locality: '',
                     region: '',
@@ -531,7 +528,7 @@ export default function ChurchForm(props: { initialValues?: FormSchema }) {
                 insert(store, 'leaders', {
                   value: {
                     name: '',
-                    type: 'Elder',
+                    type: OrganizationLeaderType.Elder,
                     phoneNumber: '',
                     email: '',
                   },
