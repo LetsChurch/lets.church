@@ -22,6 +22,7 @@
     "@knpwrs/envariant": "^1.1.1",
     "@modular-forms/solid": "^0.20.0",
     "@solid-primitives/autofocus": "^0.0.111",
+    "@solid-primitives/input-mask": "^0.2.2",
     "@solid-primitives/scheduled": "^1.4.3",
     "@solidjs/meta": "^0.29.3",
     "@solidjs/router": "^0.13.2",

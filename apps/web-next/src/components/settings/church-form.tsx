@@ -23,8 +23,11 @@ import {
   insert,
   remove,
   valiForm,
+  toCustom,
+  type FieldEvent,
   type FormStore,
 } from '@modular-forms/solid';
+import { createInputMask } from '@solid-primitives/input-mask';
 import { Button, LabeledInput } from '../form';
 import type {
   UpsertOrganizationMutation,
@@ -68,6 +71,8 @@ export const formSchema = object({
     [],
   ),
 });
+
+const phoneNumberMask = createInputMask<FieldEvent>('(999) 999-9999');
 
 type FormSchema = VInput<typeof formSchema>;
 
@@ -318,7 +323,13 @@ function LeadershipForm(props: {
         )}
       </Field>
 
-      <Field of={props.store} name={`leaders.${props.index}.phoneNumber`}>
+      <Field
+        of={props.store}
+        name={`leaders.${props.index}.phoneNumber`}
+        transform={toCustom((_, event) => phoneNumberMask(event), {
+          on: 'input',
+        })}
+      >
         {(field, props) => (
           <LabeledInput
             type="tel"
@@ -326,7 +337,7 @@ function LeadershipForm(props: {
             name={field.name}
             value={field.value}
             label="Phone Number"
-            placeholder="+1 (555) 555-5555"
+            placeholder="(555) 555-5555"
             error={field.error}
             class="mt-2 sm:col-span-4"
           />
@@ -454,7 +465,13 @@ export default function ChurchForm(props: { initialValues?: FormSchema }) {
               )}
             </Field>
 
-            <Field of={store} name="primaryPhoneNumber">
+            <Field
+              of={store}
+              name="primaryPhoneNumber"
+              transform={toCustom((_, event) => phoneNumberMask(event), {
+                on: 'input',
+              })}
+            >
               {(field, props) => (
                 <LabeledInput
                   type="tel"
@@ -462,7 +479,7 @@ export default function ChurchForm(props: { initialValues?: FormSchema }) {
                   name={field.name}
                   value={field.value}
                   label="Primary Phone Number"
-                  placeholder="+1 (555) 555-5555"
+                  placeholder="(555) 555-5555"
                   error={field.error}
                   class="mt-6 sm:col-span-4"
                 />
