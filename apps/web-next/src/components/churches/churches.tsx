@@ -10,6 +10,7 @@ import {
 } from 'solid-js';
 import invariant from 'tiny-invariant';
 import mapboxgl from 'mapbox-gl';
+import { createMediaQuery } from '@solid-primitives/media';
 import { ChurchesDataQuery } from './__generated__/data';
 import { getChurchesData } from './data';
 import { easeOutExpo } from '~/util';
@@ -40,6 +41,7 @@ export default function ChurchesApp() {
   const [results, setResults] = createSignal<
     ChurchesDataQuery['search']['edges']
   >([]);
+  const isLarge = createMediaQuery('(min-width: 1024px)');
 
   const renderedResults = () => {
     const res = results();
@@ -385,10 +387,13 @@ export default function ChurchesApp() {
     }
 
     const addr = node.organization.addresses.edges[0]?.node;
-    hoverPopup = new mapboxgl.Popup()
-      .setLngLat([addr?.longitude as number, addr?.latitude as number]) // TODO: handle missing coords
-      .setHTML(node.name)
-      .addTo(m);
+
+    if (isLarge()) {
+      hoverPopup = new mapboxgl.Popup()
+        .setLngLat([addr?.longitude as number, addr?.latitude as number]) // TODO: handle missing coords
+        .setHTML(node.name)
+        .addTo(m);
+    }
   }
 
   function handleMouseLeave() {
@@ -410,8 +415,11 @@ export default function ChurchesApp() {
   }
 
   return (
-    <div class="relative grid w-full grid-cols-3">
-      <div class="pointer-events-auto col-span-1 space-y-2 p-2">
+    <div class="relative grid w-full auto-rows-min grid-cols-1 lg:grid-cols-3 lg:grid-rows-1">
+      <div class="sticky top-16 z-10 row-span-1 h-[30vh] lg:order-2 lg:col-span-2 lg:h-[calc(100vh-theme(spacing.16))]">
+        <div class="h-full w-full rounded-b-md" ref={mapNode!} />
+      </div>
+      <div class="pointer-events-auto row-span-1 space-y-2 p-2 lg:order-1 lg:col-span-1">
         <Searchbox />
         <Show when={!loading()} fallback={<p>Loading</p>}>
           <For each={renderedResults()}>
@@ -457,9 +465,6 @@ export default function ChurchesApp() {
             )}
           </For>
         </Show>
-      </div>
-      <div class="sticky top-16 col-span-2 h-[calc(100vh-theme(spacing.16))]">
-        <div class="h-full w-full rounded-b-md" ref={mapNode!} />
       </div>
     </div>
   );

@@ -61,7 +61,7 @@ export default function Header() {
   return (
     <header
       class={cn(
-        'relative z-10 bg-white shadow',
+        'relative z-50 bg-white shadow',
         isChurchesPage() ? 'sticky top-0' : null,
       )}
     >
