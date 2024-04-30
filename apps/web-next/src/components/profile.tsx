@@ -73,7 +73,11 @@ export default function Profile(props: Props) {
           onClick={toggleMenu}
         >
           <span class="sr-only">Open user menu</span>
-          <Avatar src={props.me?.avatarUrl ?? ''} size="sm" />
+          <Avatar
+            src={props.me?.avatarUrl ?? ''}
+            name={props.me?.fullName}
+            size="sm"
+          />
         </button>
         <form
           id={logoutFormId}

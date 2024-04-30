@@ -21,14 +21,14 @@ export default function MediaHeader(props: { class?: string }) {
   // Alternatively, this could move into a media layout and paths can change to be under /media
   function isMediaPage() {
     const p = loc.pathname;
-    return p === '/' || !(p.startsWith('/churches') || p.startsWith('/about'));
+    return p === '/' || p.startsWith('/media');
   }
 
   return (
     <Show when={isMediaPage()}>
       <div
         class={cn(
-          'mx-auto mt-5 flex max-w-7xl flex-1 items-center justify-center lg:justify-between',
+          'mx-auto my-5 flex max-w-7xl flex-1 items-center justify-center lg:justify-between',
           props.class,
         )}
       >

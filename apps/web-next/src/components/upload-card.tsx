@@ -31,6 +31,7 @@ export default function UploadCard(props: Props) {
       <div class="flex items-center space-x-3 overflow-hidden">
         <Avatar
           size="sm"
+          name={props.data.channel.name}
           src={props.data.channel.avatarUrl}
           alt={props.data.channel.name}
         />
