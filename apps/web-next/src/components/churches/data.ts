@@ -41,6 +41,7 @@ export async function getChurchesData(f: Filters) {
                     id
                     slug
                     type
+                    name
                     addresses(type: MEETING) {
                       edges {
                         node {

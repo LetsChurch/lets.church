@@ -11,6 +11,7 @@ import {
 import invariant from 'tiny-invariant';
 import mapboxgl from 'mapbox-gl';
 import { createMediaQuery } from '@solid-primitives/media';
+import { Avatar } from '../avatar';
 import { ChurchesDataQuery } from './__generated__/data';
 import { getChurchesData } from './data';
 import { easeOutExpo } from '~/util';
@@ -425,25 +426,19 @@ export default function ChurchesApp() {
           <For each={renderedResults()}>
             {(res) => (
               <div
-                class="relative sm:flex"
+                class="relative rounded-md p-2 even:bg-gray-100 hover:bg-gray-200 sm:flex"
                 onMouseEnter={[handleMouseEnter, res]}
                 onMouseLeave={handleMouseLeave}
               >
                 <div class="mb-4 flex-shrink-0 sm:mb-0 sm:mr-4">
-                  <svg
-                    class="h-32 w-full border border-gray-300 bg-white text-gray-300 sm:w-32"
-                    preserveAspectRatio="none"
-                    stroke="currentColor"
-                    fill="none"
-                    viewBox="0 0 200 200"
-                    aria-hidden="true"
-                  >
-                    <path
-                      vector-effect="non-scaling-stroke"
-                      stroke-width="1"
-                      d="M0 0l200 200M0 200L200 0"
-                    />
-                  </svg>
+                  <Avatar
+                    size="2xl"
+                    name={
+                      'organization' in res.node
+                        ? res.node.organization.name
+                        : null
+                    }
+                  />
                 </div>
                 <div>
                   <h4 class="text-lg font-bold">
