@@ -14,7 +14,7 @@ import { createMediaQuery } from '@solid-primitives/media';
 import { Avatar } from '../avatar';
 import { ChurchesDataQuery } from './__generated__/data';
 import { getChurchesData } from './data';
-import { easeOutExpo } from '~/util';
+import { cn, easeOutExpo } from '~/util';
 import Searchbox, {
   murica,
   useParsedFilters,
@@ -32,7 +32,7 @@ const hoverColor = '#d946ef';
 const unclusteredRadius = 7;
 const unclusteredHoverRadius = 10;
 
-export default function ChurchesApp() {
+export default function ChurchesApp(props: { embed?: boolean }) {
   const [map, setMap] = createSignal<MapboxMap | null>(null);
   const [source, setSource] = createSignal<mapboxgl.AnySourceImpl | null>(null);
   let mapNode: HTMLDivElement;
@@ -417,7 +417,14 @@ export default function ChurchesApp() {
 
   return (
     <div class="relative grid w-full auto-rows-min grid-cols-1 lg:grid-cols-3 lg:grid-rows-1">
-      <div class="sticky top-16 z-10 row-span-1 h-[30vh] lg:order-2 lg:col-span-2 lg:h-[calc(100vh-theme(spacing.16))]">
+      <div
+        class={cn(
+          'sticky z-10 row-span-1 h-[30vh] lg:order-2 lg:col-span-2',
+          props.embed
+            ? 'top-0 lg:h-screen'
+            : 'top-16 lg:h-[calc(100vh-theme(spacing.16))]',
+        )}
+      >
         <div class="h-full w-full rounded-b-md" ref={mapNode!} />
       </div>
       <div class="pointer-events-auto row-span-1 space-y-2 p-2 lg:order-1 lg:col-span-1">
