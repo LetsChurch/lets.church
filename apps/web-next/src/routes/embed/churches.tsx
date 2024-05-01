@@ -1,3 +1,4 @@
+import { useSearchParams } from '@solidjs/router';
 import { clientOnly } from '@solidjs/start';
 
 const Client = clientOnly(async () => {
@@ -5,9 +6,14 @@ const Client = clientOnly(async () => {
 });
 
 export default function ChurchesRoute() {
+  const [searchParams] = useSearchParams();
+
+  const hidden = searchParams['hidden']?.split(',') ?? [];
+
   return (
     <Client
       embed
+      hidden={hidden}
       fallback={
         <div class="mx-auto mt-16 max-w-2xl text-center">
           <h1 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl">

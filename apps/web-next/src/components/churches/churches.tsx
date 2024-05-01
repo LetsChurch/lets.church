@@ -32,7 +32,10 @@ const hoverColor = '#d946ef';
 const unclusteredRadius = 7;
 const unclusteredHoverRadius = 10;
 
-export default function ChurchesApp(props: { embed?: boolean }) {
+export default function ChurchesApp(props: {
+  embed?: boolean;
+  hidden?: Array<string>;
+}) {
   const [map, setMap] = createSignal<MapboxMap | null>(null);
   const [source, setSource] = createSignal<mapboxgl.AnySourceImpl | null>(null);
   let mapNode: HTMLDivElement;
@@ -428,7 +431,7 @@ export default function ChurchesApp(props: { embed?: boolean }) {
         <div class="h-full w-full rounded-b-md" ref={mapNode!} />
       </div>
       <div class="pointer-events-auto row-span-1 space-y-2 p-2 lg:order-1 lg:col-span-1">
-        <Searchbox />
+        <Searchbox hidden={props.hidden} />
         <Show when={!loading()} fallback={<p>Loading</p>}>
           <For each={renderedResults()}>
             {(res) => (

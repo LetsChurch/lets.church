@@ -1,5 +1,6 @@
 import {
   For,
+  Show,
   createEffect,
   createMemo,
   createSignal,
@@ -26,6 +27,9 @@ import {
 import { TagsMenu, useParsedTags, tagSlug, tagsState } from './tags';
 import { optionId } from './util';
 import { OrganizationTag } from '~/__generated__/graphql-types';
+import { Optional } from '~/util';
+
+const hiddenOrganization = 'organization';
 
 export const useParsedFilters = () => {
   const parsedLocation = useParsedLocation();
@@ -43,7 +47,7 @@ export const useParsedFilters = () => {
 
 export type Filters = ReturnType<ReturnType<typeof useParsedFilters>>;
 
-export default function Searchbox() {
+export default function Searchbox(props: { hidden?: Optional<Array<string>> }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
 
@@ -79,7 +83,13 @@ export default function Searchbox() {
   const { tagChiclets, filterTags, tagOptionsByCategory } = tagsState();
 
   const chiclets = createMemo(() => {
-    return [...locationChiclet(), ...organizationChiclet(), ...tagChiclets()];
+    return [
+      ...locationChiclet(),
+      ...(!props.hidden?.includes(hiddenOrganization)
+        ? organizationChiclet()
+        : []),
+      ...tagChiclets(),
+    ];
   });
 
   const floatPosition = useFloating(reference, float, {
@@ -284,12 +294,14 @@ export default function Searchbox() {
             optionPrefix={popupId}
             activeOptionId={activeOptionId()}
           />
-          <OrganizationMenu
-            organizationSuggestions={organizationSuggestions()}
-            addOrganizationFromSuggestion={addOrganizationFromSuggestion}
-            optionPrefix={popupId}
-            activeOptionId={activeOptionId()}
-          />
+          <Show when={!props.hidden?.includes(hiddenOrganization)}>
+            <OrganizationMenu
+              organizationSuggestions={organizationSuggestions()}
+              addOrganizationFromSuggestion={addOrganizationFromSuggestion}
+              optionPrefix={popupId}
+              activeOptionId={activeOptionId()}
+            />
+          </Show>
           <TagsMenu
             tagOptionsByCategory={tagOptionsByCategory()}
             clearInput={clearInput}
