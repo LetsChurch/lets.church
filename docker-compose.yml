@@ -51,6 +51,7 @@ services:
       context: ./apps/web-next
       dockerfile: Dockerfile
     command: npm run dev
+    restart: on-failure
     ports:
       - ${HOST_WEB_NEXT_PORT}:3000
       - ${HOST_WEB_HMR_PORT}:${INTERNAL_WEB_HMR_PORT}
