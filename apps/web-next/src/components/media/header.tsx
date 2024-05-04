@@ -21,7 +21,12 @@ export default function MediaHeader(props: { class?: string }) {
   // Alternatively, this could move into a media layout and paths can change to be under /media
   function isMediaPage() {
     const p = loc.pathname;
-    return p === '/' || p.startsWith('/media');
+    return (
+      p === '/' ||
+      p.startsWith('/channel') ||
+      p.startsWith('/media') ||
+      p.startsWith('/search')
+    );
   }
 
   return (
