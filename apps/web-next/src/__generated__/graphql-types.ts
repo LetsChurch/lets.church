@@ -489,6 +489,7 @@ export type MutationUpsertOrganizationArgs = {
   primaryEmail?: InputMaybe<Scalars['String']['input']>;
   primaryPhoneNumber?: InputMaybe<Scalars['String']['input']>;
   slug?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
   type?: InputMaybe<OrganizationType>;
 };
 

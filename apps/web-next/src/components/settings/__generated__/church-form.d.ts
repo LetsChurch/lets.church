@@ -7,9 +7,15 @@ export type UpsertOrganizationMutationVariables = Types.Exact<{
   about?: Types.InputMaybe<Types.Scalars['String']['input']>;
   primaryEmail?: Types.InputMaybe<Types.Scalars['String']['input']>;
   primaryPhoneNumber?: Types.InputMaybe<Types.Scalars['String']['input']>;
+  tags?: Types.InputMaybe<Array<Types.Scalars['String']['input']> | Types.Scalars['String']['input']>;
   addresses?: Types.InputMaybe<Array<Types.AddressInput> | Types.AddressInput>;
   leaders?: Types.InputMaybe<Array<Types.OrganizationLeaderInput> | Types.OrganizationLeaderInput>;
 }>;
 
 
 export type UpsertOrganizationMutation = { __typename?: 'Mutation', upsertOrganization: { __typename?: 'Organization', id: string } };
+
+export type ChurchFormOrganizationTagsQueryVariables = Types.Exact<{ [key: string]: never; }>;
+
+
+export type ChurchFormOrganizationTagsQuery = { __typename?: 'Query', organizationTagsConnection: { __typename?: 'QueryOrganizationTagsConnection', edges: Array<{ __typename?: 'QueryOrganizationTagsConnectionEdge', node: { __typename?: 'OrganizationTag', category: Types.OrganizationTagCategory, color: Types.TagColor, label: string, slug: string, suggests: { __typename?: 'OrganizationTagSuggestsConnection', edges: Array<{ __typename?: 'OrganizationTagSuggestsConnectionEdge', node: { __typename?: 'OrganizationTagSuggestion', suggested: { __typename?: 'OrganizationTag', category: Types.OrganizationTagCategory, color: Types.TagColor, label: string } } }> } } }> } };

@@ -1,4 +1,5 @@
 import { action, redirect, useAction } from '@solidjs/router';
+import { size, shift } from '@floating-ui/dom';
 import TrashIcon from '@tabler/icons/outline/trash.svg?component-solid';
 import AddIcon from '@tabler/icons/outline/plus.svg?component-solid';
 import { gql } from 'graphql-request';
@@ -14,7 +15,15 @@ import {
   string,
   type Input as VInput,
 } from 'valibot';
-import { For, Show, createSignal, type ParentProps } from 'solid-js';
+import {
+  For,
+  Show,
+  createMemo,
+  createResource,
+  createSignal,
+  createUniqueId,
+  type ParentProps,
+} from 'solid-js';
 import {
   Field,
   FieldArray,
@@ -28,8 +37,12 @@ import {
   type FormStore,
 } from '@modular-forms/solid';
 import { createInputMask } from '@solid-primitives/input-mask';
-import { Button, LabeledInput } from '../form';
+import { useFloating } from 'solid-floating-ui';
+import { Button, Input, LabeledInput } from '../form';
+import FloatingDiv from '../floating-div';
 import type {
+  ChurchFormOrganizationTagsQuery,
+  ChurchFormOrganizationTagsQueryVariables,
   UpsertOrganizationMutation,
   UpsertOrganizationMutationVariables,
 } from './__generated__/church-form';
@@ -38,12 +51,14 @@ import {
   OrganizationLeaderType,
 } from '~/__generated__/graphql-types';
 import { getAuthenticatedClientOrRedirect } from '~/util/gql/server';
+import { cn } from '~/util';
 
 export const formSchema = object({
   id: optional(string()),
   name: string([minLength(1, 'Please enter a name for your church.')]),
   slug: string([minLength(3, 'Please enter a URL name for your church.')]),
   description: optional(nullable(string())),
+  tags: optional(array(string())),
   primaryEmail: optional(nullable(string([email()]))),
   primaryPhoneNumber: optional(nullable(string())),
   leaders: optional(
@@ -92,6 +107,7 @@ const upsertChurch = action(async (data: FormSchema) => {
         $about: String
         $primaryEmail: String
         $primaryPhoneNumber: String
+        $tags: [String!]
         $addresses: [AddressInput!]
         $leaders: [OrganizationLeaderInput!]
       ) {
@@ -103,6 +119,7 @@ const upsertChurch = action(async (data: FormSchema) => {
           description: $about
           primaryEmail: $primaryEmail
           primaryPhoneNumber: $primaryPhoneNumber
+          tags: $tags
           addresses: $addresses
           leaders: $leaders
         ) {
@@ -116,6 +133,7 @@ const upsertChurch = action(async (data: FormSchema) => {
       about: data.description ?? null,
       primaryEmail: data.primaryEmail ?? null,
       primaryPhoneNumber: data.primaryPhoneNumber ?? null,
+      tags: data.tags ?? null,
       addresses:
         data.addresses?.map((a) => ({
           ...a,
@@ -147,6 +165,190 @@ function EmptyState(props: ParentProps) {
     <div class="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
       {props.children}
     </div>
+  );
+}
+
+function TagsForm(props: { store: FormStore<FormSchema, undefined> }) {
+  const [tagsData] = createResource(async () => {
+    'use server';
+    const client = await getAuthenticatedClientOrRedirect();
+
+    const res = await client.request<
+      ChurchFormOrganizationTagsQuery,
+      ChurchFormOrganizationTagsQueryVariables
+    >(gql`
+      query ChurchFormOrganizationTags {
+        organizationTagsConnection {
+          edges {
+            node {
+              category
+              color
+              label
+              slug
+              suggests {
+                edges {
+                  node {
+                    suggested {
+                      category
+                      color
+                      label
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `);
+
+    return res.organizationTagsConnection.edges;
+  });
+
+  const popupId = createUniqueId();
+  const [inputText, setInputText] = createSignal('');
+  const [inputReference, setInputReference] = createSignal<HTMLInputElement>();
+  const [arrowPressed, setArrowPressed] = createSignal(false);
+  const [activeOptionIndex, setActiveOptionIndex] = createSignal<number>(-1);
+  const filteredTags = createMemo(() =>
+    tagsData()?.filter((t) =>
+      `${t.node.slug}${t.node.label}`
+        .toLowerCase()
+        .includes(inputText().toLowerCase()),
+    ),
+  );
+  const activeOptionId = createMemo(() => {
+    const data = filteredTags();
+
+    if (!arrowPressed() || !data || activeOptionIndex() === -1) {
+      return null;
+    }
+
+    return data[activeOptionIndex()]?.node.slug ?? null;
+  });
+  const [float, setFloat] = createSignal<HTMLDivElement>();
+  const [floatOpen, setFloatOpen] = createSignal(false);
+
+  const floatPosition = useFloating(inputReference, float, {
+    placement: 'bottom-start',
+    middleware: [
+      size({
+        apply({ rects, elements }) {
+          Object.assign(elements.floating.style, {
+            width: `${rects.reference.width}px`,
+          });
+        },
+      }),
+      shift(),
+    ],
+  });
+
+  function handleKeyDown(
+    e: KeyboardEvent & { currentTarget: HTMLInputElement },
+  ) {
+    if (e.key === 'Enter') {
+      const activeId = activeOptionId();
+      if (activeId) {
+        document.getElementById(activeId)?.click();
+        e.preventDefault();
+      }
+    }
+
+    if (e.key === 'ArrowDown' && (filteredTags()?.length ?? 0) > 0) {
+      e.preventDefault();
+      setActiveOptionIndex((i) => (i + 1) % (filteredTags()?.length ?? 0));
+      setArrowPressed(true);
+      return;
+    }
+
+    if (e.key === 'ArrowUp' && (filteredTags()?.length ?? 0) > 0) {
+      e.preventDefault();
+      setActiveOptionIndex(
+        (i) =>
+          (i - 1 + (filteredTags()?.length ?? 0)) %
+          (filteredTags()?.length ?? 0),
+      );
+      setArrowPressed(true);
+      return;
+    }
+  }
+
+  return (
+    <FieldArray of={props.store} name="tags">
+      {(fieldArray) => (
+        <div class="col-span-2">
+          <ul class="ml-4 list-disc">
+            <For each={fieldArray.items} fallback={<li>No tags added yet.</li>}>
+              {(_, index) => (
+                <Field of={props.store} name={`tags.${index()}`}>
+                  {(f) => (
+                    <li>
+                      {
+                        tagsData()?.find((e) => e.node.slug === f.value)?.node
+                          .label
+                      }
+                    </li>
+                  )}
+                </Field>
+              )}
+            </For>
+          </ul>
+          <Input
+            placeholder="Search for a tag"
+            role="combobox"
+            aria-controls={popupId}
+            aria-expanded={floatOpen()}
+            aria-activeDescendant={activeOptionId()}
+            ref={setInputReference}
+            onClick={() => setFloatOpen(true)}
+            onInput={(e) => {
+              setInputText(e.currentTarget.value);
+              setFloatOpen(true);
+              float()?.scrollTo(0, 0);
+            }}
+            onKeyDown={handleKeyDown}
+          />
+          <FloatingDiv
+            ref={setFloat}
+            open={floatOpen()}
+            onClose={() => setFloatOpen(false)}
+            position={floatPosition}
+            id={popupId}
+            class="relative max-h-64 overflow-y-auto"
+            role="listbox"
+          >
+            <ul>
+              <For each={filteredTags()}>
+                {(tag) => (
+                  <li
+                    id={tag.node.slug}
+                    class={cn(
+                      'cursor-pointer hover:bg-gray-200',
+                      tag.node.slug === activeOptionId() ? 'bg-gray-200' : null,
+                    )}
+                    onClick={() => {
+                      const input = inputReference();
+                      if (input) {
+                        input.value = '';
+                      }
+                      setInputText('');
+                      setActiveOptionIndex(-1);
+                      setArrowPressed(false);
+                      insert(props.store, 'tags', { value: tag.node.slug });
+                    }}
+                  >
+                    {
+                      tagsData()?.find((e) => e.node.slug === tag.node.slug)
+                        ?.node.label
+                    }
+                  </li>
+                )}
+              </For>
+            </ul>
+          </FloatingDiv>
+        </div>
+      )}
+    </FieldArray>
   );
 }
 
@@ -440,6 +642,7 @@ export default function ChurchForm(props: { initialValues?: FormSchema }) {
                   />
                 )}
               </Field>
+              <TagsForm store={store} />
             </div>
           </div>
 

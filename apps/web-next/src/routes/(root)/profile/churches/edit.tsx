@@ -11,7 +11,7 @@ import {
   ProfileChurchEditRouteDataQuery,
   ProfileChurchEditRouteDataQueryVariables,
 } from './__generated__/edit';
-import { getAdminClientOrRedirect } from '~/util/gql/server';
+import { getAuthenticatedClientOrRedirect } from '~/util/gql/server';
 import { PageHeading } from '~/components/page-heading';
 import ChurchForm from '~/components/settings/church-form';
 
@@ -19,7 +19,7 @@ const loadChurch = cache(async (id: string) => {
   'use server';
   invariant(id, 'No ID provided');
 
-  const client = await getAdminClientOrRedirect();
+  const client = await getAuthenticatedClientOrRedirect();
 
   const res = await client.request<
     ProfileChurchEditRouteDataQuery,
@@ -34,6 +34,15 @@ const loadChurch = cache(async (id: string) => {
           description
           primaryEmail
           primaryPhoneNumber
+          tags {
+            edges {
+              node {
+                tag {
+                  slug
+                }
+              }
+            }
+          }
           addresses {
             edges {
               node {
@@ -65,6 +74,7 @@ const loadChurch = cache(async (id: string) => {
 
   return {
     ...res.organizationById,
+    tags: res.organizationById?.tags.edges.map((e) => e.node.tag.slug),
     addresses: res.organizationById?.addresses.edges.map((e) => e.node),
     leaders: res.organizationById?.leaders.edges.map((e) => e.node),
   };

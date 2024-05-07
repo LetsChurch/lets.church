@@ -335,6 +335,7 @@ builder.mutationFields((t) => ({
       description: t.arg.string({ required: false }),
       primaryEmail: t.arg.string({ required: false }),
       primaryPhoneNumber: t.arg.string({ required: false }),
+      tags: t.arg.stringList({ required: false }),
       addresses: t.arg({
         type: [AddressInput],
         required: false,
@@ -359,6 +360,7 @@ builder.mutationFields((t) => ({
         description,
         primaryEmail,
         primaryPhoneNumber,
+        tags,
         addresses,
         leaders,
       },
@@ -386,6 +388,15 @@ builder.mutationFields((t) => ({
                 : {}),
             },
           });
+
+          if (tags) {
+            await tx.organizationTagInstance.deleteMany({
+              where: { organizationId },
+            });
+            await tx.organizationTagInstance.createMany({
+              data: tags.map((tag) => ({ organizationId, tagSlug: tag })),
+            });
+          }
 
           if (addresses) {
             await tx.organizationAddress.deleteMany({
@@ -444,6 +455,13 @@ builder.mutationFields((t) => ({
               ? {
                   primaryPhoneNumber: parsePhoneNumber(primaryPhoneNumber, 'US')
                     .number,
+                }
+              : {}),
+            ...(tags
+              ? {
+                  tags: {
+                    createMany: { data: tags.map((tag) => ({ tagSlug: tag })) },
+                  },
                 }
               : {}),
             ...(addresses
