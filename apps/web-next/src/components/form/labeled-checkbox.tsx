@@ -1,4 +1,4 @@
-import { createUniqueId, type JSX, Show } from 'solid-js';
+import { createUniqueId, type JSX, Show, splitProps } from 'solid-js';
 import type { Optional } from '~/util';
 
 export default function LabeledInput(props: {
@@ -6,28 +6,39 @@ export default function LabeledInput(props: {
   label: string | JSX.Element;
   error?: Optional<string | Array<string>>;
   checked?: boolean;
+  value: string;
 }) {
+  const [localProps, restProps] = splitProps(props, [
+    'name',
+    'label',
+    'checked',
+    'value',
+    'error',
+  ]);
+
   const id = createUniqueId();
 
   return (
     <div class="relative flex items-start">
       <div class="flex h-6 items-center">
         <input
+          {...restProps}
           id={id}
           aria-describedby="comments-description"
-          name={props.name}
+          name={localProps.name}
           type="checkbox"
           class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
-          checked={props.checked || false}
+          checked={localProps.checked ?? false}
+          value={localProps.value}
         />
       </div>
       <div class="ml-3 text-sm leading-6">
         <label for={id} class="font-medium text-gray-900">
-          {props.label}
+          {localProps.label}
         </label>
-        <Show when={props.error}>
+        <Show when={localProps.error}>
           <p id="comments-description" class="text-sm font-bold text-red-600">
-            {props.error}
+            {localProps.error}
           </p>
         </Show>
       </div>

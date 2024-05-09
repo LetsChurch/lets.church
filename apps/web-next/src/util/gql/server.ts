@@ -35,6 +35,7 @@ export async function getAuthenticatedClientOrRedirect() {
       authorization: `Bearer ${jwt}`,
       ...getForwardingHeaders(),
     },
+    errorPolicy: 'all',
   });
 }
 
@@ -46,6 +47,7 @@ export async function getAuthenticatedClient() {
       ...(jwt ? { authorization: `Bearer ${jwt}` } : {}),
       ...getForwardingHeaders(),
     },
+    errorPolicy: 'all',
   });
 }
 
@@ -61,6 +63,7 @@ export async function getAdminClientOrRedirect() {
       authorization: `Bearer ${jwt}`,
       ...getForwardingHeaders(),
     },
+    errorPolicy: 'all',
   });
 
   const { data } = await client.rawRequest<

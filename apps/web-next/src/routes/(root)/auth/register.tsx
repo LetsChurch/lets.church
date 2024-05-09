@@ -187,6 +187,7 @@ export default function RegisterRoute() {
       <div class="space-y-0">
         <LabeledCheckbox
           name="agreeToTheology"
+          value="agreeToTheology"
           label={
             <>
               I agree to the{' '}
@@ -201,6 +202,7 @@ export default function RegisterRoute() {
         />
         <LabeledCheckbox
           name="agreeToTerms"
+          value="agreeToTerms"
           label={
             <>
               I agree to the <A href="/about/terms">Terms and Conditions</A> and{' '}
@@ -215,6 +217,7 @@ export default function RegisterRoute() {
         />
         <LabeledCheckbox
           name="subscribeToNewsletter"
+          value="true"
           label="Subscribe to the Let's Church Newsletter."
           checked
         />

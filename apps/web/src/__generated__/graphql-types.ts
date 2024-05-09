@@ -491,6 +491,7 @@ export type MutationUpsertOrganizationArgs = {
   slug?: InputMaybe<Scalars['String']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   type?: InputMaybe<OrganizationType>;
+  upstreamAssociations?: InputMaybe<Array<Scalars['ShortUuid']['input']>>;
 };
 
 
@@ -571,6 +572,7 @@ export type Organization = {
   coverUrl?: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['DateTime']['output'];
   description?: Maybe<Scalars['String']['output']>;
+  downstreamAssociationsConnection: OrganizationDownstreamAssociationsConnection;
   endorsedChannelsConnection: OrganizationEndorsedChannelsConnection;
   id: Scalars['ShortUuid']['output'];
   leaders: OrganizationLeadersConnection;
@@ -584,6 +586,7 @@ export type Organization = {
   tags: OrganizationTagsConnection;
   type: OrganizationType;
   updatedAt: Scalars['DateTime']['output'];
+  upstreamAssociationsConnection: OrganizationUpstreamAssociationsConnection;
   websiteUrl?: Maybe<Scalars['String']['output']>;
 };
 
@@ -594,6 +597,14 @@ export type OrganizationAddressesArgs = {
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   type?: InputMaybe<OrganizationAddressType>;
+};
+
+
+export type OrganizationDownstreamAssociationsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -637,6 +648,14 @@ export type OrganizationTagsArgs = {
   last?: InputMaybe<Scalars['Int']['input']>;
 };
 
+
+export type OrganizationUpstreamAssociationsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type OrganizationAddress = {
   __typename?: 'OrganizationAddress';
   country?: Maybe<Scalars['String']['output']>;
@@ -674,6 +693,18 @@ export type OrganizationChannelAssociation = {
   __typename?: 'OrganizationChannelAssociation';
   channel: Channel;
   organization: Organization;
+};
+
+export type OrganizationDownstreamAssociationsConnection = {
+  __typename?: 'OrganizationDownstreamAssociationsConnection';
+  edges: Array<OrganizationDownstreamAssociationsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type OrganizationDownstreamAssociationsConnectionEdge = {
+  __typename?: 'OrganizationDownstreamAssociationsConnectionEdge';
+  cursor: Scalars['String']['output'];
+  node: OrganizationOrganizationAssociation;
 };
 
 export type OrganizationEndorsedChannelsConnection = {
@@ -750,6 +781,12 @@ export type OrganizationOfficialChannelsConnectionEdge = {
   __typename?: 'OrganizationOfficialChannelsConnectionEdge';
   cursor: Scalars['String']['output'];
   node: OrganizationChannelAssociation;
+};
+
+export type OrganizationOrganizationAssociation = {
+  __typename?: 'OrganizationOrganizationAssociation';
+  downstreamOrganization: Organization;
+  upstreamOrganization: Organization;
 };
 
 export type OrganizationSearchHit = ISearchHit & {
@@ -850,6 +887,18 @@ export enum OrganizationType {
   Ministry = 'MINISTRY'
 }
 
+export type OrganizationUpstreamAssociationsConnection = {
+  __typename?: 'OrganizationUpstreamAssociationsConnection';
+  edges: Array<OrganizationUpstreamAssociationsConnectionEdge>;
+  pageInfo: PageInfo;
+};
+
+export type OrganizationUpstreamAssociationsConnectionEdge = {
+  __typename?: 'OrganizationUpstreamAssociationsConnectionEdge';
+  cursor: Scalars['String']['output'];
+  node: OrganizationOrganizationAssociation;
+};
+
 export type PageInfo = {
   __typename?: 'PageInfo';
   endCursor?: Maybe<Scalars['String']['output']>;
@@ -930,6 +979,7 @@ export type QueryOrganizationTagsConnectionArgs = {
 
 export type QueryOrganizationsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
+  autoApproveEnabled?: InputMaybe<Scalars['Boolean']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;

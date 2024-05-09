@@ -66,6 +66,15 @@ const loadChurch = cache(async (id: string) => {
               }
             }
           }
+          upstreamAssociationsConnection {
+            edges {
+              node {
+                upstreamOrganization {
+                  id
+                }
+              }
+            }
+          }
         }
       }
     `,
@@ -77,6 +86,10 @@ const loadChurch = cache(async (id: string) => {
     tags: res.organizationById?.tags.edges.map((e) => e.node.tag.slug),
     addresses: res.organizationById?.addresses.edges.map((e) => e.node),
     leaders: res.organizationById?.leaders.edges.map((e) => e.node),
+    upstreamAssociations:
+      res.organizationById?.upstreamAssociationsConnection.edges.map(
+        (e) => e.node.upstreamOrganization.id,
+      ),
   };
 }, 'profileChurch');
 

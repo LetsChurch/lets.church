@@ -38,9 +38,11 @@ import {
 } from '@modular-forms/solid';
 import { createInputMask } from '@solid-primitives/input-mask';
 import { useFloating } from 'solid-floating-ui';
-import { Button, Input, LabeledInput } from '../form';
+import { Button, Input, LabeledCheckbox, LabeledInput } from '../form';
 import FloatingDiv from '../floating-div';
 import type {
+  ChurchFormAssociatableOrganizationsQuery,
+  ChurchFormAssociatableOrganizationsQueryVariables,
   ChurchFormOrganizationTagsQuery,
   ChurchFormOrganizationTagsQueryVariables,
   UpsertOrganizationMutation,
@@ -85,6 +87,7 @@ export const formSchema = object({
     ),
     [],
   ),
+  upstreamAssociations: optional(array(string()), []),
 });
 
 const phoneNumberMask = createInputMask<FieldEvent>('(999) 999-9999');
@@ -95,6 +98,7 @@ const upsertChurch = action(async (data: FormSchema) => {
   'use server';
   const validated = parse(formSchema, data);
   const client = await getAuthenticatedClientOrRedirect();
+
   const res = await client.rawRequest<
     UpsertOrganizationMutation,
     UpsertOrganizationMutationVariables
@@ -110,6 +114,7 @@ const upsertChurch = action(async (data: FormSchema) => {
         $tags: [String!]
         $addresses: [AddressInput!]
         $leaders: [OrganizationLeaderInput!]
+        $upstreamAssociations: [ShortUuid!]
       ) {
         upsertOrganization(
           type: CHURCH
@@ -122,6 +127,7 @@ const upsertChurch = action(async (data: FormSchema) => {
           tags: $tags
           addresses: $addresses
           leaders: $leaders
+          upstreamAssociations: $upstreamAssociations
         ) {
           id
         }
@@ -150,6 +156,7 @@ const upsertChurch = action(async (data: FormSchema) => {
           email: l.email ?? null,
           phoneNumber: l.phoneNumber ?? null,
         })) ?? null,
+      upstreamAssociations: data.upstreamAssociations ?? null,
     },
   );
 
@@ -570,6 +577,29 @@ export default function ChurchForm(props: { initialValues?: FormSchema }) {
     }
   }
 
+  const [orgsData] = createResource(async () => {
+    'use server';
+    const client = await getAuthenticatedClientOrRedirect();
+
+    const res = await client.request<
+      ChurchFormAssociatableOrganizationsQuery,
+      ChurchFormAssociatableOrganizationsQueryVariables
+    >(gql`
+      query ChurchFormAssociatableOrganizations {
+        organizationsConnection(autoApproveEnabled: true, first: 100) {
+          edges {
+            node {
+              name
+              id
+            }
+          }
+        }
+      }
+    `);
+
+    return res.organizationsConnection.edges;
+  });
+
   return (
     <>
       <For each={errors()}>
@@ -759,6 +789,30 @@ export default function ChurchForm(props: { initialValues?: FormSchema }) {
               <AddIcon class="-ml-2 mr-2 text-gray-400" />
               Add leader
             </Button>
+          </div>
+
+          <div class="pb-12">
+            <h2 class="text-base font-semibold leading-7 text-gray-900">
+              Organization Associations
+            </h2>
+            <p class="mt-1 text-sm leading-6 text-gray-600">
+              Organizations Your Church is Associated With
+            </p>
+
+            <For each={orgsData()}>
+              {({ node: { name, id } }) => (
+                <Field name="upstreamAssociations" of={store} type="string[]">
+                  {(field, props) => (
+                    <LabeledCheckbox
+                      {...props}
+                      label={name}
+                      checked={field.value?.includes(id) ?? false}
+                      value={id}
+                    />
+                  )}
+                </Field>
+              )}
+            </For>
           </div>
         </div>
 

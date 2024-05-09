@@ -235,6 +235,7 @@ const { id: org01id, channelAssociations: org01Associations } =
           isAdmin: true,
         },
       },
+      automaticallyApproveOrganizationAssociations: true,
       channelAssociations: {
         create: {
           officialChannel: true,
@@ -282,6 +283,7 @@ const { id: org03Id, channelAssociations: org03Associations } =
           isAdmin: true,
         },
       },
+      automaticallyApproveOrganizationAssociations: true,
       channelAssociations: {
         create: {
           officialChannel: true,

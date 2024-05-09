@@ -134,6 +134,13 @@ const OrganizationLeaderInputSchema = z.object({
 
 const OrganizationLeaderInputsSchema = z.array(OrganizationLeaderInputSchema);
 
+builder.prismaObject('OrganizationOrganizationAssociation', {
+  fields: (t) => ({
+    upstreamOrganization: t.relation('upstreamOrganization'),
+    downstreamOrganization: t.relation('downstreamOrganization'),
+  }),
+});
+
 const Organization = builder.prismaObject('Organization', {
   select: { id: true },
   fields: (t) => ({
@@ -185,6 +192,14 @@ const Organization = builder.prismaObject('Organization', {
     membershipsConnection: t.relatedConnection('memberships', {
       cursor: 'organizationId_appUserId',
     }),
+    upstreamAssociationsConnection: t.relatedConnection(
+      'upstreamOrganizationAssociations',
+      { cursor: 'upstreamOrganizationId_downstreamOrganizationId' },
+    ),
+    downstreamAssociationsConnection: t.relatedConnection(
+      'downstreamOrganizationAssociations',
+      { cursor: 'upstreamOrganizationId_downstreamOrganizationId' },
+    ),
     officialChannelsConnection: t.relatedConnection('channelAssociations', {
       cursor: 'organizationId_channelId',
       query: { where: { officialChannel: true } },
@@ -275,8 +290,20 @@ builder.queryFields((t) => ({
   organizationsConnection: t.prismaConnection({
     type: 'Organization',
     cursor: 'id',
-    resolve: (query, _root, _args, _context, _info) => {
-      return prisma.organization.findMany(query);
+    args: {
+      autoApproveEnabled: t.arg({
+        type: 'Boolean',
+        required: false,
+        defaultValue: false,
+      }),
+    },
+    resolve: (query, _root, args, _context, _info) => {
+      return prisma.organization.findMany({
+        ...query,
+        ...(args.autoApproveEnabled
+          ? { where: { automaticallyApproveOrganizationAssociations: true } }
+          : {}),
+      });
     },
   }),
   organizationTagsConnection: t.prismaConnection({
@@ -344,6 +371,7 @@ builder.mutationFields((t) => ({
         type: [OrganizationLeaderInput],
         required: false,
       }),
+      upstreamAssociations: t.arg({ type: ['ShortUuid'], required: false }),
     },
     authScopes: (_root, { organizationId }, context, _info) =>
       organizationId
@@ -363,6 +391,7 @@ builder.mutationFields((t) => ({
         tags,
         addresses,
         leaders,
+        upstreamAssociations,
       },
       { session },
     ) => {
@@ -395,6 +424,40 @@ builder.mutationFields((t) => ({
             });
             await tx.organizationTagInstance.createMany({
               data: tags.map((tag) => ({ organizationId, tagSlug: tag })),
+            });
+          }
+
+          if (upstreamAssociations) {
+            const existingAssociations =
+              await tx.organizationOrganizationAssociation.findMany({
+                where: { downstreamOrganizationId: organizationId },
+              });
+
+            await tx.organizationOrganizationAssociation.deleteMany({
+              where: { downstreamOrganizationId: organizationId },
+            });
+
+            // Copy existing approvals
+            await tx.organizationOrganizationAssociation.createMany({
+              data: await Promise.all(
+                upstreamAssociations.map(async (upstreamOrganizationId) => ({
+                  upstreamOrganizationId,
+                  upstreamApproved:
+                    existingAssociations.find(
+                      (ea) =>
+                        ea.upstreamOrganizationId === upstreamOrganizationId,
+                    )?.upstreamApproved ??
+                    (
+                      await tx.organization.findUniqueOrThrow({
+                        where: {
+                          id: upstreamOrganizationId,
+                        },
+                      })
+                    ).automaticallyApproveOrganizationAssociations,
+                  downstreamOrganizationId: organizationId,
+                  downstreamApproved: true,
+                })),
+              ),
             });
           }
 
@@ -463,6 +526,19 @@ builder.mutationFields((t) => ({
                     createMany: { data: tags.map((tag) => ({ tagSlug: tag })) },
                   },
                 }
+              : {}),
+            ...(upstreamAssociations
+              ? await Promise.all(
+                  upstreamAssociations.map(async (upstreamOrganizationId) => ({
+                    upstreamOrganizationId,
+                    upstreamApproved: (
+                      await tx.organization.findUniqueOrThrow({
+                        where: { id: upstreamOrganizationId },
+                      })
+                    ).automaticallyApproveOrganizationAssociations,
+                    downstreamApproved: true,
+                  })),
+                )
               : {}),
             ...(addresses
               ? {
