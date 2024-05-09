@@ -178,7 +178,7 @@ function TagsForm(props: { store: FormStore<FormSchema, undefined> }) {
       ChurchFormOrganizationTagsQueryVariables
     >(gql`
       query ChurchFormOrganizationTags {
-        organizationTagsConnection {
+        organizationTagsConnection(first: 100) {
           edges {
             node {
               category
