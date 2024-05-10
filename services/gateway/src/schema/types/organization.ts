@@ -10,7 +10,7 @@ import {
 } from '@prisma/client';
 import { parsePhoneNumber } from 'libphonenumber-js';
 import { z } from 'zod';
-import { indexDocument } from '../../temporal';
+import { geocodeOrganization, indexDocument } from '../../temporal';
 import prisma from '../../util/prisma';
 import builder from '../builder';
 import { Context } from '../../util/context';
@@ -397,7 +397,7 @@ builder.mutationFields((t) => ({
     ) => {
       invariant(session, 'Unauthorized');
 
-      return prisma.$transaction(async (tx) => {
+      const res = await prisma.$transaction(async (tx) => {
         if (organizationId) {
           await tx.organization.update({
             ...query,
@@ -461,7 +461,9 @@ builder.mutationFields((t) => ({
             });
           }
 
+          // TODO: update existing addresses via id from form
           if (addresses) {
+            // TODO: copy old geocoding results?
             await tx.organizationAddress.deleteMany({
               where: { organizationId },
             });
@@ -473,6 +475,7 @@ builder.mutationFields((t) => ({
             });
           }
 
+          // TODO: update existing leaders via id from form
           if (leaders) {
             await tx.organizationLeader.deleteMany({
               where: { organizationId },
@@ -566,6 +569,12 @@ builder.mutationFields((t) => ({
           where: { id: res.id },
         });
       });
+
+      if ((addresses?.length ?? 0) > 0) {
+        await geocodeOrganization(res.id);
+      }
+
+      return res;
     },
   }),
   upsertOrganizationMembership: t.prismaField({

@@ -1,6 +1,7 @@
 export { createUploadRecordWorkflow } from './create-upload-record';
 export { deleteUploadWorkflow } from './delete-upload';
 export { generatePeaksWorkflow } from './generate-peaks';
+export { geocodeOrganizationWorkflow } from './geocode-organization';
 export {
   handleMultipartMediaUploadWorkflow,
   uploadDoneSignal,

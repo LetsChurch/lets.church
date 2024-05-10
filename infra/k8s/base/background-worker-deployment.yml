@@ -42,6 +42,8 @@ spec:
             - secretRef:
                 name: axiom-secret
             - secretRef:
+                name: mapbox-secret
+            - secretRef:
                 name: s3-secret
             - secretRef:
                 name: smtp-secret

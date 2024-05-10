@@ -4,6 +4,7 @@ export { default as completeMultipartUpload } from './complete-multipart-upload'
 export { default as createUploadRecord } from './create-upload-record';
 export { default as deleteOldThumbnails } from './delete-old-thumbnails';
 export { default as finalizeUploadRecord } from './finalize-upload-record';
+export { default as geocodeOrganization } from './geocode-organization';
 export { default as getFinalizedUploadKey } from './get-finalized-upload-key';
 export { default as getProbe } from './get-probe';
 export { default as indexDocument } from './index-document';

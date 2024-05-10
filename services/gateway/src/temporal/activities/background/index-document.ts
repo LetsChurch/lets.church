@@ -177,7 +177,7 @@ async function getDocument(
           description: rec.description,
           type: rec.type,
           tags: rec.tags.map((tag) => tag.tagSlug),
-          ...(loc
+          ...(loc?.latitude && loc?.longitude
             ? { meetingLocation: { lat: loc.latitude, lon: loc.longitude } }
             : {}),
           upstreamOrganizationAssociations:

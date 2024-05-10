@@ -15,6 +15,7 @@ import {
   updateUploadRecordWorkflow,
   updateUploadRecordSignal,
   createUploadRecordWorkflow,
+  geocodeOrganizationWorkflow,
 } from './workflows';
 import { BACKGROUND_QUEUE } from './queues';
 import type { DocumentKind } from './activities/background/index-document';
@@ -170,6 +171,15 @@ export async function completeResetPassword(id: string, hash: string) {
   return (await client).workflow
     .getHandle(`resetPassword:${id}`)
     .signal(completeResetPasswordSignal, hash);
+}
+
+export async function geocodeOrganization(id: string) {
+  return (await client).workflow.start(geocodeOrganizationWorkflow, {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    args: [id],
+    workflowId: `geocodeOrganization:${id}:${Date.now()}`,
+  });
 }
 
 export async function waitOnTemporal() {

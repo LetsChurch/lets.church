@@ -130,6 +130,7 @@ services:
       IDENTITY: dev
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       ELASTICSEARCH_URL: http://elasticsearch:9200
+      MAPBOX_GEOCODING_TOKEN: ${MAPBOX_GEOCODING_TOKEN}
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1m
       <<: *s3-env
