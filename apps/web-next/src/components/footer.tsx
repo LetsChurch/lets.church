@@ -37,22 +37,23 @@ export default function Footer() {
                       Channels
                     </a>
                   </li>
-                  <li>
-                    <a
-                      href="/"
-                      class="text-sm leading-6 text-gray-600 hover:text-gray-900"
-                    >
-                      Sermons
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="/"
-                      class="text-sm leading-6 text-gray-600 hover:text-gray-900"
-                    >
-                      Podcasts
-                    </a>
-                  </li>
+                  {/* TODO: Make these real */}
+                  {/* <li> */}
+                  {/*   <a */}
+                  {/*     href="/" */}
+                  {/*     class="text-sm leading-6 text-gray-600 hover:text-gray-900" */}
+                  {/*   > */}
+                  {/*     Sermons */}
+                  {/*   </a> */}
+                  {/* </li> */}
+                  {/* <li> */}
+                  {/*   <a */}
+                  {/*     href="/" */}
+                  {/*     class="text-sm leading-6 text-gray-600 hover:text-gray-900" */}
+                  {/*   > */}
+                  {/*     Podcasts */}
+                  {/*   </a> */}
+                  {/* </li> */}
                 </ul>
               </div>
               <div class="mt-10 md:mt-0">
@@ -70,7 +71,7 @@ export default function Footer() {
                   </li>
                   <li>
                     <a
-                      href="/churches"
+                      href="/churches?tag=reformed"
                       class="text-sm leading-6 text-gray-600 hover:text-gray-900"
                     >
                       Reformed Churches
@@ -78,7 +79,7 @@ export default function Footer() {
                   </li>
                   <li>
                     <a
-                      href="/churches"
+                      href="/churches?tag=family-integrated"
                       class="text-sm leading-6 text-gray-600 hover:text-gray-900"
                     >
                       Family Integrated Churches
