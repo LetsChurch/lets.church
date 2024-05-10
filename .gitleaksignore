@@ -7,6 +7,8 @@ infra/k8s/prod/imgproxy.crypt.env:generic-api-key:6
 infra/k8s/prod/imgproxy.crypt.env:generic-api-key:7
 infra/k8s/prod/jwt.crypt.env:generic-api-key:1
 infra/k8s/prod/mapbox.crypt.env:generic-api-key:1
+infra/k8s/prod/mapbox.crypt.env:generic-api-key:2
+infra/k8s/prod/mapbox.crypt.env:generic-api-key:3
 infra/k8s/prod/pgo-backup-creds.crypt.conf:aws-access-token:2
 infra/k8s/prod/pgo-backup-creds.crypt.conf:generic-api-key:3
 infra/k8s/prod/s3.crypt.env:aws-access-token:14

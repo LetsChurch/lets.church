@@ -25,6 +25,11 @@ spec:
                 secretKeyRef:
                   name: pg-pguser-letschurch
                   key: uri
+            - name: MAPBOX_GEOCODING_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: mapbox-secret
+                  key: MAPBOX_GEOCODING_TOKEN
             - name: SENTRY_DSN
               valueFrom:
                 secretKeyRef:
@@ -41,8 +46,6 @@ spec:
                 name: background-worker-config
             - secretRef:
                 name: axiom-secret
-            - secretRef:
-                name: mapbox-secret
             - secretRef:
                 name: s3-secret
             - secretRef:

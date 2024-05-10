@@ -24,6 +24,16 @@ spec:
           env:
             - name: SERVICE_NAME
               value: web-next
+            - name: VITE_MAPBOX_MAP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: mapbox-secret
+                  key: VITE_MAPBOX_MAP_TOKEN
+            - name: VITE_MAPBOX_SEARCHBOX_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: mapbox-secret
+                  key: VITE_MAPBOX_SEARCHBOX_TOKEN
           envFrom:
             - secretRef:
                 name: turnstile-secret
