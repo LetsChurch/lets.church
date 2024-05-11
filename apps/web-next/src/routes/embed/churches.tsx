@@ -5,7 +5,7 @@ const Client = clientOnly(async () => {
   return import('~/components/churches/churches');
 });
 
-export default function ChurchesRoute() {
+export default function EmbedChurchesRoute() {
   const [searchParams] = useSearchParams();
 
   const hidden = searchParams['hidden']?.split(',') ?? [];
