@@ -1,6 +1,7 @@
 import { gql } from 'graphql-request';
 import { ParentProps } from 'solid-js';
 import { type RouteDefinition, cache, createAsync } from '@solidjs/router';
+import { Title } from '@solidjs/meta';
 import type { MeQuery } from './__generated__/(root)';
 import Footer from '~/components/footer';
 import Header from '~/components/header';
@@ -45,6 +46,7 @@ export default function RootLayout(props: ParentProps) {
     <UserContext.Provider value={data}>
       <Header />
       <main class={cn(isChurchesPage() ? null : 'px-2 sm:px-4 lg:px-8')}>
+        <Title>Let's Church</Title>
         <MediaHeader />
         <div class={cn(isChurchesPage() ? null : 'mx-auto max-w-7xl')}>
           {props.children}
