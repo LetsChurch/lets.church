@@ -26,7 +26,7 @@ const getHomepageData = cache(async function () {
       ${UploadCardFields}
 
       query HomepageData($loggedIn: Boolean!) {
-        subscriptionUploads: mySubscriptionUploadRecords(first: 5)
+        subscriptionUploads: mySubscriptionUploadRecords(first: 8)
           @include(if: $loggedIn) {
           pageInfo {
             hasNextPage
