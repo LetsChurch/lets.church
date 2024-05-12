@@ -21,6 +21,7 @@
     "@fontsource-variable/roboto-mono": "^5.0.19",
     "@knpwrs/envariant": "^1.1.1",
     "@modular-forms/solid": "^0.20.0",
+    "@sentry/browser": "^7.114.0",
     "@solid-primitives/autofocus": "^0.0.111",
     "@solid-primitives/input-mask": "^0.2.2",
     "@solid-primitives/media": "^2.2.9",
