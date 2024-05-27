@@ -51,7 +51,8 @@
     "admin:check-s3-orphans": "tsx scripts/check-s3-orphans.ts",
     "admin:check-es-orphans": "tsx scripts/check-es-orphans.ts",
     "admin:translate-uuid": "tsx scripts/translate-uuid.ts",
-    "admin:generate-peaks": "tsx scripts/generate-peaks.ts"
+    "admin:generate-peaks": "tsx scripts/generate-peaks.ts",
+    "admin:geocode-organization": "tsx scripts/geocode-organization.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed/dev.ts"
