@@ -18,6 +18,7 @@ const what = await select({
     { name: 'Uploads', value: 'uploads' as const },
     { name: 'Transcripts', value: 'transcripts' as const },
     { name: 'Channels', value: 'channels' as const },
+    { name: 'Organizations', value: 'organizations' as const },
   ],
 });
 
@@ -39,7 +40,12 @@ const slugs =
     ? (await input({ message: 'Slugs (comma-seperated):' })).split(',')
     : null;
 
-const documents = await (what === 'channels'
+const documents = await (what === 'organizations'
+  ? prisma.organization.findMany({
+      select: { id: true },
+      take: Number.MAX_SAFE_INTEGER,
+    })
+  : what === 'channels'
   ? prisma.channel.findMany({
       select: { id: true },
       take: Number.MAX_SAFE_INTEGER,
@@ -119,6 +125,18 @@ await pMap(
         taskQueue: BACKGROUND_QUEUE,
         workflowId: `reindexChannel:${id}`,
         args: ['channel', id],
+        signal: emptySignal,
+        signalArgs: [],
+      });
+    }
+
+    if (what === 'organizations') {
+      await (
+        await client
+      ).workflow.signalWithStart(indexDocumentWorkflow, {
+        taskQueue: BACKGROUND_QUEUE,
+        workflowId: `reindexOrganization:${id}`,
+        args: ['organization', id],
         signal: emptySignal,
         signalArgs: [],
       });
