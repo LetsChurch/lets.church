@@ -52,6 +52,7 @@ const geocodeResSchema = z
                 'neighborhood',
                 'street',
                 'address',
+                'secondary_address',
               ] as const),
               name: z.string(),
               name_preferred: z.string(),
