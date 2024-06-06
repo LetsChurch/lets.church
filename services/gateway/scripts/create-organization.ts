@@ -84,6 +84,16 @@ while (
   });
 }
 
+const assocOrgChoices = await prisma.organization.findMany({
+  select: { id: true, name: true },
+  where: { automaticallyApproveOrganizationAssociations: true },
+});
+
+const associatedOrgs = await checkbox({
+  message: 'Associated Organizations',
+  choices: assocOrgChoices.map((o) => ({ name: o.name, value: o.id })),
+});
+
 if (
   !(await confirm({
     message: 'Create organization with provided details?',
@@ -123,6 +133,13 @@ const org = await prisma.organization.create({
       createMany: {
         data: leadership,
       },
+    },
+    upstreamOrganizationAssociations: {
+      create: associatedOrgs.map((id) => ({
+        upstreamApproved: true,
+        downstreamApproved: true,
+        upstreamOrganization: { connect: { id } },
+      })),
     },
   },
 });
