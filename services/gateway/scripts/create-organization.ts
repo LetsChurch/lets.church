@@ -31,6 +31,7 @@ const tags = await checkbox({
   choices: tagOptions.map((t) => ({ name: t.label, value: t.slug })),
 });
 
+const websiteUrl = await input({ message: 'Website:' });
 const primaryEmail = await input({ message: 'Primary Email:' });
 const primaryPhoneNumber = await input({ message: 'Primary Phone Number:' });
 
@@ -97,6 +98,7 @@ const org = await prisma.organization.create({
     name,
     slug,
     type,
+    websiteUrl,
     primaryEmail,
     primaryPhoneNumber,
     tags: {

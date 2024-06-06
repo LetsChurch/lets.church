@@ -61,6 +61,7 @@ export const formSchema = object({
   slug: string([minLength(3, 'Please enter a URL name for your church.')]),
   description: optional(nullable(string())),
   tags: optional(array(string())),
+  websiteUrl: optional(nullable(string())),
   primaryEmail: optional(nullable(string([email()]))),
   primaryPhoneNumber: optional(nullable(string())),
   leaders: optional(
@@ -109,6 +110,7 @@ const upsertChurch = action(async (data: FormSchema) => {
         $name: String!
         $slug: String!
         $about: String
+        $websiteUrl: String
         $primaryEmail: String
         $primaryPhoneNumber: String
         $tags: [String!]
@@ -122,6 +124,7 @@ const upsertChurch = action(async (data: FormSchema) => {
           name: $name
           slug: $slug
           description: $about
+          websiteUrl: $websiteUrl
           primaryEmail: $primaryEmail
           primaryPhoneNumber: $primaryPhoneNumber
           tags: $tags
@@ -137,6 +140,7 @@ const upsertChurch = action(async (data: FormSchema) => {
       ...validated,
       id: validated.id ?? null,
       about: data.description ?? null,
+      websiteUrl: data.websiteUrl ?? null,
       primaryEmail: data.primaryEmail ?? null,
       primaryPhoneNumber: data.primaryPhoneNumber ?? null,
       tags: data.tags ?? null,
@@ -683,6 +687,20 @@ export default function ChurchForm(props: { initialValues?: FormSchema }) {
             <p class="mt-1 text-sm leading-6 text-gray-600">
               Contact and meeting information for your church.
             </p>
+
+            <Field of={store} name="websiteUrl">
+              {(field, props) => (
+                <LabeledInput
+                  {...props}
+                  name={field.name}
+                  value={field.value}
+                  label="Website URL"
+                  placeholder="https://some.church"
+                  error={field.error}
+                  class="mt-6 sm:col-span-4"
+                />
+              )}
+            </Field>
 
             <Field of={store} name="primaryEmail">
               {(field, props) => (

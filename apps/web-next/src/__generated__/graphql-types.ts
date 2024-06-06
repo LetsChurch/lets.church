@@ -492,6 +492,7 @@ export type MutationUpsertOrganizationArgs = {
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   type?: InputMaybe<OrganizationType>;
   upstreamAssociations?: InputMaybe<Array<Scalars['ShortUuid']['input']>>;
+  websiteUrl?: InputMaybe<Scalars['String']['input']>;
 };
 
 

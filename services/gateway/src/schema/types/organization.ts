@@ -360,6 +360,7 @@ builder.mutationFields((t) => ({
       name: t.arg.string({ required: false }),
       slug: t.arg.string({ required: false }),
       description: t.arg.string({ required: false }),
+      websiteUrl: t.arg.string({ required: false }),
       primaryEmail: t.arg.string({ required: false }),
       primaryPhoneNumber: t.arg.string({ required: false }),
       tags: t.arg.stringList({ required: false }),
@@ -386,6 +387,7 @@ builder.mutationFields((t) => ({
         name,
         slug,
         description,
+        websiteUrl,
         primaryEmail,
         primaryPhoneNumber,
         tags,
@@ -406,6 +408,7 @@ builder.mutationFields((t) => ({
               ...(typeof name === 'string' ? { name } : {}),
               ...(typeof slug === 'string' ? { slug } : {}),
               ...(typeof description === 'string' ? { description } : {}),
+              ...(typeof websiteUrl === 'string' ? { websiteUrl } : {}),
               ...(typeof primaryEmail === 'string' ? { primaryEmail } : {}),
               ...(typeof primaryPhoneNumber === 'string'
                 ? {
@@ -516,6 +519,7 @@ builder.mutationFields((t) => ({
               },
             },
             ...(typeof description === 'string' ? { description } : {}),
+            ...(typeof websiteUrl === 'string' ? { websiteUrl } : {}),
             ...(typeof primaryEmail === 'string' ? { primaryEmail } : {}),
             ...(typeof primaryPhoneNumber === 'string'
               ? {

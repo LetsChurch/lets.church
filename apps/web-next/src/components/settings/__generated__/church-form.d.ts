@@ -5,6 +5,7 @@ export type UpsertOrganizationMutationVariables = Types.Exact<{
   name: Types.Scalars['String']['input'];
   slug: Types.Scalars['String']['input'];
   about?: Types.InputMaybe<Types.Scalars['String']['input']>;
+  websiteUrl?: Types.InputMaybe<Types.Scalars['String']['input']>;
   primaryEmail?: Types.InputMaybe<Types.Scalars['String']['input']>;
   primaryPhoneNumber?: Types.InputMaybe<Types.Scalars['String']['input']>;
   tags?: Types.InputMaybe<Array<Types.Scalars['String']['input']> | Types.Scalars['String']['input']>;

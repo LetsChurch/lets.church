@@ -32,6 +32,7 @@ const loadChurch = cache(async (id: string) => {
           name
           slug
           description
+          websiteUrl
           primaryEmail
           primaryPhoneNumber
           tags {
