@@ -38,6 +38,7 @@
     "admin:bulk-import": "tsx scripts/bulk-import.ts",
     "admin:create-user": "tsx scripts/create-user.ts",
     "admin:create-channel": "tsx scripts/create-channel.ts",
+    "admin:create-organization": "tsx scripts/create-organization.ts",
     "admin:create-upload-list": "tsx scripts/create-upload-list.ts",
     "admin:delete-upload": "tsx scripts/delete-upload.ts",
     "admin:delete-uploads": "tsx scripts/delete-uploads.ts",

@@ -8,7 +8,7 @@ const name = await input({ message: 'Name:' });
 const slug = await input({ message: 'Slug:' });
 const username = await input({ message: 'Admin Username:' });
 const visibility = await select({
-  message: 'Admin Username:',
+  message: 'visibility:',
   choices: [
     { name: 'Public', value: ChannelVisibility.PUBLIC },
     { name: 'Private', value: ChannelVisibility.PRIVATE },
