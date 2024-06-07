@@ -20,7 +20,7 @@ export type UpsertOrganizationMutation = { __typename?: 'Mutation', upsertOrgani
 export type ChurchFormOrganizationTagsQueryVariables = Types.Exact<{ [key: string]: never; }>;
 
 
-export type ChurchFormOrganizationTagsQuery = { __typename?: 'Query', organizationTagsConnection: { __typename?: 'QueryOrganizationTagsConnection', edges: Array<{ __typename?: 'QueryOrganizationTagsConnectionEdge', node: { __typename?: 'OrganizationTag', category: Types.OrganizationTagCategory, color: Types.TagColor, label: string, slug: string, suggests: { __typename?: 'OrganizationTagSuggestsConnection', edges: Array<{ __typename?: 'OrganizationTagSuggestsConnectionEdge', node: { __typename?: 'OrganizationTagSuggestion', suggested: { __typename?: 'OrganizationTag', category: Types.OrganizationTagCategory, color: Types.TagColor, label: string } } }> } } }> } };
+export type ChurchFormOrganizationTagsQuery = { __typename?: 'Query', organizationTagsConnection: { __typename?: 'QueryOrganizationTagsConnection', edges: Array<{ __typename?: 'QueryOrganizationTagsConnectionEdge', node: { __typename?: 'OrganizationTag', slug: string, label: string } }> } };
 
 export type ChurchFormAssociatableOrganizationsQueryVariables = Types.Exact<{ [key: string]: never; }>;
 
