@@ -455,6 +455,7 @@ export default function ChurchesApp(props: {
                     <a
                       href={`/churches/${'organization' in res.node ? res.node.organization.slug : null}`}
                       class="before:absolute before:inset-0"
+                      target={props.embed ? '_blank' : '_self'}
                     >
                       {'name' in res.node ? res.node.name : null}
                     </a>
