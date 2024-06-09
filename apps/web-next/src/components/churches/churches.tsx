@@ -436,13 +436,13 @@ export default function ChurchesApp(props: {
           <For each={renderedResults()}>
             {(res) => (
               <div
-                class="relative rounded-md p-2 even:bg-gray-100 hover:bg-gray-200 sm:flex"
+                class="relative flex rounded-md p-2 even:bg-gray-100 hover:bg-gray-200"
                 onMouseEnter={[handleMouseEnter, res]}
                 onMouseLeave={handleMouseLeave}
               >
-                <div class="mb-4 flex-shrink-0 sm:mb-0 sm:mr-4">
+                <div class="mb-4 mr-4 flex-shrink-0 sm:mb-0">
                   <Avatar
-                    size="2xl"
+                    size="xl"
                     name={
                       'organization' in res.node
                         ? res.node.organization.name
