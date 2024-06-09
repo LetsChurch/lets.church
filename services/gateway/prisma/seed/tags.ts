@@ -11,6 +11,7 @@ export const reformedBaptistTagSlug = 'reformed-baptist';
 export const independentTagSlug = 'independent';
 export const presbyterianTagSlug = 'presbyterian';
 export const presbyterianArpTagSlug = 'presbyterian-arp';
+export const presbyterianEpcTagSlug = 'presbyterian-epc';
 export const presbyterianPcaTagSlug = 'presbyterian-pca';
 export const presbyterianRpcusTagSlug = 'presbyterian-rpcus';
 export const presbyterianRpcnaTagSlug = 'presbyterian-rpcna';
@@ -135,6 +136,14 @@ const tagsData: ReadonlyArray<
     slug: presbyterianArpTagSlug,
     label: 'Presbyterian (ARP)',
     description: 'Associate Reformed Presbyterian',
+    suggests: [reformedTagSlug, presbyterianTagSlug],
+  },
+  {
+    category: OrganizationTagCategory.DENOMINATION,
+    color: 'BLUE',
+    slug: presbyterianEpcTagSlug,
+    label: 'Presbyterian (EPC)',
+    description: 'Evangelical Presbyterian Church',
     suggests: [reformedTagSlug, presbyterianTagSlug],
   },
   {
