@@ -27,6 +27,7 @@ export const reformedPaedobaptistTagSlug = 'reformed-paedobaptist';
 export const fundamentalistTagSlug = 'fundamentalist-paedobaptist';
 export const dispensationalTagSlug = 'dispenational';
 export const anabaptistTagSlug = 'anabaptist';
+export const calvinisticTagSlug = 'calvinistic';
 
 export const amillennialTagSlug = 'amillennial';
 export const premillennialTagSlug = 'premillennial';
@@ -114,7 +115,7 @@ const tagsData: ReadonlyArray<
     color: 'BLUE',
     slug: calvinisticBaptistTagSlug,
     label: 'Calvinistic Baptist',
-    suggests: [baptistTagSlug],
+    suggests: [baptistTagSlug, calvinisticTagSlug],
   },
   {
     category: OrganizationTagCategory.DENOMINATION,
@@ -244,6 +245,12 @@ const tagsData: ReadonlyArray<
     slug: anabaptistTagSlug,
     label: 'Anabaptist',
     suggests: ['baptist'],
+  },
+  {
+    category: OrganizationTagCategory.DOCTRINE,
+    color: 'GREEN',
+    slug: calvinisticTagSlug,
+    label: 'Calvinistic',
   },
   // Eschatology
   {
