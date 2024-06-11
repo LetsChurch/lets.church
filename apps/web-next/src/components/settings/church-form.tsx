@@ -34,6 +34,8 @@ import {
   type FormStore,
 } from '@modular-forms/solid';
 import { createInputMask } from '@solid-primitives/input-mask';
+import groupBy from 'just-group-by';
+import { capitalCase } from 'change-case';
 import { Button, LabeledCheckbox, LabeledInput } from '../form';
 import type {
   ChurchFormAssociatableOrganizationsQuery,
@@ -403,6 +405,7 @@ export default function ChurchForm(props: { initialValues?: FormSchema }) {
         organizationTagsConnection(first: 100) {
           edges {
             node {
+              category
               slug
               label
             }
@@ -411,7 +414,14 @@ export default function ChurchForm(props: { initialValues?: FormSchema }) {
       }
     `);
 
-    return res.organizationTagsConnection.edges;
+    const grouped = Object.entries(
+      groupBy(
+        res.organizationTagsConnection.edges.map((e) => e.node),
+        (t) => t.category,
+      ),
+    ).map(([k, v]): [string, typeof v] => [capitalCase(k), v]);
+
+    return grouped;
   });
 
   const [orgsData] = createResource(async () => {
@@ -515,22 +525,31 @@ export default function ChurchForm(props: { initialValues?: FormSchema }) {
                   Tags
                 </label>
 
-                <div class="grid grid-cols-2">
-                  <For each={tagsData()}>
-                    {({ node: { slug, label } }) => (
-                      <Field name="tags" of={store} type="string[]">
-                        {(field, props) => (
-                          <LabeledCheckbox
-                            {...props}
-                            label={label}
-                            checked={field.value?.includes(slug) ?? false}
-                            value={slug}
-                          />
-                        )}
-                      </Field>
-                    )}
-                  </For>
-                </div>
+                <For each={tagsData()}>
+                  {([cat, tags]) => (
+                    <>
+                      <h3 class="mt-4 text-xs font-medium text-gray-900">
+                        {cat}
+                      </h3>
+                      <div class="grid grid-cols-2">
+                        <For each={tags}>
+                          {({ label, slug }) => (
+                            <Field name="tags" of={store} type="string[]">
+                              {(field, props) => (
+                                <LabeledCheckbox
+                                  {...props}
+                                  label={label}
+                                  checked={field.value?.includes(slug) ?? false}
+                                  value={slug}
+                                />
+                              )}
+                            </Field>
+                          )}
+                        </For>
+                      </div>
+                    </>
+                  )}
+                </For>
               </div>
             </div>
           </div>
