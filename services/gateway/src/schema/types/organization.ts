@@ -523,8 +523,9 @@ builder.mutationFields((t) => ({
             ...(typeof primaryEmail === 'string' ? { primaryEmail } : {}),
             ...(typeof primaryPhoneNumber === 'string'
               ? {
-                  primaryPhoneNumber: parsePhoneNumber(primaryPhoneNumber, 'US')
-                    .number,
+                  primaryPhoneNumber: primaryPhoneNumber
+                    ? parsePhoneNumber(primaryPhoneNumber, 'US').number
+                    : null,
                 }
               : {}),
             ...(tags
