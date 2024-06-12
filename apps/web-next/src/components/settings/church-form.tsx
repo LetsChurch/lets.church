@@ -36,6 +36,7 @@ import {
 import { createInputMask } from '@solid-primitives/input-mask';
 import groupBy from 'just-group-by';
 import { capitalCase } from 'change-case';
+import countries from 'countries-list/minimal/countries.en.min.json';
 import { Button, LabeledCheckbox, LabeledInput } from '../form';
 import type {
   ChurchFormAssociatableOrganizationsQuery,
@@ -221,9 +222,9 @@ function AddressForm(props: {
             error={field.error}
             class="sm:col-span-2"
           >
-            <option>United States</option>
-            <option>Canada</option>
-            <option>Mexico</option>
+            <For each={Object.entries(countries)}>
+              {([, country]) => <option>{country}</option>}
+            </For>
           </LabeledInput>
         )}
       </Field>
@@ -633,7 +634,7 @@ export default function ChurchForm(props: { initialValues?: FormSchema }) {
                 insert(store, 'addresses', {
                   value: {
                     type: OrganizationAddressType.Meeting,
-                    country: 'United States',
+                    country: countries['US'],
                     locality: '',
                     region: '',
                     // postOfficeBoxNumber: '',

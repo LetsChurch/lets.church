@@ -64,7 +64,7 @@ export default function LabeledInput(
           aria-invalid={Boolean(props.error)}
           {...merged}
           class={cn(
-            'block flex-1 border-0 bg-transparent py-1.5 pl-1 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm sm:leading-6',
+            'block max-w-full flex-1 border-0 bg-transparent py-1.5 pl-1 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm sm:leading-6',
             otherProps.prefix ? null : 'pl-3',
             otherProps.inputClass,
           )}
