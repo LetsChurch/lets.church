@@ -15,11 +15,11 @@ RUN cmake -D BUILD_STATIC=1 .. && make
 # Temporal does not support alpine: https://github.com/temporalio/sdk-typescript/issues/850
 FROM node:20.7.0-bullseye-slim as base
 # Prisma requires lbssl-dev and ca-certificates
-RUN apt-get update && apt-get install -y libssl-dev ca-certificates
+RUN apt-get update && apt-get install -y libssl-dev ca-certificates neovim
 WORKDIR /home/node/app
 COPY package.json package-lock.json ./
 RUN npm ci
-ENV NODE_ENV=production
+ENV NODE_ENV=production EDITOR=nvim
 COPY . .
 
 FROM base as server

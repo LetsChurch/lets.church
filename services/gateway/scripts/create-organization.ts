@@ -1,4 +1,4 @@
-import { input, select, checkbox, confirm } from '@inquirer/prompts';
+import { input, editor, select, checkbox, confirm } from '@inquirer/prompts';
 import short from 'short-uuid';
 import {
   AddressType,
@@ -11,6 +11,7 @@ import { geocodeOrganization } from '../src/temporal';
 
 const name = await input({ message: 'Name:' });
 const slug = await input({ message: 'Slug:' });
+const description = await editor({ message: 'About:' });
 const username = await input({ message: 'Admin Username:' });
 const type = await select({
   message: 'Type:',
@@ -107,6 +108,7 @@ const org = await prisma.organization.create({
   data: {
     name,
     slug,
+    description,
     type,
     websiteUrl,
     primaryEmail,
