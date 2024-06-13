@@ -5,6 +5,7 @@ import {
   OrganizationLeaderType,
   OrganizationType,
 } from '@prisma/client';
+import countries from 'countries-list/minimal/countries.en.min.json';
 import prisma from '../src/util/prisma';
 import logger from '../src/util/logger';
 import { geocodeOrganization } from '../src/temporal';

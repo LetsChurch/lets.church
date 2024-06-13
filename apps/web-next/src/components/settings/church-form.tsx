@@ -222,8 +222,8 @@ function AddressForm(props: {
             error={field.error}
             class="sm:col-span-2"
           >
-            <For each={Object.entries(countries)}>
-              {([, country]) => <option>{country}</option>}
+            <For each={Object.values(countries)}>
+              {(country) => <option>{country}</option>}
             </For>
           </LabeledInput>
         )}
