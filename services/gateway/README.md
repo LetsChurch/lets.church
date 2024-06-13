@@ -59,6 +59,10 @@ All workers expect the following environment variables:
 
 - `MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS`
 - `TRANSCODE_HW_ACCEL`, (e.g., `ama`)
+- _optional_ `TRANSCODE_WORKING_DIRECTORY`
+- _optional_ `THUMBNAILS_WORKING_DIRECTORY`
+- _optional_ `PEAKS_WORKING_DIRECTORY`
+- _optional_ `PROBE_WORKING_DIRECTORY`
 - If running without the container you must ensure that `ffmpeg` and `audiowaveform` are available on `PATH`
 
 ### `transcribe-worker`
@@ -66,6 +70,7 @@ All workers expect the following environment variables:
 - `MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS`
 - `WHISPER_MODEL`
 - `WHISPER_EXTRA_ARGS`, (e.g., `--device_index 1`)
+- _optional_ `TRANSCRIBE_WORKING_DIRECTORY`
 - If running without the container you must ensure that `ffmpeg` and `whisper-ctranslate2` are available on `PATH`
 
 [Temporal]: https://temporal.io 'Less plumbing, more coding'
