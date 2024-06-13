@@ -92,6 +92,7 @@
     "argon2": "^0.30.3",
     "blurhash": "^2.0.5",
     "camelcase-keys": "^8.0.2",
+    "countries-list": "^3.1.0",
     "dot-prop": "^7.2.0",
     "execa": "^7.0.0",
     "expiry-map": "^2.0.0",

@@ -55,8 +55,9 @@ while (
       message: 'Country:',
       choices: [
         { value: 'United States' },
-        { value: 'Canada' },
-        { value: 'Mexico' },
+        ...Object.values(countries)
+          .filter((c) => c !== 'United States')
+          .map((value) => ({ value })),
       ],
     }),
     streetAddress: await input({ message: 'Street Address:' }),
