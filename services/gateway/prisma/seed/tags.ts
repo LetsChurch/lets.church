@@ -19,6 +19,7 @@ export const presbyterianOpcTagSlug = 'presbyterian-opc';
 export const presbyterianCrecTagSlug = 'presbyterian-crec';
 export const lutheranTagSlug = 'lutheran';
 export const lutheranAalcTagSlug = 'lutheran-aalc';
+export const lutheranLcmsTagSlug = 'lutheran-lcms';
 export const interdenominationalTagSlug = 'interdenominational';
 export const evangelicalFreeTagSlug = 'evangelical-free';
 
@@ -198,6 +199,13 @@ const tagsData: ReadonlyArray<
     color: 'BLUE',
     slug: lutheranAalcTagSlug,
     label: 'Lutheran (AALC)',
+    suggests: [lutheranTagSlug],
+  },
+  {
+    category: OrganizationTagCategory.DENOMINATION,
+    color: 'BLUE',
+    slug: lutheranLcmsTagSlug,
+    label: 'Lutheran (LCMS)',
     suggests: [lutheranTagSlug],
   },
   {
