@@ -1,9 +1,9 @@
 # generate the sha256 like this:
-# nix-prefetch-url --unpack https://github.com/NixOS/nixpkgs/archive/2b2a5687de6e2b016e3ba5b95b51f4d5a840a28a.tar.gz
+# nix-prefetch-url --unpack https://github.com/NixOS/nixpkgs/archive/47b604b07d1e8146d5398b42d3306fdebd343986.tar.gz
 
 with (import (fetchTarball {
-  url = "https://github.com/nixos/nixpkgs/archive/2b2a5687de6e2b016e3ba5b95b51f4d5a840a28a.tar.gz";
-  sha256 = "0gnakh6cd9k16haqdsrdnk77sniyk7ncy6fpkvb1m1zxlj5y2ndx";
+  url = "https://github.com/nixos/nixpkgs/archive/47b604b07d1e8146d5398b42d3306fdebd343986.tar.gz";
+  sha256 = "0g0nl5dprv52zq33wphjydbf3xy0kajp0yix7xg2m0qgp83pp046";
 }) {});
 
 mkShell {
@@ -12,6 +12,7 @@ mkShell {
     fd
     git-lfs
     gitleaks
+    go
     just
     kubectl
     kustomize
