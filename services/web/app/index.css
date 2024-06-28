@@ -1,0 +1,15 @@
+@layer reset, base, layout, components;
+
+@import "../node_modules/sanitize.css/sanitize.css" layer(reset);
+@import "../node_modules/sanitize.css/typography.css" layer(reset);
+
+:root {
+  --color-brand: #6366f1;
+}
+
+@layer base {
+  a {
+    color: var(--color-brand);
+    text-decoration: none;
+  }
+}

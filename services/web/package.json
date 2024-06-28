@@ -1,0 +1,11 @@
+{
+  "name": "lc-web",
+  "private": true,
+  "devDependencies": {
+    "esbuild": "^0.21.5",
+    "lightningcss-cli": "^1.25.1"
+  },
+  "dependencies": {
+    "sanitize.css": "^13.0.0"
+  }
+}

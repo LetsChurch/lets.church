@@ -1,0 +1,27 @@
+package layouts
+
+import "lets.church/web/app/components"
+
+var mainHandle = templ.NewOnceHandle()
+
+templ Main() {
+	<!DOCTYPE html>
+	<html class="no-js" lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>Let's Church</title>
+			<link rel="stylesheet" href="/assets/styles.css"/>
+			<script type="module" src="/assets/index.js" defer></script>
+		</head>
+		<body>
+			<div id="lc-root">
+				@components.Header()
+				<main>
+					{ children... }
+				</main>
+				<footer>footer</footer>
+			</div>
+		</body>
+	</html>
+}

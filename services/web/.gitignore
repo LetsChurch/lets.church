@@ -1,0 +1,3 @@
+*_templ.go
+node_modules
+assets/*.{css,js}

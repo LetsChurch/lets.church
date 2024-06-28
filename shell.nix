@@ -9,6 +9,7 @@ with (import (fetchTarball {
 mkShell {
   packages = [
     ansible
+    docker-compose
     fd
     git-lfs
     gitleaks
@@ -21,6 +22,7 @@ mkShell {
     nodejs_20
     rclone
     sampler
+    templ
     transcrypt
     unixtools.xxd
   ];

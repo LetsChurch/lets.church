@@ -1,5 +1,3 @@
-version: "3.7"
-
 volumes:
   auth-hooks-node-modules:
   background-worker-node-modules:
@@ -69,6 +67,24 @@ services:
       - web-next-dot-output:/home/node/app/.output
     depends_on:
       - gateway
+  web-go:
+    build:
+      context: ./services/web
+      dockerfile: Dockerfile
+    command: ./dev.sh
+    ports:
+      - ${HOST_WEB_GO_PORT}:3001
+    develop:
+      watch:
+        - action: sync
+          path: ./services/web
+          target: /usr/src/app
+          ignore:
+            - ./services/web/node_modules
+            - ./services/web/package.json
+            - ./services/web/package-lock.json
+        - action: rebuild
+          path: ./services/web/package.json
   # web-astro:
   #   build:
   #     context: ./apps/web-astro
