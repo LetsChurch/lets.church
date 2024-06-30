@@ -1,0 +1,28 @@
+.lc-button {
+  --height: 40px;
+
+  height: var(--height);
+  border: none;
+  border-radius: var(--border-radius);
+  outline: none;
+
+  color: var(--color-button-tertiary-fg);
+  font-size: var(--text-md-size);
+  font-weight: var(--text-medium);
+  line-height: var(--text-md-line-height);
+
+  padding-inline: calc(4 * var(--unit));
+
+  :where(&).primary {
+    background: var(--color-brand);
+    color: white;
+  }
+
+  &:hover {
+    cursor: pointer;
+  }
+
+  &:focus {
+    box-shadow: 0 0 0 calc(2 * var(--unit)) #9e77ed24;
+  }
+}

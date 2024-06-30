@@ -1,7 +1,18 @@
 package components
 
 templ Header() {
-	<header>
-		<a href="/">Let's Church</a>
+	<header class="lc-container lc-header">
+		<div class="left">
+			<a href="/" class="lc-logo"><img src="/assets/logoicon.svg"/></a>
+			@Input(InputProps{Placeholder: "Search", Icon: "search"})
+			<a class="nav" href="/">Media</a>
+			<a class="nav" href="/churches">Find a Church</a>
+			<a class="nav" href="/about">About</a>
+		</div>
+		<div class="right">
+			@Button(ButtonProps{Primary: true}) {
+				Login 
+			}
+		</div>
 	</header>
 }

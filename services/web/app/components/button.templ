@@ -1,0 +1,12 @@
+package components
+
+type ButtonProps struct {
+	Primary bool
+	Class   string
+}
+
+templ Button(props ButtonProps) {
+	<button class={ "lc-button", props.Class, templ.KV("primary", props.Primary) }>
+		{ children... }
+	</button>
+}

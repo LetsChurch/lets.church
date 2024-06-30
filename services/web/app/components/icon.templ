@@ -1,0 +1,12 @@
+package components
+
+type IconProps struct {
+	Name  string
+	Class string
+}
+
+templ Icon(props IconProps) {
+	<svg class={ "lc-icon" , props.Class }>
+		<use href={ "/assets/icons.svg#" + props.Name }></use>
+	</svg>
+}

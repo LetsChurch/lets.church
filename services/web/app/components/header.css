@@ -1,0 +1,40 @@
+.lc-header {
+  --height: calc(16 * var(--unit));
+
+  height: var(--height);
+  display: flex;
+
+  :where(&) > :where(.left, .right) {
+    display: flex;
+    height: var(--height);
+    align-items: center;
+    gap: calc(8 * var(--unit));
+
+    &.left {
+      flex-grow: 1;
+      justify-content: flex-start;
+    }
+
+    &.right {
+      display: none;
+      @media (--lg) {
+        display: flex;
+        flex-shrink: 1;
+        justify-content: flex-end;
+      }
+    }
+  }
+
+  :where(&) {
+    .lc-logo img {
+      height: calc(var(--height) / 2);
+    }
+
+    .nav {
+      color: var(--color-button-tertiary-fg);
+      font-size: var(--text-md-size);
+      font-weight: var(--text-medium);
+      line-height: var(--text-md-line-height);
+    }
+  }
+}

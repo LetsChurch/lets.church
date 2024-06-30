@@ -1,0 +1,18 @@
+package components
+
+type InputProps struct {
+	Placeholder string
+	Icon        string
+	Class       string
+}
+
+templ Input(props InputProps) {
+	<div class={ "lc-input" , props.Class }>
+		if props.Icon != "" {
+			@Icon(IconProps{Name: props.Icon})
+		}
+		<input
+			placeholder={ props.Placeholder }
+		/>
+	</div>
+}
