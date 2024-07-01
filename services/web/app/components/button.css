@@ -14,8 +14,12 @@
   padding-inline: calc(4 * var(--unit));
 
   :where(&).primary {
-    background: var(--color-brand);
+    background: var(--color-button-primary-bg);
     color: white;
+
+    &:hover {
+      background: var(--color-button-primary-bg-hover);
+    }
   }
 
   &:hover {

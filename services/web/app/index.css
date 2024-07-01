@@ -27,12 +27,16 @@
 
   --color-brand: #6366f1;
   --color-brand-300: #d6bbfb;
+  --color-brand-700: #4338ca;
   --color-gray-light-300: #d0d5dd;
   --color-gray-light-600: #475467;
 
+  --color-bg-primary: #fff;
   --color-border-brand: var(--color-brand-300);
   --color-border-brand-ring: #9e77ed24;
   --color-border-primary: var(--color-gray-light-300);
+  --color-button-primary-bg: var(--color-brand);
+  --color-button-primary-bg-hover: var(--color-brand-700);
   --color-button-tertiary-fg: var(--color-gray-light-600);
 
   --text-regular: 400;
@@ -45,6 +49,11 @@
 }
 
 @layer base {
+  body,
+  #lc-root {
+    background: var(--color-bg-primary);
+  }
+
   a {
     color: var(--color-brand);
     text-decoration: none;
