@@ -4,6 +4,7 @@
 @import "../node_modules/sanitize.css/typography.css" layer(reset);
 
 @import "./components/button.css" layer(components);
+@import "./components/cta.css" layer(components);
 @import "./components/header.css" layer(components);
 @import "./components/icon.css" layer(components);
 @import "./components/input.css" layer(components);
@@ -101,43 +102,6 @@
 
     @media (--2xl) {
       --width: var(--2xl);
-    }
-
-    :where(&).cta {
-      padding-block: calc(24 * var(--unit));
-      background: var(--color-bg-secondary);
-      display: flex;
-      gap: var(--padding);
-
-      :where(&) > :where(.left, .right) {
-        &.left {
-          flex: 3;
-        }
-
-        &.right {
-          flex: 1;
-          display: flex;
-          gap: calc(2 * var(--unit));
-          padding-top: calc(2 * var(--unit));
-        }
-      }
-
-      :where(&) {
-        h2 {
-          font-size: var(--text-size-display-lg);
-          font-weight: var(--text-weight-semibold);
-          line-height: var(--text-line-height-display-lg);
-          letter-spacing: var(--text-tracking-display);
-          color: var(--color-gray-900);
-          margin: 0;
-          margin-bottom: calc(5 * var(--unit));
-          grid-column: 1 / 2;
-        }
-
-        p {
-          grid-column: 1 / 2;
-        }
-      }
     }
   }
 }

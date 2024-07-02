@@ -1,0 +1,25 @@
+package components
+
+type CtaProps struct {
+	PrimaryText   string
+	PrimaryHref   string
+	SecondaryText string
+	SecondaryHref string
+}
+
+templ Cta(props CtaProps) {
+	<aside class="lc-container lc-cta">
+		<div class="left">
+			<h2>Join Let's Church</h2>
+			<p>Get sermon hosting and other resources 100% free of charge.</p>
+		</div>
+		<div class="right">
+			@ButtonLink(ButtonProps{Primary: true, Href: props.SecondaryHref}) {
+				{ props.SecondaryText }
+			}
+			@ButtonLink(ButtonProps{Href: props.PrimaryHref}) {
+				{ props.PrimaryText }
+			}
+		</div>
+	</aside>
+}

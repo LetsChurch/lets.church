@@ -10,19 +10,11 @@ templ Media() {
 		<main class="lc-container">
 			main
 		</main>
-		<aside class="lc-container cta">
-			<div class="left">
-				<h2>Join Let's Church</h2>
-				<p>Get sermon hosting and other resources 100% free of charge.</p>
-			</div>
-			<div class="right">
-				@components.ButtonLink(components.ButtonProps{Href: "/about"}) {
-					Learn More 
-				}
-				@components.ButtonLink(components.ButtonProps{Primary: true, Href: "/auth/register"}) {
-					Sign Up 
-				}
-			</div>
-		</aside>
+		@components.Cta(components.CtaProps{
+			PrimaryText:   "Sign Up",
+			PrimaryHref:   "/auth/register",
+			SecondaryText: "Learn More",
+			SecondaryHref: "/about",
+		})
 	}
 }
