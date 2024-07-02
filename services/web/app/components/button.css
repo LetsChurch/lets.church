@@ -1,5 +1,5 @@
 .lc-button {
-  --height: 40px;
+  --height: 44px;
 
   height: var(--height);
   display: flex;

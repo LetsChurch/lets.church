@@ -1,13 +1,19 @@
 package components
 
 type ButtonProps struct {
+	Type    string
 	Primary bool
 	Class   string
 	Href    string
 }
 
 templ Button(props ButtonProps) {
-	<button class={ "lc-button", props.Class, templ.KV("primary", props.Primary) }>
+	<button
+		if props.Type != "" {
+			type={ props.Type }
+		}
+		class={ "lc-button", props.Class, templ.KV("primary", props.Primary) }
+	>
 		{ children... }
 	</button>
 }

@@ -2,13 +2,13 @@ package components
 
 templ Header() {
 	<header class="lc-container lc-header">
-		<div class="left">
+		<nav class="left">
 			<a href="/" class="lc-logo"><img src="/assets/logoicon.svg"/></a>
-			@Input(InputProps{Placeholder: "Search", Icon: "search"})
+			@Input(InputProps{Type: "search", Placeholder: "Search", Icon: "search"})
 			<a class="nav" href="/">Media</a>
 			<a class="nav" href="/churches">Find a Church</a>
 			<a class="nav" href="/about">About</a>
-		</div>
+		</nav>
 		<div class="right">
 			@ButtonLink(ButtonProps{Primary: true, Href: "/auth/login"}) {
 				Login 

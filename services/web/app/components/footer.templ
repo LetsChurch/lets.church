@@ -1,0 +1,60 @@
+package components
+
+type FooterProps struct {
+}
+
+templ Footer(props FooterProps) {
+	<footer class="lc-container lc-footer">
+		<div class="newsletter">
+			<div class="left">
+				<h3>Join our newsletter</h3>
+				<p>Get updates about Let's Church. No spam.</p>
+			</div>
+			<form class="right">
+				@Input(InputProps{Type: "email", Placeholder: "Enter your email"})
+				@Button(ButtonProps{Type: "submit", Primary: true}) {
+					Subscribe
+				}
+			</form>
+		</div>
+		<nav>
+			<div>
+				<h4>Media</h4>
+				<ul>
+					<li><a href="/">Explore</a></li>
+					<li><a href="/channels">Channels</a></li>
+				</ul>
+			</div>
+			<div>
+				<h4>Find a Church</h4>
+				<ul>
+					<li><a href="/churches">Search</a></li>
+					<li><a href="/churches?tag=reformed">Reformed Churches</a></li>
+					<li><a href="/churches?tag=family-integrated">Family Integrated Churches</a></li>
+					<li><a href="/churches/add">Add Your Church</a></li>
+				</ul>
+			</div>
+			<div>
+				<h4>Company</h4>
+				<ul>
+					<li><a href="/about">About</a></li>
+					<li><a href="/about/theology">Theology</a></li>
+					<li><a href="/about/dorean">The Dorean Principle</a></li>
+					<li><a href="https://www.zeffy.com/en-US/donation-form/5da9e1c3-a8e2-4bb4-817a-5dbbb968ec6b">Donate</a></li>
+				</ul>
+			</div>
+			<div>
+				<h4>Legal</h4>
+				<ul>
+					<li><a href="/about/terms">Terms</a></li>
+					<li><a href="/about/privacy">Privacy</a></li>
+					<li><a href="/about/dmca">DMCA</a></li>
+				</ul>
+			</div>
+		</nav>
+		<div class="bottom">
+			<div class="left"><a href="/"><img src="/assets/logo.svg"/></a></div>
+			<div class="right">Let's Church is in the public domain and is a 501(c)(3) non-profit.&#20;<a href="/about">Learn more.</a></div>
+		</div>
+	</footer>
+}

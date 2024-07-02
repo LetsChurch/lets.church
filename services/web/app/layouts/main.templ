@@ -18,7 +18,7 @@ templ Main() {
 			<div id="lc-root">
 				@components.Header()
 				{ children... }
-				<footer class="lc-container">footer</footer>
+				@components.Footer(components.FooterProps{})
 			</div>
 		</body>
 	</html>

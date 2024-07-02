@@ -1,0 +1,92 @@
+.lc-footer {
+  padding-block: calc(16 * var(--unit)) calc(12 * var(--unit));
+
+  :where(&) {
+    & > .newsletter {
+      display: flex;
+      gap: var(--unit);
+      padding-bottom: calc(16 * var(--unit));
+      border-bottom: 1px solid var(--color-gray-200);
+
+      :where(&) > :where(.left, .right) {
+        &.left {
+          flex-grow: 1;
+          h3 {
+            font-size: var(--text-size-xl);
+            line-height: var(--text-line-height-xl);
+            font-weight: var(--text-weight-semibold);
+            color: var(--color-gray-900);
+          }
+          p {
+            font-size: var(--text-size-md);
+            line-height: var(--text-line-height-md);
+            font-weight: var(--text-weight-regular);
+            color: var(--color-gray-600);
+          }
+        }
+        &.right {
+          flex-shrink: 1;
+          display: flex;
+          gap: calc(2 * var(--unit));
+          padding-top: calc(4 * var(--unit));
+        }
+      }
+    }
+
+    & > nav {
+      padding-block: calc(16 * var(--unit));
+      border-bottom: 1px solid var(--color-gray-200);
+      margin-bottom: calc(8 * var(--unit));
+      display: flex;
+      gap: calc(2 * var(--unit));
+      > div {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: calc(2 * var(--unit));
+        h4 {
+          font-size: var(--text-size-sm);
+          line-height: var(--text-line-height-sm);
+          font-weight: var(--text-weight-semibold);
+          color: var(--color-gray-500);
+          margin-block: 0 calc(4 * var(--unit));
+        }
+        ul {
+          margin: 0;
+          & > li {
+            margin-bottom: calc(3 * var(--unit));
+            & > a {
+              font-size: var(--text-size-md);
+              line-height: var(--text-line-height-md);
+              font-weight: var(--text-weight-semibold);
+              color: var(--color-gray-600);
+            }
+          }
+        }
+      }
+    }
+
+    & > .bottom {
+      display: flex;
+      justify-content: space-between;
+
+      :where(&) > :where(.left, .right) {
+        &.left {
+          flex-shrink: 1;
+          img {
+            height: calc(16 * var(--unit));
+          }
+        }
+        &.right {
+          flex-grow: 1;
+          display: flex;
+          align-items: flex-end;
+          justify-content: flex-end;
+          font-size: var(--text-size-md);
+          font-weight: var(--text-weight-regular);
+          color: var(--color-gray-500);
+        }
+      }
+    }
+  }
+}

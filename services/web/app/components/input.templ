@@ -1,6 +1,7 @@
 package components
 
 type InputProps struct {
+	Type        string
 	Placeholder string
 	Icon        string
 	Class       string
@@ -12,6 +13,7 @@ templ Input(props InputProps) {
 			@Icon(IconProps{Name: props.Icon})
 		}
 		<input
+			type={ props.Type }
 			placeholder={ props.Placeholder }
 		/>
 	</div>
