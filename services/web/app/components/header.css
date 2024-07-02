@@ -32,9 +32,9 @@
 
     .nav {
       color: var(--color-button-tertiary-fg);
-      font-size: var(--text-md-size);
-      font-weight: var(--text-medium);
-      line-height: var(--text-md-line-height);
+      font-size: var(--text-size-md);
+      font-weight: var(--text-weight-medium);
+      line-height: var(--text-line-height-md);
     }
   }
 }

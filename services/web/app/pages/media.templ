@@ -1,9 +1,28 @@
 package pages
 
 import (
+	"lets.church/web/app/components"
 	"lets.church/web/app/layouts"
 )
 
 templ Media() {
-	@layouts.Main()
+	@layouts.Main() {
+		<main class="lc-container">
+			main
+		</main>
+		<aside class="lc-container cta">
+			<div class="left">
+				<h2>Join Let's Church</h2>
+				<p>Get sermon hosting and other resources 100% free of charge.</p>
+			</div>
+			<div class="right">
+				@components.Button(components.ButtonProps{}) {
+					Learn More 
+				}
+				@components.Button(components.ButtonProps{Primary: true}) {
+					Sign Up 
+				}
+			</div>
+		</aside>
+	}
 }

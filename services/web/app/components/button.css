@@ -2,31 +2,35 @@
   --height: 40px;
 
   height: var(--height);
-  border: none;
+  border: 1px solid var(--color-button-secondary-border);
   border-radius: var(--border-radius);
   outline: none;
 
   color: var(--color-button-tertiary-fg);
-  font-size: var(--text-md-size);
-  font-weight: var(--text-medium);
-  line-height: var(--text-md-line-height);
+  font-size: var(--text-size-md);
+  font-weight: var(--text-weight-medium);
+  line-height: var(--text-line-height-md);
 
   padding-inline: calc(4 * var(--unit));
 
+  background: var(--color-button-secondary-bg);
+
+  &:hover {
+    cursor: pointer;
+    background: var(--color-button-secondary-bg-hover);
+  }
+
+  &:focus {
+    box-shadow: 0 0 0 calc(2 * var(--unit)) #9e77ed24;
+  }
+
   :where(&).primary {
+    border: none;
     background: var(--color-button-primary-bg);
     color: white;
 
     &:hover {
       background: var(--color-button-primary-bg-hover);
     }
-  }
-
-  &:hover {
-    cursor: pointer;
-  }
-
-  &:focus {
-    box-shadow: 0 0 0 calc(2 * var(--unit)) #9e77ed24;
   }
 }
