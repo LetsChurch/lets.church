@@ -21,7 +21,7 @@
   }
 
   &:focus {
-    box-shadow: 0 0 0 calc(2 * var(--unit)) #9e77ed24;
+    box-shadow: 0 0 0 calc(2 * var(--unit)) #98a2314;
   }
 
   :where(&).primary {
@@ -31,6 +31,10 @@
 
     &:hover {
       background: var(--color-button-primary-bg-hover);
+    }
+
+    &:focus {
+      box-shadow: 0 0 0 calc(2 * var(--unit)) #9e77ed24;
     }
   }
 }
