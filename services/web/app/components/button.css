@@ -2,6 +2,10 @@
   --height: 40px;
 
   height: var(--height);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
   border: 1px solid var(--color-button-secondary-border);
   border-radius: var(--border-radius);
   outline: none;

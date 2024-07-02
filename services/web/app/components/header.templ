@@ -10,7 +10,7 @@ templ Header() {
 			<a class="nav" href="/about">About</a>
 		</div>
 		<div class="right">
-			@Button(ButtonProps{Primary: true}) {
+			@ButtonLink(ButtonProps{Primary: true, Href: "/auth/login"}) {
 				Login 
 			}
 		</div>

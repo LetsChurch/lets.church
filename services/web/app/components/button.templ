@@ -3,10 +3,17 @@ package components
 type ButtonProps struct {
 	Primary bool
 	Class   string
+	Href    string
 }
 
 templ Button(props ButtonProps) {
 	<button class={ "lc-button", props.Class, templ.KV("primary", props.Primary) }>
 		{ children... }
 	</button>
+}
+
+templ ButtonLink(props ButtonProps) {
+	<a class={ "lc-button", props.Class, templ.KV("primary", props.Primary) } href={ templ.URL(props.Href) }>
+		{ children... }
+	</a>
 }

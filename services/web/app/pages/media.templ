@@ -16,10 +16,10 @@ templ Media() {
 				<p>Get sermon hosting and other resources 100% free of charge.</p>
 			</div>
 			<div class="right">
-				@components.Button(components.ButtonProps{}) {
+				@components.ButtonLink(components.ButtonProps{Href: "/about"}) {
 					Learn More 
 				}
-				@components.Button(components.ButtonProps{Primary: true}) {
+				@components.ButtonLink(components.ButtonProps{Primary: true, Href: "/auth/register"}) {
 					Sign Up 
 				}
 			</div>
