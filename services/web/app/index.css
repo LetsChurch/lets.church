@@ -87,28 +87,15 @@
     --padding: var(--unit);
 
     background: var(--color-bg-primary);
-    padding-inline: calc((100vw - var(--width)) / 2 + var(--padding));
+    padding-inline: var(--padding);
 
     @media (--sm) {
-      --width: var(--sm);
       --padding: calc(2 * var(--unit));
     }
 
     @media (--md) {
       --width: var(--md);
-    }
-
-    @media (--lg) {
-      --width: var(--lg);
-      --padding: calc(8 * var(--unit));
-    }
-
-    @media (--xl) {
-      --width: var(--xl);
-    }
-
-    @media (--2xl) {
-      --width: var(--2xl);
+      --padding: calc(32 * var(--unit));
     }
   }
 }

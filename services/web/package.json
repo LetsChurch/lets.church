@@ -6,6 +6,7 @@
     "lightningcss-cli": "^1.25.1"
   },
   "dependencies": {
+    "htmx.org": "^1.9.12",
     "sanitize.css": "^13.0.0"
   }
 }

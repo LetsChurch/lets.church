@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
 	"lets.church/web/app/pages"
@@ -15,8 +14,11 @@ func main() {
 	app.File("/favicon.ico", "assets/favicon.ico")
 	app.Static("/assets", "assets")
 	app.GET("/", MediaHandler)
-
-	fmt.Println("hello, world")
+	app.GET("/about", AboutHandler)
+	app.GET("/about/:page", AboutPageHandler)
+	app.GET("/channels", ChannelsHandler)
+	app.GET("/churches", ChurchesHandler)
+	app.GET("/churches/add", ChurchesAddHandler)
 
 	app.Logger.Fatal(app.Start("0.0.0.0:3000"))
 }
@@ -35,4 +37,37 @@ func Render(ctx echo.Context, statusCode int, t templ.Component) error {
 
 func MediaHandler(c echo.Context) error {
 	return Render(c, http.StatusOK, pages.Media())
+}
+
+func AboutHandler(c echo.Context) error {
+	return Render(c, http.StatusOK, pages.About("About"))
+}
+
+func AboutPageHandler(c echo.Context) error {
+	switch page := c.Param("page"); page {
+	case "dmca":
+		return Render(c, http.StatusOK, pages.About("About DMCA"))
+	case "dorean":
+		return Render(c, http.StatusOK, pages.About("About Dorean"))
+	case "privacy":
+		return Render(c, http.StatusOK, pages.About("About Privacy"))
+	case "terms":
+		return Render(c, http.StatusOK, pages.About("About Terms"))
+	case "theology":
+		return Render(c, http.StatusOK, pages.About("About Theology"))
+	}
+
+	return echo.ErrNotFound
+}
+
+func ChannelsHandler(c echo.Context) error {
+	return Render(c, http.StatusOK, pages.Channels())
+}
+
+func ChurchesHandler(c echo.Context) error {
+	return Render(c, http.StatusOK, pages.Churches())
+}
+
+func ChurchesAddHandler(c echo.Context) error {
+	return Render(c, http.StatusOK, pages.ChurchesAdd())
 }

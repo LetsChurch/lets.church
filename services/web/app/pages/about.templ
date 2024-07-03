@@ -1,0 +1,13 @@
+package pages
+
+import (
+	"lets.church/web/app/layouts"
+)
+
+templ About(html string) {
+	@layouts.Main() {
+		<main class="lc-container">
+			@templ.Raw(html)
+		</main>
+	}
+}

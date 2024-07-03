@@ -15,7 +15,7 @@ templ Main() {
 			<script type="module" src="/assets/index.js" defer></script>
 		</head>
 		<body>
-			<div id="lc-root">
+			<div id="lc-root" hx-boost="true">
 				@components.Header()
 				{ children... }
 				@components.Footer(components.FooterProps{})
