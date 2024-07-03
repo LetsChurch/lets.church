@@ -21,7 +21,7 @@ COPY . .
 RUN npm ci
 
 RUN templ generate && go build main.go
-RUN npx esbuild app/index.ts --bundle --format=esm --outdir=assets
+RUN npx esbuild app/index.ts --bundle --format=esm --minify --outdir=assets
 RUN npx lightningcss-cli --minify --bundle --custom-media --targets 'last 2 versions and not dead' app/index.css -o assets/styles.css
 
 CMD ["go", "run", "main.go"]
