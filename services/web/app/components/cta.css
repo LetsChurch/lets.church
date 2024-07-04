@@ -6,11 +6,11 @@
 
   :where(&) > :where(.left, .right) {
     &.left {
-      flex: 3;
+      flex-grow: 1;
     }
 
     &.right {
-      flex: 1;
+      flex-shrink: 1;
       display: flex;
       gap: calc(2 * var(--unit));
       padding-top: calc(2 * var(--unit));
