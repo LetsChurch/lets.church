@@ -1,0 +1,96 @@
+.lc-media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(calc(70 * var(--unit)), 1fr));
+  gap: calc(4 * var(--unit));
+
+  :where(&) > .lc-card {
+    display: flex;
+    flex-direction: column;
+    gap: calc(3 * var(--unit));
+    position: relative;
+
+    :where(&) {
+      > .thumbnail {
+        background: var(--color-gray-100);
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+        > .thumbnail-inner {
+          position: relative;
+          > img {
+            aspect-ratio: 16 / 9;
+            width: 100%;
+            background: var(--color-gray-200);
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            object-fit: contain;
+          }
+
+          > .timestamp {
+            position: absolute;
+            bottom: calc(2 * var(--unit));
+            right: calc(2 * var(--unit));
+            display: inline-flex;
+            align-items: center;
+            border-radius: var(--border-radius);
+            background: var(--color-gray-900);
+            padding: calc(0.5 * var(--unit)) calc(1.5 * var(--unit));
+            font-size: var(--text-size-xs);
+            line-height: var(--text-line-height-xs);
+            font-weight: var(--text-weight-medium);
+            color: #fff;
+          }
+        }
+      }
+
+      > .meta {
+        display: flex;
+        align-items: center;
+        gap: calc(3 * var(--unit));
+        overflow: hidden;
+
+        > .avatar {
+          display: inline-block;
+          aspect-ratio: 1;
+          border-radius: 50%;
+          background: var(--color-gray-200);
+          object-fit: cover;
+          color: transparent;
+          width: calc(8 * var(--unit));
+          height: calc(8 * var(--unit));
+        }
+
+        > a {
+          display: block;
+          min-width: 0;
+          &:before {
+            content: "";
+            position: absolute;
+            inset: 0;
+          }
+
+          > p {
+            margin: 0;
+            &.title {
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+              font-size: var(--text-size-sm);
+              font-weight: var(--text-weight-medium);
+              color: var(--color-gray-900);
+            }
+
+            &.channel-name {
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+              font-size: var(--text-size-sm);
+              font-weight: var(--text-weight-medium);
+              color: var(--color-gray-500);
+            }
+          }
+        }
+      }
+    }
+  }
+}

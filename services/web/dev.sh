@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # server
-watchexec --restart --exts go -- go run main.go &
+watchexec --restart --exts go --delay-run 1s -- go run main.go &
 
 # templ components
 templ generate --watch -v --proxy="http://localhost:3000" --proxybind="0.0.0.0" --proxyport="3001" --open-browser=false &

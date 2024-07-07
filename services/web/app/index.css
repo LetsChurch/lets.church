@@ -9,6 +9,7 @@
 @import "./components/header.css" layer(components);
 @import "./components/icon.css" layer(components);
 @import "./components/input.css" layer(components);
+@import "./components/media-grid.css" layer(components);
 
 @custom-media --sm (width >= 640px);
 @custom-media --md (width >= 768px);
@@ -31,6 +32,7 @@
   --color-brand-300: #d6bbfb;
   --color-brand-700: #4338ca;
   --color-gray-50: #f9fafb;
+  --color-gray-100: #f2f4f7;
   --color-gray-200: #eaecf0;
   --color-gray-300: #d0d5dd;
   --color-gray-500: #667085;
@@ -54,13 +56,15 @@
   --text-weight-semibold: 600;
   --text-weight-bold: 700;
 
-  --text-size-sm: 0.75rem;
+  --text-size-xs: 0.75rem;
+  --text-size-sm: 0.875rem;
   --text-size-md: 1rem;
   --text-size-xl: 1.125rem;
   --text-size-display-lg: 3rem;
   --text-size-display-xl: 3.75rem;
 
-  --text-line-height-sm: 1.125rem;
+  --text-line-height-xs: 1.125rem;
+  --text-line-height-sm: 1.25;
   --text-line-height-md: 1.5rem;
   --text-line-height-xl: 1.75rem;
   --text-line-height-display-lg: 3.75rem;

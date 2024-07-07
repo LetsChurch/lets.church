@@ -3,12 +3,17 @@ package pages
 import (
 	"lets.church/web/app/components"
 	"lets.church/web/app/layouts"
+	"lets.church/web/app/data"
 )
 
-templ Media() {
+type MediaProps struct {
+	Uploads *[]data.UploadGridRecord
+}
+
+templ Media(props MediaProps) {
 	@layouts.Main() {
 		<main class="lc-container">
-			main
+			@components.MediaGrid(components.MediaGridProps{Uploads: props.Uploads})
 		</main>
 		@components.Cta(components.CtaProps{
 			PrimaryText:   "Sign Up",
