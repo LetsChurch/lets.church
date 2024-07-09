@@ -15,5 +15,10 @@ const plausible = Plausible({
 
 plausible.enableAutoPageviews();
 plausible.enableAutoOutboundTracking();
+plausible.trackEvent('supports', {
+  props: {
+    anchorPositioning: window.CSS.supports('anchor-name', '--anchor-el'),
+  },
+});
 
 mount(() => <StartClient />, document);
