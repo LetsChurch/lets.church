@@ -1,7 +1,4 @@
 fmt-go:
   go fmt
 
-fmt-templ:
-  fd -e templ -x templ fmt
-
-fmt: fmt-go fmt-templ
+fmt: fmt-go

@@ -73,7 +73,7 @@ services:
       dockerfile: Dockerfile
     command: ./dev.sh
     ports:
-      - ${HOST_WEB_GO_PORT}:3001
+      - ${HOST_WEB_GO_PORT}:3000
     develop:
       watch:
         - action: sync
@@ -85,6 +85,8 @@ services:
             - ./services/web/package-lock.json
         - action: rebuild
           path: ./services/web/package.json
+        - action: rebuild
+          path: ./services/web/go.mod
   # web-astro:
   #   build:
   #     context: ./apps/web-astro
