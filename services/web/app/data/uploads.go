@@ -23,6 +23,8 @@ func TrendingUploads(db *sqlx.DB) ([]UploadGridRecord, error) {
     WHERE
       transcribing_finished_at IS NOT NULL
       AND transcoding_finished_at IS NOT NULL
+		  AND upload_record.visibility = 'PUBLIC'
+			AND channel.visibility = 'PUBLIC'
     ORDER BY
       score DESC
   `)
