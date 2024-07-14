@@ -1,21 +1,31 @@
 package handler
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 	"lets.church/web/app/data"
 	"lets.church/web/app/pages"
+	"lets.church/web/app/util"
 )
 
 func (h *Handler) Media(c echo.Context) (err error) {
-	// TODO: should this be inlined? Or should this write into a reference? Or leave it as is?
-	upload_records, err := data.TrendingUploads(h.Db)
+	id := c.Param("id")
+
+	if id == "" {
+		return errors.New("missing id")
+	}
+
+	upload_record, err := h.Queries.UploadData(c.Request().Context(), data.UploadDataParams{UploadID: util.ParseUuid58(id)})
 	if err != nil {
+		fmt.Println("%v", err)
 		return err
 	}
 
 	return Render(c, http.StatusOK, pages.Media(pages.MediaProps{
-		Uploads: &upload_records,
+		UploadId:      id,
+		UploadDataRow: &upload_record,
 	}))
 }

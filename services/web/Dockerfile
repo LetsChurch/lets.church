@@ -1,3 +1,14 @@
+# FROM sqlc/sqlc:1.26.0 as sqlc
+# sqlc runner
+FROM golang:1.22.4-bookworm as sqlc
+# Dependencies for webinstall
+RUN apt-get update && apt-get install -y curl xz-utils
+RUN curl -sS https://webi.sh/watchexec@2.1.1 | sh
+RUN go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.26.0
+ENV PATH="/root/.local/bin:${PATH}"
+WORKDIR /src
+
+# Dev / Build
 FROM golang:1.22.4-bookworm
 
 WORKDIR /usr/src/app

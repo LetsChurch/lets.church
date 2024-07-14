@@ -74,6 +74,8 @@ services:
     command: ./dev.sh
     ports:
       - ${HOST_WEB_GO_PORT}:3000
+    environment:
+      DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
     develop:
       watch:
         - action: sync
@@ -87,6 +89,16 @@ services:
           path: ./services/web/package.json
         - action: rebuild
           path: ./services/web/go.mod
+  sqlc:
+    build:
+      context: ./services/web
+      target: sqlc
+      dockerfile: Dockerfile
+    command: watchexec --watch app --exts sql -- sqlc generate
+    environment:
+      DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
+    volumes:
+      - ./services/web:/src
   # web-astro:
   #   build:
   #     context: ./apps/web-astro

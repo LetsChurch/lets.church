@@ -1,7 +1,9 @@
 package handler
 
-import "github.com/jmoiron/sqlx"
+import (
+	"lets.church/web/app/data"
+)
 
 type Handler struct {
-	Db *sqlx.DB
+	Queries *data.Queries
 }
