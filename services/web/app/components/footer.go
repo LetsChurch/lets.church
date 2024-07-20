@@ -13,8 +13,8 @@ func Footer() g.Node {
 				h.P(g.Text("Get updates about Let's Church. No spam.")),
 			),
 			h.Form(h.Class("right"),
-				Input(InputProps{Type: "email", Placeholder: "Enter your email"}),
-				Button(ButtonProps{Type: "submit", Primary: true, Children: []g.Node{g.Text("Subscribe")}}),
+				Input(InputProps{Type: "email", Placeholder: "Enter your email", Big: true}),
+				Button(ButtonProps{Type: "submit", Primary: true, Big: true, Children: []g.Node{g.Text("Subscribe")}}),
 			),
 		),
 		h.Nav(

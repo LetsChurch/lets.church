@@ -49,17 +49,6 @@
         gap: calc(3 * var(--unit));
         overflow: hidden;
 
-        > .avatar {
-          display: inline-block;
-          aspect-ratio: 1;
-          border-radius: 50%;
-          background: var(--color-gray-200);
-          object-fit: cover;
-          color: transparent;
-          width: calc(8 * var(--unit));
-          height: calc(8 * var(--unit));
-        }
-
         > a {
           display: block;
           min-width: 0;

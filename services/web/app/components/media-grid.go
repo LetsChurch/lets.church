@@ -22,7 +22,7 @@ func MediaGrid(props MediaGridProps) g.Node {
 					),
 				),
 				h.Div(h.Class("meta"),
-					h.Img(h.Class("avatar"), h.Src("https://placehold.co/96"), h.Alt("Placeholder")),
+					Avatar(AvatarProps{Name: item.ChannelName, Src: "https://placehold.co/96", Size: "md", Alt: "Placeholder"}),
 					h.A(h.Title(item.Title.String), h.Href("/media/"+util.FormatUuid58(item.ID.Bytes)),
 						h.P(h.Class("title"), g.Text(item.Title.String)),
 						h.P(h.Class("channel-name"), g.Text(item.ChannelName)),

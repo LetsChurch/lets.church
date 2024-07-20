@@ -1,0 +1,22 @@
+.lc-player-container {
+  background: #151515;
+}
+
+.lc-player {
+  --header-height: calc(16 * var(--unit));
+  --media-width: 1920;
+  --media-height: 1080;
+
+  background: red;
+  aspect-ratio: 16 / 9;
+  margin-inline: auto;
+
+  @media (orientation: landscape) {
+    max-height: calc(100dvh - 2 * var(--header-height));
+  }
+
+  @media (orientation: portrait) {
+    width: 100vw;
+    max-width: var(--media-width);
+  }
+}
