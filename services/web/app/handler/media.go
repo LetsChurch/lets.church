@@ -9,6 +9,8 @@ import (
 	"lets.church/web/app/data"
 	"lets.church/web/app/pages"
 	"lets.church/web/app/util"
+
+	"github.com/asticode/go-astisub"
 )
 
 func (h *Handler) Media(c echo.Context) (err error) {
@@ -18,14 +20,34 @@ func (h *Handler) Media(c echo.Context) (err error) {
 		return errors.New("missing id")
 	}
 
-	upload_record, err := h.Queries.UploadData(c.Request().Context(), data.UploadDataParams{UploadID: util.ParseUuid58(id)})
+	uploadUuid, err := util.Parse(id)
 	if err != nil {
-		fmt.Println("%v", err)
+		fmt.Println(err)
+		return err
+	}
+
+	uploadRecord, err := h.Queries.UploadData(c.Request().Context(), data.UploadDataParams{UploadID: uploadUuid.Pg()})
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	transcriptUrl := util.GetPublicMediaUrl(uploadUuid.Canonical() + "/transcript.vtt")
+	transcriptBytes, err := util.DownloadFileToReader(transcriptUrl)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	transcript, err := astisub.ReadFromWebVTT(transcriptBytes)
+	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
 	return Render(c, http.StatusOK, pages.Media(pages.MediaProps{
 		UploadId:      id,
-		UploadDataRow: &upload_record,
+		UploadDataRow: &uploadRecord,
+		Transcript:    transcript,
 	}))
 }

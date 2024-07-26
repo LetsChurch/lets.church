@@ -76,6 +76,7 @@ services:
       - ${HOST_WEB_GO_PORT}:3000
     environment:
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
+      MEDIA_URL: ${MEDIA_URL}
     develop:
       watch:
         - action: sync

@@ -3,7 +3,7 @@ module lets.church/web
 go 1.22.3
 
 require (
-	github.com/AlexanderMatveev/go-uuid-base58 v0.1.1
+	github.com/asticode/go-astisub v0.26.2
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/labstack/echo/v4 v4.12.0
@@ -13,7 +13,8 @@ require (
 )
 
 require (
-	github.com/btcsuite/btcutil v1.0.2 // indirect
+	github.com/asticode/go-astikit v0.20.0 // indirect
+	github.com/asticode/go-astits v1.8.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/labstack/gommon v0.4.2 // indirect

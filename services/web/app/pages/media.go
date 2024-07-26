@@ -6,14 +6,17 @@ import (
 	g "github.com/maragudk/gomponents"
 	h "github.com/maragudk/gomponents/html"
 
+	"github.com/asticode/go-astisub"
 	"lets.church/web/app/components"
 	"lets.church/web/app/data"
 	"lets.church/web/app/layouts"
+	"lets.church/web/app/util"
 )
 
 type MediaProps struct {
 	*data.UploadDataRow
-	UploadId string
+	Transcript *astisub.Subtitles
+	UploadId   string
 }
 
 func Media(props MediaProps) g.Node {
@@ -53,8 +56,15 @@ func Media(props MediaProps) g.Node {
 						g.Text(props.Description.String),
 					),
 				),
-				h.Div(h.Class("lc-media__content__transcript"),
-					g.Text("transcript"),
+				h.Dl(h.Class("lc-media__content__transcript"),
+					g.Group(g.Map(props.Transcript.Items, func(item *astisub.Item) g.Node {
+						return h.Div(
+							h.Class("lc-media__content__transcript__segment"),
+							h.Role("button"),
+							h.Dt(h.Pre(g.Text(util.FormatDuration(item.StartAt)))),
+							h.Dd(g.Text(item.String())),
+						)
+					})),
 				),
 			),
 		),
