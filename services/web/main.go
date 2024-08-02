@@ -14,13 +14,32 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func main() {
-	ctx := context.Background()
-
+func getDbConn(ctx context.Context) *pgx.Conn {
 	conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
 	if err != nil {
 		log.Fatalln(err)
 	}
+
+	dataTypeNames := []string{
+		"upload_variant",
+		"_upload_variant",
+	}
+
+	for _, typeName := range dataTypeNames {
+		dataType, err := conn.LoadType(ctx, typeName)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		conn.TypeMap().RegisterType(dataType)
+	}
+
+	return conn
+}
+
+func main() {
+	ctx := context.Background()
+
+	conn := getDbConn(ctx)
 	defer conn.Close(ctx)
 
 	h := &handler.Handler{Queries: data.New(conn)}

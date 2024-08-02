@@ -1,22 +1,49 @@
-.lc-player-container {
-  background: #151515;
+@import '../../node_modules/video.js/dist/video-js.css';
+
+lc-player .video-js {
+  aspect-ratio: var(--media-width) / var(--media-height);
+  width: 100%;
+  height: 100%;
+  margin-inline: auto;
 }
 
-.lc-player {
-  --header-height: calc(16 * var(--unit));
-  --media-width: 1920;
-  --media-height: 1080;
+.lc-player__waveform {
+  --progress: 0%;
 
-  background: red;
-  aspect-ratio: 16 / 9;
-  margin-inline: auto;
+  position: relative;
+  background: var(--color-bg-primary);
+  height: 125px;
+  padding-inline: var(--unit);
+}
 
-  @media (orientation: landscape) {
-    max-height: calc(100dvh - 2 * var(--header-height));
+.lc-player__waveform__total,
+.lc-player__waveform__progress {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--unit);
+  right: var(--unit);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1px;
+}
+
+.lc-player__waveform__progress {
+  clip-path: inset(0 0 0 var(--progress));
+}
+
+.lc-player__waveform__bar {
+  flex: 1;
+  height: 100%;
+  border-radius: var(--unit);
+
+  :where(.lc-player__waveform__total) & {
+    background: var(--color-brand);
   }
 
-  @media (orientation: portrait) {
-    width: 100vw;
-    max-width: var(--media-width);
+  :where(.lc-player__waveform__progress) & {
+    background: var(--color-brand-200);
   }
 }

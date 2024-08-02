@@ -1,19 +1,18 @@
 @layer reset, base, layout, components, util;
 
-@import "../node_modules/sanitize.css/sanitize.css" layer(reset);
-@import "../node_modules/sanitize.css/typography.css" layer(reset);
+@import '../node_modules/sanitize.css/sanitize.css' layer(reset);
+@import '../node_modules/sanitize.css/typography.css' layer(reset);
 
-@import "./pages/media.css" layer(components);
+@import './pages/media.css' layer(components);
 
-@import "./components/avatar.css" layer(components);
-@import "./components/button.css" layer(components);
-@import "./components/cta.css" layer(components);
-@import "./components/footer.css" layer(components);
-@import "./components/header.css" layer(components);
-@import "./components/icon.css" layer(components);
-@import "./components/input.css" layer(components);
-@import "./components/media-grid.css" layer(components);
-@import "./components/player.css" layer(components);
+@import './components/avatar.css' layer(components);
+@import './components/button.css' layer(components);
+@import './components/cta.css' layer(components);
+@import './components/footer.css' layer(components);
+@import './components/header.css' layer(components);
+@import './components/icon.css' layer(components);
+@import './components/input.css' layer(components);
+@import './components/media-grid.css' layer(components);
 
 @custom-media --sm (width >= 640px);
 @custom-media --md (width >= 768px);
@@ -33,6 +32,7 @@
   --border-radius: calc(2 * var(--unit));
 
   --color-brand: #6366f1;
+  --color-brand-200: #c7d2fe;
   --color-brand-300: #d6bbfb;
   --color-brand-700: #4338ca;
   --color-gray-50: #f9fafb;
@@ -86,6 +86,8 @@
   --text-line-height-display-xl: 4.5rem;
 
   --text-tracking-display: -2%;
+
+  --header-height: calc(16 * var(--unit));
 }
 
 @layer base {

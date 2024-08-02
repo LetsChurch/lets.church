@@ -15,3 +15,19 @@ func GetPublicMediaUrl(key string) string {
 	baseUrl.Path += "/" + key
 	return baseUrl.String()
 }
+
+func GetVideoSourceUrl(key string) string {
+	return GetPublicMediaUrl(key + "/master.m3u8")
+}
+
+func GetAudioSourceUrl(key string) string {
+	return GetPublicMediaUrl(key + "/AUDIO.m3u8")
+}
+
+func GetPeaksDatUrl(key string) string {
+	return GetPublicMediaUrl(key + "/peaks.dat")
+}
+
+func GetPeaksJsonUrl(key string) string {
+	return GetPublicMediaUrl(key + "/peaks.json")
+}

@@ -101,3 +101,19 @@
   margin: 0;
   color: var(--color-gray-600);
 }
+
+.lc-player-container {
+  background: #151515;
+}
+
+lc-player {
+  --media-width: 0;
+  --media-height: 0;
+  width: 100%;
+  max-height: calc(100dvh - 2 * var(--header-height));
+  aspect-ratio: var(--media-width) / var(--media-height);
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}

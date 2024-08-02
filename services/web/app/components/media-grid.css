@@ -2,6 +2,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(calc(70 * var(--unit)), 1fr));
   gap: calc(4 * var(--unit));
+  margin-bottom: calc(4 * var(--unit));
 
   :where(&) > .lc-card {
     display: flex;
@@ -53,7 +54,7 @@
           display: block;
           min-width: 0;
           &:before {
-            content: "";
+            content: '';
             position: absolute;
             inset: 0;
           }

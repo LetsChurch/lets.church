@@ -8,11 +8,11 @@ import (
 func Footer() g.Node {
 	return h.Footer(h.Class("lc-container lc-footer"),
 		h.Div(h.Class("newsletter"),
-			h.Div(h.Class("left"),
+			h.Div(
 				h.H3(g.Text("Join our newsletter")),
 				h.P(g.Text("Get updates about Let's Church. No spam.")),
 			),
-			h.Form(h.Class("right"),
+			h.Form(
 				Input(InputProps{Type: "email", Placeholder: "Enter your email", Big: true}),
 				Button(ButtonProps{Type: "submit", Primary: true, Big: true, Children: []g.Node{g.Text("Subscribe")}}),
 			),
@@ -53,8 +53,8 @@ func Footer() g.Node {
 			),
 		),
 		h.Div(h.Class("bottom"),
-			h.Div(h.Class("left"), g.Raw(`<a href="/"><img src="/assets/logo.svg"></a>`)),
-			h.Div(h.Class("right"), g.Raw(`Let's Church is in the public domain and is a 501(c)(3) non-profit.&nbsp;<a href="/about">Learn more.</a>`)),
+			h.Div(g.Raw(`<a href="/"><img src="/assets/logo.svg"></a>`)),
+			h.Div(g.Raw(`Let's Church is in the public domain and is a 501(c)(3) non-profit.&nbsp;<a href="/about">Learn more.</a>`)),
 		),
 	)
 }

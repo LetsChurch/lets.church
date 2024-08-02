@@ -81,7 +81,13 @@ SELECT
   ur.default_thumbnail_path,
   ur.override_thumbnail_path,
   ur.downloads_enabled,
-  ur.user_comments_enabled
+  ur.user_comments_enabled,
+  ur.variants,
+  NOT EXISTS (
+    SELECT 1 
+    FROM unnest(ur.variants) AS variant 
+    WHERE variant NOT IN ('AUDIO', 'AUDIO_DOWNLOAD')
+  ) as audio_only
 FROM
   upload_record ur
 LEFT JOIN channel c ON ur.channel_id = c.id
@@ -99,18 +105,20 @@ type UploadDataRow struct {
 	Title                       pgtype.Text
 	LengthSeconds               pgtype.Float8
 	Description                 pgtype.Text
-	PublishedAt                 interface{}
-	TotalViews                  pgtype.Int8
+	PublishedAt                 pgtype.Timestamp
+	TotalViews                  int64
 	ChannelID                   pgtype.UUID
-	ChannelSlug                 string
-	ChannelName                 string
+	ChannelSlug                 pgtype.Text
+	ChannelName                 pgtype.Text
 	ChannelAvatarPath           pgtype.Text
 	ChannelDefaultThumbnailPath pgtype.Text
-	ChannelUserSubscribed       pgtype.Bool
+	ChannelUserSubscribed       bool
 	DefaultThumbnailPath        pgtype.Text
 	OverrideThumbnailPath       pgtype.Text
 	DownloadsEnabled            bool
 	UserCommentsEnabled         bool
+	Variants                    []UploadVariant
+	AudioOnly                   bool
 }
 
 func (q *Queries) UploadData(ctx context.Context, arg UploadDataParams) (UploadDataRow, error) {
@@ -133,6 +141,8 @@ func (q *Queries) UploadData(ctx context.Context, arg UploadDataParams) (UploadD
 		&i.OverrideThumbnailPath,
 		&i.DownloadsEnabled,
 		&i.UserCommentsEnabled,
+		&i.Variants,
+		&i.AudioOnly,
 	)
 	return i, err
 }

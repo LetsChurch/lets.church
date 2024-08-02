@@ -35,7 +35,13 @@ SELECT
   ur.default_thumbnail_path,
   ur.override_thumbnail_path,
   ur.downloads_enabled,
-  ur.user_comments_enabled
+  ur.user_comments_enabled,
+  ur.variants,
+  NOT EXISTS (
+    SELECT 1 
+    FROM unnest(ur.variants) AS variant 
+    WHERE variant NOT IN ('AUDIO', 'AUDIO_DOWNLOAD')
+  ) as audio_only
 FROM
   upload_record ur
 LEFT JOIN channel c ON ur.channel_id = c.id

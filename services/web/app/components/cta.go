@@ -14,11 +14,11 @@ type CtaProps struct {
 
 func Cta(props CtaProps) g.Node {
 	return h.Aside(h.Class("lc-container lc-cta"),
-		h.Div(h.Class("left"),
+		h.Div(
 			h.H2(g.Text("Join Let's Church")),
 			h.P(g.Text("Get sermon hosting and other resources 100% free of charge.")),
 		),
-		h.Div(h.Class("right"),
+		h.Div(
 			ButtonLink(ButtonLinkProps{
 				ButtonProps: ButtonProps{Primary: true, Children: []g.Node{g.Text(props.SecondaryText)}},
 				Href:        props.SecondaryHref,

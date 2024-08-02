@@ -1,21 +1,18 @@
 .lc-header {
-  --height: calc(16 * var(--unit));
-
-  height: var(--height);
+  height: var(--header-height);
   display: flex;
 
-  :where(&) > :where(.left, .right) {
+  & > * {
     display: flex;
-    height: var(--height);
     align-items: center;
     gap: calc(8 * var(--unit));
 
-    &.left {
+    &:first-child {
       flex-grow: 1;
       justify-content: flex-start;
     }
 
-    &.right {
+    &:last-child {
       display: none;
       @media (--lg) {
         display: flex;
@@ -27,7 +24,7 @@
 
   :where(&) {
     .lc-logo img {
-      height: calc(var(--height) / 2);
+      height: calc(var(--header-height) / 2);
     }
 
     .nav {

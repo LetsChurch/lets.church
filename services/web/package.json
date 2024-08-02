@@ -1,12 +1,19 @@
 {
   "name": "lc-web",
   "private": true,
+  "scripts": {
+    "check": "prettier --check .",
+    "format": "prettier --write ."
+  },
   "devDependencies": {
     "esbuild": "^0.21.5",
-    "lightningcss-cli": "^1.25.1"
+    "lightningcss-cli": "^1.25.1",
+    "prettier": "^3.3.3"
   },
   "dependencies": {
+    "es-toolkit": "^1.13.1",
     "htmx.org": "^1.9.12",
-    "sanitize.css": "^13.0.0"
+    "sanitize.css": "^13.0.0",
+    "video.js": "^8.17.1"
   }
 }

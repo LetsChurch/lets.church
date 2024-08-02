@@ -1,11 +1,15 @@
-version: "2"
+version: '2'
 sql:
-  - engine: "postgresql"
-    queries: "./app/data"
-    database:
-      uri: ${DATABASE_URL}
+  - engine: 'postgresql'
+    schema: './app/data/schema.sql'
+    queries: './app/data'
     gen:
       go:
-        package: "data"
-        out: "./app/data"
-        sql_package: "pgx/v5"
+        package: 'data'
+        out: './app/data'
+        sql_package: 'pgx/v5'
+        overrides:
+          - column: 'channel.slug'
+            go_type:
+              import: 'github.com/jackc/pgx/v5/pgtype'
+              type: 'Text'

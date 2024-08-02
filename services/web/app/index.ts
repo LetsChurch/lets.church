@@ -1,3 +1,3 @@
-import "htmx.org";
+import 'htmx.org';
 
-document.documentElement.classList.replace("no-js", "js");
+document.documentElement.classList.replace('no-js', 'js');

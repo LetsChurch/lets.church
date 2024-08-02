@@ -4,12 +4,12 @@
   display: flex;
   gap: var(--padding);
 
-  :where(&) > :where(.left, .right) {
-    &.left {
+  & > * {
+    &:first-child {
       flex-grow: 1;
     }
 
-    &.right {
+    &:last-child {
       flex-shrink: 1;
       display: flex;
       gap: calc(2 * var(--unit));
