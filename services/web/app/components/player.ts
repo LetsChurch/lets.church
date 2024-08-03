@@ -3,7 +3,7 @@ import type VideoJsPlayer from 'video.js/dist/types/player';
 import { chunk } from 'es-toolkit';
 
 class LcPlayer extends HTMLElement {
-  abortController = new AbortController();
+  abortController: AbortController | null = null;
   player: VideoJsPlayer | null = null;
   rob: ResizeObserver | null = null;
 
@@ -12,6 +12,8 @@ class LcPlayer extends HTMLElement {
   }
 
   connectedCallback() {
+    const ac = (this.abortController = new AbortController());
+
     // video.js has issues in the shadow dom: https://github.com/videojs/video.js/issues/8069
     // const shadowRoot = this.attachShadow({ mode: "open" });
     const videoSource = this.getAttribute('video-source');
@@ -64,6 +66,25 @@ class LcPlayer extends HTMLElement {
       },
     ));
 
+    player.on('timeupdate', () => {
+      const currentTime = this.player?.currentTime() ?? 0;
+      document.dispatchEvent(
+        new CustomEvent('lc:player:timeupdate', { detail: currentTime }),
+      );
+    });
+
+    document.addEventListener(
+      'lc:player:seek',
+      (e) => {
+        if (!('detail' in e) || typeof e.detail !== 'number') {
+          return;
+        }
+
+        player.currentTime(e.detail);
+      },
+      { signal: ac.signal },
+    );
+
     if (audioOnlyMode) {
       this.initWaveform();
     }
@@ -72,7 +93,7 @@ class LcPlayer extends HTMLElement {
   disconnectedCallback() {
     this.player?.dispose();
     this.rob?.disconnect();
-    this.abortController.abort();
+    this.abortController?.abort();
     this.innerHTML = '';
   }
 
@@ -106,14 +127,17 @@ class LcPlayer extends HTMLElement {
     });
 
     const peaksUrl = this.getAttribute('peaks-json-url');
+
     if (!peaksUrl) {
       throw new Error(
         'peaks-json-url attribute is required for audio-only mode',
       );
     }
+
     const peaksRes = await fetch(peaksUrl, {
-      signal: this.abortController.signal,
+      signal: this.abortController?.signal,
     });
+
     const { data: peaksData } = (await peaksRes.json()) as {
       data: Array<number>;
     };

@@ -29,7 +29,6 @@ func Player(props PlayerProps) g.Node {
 				g.Attr("audio-source", util.GetAudioSourceUrl(props.Id)),
 				g.Attr("peaks-dat-url", util.GetPeaksDatUrl(props.Id)),
 				g.Attr("peaks-json-url", util.GetPeaksJsonUrl(props.Id)),
-				g.Attr("length-seconds", strconv.FormatFloat(props.LengthSeconds, 'f', -1, 64)),
 				g.Attr("play-at", strconv.FormatFloat(props.PlayAt, 'f', -1, 64)),
 				g.If(props.Width > 0 && props.Height > 0, g.Attr("style", "--media-width:"+fmt.Sprint(props.Width)+";--media-height:"+fmt.Sprint(props.Height)+";")),
 			),

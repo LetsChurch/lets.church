@@ -2,6 +2,7 @@ package pages
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	g "github.com/maragudk/gomponents"
@@ -57,12 +58,11 @@ func Media(props MediaProps) g.Node {
 
 	return layouts.Main(
 		components.Player(components.PlayerProps{
-			Id:            uuid.Canonical(),
-			LengthSeconds: props.LengthSeconds.Float64,
-			PlayAt:        0.0,
-			AudioOnly:     audioOnly,
-			Width:         width,
-			Height:        height,
+			Id:        uuid.Canonical(),
+			PlayAt:    0.0,
+			AudioOnly: audioOnly,
+			Width:     width,
+			Height:    height,
 		}),
 		h.Div(h.Class("lc-container"),
 			h.H1(h.Class("lc-media__title"), g.Text(props.Title.String)),
@@ -98,15 +98,19 @@ func Media(props MediaProps) g.Node {
 						g.Text(props.Description.String),
 					),
 				),
-				h.Dl(h.Class("lc-media__content__transcript"),
-					g.Group(g.Map(props.Transcript.Items, func(item *astisub.Item) g.Node {
-						return h.Div(
-							h.Class("lc-media__content__transcript__segment"),
-							h.Role("button"),
-							h.Dt(h.Pre(g.Text(util.FormatDuration(item.StartAt)))),
-							h.Dd(g.Text(item.String())),
-						)
-					})),
+				h.Script(h.Type("module"), h.Src("/assets/components/transcript.js"), h.Defer()),
+				g.El("lc-transcript",
+					h.Dl(h.Class("lc-media__content__transcript"),
+						g.Group(g.Map(props.Transcript.Items, func(item *astisub.Item) g.Node {
+							return h.Div(
+								h.Class("lc-media__content__transcript__segment"),
+								h.Role("button"),
+								h.Data("start", strconv.Itoa(int(item.StartAt.Seconds()))),
+								h.Dt(h.Pre(g.Text(util.FormatDuration(item.StartAt)))),
+								h.Dd(g.Text(item.String())),
+							)
+						})),
+					),
 				),
 			),
 		),

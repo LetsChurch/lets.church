@@ -32,6 +32,7 @@
   --border-radius: calc(2 * var(--unit));
 
   --color-brand: #6366f1;
+  --color-brand-50: #eef2ff;
   --color-brand-200: #c7d2fe;
   --color-brand-300: #d6bbfb;
   --color-brand-700: #4338ca;

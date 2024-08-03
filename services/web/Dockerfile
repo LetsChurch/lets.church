@@ -31,7 +31,7 @@ COPY . .
 RUN npm ci
 
 RUN go build main.go
-RUN npx esbuild app/index.ts app/components/player.ts --bundle --format=esm --minify --outdir=assets
+RUN npx esbuild app/index.ts app/components/player.ts app/components/transcript.ts --bundle --format=esm --minify --outdir=assets
 RUN npx lightningcss-cli --minify --bundle --custom-media --targets 'last 2 versions and not dead' app/index.css app/components/player.css --output-dir assets
 
 CMD ["go", "run", "main.go"]
