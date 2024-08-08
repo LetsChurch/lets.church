@@ -2,6 +2,7 @@
 import { mount, StartClient } from '@solidjs/start/client';
 import { DEV } from 'solid-js';
 import * as Sentry from '@sentry/browser';
+import Plausible from 'plausible-tracker';
 
 // this will only initialize your Sentry client in production builds.
 if (!DEV) {
@@ -26,5 +27,17 @@ if (!DEV) {
     replaysOnErrorSampleRate: 1.0,
   });
 }
+
+const plausible = Plausible({
+  domain: 'lets.church',
+});
+
+plausible.enableAutoPageviews();
+plausible.enableAutoOutboundTracking();
+plausible.trackEvent('supports', {
+  props: {
+    anchorPositioning: window.CSS.supports('anchor-name', '--anchor-el'),
+  },
+});
 
 mount(() => <StartClient />, document.getElementById('app')!);
