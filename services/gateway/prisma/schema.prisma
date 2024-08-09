@@ -71,7 +71,7 @@ model AppSession {
   id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   appUserId String    @map("app_user_id") @db.Uuid
   appUser   AppUser   @relation(fields: [appUserId], references: [id], onDelete: Cascade)
-  expiresAt DateTime  @default(dbgenerated("(now() + '14 days'::interval)")) @map("expires_at")
+  expiresAt DateTime  @default(dbgenerated("(now() + '30 days'::interval)")) @map("expires_at")
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
