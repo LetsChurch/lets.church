@@ -8,9 +8,19 @@ import (
 )
 
 func (h *Handler) Churches(c echo.Context) error {
-	return Render(c, http.StatusOK, pages.Churches())
+	session, err := h.getSession(c)
+	if err != nil {
+		return err
+	}
+
+	return Render(c, http.StatusOK, pages.Churches(pages.ChurchesProps{Session: session}))
 }
 
 func (h *Handler) ChurchesAdd(c echo.Context) error {
-	return Render(c, http.StatusOK, pages.ChurchesAdd())
+	session, err := h.getSession(c)
+	if err != nil {
+		return err
+	}
+
+	return Render(c, http.StatusOK, pages.ChurchesAdd(pages.ChurchesAddProps{Session: session}))
 }

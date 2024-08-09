@@ -14,6 +14,11 @@ import (
 )
 
 func (h *Handler) Media(c echo.Context) (err error) {
+	session, err := h.getSession(c)
+	if err != nil {
+		return err
+	}
+
 	id := c.Param("id")
 
 	if id == "" {
@@ -46,6 +51,7 @@ func (h *Handler) Media(c echo.Context) (err error) {
 	}
 
 	return Render(c, http.StatusOK, pages.Media(pages.MediaProps{
+		Session:       session,
 		UploadId:      id,
 		UploadDataRow: &uploadRecord,
 		Transcript:    transcript,

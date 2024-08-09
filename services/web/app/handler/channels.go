@@ -8,5 +8,10 @@ import (
 )
 
 func (h *Handler) Channels(c echo.Context) error {
-	return Render(c, http.StatusOK, pages.Channels())
+	session, err := h.getSession(c)
+	if err != nil {
+		return err
+	}
+
+	return Render(c, http.StatusOK, pages.Channels(pages.ChannelsProps{Session: session}))
 }

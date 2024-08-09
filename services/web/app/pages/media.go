@@ -43,6 +43,7 @@ func getDimensions(variants []data.UploadVariant) (int, int) {
 
 type MediaProps struct {
 	*data.UploadDataRow
+	Session    *data.GetSessionRow
 	Transcript *astisub.Subtitles
 	UploadId   string
 }
@@ -57,6 +58,7 @@ func Media(props MediaProps) g.Node {
 	width, height := getDimensions(props.Variants)
 
 	return layouts.Main(
+		layouts.MainProps{Session: props.Session},
 		components.Player(components.PlayerProps{
 			Id:        uuid.Canonical(),
 			PlayAt:    0.0,

@@ -9,6 +9,10 @@ sql:
         out: './app/data'
         sql_package: 'pgx/v5'
         overrides:
+          - column: 'app_user.username'
+            go_type:
+              import: 'github.com/jackc/pgx/v5/pgtype'
+              type: 'Text'
           - column: 'channel.slug'
             go_type:
               import: 'github.com/jackc/pgx/v5/pgtype'

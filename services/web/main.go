@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
 
 	"lets.church/web/app/data"
@@ -10,7 +11,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 
+	"github.com/gorilla/sessions"
+	"github.com/labstack/echo-contrib/session"
 	_ "github.com/lib/pq"
 )
 
@@ -47,9 +51,20 @@ func main() {
 	app := echo.New()
 	app.File("/favicon.ico", "assets/favicon.ico")
 	app.Static("/assets", "assets")
+	app.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
+		TokenLookup:    "cookie:_csrf",
+		CookiePath:     "/",
+		CookieSecure:   true,
+		CookieHTTPOnly: true,
+		CookieSameSite: http.SameSiteStrictMode,
+	}))
+	app.Use(session.Middleware(sessions.NewCookieStore([]byte(os.Getenv("COOKIE_SECRET")))))
 	app.GET("/", h.Home)
 	app.GET("/about", h.About)
 	app.GET("/about/:page", h.AboutPage)
+	app.GET("/auth/login", h.GetAuthLogin)
+	app.POST("/auth/login", h.PostAuthLogin)
+	app.POST("/auth/logout", h.AuthLogout)
 	app.GET("/channels", h.Channels)
 	app.GET("/churches", h.Churches)
 	app.GET("/churches/add", h.ChurchesAdd)

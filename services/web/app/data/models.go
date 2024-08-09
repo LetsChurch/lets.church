@@ -559,7 +559,7 @@ type AppSession struct {
 
 type AppUser struct {
 	ID             pgtype.UUID
-	Username       interface{}
+	Username       pgtype.Text
 	Password       string
 	FullName       pgtype.Text
 	AvatarPath     pgtype.Text

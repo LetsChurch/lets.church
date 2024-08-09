@@ -9,11 +9,13 @@ import (
 )
 
 type HomeProps struct {
+	Session *data.GetSessionRow
 	Uploads *[]data.TrendingUploadsRow
 }
 
 func Home(props HomeProps) g.Node {
 	return layouts.Main(
+		layouts.MainProps{Session: props.Session},
 		h.Main(h.Class("lc-container"),
 			components.MediaGrid(components.MediaGridProps{Uploads: props.Uploads}),
 		),

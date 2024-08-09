@@ -32,3 +32,35 @@
     margin-inline-start: calc(2 * var(--unit));
   }
 }
+
+.lc-labeled-input {
+  display: flex;
+  flex-direction: column;
+}
+
+.lc-labeled-input__label {
+  margin-bottom: calc(1.5 * var(--unit));
+  color: var(--color-gray-700);
+  font-size: var(--text-size-sm);
+  line-height: var(--text-line-height-sm);
+  font-weight: var(--text-weight-medium);
+}
+
+.lc-labeled-checkbox {
+  display: flex;
+  flex-direction: row;
+  gap: calc(2 * var(--unit));
+
+  > input {
+    width: calc(4 * var(--height));
+    height: calc(4 * var(--height));
+    accent-color: var(--color-brand);
+  }
+}
+
+.lc-labeled-checkbox__label {
+  color: var(--color-gray-700);
+  font-size: var(--text-size-sm);
+  line-height: var(--text-line-height-sm);
+  font-weight: var(--text-weight-medium);
+}

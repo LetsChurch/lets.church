@@ -3,6 +3,7 @@
 @import '../node_modules/sanitize.css/sanitize.css' layer(reset);
 @import '../node_modules/sanitize.css/typography.css' layer(reset);
 
+@import './pages/login.css' layer(components);
 @import './pages/media.css' layer(components);
 
 @import './components/avatar.css' layer(components);
@@ -76,7 +77,7 @@
   --text-size-display-xl: 3.75rem;
 
   --text-line-height-xs: 1.125rem;
-  --text-line-height-sm: 1.25;
+  --text-line-height-sm: 1.25rem;
   --text-line-height-md: 1.5rem;
   --text-line-height-lg: 1.75rem;
   --text-line-height-xl: 1.875rem;
@@ -100,6 +101,7 @@
   a {
     color: var(--color-brand);
     text-decoration: none;
+    font-weight: var(--text-weight-semibold);
   }
 }
 
