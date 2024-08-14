@@ -4,9 +4,11 @@ import (
 	g "github.com/maragudk/gomponents"
 	hx "github.com/maragudk/gomponents-htmx"
 	h "github.com/maragudk/gomponents/html"
+	c "lets.church/web/app/components"
+	"lets.church/web/app/util"
 )
 
-func Doc(body ...g.Node) g.Node {
+func Doc(ac *util.AppContext, body ...g.Node) g.Node {
 	return h.Doctype(
 		h.HTML(h.Lang("en"),
 			h.Head(
@@ -20,6 +22,9 @@ func Doc(body ...g.Node) g.Node {
 				h.Div(h.ID("lc-root"), hx.Boost("true"),
 					g.Group(body),
 				),
+				g.Group(g.Map(ac.Flashes, func(f util.Flash) g.Node {
+					return c.Notification(c.NotificationProps{Level: f.Level, Title: f.Title, Message: f.Message})
+				})),
 			),
 		),
 	)

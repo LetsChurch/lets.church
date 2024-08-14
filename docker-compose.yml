@@ -2,11 +2,13 @@ volumes:
   auth-hooks-node-modules:
   background-worker-node-modules:
   es-data:
+  faktory-data:
   gateway-node-modules:
   import-worker-node-modules:
   pg-data:
   transcode-worker-node-modules:
   transcribe-worker-node-modules:
+  web-go-node-modules:
   web-node-modules:
   web-next-node-modules:
   web-next-dot-output:
@@ -71,36 +73,25 @@ services:
     build:
       context: ./services/web
       dockerfile: Dockerfile
+      target: build
     command: ./dev.sh
     ports:
       - ${HOST_WEB_GO_PORT}:3000
     environment:
+      APP_ENV: development
       COOKIE_SECRET: ${WEB_COOKIE_SECRET}
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
+      FAKTORY_URL: tcp://faktory:7419
+      JWT_SECRET: ${JWT_SECRET}
       MEDIA_URL: ${MEDIA_URL}
-    develop:
-      watch:
-        - action: sync
-          path: ./services/web
-          target: /usr/src/app
-          ignore:
-            - ./services/web/node_modules
-            - ./services/web/package.json
-            - ./services/web/package-lock.json
-        - action: rebuild
-          path: ./services/web/package.json
-        - action: rebuild
-          path: ./services/web/go.mod
-  sqlc:
-    build:
-      context: ./services/web
-      target: sqlc
-      dockerfile: Dockerfile
-    command: watchexec --watch app --exts sql -- sqlc generate
-    environment:
-      DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
+      PUBLIC_URL: ${HOST_WEB_GO_URL}
+      ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
     volumes:
-      - ./services/web:/src
+      - ./services/web:/usr/src/app
+      - web-go-node-modules:/usr/src/app/node_modules
+    depends_on:
+      - postgres
+      - elasticsearch
   # web-astro:
   #   build:
   #     context: ./apps/web-astro
@@ -170,6 +161,19 @@ services:
     volumes:
       - ./services/gateway:/home/node/app
       - background-worker-node-modules:/home/node/app/node_modules
+
+  background-worker-go:
+    build:
+      context: ./services/web
+      dockerfile: Dockerfile
+      target: build
+    command: watchexec --restart --exts go -- go run background-worker/main.go
+    environment:
+      FAKTORY_URL: tcp://faktory:7419
+      SERVICE_NAME: background-worker
+      SMTP_URL: smtp://mailpit:1025
+    volumes:
+      - ./services/web:/usr/src/app
 
   probe-worker:
     build:
@@ -258,6 +262,14 @@ services:
       AWS_SECRET_ACCESS_KEY: ${S3_INGEST_SECRET_ACCESS_KEY}
     ports:
       - ${HOST_IMGPROXY_PORT}:8080
+
+  faktory:
+    image: contribsys/faktory:1.9.0
+    ports:
+      - ${HOST_FAKTORY_PORT}:7419
+      - ${HOST_FAKTORY_UI_PORT}:7420
+    volumes:
+      - faktory-data:/var/lib/faktory/db
 
   temporal:
     image: temporalio/auto-setup:1.22.4.0

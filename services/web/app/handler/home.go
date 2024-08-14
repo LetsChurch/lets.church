@@ -8,7 +8,7 @@ import (
 )
 
 func (h *Handler) Home(c echo.Context) (err error) {
-	session, err := h.getSession(c)
+	ac, err := h.getAppContext(c)
 	if err != nil {
 		return err
 	}
@@ -18,8 +18,7 @@ func (h *Handler) Home(c echo.Context) (err error) {
 		return err
 	}
 
-	return Render(c, http.StatusOK, pages.Home(pages.HomeProps{
-		Session: session,
+	return Render(c, http.StatusOK, pages.Home(ac, pages.HomeProps{
 		Uploads: &upload_records,
 	}))
 }

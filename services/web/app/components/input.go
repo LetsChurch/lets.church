@@ -14,6 +14,7 @@ type InputProps struct {
 	Icon        string
 	Class       string
 	Big         bool
+	Required    bool
 }
 
 func inputClasses(big bool, class string) string {
@@ -30,7 +31,7 @@ func inputClasses(big bool, class string) string {
 func Input(props InputProps) g.Node {
 	return h.Div(h.Class(inputClasses(props.Big, props.Class)),
 		g.If(props.Icon != "", Icon(IconProps{Name: props.Icon})),
-		h.Input(h.Type(props.Type), h.Name(props.Name), h.Placeholder(props.Placeholder)),
+		h.Input(h.Type(props.Type), h.Name(props.Name), h.Placeholder(props.Placeholder), g.If(props.Required, h.Required())),
 	)
 }
 

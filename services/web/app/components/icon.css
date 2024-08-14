@@ -2,3 +2,8 @@
   width: 24px;
   height: 24px;
 }
+
+.lc-icon--full {
+  width: 100%;
+  height: 100%;
+}

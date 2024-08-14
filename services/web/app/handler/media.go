@@ -14,7 +14,7 @@ import (
 )
 
 func (h *Handler) Media(c echo.Context) (err error) {
-	session, err := h.getSession(c)
+	ac, err := h.getAppContext(c)
 	if err != nil {
 		return err
 	}
@@ -50,8 +50,7 @@ func (h *Handler) Media(c echo.Context) (err error) {
 		return err
 	}
 
-	return Render(c, http.StatusOK, pages.Media(pages.MediaProps{
-		Session:       session,
+	return Render(c, http.StatusOK, pages.Media(ac, pages.MediaProps{
 		UploadId:      id,
 		UploadDataRow: &uploadRecord,
 		Transcript:    transcript,

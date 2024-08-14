@@ -3,17 +3,13 @@ package pages
 import (
 	g "github.com/maragudk/gomponents"
 	h "github.com/maragudk/gomponents/html"
-	"lets.church/web/app/data"
 	"lets.church/web/app/layouts"
+	"lets.church/web/app/util"
 )
 
-type ChurchesAddProps struct {
-	Session *data.GetSessionRow
-}
-
-func ChurchesAdd(props ChurchesAddProps) g.Node {
+func ChurchesAdd(ac *util.AppContext) g.Node {
 	return layouts.Main(
-		layouts.MainProps{Session: props.Session},
+		ac,
 		h.Main(h.Class("lc-container"),
 			g.Text("Add Church"),
 		),

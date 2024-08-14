@@ -5,8 +5,8 @@ default:
 # Docker
 #
 
-start *params:
-  docker-compose up --watch {{params}}
+start *params='-d':
+  docker-compose up {{params}}
 stop:
   docker-compose down
 build *params:

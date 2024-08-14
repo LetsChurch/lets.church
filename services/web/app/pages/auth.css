@@ -1,0 +1,75 @@
+.lc-auth {
+  width: calc(90 * var(--unit));
+  margin-inline: auto;
+}
+
+.lc-auth__header {
+  margin-block: calc(16 * var(--unit)) calc(8 * var(--unit));
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  img {
+    height: calc(25 * var(--unit));
+  }
+}
+
+.lc-auth__heading {
+  font-size: var(--text-size-display-sm);
+  font-weight: var(--text-weight-semibold);
+  line-height: var(--line-height-display-sm);
+  color: var(--color-gray-900);
+  text-align: center;
+  margin: 0;
+}
+
+.lc-auth__description {
+  font-size: var(--text-size-md);
+  font-weight: var(--text-weight-regular);
+  line-height: var(--line-height-md);
+  color: var(--color-gray-600);
+  text-align: center;
+  margin-block: calc(3 * var(--unit)) calc(8 * var(--unit));
+}
+
+.lc-auth__input {
+  margin-bottom: calc(5 * var(--unit));
+}
+
+.lc-auth__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: calc(6 * var(--unit));
+  color: var(--color-gray-700);
+  font-size: var(--text-size-sm);
+  line-height: var(--text-line-height-sm);
+  font-weight: var(--text-weight-medium);
+}
+
+.lc-auth__submit-button {
+  width: 100%;
+  margin-top: calc(6 * var(--unit));
+}
+
+.lc-auth__bottom {
+  margin-top: calc(8 * var(--unit));
+  color: var(--color-gray-700);
+  font-size: var(--text-size-sm);
+  line-height: var(--text-line-height-sm);
+  font-weight: var(--text-weight-medium);
+  text-align: center;
+}
+
+.lc-auth__back-link {
+  color: var(--color-gray-600);
+  font-size: var(--text-size-sm);
+  line-height: var(--text-line-height-sm);
+  font-weight: var(--text-weight-semibold);
+  & > svg {
+    width: calc(5 * var(--unit));
+    height: calc(5 * var(--unit));
+    margin-right: calc(1.5 * var(--unit));
+    position: relative;
+    top: calc(-0.75 * var(--unit));
+  }
+}

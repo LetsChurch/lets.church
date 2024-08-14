@@ -11,16 +11,56 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const changePassword = `-- name: ChangePassword :exec
+UPDATE app_user SET password=$1 WHERE id=$2
+`
+
+type ChangePasswordParams struct {
+	Password string
+	ID       pgtype.UUID
+}
+
+func (q *Queries) ChangePassword(ctx context.Context, arg ChangePasswordParams) error {
+	_, err := q.db.Exec(ctx, changePassword, arg.Password, arg.ID)
+	return err
+}
+
 const getUser = `-- name: GetUser :one
 SELECT u.id, u.username, u.password, u.full_name, u.avatar_path, u.avatar_blurhash, u.created_at, u.updated_at, u.deleted_at, u.role
 FROM app_user u
-LEFT JOIN app_user_email e ON u.id = e.app_user_id
+LEFT JOIN app_user_email e ON e.app_user_id = u.id
 WHERE u.username = $1 OR e.email = $1
 LIMIT 1
 `
 
 func (q *Queries) GetUser(ctx context.Context, identifier pgtype.Text) (AppUser, error) {
 	row := q.db.QueryRow(ctx, getUser, identifier)
+	var i AppUser
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Password,
+		&i.FullName,
+		&i.AvatarPath,
+		&i.AvatarBlurhash,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Role,
+	)
+	return i, err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT u.id, u.username, u.password, u.full_name, u.avatar_path, u.avatar_blurhash, u.created_at, u.updated_at, u.deleted_at, u.role
+FROM app_user u
+LEFT JOIN app_user_email e ON e.app_user_id = u.id
+WHERE e.email = $1
+LIMIT 1
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, identifier interface{}) (AppUser, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, identifier)
 	var i AppUser
 	err := row.Scan(
 		&i.ID,

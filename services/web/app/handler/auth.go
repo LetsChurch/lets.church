@@ -1,38 +1,50 @@
 package handler
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
+	"time"
 
+	"github.com/contribsys/faktory/client"
+	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/samber/lo"
+	"github.com/trustelem/zxcvbn"
 	"lets.church/web/app/data"
 	"lets.church/web/app/pages"
 	"lets.church/web/app/util"
+	"lets.church/web/background-worker/jobs"
 
 	"github.com/alexedwards/argon2id"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func (h *Handler) GetAuthLogin(c echo.Context) (err error) {
-	sess, _ := session.Get("session", c)
-
-	if sess.Values["id"] != nil {
-		return c.Redirect(http.StatusFound, "/")
-	}
-
-	return Render(c, http.StatusOK, pages.Login(pages.LoginProps{Csrf: c.Get("csrf").(string)}))
-}
-
-func (h *Handler) PostAuthLogin(c echo.Context) (err error) {
-	sess, err := h.getSession(c)
+	ac, err := h.getAppContext(c)
 	if err != nil {
 		return err
 	}
 
-	if sess != nil {
+	if ac.Authenticated {
+		return c.Redirect(http.StatusForbidden, "/")
+	}
+
+	return Render(c, http.StatusOK, pages.Login(ac, pages.LoginProps{Csrf: c.Get("csrf").(string)}))
+}
+
+func (h *Handler) PostAuthLogin(c echo.Context) (err error) {
+	ac, err := h.getAppContext(c)
+	if err != nil {
+		return err
+	}
+
+	if ac.Authenticated {
 		return c.Redirect(http.StatusFound, "/")
 	}
 
@@ -60,7 +72,7 @@ func (h *Handler) PostAuthLogin(c echo.Context) (err error) {
 
 	if !match {
 		// TODO: Show error message
-		return Render(c, http.StatusOK, pages.Login(pages.LoginProps{Csrf: csrf}))
+		return Render(c, http.StatusOK, pages.Login(ac, pages.LoginProps{Csrf: csrf}))
 	}
 
 	h.createSession(c, &user, remember)
@@ -83,22 +95,178 @@ func (h *Handler) AuthLogout(c echo.Context) (err error) {
 	return c.Redirect(http.StatusFound, "/")
 }
 
+func (h *Handler) GetAuthForgotPassword(c echo.Context) (err error) {
+	ac, err := h.getAppContext(c)
+	if err != nil {
+		return err
+	}
+
+	if ac.Authenticated {
+		return c.Redirect(http.StatusForbidden, "/")
+	}
+
+	return Render(c, http.StatusOK, pages.ForgotPassword(ac, pages.ForgotPasswordProps{Csrf: c.Get("csrf").(string)}))
+}
+
+type ResetPasswordClaims struct {
+	Id string `json:"id"`
+	jwt.RegisteredClaims
+}
+
+func (h *Handler) PostAuthForgotPassword(c echo.Context) (err error) {
+	ac, err := h.getAppContext(c)
+	if err != nil {
+		return err
+	}
+
+	if ac.Authenticated {
+		return c.Redirect(http.StatusFound, "/")
+	}
+
+	email := c.FormValue("email")
+
+	h.addFlash(c, util.Flash{
+		Level:   "success",
+		Title:   "Check your email!",
+		Message: "If you have an account you will receive an email with instructions to reset your password.",
+	})
+
+	user, err := h.Queries.GetUserByEmail(c.Request().Context(), email)
+	if err != nil {
+		return c.Redirect(http.StatusFound, "/")
+	}
+
+	userId := util.Uuid(user.ID.Bytes)
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, ResetPasswordClaims{
+		Id: userId.Canonical(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
+		},
+	})
+	tokenString, err := token.SignedString(h.JwtSecret)
+	if err != nil {
+		return err
+	}
+
+	resetUrl := h.PublicUrl + "/auth/reset-password?token=" + tokenString
+
+	emailJob := jobs.EmailArgs{
+		From:    "hello@lets.church",
+		To:      []string{email},
+		Subject: "Reset Your Password For Let's Church",
+		Text:    "Hello! Please visit the following link to reset your password: " + resetUrl + "\n\nThis link will expire in 15 minutes.\n\nIf you did not request a password reset, please ignore this email.",
+		Html:    "Hello! Please click <a href=\"" + resetUrl + "\">here</a> to reset your password.\n\nThis link will expire in 15 minutes.\n\nIf you did not request a password reset, please ignore this email.",
+	}
+	emailJson, err := json.Marshal(emailJob)
+	if err != nil {
+		return err
+	}
+
+	err = h.FaktoryClient.Push(&client.Job{
+		Queue: "background",
+		Type:  "SendEmail",
+		Args:  []any{string(emailJson)},
+		Jid:   uuid.NewString(),
+	})
+	if err != nil {
+		return err
+	}
+
+	return c.Redirect(http.StatusFound, "/")
+}
+
+func (h *Handler) GetResetPassword(c echo.Context) error {
+	ac, err := h.getAppContext(c)
+	if err != nil {
+		return err
+	}
+
+	tokenString := c.QueryParam("token")
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+
+		return h.JwtSecret, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if _, ok := token.Claims.(jwt.MapClaims); !ok {
+		return err
+	}
+
+	return Render(c, http.StatusOK, pages.ResetPassword(ac, pages.ResetPasswordProps{Csrf: c.Get("csrf").(string), Token: tokenString}))
+}
+
+func (h *Handler) PostResetPassword(c echo.Context) error {
+	tokenString := c.QueryParam("token")
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+
+		return h.JwtSecret, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		id, _ := util.Parse(claims["id"].(string))
+		password := c.FormValue("password")
+		if password == "" {
+			return errors.New("missing password")
+		}
+
+		confirmPassword := c.FormValue("confirmPassword")
+		if confirmPassword != password {
+			h.addFlash(c, util.Flash{Level: "warning", Title: "Passwords do not match", Message: "The passwords you entered do not match."})
+			return c.Redirect(http.StatusFound, "/auth/reset-password?token="+tokenString)
+		}
+
+		// TODO: user inputs instead of nil?
+		zRes := zxcvbn.PasswordStrength(password, nil)
+
+		if zRes.Score < h.ZxcvbnMinimumScore {
+			h.addFlash(c, util.Flash{Level: "warning", Title: "Weak password", Message: "Please pick a stronger password. Try to avoid repeated characters and common sequences, and make sure your password is long."})
+			return c.Redirect(http.StatusFound, "/auth/reset-password?token="+tokenString)
+		}
+
+		hash, err := argon2id.CreateHash(password, argon2id.DefaultParams)
+		if err != nil {
+			return err
+		}
+
+		h.Queries.ChangePassword(c.Request().Context(), data.ChangePasswordParams{ID: id.Pg(), Password: hash})
+
+		h.addFlash(c, util.Flash{
+			Level:   "success",
+			Title:   "Password changed!",
+			Message: "Your password has been changed. You can now log in with your new password.",
+		})
+
+		return c.Redirect(http.StatusFound, "/auth/login")
+	}
+
+	return errors.New("could not get token claims")
+}
+
 func (h *Handler) getSession(c echo.Context) (*data.GetSessionRow, error) {
-	sess, err := session.Get("session", c)
+	ac, err := h.getAppContext(c)
 	if err != nil {
 		return nil, err
 	}
 
-	if sess.Values["id"] == nil {
+	if !ac.Authenticated {
 		return nil, nil
 	}
 
-	session_id, err := util.Parse(sess.Values["id"].(string))
-	if err != nil {
-		return nil, err
-	}
-
-	appSession, err := h.Queries.GetSession(c.Request().Context(), session_id.Pg())
+	appSession, err := h.Queries.GetSession(c.Request().Context(), ac.SessionId.Pg())
 
 	return &appSession, err
 }
@@ -109,7 +277,7 @@ func (h *Handler) createSession(c echo.Context, user *data.AppUser, remember boo
 		return nil, err
 	}
 
-	session_id := util.Uuid(res.Bytes)
+	sessionId := util.Uuid(res.Bytes)
 
 	sess, err := session.Get("session", c)
 	if err != nil {
@@ -121,13 +289,13 @@ func (h *Handler) createSession(c echo.Context, user *data.AppUser, remember boo
 		MaxAge:   lo.Ternary(remember, 60*60*24*30, 0),
 		HttpOnly: true,
 	}
-	sess.Values["id"] = session_id.Canonical()
+	sess.Values["id"] = sessionId.Canonical()
 
 	if err := sess.Save(c.Request(), c.Response()); err != nil {
 		return nil, err
 	}
 
-	return &session_id, nil
+	return &sessionId, nil
 }
 
 func (h *Handler) deleteSession(c echo.Context, sessionRow *data.GetSessionRow) error {
