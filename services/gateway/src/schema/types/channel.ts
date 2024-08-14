@@ -243,8 +243,8 @@ builder.queryFields((t) => ({
   channelsConnection: t.prismaConnection({
     type: Channel,
     cursor: 'id',
-    maxSize: 50,
-    defaultSize: 50,
+    maxSize: 100,
+    defaultSize: 100,
     resolve: (query) =>
       prisma.channel.findMany({
         ...query,
