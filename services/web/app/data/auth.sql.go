@@ -25,6 +25,48 @@ func (q *Queries) ChangePassword(ctx context.Context, arg ChangePasswordParams) 
 	return err
 }
 
+const createUser = `-- name: CreateUser :one
+INSERT INTO app_user (username, password, full_name, updated_at)
+VALUES ($1, $2, $3, NOW())
+RETURNING id
+`
+
+type CreateUserParams struct {
+	Username pgtype.Text
+	Password string
+	FullName pgtype.Text
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, createUser, arg.Username, arg.Password, arg.FullName)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const createUserEmail = `-- name: CreateUserEmail :one
+INSERT INTO app_user_email (app_user_id, email)
+VALUES ($1, $2)
+RETURNING id, key
+`
+
+type CreateUserEmailParams struct {
+	AppUserID pgtype.UUID
+	Email     pgtype.Text
+}
+
+type CreateUserEmailRow struct {
+	ID  pgtype.UUID
+	Key pgtype.UUID
+}
+
+func (q *Queries) CreateUserEmail(ctx context.Context, arg CreateUserEmailParams) (CreateUserEmailRow, error) {
+	row := q.db.QueryRow(ctx, createUserEmail, arg.AppUserID, arg.Email)
+	var i CreateUserEmailRow
+	err := row.Scan(&i.ID, &i.Key)
+	return i, err
+}
+
 const getUser = `-- name: GetUser :one
 SELECT u.id, u.username, u.password, u.full_name, u.avatar_path, u.avatar_blurhash, u.created_at, u.updated_at, u.deleted_at, u.role
 FROM app_user u
@@ -59,7 +101,7 @@ WHERE e.email = $1
 LIMIT 1
 `
 
-func (q *Queries) GetUserByEmail(ctx context.Context, identifier interface{}) (AppUser, error) {
+func (q *Queries) GetUserByEmail(ctx context.Context, identifier pgtype.Text) (AppUser, error) {
 	row := q.db.QueryRow(ctx, getUserByEmail, identifier)
 	var i AppUser
 	err := row.Scan(
@@ -75,4 +117,38 @@ func (q *Queries) GetUserByEmail(ctx context.Context, identifier interface{}) (A
 		&i.Role,
 	)
 	return i, err
+}
+
+const subscribeToNewsletter = `-- name: SubscribeToNewsletter :exec
+INSERT INTO newsletter_subscription (email) VALUES ($1)
+`
+
+func (q *Queries) SubscribeToNewsletter(ctx context.Context, email pgtype.Text) error {
+	_, err := q.db.Exec(ctx, subscribeToNewsletter, email)
+	return err
+}
+
+const verifyEmail = `-- name: VerifyEmail :one
+WITH updated_rows AS (
+    UPDATE app_user_email SET "verifiedAt"=NOW()
+    WHERE id=$1
+    AND app_user_id = $2
+    AND key=$3
+    AND "verifiedAt" IS NULL
+    RETURNING id, app_user_id, email, key, "verifiedAt"
+)
+SELECT COUNT(*) FROM updated_rows
+`
+
+type VerifyEmailParams struct {
+	EmailID   pgtype.UUID
+	AppUserID pgtype.UUID
+	Key       pgtype.UUID
+}
+
+func (q *Queries) VerifyEmail(ctx context.Context, arg VerifyEmailParams) (int64, error) {
+	row := q.db.QueryRow(ctx, verifyEmail, arg.EmailID, arg.AppUserID, arg.Key)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }

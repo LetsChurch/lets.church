@@ -2,6 +2,7 @@ package handler
 
 import (
 	"github.com/contribsys/faktory/client"
+	"github.com/jackc/pgx/v5"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/samber/lo"
@@ -10,6 +11,7 @@ import (
 )
 
 type Handler struct {
+	PgxConn            *pgx.Conn
 	Queries            *data.Queries
 	FaktoryClient      *client.Client
 	PublicUrl          string

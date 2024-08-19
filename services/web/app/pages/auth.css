@@ -1,5 +1,5 @@
 .lc-auth {
-  width: calc(90 * var(--unit));
+  width: calc(100 * var(--unit));
   margin-inline: auto;
 }
 

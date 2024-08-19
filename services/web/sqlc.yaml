@@ -13,7 +13,15 @@ sql:
             go_type:
               import: 'github.com/jackc/pgx/v5/pgtype'
               type: 'Text'
+          - column: 'app_user_email.email'
+            go_type:
+              import: 'github.com/jackc/pgx/v5/pgtype'
+              type: 'Text'
           - column: 'channel.slug'
+            go_type:
+              import: 'github.com/jackc/pgx/v5/pgtype'
+              type: 'Text'
+          - column: 'newsletter_subscription.email'
             go_type:
               import: 'github.com/jackc/pgx/v5/pgtype'
               type: 'Text'

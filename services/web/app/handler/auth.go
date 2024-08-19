@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/mail"
+	"net/url"
 	"time"
 
 	"github.com/contribsys/faktory/client"
@@ -131,7 +133,7 @@ func (h *Handler) PostAuthForgotPassword(c echo.Context) (err error) {
 		Message: "If you have an account you will receive an email with instructions to reset your password.",
 	})
 
-	user, err := h.Queries.GetUserByEmail(c.Request().Context(), email)
+	user, err := h.Queries.GetUserByEmail(c.Request().Context(), pgtype.Text{String: email, Valid: true})
 	if err != nil {
 		return c.Redirect(http.StatusFound, "/")
 	}
@@ -176,7 +178,143 @@ func (h *Handler) PostAuthForgotPassword(c echo.Context) (err error) {
 	return c.Redirect(http.StatusFound, "/")
 }
 
-func (h *Handler) GetResetPassword(c echo.Context) error {
+func (h *Handler) GetAuthRegister(c echo.Context) error {
+	ac, err := h.getAppContext(c)
+	if err != nil {
+		return err
+	}
+
+	if ac.Authenticated {
+		return c.Redirect(http.StatusForbidden, "/")
+	}
+
+	return Render(c, http.StatusOK, pages.Register(ac, pages.RegisterProps{Csrf: c.Get("csrf").(string)}))
+}
+
+func (h *Handler) PostAuthRegister(c echo.Context) error {
+	ac, err := h.getAppContext(c)
+	if err != nil {
+		return err
+	}
+
+	if ac.Authenticated {
+		return c.Redirect(http.StatusForbidden, "/")
+	}
+
+	username := c.FormValue("username")
+	password := c.FormValue("password")
+	email := c.FormValue("email")
+	fullname := c.FormValue("fullname")
+	subscribeToNewsletter := c.FormValue("newsletter") == "on"
+
+	_, emailErr := mail.ParseAddress(email)
+
+	if len(username) < 3 || emailErr != nil {
+		h.addFlash(c, util.Flash{Level: "warning", Title: "Invalid", Message: "Invalid form values."})
+		// TODO: keep form values, maybe via trigger
+		return c.Redirect(http.StatusFound, "/auth/register")
+	}
+
+	zRes := zxcvbn.PasswordStrength(password, []string{username, email})
+
+	if zRes.Score < h.ZxcvbnMinimumScore {
+		h.addFlash(c, util.Flash{Level: "warning", Title: "Weak password", Message: "Please pick a stronger password. Try to avoid repeated characters and common sequences, and make sure your password is long."})
+		// TODO: keep form values, maybe via trigger
+		return c.Redirect(http.StatusFound, "/auth/register")
+	}
+
+	hash, err := argon2id.CreateHash(password, argon2id.DefaultParams)
+	if err != nil {
+		return err
+	}
+
+	tx, err := h.PgxConn.Begin(c.Request().Context())
+	if err != nil {
+		return err
+	}
+
+	qtx := h.Queries.WithTx(tx)
+	appUserId, err := qtx.CreateUser(c.Request().Context(), data.CreateUserParams{
+		Username: pgtype.Text{String: username, Valid: true},
+		Password: hash,
+		FullName: pgtype.Text{String: fullname, Valid: len(fullname) > 0},
+	})
+	if err != nil {
+		tx.Rollback(c.Request().Context())
+		return err
+	}
+
+	emailRow, err := qtx.CreateUserEmail(
+		c.Request().Context(),
+		data.CreateUserEmailParams{AppUserID: appUserId, Email: pgtype.Text{String: email, Valid: true}},
+	)
+	if err != nil {
+		tx.Rollback(c.Request().Context())
+		return err
+	}
+
+	if err := tx.Commit(c.Request().Context()); err != nil {
+		return err
+	}
+
+	params := url.Values{}
+	params.Add("userId", util.Uuid(appUserId.Bytes).Base58())
+	params.Add("emailId", util.Uuid(emailRow.ID.Bytes).Base58())
+	params.Add("emailKey", util.Uuid(emailRow.Key.Bytes).Base58())
+	verifyUrl := h.PublicUrl + "/auth/verify?" + params.Encode()
+	emailJob := jobs.EmailArgs{
+		From:    "hello@lets.church",
+		To:      []string{email},
+		Subject: "Welcome to Let's Church! Please verify your email.",
+		Text:    "Welcome, " + username + "! Please visit the following link to verify your email: " + verifyUrl,
+		Html:    "Welcome to Let's Church, <b>" + username + "</b>! Please click <a href=\"" + verifyUrl + "\">here</a> to verify your email.",
+	}
+	emailJson, err := json.Marshal(emailJob)
+	if err != nil {
+		return err
+	}
+
+	err = h.FaktoryClient.Push(&client.Job{
+		Queue: "background",
+		Type:  "SendEmail",
+		Args:  []any{string(emailJson)},
+		Jid:   uuid.NewString(),
+	})
+	if err != nil {
+		return err
+	}
+
+	if subscribeToNewsletter {
+		h.Queries.SubscribeToNewsletter(c.Request().Context(), pgtype.Text{String: email, Valid: true})
+	}
+
+	return c.Redirect(http.StatusFound, "/")
+}
+
+func (h *Handler) GetAuthVerify(c echo.Context) error {
+	userId, err := util.Parse(c.QueryParam("userId"))
+	if err != nil {
+		return c.NoContent(http.StatusNotFound)
+	}
+	emailId, err := util.Parse(c.QueryParam("emailId"))
+	if err != nil {
+		return c.NoContent(http.StatusNotFound)
+	}
+	emailKey, err := util.Parse(c.QueryParam("emailKey"))
+	if err != nil {
+		return c.NoContent(http.StatusNotFound)
+	}
+
+	count, err := h.Queries.VerifyEmail(c.Request().Context(), data.VerifyEmailParams{AppUserID: userId.Pg(), EmailID: emailId.Pg(), Key: emailKey.Pg()})
+
+	if err != nil || count == 0 {
+		return c.NoContent(http.StatusNotFound)
+	}
+
+	return c.Redirect(http.StatusFound, "/")
+}
+
+func (h *Handler) GetAuthResetPassword(c echo.Context) error {
 	ac, err := h.getAppContext(c)
 	if err != nil {
 		return err
@@ -202,7 +340,16 @@ func (h *Handler) GetResetPassword(c echo.Context) error {
 	return Render(c, http.StatusOK, pages.ResetPassword(ac, pages.ResetPasswordProps{Csrf: c.Get("csrf").(string), Token: tokenString}))
 }
 
-func (h *Handler) PostResetPassword(c echo.Context) error {
+func (h *Handler) PostAuthResetPassword(c echo.Context) error {
+	ac, err := h.getAppContext(c)
+	if err != nil {
+		return err
+	}
+
+	if ac.Authenticated {
+		return c.Redirect(http.StatusForbidden, "/")
+	}
+
 	tokenString := c.QueryParam("token")
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -221,12 +368,6 @@ func (h *Handler) PostResetPassword(c echo.Context) error {
 		password := c.FormValue("password")
 		if password == "" {
 			return errors.New("missing password")
-		}
-
-		confirmPassword := c.FormValue("confirmPassword")
-		if confirmPassword != password {
-			h.addFlash(c, util.Flash{Level: "warning", Title: "Passwords do not match", Message: "The passwords you entered do not match."})
-			return c.Redirect(http.StatusFound, "/auth/reset-password?token="+tokenString)
 		}
 
 		// TODO: user inputs instead of nil?

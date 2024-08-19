@@ -10,6 +10,7 @@ import (
 type InputProps struct {
 	Type        string
 	Name        string
+	Value       string
 	Placeholder string
 	Icon        string
 	Class       string
@@ -31,7 +32,13 @@ func inputClasses(big bool, class string) string {
 func Input(props InputProps) g.Node {
 	return h.Div(h.Class(inputClasses(props.Big, props.Class)),
 		g.If(props.Icon != "", Icon(IconProps{Name: props.Icon})),
-		h.Input(h.Type(props.Type), h.Name(props.Name), h.Placeholder(props.Placeholder), g.If(props.Required, h.Required())),
+		h.Input(
+			h.Type(props.Type),
+			h.Name(props.Name),
+			g.If(props.Value != "", h.Value(props.Value)),
+			h.Placeholder(props.Placeholder),
+			g.If(props.Required, h.Required()),
+		),
 	)
 }
 
@@ -65,6 +72,6 @@ type LabeledCheckboxProps struct {
 func LabeledCheckbox(props LabeledCheckboxProps) g.Node {
 	return h.Label(h.Class("lc-labeled-checkbox"),
 		h.Input(h.Type("checkbox"), h.Name(props.Name), g.If(props.Checked, h.Checked())),
-		h.Span(h.Class("lc-labeled-checkbox__label"), g.Text(props.Label)),
+		h.Span(h.Class("lc-labeled-checkbox__label"), g.Raw(props.Label)),
 	)
 }

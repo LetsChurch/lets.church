@@ -573,7 +573,7 @@ type AppUser struct {
 type AppUserEmail struct {
 	ID         pgtype.UUID
 	AppUserID  pgtype.UUID
-	Email      interface{}
+	Email      pgtype.Text
 	Key        pgtype.UUID
 	VerifiedAt pgtype.Timestamp
 }
@@ -609,7 +609,7 @@ type ChannelSubscription struct {
 
 type NewsletterSubscription struct {
 	ID         pgtype.UUID
-	Email      interface{}
+	Email      pgtype.Text
 	Key        pgtype.UUID
 	VerifiedAt pgtype.Timestamp
 }

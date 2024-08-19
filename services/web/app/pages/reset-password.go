@@ -24,11 +24,6 @@ func ResetPassword(ac *util.AppContext, props ResetPasswordProps) g.Node {
 				Label:      "New Password",
 				InputProps: c.InputProps{Type: "password", Name: "password", Placeholder: "Password", Required: true},
 			}),
-			c.LabeledInput(c.LabeledInputProps{
-				Class:      "lc-auth__input",
-				Label:      "Confirm New Password",
-				InputProps: c.InputProps{Type: "password", Name: "confirmPassword", Placeholder: "Password", Required: true},
-			}),
 			c.Button(c.ButtonProps{
 				Primary:  true,
 				Class:    "lc-auth__submit-button",

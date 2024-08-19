@@ -63,6 +63,8 @@ func main() {
 	}
 
 	h := &handler.Handler{
+		PgxConn: conn,
+		// TODO: use pool
 		Queries:            data.New(conn),
 		JwtSecret:          []byte(os.Getenv("JWT_SECRET")),
 		FaktoryClient:      faktoryClient,
@@ -90,8 +92,11 @@ func main() {
 	app.GET("/auth/login", h.GetAuthLogin)
 	app.POST("/auth/login", h.PostAuthLogin)
 	app.POST("/auth/logout", h.AuthLogout)
-	app.GET("/auth/reset-password", h.GetResetPassword)
-	app.POST("/auth/reset-password", h.PostResetPassword)
+	app.GET("/auth/register", h.GetAuthRegister)
+	app.POST("/auth/register", h.PostAuthRegister)
+	app.GET("/auth/reset-password", h.GetAuthResetPassword)
+	app.POST("/auth/reset-password", h.PostAuthResetPassword)
+	app.GET("/auth/verify", h.GetAuthVerify)
 	app.GET("/channels", h.Channels)
 	app.GET("/churches", h.Churches)
 	app.GET("/churches/add", h.ChurchesAdd)
