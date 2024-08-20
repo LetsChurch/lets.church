@@ -128,6 +128,17 @@ func (q *Queries) SubscribeToNewsletter(ctx context.Context, email pgtype.Text) 
 	return err
 }
 
+const userExists = `-- name: UserExists :one
+SELECT EXISTS (SELECT 1 FROM app_user WHERE username = $1)
+`
+
+func (q *Queries) UserExists(ctx context.Context, username pgtype.Text) (bool, error) {
+	row := q.db.QueryRow(ctx, userExists, username)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const verifyEmail = `-- name: VerifyEmail :one
 WITH updated_rows AS (
     UPDATE app_user_email SET "verifiedAt"=NOW()

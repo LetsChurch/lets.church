@@ -3,6 +3,9 @@ INSERT INTO app_user (username, password, full_name, updated_at)
 VALUES (sqlc.arg(username), sqlc.arg(password), sqlc.narg(full_name), NOW())
 RETURNING id;
 
+-- name: UserExists :one
+SELECT EXISTS (SELECT 1 FROM app_user WHERE username = sqlc.arg(username));
+
 -- name: CreateUserEmail :one
 INSERT INTO app_user_email (app_user_id, email)
 VALUES (sqlc.arg(app_user_id), sqlc.arg(email))

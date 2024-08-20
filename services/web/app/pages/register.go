@@ -21,6 +21,27 @@ type RegisterProps struct {
 	}
 }
 
+type RegisterUsernameInputProps struct {
+	Value string
+	Error string
+}
+
+func RegisterUsernameInput(props RegisterUsernameInputProps) g.Node {
+	return c.LabeledInput(c.LabeledInputProps{
+		Class: "lc-auth__input",
+		Label: "Username",
+		InputProps: c.InputProps{
+			Type:        "text",
+			Name:        "username",
+			Placeholder: "Username",
+			Required:    true,
+			HxPost:      "/auth/check-username",
+			Value:       props.Value,
+		},
+		Error: props.Error,
+	})
+}
+
 func Register(ac *util.AppContext, props RegisterProps) g.Node {
 	return layouts.Auth(
 		ac,
@@ -31,11 +52,7 @@ func Register(ac *util.AppContext, props RegisterProps) g.Node {
 				Label:      "Email",
 				InputProps: c.InputProps{Type: "email", Name: "email", Placeholder: "Email", Required: true},
 			}),
-			c.LabeledInput(c.LabeledInputProps{
-				Class:      "lc-auth__input",
-				Label:      "Username",
-				InputProps: c.InputProps{Type: "text", Name: "username", Placeholder: "Username", Required: true},
-			}),
+			RegisterUsernameInput(RegisterUsernameInputProps{}),
 			c.LabeledInput(c.LabeledInputProps{
 				Class:      "lc-auth__input",
 				Label:      "Password",

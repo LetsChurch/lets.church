@@ -40,6 +40,21 @@ func (h *Handler) GetAuthLogin(c echo.Context) (err error) {
 	return Render(c, http.StatusOK, pages.Login(ac, pages.LoginProps{Csrf: c.Get("csrf").(string)}))
 }
 
+func (h *Handler) PostAuthCheckUsername(c echo.Context) (err error) {
+	username := c.FormValue("username")
+	userExists, err := h.Queries.UserExists(c.Request().Context(), pgtype.Text{String: username, Valid: true})
+	if err != nil {
+		return err
+	}
+
+	return Render(c, http.StatusOK, pages.RegisterUsernameInput(
+		pages.RegisterUsernameInputProps{
+			Value: username,
+			Error: lo.Ternary(userExists, "Username has already been taken", ""),
+		},
+	))
+}
+
 func (h *Handler) PostAuthLogin(c echo.Context) (err error) {
 	ac, err := h.getAppContext(c)
 	if err != nil {

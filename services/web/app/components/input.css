@@ -2,7 +2,7 @@
   --height: 44px;
 
   height: var(--height);
-  border: 1px solid var(--color-border-primary);
+  border: 1px solid var(--border-color, var(--color-border-primary));
   border-radius: var(--border-radius);
 
   color: var(--color-button-tertiary-fg);
@@ -10,7 +10,12 @@
   font-weight: var(--text-weight-medium);
   line-height: var(--text-line-height-md);
 
+  display: flex;
+  align-items: center;
+  gap: var(--unit);
+
   :where(&) input {
+    width: 100%;
     height: var(--height);
     padding: calc(2.5 * var(--unit)) calc(3.5 * var(--unit));
     border: none;
@@ -19,8 +24,8 @@
   }
 
   &:focus-within {
-    border-color: var(--color-border-brand);
-    box-shadow: 0 0 0 calc(2 * var(--unit)) #9e77ed24;
+    border-color: var(--border-color, var(--color-border-brand));
+    box-shadow: 0 0 0 calc(2 * var(--unit)) var(--focus-color, #9e77ed24);
   }
 
   &:where(:has(.lc-icon)) input {
@@ -38,12 +43,32 @@
   flex-direction: column;
 }
 
+.lc-labeled-input--error {
+  --border-color: var(--color-error-300);
+  --focus-color: #f0443824;
+}
+
 .lc-labeled-input__label {
-  margin-bottom: calc(1.5 * var(--unit));
   color: var(--color-gray-700);
   font-size: var(--text-size-sm);
   line-height: var(--text-line-height-sm);
   font-weight: var(--text-weight-medium);
+
+  & + .lc-input {
+    margin-top: calc(1.5 * var(--unit));
+  }
+}
+
+.lc-labeled-input__hint {
+  margin-top: calc(1.5 * var(--unit));
+  color: var(--color-gray-600);
+  font-size: var(--text-size-sm);
+  line-height: var(--text-line-height-sm);
+  font-weight: var(--text-weight-regular);
+
+  :where(.lc-labeled-input--error) & {
+    color: var(--color-error-500);
+  }
 }
 
 .lc-labeled-checkbox {
