@@ -20,6 +20,9 @@ open http://localhost:${HOST_KIBANA_PORT##*:}
 # Open Temporal UI
 open http://localhost:${HOST_TEMPORAL_UI_PORT##*:}
 
+# Open Faktory UI
+open http://localhost:${HOST_FAKTORY_UI_PORT##*:}
+
 # Open Mailpit Web UI
 open http://localhost:${HOST_MAILPIT_WEB_PORT##*:}
 
