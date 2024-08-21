@@ -169,6 +169,7 @@ services:
       target: build
     command: watchexec --restart --exts go -- go run background-worker/main.go
     environment:
+      APP_ENV: development
       FAKTORY_URL: tcp://faktory:7419
       SERVICE_NAME: background-worker
       SMTP_URL: smtp://mailpit:1025

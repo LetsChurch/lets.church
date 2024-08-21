@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/gob"
 	"encoding/json"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -19,7 +18,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/samber/lo"
 	"github.com/samber/oops"
 
 	"github.com/contribsys/faktory/client"
@@ -27,7 +25,6 @@ import (
 	"github.com/labstack/echo-contrib/session"
 	_ "github.com/lib/pq"
 
-	axiomAdapter "github.com/axiomhq/axiom-go/adapters/zerolog"
 	"github.com/rs/zerolog"
 	l "github.com/rs/zerolog/log"
 )
@@ -56,19 +53,7 @@ func getDbConn(ctx context.Context) *pgx.Conn {
 
 func main() {
 	debug := os.Getenv("APP_ENV") == "development"
-	l.Logger = zerolog.New(lo.TernaryF(
-		debug,
-		func() io.Writer {
-			return zerolog.ConsoleWriter{Out: os.Stderr}
-		},
-		func() io.Writer {
-			writer, err := axiomAdapter.New()
-			if err != nil {
-				log.Fatal(err)
-			}
-			return io.MultiWriter(writer, os.Stderr)
-		},
-	))
+	util.InitLogger()
 	gob.Register(util.Flash{})
 	ctx := context.Background()
 
@@ -97,7 +82,7 @@ func main() {
 	}
 
 	app := echo.New()
-	app.Debug = os.Getenv("APP_ENV") == "development"
+	app.Debug = debug
 	setupErrorHandler(app)
 	app.File("/favicon.ico", "assets/favicon.ico")
 	app.Static("/assets", "assets")
