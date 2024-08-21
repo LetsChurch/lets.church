@@ -309,15 +309,15 @@ func (h *Handler) PostAuthRegister(c echo.Context) error {
 }
 
 func (h *Handler) GetAuthVerify(c echo.Context) error {
-	userId, err := util.Parse(c.QueryParam("userId"))
+	userId, err := util.ParseUuid(c.QueryParam("userId"))
 	if err != nil {
 		return c.NoContent(http.StatusNotFound)
 	}
-	emailId, err := util.Parse(c.QueryParam("emailId"))
+	emailId, err := util.ParseUuid(c.QueryParam("emailId"))
 	if err != nil {
 		return c.NoContent(http.StatusNotFound)
 	}
-	emailKey, err := util.Parse(c.QueryParam("emailKey"))
+	emailKey, err := util.ParseUuid(c.QueryParam("emailKey"))
 	if err != nil {
 		return c.NoContent(http.StatusNotFound)
 	}
@@ -383,7 +383,7 @@ func (h *Handler) PostAuthResetPassword(c echo.Context) error {
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
-		id, _ := util.Parse(claims["id"].(string))
+		id, _ := util.ParseUuid(claims["id"].(string))
 		password := c.FormValue("password")
 		if password == "" {
 			return eb.Public("Missing new password").Errorf("missing password")

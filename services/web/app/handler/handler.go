@@ -33,7 +33,7 @@ func (h *Handler) getAppContext(c echo.Context) (*util.AppContext, error) {
 		Flashes:       flashes,
 		Authenticated: sessionId != nil,
 		SessionId: lo.IfF(sessionId != nil, func() *util.Uuid {
-			id, err := util.Parse(sessionId.(string))
+			id, err := util.ParseUuid(sessionId.(string))
 			if err != nil {
 				return nil
 			}

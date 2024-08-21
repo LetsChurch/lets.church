@@ -13,7 +13,7 @@ const base58Alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWX
 
 type Uuid [16]byte
 
-func Parse(id string) (Uuid, error) {
+func ParseUuid(id string) (Uuid, error) {
 	if len(id) == 22 {
 		alphabetLen := big.NewInt(int64(len(base58Alphabet)))
 		x := big.NewInt(0)

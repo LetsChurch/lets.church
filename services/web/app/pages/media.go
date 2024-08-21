@@ -48,7 +48,7 @@ type MediaProps struct {
 }
 
 func Media(ac *util.AppContext, props MediaProps) g.Node {
-	uuid, _ := util.Parse(props.UploadId)
+	uuid, _ := util.ParseUuid(props.UploadId)
 
 	audioOnly := lo.EveryBy(props.Variants, func(v data.UploadVariant) bool {
 		return strings.HasPrefix(string(v), "AUDIO")

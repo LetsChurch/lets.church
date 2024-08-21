@@ -25,7 +25,7 @@ func (h *Handler) Media(c echo.Context) (err error) {
 		return errors.New("missing id")
 	}
 
-	uploadUuid, err := util.Parse(id)
+	uploadUuid, err := util.ParseUuid(id)
 	if err != nil {
 		fmt.Println(err)
 		return err
