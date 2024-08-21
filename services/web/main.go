@@ -143,7 +143,9 @@ func setupErrorHandler(e *echo.Echo) {
 	defaultHandler := e.HTTPErrorHandler
 
 	e.HTTPErrorHandler = func(err error, c echo.Context) {
-		l.Logger.Error().AnErr("echo", err).Send()
+		oopsErr, _ := oops.AsOops(oops.Hint("echo global error handler").Wrap(err))
+		LogOops(l.Logger, oopsErr).Error().Send()
+
 		if c.Request().Header.Get("HX-Request") != "" {
 			// Get message
 			message := oops.GetPublic(err, ISE)
@@ -167,4 +169,14 @@ func setupErrorHandler(e *echo.Echo) {
 
 		defaultHandler(err, c)
 	}
+}
+
+func LogOops(l zerolog.Logger, err oops.OopsError) *zerolog.Logger {
+	ctx := l.With()
+	for k, v := range err.ToMap() {
+		ctx = ctx.Interface(k, v)
+	}
+
+	logger := ctx.Err(err).Logger()
+	return &logger
 }

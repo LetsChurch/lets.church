@@ -12,8 +12,11 @@ import (
 	"os"
 	"strings"
 
+	"github.com/contribsys/faktory/client"
 	worker "github.com/contribsys/faktory_worker_go"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
+	"github.com/samber/oops"
 )
 
 var SMTP_URL string = os.Getenv("SMTP_URL")
@@ -24,6 +27,23 @@ type EmailArgs struct {
 	Text    string   `json:"text"`
 	Html    string   `json:"html"`
 	To      []string `json:"to"`
+}
+
+func QueueEmailJob(c *client.Client, args EmailArgs) error {
+	eb := oops.Hint("QueueEmailJob")
+	emailJson, err := json.Marshal(args)
+	if err != nil {
+		return eb.Hint("Could not serialize email job arguments").Wrap(err)
+	}
+
+	err = c.Push(&client.Job{
+		Queue: "background",
+		Type:  "SendEmail",
+		Args:  []any{string(emailJson)},
+		Jid:   uuid.NewString(),
+	})
+
+	return oops.Hint("Could not submit email job").Wrap(err)
 }
 
 func SendEmail(ctx context.Context, args ...any) error {

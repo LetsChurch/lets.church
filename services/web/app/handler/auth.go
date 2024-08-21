@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -10,13 +9,12 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/contribsys/faktory/client"
-	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/samber/lo"
+	"github.com/samber/oops"
 	"github.com/trustelem/zxcvbn"
 	"lets.church/web/app/data"
 	"lets.church/web/app/pages"
@@ -28,9 +26,10 @@ import (
 )
 
 func (h *Handler) GetAuthLogin(c echo.Context) (err error) {
+	eb := oops.In("GetAuthLogin")
 	ac, err := h.getAppContext(c)
 	if err != nil {
-		return err
+		return eb.Hint("Could not get app context").Wrap(err)
 	}
 
 	if ac.Authenticated {
@@ -131,6 +130,7 @@ type ResetPasswordClaims struct {
 }
 
 func (h *Handler) PostAuthForgotPassword(c echo.Context) (err error) {
+	eb := oops.In("PostAuthForgotPassword")
 	ac, err := h.getAppContext(c)
 	if err != nil {
 		return err
@@ -168,26 +168,28 @@ func (h *Handler) PostAuthForgotPassword(c echo.Context) (err error) {
 
 	resetUrl := h.PublicUrl + "/auth/reset-password?token=" + tokenString
 
-	emailJob := jobs.EmailArgs{
+	html, err := util.MakeEmailHtml(util.MakeEmailHtmlArgs{
+		Title:   "Welcome to Let's Church!",
+		Preview: "Please verify your email.",
+		Body: []string{
+			"Hello! Please click <a href=\"" + resetUrl + "\">here</a> to reset your password.",
+			"This link will expire in 15 minutes.",
+			"If you did not request a password reset, please ignore this email.",
+		},
+	})
+	if err != nil {
+		return eb.Hint("Could not make password reset email HTML").Wrap(err)
+	}
+
+	err = jobs.QueueEmailJob(h.FaktoryClient, jobs.EmailArgs{
 		From:    "hello@lets.church",
 		To:      []string{email},
 		Subject: "Reset Your Password For Let's Church",
 		Text:    "Hello! Please visit the following link to reset your password: " + resetUrl + "\n\nThis link will expire in 15 minutes.\n\nIf you did not request a password reset, please ignore this email.",
-		Html:    "Hello! Please click <a href=\"" + resetUrl + "\">here</a> to reset your password.\n\nThis link will expire in 15 minutes.\n\nIf you did not request a password reset, please ignore this email.",
-	}
-	emailJson, err := json.Marshal(emailJob)
-	if err != nil {
-		return err
-	}
-
-	err = h.FaktoryClient.Push(&client.Job{
-		Queue: "background",
-		Type:  "SendEmail",
-		Args:  []any{string(emailJson)},
-		Jid:   uuid.NewString(),
+		Html:    html,
 	})
 	if err != nil {
-		return err
+		return eb.Hint("Could not send reset password email").Wrap(err)
 	}
 
 	return c.Redirect(http.StatusFound, "/")
@@ -207,9 +209,10 @@ func (h *Handler) GetAuthRegister(c echo.Context) error {
 }
 
 func (h *Handler) PostAuthRegister(c echo.Context) error {
+	eb := oops.In("PostAuthRegister")
 	ac, err := h.getAppContext(c)
 	if err != nil {
-		return err
+		return eb.Hint("Could not get app context").Wrap(err)
 	}
 
 	if ac.Authenticated {
@@ -225,27 +228,24 @@ func (h *Handler) PostAuthRegister(c echo.Context) error {
 	_, emailErr := mail.ParseAddress(email)
 
 	if len(username) < 3 || emailErr != nil {
-		h.addFlash(c, util.Flash{Level: "warning", Title: "Invalid", Message: "Invalid form values."})
-		// TODO: keep form values, maybe via trigger
-		return c.Redirect(http.StatusFound, "/auth/register")
+		return eb.Public("Invalid email address.").Wrap(emailErr)
 	}
 
 	zRes := zxcvbn.PasswordStrength(password, []string{username, email})
 
 	if zRes.Score < h.ZxcvbnMinimumScore {
-		h.addFlash(c, util.Flash{Level: "warning", Title: "Weak password", Message: "Please pick a stronger password. Try to avoid repeated characters and common sequences, and make sure your password is long."})
-		// TODO: keep form values, maybe via trigger
-		return c.Redirect(http.StatusFound, "/auth/register")
+		return eb.Public("Please pick a stronger password. Try to avoid repeated characters and common sequences, and make sure your password is long.").
+			Errorf("Password too weak: %d", zRes.Score)
 	}
 
 	hash, err := argon2id.CreateHash(password, argon2id.DefaultParams)
 	if err != nil {
-		return err
+		return eb.Hint("Could not create argon2id password hash").Wrap(err)
 	}
 
 	tx, err := h.PgxConn.Begin(c.Request().Context())
 	if err != nil {
-		return err
+		return eb.Hint("Could not start Postgres transaction").Wrap(err)
 	}
 
 	qtx := h.Queries.WithTx(tx)
@@ -256,7 +256,7 @@ func (h *Handler) PostAuthRegister(c echo.Context) error {
 	})
 	if err != nil {
 		tx.Rollback(c.Request().Context())
-		return err
+		return eb.Hint("Could not create user").Wrap(err)
 	}
 
 	emailRow, err := qtx.CreateUserEmail(
@@ -265,11 +265,11 @@ func (h *Handler) PostAuthRegister(c echo.Context) error {
 	)
 	if err != nil {
 		tx.Rollback(c.Request().Context())
-		return err
+		return eb.Hint("Email address is probably already registered").Wrap(err)
 	}
 
 	if err := tx.Commit(c.Request().Context()); err != nil {
-		return err
+		return eb.Hint("Could not commit Postgres transaction").Wrap(err)
 	}
 
 	params := url.Values{}
@@ -277,31 +277,33 @@ func (h *Handler) PostAuthRegister(c echo.Context) error {
 	params.Add("emailId", util.Uuid(emailRow.ID.Bytes).Base58())
 	params.Add("emailKey", util.Uuid(emailRow.Key.Bytes).Base58())
 	verifyUrl := h.PublicUrl + "/auth/verify?" + params.Encode()
-	emailJob := jobs.EmailArgs{
+	html, err := util.MakeEmailHtml(util.MakeEmailHtmlArgs{
+		Title:   "Welcome to Let's Church!",
+		Preview: "Please verify your email.",
+		Body: []string{
+			"Welcome to Let's Church, <b>" + username + "</b>! Please click <a href=\"" + verifyUrl + "\" target=\"_blank\">here</a> to verify your email.",
+		},
+	})
+	if err != nil {
+		return eb.Hint("Could not generate HTML for email validation email").Wrap(err)
+	}
+
+	err = jobs.QueueEmailJob(h.FaktoryClient, jobs.EmailArgs{
 		From:    "hello@lets.church",
 		To:      []string{email},
 		Subject: "Welcome to Let's Church! Please verify your email.",
 		Text:    "Welcome, " + username + "! Please visit the following link to verify your email: " + verifyUrl,
-		Html:    "Welcome to Let's Church, <b>" + username + "</b>! Please click <a href=\"" + verifyUrl + "\">here</a> to verify your email.",
-	}
-	emailJson, err := json.Marshal(emailJob)
-	if err != nil {
-		return err
-	}
-
-	err = h.FaktoryClient.Push(&client.Job{
-		Queue: "background",
-		Type:  "SendEmail",
-		Args:  []any{string(emailJson)},
-		Jid:   uuid.NewString(),
+		Html:    html,
 	})
 	if err != nil {
-		return err
+		return eb.Hint("Could not send email verification email").Wrap(err)
 	}
 
 	if subscribeToNewsletter {
 		h.Queries.SubscribeToNewsletter(c.Request().Context(), pgtype.Text{String: email, Valid: true})
 	}
+
+	h.addFlash(c, util.Flash{Level: "success", Title: "Check your email!", Message: "We sent an email to " + email + " for verification."})
 
 	return c.Redirect(http.StatusFound, "/")
 }
@@ -330,35 +332,37 @@ func (h *Handler) GetAuthVerify(c echo.Context) error {
 }
 
 func (h *Handler) GetAuthResetPassword(c echo.Context) error {
+	eb := oops.In("GetAuthResetPassword")
 	ac, err := h.getAppContext(c)
 	if err != nil {
-		return err
+		return eb.Hint("Could not get app context").Wrap(err)
 	}
 
 	tokenString := c.QueryParam("token")
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			return nil, eb.Public("Invalid token").Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 
 		return h.JwtSecret, nil
 	})
 	if err != nil {
-		return err
+		return eb.Public("Invalid token").Wrap(err)
 	}
 
 	if _, ok := token.Claims.(jwt.MapClaims); !ok {
-		return err
+		return eb.Public("Invalid token").Wrap(err)
 	}
 
 	return Render(c, http.StatusOK, pages.ResetPassword(ac, pages.ResetPasswordProps{Csrf: c.Get("csrf").(string), Token: tokenString}))
 }
 
 func (h *Handler) PostAuthResetPassword(c echo.Context) error {
+	eb := oops.In("PostAuthResetPassword")
 	ac, err := h.getAppContext(c)
 	if err != nil {
-		return err
+		return eb.Hint("Could not get app context").Wrap(err)
 	}
 
 	if ac.Authenticated {
@@ -375,27 +379,27 @@ func (h *Handler) PostAuthResetPassword(c echo.Context) error {
 		return h.JwtSecret, nil
 	})
 	if err != nil {
-		return err
+		return eb.Public("Invalid token").Wrap(err)
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
 		id, _ := util.Parse(claims["id"].(string))
 		password := c.FormValue("password")
 		if password == "" {
-			return errors.New("missing password")
+			return eb.Public("Missing new password").Errorf("missing password")
 		}
 
 		// TODO: user inputs instead of nil?
 		zRes := zxcvbn.PasswordStrength(password, nil)
 
 		if zRes.Score < h.ZxcvbnMinimumScore {
-			h.addFlash(c, util.Flash{Level: "warning", Title: "Weak password", Message: "Please pick a stronger password. Try to avoid repeated characters and common sequences, and make sure your password is long."})
-			return c.Redirect(http.StatusFound, "/auth/reset-password?token="+tokenString)
+			return eb.Public("Please pick a stronger password. Try to avoid repeated characters and common sequences, and make sure your password is long.").
+				Errorf("Password too weak: %d", zRes.Score)
 		}
 
 		hash, err := argon2id.CreateHash(password, argon2id.DefaultParams)
 		if err != nil {
-			return err
+			return eb.Hint("Could not create argon2id password hash").Wrap(err)
 		}
 
 		h.Queries.ChangePassword(c.Request().Context(), data.ChangePasswordParams{ID: id.Pg(), Password: hash})
@@ -413,9 +417,10 @@ func (h *Handler) PostAuthResetPassword(c echo.Context) error {
 }
 
 func (h *Handler) getSession(c echo.Context) (*data.GetSessionRow, error) {
+	eb := oops.In("getSession")
 	ac, err := h.getAppContext(c)
 	if err != nil {
-		return nil, err
+		return nil, eb.Hint("Could not get app context").Wrap(err)
 	}
 
 	if !ac.Authenticated {
@@ -424,20 +429,21 @@ func (h *Handler) getSession(c echo.Context) (*data.GetSessionRow, error) {
 
 	appSession, err := h.Queries.GetSession(c.Request().Context(), ac.SessionId.Pg())
 
-	return &appSession, err
+	return &appSession, eb.Hint("Could not get session from Postgres").Wrap(err)
 }
 
 func (h *Handler) createSession(c echo.Context, user *data.AppUser, remember bool) (*util.Uuid, error) {
+	eb := oops.In("createSession")
 	res, err := h.Queries.CreateSession(c.Request().Context(), user.ID)
 	if err != nil {
-		return nil, err
+		return nil, eb.Hint("Could not create session in Postgres").Wrap(err)
 	}
 
 	sessionId := util.Uuid(res.Bytes)
 
 	sess, err := session.Get("session", c)
 	if err != nil {
-		return nil, err
+		return nil, eb.Hint("Could not get session").Wrap(err)
 	}
 
 	sess.Options = &sessions.Options{
@@ -448,23 +454,25 @@ func (h *Handler) createSession(c echo.Context, user *data.AppUser, remember boo
 	sess.Values["id"] = sessionId.Canonical()
 
 	if err := sess.Save(c.Request(), c.Response()); err != nil {
-		return nil, err
+		return nil, eb.Hint("Could not save session to response").Wrap(err)
 	}
 
 	return &sessionId, nil
 }
 
 func (h *Handler) deleteSession(c echo.Context, sessionRow *data.GetSessionRow) error {
+	eb := oops.In("deleteSession")
 	sess, err := session.Get("session", c)
 	if err != nil {
-		return err
+		return eb.Hint("Could not get session to delete").Wrap(err)
 	}
 
 	sess.Values["id"] = nil
 
 	if err := sess.Save(c.Request(), c.Response()); err != nil {
-		return err
+		return eb.Hint("Could not save session to response").Wrap(err)
 	}
 
-	return h.Queries.DeleteSession(c.Request().Context(), sessionRow.ID)
+	return eb.Hint("Could not delete session from Postgres").
+		Wrap(h.Queries.DeleteSession(c.Request().Context(), sessionRow.ID))
 }
