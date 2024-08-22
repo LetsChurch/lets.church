@@ -104,49 +104,49 @@ build-gateway:
   <<: *build-common
   script:
     - cd services/gateway
-    - depot build --target server -t registry.gitlab.com/letschurch/lets.church/gateway:${CI_COMMIT_SHORT_SHA} . --push
+    - depot build --platform linux/amd64,linux/arm64 --target server -t registry.gitlab.com/letschurch/lets.church/gateway:${CI_COMMIT_SHORT_SHA} . --push
 
 build-background-worker:
   <<: *build-common
   script:
     - cd services/gateway
-    - depot build --target background-worker -t registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA} . --push
+    - depot build --platform linux/amd64,linux/arm64 --target background-worker -t registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA} . --push
 
 build-probe-worker:
   <<: *build-common
   script:
     - cd services/gateway
-    - depot build --target probe-worker -t registry.gitlab.com/letschurch/lets.church/probe-worker:${CI_COMMIT_SHORT_SHA} . --push
+    - depot build --platform linux/amd64,linux/arm64 --target probe-worker -t registry.gitlab.com/letschurch/lets.church/probe-worker:${CI_COMMIT_SHORT_SHA} . --push
 
 build-import-worker:
   <<: *build-common
   script:
     - cd services/gateway
-    - depot build --target import-worker -t registry.gitlab.com/letschurch/lets.church/import-worker:${CI_COMMIT_SHORT_SHA} . --push
+    - depot build --platform linux/amd64,linux/arm64 --target import-worker -t registry.gitlab.com/letschurch/lets.church/import-worker:${CI_COMMIT_SHORT_SHA} . --push
 
 build-transcode-worker:
   <<: *build-common
   script:
     - cd services/gateway
-    - depot build --target transcode-worker -t registry.gitlab.com/letschurch/lets.church/transcode-worker:${CI_COMMIT_SHORT_SHA} . --push
+    - depot build --platform linux/amd64,linux/arm64 --target transcode-worker -t registry.gitlab.com/letschurch/lets.church/transcode-worker:${CI_COMMIT_SHORT_SHA} . --push
 
 build-transcribe-worker:
   <<: *build-common
   script:
     - cd services/gateway
-    - depot build --target transcribe-worker --build-arg WHISPER_MODEL=large-v2 -t registry.gitlab.com/letschurch/lets.church/transcribe-worker:${CI_COMMIT_SHORT_SHA} . --push
+    - depot build --platform linux/amd64,linux/arm64 --target transcribe-worker --build-arg WHISPER_MODEL=large-v2 -t registry.gitlab.com/letschurch/lets.church/transcribe-worker:${CI_COMMIT_SHORT_SHA} . --push
 
 build-web:
   <<: *build-common
   script:
     - cd apps/web
-    - depot build -t registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA} . --push
+    - depot build --platform linux/amd64,linux/arm64 -t registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA} . --push
 
 build-web-next:
   <<: *build-common
   script:
     - cd apps/web-next
-    - depot build -t registry.gitlab.com/letschurch/lets.church/web-next:${CI_COMMIT_SHORT_SHA} . --push
+    - depot build --platform linux/amd64,linux/arm64 -t registry.gitlab.com/letschurch/lets.church/web-next:${CI_COMMIT_SHORT_SHA} . --push
 
 #  ____             _
 # |  _ \  ___ _ __ | | ___  _   _
