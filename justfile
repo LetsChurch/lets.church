@@ -158,3 +158,9 @@ tf *params:
 
 deploy env:
   just infra/deploy {{env}}
+
+dash:
+  sampler -c ./infra/sampler.yml
+
+pv-usage *flags='-h':
+  ./infra/pv-usage.sh {{flags}}

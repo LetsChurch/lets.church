@@ -19,6 +19,7 @@ mkShell {
     navi
     nodejs_20
     rclone
+    sampler
     transcrypt
     unixtools.xxd
   ];

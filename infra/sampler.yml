@@ -1,0 +1,58 @@
+# 80x40
+barcharts:
+  - title: Media Transcoded (Past Hour)
+    position: [[0, 0], [20, 8]]
+    rate-ms: 5000
+    scale: 0
+    items:
+      - label: awsaw
+        sample: axiom query --start-time -1h 'pino | where (hostname =~ "awsaw" and temporalActivity =~ "transcode" and msg =~ "Queueing final update for upload record") | summarize count()'
+      - label: saphar
+        sample: axiom query --start-time -1h 'pino | where (hostname =~ "saphar" and temporalActivity =~ "transcode" and msg =~ "Queueing final update for upload record") | summarize count()'
+  - title: Media Transcribed (Past Hour)
+    position: [[20, 0], [20, 8]]
+    rate-ms: 5000
+    scale: 0
+    items:
+      - label: saphar
+        sample: axiom query --start-time -1h 'pino | where (hostname =~ "saphar" and temporalActivity =~ "transcribe" and msg =~ "done uploading transcript.vtt") | summarize count()'
+  - title: Imported Media Counts (Past Hour)
+    position: [[40, 0], [20, 8]]
+    rate-ms: 5000
+    scale: 0
+    items:
+      - label: raa
+        sample: axiom query --start-time -1h 'pino | where (hostname =~ "raa" and temporalActivity =~ "importMedia" and msg startswith "yt-dlp downloaded") | summarize count()'
+      - label: saphar
+        sample: axiom query --start-time -1h 'pino | where (hostname =~ "saphar" and temporalActivity =~ "importMedia" and msg startswith "yt-dlp downloaded") | summarize count()'
+gauges:
+  - title: PostgreSQL Volume Usage
+    position: [[60, 0], [20, 4]]
+    rate-ms: 5000
+    cur:
+      sample: just pv-usage | grep "pg-instance1-dqf6-pgdata" | awk '{print $3}' | tr -cd '0-9.'
+    min:
+      sample: echo 0
+    max:
+      sample: just pv-usage | grep "pg-instance1-dqf6-pgdata" | awk '{print $2}' | tr -cd '0-9.'
+  - title: ElasticSearch Volume Usage
+    position: [[60, 4], [20, 4]]
+    rate-ms: 5000
+    cur:
+      sample: just pv-usage | grep "elasticsearch-pvc" | awk '{print $3}' | tr -cd '0-9.'
+    min:
+      sample: echo 0
+    max:
+      sample: just pv-usage | grep "elasticsearch-pvc" | awk '{print $2}' | tr -cd '0-9.'
+runcharts:
+  - title: Ping Times
+    position: [[0, 8], [80, 32]]
+    rate-ms: 500
+    scale: 3
+    items:
+      - label: awsaw
+        sample: ping -c 1 awsaw | grep 'time=' | awk -F'time=' '{ print $2 }' | awk '{ print $1 }'
+      - label: raa
+        sample: ping -c 1 raa | grep 'time=' | awk -F'time=' '{ print $2 }' | awk '{ print $1 }'
+      - label: saphar
+        sample: ping -c 1 saphar | grep 'time=' | awk -F'time=' '{ print $2 }' | awk '{ print $1 }'
