@@ -58,6 +58,8 @@ configMapGenerator:
     literals:
       - TEMPORAL_SHUTDOWN_GRACE_TIME=1m
       - IDENTITY=(CLOUD1)
+      - MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS=2
+      - MAX_CONCURRENT_WORKFLOW_TASK_EXECUTIONS=2
   - name: transcode-worker-config
     literals:
       - TEMPORAL_SHUTDOWN_GRACE_TIME=1h
