@@ -1,0 +1,8 @@
+default:
+  @just --choose
+
+init:
+  ansible-galaxy install -r requirements.yml
+
+play:
+  ansible-playbook import-worker.yml -K

@@ -1,0 +1,27 @@
+x-env: &x-env
+
+services:
+  import-worker:
+    image: registry.gitlab.com/letschurch/lets.church/import-worker:{{lc_hash}}
+    restart: always
+    network_mode: host
+    environment:
+      IDENTITY: {{identity}}
+      SERVICE_NAME: import-worker
+      AXIOM_DATASET: ${AXIOM_DATASET}
+      AXIOM_TOKEN: ${AXIOM_TOKEN}
+      MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 1
+      MAX_CONCURRENT_WORKFLOW_TASK_EXECUTIONS: 1
+      S3_INGEST_ACCESS_KEY_ID: ${S3_INGEST_ACCESS_KEY_ID}
+      S3_INGEST_BUCKET: ${S3_INGEST_BUCKET}
+      S3_INGEST_ENDPOINT: ${S3_INGEST_ENDPOINT}
+      S3_INGEST_REGION: ${S3_INGEST_REGION}
+      S3_INGEST_SECRET_ACCESS_KEY: ${S3_INGEST_SECRET_ACCESS_KEY}
+      S3_PUBLIC_ACCESS_KEY_ID: ${S3_PUBLIC_ACCESS_KEY_ID}
+      S3_PUBLIC_BUCKET: ${S3_PUBLIC_BUCKET}
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT}
+      S3_PUBLIC_REGION: ${S3_PUBLIC_REGION}
+      S3_PUBLIC_SECRET_ACCESS_KEY: ${S3_PUBLIC_SECRET_ACCESS_KEY}
+      SENTRY_DSN: ${SENTRY_DSN}
+      TEMPORAL_ADDRESS: letschurch-prod-temporal:7233
+      TEMPORAL_SHUTDOWN_GRACE_TIME: 1h

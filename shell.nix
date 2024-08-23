@@ -8,6 +8,7 @@ with (import (fetchTarball {
 
 mkShell {
   packages = [
+    ansible
     fd
     git-lfs
     gitleaks
