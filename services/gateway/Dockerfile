@@ -64,6 +64,6 @@ CMD npm run start:transcribe-worker
 
 FROM base as import-worker
 RUN apt-get install -y python3 ffmpeg
-COPY --from=jauderho/yt-dlp:2023.11.16 /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
+COPY --from=jauderho/yt-dlp:2024.08.06 /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
 RUN npm run prisma:generate
 CMD npm run start:import-worker
