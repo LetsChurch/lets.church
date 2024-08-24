@@ -47,3 +47,11 @@ FROM
 LEFT JOIN channel c ON ur.channel_id = c.id
 LEFT JOIN channel_subscription cs ON ur.channel_id = cs.channel_id AND cs.app_user_id = sqlc.arg(user_id)
 WHERE ur.id = sqlc.arg(upload_id);
+
+-- name: GetUploadUserComments :many
+SELECT
+  c.id, c.created_at, c.replying_to_id, a.username, c.text, c.score
+FROM upload_user_comment c
+LEFT JOIN app_user a ON c.author_id = a.id
+WHERE c.upload_id = sqlc.arg(upload_id)
+ORDER BY c.score DESC;

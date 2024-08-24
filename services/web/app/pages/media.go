@@ -44,6 +44,7 @@ func getDimensions(variants []data.UploadVariant) (int, int) {
 type MediaProps struct {
 	*data.UploadDataRow
 	Transcript *astisub.Subtitles
+	Comments   map[string][]data.GetUploadUserCommentsRow
 	UploadId   string
 }
 
@@ -85,23 +86,9 @@ func Media(ac *util.AppContext, props MediaProps) g.Node {
 				),
 			),
 			h.Div(h.Class("lc-media__content"),
-				h.Div(h.Class("lc-media__content__meta"),
-					h.Div(h.Class("lc-media__content__meta__stats"),
-						h.P(h.Class("lc-media__content__meta__stats__views"),
-							g.Text(fmt.Sprintf("%d views", props.TotalViews)),
-						),
-						h.Time(h.Class("lc-media__content__meta__stats__date"),
-							g.Attr("datetime", "2024-07-09T18:28:18.961Z"),
-							g.Text("July 9, 2024"),
-						),
-					),
-					h.Div(
-						g.Text(props.Description.String),
-					),
-				),
 				h.Script(h.Type("module"), h.Src("/assets/components/transcript.js"), h.Defer()),
 				g.El("lc-transcript",
-					h.Dl(h.Class("lc-media__content__transcript"),
+					h.Dl(h.Class("lc-media__content__transcript float-right float-right-gap"),
 						g.Group(g.Map(props.Transcript.Items, func(item *astisub.Item) g.Node {
 							return h.Div(
 								h.Class("lc-media__content__transcript__segment"),
@@ -113,6 +100,27 @@ func Media(ac *util.AppContext, props MediaProps) g.Node {
 						})),
 					),
 				),
+				h.Div(h.Class("lc-media__content__meta bfc-scroll"),
+					h.Div(h.Class("lc-media__content__meta__stats"),
+						h.P(h.Class("lc-media__content__meta__stats__views"),
+							g.Text(fmt.Sprintf("%d views", props.TotalViews)),
+						),
+						h.Time(h.Class("lc-media__content__meta__stats__date"),
+							g.Attr("datetime", "2024-07-09T18:28:18.961Z"),
+							g.Text("July 9, 2024"),
+						),
+					),
+					g.If(props.Description.String != "", h.Div(
+						g.Text(props.Description.String),
+					)),
+				),
+			),
+			h.Div(
+				g.Iff(props.Comments[""] != nil, func() g.Node {
+					return g.Group(g.Map(props.Comments[""], func(rootComment data.GetUploadUserCommentsRow) g.Node {
+						return h.Div(g.Text(rootComment.Text))
+					}))
+				}),
 			),
 		),
 	)

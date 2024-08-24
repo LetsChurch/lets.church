@@ -11,6 +11,51 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const getUploadUserComments = `-- name: GetUploadUserComments :many
+SELECT
+  c.id, c.created_at, c.replying_to_id, a.username, c.text, c.score
+FROM upload_user_comment c
+LEFT JOIN app_user a ON c.author_id = a.id
+WHERE c.upload_id = $1
+ORDER BY c.score DESC
+`
+
+type GetUploadUserCommentsRow struct {
+	ID           pgtype.UUID
+	CreatedAt    pgtype.Timestamp
+	ReplyingToID pgtype.UUID
+	Username     pgtype.Text
+	Text         string
+	Score        float64
+}
+
+func (q *Queries) GetUploadUserComments(ctx context.Context, uploadID pgtype.UUID) ([]GetUploadUserCommentsRow, error) {
+	rows, err := q.db.Query(ctx, getUploadUserComments, uploadID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetUploadUserCommentsRow
+	for rows.Next() {
+		var i GetUploadUserCommentsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CreatedAt,
+			&i.ReplyingToID,
+			&i.Username,
+			&i.Text,
+			&i.Score,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const trendingUploads = `-- name: TrendingUploads :many
 SELECT
   upload_record.id,

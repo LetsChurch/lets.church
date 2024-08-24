@@ -6,7 +6,7 @@ import (
 )
 
 func Footer() g.Node {
-	return h.Footer(h.Class("lc-container lc-footer"),
+	return h.Footer(h.Class("lc-container lc-footer clear-both"),
 		h.Div(h.Class("newsletter"),
 			h.Div(
 				h.H3(g.Text("Join our newsletter")),

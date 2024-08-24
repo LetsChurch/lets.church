@@ -137,4 +137,23 @@
   .flip-x {
     transform: scaleX(-1);
   }
+
+  .float-right {
+    float: right;
+  }
+
+  .float-right-gap {
+    --gap: calc(2 * var(--unit));
+    margin: 0 0 var(--gap) var(--gap);
+  }
+
+  .clear-both {
+    clear: both;
+  }
+
+  /* https://stackoverflow.com/a/36092138 */
+  /* https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_display/Block_formatting_context */
+  .bfc-scroll {
+    overflow: auto;
+  }
 }

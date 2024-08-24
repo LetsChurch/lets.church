@@ -1,11 +1,12 @@
 package handler
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/samber/lo"
+	"github.com/samber/oops"
 	"lets.church/web/app/data"
 	"lets.church/web/app/pages"
 	"lets.church/web/app/util"
@@ -14,45 +15,61 @@ import (
 )
 
 func (h *Handler) Media(c echo.Context) (err error) {
+	eb := oops.In("handler::Media")
 	ac, err := h.getAppContext(c)
 	if err != nil {
-		return err
+		return eb.Hint("Could not get app context").Wrap(err)
 	}
 
 	id := c.Param("id")
 
 	if id == "" {
-		return errors.New("missing id")
+		return eb.Errorf("missing id")
 	}
 
 	uploadUuid, err := util.ParseUuid(id)
 	if err != nil {
-		fmt.Println(err)
-		return err
+		return eb.Hint("Invalid upload ID").Public("Invalid ID").Wrap(err)
 	}
 
-	uploadRecord, err := h.Queries.UploadData(c.Request().Context(), data.UploadDataParams{UploadID: uploadUuid.Pg()})
+	pgUuid := uploadUuid.Pg()
+
+	uploadRecord, err := h.Queries.UploadData(c.Request().Context(), data.UploadDataParams{UploadID: pgUuid})
 	if err != nil {
-		fmt.Println(err)
-		return err
+		return eb.Hint("Could not fetch upload data").Wrap(err)
 	}
 
 	transcriptUrl := util.GetPublicMediaUrl(uploadUuid.Canonical() + "/transcript.vtt")
 	transcriptBytes, err := util.DownloadFileToReader(transcriptUrl)
 	if err != nil {
-		fmt.Println(err)
-		return err
+		return eb.Hint("Could not fetch transcript").Wrap(err)
 	}
 
 	transcript, err := astisub.ReadFromWebVTT(transcriptBytes)
 	if err != nil {
-		fmt.Println(err)
-		return err
+		return eb.Hint("Could not parse transcript").Wrap(err)
 	}
+
+	comments, err := h.Queries.GetUploadUserComments(c.Request().Context(), pgUuid)
+	if err != nil {
+		return eb.Hint("Could not fetch comments").Wrap(err)
+	}
+
+	groupedComments := lo.GroupBy(comments, func(comment data.GetUploadUserCommentsRow) string {
+		if comment.ReplyingToID.Valid {
+			return util.Uuid(comment.ReplyingToID.Bytes).Base58()
+		}
+
+		return ""
+	})
+
+	_ = groupedComments
+	fmt.Printf("%#v\n", len(groupedComments))
 
 	return Render(c, http.StatusOK, pages.Media(ac, pages.MediaProps{
 		UploadId:      id,
 		UploadDataRow: &uploadRecord,
+		Comments:      groupedComments,
 		Transcript:    transcript,
 	}))
 }

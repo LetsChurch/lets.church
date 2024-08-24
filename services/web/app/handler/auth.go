@@ -39,25 +39,11 @@ func (h *Handler) GetAuthLogin(c echo.Context) (err error) {
 	return Render(c, http.StatusOK, pages.Login(ac, pages.LoginProps{Csrf: c.Get("csrf").(string)}))
 }
 
-func (h *Handler) PostAuthCheckUsername(c echo.Context) (err error) {
-	username := c.FormValue("username")
-	userExists, err := h.Queries.UserExists(c.Request().Context(), pgtype.Text{String: username, Valid: true})
-	if err != nil {
-		return err
-	}
-
-	return Render(c, http.StatusOK, pages.RegisterUsernameInput(
-		pages.RegisterUsernameInputProps{
-			Value: username,
-			Error: lo.Ternary(userExists, "Username has already been taken", ""),
-		},
-	))
-}
-
 func (h *Handler) PostAuthLogin(c echo.Context) (err error) {
+	eb := oops.In("PostAuthLogin")
 	ac, err := h.getAppContext(c)
 	if err != nil {
-		return err
+		return eb.Hint("Could not get app context").Wrap(err)
 	}
 
 	if ac.Authenticated {
@@ -78,7 +64,7 @@ func (h *Handler) PostAuthLogin(c echo.Context) (err error) {
 	_ = user
 
 	if err != nil {
-		return err
+		return eb.Public("Error logging in. Please check your credentials and try again.").Wrap(err)
 	}
 
 	match, err := argon2id.ComparePasswordAndHash(password, user.Password)
@@ -87,8 +73,8 @@ func (h *Handler) PostAuthLogin(c echo.Context) (err error) {
 	}
 
 	if !match {
-		// TODO: Show error message
-		return Render(c, http.StatusOK, pages.Login(ac, pages.LoginProps{Csrf: csrf}))
+		return eb.Public("Error logging in. Please check your credentials and try again.").
+			Errorf("Password did not match for user %v", id)
 	}
 
 	h.createSession(c, &user, remember)
@@ -206,6 +192,21 @@ func (h *Handler) GetAuthRegister(c echo.Context) error {
 	}
 
 	return Render(c, http.StatusOK, pages.Register(ac, pages.RegisterProps{Csrf: c.Get("csrf").(string)}))
+}
+
+func (h *Handler) PostAuthCheckUsername(c echo.Context) (err error) {
+	username := c.FormValue("username")
+	userExists, err := h.Queries.UserExists(c.Request().Context(), pgtype.Text{String: username, Valid: true})
+	if err != nil {
+		return err
+	}
+
+	return Render(c, http.StatusOK, pages.RegisterUsernameInput(
+		pages.RegisterUsernameInputProps{
+			Value: username,
+			Error: lo.Ternary(userExists, "Username has already been taken", ""),
+		},
+	))
 }
 
 func (h *Handler) PostAuthRegister(c echo.Context) error {
