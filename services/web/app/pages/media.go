@@ -11,7 +11,7 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/asticode/go-astisub"
-	"lets.church/web/app/components"
+	c "lets.church/web/app/components"
 	"lets.church/web/app/data"
 	"lets.church/web/app/layouts"
 	"lets.church/web/app/util"
@@ -59,7 +59,7 @@ func Media(ac *util.AppContext, props MediaProps) g.Node {
 
 	return layouts.Main(
 		ac,
-		components.Player(components.PlayerProps{
+		c.Player(c.PlayerProps{
 			Id:        uuid.Canonical(),
 			PlayAt:    0.0,
 			AudioOnly: audioOnly,
@@ -67,45 +67,53 @@ func Media(ac *util.AppContext, props MediaProps) g.Node {
 			Height:    height,
 		}),
 		h.Div(h.Class("lc-container"),
-			h.H1(h.Class("lc-media__title"), g.Text(props.Title.String)),
-			h.Div(h.Class("lc-media__actions"),
-				h.A(
-					h.Href("/channel/"+props.ChannelSlug.String),
-					h.Class("lc-media__actions__channel"),
-					components.Avatar(components.AvatarProps{Src: "https://placehold.co/96", Name: props.ChannelName.String, Size: "md", Alt: props.ChannelName.String}),
-					h.Div(g.Text(props.ChannelName.String)),
-					components.Button(components.ButtonProps{Icon: "rss", Children: []g.Node{g.Text("Subscribe")}}),
-				),
-				h.Div(
-					components.Button(components.ButtonProps{Icon: "cloud-download", Children: []g.Node{g.Text("Download")}}),
-					components.Button(components.ButtonProps{Icon: "share", Children: []g.Node{g.Text("Share")}}),
-					h.Div(h.Class("lc-button-group"),
-						components.Button(components.ButtonProps{Icon: "thumb-up", Children: []g.Node{g.Text("Up")}}),
-						components.Button(components.ButtonProps{Icon: "thumb-down", IconClass: "flip-x", Children: []g.Node{g.Text("Down")}}),
+			h.Div(
+				h.Class("lc-media__meta"),
+				h.H1(h.Class("lc-media__meta__title"), g.Text(props.Title.String)),
+				h.Div(h.Class("lc-media__meta__actions"),
+					h.A(
+						h.Href("/channel/"+props.ChannelSlug.String),
+						h.Class("lc-media__meta__actions__channel"),
+						c.Avatar(c.AvatarProps{Src: "https://placehold.co/96", Name: props.ChannelName.String, Size: "md", Alt: props.ChannelName.String}),
+						h.Div(g.Text(props.ChannelName.String)),
+						c.Button(c.ButtonProps{Icon: "rss", Children: []g.Node{g.Text("Subscribe")}}),
+					),
+					h.Div(
+						c.Button(c.ButtonProps{Icon: "cloud-download", Children: []g.Node{g.Text("Download")}}),
+						c.Button(c.ButtonProps{Icon: "share", Children: []g.Node{g.Text("Share")}}),
+						h.Div(h.Class("lc-button-group"),
+							c.Button(c.ButtonProps{Icon: "thumb-up", Children: []g.Node{g.Text("Up")}}),
+							c.Button(c.ButtonProps{Icon: "thumb-down", IconClass: "flip-x", Children: []g.Node{g.Text("Down")}}),
+						),
 					),
 				),
-			),
-			h.Div(h.Class("lc-media__content"),
 				h.Script(h.Type("module"), h.Src("/assets/components/transcript.js"), h.Defer()),
 				g.El("lc-transcript",
-					h.Dl(h.Class("lc-media__content__transcript float-right float-right-gap"),
-						g.Group(g.Map(props.Transcript.Items, func(item *astisub.Item) g.Node {
-							return h.Div(
-								h.Class("lc-media__content__transcript__segment"),
-								h.Role("button"),
-								h.Data("start", strconv.Itoa(int(item.StartAt.Seconds()))),
-								h.Dt(h.Pre(g.Text(util.FormatDuration(item.StartAt)))),
-								h.Dd(g.Text(item.String())),
-							)
-						})),
+					h.Div(
+						h.Class("lc-media__meta__transcript"),
+						h.Button(h.Class("lc-media__meta__transcript__expand"),
+							g.Attr("onclick", "this.parentElement.classList.toggle('lc-media__meta__transcript--expanded')"),
+							c.Icon(c.IconProps{Name: "caret-down-filled", Width: 16, Height: 16}),
+						),
+						h.Dl(h.Class("lc-media__meta__transcript__scroll"),
+							g.Group(g.Map(props.Transcript.Items, func(item *astisub.Item) g.Node {
+								return h.Div(
+									h.Class("lc-media__meta__transcript__segment"),
+									h.Role("button"),
+									h.Data("start", strconv.Itoa(int(item.StartAt.Seconds()))),
+									h.Dt(h.Pre(g.Text(util.FormatDuration(item.StartAt)))),
+									h.Dd(g.Text(item.String())),
+								)
+							})),
+						),
 					),
 				),
-				h.Div(h.Class("lc-media__content__meta bfc-scroll"),
-					h.Div(h.Class("lc-media__content__meta__stats"),
-						h.P(h.Class("lc-media__content__meta__stats__views"),
+				h.Div(h.Class("lc-media__meta__details"),
+					h.Div(h.Class("lc-media__meta__details__stats"),
+						h.P(h.Class("lc-media__meta__details__stats__views"),
 							g.Text(fmt.Sprintf("%d views", props.TotalViews)),
 						),
-						h.Time(h.Class("lc-media__content__meta__stats__date"),
+						h.Time(h.Class("lc-media__meta__details__stats__date"),
 							g.Attr("datetime", "2024-07-09T18:28:18.961Z"),
 							g.Text("July 9, 2024"),
 						),
