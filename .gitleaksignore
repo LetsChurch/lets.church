@@ -1,10 +1,10 @@
 apps/web-next/.env.production:generic-api-key:3
 apps/web-next/.env.production:generic-api-key:4
-infra/ansible/templates/.crypt.env:generic-api-key:2
-infra/ansible/templates/.crypt.env:generic-api-key:6
-infra/ansible/templates/.crypt.env:generic-api-key:7
-infra/ansible/templates/.crypt.env:generic-api-key:11
-infra/ansible/templates/.crypt.env:generic-api-key:12
+infra/ansible/variables/import-worker.crypt.yml:generic-api-key:3
+infra/ansible/variables/import-worker.crypt.yml:generic-api-key:11
+infra/ansible/variables/import-worker.crypt.yml:generic-api-key:12
+infra/ansible/variables/import-worker.crypt.yml:generic-api-key:16
+infra/ansible/variables/import-worker.crypt.yml:generic-api-key:17
 infra/k8s/local/kustomization.yml:generic-api-key:17
 infra/k8s/prod/axiom.crypt.env:generic-api-key:2
 infra/k8s/prod/cf-api.crypt.env:generic-api-key:3

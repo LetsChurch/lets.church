@@ -4,5 +4,9 @@ default:
 init:
   ansible-galaxy install -r requirements.yml
 
-play:
-  ansible-playbook import-worker.yml -K
+play-docker:
+  ansible-playbook ./playbooks/install-docker.yml -K
+play-import-worker:
+  ansible-playbook ./playbooks/import-worker.yml -K
+
+play: play-docker play-import-worker

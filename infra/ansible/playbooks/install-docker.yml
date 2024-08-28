@@ -1,0 +1,13 @@
+---
+- name: Install Docker
+  hosts: docker
+  become: true
+  roles:
+    - role: geerlingguy.docker
+  tasks:
+    - name: Install python requests library
+      ansible.builtin.apt:
+        name:
+          - python3
+          - python3-requests
+        state: present
