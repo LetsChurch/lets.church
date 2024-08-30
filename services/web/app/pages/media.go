@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	g "github.com/maragudk/gomponents"
+	hx "github.com/maragudk/gomponents-htmx"
 	h "github.com/maragudk/gomponents/html"
 
 	"github.com/samber/lo"
@@ -67,6 +68,7 @@ func Media(ac *util.AppContext, props MediaProps) g.Node {
 			Height:    height,
 		}),
 		h.Div(h.Class("lc-container"),
+			hx.History("false"),
 			h.Div(
 				h.Class("lc-media__meta"),
 				h.H1(h.Class("lc-media__meta__title"), g.Text(props.Title.String)),
