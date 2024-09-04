@@ -37,7 +37,7 @@ services:
       dockerfile: Dockerfile
     command: npm run dev
     ports:
-      - ${HOST_WEB_PORT}:3000
+      - 127.0.0.1:${HOST_WEB_PORT}:3000
     environment:
       NODE_ENV: development
       GRAPHQL_URL: http://gateway:3000/graphql
@@ -53,8 +53,8 @@ services:
     command: npm run dev
     restart: on-failure
     ports:
-      - ${HOST_WEB_NEXT_PORT}:3000
-      - ${HOST_WEB_HMR_PORT}:${INTERNAL_WEB_HMR_PORT}
+      - 127.0.0.1:${HOST_WEB_NEXT_PORT}:3000
+      - 127.0.0.1:${HOST_WEB_HMR_PORT}:${INTERNAL_WEB_HMR_PORT}
     environment:
       NODE_ENV: development
       COOKIE_SECRET: ${WEB_COOKIE_SECRET}
@@ -76,7 +76,7 @@ services:
       target: build
     command: ./dev.sh
     ports:
-      - ${HOST_WEB_GO_PORT}:3000
+      - 127.0.0.1:${HOST_WEB_GO_PORT}:3000
     environment:
       APP_ENV: development
       COOKIE_SECRET: ${WEB_COOKIE_SECRET}
@@ -98,7 +98,7 @@ services:
   #     dockerfile: Dockerfile
   #   command: npm run dev
   #   ports:
-  #     - ${HOST_WEB_NEXT_PORT}:4321
+  #     - 127.0.0.1:${HOST_WEB_NEXT_PORT}:4321
   #   environment:
   #     NODE_ENV: development
   #     COOKIE_SECRET: ${WEB_COOKIE_SECRET}
@@ -118,7 +118,7 @@ services:
       target: server
     command: npm run dev:server
     ports:
-      - ${HOST_GATEWAY_PORT}:3000
+      - 127.0.0.1:${HOST_GATEWAY_PORT}:3000
     environment:
       NODE_ENV: development
       SENTRY_DSN: ${SENTRY_GATEWAY_DSN}
@@ -251,6 +251,22 @@ services:
   #
   # Vendor Services
   #
+  listmonk:
+    image: listmonk/listmonk:v3.0.0
+    command:
+      [
+        sh,
+        -c,
+        "yes | ./listmonk --install --config config-demo.toml && ./listmonk --config config-demo.toml",
+      ]
+    environment:
+      LISTMONK_db__host: postgres
+      TZ: US/Eastern
+    ports:
+      - "127.0.0.1:${HOST_LISTMONK_PORT}:9000"
+    depends_on:
+      - postgres
+
   imgproxy:
     image: darthsim/imgproxy:v3.21.0
     environment:
@@ -262,13 +278,13 @@ services:
       AWS_ACCESS_KEY_ID: ${S3_INGEST_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${S3_INGEST_SECRET_ACCESS_KEY}
     ports:
-      - ${HOST_IMGPROXY_PORT}:8080
+      - 127.0.0.1:${HOST_IMGPROXY_PORT}:8080
 
   faktory:
     image: contribsys/faktory:1.9.0
     ports:
-      - ${HOST_FAKTORY_PORT}:7419
-      - ${HOST_FAKTORY_UI_PORT}:7420
+      - 127.0.0.1:${HOST_FAKTORY_PORT}:7419
+      - 127.0.0.1:${HOST_FAKTORY_UI_PORT}:7420
     volumes:
       - faktory-data:/var/lib/faktory/db
 
@@ -289,7 +305,7 @@ services:
       ES_SEEDS: elasticsearch
       ES_VERSION: v7 # Even though we run v8, temporal only has configuration for v7
     ports:
-      - ${HOST_TEMPORAL_PORT}:7233
+      - 127.0.0.1:${HOST_TEMPORAL_PORT}:7233
     volumes:
       - ./etc/temporal/dynamicconfig:/etc/temporal/config/dynamicconfig
     depends_on:
@@ -312,7 +328,7 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_CORS_ORIGINS: http://localhost:3000
     ports:
-      - ${HOST_TEMPORAL_UI_PORT}:8080
+      - 127.0.0.1:${HOST_TEMPORAL_UI_PORT}:8080
     depends_on:
       - temporal
 
@@ -326,7 +342,7 @@ services:
       POSTGRES_PASSWORD: ${PG_PASSWORD}
       POSTGRES_DB: ${PG_DATABASE}
     ports:
-      - "${HOST_PG_PORT}:5432"
+      - 127.0.0.1:${HOST_PG_PORT}:5432
     volumes:
       - ./etc/postgres-init:/docker-entrypoint-initdb.d
       - pg-data:/var/lib/postgresql/data
@@ -350,7 +366,7 @@ services:
       - ES_JAVA_OPTS=-Xms256m -Xmx256m
       - xpack.security.enabled=false
     ports:
-      - ${HOST_ES_PORT}:9200
+      - 127.0.0.1:${HOST_ES_PORT}:9200
     volumes:
       - es-data:/usr/share/elasticsearch/data
 
@@ -364,16 +380,16 @@ services:
     depends_on:
       - elasticsearch
     ports:
-      - ${HOST_KIBANA_PORT}:5601
+      - 127.0.0.1:${HOST_KIBANA_PORT}:5601
   mailpit:
     image: axllent/mailpit:v1.13.0
     restart: always
     ports:
-      - ${HOST_MAILPIT_SMTP_PORT}:1025 # smtp server
-      - ${HOST_MAILPIT_WEB_PORT}:8025 # web ui
+      - 127.0.0.1:${HOST_MAILPIT_SMTP_PORT}:1025 # smtp server
+      - 127.0.0.1:${HOST_MAILPIT_WEB_PORT}:8025 # web ui
   pgweb:
     image: sosedoff/pgweb:0.14.2
     environment:
       PGWEB_DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch?sslmode=disable
     ports:
-      - ${HOST_PGWEB_PORT}:8081
+      - 127.0.0.1:${HOST_PGWEB_PORT}:8081

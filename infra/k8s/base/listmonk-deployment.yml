@@ -1,0 +1,74 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: listmonk
+  labels:
+    app: listmonk
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: listmonk
+  template:
+    metadata:
+      labels:
+        app: listmonk
+    spec:
+      restartPolicy: Always
+      containers:
+        - image: listmonk/listmonk:v3.0.0
+          name: listmonk
+          ports:
+            - containerPort: 9000
+          env:
+            - name: TZ
+              value: US/Eastern
+            - name: LISTMONK_db__host
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pguser-listmonk
+                  key: host
+            - name: LISTMONK_db__port
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pguser-listmonk
+                  key: port
+            - name: LISTMONK_db__database
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pguser-listmonk
+                  key: dbname
+            - name: LISTMONK_db__user
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pguser-listmonk
+                  key: user
+            - name: LISTMONK_db__password
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pguser-listmonk
+                  key: password
+            - name: LISTMONK_app__admin_username
+              value: ""
+            - name: LISTMONK_app__admin_password
+              value: ""
+            - name: LISTMONK_app__address
+              value: "0.0.0.0:9000"
+            - name: LISTMONK_db__ssl_mode
+              value: "require"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: listmonk
+  annotations:
+    tailscale.com/expose: "true"
+spec:
+  selector:
+    app: listmonk
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 9000

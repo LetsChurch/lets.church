@@ -4,6 +4,7 @@ resources:
   - elasticsearch-deployment.yml
   - imgproxy-deployment.yml
   - kibana-deployment.yml
+  - listmonk-deployment.yml
   - metabase-deployment.yml
   - pgweb-deployment.yml
   - temporal-deployment.yml

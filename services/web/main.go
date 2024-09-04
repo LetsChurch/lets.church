@@ -91,7 +91,7 @@ func main() {
 		CookiePath:     "/",
 		CookieSecure:   true,
 		CookieHTTPOnly: true,
-		CookieSameSite: http.SameSiteStrictMode,
+		CookieSameSite: http.SameSiteLaxMode,
 	}))
 	app.Use(session.Middleware(sessions.NewCookieStore([]byte(os.Getenv("COOKIE_SECRET")))))
 	app.GET("/", h.Home)
