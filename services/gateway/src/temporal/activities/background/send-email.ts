@@ -2,7 +2,9 @@ import envariant from '@knpwrs/envariant';
 import { createTransport, type SendMailOptions } from 'nodemailer';
 import logger from '../../../util/logger';
 
-const transport = createTransport(envariant('SMTP_URL'));
+const transport = createTransport(envariant('SMTP_URL'), {
+  opportunisticTLS: true,
+});
 
 export type EmailArgs = SendMailOptions;
 
