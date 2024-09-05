@@ -17,11 +17,11 @@ spec:
     spec:
       restartPolicy: Always
       containers:
-        - image: listmonk/listmonk:v3.0.0
+        - image: &listmonkImage listmonk/listmonk:v3.0.0
           name: listmonk
           ports:
             - containerPort: 9000
-          env:
+          env: &listmonkEnv
             - name: TZ
               value: US/Eastern
             - name: LISTMONK_db__host
@@ -57,6 +57,11 @@ spec:
               value: "0.0.0.0:9000"
             - name: LISTMONK_db__ssl_mode
               value: "require"
+      initContainers:
+        - name: listmonk-upgrade
+          image: *listmonkImage
+          command: ["listmonk", "--upgrade"]
+          env: *listmonkEnv
 ---
 apiVersion: v1
 kind: Service

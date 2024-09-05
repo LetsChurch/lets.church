@@ -17,7 +17,7 @@ spec:
     spec:
       restartPolicy: Always
       containers:
-        - image: registry.gitlab.com/letschurch/lets.church/gateway:latest
+        - image: &gatewayImage registry.gitlab.com/letschurch/lets.church/gateway:latest
           name: gateway
           ports:
             - containerPort: 3000
@@ -68,12 +68,12 @@ spec:
             failureThreshold: 5
       initContainers:
         - name: gateway-init-migrations
-          image: registry.gitlab.com/letschurch/lets.church/gateway:latest
+          image: *gatewayImage
           command: ["npm", "run", "prisma:migrate:deploy"]
           env: *gatewayEnv
           envFrom: *gatewayEnvFrom
         - name: gateway-init-es-mappings
-          image: registry.gitlab.com/letschurch/lets.church/gateway:latest
+          image: *gatewayImage
           command: ["npm", "run", "es:push-mappings"]
           env: *gatewayEnv
           envFrom: *gatewayEnvFrom
