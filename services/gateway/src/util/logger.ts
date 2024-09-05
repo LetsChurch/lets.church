@@ -18,6 +18,7 @@ const logger = pino({
       return {
         ...bindings,
         serviceName: process.env['SERVICE_NAME'] ?? 'unknown',
+        identity: process.env['IDENTITY'] ?? 'unknown',
       };
     },
   },
