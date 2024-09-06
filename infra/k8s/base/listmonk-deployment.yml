@@ -60,7 +60,7 @@ spec:
       initContainers:
         - name: listmonk-upgrade
           image: *listmonkImage
-          command: ["listmonk", "--upgrade"]
+          command: ["listmonk", "--upgrade", "--yes"]
           env: *listmonkEnv
 ---
 apiVersion: v1
