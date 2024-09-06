@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"net/http"
+
 	"github.com/contribsys/faktory/client"
 	"github.com/jackc/pgx/v5"
 	"github.com/labstack/echo-contrib/session"
@@ -39,6 +41,7 @@ func (h *Handler) getAppContext(c echo.Context) (*util.AppContext, error) {
 			}
 			return &id
 		}).Else(nil),
+		CsrfToken: c.Get("csrf").(string),
 	}, nil
 }
 
@@ -46,4 +49,12 @@ func (h *Handler) addFlash(c echo.Context, f util.Flash) error {
 	sess, _ := session.Get("session", c)
 	sess.AddFlash(f)
 	return sess.Save(c.Request(), c.Response())
+}
+
+func (h *Handler) checkCsrf(c echo.Context) error {
+	csrf := c.FormValue("_csrf")
+	if csrf != c.Get("csrf").(string) {
+		return c.NoContent(http.StatusBadRequest)
+	}
+	return nil
 }

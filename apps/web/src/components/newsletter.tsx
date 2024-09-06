@@ -1,62 +1,21 @@
-import { A, FormError } from 'solid-start';
+import { A } from 'solid-start';
 import { createServerAction$, redirect } from 'solid-start/server';
-import invariant from 'tiny-invariant';
-import { gql } from 'graphql-request';
+import { For } from 'solid-js';
 import { Button, Input } from './form';
 import { Turnstile } from './turnstile';
-import type {
-  SubscribeToNewsletterMutation,
-  SubscribeToNewsletterMutationVariables,
-} from './__generated__/newsletter';
 import { useUser } from '~/util/user-context';
 import validateTurnstile from '~/util/server/validate-turnstile';
-import { createAuthenticatedClient } from '~/util/gql/server';
 
-export default function Newsletter() {
-  const [submitting, { Form }] = createServerAction$(
-    async (form: FormData, { request }) => {
-      await validateTurnstile(form);
-      const email = form.get('email')?.toString();
-      invariant(email);
+export default function Newsletter(props: { listIds: Array<string> }) {
+  const [submitting, { Form }] = createServerAction$(async (form: FormData) => {
+    await validateTurnstile(form);
+    await fetch(
+      import.meta.env['VITE_LISTMONK_INTERNAL_URL'] + '/subscription/form',
+      { method: 'POST', body: form },
+    );
 
-      const client = await createAuthenticatedClient(request);
-
-      const { subscribeToNewsletter: res } = await client.request<
-        SubscribeToNewsletterMutation,
-        SubscribeToNewsletterMutationVariables
-      >(
-        gql`
-          mutation SubscribeToNewsletter($email: String!) {
-            subscribeToNewsletter(email: $email) {
-              ... on MutationSubscribeToNewsletterSuccess {
-                __typename
-                data
-              }
-              ... on ValidationError {
-                __typename
-                fieldErrors {
-                  message
-                  path
-                }
-              }
-            }
-          }
-        `,
-        { email },
-      );
-
-      if (res.__typename === 'ValidationError') {
-        throw new FormError('', {
-          fieldErrors: res.fieldErrors.reduce(
-            (acc, cur) => ({ ...acc, [cur.path.at(-1) ?? '']: cur.message }),
-            {} as Record<string, Array<string> | string>,
-          ),
-        });
-      }
-
-      return redirect('/newsletter/subscribe');
-    },
-  );
+    return redirect('/newsletter/subscribe');
+  });
 
   const user = useUser();
   const email = () => user()?.emails.at(0)?.email ?? '';
@@ -81,6 +40,9 @@ export default function Newsletter() {
               placeholder="Enter your email"
               value={email()}
             />
+            <For each={props.listIds}>
+              {(id) => <input type="hidden" name="l" value={id} />}
+            </For>
             <Button type="submit" disabled={submitting.pending}>
               Subscribe
             </Button>

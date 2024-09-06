@@ -9,7 +9,6 @@ import (
 )
 
 type RegisterProps struct {
-	Csrf   string
 	Values struct {
 		Newsletter    *bool
 		Email         string
@@ -46,7 +45,7 @@ func Register(ac *util.AppContext, props RegisterProps) g.Node {
 	return layouts.Auth(
 		ac,
 		h.Form(h.Method("POST"),
-			h.Input(h.Type("hidden"), h.Name("_csrf"), h.Value(props.Csrf)),
+			h.Input(h.Type("hidden"), h.Name("_csrf"), h.Value(ac.CsrfToken)),
 			c.LabeledInput(c.LabeledInputProps{
 				Class:      "lc-auth__input",
 				Label:      "Email",

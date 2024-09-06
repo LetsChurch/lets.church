@@ -41,6 +41,7 @@ services:
     environment:
       NODE_ENV: development
       GRAPHQL_URL: http://gateway:3000/graphql
+      VITE_LISTMONK_INTERNAL_URL: http://listmonk:9000
     volumes:
       - ./apps/web:/home/node/app
       - web-node-modules:/home/node/app/node_modules
@@ -60,6 +61,7 @@ services:
       COOKIE_SECRET: ${WEB_COOKIE_SECRET}
       GRAPHQL_URL: http://gateway:3000/graphql
       INTERNAL_WEB_HMR_PORT: ${INTERNAL_WEB_HMR_PORT}
+      VITE_LISTMONK_INTERNAL_URL: http://listmonk:9000
       VITE_MAPBOX_MAP_TOKEN: ${MAPBOX_MAP_TOKEN}
       VITE_MAPBOX_SEARCHBOX_TOKEN: ${MAPBOX_SEARCHBOX_TOKEN}
     volumes:
@@ -83,6 +85,7 @@ services:
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       FAKTORY_URL: tcp://faktory:7419
       JWT_SECRET: ${JWT_SECRET}
+      LISTMONK_INTERNAL_URL: http://listmonk:9000
       MEDIA_URL: ${MEDIA_URL}
       PUBLIC_URL: ${HOST_WEB_GO_URL}
       ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
@@ -129,6 +132,7 @@ services:
       IMGPROXY_SALT: ${IMGPROXY_SALT}
       IMGPROXY_URL: ${IMGPROXY_URL}
       JWT_SECRET: ${JWT_SECRET}
+      LISTMONK_INTERNAL_URL: http://listmonk:9000
       MAPBOX_GEOCODING_TOKEN: ${MAPBOX_GEOCODING_TOKEN}
       MEDIA_URL: ${MEDIA_URL}
       TEMPORAL_ADDRESS: temporal:7233

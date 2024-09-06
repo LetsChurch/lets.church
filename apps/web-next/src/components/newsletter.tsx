@@ -1,57 +1,22 @@
-import invariant from 'tiny-invariant';
-import { gql } from 'graphql-request';
+import { For } from 'solid-js';
 import { A, action, redirect, useSubmission } from '@solidjs/router';
 import { Button, Input } from './form';
 import { Turnstile } from './turnstile';
-import type {
-  SubscribeToNewsletterMutation,
-  SubscribeToNewsletterMutationVariables,
-} from './__generated__/newsletter';
 import { useUser } from '~/util/user-context';
 import validateTurnstile from '~/util/server/validate-turnstile';
-import { getAuthenticatedClient } from '~/util/gql/server';
 
 const subscribe = action(async (form: FormData) => {
   'use server';
   await validateTurnstile(form);
-
-  const email = form.get('email')?.toString();
-  invariant(email);
-
-  const client = await getAuthenticatedClient();
-
-  const { subscribeToNewsletter: res } = await client.request<
-    SubscribeToNewsletterMutation,
-    SubscribeToNewsletterMutationVariables
-  >(
-    gql`
-      mutation SubscribeToNewsletter($email: String!) {
-        subscribeToNewsletter(email: $email) {
-          ... on MutationSubscribeToNewsletterSuccess {
-            __typename
-            data
-          }
-          ... on ValidationError {
-            __typename
-            fieldErrors {
-              message
-              path
-            }
-          }
-        }
-      }
-    `,
-    { email },
+  await fetch(
+    import.meta.env['VITE_LISTMONK_INTERNAL_URL'] + '/subscription/form',
+    { method: 'POST', body: form },
   );
-
-  if (res.__typename === 'ValidationError') {
-    return { error: res.fieldErrors[0]?.message ?? 'Error' };
-  }
 
   throw redirect('/newsletter/subscribe');
 });
 
-export default function Newsletter() {
+export default function Newsletter(props: { listIds: Array<string> }) {
   const user = useUser();
   const email = () => user()?.emails.at(0)?.email ?? '';
   const submitting = useSubmission(subscribe);
@@ -80,6 +45,9 @@ export default function Newsletter() {
               placeholder="Enter your email"
               value={email()}
             />
+            <For each={props.listIds}>
+              {(id) => <input type="hidden" name="l" value={id} />}
+            </For>
             <Button type="submit" disabled={submitting.pending}>
               Subscribe
             </Button>

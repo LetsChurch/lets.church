@@ -9,7 +9,6 @@ import (
 )
 
 type ResetPasswordProps struct {
-	Csrf  string
 	Token string
 }
 
@@ -17,7 +16,7 @@ func ResetPassword(ac *util.AppContext, props ResetPasswordProps) g.Node {
 	return layouts.Auth(
 		ac,
 		h.Form(h.Method("POST"),
-			h.Input(h.Type("hidden"), h.Name("_csrf"), h.Value(props.Csrf)),
+			h.Input(h.Type("hidden"), h.Name("_csrf"), h.Value(ac.CsrfToken)),
 			h.Input(h.Type("hidden"), h.Name("token"), h.Value(props.Token)),
 			c.LabeledInput(c.LabeledInputProps{
 				Class:      "lc-auth__input",

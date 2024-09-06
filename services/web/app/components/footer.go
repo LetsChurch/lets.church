@@ -1,20 +1,72 @@
 package components
 
 import (
+	"encoding/json"
+	"io"
+	"net/http"
+	"os"
+
 	g "github.com/maragudk/gomponents"
 	h "github.com/maragudk/gomponents/html"
+	"github.com/samber/lo"
+	"github.com/samber/oops"
+	"lets.church/web/app/util"
 )
 
-func Footer() g.Node {
+func getMailingListIds() ([]string, error) {
+	eb := oops.In("getMailingListIds").Public("Error loading newsletter form.")
+	response, err := http.Get(os.Getenv("LISTMONK_INTERNAL_URL") + "/api/lists?tag=default")
+
+	if err != nil {
+		return nil, eb.Wrap(err)
+	}
+
+	if response.StatusCode != 200 {
+		return nil, eb.Errorf("Non-200 response from Listmonk")
+	}
+
+	defer response.Body.Close()
+	body, err := io.ReadAll(response.Body)
+
+	if err != nil {
+		return nil, eb.Wrap(err)
+	}
+
+	var data map[string]any
+	err = json.Unmarshal(body, &data)
+
+	// Extract the UUID from each list
+	results := lo.Map(data["data"].(map[string]any)["results"].([]any), func(item any, index int) string {
+		return item.(map[string]any)["uuid"].(string)
+	})
+
+	return results, nil
+}
+
+func Footer(ac *util.AppContext) g.Node {
+	listIds, err := getMailingListIds()
+	message := oops.GetPublic(err, "")
+
 	return h.Footer(h.Class("lc-container lc-footer"),
 		h.Div(h.Class("newsletter"),
-			h.Div(
-				h.H3(g.Text("Join our newsletter")),
-				h.P(g.Text("Get updates about Let's Church. No spam.")),
-			),
-			h.Form(
-				Input(InputProps{Type: "email", Placeholder: "Enter your email", Big: true}),
-				Button(ButtonProps{Type: "submit", Primary: true, Big: true, Children: []g.Node{g.Text("Subscribe")}}),
+			g.If(message != "", h.P(g.Text("Error loading newsletter form."))),
+			g.If(message == "",
+				g.Group([]g.Node{
+					h.Div(
+						h.H3(g.Text("Join our newsletter")),
+						h.P(g.Text("Get updates about Let's Church. No spam.")),
+					),
+					h.Form(
+						h.Method("post"),
+						h.Action("/newsletter/subscribe"),
+						h.Input(h.Type("hidden"), h.Name("_csrf"), h.Value(ac.CsrfToken)),
+						g.Group(g.Map(listIds, func(id string) g.Node {
+							return h.Input(h.Type("hidden"), h.Name("l"), h.Value(id))
+						})),
+						Input(InputProps{Type: "email", Placeholder: "Enter your email", Big: true, Name: "email"}),
+						Button(ButtonProps{Type: "submit", Primary: true, Big: true, Children: []g.Node{g.Text("Subscribe")}}),
+					),
+				}),
 			),
 		),
 		h.Nav(

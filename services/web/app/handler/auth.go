@@ -36,24 +36,25 @@ func (h *Handler) GetAuthLogin(c echo.Context) (err error) {
 		return c.Redirect(http.StatusForbidden, "/")
 	}
 
-	return Render(c, http.StatusOK, pages.Login(ac, pages.LoginProps{Csrf: c.Get("csrf").(string)}))
+	return Render(c, http.StatusOK, pages.Login(ac))
 }
 
 func (h *Handler) PostAuthLogin(c echo.Context) (err error) {
 	eb := oops.In("PostAuthLogin")
+	err = h.checkCsrf(c)
+
+	if err != nil {
+		return eb.Wrap(err)
+	}
+
 	ac, err := h.getAppContext(c)
+
 	if err != nil {
 		return eb.Hint("Could not get app context").Wrap(err)
 	}
 
 	if ac.Authenticated {
 		return c.Redirect(http.StatusFound, "/")
-	}
-
-	csrf := c.FormValue("_csrf")
-
-	if c.Get("csrf").(string) != csrf {
-		return c.NoContent(http.StatusBadRequest)
 	}
 
 	id := c.FormValue("id")
@@ -107,7 +108,7 @@ func (h *Handler) GetAuthForgotPassword(c echo.Context) (err error) {
 		return c.Redirect(http.StatusForbidden, "/")
 	}
 
-	return Render(c, http.StatusOK, pages.ForgotPassword(ac, pages.ForgotPasswordProps{Csrf: c.Get("csrf").(string)}))
+	return Render(c, http.StatusOK, pages.ForgotPassword(ac))
 }
 
 type ResetPasswordClaims struct {
@@ -117,7 +118,14 @@ type ResetPasswordClaims struct {
 
 func (h *Handler) PostAuthForgotPassword(c echo.Context) (err error) {
 	eb := oops.In("PostAuthForgotPassword")
+	err = h.checkCsrf(c)
+
+	if err != nil {
+		return eb.Wrap(err)
+	}
+
 	ac, err := h.getAppContext(c)
+
 	if err != nil {
 		return err
 	}
@@ -191,10 +199,17 @@ func (h *Handler) GetAuthRegister(c echo.Context) error {
 		return c.Redirect(http.StatusForbidden, "/")
 	}
 
-	return Render(c, http.StatusOK, pages.Register(ac, pages.RegisterProps{Csrf: c.Get("csrf").(string)}))
+	return Render(c, http.StatusOK, pages.Register(ac, pages.RegisterProps{}))
 }
 
 func (h *Handler) PostAuthCheckUsername(c echo.Context) (err error) {
+	eb := oops.In("PostAuthCheckUsername")
+	err = h.checkCsrf(c)
+
+	if err != nil {
+		return eb.Wrap(err)
+	}
+
 	username := c.FormValue("username")
 	userExists, err := h.Queries.UserExists(c.Request().Context(), pgtype.Text{String: username, Valid: true})
 	if err != nil {
@@ -211,6 +226,12 @@ func (h *Handler) PostAuthCheckUsername(c echo.Context) (err error) {
 
 func (h *Handler) PostAuthRegister(c echo.Context) error {
 	eb := oops.In("PostAuthRegister")
+	err := h.checkCsrf(c)
+
+	if err != nil {
+		return eb.Wrap(err)
+	}
+
 	ac, err := h.getAppContext(c)
 	if err != nil {
 		return eb.Hint("Could not get app context").Wrap(err)
@@ -356,11 +377,17 @@ func (h *Handler) GetAuthResetPassword(c echo.Context) error {
 		return eb.Public("Invalid token").Wrap(err)
 	}
 
-	return Render(c, http.StatusOK, pages.ResetPassword(ac, pages.ResetPasswordProps{Csrf: c.Get("csrf").(string), Token: tokenString}))
+	return Render(c, http.StatusOK, pages.ResetPassword(ac, pages.ResetPasswordProps{Token: tokenString}))
 }
 
 func (h *Handler) PostAuthResetPassword(c echo.Context) error {
 	eb := oops.In("PostAuthResetPassword")
+	err := h.checkCsrf(c)
+
+	if err != nil {
+		return eb.Wrap(err)
+	}
+
 	ac, err := h.getAppContext(c)
 	if err != nil {
 		return eb.Hint("Could not get app context").Wrap(err)

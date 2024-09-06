@@ -920,6 +920,7 @@ export type Query = {
   channelsConnection: QueryChannelsConnection;
   me?: Maybe<AppUser>;
   mySubscriptionUploadRecords?: Maybe<QueryMySubscriptionUploadRecordsConnection>;
+  newsletterListIds: Array<Scalars['String']['output']>;
   organizationById: Organization;
   organizationBySlug: Organization;
   organizationTagsConnection: QueryOrganizationTagsConnection;

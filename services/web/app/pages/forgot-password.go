@@ -8,17 +8,13 @@ import (
 	"lets.church/web/app/util"
 )
 
-type ForgotPasswordProps struct {
-	Csrf string
-}
-
-func ForgotPassword(ac *util.AppContext, props ForgotPasswordProps) g.Node {
+func ForgotPassword(ac *util.AppContext) g.Node {
 	return layouts.Auth(
 		ac,
 		h.H1(h.Class("lc-auth__heading"), g.Text("Forgot password?")),
 		h.P(h.Class("lc-auth__description"), g.Text("No worries, we'll send you reset instructions.")),
 		h.Form(h.Method("POST"),
-			h.Input(h.Type("hidden"), h.Name("_csrf"), h.Value(props.Csrf)),
+			h.Input(h.Type("hidden"), h.Name("_csrf"), h.Value(ac.CsrfToken)),
 			c.LabeledInput(c.LabeledInputProps{
 				Class:      "lc-auth__input",
 				Label:      "Email",

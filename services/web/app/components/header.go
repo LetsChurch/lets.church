@@ -24,6 +24,7 @@ func Header(ac *util.AppContext) g.Node {
 			),
 			g.If(ac.Authenticated,
 				h.Form(h.Action("/auth/logout"), h.Method("POST"),
+					h.Input(h.Type("hidden"), h.Name("_csrf"), h.Value(ac.CsrfToken)),
 					Button(ButtonProps{Primary: true, Type: "submit", Big: true, Children: []g.Node{g.Text("Logout")}}),
 				),
 			),

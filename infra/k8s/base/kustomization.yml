@@ -20,10 +20,12 @@ configMapGenerator:
   - name: web-config
     literals:
       - GRAPHQL_URL="http://gateway:3000/graphql"
+      - VITE_LISTMONK_INTERNAL_URL="http://listmonk"
   - name: gateway-config
     literals:
       - ELASTICSEARCH_URL="http://elasticsearch:9200"
       - IMGPROXY_URL="http://IMGPROXY_URL"
+      - LISTMONK_INTERNAL_URL="http://listmonk"
       - MEDIA_URL="http://MEDIA_URL"
       - POSTGRES_HOST="postgres:5432"
       - WEB_URL="https://lets.church"

@@ -27,6 +27,7 @@ export function routeData() {
           ${UploadCardFields}
 
           query HomepageData($loggedIn: Boolean!) {
+            newsletterListIds
             subscriptionUploads: mySubscriptionUploadRecords(first: 5)
               @include(if: $loggedIn) {
               pageInfo {
@@ -119,7 +120,7 @@ export default function WatchRoute() {
       <UploadGrid edges={data()?.trendingUploads?.edges ?? []} />
       <SeeMoreLink to="trending" />
       <Show when={!user()?.subscribedToNewsletter}>
-        <Newsletter />
+        <Newsletter listIds={data()?.newsletterListIds ?? []} />
       </Show>
     </>
   );

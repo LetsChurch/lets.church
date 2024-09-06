@@ -56,3 +56,18 @@ builder.queryField('stats', (t) =>
     },
   }),
 );
+
+builder.queryField('newsletterListIds', (t) =>
+  t.field({
+    type: ['String'],
+    resolve: async () => {
+      const res = await fetch(
+        process.env['LISTMONK_INTERNAL_URL'] + '/api/lists?tag=default',
+      );
+      const json = await res.json();
+      return json.data.results.map(
+        (l: { uuid: string }) => l.uuid,
+      ) as Array<string>;
+    },
+  }),
+);
