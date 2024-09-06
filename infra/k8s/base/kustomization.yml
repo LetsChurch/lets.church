@@ -20,7 +20,6 @@ configMapGenerator:
   - name: web-config
     literals:
       - GRAPHQL_URL="http://gateway:3000/graphql"
-      - VITE_LISTMONK_INTERNAL_URL="http://listmonk"
   - name: gateway-config
     literals:
       - ELASTICSEARCH_URL="http://elasticsearch:9200"

@@ -41,7 +41,6 @@ services:
     environment:
       NODE_ENV: development
       GRAPHQL_URL: http://gateway:3000/graphql
-      VITE_LISTMONK_INTERNAL_URL: http://listmonk:9000
     volumes:
       - ./apps/web:/home/node/app
       - web-node-modules:/home/node/app/node_modules
@@ -61,7 +60,6 @@ services:
       COOKIE_SECRET: ${WEB_COOKIE_SECRET}
       GRAPHQL_URL: http://gateway:3000/graphql
       INTERNAL_WEB_HMR_PORT: ${INTERNAL_WEB_HMR_PORT}
-      VITE_LISTMONK_INTERNAL_URL: http://listmonk:9000
       VITE_MAPBOX_MAP_TOKEN: ${MAPBOX_MAP_TOKEN}
       VITE_MAPBOX_SEARCHBOX_TOKEN: ${MAPBOX_SEARCHBOX_TOKEN}
     volumes:
