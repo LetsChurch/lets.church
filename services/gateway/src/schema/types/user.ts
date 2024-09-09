@@ -23,7 +23,6 @@ import prisma from '../../util/prisma';
 import { getPublicImageUrl } from '../../util/url';
 import { emailHtml } from '../../util/email';
 import { uuidTranslator } from '../../util/uuid';
-import { subscribeToNewsletter } from '../../util/newsletter';
 import { getS3ProtocolUri } from '../../util/s3';
 import logger from '../../util/logger';
 import { ResizeParams } from './misc';
@@ -192,12 +191,19 @@ export const AppUser = builder.prismaObject('AppUser', {
       type: 'Boolean',
       authScopes: privateAuthScopes,
       select: { id: true, emails: { select: { email: true } } },
-      resolve: async (user) =>
-        (
-          await prisma.newsletterSubscription.findMany({
-            where: { email: { in: user.emails.map(({ email }) => email) } },
-          })
-        ).length > 0,
+      resolve: async (user) => {
+        const res = await fetch(
+          `${envariant(
+            'LISTMONK_INTERNAL_URL',
+          )}/api/subscribers?query=${encodeURIComponent(
+            `subscribers.email in (${user.emails
+              .map((e) => `'${e.email}'`)
+              .join(',')})`,
+          )}`,
+        );
+        const json: { data: { total: number } } = await res.json();
+        return json.data.total > 0;
+      },
     }),
   }),
 });
@@ -365,7 +371,12 @@ builder.mutationFields((t) => ({
       });
 
       if (args.subscribeToNewsletter) {
-        await subscribeToNewsletter(email);
+        const form = new FormData();
+        form.set('email', email);
+        await fetch(
+          envariant('VITE_LISTMONK_INTERNAL_URL') + '/subscription/form',
+          { method: 'POST', body: form },
+        );
       }
 
       return user;
@@ -531,62 +542,6 @@ builder.mutationFields((t) => ({
           },
         },
       });
-    },
-  }),
-  subscribeToNewsletter: t.boolean({
-    args: {
-      email: t.arg.string({ required: true }),
-    },
-    validate: {
-      schema: z.object({
-        email: z.string().email(),
-      }),
-    },
-    errors: {
-      types: [ZodError],
-    },
-    resolve: async (_parent, { email }) => {
-      try {
-        await subscribeToNewsletter(email);
-        return true;
-      } catch (e) {
-        return false;
-      }
-    },
-  }),
-  unsubscribeFromNewsletter: t.boolean({
-    args: {
-      subscriptionId: t.arg({ type: 'ShortUuid', required: true }),
-      emailKey: t.arg({ type: 'ShortUuid', required: true }),
-    },
-    resolve: async (_root, { subscriptionId, emailKey }) => {
-      const res = await prisma.appUserEmail.deleteMany({
-        where: {
-          id: subscriptionId,
-          key: emailKey,
-        },
-      });
-
-      return res.count > 0;
-    },
-  }),
-  verifyNewsletterSubscription: t.boolean({
-    args: {
-      subscriptionId: t.arg({ type: 'ShortUuid', required: true }),
-      emailKey: t.arg({ type: 'ShortUuid', required: true }),
-    },
-    resolve: async (_root, { subscriptionId, emailKey }) => {
-      const res = await prisma.newsletterSubscription.updateMany({
-        data: {
-          verifiedAt: new Date(),
-        },
-        where: {
-          id: subscriptionId,
-          key: emailKey,
-        },
-      });
-
-      return res.count > 0;
     },
   }),
 }));

@@ -2,8 +2,10 @@ package components
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 
 	g "github.com/maragudk/gomponents"
@@ -43,30 +45,76 @@ func getMailingListIds() ([]string, error) {
 	return results, nil
 }
 
+func isUserSubscribedToNewsletter(ac *util.AppContext) bool {
+	if ac.User == nil {
+		return false
+	}
+
+	if !ac.User.Email.Valid {
+		return false
+	}
+
+	response, err := http.Get(os.Getenv("LISTMONK_INTERNAL_URL") + "/api/subscribers?query=" + url.PathEscape("subscribers.email = '"+ac.User.Email.String+"'"))
+
+	if err != nil {
+		return false
+	}
+
+	defer response.Body.Close()
+	body, err := io.ReadAll(response.Body)
+
+	var data map[string]any
+	err = json.Unmarshal(body, &data)
+
+	if err != nil {
+		return false
+	}
+
+	return data["data"].(map[string]any)["total"].(float64) > 0
+}
+
 func Footer(ac *util.AppContext) g.Node {
 	listIds, err := getMailingListIds()
 	message := oops.GetPublic(err, "")
 
+	fmt.Printf("ac: %+v\n)", ac)
+
 	return h.Footer(h.Class("lc-container lc-footer"),
-		h.Div(h.Class("newsletter"),
-			g.If(message != "", h.P(g.Text("Error loading newsletter form."))),
-			g.If(message == "",
-				g.Group([]g.Node{
-					h.Div(
-						h.H3(g.Text("Join our newsletter")),
-						h.P(g.Text("Get updates about Let's Church. No spam.")),
-					),
-					h.Form(
-						h.Method("post"),
-						h.Action("/newsletter/subscribe"),
-						h.Input(h.Type("hidden"), h.Name("_csrf"), h.Value(ac.CsrfToken)),
-						g.Group(g.Map(listIds, func(id string) g.Node {
-							return h.Input(h.Type("hidden"), h.Name("l"), h.Value(id))
-						})),
-						Input(InputProps{Type: "email", Placeholder: "Enter your email", Big: true, Name: "email"}),
-						Button(ButtonProps{Type: "submit", Primary: true, Big: true, Children: []g.Node{g.Text("Subscribe")}}),
-					),
-				}),
+		g.If(!isUserSubscribedToNewsletter(ac),
+			h.Div(h.Class("newsletter"),
+				g.If(message != "", h.P(g.Text(message))),
+				g.If(message == "",
+					g.Group([]g.Node{
+						h.Div(
+							h.H3(g.Text("Join our newsletter")),
+							h.P(g.Text("Get updates about Let's Church. No spam.")),
+						),
+						h.Form(
+							h.Method("post"),
+							h.Action("/newsletter/subscribe"),
+							h.Input(h.Type("hidden"), h.Name("_csrf"), h.Value(ac.CsrfToken)),
+							g.Group(g.Map(listIds, func(id string) g.Node {
+								return h.Input(h.Type("hidden"), h.Name("l"), h.Value(id))
+							})),
+							Input(InputProps{
+								Type:        "email",
+								Placeholder: "Enter your email",
+								Big:         true,
+								Name:        "email",
+								Value: lo.TernaryF(
+									ac.User != nil,
+									func() string {
+										return ac.User.Email.String
+									},
+									func() string {
+										return ""
+									},
+								),
+							}),
+							Button(ButtonProps{Type: "submit", Primary: true, Big: true, Children: []g.Node{g.Text("Subscribe")}}),
+						),
+					}),
+				),
 			),
 		),
 		h.Nav(

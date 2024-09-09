@@ -1,5 +1,6 @@
 import ExpiryMap from 'expiry-map';
 import pMem from 'p-memoize';
+import envariant from '@knpwrs/envariant';
 import prisma from '../../util/prisma';
 import builder from '../builder';
 
@@ -62,7 +63,7 @@ builder.queryField('newsletterListIds', (t) =>
     type: ['String'],
     resolve: async () => {
       const res = await fetch(
-        process.env['LISTMONK_INTERNAL_URL'] + '/api/lists?tag=default',
+        envariant('LISTMONK_INTERNAL_URL') + '/api/lists?tag=default',
       );
       const json = await res.json();
       return json.data.results.map(

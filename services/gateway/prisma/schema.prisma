@@ -62,7 +62,7 @@ model AppUserEmail {
   appUserId  String    @map("app_user_id") @db.Uuid
   email      String    @unique @db.Citext
   key        String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  verifiedAt DateTime?
+  verifiedAt DateTime? @map("verified_at")
 
   @@map("app_user_email")
 }
@@ -533,13 +533,4 @@ model UploadList {
 
   @@unique([createdAt, id])
   @@map("upload_list")
-}
-
-model NewsletterSubscription {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email      String    @unique @db.Citext
-  key        String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  verifiedAt DateTime?
-
-  @@map("newsletter_subscription")
 }

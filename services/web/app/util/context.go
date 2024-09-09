@@ -1,5 +1,7 @@
 package util
 
+import "lets.church/web/app/data"
+
 type Flash struct {
 	Level   string
 	Title   string
@@ -7,8 +9,8 @@ type Flash struct {
 }
 
 type AppContext struct {
-	SessionId     *Uuid
 	Flashes       []Flash
 	Authenticated bool
 	CsrfToken     string
+	User          *data.GetUserByIdRow
 }

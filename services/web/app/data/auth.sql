@@ -13,20 +13,28 @@ RETURNING id, key;
 
 -- name: VerifyEmail :one
 WITH updated_rows AS (
-    UPDATE app_user_email SET "verifiedAt"=NOW()
-    WHERE id=sqlc.arg(email_id)
-    AND app_user_id = sqlc.arg(app_user_id)
-    AND key=sqlc.arg(key)
-    AND "verifiedAt" IS NULL
-    RETURNING *
+  UPDATE app_user_email SET "verifiedAt"=NOW()
+  WHERE id=sqlc.arg(email_id)
+  AND app_user_id = sqlc.arg(app_user_id)
+  AND key=sqlc.arg(key)
+  AND "verifiedAt" IS NULL
+  RETURNING *
 )
 SELECT COUNT(*) FROM updated_rows;
 
 -- name: GetUser :one
-SELECT u.*
+SELECT
+  u.*,
+  (SELECT e.email
+   FROM app_user_email e
+   WHERE e.app_user_id = u.id
+     AND e.verified_at IS NOT NULL
+   ORDER BY e.verified_at DESC
+   LIMIT 1) AS email
 FROM app_user u
 LEFT JOIN app_user_email e ON e.app_user_id = u.id
-WHERE u.username = sqlc.arg(identifier) OR e.email = sqlc.arg(identifier)
+WHERE u.username = sqlc.arg(identifier)
+   OR e.email = sqlc.arg(identifier)
 LIMIT 1;
 
 -- name: GetUserByEmail :one
@@ -36,8 +44,24 @@ LEFT JOIN app_user_email e ON e.app_user_id = u.id
 WHERE e.email = sqlc.arg(identifier)
 LIMIT 1;
 
+-- name: GetUserById :one
+SELECT
+  u.*,
+  (SELECT e.email
+   FROM app_user_email e
+   WHERE e.app_user_id = u.id
+     AND e.verified_at IS NOT NULL
+   ORDER BY e.verified_at DESC
+   LIMIT 1) AS email
+FROM app_user u
+LEFT JOIN app_user_email e ON e.app_user_id = u.id
+WHERE u.id = sqlc.arg(id);
+
 -- name: ChangePassword :exec
 UPDATE app_user SET password=sqlc.arg(password) WHERE id=sqlc.arg(id);
 
 -- name: SubscribeToNewsletter :exec
 INSERT INTO newsletter_subscription (email) VALUES (sqlc.arg(email));
+
+-- name: GetValidSession :one
+SELECT * FROM app_session WHERE id = sqlc.arg(id) AND expires_at > NOW();

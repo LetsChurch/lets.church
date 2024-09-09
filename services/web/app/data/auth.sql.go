@@ -68,16 +68,38 @@ func (q *Queries) CreateUserEmail(ctx context.Context, arg CreateUserEmailParams
 }
 
 const getUser = `-- name: GetUser :one
-SELECT u.id, u.username, u.password, u.full_name, u.avatar_path, u.avatar_blurhash, u.created_at, u.updated_at, u.deleted_at, u.role
+SELECT
+  u.id, u.username, u.password, u.full_name, u.avatar_path, u.avatar_blurhash, u.created_at, u.updated_at, u.deleted_at, u.role,
+  (SELECT e.email
+   FROM app_user_email e
+   WHERE e.app_user_id = u.id
+     AND e.verified_at IS NOT NULL
+   ORDER BY e.verified_at DESC
+   LIMIT 1) AS email
 FROM app_user u
 LEFT JOIN app_user_email e ON e.app_user_id = u.id
-WHERE u.username = $1 OR e.email = $1
+WHERE u.username = $1
+   OR e.email = $1
 LIMIT 1
 `
 
-func (q *Queries) GetUser(ctx context.Context, identifier pgtype.Text) (AppUser, error) {
+type GetUserRow struct {
+	ID             pgtype.UUID
+	Username       pgtype.Text
+	Password       string
+	FullName       pgtype.Text
+	AvatarPath     pgtype.Text
+	AvatarBlurhash pgtype.Text
+	CreatedAt      pgtype.Timestamp
+	UpdatedAt      pgtype.Timestamp
+	DeletedAt      pgtype.Timestamp
+	Role           AppUserRole
+	Email          pgtype.Text
+}
+
+func (q *Queries) GetUser(ctx context.Context, identifier pgtype.Text) (GetUserRow, error) {
 	row := q.db.QueryRow(ctx, getUser, identifier)
-	var i AppUser
+	var i GetUserRow
 	err := row.Scan(
 		&i.ID,
 		&i.Username,
@@ -89,6 +111,7 @@ func (q *Queries) GetUser(ctx context.Context, identifier pgtype.Text) (AppUser,
 		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.Role,
+		&i.Email,
 	)
 	return i, err
 }
@@ -119,6 +142,71 @@ func (q *Queries) GetUserByEmail(ctx context.Context, identifier pgtype.Text) (A
 	return i, err
 }
 
+const getUserById = `-- name: GetUserById :one
+SELECT
+  u.id, u.username, u.password, u.full_name, u.avatar_path, u.avatar_blurhash, u.created_at, u.updated_at, u.deleted_at, u.role,
+  (SELECT e.email
+   FROM app_user_email e
+   WHERE e.app_user_id = u.id
+     AND e.verified_at IS NOT NULL
+   ORDER BY e.verified_at DESC
+   LIMIT 1) AS email
+FROM app_user u
+LEFT JOIN app_user_email e ON e.app_user_id = u.id
+WHERE u.id = $1
+`
+
+type GetUserByIdRow struct {
+	ID             pgtype.UUID
+	Username       pgtype.Text
+	Password       string
+	FullName       pgtype.Text
+	AvatarPath     pgtype.Text
+	AvatarBlurhash pgtype.Text
+	CreatedAt      pgtype.Timestamp
+	UpdatedAt      pgtype.Timestamp
+	DeletedAt      pgtype.Timestamp
+	Role           AppUserRole
+	Email          pgtype.Text
+}
+
+func (q *Queries) GetUserById(ctx context.Context, id pgtype.UUID) (GetUserByIdRow, error) {
+	row := q.db.QueryRow(ctx, getUserById, id)
+	var i GetUserByIdRow
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Password,
+		&i.FullName,
+		&i.AvatarPath,
+		&i.AvatarBlurhash,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Role,
+		&i.Email,
+	)
+	return i, err
+}
+
+const getValidSession = `-- name: GetValidSession :one
+SELECT id, app_user_id, expires_at, created_at, updated_at, deleted_at FROM app_session WHERE id = $1 AND expires_at > NOW()
+`
+
+func (q *Queries) GetValidSession(ctx context.Context, id pgtype.UUID) (AppSession, error) {
+	row := q.db.QueryRow(ctx, getValidSession, id)
+	var i AppSession
+	err := row.Scan(
+		&i.ID,
+		&i.AppUserID,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const subscribeToNewsletter = `-- name: SubscribeToNewsletter :exec
 INSERT INTO newsletter_subscription (email) VALUES ($1)
 `
@@ -141,12 +229,12 @@ func (q *Queries) UserExists(ctx context.Context, username pgtype.Text) (bool, e
 
 const verifyEmail = `-- name: VerifyEmail :one
 WITH updated_rows AS (
-    UPDATE app_user_email SET "verifiedAt"=NOW()
-    WHERE id=$1
-    AND app_user_id = $2
-    AND key=$3
-    AND "verifiedAt" IS NULL
-    RETURNING id, app_user_id, email, key, "verifiedAt"
+  UPDATE app_user_email SET "verifiedAt"=NOW()
+  WHERE id=$1
+  AND app_user_id = $2
+  AND key=$3
+  AND "verifiedAt" IS NULL
+  RETURNING id, app_user_id, email, key, "verifiedAt"
 )
 SELECT COUNT(*) FROM updated_rows
 `

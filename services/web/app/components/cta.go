@@ -3,6 +3,7 @@ package components
 import (
 	g "github.com/maragudk/gomponents"
 	h "github.com/maragudk/gomponents/html"
+	"lets.church/web/app/util"
 )
 
 type CtaProps struct {
@@ -12,8 +13,8 @@ type CtaProps struct {
 	SecondaryHref string
 }
 
-func Cta(props CtaProps) g.Node {
-	return h.Aside(h.Class("lc-container lc-cta"),
+func Cta(ac *util.AppContext, props CtaProps) g.Node {
+	return g.If(!ac.Authenticated, h.Aside(h.Class("lc-container lc-cta"),
 		h.Div(
 			h.H2(g.Text("Join Let's Church")),
 			h.P(g.Text("Get sermon hosting and other resources 100% free of charge.")),
@@ -28,5 +29,5 @@ func Cta(props CtaProps) g.Node {
 				Href:        props.PrimaryHref,
 			}),
 		),
-	)
+	))
 }

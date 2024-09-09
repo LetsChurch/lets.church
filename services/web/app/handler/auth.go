@@ -84,7 +84,7 @@ func (h *Handler) PostAuthLogin(c echo.Context) (err error) {
 }
 
 func (h *Handler) AuthLogout(c echo.Context) (err error) {
-	sess, err := h.getSession(c)
+	sess, err := h.getAppSession(c)
 	if err != nil {
 		return err
 	}
@@ -444,23 +444,7 @@ func (h *Handler) PostAuthResetPassword(c echo.Context) error {
 	return errors.New("could not get token claims")
 }
 
-func (h *Handler) getSession(c echo.Context) (*data.GetSessionRow, error) {
-	eb := oops.In("getSession")
-	ac, err := h.getAppContext(c)
-	if err != nil {
-		return nil, eb.Hint("Could not get app context").Wrap(err)
-	}
-
-	if !ac.Authenticated {
-		return nil, nil
-	}
-
-	appSession, err := h.Queries.GetSession(c.Request().Context(), ac.SessionId.Pg())
-
-	return &appSession, eb.Hint("Could not get session from Postgres").Wrap(err)
-}
-
-func (h *Handler) createSession(c echo.Context, user *data.AppUser, remember bool) (*util.Uuid, error) {
+func (h *Handler) createSession(c echo.Context, user *data.GetUserRow, remember bool) (*util.Uuid, error) {
 	eb := oops.In("createSession")
 	res, err := h.Queries.CreateSession(c.Request().Context(), user.ID)
 	if err != nil {

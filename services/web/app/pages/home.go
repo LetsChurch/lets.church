@@ -20,7 +20,7 @@ func Home(ac *util.AppContext, props HomeProps) g.Node {
 		h.Main(h.Class("lc-container"),
 			components.MediaGrid(components.MediaGridProps{Uploads: props.Uploads}),
 		),
-		components.Cta(components.CtaProps{
+		components.Cta(ac, components.CtaProps{
 			PrimaryText:   "Sign Up",
 			PrimaryHref:   "/auth/register",
 			SecondaryText: "Learn More",

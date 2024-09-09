@@ -332,9 +332,7 @@ export type Mutation = {
   register: MutationRegisterResult;
   resetPassword: Scalars['Boolean']['output'];
   subscribeToChannel: ChannelSubscription;
-  subscribeToNewsletter: MutationSubscribeToNewsletterResult;
   unsubscribeFromChannel: Scalars['Boolean']['output'];
-  unsubscribeFromNewsletter: Scalars['Boolean']['output'];
   upsertChannel: Channel;
   upsertChannelMembership: ChannelMembership;
   upsertOrganization: Organization;
@@ -343,7 +341,6 @@ export type Mutation = {
   upsertUploadUserComment: UploadUserComment;
   upsertUser: AppUser;
   verifyEmail: Scalars['Boolean']['output'];
-  verifyNewsletterSubscription: Scalars['Boolean']['output'];
 };
 
 
@@ -447,19 +444,8 @@ export type MutationSubscribeToChannelArgs = {
 };
 
 
-export type MutationSubscribeToNewsletterArgs = {
-  email: Scalars['String']['input'];
-};
-
-
 export type MutationUnsubscribeFromChannelArgs = {
   channelId: Scalars['ShortUuid']['input'];
-};
-
-
-export type MutationUnsubscribeFromNewsletterArgs = {
-  emailKey: Scalars['ShortUuid']['input'];
-  subscriptionId: Scalars['ShortUuid']['input'];
 };
 
 
@@ -541,24 +527,11 @@ export type MutationVerifyEmailArgs = {
   userId: Scalars['ShortUuid']['input'];
 };
 
-
-export type MutationVerifyNewsletterSubscriptionArgs = {
-  emailKey: Scalars['ShortUuid']['input'];
-  subscriptionId: Scalars['ShortUuid']['input'];
-};
-
 export type MutationRegisterResult = DataError | MutationRegisterSuccess | ValidationError;
 
 export type MutationRegisterSuccess = {
   __typename?: 'MutationRegisterSuccess';
   data: AppUser;
-};
-
-export type MutationSubscribeToNewsletterResult = MutationSubscribeToNewsletterSuccess | ValidationError;
-
-export type MutationSubscribeToNewsletterSuccess = {
-  __typename?: 'MutationSubscribeToNewsletterSuccess';
-  data: Scalars['Boolean']['output'];
 };
 
 export enum Order {
