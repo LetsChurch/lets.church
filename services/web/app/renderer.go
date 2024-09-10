@@ -13,5 +13,5 @@ type Renderer struct {
 
 func (r *Renderer) Render(ctx echo.Context, statusCode int, node g.Node) error {
 	ctx.Response().WriteHeader(statusCode)
-	return node.Render(ctx.Response().Writer)
+	return node.Render(ctx.Response())
 }
