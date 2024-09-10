@@ -84,6 +84,8 @@ func main() {
 	app := echo.New()
 	app.Debug = debug
 	setupErrorHandler(app)
+	// Enable CORS and disable implicit credentials
+	app.Use(middleware.CORS())
 	app.File("/favicon.ico", "assets/favicon.ico")
 	app.Static("/assets", "assets")
 	app.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
