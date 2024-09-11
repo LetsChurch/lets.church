@@ -2,22 +2,12 @@ package handler
 
 import (
 	"net/http"
-	"os"
-
-	"strings"
+	"net/mail"
 
 	"github.com/labstack/echo/v4"
 	"github.com/samber/oops"
 	"lets.church/internal/util"
 )
-
-type Subscriber struct {
-	Email                   string   `json:"email"`
-	Lists                   []string `json:"lists"`
-	Name                    string   `json:"name"`
-	Status                  string   `json:"status"`
-	PreconfirmSubscriptions bool     `json:"preconfirm_subscriptions"`
-}
 
 func (h *Handler) PostNewsletterSubscribe(c echo.Context) error {
 	eb := oops.In("PostNewsletter")
@@ -27,25 +17,19 @@ func (h *Handler) PostNewsletterSubscribe(c echo.Context) error {
 		return eb.Wrap(err)
 	}
 
-	params, err := c.FormParams()
+	email := c.FormValue("email")
+
+	_, err = mail.ParseAddress(email)
+
+	if err != nil {
+		return eb.Public("Invalid email address.").Wrap(err)
+	}
+
+	err = util.SubscribeToDefaultNewsletters(email)
 
 	if err != nil {
 		return eb.Wrap(err)
 	}
-
-	params.Del("_crsf")
-
-	resp, err := http.Post(
-		os.Getenv("LISTMONK_INTERNAL_URL")+"/subscription/form",
-		"application/x-www-form-urlencoded",
-		strings.NewReader(params.Encode()),
-	)
-
-	if err != nil {
-		return eb.Public("Could not subscribe to newsletter.").Wrap(err)
-	}
-
-	defer resp.Body.Close()
 
 	h.addFlash(c, util.Flash{
 		Level:   "success",

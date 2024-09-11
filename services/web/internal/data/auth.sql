@@ -60,8 +60,5 @@ WHERE u.id = sqlc.arg(id);
 -- name: ChangePassword :exec
 UPDATE app_user SET password=sqlc.arg(password) WHERE id=sqlc.arg(id);
 
--- name: SubscribeToNewsletter :exec
-INSERT INTO newsletter_subscription (email) VALUES (sqlc.arg(email));
-
 -- name: GetValidSession :one
 SELECT * FROM app_session WHERE id = sqlc.arg(id) AND expires_at > NOW();

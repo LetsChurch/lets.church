@@ -207,15 +207,6 @@ func (q *Queries) GetValidSession(ctx context.Context, id pgtype.UUID) (AppSessi
 	return i, err
 }
 
-const subscribeToNewsletter = `-- name: SubscribeToNewsletter :exec
-INSERT INTO newsletter_subscription (email) VALUES ($1)
-`
-
-func (q *Queries) SubscribeToNewsletter(ctx context.Context, email pgtype.Text) error {
-	_, err := q.db.Exec(ctx, subscribeToNewsletter, email)
-	return err
-}
-
 const userExists = `-- name: UserExists :one
 SELECT EXISTS (SELECT 1 FROM app_user WHERE username = $1)
 `

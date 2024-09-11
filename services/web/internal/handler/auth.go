@@ -321,8 +321,9 @@ func (h *Handler) PostAuthRegister(c echo.Context) error {
 		return eb.Hint("Could not send email verification email").Wrap(err)
 	}
 
+	fmt.Println("Subscribing to newsletter:", subscribeToNewsletter)
 	if subscribeToNewsletter {
-		h.Queries.SubscribeToNewsletter(c.Request().Context(), pgtype.Text{String: email, Valid: true})
+		util.SubscribeToDefaultNewsletters(email)
 	}
 
 	h.addFlash(c, util.Flash{Level: "success", Title: "Check your email!", Message: "We sent an email to " + email + " for verification."})
