@@ -1,4 +1,4 @@
-module lets.church/web
+module lets.church
 
 go 1.22.3
 

@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
 # server
-watchexec --restart --exts go -- go run main.go &
+watchexec --restart --exts go -- go run cmd/server/main.go &
 
 # javascript
-npx esbuild app/index.ts app/components/player.ts app/components/transcript.ts --bundle --format=esm --outdir=assets --watch=forever &
+npx esbuild internal/index.ts internal/components/player.ts internal/components/transcript.ts --bundle --format=esm --outdir=assets --watch=forever &
 
 # css
-watchexec --watch app --exts css -- "npx lightningcss-cli --minify --bundle --custom-media --targets 'last 2 versions and not dead' app/index.css app/components/player.css --output-dir assets" &
+watchexec --watch internal --exts css -- "npx lightningcss-cli --minify --bundle --custom-media --targets 'last 2 versions and not dead' internal/index.css internal/components/player.css --output-dir assets" &
 
 # sqlc
-watchexec --watch app --exts sql -- sqlc generate &
+watchexec --watch internal --exts sql -- sqlc generate &
 
 wait

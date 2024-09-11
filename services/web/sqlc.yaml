@@ -1,13 +1,13 @@
 version: '2'
 sql:
   - engine: 'postgresql'
-    schema: './app/data/schema.sql'
-    queries: './app/data'
+    schema: './internal/data/schema.sql'
+    queries: './internal/data'
     strict_order_by: false
     gen:
       go:
         package: 'data'
-        out: './app/data'
+        out: './internal/data'
         sql_package: 'pgx/v5'
         overrides:
           - column: 'app_user.username'

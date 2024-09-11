@@ -3510,7 +3510,7 @@ var htmx2 = function() {
 }();
 var htmx_esm_default = htmx2;
 
-// app/components/notification.ts
+// internal/components/notification.ts
 var LcNotification = class extends HTMLElement {
   abortController = null;
   constructor() {
@@ -3544,7 +3544,7 @@ var LcNotification = class extends HTMLElement {
 };
 customElements.define("lc-notification", LcNotification);
 
-// app/index.ts
+// internal/index.ts
 document.documentElement.classList.replace("no-js", "js");
 document.body.addEventListener("flash", (e) => {
   if (!(e instanceof CustomEvent) || !("html" in e.detail) || typeof e.detail.html !== "string") {

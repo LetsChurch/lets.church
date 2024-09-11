@@ -169,7 +169,7 @@ services:
       context: ./services/web
       dockerfile: Dockerfile
       target: build
-    command: watchexec --restart --exts go -- go run background-worker/main.go
+    command: watchexec --restart --exts go -- go run cmd/background-worker/main.go
     environment:
       APP_ENV: development
       FAKTORY_URL: tcp://faktory:7419

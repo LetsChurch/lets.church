@@ -19,19 +19,21 @@ ENV PATH="/root/.local/bin:${PATH}"
 WORKDIR /usr/src/app
 
 COPY . .
-RUN go build -v -o /usr/local/bin/app ./main.go
-RUN go build -v -o /usr/local/bin/background-worker ./background-worker/main.go
+RUN go build -v -o /usr/local/bin/app ./cmd/server/main.go
+RUN go build -v -o /usr/local/bin/background-worker ./cmd/background-worker/main.go
 
 RUN npm ci
-RUN npx esbuild app/index.ts app/components/player.ts app/components/transcript.ts --bundle --format=esm --minify --outdir=assets
-RUN npx lightningcss-cli --minify --bundle --custom-media --targets 'last 2 versions and not dead' app/index.css app/components/player.css --output-dir assets
+RUN npx esbuild internal/index.ts internal/components/player.ts internal/components/transcript.ts --bundle --format=esm --minify --outdir=assets
+RUN npx lightningcss-cli --minify --bundle --custom-media --targets 'last 2 versions and not dead' internal/index.css internal/components/player.css --output-dir assets
 
 # Prod App
-FROM golang:1.22.4-bookworm as app
+FROM scratch as app
+WORKDIR /usr/src/app
 COPY --from=build /usr/local/bin/app /usr/local/bin/app
+COPY --from=build /usr/src/app/assets /usr/src/app/
 CMD ["app"]
 
 # Prod Background Worker
-FROM golang:1.22.6-bookworm as background-worker
+FROM scratch as background-worker
 COPY --from=build /usr/local/bin/background-worker /usr/local/bin/background-worker
 CMD ["app"]

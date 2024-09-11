@@ -50078,7 +50078,7 @@ function chunk(arr, size) {
   return result;
 }
 
-// app/components/player.ts
+// internal/components/player.ts
 var LcPlayer = class extends HTMLElement {
   abortController = null;
   player = null;

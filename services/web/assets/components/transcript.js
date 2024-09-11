@@ -58,7 +58,7 @@ var require_binary_search = __commonJS({
   }
 });
 
-// app/components/transcript.ts
+// internal/components/transcript.ts
 var import_binary_search = __toESM(require_binary_search());
 var activeClass = "lc-media__content__transcript__segment--active";
 var LcTranscript = class extends HTMLElement {
