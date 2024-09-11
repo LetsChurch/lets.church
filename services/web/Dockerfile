@@ -19,8 +19,8 @@ ENV PATH="/root/.local/bin:${PATH}"
 WORKDIR /usr/src/app
 
 COPY . .
-RUN go build -v -o /usr/local/bin/app ./cmd/server/main.go
-RUN go build -v -o /usr/local/bin/background-worker ./cmd/background-worker/main.go
+RUN CGO_ENABLED=0 go build -v -o /usr/local/bin/app ./cmd/server/main.go
+RUN CGO_ENABLED=0 go build -v -o /usr/local/bin/background-worker ./cmd/background-worker/main.go
 
 RUN npm ci
 RUN npx esbuild internal/index.ts internal/components/player.ts internal/components/transcript.ts --bundle --format=esm --minify --outdir=assets
@@ -30,10 +30,10 @@ RUN npx lightningcss-cli --minify --bundle --custom-media --targets 'last 2 vers
 FROM scratch as app
 WORKDIR /usr/src/app
 COPY --from=build /usr/local/bin/app /usr/local/bin/app
-COPY --from=build /usr/src/app/assets /usr/src/app/
+COPY --from=build /usr/src/app/assets /usr/src/app/assets
 CMD ["app"]
 
 # Prod Background Worker
 FROM scratch as background-worker
-COPY --from=build /usr/local/bin/background-worker /usr/local/bin/background-worker
-CMD ["app"]
+COPY --from=build /usr/local/bin/background-worker /background-worker
+CMD ["/background-worker"]
