@@ -59,6 +59,3 @@ WHERE u.id = sqlc.arg(id);
 
 -- name: ChangePassword :exec
 UPDATE app_user SET password=sqlc.arg(password) WHERE id=sqlc.arg(id);
-
--- name: GetValidSession :one
-SELECT * FROM app_session WHERE id = sqlc.arg(id) AND expires_at > NOW();

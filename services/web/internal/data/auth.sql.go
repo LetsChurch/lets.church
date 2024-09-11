@@ -189,24 +189,6 @@ func (q *Queries) GetUserById(ctx context.Context, id pgtype.UUID) (GetUserByIdR
 	return i, err
 }
 
-const getValidSession = `-- name: GetValidSession :one
-SELECT id, app_user_id, expires_at, created_at, updated_at, deleted_at FROM app_session WHERE id = $1 AND expires_at > NOW()
-`
-
-func (q *Queries) GetValidSession(ctx context.Context, id pgtype.UUID) (AppSession, error) {
-	row := q.db.QueryRow(ctx, getValidSession, id)
-	var i AppSession
-	err := row.Scan(
-		&i.ID,
-		&i.AppUserID,
-		&i.ExpiresAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
-	)
-	return i, err
-}
-
 const userExists = `-- name: UserExists :one
 SELECT EXISTS (SELECT 1 FROM app_user WHERE username = $1)
 `

@@ -1,4 +1,4 @@
--- name: GetSession :one
+-- name: GetValidSession :many
 SELECT s.*, u.id as user_id, u.username as username
 FROM app_session s, app_user u
 WHERE s.id = sqlc.arg(id)

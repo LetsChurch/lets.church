@@ -35,7 +35,7 @@ func (q *Queries) DeleteSession(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
-const getSession = `-- name: GetSession :one
+const getValidSession = `-- name: GetValidSession :many
 SELECT s.id, s.app_user_id, s.expires_at, s.created_at, s.updated_at, s.deleted_at, u.id as user_id, u.username as username
 FROM app_session s, app_user u
 WHERE s.id = $1
@@ -46,7 +46,7 @@ AND s.deleted_at IS NULL
 LIMIT 1
 `
 
-type GetSessionRow struct {
+type GetValidSessionRow struct {
 	ID        pgtype.UUID
 	AppUserID pgtype.UUID
 	ExpiresAt pgtype.Timestamp
@@ -57,18 +57,31 @@ type GetSessionRow struct {
 	Username  pgtype.Text
 }
 
-func (q *Queries) GetSession(ctx context.Context, id pgtype.UUID) (GetSessionRow, error) {
-	row := q.db.QueryRow(ctx, getSession, id)
-	var i GetSessionRow
-	err := row.Scan(
-		&i.ID,
-		&i.AppUserID,
-		&i.ExpiresAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.DeletedAt,
-		&i.UserID,
-		&i.Username,
-	)
-	return i, err
+func (q *Queries) GetValidSession(ctx context.Context, id pgtype.UUID) ([]GetValidSessionRow, error) {
+	rows, err := q.db.Query(ctx, getValidSession, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetValidSessionRow
+	for rows.Next() {
+		var i GetValidSessionRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.AppUserID,
+			&i.ExpiresAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.UserID,
+			&i.Username,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

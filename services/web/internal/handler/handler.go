@@ -22,7 +22,7 @@ type Handler struct {
 	ZxcvbnMinimumScore int
 }
 
-func (h *Handler) getAppSession(c echo.Context) (*data.GetSessionRow, error) {
+func (h *Handler) getAppSession(c echo.Context) (*data.GetValidSessionRow, error) {
 	sess, _ := session.Get("session", c)
 	sessionId := sess.Values["id"]
 
@@ -37,12 +37,16 @@ func (h *Handler) getAppSession(c echo.Context) (*data.GetSessionRow, error) {
 		return nil, eb.Wrap(err)
 	}
 
-	session, err := h.Queries.GetSession(c.Request().Context(), sessionUuid.Pg())
+	session, err := h.Queries.GetValidSession(c.Request().Context(), sessionUuid.Pg())
 
-	return &session, eb.Wrap(err)
+	if len(session) == 0 {
+		return nil, eb.Errorf("No valid session found")
+	}
+
+	return &session[0], eb.Wrap(err)
 }
 
-func (h *Handler) getAppUserFromSession(c echo.Context, session *data.GetSessionRow) (*data.GetUserByIdRow, error) {
+func (h *Handler) getAppUserFromSession(c echo.Context, session *data.GetValidSessionRow) (*data.GetUserByIdRow, error) {
 	if session == nil {
 		return nil, nil
 	}
@@ -62,18 +66,16 @@ func (h *Handler) getAppContext(c echo.Context) (*util.AppContext, error) {
 	flashes := lo.Map(sess.Flashes(), func(f any, _ int) util.Flash {
 		return f.(util.Flash)
 	})
+
 	eb := oops.In("getAppContext")
 	err := sess.Save(c.Request(), c.Response())
+
 	if err != nil {
 		return nil, eb.Hint("Could not save session after getting flashes").Wrap(err)
 	}
 
-	appSession, err := h.getAppSession(c)
-	if err != nil {
-		return nil, eb.Hint("Could not get app session").Wrap(err)
-	}
-
-	appUser, err := h.getAppUserFromSession(c, appSession)
+	appSession, _ := h.getAppSession(c)
+	appUser, _ := h.getAppUserFromSession(c, appSession)
 
 	return &util.AppContext{
 		Flashes:       flashes,

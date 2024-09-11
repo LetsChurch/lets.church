@@ -473,7 +473,7 @@ func (h *Handler) createSession(c echo.Context, user *data.GetUserRow, remember 
 	return &sessionId, nil
 }
 
-func (h *Handler) deleteSession(c echo.Context, sessionRow *data.GetSessionRow) error {
+func (h *Handler) deleteSession(c echo.Context, sessionRow *data.GetValidSessionRow) error {
 	eb := oops.In("deleteSession")
 	sess, err := session.Get("session", c)
 	if err != nil {
