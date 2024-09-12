@@ -19,7 +19,7 @@ import (
 	"lets.church/cmd/server/pages"
 	"lets.church/cmd/server/util"
 	"lets.church/internal/data"
-	"lets.church/internal/jobs/background-worker"
+	"lets.church/internal/jobs"
 	gutil "lets.church/internal/util"
 
 	"github.com/alexedwards/argon2id"
@@ -163,25 +163,18 @@ func (h *Handler) PostAuthForgotPassword(c echo.Context) (err error) {
 
 	resetUrl := h.PublicUrl + "/auth/reset-password?token=" + tokenString
 
-	html, err := gutil.MakeEmailHtml(gutil.MakeEmailHtmlArgs{
-		Title:   "Welcome to Let's Church!",
-		Preview: "Please verify your email.",
-		Body: []string{
+	err = jobs.QueueEmailJob(h.FaktoryClient, jobs.EmailArgs{
+		From:        "hello@lets.church",
+		To:          []string{email},
+		Subject:     "Reset Your Password For Let's Church",
+		PlainText:   "Hello! Please visit the following link to reset your password: " + resetUrl + "\n\nThis link will expire in 15 minutes.\n\nIf you did not request a password reset, please ignore this email.",
+		HtmlTitle:   "Welcome to Let's Church!",
+		HtmlPreview: "Please verify your email.",
+		HtmlParas: []string{
 			"Hello! Please click <a href=\"" + resetUrl + "\">here</a> to reset your password.",
 			"This link will expire in 15 minutes.",
 			"If you did not request a password reset, please ignore this email.",
 		},
-	})
-	if err != nil {
-		return eb.Hint("Could not make password reset email HTML").Wrap(err)
-	}
-
-	err = jobs.QueueEmailJob(h.FaktoryClient, jobs.EmailArgs{
-		From:    "hello@lets.church",
-		To:      []string{email},
-		Subject: "Reset Your Password For Let's Church",
-		Text:    "Hello! Please visit the following link to reset your password: " + resetUrl + "\n\nThis link will expire in 15 minutes.\n\nIf you did not request a password reset, please ignore this email.",
-		Html:    html,
 	})
 	if err != nil {
 		return eb.Hint("Could not send reset password email").Wrap(err)
@@ -300,23 +293,17 @@ func (h *Handler) PostAuthRegister(c echo.Context) error {
 	params.Add("emailId", gutil.Uuid(emailRow.ID.Bytes).Base58())
 	params.Add("emailKey", gutil.Uuid(emailRow.Key.Bytes).Base58())
 	verifyUrl := h.PublicUrl + "/auth/verify?" + params.Encode()
-	html, err := gutil.MakeEmailHtml(gutil.MakeEmailHtmlArgs{
-		Title:   "Welcome to Let's Church!",
-		Preview: "Please verify your email.",
-		Body: []string{
-			"Welcome to Let's Church, <b>" + username + "</b>! Please click <a href=\"" + verifyUrl + "\" target=\"_blank\">here</a> to verify your email.",
-		},
-	})
-	if err != nil {
-		return eb.Hint("Could not generate HTML for email validation email").Wrap(err)
-	}
 
 	err = jobs.QueueEmailJob(h.FaktoryClient, jobs.EmailArgs{
-		From:    "hello@lets.church",
-		To:      []string{email},
-		Subject: "Welcome to Let's Church! Please verify your email.",
-		Text:    "Welcome, " + username + "! Please visit the following link to verify your email: " + verifyUrl,
-		Html:    html,
+		From:        "hello@lets.church",
+		To:          []string{email},
+		Subject:     "Welcome to Let's Church! Please verify your email.",
+		PlainText:   "Welcome, " + username + "! Please visit the following link to verify your email: " + verifyUrl,
+		HtmlTitle:   "Welcome to Let's Church!",
+		HtmlPreview: "Please verify your email.",
+		HtmlParas: []string{
+			"Welcome to Let's Church, <b>" + username + "</b>! Please click <a href=\"" + verifyUrl + "\" target=\"_blank\">here</a> to verify your email.",
+		},
 	})
 	if err != nil {
 		return eb.Hint("Could not send email verification email").Wrap(err)

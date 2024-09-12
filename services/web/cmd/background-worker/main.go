@@ -4,7 +4,7 @@ import (
 	"time"
 
 	worker "github.com/contribsys/faktory_worker_go"
-	"lets.church/internal/jobs/background-worker"
+	"lets.church/cmd/background-worker/jobs"
 	"lets.church/internal/util"
 )
 
