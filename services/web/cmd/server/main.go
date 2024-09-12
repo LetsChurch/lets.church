@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/gob"
 	"encoding/json"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -20,6 +21,8 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/samber/oops"
 
+	"embed"
+
 	"github.com/contribsys/faktory/client"
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
@@ -28,6 +31,9 @@ import (
 	"github.com/rs/zerolog"
 	l "github.com/rs/zerolog/log"
 )
+
+//go:embed assets/*
+var embeddedAssets embed.FS
 
 func getDbConn(ctx context.Context) *pgx.Conn {
 	conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
@@ -57,6 +63,11 @@ func main() {
 	gob.Register(util.Flash{})
 	ctx := context.Background()
 
+	fsys, err := fs.Sub(embeddedAssets, "assets")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	conn := getDbConn(ctx)
 	defer conn.Close(ctx)
 
@@ -84,10 +95,10 @@ func main() {
 	app := echo.New()
 	app.Debug = debug
 	setupErrorHandler(app)
+	app.GET("/favicon.ico", echo.WrapHandler(http.FileServer(http.FS(fsys))))
+	app.GET("/assets/*", echo.WrapHandler(http.StripPrefix("/assets/", http.FileServer(http.FS(fsys)))))
 	// Enable CORS and disable implicit credentials
 	app.Use(middleware.CORS())
-	app.File("/favicon.ico", "assets/favicon.ico")
-	app.Static("/assets", "assets")
 	app.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
 		TokenLookup:    "cookie:_csrf",
 		CookiePath:     "/",

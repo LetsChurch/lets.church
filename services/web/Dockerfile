@@ -1,4 +1,4 @@
-FROM golang:1.22.4-bookworm as build
+FROM golang:1.23.1-bookworm AS build
 # Dependencies for webinstall
 RUN apt-get update && apt-get install -y curl xz-utils
 RUN curl -sS https://webi.sh/watchexec@2.1.1 | sh
@@ -19,21 +19,24 @@ ENV PATH="/root/.local/bin:${PATH}"
 WORKDIR /usr/src/app
 
 COPY . .
-RUN CGO_ENABLED=0 go build -v -o /usr/local/bin/app ./cmd/server/main.go
-RUN CGO_ENABLED=0 go build -v -o /usr/local/bin/background-worker ./cmd/background-worker/main.go
 
 RUN npm ci
-RUN npx esbuild internal/index.ts internal/components/player.ts internal/components/transcript.ts --bundle --format=esm --minify --outdir=assets
-RUN npx lightningcss-cli --minify --bundle --custom-media --targets 'last 2 versions and not dead' internal/index.css internal/components/player.css --output-dir assets
+RUN npx esbuild internal/index.ts internal/components/player.ts internal/components/transcript.ts --bundle --format=esm --minify --outdir=cmd/server/assets
+RUN npx lightningcss-cli --minify --bundle --custom-media --targets 'last 2 versions and not dead' internal/index.css internal/components/player.css --output-dir cmd/server/assets
 
-# Prod App
-FROM scratch as app
-WORKDIR /usr/src/app
-COPY --from=build /usr/local/bin/app /usr/local/bin/app
-COPY --from=build /usr/src/app/assets /usr/src/app/assets
-CMD ["app"]
+RUN CGO_ENABLED=0 go build -v -o /usr/local/bin/server ./cmd/server/main.go
+RUN CGO_ENABLED=0 go build -v -o /usr/local/bin/background-worker ./cmd/background-worker/main.go
+
+# Prod Base
+FROM scratch AS prod-base
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+# Prod Server
+FROM prod-base AS server
+COPY --from=build /usr/local/bin/server /usr/local/bin/server
+CMD ["server"]
 
 # Prod Background Worker
-FROM scratch as background-worker
-COPY --from=build /usr/local/bin/background-worker /background-worker
-CMD ["/background-worker"]
+FROM prod-base AS background-worker
+COPY --from=build /usr/local/bin/background-worker /usr/local/bin/background-worker
+CMD ["background-worker"]

@@ -1,4 +1,6 @@
 *_templ.go
 node_modules
-assets/*.css
-assets/*.js
+cmd/server/assets/*.css
+cmd/server/assets/**/*.css
+cmd/server/assets/*.js
+cmd/server/assets/**/*.js

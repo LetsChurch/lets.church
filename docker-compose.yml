@@ -36,6 +36,7 @@ services:
       context: ./apps/web
       dockerfile: Dockerfile
     command: npm run dev
+    restart: unless-stopped
     ports:
       - 127.0.0.1:${HOST_WEB_PORT}:3000
     environment:
@@ -51,7 +52,7 @@ services:
       context: ./apps/web-next
       dockerfile: Dockerfile
     command: npm run dev
-    restart: on-failure
+    restart: unless-stopped
     ports:
       - 127.0.0.1:${HOST_WEB_NEXT_PORT}:3000
       - 127.0.0.1:${HOST_WEB_HMR_PORT}:${INTERNAL_WEB_HMR_PORT}
@@ -75,6 +76,7 @@ services:
       dockerfile: Dockerfile
       target: build
     command: ./dev.sh
+    restart: unless-stopped
     ports:
       - 127.0.0.1:${HOST_WEB_GO_PORT}:3000
     environment:
@@ -98,6 +100,7 @@ services:
   #     context: ./apps/web-astro
   #     dockerfile: Dockerfile
   #   command: npm run dev
+  #   restart: unless-stopped
   #   ports:
   #     - 127.0.0.1:${HOST_WEB_NEXT_PORT}:4321
   #   environment:
@@ -118,6 +121,7 @@ services:
       context: ./services/gateway
       target: server
     command: npm run dev:server
+    restart: unless-stopped
     ports:
       - 127.0.0.1:${HOST_GATEWAY_PORT}:3000
     environment:
@@ -148,6 +152,7 @@ services:
       context: ./services/gateway
       target: background-worker
     command: npm run dev:background-worker
+    restart: unless-stopped
     environment:
       NODE_ENV: development
       SENTRY_DSN: ${SENTRY_BACKGROUND_WORKER_DSN}
@@ -170,6 +175,7 @@ services:
       dockerfile: Dockerfile
       target: build
     command: watchexec --restart --exts go -- go run cmd/background-worker/main.go
+    restart: unless-stopped
     environment:
       APP_ENV: development
       FAKTORY_URL: tcp://faktory:7419
@@ -183,6 +189,7 @@ services:
       context: ./services/gateway
       target: probe-worker
     command: npm run dev:probe-worker
+    restart: unless-stopped
     environment:
       NODE_ENV: development
       SENTRY_DSN: ${SENTRY_TRANSCODE_WORKER_DSN}
@@ -201,6 +208,7 @@ services:
       context: ./services/gateway
       target: transcode-worker
     command: npm run dev:transcode-worker
+    restart: unless-stopped
     environment:
       NODE_ENV: development
       SENTRY_DSN: ${SENTRY_TRANSCODE_WORKER_DSN}
@@ -219,6 +227,7 @@ services:
       context: ./services/gateway
       target: transcribe-worker
     command: npm run dev:transcribe-worker
+    restart: unless-stopped
     environment:
       NODE_ENV: development
       SENTRY_DSN: ${SENTRY_TRANSCRIBE_WORKER_DSN}
@@ -238,6 +247,7 @@ services:
       context: ./services/gateway
       target: import-worker
     command: npm run dev:import-worker
+    restart: unless-stopped
     environment:
       NODE_ENV: development
       SENTRY_DSN: ${SENTRY_IMPORT_WORKER_DSN}

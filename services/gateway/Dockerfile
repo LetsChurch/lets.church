@@ -1,4 +1,4 @@
-FROM debian:bullseye-slim as build-audiowaveform
+FROM debian:bullseye-slim AS build-audiowaveform
 RUN apt-get update && apt-get install -y git wget cmake build-essential libmad0-dev libid3tag0-dev libsndfile1-dev libgd-dev libboost-filesystem-dev libboost-program-options-dev libboost-regex-dev
 RUN mkdir -p /home/build
 RUN git clone https://github.com/bbc/audiowaveform.git /home/build/audiowaveform
@@ -13,7 +13,7 @@ RUN cmake -D BUILD_STATIC=1 .. && make
 
 # Debian Base Image currently required for Prisma and M1 Macs: https://github.com/prisma/prisma/issues/8478
 # Temporal does not support alpine: https://github.com/temporalio/sdk-typescript/issues/850
-FROM node:20.7.0-bullseye-slim as base
+FROM node:20.7.0-bullseye-slim AS base
 # Prisma requires lbssl-dev and ca-certificates
 RUN apt-get update && apt-get install -y libssl-dev ca-certificates neovim
 WORKDIR /home/node/app
@@ -22,26 +22,26 @@ RUN npm ci
 ENV NODE_ENV=production EDITOR=nvim
 COPY . .
 
-FROM base as server
+FROM base AS server
 RUN npm run prisma:generate
 CMD npm run start:server
 
-FROM base as background-worker
+FROM base AS background-worker
 RUN apt-get install -y imagemagick jpegoptim
 COPY --from=videah/oxipng:7.0.0 /usr/local/bin/oxipng /usr/local/bin/oxipng
 RUN npm run prisma:generate
 CMD npm run start:background-worker
 
-FROM base as probe-worker
+FROM base AS probe-worker
 RUN apt-get install -y ffmpeg
 CMD npm run start:probe-worker
 
-FROM base as transcode-worker
+FROM base AS transcode-worker
 RUN apt-get install -y imagemagick jpegoptim ffmpeg
 COPY --from=build-audiowaveform /home/build/audiowaveform/build/audiowaveform /usr/bin/
 CMD npm run start:transcode-worker
 
-FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04 as transcribe-worker
+FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04 AS transcribe-worker
 ARG WHISPER_MODEL=tiny.en
 RUN apt-get update && \
   apt-get install -y ca-certificates curl gnupg python3 python3-pip git ffmpeg && \
@@ -62,7 +62,7 @@ COPY . .
 ENV NODE_ENV=production
 CMD npm run start:transcribe-worker
 
-FROM base as import-worker
+FROM base AS import-worker
 RUN apt-get install -y python3 ffmpeg
 COPY --from=jauderho/yt-dlp:2024.08.06 /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
 RUN npm run prisma:generate
