@@ -11,10 +11,11 @@ import (
 	"strconv"
 	"strings"
 
-	"lets.church/internal/components"
+	"lets.church/cmd/server/components"
+	"lets.church/cmd/server/handler"
+	"lets.church/cmd/server/util"
 	"lets.church/internal/data"
-	"lets.church/internal/handler"
-	"lets.church/internal/util"
+	gutil "lets.church/internal/util"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/labstack/echo/v4"
@@ -59,7 +60,7 @@ func getDbConn(ctx context.Context) *pgx.Conn {
 
 func main() {
 	debug := os.Getenv("APP_ENV") == "development"
-	util.InitLogger()
+	gutil.InitLogger()
 	gob.Register(util.Flash{})
 	ctx := context.Background()
 
