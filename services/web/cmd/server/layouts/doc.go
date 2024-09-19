@@ -17,6 +17,7 @@ func Doc(ac *util.AppContext, body ...g.Node) g.Node {
 				h.TitleEl(g.Text("Let's Church")),
 				h.Link(h.Rel("stylesheet"), h.Href("/assets/index.css")),
 				h.Script(h.Type("module"), h.Src("/assets/index.js"), h.Defer()),
+				h.Link(h.Rel("shortcut icon"), h.Href("/assets/favicon.svg")),
 			),
 			h.Body(
 				h.Div(h.ID("lc-root"), hx.Boost("true"),
