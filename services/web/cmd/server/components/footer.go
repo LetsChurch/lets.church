@@ -2,7 +2,6 @@ package components
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -43,8 +42,6 @@ func isUserSubscribedToNewsletter(ac *util.AppContext) bool {
 }
 
 func Footer(ac *util.AppContext) g.Node {
-	fmt.Printf("ac: %+v\n)", ac)
-
 	return h.Footer(h.Class("lc-container lc-footer"),
 		g.If(!isUserSubscribedToNewsletter(ac),
 			h.Div(h.Class("newsletter"),

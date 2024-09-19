@@ -22,6 +22,7 @@ require (
 	github.com/samber/lo v1.46.0
 	github.com/samber/oops v1.13.0
 	github.com/trustelem/zxcvbn v1.0.1
+	github.com/yuin/goldmark v1.7.4
 )
 
 require (

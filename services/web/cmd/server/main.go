@@ -96,8 +96,13 @@ func main() {
 	app := echo.New()
 	app.Debug = debug
 	setupErrorHandler(app)
-	app.GET("/favicon.ico", echo.WrapHandler(http.FileServer(http.FS(fsys))))
-	app.GET("/assets/*", echo.WrapHandler(http.StripPrefix("/assets/", http.FileServer(http.FS(fsys)))))
+	if debug {
+		app.File("/favicon.ico", "cmd/server/assets/favicon.ico")
+		app.Static("/assets", "cmd/server/assets")
+	} else {
+		app.GET("/favicon.ico", echo.WrapHandler(http.FileServer(http.FS(fsys))))
+		app.GET("/assets/*", echo.WrapHandler(http.StripPrefix("/assets/", http.FileServer(http.FS(fsys)))))
+	}
 	// Enable CORS and disable implicit credentials
 	app.Use(middleware.CORS())
 	app.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{

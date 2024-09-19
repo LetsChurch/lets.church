@@ -14,7 +14,7 @@ type AboutProps struct {
 func About(ac *util.AppContext, props AboutProps) g.Node {
 	return layouts.Main(
 		ac,
-		h.Main(h.Class("lc-container"),
+		h.Main(h.Class("lc-container epistole"),
 			g.Raw(props.Html),
 		),
 	)

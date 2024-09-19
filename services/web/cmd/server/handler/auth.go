@@ -2,7 +2,6 @@ package handler
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"net/mail"
@@ -309,7 +308,6 @@ func (h *Handler) PostAuthRegister(c echo.Context) error {
 		return eb.Hint("Could not send email verification email").Wrap(err)
 	}
 
-	fmt.Println("Subscribing to newsletter:", subscribeToNewsletter)
 	if subscribeToNewsletter {
 		gutil.SubscribeToDefaultNewsletters(email)
 	}
@@ -390,7 +388,7 @@ func (h *Handler) PostAuthResetPassword(c echo.Context) error {
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			return nil, eb.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 
 		return h.JwtSecret, nil
