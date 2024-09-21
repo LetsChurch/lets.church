@@ -7,6 +7,7 @@ require (
 	github.com/alexedwards/argon2id v1.0.0
 	github.com/asticode/go-astisub v0.26.2
 	github.com/axiomhq/axiom-go v0.20.2
+	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/contribsys/faktory v1.9.0
 	github.com/contribsys/faktory_worker_go v1.7.0
 	github.com/golang-jwt/jwt/v5 v5.2.1

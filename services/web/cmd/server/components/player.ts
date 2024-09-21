@@ -2,9 +2,24 @@ import videojs from 'video.js';
 import type VideoJsPlayer from 'video.js/dist/types/player';
 import { chunk } from 'es-toolkit';
 
+function serializeTimeRanges(
+  ranges: TimeRanges,
+): Array<{ start: number; end: number }> {
+  const res: ReturnType<typeof serializeTimeRanges> = new Array(ranges.length);
+
+  for (let i = 0; i < ranges.length; i += 1) {
+    res[i] = { start: ranges.start(i), end: ranges.end(i) };
+  }
+
+  return res;
+}
+
 class LcPlayer extends HTMLElement {
   abortController: AbortController | null = null;
   player: VideoJsPlayer | null = null;
+  reportRangesTimer: number | undefined = undefined;
+  viewId: string | null = null;
+
   rob: ResizeObserver | null = null;
 
   constructor() {
@@ -16,6 +31,7 @@ class LcPlayer extends HTMLElement {
 
     // video.js has issues in the shadow dom: https://github.com/videojs/video.js/issues/8069
     // const shadowRoot = this.attachShadow({ mode: "open" });
+    const id = this.getAttribute('id');
     const videoSource = this.getAttribute('video-source');
     const audioSource = this.getAttribute('audio-source');
 
@@ -88,6 +104,32 @@ class LcPlayer extends HTMLElement {
     if (audioOnlyMode) {
       this.initWaveform();
     }
+
+    async function reportTimeRanges() {
+      try {
+        const res = await fetch(`/media/${id}/record`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            viewId: this.viewId,
+            ranges: serializeTimeRanges(video.played),
+          }),
+          signal: ac.signal,
+        });
+
+        const json = await res.json();
+
+        if ('viewId' in json && typeof json.viewId === 'string') {
+          this.viewId = json.viewId;
+        }
+      } finally {
+        this.reportRangesTimer = window.setTimeout(reportTimeRanges, 5000);
+      }
+    }
+
+    this.reportRangesTimer = window.setTimeout(reportTimeRanges, 5000);
   }
 
   disconnectedCallback() {

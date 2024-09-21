@@ -55,3 +55,12 @@ FROM upload_user_comment c
 LEFT JOIN app_user a ON c.author_id = a.id
 WHERE c.upload_id = sqlc.arg(upload_id)
 ORDER BY c.score DESC;
+
+-- name: RecordViewRanges :one
+INSERT INTO upload_view_ranges (upload_record_id, viewer_hash, app_user_id, ranges, total_time)
+VALUES (sqlc.arg(upload_record_id), sqlc.arg(viewer_hash), sqlc.narg(app_user_id), sqlc.arg(ranges), sqlc.arg(total_time))
+RETURNING id;
+
+-- name: UpdateViewRanges :exec
+UPDATE upload_view_ranges SET ranges = sqlc.arg(ranges), total_time = sqlc.arg(total_time)
+WHERE id = sqlc.arg(id);

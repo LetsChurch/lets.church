@@ -56,6 +56,33 @@ func (q *Queries) GetUploadUserComments(ctx context.Context, uploadID pgtype.UUI
 	return items, nil
 }
 
+const recordViewRanges = `-- name: RecordViewRanges :one
+INSERT INTO upload_view_ranges (upload_record_id, viewer_hash, app_user_id, ranges, total_time)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id
+`
+
+type RecordViewRangesParams struct {
+	UploadRecordID pgtype.UUID
+	ViewerHash     int64
+	AppUserID      pgtype.UUID
+	Ranges         []byte
+	TotalTime      float64
+}
+
+func (q *Queries) RecordViewRanges(ctx context.Context, arg RecordViewRangesParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, recordViewRanges,
+		arg.UploadRecordID,
+		arg.ViewerHash,
+		arg.AppUserID,
+		arg.Ranges,
+		arg.TotalTime,
+	)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const trendingUploads = `-- name: TrendingUploads :many
 SELECT
   upload_record.id,
@@ -104,6 +131,22 @@ func (q *Queries) TrendingUploads(ctx context.Context) ([]TrendingUploadsRow, er
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateViewRanges = `-- name: UpdateViewRanges :exec
+UPDATE upload_view_ranges SET ranges = $1, total_time = $2
+WHERE id = $3
+`
+
+type UpdateViewRangesParams struct {
+	Ranges    []byte
+	TotalTime float64
+	ID        pgtype.UUID
+}
+
+func (q *Queries) UpdateViewRanges(ctx context.Context, arg UpdateViewRangesParams) error {
+	_, err := q.db.Exec(ctx, updateViewRanges, arg.Ranges, arg.TotalTime, arg.ID)
+	return err
 }
 
 const uploadData = `-- name: UploadData :one

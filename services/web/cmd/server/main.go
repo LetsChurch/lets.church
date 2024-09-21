@@ -131,6 +131,7 @@ func main() {
 	app.GET("/churches", h.Churches)
 	app.GET("/churches/add", h.ChurchesAdd)
 	app.GET("/media/:id", h.Media)
+	app.POST("/media/:id/record", h.MediaRecord)
 	app.POST("/newsletter/subscribe", h.PostNewsletterSubscribe)
 
 	app.Logger.Fatal(app.Start("0.0.0.0:3000"))
