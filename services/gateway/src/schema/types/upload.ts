@@ -11,7 +11,7 @@ import {
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
 import { resolveOffsetConnection } from '@pothos/plugin-relay';
 import { queryFromInfo } from '@pothos/plugin-prisma';
-import { xxh32 } from '@node-rs/xxhash';
+import { xxh64 } from '@node-rs/xxhash';
 import { LexoRank } from 'lexorank';
 import { z } from 'zod';
 import { indexDocument } from '../../temporal';
@@ -1073,9 +1073,9 @@ builder.mutationFields((t) => ({
       }
 
       // The view hash will change once daily since the salt changes once daily, this means that each user can count for one view per day
-      const viewHash = xxh32(
+      const viewHash = xxh64(
         session?.appUserId ?? clientIp + clientUserAgent,
-        res.salt,
+        BigInt(res.salt),
       );
 
       await prisma.uploadView.upsert({
@@ -1136,9 +1136,9 @@ builder.mutationFields((t) => ({
       }
 
       // The viewer hash will change once daily since the salt changes once daily, this means that each user can count for one view per day
-      const viewHash = xxh32(
+      const viewHash = xxh64(
         session?.appUserId ?? `${clientIp}${clientUserAgent}`,
-        res.salt,
+        BigInt(res.salt),
       );
 
       // Refreshing can cause duplicate views, but as long as viewing time is not overridden then that's okay
