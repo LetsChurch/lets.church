@@ -20,14 +20,14 @@ func Cta(ac *util.AppContext, props CtaProps) g.Node {
 			h.P(g.Text("Get sermon hosting and other resources 100% free of charge.")),
 		),
 		h.Div(
-			ButtonLink(ButtonLinkProps{
-				ButtonProps: ButtonProps{Primary: true, Children: []g.Node{g.Text(props.SecondaryText)}},
-				Href:        props.SecondaryHref,
-			}),
-			ButtonLink(ButtonLinkProps{
-				ButtonProps: ButtonProps{Children: []g.Node{g.Text(props.PrimaryText)}},
-				Href:        props.PrimaryHref,
-			}),
+			ButtonLink{
+				Button: Button{Primary: true, Children: []g.Node{g.Text(props.SecondaryText)}},
+				Href:   props.SecondaryHref,
+			},
+			ButtonLink{
+				Button: Button{Children: []g.Node{g.Text(props.PrimaryText)}},
+				Href:   props.PrimaryHref,
+			},
 		),
 	))
 }

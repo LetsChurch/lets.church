@@ -20,11 +20,11 @@ func ForgotPassword(ac *util.AppContext) g.Node {
 				Label:      "Email",
 				InputProps: c.InputProps{Type: "email", Name: "email", Placeholder: "Email", Required: true},
 			}),
-			c.Button(c.ButtonProps{
+			c.Button{
 				Primary:  true,
 				Class:    "lc-auth__submit-button",
 				Children: []g.Node{g.Text("Reset password")},
-			}),
+			},
 			h.Div(h.Class("lc-auth__bottom"),
 				h.A(h.Class("lc-auth__back-link"), h.Href("/auth/login"),
 					c.Icon(c.IconProps{Name: "arrow-left"}),

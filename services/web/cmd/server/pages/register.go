@@ -75,11 +75,11 @@ func Register(ac *util.AppContext, props RegisterProps) g.Node {
 				Name:    "newsletter",
 				Checked: true,
 			}),
-			c.Button(c.ButtonProps{
+			c.Button{
 				Primary:  true,
 				Class:    "lc-auth__submit-button",
 				Children: []g.Node{g.Text("Register")},
-			}),
+			},
 			h.Div(h.Class("lc-auth__bottom"),
 				h.A(h.Class("lc-auth__back-link"), h.Href("/auth/login"),
 					c.Icon(c.IconProps{Name: "arrow-left"}),

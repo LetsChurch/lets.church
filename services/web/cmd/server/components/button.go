@@ -1,13 +1,14 @@
 package components
 
 import (
+	"io"
 	"strings"
 
 	g "github.com/maragudk/gomponents"
 	h "github.com/maragudk/gomponents/html"
 )
 
-type ButtonProps struct {
+type Button struct {
 	Type      string
 	Class     string
 	Icon      string
@@ -17,39 +18,43 @@ type ButtonProps struct {
 	Big       bool
 }
 
-func buttonClasses(primary bool, big bool, class string) string {
+func (b Button) Render(w io.Writer) error {
+	h.Button(
+		g.If(b.Type != "", h.Type(b.Type)),
+		h.Class(b.classes()),
+		g.If(b.Icon != "", Icon(IconProps{Name: b.Icon, Class: b.IconClass})),
+		g.Group(b.Children),
+	).Render(w)
+
+	return nil
+}
+
+func (b Button) classes() string {
 	arr := []string{"lc-button"}
-	if class != "" {
-		arr = append(arr, class)
+	if b.Class != "" {
+		arr = append(arr, b.Class)
 	}
-	if primary {
+	if b.Primary {
 		arr = append(arr, "primary")
 	}
-	if big {
+	if b.Big {
 		arr = append(arr, "big")
 	}
 	return strings.Join(arr, " ")
 }
 
-func Button(props ButtonProps) g.Node {
-	return h.Button(
-		g.If(props.Type != "", h.Type(props.Type)),
-		h.Class(buttonClasses(props.Primary, props.Big, props.Class)),
-		g.If(props.Icon != "", Icon(IconProps{Name: props.Icon, Class: props.IconClass})),
-		g.Group(props.Children),
-	)
-}
-
-type ButtonLinkProps struct {
+type ButtonLink struct {
 	Href string
-	ButtonProps
+	Button
 }
 
-func ButtonLink(props ButtonLinkProps) g.Node {
-	return h.A(
-		g.If(props.Type != "", h.Type(props.Type)),
-		h.Class(buttonClasses(props.Primary, props.Big, props.Class)),
-		h.Href(props.Href),
-		g.Group(props.Children),
-	)
+func (bl ButtonLink) Render(w io.Writer) error {
+	h.A(
+		g.If(bl.Type != "", h.Type(bl.Type)),
+		h.Class(bl.classes()),
+		h.Href(bl.Href),
+		g.Group(bl.Children),
+	).Render(w)
+
+	return nil
 }

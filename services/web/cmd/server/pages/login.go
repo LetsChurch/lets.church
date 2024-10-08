@@ -27,11 +27,11 @@ func Login(ac *util.AppContext) g.Node {
 				h.Div(c.LabeledCheckbox(c.LabeledCheckboxProps{Name: "remember", Label: "Remember for 30 days", Checked: true})),
 				h.Div(h.A(h.Href("/auth/forgot-password"), g.Text("Forgot password"))),
 			),
-			c.Button(c.ButtonProps{
+			c.Button{
 				Primary:  true,
 				Class:    "lc-auth__submit-button",
 				Children: []g.Node{g.Text("Login")},
-			}),
+			},
 			h.Div(h.Class("lc-auth__bottom"),
 				h.Span(g.Text("Don't have an account?")),
 				g.Raw("&nbsp;"),

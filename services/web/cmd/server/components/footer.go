@@ -69,7 +69,7 @@ func Footer(ac *util.AppContext) g.Node {
 								},
 							),
 						}),
-						Button(ButtonProps{Type: "submit", Primary: true, Big: true, Children: []g.Node{g.Text("Subscribe")}}),
+						Button{Type: "submit", Primary: true, Big: true, Children: []g.Node{g.Text("Subscribe")}},
 					),
 				}),
 			),
