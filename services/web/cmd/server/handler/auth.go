@@ -36,7 +36,8 @@ func (h *Handler) GetAuthLogin(c echo.Context) (err error) {
 		return c.Redirect(http.StatusForbidden, "/")
 	}
 
-	return render(c, http.StatusOK, pages.Login(ac))
+	c.Response().WriteHeader(http.StatusOK)
+	return pages.Login{Ac: ac}.Render(c.Response())
 }
 
 func (h *Handler) PostAuthLogin(c echo.Context) (err error) {
@@ -108,7 +109,8 @@ func (h *Handler) GetAuthForgotPassword(c echo.Context) (err error) {
 		return c.Redirect(http.StatusForbidden, "/")
 	}
 
-	return render(c, http.StatusOK, pages.ForgotPassword(ac))
+	c.Response().WriteHeader(http.StatusOK)
+	return pages.ForgotPassword{Ac: ac}.Render(c.Response())
 }
 
 type ResetPasswordClaims struct {
@@ -192,7 +194,8 @@ func (h *Handler) GetAuthRegister(c echo.Context) error {
 		return c.Redirect(http.StatusForbidden, "/")
 	}
 
-	return render(c, http.StatusOK, pages.Register(ac, pages.RegisterProps{}))
+	c.Response().WriteHeader(http.StatusOK)
+	return pages.Register{Ac: ac}.Render(c.Response())
 }
 
 func (h *Handler) PostAuthCheckUsername(c echo.Context) (err error) {
@@ -209,12 +212,11 @@ func (h *Handler) PostAuthCheckUsername(c echo.Context) (err error) {
 		return err
 	}
 
-	return render(c, http.StatusOK, pages.RegisterUsernameInput(
-		pages.RegisterUsernameInputProps{
-			Value: username,
-			Error: lo.Ternary(userExists, "Username has already been taken", ""),
-		},
-	))
+	c.Response().WriteHeader(http.StatusOK)
+	return pages.RegisterUsernameInput{
+		Value: username,
+		Error: lo.Ternary(userExists, "Username has already been taken", ""),
+	}.Render(c.Response())
 }
 
 func (h *Handler) PostAuthRegister(c echo.Context) error {
@@ -364,7 +366,8 @@ func (h *Handler) GetAuthResetPassword(c echo.Context) error {
 		return eb.Public("Invalid token").Wrap(err)
 	}
 
-	return render(c, http.StatusOK, pages.ResetPassword(ac, pages.ResetPasswordProps{Token: tokenString}))
+	c.Response().WriteHeader(http.StatusOK)
+	return pages.ResetPassword{Ac: ac, Token: tokenString}.Render(c.Response())
 }
 
 func (h *Handler) PostAuthResetPassword(c echo.Context) error {

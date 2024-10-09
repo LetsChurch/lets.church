@@ -18,7 +18,10 @@ func (h *Handler) Home(c echo.Context) (err error) {
 		return err
 	}
 
-	return render(c, http.StatusOK, pages.Home(ac, pages.HomeProps{
+	c.Response().WriteHeader(http.StatusOK)
+
+	return pages.Home{
+		Ac:      ac,
 		Uploads: &upload_records,
-	}))
+	}.Render(c.Response())
 }

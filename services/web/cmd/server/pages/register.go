@@ -1,6 +1,8 @@
 package pages
 
 import (
+	"io"
+
 	g "github.com/maragudk/gomponents"
 	h "github.com/maragudk/gomponents/html"
 	c "lets.church/cmd/server/components"
@@ -8,7 +10,8 @@ import (
 	"lets.church/cmd/server/util"
 )
 
-type RegisterProps struct {
+type Register struct {
+	Ac     *util.AppContext
 	Values struct {
 		Newsletter    *bool
 		Email         string
@@ -20,72 +23,74 @@ type RegisterProps struct {
 	}
 }
 
-type RegisterUsernameInputProps struct {
+type RegisterUsernameInput struct {
 	Value string
 	Error string
 }
 
-func RegisterUsernameInput(props RegisterUsernameInputProps) g.Node {
-	return c.LabeledInput(c.LabeledInputProps{
+func (r RegisterUsernameInput) Render(w io.Writer) error {
+	return c.LabeledInput{
 		Class: "lc-auth__input",
 		Label: "Username",
-		InputProps: c.InputProps{
+		Input: c.Input{
 			Type:        "text",
 			Name:        "username",
 			Placeholder: "Username",
 			Required:    true,
 			HxPost:      "/auth/check-username",
-			Value:       props.Value,
+			Value:       r.Value,
 		},
-		Error: props.Error,
-	})
+		Error: r.Error,
+	}.Render(w)
 }
 
-func Register(ac *util.AppContext, props RegisterProps) g.Node {
-	return layouts.Auth(
-		ac,
-		h.Form(h.Method("POST"),
-			h.Input(h.Type("hidden"), h.Name("_csrf"), h.Value(ac.CsrfToken)),
-			c.LabeledInput(c.LabeledInputProps{
-				Class:      "lc-auth__input",
-				Label:      "Email",
-				InputProps: c.InputProps{Type: "email", Name: "email", Placeholder: "Email", Required: true},
-			}),
-			RegisterUsernameInput(RegisterUsernameInputProps{}),
-			c.LabeledInput(c.LabeledInputProps{
-				Class:      "lc-auth__input",
-				Label:      "Password",
-				InputProps: c.InputProps{Type: "password", Name: "password", Placeholder: "Password", Required: true},
-			}),
-			c.LabeledInput(c.LabeledInputProps{
-				Class:      "lc-auth__input",
-				Label:      "Full Name",
-				InputProps: c.InputProps{Type: "text", Name: "fullname", Placeholder: "Full Name", Required: true},
-			}),
-			c.LabeledCheckbox(c.LabeledCheckboxProps{
-				Label: "I agree to the <a href=\"/about/theology\" target=\"_blank\">Let's Church Statement of Theology</a>.",
-				Name:  "agreeTheology",
-			}),
-			c.LabeledCheckbox(c.LabeledCheckboxProps{
-				Label: "I agree to the <a href=\"/about/terms\" target=\"_blank\">Terms and Conditions</a> and <a href=\"/about/privacy\" target=\"_blank\">Privacy Policy</a>.",
-				Name:  "agreeTerms",
-			}),
-			c.LabeledCheckbox(c.LabeledCheckboxProps{
-				Label:   "Subscribe to the Let's Church Newsletter.",
-				Name:    "newsletter",
-				Checked: true,
-			}),
-			c.Button{
-				Primary:  true,
-				Class:    "lc-auth__submit-button",
-				Children: []g.Node{g.Text("Register")},
-			},
-			h.Div(h.Class("lc-auth__bottom"),
-				h.A(h.Class("lc-auth__back-link"), h.Href("/auth/login"),
-					c.Icon(c.IconProps{Name: "arrow-left"}),
-					g.Text("Back to login"),
+func (r Register) Render(w io.Writer) error {
+	return layouts.Auth{
+		Ac: r.Ac,
+		Body: []g.Node{
+			h.Form(h.Method("POST"),
+				h.Input(h.Type("hidden"), h.Name("_csrf"), h.Value(r.Ac.CsrfToken)),
+				c.LabeledInput{
+					Class: "lc-auth__input",
+					Label: "Email",
+					Input: c.Input{Type: "email", Name: "email", Placeholder: "Email", Required: true},
+				},
+				RegisterUsernameInput{},
+				c.LabeledInput{
+					Class: "lc-auth__input",
+					Label: "Password",
+					Input: c.Input{Type: "password", Name: "password", Placeholder: "Password", Required: true},
+				},
+				c.LabeledInput(c.LabeledInput{
+					Class: "lc-auth__input",
+					Label: "Full Name",
+					Input: c.Input{Type: "text", Name: "fullname", Placeholder: "Full Name", Required: true},
+				}),
+				c.LabeledCheckbox(c.LabeledCheckbox{
+					Label: "I agree to the <a href=\"/about/theology\" target=\"_blank\">Let's Church Statement of Theology</a>.",
+					Name:  "agreeTheology",
+				}),
+				c.LabeledCheckbox(c.LabeledCheckbox{
+					Label: "I agree to the <a href=\"/about/terms\" target=\"_blank\">Terms and Conditions</a> and <a href=\"/about/privacy\" target=\"_blank\">Privacy Policy</a>.",
+					Name:  "agreeTerms",
+				}),
+				c.LabeledCheckbox(c.LabeledCheckbox{
+					Label:   "Subscribe to the Let's Church Newsletter.",
+					Name:    "newsletter",
+					Checked: true,
+				}),
+				c.Button{
+					Primary:  true,
+					Class:    "lc-auth__submit-button",
+					Children: []g.Node{g.Text("Register")},
+				},
+				h.Div(h.Class("lc-auth__bottom"),
+					h.A(h.Class("lc-auth__back-link"), h.Href("/auth/login"),
+						c.Icon(c.Icon{Name: "arrow-left"}),
+						g.Text("Back to login"),
+					),
 				),
 			),
-		),
-	)
+		},
+	}.Render(w)
 }

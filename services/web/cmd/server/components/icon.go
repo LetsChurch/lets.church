@@ -1,6 +1,7 @@
 package components
 
 import (
+	"io"
 	"strconv"
 	"strings"
 
@@ -8,7 +9,7 @@ import (
 	h "github.com/maragudk/gomponents/html"
 )
 
-type IconProps struct {
+type Icon struct {
 	Name   string
 	Class  string
 	Width  int
@@ -30,11 +31,11 @@ func iconClasses(size int, full bool, class string) string {
 	return strings.Join(arr, " ")
 }
 
-func Icon(props IconProps) g.Node {
-	return g.El("svg", h.Class(iconClasses(props.Size, props.Full, props.Class)),
-		g.El("use", h.Href("/assets/icons.svg#"+props.Name),
-			g.If(props.Width > 0, h.Width(strconv.Itoa(props.Width))),
-			g.If(props.Height > 0, h.Height(strconv.Itoa(props.Height))),
+func (i Icon) Render(w io.Writer) error {
+	return g.El("svg", h.Class(iconClasses(i.Size, i.Full, i.Class)),
+		g.El("use", h.Href("/assets/icons.svg#"+i.Name),
+			g.If(i.Width > 0, h.Width(strconv.Itoa(i.Width))),
+			g.If(i.Height > 0, h.Height(strconv.Itoa(i.Height))),
 		),
-	)
+	).Render(w)
 }

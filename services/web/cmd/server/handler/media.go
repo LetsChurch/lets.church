@@ -68,12 +68,15 @@ func (h *Handler) Media(c echo.Context) (err error) {
 	_ = groupedComments
 	fmt.Printf("%#v\n", len(groupedComments))
 
-	return render(c, http.StatusOK, pages.Media(ac, pages.MediaProps{
+	c.Response().WriteHeader(http.StatusOK)
+
+	return pages.Media{
+		Ac:            ac,
 		UploadId:      id,
 		UploadDataRow: &uploadRecord,
 		Comments:      groupedComments,
 		Transcript:    transcript,
-	}))
+	}.Render(c.Response())
 }
 
 type Range struct {

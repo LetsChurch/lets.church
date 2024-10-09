@@ -1,6 +1,8 @@
 package layouts
 
 import (
+	"io"
+
 	g "github.com/maragudk/gomponents"
 	hx "github.com/maragudk/gomponents-htmx"
 	h "github.com/maragudk/gomponents/html"
@@ -8,7 +10,12 @@ import (
 	"lets.church/cmd/server/util"
 )
 
-func Doc(ac *util.AppContext, body ...g.Node) g.Node {
+type Doc struct {
+	Ac   *util.AppContext
+	Body []g.Node
+}
+
+func (d Doc) Render(w io.Writer) error {
 	return h.Doctype(
 		h.HTML(h.Lang("en"),
 			h.Head(
@@ -21,12 +28,12 @@ func Doc(ac *util.AppContext, body ...g.Node) g.Node {
 			),
 			h.Body(
 				h.Div(h.ID("lc-root"), hx.Boost("true"),
-					g.Group(body),
+					g.Group(d.Body),
 				),
-				g.Group(g.Map(ac.Flashes, func(f util.Flash) g.Node {
-					return c.Notification(c.NotificationProps{Level: f.Level, Title: f.Title, Message: f.Message})
+				g.Group(g.Map(d.Ac.Flashes, func(f util.Flash) g.Node {
+					return c.Notification{Level: f.Level, Title: f.Title, Message: f.Message}
 				})),
 			),
 		),
-	)
+	).Render(w)
 }

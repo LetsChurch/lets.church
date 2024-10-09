@@ -19,14 +19,12 @@ type Button struct {
 }
 
 func (b Button) Render(w io.Writer) error {
-	h.Button(
+	return h.Button(
 		g.If(b.Type != "", h.Type(b.Type)),
 		h.Class(b.classes()),
-		g.If(b.Icon != "", Icon(IconProps{Name: b.Icon, Class: b.IconClass})),
+		g.If(b.Icon != "", Icon{Name: b.Icon, Class: b.IconClass}),
 		g.Group(b.Children),
 	).Render(w)
-
-	return nil
 }
 
 func (b Button) classes() string {
@@ -49,12 +47,10 @@ type ButtonLink struct {
 }
 
 func (bl ButtonLink) Render(w io.Writer) error {
-	h.A(
+	return h.A(
 		g.If(bl.Type != "", h.Type(bl.Type)),
 		h.Class(bl.classes()),
 		h.Href(bl.Href),
 		g.Group(bl.Children),
 	).Render(w)
-
-	return nil
 }

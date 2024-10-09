@@ -13,7 +13,8 @@ func (h *Handler) Churches(c echo.Context) error {
 		return err
 	}
 
-	return render(c, http.StatusOK, pages.Churches(ac))
+	c.Response().WriteHeader(http.StatusOK)
+	return pages.Churches{Ac: ac}.Render(c.Response())
 }
 
 func (h *Handler) ChurchesAdd(c echo.Context) error {
@@ -22,5 +23,6 @@ func (h *Handler) ChurchesAdd(c echo.Context) error {
 		return err
 	}
 
-	return render(c, http.StatusOK, pages.ChurchesAdd(ac))
+	c.Response().WriteHeader(http.StatusOK)
+	return pages.ChurchesAdd{Ac: ac}.Render(c.Response())
 }

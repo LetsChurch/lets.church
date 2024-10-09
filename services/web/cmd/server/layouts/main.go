@@ -1,16 +1,25 @@
 package layouts
 
 import (
+	"io"
+
 	g "github.com/maragudk/gomponents"
 	c "lets.church/cmd/server/components"
 	"lets.church/cmd/server/util"
 )
 
-func Main(ac *util.AppContext, body ...g.Node) g.Node {
-	return Doc(
-		ac,
-		c.Header(ac),
-		g.Group(body),
-		c.Footer(ac),
-	)
+type Main struct {
+	Ac   *util.AppContext
+	Body []g.Node
+}
+
+func (m Main) Render(w io.Writer) error {
+	return Doc{
+		Ac: m.Ac,
+		Body: []g.Node{
+			c.Header{Ac: m.Ac},
+			g.Group(m.Body),
+			c.Footer{Ac: m.Ac},
+		},
+	}.Render(w)
 }

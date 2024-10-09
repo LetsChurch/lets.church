@@ -1,6 +1,7 @@
 package components
 
 import (
+	"io"
 	"regexp"
 	"strings"
 
@@ -37,7 +38,7 @@ func avatarClasses(size string, class string) string {
 	return strings.Join(arr, " ")
 }
 
-type AvatarProps struct {
+type Avatar struct {
 	Src   string
 	Name  string
 	Class string
@@ -45,8 +46,9 @@ type AvatarProps struct {
 	Alt   string
 }
 
-func Avatar(props AvatarProps) g.Node {
-	return h.Div(h.Class(avatarClasses(props.Size, props.Class)),
-		g.If(props.Src != "", h.Img(h.Src(props.Src))),
-		g.If(props.Src == "" && props.Name != "", g.Text(getAvatarInitials(props.Name))))
+func (a Avatar) Render(w io.Writer) error {
+	return h.Div(h.Class(avatarClasses(a.Size, a.Class)),
+		g.If(a.Src != "", h.Img(h.Src(a.Src))),
+		g.If(a.Src == "" && a.Name != "", g.Text(getAvatarInitials(a.Name))),
+	).Render(w)
 }

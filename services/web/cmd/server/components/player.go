@@ -2,6 +2,7 @@ package components
 
 import (
 	"fmt"
+	"io"
 	"strconv"
 
 	g "github.com/maragudk/gomponents"
@@ -9,7 +10,7 @@ import (
 	"lets.church/internal/util"
 )
 
-type PlayerProps struct {
+type Player struct {
 	Id            string
 	LengthSeconds float64
 	PlayAt        float64
@@ -18,20 +19,20 @@ type PlayerProps struct {
 	Height        int
 }
 
-func Player(props PlayerProps) g.Node {
-	return g.Group([]g.Node{
-		h.Script(h.Type("module"), h.Src("/assets/components/player.js"), h.Defer()),
-		h.Link(h.Rel("stylesheet"), h.Href("/assets/player.css")),
-		h.Div(h.Class("lc-player-container"),
+func (p Player) Render(w io.Writer) error {
+	return h.Div(h.Class("lc-player-container"),
+		g.Group([]g.Node{
+			h.Script(h.Type("module"), h.Src("/assets/components/player.js"), h.Defer()),
+			h.Link(h.Rel("stylesheet"), h.Href("/assets/player.css")),
 			g.El("lc-player",
-				h.ID(props.Id),
-				g.If(!props.AudioOnly, g.Attr("video-source", util.GetVideoSourceUrl(props.Id))),
-				g.Attr("audio-source", util.GetAudioSourceUrl(props.Id)),
-				g.Attr("peaks-dat-url", util.GetPeaksDatUrl(props.Id)),
-				g.Attr("peaks-json-url", util.GetPeaksJsonUrl(props.Id)),
-				g.Attr("play-at", strconv.FormatFloat(props.PlayAt, 'f', -1, 64)),
-				g.If(props.Width > 0 && props.Height > 0, g.Attr("style", "--media-width:"+fmt.Sprint(props.Width)+";--media-height:"+fmt.Sprint(props.Height)+";")),
+				h.ID(p.Id),
+				g.If(!p.AudioOnly, g.Attr("video-source", util.GetVideoSourceUrl(p.Id))),
+				g.Attr("audio-source", util.GetAudioSourceUrl(p.Id)),
+				g.Attr("peaks-dat-url", util.GetPeaksDatUrl(p.Id)),
+				g.Attr("peaks-json-url", util.GetPeaksJsonUrl(p.Id)),
+				g.Attr("play-at", strconv.FormatFloat(p.PlayAt, 'f', -1, 64)),
+				g.If(p.Width > 0 && p.Height > 0, g.Attr("style", "--media-width:"+fmt.Sprint(p.Width)+";--media-height:"+fmt.Sprint(p.Height)+";")),
 			),
-		),
-	})
+		}),
+	).Render(w)
 }

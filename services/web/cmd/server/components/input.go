@@ -1,6 +1,7 @@
 package components
 
 import (
+	"io"
 	"strings"
 
 	g "github.com/maragudk/gomponents"
@@ -9,7 +10,7 @@ import (
 	"github.com/samber/lo"
 )
 
-type InputProps struct {
+type Input struct {
 	Type        string
 	Name        string
 	Value       string
@@ -22,63 +23,52 @@ type InputProps struct {
 	Required    bool
 }
 
-func inputClasses(props InputProps) string {
+func (i Input) Render(w io.Writer) error {
+	return h.Div(h.Class(i.classes()),
+		g.If(i.Icon != "", Icon{Name: i.Icon}),
+		h.Input(
+			h.Type(i.Type),
+			h.Name(i.Name),
+			g.If(i.Value != "", h.Value(i.Value)),
+			h.Placeholder(i.Placeholder),
+			g.If(i.Required, h.Required()),
+			g.If(i.HxPost != "", hx.Post(i.HxPost)),
+			g.If(i.Error != "", g.Group([]g.Node{
+				g.Attr("aria-invalid", "true"),
+				g.Attr("aria-errormessage", i.Error),
+			})),
+		),
+	).Render(w)
+}
+
+func (i Input) classes() string {
 	arr := []string{"lc-input"}
-	if props.Class != "" {
-		arr = append(arr, props.Class)
+	if i.Class != "" {
+		arr = append(arr, i.Class)
 	}
-	if props.Big {
+	if i.Big {
 		arr = append(arr, "big")
 	}
 	return strings.Join(arr, " ")
 }
 
-func Input(props InputProps) g.Node {
-	return h.Div(h.Class(inputClasses(props)),
-		g.If(props.Icon != "", Icon(IconProps{Name: props.Icon})),
-		h.Input(
-			h.Type(props.Type),
-			h.Name(props.Name),
-			g.If(props.Value != "", h.Value(props.Value)),
-			h.Placeholder(props.Placeholder),
-			g.If(props.Required, h.Required()),
-			g.If(props.HxPost != "", hx.Post(props.HxPost)),
-			g.If(props.Error != "", g.Group([]g.Node{
-				g.Attr("aria-invalid", "true"),
-				g.Attr("aria-errormessage", props.Error),
-			})),
-		),
-	)
-}
-
-type LabeledInputProps struct {
+type LabeledInput struct {
 	Label string
 	Class string
 	Hint  string
 	Error string
-	InputProps
+	Input
 }
 
-func labeledInputClasses(props LabeledInputProps) string {
-	arr := []string{"lc-labeled-input"}
-	if props.Error != "" {
-		arr = append(arr, "lc-labeled-input--error")
-	}
-	if props.Class != "" {
-		arr = append(arr, props.Class)
-	}
-	return strings.Join(arr, " ")
-}
-
-func LabeledInput(props LabeledInputProps) g.Node {
-	hintText, hasHintText := lo.Coalesce(props.Error, props.Hint)
-	inputProps := props.InputProps
-	inputProps.Error = props.Error
+func (li LabeledInput) Render(w io.Writer) error {
+	hintText, hasHintText := lo.Coalesce(li.Error, li.Hint)
+	input := li.Input
+	input.Error = li.Error
 
 	return h.Div(
-		h.Class(labeledInputClasses(props)),
+		h.Class(li.classes()),
 		g.If(
-			props.HxPost != "",
+			li.HxPost != "",
 			g.Group(
 				[]g.Node{
 					hx.Target("this"),
@@ -87,25 +77,36 @@ func LabeledInput(props LabeledInputProps) g.Node {
 			),
 		),
 		h.Label(
-			h.Span(h.Class("lc-labeled-input__label"), g.Text(props.Label)),
-			Input(inputProps),
+			h.Span(h.Class("lc-labeled-input__label"), g.Text(li.Label)),
+			Input(input),
 		),
 		g.If(
 			hasHintText,
 			h.Small(h.Class("lc-labeled-input__hint"), g.Text(hintText)),
 		),
-	)
+	).Render(w)
 }
 
-type LabeledCheckboxProps struct {
+func (li LabeledInput) classes() string {
+	arr := []string{"lc-labeled-input"}
+	if li.Error != "" {
+		arr = append(arr, "lc-labeled-input--error")
+	}
+	if li.Class != "" {
+		arr = append(arr, li.Class)
+	}
+	return strings.Join(arr, " ")
+}
+
+type LabeledCheckbox struct {
 	Name    string
 	Label   string
 	Checked bool
 }
 
-func LabeledCheckbox(props LabeledCheckboxProps) g.Node {
+func (lcb LabeledCheckbox) Render(w io.Writer) error {
 	return h.Label(h.Class("lc-labeled-checkbox"),
-		h.Input(h.Type("checkbox"), h.Name(props.Name), g.If(props.Checked, h.Checked())),
-		h.Span(h.Class("lc-labeled-checkbox__label"), g.Raw(props.Label)),
-	)
+		h.Input(h.Type("checkbox"), h.Name(lcb.Name), g.If(lcb.Checked, h.Checked())),
+		h.Span(h.Class("lc-labeled-checkbox__label"), g.Raw(lcb.Label)),
+	).Render(w)
 }

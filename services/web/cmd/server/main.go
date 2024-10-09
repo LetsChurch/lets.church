@@ -159,11 +159,11 @@ func setupErrorHandler(e *echo.Echo) {
 			// Make trigger payload
 			trigger := Trigger{}
 			htmlBuilder := strings.Builder{}
-			components.Notification(components.NotificationProps{
+			components.Notification{
 				Level:   "error",
 				Title:   "Error",
 				Message: message,
-			}).Render(&htmlBuilder)
+			}.Render(&htmlBuilder)
 			trigger.Flash.Html = htmlBuilder.String()
 			triggerJson, jsonErr := json.Marshal(trigger)
 

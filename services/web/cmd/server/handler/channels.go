@@ -13,5 +13,6 @@ func (h *Handler) Channels(c echo.Context) error {
 		return err
 	}
 
-	return render(c, http.StatusOK, pages.Channels(ac))
+	c.Response().WriteHeader(http.StatusOK)
+	return pages.Channels{Ac: ac}.Render(c.Response())
 }

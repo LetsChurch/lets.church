@@ -41,9 +41,13 @@ func isUserSubscribedToNewsletter(ac *util.AppContext) bool {
 	return data["data"].(map[string]any)["total"].(float64) > 0
 }
 
-func Footer(ac *util.AppContext) g.Node {
+type Footer struct {
+	Ac *util.AppContext
+}
+
+func (f Footer) Render(w io.Writer) error {
 	return h.Footer(h.Class("lc-container lc-footer"),
-		g.If(!isUserSubscribedToNewsletter(ac),
+		g.If(!isUserSubscribedToNewsletter(f.Ac),
 			h.Div(h.Class("newsletter"),
 				g.Group([]g.Node{
 					h.Div(
@@ -53,22 +57,22 @@ func Footer(ac *util.AppContext) g.Node {
 					h.Form(
 						h.Method("post"),
 						h.Action("/newsletter/subscribe"),
-						h.Input(h.Type("hidden"), h.Name("_csrf"), h.Value(ac.CsrfToken)),
-						Input(InputProps{
+						h.Input(h.Type("hidden"), h.Name("_csrf"), h.Value(f.Ac.CsrfToken)),
+						Input{
 							Type:        "email",
 							Placeholder: "Enter your email",
 							Big:         true,
 							Name:        "email",
 							Value: lo.TernaryF(
-								ac.User != nil,
+								f.Ac.User != nil,
 								func() string {
-									return ac.User.Email.String
+									return f.Ac.User.Email.String
 								},
 								func() string {
 									return ""
 								},
 							),
-						}),
+						},
 						Button{Type: "submit", Primary: true, Big: true, Children: []g.Node{g.Text("Subscribe")}},
 					),
 				}),
@@ -113,5 +117,5 @@ func Footer(ac *util.AppContext) g.Node {
 			h.Div(g.Raw(`<a href="/"><img src="/assets/logo.svg"></a>`)),
 			h.Div(g.Raw(`Let's Church is in the public domain and is a 501(c)(3) non-profit.&nbsp;<a href="/about">Learn more.</a>`)),
 		),
-	)
+	).Render(w)
 }

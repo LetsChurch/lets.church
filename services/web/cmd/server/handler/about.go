@@ -30,7 +30,8 @@ func (h *Handler) About(c echo.Context) (err error) {
 		return eb.Wrap(err)
 	}
 
-	return eb.Wrap(render(c, http.StatusOK, pages.About(ac, pages.AboutProps{Html: buf.String()})))
+	c.Response().WriteHeader(http.StatusOK)
+	return pages.About{Ac: ac, Html: buf.String()}.Render(c.Response())
 }
 
 //go:embed "dmca.md"
@@ -63,15 +64,20 @@ func (h *Handler) AboutPage(c echo.Context) (err error) {
 
 	switch page := c.Param("page"); page {
 	case "dmca":
-		return eb.Wrap(render(c, http.StatusOK, pages.About(ac, pages.AboutProps{Html: htmlDmca()})))
+		c.Response().WriteHeader(http.StatusOK)
+		return eb.Wrap(pages.About{Ac: ac, Html: htmlDmca()}.Render(c.Response()))
 	case "dorean":
-		return eb.Wrap(render(c, http.StatusOK, pages.About(ac, pages.AboutProps{Html: htmlDorean()})))
+		c.Response().WriteHeader(http.StatusOK)
+		return eb.Wrap(pages.About{Ac: ac, Html: htmlDorean()}.Render(c.Response()))
 	case "privacy":
-		return eb.Wrap(render(c, http.StatusOK, pages.About(ac, pages.AboutProps{Html: htmlPrivacy()})))
+		c.Response().WriteHeader(http.StatusOK)
+		return eb.Wrap(pages.About{Ac: ac, Html: htmlPrivacy()}.Render(c.Response()))
 	case "terms":
-		return eb.Wrap(render(c, http.StatusOK, pages.About(ac, pages.AboutProps{Html: htmlTerms()})))
+		c.Response().WriteHeader(http.StatusOK)
+		return eb.Wrap(pages.About{Ac: ac, Html: htmlTerms()}.Render(c.Response()))
 	case "theology":
-		return eb.Wrap(render(c, http.StatusOK, pages.About(ac, pages.AboutProps{Html: htmlTheology()})))
+		c.Response().WriteHeader(http.StatusOK)
+		return eb.Wrap(pages.About{Ac: ac, Html: htmlTheology()}.Render(c.Response()))
 	}
 
 	return echo.ErrNotFound

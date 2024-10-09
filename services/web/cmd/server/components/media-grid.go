@@ -1,6 +1,7 @@
 package components
 
 import (
+	"io"
 	"time"
 
 	g "github.com/maragudk/gomponents"
@@ -9,13 +10,13 @@ import (
 	"lets.church/internal/util"
 )
 
-type MediaGridProps struct {
+type MediaGrid struct {
 	Uploads *[]data.TrendingUploadsRow
 }
 
-func MediaGrid(props MediaGridProps) g.Node {
+func (mg MediaGrid) Render(w io.Writer) error {
 	return h.Div(h.Class("lc-media-grid"),
-		g.Group(g.Map(*props.Uploads, func(item data.TrendingUploadsRow) g.Node {
+		g.Group(g.Map(*mg.Uploads, func(item data.TrendingUploadsRow) g.Node {
 			return h.Div(h.Class("lc-card"),
 				h.Div(h.Class("thumbnail"),
 					h.Div(h.Class("thumbnail-inner"),
@@ -24,7 +25,7 @@ func MediaGrid(props MediaGridProps) g.Node {
 					),
 				),
 				h.Div(h.Class("meta"),
-					Avatar(AvatarProps{Name: item.ChannelName, Src: "https://placehold.co/96", Size: "md", Alt: "Placeholder"}),
+					Avatar{Name: item.ChannelName, Src: "https://placehold.co/96", Size: "md", Alt: "Placeholder"},
 					h.A(h.Title(item.Title.String), h.Href("/media/"+util.Uuid(item.ID.Bytes).Base58()),
 						h.P(h.Class("title"), g.Text(item.Title.String)),
 						h.P(h.Class("channel-name"), g.Text(item.ChannelName)),
@@ -32,5 +33,5 @@ func MediaGrid(props MediaGridProps) g.Node {
 				),
 			)
 		})),
-	)
+	).Render(w)
 }
