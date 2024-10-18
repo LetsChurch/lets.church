@@ -17,6 +17,7 @@ import {
 import { getAuthenticatedClient } from '~/util/gql/server';
 import { Avatar } from '~/components/avatar';
 import Chiclet from '~/components/churches/searchbox/chiclet';
+import { OrganizationAddressType } from '~/__generated__/graphql-types';
 
 const loadChurch = cache(async (slug: string) => {
   'use server';
@@ -116,6 +117,11 @@ export default function ChurchRoute() {
     return loadChurch(slug);
   });
 
+  const address = () =>
+    data()?.addresses.edges.find(
+      (e) => e.node.type === OrganizationAddressType.Meeting,
+    )?.node;
+
   return (
     <article>
       <div>
@@ -213,6 +219,18 @@ export default function ChurchRoute() {
               <div class="sm:col-span-1">
                 <dt class="text-sm font-medium text-gray-500">Email</dt>
                 <dd class="mt-1 text-sm text-gray-900">{email}</dd>
+              </div>
+            )}
+          </Show>
+          <Show when={address()} keyed>
+            {(address) => (
+              <div class="sm:col-span-1">
+                <dt class="text-sm font-medium text-gray-500">Address</dt>
+                <dd class="mt-1 text-sm text-gray-900">
+                  {address.streetAddress}
+                  <br />
+                  {address.locality}, {address.region} {address.postalCode}
+                </dd>
               </div>
             )}
           </Show>
