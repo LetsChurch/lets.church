@@ -19,7 +19,6 @@ import {
 import Waveform from './waveform';
 import type { Optional } from '~/util';
 import { getAuthenticatedClient } from '~/util/gql/server';
-import { makeCleanupSignal } from '~/util/cleanup-signal';
 
 function serializeTimeRanges(
   ranges: TimeRanges,
@@ -81,7 +80,6 @@ export default function Player(props: Props) {
   let player: VideoJsPlayer;
   const [ready, setReady] = createSignal(false);
   const [currentTime, setCurrentTime] = createSignal(0);
-  const cleanupSignal = makeCleanupSignal();
 
   const audioOnlyMode = () =>
     Boolean(
@@ -108,18 +106,6 @@ export default function Player(props: Props) {
       viewId = res.viewId;
     } finally {
       reportRangesTimer = window.setTimeout(reportTimeRanges, 5000);
-    }
-  }
-
-  let userPaused = false;
-
-  function playWhenHidden() {
-    if (document.visibilityState === 'hidden' && !userPaused) {
-      try {
-        player.play();
-      } catch (e) {
-        console.warn('Could not play video when hidden', e);
-      }
     }
   }
 
@@ -178,14 +164,6 @@ export default function Player(props: Props) {
 
     const onTimeUpdate = untrack(() => props.onTimeUpdate);
 
-    player.on('pause', () => {
-      userPaused = Boolean(player.userActive());
-    });
-
-    player.on('playing', () => {
-      userPaused = false;
-    });
-
     player.on('timeupdate', () => {
       const tuCurrentTime = player.currentTime() ?? 0;
       onTimeUpdate?.(tuCurrentTime);
@@ -195,12 +173,6 @@ export default function Player(props: Props) {
     player.one('ready', () => {
       setReady(true);
     });
-
-    if (!isServer) {
-      document.addEventListener('visibilitychange', playWhenHidden, {
-        signal: cleanupSignal,
-      });
-    }
   });
 
   createEffect(() => {
