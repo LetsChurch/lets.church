@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	g "github.com/maragudk/gomponents"
-	hx "github.com/maragudk/gomponents-htmx"
-	h "github.com/maragudk/gomponents/html"
+	g "maragu.dev/gomponents"
+	hx "maragu.dev/gomponents-htmx"
+	h "maragu.dev/gomponents/html"
 
 	"github.com/samber/lo"
 

@@ -3,8 +3,8 @@ package pages
 import (
 	"io"
 
-	g "github.com/maragudk/gomponents"
-	h "github.com/maragudk/gomponents/html"
+	g "maragu.dev/gomponents"
+	h "maragu.dev/gomponents/html"
 	c "lets.church/cmd/server/components"
 	"lets.church/cmd/server/layouts"
 	"lets.church/cmd/server/util"

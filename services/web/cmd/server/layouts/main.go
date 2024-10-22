@@ -3,7 +3,7 @@ package layouts
 import (
 	"io"
 
-	g "github.com/maragudk/gomponents"
+	g "maragu.dev/gomponents"
 	c "lets.church/cmd/server/components"
 	"lets.church/cmd/server/util"
 )

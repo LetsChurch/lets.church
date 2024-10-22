@@ -3,9 +3,9 @@ package layouts
 import (
 	"io"
 
-	g "github.com/maragudk/gomponents"
-	hx "github.com/maragudk/gomponents-htmx"
-	h "github.com/maragudk/gomponents/html"
+	g "maragu.dev/gomponents"
+	hx "maragu.dev/gomponents-htmx"
+	h "maragu.dev/gomponents/html"
 	c "lets.church/cmd/server/components"
 	"lets.church/cmd/server/util"
 )
