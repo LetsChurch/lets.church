@@ -456,19 +456,17 @@ export const MSearchResponseSchema = z.object({
         skipped: z.number(),
         failed: z.number(),
       }),
-      hits: z
-        .object({
-          total: z.object({ value: z.number(), relation: z.string() }),
-          hits: z.array(
-            z.discriminatedUnion('_index', [
-              TranscriptHitSchema,
-              UploadHitSchema,
-              ChannelHitSchema,
-              OrganizationHitSchema,
-            ]),
-          ),
-        })
-        .optional(),
+      hits: z.object({
+        total: z.object({ value: z.number(), relation: z.string() }),
+        hits: z.array(
+          z.discriminatedUnion('_index', [
+            TranscriptHitSchema,
+            UploadHitSchema,
+            ChannelHitSchema,
+            OrganizationHitSchema,
+          ]),
+        ),
+      }),
       aggregations: z
         .object({
           channelIds: z
