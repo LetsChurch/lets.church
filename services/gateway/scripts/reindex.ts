@@ -30,6 +30,7 @@ const scope =
         message: 'What scope would you like to reindex?',
         choices: [
           { name: 'Channel Slugs', value: 'slugs' as const },
+          { name: 'Date range', value: 'date' as const },
           { name: 'All', value: 'all' as const },
         ],
       })
@@ -39,6 +40,11 @@ const slugs =
   scope === 'slugs'
     ? (await input({ message: 'Slugs (comma-seperated):' })).split(',')
     : null;
+
+const dateStart =
+  scope === 'date' ? await input({ message: 'Start date:' }) : null;
+const dateEnd =
+  scope === 'date' ? await input({ message: 'Start date:' }) : null;
 
 const documents = await (what === 'organizations'
   ? prisma.organization.findMany({
@@ -60,6 +66,14 @@ const documents = await (what === 'organizations'
           ? {
               channel: {
                 slug: { in: slugs },
+              },
+            }
+          : {}),
+        ...(dateStart && dateEnd
+          ? {
+              createdAt: {
+                gte: new Date(dateStart),
+                lte: new Date(dateEnd),
               },
             }
           : {}),
