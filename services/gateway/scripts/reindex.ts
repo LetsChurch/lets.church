@@ -1,12 +1,14 @@
 import { input, select, confirm } from '@inquirer/prompts';
 import ora from 'ora';
 import pMap from 'p-map';
+import pFilter from 'p-filter';
 import { client } from '../src/temporal';
 import { BACKGROUND_QUEUE } from '../src/temporal/queues';
 import { emptySignal } from '../src/temporal/signals';
 import { indexDocumentWorkflow } from '../src/temporal/workflows';
 import prisma from '../src/util/prisma';
 import logger from '../src/util/logger';
+import { uploadExists } from '../src/util/elasticsearch';
 
 const what = await select({
   message: 'What would you like to reindex?',
@@ -31,6 +33,7 @@ const scope =
         choices: [
           { name: 'Channel Slugs', value: 'slugs' as const },
           { name: 'Date range', value: 'date' as const },
+          { name: 'Missing', value: 'missing' as const },
           { name: 'All', value: 'all' as const },
         ],
       })
@@ -46,7 +49,7 @@ const dateStart =
 const dateEnd =
   scope === 'date' ? await input({ message: 'Start date:' }) : null;
 
-const documents = await (what === 'organizations'
+let documents = await (what === 'organizations'
   ? prisma.organization.findMany({
       select: { id: true },
       take: Number.MAX_SAFE_INTEGER,
@@ -79,6 +82,16 @@ const documents = await (what === 'organizations'
           : {}),
       },
     }));
+
+if (scope === 'missing') {
+  documents = await pFilter(
+    documents,
+    async ({ id }) => !(await uploadExists(id)),
+    {
+      concurrency: 50,
+    },
+  );
+}
 
 if (
   !(await confirm({

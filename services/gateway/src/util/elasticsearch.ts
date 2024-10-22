@@ -531,3 +531,7 @@ export async function* listIds(
     hits = scrollRes.hits.hits;
   }
 }
+
+export async function uploadExists(id: string): Promise<boolean> {
+  return client.exists({ index: 'lc_uploads_v2', id });
+}
