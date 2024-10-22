@@ -396,13 +396,13 @@ builder.queryFields((t) => ({
             const parsed = MSearchResponseSchema.parse(esRes);
 
             totalCount = parsed.responses.reduce(
-              (sum, res) => sum + res.hits.total.value,
+              (sum, res) => sum + (res.hits?.total.value ?? 0),
               0,
             );
-            uploadHitCount = parsed.responses[0]?.hits.total.value ?? 0;
-            transcriptHitCount = parsed.responses[1]?.hits.total.value ?? 0;
-            channelHitCount = parsed.responses[2]?.hits.total.value ?? 0;
-            organizationHitCount = parsed.responses[3]?.hits.total.value ?? 0;
+            uploadHitCount = parsed.responses[0]?.hits?.total.value ?? 0;
+            transcriptHitCount = parsed.responses[1]?.hits?.total.value ?? 0;
+            channelHitCount = parsed.responses[2]?.hits?.total.value ?? 0;
+            organizationHitCount = parsed.responses[3]?.hits?.total.value ?? 0;
 
             const focusedResponse =
               parsed.responses[
@@ -487,7 +487,8 @@ builder.queryFields((t) => ({
                 : null;
 
             const res = parsed.responses
-              .flatMap(({ hits: { hits } }) => hits)
+              .flatMap(({ hits }) => hits?.hits)
+              .filter((hit): hit is NonNullable<typeof hit> => !!hit)
               .map((hit) => ({
                 __typename:
                   focus === 'UPLOADS'
