@@ -16,6 +16,7 @@ import {
 import prisma from '../../util/prisma';
 import { identifiableSchema } from '../../util/zod';
 import builder from '../builder';
+import logger from '../../util/logger';
 import { OrganizationTypeEnum } from './organization';
 
 // TODO: ensure all aggregates are returned for every focus
@@ -393,7 +394,16 @@ builder.queryFields((t) => ({
             const CHANNELS_MSEARCH_INDEX = 2;
             const ORGANIZATIONS_MSEARCH_INDEX = 3;
 
-            const parsed = MSearchResponseSchema.parse(esRes);
+            const parseRes = MSearchResponseSchema.safeParse(esRes);
+
+            if (!parseRes.success) {
+              logger.error('Error parsing msearch response', {
+                res: JSON.stringify({ esRes, parseRes }),
+              });
+              throw parseRes.error;
+            }
+
+            const parsed = parseRes.data;
 
             totalCount = parsed.responses.reduce(
               (sum, res) => sum + res.hits.total.value,
