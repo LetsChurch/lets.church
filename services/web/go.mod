@@ -17,13 +17,13 @@ require (
 	github.com/labstack/echo-contrib v0.17.1
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/lib/pq v1.10.9
-	github.com/maragudk/gomponents v0.20.4
-	github.com/maragudk/gomponents-htmx v0.5.0
 	github.com/rs/zerolog v1.33.0
 	github.com/samber/lo v1.46.0
 	github.com/samber/oops v1.13.0
 	github.com/trustelem/zxcvbn v1.0.1
 	github.com/yuin/goldmark v1.7.4
+	maragu.dev/gomponents v1.0.0
+	maragu.dev/gomponents-htmx v0.6.1
 )
 
 require (
