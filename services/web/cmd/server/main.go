@@ -143,18 +143,20 @@ type Trigger struct {
 	} `json:"flash"`
 }
 
-const ISE = "Internal server error"
-
 func setupErrorHandler(e *echo.Echo) {
 	defaultHandler := e.HTTPErrorHandler
 
 	e.HTTPErrorHandler = func(err error, c echo.Context) {
+		code := http.StatusInternalServerError
+		if he, ok := err.(*echo.HTTPError); ok {
+			code = he.Code
+		}
 		oopsErr, _ := oops.AsOops(oops.Hint("echo global error handler").Wrap(err))
 		LogOops(l.Logger, oopsErr).Error().Send()
 
 		if c.Request().Header.Get("HX-Request") != "" {
 			// Get message
-			message := oops.GetPublic(err, ISE)
+			message := oops.GetPublic(err, http.StatusText(code))
 
 			// Make trigger payload
 			trigger := Trigger{}
