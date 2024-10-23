@@ -77,11 +77,13 @@ func (m Media) Render(w io.Writer) error {
 					h.Class("lc-media__meta"),
 					h.H1(h.Class("lc-media__meta__title"), g.Text(m.Title.String)),
 					h.Div(h.Class("lc-media__meta__actions"),
-						h.A(
-							h.Href("/channel/"+m.ChannelSlug.String),
-							h.Class("lc-media__meta__actions__channel"),
-							c.Avatar{Src: "https://placehold.co/96", Name: m.ChannelName.String, Size: "md", Alt: m.ChannelName.String},
-							h.Div(g.Text(m.ChannelName.String)),
+						h.Div(
+							h.A(
+								h.Href("/channel/"+m.ChannelSlug.String),
+								h.Class("lc-media__meta__actions__channel"),
+								c.Avatar{Src: "https://placehold.co/96", Name: m.ChannelName.String, Size: "md", Alt: m.ChannelName.String},
+								h.Div(g.Text(m.ChannelName.String)),
+							),
 							c.Button{Icon: "rss", Children: []g.Node{g.Text("Subscribe")}},
 						),
 						h.Div(

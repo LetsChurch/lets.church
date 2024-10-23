@@ -37,6 +37,7 @@
   align-items: center;
   color: var(--color-gray-600);
   font-weight: var(--text-weight-medium);
+  gap: calc(2 * var(--unit));
 }
 
 .lc-media__meta__transcript {
