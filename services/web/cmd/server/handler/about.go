@@ -15,25 +15,6 @@ import (
 var mdAbout []byte
 var htmlAbout = util.OnceUnsafeMdTmpl("about", mdAbout)
 
-func (h *Handler) About(c echo.Context) (err error) {
-	eb := oops.In("Handler::About")
-	ac, err := h.getAppContext(c)
-
-	if err != nil {
-		return eb.Wrap(err)
-	}
-
-	var buf strings.Builder
-	err = htmlAbout().Execute(&buf, map[string]string{"Hello": "World"})
-
-	if err != nil {
-		return eb.Wrap(err)
-	}
-
-	c.Response().WriteHeader(http.StatusOK)
-	return pages.About{Ac: ac, Html: buf.String()}.Render(c.Response())
-}
-
 //go:embed "dmca.md"
 var mdDmca []byte
 var htmlDmca = util.OnceUnsafeMd(mdDmca)
@@ -54,31 +35,54 @@ var htmlTerms = util.OnceUnsafeMd(mdTerms)
 var mdTheology []byte
 var htmlTheology = util.OnceUnsafeMd(mdTheology)
 
-func (h *Handler) AboutPage(c echo.Context) (err error) {
-	eb := oops.In("Handler::AboutPage")
+func (h *Handler) AboutRoutes(app *echo.Echo) {
+	g := app.Group("/about")
 
-	ac, err := h.getAppContext(c)
-	if err != nil {
-		return eb.Wrap(err)
-	}
+	g.GET("", func(c echo.Context) error {
+		eb := oops.In("Handler::About")
+		ac, err := h.getAppContext(c)
 
-	switch page := c.Param("page"); page {
-	case "dmca":
-		c.Response().WriteHeader(http.StatusOK)
-		return eb.Wrap(pages.About{Ac: ac, Html: htmlDmca()}.Render(c.Response()))
-	case "dorean":
-		c.Response().WriteHeader(http.StatusOK)
-		return eb.Wrap(pages.About{Ac: ac, Html: htmlDorean()}.Render(c.Response()))
-	case "privacy":
-		c.Response().WriteHeader(http.StatusOK)
-		return eb.Wrap(pages.About{Ac: ac, Html: htmlPrivacy()}.Render(c.Response()))
-	case "terms":
-		c.Response().WriteHeader(http.StatusOK)
-		return eb.Wrap(pages.About{Ac: ac, Html: htmlTerms()}.Render(c.Response()))
-	case "theology":
-		c.Response().WriteHeader(http.StatusOK)
-		return eb.Wrap(pages.About{Ac: ac, Html: htmlTheology()}.Render(c.Response()))
-	}
+		if err != nil {
+			return eb.Wrap(err)
+		}
 
-	return echo.ErrNotFound
+		var buf strings.Builder
+		err = htmlAbout().Execute(&buf, map[string]string{"Hello": "World"})
+
+		if err != nil {
+			return eb.Wrap(err)
+		}
+
+		c.Response().WriteHeader(http.StatusOK)
+		return pages.About{Ac: ac, Html: buf.String()}.Render(c.Response())
+	})
+
+	g.GET("/:page", func(c echo.Context) error {
+		eb := oops.In("Handler::AboutPage")
+
+		ac, err := h.getAppContext(c)
+		if err != nil {
+			return eb.Wrap(err)
+		}
+
+		switch page := c.Param("page"); page {
+		case "dmca":
+			c.Response().WriteHeader(http.StatusOK)
+			return eb.Wrap(pages.About{Ac: ac, Html: htmlDmca()}.Render(c.Response()))
+		case "dorean":
+			c.Response().WriteHeader(http.StatusOK)
+			return eb.Wrap(pages.About{Ac: ac, Html: htmlDorean()}.Render(c.Response()))
+		case "privacy":
+			c.Response().WriteHeader(http.StatusOK)
+			return eb.Wrap(pages.About{Ac: ac, Html: htmlPrivacy()}.Render(c.Response()))
+		case "terms":
+			c.Response().WriteHeader(http.StatusOK)
+			return eb.Wrap(pages.About{Ac: ac, Html: htmlTerms()}.Render(c.Response()))
+		case "theology":
+			c.Response().WriteHeader(http.StatusOK)
+			return eb.Wrap(pages.About{Ac: ac, Html: htmlTheology()}.Render(c.Response()))
+		}
+
+		return echo.ErrNotFound
+	})
 }
