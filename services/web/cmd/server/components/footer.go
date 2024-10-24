@@ -7,10 +7,10 @@ import (
 	"net/url"
 	"os"
 
-	g "maragu.dev/gomponents"
-	h "maragu.dev/gomponents/html"
 	"github.com/samber/lo"
 	"lets.church/cmd/server/util"
+	g "maragu.dev/gomponents"
+	h "maragu.dev/gomponents/html"
 )
 
 func isUserSubscribedToNewsletter(ac *util.AppContext) bool {
@@ -101,7 +101,7 @@ func (f Footer) Render(w io.Writer) error {
 					h.Li(h.A(h.Href("/about"), g.Text("About"))),
 					h.Li(h.A(h.Href("/about/theology"), g.Text("Theology"))),
 					h.Li(h.A(h.Href("/about/dorean"), g.Text("The Dorean Principle"))),
-					h.Li(h.A(h.Href("https://www.zeffy.com/en-US/donation-form/5da9e1c3-a8e2-4bb4-817a-5dbbb968ec6b"), g.Text("Donate"))),
+					h.Li(h.A(h.Href("https://www.zeffy.com/en-US/donation-form/5da9e1c3-a8e2-4bb4-817a-5dbbb968ec6b"), g.Text("Donate"), h.Target("_blank"))),
 				),
 			),
 			h.Div(
