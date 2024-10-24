@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo/v4"
 	"github.com/samber/lo"
 	"github.com/samber/oops"
@@ -35,8 +36,13 @@ func (h *Handler) Media(c echo.Context) (err error) {
 	}
 
 	pgUuid := uploadUuid.Pg()
+	userId := pgtype.UUID{}
 
-	uploadRecord, err := h.Queries.UploadData(c.Request().Context(), data.UploadDataParams{UploadID: pgUuid})
+	if ac.Authenticated {
+		userId = ac.User.ID
+	}
+
+	uploadRecord, err := h.Queries.UploadData(c.Request().Context(), data.UploadDataParams{UploadID: pgUuid, UserID: userId})
 	if err != nil {
 		return eb.Hint("Could not fetch upload data").Wrap(err)
 	}

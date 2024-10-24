@@ -127,12 +127,17 @@ func main() {
 	app.GET("/auth/reset-password", h.GetAuthResetPassword)
 	app.POST("/auth/reset-password", h.PostAuthResetPassword)
 	app.GET("/auth/verify", h.GetAuthVerify)
+	app.GET("/channel/:slug", h.Channel)
+	app.POST("/channel/:slug/subscribe", h.ChannelSubscribe)
+	app.POST("/channel/:slug/unsubscribe", h.ChannelUnsubscribe)
 	app.GET("/channels", h.Channels)
 	app.GET("/churches", h.Churches)
 	app.GET("/churches/add", h.ChurchesAdd)
 	app.GET("/media/:id", h.Media)
 	app.POST("/media/:id/record", h.MediaRecord)
 	app.POST("/newsletter/subscribe", h.PostNewsletterSubscribe)
+
+	app.GET("/@:slug", h.AtChannelSlug)
 
 	app.Logger.Fatal(app.Start("0.0.0.0:3000"))
 }
@@ -148,10 +153,11 @@ func setupErrorHandler(e *echo.Echo) {
 
 	e.HTTPErrorHandler = func(err error, c echo.Context) {
 		code := http.StatusInternalServerError
-		if he, ok := err.(*echo.HTTPError); ok {
+		oopsErr, _ := oops.AsOops(err)
+		originalErr := oopsErr.Unwrap()
+		if he, ok := originalErr.(*echo.HTTPError); ok {
 			code = he.Code
 		}
-		oopsErr, _ := oops.AsOops(oops.Hint("echo global error handler").Wrap(err))
 		LogOops(l.Logger, oopsErr).Error().Send()
 
 		if c.Request().Header.Get("HX-Request") != "" {

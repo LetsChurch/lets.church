@@ -16,6 +16,7 @@ type Button struct {
 	Children  []g.Node
 	Primary   bool
 	Big       bool
+	Active    bool
 }
 
 func (b Button) Render(w io.Writer) error {
@@ -34,6 +35,9 @@ func (b Button) classes() string {
 	}
 	if b.Primary {
 		arr = append(arr, "primary")
+	}
+	if b.Active {
+		arr = append(arr, "active")
 	}
 	if b.Big {
 		arr = append(arr, "big")

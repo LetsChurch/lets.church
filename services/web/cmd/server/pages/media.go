@@ -84,7 +84,13 @@ func (m Media) Render(w io.Writer) error {
 								c.Avatar{Src: "https://placehold.co/96", Name: m.ChannelName.String, Size: "md", Alt: m.ChannelName.String},
 								h.Div(g.Text(m.ChannelName.String)),
 							),
-							c.Button{Icon: "rss", Children: []g.Node{g.Text("Subscribe")}},
+							h.Form(h.Action("/channel/"+m.ChannelSlug.String+lo.Ternary(m.ChannelUserSubscribed, "/unsubscribe", "/subscribe")), h.Method("post"), util.HxIsland("subscribe"),
+								c.Button{
+									Icon:     "rss",
+									Children: []g.Node{g.Text(lo.Ternary(m.ChannelUserSubscribed, "Unsubscribe", "Subscribe"))},
+									Active:   m.ChannelUserSubscribed,
+								},
+							),
 						),
 						h.Div(
 							c.Button{Icon: "cloud-download", Children: []g.Node{g.Text("Download")}},
