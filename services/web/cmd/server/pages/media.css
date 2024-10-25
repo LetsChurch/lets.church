@@ -18,15 +18,13 @@
   flex-direction: row;
   justify-content: space-between;
   overflow-x: auto;
+  gap: calc(2 * var(--unit));
 }
 
 .lc-media__meta__actions > * {
   display: flex;
   flex-direction: row;
   gap: calc(2 * var(--unit));
-  &:last-child {
-    margin-inline-start: calc(2 * var(--unit));
-  }
 }
 
 .lc-media__meta__actions__channel {
