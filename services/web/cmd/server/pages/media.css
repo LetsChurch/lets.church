@@ -17,8 +17,12 @@
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-  overflow-x: auto;
   gap: calc(2 * var(--unit));
+
+  overflow-x: auto;
+  /* Grow the bar by the focus ring size then pull in the surroundings. This will show the focus ring completely even though overflow-y is hidden. */
+  padding-block: calc(2 * var(--unit));
+  margin-block: calc(-2 * var(--unit));
 }
 
 .lc-media__meta__actions > * {
