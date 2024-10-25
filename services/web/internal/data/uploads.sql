@@ -23,6 +23,9 @@ SELECT
   ur.description,
   published_at,
   (SELECT COUNT(*) FROM upload_view WHERE upload_record_id = ur.id) AS total_views,
+  (SELECT COUNT(*) FROM upload_user_rating WHERE rating = 'LIKE' AND upload_id = ur.id) AS total_likes,
+  (SELECT COUNT(*) FROM upload_user_rating WHERE rating = 'DISLIKE' AND upload_id = ur.id) AS total_dislikes,
+  uur.rating as user_rating,
   c.id as channel_id,
   c.slug as channel_slug,
   c.name as channel_name,
@@ -46,7 +49,17 @@ FROM
   upload_record ur
 LEFT JOIN channel c ON ur.channel_id = c.id
 LEFT JOIN channel_subscription cs ON ur.channel_id = cs.channel_id AND cs.app_user_id = sqlc.arg(user_id)
+LEFT JOIN upload_user_rating uur ON uur.upload_id = ur.id AND uur.app_user_id = sqlc.arg(user_id)
 WHERE ur.id = sqlc.arg(upload_id);
+
+-- name: GetUploadUserRating :one
+SELECT rating FROM upload_user_rating WHERE upload_id = sqlc.arg(upload_id) AND app_user_id = sqlc.arg(user_id);
+
+-- name: DeleteUploadUserRating :exec
+DELETE FROM upload_user_rating WHERE upload_id = sqlc.arg(upload_id) AND app_user_id = sqlc.arg(user_id);
+
+-- name: RecordUploadUserRating :exec
+INSERT INTO upload_user_rating (upload_id, app_user_id, rating) VALUES (sqlc.arg(upload_id), sqlc.arg(user_id), sqlc.arg(rating));
 
 -- name: GetUploadUserComments :many
 SELECT

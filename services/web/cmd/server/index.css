@@ -159,4 +159,8 @@
   .flip-x {
     transform: scaleX(-1);
   }
+
+  .contents {
+    display: contents;
+  }
 }

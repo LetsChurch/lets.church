@@ -87,6 +87,7 @@ func (m Media) Render(w io.Writer) error {
 							h.Form(
 								h.Action("/channel/"+m.ChannelSlug.String+lo.Ternary(m.ChannelUserSubscribed, "/unsubscribe", "/subscribe")),
 								h.Method("post"),
+								h.Class("contents"),
 								util.HxIsland("subscribe"),
 								c.Button{
 									Type:     "submit",
@@ -100,8 +101,12 @@ func (m Media) Render(w io.Writer) error {
 							c.Button{Icon: "cloud-download", Children: []g.Node{g.Text("Download")}},
 							c.Button{Icon: "share", Children: []g.Node{g.Text("Share")}},
 							h.Div(h.Class("lc-button-group"),
-								c.Button{Icon: "thumb-up", Children: []g.Node{g.Text("Up")}},
-								c.Button{Icon: "thumb-down", IconClass: "flip-x", Children: []g.Node{g.Text("Down")}},
+								MediaRatingForm{
+									UploadId:   m.UploadId,
+									Likes:      m.UploadDataRow.TotalLikes,
+									Dislikes:   m.UploadDataRow.TotalDislikes,
+									UserRating: m.UploadDataRow.UserRating.Rating,
+								},
 							),
 						),
 					),
@@ -151,4 +156,40 @@ func (m Media) Render(w io.Writer) error {
 			),
 		},
 	}.Render(w)
+}
+
+type MediaRatingForm struct {
+	UploadId   string
+	Likes      int64
+	Dislikes   int64
+	UserRating data.Rating
+}
+
+func (m MediaRatingForm) Render(w io.Writer) error {
+	return h.Form(
+		h.Method("post"),
+		h.Action("/media/"+m.UploadId+"/rate"),
+		h.Class("contents"),
+		hx.Boost("false"),
+		hx.Post("/media/"+m.UploadId+"/rate"),
+		h.Input(h.Type("hidden"), h.Name("likes"), h.Value(strconv.Itoa(int(m.Likes)))),
+		c.Button{
+			Type:       "submit",
+			Name:       "rating",
+			Value:      "LIKE",
+			Icon:       "thumb-up",
+			Children:   []g.Node{g.Text(strconv.FormatInt(m.Likes, 10))},
+			ActiveText: m.UserRating == data.RatingLIKE,
+		},
+		h.Input(h.Type("hidden"), h.Name("dislikes"), h.Value(strconv.Itoa(int(m.Dislikes)))),
+		c.Button{
+			Type:       "submit",
+			Name:       "rating",
+			Value:      "DISLIKE",
+			Icon:       "thumb-down",
+			IconClass:  "flip-x",
+			Children:   []g.Node{g.Text(strconv.FormatInt(m.Dislikes, 10))},
+			ActiveText: m.UserRating == data.RatingDISLIKE,
+		},
+	).Render(w)
 }

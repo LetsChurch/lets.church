@@ -11,6 +11,20 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const deleteUploadUserRating = `-- name: DeleteUploadUserRating :exec
+DELETE FROM upload_user_rating WHERE upload_id = $1 AND app_user_id = $2
+`
+
+type DeleteUploadUserRatingParams struct {
+	UploadID pgtype.UUID
+	UserID   pgtype.UUID
+}
+
+func (q *Queries) DeleteUploadUserRating(ctx context.Context, arg DeleteUploadUserRatingParams) error {
+	_, err := q.db.Exec(ctx, deleteUploadUserRating, arg.UploadID, arg.UserID)
+	return err
+}
+
 const getUploadUserComments = `-- name: GetUploadUserComments :many
 SELECT
   c.id, c.created_at, c.replying_to_id, a.username, c.text, c.score
@@ -54,6 +68,37 @@ func (q *Queries) GetUploadUserComments(ctx context.Context, uploadID pgtype.UUI
 		return nil, err
 	}
 	return items, nil
+}
+
+const getUploadUserRating = `-- name: GetUploadUserRating :one
+SELECT rating FROM upload_user_rating WHERE upload_id = $1 AND app_user_id = $2
+`
+
+type GetUploadUserRatingParams struct {
+	UploadID pgtype.UUID
+	UserID   pgtype.UUID
+}
+
+func (q *Queries) GetUploadUserRating(ctx context.Context, arg GetUploadUserRatingParams) (Rating, error) {
+	row := q.db.QueryRow(ctx, getUploadUserRating, arg.UploadID, arg.UserID)
+	var rating Rating
+	err := row.Scan(&rating)
+	return rating, err
+}
+
+const recordUploadUserRating = `-- name: RecordUploadUserRating :exec
+INSERT INTO upload_user_rating (upload_id, app_user_id, rating) VALUES ($1, $2, $3)
+`
+
+type RecordUploadUserRatingParams struct {
+	UploadID pgtype.UUID
+	UserID   pgtype.UUID
+	Rating   Rating
+}
+
+func (q *Queries) RecordUploadUserRating(ctx context.Context, arg RecordUploadUserRatingParams) error {
+	_, err := q.db.Exec(ctx, recordUploadUserRating, arg.UploadID, arg.UserID, arg.Rating)
+	return err
 }
 
 const recordViewRanges = `-- name: RecordViewRanges :one
@@ -157,6 +202,9 @@ SELECT
   ur.description,
   published_at,
   (SELECT COUNT(*) FROM upload_view WHERE upload_record_id = ur.id) AS total_views,
+  (SELECT COUNT(*) FROM upload_user_rating WHERE rating = 'LIKE' AND upload_id = ur.id) AS total_likes,
+  (SELECT COUNT(*) FROM upload_user_rating WHERE rating = 'DISLIKE' AND upload_id = ur.id) AS total_dislikes,
+  uur.rating as user_rating,
   c.id as channel_id,
   c.slug as channel_slug,
   c.name as channel_name,
@@ -180,6 +228,7 @@ FROM
   upload_record ur
 LEFT JOIN channel c ON ur.channel_id = c.id
 LEFT JOIN channel_subscription cs ON ur.channel_id = cs.channel_id AND cs.app_user_id = $1
+LEFT JOIN upload_user_rating uur ON uur.upload_id = ur.id AND uur.app_user_id = $1
 WHERE ur.id = $2
 `
 
@@ -195,6 +244,9 @@ type UploadDataRow struct {
 	Description                 pgtype.Text
 	PublishedAt                 pgtype.Timestamp
 	TotalViews                  int64
+	TotalLikes                  int64
+	TotalDislikes               int64
+	UserRating                  NullRating
 	ChannelID                   pgtype.UUID
 	ChannelSlug                 pgtype.Text
 	ChannelName                 pgtype.Text
@@ -219,6 +271,9 @@ func (q *Queries) UploadData(ctx context.Context, arg UploadDataParams) (UploadD
 		&i.Description,
 		&i.PublishedAt,
 		&i.TotalViews,
+		&i.TotalLikes,
+		&i.TotalDislikes,
+		&i.UserRating,
 		&i.ChannelID,
 		&i.ChannelSlug,
 		&i.ChannelName,

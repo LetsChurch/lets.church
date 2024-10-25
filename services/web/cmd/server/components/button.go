@@ -9,14 +9,17 @@ import (
 )
 
 type Button struct {
-	Type      string
-	Class     string
-	Icon      string
-	IconClass string
-	Children  []g.Node
-	Primary   bool
-	Big       bool
-	Active    bool
+	Type       string
+	Class      string
+	Icon       string
+	IconClass  string
+	Name       string
+	Value      string
+	Children   []g.Node
+	Primary    bool
+	Big        bool
+	Active     bool
+	ActiveText bool
 }
 
 func (b Button) Render(w io.Writer) error {
@@ -25,6 +28,8 @@ func (b Button) Render(w io.Writer) error {
 		h.Class(b.classes()),
 		g.If(b.Icon != "", Icon{Name: b.Icon, Class: b.IconClass}),
 		g.Group(b.Children),
+		g.If(b.Name != "", h.Name(b.Name)),
+		g.If(b.Value != "", h.Value(b.Value)),
 	).Render(w)
 }
 
@@ -38,6 +43,9 @@ func (b Button) classes() string {
 	}
 	if b.Active {
 		arr = append(arr, "active")
+	}
+	if b.ActiveText {
+		arr = append(arr, "active-text")
 	}
 	if b.Big {
 		arr = append(arr, "big")

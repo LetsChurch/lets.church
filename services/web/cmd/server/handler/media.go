@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/labstack/echo/v4"
@@ -100,6 +101,116 @@ func (h *Handler) MediaRoutes(app *echo.Echo) {
 			Comments:      groupedComments,
 			Transcript:    transcript,
 		}.Render(c.Response())
+	})
+
+	g.POST("/:id/rate", func(ctx echo.Context) (err error) {
+		eb := oops.In("/media/:id/rate")
+		ac, err := h.getAppContext(ctx)
+
+		if err != nil {
+			return eb.Hint("Error getting app context").Wrap(err)
+		}
+
+		// TODO: restrict rating private uploads
+		if !ac.Authenticated {
+			return eb.Hint("Not authenticated").Public("You must be logged in to rate media.").Errorf("Not authenticated")
+		}
+
+		submittedRating := ctx.FormValue("rating")
+		likes, likesErr := strconv.ParseInt(ctx.FormValue("likes"), 10, 64)
+		dislikes, dislikesErr := strconv.ParseInt(ctx.FormValue("dislikes"), 10, 64)
+
+		if likesErr != nil || dislikesErr != nil {
+			return eb.Hint("Invalid state").Errorf("Invalid state")
+		}
+
+		id, err := util.ParseUuid(ctx.Param("id"))
+
+		if err != nil {
+			return eb.Hint("Invalid ID").Public("Could not find upload").Wrap(err)
+		}
+
+		if submittedRating != "LIKE" && submittedRating != "DISLIKE" {
+			return eb.Public("Invalid rating. Must be LIKE or DISLIKE.").Errorf("Invalid rating. Must be LIKE or DISLIKE.")
+		}
+
+		safeSubmittedRating := data.Rating(submittedRating)
+
+		tx, err := h.PgxConn.Begin(ctx.Request().Context())
+		if err != nil {
+			return eb.Hint("Could not start transaction").Wrap(err)
+		}
+		defer tx.Rollback(ctx.Request().Context())
+		txQueries := h.Queries.WithTx(tx)
+
+		// 1. Get existing rating
+		userRating, _ := txQueries.GetUploadUserRating(ctx.Request().Context(), data.GetUploadUserRatingParams{
+			UploadID: id.Pg(),
+			UserID:   ac.User.ID,
+		})
+
+		// 2. Delete any existing rating
+		if err := txQueries.DeleteUploadUserRating(
+			ctx.Request().Context(),
+			data.DeleteUploadUserRatingParams{UploadID: id.Pg(), UserID: ac.User.ID},
+		); err != nil {
+			return eb.Hint("Could not delete existing rating").Wrap(err)
+		}
+
+		// 3. If the new rating is different from any existing rating, record it
+		if userRating != safeSubmittedRating {
+			if err := txQueries.RecordUploadUserRating(
+				ctx.Request().Context(),
+				data.RecordUploadUserRatingParams{UploadID: id.Pg(), UserID: ac.User.ID, Rating: safeSubmittedRating},
+			); err != nil {
+				return eb.Hint("Could not record new rating").Public("Error saving rating").Wrap(err)
+			}
+		}
+
+		// 4. Commit transaction!
+		if err = tx.Commit(ctx.Request().Context()); err != nil {
+			return eb.Hint("Could not commit transaction").Wrap(err)
+		}
+
+		// 5. UI state
+		if userRating == data.RatingLIKE {
+			if safeSubmittedRating == data.RatingLIKE {
+				likes -= 1
+				safeSubmittedRating = ""
+			} else if safeSubmittedRating == data.RatingDISLIKE {
+				likes -= 1
+				dislikes += 1
+				safeSubmittedRating = data.RatingDISLIKE
+			}
+		} else if userRating == data.RatingDISLIKE {
+			if safeSubmittedRating == data.RatingDISLIKE {
+				dislikes -= 1
+				safeSubmittedRating = ""
+			} else if safeSubmittedRating == data.RatingLIKE {
+				likes += 1
+				dislikes -= 1
+				safeSubmittedRating = data.RatingLIKE
+			}
+		} else {
+			if safeSubmittedRating == data.RatingLIKE {
+				likes += 1
+			} else if safeSubmittedRating == data.RatingDISLIKE {
+				dislikes += 1
+			}
+		}
+
+		// Submit partial response for HTMX
+		if ctx.Request().Header.Get("HX-Request") == "true" {
+			return pages.MediaRatingForm{
+				UploadId:   id.Base58(),
+				Likes:      likes,
+				Dislikes:   dislikes,
+				UserRating: safeSubmittedRating,
+			}.Render(ctx.Response())
+		}
+
+		// Redirect to media page
+		return ctx.Redirect(http.StatusFound, ctx.Request().Referer())
 	})
 
 	g.POST("/:id/record", func(c echo.Context) (err error) {

@@ -59,9 +59,15 @@
     }
   }
 
-  :where(&).active {
-    color: var(--color-brand);
-    border-color: var(--color-brand);
+  :where(&) {
+    &.active,
+    &.active-text {
+      color: var(--color-brand);
+    }
+
+    &.active {
+      border-color: var(--color-brand);
+    }
   }
 
   :where(.lc-button-group) & {
