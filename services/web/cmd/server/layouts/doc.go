@@ -6,6 +6,7 @@ import (
 	g "maragu.dev/gomponents"
 	hx "maragu.dev/gomponents-htmx"
 	h "maragu.dev/gomponents/html"
+
 	c "lets.church/cmd/server/components"
 	"lets.church/cmd/server/util"
 )
@@ -17,7 +18,7 @@ type Doc struct {
 
 func (d Doc) Render(w io.Writer) error {
 	return h.Doctype(
-		h.HTML(h.Lang("en"),
+		h.HTML(h.Lang("en"), h.Class("no-js"),
 			h.Head(
 				h.Meta(h.Charset("utf-8")),
 				h.Meta(h.Name("viewport"), h.Content("width=device-width, initial-scale=1")),
