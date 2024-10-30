@@ -41,7 +41,7 @@ RUN apt-get install -y imagemagick jpegoptim ffmpeg
 COPY --from=build-audiowaveform /home/build/audiowaveform/build/audiowaveform /usr/bin/
 CMD npm run start:transcode-worker
 
-FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04 AS transcribe-worker
+FROM nvidia/cuda:12.6.2-cudnn-runtime-ubuntu22.04 AS transcribe-worker
 ARG WHISPER_MODEL=tiny.en
 RUN apt-get update && \
   apt-get install -y ca-certificates curl gnupg python3 python3-pip git ffmpeg && \
