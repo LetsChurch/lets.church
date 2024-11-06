@@ -6,7 +6,7 @@
   align-items: center;
   padding: calc(10 * var(--unit));
   gap: calc(8 * var(--unit));
-  border-radius: var(--border-radius-4);
+  border-radius: var(--border-radius-lg);
 
   @media (--lg) {
     padding-inline: calc(10 * var(--unit));

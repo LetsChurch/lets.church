@@ -1,11 +1,30 @@
 package util
 
 import (
+	"context"
+	"fmt"
 	"net/url"
 	"os"
+	"strings"
+
+	"github.com/samber/lo"
+	"github.com/samber/oops"
+	"lets.church/internal/data"
+
+	"github.com/subosito/gozaru"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 var MEDIA_URL = os.Getenv("MEDIA_URL")
+var S3_PUBLIC_REGION = os.Getenv("S3_PUBLIC_REGION")
+var S3_PUBLIC_ENDPOINT = os.Getenv("S3_PUBLIC_ENDPOINT")
+var S3_PUBLIC_BUCKET = os.Getenv("S3_PUBLIC_BUCKET")
+var S3_PUBLIC_ACCESS_KEY_ID = os.Getenv("S3_PUBLIC_ACCESS_KEY_ID")
+var S3_PUBLIC_SECRET_ACCESS_KEY = os.Getenv("S3_PUBLIC_SECRET_ACCESS_KEY")
 
 func GetPublicMediaUrl(key string) string {
 	baseUrl, err := url.Parse(MEDIA_URL)
@@ -14,6 +33,40 @@ func GetPublicMediaUrl(key string) string {
 	}
 	baseUrl.Path += "/" + key
 	return baseUrl.String()
+}
+
+func GetPublicUrlWithFilename(ctx context.Context, key string, filename string) (string, error) {
+	eb := oops.In("GetPublicUrlWithFilename")
+	cfg, err := config.LoadDefaultConfig(
+		ctx,
+		config.WithRegion(S3_PUBLIC_REGION),
+		config.WithBaseEndpoint(S3_PUBLIC_ENDPOINT),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
+			S3_PUBLIC_ACCESS_KEY_ID,
+			S3_PUBLIC_SECRET_ACCESS_KEY,
+			"",
+		)),
+	)
+	if err != nil {
+		return "", eb.Wrap(err)
+	}
+
+	s3Client := s3.NewFromConfig(cfg)
+	presignClient := s3.NewPresignClient(s3Client)
+	sanitizedFilename := gozaru.Sanitize(filename)
+
+	getObjectInput := &s3.GetObjectInput{
+		Bucket:                     aws.String(S3_PUBLIC_BUCKET),
+		Key:                        aws.String(key),
+		ResponseContentDisposition: aws.String(fmt.Sprintf(`attachment; filename="%s"`, sanitizedFilename)),
+	}
+
+	presignedURL, err := presignClient.PresignGetObject(ctx, getObjectInput)
+	if err != nil {
+		return "", eb.Wrap(err)
+	}
+
+	return presignedURL.URL, nil
 }
 
 func GetVideoSourceUrl(key string) string {
@@ -30,4 +83,91 @@ func GetPeaksDatUrl(key string) string {
 
 func GetPeaksJsonUrl(key string) string {
 	return GetPublicMediaUrl(key + "/peaks.json")
+}
+
+type DownloadMeta struct {
+	Icon  string
+	Label string
+	Url   string
+}
+
+func GetMediaDownloadUrls(ctx context.Context, udr *data.UploadDataRow) ([]DownloadMeta, error) {
+	if !udr.DownloadsEnabled {
+		return nil, nil
+	}
+
+	eb := oops.In("GetMediaDownloadUrls")
+
+	filteredVariants := lo.Filter(udr.Variants, func(variant data.UploadVariant, i int) bool {
+		// TODO: remove 360P
+		return strings.HasSuffix(string(variant), "_DOWNLOAD") && !strings.Contains(string(variant), "360P")
+	})
+
+	downloadVariants := make([]DownloadMeta, len(filteredVariants))
+
+	for i, variant := range filteredVariants {
+		canonical := Uuid(udr.ID.Bytes).Canonical()
+		ext := lo.Ternary(strings.HasPrefix(string(variant), "VIDEO"), "mp4", "m4a")
+
+		publicUrl, err := GetPublicUrlWithFilename(
+			ctx,
+			fmt.Sprintf("%s/%s.%s", canonical, variant, ext),
+			fmt.Sprintf("%s.%s", udr.Title.String, ext),
+		)
+
+		if err != nil {
+			return nil, eb.Wrap(err)
+		}
+
+		downloadVariants[i] = DownloadMeta{
+			Icon: strings.TrimSuffix(string(variant), "_DOWNLOAD"),
+			Label: lo.Switch[data.UploadVariant, string](variant).
+				Case(data.UploadVariantVIDEO4KDOWNLOAD, "4k Video").
+				Case(data.UploadVariantVIDEO1080PDOWNLOAD, "1080p Video").
+				Case(data.UploadVariantVIDEO720PDOWNLOAD, "720p Video").
+				Case(data.UploadVariantVIDEO480PDOWNLOAD, "480p Video").
+				Default("Audio"),
+			Url: publicUrl,
+		}
+	}
+
+	return downloadVariants, nil
+}
+
+func GetTranscriptDownloadUrls(ctx context.Context, udr *data.UploadDataRow) ([]DownloadMeta, error) {
+	eb := oops.In("GetTranscriptDownloadUrls")
+	if !udr.DownloadsEnabled {
+		return nil, nil
+	}
+
+	vttUrl, err := GetPublicUrlWithFilename(
+		ctx,
+		Uuid(udr.ID.Bytes).Canonical()+"/transcript.vtt",
+		udr.Title.String+".vtt",
+	)
+	if err != nil {
+		return nil, eb.Wrap(err)
+	}
+
+	txtUrl, err := GetPublicUrlWithFilename(
+		ctx,
+		Uuid(udr.ID.Bytes).Canonical()+"transcript.original.txt",
+		udr.Title.String+".txt",
+	)
+	if err != nil {
+		return nil, eb.Wrap(err)
+	}
+
+	return []DownloadMeta{
+		{
+			Icon:  "badge-cc",
+			Label: "Transcript (vtt)",
+			Url:   vttUrl,
+		},
+		{
+			Icon:  "file-description",
+			Label: "Transcript (txt)",
+			Url:   txtUrl,
+		},
+	}, nil
 }

@@ -34,6 +34,7 @@ func iconClasses(size int, full bool, class string) string {
 func (i Icon) Render(w io.Writer) error {
 	return g.El("svg", h.Class(iconClasses(i.Size, i.Full, i.Class)),
 		g.El("use", h.Href("/assets/icons.svg#"+i.Name),
+			g.If(i.Size > 0, g.Group([]g.Node{h.Width(strconv.Itoa(i.Size)), h.Height(strconv.Itoa(i.Size))})),
 			g.If(i.Width > 0, h.Width(strconv.Itoa(i.Width))),
 			g.If(i.Height > 0, h.Height(strconv.Itoa(i.Height))),
 		),

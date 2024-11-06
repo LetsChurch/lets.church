@@ -1,6 +1,7 @@
 package pages
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 	h "maragu.dev/gomponents/html"
 
 	"github.com/samber/lo"
+	"github.com/samber/oops"
 
 	"github.com/asticode/go-astisub"
 	c "lets.church/cmd/server/components"
@@ -47,12 +49,14 @@ func getDimensions(variants []data.UploadVariant) (int, int) {
 type Media struct {
 	*data.UploadDataRow
 	Ac         *util.AppContext
+	Rc         context.Context
 	Transcript *astisub.Subtitles
 	Comments   map[string][]data.GetUploadUserCommentsRow
 	UploadId   string
 }
 
 func (m Media) Render(w io.Writer) error {
+	eb := oops.In("Media.Render")
 	uuid, _ := gutil.ParseUuid(m.UploadId)
 
 	audioOnly := lo.EveryBy(m.Variants, func(v data.UploadVariant) bool {
@@ -60,6 +64,19 @@ func (m Media) Render(w io.Writer) error {
 	})
 
 	width, height := getDimensions(m.Variants)
+
+	mediaDownloadUrls, err := gutil.GetMediaDownloadUrls(m.Rc, m.UploadDataRow)
+	if err != nil {
+		return eb.Wrap(err)
+	}
+
+	fmt.Printf("mediaDownloadUrls error: %v\n", err)
+	fmt.Printf("mediaDownloadUrls: %v\n", mediaDownloadUrls)
+
+	transcriptDownloadUrls, err := gutil.GetTranscriptDownloadUrls(m.Rc, m.UploadDataRow)
+	if err != nil {
+		return eb.Wrap(err)
+	}
 
 	return layouts.Main{
 		Ac: m.Ac,
@@ -97,16 +114,45 @@ func (m Media) Render(w io.Writer) error {
 								},
 							),
 						),
-						h.Div(
-							c.Button{Icon: "cloud-download", Children: []g.Node{g.Text("Download")}},
-							c.Button{Icon: "share", Children: []g.Node{g.Text("Share")}},
-							h.Div(h.Class("lc-button-group"),
-								MediaRatingForm{
-									UploadId:   m.UploadId,
-									Likes:      m.UploadDataRow.TotalLikes,
-									Dislikes:   m.UploadDataRow.TotalDislikes,
-									UserRating: m.UploadDataRow.UserRating.Rating,
+						g.If(m.DownloadsEnabled,
+							h.Div(
+								c.Button{
+									Icon: "cloud-download",
+									Children: []g.Node{
+										g.Attr("popovertarget", "popover-download"),
+										h.Style("anchor-name: --download-button;"),
+										g.Text("Download"),
+									},
 								},
+								c.DropdownLinkMenu{
+									Id:    "popover-download",
+									Attrs: []g.Node{h.Style("position-anchor: --download-button; top: calc(anchor(bottom) + 2 * var(--unit)); right: anchor(right);")},
+									Links: [][]c.Link{
+										lo.Map(mediaDownloadUrls, func(dl gutil.DownloadMeta, _ int) c.Link {
+											return c.Link{
+												Href:  dl.Url,
+												Icon:  dl.Icon,
+												Label: dl.Label,
+											}
+										}),
+										lo.Map(transcriptDownloadUrls, func(dl gutil.DownloadMeta, _ int) c.Link {
+											return c.Link{
+												Href:  dl.Url,
+												Icon:  dl.Icon,
+												Label: dl.Label,
+											}
+										}),
+									},
+								},
+								c.Button{Icon: "share", Children: []g.Node{g.Text("Share")}},
+								h.Div(h.Class("lc-button-group"),
+									MediaRatingForm{
+										UploadId:   m.UploadId,
+										Likes:      m.UploadDataRow.TotalLikes,
+										Dislikes:   m.UploadDataRow.TotalDislikes,
+										UserRating: m.UploadDataRow.UserRating.Rating,
+									},
+								),
 							),
 						),
 					),

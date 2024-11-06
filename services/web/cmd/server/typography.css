@@ -68,4 +68,16 @@
       }
     }
   }
+
+  a {
+    &[href^='http'],
+    &[href^='mailto'] {
+      &::after {
+        content: ' ↗';
+        font-size: 0.7em;
+        position: relative;
+        bottom: 0.4em;
+      }
+    }
+  }
 }

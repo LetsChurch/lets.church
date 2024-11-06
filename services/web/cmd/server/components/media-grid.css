@@ -33,7 +33,7 @@
             right: calc(2 * var(--unit));
             display: inline-flex;
             align-items: center;
-            border-radius: var(--border-radius);
+            border-radius: var(--border-radius-sm);
             background: var(--color-gray-900);
             padding: calc(0.5 * var(--unit)) calc(1.5 * var(--unit));
             font-size: var(--text-size-xs);

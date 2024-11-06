@@ -1,5 +1,6 @@
 import 'htmx.org';
 import './components/notification';
+import './components/dropdown-menu';
 
 document.documentElement.classList.replace('no-js', 'js');
 

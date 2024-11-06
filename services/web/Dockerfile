@@ -21,7 +21,7 @@ WORKDIR /usr/src/app
 COPY . .
 
 RUN npm ci
-RUN npx esbuild cmd/server/index.ts cmd/server/components/player.ts cmd/server/components/transcript.ts --bundle --format=esm --minify --outdir=cmd/server/assets
+RUN npx esbuild cmd/server/index.ts cmd/server/components/player.ts cmd/server/components/transcript.ts --bundle --splitting --format=esm --minify --outdir=cmd/server/assets
 RUN npx lightningcss-cli --minify --bundle --custom-media --targets 'last 2 versions and not dead' cmd/server/index.css cmd/server/components/player.css --output-dir cmd/server/assets
 
 RUN CGO_ENABLED=0 go build -v -o /usr/local/bin/server ./cmd/server/main.go

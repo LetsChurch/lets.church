@@ -1,0 +1,38 @@
+lc-dropdown-menu:popover-open {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--color-border-dropdown);
+  padding: 0;
+
+  :where(&) > .group {
+    list-style-type: none;
+    margin: 0;
+    padding: var(--unit);
+    background: none;
+    border: none;
+
+    & + & {
+      border-top: 1px solid var(--color-border-dropdown);
+    }
+
+    & > .item {
+      display: flex;
+      flex-direction: row;
+      gap: calc(2 * var(--unit));
+      align-items: center;
+      height: calc(10 * var(--unit));
+      color: var(--color-gray-900);
+      padding: var(--unit) calc(2 * var(--unit));
+      border-radius: 6px;
+
+      &:focus,
+      &:hover {
+        background: var(--color-gray-50);
+        outline: none;
+      }
+    }
+  }
+}

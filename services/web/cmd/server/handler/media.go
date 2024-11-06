@@ -96,6 +96,7 @@ func (h *Handler) MediaRoutes(app *echo.Echo) {
 
 		return pages.Media{
 			Ac:            ac,
+			Rc:            c.Request().Context(),
 			UploadId:      id,
 			UploadDataRow: &uploadRecord,
 			Comments:      groupedComments,

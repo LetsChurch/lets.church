@@ -10,6 +10,7 @@
 @import './components/avatar.css' layer(components);
 @import './components/button.css' layer(components);
 @import './components/cta.css' layer(components);
+@import './components/dropdown-menu.css' layer(components);
 @import './components/footer.css' layer(components);
 @import './components/header.css' layer(components);
 @import './components/icon.css' layer(components);
@@ -33,8 +34,8 @@
 
   --unit: 0.25rem;
 
-  --border-radius: calc(2 * var(--unit));
-  --border-radius-4: calc(4 * var(--unit));
+  --border-radius-sm: calc(2 * var(--unit));
+  --border-radius-lg: calc(4 * var(--unit));
   --easing-curve: cubic-bezier(0.19, 1, 0.22, 1);
 
   --color-brand: #6366f1;
@@ -63,6 +64,7 @@
   --color-bg-secondary: var(--color-gray-50);
   --color-border-brand: var(--color-brand-300);
   --color-border-brand-ring: #9e77ed24;
+  --color-border-dropdown: var(--color-gray-200);
   --color-border-primary: var(--color-gray-300);
   --color-button-primary-bg: var(--color-brand);
   --color-button-primary-bg-hover: var(--color-brand-700);
@@ -113,6 +115,13 @@
   --header-height: calc(16 * var(--unit));
 }
 
+@layer reset {
+  :popover-open {
+    inset: unset;
+    border: none;
+  }
+}
+
 @layer base {
   body,
   #lc-root {
@@ -124,15 +133,6 @@
     color: var(--color-brand);
     text-decoration: none;
     font-weight: var(--text-weight-semibold);
-    &[href^='http'],
-    &[href^='mailto'] {
-      &::after {
-        content: ' ↗';
-        font-size: 0.7em;
-        position: relative;
-        bottom: 0.4em;
-      }
-    }
   }
 }
 

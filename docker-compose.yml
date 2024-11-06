@@ -89,6 +89,7 @@ services:
       MEDIA_URL: ${MEDIA_URL}
       PUBLIC_URL: ${HOST_WEB_GO_URL}
       ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
+      <<: *s3-env
     volumes:
       - ./services/web:/usr/src/app
       - web-go-node-modules:/usr/src/app/node_modules

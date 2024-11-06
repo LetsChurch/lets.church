@@ -3,7 +3,7 @@
 
   height: var(--height);
   border: 1px solid var(--border-color, var(--color-border-primary));
-  border-radius: var(--border-radius);
+  border-radius: var(--border-radius-sm);
 
   color: var(--color-button-tertiary-fg);
   font-size: var(--text-size-md);
