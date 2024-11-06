@@ -13,7 +13,7 @@
     htop
     lazydocker
     neovim
-    nvidia-docker
+    nvidia-container-toolkit
     python310
     python310Packages.pip
     tailscale
@@ -22,17 +22,19 @@
   ];
 
   services.tailscale.enable = true;
-
   services.xserver.videoDrivers = ["nvidia"];
 
   hardware.opengl = {
     enable = true;
+    driSupport = true;
     driSupport32Bit = true;
     setLdLibraryPath = true;
   };
 
+  hardware.nvidia-container-toolkit.enable = true;
+
   virtualisation.docker = {
     enable = true;
-    enableNvidia = true;
+    enableOnBoot = true;
   };
 }
