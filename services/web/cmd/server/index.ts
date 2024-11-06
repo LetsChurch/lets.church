@@ -1,6 +1,18 @@
 import 'htmx.org';
 import './components/notification';
 import './components/dropdown-menu';
+import './components/share-menu';
+
+declare global {
+  interface HTMLElement {
+    addEventListener(
+      type: 'toggle',
+      listener: (this: Document, ev: ToggleEvent) => unknown,
+      options?: boolean | AddEventListenerOptions,
+    ): void;
+    popoverTargetElement: HTMLElement | null;
+  }
+}
 
 document.documentElement.classList.replace('no-js', 'js');
 

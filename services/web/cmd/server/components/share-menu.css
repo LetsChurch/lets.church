@@ -1,0 +1,25 @@
+lc-share-menu:popover-open {
+  position: absolute;
+  display: flex;
+  flex-direction: row;
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--color-border-dropdown);
+  padding: var(--unit);
+  gap: var(--unit);
+
+  :where(&) > .item {
+    background: none;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    &:focus,
+    &:hover {
+      background: var(--color-button-secondary-bg-hover);
+      outline: none;
+    }
+    * {
+      pointer-events: none;
+    }
+  }
+}

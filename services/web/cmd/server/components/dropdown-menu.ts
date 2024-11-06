@@ -1,16 +1,5 @@
 import { createFocusTrap } from 'focus-trap';
 
-declare global {
-  interface HTMLElement {
-    addEventListener(
-      type: 'toggle',
-      listener: (this: Document, ev: ToggleEvent) => unknown,
-      options?: boolean | AddEventListenerOptions,
-    ): void;
-    popoverTargetElement: HTMLElement | null;
-  }
-}
-
 class DropdownMenu extends HTMLElement {
   controller = new AbortController();
   index = 0;
@@ -47,7 +36,7 @@ class DropdownMenu extends HTMLElement {
       }
     };
 
-    this?.addEventListener('toggle', (event) => {
+    this.addEventListener('toggle', (event) => {
       if (event.newState === 'open') {
         trap.activate();
         this.index = 0;

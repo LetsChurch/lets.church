@@ -30,7 +30,7 @@ lc-dropdown-menu:popover-open {
 
       &:focus,
       &:hover {
-        background: var(--color-gray-50);
+        background: var(--color-button-secondary-bg-hover);
         outline: none;
       }
     }

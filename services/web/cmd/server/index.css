@@ -11,6 +11,7 @@
 @import './components/button.css' layer(components);
 @import './components/cta.css' layer(components);
 @import './components/dropdown-menu.css' layer(components);
+@import './components/share-menu.css' layer(components);
 @import './components/footer.css' layer(components);
 @import './components/header.css' layer(components);
 @import './components/icon.css' layer(components);

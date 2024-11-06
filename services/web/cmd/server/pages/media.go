@@ -144,7 +144,35 @@ func (m Media) Render(w io.Writer) error {
 										}),
 									},
 								},
-								c.Button{Icon: "share", Children: []g.Node{g.Text("Share")}},
+								h.Div(
+									c.Button{
+										Icon: "share",
+										Children: []g.Node{
+											g.Attr("popovertarget", "popover-share"),
+											h.Style("anchor-name: --share-button;"),
+											g.Text("Share"),
+										},
+									},
+									g.El("lc-share-menu", h.ID("popover-share"), g.Attr("popover"), g.Attr("title", m.Title.String),
+										h.Role("menu"),
+										h.Style("position-anchor: --share-button; top: calc(anchor(bottom) + 2 * var(--unit)); right: anchor(right);"),
+										h.Button(
+											h.Class("item"),
+											h.Data("action", "facebook"),
+											c.Icon{Name: "brand-facebook", Size: 24},
+										),
+										h.Button(
+											h.Class("item"),
+											h.Data("action", "x"),
+											c.Icon{Name: "brand-x", Size: 24},
+										),
+										h.Button(
+											h.Class("item"),
+											h.Data("action", "copy"),
+											c.Icon{Name: "copy", Size: 24},
+										),
+									),
+								),
 								h.Div(h.Class("lc-button-group"),
 									MediaRatingForm{
 										UploadId:   m.UploadId,
