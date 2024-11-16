@@ -458,7 +458,7 @@ model UploadUserComment {
 model UploadUserCommentRating {
   appUser             AppUser           @relation(fields: [appUserId], references: [id], onDelete: Cascade)
   appUserId           String            @map("app_user_id") @db.Uuid
-  uploadUserCommentId String            @map("upload_id") @db.Uuid
+  uploadUserCommentId String            @map("upload_user_comment_id") @db.Uuid
   uploadUserComment   UploadUserComment @relation(fields: [uploadUserCommentId], references: [id], onDelete: Cascade)
   rating              Rating
   createdAt           DateTime          @default(now()) @map("created_at")

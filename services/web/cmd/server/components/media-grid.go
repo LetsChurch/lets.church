@@ -4,10 +4,10 @@ import (
 	"io"
 	"time"
 
-	g "maragu.dev/gomponents"
-	h "maragu.dev/gomponents/html"
 	"lets.church/internal/data"
 	"lets.church/internal/util"
+	g "maragu.dev/gomponents"
+	h "maragu.dev/gomponents/html"
 )
 
 type MediaGrid struct {
@@ -25,7 +25,7 @@ func (mg MediaGrid) Render(w io.Writer) error {
 					),
 				),
 				h.Div(h.Class("meta"),
-					Avatar{Name: item.ChannelName, Src: "https://placehold.co/96", Size: "md", Alt: "Placeholder"},
+					Avatar{Name: item.ChannelName, Size: "md", Alt: "Placeholder"},
 					h.A(h.Title(item.Title.String), h.Href("/media/"+util.Uuid(item.ID.Bytes).Base58()),
 						h.P(h.Class("title"), g.Text(item.Title.String)),
 						h.P(h.Class("channel-name"), g.Text(item.ChannelName)),

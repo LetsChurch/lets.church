@@ -20,6 +20,7 @@ mkShell {
     lazydocker
     navi
     nodejs_20
+    postgresql_14
     rclone
     sampler
     templ

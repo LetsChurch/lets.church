@@ -11,6 +11,56 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createUploadUserComment = `-- name: CreateUploadUserComment :one
+INSERT INTO
+upload_user_comment (upload_id, author_id, text, replying_to_id, updated_at)
+VALUES ($1, $2, $3, $4, NOW())
+RETURNING id, created_at, updated_at, author_id, upload_id, replying_to_id, text, score, score_stale_at
+`
+
+type CreateUploadUserCommentParams struct {
+	UploadID     pgtype.UUID
+	AuthorID     pgtype.UUID
+	Text         string
+	ReplyingToID pgtype.UUID
+}
+
+func (q *Queries) CreateUploadUserComment(ctx context.Context, arg CreateUploadUserCommentParams) (UploadUserComment, error) {
+	row := q.db.QueryRow(ctx, createUploadUserComment,
+		arg.UploadID,
+		arg.AuthorID,
+		arg.Text,
+		arg.ReplyingToID,
+	)
+	var i UploadUserComment
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.AuthorID,
+		&i.UploadID,
+		&i.ReplyingToID,
+		&i.Text,
+		&i.Score,
+		&i.ScoreStaleAt,
+	)
+	return i, err
+}
+
+const deleteUploadUserCommentRating = `-- name: DeleteUploadUserCommentRating :exec
+DELETE FROM upload_user_comment_rating WHERE upload_user_comment_id = $1 AND app_user_id = $2
+`
+
+type DeleteUploadUserCommentRatingParams struct {
+	UploadUserCommentID pgtype.UUID
+	UserID              pgtype.UUID
+}
+
+func (q *Queries) DeleteUploadUserCommentRating(ctx context.Context, arg DeleteUploadUserCommentRatingParams) error {
+	_, err := q.db.Exec(ctx, deleteUploadUserCommentRating, arg.UploadUserCommentID, arg.UserID)
+	return err
+}
+
 const deleteUploadUserRating = `-- name: DeleteUploadUserRating :exec
 DELETE FROM upload_user_rating WHERE upload_id = $1 AND app_user_id = $2
 `
@@ -25,9 +75,27 @@ func (q *Queries) DeleteUploadUserRating(ctx context.Context, arg DeleteUploadUs
 	return err
 }
 
+const getUploadUserCommentRating = `-- name: GetUploadUserCommentRating :one
+SELECT rating FROM upload_user_comment_rating WHERE upload_user_comment_id = $1 AND app_user_id = $2
+`
+
+type GetUploadUserCommentRatingParams struct {
+	UploadUserCommentID pgtype.UUID
+	UserID              pgtype.UUID
+}
+
+func (q *Queries) GetUploadUserCommentRating(ctx context.Context, arg GetUploadUserCommentRatingParams) (Rating, error) {
+	row := q.db.QueryRow(ctx, getUploadUserCommentRating, arg.UploadUserCommentID, arg.UserID)
+	var rating Rating
+	err := row.Scan(&rating)
+	return rating, err
+}
+
 const getUploadUserComments = `-- name: GetUploadUserComments :many
 SELECT
-  c.id, c.created_at, c.replying_to_id, a.username, c.text, c.score
+  c.id, c.created_at, c.replying_to_id, a.username, a.avatar_path, c.text, c.score,
+  (SELECT COUNT(*) FROM upload_user_comment_rating WHERE rating = 'LIKE' AND upload_user_comment_id = c.id) AS total_likes,
+  (SELECT COUNT(*) FROM upload_user_comment_rating WHERE rating = 'DISLIKE' AND upload_user_comment_id = c.id) AS total_dislikes
 FROM upload_user_comment c
 LEFT JOIN app_user a ON c.author_id = a.id
 WHERE c.upload_id = $1
@@ -35,12 +103,15 @@ ORDER BY c.score DESC
 `
 
 type GetUploadUserCommentsRow struct {
-	ID           pgtype.UUID
-	CreatedAt    pgtype.Timestamp
-	ReplyingToID pgtype.UUID
-	Username     pgtype.Text
-	Text         string
-	Score        float64
+	ID            pgtype.UUID
+	CreatedAt     pgtype.Timestamp
+	ReplyingToID  pgtype.UUID
+	Username      pgtype.Text
+	AvatarPath    pgtype.Text
+	Text          string
+	Score         float64
+	TotalLikes    int64
+	TotalDislikes int64
 }
 
 func (q *Queries) GetUploadUserComments(ctx context.Context, uploadID pgtype.UUID) ([]GetUploadUserCommentsRow, error) {
@@ -57,8 +128,11 @@ func (q *Queries) GetUploadUserComments(ctx context.Context, uploadID pgtype.UUI
 			&i.CreatedAt,
 			&i.ReplyingToID,
 			&i.Username,
+			&i.AvatarPath,
 			&i.Text,
 			&i.Score,
+			&i.TotalLikes,
+			&i.TotalDislikes,
 		); err != nil {
 			return nil, err
 		}
@@ -84,6 +158,21 @@ func (q *Queries) GetUploadUserRating(ctx context.Context, arg GetUploadUserRati
 	var rating Rating
 	err := row.Scan(&rating)
 	return rating, err
+}
+
+const recordUploadUserCommentRating = `-- name: RecordUploadUserCommentRating :exec
+INSERT INTO upload_user_comment_rating (upload_user_comment_id, app_user_id, rating) VALUES ($1, $2, $3)
+`
+
+type RecordUploadUserCommentRatingParams struct {
+	UploadUserCommentID pgtype.UUID
+	UserID              pgtype.UUID
+	Rating              Rating
+}
+
+func (q *Queries) RecordUploadUserCommentRating(ctx context.Context, arg RecordUploadUserCommentRatingParams) error {
+	_, err := q.db.Exec(ctx, recordUploadUserCommentRating, arg.UploadUserCommentID, arg.UserID, arg.Rating)
+	return err
 }
 
 const recordUploadUserRating = `-- name: RecordUploadUserRating :exec

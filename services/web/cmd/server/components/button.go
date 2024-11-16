@@ -18,6 +18,7 @@ type Button struct {
 	Children   []g.Node
 	Primary    bool
 	Big        bool
+	Small      bool
 	Active     bool
 	ActiveText bool
 }
@@ -49,6 +50,9 @@ func (b Button) classes() string {
 	}
 	if b.Big {
 		arr = append(arr, "big")
+	}
+	if b.Small {
+		arr = append(arr, "small")
 	}
 	return strings.Join(arr, " ")
 }

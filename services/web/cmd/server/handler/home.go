@@ -7,7 +7,7 @@ import (
 	"lets.church/cmd/server/pages"
 )
 
-func (h *Handler) Home(c echo.Context) (err error) {
+func (h *Handler) Home(c echo.Context) error {
 	ac, err := h.getAppContext(c)
 	if err != nil {
 		return err

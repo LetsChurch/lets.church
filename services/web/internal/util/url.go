@@ -2,6 +2,10 @@ package util
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"net/url"
 	"os"
@@ -25,6 +29,14 @@ var S3_PUBLIC_ENDPOINT = os.Getenv("S3_PUBLIC_ENDPOINT")
 var S3_PUBLIC_BUCKET = os.Getenv("S3_PUBLIC_BUCKET")
 var S3_PUBLIC_ACCESS_KEY_ID = os.Getenv("S3_PUBLIC_ACCESS_KEY_ID")
 var S3_PUBLIC_SECRET_ACCESS_KEY = os.Getenv("S3_PUBLIC_SECRET_ACCESS_KEY")
+var S3_INGEST_REGION = os.Getenv("S3_INGEST_REGION")
+var S3_INGEST_ENDPOINT = os.Getenv("S3_INGEST_ENDPOINT")
+var S3_INGEST_BUCKET = os.Getenv("S3_INGEST_BUCKET")
+var S3_INGEST_ACCESS_KEY_ID = os.Getenv("S3_INGEST_ACCESS_KEY_ID")
+var S3_INGEST_SECRET_ACCESS_KEY = os.Getenv("S3_INGEST_SECRET_ACCESS_KEY")
+var IMGPROXY_URL = os.Getenv("IMGPROXY_URL")
+var IMGPROXY_KEY = lo.Must(hex.DecodeString(os.Getenv("IMGPROXY_KEY")))
+var IMGPROXY_SALT = lo.Must(hex.DecodeString(os.Getenv("IMGPROXY_SALT")))
 
 func GetPublicMediaUrl(key string) string {
 	baseUrl, err := url.Parse(MEDIA_URL)
@@ -170,4 +182,39 @@ func GetTranscriptDownloadUrls(ctx context.Context, udr *data.UploadDataRow) ([]
 			Url:   txtUrl,
 		},
 	}, nil
+}
+
+func GetS3ProtocolUri(from string, key string) string {
+	return fmt.Sprintf("s3://%s/%s", lo.Ternary(from == "PUBLIC", S3_PUBLIC_BUCKET, S3_INGEST_BUCKET), key)
+}
+
+type PublicImage struct {
+	Key    string
+	Width  int
+	Height int
+}
+
+func (pi PublicImage) String() string {
+	encoded := imgproxyBase64([]byte(GetS3ProtocolUri("PUBLIC", pi.Key)))
+	path := fmt.Sprintf("/w:%d/h:%d/%s", pi.Width, pi.Height, encoded)
+	sig := imgproxyHmac(path)
+
+	return IMGPROXY_URL + "/" + sig + path
+}
+
+func imgproxyHmac(payload string) string {
+	hmac := hmac.New(sha256.New, IMGPROXY_KEY)
+	hmac.Write(IMGPROXY_SALT)
+	hmac.Write([]byte(payload))
+	dataHmac := hmac.Sum(nil)
+
+	return imgproxyBase64(dataHmac)
+}
+
+func imgproxyBase64(data []byte) string {
+	str := base64.StdEncoding.EncodeToString(data)
+	str = strings.ReplaceAll(str, "=", "")
+	str = strings.ReplaceAll(str, "+", "-")
+	str = strings.ReplaceAll(str, "/", "_")
+	return str
 }

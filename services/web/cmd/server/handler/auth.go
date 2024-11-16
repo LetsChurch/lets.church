@@ -28,9 +28,9 @@ import (
 func (h *Handler) AuthRoutes(app *echo.Echo) {
 	g := app.Group("/auth")
 
-	g.POST("/check-username", func(c echo.Context) (err error) {
+	g.POST("/check-username", func(c echo.Context) error {
 		eb := oops.In("PostAuthCheckUsername")
-		err = h.checkCsrf(c)
+		err := h.checkCsrf(c)
 
 		if err != nil {
 			return eb.Wrap(err)
@@ -63,9 +63,9 @@ func (h *Handler) AuthRoutes(app *echo.Echo) {
 		return pages.ForgotPassword{Ac: ac}.Render(c.Response())
 	})
 
-	g.POST("/forgot-password", func(c echo.Context) (err error) {
+	g.POST("/forgot-password", func(c echo.Context) error {
 		eb := oops.In("PostAuthForgotPassword")
-		err = h.checkCsrf(c)
+		err := h.checkCsrf(c)
 
 		if err != nil {
 			return eb.Wrap(err)

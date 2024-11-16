@@ -607,13 +607,6 @@ type ChannelSubscription struct {
 	ChannelID pgtype.UUID
 }
 
-type NewsletterSubscription struct {
-	ID         pgtype.UUID
-	Email      pgtype.Text
-	Key        pgtype.UUID
-	VerifiedAt pgtype.Timestamp
-}
-
 type Organization struct {
 	ID                                           pgtype.UUID
 	Name                                         string
@@ -789,10 +782,10 @@ type UploadUserComment struct {
 }
 
 type UploadUserCommentRating struct {
-	AppUserID pgtype.UUID
-	UploadID  pgtype.UUID
-	Rating    Rating
-	CreatedAt pgtype.Timestamp
+	AppUserID           pgtype.UUID
+	UploadUserCommentID pgtype.UUID
+	Rating              Rating
+	CreatedAt           pgtype.Timestamp
 }
 
 type UploadUserRating struct {

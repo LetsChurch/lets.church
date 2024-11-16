@@ -207,7 +207,7 @@ WITH updated_rows AS (
   AND app_user_id = $2
   AND key=$3
   AND "verifiedAt" IS NULL
-  RETURNING id, app_user_id, email, key, "verifiedAt"
+  RETURNING id, app_user_id, email, key, verified_at
 )
 SELECT COUNT(*) FROM updated_rows
 `

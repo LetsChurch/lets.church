@@ -6,6 +6,10 @@
     --height: 44px;
   }
 
+  &:where(&).small {
+    --height: 32px;
+  }
+
   height: var(--height);
   display: flex;
   flex-shrink: 0;

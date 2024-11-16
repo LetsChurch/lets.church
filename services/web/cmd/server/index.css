@@ -164,4 +164,12 @@
   .contents {
     display: contents;
   }
+
+  .mt {
+    margin-top: calc(4 * var(--unit));
+  }
+
+  .mb {
+    margin-bottom: calc(4 * var(--unit));
+  }
 }

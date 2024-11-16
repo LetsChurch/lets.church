@@ -63,3 +63,7 @@
   --scale: 16;
   font-size: var(--text-size-display-xs);
 }
+
+.lc-avatar--on-dark {
+  background: #fff;
+}

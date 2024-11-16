@@ -1,6 +1,7 @@
 import 'htmx.org';
-import './components/notification';
+import './components/comment-form';
 import './components/dropdown-menu';
+import './components/notification';
 import './components/share-menu';
 
 declare global {

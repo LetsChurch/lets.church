@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	"lets.church/internal/util"
 	g "maragu.dev/gomponents"
 	h "maragu.dev/gomponents/html"
 )
@@ -27,28 +28,51 @@ func getAvatarInitials(name string) string {
 	return initials
 }
 
-func avatarClasses(size string, class string) string {
+type Avatar struct {
+	ImgKey string
+	Name   string
+	Class  string
+	Size   string
+	Alt    string
+	OnDark bool
+}
+
+func (a Avatar) Render(w io.Writer) error {
+	return h.Div(h.Class(a.classes()),
+		g.If(a.ImgKey != "", h.Img(h.Src(a.src()))),
+		g.If(a.ImgKey == "" && a.Name != "", g.Text(getAvatarInitials(a.Name))),
+	).Render(w)
+}
+
+func (a Avatar) classes() string {
 	arr := []string{"lc-avatar"}
-	if size != "" {
-		arr = append(arr, "lc-avatar--"+size)
+	if a.OnDark {
+		arr = append(arr, "lc-avatar--on-dark")
 	}
-	if class != "" {
-		arr = append(arr, class)
+	if a.Size != "" {
+		arr = append(arr, "lc-avatar--"+a.Size)
+	}
+	if a.Class != "" {
+		arr = append(arr, a.Class)
 	}
 	return strings.Join(arr, " ")
 }
 
-type Avatar struct {
-	Src   string
-	Name  string
-	Class string
-	Size  string
-	Alt   string
-}
+func (a Avatar) src() string {
+	scale := 6
+	if a.Size == "sm" {
+		scale = 8
+	} else if a.Size == "md" {
+		scale = 10
+	} else if a.Size == "lg" {
+		scale = 12
+	} else if a.Size == "xl" {
+		scale = 14
+	} else if a.Size == "2xl" {
+		scale = 16
+	}
 
-func (a Avatar) Render(w io.Writer) error {
-	return h.Div(h.Class(avatarClasses(a.Size, a.Class)),
-		g.If(a.Src != "", h.Img(h.Src(a.Src))),
-		g.If(a.Src == "" && a.Name != "", g.Text(getAvatarInitials(a.Name))),
-	).Render(w)
+	size := scale * 4 * 3 // 4 is the unit size, 3 is for DPI (TODO: serve multiple renditions for different DPI?)
+
+	return util.PublicImage{Key: a.ImgKey, Width: size, Height: size}.String()
 }

@@ -3,7 +3,7 @@
 --
 
 -- Dumped from database version 14.7
--- Dumped by pg_dump version 14.11 (Homebrew)
+-- Dumped by pg_dump version 14.12
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -250,7 +250,7 @@ ALTER TABLE public._prisma_migrations OWNER TO letschurch;
 CREATE TABLE public.app_session (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     app_user_id uuid NOT NULL,
-    expires_at timestamp(3) without time zone DEFAULT (now() + '14 days'::interval) NOT NULL,
+    expires_at timestamp(3) without time zone DEFAULT (now() + '30 days'::interval) NOT NULL,
     created_at timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp(3) without time zone NOT NULL,
     deleted_at timestamp(3) without time zone
@@ -288,7 +288,7 @@ CREATE TABLE public.app_user_email (
     app_user_id uuid NOT NULL,
     email public.citext NOT NULL,
     key uuid DEFAULT gen_random_uuid() NOT NULL,
-    "verifiedAt" timestamp(3) without time zone
+    verified_at timestamp(3) without time zone
 );
 
 
@@ -343,20 +343,6 @@ CREATE TABLE public.channel_subscription (
 
 
 ALTER TABLE public.channel_subscription OWNER TO letschurch;
-
---
--- Name: newsletter_subscription; Type: TABLE; Schema: public; Owner: letschurch
---
-
-CREATE TABLE public.newsletter_subscription (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    email public.citext NOT NULL,
-    key uuid DEFAULT gen_random_uuid() NOT NULL,
-    "verifiedAt" timestamp(3) without time zone
-);
-
-
-ALTER TABLE public.newsletter_subscription OWNER TO letschurch;
 
 --
 -- Name: organization; Type: TABLE; Schema: public; Owner: letschurch
@@ -654,7 +640,7 @@ ALTER TABLE public.upload_user_comment OWNER TO letschurch;
 
 CREATE TABLE public.upload_user_comment_rating (
     app_user_id uuid NOT NULL,
-    upload_id uuid NOT NULL,
+    upload_user_comment_id uuid NOT NULL,
     rating public.rating NOT NULL,
     created_at timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -772,14 +758,6 @@ ALTER TABLE ONLY public.channel_subscription
 
 
 --
--- Name: newsletter_subscription newsletter_subscription_pkey; Type: CONSTRAINT; Schema: public; Owner: letschurch
---
-
-ALTER TABLE ONLY public.newsletter_subscription
-    ADD CONSTRAINT newsletter_subscription_pkey PRIMARY KEY (id);
-
-
---
 -- Name: organization_address organization_address_pkey; Type: CONSTRAINT; Schema: public; Owner: letschurch
 --
 
@@ -888,7 +866,7 @@ ALTER TABLE ONLY public.upload_user_comment
 --
 
 ALTER TABLE ONLY public.upload_user_comment_rating
-    ADD CONSTRAINT upload_user_comment_rating_pkey PRIMARY KEY (app_user_id, upload_id);
+    ADD CONSTRAINT upload_user_comment_rating_pkey PRIMARY KEY (app_user_id, upload_user_comment_id);
 
 
 --
@@ -934,13 +912,6 @@ CREATE UNIQUE INDEX app_user_username_key ON public.app_user USING btree (userna
 --
 
 CREATE UNIQUE INDEX channel_slug_key ON public.channel USING btree (slug);
-
-
---
--- Name: newsletter_subscription_email_key; Type: INDEX; Schema: public; Owner: letschurch
---
-
-CREATE UNIQUE INDEX newsletter_subscription_email_key ON public.newsletter_subscription USING btree (email);
 
 
 --
@@ -1007,10 +978,10 @@ CREATE INDEX upload_user_comment_rating_app_user_id_rating_idx ON public.upload_
 
 
 --
--- Name: upload_user_comment_rating_upload_id_rating_idx; Type: INDEX; Schema: public; Owner: letschurch
+-- Name: upload_user_comment_rating_upload_user_comment_id_rating_idx; Type: INDEX; Schema: public; Owner: letschurch
 --
 
-CREATE INDEX upload_user_comment_rating_upload_id_rating_idx ON public.upload_user_comment_rating USING btree (upload_id, rating);
+CREATE INDEX upload_user_comment_rating_upload_user_comment_id_rating_idx ON public.upload_user_comment_rating USING btree (upload_user_comment_id, rating);
 
 
 --
@@ -1301,11 +1272,11 @@ ALTER TABLE ONLY public.upload_user_comment_rating
 
 
 --
--- Name: upload_user_comment_rating upload_user_comment_rating_upload_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: letschurch
+-- Name: upload_user_comment_rating upload_user_comment_rating_upload_user_comment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: letschurch
 --
 
 ALTER TABLE ONLY public.upload_user_comment_rating
-    ADD CONSTRAINT upload_user_comment_rating_upload_id_fkey FOREIGN KEY (upload_id) REFERENCES public.upload_user_comment(id) ON UPDATE CASCADE ON DELETE CASCADE;
+    ADD CONSTRAINT upload_user_comment_rating_upload_user_comment_id_fkey FOREIGN KEY (upload_user_comment_id) REFERENCES public.upload_user_comment(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --
@@ -1375,5 +1346,4 @@ ALTER TABLE ONLY public.upload_view
 --
 -- PostgreSQL database dump complete
 --
-
 

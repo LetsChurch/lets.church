@@ -84,6 +84,9 @@ services:
       COOKIE_SECRET: ${WEB_COOKIE_SECRET}
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       FAKTORY_URL: tcp://faktory:7419
+      IMGPROXY_KEY: ${IMGPROXY_KEY}
+      IMGPROXY_SALT: ${IMGPROXY_SALT}
+      IMGPROXY_URL: ${IMGPROXY_URL}
       JWT_SECRET: ${JWT_SECRET}
       LISTMONK_INTERNAL_URL: http://listmonk:9000
       MEDIA_URL: ${MEDIA_URL}

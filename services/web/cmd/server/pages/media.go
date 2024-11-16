@@ -48,11 +48,12 @@ func getDimensions(variants []data.UploadVariant) (int, int) {
 
 type Media struct {
 	*data.UploadDataRow
-	Ac         *util.AppContext
-	Rc         context.Context
-	Transcript *astisub.Subtitles
-	Comments   map[string][]data.GetUploadUserCommentsRow
-	UploadId   string
+	Ac            *util.AppContext
+	Rc            context.Context
+	Transcript    *astisub.Subtitles
+	Comments      map[string][]data.GetUploadUserCommentsRow
+	CommentsCount int
+	UploadId      string
 }
 
 func (m Media) Render(w io.Writer) error {
@@ -69,9 +70,6 @@ func (m Media) Render(w io.Writer) error {
 	if err != nil {
 		return eb.Wrap(err)
 	}
-
-	fmt.Printf("mediaDownloadUrls error: %v\n", err)
-	fmt.Printf("mediaDownloadUrls: %v\n", mediaDownloadUrls)
 
 	transcriptDownloadUrls, err := gutil.GetTranscriptDownloadUrls(m.Rc, m.UploadDataRow)
 	if err != nil {
@@ -92,13 +90,13 @@ func (m Media) Render(w io.Writer) error {
 				hx.History("false"),
 				h.Div(
 					h.Class("lc-media__meta"),
-					h.H1(h.Class("lc-media__meta__title"), g.Text(m.Title.String)),
+					h.H1(h.Class("lc-media__section-title"), g.Text(m.Title.String)),
 					h.Div(h.Class("lc-media__meta__actions"),
 						h.Div(
 							h.A(
 								h.Href("/channel/"+m.ChannelSlug.String),
 								h.Class("lc-media__meta__actions__channel"),
-								c.Avatar{Src: "https://placehold.co/96", Name: m.ChannelName.String, Size: "md", Alt: m.ChannelName.String},
+								c.Avatar{Name: m.ChannelName.String, Size: "md", Alt: m.ChannelName.String},
 								h.Div(g.Text(m.ChannelName.String)),
 							),
 							h.Form(
@@ -220,16 +218,43 @@ func (m Media) Render(w io.Writer) error {
 						)),
 					),
 				),
-				h.Div(
-					g.Iff(m.Comments[""] != nil, func() g.Node {
-						return g.Group(g.Map(m.Comments[""], func(rootComment data.GetUploadUserCommentsRow) g.Node {
-							return h.Div(g.Text(rootComment.Text))
-						}))
-					}),
-				),
+				CommentsSection{Ac: m.Ac, Comments: m.Comments, CommentsCount: m.CommentsCount, UploadId: m.UploadId},
 			),
 		},
 	}.Render(w)
+}
+
+type CommentsSection struct {
+	Ac            *util.AppContext
+	Comments      map[string][]data.GetUploadUserCommentsRow
+	CommentsCount int
+	UploadId      string
+}
+
+func (cs CommentsSection) Render(w io.Writer) error {
+	return h.Div(
+		h.ID("comments"),
+		c.CommentCount{Count: cs.CommentsCount},
+		lo.TernaryF(
+			cs.Ac.Authenticated,
+			func() g.Node {
+				return c.CommentForm{Ac: cs.Ac, UploadId: cs.UploadId}
+			},
+			func() g.Node {
+				return h.Div(h.A(g.Text("Sign in"), h.Href("/auth/login")), g.Text(" to leave a comment"))
+			},
+		),
+		g.Iff(len(cs.Comments[""]) > 0, func() g.Node {
+			return g.Group(g.Map(cs.Comments[""], func(rootComment data.GetUploadUserCommentsRow) g.Node {
+				return c.Comment{
+					Ac:       cs.Ac,
+					UploadId: cs.UploadId,
+					Root:     rootComment,
+					Children: cs.Comments[gutil.Uuid(rootComment.ID.Bytes).Base58()],
+				}
+			}))
+		}),
+	).Render(w)
 }
 
 type MediaRatingForm struct {
