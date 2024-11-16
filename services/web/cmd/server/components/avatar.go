@@ -74,5 +74,5 @@ func (a Avatar) src() string {
 
 	size := scale * 4 * 3 // 4 is the unit size, 3 is for DPI (TODO: serve multiple renditions for different DPI?)
 
-	return util.PublicImage{Key: a.ImgKey, Width: size, Height: size}.String()
+	return util.PublicImage(a.ImgKey, util.PiWidth(size), util.PiHeight(size))
 }

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/samber/lo"
@@ -188,18 +189,36 @@ func GetS3ProtocolUri(from string, key string) string {
 	return fmt.Sprintf("s3://%s/%s", lo.Ternary(from == "PUBLIC", S3_PUBLIC_BUCKET, S3_INGEST_BUCKET), key)
 }
 
-type PublicImage struct {
-	Key    string
-	Width  int
-	Height int
+func PublicImage(key string, ops ...Configurator[strings.Builder]) string {
+	pathBuilder := strings.Builder{}
+
+	for _, op := range ops {
+		if err := op(&pathBuilder); err != nil {
+			panic(err)
+		}
+	}
+
+	pathBuilder.Write([]byte("/"))
+	pathBuilder.Write([]byte(imgproxyBase64([]byte(GetS3ProtocolUri("PUBLIC", key)))))
+	path := pathBuilder.String()
+	sig := imgproxyHmac(path)
+	return IMGPROXY_URL + "/" + sig + path
 }
 
-func (pi PublicImage) String() string {
-	encoded := imgproxyBase64([]byte(GetS3ProtocolUri("PUBLIC", pi.Key)))
-	path := fmt.Sprintf("/w:%d/h:%d/%s", pi.Width, pi.Height, encoded)
-	sig := imgproxyHmac(path)
+func PiWidth(width int) Configurator[strings.Builder] {
+	return func(pb *strings.Builder) error {
+		pb.Write([]byte("/w:"))
+		pb.Write([]byte(strconv.Itoa(width)))
+		return nil
+	}
+}
 
-	return IMGPROXY_URL + "/" + sig + path
+func PiHeight(height int) Configurator[strings.Builder] {
+	return func(pb *strings.Builder) error {
+		pb.Write([]byte("/h:"))
+		pb.Write([]byte(strconv.Itoa(height)))
+		return nil
+	}
 }
 
 func imgproxyHmac(payload string) string {
