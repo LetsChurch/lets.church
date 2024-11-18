@@ -83,9 +83,9 @@ export function probeIsAudioFile(probe: Probe) {
     return true;
   }
 
-  return (
-    probe.format.nb_streams === 1 && probe.streams.at(0)?.codec_type === 'audio'
-  );
+  const streams = probe.streams.filter((s) => s.codec_name !== 'mjpeg');
+
+  return streams.length === 1 && streams.at(0)?.codec_type === 'audio';
 }
 
 export function probeIsVideoFile(probe: Probe) {
