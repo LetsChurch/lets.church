@@ -66,3 +66,7 @@ func (id Uuid) Canonical() string {
 func (id Uuid) Pg() pgtype.UUID {
 	return pgtype.UUID{Bytes: id, Valid: true}
 }
+
+func (id Uuid) Zero() bool {
+	return id == Uuid([16]byte{})
+}

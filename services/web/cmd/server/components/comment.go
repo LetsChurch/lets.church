@@ -17,10 +17,10 @@ import (
 
 type Comment struct {
 	Ac       *util.AppContext
-	UploadId string
+	UploadId gutil.Uuid
 	Root     data.GetUploadUserCommentsRow
 	Children []data.GetUploadUserCommentsRow
-	ReplyTo  string
+	ReplyTo  gutil.Uuid
 }
 
 var parare = regexp.MustCompile(`(\r?\n){2,}`)
@@ -43,8 +43,8 @@ func (c Comment) Render(w io.Writer) error {
 			CommentActions{
 				Ac:        c.Ac,
 				UploadId:  c.UploadId,
-				CommentId: gutil.Uuid(c.Root.ID.Bytes).Base58(),
-				IsReply:   c.ReplyTo != "",
+				CommentId: gutil.Uuid(c.Root.ID.Bytes),
+				IsReply:   !c.ReplyTo.Zero(),
 				Likes:     c.Root.TotalLikes,
 				Dislikes:  c.Root.TotalDislikes,
 			},
@@ -56,7 +56,7 @@ func (c Comment) Render(w io.Writer) error {
 							Ac:       c.Ac,
 							UploadId: c.UploadId,
 							Root:     replyComment,
-							ReplyTo:  gutil.Uuid(c.Root.ID.Bytes).Base58(),
+							ReplyTo:  gutil.Uuid(c.Root.ID.Bytes),
 						}
 					})),
 				)
@@ -69,8 +69,8 @@ func (c Comment) Render(w io.Writer) error {
 
 type CommentActions struct {
 	Ac        *util.AppContext
-	UploadId  string
-	CommentId string
+	UploadId  gutil.Uuid
+	CommentId gutil.Uuid
 	ReplyOpen bool
 	IsReply   bool
 	Likes     int64
@@ -84,16 +84,16 @@ func (ca CommentActions) Render(w io.Writer) error {
 			Button{Small: true, Icon: "message-plus", Children: []g.Node{
 				hx.Target("closest .lc-media__comment__actions"),
 				hx.Swap("outerHTML"),
-				hx.Get("/media/" + ca.UploadId + "/comment?replyingTo=" + ca.CommentId + "&likes=" + strconv.Itoa(int(ca.Likes)) + "&dislikes=" + strconv.Itoa(int(ca.Dislikes))),
+				hx.Get("/media/" + ca.UploadId.Base58() + "/comment?replyingTo=" + ca.CommentId.Base58() + "&likes=" + strconv.Itoa(int(ca.Likes)) + "&dislikes=" + strconv.Itoa(int(ca.Dislikes))),
 				g.Text("Reply"),
 			}},
 		),
 		h.Form(
 			h.Class("contents"),
 			h.Method("post"),
-			h.Action("/media/"+ca.UploadId+"/comment/"+ca.CommentId+"/rate"),
+			h.Action("/media/"+ca.UploadId.Base58()+"/comment/"+ca.CommentId.Base58()+"/rate"),
 			hx.Boost("false"),
-			hx.Post("/media/"+ca.UploadId+"/comment/"+ca.CommentId+"/rate"),
+			hx.Post("/media/"+ca.UploadId.Base58()+"/comment/"+ca.CommentId.Base58()+"/rate"),
 			hx.Target("closest .lc-media__comment__actions"),
 			h.Input(h.Type("hidden"), h.Name("likes"), h.Value(strconv.Itoa(int(ca.Likes)))),
 			Button{
@@ -138,24 +138,24 @@ func (cc CommentCount) Render(w io.Writer) error {
 
 type CommentForm struct {
 	Ac         *util.AppContext
-	UploadId   string
-	ReplyingTo string
+	UploadId   gutil.Uuid
+	ReplyingTo gutil.Uuid
 }
 
 func (cf CommentForm) Render(w io.Writer) error {
 	return g.El("comment-form",
 		h.Form(
-			g.If(cf.ReplyingTo == "", h.ID("comment-form"+cf.ReplyingTo)),
+			g.If(cf.ReplyingTo.Zero(), h.ID("comment-form"+cf.ReplyingTo.Base58())),
 			h.Method("post"),
-			h.Action("/media/"+cf.UploadId+"/comment"),
-			hx.Post("/media/"+cf.UploadId+"/comment"),
+			h.Action("/media/"+cf.UploadId.Base58()+"/comment"),
+			hx.Post("/media/"+cf.UploadId.Base58()+"/comment"),
 			hx.Trigger("keydown[key==='Enter'&&!shiftKey],submit"),
 			hx.Target("#comments"),
 			hx.Select("#comments"),
 			h.Class("lc-media__comment-form"),
 			Avatar{Name: cf.Ac.User.Username.String, ImgKey: cf.Ac.User.AvatarPath.String, Size: "sm", OnDark: true},
-			h.Textarea(h.Name("comment"), h.Placeholder(lo.Ternary(cf.ReplyingTo == "", "Write a comment...", "Write a reply..."))),
-			g.If(cf.ReplyingTo != "", h.Input(h.Type("hidden"), h.Name("replyingTo"), h.Value(cf.ReplyingTo))),
+			h.Textarea(h.Name("comment"), h.Placeholder(lo.Ternary(cf.ReplyingTo.Zero(), "Write a comment...", "Write a reply..."))),
+			g.If(!cf.ReplyingTo.Zero(), h.Input(h.Type("hidden"), h.Name("replyingTo"), h.Value(cf.ReplyingTo.Base58()))),
 			Button{Primary: true, Type: "submit", Icon: "send"},
 		),
 	).Render(w)

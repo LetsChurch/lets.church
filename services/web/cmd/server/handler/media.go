@@ -13,6 +13,7 @@ import (
 	"lets.church/cmd/server/pages"
 	"lets.church/internal/data"
 	"lets.church/internal/util"
+	gutil "lets.church/internal/util"
 
 	"github.com/asticode/go-astisub"
 	"github.com/cespare/xxhash/v2"
@@ -70,30 +71,27 @@ func (h *Handler) MediaRoutes(app *echo.Echo) {
 			return eb.Hint("Could not get app context").Wrap(err)
 		}
 
-		id := c.Param("id")
-
-		if id == "" {
+		id, err := gutil.ParseUuid(c.Param("id"))
+		if err != nil {
 			return eb.Errorf("missing id")
 		}
 
-		uploadUuid, err := util.ParseUuid(id)
-		if err != nil {
-			return eb.Hint("Invalid upload ID").Public("Invalid ID").Wrap(err)
+		if id.Zero() {
+			return eb.Errorf("missing id")
 		}
 
-		pgUuid := uploadUuid.Pg()
 		userId := pgtype.UUID{}
 
 		if ac.Authenticated {
 			userId = ac.User.ID
 		}
 
-		uploadRecord, err := h.Queries.UploadData(c.Request().Context(), data.UploadDataParams{UploadID: pgUuid, UserID: userId})
+		uploadRecord, err := h.Queries.UploadData(c.Request().Context(), data.UploadDataParams{UploadID: id.Pg(), UserID: userId})
 		if err != nil {
 			return eb.Hint("Could not fetch upload data").Wrap(err)
 		}
 
-		transcriptUrl := util.GetPublicMediaUrl(uploadUuid.Canonical() + "/transcript.vtt")
+		transcriptUrl := util.GetPublicMediaUrl(id.Canonical() + "/transcript.vtt")
 		transcriptBytes, err := util.DownloadFileToReader(transcriptUrl)
 		if err != nil {
 			return eb.Hint("Could not fetch transcript").Wrap(err)
@@ -104,7 +102,7 @@ func (h *Handler) MediaRoutes(app *echo.Echo) {
 			return eb.Hint("Could not parse transcript").Wrap(err)
 		}
 
-		comments, err := h.Queries.GetUploadUserComments(c.Request().Context(), pgUuid)
+		comments, err := h.Queries.GetUploadUserComments(c.Request().Context(), id.Pg())
 		if err != nil {
 			return eb.Hint("Could not fetch comments").Wrap(err)
 		}
@@ -205,7 +203,7 @@ func (h *Handler) MediaRoutes(app *echo.Echo) {
 		// Submit partial response for HTMX
 		if ctx.Request().Header.Get("HX-Request") == "true" {
 			return pages.MediaRatingForm{
-				UploadId:   id.Base58(),
+				UploadId:   id,
 				Likes:      likes,
 				Dislikes:   dislikes,
 				UserRating: safeSubmittedRating,
@@ -229,7 +227,10 @@ func (h *Handler) MediaRoutes(app *echo.Echo) {
 			return eb.Wrap(err)
 		}
 
-		replyingTo := ctx.QueryParam("replyingTo")
+		replyingTo, err := util.ParseUuid(ctx.QueryParam("replyingTo"))
+		if err != nil {
+			return eb.Wrap(err)
+		}
 
 		likes, likesErr := strconv.ParseInt(ctx.QueryParam("likes"), 10, 64)
 		dislikes, dislikesErr := strconv.ParseInt(ctx.QueryParam("dislikes"), 10, 64)
@@ -240,7 +241,7 @@ func (h *Handler) MediaRoutes(app *echo.Echo) {
 
 		return eb.Wrap(components.CommentActions{
 			Ac:        ac,
-			UploadId:  id.Base58(),
+			UploadId:  id,
 			ReplyOpen: true,
 			CommentId: replyingTo,
 			Likes:     likes,
@@ -379,9 +380,9 @@ func (h *Handler) MediaRoutes(app *echo.Echo) {
 		if ctx.Request().Header.Get("HX-Request") == "true" {
 			return components.CommentActions{
 				Ac:        ac,
-				UploadId:  id.Base58(),
+				UploadId:  id,
 				ReplyOpen: false,
-				CommentId: commentId.Base58(),
+				CommentId: commentId,
 				Likes:     likes,
 				Dislikes:  dislikes,
 			}.Render(ctx.Response())

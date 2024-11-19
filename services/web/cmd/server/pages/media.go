@@ -53,12 +53,11 @@ type Media struct {
 	Transcript    *astisub.Subtitles
 	Comments      map[string][]data.GetUploadUserCommentsRow
 	CommentsCount int
-	UploadId      string
+	UploadId      gutil.Uuid
 }
 
 func (m Media) Render(w io.Writer) error {
 	eb := oops.In("Media.Render")
-	uuid, _ := gutil.ParseUuid(m.UploadId)
 
 	audioOnly := lo.EveryBy(m.Variants, func(v data.UploadVariant) bool {
 		return strings.HasPrefix(string(v), "AUDIO")
@@ -80,7 +79,7 @@ func (m Media) Render(w io.Writer) error {
 		Ac: m.Ac,
 		Body: []g.Node{
 			c.Player{
-				Id:        uuid.Canonical(),
+				Id:        m.UploadId.Canonical(),
 				PlayAt:    0.0,
 				AudioOnly: audioOnly,
 				Width:     width,
@@ -228,7 +227,7 @@ type CommentsSection struct {
 	Ac            *util.AppContext
 	Comments      map[string][]data.GetUploadUserCommentsRow
 	CommentsCount int
-	UploadId      string
+	UploadId      gutil.Uuid
 }
 
 func (cs CommentsSection) Render(w io.Writer) error {
@@ -258,7 +257,7 @@ func (cs CommentsSection) Render(w io.Writer) error {
 }
 
 type MediaRatingForm struct {
-	UploadId   string
+	UploadId   gutil.Uuid
 	Likes      int64
 	Dislikes   int64
 	UserRating data.Rating
@@ -267,10 +266,10 @@ type MediaRatingForm struct {
 func (m MediaRatingForm) Render(w io.Writer) error {
 	return h.Form(
 		h.Method("post"),
-		h.Action("/media/"+m.UploadId+"/rate"),
+		h.Action("/media/"+m.UploadId.Base58()+"/rate"),
 		h.Class("contents"),
 		hx.Boost("false"),
-		hx.Post("/media/"+m.UploadId+"/rate"),
+		hx.Post("/media/"+m.UploadId.Base58()+"/rate"),
 		h.Input(h.Type("hidden"), h.Name("likes"), h.Value(strconv.Itoa(int(m.Likes)))),
 		c.Button{
 			Type:       "submit",
