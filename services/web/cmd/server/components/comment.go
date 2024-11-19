@@ -95,6 +95,7 @@ func (ca CommentActions) Render(w io.Writer) error {
 			hx.Boost("false"),
 			hx.Post("/media/"+ca.UploadId.Base58()+"/comment/"+ca.CommentId.Base58()+"/rate"),
 			hx.Target("closest .lc-media__comment__actions"),
+			g.If(ca.IsReply, h.Input(h.Type("hidden"), h.Name("isReply"), h.Value("true"))),
 			h.Input(h.Type("hidden"), h.Name("likes"), h.Value(strconv.Itoa(int(ca.Likes)))),
 			Button{
 				Type:     "submit",

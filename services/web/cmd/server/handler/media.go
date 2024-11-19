@@ -376,12 +376,15 @@ func (h *Handler) MediaRoutes(app *echo.Echo) {
 		// 5. UI state
 		ratingUiState(userRating, &safeSubmittedRating, &likes, &dislikes)
 
+		isReply := ctx.FormValue("isReply") == "true"
+
 		// Submit partial response for HTMX
 		if ctx.Request().Header.Get("HX-Request") == "true" {
 			return components.CommentActions{
 				Ac:        ac,
 				UploadId:  id,
 				ReplyOpen: false,
+				IsReply:   isReply,
 				CommentId: commentId,
 				Likes:     likes,
 				Dislikes:  dislikes,
