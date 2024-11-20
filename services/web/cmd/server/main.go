@@ -130,11 +130,10 @@ func main() {
 	})
 
 	app.GET("/:id", func(c echo.Context) error {
-		eb := oops.In("GET /:id")
 		id, err := gutil.ParseUuid(c.Param("id"))
 
 		if err != nil {
-			return eb.Wrap(err)
+			return echo.NewHTTPError(http.StatusNotFound, "Not Found")
 		}
 
 		return c.Redirect(http.StatusMovedPermanently, "/media/"+id.Base58())

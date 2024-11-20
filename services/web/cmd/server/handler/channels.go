@@ -43,7 +43,8 @@ func (h *Handler) ChannelRoutes(app *echo.Echo) {
 		slug := c.Param("slug")
 
 		if ac.User == nil {
-			return eb.Public("You must be logged in to subscribe to a channel.").Wrap(&echo.HTTPError{Code: http.StatusUnauthorized})
+			msg := "You must be logged in to subscribe to a channel."
+			return eb.Public(msg).Wrap(echo.NewHTTPError(http.StatusUnauthorized, msg))
 		}
 
 		h.Queries.SubscribeToChannelBySlug(c.Request().Context(), data.SubscribeToChannelBySlugParams{
@@ -63,7 +64,8 @@ func (h *Handler) ChannelRoutes(app *echo.Echo) {
 		slug := c.Param("slug")
 
 		if ac.User == nil {
-			return eb.Public("You must be logged in to unsubscribe from a channel.").Wrap(&echo.HTTPError{Code: http.StatusUnauthorized})
+			msg := "You must be logged in to unsubscribe from a channel."
+			return eb.Public(msg).Wrap(echo.NewHTTPError(http.StatusUnauthorized, msg))
 		}
 
 		h.Queries.UnsubscribeFromChannelBySlug(c.Request().Context(), data.UnsubscribeFromChannelBySlugParams{
