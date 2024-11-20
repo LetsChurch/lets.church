@@ -123,9 +123,21 @@ func main() {
 	h.MediaRoutes(app)
 
 	app.POST("/newsletter/subscribe", h.PostNewsletterSubscribe)
+
 	app.GET("/@:slug", func(c echo.Context) error {
 		slug := c.Param("slug")
 		return c.Redirect(http.StatusMovedPermanently, "/channel/"+slug)
+	})
+
+	app.GET("/:id", func(c echo.Context) error {
+		eb := oops.In("GET /:id")
+		id, err := gutil.ParseUuid(c.Param("id"))
+
+		if err != nil {
+			return eb.Wrap(err)
+		}
+
+		return c.Redirect(http.StatusMovedPermanently, "/media/"+id.Base58())
 	})
 
 	app.Logger.Fatal(app.Start("0.0.0.0:3000"))
