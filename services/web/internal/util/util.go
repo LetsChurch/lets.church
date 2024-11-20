@@ -7,9 +7,6 @@ import (
 	"net/http"
 )
 
-// Configurator is a generic function for implementing the functional options pattern.
-type Configurator[T any] func(options *T) error
-
 func DownloadFileToReader(url string) (*bytes.Reader, error) {
 	// Make the HTTP request
 	resp, err := http.Get(url)

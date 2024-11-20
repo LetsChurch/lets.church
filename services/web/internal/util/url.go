@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"strconv"
@@ -189,45 +190,43 @@ func GetS3ProtocolUri(from string, key string) string {
 	return fmt.Sprintf("s3://%s/%s", lo.Ternary(from == "PUBLIC", S3_PUBLIC_BUCKET, S3_INGEST_BUCKET), key)
 }
 
-func PublicImage(key string, ops ...Configurator[strings.Builder]) string {
+type PublicImageConfigurator func(w io.Writer) error
+
+func PublicImage(key string, ops ...PublicImageConfigurator) string {
 	pathBuilder := strings.Builder{}
+	hashBuilder := hmac.New(sha256.New, IMGPROXY_KEY)
+
+	hashBuilder.Write(IMGPROXY_SALT)
+
+	w := io.MultiWriter(&pathBuilder, hashBuilder)
 
 	for _, op := range ops {
-		if err := op(&pathBuilder); err != nil {
+		if err := op(w); err != nil {
 			panic(err)
 		}
 	}
 
-	pathBuilder.Write([]byte("/"))
-	pathBuilder.Write([]byte(imgproxyBase64([]byte(GetS3ProtocolUri("PUBLIC", key)))))
+	w.Write([]byte("/"))
+	w.Write([]byte(imgproxyBase64([]byte(GetS3ProtocolUri("PUBLIC", key)))))
 	path := pathBuilder.String()
-	sig := imgproxyHmac(path)
+	sig := imgproxyBase64(hashBuilder.Sum(nil))
 	return IMGPROXY_URL + "/" + sig + path
 }
 
-func PiWidth(width int) Configurator[strings.Builder] {
-	return func(pb *strings.Builder) error {
-		pb.Write([]byte("/w:"))
-		pb.Write([]byte(strconv.Itoa(width)))
+func PiWidth(width int) PublicImageConfigurator {
+	return func(w io.Writer) error {
+		w.Write([]byte("/w:"))
+		w.Write([]byte(strconv.Itoa(width)))
 		return nil
 	}
 }
 
-func PiHeight(height int) Configurator[strings.Builder] {
-	return func(pb *strings.Builder) error {
-		pb.Write([]byte("/h:"))
-		pb.Write([]byte(strconv.Itoa(height)))
+func PiHeight(height int) PublicImageConfigurator {
+	return func(w io.Writer) error {
+		w.Write([]byte("/h:"))
+		w.Write([]byte(strconv.Itoa(height)))
 		return nil
 	}
-}
-
-func imgproxyHmac(payload string) string {
-	hmac := hmac.New(sha256.New, IMGPROXY_KEY)
-	hmac.Write(IMGPROXY_SALT)
-	hmac.Write([]byte(payload))
-	dataHmac := hmac.Sum(nil)
-
-	return imgproxyBase64(dataHmac)
 }
 
 func imgproxyBase64(data []byte) string {
