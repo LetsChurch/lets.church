@@ -1,17 +1,22 @@
 -- name: TrendingUploads :many
 SELECT
-  upload_record.id,
-  title,
-  length_seconds,
-  channel.name as channel_name
+  ur.id,
+  ur.title,
+  ur.length_seconds,
+  c.name as channel_name,
+  c.avatar_path as channel_avatar_path,
+  c.default_thumbnail_path as channel_default_thumbnail_path,
+  ur.default_thumbnail_path,
+  ur.override_thumbnail_path,
+  ur.variants
 FROM
-  upload_record
-  JOIN channel ON upload_record.channel_id = channel.id
+  upload_record ur
+  JOIN channel c ON ur.channel_id = c.id
 WHERE
-  transcribing_finished_at IS NOT NULL
-  AND transcoding_finished_at IS NOT NULL
-  AND upload_record.visibility = 'PUBLIC'
-  AND channel.visibility = 'PUBLIC'
+  ur.transcribing_finished_at IS NOT NULL
+  AND ur.transcoding_finished_at IS NOT NULL
+  AND ur.visibility = 'PUBLIC'
+  AND c.visibility = 'PUBLIC'
 ORDER BY
   score DESC;
 

@@ -18,6 +18,7 @@
 @import './components/input.css' layer(components);
 @import './components/media-grid.css' layer(components);
 @import './components/notification.css' layer(components);
+@import './components/thumbnail.css' layer(components);
 @import './typography.css' layer(components);
 
 @custom-media --sm (width >= 640px);

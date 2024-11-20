@@ -219,27 +219,37 @@ func (q *Queries) RecordViewRanges(ctx context.Context, arg RecordViewRangesPara
 
 const trendingUploads = `-- name: TrendingUploads :many
 SELECT
-  upload_record.id,
-  title,
-  length_seconds,
-  channel.name as channel_name
+  ur.id,
+  ur.title,
+  ur.length_seconds,
+  c.name as channel_name,
+  c.avatar_path as channel_avatar_path,
+  c.default_thumbnail_path as channel_default_thumbnail_path,
+  ur.default_thumbnail_path,
+  ur.override_thumbnail_path,
+  ur.variants
 FROM
-  upload_record
-  JOIN channel ON upload_record.channel_id = channel.id
+  upload_record ur
+  JOIN channel c ON ur.channel_id = c.id
 WHERE
-  transcribing_finished_at IS NOT NULL
-  AND transcoding_finished_at IS NOT NULL
-  AND upload_record.visibility = 'PUBLIC'
-  AND channel.visibility = 'PUBLIC'
+  ur.transcribing_finished_at IS NOT NULL
+  AND ur.transcoding_finished_at IS NOT NULL
+  AND ur.visibility = 'PUBLIC'
+  AND c.visibility = 'PUBLIC'
 ORDER BY
   score DESC
 `
 
 type TrendingUploadsRow struct {
-	ID            pgtype.UUID
-	Title         pgtype.Text
-	LengthSeconds pgtype.Float8
-	ChannelName   string
+	ID                          pgtype.UUID
+	Title                       pgtype.Text
+	LengthSeconds               pgtype.Float8
+	ChannelName                 string
+	ChannelAvatarPath           pgtype.Text
+	ChannelDefaultThumbnailPath pgtype.Text
+	DefaultThumbnailPath        pgtype.Text
+	OverrideThumbnailPath       pgtype.Text
+	Variants                    []UploadVariant
 }
 
 func (q *Queries) TrendingUploads(ctx context.Context) ([]TrendingUploadsRow, error) {
@@ -256,6 +266,11 @@ func (q *Queries) TrendingUploads(ctx context.Context) ([]TrendingUploadsRow, er
 			&i.Title,
 			&i.LengthSeconds,
 			&i.ChannelName,
+			&i.ChannelAvatarPath,
+			&i.ChannelDefaultThumbnailPath,
+			&i.DefaultThumbnailPath,
+			&i.OverrideThumbnailPath,
+			&i.Variants,
 		); err != nil {
 			return nil, err
 		}
