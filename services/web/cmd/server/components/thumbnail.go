@@ -29,7 +29,7 @@ func (tn Thumbnail) Render(w io.Writer) error {
 					return h.Img(h.Src(src), h.Style("background:url("+lqsrc+")"))
 				},
 				func() g.Node {
-					return Icon{Name: lo.Ternary(tn.HasVideo, "player-play", "volume"), Full: true}
+					return Icon{Name: lo.Ternary(tn.HasVideo, "player-play", "volume"), Full: true, ViewBox: true}
 				},
 			),
 			h.Span(h.Class("lc-thumbnail__timestamp"), g.Text(util.FormatDuration(time.Duration(tn.LengthSeconds)*time.Second))),

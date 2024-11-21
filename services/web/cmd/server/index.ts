@@ -26,6 +26,5 @@ document.body.addEventListener('flash', (e) => {
     return;
   }
 
-  console.log(e.detail.html);
   document.body.insertAdjacentHTML('beforeend', e.detail.html);
 });
