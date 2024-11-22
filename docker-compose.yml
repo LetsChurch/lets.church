@@ -51,7 +51,7 @@ services:
     build:
       context: ./apps/web-next
       dockerfile: Dockerfile
-    command: npm run dev
+    command: bun run dev
     restart: unless-stopped
     ports:
       - 127.0.0.1:${HOST_WEB_NEXT_PORT}:3000

@@ -1,8 +1,8 @@
-FROM node:20.11.0-alpine3.19
+FROM oven/bun:1.1.36-slim
 WORKDIR /home/node/app
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json bun.lockb ./
+RUN bun install
 COPY . .
 ENV NODE_ENV=production
-RUN npm run build
-CMD ["npm", "start"]
+RUN bun run build
+CMD ["bun", "start"]

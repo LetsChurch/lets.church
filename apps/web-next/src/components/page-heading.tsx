@@ -29,7 +29,7 @@ export function PageHeading(props: Props) {
             <A
               class={`inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 md:ml-3 ${
                 action.variant === 'primary'
-                  ? 'border-transparent  bg-indigo-600 text-white hover:bg-indigo-700'
+                  ? 'border-transparent bg-indigo-600 text-white hover:bg-indigo-700'
                   : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
               }`}
               href={action.href}

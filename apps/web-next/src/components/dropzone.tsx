@@ -129,7 +129,7 @@ export default function Dropzone(props: Props) {
                   class={`relative rounded-md font-medium focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 ${
                     props.disabled
                       ? 'text-gray-600'
-                      : 'cursor-pointer text-indigo-600 focus-within:ring-indigo-500 hover:text-indigo-500 '
+                      : 'cursor-pointer text-indigo-600 focus-within:ring-indigo-500 hover:text-indigo-500'
                   }`}
                 >
                   <span>Upload a file</span>

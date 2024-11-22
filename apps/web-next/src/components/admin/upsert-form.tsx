@@ -62,7 +62,7 @@ type Section<N extends string> = {
 export type Props<N extends string> = {
   sections: Array<Section<N>>;
   defaultValues?: Partial<{ [K in N]: string }>;
-  submitting?: boolean;
+  submitting?: boolean | undefined;
 };
 
 export function UpsertForm<N extends string>(props: Props<N>) {

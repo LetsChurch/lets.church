@@ -156,6 +156,7 @@ export default function ChurchesApp(props: {
     map.on('wheel', () => setInteracted(true));
 
     function getRenderedUnclusteredChurches() {
+      // @ts-expect-error TODO
       const renderedPoints = map.queryRenderedFeatures(undefined, {
         layers: ['unclustered-point'],
       });
@@ -175,6 +176,7 @@ export default function ChurchesApp(props: {
 
     async function getRenderedClusteredChurches() {
       const source = map.getSource('churches') as GeoJSONSource;
+      // @ts-expect-error TODO
       const renderedClusters = map.queryRenderedFeatures(undefined, {
         layers: ['clusters'],
       });
@@ -211,7 +213,7 @@ export default function ChurchesApp(props: {
           [
             ...getRenderedUnclusteredChurches(),
             ...(await getRenderedClusteredChurches()),
-          ].map((p) => p.properties?.['id']),
+          ].map((p) => p?.properties?.['id']),
         ),
       );
     });
@@ -320,7 +322,7 @@ export default function ChurchesApp(props: {
             if (map && geometry?.type === 'Point') {
               map.easeTo({
                 center: geometry.coordinates as [number, number],
-                zoom: zoom,
+                zoom: zoom ?? 1,
               });
             }
           });
@@ -340,7 +342,10 @@ export default function ChurchesApp(props: {
         // multiple copies of the feature are visible, the
         // popup appears over the copy being pointed to.
         while (Math.abs(e.lngLat.lng - (coordinates?.[0] ?? 0)) > 180) {
-          coordinates[0] += e.lngLat.lng > (coordinates[0] ?? 0) ? 360 : -360;
+          coordinates[0] =
+            (coordinates[0] ?? 0) + e.lngLat.lng > (coordinates[0] ?? 0)
+              ? 360
+              : -360;
         }
 
         invariant(map, 'Map should be defined');

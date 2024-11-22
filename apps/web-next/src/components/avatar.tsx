@@ -11,7 +11,7 @@ export type Props = {
 
 function getInitials(name: string) {
   const rx = /(\p{L}{1})\p{L}+/gu;
-  const split = [...name.matchAll(rx)] || [];
+  const split = Array.from(name.matchAll(rx));
   return ((split.shift()?.[1] || '') + (split.pop()?.[1] || '')).toUpperCase();
 }
 

@@ -12,6 +12,8 @@ stages:
 .setup:
   npmci: nix-shell $CI_PROJECT_DIR/shell.nix --run "npm ci --cache $CI_PROJECT_DIR/.npm --prefer-offline"
   npmcheck: nix-shell $CI_PROJECT_DIR/shell.nix --run "npm run check"
+  buninstall: nix-shell $CI_PROJECT_DIR/shell.nix --run "bun install"
+  buncheck: nix-shell $CI_PROJECT_DIR/shell.nix --run "bun run check"
 
 default:
   image: nixos/nix:2.19.2
@@ -52,8 +54,8 @@ check-web-next:
   stage: check
   script:
     - cd $CI_PROJECT_DIR/apps/web-next
-    - !reference [.setup, npmci]
-    - !reference [.setup, npmcheck]
+    - !reference [.setup, buninstall]
+    - !reference [.setup, buncheck]
   cache:
     key:
       files:

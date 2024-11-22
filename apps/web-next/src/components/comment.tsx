@@ -26,12 +26,12 @@ export type Props = {
   replies?: Array<Omit<CommentData, 'replies'>>;
   replyAction?: Action<[FormData], never>;
   rateAction: Action<[FormData], Response | null>;
-  pending?: boolean;
+  pending?: boolean | undefined;
 } & Pick<JSX.IntrinsicElements['form'], 'onSubmit'>;
 
 export function CommentForm(props: {
   placeholder: string;
-  pending?: boolean;
+  pending?: boolean | undefined;
   onCancel?: () => unknown;
   autofocus?: boolean;
 }) {

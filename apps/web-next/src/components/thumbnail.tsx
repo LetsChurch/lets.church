@@ -42,7 +42,9 @@ export default function Thumbnail(props: Props) {
             <img
               src={url}
               class="aspect-video w-full bg-gray-200 bg-contain bg-center bg-no-repeat object-contain"
-              style={{ background: `url(${props.lqUrl})` ?? '#EEE' }}
+              style={{
+                background: props.lqUrl ? `url(${props.lqUrl})` : '#EEE',
+              }}
             />
           )}
         </Match>

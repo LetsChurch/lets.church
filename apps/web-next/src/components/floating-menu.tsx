@@ -4,7 +4,10 @@ import { A, useLocation } from '@solidjs/router';
 import FloatingDiv, { type Props as FloatingDivProps } from './floating-div';
 
 type Link = { label: string } & MergeExclusive<
-  MergeExclusive<{ href: string }, { form: string; pending?: boolean }>,
+  MergeExclusive<
+    { href: string },
+    { form: string; pending?: boolean | undefined }
+  >,
   { action: () => unknown }
 >;
 
