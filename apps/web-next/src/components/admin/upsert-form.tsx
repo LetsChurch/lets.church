@@ -2,7 +2,7 @@ import { For, Match, Show, Switch, createUniqueId } from 'solid-js';
 import Dropzone, { DroppedRes } from '../dropzone';
 import { Button, Input, Radios, Select, Textarea } from '../form';
 import AutoComplete from '../form/autocomplete';
-import { Optional } from '~/util';
+import type { Optional } from '~/util';
 
 type BaseField<N extends string, V = string> = {
   label: string;
@@ -62,7 +62,7 @@ type Section<N extends string> = {
 export type Props<N extends string> = {
   sections: Array<Section<N>>;
   defaultValues?: Partial<{ [K in N]: string }>;
-  submitting?: boolean | undefined;
+  submitting?: Optional<boolean>;
 };
 
 export function UpsertForm<N extends string>(props: Props<N>) {

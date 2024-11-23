@@ -1,5 +1,5 @@
 import { createEffect, type ParentProps } from 'solid-js';
-import { Optional, cn } from '../../../util';
+import { type Optional, cn } from '../../../util';
 
 export default function ResultRow(
   props: ParentProps<{

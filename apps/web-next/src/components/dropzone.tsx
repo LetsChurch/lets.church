@@ -1,14 +1,15 @@
 import DragDropIcon from '@tabler/icons/outline/drag-drop.svg?component-solid';
 import { type Accessor, createSignal, createUniqueId, Show } from 'solid-js';
 import invariant from 'tiny-invariant';
+import type { Optional } from '~/util';
 
 export type DroppedRes = { title: string; progress: Accessor<number> };
 
 export type Props = {
-  caption?: string | undefined;
+  caption?: Optional<string>;
   name?: string;
   progressLabel?: string;
-  accept?: string | undefined;
+  accept?: Optional<string>;
   onDrop: (file: File, mime: string) => DroppedRes;
   disabled?: boolean;
 };

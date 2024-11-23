@@ -16,12 +16,12 @@ type Turnstile = {
 
 declare global {
   interface Window {
-    onloadTurnstileCallback?: (() => void) | undefined;
+    onloadTurnstileCallback?: Optional<() => void>;
     turnstile: Turnstile;
   }
 }
 
-let scriptEl: HTMLScriptElement | undefined;
+let scriptEl: Optional<HTMLScriptElement>;
 
 export default function TurnstileClient(
   props: { size?: 'normal' | 'compact' } & JSX.HTMLAttributes<HTMLDivElement>,

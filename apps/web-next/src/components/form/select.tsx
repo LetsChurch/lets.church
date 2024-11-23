@@ -1,9 +1,9 @@
 import { For, mergeProps, splitProps, untrack, type JSX } from 'solid-js';
-import { cn } from '~/util';
+import { cn, type Optional } from '~/util';
 
 export type Props = Omit<JSX.IntrinsicElements['select'], 'value'> & {
   options: Array<{ label: string; value: string; disabled?: boolean }>;
-  value?: string | undefined;
+  value?: Optional<string>;
 };
 
 export default function Select(incomingProps: Props) {

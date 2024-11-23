@@ -3,13 +3,14 @@ import { Portal } from 'solid-js/web';
 import XIcon from '@tabler/icons/outline/x.svg?component-solid';
 import ShowTransition from './show-transition';
 import clickOutside from '~/util/click-outside';
+import type { Optional } from '~/util';
 
 export type Props = ParentProps<
   JSX.HTMLAttributes<HTMLDivElement> & {
     open: boolean;
     onClose: () => unknown;
   }
-> & { backdropClass?: string | undefined };
+> & { backdropClass?: Optional<string> };
 
 export default function OffCanvasDiv(props: Props) {
   const [local, others] = splitProps(props, [

@@ -1,7 +1,7 @@
 import { For, Show, createMemo, createSignal, onMount } from 'solid-js';
 import { useSearchParams } from '@solidjs/router';
 import { gql } from 'graphql-request';
-import { Optional, cn } from '../../../util';
+import { type Optional, cn } from '../../../util';
 import ListHeading from './list-heading';
 import { getMenuColorClass, getOrgTagCategoryLabel, optionId } from './util';
 import ResultRow from './result-row';

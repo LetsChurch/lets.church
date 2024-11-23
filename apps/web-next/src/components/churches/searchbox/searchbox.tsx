@@ -27,7 +27,7 @@ import {
 import { TagsMenu, useParsedTags, tagSlug, tagsState } from './tags';
 import { optionId } from './util';
 import { OrganizationTag } from '~/__generated__/graphql-types';
-import { Optional } from '~/util';
+import type { Optional } from '~/util';
 
 const hiddenOrganization = 'organization';
 

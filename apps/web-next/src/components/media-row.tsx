@@ -8,7 +8,7 @@ import { Avatar } from './avatar';
 import Thumbnail, { type Props as ThumbnailProps } from './thumbnail';
 import type { MediaRowPropsFragment } from './__generated__/media-row';
 import { formatDateFull } from '~/util/date';
-import { cn } from '~/util';
+import { cn, type Optional } from '~/util';
 
 export const MediaRowFragment = isServer
   ? gql`
@@ -42,7 +42,7 @@ export type Props = ParentProps<
     href: string;
     uploadProps: MediaRowPropsFragment;
     marked?: boolean;
-    class?: string | undefined;
+    class?: Optional<string>;
   }
 >;
 

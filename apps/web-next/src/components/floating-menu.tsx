@@ -2,11 +2,12 @@ import { For, Match, splitProps, Switch } from 'solid-js';
 import type { MergeExclusive } from 'type-fest';
 import { A, useLocation } from '@solidjs/router';
 import FloatingDiv, { type Props as FloatingDivProps } from './floating-div';
+import type { Optional } from '~/util';
 
 type Link = { label: string } & MergeExclusive<
   MergeExclusive<
     { href: string },
-    { form: string; pending?: boolean | undefined }
+    { form: string; pending?: Optional<boolean> }
   >,
   { action: () => unknown }
 >;

@@ -7,6 +7,7 @@ import { Button } from './form';
 import { Avatar } from './avatar';
 import { Rating } from '~/__generated__/graphql-types';
 import { useUser } from '~/util/user-context';
+import type { Optional } from '~/util';
 
 export type CommentData = {
   id: string;
@@ -26,12 +27,12 @@ export type Props = {
   replies?: Array<Omit<CommentData, 'replies'>>;
   replyAction?: Action<[FormData], never>;
   rateAction: Action<[FormData], Response | null>;
-  pending?: boolean | undefined;
+  pending?: Optional<boolean>;
 } & Pick<JSX.IntrinsicElements['form'], 'onSubmit'>;
 
 export function CommentForm(props: {
   placeholder: string;
-  pending?: boolean | undefined;
+  pending?: Optional<boolean>;
   onCancel?: () => unknown;
   autofocus?: boolean;
 }) {

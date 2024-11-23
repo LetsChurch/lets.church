@@ -70,7 +70,7 @@ export type Props = {
   audioSource?: Optional<string>;
   peaksDatUrl?: Optional<string>;
   peaksJsonUrl?: Optional<string>;
-  fluid?: boolean | undefined;
+  fluid?: Optional<boolean>;
   playAt?: Accessor<number>;
   onTimeUpdate?: (currentTime: number) => unknown;
 };
@@ -89,7 +89,7 @@ export default function Player(props: Props) {
     );
 
   const id = untrack(() => props.id);
-  let reportRangesTimer: number | undefined = undefined;
+  let reportRangesTimer: Optional<number> = undefined;
   let viewId: string | null = null;
 
   async function reportTimeRanges() {
@@ -182,7 +182,9 @@ export default function Player(props: Props) {
   });
 
   onCleanup(() => {
-    clearTimeout(reportRangesTimer);
+    if (reportRangesTimer !== undefined && reportRangesTimer !== null) {
+      clearTimeout(reportRangesTimer);
+    }
     reportTimeRanges();
     player?.dispose();
   });

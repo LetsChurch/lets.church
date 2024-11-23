@@ -9,7 +9,7 @@ export type Props = {
   url?: Optional<string>;
   width: number;
   height: number;
-  placeholder?: 'video' | 'audio' | undefined;
+  placeholder?: Optional<'video' | 'audio'>;
   lengthSeconds?: Optional<number>;
 };
 

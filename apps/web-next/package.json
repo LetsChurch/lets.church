@@ -4,10 +4,10 @@
   "scripts": {
     "dev": "run-p dev:*",
     "dev:codegen": "bun ./wait.ts && bun run codegen -- -w src/routes/**/*.ts",
-    "dev:vinxi": "bunx --bun vinxi dev --host",
+    "dev:vinxi": "vinxi dev --host",
     "codegen": "graphql-codegen --config codegen.yml",
-    "build": "bunx --bun vinxi build",
-    "start": "bunx --bun vinxi start",
+    "build": "vinxi build",
+    "start": "vinxi start",
     "check": "npm-run-all check:*",
     "check:lint": "eslint --ext .ts,.tsx .",
     "check:format": "prettier --check .",

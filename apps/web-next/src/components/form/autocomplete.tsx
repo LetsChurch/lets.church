@@ -3,12 +3,12 @@ import debounce from 'just-debounce';
 import { useFloating } from 'solid-floating-ui';
 import FloatingDiv from '../floating-div';
 import Input, { type Props as InputProps } from './input';
-import { cn } from '~/util';
+import { cn, type Optional } from '~/util';
 
 export type Props = {
   value?: string;
-  renderValue?: ((value?: string) => string) | undefined;
-  renderMenuValue?: ((value: string) => string) | undefined;
+  renderValue?: Optional<(value?: string) => string>;
+  renderMenuValue?: Optional<(value: string) => string>;
   getOptions: (query: string) => Promise<Array<string>>;
 } & Omit<InputProps, 'value' | 'onChange' | 'ref'>;
 

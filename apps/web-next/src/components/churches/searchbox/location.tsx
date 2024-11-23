@@ -10,7 +10,7 @@ import {
   type Input,
 } from 'valibot';
 import { useSearchParams } from '@solidjs/router';
-import { Optional, cn } from '../../../util';
+import { type Optional, cn } from '../../../util';
 import ListHeading from './list-heading';
 import { getMenuColorClass, optionId } from './util';
 import ResultRow from './result-row';
