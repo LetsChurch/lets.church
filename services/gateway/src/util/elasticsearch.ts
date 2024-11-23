@@ -1,9 +1,4 @@
-import { Client } from '@elastic/elasticsearch';
-import type {
-  MsearchMultisearchBody,
-  MsearchRequestItem,
-  QueryDslQueryContainer,
-} from '@elastic/elasticsearch/lib/api/types';
+import { Client, HttpConnection, type estypes } from '@elastic/elasticsearch';
 import envariant from '@knpwrs/envariant';
 import waitOn from 'wait-on';
 import { z } from 'zod';
@@ -14,6 +9,7 @@ const ELASTICSEARCH_URL = envariant('ELASTICSEARCH_URL');
 
 export const client = new Client({
   node: ELASTICSEARCH_URL,
+  Connection: HttpConnection, // Required for Bun
 });
 
 export async function waitForElasticsearch() {
@@ -32,10 +28,10 @@ function makePostFilterSpread({
   channelIds?: Array<string> | null;
   publishedAt?: PublishedAtRange | undefined;
   orderBy?: OrderBy | undefined;
-}): MsearchMultisearchBody {
-  const res: MsearchMultisearchBody = {};
+}): estypes.MsearchMultisearchBody {
+  const res: estypes.MsearchMultisearchBody = {};
 
-  const must: Array<QueryDslQueryContainer> = [];
+  const must: Array<estypes.QueryDslQueryContainer> = [];
 
   if ((Array.isArray(channelIds) && channelIds.length > 0) || publishedAt) {
     res.post_filter = { bool: { must: [], should: [] } };
@@ -69,7 +65,7 @@ export function msearchUploads(
     publishedAt?: PublishedAtRange | undefined;
     orderBy?: OrderBy | undefined;
   },
-): [MsearchRequestItem, MsearchRequestItem] {
+): [estypes.MsearchRequestItem, estypes.MsearchRequestItem] {
   const trimmed = query.trim();
   const words = trimmed.split(/\s+/g);
 
@@ -115,8 +111,8 @@ export function msearchUploads(
       ...(orderBy === 'date'
         ? { sort: [{ publishedAt: { order: 'asc' } }] }
         : orderBy === 'dateDesc'
-        ? { sort: [{ publishedAt: { order: 'desc' } }] }
-        : {}),
+          ? { sort: [{ publishedAt: { order: 'desc' } }] }
+          : {}),
       aggs: {
         channelIds: {
           terms: {
@@ -154,7 +150,7 @@ export function msearchTranscripts(
     orderBy?: OrderBy | undefined;
     phrase?: boolean;
   },
-): [MsearchRequestItem, MsearchRequestItem] {
+): [estypes.MsearchRequestItem, estypes.MsearchRequestItem] {
   const trimmed = query.trim();
   const words = trimmed.split(/\s+/g);
 
@@ -243,8 +239,8 @@ export function msearchTranscripts(
       ...(orderBy === 'date'
         ? { sort: [{ publishedAt: { order: 'asc' } }] }
         : orderBy === 'dateDesc'
-        ? { sort: [{ publishedAt: { order: 'desc' } }] }
-        : {}),
+          ? { sort: [{ publishedAt: { order: 'desc' } }] }
+          : {}),
       aggs: {
         channelIds: {
           terms: {
@@ -271,7 +267,7 @@ export function msearchChannels(
   query: string,
   from = 0,
   size = 0,
-): [MsearchRequestItem, MsearchRequestItem] {
+): [estypes.MsearchRequestItem, estypes.MsearchRequestItem] {
   return [
     { index: 'lc_channels' },
     {
@@ -306,7 +302,7 @@ export function msearchOrganizations(
     organization?: string | null;
     tags?: string[] | null;
   },
-): [MsearchRequestItem, MsearchRequestItem] {
+): [estypes.MsearchRequestItem, estypes.MsearchRequestItem] {
   const trimmed = query.trim();
 
   return [

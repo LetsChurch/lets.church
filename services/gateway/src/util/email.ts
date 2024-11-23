@@ -1,14 +1,15 @@
 import mjml2html from 'mjml';
 import { stripIndent } from 'proper-tags';
+import { minify } from 'html-minifier';
 
 const fontFamily = 'Inter, sans-serif';
 const color = '#111111';
 
-export function emailHtml(title: string, body: string, minify = true) {
-  return mjml2html(
+export function emailHtml(title: string, body: string, minifyOp = true) {
+  const res = mjml2html(
     {
       tagName: 'mjml',
-      attributes: {},
+      attributes: { lang: 'en' },
       children: [
         {
           tagName: 'mj-head',
@@ -194,6 +195,12 @@ export function emailHtml(title: string, body: string, minify = true) {
         },
       ],
     },
-    { minify, validationLevel: 'soft' },
+    { validationLevel: 'soft' },
   );
+
+  if (minifyOp) {
+    res.html = minify(res.html);
+  }
+
+  return res;
 }

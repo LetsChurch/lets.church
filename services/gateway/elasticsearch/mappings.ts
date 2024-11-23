@@ -1,8 +1,4 @@
-import type {
-  MappingProperty,
-  IndicesIndexSettings,
-  PropertyName,
-} from '@elastic/elasticsearch/lib/api/types';
+import type { estypes } from '@elastic/elasticsearch';
 import { diff } from 'jest-diff';
 import pc from 'picocolors';
 import { waitForElasticsearch, client } from '../src/util/elasticsearch';
@@ -19,8 +15,8 @@ moduleLogger.info('Starting index mapping deployment');
 const targetMappings: Record<
   string, // index name
   {
-    properties: Record<PropertyName, MappingProperty>;
-    settings?: IndicesIndexSettings;
+    properties: Record<estypes.PropertyName, estypes.MappingProperty>;
+    settings?: estypes.IndicesIndexSettings;
   }
 > = {
   lc_channels: {

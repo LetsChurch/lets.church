@@ -265,7 +265,7 @@ builder.queryFields((t) => ({
           // TODO: validate geo and denomination against focus
           .refine(
             (val) =>
-              val.channels?.length ?? 0 > 0
+              (val.channels?.length ?? 0 > 0)
                 ? val.focus === 'UPLOADS' || val.focus === 'TRANSCRIPTS'
                 : true,
             {
@@ -419,10 +419,10 @@ builder.queryFields((t) => ({
                 focus === 'UPLOADS'
                   ? UPLOADS_MSEARCH_INDEX
                   : focus === 'TRANSCRIPTS'
-                  ? TRANSCRIPTS_MSEARCH_INDEX
-                  : focus === 'CHANNELS'
-                  ? CHANNELS_MSEARCH_INDEX
-                  : ORGANIZATIONS_MSEARCH_INDEX
+                    ? TRANSCRIPTS_MSEARCH_INDEX
+                    : focus === 'CHANNELS'
+                      ? CHANNELS_MSEARCH_INDEX
+                      : ORGANIZATIONS_MSEARCH_INDEX
               ];
             invariant(focusedResponse, 'Focused response should exist');
 
@@ -503,10 +503,10 @@ builder.queryFields((t) => ({
                   focus === 'UPLOADS'
                     ? 'UploadSearchHit'
                     : focus === 'TRANSCRIPTS'
-                    ? 'TranscriptSearchHit'
-                    : focus === 'CHANNELS'
-                    ? 'ChannelSearchHit'
-                    : 'OrganizationSearchHit',
+                      ? 'TranscriptSearchHit'
+                      : focus === 'CHANNELS'
+                        ? 'ChannelSearchHit'
+                        : 'OrganizationSearchHit',
                 id: hit._id,
                 ...(hit._index === 'lc_uploads_v2'
                   ? {
@@ -514,28 +514,29 @@ builder.queryFields((t) => ({
                       title: hit._source.title,
                     }
                   : hit._index === 'lc_transcripts'
-                  ? {
-                      uploadRecord: { id: hit._id },
-                      hits: hit.inner_hits.segments.hits.hits.map((h) => ({
-                        start: h._source.start,
-                        end: h._source.end,
-                        text: {
-                          source: h._source.text,
-                          marked: h.highlight['segments.text'].join(' ') ?? '',
-                        },
-                      })),
-                    }
-                  : hit._index === 'lc_channels'
-                  ? {
-                      channel: { id: hit._id },
-                      name: hit._source.name,
-                    }
-                  : hit._index === 'lc_organizations'
-                  ? {
-                      organization: { id: hit._id },
-                      name: hit._source.name,
-                    }
-                  : (null as never)),
+                    ? {
+                        uploadRecord: { id: hit._id },
+                        hits: hit.inner_hits.segments.hits.hits.map((h) => ({
+                          start: h._source.start,
+                          end: h._source.end,
+                          text: {
+                            source: h._source.text,
+                            marked:
+                              h.highlight['segments.text'].join(' ') ?? '',
+                          },
+                        })),
+                      }
+                    : hit._index === 'lc_channels'
+                      ? {
+                          channel: { id: hit._id },
+                          name: hit._source.name,
+                        }
+                      : hit._index === 'lc_organizations'
+                        ? {
+                            organization: { id: hit._id },
+                            name: hit._source.name,
+                          }
+                        : (null as never)),
               }));
 
             return res;

@@ -535,8 +535,8 @@ export function* getBibleReferences(text: string) {
       chapterEnd: chapterEnd
         ? parseInt(chapterEnd)
         : chapter
-        ? parseInt(chapter)
-        : null,
+          ? parseInt(chapter)
+          : null,
       verse: verse ? parseInt(verse) : null,
       verseSuffix: verseSuffix ? verseSuffix : null,
       verseEnd: verseEnd ? parseInt(verseEnd) : verse ? parseInt(verse) : null,

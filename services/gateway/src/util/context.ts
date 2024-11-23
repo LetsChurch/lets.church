@@ -1,4 +1,3 @@
-import type { Context as HonoContext } from 'hono';
 import { getClientIpAddress } from './request-ip';
 import prisma from './prisma';
 import { parseSessionJwt } from './jwt';
@@ -30,14 +29,14 @@ async function getSession(sessionJwt?: string) {
   return s;
 }
 
-export default async function context({ c }: { c: HonoContext }) {
-  const sessionJwt = c.req.header('authorization')?.split(' ')[1];
+export default async function context({ request }: { request: Request }) {
+  const sessionJwt = request.headers.get('authorization')?.split(' ')[1];
   const session = await getSession(sessionJwt);
 
   return {
     session,
-    clientIp: getClientIpAddress(c.req.raw.headers),
-    clientUserAgent: c.req.header('user-agent'),
+    clientIp: getClientIpAddress(request.headers),
+    clientUserAgent: request.headers.get('user-agent'),
   };
 }
 

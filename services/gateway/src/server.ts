@@ -1,6 +1,4 @@
 import { createYoga } from 'graphql-yoga';
-import { Hono, Context } from 'hono';
-import { serve } from '@hono/node-server';
 import { useDisableIntrospection } from '@envelop/disable-introspection';
 import * as Sentry from '@sentry/node';
 import envariant from '@knpwrs/envariant';
@@ -14,15 +12,11 @@ if (process.env['NODE_ENV'] !== 'development') {
   });
 }
 
-const app = new Hono();
-
 const graphqlPlugins = [
   process.env['NODE_ENV'] !== 'development' && useDisableIntrospection,
 ];
 
-const graphqlHandler = createYoga<{
-  c: Context;
-}>({
+const graphqlHandler = createYoga({
   schema,
   context,
   plugins: graphqlPlugins,
@@ -34,13 +28,20 @@ const graphqlHandler = createYoga<{
   },
 });
 
-app.on(['GET', 'POST', 'OPTIONS'], '/graphql', async (c) => {
-  return graphqlHandler.fetch(c.req.raw, { c });
+const server = Bun.serve({
+  fetch: (req, _server) => {
+    if (req.url === '/health') {
+      return new Response(null, { status: 204 });
+    }
+
+    return graphqlHandler.fetch(req);
+  },
+  port: 3000,
 });
 
-app.all('/health', async (c) => {
-  c.status(204);
-  return c.body(null);
-});
-
-serve(app);
+console.info(
+  `Server is running on ${new URL(
+    graphqlHandler.graphqlEndpoint,
+    `http://${server.hostname}:${server.port}`,
+  )}`,
+);

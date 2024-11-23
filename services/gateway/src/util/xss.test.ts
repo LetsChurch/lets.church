@@ -27,7 +27,7 @@ test('escapeDocument', () => {
         },
       ],
       "foo": "bar",
-      "html": "&lt;video src=\\"foo\\" /&gt;",
+      "html": "&lt;video src="foo" /&gt;",
       "object": {
         "baz": "ducks",
         "bears": "&lt;bananas /&gt;",

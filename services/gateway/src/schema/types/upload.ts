@@ -501,22 +501,22 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
                 kind: (v === 'VIDEO_4K_DOWNLOAD'
                   ? 'VIDEO_4K'
                   : v === 'VIDEO_1080P_DOWNLOAD'
-                  ? 'VIDEO_1080P'
-                  : v === 'VIDEO_720P_DOWNLOAD'
-                  ? 'VIDEO_720P'
-                  : v === 'VIDEO_480P'
-                  ? 'VIDEO_480P'
-                  : 'AUDIO') as MediaDownloadKind,
+                    ? 'VIDEO_1080P'
+                    : v === 'VIDEO_720P_DOWNLOAD'
+                      ? 'VIDEO_720P'
+                      : v === 'VIDEO_480P'
+                        ? 'VIDEO_480P'
+                        : 'AUDIO') as MediaDownloadKind,
                 label:
                   v === 'VIDEO_4K_DOWNLOAD'
                     ? '4k Video'
                     : v === 'VIDEO_1080P_DOWNLOAD'
-                    ? '1080p Video'
-                    : v === 'VIDEO_720P_DOWNLOAD'
-                    ? '720p Video'
-                    : v === 'VIDEO_480P'
-                    ? '480p Video'
-                    : 'Audio',
+                      ? '1080p Video'
+                      : v === 'VIDEO_720P_DOWNLOAD'
+                        ? '720p Video'
+                        : v === 'VIDEO_480P'
+                          ? '480p Video'
+                          : 'Audio',
                 url: await getPublicUrlWithFilename(
                   `${root.id}/${v}.${ext}`,
                   `${root.title ?? root.id}.${ext}`,

@@ -14,6 +14,7 @@ stages:
   npmcheck: nix-shell $CI_PROJECT_DIR/shell.nix --run "npm run check"
   buninstall: nix-shell $CI_PROJECT_DIR/shell.nix --run "bun install"
   buncheck: nix-shell $CI_PROJECT_DIR/shell.nix --run "bun run check"
+  buntest: nix-shell $CI_PROJECT_DIR/shell.nix --run "bun run test"
 
 default:
   image: nixos/nix:2.19.2
@@ -28,8 +29,8 @@ check-gateway:
   stage: check
   script:
     - cd $CI_PROJECT_DIR/services/gateway
-    - !reference [.setup, npmci]
-    - !reference [.setup, npmcheck]
+    - !reference [.setup, buninstall]
+    - !reference [.setup, buncheck]
   cache:
     key:
       files:
@@ -80,8 +81,8 @@ test-gateway:
   stage: check
   script:
     - cd services/gateway
-    - !reference [.setup, npmci]
-    - !reference [.setup, npmcheck]
+    - !reference [.setup, buninstall]
+    - !reference [.setup, buntest]
   cache: !reference [check-gateway, cache]
 
 #  ____  _   _ ___ _     ____

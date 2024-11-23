@@ -55,33 +55,33 @@ let documents = await (what === 'organizations'
       take: Number.MAX_SAFE_INTEGER,
     })
   : what === 'channels'
-  ? prisma.channel.findMany({
-      select: { id: true },
-      take: Number.MAX_SAFE_INTEGER,
-    })
-  : prisma.uploadRecord.findMany({
-      select: { id: true },
-      take: Number.MAX_SAFE_INTEGER,
-      where: {
-        transcodingFinishedAt: { not: null },
-        transcribingFinishedAt: { not: null },
-        ...(slugs
-          ? {
-              channel: {
-                slug: { in: slugs },
-              },
-            }
-          : {}),
-        ...(dateStart && dateEnd
-          ? {
-              createdAt: {
-                gte: new Date(dateStart),
-                lte: new Date(dateEnd),
-              },
-            }
-          : {}),
-      },
-    }));
+    ? prisma.channel.findMany({
+        select: { id: true },
+        take: Number.MAX_SAFE_INTEGER,
+      })
+    : prisma.uploadRecord.findMany({
+        select: { id: true },
+        take: Number.MAX_SAFE_INTEGER,
+        where: {
+          transcodingFinishedAt: { not: null },
+          transcribingFinishedAt: { not: null },
+          ...(slugs
+            ? {
+                channel: {
+                  slug: { in: slugs },
+                },
+              }
+            : {}),
+          ...(dateStart && dateEnd
+            ? {
+                createdAt: {
+                  gte: new Date(dateStart),
+                  lte: new Date(dateEnd),
+                },
+              }
+            : {}),
+        },
+      }));
 
 if (scope === 'missing') {
   documents = await pFilter(
