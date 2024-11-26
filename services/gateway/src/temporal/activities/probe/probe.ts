@@ -43,12 +43,13 @@ export default async function probe(
     await mkdirp(workingDir);
 
     const downloadPath = join(workingDir, 'download');
-    await streamObjectToFile('INGEST', s3UploadKey, downloadPath, () =>
-      Context.current().heartbeat('download'),
-    );
     const uploadSizeBytes = (await headObject('INGEST', s3UploadKey))
       ?.ContentLength;
     invariant(uploadSizeBytes, 'Invalid uploadSizeBytes');
+    await streamObjectToFile('INGEST', s3UploadKey, downloadPath, {
+      heartbeat: () => Context.current().heartbeat('download'),
+      Range: `bytes=0-${Math.min(5 * 1024 ** 2 - 1, uploadSizeBytes - 1)}`,
+    });
     await mkdirp(workingDir);
 
     activityLogger.info(`Probing ${downloadPath}`);

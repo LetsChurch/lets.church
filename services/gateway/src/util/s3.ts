@@ -9,6 +9,7 @@ import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
   GetObjectCommand,
+  GetObjectCommandInput,
   ListObjectsV2Command,
   PutObjectCommand,
   S3,
@@ -242,10 +243,18 @@ export async function streamObjectToFile(
   from: Client,
   key: string,
   path: string,
-  heartbeat?: (arg: string) => unknown,
+  extra?:
+    | (Omit<GetObjectCommandInput, 'Bucket' | 'Key'> & {
+        heartbeat?: (arg: string) => unknown;
+      })
+    | ((arg: string) => unknown),
 ) {
   const { client, bucket } = getClientAndBucket(from);
-  const cmd = new GetObjectCommand({ Bucket: bucket, Key: key });
+  const { getArgs, heartbeat } =
+    typeof extra === 'function'
+      ? { getArgs: {}, heartbeat: extra }
+      : { getArgs: extra, heartbeat: undefined };
+  const cmd = new GetObjectCommand({ Bucket: bucket, Key: key, ...getArgs });
   const res = await client.send(cmd);
 
   invariant(res.Body, 'No body in response!');
