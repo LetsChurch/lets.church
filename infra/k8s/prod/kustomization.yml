@@ -25,6 +25,9 @@ secretGenerator:
   - name: axiom-secret
     envs:
       - axiom.crypt.env
+  - name: axiom-syslog-proxy
+    envs:
+      - axiom-syslog-proxy.crypt.env
   - name: cf-tunnel-secret
     envs:
       - cf-tunnel.crypt.env

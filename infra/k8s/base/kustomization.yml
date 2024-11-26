@@ -1,7 +1,8 @@
 resources:
   - config.yml
-  - gateway-deployment.yml
+  - axiom-syslog-proxy-deployment.yml
   - elasticsearch-deployment.yml
+  - gateway-deployment.yml
   - imgproxy-deployment.yml
   - kibana-deployment.yml
   - listmonk-deployment.yml
