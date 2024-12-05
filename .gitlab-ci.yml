@@ -68,8 +68,8 @@ check-scripts:
   stage: check
   script:
     - cd $CI_PROJECT_DIR/scripts
-    - !reference [.setup, npmci]
-    - !reference [.setup, npmcheck]
+    - !reference [.setup, buninstall]
+    - !reference [.setup, buncheck]
   cache:
     key:
       files:
