@@ -1,0 +1,69 @@
+name: Check
+
+on: ["push", "pull_request"]
+
+jobs:
+  gateway:
+    runs-on: depot-ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.1.34"
+      - name: Check gateway
+        working-directory: ./services/gateway
+        run: |
+          bun install
+          bun run check
+  web:
+    runs-on: depot-ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.18.0"
+          cache: "npm"
+          cache-dependency-path: ./apps/web/package-lock.json
+      - name: Check web
+        working-directory: ./apps/web
+        run: |
+          npm ci
+          npm run check
+  web-next:
+    runs-on: depot-ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.1.34"
+      - name: Check web-next
+        working-directory: ./apps/web-next
+        run: |
+          bun install
+          bun run check
+  scripts:
+    runs-on: depot-ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.18.0"
+          cache: "npm"
+          cache-dependency-path: ./scripts/package-lock.json
+      - name: Check Scripts
+        working-directory: ./scripts
+        run: |
+          npm ci
+          npm run check
+  gateway-test:
+    runs-on: depot-ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.1.34"
+      - name: Test gateway
+        working-directory: ./services/gateway
+        run: |
+          bun install
+          bun run check
