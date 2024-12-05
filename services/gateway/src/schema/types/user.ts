@@ -373,10 +373,10 @@ builder.mutationFields((t) => ({
       if (args.subscribeToNewsletter) {
         const form = new FormData();
         form.set('email', email);
-        await fetch(
-          envariant('VITE_LISTMONK_INTERNAL_URL') + '/subscription/form',
-          { method: 'POST', body: form },
-        );
+        await fetch(envariant('LISTMONK_INTERNAL_URL') + '/subscription/form', {
+          method: 'POST',
+          body: form,
+        });
       }
 
       return user;
