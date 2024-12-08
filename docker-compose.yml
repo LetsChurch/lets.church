@@ -10,10 +10,10 @@ volumes:
   transcribe-worker-node-modules:
   web-go-node-modules:
   web-node-modules:
+  web-astro-node-modules:
   web-next-node-modules:
   web-next-dot-output:
   web-next-dot-vinxi:
-  web-astro-node-modules:
 
 x-s3-env: &s3-env
   S3_INGEST_REGION: ${S3_INGEST_REGION}
@@ -99,26 +99,35 @@ services:
     depends_on:
       - postgres
       - elasticsearch
-  # web-astro:
-  #   build:
-  #     context: ./apps/web-astro
-  #     dockerfile: Dockerfile
-  #   command: npm run dev
-  #   restart: unless-stopped
-  #   ports:
-  #     - 127.0.0.1:${HOST_WEB_NEXT_PORT}:4321
-  #   environment:
-  #     NODE_ENV: development
-  #     COOKIE_SECRET: ${WEB_COOKIE_SECRET}
-  #     GRAPHQL_URL: http://gateway:3000/graphql
-  #     PUBLIC_MAPBOX_MAP_TOKEN: ${MAPBOX_MAP_TOKEN}
-  #     PUBLIC_MAPBOX_SEARCHBOX_TOKEN: ${MAPBOX_SEARCHBOX_TOKEN}
-  #     TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA"
-  #   volumes:
-  #     - ./apps/web-astro:/home/node/app
-  #     - web-astro-node-modules:/home/node/app/node_modules
-  #   depends_on:
-  #     - gateway
+  web-astro:
+    build:
+      context: ./apps/web-astro
+      dockerfile: Dockerfile
+    command: bun run dev --host
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:${HOST_WEB_ASTRO_PORT}:4321
+    environment:
+      NODE_ENV: development
+      COOKIE_SECRET: ${WEB_COOKIE_SECRET}
+      DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
+      GRAPHQL_URL: http://gateway:3000/graphql
+      HOST: 0.0.0.0
+      IMGPROXY_KEY: ${IMGPROXY_KEY}
+      IMGPROXY_SALT: ${IMGPROXY_SALT}
+      IMGPROXY_URL: ${IMGPROXY_URL}
+      LISTMONK_INTERNAL_URL: http://listmonk:9000
+      MEDIA_URL: ${MEDIA_URL}
+      PUBLIC_MAPBOX_MAP_TOKEN: ${MAPBOX_MAP_TOKEN}
+      PUBLIC_MAPBOX_SEARCHBOX_TOKEN: ${MAPBOX_SEARCHBOX_TOKEN}
+      PUBLIC_URL: ${HOST_WEB_GO_URL}
+      TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA"
+      ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
+    volumes:
+      - ./apps/web-astro:/home/bun/app
+      - web-astro-node-modules:/home/bun/app/node_modules
+    depends_on:
+      - gateway
 
   gateway:
     build:

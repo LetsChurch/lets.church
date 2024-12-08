@@ -1,6 +1,0 @@
-dist
-node_modules
-public/site.webmanifest
-.astro
-package-lock.json
-src/graphql-env.d.ts
