@@ -43,20 +43,20 @@ temporal *args:
   docker-compose exec temporal-admin-tools temporal {{args}}
 
 gateway-db-push:
-  docker-compose exec gateway npm run prisma:db:push
+  docker-compose exec gateway bun run prisma:db:push
 
 gateway-db-reset:
-  docker-compose exec gateway npm run prisma:migrate:reset
+  docker-compose exec gateway bun run prisma:migrate:reset
   docker-compose restart postgres
 
 gateway-prisma-generate:
-  docker-compose exec gateway npm run prisma:migrate:dev
+  docker-compose exec gateway bun run prisma:migrate:dev
 
 gateway-es-push-mappings:
-  docker-compose exec gateway npm run es:push-mappings
+  docker-compose exec gateway bun run es:push-mappings
 
 gateway-migrate-dev:
-  docker-compose exec gateway npm run prisma:migrate:dev
+  docker-compose exec gateway bun run prisma:migrate:dev
   cd services/gateway; npm run prisma:generate
 
 gateway-schedule:
@@ -116,7 +116,7 @@ npmci-web-qwik:
 npmci: npmci-gateway npmci-web npmci-web-next npmci-web-qwik npmci-scripts
 
 seed-db:
-  docker-compose exec gateway npm run prisma:db:seed
+  docker-compose exec gateway bun run prisma:db:seed
 seed-s3-ingest:
   rclone sync --fast-list --checksum -P ./seed-data/lcdevs3/letschurch-dev-ingest lcdevs3:letschurch-dev-ingest
 seed-s3-public:
@@ -125,7 +125,7 @@ seed-s3: seed-s3-ingest seed-s3-public
 seed: seed-s3 seed-db
 
 truncate:
-  docker-compose exec gateway npm run prisma:db:truncate
+  docker-compose exec gateway bun run prisma:db:truncate
 
 check-gateway:
   cd services/gateway; npm run check
