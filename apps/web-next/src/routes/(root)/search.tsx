@@ -17,14 +17,14 @@ import {
   A,
   type RouteDefinition,
   type Location,
-  cache,
-  useLocation,
   createAsync,
+  useLocation,
+  query,
 } from '@solidjs/router';
 import type { SearchQuery, SearchQueryVariables } from './__generated__/search';
 import Pagination from '~/components/pagination';
 import { SearchFocus, SearchOrder } from '~/__generated__/graphql-types';
-import { cn, formatTime } from '~/util';
+import { cn, formatTime, unwrapFirst } from '~/util';
 import FloatingDiv from '~/components/floating-div';
 import NavigatingBooleans from '~/components/navigating-booleans';
 import NavigatingChecklist from '~/components/navigating-checklist';
@@ -40,7 +40,7 @@ import { getAuthenticatedClient } from '~/util/gql/server';
 
 const PAGE_SIZE = 20;
 
-const loadData = cache(async function (
+const loadData = query(async function (
   q = '',
   focus = 'uploads',
   after: string | null = null,
@@ -173,13 +173,14 @@ const loadData = cache(async function (
 
 function getRouteArgs(location: Location) {
   return [
-    location.query['q'],
-    location.query['focus'],
-    location.query['after'],
-    location.query['before'],
-    location.query['publishedAt'],
-    location.query['orderBy'],
-    location.query['channels']?.split(',').filter(Boolean),
+    unwrapFirst(location.query['q']),
+    unwrapFirst(location.query['focus']),
+    unwrapFirst(location.query['after']),
+    unwrapFirst(location.query['before']),
+    unwrapFirst(location.query['publishedAt']),
+    unwrapFirst(location.query['orderBy']),
+    // TODO: use standard query parsing
+    unwrapFirst(location.query['channels'])?.split(',').filter(Boolean),
     (location.query['transcriptPhraseSearch'] ?? 'true') === 'true',
   ] as const;
 }
@@ -348,7 +349,8 @@ export default function SearchRoute() {
     new URLSearchParams(location.search).get('channels')?.split(',').length ??
     0;
   const channelsValues = () =>
-    location.query['channels']?.split(',').filter(Boolean) ?? [];
+    // TODO: use standard query parsing
+    unwrapFirst(location.query['channels'])?.split(',').filter(Boolean) ?? [];
   const channelsOptions = () =>
     data()?.search.aggs.channels.map(({ channel }) => ({
       label: channel.name,
@@ -404,7 +406,7 @@ export default function SearchRoute() {
           >
             {({ title, focus, count }) => (
               <AggFilterLink
-                q={location.query['q'] ?? ''}
+                q={unwrapFirst(location.query['q']) ?? ''}
                 focus={focus}
                 title={title}
                 count={count}

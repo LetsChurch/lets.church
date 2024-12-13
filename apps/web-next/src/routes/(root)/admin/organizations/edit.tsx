@@ -1,13 +1,13 @@
 import { gql } from 'graphql-request';
 import * as z from 'zod';
 import { Show } from 'solid-js';
-import { decodeJwt } from 'jose';
+// import { decodeJwt } from 'jose';
 import {
   action,
-  cache,
   createAsync,
   redirect,
-  useSubmission,
+  // useSubmission,
+  query,
 } from '@solidjs/router';
 import { getRequestEvent } from 'solid-js/web';
 import {
@@ -16,7 +16,7 @@ import {
   AdminUpsertOrganizationMutation,
   AdminUpsertOrganizationMutationVariables,
 } from './__generated__/edit';
-import { UpsertForm } from '~/components/admin/upsert-form';
+// import { UpsertForm } from '~/components/admin/upsert-form';
 import { PageHeading } from '~/components/page-heading';
 import { getAdminClientOrRedirect } from '~/util/gql/server';
 
@@ -28,16 +28,16 @@ const UpsertOrganizationSchema = z.object({
   addressJwt: z.string().nullable(),
 });
 
-const ParseJwtSchema = z.object({
-  label: z.string(),
-});
+// const ParseJwtSchema = z.object({
+//   label: z.string(),
+// });
 
-function renderLabelFromJwt(jwt: string) {
-  const decoded = decodeJwt(jwt);
-  return ParseJwtSchema.parse(decoded).label;
-}
-
-const loadOrganization = cache(async () => {
+// function renderLabelFromJwt(jwt: string) {
+//   const decoded = decodeJwt(jwt);
+//   return ParseJwtSchema.parse(decoded).label;
+// }
+//
+const loadOrganization = query(async () => {
   'use server';
   const event = getRequestEvent();
   const url = new URL(event?.request.url ?? '');
@@ -129,7 +129,7 @@ const upsertOrganization = action(async (form: FormData) => {
 
 export default function AdminOrganizationsEditRoute() {
   const data = createAsync(() => loadOrganization());
-  const submission = useSubmission(upsertOrganization);
+  // const submission = useSubmission(upsertOrganization);
 
   return (
     <>
@@ -141,41 +141,42 @@ export default function AdminOrganizationsEditRoute() {
         <Show when={data()?.organizationById?.id} keyed>
           {(id) => <input type="hidden" name="organizationId" value={id} />}
         </Show>
-        <UpsertForm
-          sections={[
-            {
-              title: 'Meta',
-              fields: [
-                { type: 'text', name: 'name', label: 'Name' },
-                {
-                  type: 'select',
-                  name: 'type',
-                  label: 'Type',
-                  options: [
-                    { label: 'Church', value: 'CHURCH' },
-                    { label: 'Ministry', value: 'MINISTRY' },
-                  ],
-                },
-                { type: 'text', name: 'slug', label: 'Slug' },
-                {
-                  type: 'autocomplete',
-                  name: 'addressJwt',
-                  label: 'New Address (tmp: move to own page)',
-                  getOptions: async () => [],
-                  // TODO: maybe just one prop: valueAsString?
-                  renderValue: (val) => (val ? renderLabelFromJwt(val) : ''),
-                  renderMenuValue: (val) => renderLabelFromJwt(val),
-                },
-              ],
-            },
-          ]}
-          defaultValues={{
-            name: data()?.organizationById?.name ?? '',
-            type: data()?.organizationById?.type ?? 'MINISTRY',
-            slug: data()?.organizationById?.slug ?? '',
-          }}
-          submitting={submission.pending}
-        />
+        <h1>TODO</h1>
+        {/* <UpsertForm */}
+        {/*   sections={[ */}
+        {/*     { */}
+        {/*       title: 'Meta', */}
+        {/*       fields: [ */}
+        {/*         { type: 'text', name: 'name', label: 'Name' }, */}
+        {/*         { */}
+        {/*           type: 'select', */}
+        {/*           name: 'type', */}
+        {/*           label: 'Type', */}
+        {/*           options: [ */}
+        {/*             { label: 'Church', value: 'CHURCH' }, */}
+        {/*             { label: 'Ministry', value: 'MINISTRY' }, */}
+        {/*           ], */}
+        {/*         }, */}
+        {/*         { type: 'text', name: 'slug', label: 'Slug' }, */}
+        {/*         { */}
+        {/*           type: 'autocomplete', */}
+        {/*           name: 'addressJwt', */}
+        {/*           label: 'New Address (tmp: move to own page)', */}
+        {/*           getOptions: async () => [], */}
+        {/*           // TODO: maybe just one prop: valueAsString? */}
+        {/*           renderValue: (val) => (val ? renderLabelFromJwt(val) : ''), */}
+        {/*           renderMenuValue: (val) => renderLabelFromJwt(val), */}
+        {/*         }, */}
+        {/*       ], */}
+        {/*     }, */}
+        {/*   ]} */}
+        {/*   defaultValues={{ */}
+        {/*     name: data()?.organizationById?.name ?? '', */}
+        {/*     type: data()?.organizationById?.type ?? 'MINISTRY', */}
+        {/*     slug: data()?.organizationById?.slug ?? '', */}
+        {/*   }} */}
+        {/*   submitting={submission.pending} */}
+        {/* /> */}
       </form>
     </>
   );

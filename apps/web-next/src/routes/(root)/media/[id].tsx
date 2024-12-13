@@ -12,14 +12,14 @@ import { gql } from 'graphql-request';
 import {
   type RouteDefinition,
   action,
-  cache,
   createAsync,
   redirect,
   useLocation,
   useParams,
   useSubmission,
-  A,
   useAction,
+  query,
+  A,
 } from '@solidjs/router';
 import { Title } from '@solidjs/meta';
 import type {
@@ -73,7 +73,7 @@ const recordView = async (id: string) => {
   return res;
 };
 
-const loadMediaMetadata = cache(async (id: string) => {
+const loadMediaMetadata = query(async (id: string) => {
   'use server';
   const event = getRequestEvent();
   const url = new URL(event?.request.url ?? '');

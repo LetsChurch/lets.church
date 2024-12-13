@@ -1,6 +1,6 @@
 import { gql } from 'graphql-request';
 import { ParentProps } from 'solid-js';
-import { type RouteDefinition, cache, createAsync } from '@solidjs/router';
+import { type RouteDefinition, createAsync, query } from '@solidjs/router';
 import { Title } from '@solidjs/meta';
 import type { MeQuery } from './__generated__/(root)';
 import Footer from '~/components/footer';
@@ -11,7 +11,7 @@ import MediaHeader from '~/components/media/header';
 import { isChurchesPage } from '~/util/routing';
 import { cn } from '~/util';
 
-const getMe = cache(async function () {
+const getMe = query(async function () {
   'use server';
   const client = await getAuthenticatedClient();
 

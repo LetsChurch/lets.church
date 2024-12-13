@@ -1,6 +1,7 @@
 import { useSearchParams } from '@solidjs/router';
 import { clientOnly } from '@solidjs/start';
 import { Delay } from '~/components/delay';
+import { unwrapFirst } from '~/util';
 
 const Client = clientOnly(async () => {
   return import('~/components/churches/churches');
@@ -9,7 +10,7 @@ const Client = clientOnly(async () => {
 export default function EmbedChurchesRoute() {
   const [searchParams] = useSearchParams();
 
-  const hidden = searchParams['hidden']?.split(',') ?? [];
+  const hidden = unwrapFirst(searchParams['hidden'])?.split(',') ?? [];
 
   return (
     <Client

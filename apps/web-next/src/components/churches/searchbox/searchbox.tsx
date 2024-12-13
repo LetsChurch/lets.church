@@ -27,7 +27,7 @@ import {
 import { TagsMenu, useParsedTags, tagSlug, tagsState } from './tags';
 import { optionId } from './util';
 import { OrganizationTag } from '~/__generated__/graphql-types';
-import type { Optional } from '~/util';
+import { unwrapFirst, type Optional } from '~/util';
 
 const hiddenOrganization = 'organization';
 
@@ -152,7 +152,7 @@ export default function Searchbox(props: { hidden?: Optional<Array<string>> }) {
     } else if (chiclet.slug === organizationSlug) {
       onClearOrganization();
     } else {
-      const newTags = searchParams[tagSlug]
+      const newTags = unwrapFirst(searchParams[tagSlug])
         ?.split(',')
         .filter((t) => t !== chiclet.slug);
       setSearchParams({
@@ -231,7 +231,7 @@ export default function Searchbox(props: { hidden?: Optional<Array<string>> }) {
       } else if (slug === 'organization') {
         onClearOrganization();
       } else if (slug) {
-        const newTags = searchParams[tagSlug]
+        const newTags = unwrapFirst(searchParams[tagSlug])
           ?.split(',')
           .filter((t) => t !== slug);
         setSearchParams({

@@ -10,7 +10,7 @@ import {
   type Input,
 } from 'valibot';
 import { useSearchParams } from '@solidjs/router';
-import { type Optional, cn } from '../../../util';
+import { type Optional, cn, unwrapFirst } from '../../../util';
 import ListHeading from './list-heading';
 import { getMenuColorClass, optionId } from './util';
 import ResultRow from './result-row';
@@ -101,10 +101,10 @@ export const useParsedLocation = () => {
       searchParams['range'] ??
       (searchParams['center'] ? defaultRange : '25000 mi'),
     center:
-      (searchParams['center']?.split(',').map(parseFloat).slice(0, 2) as [
-        number,
-        number,
-      ]) ?? murica,
+      (unwrapFirst(searchParams['center'])
+        ?.split(',')
+        .map(parseFloat)
+        .slice(0, 2) as [number, number]) ?? murica,
   }));
 
   return parsed;
@@ -125,7 +125,7 @@ export function locationState(clearInput: () => unknown) {
   const [searchParams, setSearchParams] = useSearchParams();
 
   onMount(async () => {
-    const center = searchParams['center'];
+    const center = unwrapFirst(searchParams['center']);
 
     if (center) {
       const res = await reverseGeocode(

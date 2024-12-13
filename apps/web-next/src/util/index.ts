@@ -63,3 +63,7 @@ export function useLoginLocation() {
 export function easeOutExpo(x: number): number {
   return x === 1 ? 1 : 1 - Math.pow(2, -10 * x);
 }
+
+export function unwrapFirst(val?: string | string[] | null): string | null {
+  return Array.isArray(val) ? (val[0] ?? null) : (val ?? null);
+}

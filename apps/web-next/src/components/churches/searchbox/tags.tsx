@@ -1,7 +1,7 @@
 import { For, Show, createMemo, createSignal, onMount } from 'solid-js';
 import { useSearchParams } from '@solidjs/router';
 import { gql } from 'graphql-request';
-import { type Optional, cn } from '../../../util';
+import { type Optional, cn, unwrapFirst } from '../../../util';
 import ListHeading from './list-heading';
 import { getMenuColorClass, getOrgTagCategoryLabel, optionId } from './util';
 import ResultRow from './result-row';
@@ -18,7 +18,7 @@ export const useParsedTags = () => {
   const [searchParams] = useSearchParams();
 
   const parsed = createMemo(() => ({
-    tags: searchParams['tag']?.split(',') ?? [],
+    tags: unwrapFirst(searchParams['tag'])?.split(',') ?? [],
   }));
 
   return parsed;
@@ -131,7 +131,7 @@ export function TagsMenu(props: {
   const [searchParams, setSearchParams] = useSearchParams();
 
   function addTag(tag: OrganizationTagQueryNode) {
-    const tags = searchParams[tagSlug]?.split(',') ?? [];
+    const tags = unwrapFirst(searchParams[tagSlug])?.split(',') ?? [];
     tags.push(tag.slug);
     setSearchParams({ [tagSlug]: tags.join(',') });
     props.clearInput();

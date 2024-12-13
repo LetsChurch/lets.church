@@ -1,5 +1,5 @@
 import { gql } from 'graphql-request';
-import { type RouteDefinition, cache, createAsync, A } from '@solidjs/router';
+import { type RouteDefinition, A, createAsync, query } from '@solidjs/router';
 import { getRequestEvent } from 'solid-js/web';
 import {
   AdminUsersRouteQuery,
@@ -13,7 +13,7 @@ import Pagination from '~/components/pagination';
 
 const PAGE_SIZE = 60;
 
-const loadUsers = cache(async () => {
+const loadUsers = query(async () => {
   'use server';
   const event = getRequestEvent();
   const url = new URL(event?.request.url ?? '');

@@ -1,13 +1,13 @@
 import { gql } from 'graphql-request';
 import humanFormat from 'human-format';
-import { cache, createAsync } from '@solidjs/router';
+import { query, createAsync } from '@solidjs/router';
 import type {
   AboutPageDataQuery,
   AboutPageDataQueryVariables,
 } from './__generated__/about-stats';
 import { getAuthenticatedClient } from '~/util/gql/server';
 
-const getData = cache(async () => {
+const getData = query(async () => {
   'use server';
   const client = await getAuthenticatedClient();
 

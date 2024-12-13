@@ -4,11 +4,11 @@ import { Show } from 'solid-js';
 import {
   type RouteDefinition,
   action,
-  cache,
   createAsync,
   redirect,
   useSubmission,
   useLocation,
+  query,
 } from '@solidjs/router';
 import {
   AdminChannelEditRouteDataQuery,
@@ -19,6 +19,7 @@ import {
 import { UpsertForm } from '~/components/admin/upsert-form';
 import { PageHeading } from '~/components/page-heading';
 import { getAdminClientOrRedirect } from '~/util/gql/server';
+import { unwrapFirst } from '~/util';
 
 const UpsertChannelSchema = z.object({
   channelId: z.string().nullable(),
@@ -27,7 +28,7 @@ const UpsertChannelSchema = z.object({
   description: z.string().nullable(),
 });
 
-const loadChannel = cache(async (id: string | null) => {
+const loadChannel = query(async (id: string | null) => {
   'use server';
   const client = await getAdminClientOrRedirect();
 
@@ -56,7 +57,7 @@ const loadChannel = cache(async (id: string | null) => {
 
 export const route = {
   load: ({ location }) => {
-    void loadChannel(location.query['id'] ?? null);
+    void loadChannel(unwrapFirst(location.query['id']));
   },
 } satisfies RouteDefinition;
 
@@ -99,7 +100,9 @@ const upsertChannel = action(async (form: FormData) => {
 
 export default function AdminChannelsEditRoute() {
   const location = useLocation();
-  const data = createAsync(() => loadChannel(location.query['id'] ?? null));
+  const data = createAsync(() =>
+    loadChannel(unwrapFirst(location.query['id'])),
+  );
   const submission = useSubmission(upsertChannel);
 
   return (

@@ -2,6 +2,7 @@ import { type JSX, splitProps } from 'solid-js';
 import { useLocation, useNavigate } from '@solidjs/router';
 import { Button, Input } from './form';
 import { setQueryParams } from '~/util/url';
+import { unwrapFirst } from '~/util';
 
 export type Props = JSX.IntrinsicElements['div'] & {
   min?: Date | null;
@@ -32,7 +33,7 @@ export default function NavigatingDateRange(props: Props) {
 
   const currentValues = () => {
     const [min = dateToIso(local.min), max = dateToIso(local.max)] =
-      loc.query[local.queryKey]?.split('/').filter(Boolean) ?? [];
+      unwrapFirst(loc.query[local.queryKey])?.split('/').filter(Boolean) ?? [];
     return { min, max };
   };
 

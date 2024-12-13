@@ -4,9 +4,9 @@ import delay from 'delay';
 import { gql } from 'graphql-request';
 import {
   action,
-  cache,
   createAsync,
   type RouteDefinition,
+  query,
 } from '@solidjs/router';
 import type {
   CreateAvatarUploadMutation,
@@ -45,7 +45,7 @@ const fields: Array<DatalistField> = [
   },
 ];
 
-const loadData = cache(async () => {
+const loadData = query(async () => {
   'use server';
   const client = await getAuthenticatedClientOrRedirect();
   return await client.request<

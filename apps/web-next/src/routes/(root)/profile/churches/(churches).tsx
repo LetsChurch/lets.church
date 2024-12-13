@@ -1,5 +1,5 @@
 import { For } from 'solid-js';
-import { type RouteDefinition, cache, createAsync, A } from '@solidjs/router';
+import { type RouteDefinition, A, createAsync, query } from '@solidjs/router';
 import { gql } from 'graphql-request';
 import type {
   MyChurchesQuery,
@@ -8,7 +8,7 @@ import type {
 import { PageHeading } from '~/components/page-heading';
 import { getAuthenticatedClientOrRedirect } from '~/util/gql/server';
 
-const loadChurches = cache(async () => {
+const loadChurches = query(async () => {
   'use server';
   const client = await getAuthenticatedClientOrRedirect();
 

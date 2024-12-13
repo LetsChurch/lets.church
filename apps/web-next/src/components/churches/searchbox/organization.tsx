@@ -1,7 +1,7 @@
 import { For, Show, createMemo, createSignal, onMount } from 'solid-js';
 import { useSearchParams } from '@solidjs/router';
 import { gql } from 'graphql-request';
-import { type Optional, cn } from '../../../util';
+import { type Optional, cn, unwrapFirst } from '../../../util';
 import ListHeading from './list-heading';
 import ResultRow from './result-row';
 import { getMenuColorClass, optionId } from './util';
@@ -104,7 +104,7 @@ export function organizationState(clearInput: () => unknown) {
     const orgId = searchParams[organizationSlug];
 
     if (orgId) {
-      const res = await fetchOrganization(orgId);
+      const res = await fetchOrganization(unwrapFirst(orgId) ?? '');
       setOrganizationLabel(res.name);
     }
   });

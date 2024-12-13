@@ -1,9 +1,9 @@
 import { gql } from 'graphql-request';
 import {
   type RouteDefinition,
-  cache,
-  useLocation,
   createAsync,
+  useLocation,
+  query,
 } from '@solidjs/router';
 import type {
   TrendingRouteDataQuery,
@@ -13,10 +13,11 @@ import { getAuthenticatedClientOrRedirect } from '~/util/gql/server';
 import { UploadCardFields } from '~/util/gql/fragments';
 import { UploadGrid } from '~/components/upload-grid';
 import Pagination from '~/components/pagination';
+import { unwrapFirst } from '~/util';
 
 const PAGE_SIZE = 60;
 
-const loadData = cache(async function (
+const loadData = query(async function (
   after: string | null,
   before: string | null,
 ) {
@@ -68,8 +69,8 @@ const loadData = cache(async function (
 export const route = {
   load: ({ location }) => {
     void loadData(
-      location.query['after'] ?? null,
-      location.query['before'] ?? null,
+      unwrapFirst(location.query['after']),
+      unwrapFirst(location.query['before']),
     );
   },
 } satisfies RouteDefinition;
@@ -77,7 +78,10 @@ export const route = {
 export default function TrendingRoute() {
   const location = useLocation();
   const data = createAsync(() =>
-    loadData(location.query['after'] ?? null, location.query['before'] ?? null),
+    loadData(
+      unwrapFirst(location.query['after']),
+      unwrapFirst(location.query['before']),
+    ),
   );
 
   return (

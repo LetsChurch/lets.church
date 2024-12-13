@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from '@solidjs/router';
 import { For, type JSX, splitProps } from 'solid-js';
+import { unwrapFirst } from '~/util';
 import { setQueryParams } from '~/util/url';
 
 type Link = { label: string; value: string; checked: boolean };
@@ -16,7 +17,7 @@ export default function NavigatingChecklist(props: Props) {
   const loc = useLocation();
 
   const currentValues = () =>
-    loc.query[local.queryKey]?.split(',').filter(Boolean) ?? [];
+    unwrapFirst(loc.query[local.queryKey])?.split(',').filter(Boolean) ?? [];
 
   function onChange({ value, checked }: { value: string; checked: boolean }) {
     navigate(

@@ -1,8 +1,8 @@
 import {
   type RouteDefinition,
-  cache,
   useParams,
   createAsync,
+  query,
 } from '@solidjs/router';
 import WorldIcon from '@tabler/icons/outline/world.svg?component-solid';
 import MailIcon from '@tabler/icons/outline/mail.svg?component-solid';
@@ -19,7 +19,7 @@ import { Avatar } from '~/components/avatar';
 import Chiclet from '~/components/churches/searchbox/chiclet';
 import { OrganizationAddressType } from '~/__generated__/graphql-types';
 
-const loadChurch = cache(async (slug: string) => {
+const loadChurch = query(async (slug: string) => {
   'use server';
   invariant(slug, 'Missing slug');
 

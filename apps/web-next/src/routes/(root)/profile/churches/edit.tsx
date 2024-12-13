@@ -1,9 +1,9 @@
 import { Show } from 'solid-js';
 import {
   type RouteDefinition,
-  cache,
   createAsync,
   useLocation,
+  query,
 } from '@solidjs/router';
 import { gql } from 'graphql-request';
 import invariant from 'tiny-invariant';
@@ -14,8 +14,9 @@ import {
 import { getAuthenticatedClientOrRedirect } from '~/util/gql/server';
 import { PageHeading } from '~/components/page-heading';
 import ChurchForm from '~/components/settings/church-form';
+import { unwrapFirst } from '~/util';
 
-const loadChurch = cache(async (id: string) => {
+const loadChurch = query(async (id: string) => {
   'use server';
   invariant(id, 'No ID provided');
 
@@ -96,7 +97,7 @@ const loadChurch = cache(async (id: string) => {
 
 export const route = {
   load: ({ location }) => {
-    const id = location.query['id'];
+    const id = unwrapFirst(location.query['id']);
     invariant(id, 'No ID provided');
     void loadChurch(id);
   },
@@ -104,7 +105,9 @@ export const route = {
 
 export default function AdminOrganizationsEditRoute() {
   const location = useLocation();
-  const data = createAsync(() => loadChurch(location.query['id'] ?? ''));
+  const data = createAsync(() =>
+    loadChurch(unwrapFirst(location.query['id']) ?? ''),
+  );
 
   return (
     <>

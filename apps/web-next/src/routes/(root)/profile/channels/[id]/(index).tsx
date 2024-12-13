@@ -1,7 +1,7 @@
 import { For } from 'solid-js';
 import invariant from 'tiny-invariant';
 import { gql } from 'graphql-request';
-import { type RouteDefinition, cache, createAsync } from '@solidjs/router';
+import { type RouteDefinition, createAsync, query } from '@solidjs/router';
 import { getRequestEvent } from 'solid-js/web';
 import type {
   ProfileChannelsQuery,
@@ -15,7 +15,7 @@ import { UploadCardFields } from '~/util/gql/fragments';
 
 const PAGE_SIZE = 60;
 
-const loadChannel = cache(async function () {
+const loadChannel = query(async function () {
   'use server';
   const event = getRequestEvent();
   const url = new URL(event?.request.url ?? '');

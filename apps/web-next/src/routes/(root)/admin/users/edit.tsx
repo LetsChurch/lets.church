@@ -4,10 +4,10 @@ import { Show } from 'solid-js';
 import {
   type RouteDefinition,
   createAsync,
-  cache,
   action,
   redirect,
   useSubmission,
+  query,
 } from '@solidjs/router';
 import { getRequestEvent } from 'solid-js/web';
 import {
@@ -30,7 +30,7 @@ const UpsertUserSchema = z.object({
   newPassword: z.string().nullable(),
 });
 
-const loadUser = cache(async () => {
+const loadUser = query(async () => {
   'use server';
   const event = getRequestEvent();
   const url = new URL(event?.request.url ?? '');

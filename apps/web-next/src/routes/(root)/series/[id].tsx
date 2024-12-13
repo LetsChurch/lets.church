@@ -3,9 +3,9 @@ import invariant from 'tiny-invariant';
 import { gql } from 'graphql-request';
 import {
   type RouteDefinition,
-  cache,
   createAsync,
   useParams,
+  query,
 } from '@solidjs/router';
 import { Title } from '@solidjs/meta';
 import type {
@@ -16,7 +16,7 @@ import { MediaRow, MediaRowFragment } from '~/components/media-row';
 import { getAuthenticatedClient } from '~/util/gql/server';
 import H1 from '~/components/content/h1';
 
-const loadData = cache(async function (id: string) {
+const loadData = query(async function (id: string) {
   'use server';
   const client = await getAuthenticatedClient();
 

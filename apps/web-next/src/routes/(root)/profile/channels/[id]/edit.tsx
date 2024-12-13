@@ -5,9 +5,9 @@ import { gql } from 'graphql-request';
 import { getRequestEvent } from 'solid-js/web';
 import {
   action,
-  cache,
   createAsync,
   type RouteDefinition,
+  query,
 } from '@solidjs/router';
 import type {
   CreateChannelFileUploadMutation,
@@ -28,7 +28,7 @@ import { UploadPostProcess } from '~/__generated__/graphql-types';
 import { doMultipartUpload } from '~/util/multipart-upload';
 import { Avatar } from '~/components/avatar';
 
-const loadChannel = cache(async () => {
+const loadChannel = query(async () => {
   'use server';
   const event = getRequestEvent();
   const url = new URL(event?.request.url ?? '');

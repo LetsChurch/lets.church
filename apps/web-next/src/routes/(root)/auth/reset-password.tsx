@@ -15,13 +15,14 @@ import { Button, LabeledInput } from '~/components/form';
 import { Turnstile } from '~/components/turnstile';
 import validateTurnstile from '~/util/server/validate-turnstile';
 import { getAuthenticatedClient } from '~/util/gql/server';
+import { unwrapFirst } from '~/util';
 
 const ResetPasswordSchema = z.object({
   id: z.string().uuid(),
   password: z.string(),
 });
 
-const routeData = async (id?: string) => {
+const routeData = async (id?: string | null) => {
   'use server';
   if (!id) {
     throw redirect('/');
@@ -60,7 +61,7 @@ const resetPassword = action(async (form: FormData) => {
 
 export default function ResetPasswordRoute() {
   const location = useLocation();
-  const data = createAsync(() => routeData(location.query['id']));
+  const data = createAsync(() => routeData(unwrapFirst(location.query['id'])));
   const submission = useSubmission(resetPassword);
 
   return (

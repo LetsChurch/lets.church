@@ -5,6 +5,7 @@ import {
   ChurchesDataQueryVariables,
 } from './__generated__/data';
 import { getAuthenticatedClient } from '~/util/gql/server';
+import { unwrapFirst } from '~/util';
 
 export async function getChurchesData(f: Filters) {
   'use server';
@@ -66,8 +67,8 @@ export async function getChurchesData(f: Filters) {
       {
         lon: f.center[0],
         lat: f.center[1],
-        range: f.range,
-        organization: f.organization ?? null,
+        range: unwrapFirst(f.range) ?? '',
+        organization: unwrapFirst(f.organization),
         tags: f.tags,
       },
     );

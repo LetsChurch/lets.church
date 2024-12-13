@@ -11,7 +11,6 @@ import { z } from 'zod';
 import invariant from 'tiny-invariant';
 import { gql } from 'graphql-request';
 import {
-  cache,
   redirect,
   createAsync,
   action,
@@ -19,6 +18,7 @@ import {
   type RouteDefinition,
   useLocation,
   useAction,
+  query,
 } from '@solidjs/router';
 import type {
   UploadRouteDataQuery,
@@ -38,7 +38,7 @@ import {
   UploadVisibility,
   type Channel,
 } from '~/__generated__/graphql-types';
-import { notEmpty, type Optional } from '~/util';
+import { notEmpty, unwrapFirst, type Optional } from '~/util';
 import { doMultipartUpload } from '~/util/multipart-upload';
 import { Input, Select, Button, Radios, Textarea } from '~/components/form';
 import { dateToIso8601 } from '~/util/date';
@@ -248,7 +248,7 @@ function getSections(
   ];
 }
 
-const routeData = cache(async (id: string | null) => {
+const routeData = query(async (id: string | null) => {
   'use server';
   const client = await getAuthenticatedClientOrRedirect();
   const res = await client.request<
@@ -304,7 +304,7 @@ const routeData = cache(async (id: string | null) => {
 
 export const route = {
   load: ({ location }) => {
-    void routeData(location.query['id'] ?? null);
+    void routeData(unwrapFirst(location.query['id']));
   },
 } satisfies RouteDefinition;
 
@@ -447,7 +447,7 @@ async function finalizeUpload(variables: FinalizeMediaUploadMutationVariables) {
 
 export default function UploadRoute() {
   const location = useLocation();
-  const data = createAsync(() => routeData(location.query['id'] ?? null));
+  const data = createAsync(() => routeData(unwrapFirst(location.query['id'])));
   const upsertAction = useAction(upsert);
   const upsertSubmission = useSubmission(upsert);
 

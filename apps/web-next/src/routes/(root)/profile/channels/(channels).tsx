@@ -1,12 +1,12 @@
 import { For } from 'solid-js';
 import { gql } from 'graphql-request';
-import { type RouteDefinition, cache, createAsync } from '@solidjs/router';
+import { type RouteDefinition, createAsync, query } from '@solidjs/router';
 import type { MyChannelsQuery } from './__generated__/(channels)';
 import ChannelCard from '~/components/channel-card';
 import { PageHeading } from '~/components/page-heading';
 import { getAuthenticatedClientOrRedirect } from '~/util/gql/server';
 
-const loadChannels = cache(async () => {
+const loadChannels = query(async () => {
   'use server';
   const client = await getAuthenticatedClientOrRedirect();
 

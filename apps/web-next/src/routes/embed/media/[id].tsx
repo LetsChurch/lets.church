@@ -1,8 +1,8 @@
 import {
   type RouteDefinition,
-  cache,
   createAsync,
   redirect,
+  query,
   useParams,
 } from '@solidjs/router';
 import { gql } from 'graphql-request';
@@ -15,7 +15,7 @@ import {
 import { getAuthenticatedClient } from '~/util/gql/server';
 import Player from '~/components/media/player';
 
-const loadMediaMetadata = cache(async (id: string) => {
+const loadMediaMetadata = query(async (id: string) => {
   'use server';
   invariant(id, 'Missing id');
 
