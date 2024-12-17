@@ -12,6 +12,7 @@ import {
 import type VideoJsPlayer from 'video.js/dist/types/player';
 import 'video.js/dist/video-js.css';
 import { isServer } from 'solid-js/web';
+import invariant from 'tiny-invariant';
 import {
   MediaRouteRecordViewRangesMutation,
   MediaRouteRecordViewRangesMutationVariables,
@@ -97,6 +98,8 @@ export default function Player(props: Props) {
       return;
     }
 
+    invariant(videoRef!, 'player reportTimeRanges: videoRef is undefined');
+
     try {
       const res = await recordViewRanges(
         id,
@@ -133,6 +136,8 @@ export default function Player(props: Props) {
         type: 'application/x-mpegURL',
       });
     }
+
+    invariant(videoRef!, 'player onMount: videoRef is undefined');
 
     player = videojs(
       videoRef,

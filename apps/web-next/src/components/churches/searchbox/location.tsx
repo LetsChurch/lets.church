@@ -7,7 +7,9 @@ import {
   parse,
   string,
   unknown,
-  type Input,
+  type InferInput,
+  looseObject,
+  objectWithRest,
 } from 'valibot';
 import { useSearchParams } from '@solidjs/router';
 import { type Optional, cn, unwrapFirst } from '../../../util';
@@ -23,41 +25,32 @@ const sessionToken = window.crypto.randomUUID();
 export const murica = [-97.9222112121185, 39.3812661305678] as [number, number];
 const defaultRange = '100 mi';
 
-const suggestionSchema = object(
-  {
-    name: string(),
-    feature_type: string(),
-    address: optional(string()),
-    full_address: optional(string()),
-    place_formatted: string(),
-    mapbox_id: string(),
-  },
-  unknown(),
-);
+const suggestionSchema = looseObject({
+  name: string(),
+  feature_type: string(),
+  address: optional(string()),
+  full_address: optional(string()),
+  place_formatted: string(),
+  mapbox_id: string(),
+});
 
-const locationSuggestSchema = object(
-  {
-    suggestions: array(suggestionSchema),
-  },
-  unknown(),
-);
+const locationSuggestSchema = looseObject({
+  suggestions: array(suggestionSchema),
+});
 
-const reverseGeocodeSchema = object(
-  {
-    features: array(
-      object(
-        {
-          place_name: string(),
-        },
-        unknown(),
-      ),
+const reverseGeocodeSchema = looseObject({
+  features: array(
+    objectWithRest(
+      {
+        place_name: string(),
+      },
+      unknown(),
     ),
-  },
-  unknown(),
-);
+  ),
+});
 
 async function reverseGeocode([long, lat]: [number, number]): Promise<
-  Input<typeof reverseGeocodeSchema>
+  InferInput<typeof reverseGeocodeSchema>
 > {
   const res = await fetch(
     `https://api.mapbox.com/geocoding/v5/mapbox.places/${long},${lat}.json?access_token=${mbAccessToken}`,
@@ -66,26 +59,25 @@ async function reverseGeocode([long, lat]: [number, number]): Promise<
   return parse(reverseGeocodeSchema, await res.json());
 }
 
-const retrieveSchema = object(
-  {
-    features: array(
-      object(
-        {
-          properties: object(
-            {
-              coordinates: object({ longitude: number(), latitude: number() }),
-            },
-            unknown(),
-          ),
-        },
-        unknown(),
-      ),
+const retrieveSchema = looseObject({
+  features: array(
+    objectWithRest(
+      {
+        properties: objectWithRest(
+          {
+            coordinates: object({ longitude: number(), latitude: number() }),
+          },
+          unknown(),
+        ),
+      },
+      unknown(),
     ),
-  },
-  unknown(),
-);
+  ),
+});
 
-async function retrieve(id: string): Promise<Input<typeof retrieveSchema>> {
+async function retrieve(
+  id: string,
+): Promise<InferInput<typeof retrieveSchema>> {
   const res = await fetch(
     `https://api.mapbox.com/search/searchbox/v1/retrieve/${id}?session_token=${sessionToken}&access_token=${mbAccessToken}`,
   );

@@ -144,8 +144,9 @@ export default function ChurchesApp(props: {
   }
 
   onMount(() => {
+    invariant(mapNode!, 'Map node should be defined');
     const map = new mapboxgl.Map({
-      container: mapNode,
+      container: mapNode!,
       style: 'mapbox://styles/mapbox/streets-v12',
       center: murica,
       zoom: 4,

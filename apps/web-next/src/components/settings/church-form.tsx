@@ -12,7 +12,8 @@ import {
   optional,
   parse,
   string,
-  type Input as VInput,
+  type InferInput,
+  pipe,
 } from 'valibot';
 import {
   For,
@@ -54,23 +55,25 @@ import { getAuthenticatedClientOrRedirect } from '~/util/gql/server';
 
 export const formSchema = object({
   id: optional(string()),
-  name: string([minLength(1, 'Please enter a name for your church.')]),
-  slug: string([minLength(3, 'Please enter a URL name for your church.')]),
+  name: pipe(string(), minLength(1, 'Please enter a name for your church.')),
+  slug: pipe(
+    string(),
+    minLength(3, 'Please enter a URL name for your church.'),
+  ),
   description: optional(nullable(string())),
   tags: optional(array(string())),
   websiteUrl: optional(nullable(string())),
-  primaryEmail: optional(nullable(string([email()]))),
+  primaryEmail: optional(nullable(pipe(string(), email()))),
   primaryPhoneNumber: optional(nullable(string())),
   leaders: optional(
     array(
       object({
         name: optional(nullable(string())),
         type: enum_(OrganizationLeaderType),
-        email: optional(nullable(string([email()]))),
+        email: optional(nullable(pipe(string(), email()))),
         phoneNumber: optional(nullable(string())),
       }),
     ),
-    [],
   ),
   addresses: optional(
     array(
@@ -83,14 +86,13 @@ export const formSchema = object({
         streetAddress: optional(nullable(string()), null),
       }),
     ),
-    [],
   ),
-  upstreamAssociations: optional(array(string()), []),
+  upstreamAssociations: optional(array(string())),
 });
 
 const phoneNumberMask = createInputMask<FieldEvent>('(999) 999-9999');
 
-type FormSchema = VInput<typeof formSchema>;
+type FormSchema = InferInput<typeof formSchema>;
 
 const upsertChurch = action(async (data: FormSchema) => {
   'use server';
@@ -375,7 +377,7 @@ function LeadershipForm(props: {
 
 export default function ChurchForm(props: { initialValues?: FormSchema }) {
   // TODO: Why do the initial values not render properly on refresh even though they do on navigation?
-  const store = createFormStore({
+  const store = createFormStore<FormSchema>({
     validate: valiForm(formSchema),
     ...(props.initialValues ? { initialValues: props.initialValues } : {}),
   });

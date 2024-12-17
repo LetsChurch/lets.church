@@ -457,6 +457,7 @@ export default function UploadRoute() {
   let formRef: HTMLFormElement;
 
   async function submitUpsert() {
+    invariant(formRef!, 'formRef should be defined');
     const res = await upsertAction(new FormData(formRef));
     setUploadRecordId(res.upsertUploadRecord.id);
   }

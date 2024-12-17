@@ -31,7 +31,7 @@ export default function TurnstileClient(
   let element: HTMLDivElement;
 
   const ready = () => {
-    invariant(element);
+    invariant(element!);
     window.onloadTurnstileCallback = undefined;
     window.turnstile.render(element, {
       sitekey: import.meta.env['VITE_TURNSTILE_SITEKEY'],

@@ -54,7 +54,7 @@ export default function Searchbox(props: { hidden?: Optional<Array<string>> }) {
   let inputEl: HTMLInputElement;
 
   function clearInput() {
-    if (inputEl) {
+    if (inputEl!) {
       inputEl.value = '';
       inputEl.focus();
     }
@@ -246,7 +246,9 @@ export default function Searchbox(props: { hidden?: Optional<Array<string>> }) {
       ref={setReference}
       class="flex cursor-text flex-wrap gap-2 rounded-md px-3 py-1.5 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-600"
       onClick={() => {
-        inputEl?.focus();
+        if (inputEl!) {
+          inputEl.focus();
+        }
         setFloatOpen((o) => !o);
       }}
     >

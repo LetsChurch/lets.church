@@ -33,6 +33,7 @@ export default function Waveform(props: Props) {
       setBarCount(Math.floor(entry.contentRect.width / TARGET_BAR_WIDTH));
     });
 
+    invariant(container!, 'waveform: container is undefined');
     rob.observe(container);
   });
 

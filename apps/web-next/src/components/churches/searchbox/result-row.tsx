@@ -1,4 +1,5 @@
 import { createEffect, type ParentProps } from 'solid-js';
+import invariant from 'tiny-invariant';
 import { type Optional, cn } from '../../../util';
 
 export default function ResultRow(
@@ -11,6 +12,7 @@ export default function ResultRow(
   let el: HTMLLIElement;
 
   createEffect(() => {
+    invariant(el!, 'ResultRow: el is undefined');
     if (props.activeId === props.id) {
       el.scrollIntoView({ block: 'nearest' });
     }

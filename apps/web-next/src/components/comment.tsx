@@ -54,7 +54,7 @@ export function CommentForm(props: {
   let ref: HTMLTextAreaElement;
 
   onMount(() => {
-    if (ref && props.autofocus) {
+    if (ref! && props.autofocus) {
       ref.focus();
       ref.scrollIntoView();
     }
