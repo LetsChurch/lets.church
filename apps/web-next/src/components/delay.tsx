@@ -16,7 +16,7 @@ export function Delay(
   let timer: ReturnType<typeof setTimeout>;
 
   onMount(() => {
-    timer = setTimeout(() => setShow(true), props.ms ?? 1000);
+    timer = setTimeout(() => setShow(true), props.ms ?? 200);
   });
 
   onCleanup(() => clearTimeout(timer));
