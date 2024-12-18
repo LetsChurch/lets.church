@@ -1,4 +1,4 @@
-FROM oven/bun:1.1.36-slim
+FROM oven/bun:1.1.40-slim
 WORKDIR /home/bun/app
 COPY package.json bun.lockb ./
 RUN bun install
