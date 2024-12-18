@@ -1,6 +1,5 @@
 import { ParentProps } from 'solid-js';
-// https://github.com/nksaraf/solid-mdx/issues/2
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment, import/no-unresolved
+// @ts-expect-error: https://github.com/nksaraf/solid-mdx/issues/2
 import { MDXProvider } from 'solid-mdx';
 import A from '~/components/content/a';
 

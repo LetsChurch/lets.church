@@ -85,7 +85,7 @@ export function UpsertForm<N extends string>(props: Props<N>) {
                   {(field, fieldI) => {
                     const id = createUniqueId();
                     return (
-                      <div class:mt-5={fieldI() > 0}>
+                      <div class={fieldI() > 0 ? 'mt-5' : ''}>
                         <Show when={field.type !== 'radio'}>
                           <label
                             class="block text-sm font-medium text-gray-700"

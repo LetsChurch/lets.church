@@ -163,7 +163,6 @@ export default function Comment(props: Props) {
             action={props.rateAction}
             method="post"
             class="contents"
-            // eslint-disable-next-line solid/reactivity
             onSubmit={(e: SubmitEvent) => {
               if (!user) {
                 e.preventDefault();

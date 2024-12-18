@@ -107,13 +107,14 @@ export default function Searchbox(props: { hidden?: Optional<Array<string>> }) {
   });
 
   createEffect(() => {
+    // TODO: figure this out
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     location.search;
     floatPosition.update();
   });
 
   const [inputText, setInputText] = createSignal('');
 
-  // eslint-disable-next-line solid/reactivity
   const throttledRemoteSearch = throttle(async (text: string) => {
     if (!text) {
       clearLocationSuggestions();

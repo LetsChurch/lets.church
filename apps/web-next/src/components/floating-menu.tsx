@@ -2,7 +2,7 @@ import { For, Match, splitProps, Switch } from 'solid-js';
 import type { MergeExclusive } from 'type-fest';
 import { A, useLocation } from '@solidjs/router';
 import FloatingDiv, { type Props as FloatingDivProps } from './floating-div';
-import type { Optional } from '~/util';
+import { cn, type Optional } from '~/util';
 
 type Link = { label: string } & MergeExclusive<
   MergeExclusive<
@@ -29,10 +29,12 @@ export default function FloatingMenu(props: Props) {
               {(l) => (
                 <A
                   href={l.href ?? ''}
-                  class="block px-4 py-2 text-sm text-gray-700"
-                  class:bg-gray-100={
+                  class={cn(
+                    'block px-4 py-2 text-sm text-gray-700',
                     'href' in link && loc.pathname === link.href
-                  }
+                      ? 'bg-gray-100'
+                      : null,
+                  )}
                   role="menuitem"
                   tabindex="-1"
                 >

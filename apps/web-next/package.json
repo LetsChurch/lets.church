@@ -9,7 +9,7 @@
     "build": "vinxi build",
     "start": "vinxi start",
     "check": "npm-run-all check:*",
-    "check:lint": "eslint --ext .ts,.tsx .",
+    "check:lint": "eslint .",
     "check:format": "prettier --check .",
     "check:ts": "tsc",
     "format": "prettier --write ."
@@ -21,7 +21,7 @@
     "@fontsource-variable/roboto-mono": "^5.1.0",
     "@knpwrs/envariant": "^1.1.1",
     "@modular-forms/solid": "^0.25.0",
-    "@sentry/browser": "^7.114.0",
+    "@sentry/browser": "^8.46.0",
     "@solid-primitives/autofocus": "^0.0.111",
     "@solid-primitives/input-mask": "^0.2.2",
     "@solid-primitives/media": "^2.2.9",
@@ -57,7 +57,7 @@
     "solid-js": "^1.9.3",
     "solid-mdx": "^0.0.7",
     "tailwind-merge": "^2.5.5",
-    "tailwindcss": "^3.4.16",
+    "tailwindcss": "^3.4.17",
     "tiny-invariant": "^1.3.3",
     "valibot": "^v1.0.0-beta.9",
     "video.js": "^8.21.0",
@@ -79,10 +79,10 @@
     "@types/node": "^22.10.2",
     "@types/pluralize": "^0.0.33",
     "@types/wait-on": "^5.3.4",
-    "@typescript-eslint/eslint-plugin": "^7.8.0",
-    "@typescript-eslint/parser": "^7.8.0",
+    "@typescript-eslint/eslint-plugin": "^8.18.1",
+    "@typescript-eslint/parser": "^8.18.1",
     "@vinxi/plugin-mdx": "^3.7.2",
-    "eslint": "^8.57.0",
+    "eslint": "^9.17.0",
     "eslint-import-resolver-typescript": "^3.7.0",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-solid": "^0.14.5",
@@ -91,8 +91,9 @@
     "prettier-plugin-tailwindcss": "^0.6.9",
     "type-fest": "^4.30.2",
     "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1",
     "vite-plugin-solid-svg": "^0.8.1",
-    "wait-on": "^7.2.0"
+    "wait-on": "^8.0.1"
   },
   "overrides": {
     "vite": "5.4.10"

@@ -1,7 +1,7 @@
-import { type SearchParams } from '@solidjs/router/dist/types';
+import { type Location } from '@solidjs/router';
 
 export function setQueryParams(
-  current: SearchParams | string,
+  current: Location['query'] | string,
   params: Record<string, string | null | Array<string | null>>,
 ) {
   const searchParams = new URLSearchParams(current.toString());
