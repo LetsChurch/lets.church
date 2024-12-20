@@ -27,7 +27,16 @@ export function routeData() {
           ${UploadCardFields}
 
           query HomepageData($loggedIn: Boolean!) {
-            newsletterListIds
+            newsletterListIds {
+              ... on QueryNewsletterListIdsSuccess {
+                __typename
+                data
+              }
+              ... on Error {
+                __typename
+                message
+              }
+            }
             subscriptionUploads: mySubscriptionUploadRecords(first: 5)
               @include(if: $loggedIn) {
               pageInfo {
@@ -84,6 +93,16 @@ export default function WatchRoute() {
   const data = useRouteData<typeof routeData>();
   const user = useUser();
 
+  const newsletterListIds = () => {
+    const res = data()?.newsletterListIds;
+
+    if (res?.__typename === 'QueryNewsletterListIdsSuccess') {
+      return res.data;
+    }
+
+    return [];
+  };
+
   return (
     <>
       <Og
@@ -120,7 +139,7 @@ export default function WatchRoute() {
       <UploadGrid edges={data()?.trendingUploads?.edges ?? []} />
       <SeeMoreLink to="trending" />
       <Show when={!user()?.subscribedToNewsletter}>
-        <Newsletter listIds={data()?.newsletterListIds ?? []} />
+        <Newsletter listIds={newsletterListIds()} />
       </Show>
     </>
   );

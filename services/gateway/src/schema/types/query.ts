@@ -1,6 +1,7 @@
 import ExpiryMap from 'expiry-map';
 import pMem from 'p-memoize';
 import envariant from '@knpwrs/envariant';
+import * as v from 'valibot';
 import prisma from '../../util/prisma';
 import builder from '../builder';
 
@@ -58,14 +59,30 @@ builder.queryField('stats', (t) =>
   }),
 );
 
+const ListmonkResultSchema = v.object({
+  data: v.object({
+    results: v.array(v.object({ uuid: v.pipe(v.string(), v.uuid()) })),
+  }),
+});
+
+builder.objectType(Error, {
+  name: 'Error',
+  fields: (t) => ({
+    message: t.exposeString('message'),
+  }),
+});
+
 builder.queryField('newsletterListIds', (t) =>
   t.field({
     type: ['String'],
+    errors: {
+      types: [Error],
+    },
     resolve: async () => {
       const res = await fetch(
         envariant('LISTMONK_INTERNAL_URL') + '/api/lists?tag=default',
       );
-      const json = await res.json();
+      const json = v.parse(ListmonkResultSchema, await res.json());
       return json.data.results.map(
         (l: { uuid: string }) => l.uuid,
       ) as Array<string>;

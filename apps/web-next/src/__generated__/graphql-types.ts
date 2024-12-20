@@ -273,6 +273,11 @@ export type DataError = {
   error: PrismaRuntimeError;
 };
 
+export type Error = {
+  __typename?: 'Error';
+  message: Scalars['String']['output'];
+};
+
 export type GeoInput = {
   lat: Scalars['Float']['input'];
   lon: Scalars['Float']['input'];
@@ -893,7 +898,7 @@ export type Query = {
   channelsConnection: QueryChannelsConnection;
   me?: Maybe<AppUser>;
   mySubscriptionUploadRecords?: Maybe<QueryMySubscriptionUploadRecordsConnection>;
-  newsletterListIds: Array<Scalars['String']['output']>;
+  newsletterListIds: QueryNewsletterListIdsResult;
   organizationById: Organization;
   organizationBySlug: Organization;
   organizationTagsConnection: QueryOrganizationTagsConnection;
@@ -1033,6 +1038,13 @@ export type QueryMySubscriptionUploadRecordsConnectionEdge = {
   __typename?: 'QueryMySubscriptionUploadRecordsConnectionEdge';
   cursor: Scalars['String']['output'];
   node: UploadRecord;
+};
+
+export type QueryNewsletterListIdsResult = Error | QueryNewsletterListIdsSuccess;
+
+export type QueryNewsletterListIdsSuccess = {
+  __typename?: 'QueryNewsletterListIdsSuccess';
+  data: Array<Scalars['String']['output']>;
 };
 
 export type QueryOrganizationTagsConnection = {
