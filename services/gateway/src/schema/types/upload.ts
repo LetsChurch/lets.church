@@ -76,7 +76,7 @@ const UploadUserComment = builder.prismaObject('UploadUserComment', {
   fields: (t) => ({
     id: t.expose('id', { type: 'ShortUuid' }),
     uploadRecordId: t.expose('uploadRecordId', { type: 'ShortUuid' }),
-    replyingTo: t.relation('replyingTo'),
+    replyingTo: t.relation('replyingTo', { nullable: true }),
     createdAt: t.field({
       type: 'DateTime',
       select: {
@@ -200,6 +200,7 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
     createdBy: t.relation('createdBy', { authScopes: internalAuthScopes }),
     uploadFinalizedBy: t.relation('uploadFinalizedBy', {
       authScopes: internalAuthScopes,
+      nullable: true,
     }),
     variants: t.expose('variants', {
       type: [UploadVariantEnum],
@@ -368,6 +369,7 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
               });
               return prisma.uploadUserComment.findMany({
                 ...query,
+                select: query.select ?? null,
                 where: { uploadRecordId: root.id, replyingTo: null },
                 skip: offset,
                 take: limit,
@@ -380,8 +382,8 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
           ]);
 
           return {
-            totalCount,
             ...res,
+            totalCount,
           };
         },
       },
@@ -592,17 +594,23 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
       type: UploadList,
       select: { id: true },
       resolve: (root, args, context, info) =>
-        resolveOffsetConnection({ args }, async ({ offset, limit }) =>
-          prisma.uploadList.findMany({
-            ...queryFromInfo({ context, info, path: ['edges', 'node'] }),
+        resolveOffsetConnection({ args }, async ({ offset, limit }) => {
+          const query = queryFromInfo({
+            context,
+            info,
+            path: ['edges', 'node'],
+          });
+          return prisma.uploadList.findMany({
+            ...query,
+            select: query.select ?? null,
             skip: offset,
             take: limit,
             where: {
               type: UploadListType.SERIES,
               uploads: { some: { uploadRecordId: root.id } },
             },
-          }),
-        ),
+          });
+        }),
     }),
     playlists: t.connection({
       type: UploadList,
@@ -615,8 +623,15 @@ const UploadRecord = builder.prismaObject('UploadRecord', {
             return [];
           }
 
+          const query = queryFromInfo({
+            context,
+            info,
+            path: ['edges', 'node'],
+          });
+
           return prisma.uploadList.findMany({
-            ...queryFromInfo({ context, info, path: ['edges', 'node'] }),
+            ...query,
+            select: query.select ?? null,
             skip: offset,
             take: limit,
             where: {
@@ -684,6 +699,7 @@ builder.queryFields((t) => ({
       return resolveOffsetConnection({ args }, async ({ offset, limit }) => {
         return prisma.uploadRecord.findMany({
           ...query,
+          select: query.select ?? null,
           skip: offset,
           take: limit,
           where: {
@@ -725,6 +741,7 @@ builder.queryFields((t) => ({
       return resolveOffsetConnection({ args }, async ({ offset, limit }) => {
         return prisma.uploadRecord.findMany({
           ...query,
+          select: query.select ?? null,
           skip: offset,
           take: limit,
           where: {

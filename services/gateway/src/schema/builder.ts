@@ -18,6 +18,8 @@ import type { Scalars } from './scalars';
 const moduleLogger = logger.child({ module: 'schema/builder' });
 
 export default new SchemaBuilder<{
+  // TODO: v4 upgrade: set nullability throughout types
+  DefaultFieldNullability: false;
   PrismaTypes: PrismaTypes;
   DefaultEdgesNullability: false;
   DefaultNodeNullability: false;
@@ -43,16 +45,20 @@ export default new SchemaBuilder<{
     SimpleObjectsPlugin,
     ValidationPlugin,
   ],
-  authScopes: ({ session }) => ({
-    authenticated: !!session,
-    unauthenticated: !session,
-    admin: session?.appUser.role === 'ADMIN',
-  }),
+  // TODO: v4 upgrade: set nullability throughout types
+  defaultFieldNullability: false,
+  scopeAuth: {
+    authScopes: ({ session }) => ({
+      authenticated: !!session,
+      unauthenticated: !session,
+      admin: session?.appUser.role === 'ADMIN',
+    }),
+  },
   prisma: {
     client: prisma,
     filterConnectionTotalCount: true,
   },
-  relayOptions: {
+  relay: {
     clientMutationId: 'omit',
     cursorType: 'String',
     edgesFieldOptions: {
