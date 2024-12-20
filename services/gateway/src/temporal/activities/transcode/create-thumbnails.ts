@@ -1,12 +1,12 @@
 import { basename, join } from 'node:path';
 import { stat } from 'node:fs/promises';
-import mkdirp from 'mkdirp';
+import { mkdirp } from 'mkdirp';
 import { Context } from '@temporalio/activity';
 import pMap from 'p-map';
 import fastGlob from 'fast-glob';
 import { chunk, compact, maxBy } from 'lodash-es';
 import pRetry from 'p-retry';
-import rimraf from 'rimraf';
+import { rimraf } from 'rimraf';
 import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import { runFfmpegThumbnails } from '../../../util/ffmpeg';
 import { concatThumbs, imageToBlurhash } from '../../../util/images';
@@ -80,7 +80,7 @@ export default async function createThumbnails(
         contentType: 'image/jpeg',
         path: largestThumbnail,
         contentLength: (await stat(largestThumbnail)).size,
-        signal: Context.current().cancellationSignal,
+        cancelSignal: Context.current().cancellationSignal,
       });
       await pRetry(
         async (attempt) => {
@@ -121,7 +121,7 @@ export default async function createThumbnails(
         contentType: 'image/jpeg',
         path,
         contentLength: (await stat(path)).size,
-        signal: Context.current().cancellationSignal,
+        cancelSignal: Context.current().cancellationSignal,
       });
       Context.current().heartbeat();
       activityLogger.info(`Done uploading thumbnail: ${path}`);
@@ -140,7 +140,7 @@ export default async function createThumbnails(
       key: `${uploadRecordId}/hovernail.jpg`,
       contentType: 'image/jpeg',
       path: join(workingDir, 'hovernail.jpg'),
-      signal: Context.current().cancellationSignal,
+      cancelSignal: Context.current().cancellationSignal,
     });
     Context.current().heartbeat();
     activityLogger.info('Done uploading hovernail');

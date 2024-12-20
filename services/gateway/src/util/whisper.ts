@@ -15,7 +15,7 @@ const extraArgs = process.env['WHISPER_EXTRA_ARGS']?.split(' ') ?? [];
 export async function runWhisper(
   cwd: string,
   inputFilename: string,
-  signal: AbortSignal,
+  cancelSignal: AbortSignal,
   heartbeat = noop,
 ) {
   moduleLogger.info('Running whisper');
@@ -34,7 +34,7 @@ export async function runWhisper(
       'True',
       ...extraArgs,
     ],
-    { cwd, signal },
+    { cwd, cancelSignal },
   );
 
   moduleLogger.info(`runWhisper: ${proc.spawnargs.join(' ')}`);

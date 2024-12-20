@@ -41,7 +41,7 @@ export default async function restitchTranscript(uploadRecordId: string) {
     contentType: 'text/vtt',
     body: fixedVtt,
     contentLength: fixedVtt.length,
-    signal: Context.current().cancellationSignal,
+    cancelSignal: Context.current().cancellationSignal,
   });
 
   activityLogger.info(`done uploading transcript.vtt`);

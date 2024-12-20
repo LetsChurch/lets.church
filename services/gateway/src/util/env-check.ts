@@ -1,11 +1,11 @@
-import { execa, type ExecaReturnValue } from 'execa';
+import { execa, type Result } from 'execa';
 import invariant from 'tiny-invariant';
 
 function getHelp(bin: string) {
   return execa(bin, ['--help']);
 }
 
-function checkCode(res: ExecaReturnValue) {
+function checkCode(res: Result) {
   invariant(res.exitCode === 0, () =>
     JSON.stringify({ stdout: res.stdout, stderr: res.stderr }),
   );

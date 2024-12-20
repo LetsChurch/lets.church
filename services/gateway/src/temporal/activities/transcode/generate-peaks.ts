@@ -1,8 +1,8 @@
 import { join } from 'node:path';
 import { stat } from 'node:fs/promises';
 import { Context } from '@temporalio/activity';
-import mkdirp from 'mkdirp';
-import rimraf from 'rimraf';
+import { mkdirp } from 'mkdirp';
+import { rimraf } from 'rimraf';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import logger from '../../../util/logger';
@@ -26,7 +26,7 @@ export default async function generatePeaks(
   });
 
   Context.current().heartbeat('job start');
-  const cancellationSignal = Context.current().cancellationSignal;
+  const cancelSignal = Context.current().cancellationSignal;
   const workingDir = join(WORK_DIR, uploadRecordId);
 
   try {
@@ -44,7 +44,7 @@ export default async function generatePeaks(
     const peakFiles = await runAudiowaveform(
       workingDir,
       downloadPath,
-      cancellationSignal,
+      cancelSignal,
       () => Context.current().heartbeat('audiowaveform'),
     );
 
@@ -57,7 +57,7 @@ export default async function generatePeaks(
       contentType: 'application/json',
       path: peakFiles.json,
       contentLength: (await stat(peakFiles.json)).size,
-      signal: cancellationSignal,
+      cancelSignal,
     });
     Context.current().heartbeat('Uploaded peak json');
     activityLogger.info('Uploaded peak json');
@@ -69,7 +69,7 @@ export default async function generatePeaks(
       contentType: 'application/octet-stream',
       path: peakFiles.dat,
       contentLength: (await stat(peakFiles.dat)).size,
-      signal: cancellationSignal,
+      cancelSignal,
     });
     Context.current().heartbeat('Uploaded peak dat');
     activityLogger.info('Uploaded peak dat');

@@ -399,14 +399,14 @@ export function runFfmpegEncode({
   probe,
   variants,
   hwAccel = 'none',
-  signal,
+  cancelSignal,
 }: {
   cwd: string;
   inputFilename: string;
   probe: Probe;
   variants: Array<UploadVariant>;
   hwAccel?: HwAccel;
-  signal: AbortSignal;
+  cancelSignal: AbortSignal;
 }) {
   const proc = execa(
     'ffmpeg',
@@ -423,7 +423,7 @@ export function runFfmpegEncode({
       // Outputs
       ...ffmpegEncodingArgs(variants, probe, hwAccel),
     ],
-    { cwd, signal },
+    { cwd, cancelSignal },
   );
 
   moduleLogger.info(`runFfmpegEncode: ${proc.spawnargs.join(' ')}`);
@@ -435,7 +435,7 @@ export function runFfmpegThumbnails(
   cwd: string,
   inputFilename: string,
   probe: Probe,
-  signal: AbortSignal,
+  cancelSignal: AbortSignal,
 ) {
   const count = 100;
   const rate = 1 / (parseFloat(probe.format.duration) / count);
@@ -456,7 +456,7 @@ export function runFfmpegThumbnails(
       `${rate}`,
       'screenshot_v1_%03d.jpg',
     ],
-    { cwd, signal },
+    { cwd, cancelSignal },
   );
 
   moduleLogger.info(`runFfmpegThumbnails: ${proc.spawnargs.join(' ')}`);
@@ -468,7 +468,7 @@ export function runFfmpegThumbnails(
 export function runFfprobe(
   cwd: string,
   inputFilename: string,
-  signal: AbortSignal,
+  cancelSignal: AbortSignal,
 ) {
   const proc = execa(
     'ffprobe',
@@ -482,7 +482,7 @@ export function runFfprobe(
       /* '-count_frames', */
       inputFilename,
     ],
-    { cwd, signal },
+    { cwd, cancelSignal },
   );
 
   moduleLogger.info(`runFfmpegProbe: ${proc.spawnargs.join(' ')}`);

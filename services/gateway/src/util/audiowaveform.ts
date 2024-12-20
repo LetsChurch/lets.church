@@ -8,7 +8,7 @@ const moduleLogger = logger.child({ module: 'util/ffmpeg' });
 export async function runAudiowaveform(
   cwd: string,
   inputFilename: string,
-  signal: AbortSignal,
+  cancelSignal: AbortSignal,
   heartbeat = noop,
 ) {
   const wavFile = join(cwd, 'download.wav');
@@ -28,7 +28,7 @@ export async function runAudiowaveform(
       '1',
       wavFile,
     ],
-    { cwd, signal },
+    { cwd, cancelSignal },
   );
 
   moduleLogger.info(`runAudiowaveform: ${ffmpegProc.spawnargs.join(' ')}`);
@@ -45,7 +45,7 @@ export async function runAudiowaveform(
   const proc1 = execa(
     'audiowaveform',
     ['-i', wavFile, '-b', '8', '-o', `${wavFile}.json`],
-    { cwd, signal },
+    { cwd, cancelSignal },
   );
 
   moduleLogger.info(`runAudiowaveform: ${proc1.spawnargs.join(' ')}`);
@@ -62,7 +62,7 @@ export async function runAudiowaveform(
   const proc2 = execa(
     'audiowaveform',
     ['-i', wavFile, '-b', '8', '-o', `${wavFile}.dat`],
-    { cwd, signal },
+    { cwd, cancelSignal },
   );
 
   moduleLogger.info(`runAudiowaveform: ${proc2.spawnargs.join(' ')}`);

@@ -1,8 +1,8 @@
 import { join } from 'node:path';
 import { Context } from '@temporalio/activity';
-import mkdirp from 'mkdirp';
+import { mkdirp } from 'mkdirp';
 import mime from 'mime';
-import rimraf from 'rimraf';
+import { rimraf } from 'rimraf';
 import { nanoid } from 'nanoid';
 import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
 import {
@@ -57,7 +57,7 @@ export default async function processImage(
       key: `${s3UploadKey}.imagemagick.json`,
       contentType: 'application/json',
       body: Buffer.from(JSON.stringify(json, null, 2)),
-      signal: Context.current().cancellationSignal,
+      cancelSignal: Context.current().cancellationSignal,
     });
 
     if (json.format === 'JPEG') {
@@ -79,7 +79,7 @@ export default async function processImage(
       key: path,
       contentType: json.mimeType,
       path: downloadPath,
-      signal: Context.current().cancellationSignal,
+      cancelSignal: Context.current().cancellationSignal,
     });
 
     Context.current().heartbeat();

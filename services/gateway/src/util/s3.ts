@@ -350,14 +350,14 @@ export async function putFileMultipart({
   contentType,
   path,
   onProgress,
-  signal,
+  cancelSignal,
 }: {
   to?: Client;
   key: string;
   contentType: string;
   path: string;
   onProgress?: (progress: number) => unknown;
-  signal?: AbortSignal;
+  cancelSignal?: AbortSignal;
 }) {
   const { bucket, client } = getClientAndBucket(to);
 
@@ -378,7 +378,7 @@ export async function putFileMultipart({
     const completedParts = [];
 
     for (let i = 0; i < numParts; i++) {
-      signal?.throwIfAborted();
+      cancelSignal?.throwIfAborted();
       const start = i * partSize;
       const end = Math.min(start + partSize, fileSize) - 1;
 
@@ -421,7 +421,7 @@ export async function putFileMultipart({
 
 export async function retryablePutFile({
   maxAttempts = 5,
-  signal,
+  cancelSignal,
   ...otherOps
 }: {
   to?: Client;
@@ -429,10 +429,10 @@ export async function retryablePutFile({
   contentType: string;
   contentLength?: number;
   maxAttempts?: number;
-  signal: AbortSignal;
+  cancelSignal: AbortSignal;
 } & MergeExclusive<{ body: Buffer }, { path: string }>) {
   return pRetry(() => putFile(otherOps), {
-    signal,
+    signal: cancelSignal,
     retries: maxAttempts,
     onFailedAttempt: (error) => {
       moduleLogger.warn(`Error uploading ${otherOps.key}`);

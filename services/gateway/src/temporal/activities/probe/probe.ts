@@ -1,8 +1,8 @@
 import { join } from 'node:path';
 import invariant from 'tiny-invariant';
 import { Context } from '@temporalio/activity';
-import mkdirp from 'mkdirp';
-import rimraf from 'rimraf';
+import { mkdirp } from 'mkdirp';
+import { rimraf } from 'rimraf';
 import {
   headObject,
   retryablePutFile,
@@ -31,7 +31,7 @@ export default async function probe(
     },
   });
 
-  const cancellationSignal = Context.current().cancellationSignal;
+  const cancelSignal = Context.current().cancellationSignal;
 
   const workingDir = join(WORK_DIR, uploadRecordId);
 
@@ -54,7 +54,7 @@ export default async function probe(
 
     activityLogger.info(`Probing ${downloadPath}`);
 
-    const proc = runFfprobe(workingDir, downloadPath, cancellationSignal);
+    const proc = runFfprobe(workingDir, downloadPath, cancelSignal);
 
     proc.stdout?.on('data', (data) => {
       stdOutLines.push(String(data));
@@ -75,7 +75,7 @@ export default async function probe(
       key: `${uploadRecordId}/probe.json`,
       contentType: 'application/json',
       body: Buffer.from(probeJson),
-      signal: cancellationSignal,
+      cancelSignal,
     });
 
     await updateUploadRecord(uploadRecordId, {

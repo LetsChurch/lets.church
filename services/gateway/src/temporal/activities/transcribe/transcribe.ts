@@ -1,8 +1,8 @@
 import { join, extname } from 'node:path';
 import { stat } from 'node:fs/promises';
 import { Context } from '@temporalio/activity';
-import mkdirp from 'mkdirp';
-import rimraf from 'rimraf';
+import { mkdirp } from 'mkdirp';
+import { rimraf } from 'rimraf';
 import mime from 'mime';
 import invariant from 'tiny-invariant';
 import { updateUploadRecord } from '../..';
@@ -35,7 +35,7 @@ export default async function transcribe(
   });
 
   Context.current().heartbeat('job start');
-  const cancellationSignal = Context.current().cancellationSignal;
+  const cancelSignal = Context.current().cancellationSignal;
   const workingDir = join(WORK_DIR, uploadRecordId);
 
   await updateUploadRecord(uploadRecordId, {
@@ -56,7 +56,7 @@ export default async function transcribe(
     const outputFiles = await runWhisper(
       workingDir,
       downloadPath,
-      cancellationSignal,
+      cancelSignal,
       () => Context.current().heartbeat('whisper'),
     );
 
@@ -75,7 +75,7 @@ export default async function transcribe(
           contentType: mime.getType(ext) ?? 'text/plain',
           path: file,
           contentLength: (await stat(file)).size,
-          signal: cancellationSignal,
+          cancelSignal,
         });
 
         activityLogger.info(`done uploading ${file}`);
@@ -105,7 +105,7 @@ export default async function transcribe(
       contentType: 'text/vtt',
       body: fixedVtt,
       contentLength: fixedVtt.length,
-      signal: cancellationSignal,
+      cancelSignal,
     });
 
     activityLogger.info(`done uploading transcript.vtt`);

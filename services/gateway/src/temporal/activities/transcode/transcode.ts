@@ -2,10 +2,10 @@ import { basename, join } from 'node:path';
 import { unlink, stat } from 'node:fs/promises';
 import { setTimeout } from 'node:timers/promises';
 import { Context } from '@temporalio/activity';
-import mkdirp from 'mkdirp';
+import { mkdirp } from 'mkdirp';
 import fastGlob from 'fast-glob';
 import { throttle } from 'lodash-es';
-import rimraf from 'rimraf';
+import { rimraf } from 'rimraf';
 import mime from 'mime';
 import invariant from 'tiny-invariant';
 import type { UploadVariant } from '@prisma/client';
@@ -44,7 +44,7 @@ const formatter = new Intl.ListFormat('en', {
 
 async function uploadSegments(id: string, dir: string, log: typeof logger) {
   const segmentFiles = await fastGlob(join(dir, '*.ts'));
-  const signal = Context.current().cancellationSignal;
+  const cancelSignal = Context.current().cancellationSignal;
 
   for (const path of segmentFiles) {
     Context.current().heartbeat(`Starting upload: ${path}`);
@@ -56,7 +56,7 @@ async function uploadSegments(id: string, dir: string, log: typeof logger) {
       contentType: 'video/mp2ts',
       contentLength: (await stat(path)).size,
       path,
-      signal,
+      cancelSignal,
     });
 
     log.info(`Done uploading media segment: ${path}`);
@@ -82,7 +82,7 @@ export default async function transcode(
   });
 
   Context.current().heartbeat('job start');
-  const cancellationSignal = Context.current().cancellationSignal;
+  const cancelSignal = Context.current().cancellationSignal;
   const workingDir = join(WORK_DIR, uploadRecordId);
   const throttledUpdateUploadRecord = throttle(updateUploadRecord, 2500);
 
@@ -123,7 +123,7 @@ export default async function transcode(
       inputFilename: downloadPath,
       probe,
       variants,
-      signal: cancellationSignal,
+      cancelSignal,
       hwAccel: HW_ACCEL,
     });
 
@@ -201,7 +201,7 @@ export default async function transcode(
           Context.current().heartbeat(
             `upload ${Math.round(progress * 1000) / 10}%`,
           ),
-        signal: cancellationSignal,
+        cancelSignal,
       });
       Context.current().heartbeat(`Uploaded downloadable file: ${filename}`);
       activityLogger.info(`Uploaded downloadable file: ${filename}`);
@@ -231,7 +231,7 @@ export default async function transcode(
         contentType: 'application/x-mpegURL',
         path,
         contentLength: (await stat(path)).size,
-        signal: cancellationSignal,
+        cancelSignal,
       });
       Context.current().heartbeat(`Uploaded playlist file: ${filename}`);
       activityLogger.info(`Uploaded playlist file: ${filename}`);
@@ -254,7 +254,7 @@ export default async function transcode(
         key: `${uploadRecordId}/master.m3u8`,
         contentType: 'application/x-mpegURL',
         body: playlistBuffer,
-        signal: cancellationSignal,
+        cancelSignal,
       });
       Context.current().heartbeat('Uploaded master playlist file');
       activityLogger.info('Uploaded master playlist file');
@@ -271,7 +271,7 @@ export default async function transcode(
     const peakFiles = await runAudiowaveform(
       workingDir,
       downloadPath,
-      cancellationSignal,
+      cancelSignal,
       () => Context.current().heartbeat('audiowaveform'),
     );
 
@@ -284,7 +284,7 @@ export default async function transcode(
       contentType: 'application/json',
       path: peakFiles.json,
       contentLength: (await stat(peakFiles.json)).size,
-      signal: cancellationSignal,
+      cancelSignal,
     });
     Context.current().heartbeat('Uploaded peak json');
     activityLogger.info('Uploaded peak json');
@@ -296,7 +296,7 @@ export default async function transcode(
       contentType: 'application/octet-stream',
       path: peakFiles.dat,
       contentLength: (await stat(peakFiles.dat)).size,
-      signal: cancellationSignal,
+      cancelSignal,
     });
     Context.current().heartbeat('Uploaded peak dat');
     activityLogger.info('Uploaded peak dat');
@@ -310,7 +310,7 @@ export default async function transcode(
       key: `${uploadRecordId}/stdout.txt`,
       contentType: 'text/plain',
       body: Buffer.from(stdout.join('')),
-      signal: cancellationSignal,
+      cancelSignal,
     });
     activityLogger.info('Done uploading stdout');
     Context.current().heartbeat('queueing stderr upload');
@@ -320,7 +320,7 @@ export default async function transcode(
       key: `${uploadRecordId}/stderr.txt`,
       contentType: 'text/plain',
       body: Buffer.from(stderr.join('')),
-      signal: cancellationSignal,
+      cancelSignal,
     });
     activityLogger.info('Done uploading stderr');
     Context.current().heartbeat('Uploaded stderr');
