@@ -1298,7 +1298,7 @@ export type UploadRecord = {
   updatedAt: Scalars['DateTime']['output'];
   uploadFinalized: Scalars['Boolean']['output'];
   uploadFinalizedAt?: Maybe<Scalars['DateTime']['output']>;
-  uploadFinalizedBy: AppUser;
+  uploadFinalizedBy?: Maybe<AppUser>;
   uploadListById?: Maybe<UploadList>;
   uploadSizeBytes?: Maybe<Scalars['SafeInt']['output']>;
   userComments: UploadRecordUserCommentsConnection;
@@ -1398,7 +1398,7 @@ export type UploadUserComment = {
   id: Scalars['ShortUuid']['output'];
   myRating?: Maybe<Rating>;
   replies: UploadUserCommentRepliesConnection;
-  replyingTo: UploadUserComment;
+  replyingTo?: Maybe<UploadUserComment>;
   text: Scalars['String']['output'];
   totalDislikes: Scalars['Int']['output'];
   totalLikes: Scalars['Int']['output'];

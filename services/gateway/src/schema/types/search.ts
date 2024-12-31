@@ -274,9 +274,8 @@ builder.queryFields((t) => ({
             },
           ),
       },
-      resolve: async (
-        _root,
-        {
+      resolve: async (_root, args, context, _info) => {
+        const {
           query,
           focus,
           channels,
@@ -287,11 +286,9 @@ builder.queryFields((t) => ({
           orgType,
           organization,
           tags,
-          ...args
-        },
-        context,
-        _info,
-      ) => {
+          ...restArgs
+        } = args;
+
         let totalCount = 0;
         let uploadHitCount = 0;
         let transcriptHitCount = 0;
@@ -301,7 +298,7 @@ builder.queryFields((t) => ({
         let dateAggData: { min: Date; max: Date } | null = null;
 
         const publishedAt: { lte?: string; gte?: string } = {};
-        const orderBy = OrderByEnum.parse(args.orderBy ?? 'avg');
+        const orderBy = OrderByEnum.parse(restArgs.orderBy ?? 'avg');
 
         if (minPublishedAt) {
           publishedAt.gte =
@@ -345,7 +342,7 @@ builder.queryFields((t) => ({
           : null;
 
         const res = await resolveOffsetConnection(
-          { args },
+          { args: restArgs },
           async ({ offset, limit }) => {
             const esRes = await esClient.msearch({
               searches: [
@@ -542,6 +539,11 @@ builder.queryFields((t) => ({
             return res;
           },
         );
+
+        const { query: logQuery, ...logParams } = args;
+        await prisma.searchLogEntry.create({
+          data: { query: logQuery, params: logParams },
+        });
 
         return {
           ...res,

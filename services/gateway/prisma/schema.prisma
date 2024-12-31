@@ -534,3 +534,12 @@ model UploadList {
   @@unique([createdAt, id])
   @@map("upload_list")
 }
+
+model SearchLogEntry {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  query     String
+  params    Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("search_log_entry")
+}
