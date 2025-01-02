@@ -13,7 +13,7 @@ RUN cmake -D BUILD_STATIC=1 .. && make
 
 # Prisma generate currently requires node
 # Temporal workers require node
-FROM oven/bun:1.1.36-slim AS bun-with-node
+FROM oven/bun:1.1.42-slim AS bun-with-node
 RUN apt-get update && \
   apt-get install -y curl ffmpeg git python3 python3-pip && \
   mkdir -p /etc/apt/keyrings && \

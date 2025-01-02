@@ -1,4 +1,4 @@
-FROM oven/bun:1.1.38-alpine
+FROM oven/bun:1.1.42-alpine
 COPY package.json bun.lockb ./
 RUN bun install
 COPY . .
