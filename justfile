@@ -6,28 +6,26 @@ default:
 #
 
 start *params='-d':
-  docker-compose up {{params}}
+  docker compose up {{params}}
 stop:
-  docker-compose down
+  docker compose down
+prune:
+  docker compose down --rmi local --volumes
 build *params:
-  docker-compose build {{params}}
+  docker compose build {{params}}
 
 logs service *params:
-  docker-compose logs {{params}} {{service}}
+  docker compose logs {{params}} {{service}}
 follow service: (logs service '-f')
 
 restart *services:
-  docker-compose restart {{services}}
+  docker compose restart {{services}}
 
 exec service +command:
-  docker-compose exec {{service}} {{command}}
+  docker compose exec {{service}} {{command}}
 
 ports:
-  docker-compose ps --format json | jq -r '.[] | .Service, .Publishers[]?.PublishedPort'
-
-docker-prune *params:
-  docker system prune --filter label=com.docker.compose.project=$COMPOSE_PROJECT_NAME {{params}}
-prune: docker-prune (docker-prune '--volumes')
+  docker compose ps --format json | jq -r '.[] | .Service, .Publishers[]?.PublishedPort'
 
 purge-pg:
   docker volume rm ${COMPOSE_PROJECT_NAME}_pg-data
@@ -40,23 +38,23 @@ leaks:
   gitleaks detect --baseline-path gitleaks-report.json --redact --report-path gitleaks-findings.json
 
 temporal *args:
-  docker-compose exec temporal-admin-tools temporal {{args}}
+  docker compose exec temporal-admin-tools temporal {{args}}
 
 gateway-db-push:
-  docker-compose exec gateway bun run prisma:db:push
+  docker compose exec gateway bun run prisma:db:push
 
 gateway-db-reset:
-  docker-compose exec gateway bun run prisma:migrate:reset
-  docker-compose restart postgres
+  docker compose exec gateway bun run prisma:migrate:reset
+  docker compose restart postgres
 
 gateway-prisma-generate:
-  docker-compose exec gateway bun run prisma:migrate:dev
+  docker compose exec gateway bun run prisma:migrate:dev
 
 gateway-es-push-mappings:
-  docker-compose exec gateway bun run es:push-mappings
+  docker compose exec gateway bun run es:push-mappings
 
 gateway-migrate-dev:
-  docker-compose exec gateway bun run prisma:migrate:dev
+  docker compose exec gateway bun run prisma:migrate:dev
   cd services/gateway; npm run prisma:generate
 
 gateway-schedule:
@@ -90,17 +88,14 @@ npmi-host-gateway:
   cd services/gateway; npm i
 npmi-host-web-next:
   cd apps/web-next; npm i
-npmi-host-web-qwik:
-  cd apps/web-qwik; npm i
 npmi-host-web:
   cd apps/web; npm i
-npmi-host: npmi-host-gateway npmi-host-web npmi-host-web-next npmi-host-web-qwik npmi-host-scripts
+npmi-host: npmi-host-gateway npmi-host-web npmi-host-web-next npmi-host-scripts
 
 npmi-gateway: (exec 'gateway' 'npm' 'i')
 npmi-web: (exec 'web' 'npm' 'i')
 npmi-web-next: (exec 'web-next' 'npm' 'i')
-npmi-web-qwik: (exec 'web-qwik' 'npm' 'i')
-npmi: npmi-gateway npmi-web npmi-web-next npmi-web-qwik
+npmi: npmi-gateway npmi-web npmi-web-next
 
 # npmci scripts always run on host (except during docker build)
 npmci-scripts:
@@ -111,12 +106,10 @@ npmci-web:
   cd apps/web; npm ci
 npmci-web-next:
   cd apps/web-next; npm ci
-npmci-web-qwik:
-  cd apps/web-qwik; npm ci
-npmci: npmci-gateway npmci-web npmci-web-next npmci-web-qwik npmci-scripts
+npmci: npmci-gateway npmci-web npmci-web-next npmci-scripts
 
 seed-db:
-  docker-compose exec gateway bun run prisma:db:seed
+  docker compose exec gateway bun run prisma:db:seed
 seed-s3-ingest:
   rclone sync --fast-list --checksum -P ./seed-data/lcdevs3/letschurch-dev-ingest lcdevs3:letschurch-dev-ingest
 seed-s3-public:
@@ -125,7 +118,7 @@ seed-s3: seed-s3-ingest seed-s3-public
 seed: seed-s3 seed-db
 
 truncate:
-  docker-compose exec gateway bun run prisma:db:truncate
+  docker compose exec gateway bun run prisma:db:truncate
 
 check-gateway:
   cd services/gateway; npm run check
@@ -146,8 +139,8 @@ test-gateway:
 test: test-gateway
 
 transcribe file:
-  docker-compose run --rm -v $PWD:/host -w /host transcribe-worker /bin/bash -c 'ffmpeg -i {{file}} -ar 16000 -ac 1 {{file}}.wav'
-  docker-compose run --rm -v $PWD:/host -w /host transcribe-worker /bin/bash -c 'whisper-ctranslate2 --model large-v2 --vad_filter True {{file}}.wav'
+  docker compose run --rm -v $PWD:/host -w /host transcribe-worker /bin/bash -c 'ffmpeg -i {{file}} -ar 16000 -ac 1 {{file}}.wav'
+  docker compose run --rm -v $PWD:/host -w /host transcribe-worker /bin/bash -c 'whisper-ctranslate2 --model large-v2 --vad_filter True {{file}}.wav'
   rm {{file}}.wav
 
 transcribe-dir dir:
