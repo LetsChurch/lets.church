@@ -8,5 +8,7 @@ play-docker:
   ansible-playbook ./playbooks/install-docker.yml -K
 play-import-worker:
   ansible-playbook ./playbooks/import-worker.yml -K
+play-probe-worker:
+  ansible-playbook ./playbooks/probe-worker.yml -K
 
 play: play-docker play-import-worker
