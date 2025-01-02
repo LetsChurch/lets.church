@@ -5,7 +5,7 @@ default:
 # Docker
 #
 
-start *params='-d':
+start *params='-d --remove-orphans':
   docker compose up {{params}}
 stop:
   docker compose down
