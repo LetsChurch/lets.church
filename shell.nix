@@ -1,9 +1,9 @@
 # generate the sha256 like this:
-# nix-prefetch-url --unpack https://github.com/NixOS/nixpkgs/archive/47b604b07d1e8146d5398b42d3306fdebd343986.tar.gz
+# nix-prefetch-url --unpack https://github.com/NixOS/nixpkgs/archive/fd4ca2fcd587216ca1a023643c078f55cd32272f.tar.gz
 
 with (import (fetchTarball {
-  url = "https://github.com/nixos/nixpkgs/archive/df7cef32c3494ca95363e119160be6960022b0fd.tar.gz";
-  sha256 = "1spja94f8i1y8nnpasc9dj583w7dp15yl217q8i49dcar0mj52nk";
+  url = "https://github.com/NixOS/nixpkgs/archive/fd4ca2fcd587216ca1a023643c078f55cd32272f.tar.gz";
+  sha256 = "0s4p9kq93900nbg01jkk9qrv5iyzdgc3xxashjb5kgpkz3zrfwii";
 }) {});
 
 mkShell {
