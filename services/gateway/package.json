@@ -68,7 +68,7 @@
     "@envelop/disable-introspection": "^6.0.0",
     "@faker-js/faker": "^9.3.0",
     "@hono/node-server": "^1.13.7",
-    "@inquirer/prompts": "^1.0.1",
+    "@inquirer/prompts": "^7.2.1",
     "@knpwrs/envariant": "^1.1.1",
     "@node-rs/xxhash": "^1.7.6",
     "@pothos/core": "^4.3.0",
