@@ -29,7 +29,7 @@ RUN apt-get update && \
 FROM bun-with-node AS base
 # Prisma requires lbssl-dev and ca-certificates
 RUN apt-get update && apt-get install -y curl libssl-dev ca-certificates neovim
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 RUN bun install
 ENV NODE_ENV=production EDITOR=nvim
 COPY . .
@@ -69,7 +69,7 @@ RUN apt-get update && \
   apt-get clean && \
   pip3 install git+https://github.com/Softcatala/whisper-ctranslate2.git@0.2.9 && mkdir -p /opt/whisper/models
 WORKDIR /home/bun/app
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 RUN bun install
 COPY . .
 ENV NODE_ENV=production
