@@ -48,7 +48,7 @@ export default async function probe(
     invariant(uploadSizeBytes, 'Invalid uploadSizeBytes');
     await streamObjectToFile('INGEST', s3UploadKey, downloadPath, {
       heartbeat: () => Context.current().heartbeat('download'),
-      Range: `bytes=0-${Math.min(5 * 1024 ** 2 - 1, uploadSizeBytes - 1)}`,
+      Range: `bytes=0-${Math.min(50 * 1024 ** 2 - 1, uploadSizeBytes - 1)}`,
     });
     await mkdirp(workingDir);
 
