@@ -11,7 +11,7 @@ import { processMediaWorkflow } from './process-media';
 
 const { importMedia } = proxyActivities<typeof importActivities>({
   startToCloseTimeout: '5 hours',
-  heartbeatTimeout: '5 minutes',
+  heartbeatTimeout: '1 hour',
   taskQueue: IMPORT_QUEUE,
   retry: { maximumAttempts: 2 },
 });
