@@ -10,8 +10,8 @@ import { processImageWorkflow } from './process-image';
 import { processMediaWorkflow } from './process-media';
 
 const { importMedia } = proxyActivities<typeof importActivities>({
-  startToCloseTimeout: '5 hours',
-  heartbeatTimeout: '1 hour',
+  startToCloseTimeout: '10 hours',
+  heartbeatTimeout: '5 hours',
   taskQueue: IMPORT_QUEUE,
   retry: { maximumAttempts: 2 },
 });
