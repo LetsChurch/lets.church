@@ -1,13 +1,17 @@
 # generate the sha256 like this:
-# nix-prefetch-url --unpack https://github.com/NixOS/nixpkgs/archive/fd4ca2fcd587216ca1a023643c078f55cd32272f.tar.gz
+# nix-prefetch-url --unpack https://github.com/nixos/nixpkgs/archive/de6d4da6dfb6e16bc181a603674e3f5b5cda0bdf.tar.gz
+# Using the sha256 prevents re-fetching and/or checking etag from the network
 
-with (import (fetchTarball {
-  url = "https://github.com/NixOS/nixpkgs/archive/fd4ca2fcd587216ca1a023643c078f55cd32272f.tar.gz";
-  sha256 = "0s4p9kq93900nbg01jkk9qrv5iyzdgc3xxashjb5kgpkz3zrfwii";
-}) {});
+let
+  nixpkgs = fetchTarball {
+    url = "https://github.com/nixos/nixpkgs/archive/de6d4da6dfb6e16bc181a603674e3f5b5cda0bdf.tar.gz";
+    sha256 = "1miwvi498qa1275qfn08hci28asbv0sahd59vnvsxzb9dgd945jx";
+  };
+  pkgs = import nixpkgs { config = {}; overlays = []; };
+in 
 
-mkShell {
-  packages = [
+pkgs.mkShell {
+  packages = with pkgs; [
     ansible
     bun
     docker-compose
@@ -20,8 +24,7 @@ mkShell {
     kustomize
     lazydocker
     navi
-    nodejs_20
-    postgresql_14
+    nodejs_23
     rclone
     sampler
     templ

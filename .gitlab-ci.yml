@@ -17,7 +17,7 @@ stages:
   buntest: nix-shell $CI_PROJECT_DIR/shell.nix --run "bun run test"
 
 default:
-  image: nixos/nix:2.19.2
+  image: nixos/nix:2.26.0
 
 #   ____ _   _ _____ ____ _  __
 #  / ___| | | | ____/ ___| |/ /
