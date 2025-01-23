@@ -9,16 +9,6 @@ stages:
   - deploy
   - notify
 
-.setup:
-  npmci: nix-shell $CI_PROJECT_DIR/shell.nix --run "npm ci --cache $CI_PROJECT_DIR/.npm --prefer-offline"
-  npmcheck: nix-shell $CI_PROJECT_DIR/shell.nix --run "npm run check"
-  buninstall: nix-shell $CI_PROJECT_DIR/shell.nix --run "bun install"
-  buncheck: nix-shell $CI_PROJECT_DIR/shell.nix --run "bun run check"
-  buntest: nix-shell $CI_PROJECT_DIR/shell.nix --run "bun run test"
-
-default:
-  image: nixos/nix:2.26.0
-
 #   ____ _   _ _____ ____ _  __
 #  / ___| | | | ____/ ___| |/ /
 # | |   | |_| |  _|| |   | ' /
@@ -26,24 +16,26 @@ default:
 #  \____|_| |_|_____\____|_|\_\
 
 check-gateway:
+  image: oven/bun:1.2.0-slim
   stage: check
   script:
     - cd $CI_PROJECT_DIR/services/gateway
-    - !reference [.setup, buninstall]
-    - !reference [.setup, buncheck]
+    - bun install
+    - bun run check
   cache:
     key:
       files:
-        - $CI_PROJECT_DIR/services/gateway/package-lock.json
+        - $CI_PROJECT_DIR/services/gateway/bun.lock
     paths:
-      - $CI_PROJECT_DIR/.npm
+      - $HOME/.bun/install/cache
 
 check-web:
+  image: node:23.6.1-bookworm-slim
   stage: check
   script:
     - cd $CI_PROJECT_DIR/apps/web
-    - !reference [.setup, npmci]
-    - !reference [.setup, npmcheck]
+    - npm ci --cache $CI_PROJECT_DIR/.npm --prefer-offline
+    - npm run check
   cache:
     key:
       files:
@@ -52,38 +44,51 @@ check-web:
       - $CI_PROJECT_DIR/.npm
 
 check-web-next:
+  image: oven/bun:1.2.0-slim
   stage: check
   script:
     - cd $CI_PROJECT_DIR/apps/web-next
-    - !reference [.setup, buninstall]
-    - !reference [.setup, buncheck]
+    - bun install
+    - bun run check
   cache:
     key:
       files:
-        - $CI_PROJECT_DIR/apps/web-next/package-lock.json
+        - $CI_PROJECT_DIR/apps/web-next/bun.lockb
     paths:
-      - $CI_PROJECT_DIR/.npm
+      - $HOME/.bun/install/cache
 
 check-scripts:
+  image: oven/bun:1.2.0-slim
   stage: check
   script:
     - cd $CI_PROJECT_DIR/scripts
-    - !reference [.setup, buninstall]
-    - !reference [.setup, buncheck]
+    - bun install
+    - bun run check
   cache:
     key:
       files:
-        - $CI_PROJECT_DIR/scripts/package-lock.json
+        - $CI_PROJECT_DIR/scripts/bun.lockb
     paths:
-      - $CI_PROJECT_DIR/.npm
+      - $HOME/.bun/install/cache
 
 test-gateway:
+  image: oven/bun:1.2.0-slim
   stage: check
+  before_script:
+    # Install node (required for vitest)
+    - apt-get update && apt-get install -y curl
+    - curl -sS https://webi.sh/node | sh
+    - source $HOME/.config/envman/PATH.env
   script:
     - cd services/gateway
-    - !reference [.setup, buninstall]
-    - !reference [.setup, buntest]
-  cache: !reference [check-gateway, cache]
+    - bun install
+    - npm test
+  cache:
+    key:
+      files:
+        - $CI_PROJECT_DIR/services/gateway/bun.lock
+    paths:
+      - $HOME/.bun/install/cache
 
 #  ____  _   _ ___ _     ____
 # | __ )| | | |_ _| |   |  _ \
@@ -159,11 +164,30 @@ build-web-next:
 #            |_|            |___/
 
 deploy-k8s:
+  image: ubuntu:24.04
   stage: deploy
   only:
     - kyrios
+  before_script:
+    - apt-get update && apt-get install -y bsdmainutils curl git git-lfs gnupg just openssl
+
+    # Install transcrypt
+    - git clone https://github.com/elasticdog/transcrypt.git /tmp/transcrypt
+    - git --git-dir=/tmp/transcrypt/.git --work-tree=/tmp/transcrypt reset --hard fb66f78cd69906915627a7c41ba02428dd88e19d
+    - ln -s /tmp/transcrypt/transcrypt /usr/local/bin/transcrypt
+
+    # Decrypt transcrypt files
+    - transcrypt -F -y -c $TRANSCRYPT_CIPHER -p "$TRANSCRYPT_PASSWORD"
+
+    # Install kubectl
+    - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    - chmod +x kubectl
+    - mv kubectl /usr/local/bin/
+
+    # Install kustomize
+    - curl -s https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash
+    - mv kustomize /usr/local/bin/
   script:
-    - nix-shell shell.nix --run "transcrypt -F -y -c $TRANSCRYPT_CIPHER -p $TRANSCRYPT_PASSWORD"
     - cd infra/k8s/prod
-    - nix-shell $CI_PROJECT_DIR/shell.nix --run "just deploy-set-images prod $CI_COMMIT_SHORT_SHA"
-    - nix-shell $CI_PROJECT_DIR/shell.nix --run 'kubectl apply -k .'
+    - just deploy-set-images prod $CI_COMMIT_SHORT_SHA
+    - kubectl apply -k .
