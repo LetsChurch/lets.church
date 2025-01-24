@@ -4,7 +4,7 @@
 
 ### Prereqs
 
-1. Setup three S3 (or S3-compatible) buckets on your provider of choice for
+1. Setup two S3 (or S3-compatible) buckets on your provider of choice for
    `ingest` and `public`
 2. Ensure the `ingest` bucket has the following CORS configuration:
 ```json
@@ -41,7 +41,7 @@
 
 ### Development Environment
 
-1. Install [`git-lfs`], [Docker](https://www.docker.com/products/docker-desktop/), [`nix`], and [`direnv`]
+1. Install [`git-lfs`], [Docker], [`nix`], and [`direnv`]
 1. Clone this repo
 1. Copy `.envrc.local.example` to `.envrc.local` and update the variables to actual values
 1. Run `direnv allow` to load the shell environment
