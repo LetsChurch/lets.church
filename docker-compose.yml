@@ -133,7 +133,7 @@ services:
     build:
       context: ./services/gateway
       target: server
-    command: bun run dev:server
+    command: npm run dev:server
     restart: unless-stopped
     ports:
       - 127.0.0.1:${HOST_GATEWAY_PORT}:3000
@@ -155,8 +155,8 @@ services:
       ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
       <<: *s3-env
     volumes:
-      - ./services/gateway:/home/bun/app
-      - gateway-node-modules:/home/bun/app/node_modules
+      - ./services/gateway:/home/node/app
+      - gateway-node-modules:/home/node/app/node_modules
     depends_on:
       - temporal
 
@@ -164,7 +164,7 @@ services:
     build:
       context: ./services/gateway
       target: background-worker
-    command: bun run dev:background-worker
+    command: npm run dev:background-worker
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -179,8 +179,8 @@ services:
       <<: *s3-env
       SMTP_URL: smtp://mailpit:1025?pool=true
     volumes:
-      - ./services/gateway:/home/bun/app
-      - background-worker-node-modules:/home/bun/app/node_modules
+      - ./services/gateway:/home/node/app
+      - background-worker-node-modules:/home/node/app/node_modules
 
   background-worker-go:
     build:
@@ -201,7 +201,7 @@ services:
     build:
       context: ./services/gateway
       target: probe-worker
-    command: bun run dev:probe-worker
+    command: npm run dev:probe-worker
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -213,14 +213,14 @@ services:
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 5
       <<: *s3-env
     volumes:
-      - ./services/gateway:/home/bun/app
-      - transcode-worker-node-modules:/home/bun/app/node_modules
+      - ./services/gateway:/home/node/app
+      - transcode-worker-node-modules:/home/node/app/node_modules
 
   transcode-worker:
     build:
       context: ./services/gateway
       target: transcode-worker
-    command: bun run dev:transcode-worker
+    command: npm run dev:transcode-worker
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -232,14 +232,14 @@ services:
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 1
       <<: *s3-env
     volumes:
-      - ./services/gateway:/home/bun/app
-      - transcode-worker-node-modules:/home/bun/app/node_modules
+      - ./services/gateway:/home/node/app
+      - transcode-worker-node-modules:/home/node/app/node_modules
 
   transcribe-worker:
     build:
       context: ./services/gateway
       target: transcribe-worker
-    command: bun run dev:transcribe-worker
+    command: npm run dev:transcribe-worker
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -252,14 +252,14 @@ services:
       WHISPER_MODEL: tiny.en
       <<: *s3-env
     volumes:
-      - ./services/gateway:/home/bun/app
-      - transcribe-worker-node-modules:/home/bun/app/node_modules
+      - ./services/gateway:/home/node/app
+      - transcribe-worker-node-modules:/home/node/app/node_modules
 
   import-worker:
     build:
       context: ./services/gateway
       target: import-worker
-    command: bun run dev:import-worker
+    command: npm run dev:import-worker
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -270,8 +270,8 @@ services:
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1m
       <<: *s3-env
     volumes:
-      - ./services/gateway:/home/bun/app
-      - import-worker-node-modules:/home/bun/app/node_modules
+      - ./services/gateway:/home/node/app
+      - import-worker-node-modules:/home/node/app/node_modules
 
   #
   # Vendor Services

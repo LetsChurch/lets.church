@@ -1,9 +1,11 @@
+import { Hono } from 'hono';
+import { serve } from '@hono/node-server';
 import { createYoga } from 'graphql-yoga';
 import { useDisableIntrospection } from '@envelop/disable-introspection';
 import * as Sentry from '@sentry/node';
 import envariant from '@knpwrs/envariant';
 import context from './util/context';
-import schema from './schema';
+import schema from './schema/index';
 
 if (process.env['NODE_ENV'] !== 'development') {
   Sentry.init({
@@ -28,20 +30,20 @@ const graphqlHandler = createYoga({
   },
 });
 
-const server = Bun.serve({
-  fetch: (req, _server) => {
-    if (req.url === '/health') {
-      return new Response(null, { status: 204 });
-    }
+const app = new Hono();
 
-    return graphqlHandler.fetch(req);
-  },
-  port: 3000,
+app.get('/health', (c) => {
+  c.status(204);
+  return c.body(null);
 });
 
-console.info(
-  `Server is running on ${new URL(
-    graphqlHandler.graphqlEndpoint,
-    `http://${server.hostname}:${server.port}`,
-  )}`,
-);
+app.on(['GET', 'POST'], '/graphql', (c) => graphqlHandler.fetch(c.req.raw));
+
+serve({ fetch: app.fetch, port: 3000 }, (info) => {
+  console.info(
+    `Server is running on ${new URL(
+      graphqlHandler.graphqlEndpoint,
+      `http://${info.family === 'IPv6' ? `[${info.address}]` : info.address}:${info.port}`,
+    )}`,
+  );
+});

@@ -16,18 +16,18 @@ stages:
 #  \____|_| |_|_____\____|_|\_\
 
 check-gateway:
-  image: oven/bun:1.2.0-slim
+  image: node:23.6.0-slim
   stage: check
   script:
     - cd $CI_PROJECT_DIR/services/gateway
-    - bun install
-    - bun run check
+    - npm ci --cache $CI_PROJECT_DIR/.npm --prefer-offline
+    - npm run check
   cache:
     key:
       files:
-        - $CI_PROJECT_DIR/services/gateway/bun.lock
+        - $CI_PROJECT_DIR/services/gateway/package-lock.json
     paths:
-      - $HOME/.bun/install/cache
+      - $CI_PROJECT_DIR/.npm/
 
 check-web:
   image: node:23.6.1-bookworm-slim
@@ -72,23 +72,18 @@ check-scripts:
       - $HOME/.bun/install/cache
 
 test-gateway:
-  image: oven/bun:1.2.0-slim
+  image: node:23.6.0-slim
   stage: check
-  before_script:
-    # Install node (required for vitest)
-    - apt-get update && apt-get install -y curl
-    - curl -sS https://webi.sh/node | sh
-    - source $HOME/.config/envman/PATH.env
   script:
-    - cd services/gateway
-    - bun install
+    - cd $CI_PROJECT_DIR/services/gateway
+    - npm ci --cache .npm --prefer-offline
     - npm test
   cache:
     key:
       files:
-        - $CI_PROJECT_DIR/services/gateway/bun.lock
+        - $CI_PROJECT_DIR/services/gateway/package-lock.json
     paths:
-      - $HOME/.bun/install/cache
+      - $CI_PROJECT_DIR/.npm/
 
 #  ____  _   _ ___ _     ____
 # | __ )| | | |_ _| |   |  _ \
