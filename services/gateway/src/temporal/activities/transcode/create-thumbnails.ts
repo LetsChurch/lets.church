@@ -135,11 +135,13 @@ export default async function createThumbnails(
     activityLogger.info({ pickedThumbnails });
     await concatThumbs(workingDir, pickedThumbnails);
     activityLogger.info('Uploading hovernail');
+    const path = join(workingDir, 'hovernail.jpg');
     await retryablePutFile({
       to: 'PUBLIC',
       key: `${uploadRecordId}/hovernail.jpg`,
       contentType: 'image/jpeg',
-      path: join(workingDir, 'hovernail.jpg'),
+      contentLength: (await stat(path)).size,
+      path,
       cancelSignal: Context.current().cancellationSignal,
     });
     Context.current().heartbeat();
