@@ -158,6 +158,8 @@ services:
       - ./services/gateway:/home/node/app
       - gateway-node-modules:/home/node/app/node_modules
     depends_on:
+      - elasticsearch
+      - postgres
       - temporal
 
   background-worker:
@@ -181,6 +183,8 @@ services:
     volumes:
       - ./services/gateway:/home/node/app
       - background-worker-node-modules:/home/node/app/node_modules
+    depends_on:
+      - temporal
 
   background-worker-go:
     build:
@@ -215,6 +219,8 @@ services:
     volumes:
       - ./services/gateway:/home/node/app
       - transcode-worker-node-modules:/home/node/app/node_modules
+    depends_on:
+      - temporal
 
   transcode-worker:
     build:
@@ -234,6 +240,8 @@ services:
     volumes:
       - ./services/gateway:/home/node/app
       - transcode-worker-node-modules:/home/node/app/node_modules
+    depends_on:
+      - temporal
 
   transcribe-worker:
     build:
@@ -254,6 +262,8 @@ services:
     volumes:
       - ./services/gateway:/home/node/app
       - transcribe-worker-node-modules:/home/node/app/node_modules
+    depends_on:
+      - temporal
 
   import-worker:
     build:
@@ -272,6 +282,8 @@ services:
     volumes:
       - ./services/gateway:/home/node/app
       - import-worker-node-modules:/home/node/app/node_modules
+    depends_on:
+      - temporal
 
   #
   # Vendor Services
@@ -399,6 +411,11 @@ services:
       - 127.0.0.1:${HOST_ES_PORT}:9200
     volumes:
       - es-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: curl -s -f elasticsearch:9200/_cat/health >/dev/null || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   #
   # Development
