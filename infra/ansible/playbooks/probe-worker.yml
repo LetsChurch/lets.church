@@ -1,0 +1,49 @@
+---
+- name: Setup probe worker
+  hosts: probe-workers
+  become: true
+  vars_files:
+    - ../variables/probe-worker.crypt.yml
+  tasks:
+    - name: Get the latest commit hash
+      shell: git rev-parse HEAD | head -c 8
+      register: git_hash_result
+      delegate_to: localhost
+      changed_when: false
+      when: lc_hash is not defined
+    - name: Set lc_hash variable
+      set_fact:
+        lc_hash: "{{ lc_hash | default(git_hash_result.stdout) }}"
+    - name: Debug the final values
+      debug:
+        msg:
+          image: "registry.gitlab.com/letschurch/lets.church/probe-worker:{{lc_hash}}"
+          identity: "{{ inventory_hostname }}"
+    - name: Start lc-probe-worker container
+      community.docker.docker_container:
+        name: lc-probe-worker
+        hostname: "{{inventory_hostname}}"
+        image: registry.gitlab.com/letschurch/lets.church/probe-worker:{{lc_hash}}
+        state: started
+        recreate: true
+        restart_policy: unless-stopped
+        env:
+          IDENTITY: "{{inventory_hostname}}"
+          SERVICE_NAME: "probe-worker"
+          AXIOM_DATASET: "{{AXIOM_DATASET}}"
+          AXIOM_TOKEN: "{{AXIOM_TOKEN}}"
+          TEMPORAL_ADDRESS: "{{TEMPORAL_ADDRESS}}"
+          TEMPORAL_SHUTDOWN_GRACE_TIME: "{{TEMPORAL_SHUTDOWN_GRACE_TIME}}"
+          MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: "{{MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS}}"
+          MAX_CONCURRENT_WORKFLOW_TASK_EXECUTIONS: "{{MAX_CONCURRENT_WORKFLOW_TASK_EXECUTIONS}}"
+          S3_INGEST_REGION: "{{S3_INGEST_REGION}}"
+          S3_INGEST_ENDPOINT: "{{S3_INGEST_ENDPOINT}}"
+          S3_INGEST_BUCKET: "{{S3_INGEST_BUCKET}}"
+          S3_INGEST_ACCESS_KEY_ID: "{{S3_INGEST_ACCESS_KEY_ID}}"
+          S3_INGEST_SECRET_ACCESS_KEY: "{{S3_INGEST_SECRET_ACCESS_KEY}}"
+          S3_PUBLIC_REGION: "{{S3_PUBLIC_REGION}}"
+          S3_PUBLIC_ENDPOINT: "{{S3_PUBLIC_ENDPOINT}}"
+          S3_PUBLIC_BUCKET: "{{S3_PUBLIC_BUCKET}}"
+          S3_PUBLIC_ACCESS_KEY_ID: "{{S3_PUBLIC_ACCESS_KEY_ID}}"
+          S3_PUBLIC_SECRET_ACCESS_KEY: "{{S3_PUBLIC_SECRET_ACCESS_KEY}}"
+          SENTRY_DSN: "{{SENTRY_DSN}}"
