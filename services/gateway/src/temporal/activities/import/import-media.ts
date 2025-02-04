@@ -1,6 +1,8 @@
 import { createWriteStream } from 'node:fs';
+import { setTimeout } from 'node:timers/promises';
 import { basename, extname, join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
+import { chromium, type Request as PlaywrightRequest } from 'playwright';
 import { execa } from 'execa';
 import { rimraf } from 'rimraf';
 import { z } from 'zod';
@@ -33,7 +35,7 @@ async function downloadUrl(
   dir: string,
   log: typeof logger,
   heartbeat = noop,
-) {
+): Promise<string> {
   log.info(`Downloading URL ${url}`);
   const res = await fetch(url);
 
@@ -57,6 +59,52 @@ async function downloadUrl(
   log.info(`Downloaded ${url} to ${dest}`);
 
   return dest;
+}
+
+async function extractSubsplashM3u8(
+  url: string,
+  log: typeof logger,
+): Promise<string | null> {
+  log.info('Launching chromium');
+  const browser = await chromium.launch();
+
+  const page = await browser.newPage();
+
+  log.info(`Navigating to ${url}`);
+  await page.goto(url);
+
+  const posterPlayButton = page.locator('.kit-player__button--play');
+
+  let handler: ((request: PlaywrightRequest) => unknown) | null = null;
+
+  const m3u8UrlPromise = new Promise<string>((resolve) => {
+    handler = (request: PlaywrightRequest) => {
+      const requestedUrl = request.url();
+      if (requestedUrl.endsWith('.m3u8')) {
+        resolve(requestedUrl);
+      }
+    };
+    page.on('request', handler);
+  });
+
+  try {
+    log.info('Clicking play button');
+    await posterPlayButton.click();
+    const m3u8Url = await Promise.race([
+      m3u8UrlPromise,
+      setTimeout(20_000, null),
+    ] as const);
+
+    return m3u8Url;
+  } catch (e) {
+    // Rethrow any errors from playwright
+    throw e;
+  } finally {
+    if (handler) {
+      page.off('request', handler);
+    }
+    await browser.close();
+  }
 }
 
 const baseYtDlpArgs = [
@@ -148,6 +196,10 @@ export default async function importMedia(
 
     if (/\.(mp3|m4a|mp4)$/.test(url)) {
       mediaPath = await downloadUrl(url, dir, activityLogger, heartbeat);
+    } else if (new URL(url).hostname === 'subsplash.com') {
+      const m3u8Url = await extractSubsplashM3u8(url, activityLogger);
+      const res = await ytdlp(m3u8Url ?? url, dir, activityLogger, heartbeat);
+      mediaPath = res.mediaPath;
     } else {
       const res = await ytdlp(url, dir, activityLogger, heartbeat);
       mediaPath = res.mediaPath;
