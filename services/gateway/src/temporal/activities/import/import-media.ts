@@ -198,7 +198,8 @@ export default async function importMedia(
       mediaPath = await downloadUrl(url, dir, activityLogger, heartbeat);
     } else if (new URL(url).hostname === 'subsplash.com') {
       const m3u8Url = await extractSubsplashM3u8(url, activityLogger);
-      const res = await ytdlp(m3u8Url ?? url, dir, activityLogger, heartbeat);
+      invariant(m3u8Url, 'Missing m3u8 url (TODO)');
+      const res = await ytdlp(m3u8Url, dir, activityLogger, heartbeat);
       mediaPath = res.mediaPath;
     } else {
       const res = await ytdlp(url, dir, activityLogger, heartbeat);
