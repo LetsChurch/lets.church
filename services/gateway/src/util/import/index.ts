@@ -5,7 +5,7 @@ import { execa } from 'execa';
 import type { Logger } from '../logger';
 import { downloadUrl } from './download';
 import { ytdlp } from './yt-dlp';
-import { extractSubsplashM3u8 } from './subsplash';
+import { downloadSubsplash } from './subsplash';
 
 export type DownloadResult = {
   mediaPath: string;
@@ -34,10 +34,9 @@ export async function downloadFromUrl(
   if (/\.(mp3|m4a|mp4)$/.test(url.pathname)) {
     mediaPath = await downloadUrl(url, dir, logger, heartbeat);
   } else if (new URL(url).hostname === 'subsplash.com') {
-    const m3u8Url = await extractSubsplashM3u8(url, logger);
-    invariant(m3u8Url, 'Missing m3u8 url (TODO)');
-    const res = await ytdlp(m3u8Url, dir, logger, heartbeat);
+    const res = await downloadSubsplash(url, dir, logger, heartbeat);
     mediaPath = res.mediaPath;
+    thumbnailPath = res.thumbnailPath;
   } else {
     const res = await ytdlp(url, dir, logger, heartbeat);
     mediaPath = res.mediaPath;

@@ -69,5 +69,5 @@ FROM base AS import-worker
 RUN apt-get install -y python3 ffmpeg
 COPY --from=jauderho/yt-dlp:2025.01.26 /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
 RUN npm run prisma:generate
-RUN npx playwright install --with-deps chromium
+RUN npx playwright install --with-deps firefox
 CMD npm run start:import-worker

@@ -1,24 +1,41 @@
-import { chromium } from 'playwright';
+import { firefox } from 'playwright';
 import { pEvent } from 'p-event';
+import { noop } from 'lodash-es';
+import invariant from 'tiny-invariant';
 import type { Logger } from '../logger';
+import { ytdlp } from './yt-dlp';
+import { downloadUrl } from './download';
+import type { DownloadResult } from '.';
 
-export async function extractSubsplashM3u8(
+async function launchFirefox() {
+  const browser = await firefox.launch();
+  const context = await browser.newContext({
+    userAgent:
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:134.0) Gecko/20100101 Firefox/134.0',
+  });
+
+  return { browser, context };
+}
+
+async function extractSubsplashMedia(
   url: URL,
   log: Logger,
 ): Promise<string | null> {
-  log.info('Launching chromium');
-  const browser = await chromium.launch();
-
-  const page = await browser.newPage();
+  log.info('Launching Firefox to extract m3u8');
+  const { browser, context } = await launchFirefox();
+  const page = await context.newPage();
 
   log.info(`Navigating to ${url}`);
   await page.goto(url.toString());
 
-  const posterPlayButton = page.locator('.kit-player__button--play');
+  const posterPlayButton = page
+    .frameLocator('.sap-embed-player > iframe')
+    .locator('.kit-player__button--play');
 
   const m3u8UrlPromise = pEvent(page, 'request', {
     filter: (req) => {
-      return req.url().endsWith('.m3u8');
+      const u = req.url();
+      return u.endsWith('.m3u8') || u.endsWith('.mp3');
     },
     timeout: 20_000,
   }).then((req) => req.url());
@@ -35,4 +52,59 @@ export async function extractSubsplashM3u8(
   } finally {
     await browser.close();
   }
+}
+
+async function downloadSubsplashThumbnail(
+  url: URL,
+  dir: string,
+  log: Logger,
+): Promise<string | null> {
+  log.info('Launching Firefox to download thumbnail');
+  const { browser, context } = await launchFirefox();
+  try {
+    const page = await context.newPage();
+
+    log.info(`Navigating to ${url}`);
+    page.goto(url.toString());
+
+    const thumbnailContainer = page
+      .frameLocator('.sap-embed-player > iframe')
+      .locator('.kit-image__cover-image');
+    const style = await thumbnailContainer.getAttribute('style');
+
+    if (!style) {
+      return null;
+    }
+
+    const match = style.match(/background-image: url\("([^"]+)"\)/);
+    const thumbUrl = match?.[1] ?? null;
+
+    if (thumbUrl) {
+      return downloadUrl(thumbUrl, dir, log);
+    }
+
+    return null;
+  } catch (e) {
+    log.error('Error downloading thumbnail', e);
+    return null;
+  } finally {
+    await browser.close();
+  }
+}
+
+export async function downloadSubsplash(
+  url: URL,
+  dir: string,
+  log: Logger,
+  heartbeat: typeof noop = noop,
+): Promise<DownloadResult> {
+  const mediaUrl = await extractSubsplashMedia(url, log);
+  invariant(mediaUrl, 'Missing m3u8 url');
+
+  const res = await ytdlp(mediaUrl, dir, log, heartbeat);
+  const mediaPath = res.mediaPath;
+
+  const thumbnailPath = await downloadSubsplashThumbnail(url, dir, log);
+
+  return { mediaPath, thumbnailPath };
 }

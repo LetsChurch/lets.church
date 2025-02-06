@@ -273,6 +273,8 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: development
+      MAX_CONCURRENT_WORKFLOW_TASK_EXECUTIONS: 2
+      MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 2
       SENTRY_DSN: ${SENTRY_IMPORT_WORKER_DSN}
       SERVICE_NAME: import-worker
       IDENTITY: dev
