@@ -75,17 +75,12 @@ async function extractSubsplashM3u8(
 
   const posterPlayButton = page.locator('.kit-player__button--play');
 
-  let handler: ((request: PlaywrightRequest) => unknown) | null = null;
-
-  const m3u8UrlPromise = new Promise<string>((resolve) => {
-    handler = (request: PlaywrightRequest) => {
-      const requestedUrl = request.url();
-      if (requestedUrl.endsWith('.m3u8')) {
-        resolve(requestedUrl);
-      }
-    };
-    page.on('request', handler);
-  });
+  const m3u8UrlPromise = pEvent(page, 'request', {
+    filter: (req) => {
+      return req.url().endsWith('.m3u8');
+    },
+    timeout: 20_000,
+  }).then((req) => req.url());
 
   try {
     log.info('Clicking play button');
@@ -100,9 +95,6 @@ async function extractSubsplashM3u8(
     // Rethrow any errors from playwright
     throw e;
   } finally {
-    if (handler) {
-      page.off('request', handler);
-    }
     await browser.close();
   }
 }
