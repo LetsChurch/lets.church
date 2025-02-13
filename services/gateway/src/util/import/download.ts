@@ -1,6 +1,7 @@
 import { createWriteStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
-import { join, noop } from 'lodash-es';
+import { join } from 'node:path';
+import { noop } from 'lodash-es';
 import { nanoid } from 'nanoid';
 import logger from '../logger';
 

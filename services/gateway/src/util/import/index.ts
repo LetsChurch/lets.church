@@ -32,12 +32,15 @@ export async function downloadFromUrl(
   let thumbnailPath: string | null = null;
 
   if (/\.(mp3|m4a|mp4)$/.test(url.pathname)) {
+    logger.info(`Downloading plain URL ${url}`);
     mediaPath = await downloadUrl(url, dir, logger, heartbeat);
   } else if (new URL(url).hostname === 'subsplash.com') {
+    logger.info(`Downloading Subsplash URL ${url}`);
     const res = await downloadSubsplash(url, dir, logger, heartbeat);
     mediaPath = res.mediaPath;
     thumbnailPath = res.thumbnailPath;
   } else {
+    logger.info(`Downloading yt-dlp URL ${url}`);
     const res = await ytdlp(url, dir, logger, heartbeat);
     mediaPath = res.mediaPath;
     thumbnailPath = res.thumbnailPath;
