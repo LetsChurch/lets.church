@@ -1,7 +1,7 @@
-import { basename } from 'node:path';
 import { createWriteStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import { join, noop } from 'lodash-es';
+import { nanoid } from 'nanoid';
 import logger from '../logger';
 
 export async function downloadUrl(
@@ -19,7 +19,7 @@ export async function downloadUrl(
   }
 
   // Write fetch result to file
-  const dest = join(dir, basename(url.pathname));
+  const dest = join(dir, nanoid());
   const stream = createWriteStream(dest);
 
   await pipeline(
