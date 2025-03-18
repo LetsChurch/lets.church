@@ -45,6 +45,11 @@ export default function Root() {
         <link rel="mask-icon" href="/favicon.svg" color={indigo} />
         <meta name="msapplication-TileColor" content="#ffffff" />
         <meta name="theme-color" content={indigo} />
+        <script
+          defer
+          src="https://cloud.umami.is/script.js"
+          data-website-id="c329279a-98a1-45ab-aeda-1cee53222b20"
+        />
       </Head>
       <Body>
         <Suspense>
