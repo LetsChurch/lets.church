@@ -1,6 +1,7 @@
 import { mount, StartClient } from 'solid-start/entry-client';
 import * as Sentry from '@sentry/browser';
 import Plausible from 'plausible-tracker';
+import posthog from 'posthog-js';
 
 if (import.meta.env['MODE'] !== 'development') {
   Sentry.init({
@@ -19,6 +20,12 @@ plausible.trackEvent('supports', {
   props: {
     anchorPositioning: window.CSS.supports('anchor-name', '--anchor-el'),
   },
+});
+
+posthog.init('phc_nrdBwyxcJ3Tc0g1Gq1J5Gd2w1nmpx0IIK4HQBusIu6P', {
+  api_host: 'https://us.i.posthog.com',
+  persistence: 'memory',
+  person_profiles: 'identified_only',
 });
 
 mount(() => <StartClient />, document);
