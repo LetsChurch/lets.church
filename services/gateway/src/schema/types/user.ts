@@ -192,17 +192,24 @@ export const AppUser = builder.prismaObject('AppUser', {
       authScopes: privateAuthScopes,
       select: { id: true, emails: { select: { email: true } } },
       resolve: async (user) => {
-        const res = await fetch(
-          `${envariant(
-            'LISTMONK_INTERNAL_URL',
-          )}/api/subscribers?query=${encodeURIComponent(
-            `subscribers.email in (${user.emails
-              .map((e) => `'${e.email}'`)
-              .join(',')})`,
-          )}`,
-        );
-        const json: { data: { total: number } } = await res.json();
-        return json.data.total > 0;
+        try {
+          const res = await fetch(
+            `${envariant(
+              'LISTMONK_INTERNAL_URL',
+            )}/api/subscribers?query=${encodeURIComponent(
+              `subscribers.email in (${user.emails
+                .map((e) => `'${e.email}'`)
+                .join(',')})`,
+            )}`,
+          );
+          const json: { data: { total: number } } = await res.json();
+          return json.data.total > 0;
+        } catch (e) {
+          moduleLogger.error(e, 'Error determining subscription status.', {
+            user: { id: user.id },
+          });
+          return false;
+        }
       },
     }),
   }),
