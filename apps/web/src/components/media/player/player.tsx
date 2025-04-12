@@ -42,27 +42,32 @@ const recordViewRanges = server$(
   ) => {
     const client = await createAuthenticatedClient(server$.request);
 
-    const res = await client.request<
-      MediaRouteRecordViewRangesMutation,
-      MediaRouteRecordViewRangesMutationVariables
-    >(
-      gql`
-        mutation MediaRouteRecordViewRanges(
-          $id: ShortUuid!
-          $ranges: [TimeRange!]!
-          $viewId: Uuid
-        ) {
-          viewId: recordUploadRangesView(
-            uploadRecordId: $id
-            ranges: $ranges
-            viewId: $viewId
-          )
-        }
-      `,
-      { id, ranges, viewId },
-    );
+    try {
+      const res = await client.request<
+        MediaRouteRecordViewRangesMutation,
+        MediaRouteRecordViewRangesMutationVariables
+      >(
+        gql`
+          mutation MediaRouteRecordViewRanges(
+            $id: ShortUuid!
+            $ranges: [TimeRange!]!
+            $viewId: Uuid
+          ) {
+            viewId: recordUploadRangesView(
+              uploadRecordId: $id
+              ranges: $ranges
+              viewId: $viewId
+            )
+          }
+        `,
+        { id, ranges, viewId },
+      );
 
-    return res;
+      return res;
+    } catch (e) {
+      console.error('Error recording view ranges', e);
+      return null;
+    }
   },
 );
 
@@ -107,7 +112,9 @@ export default function Player(props: Props) {
         serializeTimeRanges(videoRef.played),
         viewId,
       );
-      viewId = res.viewId;
+      if (res) {
+        viewId = res.viewId;
+      }
     } finally {
       reportRangesTimer = window.setTimeout(reportTimeRanges, 5000);
     }
