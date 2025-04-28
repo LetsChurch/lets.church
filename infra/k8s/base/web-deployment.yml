@@ -27,6 +27,8 @@ spec:
           envFrom:
             - secretRef:
                 name: turnstile-secret
+            - secretRef:
+                name: web-secret
             - configMapRef:
                 name: web-config
           readinessProbe:
