@@ -56,3 +56,20 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-next-funnel
+  annotations:
+    tailscale.com/funnel: "true"
+spec:
+  defaultBackend:
+    service:
+      name: web-next
+      port:
+        number: 80
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+        - web-next-funnel

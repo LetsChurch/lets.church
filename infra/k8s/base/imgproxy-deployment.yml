@@ -37,3 +37,20 @@ spec:
     - protocol: TCP
       port: 8080
       targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: imgproxy-funnel
+  annotations:
+    tailscale.com/funnel: "true"
+spec:
+  defaultBackend:
+    service:
+      name: imgproxy
+      port:
+        number: 80
+  ingressClassName: tailscale
+  tls:
+    - hosts:
+        - imgproxy-funnel
