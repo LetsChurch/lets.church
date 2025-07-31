@@ -19,6 +19,7 @@ pkgs.mkShell {
     git-lfs
     gitleaks
     go
+    gum
     just
     kubectl
     kustomize

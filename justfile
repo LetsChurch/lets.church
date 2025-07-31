@@ -79,7 +79,7 @@ reset:
   just stop
   docker volume prune --all --force
   just start
-  sleep 10
+  gum spin --title "Waiting for services..." -- sleep 10
   just init seed
 
 npmi-host-scripts:
