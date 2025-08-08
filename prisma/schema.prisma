@@ -1,0 +1,541 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [citext, uuidOssp(map: "uuid-ossp")]
+}
+
+enum AppUserRole {
+  USER
+  ADMIN
+
+  @@map("app_user_role")
+}
+
+model TrackingSalt {
+  id        Int      @id @default(autoincrement())
+  salt      Int
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("tracking_salt")
+}
+
+model AppUser {
+  id                       String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  emails                   AppUserEmail[]
+  username                 String                    @unique @db.Citext
+  password                 String
+  fullName                 String?                   @map("full_name") @db.VarChar(100)
+  avatarPath               String?                   @map("avatar_path") @db.VarChar(255)
+  avatarBlurhash           String?                   @map("avatar_blurhash") @db.VarChar(255)
+  createdAt                DateTime                  @default(now()) @map("created_at")
+  updatedAt                DateTime                  @updatedAt @map("updated_at")
+  deletedAt                DateTime?                 @map("deleted_at")
+  role                     AppUserRole               @default(USER)
+  sessions                 AppSession[]
+  channelMemberships       ChannelMembership[]
+  organizationMemberships  OrganizationMembership[]
+  createdUploads           UploadRecord[]            @relation("createdUploads")
+  finalizedUploads         UploadRecord[]            @relation("finalizedUploads")
+  channelSubscriptions     ChannelSubscription[]
+  uploadUserComments       UploadUserComment[]
+  uploadUserRatings        UploadUserRating[]
+  uploadUserCommentRatings UploadUserCommentRating[]
+  uploadViews              UploadView[]
+  uploadViewRanges         UploadViewRanges[]
+  uploadLists              UploadList[]
+
+  @@map("app_user")
+}
+
+model AppUserEmail {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  appUser    AppUser   @relation(fields: [appUserId], references: [id], onDelete: Cascade)
+  appUserId  String    @map("app_user_id") @db.Uuid
+  email      String    @unique @db.Citext
+  key        String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  verifiedAt DateTime? @map("verified_at")
+
+  @@map("app_user_email")
+}
+
+model AppSession {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  appUserId String    @map("app_user_id") @db.Uuid
+  appUser   AppUser   @relation(fields: [appUserId], references: [id], onDelete: Cascade)
+  expiresAt DateTime  @default(dbgenerated("(now() + '30 days'::interval)")) @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@map("app_session")
+}
+
+model ChannelSubscription {
+  appUser   AppUser @relation(fields: [appUserId], references: [id], onDelete: Cascade)
+  appUserId String  @map("app_user_id") @db.Uuid
+  channel   Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channelId String  @map("channel_id") @db.Uuid
+
+  @@id([appUserId, channelId])
+  @@map("channel_subscription")
+}
+
+enum TagColor {
+  GRAY
+  RED
+  YELLOW
+  GREEN
+  BLUE
+  INDIGO
+  PURPLE
+  PINK
+}
+
+enum OrganizationType {
+  CHURCH
+  MINISTRY
+
+  @@map("organization_type")
+}
+
+enum OrganizationTagCategory {
+  DENOMINATION
+  DOCTRINE
+  ESCHATOLOGY
+  WORSHIP
+  CONFESSION
+  GOVERNMENT
+  OTHER
+
+  @@map("organization_tag_category")
+}
+
+model OrganizationTag {
+  slug          String                      @unique @db.Citext
+  label         String
+  description   String?
+  moreInfoLink  String?                     @map("more_info_link")
+  category      OrganizationTagCategory
+  color         TagColor                    @default(GRAY)
+  organizations OrganizationTagInstance[]
+  suggestedBy   OrganizationTagSuggestion[] @relation("SuggestedBy")
+  suggests      OrganizationTagSuggestion[] @relation("Suggests")
+
+  @@map("organization_tag")
+}
+
+model OrganizationTagSuggestion {
+  parent        OrganizationTag @relation("SuggestedBy", fields: [parentSlug], references: [slug])
+  parentSlug    String          @map("parent_slug") @db.Citext
+  suggested     OrganizationTag @relation("Suggests", fields: [suggestedSlug], references: [slug])
+  suggestedSlug String          @map("recommended_slug") @db.Citext
+
+  @@id([parentSlug, suggestedSlug])
+  @@map("organization_tag_suggestion")
+}
+
+model OrganizationTagInstance {
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  organizationId String          @map("organization_id") @db.Uuid
+  tag            OrganizationTag @relation(fields: [tagSlug], references: [slug])
+  tagSlug        String          @map("tag_slug") @db.Citext
+
+  @@id([organizationId, tagSlug])
+  @@map("organization_tag_instance")
+}
+
+model Organization {
+  id                                           String                                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type                                         OrganizationType                      @default(MINISTRY)
+  name                                         String
+  slug                                         String                                @unique @db.Citext
+  avatarPath                                   String?                               @map("avatar_path")
+  coverPath                                    String?                               @map("cover_path")
+  primaryEmail                                 String?                               @map("primary_email")
+  primaryPhoneNumber                           String?                               @map("primary_phone_number")
+  websiteUrl                                   String?                               @map("website_url")
+  addresses                                    OrganizationAddress[]
+  leaders                                      OrganizationLeader[]
+  description                                  String?
+  memberships                                  OrganizationMembership[]
+  channelAssociations                          OrganizationChannelAssociation[]
+  upstreamOrganizationAssociations             OrganizationOrganizationAssociation[] @relation("downstreamOrganization")
+  downstreamOrganizationAssociations           OrganizationOrganizationAssociation[] @relation("upstreamOrganization")
+  automaticallyApproveOrganizationAssociations Boolean                               @default(false) @map("automatically_approve_organization_associations")
+  tags                                         OrganizationTagInstance[]
+  createdAt                                    DateTime                              @default(now()) @map("created_at")
+  updatedAt                                    DateTime                              @updatedAt @map("updated_at")
+
+  @@map("organization")
+}
+
+enum AddressType {
+  MAILING
+  MEETING
+  OFFICE
+  OTHER
+
+  @@map("address_type")
+}
+
+model OrganizationAddress {
+  id                  String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organization        Organization @relation(fields: [organizationId], references: [id])
+  organizationId      String       @map("organization_id") @db.Uuid
+  type                AddressType
+  name                String?
+  query               String?
+  geocodingJson       Json?        @map("geocoding_json")
+  country             String? // e.g., United States
+  locality            String? // e.g., Boston
+  region              String? // e.g., Massachusetts
+  postOfficeBoxNumber String?      @map("post_office_box_number")
+  postalCode          String?      @map("postal_code")
+  streetAddress       String?      @map("street_address")
+  latitude            Float?       @map("latitude")
+  longitude           Float?       @map("longitude")
+
+  @@map("organization_address")
+}
+
+enum OrganizationLeaderType {
+  ELDER
+  DEACON
+  OTHER
+
+  @@map("organization_leader_type")
+}
+
+model OrganizationLeader {
+  id             String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organization   Organization           @relation(fields: [organizationId], references: [id])
+  organizationId String                 @map("organization_id") @db.Uuid
+  type           OrganizationLeaderType
+  name           String?
+  email          String?                @map("email")
+  phoneNumber    String?                @map("phone_number")
+
+  @@map("organization_leader")
+}
+
+model OrganizationMembership {
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String       @map("organization_id") @db.Uuid
+  appUser        AppUser      @relation(fields: [appUserId], references: [id], onDelete: Cascade)
+  appUserId      String       @map("app_user_id") @db.Uuid
+  isAdmin        Boolean      @default(false) @map("is_admin")
+  canEdit        Boolean      @default(false) @map("can_edit")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@id([organizationId, appUserId])
+  @@map("organization_membership")
+}
+
+model OrganizationOrganizationAssociation {
+  upstreamOrganization     Organization @relation("upstreamOrganization", fields: [upstreamOrganizationId], references: [id], onDelete: Cascade)
+  upstreamOrganizationId   String       @map("upstream_organization_id") @db.Uuid
+  downstreamOrganization   Organization @relation("downstreamOrganization", fields: [downstreamOrganizationId], references: [id], onDelete: Cascade)
+  downstreamOrganizationId String       @map("downstream_organization_id") @db.Uuid
+  upstreamApproved         Boolean      @default(false) @map("upstream_approved")
+  downstreamApproved       Boolean      @default(false) @map("downstream_approved")
+  createdAt                DateTime     @default(now()) @map("created_at")
+  updatedAt                DateTime     @updatedAt @map("updated_at")
+
+  @@id([upstreamOrganizationId, downstreamOrganizationId])
+  @@map("organization_organization_association")
+}
+
+model OrganizationChannelAssociation {
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId  String       @map("organization_id") @db.Uuid
+  channel         Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channelId       String       @map("channel_id") @db.Uuid
+  officialChannel Boolean      @default(false) @map("official_channel")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  @@id([organizationId, channelId])
+  @@map("organization_channel_association")
+}
+
+enum ChannelVisibility {
+  PUBLIC
+  PRIVATE
+  UNLISTED
+
+  @@map("channel_visibility")
+}
+
+model Channel {
+  id                       String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                     String
+  visibility               ChannelVisibility                @default(PUBLIC)
+  avatarPath               String?                          @map("avatar_path") @db.VarChar(255)
+  avatarBlurhash           String?                          @map("avatar_blurhash") @db.VarChar(255)
+  slug                     String                           @unique @db.Citext
+  description              String?
+  memberships              ChannelMembership[]
+  organizationAssociations OrganizationChannelAssociation[]
+  createdAt                DateTime                         @default(now()) @map("created_at")
+  updatedAt                DateTime                         @updatedAt @map("updated_at")
+  uploadRecords            UploadRecord[]
+  uploadLists              UploadList[]
+  subscribers              ChannelSubscription[]
+  defaultThumbnailPath     String?                          @map("default_thumbnail_path") @db.VarChar(255)
+  defaultThumbnailBlurhash String?                          @map("default_thumbnail_blurhash") @db.VarChar(255)
+
+  @@map("channel")
+}
+
+model ChannelMembership {
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channelId String   @map("channel_id") @db.Uuid
+  appUser   AppUser  @relation(fields: [appUserId], references: [id], onDelete: Cascade)
+  appUserId String   @map("app_user_id") @db.Uuid
+  isAdmin   Boolean  @default(false) @map("is_admin")
+  canEdit   Boolean  @default(false) @map("can_edit")
+  canUpload Boolean  @default(false) @map("can_upload")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@id([channelId, appUserId])
+  @@map("channel_membership")
+}
+
+enum UploadLicense {
+  STANDARD
+  PUBLIC_DOMAIN
+  CC_BY
+  CC_BY_SA
+  CC_BY_NC
+  CC_BY_NC_SA
+  CC_BY_ND
+  CC_BY_NC_ND
+  CC0
+
+  @@map("upload_license")
+}
+
+enum UploadVisibility {
+  PUBLIC
+  PRIVATE
+  UNLISTED
+
+  @@map("upload_visibility")
+}
+
+enum UploadVariant {
+  VIDEO_4K
+  VIDEO_4K_DOWNLOAD
+  VIDEO_1080P
+  VIDEO_1080P_DOWNLOAD
+  VIDEO_720P
+  VIDEO_720P_DOWNLOAD
+  VIDEO_480P
+  VIDEO_480P_DOWNLOAD
+  VIDEO_360P
+  VIDEO_360P_DOWNLOAD
+  AUDIO
+  AUDIO_DOWNLOAD
+
+  @@map("upload_variant")
+}
+
+// TODO: How should we handle cascading deletes?
+model UploadRecord {
+  id                        String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title                     String?
+  description               String?
+  createdBy                 AppUser                    @relation("createdUploads", fields: [appUserId], references: [id])
+  appUserId                 String                     @map("app_user_id") @db.Uuid
+  license                   UploadLicense
+  channel                   Channel                    @relation(fields: [channelId], references: [id])
+  channelId                 String                     @map("channel_id") @db.Uuid
+  visibility                UploadVisibility
+  uploadSizeBytes           BigInt?                    @map("upload_size_bytes")
+  uploadFinalized           Boolean                    @default(false) @map("upload_finalized")
+  uploadFinalizedAt         DateTime?                  @map("upload_finalized_at")
+  uploadFinalizedBy         AppUser?                   @relation("finalizedUploads", fields: [uploadFinalizedById], references: [id])
+  uploadFinalizedById       String?                    @map("upload_finalized_by_id") @db.Uuid
+  finalizedUploadKey        String?                    @map("finalized_upload_key")
+  probe                     Json?
+  defaultThumbnailPath      String?                    @map("default_thumbnail_path")
+  defaultThumbnailBlurhash  String?                    @map("default_thumbnail_blurhash")
+  overrideThumbnailPath     String?                    @map("override_thumbnail_path")
+  overrideThumbnailBlurhash String?                    @map("override_thumbnail_blurhash")
+  thumbnailCount            Int?                       @map("thumbnail_count")
+  lengthSeconds             Float?                     @map("length_seconds")
+  createdAt                 DateTime                   @default(now()) @map("created_at")
+  updatedAt                 DateTime                   @updatedAt @map("updated_at")
+  publishedAt               DateTime                   @default(now()) @map("published_at")
+  transcodingStartedAt      DateTime?                  @map("transcoding_started_at")
+  transcodingFinishedAt     DateTime?                  @map("transcoding_finished_at")
+  transcodingProgress       Float                      @default(0) @map("transcoding_progress")
+  transcribingStartedAt     DateTime?                  @map("transcribing_started_at")
+  transcribingFinishedAt    DateTime?                  @map("transcribing_finished_at")
+  deletedAt                 DateTime?                  @map("deleted_at")
+  variants                  UploadVariant[]
+  userRatings               UploadUserRating[]
+  score                     Float                      @default(0)
+  scoreStaleAt              DateTime?                  @default(now()) @map("score_stale_at")
+  userCommentsEnabled       Boolean                    @default(true) @map("user_comments_enabled")
+  userComments              UploadUserComment[]
+  downloadsEnabled          Boolean                    @default(true) @map("downloads_enabled")
+  downloadSizes             UploadRecordDownloadSize[]
+  uploadViews               UploadView[]
+  uploadViewRanges          UploadViewRanges[]
+  uploadListEntries         UploadListEntry[]
+
+  @@index([createdAt, id])
+  @@index(score)
+  @@index(scoreStaleAt)
+  @@map("upload_record")
+}
+
+model UploadRecordDownloadSize {
+  uploadRecord   UploadRecord  @relation(fields: [uploadRecordId], references: [id], onDelete: Cascade)
+  uploadRecordId String        @map("upload_record_id") @db.Uuid
+  variant        UploadVariant
+  bytes          BigInt        @map("size_bytes")
+
+  @@unique([uploadRecordId, variant])
+  @@map("upload_record_download_size")
+}
+
+enum Rating {
+  LIKE
+  DISLIKE
+
+  @@map("rating")
+}
+
+model UploadUserRating {
+  appUser        AppUser      @relation(fields: [appUserId], references: [id], onDelete: Cascade)
+  appUserId      String       @map("app_user_id") @db.Uuid
+  uploadRecordId String       @map("upload_id") @db.Uuid
+  rating         Rating
+  createdAt      DateTime     @default(now()) @map("created_at")
+  uploadRecord   UploadRecord @relation(fields: [uploadRecordId], references: [id], onDelete: Cascade)
+
+  @@id([appUserId, uploadRecordId])
+  @@index([uploadRecordId, rating])
+  @@index([appUserId, rating])
+  @@map("upload_user_rating")
+}
+
+model UploadUserComment {
+  id             String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt      DateTime                  @default(now()) @map("created_at")
+  updatedAt      DateTime                  @updatedAt @map("updated_at")
+  author         AppUser                   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId       String                    @map("author_id") @db.Uuid
+  upload         UploadRecord              @relation(fields: [uploadRecordId], references: [id], onDelete: Cascade)
+  uploadRecordId String                    @map("upload_id") @db.Uuid
+  replies        UploadUserComment[]       @relation("ThreadComments")
+  replyingTo     UploadUserComment?        @relation("ThreadComments", fields: [replyingToId], references: [id])
+  replyingToId   String?                   @map("replying_to_id") @db.Uuid
+  text           String
+  userRatings    UploadUserCommentRating[]
+  score          Float                     @default(0)
+  scoreStaleAt   DateTime?                 @default(now()) @map("score_stale_at")
+
+  @@index(replyingToId)
+  @@index(score)
+  @@index(scoreStaleAt)
+  @@map("upload_user_comment")
+}
+
+model UploadUserCommentRating {
+  appUser             AppUser           @relation(fields: [appUserId], references: [id], onDelete: Cascade)
+  appUserId           String            @map("app_user_id") @db.Uuid
+  uploadUserCommentId String            @map("upload_user_comment_id") @db.Uuid
+  uploadUserComment   UploadUserComment @relation(fields: [uploadUserCommentId], references: [id], onDelete: Cascade)
+  rating              Rating
+  createdAt           DateTime          @default(now()) @map("created_at")
+
+  @@id([appUserId, uploadUserCommentId])
+  @@index([uploadUserCommentId, rating])
+  @@index([appUserId, rating])
+  @@map("upload_user_comment_rating")
+}
+
+model UploadView {
+  upload         UploadRecord @relation(fields: [uploadRecordId], references: [id], onDelete: Cascade)
+  uploadRecordId String       @map("upload_record_id") @db.Uuid
+  viewHash       BigInt       @map("view_hash")
+  user           AppUser?     @relation(fields: [appUserId], references: [id])
+  appUserId      String?      @map("app_user_id") @db.Uuid
+  createdAt      DateTime     @default(now()) @map("created_at")
+  count          Int          @default(1)
+
+  @@id([uploadRecordId, viewHash])
+  @@index([appUserId, uploadRecordId])
+  @@index([createdAt])
+  @@map("upload_view")
+}
+
+model UploadViewRanges {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  upload         UploadRecord @relation(fields: [uploadRecordId], references: [id], onDelete: Cascade)
+  uploadRecordId String       @map("upload_record_id") @db.Uuid
+  viewHash       BigInt       @map("viewer_hash")
+  user           AppUser?     @relation(fields: [appUserId], references: [id])
+  appUserId      String?      @map("app_user_id") @db.Uuid
+  viewTimestamp  DateTime     @default(now()) @map("view_timestamp")
+  ranges         Json         @default("[]")
+  totalTime      Float        @map("total_time") // TODO: normalize by ensuring total time doesn't go before midnight, better plan: return and re-use id via jwt
+
+  @@index([uploadRecordId, viewHash])
+  @@index(viewTimestamp)
+  @@map("upload_view_ranges")
+}
+
+enum UploadListType {
+  SERIES
+  PLAYLIST
+
+  @@map("upload_list_type")
+}
+
+model UploadListEntry {
+  uploadList     UploadList   @relation(fields: [uploadListId], references: [id])
+  uploadListId   String       @map("upload_list_id") @db.Uuid
+  upload         UploadRecord @relation(fields: [uploadRecordId], references: [id], onDelete: Cascade)
+  uploadRecordId String       @map("upload_record_id") @db.Uuid
+  rank           String       @db.VarChar(12)
+
+  @@id([uploadListId, rank])
+  @@unique([uploadListId, uploadRecordId])
+  @@map("upload_list_entry")
+}
+
+model UploadList {
+  id        String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+  title     String
+  author    AppUser           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  String            @map("author_id") @db.Uuid
+  channel   Channel?          @relation(fields: [channelId], references: [id])
+  channelId String?           @map("channel_id") @db.Uuid
+  type      UploadListType
+  uploads   UploadListEntry[]
+
+  @@unique([createdAt, id])
+  @@map("upload_list")
+}
+
+model SearchLogEntry {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  query     String
+  params    Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("search_log_entry")
+}

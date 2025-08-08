@@ -1,4 +1,9 @@
 .envrc.local
 .direnv
+.output
 gitleaks-findings.json
 node_modules
+seed-data
+
+# TODO: temp
+legacy
