@@ -47,6 +47,11 @@ const getChannels = createServerFn({ method: 'GET' })
     });
   });
 
+const channelsQueryOptions = {
+  queryKey: ['dashboard', 'channels'],
+  queryFn: () => getChannels(),
+} as const;
+
 export const Route = createFileRoute('/dashboard_/channels')({
   component: ChannelsPage,
   beforeLoad: async () => {
@@ -55,18 +60,12 @@ export const Route = createFileRoute('/dashboard_/channels')({
     }
   },
   loader: async ({ context: { queryClient } }) => {
-    return queryClient.ensureQueryData({
-      queryKey: ['dashboard', 'channels'],
-      queryFn: () => getChannels(),
-    });
+    return queryClient.ensureQueryData(channelsQueryOptions);
   },
 });
 
 function ChannelsPage() {
-  const { data: channels } = useSuspenseQuery({
-    queryKey: ['dashboard', 'channels'],
-    queryFn: () => getChannels(),
-  });
+  const { data: channels } = useSuspenseQuery(channelsQueryOptions);
 
   return (
     <>

@@ -50,6 +50,11 @@ const getChurches = createServerFn({ method: 'GET' })
     });
   });
 
+const churchesQueryOptions = {
+  queryKey: ['dashboard', 'churches'],
+  queryFn: () => getChurches(),
+} as const;
+
 export const Route = createFileRoute('/dashboard_/churches')({
   component: ChurchesPage,
   beforeLoad: async () => {
@@ -58,18 +63,12 @@ export const Route = createFileRoute('/dashboard_/churches')({
     }
   },
   loader: async ({ context: { queryClient } }) => {
-    return queryClient.ensureQueryData({
-      queryKey: ['dashboard', 'churches'],
-      queryFn: () => getChurches(),
-    });
+    return queryClient.ensureQueryData(churchesQueryOptions);
   },
 });
 
 function ChurchesPage() {
-  const { data: churches } = useSuspenseQuery({
-    queryKey: ['dashboard', 'churches'],
-    queryFn: () => getChurches(),
-  });
+  const { data: churches } = useSuspenseQuery(churchesQueryOptions);
 
   return (
     <>
