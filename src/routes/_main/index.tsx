@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { hasValidSession } from '../auth_/login';
+import { hasValidSession } from '../-functions';
 
 export const Route = createFileRoute('/_main/')({
   component: Home,

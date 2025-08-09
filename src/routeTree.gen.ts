@@ -16,9 +16,13 @@ import { Route as AuthRouteImport } from './routes/auth_'
 import { Route as MainRouteImport } from './routes/_main'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard_/index'
 import { Route as MainIndexRouteImport } from './routes/_main/index'
+import { Route as DashboardChurchesRouteImport } from './routes/dashboard_/churches'
+import { Route as DashboardChannelsRouteImport } from './routes/dashboard_/channels'
+import { Route as DashboardAccountRouteImport } from './routes/dashboard_/account'
 import { Route as AuthRegisterRouteImport } from './routes/auth_/register'
 import { Route as AuthLoginRouteImport } from './routes/auth_/login'
 import { Route as MainMediaIndexRouteImport } from './routes/_main/media/index'
+import { ServerRoute as AuthVerifyServerRouteImport } from './routes/auth_/verify'
 import { ServerRoute as AuthLogoutServerRouteImport } from './routes/auth_/logout'
 
 const rootServerRouteImport = createServerRootRoute()
@@ -47,6 +51,21 @@ const MainIndexRoute = MainIndexRouteImport.update({
   path: '/',
   getParentRoute: () => MainRoute,
 } as any)
+const DashboardChurchesRoute = DashboardChurchesRouteImport.update({
+  id: '/churches',
+  path: '/churches',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardChannelsRoute = DashboardChannelsRouteImport.update({
+  id: '/channels',
+  path: '/channels',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardAccountRoute = DashboardAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const AuthRegisterRoute = AuthRegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -62,6 +81,11 @@ const MainMediaIndexRoute = MainMediaIndexRouteImport.update({
   path: '/media/',
   getParentRoute: () => MainRoute,
 } as any)
+const AuthVerifyServerRoute = AuthVerifyServerRouteImport.update({
+  id: '/auth_/verify',
+  path: '/auth/verify',
+  getParentRoute: () => rootServerRouteImport,
+} as any)
 const AuthLogoutServerRoute = AuthLogoutServerRouteImport.update({
   id: '/auth_/logout',
   path: '/auth/logout',
@@ -73,6 +97,9 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/dashboard/account': typeof DashboardAccountRoute
+  '/dashboard/channels': typeof DashboardChannelsRoute
+  '/dashboard/churches': typeof DashboardChurchesRoute
   '/': typeof MainIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/media': typeof MainMediaIndexRoute
@@ -81,6 +108,9 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/dashboard/account': typeof DashboardAccountRoute
+  '/dashboard/channels': typeof DashboardChannelsRoute
+  '/dashboard/churches': typeof DashboardChurchesRoute
   '/': typeof MainIndexRoute
   '/dashboard': typeof DashboardIndexRoute
   '/media': typeof MainMediaIndexRoute
@@ -92,6 +122,9 @@ export interface FileRoutesById {
   '/dashboard_': typeof DashboardRouteWithChildren
   '/auth_/login': typeof AuthLoginRoute
   '/auth_/register': typeof AuthRegisterRoute
+  '/dashboard_/account': typeof DashboardAccountRoute
+  '/dashboard_/channels': typeof DashboardChannelsRoute
+  '/dashboard_/churches': typeof DashboardChurchesRoute
   '/_main/': typeof MainIndexRoute
   '/dashboard_/': typeof DashboardIndexRoute
   '/_main/media/': typeof MainMediaIndexRoute
@@ -103,11 +136,23 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/auth/login'
     | '/auth/register'
+    | '/dashboard/account'
+    | '/dashboard/channels'
+    | '/dashboard/churches'
     | '/'
     | '/dashboard/'
     | '/media'
   fileRoutesByTo: FileRoutesByTo
-  to: '/auth' | '/auth/login' | '/auth/register' | '/' | '/dashboard' | '/media'
+  to:
+    | '/auth'
+    | '/auth/login'
+    | '/auth/register'
+    | '/dashboard/account'
+    | '/dashboard/channels'
+    | '/dashboard/churches'
+    | '/'
+    | '/dashboard'
+    | '/media'
   id:
     | '__root__'
     | '/_main'
@@ -115,6 +160,9 @@ export interface FileRouteTypes {
     | '/dashboard_'
     | '/auth_/login'
     | '/auth_/register'
+    | '/dashboard_/account'
+    | '/dashboard_/channels'
+    | '/dashboard_/churches'
     | '/_main/'
     | '/dashboard_/'
     | '/_main/media/'
@@ -127,24 +175,28 @@ export interface RootRouteChildren {
 }
 export interface FileServerRoutesByFullPath {
   '/auth/logout': typeof AuthLogoutServerRoute
+  '/auth/verify': typeof AuthVerifyServerRoute
 }
 export interface FileServerRoutesByTo {
   '/auth/logout': typeof AuthLogoutServerRoute
+  '/auth/verify': typeof AuthVerifyServerRoute
 }
 export interface FileServerRoutesById {
   __root__: typeof rootServerRouteImport
   '/auth_/logout': typeof AuthLogoutServerRoute
+  '/auth_/verify': typeof AuthVerifyServerRoute
 }
 export interface FileServerRouteTypes {
   fileServerRoutesByFullPath: FileServerRoutesByFullPath
-  fullPaths: '/auth/logout'
+  fullPaths: '/auth/logout' | '/auth/verify'
   fileServerRoutesByTo: FileServerRoutesByTo
-  to: '/auth/logout'
-  id: '__root__' | '/auth_/logout'
+  to: '/auth/logout' | '/auth/verify'
+  id: '__root__' | '/auth_/logout' | '/auth_/verify'
   fileServerRoutesById: FileServerRoutesById
 }
 export interface RootServerRouteChildren {
   AuthLogoutServerRoute: typeof AuthLogoutServerRoute
+  AuthVerifyServerRoute: typeof AuthVerifyServerRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -184,6 +236,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainIndexRouteImport
       parentRoute: typeof MainRoute
     }
+    '/dashboard_/churches': {
+      id: '/dashboard_/churches'
+      path: '/churches'
+      fullPath: '/dashboard/churches'
+      preLoaderRoute: typeof DashboardChurchesRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard_/channels': {
+      id: '/dashboard_/channels'
+      path: '/channels'
+      fullPath: '/dashboard/channels'
+      preLoaderRoute: typeof DashboardChannelsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard_/account': {
+      id: '/dashboard_/account'
+      path: '/account'
+      fullPath: '/dashboard/account'
+      preLoaderRoute: typeof DashboardAccountRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/auth_/register': {
       id: '/auth_/register'
       path: '/register'
@@ -209,6 +282,13 @@ declare module '@tanstack/react-router' {
 }
 declare module '@tanstack/react-start/server' {
   interface ServerFileRoutesByPath {
+    '/auth_/verify': {
+      id: '/auth_/verify'
+      path: '/auth/verify'
+      fullPath: '/auth/verify'
+      preLoaderRoute: typeof AuthVerifyServerRouteImport
+      parentRoute: typeof rootServerRouteImport
+    }
     '/auth_/logout': {
       id: '/auth_/logout'
       path: '/auth/logout'
@@ -244,10 +324,16 @@ const AuthRouteChildren: AuthRouteChildren = {
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 interface DashboardRouteChildren {
+  DashboardAccountRoute: typeof DashboardAccountRoute
+  DashboardChannelsRoute: typeof DashboardChannelsRoute
+  DashboardChurchesRoute: typeof DashboardChurchesRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardAccountRoute: DashboardAccountRoute,
+  DashboardChannelsRoute: DashboardChannelsRoute,
+  DashboardChurchesRoute: DashboardChurchesRoute,
   DashboardIndexRoute: DashboardIndexRoute,
 }
 
@@ -265,6 +351,7 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>()
 const rootServerRouteChildren: RootServerRouteChildren = {
   AuthLogoutServerRoute: AuthLogoutServerRoute,
+  AuthVerifyServerRoute: AuthVerifyServerRoute,
 }
 export const serverRouteTree = rootServerRouteImport
   ._addFileChildren(rootServerRouteChildren)

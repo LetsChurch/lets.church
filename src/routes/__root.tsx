@@ -1,13 +1,13 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
-  createRootRoute,
+  createRootRouteWithContext,
   HeadContent,
   Outlet,
   Scripts,
 } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
+import type { AppContextType } from '@/router';
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<AppContextType>()({
   head: () => ({
     meta: [
       {
@@ -25,14 +25,10 @@ export const Route = createRootRoute({
   component: RootComponent,
 });
 
-const qc = new QueryClient();
-
 function RootComponent() {
   return (
     <RootDocument>
-      <QueryClientProvider client={qc}>
-        <Outlet />
-      </QueryClientProvider>
+      <Outlet />
     </RootDocument>
   );
 }

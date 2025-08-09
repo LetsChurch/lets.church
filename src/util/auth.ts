@@ -1,3 +1,4 @@
+import { getCookie } from '@tanstack/react-start/server';
 import argon2 from 'argon2';
 import db from './db';
 import { parseSessionJwt } from './jwt';
@@ -20,7 +21,13 @@ export async function login(id: string, password: string) {
   return session;
 }
 
-export async function getSession(cookie: string) {
+export async function getSession() {
+  const cookie = getCookie('lc-session');
+
+  if (!cookie) {
+    return null;
+  }
+
   const jwt = await parseSessionJwt(cookie);
 
   if (!jwt) {
@@ -31,6 +38,13 @@ export async function getSession(cookie: string) {
     where: {
       id: jwt.sub,
       expiresAt: { gt: new Date() },
+    },
+    include: {
+      appUser: {
+        select: {
+          id: true,
+        },
+      },
     },
   });
 

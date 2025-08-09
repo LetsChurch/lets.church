@@ -1,12 +1,6 @@
-import { getFormData } from '@tanstack/react-form/start';
-import { createServerFn } from '@tanstack/react-start';
+import { createMiddleware, createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
-
-export const getFormDataFromServer = createServerFn({ method: 'GET' }).handler(
-  async () => {
-    return getFormData();
-  },
-);
+import { getSession } from '@/util/auth';
 
 const clientEnv = z
   .object({ TURNSTILE_SITE_KEY: z.string() })
@@ -16,3 +10,32 @@ export const getClientEnv = createServerFn({
   method: 'GET',
   response: 'data',
 }).handler(() => clientEnv);
+
+export const hasValidSession = createServerFn({
+  method: 'GET',
+  response: 'data',
+}).handler(async (): Promise<boolean> => {
+  const session = await getSession();
+
+  return Boolean(session);
+});
+
+export const requireAnonMiddleware = createMiddleware({
+  type: 'function',
+}).server(async ({ next }) => {
+  if (await hasValidSession()) {
+    throw new Response('Unauthorized', { status: 401 });
+  }
+
+  return next();
+});
+
+export const requireAuthMiddleware = createMiddleware({
+  type: 'function',
+}).server(async ({ next }) => {
+  if (!(await hasValidSession())) {
+    throw new Response('Unauthorized', { status: 401 });
+  }
+
+  return next();
+});

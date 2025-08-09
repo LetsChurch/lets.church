@@ -3,6 +3,7 @@
     "jsx": "react-jsx",
     "moduleResolution": "Bundler",
     "module": "ESNext",
+    "isolatedModules": true,
     "target": "ES2024",
     "noEmit": true,
     "strict": true,

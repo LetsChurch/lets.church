@@ -1,7 +1,12 @@
 import { Alert, Paper, Stack, Text } from '@mantine/core';
 import { IconInfoCircle } from '@tabler/icons-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createFileRoute, Link, useRouter } from '@tanstack/react-router';
+import {
+  createFileRoute,
+  Link,
+  redirect,
+  useRouter,
+} from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { getWebRequest } from '@tanstack/react-start/server';
 import argon2 from 'argon2';
@@ -13,7 +18,11 @@ import db from '@/util/db';
 import { getClientIpAddress } from '@/util/request-ip';
 import { validateTurnstile } from '@/util/turnstile';
 import testPassword from '@/util/zxcvbn';
-import { getClientEnv } from '../-functions';
+import {
+  getClientEnv,
+  hasValidSession,
+  requireAnonMiddleware,
+} from '../-functions';
 
 const schema = z.object({
   email: z.email('Invalid email address'),
@@ -42,6 +51,7 @@ export const handleRegister = createServerFn({
   method: 'POST',
   response: 'data',
 })
+  .middleware([requireAnonMiddleware])
   .validator(schema)
   .handler(async ({ data: value }): Promise<HandleRegisterResponse> => {
     if (
@@ -91,6 +101,11 @@ export const handleRegister = createServerFn({
 
 export const Route = createFileRoute('/auth_/register')({
   component: RouteComponent,
+  beforeLoad: async () => {
+    if (await hasValidSession()) {
+      return redirect({ to: '/' });
+    }
+  },
   loader: async () => ({
     env: await getClientEnv(),
   }),

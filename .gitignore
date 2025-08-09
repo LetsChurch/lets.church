@@ -2,3 +2,6 @@
 .direnv
 gitleaks-findings.json
 node_modules
+.nitro
+.output
+.tanstack

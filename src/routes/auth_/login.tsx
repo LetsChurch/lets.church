@@ -8,19 +8,19 @@ import {
   useRouter,
 } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
-import {
-  getCookie,
-  getWebRequest,
-  setCookie,
-} from '@tanstack/react-start/server';
+import { getWebRequest, setCookie } from '@tanstack/react-start/server';
 import { useState } from 'react';
 import { z } from 'zod';
 import { useAppMantineForm } from '@/components/mantine';
-import { getSession, login } from '@/util/auth';
+import { login } from '@/util/auth';
 import { createSessionJwt } from '@/util/jwt';
 import { getClientIpAddress } from '@/util/request-ip';
 import { validateTurnstile } from '@/util/turnstile';
-import { getClientEnv } from '../-functions';
+import {
+  getClientEnv,
+  hasValidSession,
+  requireAnonMiddleware,
+} from '../-functions';
 
 const schema = z.object({
   id: z.string().min(1, 'Email or Username is required'),
@@ -34,6 +34,7 @@ export const handleLogin = createServerFn({
   method: 'POST',
   response: 'data',
 })
+  .middleware([requireAnonMiddleware])
   .validator(schema)
   .handler(
     async ({
@@ -65,21 +66,6 @@ export const handleLogin = createServerFn({
       }
     },
   );
-
-export const hasValidSession = createServerFn({
-  method: 'GET',
-  response: 'data',
-}).handler(async (): Promise<boolean> => {
-  const cookie = getCookie('lc-session');
-
-  if (!cookie) {
-    return false;
-  }
-
-  const session = await getSession(cookie);
-
-  return Boolean(session);
-});
 
 export const Route = createFileRoute('/auth_/login')({
   component: LoginRoute,
