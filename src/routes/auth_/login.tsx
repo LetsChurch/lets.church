@@ -40,10 +40,6 @@ export const handleLogin = createServerFn({
     async ({
       data: { id, password, turnstile },
     }): Promise<HandleLoginResponse> => {
-      if (await hasValidSession()) {
-        return { error: 'Already logged in' };
-      }
-
       if (
         !(await validateTurnstile(
           turnstile,

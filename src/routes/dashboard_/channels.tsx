@@ -12,15 +12,13 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
-import { getSession } from '@/util/auth';
 import db from '@/util/db';
 import { hasValidSession, requireAuthMiddleware } from '../-functions';
 
 const getChannels = createServerFn({ method: 'GET' })
   .middleware([requireAuthMiddleware])
-  .handler(async () => {
-    const session = await getSession();
-    invariant(session, 'Session not found');
+  .handler(async ({ context }) => {
+    invariant(context.session, 'Session not found');
 
     return db.channel.findMany({
       select: {
@@ -33,14 +31,14 @@ const getChannels = createServerFn({ method: 'GET' })
             canUpload: true,
           },
           where: {
-            appUserId: session.appUser.id,
+            appUserId: context.session.appUser.id,
           },
         },
       },
       where: {
         memberships: {
           some: {
-            appUserId: session.appUser.id,
+            appUserId: context.session.appUser.id,
           },
         },
       },

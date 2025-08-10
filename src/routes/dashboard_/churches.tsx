@@ -13,15 +13,13 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
-import { getSession } from '@/util/auth';
 import db from '@/util/db';
 import { hasValidSession, requireAuthMiddleware } from '../-functions';
 
 const getChurches = createServerFn({ method: 'GET' })
   .middleware([requireAuthMiddleware])
-  .handler(async () => {
-    const session = await getSession();
-    invariant(session, 'Session not found');
+  .handler(async ({ context }) => {
+    invariant(context.session, 'Session not found');
 
     return db.organization.findMany({
       select: {
@@ -35,7 +33,7 @@ const getChurches = createServerFn({ method: 'GET' })
             canEdit: true,
           },
           where: {
-            appUserId: session.appUser.id,
+            appUserId: context.session.appUser.id,
           },
         },
       },
@@ -43,7 +41,7 @@ const getChurches = createServerFn({ method: 'GET' })
         type: OrganizationType.CHURCH,
         memberships: {
           some: {
-            appUserId: session.appUser.id,
+            appUserId: context.session.appUser.id,
           },
         },
       },
