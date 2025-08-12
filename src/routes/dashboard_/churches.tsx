@@ -1,20 +1,29 @@
 import {
+  ActionIcon,
   Badge,
   Button,
   Card,
   Group,
+  Menu,
   SimpleGrid,
   Stack,
   Text,
   Title,
 } from '@mantine/core';
 import { OrganizationType } from '@prisma/client';
+import {
+  IconDots,
+  IconEye,
+  IconSettings,
+  IconUserMinus,
+} from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute, redirect } from '@tanstack/react-router';
+import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
 import db from '@/util/db';
 import { hasValidSession, requireAuthMiddleware } from '../-functions';
+import classes from './churches.module.css';
 
 const getChurches = createServerFn({ method: 'GET' })
   .middleware([requireAuthMiddleware])
@@ -72,7 +81,7 @@ function ChurchesPage() {
     <>
       <Group justify="space-between" align="center" mb="lg">
         <Title order={1}>Churches</Title>
-        <Button>Join Church</Button>
+        <Button>Add Church</Button>
       </Group>
 
       <Stack gap="lg">
@@ -102,32 +111,57 @@ function ChurchesPage() {
                 padding="lg"
                 radius="md"
                 withBorder
+                className={classes.card}
               >
                 <Group justify="space-between" mb="xs">
-                  <Text fw={500}>{church.name}</Text>
-                  <Badge color={isAdmin ? 'blue' : 'green'} size="sm">
-                    {isAdmin ? 'Admin' : 'Member'}
-                  </Badge>
+                  <Link
+                    to="/dashboard/churches/$churchId"
+                    params={{ churchId: church.id }}
+                    className={classes.titleLink}
+                  >
+                    <Text fw={500} truncate>
+                      {church.name}
+                    </Text>
+                  </Link>
+                  <Group gap="xs">
+                    <Badge color={isAdmin ? 'blue' : 'green'} size="sm">
+                      {isAdmin ? 'Admin' : 'Member'}
+                    </Badge>
+                    <Menu shadow="md" width={200}>
+                      <Menu.Target>
+                        <ActionIcon
+                          variant="subtle"
+                          color="gray"
+                          onClick={(e) => e.preventDefault()}
+                        >
+                          <IconDots size={16} />
+                        </ActionIcon>
+                      </Menu.Target>
+                      <Menu.Dropdown>
+                        <Menu.Item leftSection={<IconEye size={14} />}>
+                          View Details
+                        </Menu.Item>
+                        {isAdmin && (
+                          <Menu.Item leftSection={<IconSettings size={14} />}>
+                            Manage
+                          </Menu.Item>
+                        )}
+                        <Menu.Item
+                          leftSection={<IconUserMinus size={14} />}
+                          color="red"
+                        >
+                          Leave Church
+                        </Menu.Item>
+                      </Menu.Dropdown>
+                    </Menu>
+                  </Group>
                 </Group>
-                <Text size="sm" c="dimmed" mb="md">
+                <Text size="sm" c="dimmed">
                   {church.description ||
                     (isAdmin
                       ? 'You have administrative access to this church.'
                       : 'You are a member of this church.')}
                 </Text>
-                <Group>
-                  <Button variant="light" size="sm">
-                    View Details
-                  </Button>
-                  {isAdmin && (
-                    <Button variant="light" size="sm">
-                      Manage
-                    </Button>
-                  )}
-                  <Button variant="light" size="sm" color="red">
-                    Leave
-                  </Button>
-                </Group>
               </Card>
             );
           })}

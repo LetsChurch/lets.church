@@ -22,6 +22,8 @@ import { Route as DashboardAccountRouteImport } from './routes/dashboard_/accoun
 import { Route as AuthRegisterRouteImport } from './routes/auth_/register'
 import { Route as AuthLoginRouteImport } from './routes/auth_/login'
 import { Route as MainMediaIndexRouteImport } from './routes/_main/media/index'
+import { Route as DashboardChurchesChurchIdRouteImport } from './routes/dashboard_/churches_.$churchId'
+import { Route as DashboardChannelsChannelIdRouteImport } from './routes/dashboard_/channels_.$channelId'
 import { ServerRoute as AuthVerifyServerRouteImport } from './routes/auth_/verify'
 import { ServerRoute as AuthLogoutServerRouteImport } from './routes/auth_/logout'
 
@@ -81,6 +83,18 @@ const MainMediaIndexRoute = MainMediaIndexRouteImport.update({
   path: '/media/',
   getParentRoute: () => MainRoute,
 } as any)
+const DashboardChurchesChurchIdRoute =
+  DashboardChurchesChurchIdRouteImport.update({
+    id: '/churches_/$churchId',
+    path: '/churches/$churchId',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardChannelsChannelIdRoute =
+  DashboardChannelsChannelIdRouteImport.update({
+    id: '/channels_/$channelId',
+    path: '/channels/$channelId',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const AuthVerifyServerRoute = AuthVerifyServerRouteImport.update({
   id: '/auth_/verify',
   path: '/auth/verify',
@@ -102,6 +116,8 @@ export interface FileRoutesByFullPath {
   '/dashboard/churches': typeof DashboardChurchesRoute
   '/': typeof MainIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/channels/$channelId': typeof DashboardChannelsChannelIdRoute
+  '/dashboard/churches/$churchId': typeof DashboardChurchesChurchIdRoute
   '/media': typeof MainMediaIndexRoute
 }
 export interface FileRoutesByTo {
@@ -113,6 +129,8 @@ export interface FileRoutesByTo {
   '/dashboard/churches': typeof DashboardChurchesRoute
   '/': typeof MainIndexRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/channels/$channelId': typeof DashboardChannelsChannelIdRoute
+  '/dashboard/churches/$churchId': typeof DashboardChurchesChurchIdRoute
   '/media': typeof MainMediaIndexRoute
 }
 export interface FileRoutesById {
@@ -127,6 +145,8 @@ export interface FileRoutesById {
   '/dashboard_/churches': typeof DashboardChurchesRoute
   '/_main/': typeof MainIndexRoute
   '/dashboard_/': typeof DashboardIndexRoute
+  '/dashboard_/channels_/$channelId': typeof DashboardChannelsChannelIdRoute
+  '/dashboard_/churches_/$churchId': typeof DashboardChurchesChurchIdRoute
   '/_main/media/': typeof MainMediaIndexRoute
 }
 export interface FileRouteTypes {
@@ -141,6 +161,8 @@ export interface FileRouteTypes {
     | '/dashboard/churches'
     | '/'
     | '/dashboard/'
+    | '/dashboard/channels/$channelId'
+    | '/dashboard/churches/$churchId'
     | '/media'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -152,6 +174,8 @@ export interface FileRouteTypes {
     | '/dashboard/churches'
     | '/'
     | '/dashboard'
+    | '/dashboard/channels/$channelId'
+    | '/dashboard/churches/$churchId'
     | '/media'
   id:
     | '__root__'
@@ -165,6 +189,8 @@ export interface FileRouteTypes {
     | '/dashboard_/churches'
     | '/_main/'
     | '/dashboard_/'
+    | '/dashboard_/channels_/$channelId'
+    | '/dashboard_/churches_/$churchId'
     | '/_main/media/'
   fileRoutesById: FileRoutesById
 }
@@ -278,6 +304,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainMediaIndexRouteImport
       parentRoute: typeof MainRoute
     }
+    '/dashboard_/churches_/$churchId': {
+      id: '/dashboard_/churches_/$churchId'
+      path: '/churches/$churchId'
+      fullPath: '/dashboard/churches/$churchId'
+      preLoaderRoute: typeof DashboardChurchesChurchIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard_/channels_/$channelId': {
+      id: '/dashboard_/channels_/$channelId'
+      path: '/channels/$channelId'
+      fullPath: '/dashboard/channels/$channelId'
+      preLoaderRoute: typeof DashboardChannelsChannelIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
   }
 }
 declare module '@tanstack/react-start/server' {
@@ -328,6 +368,8 @@ interface DashboardRouteChildren {
   DashboardChannelsRoute: typeof DashboardChannelsRoute
   DashboardChurchesRoute: typeof DashboardChurchesRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
+  DashboardChannelsChannelIdRoute: typeof DashboardChannelsChannelIdRoute
+  DashboardChurchesChurchIdRoute: typeof DashboardChurchesChurchIdRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
@@ -335,6 +377,8 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardChannelsRoute: DashboardChannelsRoute,
   DashboardChurchesRoute: DashboardChurchesRoute,
   DashboardIndexRoute: DashboardIndexRoute,
+  DashboardChannelsChannelIdRoute: DashboardChannelsChannelIdRoute,
+  DashboardChurchesChurchIdRoute: DashboardChurchesChurchIdRoute,
 }
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(

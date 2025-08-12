@@ -1,0 +1,84 @@
+.card {
+	position: relative;
+}
+
+.titleLink {
+	color: inherit;
+	text-decoration: none;
+	&::after {
+		display: block;
+		content: "";
+		position: absolute;
+		inset: 0;
+	}
+}
+
+.value {
+	font-size: 24px;
+	font-weight: 700;
+	line-height: 1;
+}
+
+.icon {
+	color: light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3));
+}
+
+.title {
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.uploadsTile {
+	border-color: var(--mantine-color-blue-3);
+	background-color: var(--mantine-color-blue-0);
+}
+
+.uploadsTile .icon {
+	color: var(--mantine-color-blue-6);
+}
+
+.uploadsTile .title {
+	color: var(--mantine-color-blue-8);
+}
+
+.uploadsTile .value {
+	color: var(--mantine-color-blue-9);
+}
+
+.uploadsTile .value .mantine-Text-root[data-c="dimmed"] {
+	color: var(--mantine-color-blue-7) !important;
+}
+
+.subscribersTile {
+	border-color: var(--mantine-color-green-3);
+	background-color: var(--mantine-color-green-0);
+}
+
+.subscribersTile .icon {
+	color: var(--mantine-color-green-6);
+}
+
+.subscribersTile .title {
+	color: var(--mantine-color-green-8);
+}
+
+.subscribersTile .value {
+	color: var(--mantine-color-green-9);
+}
+
+.membersTile {
+	border-color: var(--mantine-color-violet-3);
+	background-color: var(--mantine-color-violet-0);
+}
+
+.membersTile .icon {
+	color: var(--mantine-color-violet-6);
+}
+
+.membersTile .title {
+	color: var(--mantine-color-violet-8);
+}
+
+.membersTile .value {
+	color: var(--mantine-color-violet-9);
+}

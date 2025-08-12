@@ -7,7 +7,13 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": [".github/**/*", "src/**/*", "!**/*.gen.*", "./*"]
+    "includes": [
+      ".github/**/*",
+      "src/**/*",
+      "!**/*.gen.*",
+      "!**/*.module.css.d.ts",
+      "./*"
+    ]
   },
   "formatter": {
     "enabled": true,

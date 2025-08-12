@@ -34,7 +34,7 @@ function DashboardLayoutComponent() {
   const getBreadcrumbs = () => {
     const pathParts = location.pathname.split('/').filter(Boolean);
     const breadcrumbs = [
-      <Anchor component={Link} to="/dashboard" key="dashboard">
+      <Anchor component={Link} to="/dashboard" key="dashboard" c="dimmed">
         Dashboard
       </Anchor>,
     ];
@@ -43,7 +43,12 @@ function DashboardLayoutComponent() {
       const section = pathParts[1];
       const sectionName = section.charAt(0).toUpperCase() + section.slice(1);
       breadcrumbs.push(
-        <Anchor component={Link} to={`/dashboard/${section}`} key={section}>
+        <Anchor
+          component={Link}
+          to={`/dashboard/${section}`}
+          key={section}
+          c="dimmed"
+        >
           {sectionName}
         </Anchor>,
       );

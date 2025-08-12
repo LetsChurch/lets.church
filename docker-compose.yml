@@ -1,6 +1,5 @@
 volumes:
   es-data:
-  faktory-data:
   pg-data:
   node-modules:
 
@@ -40,6 +39,9 @@ services:
     volumes:
       - ./:/home/node/app
       - node-modules:/home/node/app/node_modules
+      - /home/node/app/.nitro
+      - /home/node/app/.output
+      - /home/node/app/.tanstack
 
   background-worker:
     build:
