@@ -15,6 +15,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
 import { z } from 'zod';
 import db from '@/util/db';
+import { formatDate } from '@/util/format';
 import { hasValidSession, requireAuthMiddleware } from '../-functions';
 import { StatCard } from './-components/stat-card';
 
@@ -175,16 +176,8 @@ function ChannelDetailsPage() {
     channelDetailsQueryOptions(channelId),
   );
 
-  const formatDate = (date: Date | string) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
   const { userMembership } = channel;
-  const isAdmin = userMembership?.isAdmin || false;
+  const isAdmin = userMembership?.isAdmin ?? false;
 
   return (
     <Stack gap="lg">
@@ -231,6 +224,7 @@ function ChannelDetailsPage() {
       <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
         <StatCard
           title="Uploads"
+          to="/dashboard/channels/$channelId/uploads"
           color="blue"
           icon={<IconVideo size={22} stroke={1.5} />}
           tooltip="Uploaded media files on this channel"

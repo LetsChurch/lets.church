@@ -8,15 +8,40 @@ import {
   NavLink,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
+import { useQuery } from '@tanstack/react-query';
 import {
   createFileRoute,
   Link,
   Outlet,
   redirect,
   useLocation,
+  useRouterState,
 } from '@tanstack/react-router';
-import { hasValidSession } from './-functions';
+import { createServerFn } from '@tanstack/react-start';
+import { invariant } from 'es-toolkit';
+import { z } from 'zod';
+import db from '@/util/db';
+import { hasValidSession, requireAuthMiddleware } from './-functions';
 import { MantineWrapper } from './-mantine';
+
+const getChannelName = createServerFn({ method: 'GET' })
+  .middleware([requireAuthMiddleware])
+  .validator(z.object({ channelId: z.string() }))
+  .handler(async ({ context, data }) => {
+    invariant(context.session, 'Session not found');
+
+    const channel = await db.channel.findFirst({
+      select: { id: true, name: true, slug: true },
+      where: {
+        id: data.channelId,
+        memberships: {
+          some: { appUserId: context.session.appUser.id },
+        },
+      },
+    });
+
+    return channel;
+  });
 
 export const Route = createFileRoute('/dashboard_')({
   beforeLoad: async () => {
@@ -24,12 +49,30 @@ export const Route = createFileRoute('/dashboard_')({
       return redirect({ to: '/auth/login' });
     }
   },
-  component: DashboardLayoutComponent,
+  component: DashboardLayout,
 });
 
-function DashboardLayoutComponent() {
+function DashboardLayout() {
   const [opened, { toggle }] = useDisclosure();
   const location = useLocation();
+  const routerState = useRouterState();
+
+  const channelId = (
+    routerState.matches.find(
+      (match) => match.params && 'channelId' in match.params,
+    )?.params as { channelId?: string }
+  )?.channelId;
+
+  const channelNameQuery = useQuery({
+    queryKey: ['channel-breadcrumb', channelId],
+    queryFn: () => {
+      invariant(channelId, 'channelId is required');
+      return getChannelName({ data: { channelId } });
+    },
+    enabled: !!channelId,
+  });
+
+  const channel = channelNameQuery.data || null;
 
   const getBreadcrumbs = () => {
     const pathParts = location.pathname.split('/').filter(Boolean);
@@ -52,6 +95,23 @@ function DashboardLayoutComponent() {
           {sectionName}
         </Anchor>,
       );
+
+      if (section === 'channels' && channelId && channel) {
+        breadcrumbs.push(
+          <Anchor
+            component={Link}
+            to={`/dashboard/channels/${channelId}`}
+            key={channelId}
+            c="dimmed"
+          >
+            {channel.name}
+          </Anchor>,
+        );
+
+        if (pathParts[3] === 'uploads') {
+          breadcrumbs.push(<span key="uploads">Uploads</span>);
+        }
+      }
     }
 
     return breadcrumbs;

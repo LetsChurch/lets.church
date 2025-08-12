@@ -9,12 +9,18 @@
 }
 
 .title {
-	position: relative;
 	font-weight: 700;
 	text-transform: uppercase;
+	&::after {
+		display: block;
+		content: "";
+		position: absolute;
+		inset: 0;
+	}
 }
 
 .root {
+	position: relative;
 	border-color: var(--tile-border-color);
 	background-color: var(--tile-bg-color);
 

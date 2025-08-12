@@ -1,5 +1,10 @@
 import { ActionIcon, Group, Paper, Text, Tooltip } from '@mantine/core';
 import { IconInfoCircle } from '@tabler/icons-react';
+import {
+  Link,
+  type RegisteredRouter,
+  type ValidateLinkOptions,
+} from '@tanstack/react-router';
 import { clsx } from 'clsx';
 import type { ReactNode } from 'react';
 import classes from './stat-card.module.css';
@@ -10,6 +15,7 @@ interface StatCardProps {
   icon: ReactNode;
   color: 'blue' | 'green' | 'violet';
   tooltip?: string;
+  to?: ValidateLinkOptions<RegisteredRouter, unknown>['to'];
 }
 
 export function StatCard({
@@ -18,6 +24,7 @@ export function StatCard({
   icon,
   color,
   tooltip,
+  to,
 }: StatCardProps) {
   return (
     <Paper
@@ -28,7 +35,11 @@ export function StatCard({
     >
       <Group justify="space-between">
         <Group gap="xs">
-          <Text size="xs" className={classes.title}>
+          <Text
+            size="xs"
+            className={classes.title}
+            {...(to ? { component: Link, to } : {})}
+          >
             {title}
           </Text>
           {tooltip && (

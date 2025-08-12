@@ -15,6 +15,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
 import { z } from 'zod';
 import db from '@/util/db';
+import { formatDate } from '@/util/format';
 import { hasValidSession, requireAuthMiddleware } from '../-functions';
 import { StatCard } from './-components/stat-card';
 
@@ -147,16 +148,8 @@ function ChurchDetailsPage() {
     churchDetailsQueryOptions(churchId),
   );
 
-  const formatDate = (date: Date | string) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
   const { userMembership } = church;
-  const isAdmin = userMembership?.isAdmin || false;
+  const isAdmin = userMembership?.isAdmin ?? false;
 
   return (
     <Stack gap="lg">
