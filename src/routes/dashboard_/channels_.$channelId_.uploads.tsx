@@ -18,6 +18,7 @@ import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
 import { z } from 'zod';
+import { useSetBackNavigation } from '@/util/back-navigation';
 import db from '@/util/db';
 import { formatDate, formatTime } from '@/util/format';
 import { hasValidSession, requireAuthMiddleware } from '../-functions';
@@ -199,6 +200,8 @@ function ChannelUploadsPage() {
 
   const uploadIds = uploads.map((upload) => upload.id);
   const [selection, handlers] = useSelection({ data: uploadIds });
+
+  useSetBackNavigation(channel.name, `/dashboard/channels/${channelId}`);
 
   const getVisibilityIcon = (visibility: string) => {
     switch (visibility) {

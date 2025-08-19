@@ -14,6 +14,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
 import { z } from 'zod';
+import { useSetBackNavigation } from '@/util/back-navigation';
 import db from '@/util/db';
 import { formatDate } from '@/util/format';
 import { hasValidSession, requireAuthMiddleware } from '../-functions';
@@ -150,6 +151,8 @@ function ChurchDetailsPage() {
 
   const { userMembership } = church;
   const isAdmin = userMembership?.isAdmin ?? false;
+
+  useSetBackNavigation('Churches', '/dashboard/churches');
 
   return (
     <Stack gap="lg">

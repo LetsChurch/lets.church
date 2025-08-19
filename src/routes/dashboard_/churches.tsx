@@ -21,6 +21,7 @@ import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
+import { useSetBackNavigation } from '@/util/back-navigation';
 import db from '@/util/db';
 import { hasValidSession, requireAuthMiddleware } from '../-functions';
 import classes from './churches.module.css';
@@ -76,6 +77,8 @@ export const Route = createFileRoute('/dashboard_/churches')({
 
 function ChurchesPage() {
   const { data: churches } = useSuspenseQuery(churchesQueryOptions);
+
+  useSetBackNavigation('Dashboard', '/dashboard');
 
   return (
     <>
