@@ -9,12 +9,10 @@ import {
   Title,
 } from '@mantine/core';
 import { IconShield, IconUsers, IconVideo } from '@tabler/icons-react';
-import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
 import { z } from 'zod';
-import { useSetBackNavigation } from '@/util/back-navigation';
 import db from '@/util/db';
 import { formatDate } from '@/util/format';
 import { hasValidSession, requireAuthMiddleware } from '../-functions';
@@ -137,22 +135,24 @@ export const Route = createFileRoute('/dashboard_/churches_/$churchId')({
     }
   },
   loader: async ({ context: { queryClient }, params }) => {
-    return queryClient.ensureQueryData(
+    const data = await queryClient.ensureQueryData(
       churchDetailsQueryOptions(params.churchId),
     );
+    return {
+      data,
+      backNavigation: {
+        label: 'Churches',
+        to: '/dashboard/churches',
+      },
+    };
   },
 });
 
 function ChurchDetailsPage() {
-  const { churchId } = Route.useParams();
-  const { data: church } = useSuspenseQuery(
-    churchDetailsQueryOptions(churchId),
-  );
+  const { data: church } = Route.useLoaderData();
 
   const { userMembership } = church;
   const isAdmin = userMembership?.isAdmin ?? false;
-
-  useSetBackNavigation('Churches', '/dashboard/churches');
 
   return (
     <Stack gap="lg">

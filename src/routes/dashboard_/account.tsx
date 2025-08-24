@@ -1,6 +1,5 @@
 import { Button, Card, Group, Stack, Text, Title } from '@mantine/core';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { useSetBackNavigation } from '@/util/back-navigation';
 import { hasValidSession } from '../-functions';
 
 export const Route = createFileRoute('/dashboard_/account')({
@@ -10,11 +9,15 @@ export const Route = createFileRoute('/dashboard_/account')({
       return redirect({ to: '/auth/login' });
     }
   },
+  loader: () => ({
+    backNavigation: {
+      label: 'Dashboard',
+      to: '/dashboard',
+    },
+  }),
 });
 
 function AccountPage() {
-  useSetBackNavigation('Dashboard', '/dashboard');
-
   return (
     <>
       <Title order={1} mb="lg">

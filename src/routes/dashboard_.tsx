@@ -7,7 +7,7 @@ import {
   redirect,
   useLocation,
 } from '@tanstack/react-router';
-import { BackButton, BackNavigationProvider } from '@/util/back-navigation';
+import { BackButton } from '@/util/back-navigation';
 import { hasValidSession } from './-functions';
 import { MantineWrapper } from './-mantine';
 
@@ -26,78 +26,76 @@ function DashboardLayout() {
 
   return (
     <MantineWrapper>
-      <BackNavigationProvider>
-        <AppShell
-          header={{ height: 60 }}
-          navbar={{
-            width: 300,
-            breakpoint: 'sm',
-            collapsed: { mobile: !opened },
-          }}
-          padding="md"
-        >
-          <AppShell.Header>
-            <Group h="100%" px="md">
-              <Burger
-                opened={opened}
-                onClick={toggle}
-                hiddenFrom="sm"
-                size="sm"
-              />
-              <Anchor
-                component={Link}
-                to="/dashboard"
-                size="lg"
-                fw={500}
-                td="none"
-                c="inherit"
-              >
-                Dashboard
-              </Anchor>
-            </Group>
-          </AppShell.Header>
-
-          <AppShell.Navbar p="md">
-            <Box style={{ flex: 1 }}>
-              <NavLink
-                label="Account"
-                component={Link}
-                to="/dashboard/account"
-                active={location.pathname.startsWith('/dashboard/account')}
-              />
-              <NavLink
-                label="Channels"
-                component={Link}
-                to="/dashboard/channels"
-                active={location.pathname.startsWith('/dashboard/channels')}
-              />
-              <NavLink
-                label="Churches"
-                component={Link}
-                to="/dashboard/churches"
-                active={location.pathname.startsWith('/dashboard/churches')}
-              />
-            </Box>
-
-            <Box
-              mt="auto"
-              pt="md"
-              style={{ borderTop: '1px solid var(--mantine-color-gray-3)' }}
+      <AppShell
+        header={{ height: 60 }}
+        navbar={{
+          width: 300,
+          breakpoint: 'sm',
+          collapsed: { mobile: !opened },
+        }}
+        padding="md"
+      >
+        <AppShell.Header>
+          <Group h="100%" px="md">
+            <Burger
+              opened={opened}
+              onClick={toggle}
+              hiddenFrom="sm"
+              size="sm"
+            />
+            <Anchor
+              component={Link}
+              to="/dashboard"
+              size="lg"
+              fw={500}
+              td="none"
+              c="inherit"
             >
-              <Anchor component={Link} to="/" fw={500}>
-                ← Back to Let's Church
-              </Anchor>
-            </Box>
-          </AppShell.Navbar>
+              Dashboard
+            </Anchor>
+          </Group>
+        </AppShell.Header>
 
-          <AppShell.Main>
-            <Box mb="md">
-              <BackButton />
-            </Box>
-            <Outlet />
-          </AppShell.Main>
-        </AppShell>
-      </BackNavigationProvider>
+        <AppShell.Navbar p="md">
+          <Box style={{ flex: 1 }}>
+            <NavLink
+              label="Account"
+              component={Link}
+              to="/dashboard/account"
+              active={location.pathname.startsWith('/dashboard/account')}
+            />
+            <NavLink
+              label="Channels"
+              component={Link}
+              to="/dashboard/channels"
+              active={location.pathname.startsWith('/dashboard/channels')}
+            />
+            <NavLink
+              label="Churches"
+              component={Link}
+              to="/dashboard/churches"
+              active={location.pathname.startsWith('/dashboard/churches')}
+            />
+          </Box>
+
+          <Box
+            mt="auto"
+            pt="md"
+            style={{ borderTop: '1px solid var(--mantine-color-gray-3)' }}
+          >
+            <Anchor component={Link} to="/" fw={500}>
+              ← Back to Let's Church
+            </Anchor>
+          </Box>
+        </AppShell.Navbar>
+
+        <AppShell.Main>
+          <Box mb="md">
+            <BackButton />
+          </Box>
+          <Outlet />
+        </AppShell.Main>
+      </AppShell>
     </MantineWrapper>
   );
 }

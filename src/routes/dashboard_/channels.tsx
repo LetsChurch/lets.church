@@ -11,11 +11,9 @@ import {
   Title,
 } from '@mantine/core';
 import { IconDots, IconEdit, IconTrash } from '@tabler/icons-react';
-import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
-import { useSetBackNavigation } from '@/util/back-navigation';
 import db from '@/util/db';
 import { hasValidSession, requireAuthMiddleware } from '../-functions';
 import classes from './channels.module.css';
@@ -63,14 +61,19 @@ export const Route = createFileRoute('/dashboard_/channels')({
     }
   },
   loader: async ({ context: { queryClient } }) => {
-    return queryClient.ensureQueryData(channelsQueryOptions);
+    const data = await queryClient.ensureQueryData(channelsQueryOptions);
+    return {
+      data,
+      backNavigation: {
+        label: 'Dashboard',
+        to: '/dashboard',
+      },
+    };
   },
 });
 
 function ChannelsPage() {
-  const { data: channels } = useSuspenseQuery(channelsQueryOptions);
-
-  useSetBackNavigation('Dashboard', '/dashboard');
+  const { data: channels } = Route.useLoaderData();
 
   return (
     <>

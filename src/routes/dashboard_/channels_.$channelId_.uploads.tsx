@@ -13,12 +13,10 @@ import {
 } from '@mantine/core';
 import { useSelection } from '@mantine/hooks';
 import { IconEdit, IconEye, IconEyeOff } from '@tabler/icons-react';
-import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
 import { z } from 'zod';
-import { useSetBackNavigation } from '@/util/back-navigation';
 import db from '@/util/db';
 import { formatDate, formatTime } from '@/util/format';
 import { hasValidSession, requireAuthMiddleware } from '../-functions';
@@ -180,19 +178,23 @@ export const Route = createFileRoute(
   }),
   loaderDeps: ({ search }) => ({ search }),
   loader: async ({ context: { queryClient }, params, deps: { search } }) => {
-    return queryClient.ensureQueryData(
+    const data = await queryClient.ensureQueryData(
       channelUploadsQueryOptions(params.channelId, search.page, search.limit),
     );
+    return {
+      data,
+      backNavigation: {
+        label: data.channel.name,
+        to: `/dashboard/channels/${params.channelId}`,
+      },
+    };
   },
 });
 
 function ChannelUploadsPage() {
-  const { channelId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const { data } = useSuspenseQuery(
-    channelUploadsQueryOptions(channelId, search.page || 1, search.limit || 20),
-  );
+  const { data } = Route.useLoaderData();
 
   const { channel, uploads, pagination } = data;
   const isAdmin = channel.userMembership?.isAdmin ?? false;
@@ -200,8 +202,6 @@ function ChannelUploadsPage() {
 
   const uploadIds = uploads.map((upload) => upload.id);
   const [selection, handlers] = useSelection({ data: uploadIds });
-
-  useSetBackNavigation(channel.name, `/dashboard/channels/${channelId}`);
 
   const getVisibilityIcon = (visibility: string) => {
     switch (visibility) {
