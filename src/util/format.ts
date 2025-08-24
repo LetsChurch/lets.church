@@ -14,5 +14,6 @@ export function formatDate(
     year: 'numeric',
     month: monthFormat,
     day: 'numeric',
+    timeZone: 'UTC',
   });
 }
