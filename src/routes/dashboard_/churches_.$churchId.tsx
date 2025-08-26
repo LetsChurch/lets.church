@@ -109,7 +109,7 @@ const getChurchDetails = createServerFn({ method: 'GET' })
     });
 
     if (!church) {
-      throw new Error('Church not found or access denied');
+      throw new Error('Church not found');
     }
 
     const userMembership = church.memberships.find(

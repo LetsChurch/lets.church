@@ -110,7 +110,7 @@ const getChannelDetails = createServerFn({ method: 'GET' })
     });
 
     if (!channel) {
-      throw new Error('Channel not found or access denied');
+      throw new Error('Channel not found');
     }
 
     const totalViews = await db.uploadView.count({

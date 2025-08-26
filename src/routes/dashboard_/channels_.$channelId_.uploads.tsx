@@ -2,6 +2,7 @@ import {
   ActionIcon,
   Avatar,
   Badge,
+  Box,
   Checkbox,
   Group,
   Pagination,
@@ -62,7 +63,7 @@ const getChannelUploads = createServerFn({ method: 'GET' })
     });
 
     if (!channel) {
-      throw new Error('Channel not found or access denied');
+      throw new Error('Channel not found');
     }
 
     const userMembership = channel.memberships.find(
@@ -253,9 +254,8 @@ function ChannelUploadsPage() {
                   }}
                 />
               </Table.Th>
-              <Table.Th>Title</Table.Th>
+              <Table.Th>Video</Table.Th>
               <Table.Th>Visibility</Table.Th>
-              <Table.Th>Duration</Table.Th>
               <Table.Th>Views</Table.Th>
               <Table.Th>Created</Table.Th>
               {(isAdmin || canEdit) && <Table.Th>Actions</Table.Th>}
@@ -264,7 +264,7 @@ function ChannelUploadsPage() {
           <Table.Tbody>
             {uploads.length === 0 ? (
               <Table.Tr>
-                <Table.Td colSpan={isAdmin || canEdit ? 7 : 6}>
+                <Table.Td colSpan={isAdmin || canEdit ? 6 : 5}>
                   <Text ta="center" c="dimmed" py="xl">
                     No uploads found
                   </Text>
@@ -287,20 +287,58 @@ function ChannelUploadsPage() {
                       />
                     </Table.Td>
                     <Table.Td>
-                      <Group gap="sm">
-                        <Avatar size="sm" radius="sm">
-                          📹
-                        </Avatar>
-                        <div>
-                          <Text fw={500} lineClamp={1}>
+                      <Group gap="sm" align="flex-start">
+                        <Box pos="relative">
+                          <Box
+                            w={120}
+                            h={68}
+                            bg="gray.3"
+                            style={{
+                              borderRadius: 4,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Text size="xs" c="dimmed">
+                              📹
+                            </Text>
+                          </Box>
+                          {upload.lengthSeconds && (
+                            <Box
+                              pos="absolute"
+                              bottom={4}
+                              right={4}
+                              px={4}
+                              py={1}
+                              bg="rgba(0, 0, 0, 0.8)"
+                              style={{
+                                borderRadius: 2,
+                                fontSize: '11px',
+                                color: 'white',
+                                fontFamily: 'monospace',
+                                lineHeight: 1,
+                              }}
+                            >
+                              {formatTime(upload.lengthSeconds * 1000)}
+                            </Box>
+                          )}
+                        </Box>
+                        <Box style={{ flex: 1, minWidth: 0 }}>
+                          <Text fw={500} lineClamp={2} size="sm">
                             {upload.title}
                           </Text>
-                          {upload.description && (
-                            <Text size="xs" c="dimmed" lineClamp={1}>
-                              {upload.description}
-                            </Text>
-                          )}
-                        </div>
+                          <Text
+                            size="xs"
+                            c="dimmed"
+                            lineClamp={2}
+                            mt={2}
+                            fs={upload.description ? 'normal' : 'italic'}
+                          >
+                            {upload.description || 'No description'}
+                          </Text>
+                        </Box>
                       </Group>
                     </Table.Td>
                     <Table.Td>
@@ -311,13 +349,6 @@ function ChannelUploadsPage() {
                       >
                         {upload.visibility}
                       </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">
-                        {upload.lengthSeconds
-                          ? formatTime(upload.lengthSeconds * 1000)
-                          : null}
-                      </Text>
                     </Table.Td>
                     <Table.Td>
                       <Text size="sm">{upload._count.uploadViews}</Text>
