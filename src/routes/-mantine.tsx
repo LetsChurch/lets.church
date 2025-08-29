@@ -1,9 +1,15 @@
 import '@mantine/core/styles.css';
+import '@mantine/notifications/styles.css';
 import {
   createTheme,
   type MantineColorsTuple,
   MantineProvider,
 } from '@mantine/core';
+import {
+  type NotificationData,
+  Notifications,
+  notifications,
+} from '@mantine/notifications';
 import type { PropsWithChildren } from 'react';
 
 const lc: MantineColorsTuple = [
@@ -27,5 +33,26 @@ const theme = createTheme({
 });
 
 export function MantineWrapper({ children }: PropsWithChildren) {
-  return <MantineProvider theme={theme}>{children}</MantineProvider>;
+  return (
+    <MantineProvider theme={theme}>
+      <Notifications />
+      {children}
+    </MantineProvider>
+  );
+}
+
+export function showSuccess(data: NotificationData) {
+  notifications.show({
+    color: 'green',
+    position: 'top-right',
+    ...data,
+  });
+}
+
+export function showFailure(data: NotificationData) {
+  notifications.show({
+    color: 'red',
+    position: 'top-right',
+    ...data,
+  });
 }

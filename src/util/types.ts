@@ -1,4 +1,4 @@
-const uploadPostProcessValues = [
+export const uploadPostProcessValues = [
   'media',
   'thumbnail',
   'profileAvatar',

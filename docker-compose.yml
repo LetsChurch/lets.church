@@ -36,6 +36,7 @@ services:
       TURNSTILE_SITE_KEY: 1x00000000000000000000AA
       TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
       ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
+      <<: *s3-env
     volumes:
       - ./:/home/node/app
       - node-modules:/home/node/app/node_modules

@@ -22,7 +22,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
 import db from '@/util/db';
 import { hasValidSession, requireAuthMiddleware } from '../-functions';
-import classes from './churches.module.css';
+import classes from './-churches.module.css';
 
 const getChurches = createServerFn({ method: 'GET' })
   .middleware([requireAuthMiddleware])

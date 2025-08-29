@@ -16,7 +16,7 @@ import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
 import db from '@/util/db';
 import { hasValidSession, requireAuthMiddleware } from '../-functions';
-import classes from './channels.module.css';
+import classes from './-channels.module.css';
 
 const getChannels = createServerFn({ method: 'GET' })
   .middleware([requireAuthMiddleware])

@@ -13,7 +13,9 @@ export function BackButton() {
   const matches = useMatches();
 
   const currentMatch = matches[matches.length - 1];
-  const loaderData = currentMatch?.loaderData as LoaderDataWithBackNavigation | undefined;
+  const loaderData = currentMatch?.loaderData as
+    | LoaderDataWithBackNavigation
+    | undefined;
   const backNavigation = loaderData?.backNavigation;
 
   if (!backNavigation) {

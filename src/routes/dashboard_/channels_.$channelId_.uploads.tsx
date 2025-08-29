@@ -1,6 +1,5 @@
 import {
   ActionIcon,
-  Avatar,
   Badge,
   Box,
   Checkbox,
@@ -21,6 +20,7 @@ import { z } from 'zod';
 import db from '@/util/db';
 import { formatDate, formatTime } from '@/util/format';
 import { hasValidSession, requireAuthMiddleware } from '../-functions';
+import { dashboardQueryKeys } from './-query-keys';
 
 const getChannelUploads = createServerFn({ method: 'GET' })
   .middleware([requireAuthMiddleware])
@@ -160,7 +160,7 @@ const channelUploadsQueryOptions = (
   page: number,
   limit: number,
 ) => ({
-  queryKey: ['dashboard', 'channels', channelId, 'uploads', page, limit],
+  queryKey: dashboardQueryKeys.uploads.list(channelId, page, limit),
   queryFn: () => getChannelUploads({ data: { channelId, page, limit } }),
 });
 
@@ -279,8 +279,14 @@ function ChannelUploadsPage() {
                     bg={
                       isSelected ? 'var(--mantine-color-blue-light)' : undefined
                     }
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      navigate({
+                        to: `/dashboard/channels/${data.channel.id}/uploads/${upload.id}`,
+                      });
+                    }}
                   >
-                    <Table.Td>
+                    <Table.Td onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={isSelected}
                         onChange={() => handlers.toggle(upload.id)}
@@ -359,8 +365,16 @@ function ChannelUploadsPage() {
                       </Text>
                     </Table.Td>
                     {(isAdmin || canEdit) && (
-                      <Table.Td>
-                        <ActionIcon variant="subtle" size="sm">
+                      <Table.Td onClick={(e) => e.stopPropagation()}>
+                        <ActionIcon
+                          variant="subtle"
+                          size="sm"
+                          onClick={() => {
+                            navigate({
+                              to: `/dashboard/channels/${data.channel.id}/uploads/${upload.id}`,
+                            });
+                          }}
+                        >
                           <IconEdit size={16} />
                         </ActionIcon>
                       </Table.Td>
