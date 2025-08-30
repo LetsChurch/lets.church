@@ -88,6 +88,9 @@ services:
     volumes:
       - ./:/home/node/app
       - node-modules:/home/node/app/node_modules
+      - /home/node/app/.nitro
+      - /home/node/app/.output
+      - /home/node/app/.tanstack
     depends_on:
       - temporal
 
@@ -109,6 +112,9 @@ services:
     volumes:
       - ./:/home/node/app
       - node-modules:/home/node/app/node_modules
+      - /home/node/app/.nitro
+      - /home/node/app/.output
+      - /home/node/app/.tanstack
     depends_on:
       - temporal
 
@@ -131,6 +137,9 @@ services:
     volumes:
       - ./:/home/node/app
       - node-modules:/home/node/app/node_modules
+      - /home/node/app/.nitro
+      - /home/node/app/.output
+      - /home/node/app/.tanstack
     depends_on:
       - temporal
 
@@ -153,6 +162,9 @@ services:
     volumes:
       - ./:/home/node/app
       - node-modules:/home/node/app/node_modules
+      - /home/node/app/.nitro
+      - /home/node/app/.output
+      - /home/node/app/.tanstack
     depends_on:
       - temporal
 
