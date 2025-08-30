@@ -7,15 +7,17 @@ import {
   Group,
   Image,
   LoadingOverlay,
+  Progress,
   Radio,
   Stack,
   Text,
   Title,
 } from '@mantine/core';
 import { Dropzone } from '@mantine/dropzone';
+import { useStore } from '@nanostores/react';
 import { UploadLicense, UploadVisibility } from '@prisma/client';
 import { IconPhoto, IconUpload, IconX } from '@tabler/icons-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
@@ -28,14 +30,15 @@ import {
   clientCreateMultipartUpload,
   clientFinalizeMultipartUpload,
   hasValidSession,
-  requireAuthMiddleware,
+  requireChannelUploadAccessMiddleware,
   requireChannelUploadEditAccessMiddleware,
 } from '../-functions';
 import { showFailure, showSuccess } from '../-mantine';
 import { dashboardQueryKeys } from './-query-keys';
+import { $uploadProgress } from './channels_.$channelId_.uploads';
 
 const getUploadRecord = createServerFn({ method: 'GET' })
-  .middleware([requireAuthMiddleware])
+  .middleware([requireChannelUploadAccessMiddleware])
   .validator(
     z.object({
       channelId: z.string(),
@@ -57,6 +60,9 @@ const getUploadRecord = createServerFn({ method: 'GET' })
         downloadsEnabled: true,
         defaultThumbnailPath: true,
         overrideThumbnailPath: true,
+        transcodingFinishedAt: true,
+        transcribingFinishedAt: true,
+        transcodingProgress: true,
         channel: {
           select: {
             id: true,
@@ -109,6 +115,43 @@ const getUploadRecord = createServerFn({ method: 'GET' })
         userMembership,
       },
     };
+  });
+
+const getUploadProgress = createServerFn({ method: 'GET' })
+  .middleware([requireChannelUploadAccessMiddleware])
+  .validator(
+    z.object({
+      channelId: z.string(),
+      uploadId: z.string(),
+    }),
+  )
+  .handler(async ({ context, data }) => {
+    invariant(context.session, 'Session not found');
+
+    const upload = await db.uploadRecord.findFirst({
+      select: {
+        transcodingFinishedAt: true,
+        transcribingFinishedAt: true,
+        transcodingProgress: true,
+      },
+      where: {
+        id: data.uploadId,
+        channelId: data.channelId,
+        channel: {
+          memberships: {
+            some: {
+              appUserId: context.session.appUser.id,
+            },
+          },
+        },
+      },
+    });
+
+    if (!upload) {
+      throw new Error('Upload not found or access denied');
+    }
+
+    return upload;
   });
 
 const formSchema = z.object({
@@ -244,6 +287,33 @@ function ChannelUploadPage() {
   const { channelId, uploadId } = Route.useParams();
   const queryClient = useQueryClient();
 
+  const { [uploadId]: uploadProgress } = useStore($uploadProgress, {
+    keys: [uploadId],
+  });
+
+  const isUploading = typeof uploadProgress === 'number';
+
+  // Check if processing is ongoing (initially based on upload data)
+  const initialIsTranscoding = !upload.transcodingFinishedAt;
+  const initialIsTranscribing = !upload.transcribingFinishedAt;
+  const initialIsProcessing = initialIsTranscoding || initialIsTranscribing;
+
+  // Poll for progress updates every 5 seconds when processing
+  const { data: progressData } = useQuery({
+    queryKey: ['uploadProgress', channelId, uploadId],
+    queryFn: () => getUploadProgress({ data: { channelId, uploadId } }),
+    refetchInterval: initialIsProcessing ? 5000 : false,
+    enabled: !isUploading && initialIsProcessing,
+  });
+
+  // Merge progress data with initial upload data
+  const currentUpload = progressData ? { ...upload, ...progressData } : upload;
+
+  // Current processing status (may have changed due to polling)
+  const isTranscoding = !currentUpload.transcodingFinishedAt;
+  const isTranscribing = !currentUpload.transcribingFinishedAt;
+  const isProcessing = isUploading || isTranscoding || isTranscribing;
+
   const [newThumbnailFile, setNewThumbnailFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -297,17 +367,17 @@ function ChannelUploadPage() {
   ];
 
   const thumbnailUrl =
-    upload.overrideThumbnailPath || upload.defaultThumbnailPath;
+    currentUpload.overrideThumbnailPath || currentUpload.defaultThumbnailPath;
 
   const form = useAppMantineForm({
     defaultValues: {
-      title: upload.title || '',
-      description: upload.description || '',
-      license: upload.license,
-      publishedAt: new Date(upload.publishedAt),
-      visibility: upload.visibility,
-      userCommentsEnabled: upload.userCommentsEnabled,
-      downloadsEnabled: upload.downloadsEnabled,
+      title: currentUpload.title || '',
+      description: currentUpload.description || '',
+      license: currentUpload.license,
+      publishedAt: new Date(currentUpload.publishedAt),
+      visibility: currentUpload.visibility,
+      userCommentsEnabled: currentUpload.userCommentsEnabled,
+      downloadsEnabled: currentUpload.downloadsEnabled,
     },
     validators: {
       onChange: formSchema,
@@ -329,16 +399,13 @@ function ChannelUploadPage() {
           mpu.urls,
           mpu.partSize,
         );
-        // upload.onProgress((i) => setMediaUploadProgress(i));
-
-        const eTags = await uploadPromise;
 
         await clientFinalizeMultipartUpload({
           data: {
             channelId,
             s3UploadKey: mpu.s3UploadKey,
             s3UploadId: mpu.s3UploadId,
-            s3PartETags: eTags,
+            s3PartETags: await uploadPromise,
           },
         });
       }
@@ -514,21 +581,93 @@ function ChannelUploadPage() {
                 )}
               </form.Subscribe>
             </Group>
-            {/* Placeholder Player */}
-            <Box
-              bg="gray.1"
-              h={200}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: 4,
-              }}
-            >
-              <Text c="dimmed" size="sm">
-                Video Player Placeholder
-              </Text>
-            </Box>
+            {/* Player or Progress Bars */}
+            {isProcessing || initialIsProcessing ? (
+              <Stack gap="md">
+                {/* Upload Progress */}
+                {isUploading && (
+                  <Box>
+                    <Text size="sm" fw={500} mb="xs">
+                      Uploading file...
+                    </Text>
+                    <Progress
+                      value={uploadProgress * 100}
+                      size="lg"
+                      animated
+                      striped
+                    />
+                    <Text size="xs" c="dimmed" mt="xs">
+                      {Math.round(uploadProgress * 100)}% uploaded
+                    </Text>
+                  </Box>
+                )}
+
+                {/* Transcoding Progress - only show when not uploading */}
+                {!isUploading &&
+                  (isTranscoding ||
+                    (!isTranscoding && initialIsTranscoding)) && (
+                    <Box>
+                      <Text size="sm" fw={500} mb="xs">
+                        {isTranscoding
+                          ? 'Transcoding video...'
+                          : 'Transcoding complete'}
+                      </Text>
+                      <Progress
+                        value={currentUpload.transcodingProgress * 100}
+                        size="lg"
+                        animated={isTranscoding}
+                        striped={isTranscoding}
+                        color={isTranscoding ? undefined : 'green'}
+                      />
+                      <Text size="xs" c="dimmed" mt="xs">
+                        {isTranscoding
+                          ? `${Math.round(currentUpload.transcodingProgress * 100)}% complete`
+                          : 'Video transcoding finished'}
+                      </Text>
+                    </Box>
+                  )}
+
+                {/* Transcribing Progress - only show when not uploading */}
+                {!isUploading &&
+                  (isTranscribing ||
+                    (!isTranscribing && initialIsTranscribing)) && (
+                    <Box>
+                      <Text size="sm" fw={500} mb="xs">
+                        {isTranscribing
+                          ? 'Transcribing audio...'
+                          : 'Transcription complete'}
+                      </Text>
+                      <Progress
+                        value={100}
+                        size="lg"
+                        animated={isTranscribing}
+                        striped={isTranscribing}
+                        color={isTranscribing ? undefined : 'green'}
+                      />
+                      <Text size="xs" c="dimmed" mt="xs">
+                        {isTranscribing
+                          ? 'Processing audio transcript'
+                          : 'Audio transcription finished'}
+                      </Text>
+                    </Box>
+                  )}
+              </Stack>
+            ) : (
+              <Box
+                bg="gray.1"
+                h={200}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 4,
+                }}
+              >
+                <Text c="dimmed" size="sm">
+                  Video Player Placeholder
+                </Text>
+              </Box>
+            )}
 
             {/* Visibility Settings */}
             <Stack gap="md">
