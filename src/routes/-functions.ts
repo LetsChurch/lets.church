@@ -137,6 +137,33 @@ export const requireChannelUploadEditAccessMiddleware = createMiddleware({
     return next();
   });
 
+export const requireChannelAdminAccessMiddleware = createMiddleware({
+  type: 'function',
+})
+  .middleware([sessionMiddleware])
+  .validator(z.looseObject({ channelId: z.string() }))
+  .server(async ({ next, context, data: { channelId } }) => {
+    if (!context.session) {
+      throw new Response('Unauthorized', { status: 401 });
+    }
+
+    const membership = await db.channelMembership.findFirst({
+      where: {
+        channelId,
+        appUserId: context.session.appUser.id,
+      },
+      select: {
+        isAdmin: true,
+      },
+    });
+
+    if (!membership?.isAdmin) {
+      throw new Response('Forbidden', { status: 403 });
+    }
+
+    return next();
+  });
+
 export const clientCreateMultipartUpload = createServerFn({
   method: 'POST',
   response: 'data',

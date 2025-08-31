@@ -9,13 +9,14 @@ import {
   Title,
 } from '@mantine/core';
 import { IconHeart, IconShield, IconVideo } from '@tabler/icons-react';
-import { createFileRoute, redirect } from '@tanstack/react-router';
+import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
 import { z } from 'zod';
 import db from '@/util/db';
 import { formatDate } from '@/util/format';
 import { hasValidSession, requireAuthMiddleware } from '../-functions';
+import styles from './-channels_.$channelId.module.css';
 import { StatCard } from './-components/stat-card';
 
 const getChannelDetails = createServerFn({ method: 'GET' })
@@ -180,7 +181,9 @@ function ChannelDetailsPage() {
   const { data: channel } = Route.useLoaderData();
 
   const { userMembership } = channel;
-  const isAdmin = userMembership?.isAdmin ?? false;
+  const isChannelAdmin = userMembership?.isAdmin ?? false;
+
+  console.log({ isChannelAdmin });
 
   return (
     <Stack gap="lg">
@@ -202,8 +205,8 @@ function ChannelDetailsPage() {
               >
                 {channel.visibility}
               </Badge>
-              <Badge color={isAdmin ? 'blue' : 'green'} size="sm">
-                {isAdmin ? 'Admin' : 'Member'}
+              <Badge color={isChannelAdmin ? 'blue' : 'green'} size="sm">
+                {isChannelAdmin ? 'Admin' : 'Member'}
               </Badge>
             </Group>
             <Group gap="md" mb="sm">
@@ -220,7 +223,21 @@ function ChannelDetailsPage() {
           </div>
         </Group>
         <Group>
-          {isAdmin && <Button variant="light">Edit Channel</Button>}
+          {isChannelAdmin ? (
+            <Button
+              variant="light"
+              renderRoot={(rootProps) => (
+                <Link
+                  {...rootProps}
+                  className={styles.editLink}
+                  to="/dashboard/channels/$channelId/edit"
+                  params={{ channelId: channel.id }}
+                >
+                  Edit Channel
+                </Link>
+              )}
+            />
+          ) : null}
         </Group>
       </Group>
 
