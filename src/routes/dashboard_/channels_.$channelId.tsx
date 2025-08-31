@@ -259,19 +259,20 @@ function ChannelDetailsPage() {
         />
 
         <StatCard
+          title="Members"
+          to="/dashboard/channels/$channelId/members"
+          color="violet"
+          icon={<IconShield size={22} stroke={1.5} />}
+          tooltip="Users with permissions to manage, edit, or upload content"
+          value={channel._count.memberships}
+        />
+
+        <StatCard
           title="Subscribers"
           color="green"
           icon={<IconHeart size={22} stroke={1.5} />}
           tooltip="Users following this channel for new content notifications"
           value={channel._count.subscribers}
-        />
-
-        <StatCard
-          title="Members"
-          color="violet"
-          icon={<IconShield size={22} stroke={1.5} />}
-          tooltip="Users with permissions to manage, edit, or upload content"
-          value={channel._count.memberships}
         />
       </SimpleGrid>
     </Stack>
