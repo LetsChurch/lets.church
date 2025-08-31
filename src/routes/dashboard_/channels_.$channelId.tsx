@@ -9,8 +9,10 @@ import {
   Title,
 } from '@mantine/core';
 import { IconHeart, IconShield, IconVideo } from '@tabler/icons-react';
+import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
+import clsx from 'clsx';
 import { invariant } from 'es-toolkit';
 import { z } from 'zod';
 import db from '@/util/db';
@@ -18,6 +20,7 @@ import { formatDate } from '@/util/format';
 import { hasValidSession, requireAuthMiddleware } from '../-functions';
 import styles from './-channels_.$channelId.module.css';
 import { StatCard } from './-components/stat-card';
+import { dashboardQueryKeys } from './-query-keys';
 
 const getChannelDetails = createServerFn({ method: 'GET' })
   .middleware([requireAuthMiddleware])
@@ -152,7 +155,7 @@ const getChannelDetails = createServerFn({ method: 'GET' })
   });
 
 const channelDetailsQueryOptions = (channelId: string) => ({
-  queryKey: ['dashboard', 'channels', channelId],
+  queryKey: dashboardQueryKeys.channels.detail(channelId),
   queryFn: () => getChannelDetails({ data: { channelId } }),
 });
 
@@ -164,11 +167,10 @@ export const Route = createFileRoute('/dashboard_/channels_/$channelId')({
     }
   },
   loader: async ({ context: { queryClient }, params }) => {
-    const data = await queryClient.ensureQueryData(
+    await queryClient.ensureQueryData(
       channelDetailsQueryOptions(params.channelId),
     );
     return {
-      data,
       backNavigation: {
         label: 'My Channels',
         to: '/dashboard/channels',
@@ -178,7 +180,11 @@ export const Route = createFileRoute('/dashboard_/channels_/$channelId')({
 });
 
 function ChannelDetailsPage() {
-  const { data: channel } = Route.useLoaderData();
+  const params = Route.useParams();
+
+  const { data: channel } = useSuspenseQuery(
+    channelDetailsQueryOptions(params.channelId),
+  );
 
   const { userMembership } = channel;
   const isChannelAdmin = userMembership?.isAdmin ?? false;
@@ -229,7 +235,7 @@ function ChannelDetailsPage() {
               renderRoot={(rootProps) => (
                 <Link
                   {...rootProps}
-                  className={styles.editLink}
+                  className={clsx(rootProps.className, styles.editLink)}
                   to="/dashboard/channels/$channelId/edit"
                   params={{ channelId: channel.id }}
                 >

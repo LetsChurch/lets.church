@@ -17,6 +17,7 @@ import db from '@/util/db';
 import { formatDate } from '@/util/format';
 import { hasValidSession, requireAuthMiddleware } from '../-functions';
 import { StatCard } from './-components/stat-card';
+import { dashboardQueryKeys } from './-query-keys';
 
 const getChurchDetails = createServerFn({ method: 'GET' })
   .middleware([requireAuthMiddleware])
@@ -123,7 +124,7 @@ const getChurchDetails = createServerFn({ method: 'GET' })
   });
 
 const churchDetailsQueryOptions = (churchId: string) => ({
-  queryKey: ['dashboard', 'churches', churchId],
+  queryKey: dashboardQueryKeys.churches.detail(churchId),
   queryFn: () => getChurchDetails({ data: { churchId } }),
 });
 

@@ -10,6 +10,7 @@ import {
   Text,
   TextInput,
   Title,
+  Tooltip,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -18,7 +19,12 @@ import {
   IconUserCheck,
   IconUserShield,
 } from '@tabler/icons-react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
@@ -34,6 +40,7 @@ import {
   requireChannelAdminAccessMiddleware,
 } from '../-functions';
 import { showFailure, showSuccess } from '../-mantine';
+import { dashboardQueryKeys } from './-query-keys';
 
 type MembershipWithUser = {
   channelId: string;
@@ -239,7 +246,7 @@ const removeChannelMember = createServerFn({ method: 'POST' })
   });
 
 const channelMembersQueryOptions = (channelId: string) => ({
-  queryKey: ['dashboard', 'channels', channelId, 'members'],
+  queryKey: dashboardQueryKeys.channels.members(channelId),
   queryFn: () => getChannelMembers({ data: { channelId } }),
 });
 
@@ -268,13 +275,13 @@ export const Route = createFileRoute(
 
 function ChannelMembersPage() {
   const { channelId } = Route.useParams();
-  const { data: channel } = useQuery(channelMembersQueryOptions(channelId));
+  const { data: channel } = useSuspenseQuery(
+    channelMembersQueryOptions(channelId),
+  );
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery] = useDebounce(searchQuery, 200);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-
-  invariant(channel, 'Channel not loaded');
 
   const isAdmin = channel.userMembership?.isAdmin ?? false;
 
@@ -314,7 +321,7 @@ function ChannelMembersPage() {
   });
 
   const { data: searchResults = [] } = useQuery({
-    queryKey: ['users', 'search', channelId, debouncedSearchQuery],
+    queryKey: dashboardQueryKeys.users.search(channelId, debouncedSearchQuery),
     queryFn: () =>
       searchUsers({ data: { channelId, query: debouncedSearchQuery } }),
     enabled: debouncedSearchQuery.length >= 2,
@@ -326,7 +333,7 @@ function ChannelMembersPage() {
     onSuccess: () => {
       showSuccess({ message: 'Member added successfully' });
       queryClient.invalidateQueries({
-        queryKey: ['dashboard', 'channels', channelId, 'members'],
+        queryKey: dashboardQueryKeys.channels.members(channelId),
       });
       handleCloseModal();
     },
@@ -340,7 +347,7 @@ function ChannelMembersPage() {
     onSuccess: () => {
       showSuccess({ message: 'Member removed successfully' });
       queryClient.invalidateQueries({
-        queryKey: ['dashboard', 'channels', channelId, 'members'],
+        queryKey: dashboardQueryKeys.channels.members(channelId),
       });
     },
     onError: (error: Error) => {
@@ -387,14 +394,22 @@ function ChannelMembersPage() {
           </Text>
         </div>
 
-        {isAdmin && (
+        <Tooltip
+          label={
+            isAdmin
+              ? 'Add a new member to this channel'
+              : 'Only admins can add members'
+          }
+          disabled={isAdmin}
+        >
           <Button
             leftSection={<IconPlus size={16} />}
             onClick={openAddMemberModal}
+            disabled={!isAdmin}
           >
             Add Member
           </Button>
-        )}
+        </Tooltip>
       </Group>
 
       <Modal
@@ -529,13 +544,13 @@ function ChannelMembersPage() {
             <Table.Th>Member</Table.Th>
             <Table.Th>Role</Table.Th>
             <Table.Th>Joined</Table.Th>
-            {isAdmin && <Table.Th>Actions</Table.Th>}
+            <Table.Th>Actions</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
           {channel.memberships?.length === 0 ? (
             <Table.Tr>
-              <Table.Td colSpan={isAdmin ? 4 : 3}>
+              <Table.Td colSpan={4}>
                 <Text ta="center" c="dimmed" py="xl">
                   No members found
                 </Text>
@@ -588,22 +603,37 @@ function ChannelMembersPage() {
                     {formatDate(membership.createdAt, 'short')}
                   </Text>
                 </Table.Td>
-                {isAdmin && (
-                  <Table.Td>
-                    {membership.appUser.id !==
-                      channel.userMembership?.appUser.id && (
-                      <ActionIcon
-                        variant="subtle"
-                        color="red"
-                        size="sm"
-                        onClick={() => handleRemoveMember(membership.appUserId)}
-                        loading={removeMemberMutation.isPending}
-                      >
-                        <IconTrash size={16} />
-                      </ActionIcon>
-                    )}
-                  </Table.Td>
-                )}
+                <Table.Td>
+                  {(() => {
+                    const isSelf =
+                      membership.appUser.id ===
+                      channel.userMembership?.appUser.id;
+                    const canRemove = isAdmin && !isSelf;
+                    const tooltipText = !isAdmin
+                      ? 'Only admins can remove members'
+                      : isSelf
+                        ? 'You cannot remove yourself'
+                        : 'Remove this member from the channel';
+
+                    return (
+                      <Tooltip label={tooltipText}>
+                        <ActionIcon
+                          variant="subtle"
+                          color="red"
+                          size="sm"
+                          disabled={!canRemove}
+                          onClick={() =>
+                            canRemove &&
+                            handleRemoveMember(membership.appUserId)
+                          }
+                          loading={removeMemberMutation.isPending}
+                        >
+                          <IconTrash size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                    );
+                  })()}
+                </Table.Td>
               </Table.Tr>
             ))
           )}

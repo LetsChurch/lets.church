@@ -17,6 +17,7 @@ import { invariant } from 'es-toolkit';
 import db from '@/util/db';
 import { hasValidSession, requireAuthMiddleware } from '../-functions';
 import classes from './-channels.module.css';
+import { dashboardQueryKeys } from './-query-keys';
 
 const getChannels = createServerFn({ method: 'GET' })
   .middleware([requireAuthMiddleware])
@@ -49,7 +50,7 @@ const getChannels = createServerFn({ method: 'GET' })
   });
 
 const channelsQueryOptions = {
-  queryKey: ['dashboard', 'channels'],
+  queryKey: dashboardQueryKeys.channels.all(),
   queryFn: () => getChannels(),
 } as const;
 

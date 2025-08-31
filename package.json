@@ -72,6 +72,7 @@
     "@zxcvbn-ts/language-en": "^3.0.2",
     "argon2": "^0.43.1",
     "blurhash": "^2.0.5",
+    "clsx": "^2.1.1",
     "es-toolkit": "^1.39.8",
     "html-minifier": "^4.0.0",
     "is-ip": "^5.0.1",
@@ -100,6 +101,7 @@
     "sharp": "^0.34.3",
     "short-uuid": "^5.2.0",
     "subtitle": "^4.2.2-alpha.0",
+    "use-debounce": "^10.0.5",
     "wait-on": "^8.0.4",
     "xss": "^1.0.15",
     "zod": "^4.0.14"

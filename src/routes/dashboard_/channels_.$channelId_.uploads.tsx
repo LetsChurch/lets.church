@@ -11,6 +11,7 @@ import {
   Table,
   Text,
   Title,
+  Tooltip,
 } from '@mantine/core';
 import { Dropzone } from '@mantine/dropzone';
 import { useDisclosure, useSelection } from '@mantine/hooks';
@@ -22,7 +23,7 @@ import {
   IconPhoto,
   IconUpload,
 } from '@tabler/icons-react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
@@ -235,7 +236,6 @@ export const Route = createFileRoute(
       channelUploadsQueryOptions(params.channelId, search.page, search.limit),
     );
     return {
-      data,
       backNavigation: {
         label: data.channel.name,
         to: `/dashboard/channels/${params.channelId}`,
@@ -246,8 +246,12 @@ export const Route = createFileRoute(
 
 function ChannelUploadsPage() {
   const search = Route.useSearch();
+  const params = Route.useParams();
   const navigate = useNavigate();
-  const { data } = Route.useLoaderData();
+
+  const { data } = useSuspenseQuery(
+    channelUploadsQueryOptions(params.channelId, search.page, search.limit),
+  );
 
   const { channel, uploads, pagination } = data;
   const isAdmin = channel.userMembership?.isAdmin ?? false;
@@ -470,13 +474,13 @@ function ChannelUploadsPage() {
             <Table.Th>Visibility</Table.Th>
             <Table.Th>Views</Table.Th>
             <Table.Th>Created</Table.Th>
-            {(isAdmin || canEdit) && <Table.Th>Actions</Table.Th>}
+            <Table.Th>Actions</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
           {uploads.length === 0 ? (
             <Table.Tr>
-              <Table.Td colSpan={isAdmin || canEdit ? 6 : 5}>
+              <Table.Td colSpan={6}>
                 <Text ta="center" c="dimmed" py="xl">
                   No uploads found
                 </Text>
@@ -576,21 +580,33 @@ function ChannelUploadsPage() {
                       {formatDate(upload.createdAt, 'short')}
                     </Text>
                   </Table.Td>
-                  {(isAdmin || canEdit) && (
-                    <Table.Td onClick={(e) => e.stopPropagation()}>
-                      <ActionIcon
-                        variant="subtle"
-                        size="sm"
-                        onClick={() => {
-                          navigate({
-                            to: `/dashboard/channels/${data.channel.id}/uploads/${upload.id}`,
-                          });
-                        }}
-                      >
-                        <IconEdit size={16} />
-                      </ActionIcon>
-                    </Table.Td>
-                  )}
+                  <Table.Td onClick={(e) => e.stopPropagation()}>
+                    {(() => {
+                      const canEditUpload = isAdmin || canEdit;
+                      const tooltipText = canEditUpload
+                        ? 'Edit this upload'
+                        : 'Only admins and editors can edit uploads';
+
+                      return (
+                        <Tooltip label={tooltipText}>
+                          <ActionIcon
+                            variant="subtle"
+                            size="sm"
+                            disabled={!canEditUpload}
+                            onClick={() => {
+                              if (canEditUpload) {
+                                navigate({
+                                  to: `/dashboard/channels/${data.channel.id}/uploads/${upload.id}`,
+                                });
+                              }
+                            }}
+                          >
+                            <IconEdit size={16} />
+                          </ActionIcon>
+                        </Tooltip>
+                      );
+                    })()}
+                  </Table.Td>
                 </Table.Tr>
               );
             })

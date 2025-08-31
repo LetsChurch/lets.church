@@ -17,6 +17,7 @@ import { Dropzone } from '@mantine/dropzone';
 import { useStore } from '@nanostores/react';
 import { UploadLicense, UploadVisibility } from '@prisma/client';
 import { IconPhoto, IconUpload, IconX } from '@tabler/icons-react';
+import type { Query } from '@tanstack/query-core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
@@ -115,43 +116,6 @@ const getUploadRecord = createServerFn({ method: 'GET' })
         userMembership,
       },
     };
-  });
-
-const getUploadProgress = createServerFn({ method: 'GET' })
-  .middleware([requireChannelUploadAccessMiddleware])
-  .validator(
-    z.object({
-      channelId: z.string(),
-      uploadId: z.string(),
-    }),
-  )
-  .handler(async ({ context, data }) => {
-    invariant(context.session, 'Session not found');
-
-    const upload = await db.uploadRecord.findFirst({
-      select: {
-        transcodingFinishedAt: true,
-        transcribingFinishedAt: true,
-        transcodingProgress: true,
-      },
-      where: {
-        id: data.uploadId,
-        channelId: data.channelId,
-        channel: {
-          memberships: {
-            some: {
-              appUserId: context.session.appUser.id,
-            },
-          },
-        },
-      },
-    });
-
-    if (!upload) {
-      throw new Error('Upload not found or access denied');
-    }
-
-    return upload;
   });
 
 const formSchema = z.object({
@@ -255,6 +219,17 @@ const updateUploadRecord = createServerFn({
 const uploadQueryOptions = (channelId: string, uploadId: string) => ({
   queryKey: dashboardQueryKeys.uploads.detail(channelId, uploadId),
   queryFn: () => getUploadRecord({ data: { channelId, uploadId } }),
+  refetchInterval: (
+    query: Query<Awaited<ReturnType<typeof getUploadRecord>>>,
+  ) => {
+    const data = query.state.data;
+    if (!data) return false;
+
+    const isTranscoding = !data.upload.transcodingFinishedAt;
+    const isTranscribing = !data.upload.transcribingFinishedAt;
+
+    return isTranscoding || isTranscribing ? 5000 : false;
+  },
 });
 
 export const Route = createFileRoute(
@@ -267,11 +242,10 @@ export const Route = createFileRoute(
     }
   },
   loader: async ({ context: { queryClient }, params }) => {
-    const data = await queryClient.ensureQueryData(
+    await queryClient.ensureQueryData(
       uploadQueryOptions(params.channelId, params.uploadId),
     );
     return {
-      data,
       backNavigation: {
         label: 'Back to uploads',
         to: `/dashboard/channels/${params.channelId}/uploads`,
@@ -281,9 +255,6 @@ export const Route = createFileRoute(
 });
 
 function ChannelUploadPage() {
-  const { data } = Route.useLoaderData();
-  const { upload, channel } = data;
-
   const { channelId, uploadId } = Route.useParams();
   const queryClient = useQueryClient();
 
@@ -293,25 +264,16 @@ function ChannelUploadPage() {
 
   const isUploading = typeof uploadProgress === 'number';
 
-  // Check if processing is ongoing (initially based on upload data)
-  const initialIsTranscoding = !upload.transcodingFinishedAt;
-  const initialIsTranscribing = !upload.transcribingFinishedAt;
-  const initialIsProcessing = initialIsTranscoding || initialIsTranscribing;
+  // Single query for all upload data with conditional refetching
+  const { data } = useQuery(uploadQueryOptions(channelId, uploadId));
 
-  // Poll for progress updates every 5 seconds when processing
-  const { data: progressData } = useQuery({
-    queryKey: ['uploadProgress', channelId, uploadId],
-    queryFn: () => getUploadProgress({ data: { channelId, uploadId } }),
-    refetchInterval: initialIsProcessing ? 5000 : false,
-    enabled: !isUploading && initialIsProcessing,
-  });
+  invariant(data, 'Upload not found');
 
-  // Merge progress data with initial upload data
-  const currentUpload = progressData ? { ...upload, ...progressData } : upload;
+  const { upload, channel } = data;
 
-  // Current processing status (may have changed due to polling)
-  const isTranscoding = !currentUpload.transcodingFinishedAt;
-  const isTranscribing = !currentUpload.transcribingFinishedAt;
+  // Current processing status
+  const isTranscoding = !upload.transcodingFinishedAt;
+  const isTranscribing = !upload.transcribingFinishedAt;
   const isProcessing = isUploading || isTranscoding || isTranscribing;
 
   const [newThumbnailFile, setNewThumbnailFile] = useState<File | null>(null);
@@ -332,12 +294,10 @@ function ChannelUploadPage() {
         message: 'Upload details updated successfully!',
       });
 
-      // TODO: not actually invalidating? Something to do with SSR?
       await queryClient.invalidateQueries({
         queryKey: dashboardQueryKeys.uploads.detail(channelId, uploadId),
       });
 
-      // TODO: not actually invalidating? Something to do with SSR?
       await queryClient.invalidateQueries({
         queryKey: dashboardQueryKeys.uploads.all(channelId),
       });
@@ -367,17 +327,17 @@ function ChannelUploadPage() {
   ];
 
   const thumbnailUrl =
-    currentUpload.overrideThumbnailPath || currentUpload.defaultThumbnailPath;
+    upload.overrideThumbnailPath || upload.defaultThumbnailPath;
 
   const form = useAppMantineForm({
     defaultValues: {
-      title: currentUpload.title || '',
-      description: currentUpload.description || '',
-      license: currentUpload.license,
-      publishedAt: new Date(currentUpload.publishedAt),
-      visibility: currentUpload.visibility,
-      userCommentsEnabled: currentUpload.userCommentsEnabled,
-      downloadsEnabled: currentUpload.downloadsEnabled,
+      title: upload.title || '',
+      description: upload.description || '',
+      license: upload.license,
+      publishedAt: new Date(upload.publishedAt),
+      visibility: upload.visibility,
+      userCommentsEnabled: upload.userCommentsEnabled,
+      downloadsEnabled: upload.downloadsEnabled,
     },
     validators: {
       onChange: formSchema,
@@ -464,7 +424,7 @@ function ChannelUploadPage() {
                     Thumbnail
                   </Text>
                   <Group gap="md" align="flex-start">
-                    {(thumbnailUrl || previewUrl) && (
+                    {thumbnailUrl || previewUrl ? (
                       <Box pos="relative" w={160} h={90}>
                         <Image
                           src={previewUrl || thumbnailUrl}
@@ -484,7 +444,7 @@ function ChannelUploadPage() {
                         >
                           <IconX size={14} />
                         </ActionIcon>
-                        {previewUrl && (
+                        {previewUrl ? (
                           <Text
                             size="xs"
                             c="dimmed"
@@ -493,9 +453,9 @@ function ChannelUploadPage() {
                           >
                             New thumbnail
                           </Text>
-                        )}
+                        ) : null}
                       </Box>
-                    )}
+                    ) : null}
                     <Dropzone
                       onDrop={(files) => {
                         const file = files[0];
@@ -582,10 +542,10 @@ function ChannelUploadPage() {
               </form.Subscribe>
             </Group>
             {/* Player or Progress Bars */}
-            {isProcessing || initialIsProcessing ? (
+            {isProcessing ? (
               <Stack gap="md">
                 {/* Upload Progress */}
-                {isUploading && (
+                {isUploading ? (
                   <Box>
                     <Text size="sm" fw={500} mb="xs">
                       Uploading file...
@@ -600,57 +560,55 @@ function ChannelUploadPage() {
                       {Math.round(uploadProgress * 100)}% uploaded
                     </Text>
                   </Box>
-                )}
+                ) : null}
 
-                {/* Transcoding Progress - only show when not uploading */}
-                {!isUploading &&
-                  (isTranscoding ||
-                    (!isTranscoding && initialIsTranscoding)) && (
-                    <Box>
-                      <Text size="sm" fw={500} mb="xs">
-                        {isTranscoding
-                          ? 'Transcoding video...'
-                          : 'Transcoding complete'}
-                      </Text>
-                      <Progress
-                        value={currentUpload.transcodingProgress * 100}
-                        size="lg"
-                        animated={isTranscoding}
-                        striped={isTranscoding}
-                        color={isTranscoding ? undefined : 'green'}
-                      />
-                      <Text size="xs" c="dimmed" mt="xs">
-                        {isTranscoding
-                          ? `${Math.round(currentUpload.transcodingProgress * 100)}% complete`
-                          : 'Video transcoding finished'}
-                      </Text>
-                    </Box>
-                  )}
+                {/* Transcoding Progress - show when not uploading */}
+                {!isUploading ? (
+                  <Box>
+                    <Text size="sm" fw={500} mb="xs">
+                      {isTranscoding
+                        ? 'Transcoding video...'
+                        : 'Transcoding complete'}
+                    </Text>
+                    <Progress
+                      value={
+                        isTranscoding ? upload.transcodingProgress * 100 : 100
+                      }
+                      size="lg"
+                      animated={isTranscoding}
+                      striped={isTranscoding}
+                      color={isTranscoding ? undefined : 'green'}
+                    />
+                    <Text size="xs" c="dimmed" mt="xs">
+                      {isTranscoding
+                        ? `${Math.round(upload.transcodingProgress * 100)}% complete`
+                        : 'Video transcoding finished'}
+                    </Text>
+                  </Box>
+                ) : null}
 
-                {/* Transcribing Progress - only show when not uploading */}
-                {!isUploading &&
-                  (isTranscribing ||
-                    (!isTranscribing && initialIsTranscribing)) && (
-                    <Box>
-                      <Text size="sm" fw={500} mb="xs">
-                        {isTranscribing
-                          ? 'Transcribing audio...'
-                          : 'Transcription complete'}
-                      </Text>
-                      <Progress
-                        value={100}
-                        size="lg"
-                        animated={isTranscribing}
-                        striped={isTranscribing}
-                        color={isTranscribing ? undefined : 'green'}
-                      />
-                      <Text size="xs" c="dimmed" mt="xs">
-                        {isTranscribing
-                          ? 'Processing audio transcript'
-                          : 'Audio transcription finished'}
-                      </Text>
-                    </Box>
-                  )}
+                {/* Transcribing Progress - show when not uploading */}
+                {!isUploading ? (
+                  <Box>
+                    <Text size="sm" fw={500} mb="xs">
+                      {isTranscribing
+                        ? 'Transcribing audio...'
+                        : 'Transcription complete'}
+                    </Text>
+                    <Progress
+                      value={100}
+                      size="lg"
+                      animated={isTranscribing}
+                      striped={isTranscribing}
+                      color={isTranscribing ? undefined : 'green'}
+                    />
+                    <Text size="xs" c="dimmed" mt="xs">
+                      {isTranscribing
+                        ? 'Processing audio transcript'
+                        : 'Audio transcription finished'}
+                    </Text>
+                  </Box>
+                ) : null}
               </Stack>
             ) : (
               <Box

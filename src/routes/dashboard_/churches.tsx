@@ -23,6 +23,7 @@ import { invariant } from 'es-toolkit';
 import db from '@/util/db';
 import { hasValidSession, requireAuthMiddleware } from '../-functions';
 import classes from './-churches.module.css';
+import { dashboardQueryKeys } from './-query-keys';
 
 const getChurches = createServerFn({ method: 'GET' })
   .middleware([requireAuthMiddleware])
@@ -57,7 +58,7 @@ const getChurches = createServerFn({ method: 'GET' })
   });
 
 const churchesQueryOptions = {
-  queryKey: ['dashboard', 'churches'],
+  queryKey: dashboardQueryKeys.churches.all(),
   queryFn: () => getChurches(),
 } as const;
 

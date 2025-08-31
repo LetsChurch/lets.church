@@ -9,7 +9,11 @@ import {
   Title,
 } from '@mantine/core';
 import { ChannelVisibility } from '@prisma/client';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
@@ -21,6 +25,7 @@ import {
   requireChannelAdminAccessMiddleware,
 } from '../-functions';
 import { showFailure, showSuccess } from '../-mantine';
+import { dashboardQueryKeys } from './-query-keys';
 
 const getChannelForEdit = createServerFn({ method: 'GET' })
   .middleware([requireChannelAdminAccessMiddleware])
@@ -162,7 +167,7 @@ const updateChannel = createServerFn({
   });
 
 const channelEditQueryOptions = (channelId: string) => ({
-  queryKey: ['dashboard', 'channels', channelId, 'edit'],
+  queryKey: dashboardQueryKeys.channels.edit(channelId),
   queryFn: () => getChannelForEdit({ data: { channelId } }),
 });
 
@@ -174,11 +179,10 @@ export const Route = createFileRoute('/dashboard_/channels_/$channelId_/edit')({
     }
   },
   loader: async ({ context: { queryClient }, params }) => {
-    const data = await queryClient.ensureQueryData(
+    await queryClient.ensureQueryData(
       channelEditQueryOptions(params.channelId),
     );
     return {
-      data,
       backNavigation: {
         label: 'Back to channel',
         to: '/dashboard/channels/$channelId',
@@ -189,9 +193,12 @@ export const Route = createFileRoute('/dashboard_/channels_/$channelId_/edit')({
 });
 
 function ChannelEditPage() {
-  const { data: channel } = Route.useLoaderData();
   const { channelId } = Route.useParams();
   const queryClient = useQueryClient();
+
+  const { data: channel } = useSuspenseQuery(
+    channelEditQueryOptions(channelId),
+  );
 
   const updateMutation = useMutation({
     mutationFn: updateChannel,
@@ -201,11 +208,11 @@ function ChannelEditPage() {
       });
 
       await queryClient.invalidateQueries({
-        queryKey: ['dashboard', 'channels', channelId],
+        queryKey: dashboardQueryKeys.channels.detail(channelId),
       });
 
       await queryClient.invalidateQueries({
-        queryKey: ['dashboard', 'channels'],
+        queryKey: dashboardQueryKeys.channels.all(),
       });
     },
     onError: (error: Error) => {
