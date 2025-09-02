@@ -12,6 +12,7 @@ import { BACKGROUND_QUEUE } from './queues';
 import { emptySignal } from './signals';
 import {
   createUploadRecordWorkflow,
+  deleteUploadWorkflow,
   geocodeOrganizationWorkflow,
   handleMultipartMediaUploadWorkflow,
   indexDocumentWorkflow,
@@ -192,6 +193,15 @@ export async function postUserRegistration(
     taskQueue: BACKGROUND_QUEUE,
     args,
     workflowId: `postUserRegistration:${userId}`,
+  });
+}
+
+export async function deleteUpload(uploadRecordId: string) {
+  return (await client).workflow.start(deleteUploadWorkflow, {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    args: [uploadRecordId],
+    workflowId: `deleteUpload:${uploadRecordId}:${Date.now()}`,
   });
 }
 

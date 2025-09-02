@@ -15,12 +15,14 @@ import {
 } from '@mantine/core';
 import { Dropzone } from '@mantine/dropzone';
 import { useDisclosure, useSelection } from '@mantine/hooks';
+import { useStore } from '@nanostores/react';
 import { UploadLicense } from '@prisma/client';
 import {
   IconEdit,
   IconEye,
   IconEyeOff,
   IconPhoto,
+  IconTrash,
   IconUpload,
 } from '@tabler/icons-react';
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
@@ -30,6 +32,7 @@ import { invariant } from 'es-toolkit';
 import { map } from 'nanostores';
 import { useState } from 'react';
 import { z } from 'zod';
+import { deleteUpload } from '@/temporal';
 import db from '@/util/db';
 import { formatDate, formatTime } from '@/util/format';
 import { doMultipartUpload } from '@/util/multipart-upload';
@@ -38,12 +41,14 @@ import {
   clientFinalizeMultipartUpload,
   hasValidSession,
   requireAuthMiddleware,
+  requireChannelAdminAccessMiddleware,
   requireChannelUploadAccessMiddleware,
 } from '../-functions';
-import { showFailure } from '../-mantine';
+import { showFailure, showSuccess } from '../-mantine';
 import { dashboardQueryKeys } from './-query-keys';
 
 export const $uploadProgress = map<Record<string, number | undefined>>({});
+export const $deletedUploads = map<Record<string, true>>({});
 
 const getChannelUploads = createServerFn({ method: 'GET' })
   .middleware([requireAuthMiddleware])
@@ -70,6 +75,7 @@ const getChannelUploads = createServerFn({ method: 'GET' })
             appUser: {
               select: {
                 id: true,
+                role: true,
               },
             },
           },
@@ -208,12 +214,43 @@ const createUploadRecord = createServerFn({ method: 'POST' })
     return id;
   });
 
+const deleteUploadRecord = createServerFn({ method: 'POST' })
+  .middleware([requireChannelAdminAccessMiddleware])
+  .validator(
+    z.object({
+      channelId: z.string(),
+      uploadId: z.string(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    // Verify the upload belongs to this channel
+    const upload = await db.uploadRecord.findFirst({
+      select: {
+        id: true,
+        channelId: true,
+      },
+      where: {
+        id: data.uploadId,
+        channelId: data.channelId,
+      },
+    });
+
+    if (!upload) {
+      throw new Error('Upload not found');
+    }
+
+    // Start the delete workflow
+    await deleteUpload(data.uploadId);
+
+    return { success: true, uploadId: data.uploadId };
+  });
+
 const channelUploadsQueryOptions = (
   channelId: string,
   page: number,
   limit: number,
 ) => ({
-  queryKey: dashboardQueryKeys.uploads.list(channelId, page, limit),
+  queryKey: dashboardQueryKeys.uploads.list(channelId, { page, limit }),
   queryFn: () => getChannelUploads({ data: { channelId, page, limit } }),
 });
 
@@ -248,16 +285,24 @@ function ChannelUploadsPage() {
   const search = Route.useSearch();
   const params = Route.useParams();
   const navigate = useNavigate();
+  const deletedUploads = useStore($deletedUploads);
 
   const { data } = useSuspenseQuery(
     channelUploadsQueryOptions(params.channelId, search.page, search.limit),
   );
 
   const { channel, uploads, pagination } = data;
-  const isAdmin = channel.userMembership?.isAdmin ?? false;
+  const isChannelAdmin = channel.userMembership?.isAdmin ?? false;
+  const isSiteAdmin = channel.userMembership?.appUser?.role === 'ADMIN';
+  const isAdmin = isChannelAdmin || isSiteAdmin;
   const canEdit = isAdmin || (channel.userMembership?.canEdit ?? false);
   const canUpload = isAdmin || (channel.userMembership?.canUpload ?? false);
+  const canDelete = isAdmin; // Only channel admins and site admins can delete
   const [currentFile, setCurrentFile] = useState<File | null>(null);
+  const [uploadToDelete, setUploadToDelete] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   const uploadIds = uploads.map((upload) => upload.id);
   const [selection, handlers] = useSelection({ data: uploadIds });
@@ -321,6 +366,22 @@ function ChannelUploadsPage() {
           error instanceof Error
             ? error.message
             : 'Failed to create upload record',
+      });
+    },
+  });
+
+  const deleteUploadMutation = useMutation({
+    mutationFn: deleteUploadRecord,
+    onSuccess: ({ uploadId }) => {
+      $deletedUploads.setKey(uploadId, true);
+      showSuccess({ message: 'Upload deletion started successfully' });
+      setUploadToDelete(null);
+    },
+    onError: (error) => {
+      console.error('Failed to delete upload:', error);
+      showFailure({
+        message:
+          error instanceof Error ? error.message : 'Failed to delete upload',
       });
     },
   });
@@ -454,6 +515,49 @@ function ChannelUploadsPage() {
         </Text>
       </Modal>
 
+      <Modal
+        opened={uploadToDelete !== null}
+        onClose={() => setUploadToDelete(null)}
+        title="Confirm Delete"
+        centered
+      >
+        <Stack gap="md">
+          <Text>
+            Are you sure you want to delete the upload "{uploadToDelete?.title}
+            "?
+          </Text>
+          <Text size="sm" c="dimmed">
+            This action cannot be undone. The upload will be permanently removed
+            from all storage systems.
+          </Text>
+          <Group justify="flex-end" gap="sm">
+            <Button
+              variant="default"
+              onClick={() => setUploadToDelete(null)}
+              disabled={deleteUploadMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="red"
+              onClick={() => {
+                if (uploadToDelete) {
+                  deleteUploadMutation.mutate({
+                    data: {
+                      channelId: channel.id,
+                      uploadId: uploadToDelete.id,
+                    },
+                  });
+                }
+              }}
+              loading={deleteUploadMutation.isPending}
+            >
+              Delete Upload
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
       <Table verticalSpacing="md">
         <Table.Thead>
           <Table.Tr>
@@ -489,23 +593,32 @@ function ChannelUploadsPage() {
           ) : (
             uploads.map((upload) => {
               const isSelected = selection.includes(upload.id);
+              const isDeleted = deletedUploads[upload.id];
               return (
                 <Table.Tr
                   key={upload.id}
                   bg={
                     isSelected ? 'var(--mantine-color-blue-light)' : undefined
                   }
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => {
-                    navigate({
-                      to: `/dashboard/channels/${data.channel.id}/uploads/${upload.id}`,
-                    });
+                  style={{
+                    cursor: isDeleted ? 'default' : 'pointer',
+                    opacity: isDeleted ? 0.5 : 1,
                   }}
+                  onClick={
+                    isDeleted
+                      ? undefined
+                      : () => {
+                          navigate({
+                            to: `/dashboard/channels/${data.channel.id}/uploads/${upload.id}`,
+                          });
+                        }
+                  }
                 >
                   <Table.Td onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       checked={isSelected}
                       onChange={() => handlers.toggle(upload.id)}
+                      disabled={isDeleted}
                     />
                   </Table.Td>
                   <Table.Td>
@@ -581,31 +694,65 @@ function ChannelUploadsPage() {
                     </Text>
                   </Table.Td>
                   <Table.Td onClick={(e) => e.stopPropagation()}>
-                    {(() => {
-                      const canEditUpload = isAdmin || canEdit;
-                      const tooltipText = canEditUpload
-                        ? 'Edit this upload'
-                        : 'Only admins and editors can edit uploads';
+                    <Group gap="xs">
+                      {(() => {
+                        const canEditUpload =
+                          (isAdmin || canEdit) && !isDeleted;
+                        const tooltipText = isDeleted
+                          ? 'Upload is being deleted'
+                          : canEditUpload
+                            ? 'Edit this upload'
+                            : 'Only admins and editors can edit uploads';
 
-                      return (
-                        <Tooltip label={tooltipText}>
-                          <ActionIcon
-                            variant="subtle"
-                            size="sm"
-                            disabled={!canEditUpload}
-                            onClick={() => {
-                              if (canEditUpload) {
-                                navigate({
-                                  to: `/dashboard/channels/${data.channel.id}/uploads/${upload.id}`,
-                                });
-                              }
-                            }}
-                          >
-                            <IconEdit size={16} />
-                          </ActionIcon>
-                        </Tooltip>
-                      );
-                    })()}
+                        return (
+                          <Tooltip label={tooltipText}>
+                            <ActionIcon
+                              variant="subtle"
+                              size="sm"
+                              disabled={!canEditUpload}
+                              onClick={() => {
+                                if (canEditUpload) {
+                                  navigate({
+                                    to: `/dashboard/channels/${data.channel.id}/uploads/${upload.id}`,
+                                  });
+                                }
+                              }}
+                            >
+                              <IconEdit size={16} />
+                            </ActionIcon>
+                          </Tooltip>
+                        );
+                      })()}
+                      {(() => {
+                        const canDeleteUpload = canDelete && !isDeleted;
+                        const tooltipText = isDeleted
+                          ? 'Upload is being deleted'
+                          : canDelete
+                            ? 'Delete this upload'
+                            : 'Only channel admins and site admins can delete uploads';
+
+                        return (
+                          <Tooltip label={tooltipText}>
+                            <ActionIcon
+                              variant="subtle"
+                              color="red"
+                              size="sm"
+                              disabled={!canDeleteUpload}
+                              onClick={() => {
+                                if (canDeleteUpload) {
+                                  setUploadToDelete({
+                                    id: upload.id,
+                                    title: upload.title || 'Untitled Upload',
+                                  });
+                                }
+                              }}
+                            >
+                              <IconTrash size={16} />
+                            </ActionIcon>
+                          </Tooltip>
+                        );
+                      })()}
+                    </Group>
                   </Table.Td>
                 </Table.Tr>
               );

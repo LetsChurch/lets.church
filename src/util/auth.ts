@@ -43,6 +43,7 @@ export async function getSession() {
       appUser: {
         select: {
           id: true,
+          role: true,
         },
       },
     },

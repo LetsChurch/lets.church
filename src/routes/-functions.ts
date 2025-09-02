@@ -24,6 +24,7 @@ export const sessionMiddleware = createMiddleware({ type: 'function' }).server(
           expiresAt: session.expiresAt,
           appUser: {
             id: session.appUser.id,
+            role: session.appUser.role,
           },
         }
       : null;
@@ -99,7 +100,13 @@ export const requireChannelUploadAccessMiddleware = createMiddleware({
       },
     });
 
-    if (!(membership?.isAdmin || membership?.canUpload)) {
+    if (
+      !(
+        membership?.isAdmin ||
+        membership?.canUpload ||
+        context.session.appUser.role === 'ADMIN'
+      )
+    ) {
       throw new Response('Forbidden', { status: 403 });
     }
 
@@ -129,7 +136,12 @@ export const requireChannelUploadEditAccessMiddleware = createMiddleware({
     });
 
     if (
-      !(membership?.isAdmin || membership?.canUpload || membership?.canEdit)
+      !(
+        membership?.isAdmin ||
+        membership?.canUpload ||
+        membership?.canEdit ||
+        context.session.appUser.role === 'ADMIN'
+      )
     ) {
       throw new Response('Forbidden', { status: 403 });
     }
@@ -157,7 +169,7 @@ export const requireChannelAdminAccessMiddleware = createMiddleware({
       },
     });
 
-    if (!membership?.isAdmin) {
+    if (!(membership?.isAdmin || context.session.appUser.role === 'ADMIN')) {
       throw new Response('Forbidden', { status: 403 });
     }
 

@@ -1,10 +1,11 @@
 export const dashboardQueryKeys = {
   channels: {
     all: () => ['dashboard', 'channels'] as const,
-    list: (page?: number, limit?: number) =>
-      page && limit
-        ? (['dashboard', 'channels', { page, limit }] as const)
-        : (['dashboard', 'channels'] as const),
+    list: (pagination?: { page: number; limit: number }) => [
+      'dashboard',
+      'channels',
+      pagination,
+    ],
     detail: (channelId: string) =>
       ['dashboard', 'channels', { channelId }] as const,
     edit: (channelId: string) =>
@@ -13,14 +14,8 @@ export const dashboardQueryKeys = {
       ['dashboard', 'channels', { channelId }, 'members'] as const,
   },
   uploads: {
-    list: (channelId: string, page: number, limit: number) =>
-      [
-        'dashboard',
-        'channels',
-        { channelId },
-        'uploads',
-        { page, limit },
-      ] as const,
+    list: (channelId: string, pagination?: { page: number; limit: number }) =>
+      ['dashboard', 'channels', { channelId }, 'uploads', pagination] as const,
     detail: (channelId: string, uploadId: string) =>
       [
         'dashboard',
