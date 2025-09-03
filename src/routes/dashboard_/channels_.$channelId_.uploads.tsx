@@ -16,7 +16,6 @@ import {
 import { Dropzone } from '@mantine/dropzone';
 import { useDisclosure, useSelection } from '@mantine/hooks';
 import { useStore } from '@nanostores/react';
-import { UploadLicense } from '@prisma/client';
 import {
   IconEdit,
   IconEye,
@@ -27,232 +26,22 @@ import {
 } from '@tabler/icons-react';
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
-import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
 import { map } from 'nanostores';
 import { useState } from 'react';
 import { z } from 'zod';
-import { deleteUpload } from '@/temporal';
-import db from '@/util/db';
+import { useTRPC } from '@/trpc/react';
 import { formatDate, formatTime } from '@/util/format';
 import { doMultipartUpload } from '@/util/multipart-upload';
 import {
   clientCreateMultipartUpload,
   clientFinalizeMultipartUpload,
   hasValidSession,
-  requireAuthMiddleware,
-  requireChannelAdminAccessMiddleware,
-  requireChannelUploadAccessMiddleware,
 } from '../-functions';
 import { showFailure, showSuccess } from '../-mantine';
-import { dashboardQueryKeys } from './-query-keys';
 
 export const $uploadProgress = map<Record<string, number | undefined>>({});
 export const $deletedUploads = map<Record<string, true>>({});
-
-const getChannelUploads = createServerFn({ method: 'GET' })
-  .middleware([requireAuthMiddleware])
-  .validator(
-    z.object({
-      channelId: z.string(),
-      page: z.number().min(1).default(1),
-      limit: z.number().min(1).max(100).default(20),
-    }),
-  )
-  .handler(async ({ context, data }) => {
-    invariant(context.session, 'Session not found');
-
-    const channel = await db.channel.findFirst({
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        memberships: {
-          select: {
-            isAdmin: true,
-            canEdit: true,
-            canUpload: true,
-            appUser: {
-              select: {
-                id: true,
-                role: true,
-              },
-            },
-          },
-        },
-      },
-      where: {
-        id: data.channelId,
-        memberships: {
-          some: {
-            appUserId: context.session.appUser.id,
-          },
-        },
-      },
-    });
-
-    if (!channel) {
-      throw new Error('Channel not found');
-    }
-
-    const userMembership = channel.memberships.find(
-      (m) => m.appUser.id === context.session?.appUser.id,
-    );
-
-    const offset = (data.page - 1) * data.limit;
-
-    const [uploads, totalCount] = await Promise.all([
-      db.uploadRecord.findMany({
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          visibility: true,
-          createdAt: true,
-          lengthSeconds: true,
-          _count: {
-            select: {
-              uploadViews: true,
-              userComments: true,
-            },
-          },
-        },
-        where: {
-          channelId: data.channelId,
-          OR: [
-            { visibility: 'PUBLIC' },
-            { visibility: 'UNLISTED' },
-            {
-              AND: [
-                { visibility: 'PRIVATE' },
-                {
-                  channel: {
-                    memberships: {
-                      some: {
-                        appUserId: context.session.appUser.id,
-                      },
-                    },
-                  },
-                },
-              ],
-            },
-          ],
-        },
-        orderBy: { createdAt: 'desc' },
-        skip: offset,
-        take: data.limit,
-      }),
-      db.uploadRecord.count({
-        where: {
-          channelId: data.channelId,
-          OR: [
-            { visibility: 'PUBLIC' },
-            { visibility: 'UNLISTED' },
-            {
-              AND: [
-                { visibility: 'PRIVATE' },
-                {
-                  channel: {
-                    memberships: {
-                      some: {
-                        appUserId: context.session.appUser.id,
-                      },
-                    },
-                  },
-                },
-              ],
-            },
-          ],
-        },
-      }),
-    ]);
-
-    const totalPages = Math.ceil(totalCount / data.limit);
-
-    return {
-      channel: {
-        ...channel,
-        userMembership,
-      },
-      uploads,
-      pagination: {
-        page: data.page,
-        limit: data.limit,
-        totalCount,
-        totalPages,
-      },
-    };
-  });
-
-const createUploadRecord = createServerFn({ method: 'POST' })
-  .middleware([requireChannelUploadAccessMiddleware])
-  .validator(
-    z.object({
-      channelId: z.string(),
-    }),
-  )
-  .handler(async ({ context, data }) => {
-    invariant(context.session, 'Session not found');
-
-    const { id } = await db.uploadRecord.create({
-      data: {
-        license: UploadLicense.STANDARD,
-        visibility: 'PRIVATE',
-        channel: {
-          connect: {
-            id: data.channelId,
-          },
-        },
-        createdBy: {
-          connect: {
-            id: context.session.appUser.id,
-          },
-        },
-      },
-    });
-
-    return id;
-  });
-
-const deleteUploadRecord = createServerFn({ method: 'POST' })
-  .middleware([requireChannelAdminAccessMiddleware])
-  .validator(
-    z.object({
-      channelId: z.string(),
-      uploadId: z.string(),
-    }),
-  )
-  .handler(async ({ data }) => {
-    // Verify the upload belongs to this channel
-    const upload = await db.uploadRecord.findFirst({
-      select: {
-        id: true,
-        channelId: true,
-      },
-      where: {
-        id: data.uploadId,
-        channelId: data.channelId,
-      },
-    });
-
-    if (!upload) {
-      throw new Error('Upload not found');
-    }
-
-    // Start the delete workflow
-    await deleteUpload(data.uploadId);
-
-    return { success: true, uploadId: data.uploadId };
-  });
-
-const channelUploadsQueryOptions = (
-  channelId: string,
-  page: number,
-  limit: number,
-) => ({
-  queryKey: dashboardQueryKeys.uploads.list(channelId, { page, limit }),
-  queryFn: () => getChannelUploads({ data: { channelId, page, limit } }),
-});
 
 export const Route = createFileRoute(
   '/dashboard_/channels_/$channelId_/uploads',
@@ -268,9 +57,17 @@ export const Route = createFileRoute(
     limit: z.number().min(1).max(100).default(20),
   }),
   loaderDeps: ({ search }) => ({ search }),
-  loader: async ({ context: { queryClient }, params, deps: { search } }) => {
+  loader: async ({
+    context: { queryClient, trpc },
+    params,
+    deps: { search },
+  }) => {
     const data = await queryClient.ensureQueryData(
-      channelUploadsQueryOptions(params.channelId, search.page, search.limit),
+      trpc.dashboard.channels.getChannelUploads.queryOptions({
+        channelId: params.channelId,
+        page: search.page,
+        limit: search.limit,
+      }),
     );
     return {
       backNavigation: {
@@ -286,14 +83,22 @@ function ChannelUploadsPage() {
   const params = Route.useParams();
   const navigate = useNavigate();
   const deletedUploads = useStore($deletedUploads);
+  const trpc = useTRPC();
 
   const { data } = useSuspenseQuery(
-    channelUploadsQueryOptions(params.channelId, search.page, search.limit),
+    trpc.dashboard.channels.getChannelUploads.queryOptions({
+      channelId: params.channelId,
+      page: search.page,
+      limit: search.limit,
+    }),
   );
 
   const { channel, uploads, pagination } = data;
   const isChannelAdmin = channel.userMembership?.isAdmin ?? false;
-  const isSiteAdmin = channel.userMembership?.appUser?.role === 'ADMIN';
+  const userMembership = channel.memberships?.find(
+    (m) => m.appUser.id === channel.userMembership?.appUserId,
+  );
+  const isSiteAdmin = userMembership?.appUser?.role === 'ADMIN';
   const isAdmin = isChannelAdmin || isSiteAdmin;
   const canEdit = isAdmin || (channel.userMembership?.canEdit ?? false);
   const canUpload = isAdmin || (channel.userMembership?.canUpload ?? false);
@@ -307,84 +112,86 @@ function ChannelUploadsPage() {
   const uploadIds = uploads.map((upload) => upload.id);
   const [selection, handlers] = useSelection({ data: uploadIds });
 
-  const createUploadMutation = useMutation({
-    mutationFn: createUploadRecord,
-    onSuccess: async (uploadId) => {
-      invariant(currentFile, 'Missing upload file');
-      try {
-        const { urls, partSize, s3UploadKey, s3UploadId } =
-          await clientCreateMultipartUpload({
+  const createUploadMutation = useMutation(
+    trpc.dashboard.channels.createUploadRecord.mutationOptions({
+      onSuccess: async (uploadId) => {
+        invariant(currentFile, 'Missing upload file');
+        try {
+          const { urls, partSize, s3UploadKey, s3UploadId } =
+            await clientCreateMultipartUpload({
+              data: {
+                channelId: channel.id,
+                targetId: uploadId,
+                uploadMimeType: currentFile.type,
+                postProcess: 'media',
+                bytes: currentFile.size,
+              },
+            });
+
+          const mpu = doMultipartUpload(currentFile, urls, partSize);
+
+          mpu.onProgress((progress) =>
+            $uploadProgress.setKey(uploadId, progress),
+          );
+
+          const navPromise = navigate({
+            to: '/dashboard/channels/$channelId/uploads/$uploadId',
+            params: { channelId: channel.id, uploadId },
+          });
+
+          const etags = await mpu;
+
+          $uploadProgress.setKey(uploadId, undefined);
+
+          await clientFinalizeMultipartUpload({
             data: {
               channelId: channel.id,
-              targetId: uploadId,
-              uploadMimeType: currentFile.type,
-              postProcess: 'media',
-              bytes: currentFile.size,
+              s3UploadKey: s3UploadKey,
+              s3UploadId: s3UploadId,
+              s3PartETags: etags,
             },
           });
 
-        const mpu = doMultipartUpload(currentFile, urls, partSize);
-
-        mpu.onProgress((progress) =>
-          $uploadProgress.setKey(uploadId, progress),
-        );
-
-        const navPromise = navigate({
-          to: '/dashboard/channels/$channelId/uploads/$uploadId',
-          params: { channelId: channel.id, uploadId },
-        });
-
-        const etags = await mpu;
-
-        $uploadProgress.setKey(uploadId, undefined);
-
-        await clientFinalizeMultipartUpload({
-          data: {
-            channelId: channel.id,
-            s3UploadKey: s3UploadKey,
-            s3UploadId: s3UploadId,
-            s3PartETags: etags,
-          },
-        });
-
-        await navPromise;
-      } catch (error) {
-        console.error('Failed to upload file:', error);
+          await navPromise;
+        } catch (error) {
+          console.error('Failed to upload file:', error);
+          showFailure({
+            message:
+              error instanceof Error ? error.message : 'Failed to upload file',
+          });
+        }
+        closeUploadModal();
+        setCurrentFile(null);
+      },
+      onError: (error) => {
+        console.error('Failed to create upload record:', error);
+        setCurrentFile(null);
         showFailure({
           message:
-            error instanceof Error ? error.message : 'Failed to upload file',
+            error instanceof Error
+              ? error.message
+              : 'Failed to create upload record',
         });
-      }
-      closeUploadModal();
-      setCurrentFile(null);
-    },
-    onError: (error) => {
-      console.error('Failed to create upload record:', error);
-      setCurrentFile(null);
-      showFailure({
-        message:
-          error instanceof Error
-            ? error.message
-            : 'Failed to create upload record',
-      });
-    },
-  });
+      },
+    }),
+  );
 
-  const deleteUploadMutation = useMutation({
-    mutationFn: deleteUploadRecord,
-    onSuccess: ({ uploadId }) => {
-      $deletedUploads.setKey(uploadId, true);
-      showSuccess({ message: 'Upload deletion started successfully' });
-      setUploadToDelete(null);
-    },
-    onError: (error) => {
-      console.error('Failed to delete upload:', error);
-      showFailure({
-        message:
-          error instanceof Error ? error.message : 'Failed to delete upload',
-      });
-    },
-  });
+  const deleteUploadMutation = useMutation(
+    trpc.dashboard.channels.deleteUploadRecord.mutationOptions({
+      onSuccess: ({ uploadId }) => {
+        $deletedUploads.setKey(uploadId, true);
+        showSuccess({ message: 'Upload deletion started successfully' });
+        setUploadToDelete(null);
+      },
+      onError: (error) => {
+        console.error('Failed to delete upload:', error);
+        showFailure({
+          message:
+            error instanceof Error ? error.message : 'Failed to delete upload',
+        });
+      },
+    }),
+  );
 
   const getVisibilityIcon = (visibility: string) => {
     switch (visibility) {
@@ -418,9 +225,7 @@ function ChannelUploadsPage() {
   const handleDrop = ([file]: File[]) => {
     setCurrentFile(file);
     createUploadMutation.mutate({
-      data: {
-        channelId: channel.id,
-      },
+      channelId: channel.id,
     });
   };
 
@@ -543,10 +348,8 @@ function ChannelUploadsPage() {
               onClick={() => {
                 if (uploadToDelete) {
                   deleteUploadMutation.mutate({
-                    data: {
-                      channelId: channel.id,
-                      uploadId: uploadToDelete.id,
-                    },
+                    channelId: channel.id,
+                    uploadId: uploadToDelete.id,
                   });
                 }
               }}

@@ -26,21 +26,13 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { createServerFn } from '@tanstack/react-start';
-import { invariant } from 'es-toolkit';
 import { useState } from 'react';
 import { useDebounce } from 'use-debounce';
-import { z } from 'zod';
 import { useAppMantineForm } from '@/components/mantine';
-import db from '@/util/db';
+import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
-import {
-  hasValidSession,
-  requireAuthMiddleware,
-  requireChannelAdminAccessMiddleware,
-} from '../-functions';
+import { hasValidSession } from '../-functions';
 import { showFailure, showSuccess } from '../-mantine';
-import { dashboardQueryKeys } from './-query-keys';
 
 type MembershipWithUser = {
   channelId: string;
@@ -57,199 +49,6 @@ type MembershipWithUser = {
   };
 };
 
-const getChannelMembers = createServerFn({ method: 'GET' })
-  .middleware([requireAuthMiddleware])
-  .validator(z.object({ channelId: z.string() }))
-  .handler(async ({ context, data }) => {
-    invariant(context.session, 'Session not found');
-
-    const channel = await db.channel.findFirst({
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        memberships: {
-          select: {
-            channelId: true,
-            appUserId: true,
-            isAdmin: true,
-            canEdit: true,
-            canUpload: true,
-            createdAt: true,
-            appUser: {
-              select: {
-                id: true,
-                username: true,
-                fullName: true,
-                avatarPath: true,
-              },
-            },
-          },
-          orderBy: [{ isAdmin: 'desc' }, { createdAt: 'asc' }],
-        },
-      },
-      where: {
-        id: data.channelId,
-        memberships: {
-          some: {
-            appUserId: context.session.appUser.id,
-          },
-        },
-      },
-    });
-
-    if (!channel) {
-      throw new Error('Channel not found');
-    }
-
-    const userMembership = channel.memberships.find(
-      (m: MembershipWithUser) => m.appUser.id === context.session?.appUser.id,
-    );
-
-    return {
-      ...channel,
-      userMembership,
-    } as const;
-  });
-
-const searchUsers = createServerFn({ method: 'GET' })
-  .middleware([requireAuthMiddleware])
-  .validator(
-    z.object({
-      channelId: z.string(),
-      query: z.string().min(1),
-    }),
-  )
-  .handler(async ({ context, data }) => {
-    invariant(context.session, 'Session not found');
-
-    // Verify user has admin access to the channel
-    const channel = await db.channel.findFirst({
-      where: {
-        id: data.channelId,
-        memberships: {
-          some: {
-            appUserId: context.session.appUser.id,
-            isAdmin: true,
-          },
-        },
-      },
-    });
-
-    if (!channel) {
-      throw new Error('Channel not found or insufficient permissions');
-    }
-
-    // Search for users who are not already members of the channel
-    const users = await db.appUser.findMany({
-      select: {
-        id: true,
-        username: true,
-        fullName: true,
-        avatarPath: true,
-      },
-      where: {
-        username: {
-          contains: data.query,
-          mode: 'insensitive',
-        },
-        NOT: {
-          channelMemberships: {
-            some: {
-              channelId: data.channelId,
-            },
-          },
-        },
-      },
-      take: 10,
-    });
-
-    return users;
-  });
-
-const addChannelMember = createServerFn({ method: 'POST' })
-  .middleware([requireChannelAdminAccessMiddleware])
-  .validator(
-    z.object({
-      channelId: z.string(),
-      userId: z.string(),
-      isAdmin: z.boolean().default(false),
-      canEdit: z.boolean().default(false),
-      canUpload: z.boolean().default(true),
-    }),
-  )
-  .handler(async ({ context, data }) => {
-    invariant(context.session, 'Session not found');
-
-    // Add the member
-    await db.channelMembership.create({
-      data: {
-        channelId: data.channelId,
-        appUserId: data.userId,
-        isAdmin: data.isAdmin,
-        canEdit: data.canEdit,
-        canUpload: data.canUpload,
-      },
-    });
-
-    return { success: true };
-  });
-
-const removeChannelMember = createServerFn({ method: 'POST' })
-  .middleware([requireChannelAdminAccessMiddleware])
-  .validator(
-    z.object({
-      channelId: z.string(),
-      appUserId: z.string(),
-    }),
-  )
-  .handler(async ({ context, data }) => {
-    invariant(context.session, 'Session not found');
-
-    // Don't allow removing the last admin
-    const adminCount = await db.channelMembership.count({
-      where: {
-        channelId: data.channelId,
-        isAdmin: true,
-      },
-    });
-
-    const membershipToDelete = await db.channelMembership.findUnique({
-      where: {
-        channelId_appUserId: {
-          channelId: data.channelId,
-          appUserId: data.appUserId,
-        },
-      },
-      select: { isAdmin: true, appUserId: true },
-    });
-
-    if (membershipToDelete?.isAdmin && adminCount <= 1) {
-      throw new Error('Cannot remove the last admin from the channel');
-    }
-
-    // Don't allow removing yourself
-    if (membershipToDelete?.appUserId === context.session.appUser.id) {
-      throw new Error('You cannot remove yourself from the channel');
-    }
-
-    await db.channelMembership.delete({
-      where: {
-        channelId_appUserId: {
-          channelId: data.channelId,
-          appUserId: data.appUserId,
-        },
-      },
-    });
-
-    return { success: true };
-  });
-
-const channelMembersQueryOptions = (channelId: string) => ({
-  queryKey: dashboardQueryKeys.channels.members(channelId),
-  queryFn: () => getChannelMembers({ data: { channelId } }),
-});
-
 export const Route = createFileRoute(
   '/dashboard_/channels_/$channelId_/members',
 )({
@@ -259,9 +58,11 @@ export const Route = createFileRoute(
       return redirect({ to: '/auth/login' });
     }
   },
-  loader: async ({ context: { queryClient }, params }) => {
+  loader: async ({ context: { queryClient, trpc }, params }) => {
     await queryClient.ensureQueryData(
-      channelMembersQueryOptions(params.channelId),
+      trpc.dashboard.channels.getChannelMembers.queryOptions({
+        channelId: params.channelId,
+      }),
     );
     return {
       backNavigation: {
@@ -275,10 +76,14 @@ export const Route = createFileRoute(
 
 function ChannelMembersPage() {
   const { channelId } = Route.useParams();
-  const { data: channel } = useSuspenseQuery(
-    channelMembersQueryOptions(channelId),
-  );
+  const trpc = useTRPC();
   const queryClient = useQueryClient();
+
+  const { data: channel } = useSuspenseQuery(
+    trpc.dashboard.channels.getChannelMembers.queryOptions({
+      channelId,
+    }),
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery] = useDebounce(searchQuery, 200);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -311,56 +116,59 @@ function ChannelMembersPage() {
       };
 
       addMemberMutation.mutate({
-        data: {
-          channelId,
-          userId: selectedUserId,
-          ...permissions,
-        },
+        channelId,
+        userId: selectedUserId,
+        ...permissions,
       });
     },
   });
 
   const { data: searchResults = [] } = useQuery({
-    queryKey: dashboardQueryKeys.users.search(channelId, debouncedSearchQuery),
-    queryFn: () =>
-      searchUsers({ data: { channelId, query: debouncedSearchQuery } }),
+    ...trpc.dashboard.channels.searchUsers.queryOptions({
+      channelId,
+      query: debouncedSearchQuery,
+    }),
     enabled: debouncedSearchQuery.length >= 2,
     staleTime: 30000,
   });
 
-  const addMemberMutation = useMutation({
-    mutationFn: addChannelMember,
-    onSuccess: () => {
-      showSuccess({ message: 'Member added successfully' });
-      queryClient.invalidateQueries({
-        queryKey: dashboardQueryKeys.channels.members(channelId),
-      });
-      handleCloseModal();
-    },
-    onError: (error: Error) => {
-      showFailure({ message: error.message || 'Failed to add member' });
-    },
-  });
+  const addMemberMutation = useMutation(
+    trpc.dashboard.channels.addChannelMember.mutationOptions({
+      onSuccess: () => {
+        showSuccess({ message: 'Member added successfully' });
+        queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getChannelMembers.queryKey({
+            channelId,
+          }),
+        });
+        handleCloseModal();
+      },
+      onError: (error) => {
+        showFailure({ message: error.message || 'Failed to add member' });
+      },
+    }),
+  );
 
-  const removeMemberMutation = useMutation({
-    mutationFn: removeChannelMember,
-    onSuccess: () => {
-      showSuccess({ message: 'Member removed successfully' });
-      queryClient.invalidateQueries({
-        queryKey: dashboardQueryKeys.channels.members(channelId),
-      });
-    },
-    onError: (error: Error) => {
-      showFailure({ message: error.message || 'Failed to remove member' });
-    },
-  });
+  const removeMemberMutation = useMutation(
+    trpc.dashboard.channels.removeChannelMember.mutationOptions({
+      onSuccess: () => {
+        showSuccess({ message: 'Member removed successfully' });
+        queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getChannelMembers.queryKey({
+            channelId,
+          }),
+        });
+      },
+      onError: (error) => {
+        showFailure({ message: error.message || 'Failed to remove member' });
+      },
+    }),
+  );
 
   const handleRemoveMember = (appUserId: string) => {
     removeMemberMutation.mutate({
-      data: {
-        channelId,
-        appUserId,
-      },
+      channelId,
+      appUserId,
     });
   };
 
@@ -575,7 +383,7 @@ function ChannelMembersPage() {
                       <Text size="sm" fw={500}>
                         {membership.appUser.username}
                         {membership.appUser.id ===
-                          channel.userMembership?.appUser.id && (
+                          channel.userMembership?.appUserId && (
                           <Text component="span" size="xs" c="dimmed" ml={4}>
                             (you)
                           </Text>
@@ -607,7 +415,7 @@ function ChannelMembersPage() {
                   {(() => {
                     const isSelf =
                       membership.appUser.id ===
-                      channel.userMembership?.appUser.id;
+                      channel.userMembership?.appUserId;
                     const canRemove = isAdmin && !isSelf;
                     const tooltipText = !isAdmin
                       ? 'Only admins can remove members'

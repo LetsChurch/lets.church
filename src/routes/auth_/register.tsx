@@ -7,97 +7,11 @@ import {
   redirect,
   useRouter,
 } from '@tanstack/react-router';
-import { createServerFn } from '@tanstack/react-start';
-import { getWebRequest } from '@tanstack/react-start/server';
-import argon2 from 'argon2';
 import { useState } from 'react';
-import { z } from 'zod';
 import { useAppMantineForm } from '@/components/mantine';
-import { postUserRegistration } from '@/temporal';
-import db from '@/util/db';
-import { getClientIpAddress } from '@/util/request-ip';
-import { validateTurnstile } from '@/util/turnstile';
-import testPassword from '@/util/zxcvbn';
-import {
-  getClientEnv,
-  hasValidSession,
-  requireAnonMiddleware,
-} from '../-functions';
-
-const schema = z.object({
-  email: z.email('Invalid email address'),
-  username: z.string().min(1, 'Username is required'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  fullName: z.string(),
-  agreeToTheology: z
-    .boolean()
-    .refine(
-      (val) => val === true,
-      'You must agree to the Statement of Theology',
-    ),
-  agreeToTerms: z
-    .boolean()
-    .refine(
-      (val) => val === true,
-      'You must agree to the Terms and Conditions',
-    ),
-  subscribeNewsletter: z.boolean(),
-  turnstile: z.string(),
-});
-
-type HandleRegisterResponse = { error: false } | { error: string };
-
-export const handleRegister = createServerFn({
-  method: 'POST',
-  response: 'data',
-})
-  .middleware([requireAnonMiddleware])
-  .validator(schema)
-  .handler(async ({ data: value }): Promise<HandleRegisterResponse> => {
-    if (
-      !(await validateTurnstile(
-        value.turnstile,
-        getClientIpAddress(getWebRequest().headers),
-      ))
-    ) {
-      return { error: 'Invalid CAPTCHA' };
-    }
-
-    const passwordTest = testPassword(value.password);
-
-    if (passwordTest) {
-      return { error: passwordTest };
-    }
-
-    try {
-      const hash = await argon2.hash(value.password, {
-        type: argon2.argon2id,
-      });
-      const user = await db.appUser.create({
-        data: {
-          username: value.username,
-          fullName: value.fullName || null,
-          password: hash,
-          emails: {
-            create: {
-              email: value.email,
-            },
-          },
-        },
-      });
-
-      await postUserRegistration(user.id, {
-        userId: user.id,
-        username: value.username,
-        email: value.email,
-        subscribeToNewsletter: value.subscribeNewsletter,
-      });
-
-      return { error: false };
-    } catch (_e) {
-      return { error: 'Error registering a new account, please try again!' };
-    }
-  });
+import { registerSchema } from '@/schemas/auth';
+import { useTRPC } from '@/trpc/react';
+import { getClientEnv, hasValidSession } from '../-functions';
 
 export const Route = createFileRoute('/auth_/register')({
   component: RouteComponent,
@@ -117,23 +31,25 @@ function RouteComponent() {
 
   const router = useRouter();
   const queryClient = useQueryClient();
+  const trpc = useTRPC();
 
-  const registerMutation = useMutation({
-    mutationFn: handleRegister,
-    onSuccess: async (data) => {
-      if (data.error) {
-        setError(data.error);
-        return;
-      }
+  const registerMutation = useMutation(
+    trpc.auth.register.mutationOptions({
+      onSuccess: async (data) => {
+        if (data.error) {
+          setError(data.error);
+          return;
+        }
 
-      await router.invalidate();
-      await queryClient.invalidateQueries();
-      await router.navigate({ to: '/' });
-    },
-    onError: () => {
-      setError('Error registering a new account, please try again!');
-    },
-  });
+        await router.invalidate();
+        await queryClient.invalidateQueries();
+        await router.navigate({ to: '/' });
+      },
+      onError: () => {
+        setError('Error registering a new account, please try again!');
+      },
+    }),
+  );
 
   const form = useAppMantineForm({
     defaultValues: {
@@ -147,10 +63,10 @@ function RouteComponent() {
       turnstile: '',
     },
     validators: {
-      onChange: schema,
+      onChange: registerSchema,
     },
     onSubmit: async ({ value }) => {
-      registerMutation.mutate({ data: value });
+      registerMutation.mutate(value);
     },
   });
 

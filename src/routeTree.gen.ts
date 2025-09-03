@@ -28,6 +28,7 @@ import { Route as DashboardChannelsChannelIdUploadsRouteImport } from './routes/
 import { Route as DashboardChannelsChannelIdMembersRouteImport } from './routes/dashboard_/channels_.$channelId_.members'
 import { Route as DashboardChannelsChannelIdEditRouteImport } from './routes/dashboard_/channels_.$channelId_.edit'
 import { Route as DashboardChannelsChannelIdUploadsUploadIdRouteImport } from './routes/dashboard_/channels_.$channelId_.uploads_.$uploadId'
+import { ServerRoute as TrpcSplatServerRouteImport } from './routes/trpc.$'
 import { ServerRoute as AuthVerifyServerRouteImport } from './routes/auth_/verify'
 import { ServerRoute as AuthLogoutServerRouteImport } from './routes/auth_/logout'
 
@@ -123,6 +124,11 @@ const DashboardChannelsChannelIdUploadsUploadIdRoute =
     path: '/channels/$channelId/uploads/$uploadId',
     getParentRoute: () => DashboardRoute,
   } as any)
+const TrpcSplatServerRoute = TrpcSplatServerRouteImport.update({
+  id: '/trpc/$',
+  path: '/trpc/$',
+  getParentRoute: () => rootServerRouteImport,
+} as any)
 const AuthVerifyServerRoute = AuthVerifyServerRouteImport.update({
   id: '/auth_/verify',
   path: '/auth/verify',
@@ -254,27 +260,31 @@ export interface RootRouteChildren {
 export interface FileServerRoutesByFullPath {
   '/auth/logout': typeof AuthLogoutServerRoute
   '/auth/verify': typeof AuthVerifyServerRoute
+  '/trpc/$': typeof TrpcSplatServerRoute
 }
 export interface FileServerRoutesByTo {
   '/auth/logout': typeof AuthLogoutServerRoute
   '/auth/verify': typeof AuthVerifyServerRoute
+  '/trpc/$': typeof TrpcSplatServerRoute
 }
 export interface FileServerRoutesById {
   __root__: typeof rootServerRouteImport
   '/auth_/logout': typeof AuthLogoutServerRoute
   '/auth_/verify': typeof AuthVerifyServerRoute
+  '/trpc/$': typeof TrpcSplatServerRoute
 }
 export interface FileServerRouteTypes {
   fileServerRoutesByFullPath: FileServerRoutesByFullPath
-  fullPaths: '/auth/logout' | '/auth/verify'
+  fullPaths: '/auth/logout' | '/auth/verify' | '/trpc/$'
   fileServerRoutesByTo: FileServerRoutesByTo
-  to: '/auth/logout' | '/auth/verify'
-  id: '__root__' | '/auth_/logout' | '/auth_/verify'
+  to: '/auth/logout' | '/auth/verify' | '/trpc/$'
+  id: '__root__' | '/auth_/logout' | '/auth_/verify' | '/trpc/$'
   fileServerRoutesById: FileServerRoutesById
 }
 export interface RootServerRouteChildren {
   AuthLogoutServerRoute: typeof AuthLogoutServerRoute
   AuthVerifyServerRoute: typeof AuthVerifyServerRoute
+  TrpcSplatServerRoute: typeof TrpcSplatServerRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -402,6 +412,13 @@ declare module '@tanstack/react-router' {
 }
 declare module '@tanstack/react-start/server' {
   interface ServerFileRoutesByPath {
+    '/trpc/$': {
+      id: '/trpc/$'
+      path: '/trpc/$'
+      fullPath: '/trpc/$'
+      preLoaderRoute: typeof TrpcSplatServerRouteImport
+      parentRoute: typeof rootServerRouteImport
+    }
     '/auth_/verify': {
       id: '/auth_/verify'
       path: '/auth/verify'
@@ -487,6 +504,7 @@ export const routeTree = rootRouteImport
 const rootServerRouteChildren: RootServerRouteChildren = {
   AuthLogoutServerRoute: AuthLogoutServerRoute,
   AuthVerifyServerRoute: AuthVerifyServerRoute,
+  TrpcSplatServerRoute: TrpcSplatServerRoute,
 }
 export const serverRouteTree = rootServerRouteImport
   ._addFileChildren(rootServerRouteChildren)

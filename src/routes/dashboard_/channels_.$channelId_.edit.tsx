@@ -8,168 +8,17 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { ChannelVisibility } from '@prisma/client';
 import {
   useMutation,
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { createServerFn } from '@tanstack/react-start';
-import { invariant } from 'es-toolkit';
-import { z } from 'zod';
 import { useAppMantineForm } from '@/components/mantine';
-import db from '@/util/db';
-import {
-  hasValidSession,
-  requireChannelAdminAccessMiddleware,
-} from '../-functions';
+import { channelFormSchema } from '@/schemas/dashboard';
+import { useTRPC } from '@/trpc/react';
+import { hasValidSession } from '../-functions';
 import { showFailure, showSuccess } from '../-mantine';
-import { dashboardQueryKeys } from './-query-keys';
-
-const getChannelForEdit = createServerFn({ method: 'GET' })
-  .middleware([requireChannelAdminAccessMiddleware])
-  .validator(z.object({ channelId: z.string() }))
-  .handler(async ({ context, data }) => {
-    invariant(context.session, 'Session not found');
-
-    const channel = await db.channel.findFirst({
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        description: true,
-        visibility: true,
-        memberships: {
-          select: {
-            isAdmin: true,
-            appUser: {
-              select: {
-                id: true,
-              },
-            },
-          },
-        },
-      },
-      where: {
-        id: data.channelId,
-        memberships: {
-          some: {
-            appUserId: context.session.appUser.id,
-            isAdmin: true,
-          },
-        },
-      },
-    });
-
-    if (!channel) {
-      throw new Error('Channel not found or insufficient permissions');
-    }
-
-    const userMembership = channel.memberships.find(
-      (m) => m.appUser.id === context.session?.appUser.id,
-    );
-
-    return {
-      ...channel,
-      userMembership,
-    } as const;
-  });
-
-const formSchema = z.object({
-  name: z.string().min(1, 'Channel name is required'),
-  slug: z
-    .string()
-    .min(1, 'Channel slug is required')
-    .regex(
-      /^[a-zA-Z0-9_-]+$/,
-      'Slug can only contain letters, numbers, underscores, and hyphens',
-    ),
-  description: z.string(),
-  visibility: z.enum(
-    Object.values(ChannelVisibility) as [
-      ChannelVisibility,
-      ...ChannelVisibility[],
-    ],
-  ),
-});
-
-const updateChannelSchema = formSchema.and(
-  z.object({
-    channelId: z.string(),
-  }),
-);
-
-const updateChannel = createServerFn({
-  method: 'POST',
-  response: 'data',
-})
-  .middleware([requireChannelAdminAccessMiddleware])
-  .validator(updateChannelSchema)
-  .handler(async ({ context, data }) => {
-    invariant(context.session, 'Session not found');
-
-    const channel = await db.channel.findFirst({
-      select: {
-        id: true,
-        memberships: {
-          select: {
-            isAdmin: true,
-            appUser: {
-              select: {
-                id: true,
-              },
-            },
-          },
-        },
-      },
-      where: {
-        id: data.channelId,
-        memberships: {
-          some: {
-            appUserId: context.session.appUser.id,
-            isAdmin: true,
-          },
-        },
-      },
-    });
-
-    if (!channel) {
-      throw new Error('Channel not found or insufficient permissions');
-    }
-
-    const userMembership = channel.memberships.find(
-      (m) => m.appUser.id === context.session?.appUser.id,
-    );
-
-    if (!userMembership?.isAdmin) {
-      throw new Error('Insufficient permissions to edit this channel');
-    }
-
-    const updatedChannel = await db.channel.update({
-      where: { id: data.channelId },
-      data: {
-        name: data.name,
-        slug: data.slug,
-        description: data.description,
-        visibility: data.visibility,
-      },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        description: true,
-        visibility: true,
-      },
-    });
-
-    return { success: true, channel: updatedChannel };
-  });
-
-const channelEditQueryOptions = (channelId: string) => ({
-  queryKey: dashboardQueryKeys.channels.edit(channelId),
-  queryFn: () => getChannelForEdit({ data: { channelId } }),
-});
 
 export const Route = createFileRoute('/dashboard_/channels_/$channelId_/edit')({
   component: ChannelEditPage,
@@ -178,9 +27,11 @@ export const Route = createFileRoute('/dashboard_/channels_/$channelId_/edit')({
       return redirect({ to: '/auth/login' });
     }
   },
-  loader: async ({ context: { queryClient }, params }) => {
+  loader: async ({ context: { queryClient, trpc }, params }) => {
     await queryClient.ensureQueryData(
-      channelEditQueryOptions(params.channelId),
+      trpc.dashboard.channels.getChannelForEdit.queryOptions({
+        channelId: params.channelId,
+      }),
     );
     return {
       backNavigation: {
@@ -194,33 +45,39 @@ export const Route = createFileRoute('/dashboard_/channels_/$channelId_/edit')({
 
 function ChannelEditPage() {
   const { channelId } = Route.useParams();
+  const trpc = useTRPC();
   const queryClient = useQueryClient();
 
   const { data: channel } = useSuspenseQuery(
-    channelEditQueryOptions(channelId),
+    trpc.dashboard.channels.getChannelForEdit.queryOptions({
+      channelId,
+    }),
   );
 
-  const updateMutation = useMutation({
-    mutationFn: updateChannel,
-    onSuccess: async () => {
-      showSuccess({
-        message: 'Channel updated successfully!',
-      });
+  const updateMutation = useMutation(
+    trpc.dashboard.channels.updateChannel.mutationOptions({
+      onSuccess: async () => {
+        showSuccess({
+          message: 'Channel updated successfully!',
+        });
 
-      await queryClient.invalidateQueries({
-        queryKey: dashboardQueryKeys.channels.detail(channelId),
-      });
+        await queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getChannelDetails.queryKey({
+            channelId,
+          }),
+        });
 
-      await queryClient.invalidateQueries({
-        queryKey: dashboardQueryKeys.channels.all(),
-      });
-    },
-    onError: (error: Error) => {
-      showFailure({
-        message: error.message || 'Failed to update channel',
-      });
-    },
-  });
+        await queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getChannels.queryKey(),
+        });
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to update channel',
+        });
+      },
+    }),
+  );
 
   const form = useAppMantineForm({
     defaultValues: {
@@ -230,14 +87,12 @@ function ChannelEditPage() {
       visibility: channel.visibility,
     },
     validators: {
-      onChange: formSchema,
+      onChange: channelFormSchema,
     },
     onSubmit: async ({ value }) => {
       updateMutation.mutate({
-        data: {
-          channelId,
-          ...value,
-        },
+        channelId,
+        ...value,
       });
     },
   });

@@ -15,222 +15,22 @@ import {
 } from '@mantine/core';
 import { Dropzone } from '@mantine/dropzone';
 import { useStore } from '@nanostores/react';
-import { UploadLicense, UploadVisibility } from '@prisma/client';
 import { IconPhoto, IconUpload, IconX } from '@tabler/icons-react';
-import type { Query } from '@tanstack/query-core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { createServerFn } from '@tanstack/react-start';
 import { invariant } from 'es-toolkit';
 import { useState } from 'react';
-import { z } from 'zod';
 import { useAppMantineForm } from '@/components/mantine';
-import db from '@/util/db';
+import { uploadFormSchema } from '@/schemas/dashboard';
+import { useTRPC } from '@/trpc/react';
 import { doMultipartUpload } from '@/util/multipart-upload';
 import {
   clientCreateMultipartUpload,
   clientFinalizeMultipartUpload,
   hasValidSession,
-  requireChannelUploadAccessMiddleware,
-  requireChannelUploadEditAccessMiddleware,
 } from '../-functions';
 import { showFailure, showSuccess } from '../-mantine';
-import { dashboardQueryKeys } from './-query-keys';
 import { $uploadProgress } from './channels_.$channelId_.uploads';
-
-const getUploadRecord = createServerFn({ method: 'GET' })
-  .middleware([requireChannelUploadAccessMiddleware])
-  .validator(
-    z.object({
-      channelId: z.string(),
-      uploadId: z.string(),
-    }),
-  )
-  .handler(async ({ context, data }) => {
-    invariant(context.session, 'Session not found');
-
-    const upload = await db.uploadRecord.findFirst({
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        license: true,
-        visibility: true,
-        publishedAt: true,
-        userCommentsEnabled: true,
-        downloadsEnabled: true,
-        defaultThumbnailPath: true,
-        overrideThumbnailPath: true,
-        transcodingFinishedAt: true,
-        transcribingFinishedAt: true,
-        transcodingProgress: true,
-        channel: {
-          select: {
-            id: true,
-            name: true,
-            memberships: {
-              select: {
-                isAdmin: true,
-                canEdit: true,
-                appUser: {
-                  select: {
-                    id: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      where: {
-        id: data.uploadId,
-        channelId: data.channelId,
-        channel: {
-          memberships: {
-            some: {
-              appUserId: context.session.appUser.id,
-            },
-          },
-        },
-      },
-    });
-
-    if (!upload) {
-      throw new Error('Upload not found or access denied');
-    }
-
-    const userMembership = upload.channel.memberships.find(
-      (m) => m.appUser.id === context.session?.appUser.id,
-    );
-
-    const canEdit = userMembership?.isAdmin || userMembership?.canEdit;
-
-    if (!canEdit) {
-      throw new Error('Insufficient permissions to edit this upload');
-    }
-
-    return {
-      upload,
-      channel: {
-        ...upload.channel,
-        userMembership,
-      },
-    };
-  });
-
-const formSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  description: z.string(),
-  license: z.enum(UploadLicense),
-  publishedAt: z.date(),
-  visibility: z.enum(UploadVisibility),
-  userCommentsEnabled: z.boolean(),
-  downloadsEnabled: z.boolean(),
-});
-
-const updateUploadRecordSchema = formSchema.and(
-  z.object({
-    channelId: z.string(),
-    uploadId: z.string(),
-  }),
-);
-
-const updateUploadRecord = createServerFn({
-  method: 'POST',
-  response: 'data',
-})
-  .middleware([requireChannelUploadEditAccessMiddleware])
-  .validator(updateUploadRecordSchema)
-  .handler(async ({ context, data }) => {
-    invariant(context.session, 'Session not found');
-
-    const upload = await db.uploadRecord.findFirst({
-      select: {
-        id: true,
-        channel: {
-          select: {
-            memberships: {
-              select: {
-                isAdmin: true,
-                canEdit: true,
-                appUser: {
-                  select: {
-                    id: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-      where: {
-        id: data.uploadId,
-        channelId: data.channelId,
-        channel: {
-          memberships: {
-            some: {
-              appUserId: context.session.appUser.id,
-            },
-          },
-        },
-      },
-    });
-
-    if (!upload) {
-      throw new Error('Upload not found or access denied');
-    }
-
-    const userMembership = upload.channel.memberships.find(
-      (m) => m.appUser.id === context.session?.appUser.id,
-    );
-
-    const canEdit = userMembership?.isAdmin || userMembership?.canEdit;
-
-    if (!canEdit) {
-      throw new Error('Insufficient permissions to edit this upload');
-    }
-
-    const updatedUpload = await db.uploadRecord.update({
-      where: { id: data.uploadId },
-      data: {
-        title: data.title,
-        description: data.description,
-        license: data.license,
-        publishedAt: data.publishedAt,
-        visibility: data.visibility,
-        userCommentsEnabled: data.userCommentsEnabled,
-        downloadsEnabled: data.downloadsEnabled,
-      },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        license: true,
-        visibility: true,
-        publishedAt: true,
-        userCommentsEnabled: true,
-        downloadsEnabled: true,
-      },
-    });
-
-    return { success: true, upload: updatedUpload };
-  });
-
-const uploadQueryOptions = (channelId: string, uploadId: string) => ({
-  queryKey: dashboardQueryKeys.uploads.detail(channelId, uploadId),
-  queryFn: () => getUploadRecord({ data: { channelId, uploadId } }),
-  refetchInterval: (
-    query: Query<Awaited<ReturnType<typeof getUploadRecord>>>,
-  ) => {
-    const data = query.state.data;
-    if (!data) return false;
-
-    const isTranscoding = !data.upload.transcodingFinishedAt;
-    const isTranscribing = !data.upload.transcribingFinishedAt;
-
-    return isTranscoding || isTranscribing ? 5000 : false;
-  },
-});
 
 export const Route = createFileRoute(
   '/dashboard_/channels_/$channelId_/uploads_/$uploadId',
@@ -241,9 +41,12 @@ export const Route = createFileRoute(
       return redirect({ to: '/auth/login' });
     }
   },
-  loader: async ({ context: { queryClient }, params }) => {
+  loader: async ({ context: { queryClient, trpc }, params }) => {
     await queryClient.ensureQueryData(
-      uploadQueryOptions(params.channelId, params.uploadId),
+      trpc.dashboard.channels.getUploadRecord.queryOptions({
+        channelId: params.channelId,
+        uploadId: params.uploadId,
+      }),
     );
     return {
       backNavigation: {
@@ -257,6 +60,7 @@ export const Route = createFileRoute(
 function ChannelUploadPage() {
   const { channelId, uploadId } = Route.useParams();
   const queryClient = useQueryClient();
+  const trpc = useTRPC();
 
   const { [uploadId]: uploadProgress } = useStore($uploadProgress, {
     keys: [uploadId],
@@ -265,7 +69,21 @@ function ChannelUploadPage() {
   const isUploading = typeof uploadProgress === 'number';
 
   // Single query for all upload data with conditional refetching
-  const { data } = useQuery(uploadQueryOptions(channelId, uploadId));
+  const { data } = useQuery({
+    ...trpc.dashboard.channels.getUploadRecord.queryOptions({
+      channelId,
+      uploadId,
+    }),
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data) return false;
+
+      const isTranscoding = !data.upload.transcodingFinishedAt;
+      const isTranscribing = !data.upload.transcribingFinishedAt;
+
+      return isTranscoding || isTranscribing ? 5000 : false;
+    },
+  });
 
   invariant(data, 'Upload not found');
 
@@ -287,27 +105,33 @@ function ChannelUploadPage() {
     }
   };
 
-  const updateMutation = useMutation({
-    mutationFn: updateUploadRecord,
-    onSuccess: async () => {
-      showSuccess({
-        message: 'Upload details updated successfully!',
-      });
+  const updateMutation = useMutation(
+    trpc.dashboard.channels.updateUploadRecord.mutationOptions({
+      onSuccess: async () => {
+        showSuccess({
+          message: 'Upload details updated successfully!',
+        });
 
-      await queryClient.invalidateQueries({
-        queryKey: dashboardQueryKeys.uploads.detail(channelId, uploadId),
-      });
+        await queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getUploadRecord.queryKey({
+            channelId,
+            uploadId,
+          }),
+        });
 
-      await queryClient.invalidateQueries({
-        queryKey: dashboardQueryKeys.uploads.all(channelId),
-      });
-    },
-    onError: (error: Error) => {
-      showFailure({
-        message: error.message || 'Failed to update upload details',
-      });
-    },
-  });
+        await queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getChannelUploads.queryKey({
+            channelId,
+          }),
+        });
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to update upload details',
+        });
+      },
+    }),
+  );
 
   const licenseOptions = [
     { value: 'STANDARD', label: 'Standard Copyright' },
@@ -340,7 +164,7 @@ function ChannelUploadPage() {
       downloadsEnabled: upload.downloadsEnabled,
     },
     validators: {
-      onChange: formSchema,
+      onChange: uploadFormSchema,
     },
     onSubmit: async ({ value }) => {
       if (newThumbnailFile) {
@@ -371,11 +195,9 @@ function ChannelUploadPage() {
       }
 
       updateMutation.mutate({
-        data: {
-          channelId,
-          uploadId,
-          ...value,
-        },
+        channelId,
+        uploadId,
+        ...value,
       });
     },
   });

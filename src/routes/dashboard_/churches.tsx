@@ -10,57 +10,18 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { OrganizationType } from '@prisma/client';
 import {
   IconDots,
   IconEye,
   IconSettings,
   IconUserMinus,
 } from '@tabler/icons-react';
+import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
-import { createServerFn } from '@tanstack/react-start';
-import { invariant } from 'es-toolkit';
-import db from '@/util/db';
-import { hasValidSession, requireAuthMiddleware } from '../-functions';
+import { useTRPC } from '@/trpc/react';
+import { hasValidSession } from '../-functions';
 import classes from './-churches.module.css';
-import { dashboardQueryKeys } from './-query-keys';
 
-const getChurches = createServerFn({ method: 'GET' })
-  .middleware([requireAuthMiddleware])
-  .handler(async ({ context }) => {
-    invariant(context.session, 'Session not found');
-
-    return db.organization.findMany({
-      select: {
-        id: true,
-        name: true,
-        type: true,
-        description: true,
-        memberships: {
-          select: {
-            isAdmin: true,
-            canEdit: true,
-          },
-          where: {
-            appUserId: context.session.appUser.id,
-          },
-        },
-      },
-      where: {
-        type: OrganizationType.CHURCH,
-        memberships: {
-          some: {
-            appUserId: context.session.appUser.id,
-          },
-        },
-      },
-    });
-  });
-
-const churchesQueryOptions = {
-  queryKey: dashboardQueryKeys.churches.all(),
-  queryFn: () => getChurches(),
-} as const;
 
 export const Route = createFileRoute('/dashboard_/churches')({
   component: ChurchesPage,
@@ -69,8 +30,10 @@ export const Route = createFileRoute('/dashboard_/churches')({
       return redirect({ to: '/auth/login' });
     }
   },
-  loader: async ({ context: { queryClient } }) => {
-    const data = await queryClient.ensureQueryData(churchesQueryOptions);
+  loader: async ({ context: { queryClient, trpc } }) => {
+    const data = await queryClient.ensureQueryData(
+      trpc.dashboard.churches.getChurches.queryOptions(),
+    );
     return {
       data,
       backNavigation: {
@@ -82,7 +45,10 @@ export const Route = createFileRoute('/dashboard_/churches')({
 });
 
 function ChurchesPage() {
-  const { data: churches } = Route.useLoaderData();
+  const trpc = useTRPC();
+  const { data: churches } = useSuspenseQuery(
+    trpc.dashboard.churches.getChurches.queryOptions(),
+  );
 
   return (
     <>

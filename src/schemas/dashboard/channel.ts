@@ -1,0 +1,101 @@
+import {
+  ChannelVisibility,
+  UploadLicense,
+  UploadVisibility,
+} from '@prisma/client';
+import { z } from 'zod';
+
+// Common field schemas
+export const channelIdSchema = z.uuid();
+export const uploadIdSchema = z.uuid();
+export const userIdSchema = z.uuid();
+
+export const paginationSchema = z.object({
+  page: z.number().min(1).default(1),
+  limit: z.number().min(1).max(100).default(20),
+});
+
+// Channel schemas
+export const channelFormSchema = z.object({
+  name: z.string().min(1, 'Channel name is required'),
+  slug: z
+    .string()
+    .min(1, 'Channel slug is required')
+    .regex(
+      /^[a-zA-Z0-9_-]+$/,
+      'Slug can only contain letters, numbers, underscores, and hyphens',
+    ),
+  description: z.string(),
+  visibility: z.enum(
+    Object.values(ChannelVisibility) as [
+      ChannelVisibility,
+      ...ChannelVisibility[],
+    ],
+  ),
+});
+
+export const updateChannelSchema = channelFormSchema.extend({
+  channelId: channelIdSchema,
+});
+
+// Upload schemas
+export const uploadFormSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string(),
+  license: z.enum(UploadLicense),
+  publishedAt: z.date(),
+  visibility: z.enum(UploadVisibility),
+  userCommentsEnabled: z.boolean(),
+  downloadsEnabled: z.boolean(),
+});
+
+export const updateUploadSchema = uploadFormSchema.extend({
+  channelId: channelIdSchema,
+  uploadId: uploadIdSchema,
+});
+
+// Member management schemas
+export const memberPermissionsSchema = z.object({
+  isAdmin: z.boolean().default(false),
+  canEdit: z.boolean().default(false),
+  canUpload: z.boolean().default(true),
+});
+
+export const addMemberSchema = z
+  .object({
+    channelId: channelIdSchema,
+    userId: userIdSchema,
+  })
+  .and(memberPermissionsSchema);
+
+export const removeMemberSchema = z.object({
+  channelId: channelIdSchema,
+  appUserId: userIdSchema,
+});
+
+// Query input schemas
+export const channelQuerySchema = z.object({
+  channelId: channelIdSchema,
+});
+
+export const uploadQuerySchema = z.object({
+  channelId: channelIdSchema,
+  uploadId: uploadIdSchema,
+});
+
+export const channelUploadsQuerySchema =
+  channelQuerySchema.and(paginationSchema);
+
+export const userSearchSchema = z.object({
+  channelId: channelIdSchema,
+  query: z.string().min(1),
+});
+
+export const createUploadSchema = z.object({
+  channelId: channelIdSchema,
+});
+
+export const deleteUploadSchema = z.object({
+  channelId: channelIdSchema,
+  uploadId: uploadIdSchema,
+});

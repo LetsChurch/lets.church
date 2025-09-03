@@ -11,153 +11,12 @@ import {
 import { IconHeart, IconShield, IconVideo } from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
-import { createServerFn } from '@tanstack/react-start';
 import clsx from 'clsx';
-import { invariant } from 'es-toolkit';
-import { z } from 'zod';
-import db from '@/util/db';
+import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
-import { hasValidSession, requireAuthMiddleware } from '../-functions';
+import { hasValidSession } from '../-functions';
 import styles from './-channels_.$channelId.module.css';
 import { StatCard } from './-components/stat-card';
-import { dashboardQueryKeys } from './-query-keys';
-
-const getChannelDetails = createServerFn({ method: 'GET' })
-  .middleware([requireAuthMiddleware])
-  .validator(z.object({ channelId: z.string() }))
-  .handler(async ({ context, data }) => {
-    invariant(context.session, 'Session not found');
-
-    const channel = await db.channel.findFirst({
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        description: true,
-        visibility: true,
-        avatarPath: true,
-        avatarBlurhash: true,
-        defaultThumbnailPath: true,
-        defaultThumbnailBlurhash: true,
-        createdAt: true,
-        updatedAt: true,
-        memberships: {
-          select: {
-            isAdmin: true,
-            canEdit: true,
-            canUpload: true,
-            appUser: {
-              select: {
-                id: true,
-                username: true,
-                fullName: true,
-                emails: {
-                  select: {
-                    email: true,
-                    verifiedAt: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-        subscribers: {
-          select: {
-            appUserId: true,
-          },
-        },
-        uploadRecords: {
-          select: {
-            id: true,
-            title: true,
-            createdAt: true,
-          },
-          where: {
-            OR: [
-              { visibility: 'PUBLIC' },
-              { visibility: 'UNLISTED' },
-              {
-                AND: [
-                  { visibility: 'PRIVATE' },
-                  {
-                    channel: {
-                      memberships: {
-                        some: {
-                          appUserId: context.session.appUser.id,
-                        },
-                      },
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 10,
-        },
-        _count: {
-          select: {
-            uploadRecords: true,
-            subscribers: true,
-            memberships: true,
-          },
-        },
-      },
-      where: {
-        id: data.channelId,
-        memberships: {
-          some: {
-            appUserId: context.session.appUser.id,
-          },
-        },
-      },
-    });
-
-    if (!channel) {
-      throw new Error('Channel not found');
-    }
-
-    const totalViews = await db.uploadView.count({
-      where: {
-        upload: {
-          channelId: data.channelId,
-          OR: [
-            { visibility: 'PUBLIC' },
-            { visibility: 'UNLISTED' },
-            {
-              AND: [
-                { visibility: 'PRIVATE' },
-                {
-                  channel: {
-                    memberships: {
-                      some: {
-                        appUserId: context.session.appUser.id,
-                      },
-                    },
-                  },
-                },
-              ],
-            },
-          ],
-        },
-      },
-    });
-
-    const userMembership = channel.memberships.find(
-      (m) => m.appUser.id === context.session?.appUser.id,
-    );
-
-    return {
-      ...channel,
-      userMembership,
-      totalViews,
-    } as const;
-  });
-
-const channelDetailsQueryOptions = (channelId: string) => ({
-  queryKey: dashboardQueryKeys.channels.detail(channelId),
-  queryFn: () => getChannelDetails({ data: { channelId } }),
-});
 
 export const Route = createFileRoute('/dashboard_/channels_/$channelId')({
   component: ChannelDetailsPage,
@@ -166,9 +25,11 @@ export const Route = createFileRoute('/dashboard_/channels_/$channelId')({
       return redirect({ to: '/auth/login' });
     }
   },
-  loader: async ({ context: { queryClient }, params }) => {
+  loader: async ({ context: { queryClient, trpc }, params }) => {
     await queryClient.ensureQueryData(
-      channelDetailsQueryOptions(params.channelId),
+      trpc.dashboard.channels.getChannelDetails.queryOptions({
+        channelId: params.channelId,
+      }),
     );
     return {
       backNavigation: {
@@ -181,9 +42,12 @@ export const Route = createFileRoute('/dashboard_/channels_/$channelId')({
 
 function ChannelDetailsPage() {
   const params = Route.useParams();
+  const trpc = useTRPC();
 
   const { data: channel } = useSuspenseQuery(
-    channelDetailsQueryOptions(params.channelId),
+    trpc.dashboard.channels.getChannelDetails.queryOptions({
+      channelId: params.channelId,
+    }),
   );
 
   const { userMembership } = channel;

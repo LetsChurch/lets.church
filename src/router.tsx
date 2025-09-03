@@ -1,7 +1,8 @@
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { createRouter as createTanStackRouter } from '@tanstack/react-router';
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query';
 import { routeTree } from './routeTree.gen';
+import { getContext, Provider as TrpcProvider } from './trpc/react';
 
 declare global {
   interface Window {
@@ -10,13 +11,13 @@ declare global {
 }
 
 function createContext() {
-  const queryClient = new QueryClient();
+  const context = getContext();
 
   if (import.meta.env.DEV && typeof window !== 'undefined') {
-    window.__TANSTACK_QUERY_CLIENT__ = queryClient;
+    window.__TANSTACK_QUERY_CLIENT__ = context.queryClient;
   }
 
-  return { queryClient };
+  return { ...context };
 }
 
 export type AppContextType = ReturnType<typeof createContext>;
@@ -31,6 +32,11 @@ export function createRouter() {
     routeTree,
     scrollRestoration: true,
     context,
+    Wrap: ({ children }) => (
+      <QueryClientProvider client={context.queryClient}>
+        <TrpcProvider>{children}</TrpcProvider>
+      </QueryClientProvider>
+    ),
   });
 
   setupRouterSsrQueryIntegration({

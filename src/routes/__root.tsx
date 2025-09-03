@@ -1,4 +1,3 @@
-import { QueryClientProvider } from '@tanstack/react-query';
 import {
   createRootRouteWithContext,
   HeadContent,
@@ -27,14 +26,10 @@ export const Route = createRootRouteWithContext<AppContextType>()({
 });
 
 function RootComponent() {
-  const { queryClient } = Route.useRouteContext();
-
   return (
-    <QueryClientProvider client={queryClient}>
-      <RootDocument>
-        <Outlet />
-      </RootDocument>
-    </QueryClientProvider>
+    <RootDocument>
+      <Outlet />
+    </RootDocument>
   );
 }
 

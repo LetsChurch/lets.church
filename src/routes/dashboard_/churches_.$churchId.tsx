@@ -9,124 +9,13 @@ import {
   Title,
 } from '@mantine/core';
 import { IconShield, IconUsers, IconVideo } from '@tabler/icons-react';
+import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { createServerFn } from '@tanstack/react-start';
-import { invariant } from 'es-toolkit';
-import { z } from 'zod';
-import db from '@/util/db';
+import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
-import { hasValidSession, requireAuthMiddleware } from '../-functions';
+import { hasValidSession } from '../-functions';
 import { StatCard } from './-components/stat-card';
-import { dashboardQueryKeys } from './-query-keys';
 
-const getChurchDetails = createServerFn({ method: 'GET' })
-  .middleware([requireAuthMiddleware])
-  .validator(z.object({ churchId: z.string() }))
-  .handler(async ({ context, data }) => {
-    invariant(context.session, 'Session not found');
-
-    const church = await db.organization.findFirst({
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        description: true,
-        avatarPath: true,
-        primaryEmail: true,
-        primaryPhoneNumber: true,
-        websiteUrl: true,
-        createdAt: true,
-        updatedAt: true,
-        memberships: {
-          select: {
-            isAdmin: true,
-            canEdit: true,
-            appUser: {
-              select: {
-                id: true,
-                username: true,
-                fullName: true,
-                emails: {
-                  select: {
-                    email: true,
-                    verifiedAt: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-        channelAssociations: {
-          select: {
-            channel: {
-              select: {
-                id: true,
-                name: true,
-                visibility: true,
-                createdAt: true,
-              },
-            },
-            officialChannel: true,
-          },
-        },
-        leaders: {
-          select: {
-            id: true,
-            type: true,
-            name: true,
-            email: true,
-            phoneNumber: true,
-          },
-        },
-        addresses: {
-          select: {
-            id: true,
-            type: true,
-            name: true,
-            streetAddress: true,
-            locality: true,
-            region: true,
-            postalCode: true,
-            country: true,
-          },
-        },
-        _count: {
-          select: {
-            memberships: true,
-            channelAssociations: true,
-            leaders: true,
-          },
-        },
-      },
-      where: {
-        id: data.churchId,
-        type: 'CHURCH',
-        memberships: {
-          some: {
-            appUserId: context.session.appUser.id,
-          },
-        },
-      },
-    });
-
-    if (!church) {
-      throw new Error('Church not found');
-    }
-
-    const userMembership = church.memberships.find(
-      (m) => m.appUser.id === context.session?.appUser.id,
-    );
-
-    return {
-      ...church,
-      userMembership,
-    } as const;
-  });
-
-const churchDetailsQueryOptions = (churchId: string) => ({
-  queryKey: dashboardQueryKeys.churches.detail(churchId),
-  queryFn: () => getChurchDetails({ data: { churchId } }),
-});
 
 export const Route = createFileRoute('/dashboard_/churches_/$churchId')({
   component: ChurchDetailsPage,
@@ -135,12 +24,13 @@ export const Route = createFileRoute('/dashboard_/churches_/$churchId')({
       return redirect({ to: '/auth/login' });
     }
   },
-  loader: async ({ context: { queryClient }, params }) => {
-    const data = await queryClient.ensureQueryData(
-      churchDetailsQueryOptions(params.churchId),
+  loader: async ({ context: { queryClient, trpc }, params }) => {
+    await queryClient.ensureQueryData(
+      trpc.dashboard.churches.getChurchDetails.queryOptions({
+        churchId: params.churchId,
+      }),
     );
     return {
-      data,
       backNavigation: {
         label: 'Churches',
         to: '/dashboard/churches',
@@ -150,7 +40,14 @@ export const Route = createFileRoute('/dashboard_/churches_/$churchId')({
 });
 
 function ChurchDetailsPage() {
-  const { data: church } = Route.useLoaderData();
+  const { churchId } = Route.useParams();
+  const trpc = useTRPC();
+  
+  const { data: church } = useSuspenseQuery(
+    trpc.dashboard.churches.getChurchDetails.queryOptions({
+      churchId,
+    }),
+  );
 
   const { userMembership } = church;
   const isAdmin = userMembership?.isAdmin ?? false;

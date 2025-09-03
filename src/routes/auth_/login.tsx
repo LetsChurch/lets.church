@@ -7,61 +7,11 @@ import {
   redirect,
   useRouter,
 } from '@tanstack/react-router';
-import { createServerFn } from '@tanstack/react-start';
-import { getWebRequest, setCookie } from '@tanstack/react-start/server';
 import { useState } from 'react';
-import { z } from 'zod';
 import { useAppMantineForm } from '@/components/mantine';
-import { login } from '@/util/auth';
-import { createSessionJwt } from '@/util/jwt';
-import { getClientIpAddress } from '@/util/request-ip';
-import { validateTurnstile } from '@/util/turnstile';
-import {
-  getClientEnv,
-  hasValidSession,
-  requireAnonMiddleware,
-} from '../-functions';
-
-const schema = z.object({
-  id: z.string().min(1, 'Email or Username is required'),
-  password: z.string().min(1, 'Password is required'),
-  turnstile: z.string(),
-});
-
-type HandleLoginResponse = { error: false } | { error: string };
-
-export const handleLogin = createServerFn({
-  method: 'POST',
-  response: 'data',
-})
-  .middleware([requireAnonMiddleware])
-  .validator(schema)
-  .handler(
-    async ({
-      data: { id, password, turnstile },
-    }): Promise<HandleLoginResponse> => {
-      if (
-        !(await validateTurnstile(
-          turnstile,
-          getClientIpAddress(getWebRequest().headers),
-        ))
-      ) {
-        return { error: 'Invalid CAPTCHA' };
-      }
-
-      try {
-        const session = await login(id, password);
-
-        setCookie('lc-session', await createSessionJwt({ sub: session.id }), {
-          sameSite: 'lax',
-        });
-
-        return { error: false };
-      } catch (_e) {
-        return { error: 'Invalid user id or password' };
-      }
-    },
-  );
+import { loginSchema } from '@/schemas/auth';
+import { useTRPC } from '@/trpc/react';
+import { getClientEnv, hasValidSession } from '../-functions';
 
 export const Route = createFileRoute('/auth_/login')({
   component: LoginRoute,
@@ -81,25 +31,25 @@ function LoginRoute() {
 
   const router = useRouter();
   const queryClient = useQueryClient();
+  const trpc = useTRPC();
 
-  const loginMutation = useMutation({
-    mutationFn: async (...args: Parameters<typeof handleLogin>) => {
-      return handleLogin(...args);
-    },
-    onSuccess: async (data) => {
-      if (data.error) {
-        setError(data.error);
-        return;
-      }
+  const loginMutation = useMutation(
+    trpc.auth.login.mutationOptions({
+      onSuccess: async (data) => {
+        if (data.error) {
+          setError(data.error);
+          return;
+        }
 
-      await router.invalidate();
-      await queryClient.invalidateQueries();
-      await router.navigate({ to: '/' });
-    },
-    onError: () => {
-      setError('Error logging in, please try again!');
-    },
-  });
+        await router.invalidate();
+        await queryClient.invalidateQueries();
+        await router.navigate({ to: '/' });
+      },
+      onError: () => {
+        setError('Error logging in, please try again!');
+      },
+    }),
+  );
 
   const form = useAppMantineForm({
     defaultValues: {
@@ -108,10 +58,10 @@ function LoginRoute() {
       turnstile: '',
     },
     validators: {
-      onChange: schema,
+      onChange: loginSchema,
     },
     onSubmit: async ({ value }) => {
-      loginMutation.mutate({ data: value });
+      loginMutation.mutate(value);
     },
   });
 

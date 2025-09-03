@@ -12,47 +12,8 @@ import {
 } from '@mantine/core';
 import { IconDots, IconEdit, IconTrash } from '@tabler/icons-react';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
-import { createServerFn } from '@tanstack/react-start';
-import { invariant } from 'es-toolkit';
-import db from '@/util/db';
-import { hasValidSession, requireAuthMiddleware } from '../-functions';
+import { hasValidSession } from '../-functions';
 import classes from './-channels.module.css';
-import { dashboardQueryKeys } from './-query-keys';
-
-const getChannels = createServerFn({ method: 'GET' })
-  .middleware([requireAuthMiddleware])
-  .handler(async ({ context }) => {
-    invariant(context.session, 'Session not found');
-
-    return db.channel.findMany({
-      select: {
-        id: true,
-        name: true,
-        memberships: {
-          select: {
-            isAdmin: true,
-            canEdit: true,
-            canUpload: true,
-          },
-          where: {
-            appUserId: context.session.appUser.id,
-          },
-        },
-      },
-      where: {
-        memberships: {
-          some: {
-            appUserId: context.session.appUser.id,
-          },
-        },
-      },
-    });
-  });
-
-const channelsQueryOptions = {
-  queryKey: dashboardQueryKeys.channels.all(),
-  queryFn: () => getChannels(),
-} as const;
 
 export const Route = createFileRoute('/dashboard_/channels')({
   component: ChannelsPage,
@@ -61,8 +22,10 @@ export const Route = createFileRoute('/dashboard_/channels')({
       return redirect({ to: '/auth/login' });
     }
   },
-  loader: async ({ context: { queryClient } }) => {
-    const data = await queryClient.ensureQueryData(channelsQueryOptions);
+  loader: async ({ context: { queryClient, trpc } }) => {
+    const data = await queryClient.ensureQueryData(
+      trpc.dashboard.channels.getChannels.queryOptions(),
+    );
     return {
       data,
       backNavigation: {
