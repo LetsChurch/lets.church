@@ -1,7 +1,6 @@
-import { noop } from 'es-toolkit';
+import { invariant, noop } from 'es-toolkit';
 import { execa } from 'execa';
 import fastGlob from 'fast-glob';
-import invariant from 'tiny-invariant';
 import * as z from 'zod';
 import type { Logger } from '@/util/logger';
 import { downloadUrl } from './download';

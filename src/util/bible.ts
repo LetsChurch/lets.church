@@ -1,5 +1,4 @@
-import { orderBy } from 'es-toolkit';
-import invariant from 'tiny-invariant';
+import { invariant, orderBy } from 'es-toolkit';
 
 type Book = {
   name: string;
@@ -478,10 +477,10 @@ export function* getBibleReferences(text: string) {
       ['asc', 'desc'],
     );
     const first = sortedRes[0];
-    invariant(first);
+    invariant(first, 'Match result is required');
     lastIndex = first[0].lastIndex;
     lastMatch = first[1];
-    invariant(lastMatch);
+    invariant(lastMatch, 'Last match is required');
 
     // Process the match
     const { groups } = lastMatch;

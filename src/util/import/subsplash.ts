@@ -1,7 +1,6 @@
-import { noop } from 'es-toolkit';
+import { invariant, noop } from 'es-toolkit';
 import { pEvent } from 'p-event';
 import { firefox } from 'playwright';
-import invariant from 'tiny-invariant';
 import type { Logger } from '../logger';
 import type { DownloadResult } from '.';
 import { downloadUrl } from './download';

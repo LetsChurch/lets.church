@@ -1,12 +1,12 @@
+import { invariant } from 'es-toolkit';
 import { type ExecaReturnValue, execa } from 'execa';
-import invariant from 'tiny-invariant';
 
 function getHelp(bin: string) {
   return execa(bin, ['--help']);
 }
 
 function checkCode(res: ExecaReturnValue) {
-  invariant(res.exitCode === 0, () =>
+  invariant(res.exitCode === 0, 
     JSON.stringify({ stdout: res.stdout, stderr: res.stderr }),
   );
 }

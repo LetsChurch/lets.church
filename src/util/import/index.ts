@@ -1,7 +1,6 @@
 import { extname, join } from 'node:path';
-import { noop } from 'es-toolkit';
+import { invariant, noop } from 'es-toolkit';
 import { execa } from 'execa';
-import invariant from 'tiny-invariant';
 import type { Logger } from '../logger';
 import { downloadUrl } from './download';
 import { downloadSubsplash } from './subsplash';

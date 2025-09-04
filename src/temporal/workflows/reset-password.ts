@@ -4,7 +4,7 @@ import {
   proxyActivities,
   setHandler,
 } from '@temporalio/workflow';
-import invariant from 'tiny-invariant';
+import { invariant } from 'es-toolkit';
 import type * as activities from '../activities/background';
 import { BACKGROUND_QUEUE } from '../queues';
 
@@ -39,7 +39,7 @@ export async function resetPasswordWorkflow(
   });
 
   if (await condition(() => Boolean(newHash), '15 minutes')) {
-    invariant(newHash);
+    invariant(newHash, 'New password hash is required');
     await updateUser(userId, { password: newHash });
   }
 }

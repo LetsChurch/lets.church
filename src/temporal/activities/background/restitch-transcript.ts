@@ -1,5 +1,5 @@
 import { Context } from '@temporalio/activity';
-import invariant from 'tiny-invariant';
+import { invariant } from 'es-toolkit';
 import logger from '../../../util/logger';
 import { getObject, retryablePutFile } from '../../../util/s3';
 import {

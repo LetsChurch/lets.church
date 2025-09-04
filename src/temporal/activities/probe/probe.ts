@@ -1,8 +1,8 @@
 import { join } from 'node:path';
 import { Context } from '@temporalio/activity';
+import { invariant } from 'es-toolkit';
 import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
-import invariant from 'tiny-invariant';
 import logger from '@/util/logger';
 import { headObject, retryablePutFile, streamObjectToFile } from '@/util/s3';
 import { ffprobeSchema } from '@/util/zod';

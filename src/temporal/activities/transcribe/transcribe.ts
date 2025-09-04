@@ -1,10 +1,10 @@
 import { stat } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { Context } from '@temporalio/activity';
+import { invariant } from 'es-toolkit';
 import mime from 'mime';
 import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
-import invariant from 'tiny-invariant';
 import {
   readWhisperJsonFile,
   runWhisper,

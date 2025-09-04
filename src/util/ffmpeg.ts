@@ -1,6 +1,6 @@
 import type { UploadVariant } from '@prisma/client';
+import { invariant } from 'es-toolkit';
 import { execa } from 'execa';
-import invariant from 'tiny-invariant';
 import logger from './logger';
 import { type Probe, probeIsVideoFile } from './zod';
 
@@ -43,7 +43,7 @@ export function getVariants(probe: Probe): Array<UploadVariant> {
       (s): s is Extract<typeof s, { codec_type: 'video' }> =>
         s.codec_type === 'video',
     );
-    invariant(stream);
+    invariant(stream, 'Video stream is required');
 
     if (stream.width >= 3840 || stream.height >= 2160) {
       res.push('VIDEO_4K');

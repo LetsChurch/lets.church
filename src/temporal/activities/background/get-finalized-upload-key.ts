@@ -1,4 +1,4 @@
-import invariant from 'tiny-invariant';
+import { invariant } from 'es-toolkit';
 import db from '@/util/db';
 
 export default async function getFinalizedUploadKey(uploadRecordId: string) {

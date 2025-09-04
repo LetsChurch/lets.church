@@ -1,5 +1,5 @@
 import { executeChild, proxyActivities } from '@temporalio/workflow';
-import invariant from 'tiny-invariant';
+import { invariant } from 'es-toolkit';
 import { probeIsVideoFile } from '../../util/zod';
 import type * as backgroundActivities from '../activities/background';
 import type * as probeActivities from '../activities/probe';

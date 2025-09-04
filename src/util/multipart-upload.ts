@@ -1,6 +1,6 @@
+import { invariant } from 'es-toolkit';
 import pProgress, { PProgress } from 'p-progress';
 import pRetry from 'p-retry';
-import invariant from 'tiny-invariant';
 
 function uploadPart(
   file: File,
