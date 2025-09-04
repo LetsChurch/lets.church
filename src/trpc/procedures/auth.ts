@@ -26,7 +26,7 @@ export const authProcedures = {
         input: { id, password, turnstile },
       }): Promise<HandleLoginResponse> => {
         const clientIp = getClientIpAddress(getWebRequest().headers);
-        
+
         moduleLogger.info('Login attempt', {
           userId: id,
           clientIp,
@@ -69,7 +69,7 @@ export const authProcedures = {
     .input(registerSchema)
     .mutation(async ({ input: value }): Promise<HandleRegisterResponse> => {
       const clientIp = getClientIpAddress(getWebRequest().headers);
-      
+
       moduleLogger.info('Registration attempt', {
         username: value.username,
         email: value.email,

@@ -90,25 +90,28 @@ function ChurchDetailsPage() {
       <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
         <StatCard
           title="Members"
+          to="/dashboard/churches/$churchId/members"
           color="blue"
           icon={<IconUsers size={22} stroke={1.5} />}
-          tooltip="Active members of this church organization"
+          tooltip="Manage active members of this church organization"
           value={church._count.memberships}
         />
 
         <StatCard
           title="Channels"
+          to="/dashboard/churches/$churchId/channels"
           color="green"
           icon={<IconVideo size={22} stroke={1.5} />}
-          tooltip="Associated content channels for this church"
+          tooltip="Manage associated content channels for this church"
           value={church._count.channelAssociations}
         />
 
         <StatCard
           title="Leaders"
+          to="/dashboard/churches/$churchId/leaders"
           color="violet"
           icon={<IconShield size={22} stroke={1.5} />}
-          tooltip="Registered leadership team members"
+          tooltip="Manage registered leadership team members"
           value={church._count.leaders}
         />
       </SimpleGrid>
