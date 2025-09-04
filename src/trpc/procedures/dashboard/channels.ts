@@ -7,6 +7,7 @@ import {
 } from '@/schemas/common';
 import {
   addMemberSchema,
+  bulkSetVisibilitySchema,
   channelQuerySchema,
   channelUploadsQuerySchema,
   createUploadSchema,
@@ -577,6 +578,46 @@ export const channelRouter = router({
       await deleteUpload(input.uploadId);
 
       return { success: true, uploadId: input.uploadId };
+    }),
+
+  bulkSetVisibility: channelEditProcedure
+    .input(bulkSetVisibilitySchema)
+    .mutation(async ({ input }) => {
+      // Verify all uploads belong to this channel
+      const uploads = await db.uploadRecord.findMany({
+        select: {
+          id: true,
+          channelId: true,
+        },
+        where: {
+          id: { in: input.uploadIds },
+          channelId: input.channelId,
+        },
+      });
+
+      if (uploads.length !== input.uploadIds.length) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Some uploads not found or do not belong to this channel',
+        });
+      }
+
+      // Update visibility for all uploads
+      await db.uploadRecord.updateMany({
+        where: {
+          id: { in: input.uploadIds },
+          channelId: input.channelId,
+        },
+        data: {
+          visibility: input.visibility,
+        },
+      });
+
+      return {
+        success: true,
+        updatedCount: input.uploadIds.length,
+        visibility: input.visibility,
+      };
     }),
 
   getUploadRecord: channelEditProcedure

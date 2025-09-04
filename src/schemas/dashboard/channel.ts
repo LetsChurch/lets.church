@@ -99,3 +99,16 @@ export const deleteUploadSchema = z.object({
   channelId: channelIdSchema,
   uploadId: uploadIdSchema,
 });
+
+export const bulkSetVisibilitySchema = z.object({
+  channelId: channelIdSchema,
+  uploadIds: z
+    .array(uploadIdSchema)
+    .min(1, 'At least one upload must be selected'),
+  visibility: z.enum(
+    Object.values(UploadVisibility) as [
+      UploadVisibility,
+      ...UploadVisibility[],
+    ],
+  ),
+});

@@ -5,6 +5,7 @@ import {
   Button,
   Checkbox,
   Group,
+  Menu,
   Modal,
   Pagination,
   Stack,
@@ -17,6 +18,7 @@ import { Dropzone } from '@mantine/dropzone';
 import { useDisclosure, useSelection } from '@mantine/hooks';
 import { useStore } from '@nanostores/react';
 import {
+  IconChevronDown,
   IconEdit,
   IconEye,
   IconEyeOff,
@@ -24,7 +26,11 @@ import {
   IconTrash,
   IconUpload,
 } from '@tabler/icons-react';
-import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { invariant } from 'es-toolkit';
 import { map } from 'nanostores';
@@ -82,6 +88,7 @@ function ChannelUploadsPage() {
   const navigate = useNavigate();
   const deletedUploads = useStore($deletedUploads);
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
 
   const { data } = useSuspenseQuery(
     trpc.dashboard.channels.getChannelUploads.queryOptions({
@@ -106,6 +113,7 @@ function ChannelUploadsPage() {
     id: string;
     title: string;
   } | null>(null);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
   const uploadIds = uploads.map((upload) => upload.id);
   const [selection, handlers] = useSelection({ data: uploadIds });
@@ -187,6 +195,62 @@ function ChannelUploadsPage() {
     }),
   );
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (uploadIds: string[]) => {
+      const promises = uploadIds.map((uploadId) =>
+        trpcClient.dashboard.channels.deleteUploadRecord.mutate({
+          channelId: channel.id,
+          uploadId,
+        }),
+      );
+      return Promise.all(promises);
+    },
+    onSuccess: (results) => {
+      results.forEach(({ uploadId }) => {
+        $deletedUploads.setKey(uploadId, true);
+      });
+      showSuccess({
+        message: `${results.length} upload(s) deletion started successfully`,
+      });
+      setShowBulkDeleteModal(false);
+      handlers.resetSelection();
+    },
+    onError: (error) => {
+      console.error('Failed to bulk delete uploads:', error);
+      showFailure({
+        message:
+          error instanceof Error ? error.message : 'Failed to delete uploads',
+      });
+    },
+  });
+
+  const bulkSetVisibilityMutation = useMutation(
+    trpc.dashboard.channels.bulkSetVisibility.mutationOptions({
+      onSuccess: ({ updatedCount, visibility }) => {
+        showSuccess({
+          message: `${updatedCount} upload(s) visibility updated to ${visibility.toLowerCase()}`,
+        });
+        handlers.resetSelection();
+        queryClient.invalidateQueries(
+          trpc.dashboard.channels.getChannelUploads.queryOptions({
+            channelId: params.channelId,
+            page: search.page,
+            limit: search.limit,
+          }),
+        );
+      },
+      onError: (error) => {
+        console.error('Failed to bulk set visibility:', error);
+        showFailure({
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Failed to update visibility',
+        });
+      },
+    }),
+  );
+
   const getVisibilityIcon = (visibility: string) => {
     switch (visibility) {
       case 'PUBLIC':
@@ -242,6 +306,104 @@ function ChannelUploadsPage() {
           </Button>
         )}
       </Group>
+
+      {selection.length > 0 ? (
+        <Box
+          p="md"
+          bg="blue.0"
+          style={{
+            border: '1px solid var(--mantine-color-blue-3)',
+            borderRadius: 'var(--mantine-radius-md)',
+          }}
+        >
+          <Group justify="space-between" align="center">
+            <Text size="sm" fw={500}>
+              {selection.length} upload{selection.length > 1 ? 's' : ''}{' '}
+              selected
+            </Text>
+            <Group gap="sm">
+              {canDelete && (
+                <Button
+                  size="xs"
+                  color="red"
+                  variant="light"
+                  leftSection={<IconTrash size={14} />}
+                  onClick={() => setShowBulkDeleteModal(true)}
+                  loading={bulkDeleteMutation.isPending}
+                >
+                  Delete Selected
+                </Button>
+              )}
+              {canEdit && (
+                <Menu shadow="md" width={200}>
+                  <Menu.Target>
+                    <Button
+                      size="xs"
+                      variant="light"
+                      rightSection={<IconChevronDown size={14} />}
+                      loading={bulkSetVisibilityMutation.isPending}
+                    >
+                      Set Visibility
+                    </Button>
+                  </Menu.Target>
+
+                  <Menu.Dropdown>
+                    <Menu.Label>
+                      Change visibility for {selection.length} upload
+                      {selection.length > 1 ? 's' : ''}
+                    </Menu.Label>
+                    <Menu.Item
+                      leftSection={<IconEye size={16} />}
+                      onClick={() => {
+                        bulkSetVisibilityMutation.mutate({
+                          channelId: channel.id,
+                          uploadIds: selection,
+                          visibility: 'PUBLIC',
+                        });
+                      }}
+                    >
+                      Public
+                    </Menu.Item>
+                    <Menu.Item
+                      leftSection={<IconEye size={16} stroke={1} />}
+                      onClick={() => {
+                        bulkSetVisibilityMutation.mutate({
+                          channelId: channel.id,
+                          uploadIds: selection,
+                          visibility: 'UNLISTED',
+                        });
+                      }}
+                    >
+                      Unlisted
+                    </Menu.Item>
+                    <Menu.Item
+                      leftSection={<IconEyeOff size={16} />}
+                      onClick={() => {
+                        bulkSetVisibilityMutation.mutate({
+                          channelId: channel.id,
+                          uploadIds: selection,
+                          visibility: 'PRIVATE',
+                        });
+                      }}
+                    >
+                      Private
+                    </Menu.Item>
+                  </Menu.Dropdown>
+                </Menu>
+              )}
+              <Button
+                size="xs"
+                variant="default"
+                onClick={() => {
+                  handlers.resetSelection();
+                }}
+              >
+                Clear Selection
+              </Button>
+            </Group>
+          </Group>
+        </Box>
+      ) : null}
 
       <Modal
         opened={uploadModalOpened}
@@ -312,6 +474,42 @@ function ChannelUploadsPage() {
             Learn more
           </Text>
         </Text>
+      </Modal>
+
+      <Modal
+        opened={showBulkDeleteModal}
+        onClose={() => setShowBulkDeleteModal(false)}
+        title="Confirm Bulk Delete"
+        centered
+      >
+        <Stack gap="md">
+          <Text>
+            Are you sure you want to delete {selection.length} selected upload
+            {selection.length > 1 ? 's' : ''}?
+          </Text>
+          <Text size="sm" c="dimmed">
+            This action cannot be undone. The uploads will be permanently
+            deleted.
+          </Text>
+          <Group justify="flex-end" gap="sm">
+            <Button
+              variant="default"
+              onClick={() => setShowBulkDeleteModal(false)}
+              disabled={bulkDeleteMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="red"
+              onClick={() => {
+                bulkDeleteMutation.mutate(selection);
+              }}
+              loading={bulkDeleteMutation.isPending}
+            >
+              Delete {selection.length} Upload{selection.length > 1 ? 's' : ''}
+            </Button>
+          </Group>
+        </Stack>
       </Modal>
 
       <Modal

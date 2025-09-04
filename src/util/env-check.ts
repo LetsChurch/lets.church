@@ -6,7 +6,8 @@ function getHelp(bin: string) {
 }
 
 function checkCode(res: ExecaReturnValue) {
-  invariant(res.exitCode === 0, 
+  invariant(
+    res.exitCode === 0,
     JSON.stringify({ stdout: res.stdout, stderr: res.stderr }),
   );
 }
