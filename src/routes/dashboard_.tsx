@@ -8,12 +8,14 @@ import {
   useLocation,
 } from '@tanstack/react-router';
 import { BackButton } from '@/util/back-navigation';
-import { hasValidSession } from './-functions';
 import { MantineWrapper } from './-mantine';
 
 export const Route = createFileRoute('/dashboard_')({
-  beforeLoad: async () => {
-    if (!(await hasValidSession())) {
+  beforeLoad: async ({ context }) => {
+    const hasSession = await context.queryClient.fetchQuery(
+      context.trpc.common.hasValidSession.queryOptions(),
+    );
+    if (!hasSession) {
       return redirect({ to: '/auth/login' });
     }
   },

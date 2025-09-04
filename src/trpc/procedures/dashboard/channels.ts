@@ -1,5 +1,10 @@
 import { UploadLicense } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
+import { invariant } from 'es-toolkit';
+import {
+  finalizeMultipartUploadSchema,
+  multipartUploadSchema,
+} from '@/schemas/common';
 import {
   addMemberSchema,
   channelQuerySchema,
@@ -12,9 +17,18 @@ import {
   uploadQuerySchema,
   userSearchSchema,
 } from '@/schemas/dashboard';
-import { deleteUpload } from '@/temporal';
+import {
+  completeMultipartMediaUpload,
+  deleteUpload,
+  handleMultipartMediaUpload,
+} from '@/temporal';
 import db from '@/util/db';
 import logger from '@/util/logger';
+import {
+  createMultipartUpload,
+  createPresignedPartUploadUrls,
+  PART_SIZE,
+} from '@/util/s3';
 import { authProcedure, router } from '../../trpc';
 
 const moduleLogger = logger.child({
@@ -691,4 +705,55 @@ export const channelRouter = router({
 
       return { success: true, upload: updatedUpload };
     }),
+
+  createMultipartUpload: channelUploadProcedure
+    .input(multipartUploadSchema)
+    .mutation(
+      async ({ input: { targetId, uploadMimeType, postProcess, bytes } }) => {
+        const { uploadKey, uploadId } = await createMultipartUpload(
+          'INGEST',
+          targetId,
+          uploadMimeType,
+        );
+
+        await handleMultipartMediaUpload(
+          targetId,
+          'INGEST',
+          uploadId,
+          uploadKey,
+          postProcess,
+        );
+
+        const urls = await createPresignedPartUploadUrls(
+          'INGEST',
+          uploadId,
+          uploadKey,
+          bytes,
+        );
+
+        return {
+          s3UploadKey: uploadKey,
+          s3UploadId: uploadId,
+          partSize: PART_SIZE,
+          urls,
+        };
+      },
+    ),
+
+  finalizeMultipartUpload: channelUploadProcedure
+    .input(finalizeMultipartUploadSchema)
+    .mutation(
+      async ({ ctx, input: { s3UploadId, s3UploadKey, s3PartETags } }) => {
+        const userId = ctx.session?.appUserId;
+        invariant(userId, 'No user found');
+        await completeMultipartMediaUpload(
+          s3UploadId,
+          s3UploadKey,
+          s3PartETags,
+          userId,
+        );
+
+        return true;
+      },
+    ),
 });

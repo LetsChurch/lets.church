@@ -31,7 +31,6 @@ import { useDebounce } from 'use-debounce';
 import { useAppMantineForm } from '@/components/mantine';
 import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
-import { hasValidSession } from '../-functions';
 import { showFailure, showSuccess } from '../-mantine';
 
 type MembershipWithUser = {
@@ -53,8 +52,11 @@ export const Route = createFileRoute(
   '/dashboard_/channels_/$channelId_/members',
 )({
   component: ChannelMembersPage,
-  beforeLoad: async () => {
-    if (!(await hasValidSession())) {
+  beforeLoad: async ({ context }) => {
+    const hasSession = await context.queryClient.fetchQuery(
+      context.trpc.common.hasValidSession.queryOptions(),
+    );
+    if (!hasSession) {
       return redirect({ to: '/auth/login' });
     }
   },

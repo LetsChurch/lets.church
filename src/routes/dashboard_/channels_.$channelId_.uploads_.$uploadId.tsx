@@ -22,13 +22,8 @@ import { invariant } from 'es-toolkit';
 import { useState } from 'react';
 import { useAppMantineForm } from '@/components/mantine';
 import { uploadFormSchema } from '@/schemas/dashboard';
-import { useTRPC } from '@/trpc/react';
+import { trpcClient, useTRPC } from '@/trpc/react';
 import { doMultipartUpload } from '@/util/multipart-upload';
-import {
-  clientCreateMultipartUpload,
-  clientFinalizeMultipartUpload,
-  hasValidSession,
-} from '../-functions';
 import { showFailure, showSuccess } from '../-mantine';
 import { $uploadProgress } from './channels_.$channelId_.uploads';
 
@@ -36,8 +31,11 @@ export const Route = createFileRoute(
   '/dashboard_/channels_/$channelId_/uploads_/$uploadId',
 )({
   component: ChannelUploadPage,
-  beforeLoad: async () => {
-    if (!(await hasValidSession())) {
+  beforeLoad: async ({ context }) => {
+    const hasSession = await context.queryClient.fetchQuery(
+      context.trpc.common.hasValidSession.queryOptions(),
+    );
+    if (!hasSession) {
       return redirect({ to: '/auth/login' });
     }
   },
@@ -168,15 +166,14 @@ function ChannelUploadPage() {
     },
     onSubmit: async ({ value }) => {
       if (newThumbnailFile) {
-        const mpu = await clientCreateMultipartUpload({
-          data: {
+        const mpu =
+          await trpcClient.dashboard.channels.createMultipartUpload.mutate({
             channelId,
             targetId: uploadId,
             uploadMimeType: newThumbnailFile.type,
             postProcess: 'thumbnail',
             bytes: newThumbnailFile.size,
-          },
-        });
+          });
 
         const uploadPromise = doMultipartUpload(
           newThumbnailFile,
@@ -184,13 +181,11 @@ function ChannelUploadPage() {
           mpu.partSize,
         );
 
-        await clientFinalizeMultipartUpload({
-          data: {
-            channelId,
-            s3UploadKey: mpu.s3UploadKey,
-            s3UploadId: mpu.s3UploadId,
-            s3PartETags: await uploadPromise,
-          },
+        await trpcClient.dashboard.channels.finalizeMultipartUpload.mutate({
+          channelId,
+          s3UploadKey: mpu.s3UploadKey,
+          s3UploadId: mpu.s3UploadId,
+          s3PartETags: await uploadPromise,
         });
       }
 

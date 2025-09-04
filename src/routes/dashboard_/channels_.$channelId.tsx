@@ -14,14 +14,16 @@ import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import clsx from 'clsx';
 import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
-import { hasValidSession } from '../-functions';
 import styles from './-channels_.$channelId.module.css';
 import { StatCard } from './-components/stat-card';
 
 export const Route = createFileRoute('/dashboard_/channels_/$channelId')({
   component: ChannelDetailsPage,
-  beforeLoad: async () => {
-    if (!(await hasValidSession())) {
+  beforeLoad: async ({ context }) => {
+    const hasSession = await context.queryClient.fetchQuery(
+      context.trpc.common.hasValidSession.queryOptions(),
+    );
+    if (!hasSession) {
       return redirect({ to: '/auth/login' });
     }
   },
@@ -52,8 +54,6 @@ function ChannelDetailsPage() {
 
   const { userMembership } = channel;
   const isChannelAdmin = userMembership?.isAdmin ?? false;
-
-  console.log({ isChannelAdmin });
 
   return (
     <Stack gap="lg">

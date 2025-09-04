@@ -11,17 +11,19 @@ import { useState } from 'react';
 import { useAppMantineForm } from '@/components/mantine';
 import { registerSchema } from '@/schemas/auth';
 import { useTRPC } from '@/trpc/react';
-import { getClientEnv, hasValidSession } from '../-functions';
 
 export const Route = createFileRoute('/auth_/register')({
   component: RouteComponent,
-  beforeLoad: async () => {
-    if (await hasValidSession()) {
+  beforeLoad: async ({ context }) => {
+    const hasSession = await context.queryClient.fetchQuery(
+      context.trpc.common.hasValidSession.queryOptions(),
+    );
+    if (hasSession) {
       return redirect({ to: '/' });
     }
   },
-  loader: async () => ({
-    env: await getClientEnv(),
+  loader: async ({ context: { queryClient, trpc } }) => ({
+    env: await queryClient.fetchQuery(trpc.common.getClientEnv.queryOptions()),
   }),
 });
 

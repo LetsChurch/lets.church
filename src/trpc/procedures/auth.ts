@@ -5,10 +5,15 @@ import { postUserRegistration } from '@/temporal';
 import { login } from '@/util/auth';
 import db from '@/util/db';
 import { createSessionJwt } from '@/util/jwt';
+import logger from '@/util/logger';
 import { getClientIpAddress } from '@/util/request-ip';
 import { validateTurnstile } from '@/util/turnstile';
 import testPassword from '@/util/zxcvbn';
 import { anonProcedure } from '../trpc';
+
+const moduleLogger = logger.child({
+  module: 'trpc/procedures/auth',
+});
 
 type HandleLoginResponse = { error: false } | { error: string };
 type HandleRegisterResponse = { error: false } | { error: string };
@@ -20,12 +25,18 @@ export const authProcedures = {
       async ({
         input: { id, password, turnstile },
       }): Promise<HandleLoginResponse> => {
-        if (
-          !(await validateTurnstile(
-            turnstile,
-            getClientIpAddress(getWebRequest().headers),
-          ))
-        ) {
+        const clientIp = getClientIpAddress(getWebRequest().headers);
+        
+        moduleLogger.info('Login attempt', {
+          userId: id,
+          clientIp,
+        });
+
+        if (!(await validateTurnstile(turnstile, clientIp))) {
+          moduleLogger.warn('Login failed - invalid CAPTCHA', {
+            userId: id,
+            clientIp,
+          });
           return { error: 'Invalid CAPTCHA' };
         }
 
@@ -36,8 +47,19 @@ export const authProcedures = {
             sameSite: 'lax',
           });
 
+          moduleLogger.info('Login successful', {
+            userId: id,
+            sessionId: session.id,
+            clientIp,
+          });
+
           return { error: false };
-        } catch (_e) {
+        } catch (e) {
+          moduleLogger.warn('Login failed - invalid credentials', {
+            userId: id,
+            clientIp,
+            error: e instanceof Error ? e.message : String(e),
+          });
           return { error: 'Invalid user id or password' };
         }
       },
@@ -46,18 +68,32 @@ export const authProcedures = {
   register: anonProcedure
     .input(registerSchema)
     .mutation(async ({ input: value }): Promise<HandleRegisterResponse> => {
-      if (
-        !(await validateTurnstile(
-          value.turnstile,
-          getClientIpAddress(getWebRequest().headers),
-        ))
-      ) {
+      const clientIp = getClientIpAddress(getWebRequest().headers);
+      
+      moduleLogger.info('Registration attempt', {
+        username: value.username,
+        email: value.email,
+        clientIp,
+      });
+
+      if (!(await validateTurnstile(value.turnstile, clientIp))) {
+        moduleLogger.warn('Registration failed - invalid CAPTCHA', {
+          username: value.username,
+          email: value.email,
+          clientIp,
+        });
         return { error: 'Invalid CAPTCHA' };
       }
 
       const passwordTest = testPassword(value.password);
 
       if (passwordTest) {
+        moduleLogger.warn('Registration failed - weak password', {
+          username: value.username,
+          email: value.email,
+          passwordError: passwordTest,
+          clientIp,
+        });
         return { error: passwordTest };
       }
 
@@ -85,8 +121,21 @@ export const authProcedures = {
           subscribeToNewsletter: value.subscribeNewsletter,
         });
 
+        moduleLogger.info('Registration successful', {
+          userId: user.id,
+          username: value.username,
+          email: value.email,
+          clientIp,
+        });
+
         return { error: false };
-      } catch (_e) {
+      } catch (e) {
+        moduleLogger.error('Registration failed - database error', {
+          username: value.username,
+          email: value.email,
+          clientIp,
+          error: e instanceof Error ? e.message : String(e),
+        });
         return { error: 'Error registering a new account, please try again!' };
       }
     }),

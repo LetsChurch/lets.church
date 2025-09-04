@@ -30,14 +30,9 @@ import { invariant } from 'es-toolkit';
 import { map } from 'nanostores';
 import { useState } from 'react';
 import { z } from 'zod';
-import { useTRPC } from '@/trpc/react';
+import { trpcClient, useTRPC } from '@/trpc/react';
 import { formatDate, formatTime } from '@/util/format';
 import { doMultipartUpload } from '@/util/multipart-upload';
-import {
-  clientCreateMultipartUpload,
-  clientFinalizeMultipartUpload,
-  hasValidSession,
-} from '../-functions';
 import { showFailure, showSuccess } from '../-mantine';
 
 export const $uploadProgress = map<Record<string, number | undefined>>({});
@@ -47,8 +42,11 @@ export const Route = createFileRoute(
   '/dashboard_/channels_/$channelId_/uploads',
 )({
   component: ChannelUploadsPage,
-  beforeLoad: async () => {
-    if (!(await hasValidSession())) {
+  beforeLoad: async ({ context }) => {
+    const hasSession = await context.queryClient.fetchQuery(
+      context.trpc.common.hasValidSession.queryOptions(),
+    );
+    if (!hasSession) {
       return redirect({ to: '/auth/login' });
     }
   },
@@ -118,14 +116,12 @@ function ChannelUploadsPage() {
         invariant(currentFile, 'Missing upload file');
         try {
           const { urls, partSize, s3UploadKey, s3UploadId } =
-            await clientCreateMultipartUpload({
-              data: {
-                channelId: channel.id,
-                targetId: uploadId,
-                uploadMimeType: currentFile.type,
-                postProcess: 'media',
-                bytes: currentFile.size,
-              },
+            await trpcClient.dashboard.channels.createMultipartUpload.mutate({
+              channelId: channel.id,
+              targetId: uploadId,
+              uploadMimeType: currentFile.type,
+              postProcess: 'media',
+              bytes: currentFile.size,
             });
 
           const mpu = doMultipartUpload(currentFile, urls, partSize);
@@ -143,13 +139,11 @@ function ChannelUploadsPage() {
 
           $uploadProgress.setKey(uploadId, undefined);
 
-          await clientFinalizeMultipartUpload({
-            data: {
-              channelId: channel.id,
-              s3UploadKey: s3UploadKey,
-              s3UploadId: s3UploadId,
-              s3PartETags: etags,
-            },
+          await trpcClient.dashboard.channels.finalizeMultipartUpload.mutate({
+            channelId: channel.id,
+            s3UploadKey: s3UploadKey,
+            s3UploadId: s3UploadId,
+            s3PartETags: etags,
           });
 
           await navPromise;

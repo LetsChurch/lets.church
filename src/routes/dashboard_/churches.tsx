@@ -19,14 +19,15 @@ import {
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { useTRPC } from '@/trpc/react';
-import { hasValidSession } from '../-functions';
 import classes from './-churches.module.css';
-
 
 export const Route = createFileRoute('/dashboard_/churches')({
   component: ChurchesPage,
-  beforeLoad: async () => {
-    if (!(await hasValidSession())) {
+  beforeLoad: async ({ context }) => {
+    const hasSession = await context.queryClient.fetchQuery(
+      context.trpc.common.hasValidSession.queryOptions(),
+    );
+    if (!hasSession) {
       return redirect({ to: '/auth/login' });
     }
   },

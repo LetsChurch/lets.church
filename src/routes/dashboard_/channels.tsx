@@ -12,13 +12,15 @@ import {
 } from '@mantine/core';
 import { IconDots, IconEdit, IconTrash } from '@tabler/icons-react';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
-import { hasValidSession } from '../-functions';
 import classes from './-channels.module.css';
 
 export const Route = createFileRoute('/dashboard_/channels')({
   component: ChannelsPage,
-  beforeLoad: async () => {
-    if (!(await hasValidSession())) {
+  beforeLoad: async ({ context }) => {
+    const hasSession = await context.queryClient.fetchQuery(
+      context.trpc.common.hasValidSession.queryOptions(),
+    );
+    if (!hasSession) {
       return redirect({ to: '/auth/login' });
     }
   },

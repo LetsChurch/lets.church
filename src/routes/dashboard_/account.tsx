@@ -1,11 +1,13 @@
 import { Button, Card, Group, Stack, Text, Title } from '@mantine/core';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { hasValidSession } from '../-functions';
 
 export const Route = createFileRoute('/dashboard_/account')({
   component: AccountPage,
-  beforeLoad: async () => {
-    if (!(await hasValidSession())) {
+  beforeLoad: async ({ context }) => {
+    const hasSession = await context.queryClient.fetchQuery(
+      context.trpc.common.hasValidSession.queryOptions(),
+    );
+    if (!hasSession) {
       return redirect({ to: '/auth/login' });
     }
   },

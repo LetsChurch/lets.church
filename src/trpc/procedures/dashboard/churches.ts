@@ -1,8 +1,9 @@
 import { OrganizationType } from '@prisma/client';
+import { TRPCError } from '@trpc/server';
 import { churchQuerySchema } from '@/schemas/dashboard';
 import db from '@/util/db';
 import logger from '@/util/logger';
-import { authProcedure, router } from '../../trpc';
+import { authProcedure } from '../../trpc';
 
 const moduleLogger = logger.child({
   module: 'trpc/procedures/dashboard/churches',
@@ -10,6 +11,10 @@ const moduleLogger = logger.child({
 
 export const churchesProcedures = {
   getChurches: authProcedure.query(async ({ ctx }) => {
+    moduleLogger.info('Fetching churches for user', {
+      appUserId: ctx.session.appUserId,
+    });
+
     return db.organization.findMany({
       select: {
         id: true,
@@ -40,6 +45,11 @@ export const churchesProcedures = {
   getChurchDetails: authProcedure
     .input(churchQuerySchema)
     .query(async ({ ctx, input }) => {
+      moduleLogger.info('Fetching church details', {
+        ...input,
+        appUserId: ctx.session.appUserId,
+      });
+
       const church = await db.organization.findFirst({
         select: {
           id: true,
@@ -125,7 +135,12 @@ export const churchesProcedures = {
       });
 
       if (!church) {
-        throw new Error('Church not found');
+        moduleLogger.warn('Church not found', {
+          ...input,
+          appUserId: ctx.session.appUserId,
+        });
+
+        throw new TRPCError({ code: 'NOT_FOUND' });
       }
 
       const userMembership = church.memberships.find(

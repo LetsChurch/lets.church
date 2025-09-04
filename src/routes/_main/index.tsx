@@ -1,11 +1,15 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { hasValidSession } from '../-functions';
 
 export const Route = createFileRoute('/_main/')({
   component: Home,
-  loader: async () => ({
-    isLoggedIn: await hasValidSession(),
-  }),
+  loader: async ({ context }) => {
+    const hasSession = await context.queryClient.fetchQuery(
+      context.trpc.common.hasValidSession.queryOptions(),
+    );
+    return {
+      isLoggedIn: hasSession,
+    };
+  },
 });
 
 function Home() {
