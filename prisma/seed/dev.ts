@@ -4,7 +4,6 @@ import slugify from '@sindresorhus/slugify';
 import argon2 from 'argon2';
 import { Prisma, UploadListType } from '@prisma/client';
 import invariant from 'tiny-invariant';
-import { LexoRank } from 'lexorank';
 import { indexDocument, waitOnTemporal } from '../../src/temporal';
 import db from '../../src/util/db';
 import logger from '../../src/util/logger';
@@ -1485,7 +1484,7 @@ const series = await db.uploadList.create({
   },
 });
 
-let nextRank: string = LexoRank.middle().toString();
+let nextRank = 0;
 
 for (const { id } of uploadRecordData) {
   await db.uploadListEntry.create({
@@ -1503,7 +1502,9 @@ for (const { id } of uploadRecordData) {
       },
     },
   });
-  nextRank = LexoRank.parse(nextRank).between(LexoRank.max()).toString();
+
+  nextRank += 1;
+
   await indexDocument('transcript', id, `${id}/transcript.vtt`);
   await indexDocument('upload', id);
 }

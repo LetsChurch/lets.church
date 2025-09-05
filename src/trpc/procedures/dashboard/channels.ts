@@ -7,13 +7,20 @@ import {
 } from '@/schemas/common';
 import {
   addMemberSchema,
+  addToPlaylistSchema,
   bulkSetVisibilitySchema,
   channelQuerySchema,
   channelUploadsQuerySchema,
+  createPlaylistSchema,
   createUploadSchema,
+  deletePlaylistSchema,
   deleteUploadSchema,
+  playlistQuerySchema,
+  removeFromPlaylistSchema,
   removeMemberSchema,
+  reorderPlaylistSchema,
   updateChannelSchema,
+  updatePlaylistSchema,
   updateUploadSchema,
   uploadQuerySchema,
   userSearchSchema,
@@ -179,6 +186,7 @@ export const channelRouter = router({
             uploadRecords: true,
             subscribers: true,
             memberships: true,
+            uploadLists: true,
           },
         },
       },
@@ -464,6 +472,12 @@ export const channelRouter = router({
           },
           where: {
             channelId: input.channelId,
+            ...(input.search && {
+              title: {
+                contains: input.search,
+                mode: 'insensitive',
+              },
+            }),
             OR: [
               { visibility: 'PUBLIC' },
               { visibility: 'UNLISTED' },
@@ -780,6 +794,227 @@ export const channelRouter = router({
         };
       },
     ),
+
+  // Playlist procedures
+  getChannelPlaylists: channelProcedure.query(async ({ input }) => {
+    const playlists = await db.uploadList.findMany({
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            uploads: true,
+          },
+        },
+      },
+      where: {
+        channelId: input.channelId,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return playlists;
+  }),
+
+  getPlaylistDetails: channelProcedure
+    .input(playlistQuerySchema)
+    .query(async ({ input }) => {
+      const playlist = await db.uploadList.findFirst({
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          createdAt: true,
+          updatedAt: true,
+          uploads: {
+            select: {
+              upload: {
+                select: {
+                  id: true,
+                  title: true,
+                  description: true,
+                  visibility: true,
+                  createdAt: true,
+                  lengthSeconds: true,
+                  defaultThumbnailPath: true,
+                  overrideThumbnailPath: true,
+                },
+              },
+              rank: true,
+            },
+            orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
+          },
+        },
+        where: {
+          id: input.playlistId,
+          channelId: input.channelId,
+        },
+      });
+
+      if (!playlist) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Playlist not found',
+        });
+      }
+
+      return playlist;
+    }),
+
+  createPlaylist: channelEditProcedure
+    .input(createPlaylistSchema)
+    .mutation(async ({ ctx, input }) => {
+      const playlist = await db.uploadList.create({
+        data: {
+          title: input.title,
+          type: input.type,
+          authorId: ctx.session.appUser.id,
+          channelId: input.channelId,
+        },
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          createdAt: true,
+        },
+      });
+
+      return { success: true, playlist };
+    }),
+
+  updatePlaylist: channelEditProcedure
+    .input(updatePlaylistSchema)
+    .mutation(async ({ input }) => {
+      const updatedPlaylist = await db.uploadList.update({
+        where: { id: input.playlistId },
+        data: {
+          title: input.title,
+          type: input.type,
+        },
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          updatedAt: true,
+        },
+      });
+
+      return { success: true, playlist: updatedPlaylist };
+    }),
+
+  deletePlaylist: channelEditProcedure
+    .input(deletePlaylistSchema)
+    .mutation(async ({ input }) => {
+      await db.uploadList.delete({
+        where: { id: input.playlistId },
+      });
+
+      return { success: true };
+    }),
+
+  addToPlaylist: channelEditProcedure
+    .input(addToPlaylistSchema)
+    .mutation(async ({ input }) => {
+      // Get the playlist to verify it exists and get its channelId
+      const playlist = await db.uploadList.findUnique({
+        where: { id: input.playlistId },
+        select: { id: true, channelId: true },
+      });
+
+      if (!playlist?.channelId) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Playlist not found',
+        });
+      }
+
+      // Verify the upload belongs to the same channel
+      const upload = await db.uploadRecord.findFirst({
+        where: {
+          id: input.uploadId,
+          channelId: playlist.channelId,
+        },
+        select: { id: true },
+      });
+
+      if (!upload) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Upload not found or does not belong to this channel',
+        });
+      }
+
+      // Check if upload is already in playlist
+      const existingEntry = await db.uploadListEntry.findUnique({
+        where: {
+          uploadListId_uploadRecordId: {
+            uploadListId: input.playlistId,
+            uploadRecordId: input.uploadId,
+          },
+        },
+      });
+
+      if (existingEntry) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Upload is already in this playlist',
+        });
+      }
+
+      await db.uploadListEntry.create({
+        data: {
+          uploadListId: input.playlistId,
+          uploadRecordId: input.uploadId,
+        },
+      });
+
+      return { success: true };
+    }),
+
+  removeFromPlaylist: channelEditProcedure
+    .input(removeFromPlaylistSchema)
+    .mutation(async ({ input }) => {
+      const deletedEntry = await db.uploadListEntry.deleteMany({
+        where: {
+          uploadListId: input.playlistId,
+          uploadRecordId: input.uploadId,
+        },
+      });
+
+      if (deletedEntry.count === 0) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Upload not found in playlist',
+        });
+      }
+
+      return { success: true };
+    }),
+
+  reorderPlaylist: channelEditProcedure
+    .input(reorderPlaylistSchema)
+    .mutation(async ({ input }) => {
+      await db.$transaction(
+        input.uploadIds.map((uploadId, index) =>
+          db.uploadListEntry.update({
+            where: {
+              uploadListId_uploadRecordId: {
+                uploadListId: input.playlistId,
+                uploadRecordId: uploadId,
+              },
+            },
+            data: {
+              rank: index,
+            },
+          }),
+        ),
+      );
+
+      return { success: true };
+    }),
 
   finalizeMultipartUpload: channelUploadProcedure
     .input(finalizeMultipartUploadSchema)

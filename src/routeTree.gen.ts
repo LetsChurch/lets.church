@@ -28,9 +28,11 @@ import { Route as DashboardChurchesChurchIdMembersRouteImport } from './routes/d
 import { Route as DashboardChurchesChurchIdLeadersRouteImport } from './routes/dashboard_/churches_.$churchId_.leaders'
 import { Route as DashboardChurchesChurchIdChannelsRouteImport } from './routes/dashboard_/churches_.$churchId_.channels'
 import { Route as DashboardChannelsChannelIdUploadsRouteImport } from './routes/dashboard_/channels_.$channelId_.uploads'
+import { Route as DashboardChannelsChannelIdPlaylistsRouteImport } from './routes/dashboard_/channels_.$channelId_.playlists'
 import { Route as DashboardChannelsChannelIdMembersRouteImport } from './routes/dashboard_/channels_.$channelId_.members'
 import { Route as DashboardChannelsChannelIdEditRouteImport } from './routes/dashboard_/channels_.$channelId_.edit'
 import { Route as DashboardChannelsChannelIdUploadsUploadIdRouteImport } from './routes/dashboard_/channels_.$channelId_.uploads_.$uploadId'
+import { Route as DashboardChannelsChannelIdPlaylistsPlaylistIdRouteImport } from './routes/dashboard_/channels_.$channelId_.playlists_.$playlistId'
 import { ServerRoute as TrpcSplatServerRouteImport } from './routes/trpc.$'
 import { ServerRoute as AuthVerifyServerRouteImport } from './routes/auth_/verify'
 import { ServerRoute as AuthLogoutServerRouteImport } from './routes/auth_/logout'
@@ -127,6 +129,12 @@ const DashboardChannelsChannelIdUploadsRoute =
     path: '/channels/$channelId/uploads',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardChannelsChannelIdPlaylistsRoute =
+  DashboardChannelsChannelIdPlaylistsRouteImport.update({
+    id: '/channels_/$channelId_/playlists',
+    path: '/channels/$channelId/playlists',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardChannelsChannelIdMembersRoute =
   DashboardChannelsChannelIdMembersRouteImport.update({
     id: '/channels_/$channelId_/members',
@@ -143,6 +151,12 @@ const DashboardChannelsChannelIdUploadsUploadIdRoute =
   DashboardChannelsChannelIdUploadsUploadIdRouteImport.update({
     id: '/channels_/$channelId_/uploads_/$uploadId',
     path: '/channels/$channelId/uploads/$uploadId',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardChannelsChannelIdPlaylistsPlaylistIdRoute =
+  DashboardChannelsChannelIdPlaylistsPlaylistIdRouteImport.update({
+    id: '/channels_/$channelId_/playlists_/$playlistId',
+    path: '/channels/$channelId/playlists/$playlistId',
     getParentRoute: () => DashboardRoute,
   } as any)
 const TrpcSplatServerRoute = TrpcSplatServerRouteImport.update({
@@ -176,10 +190,12 @@ export interface FileRoutesByFullPath {
   '/media': typeof MainMediaIndexRoute
   '/dashboard/channels/$channelId/edit': typeof DashboardChannelsChannelIdEditRoute
   '/dashboard/channels/$channelId/members': typeof DashboardChannelsChannelIdMembersRoute
+  '/dashboard/channels/$channelId/playlists': typeof DashboardChannelsChannelIdPlaylistsRoute
   '/dashboard/channels/$channelId/uploads': typeof DashboardChannelsChannelIdUploadsRoute
   '/dashboard/churches/$churchId/channels': typeof DashboardChurchesChurchIdChannelsRoute
   '/dashboard/churches/$churchId/leaders': typeof DashboardChurchesChurchIdLeadersRoute
   '/dashboard/churches/$churchId/members': typeof DashboardChurchesChurchIdMembersRoute
+  '/dashboard/channels/$channelId/playlists/$playlistId': typeof DashboardChannelsChannelIdPlaylistsPlaylistIdRoute
   '/dashboard/channels/$channelId/uploads/$uploadId': typeof DashboardChannelsChannelIdUploadsUploadIdRoute
 }
 export interface FileRoutesByTo {
@@ -196,10 +212,12 @@ export interface FileRoutesByTo {
   '/media': typeof MainMediaIndexRoute
   '/dashboard/channels/$channelId/edit': typeof DashboardChannelsChannelIdEditRoute
   '/dashboard/channels/$channelId/members': typeof DashboardChannelsChannelIdMembersRoute
+  '/dashboard/channels/$channelId/playlists': typeof DashboardChannelsChannelIdPlaylistsRoute
   '/dashboard/channels/$channelId/uploads': typeof DashboardChannelsChannelIdUploadsRoute
   '/dashboard/churches/$churchId/channels': typeof DashboardChurchesChurchIdChannelsRoute
   '/dashboard/churches/$churchId/leaders': typeof DashboardChurchesChurchIdLeadersRoute
   '/dashboard/churches/$churchId/members': typeof DashboardChurchesChurchIdMembersRoute
+  '/dashboard/channels/$channelId/playlists/$playlistId': typeof DashboardChannelsChannelIdPlaylistsPlaylistIdRoute
   '/dashboard/channels/$channelId/uploads/$uploadId': typeof DashboardChannelsChannelIdUploadsUploadIdRoute
 }
 export interface FileRoutesById {
@@ -219,10 +237,12 @@ export interface FileRoutesById {
   '/_main/media/': typeof MainMediaIndexRoute
   '/dashboard_/channels_/$channelId_/edit': typeof DashboardChannelsChannelIdEditRoute
   '/dashboard_/channels_/$channelId_/members': typeof DashboardChannelsChannelIdMembersRoute
+  '/dashboard_/channels_/$channelId_/playlists': typeof DashboardChannelsChannelIdPlaylistsRoute
   '/dashboard_/channels_/$channelId_/uploads': typeof DashboardChannelsChannelIdUploadsRoute
   '/dashboard_/churches_/$churchId_/channels': typeof DashboardChurchesChurchIdChannelsRoute
   '/dashboard_/churches_/$churchId_/leaders': typeof DashboardChurchesChurchIdLeadersRoute
   '/dashboard_/churches_/$churchId_/members': typeof DashboardChurchesChurchIdMembersRoute
+  '/dashboard_/channels_/$channelId_/playlists_/$playlistId': typeof DashboardChannelsChannelIdPlaylistsPlaylistIdRoute
   '/dashboard_/channels_/$channelId_/uploads_/$uploadId': typeof DashboardChannelsChannelIdUploadsUploadIdRoute
 }
 export interface FileRouteTypes {
@@ -242,10 +262,12 @@ export interface FileRouteTypes {
     | '/media'
     | '/dashboard/channels/$channelId/edit'
     | '/dashboard/channels/$channelId/members'
+    | '/dashboard/channels/$channelId/playlists'
     | '/dashboard/channels/$channelId/uploads'
     | '/dashboard/churches/$churchId/channels'
     | '/dashboard/churches/$churchId/leaders'
     | '/dashboard/churches/$churchId/members'
+    | '/dashboard/channels/$channelId/playlists/$playlistId'
     | '/dashboard/channels/$channelId/uploads/$uploadId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -262,10 +284,12 @@ export interface FileRouteTypes {
     | '/media'
     | '/dashboard/channels/$channelId/edit'
     | '/dashboard/channels/$channelId/members'
+    | '/dashboard/channels/$channelId/playlists'
     | '/dashboard/channels/$channelId/uploads'
     | '/dashboard/churches/$churchId/channels'
     | '/dashboard/churches/$churchId/leaders'
     | '/dashboard/churches/$churchId/members'
+    | '/dashboard/channels/$channelId/playlists/$playlistId'
     | '/dashboard/channels/$channelId/uploads/$uploadId'
   id:
     | '__root__'
@@ -284,10 +308,12 @@ export interface FileRouteTypes {
     | '/_main/media/'
     | '/dashboard_/channels_/$channelId_/edit'
     | '/dashboard_/channels_/$channelId_/members'
+    | '/dashboard_/channels_/$channelId_/playlists'
     | '/dashboard_/channels_/$channelId_/uploads'
     | '/dashboard_/churches_/$churchId_/channels'
     | '/dashboard_/churches_/$churchId_/leaders'
     | '/dashboard_/churches_/$churchId_/members'
+    | '/dashboard_/channels_/$channelId_/playlists_/$playlistId'
     | '/dashboard_/channels_/$channelId_/uploads_/$uploadId'
   fileRoutesById: FileRoutesById
 }
@@ -447,6 +473,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardChannelsChannelIdUploadsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard_/channels_/$channelId_/playlists': {
+      id: '/dashboard_/channels_/$channelId_/playlists'
+      path: '/channels/$channelId/playlists'
+      fullPath: '/dashboard/channels/$channelId/playlists'
+      preLoaderRoute: typeof DashboardChannelsChannelIdPlaylistsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard_/channels_/$channelId_/members': {
       id: '/dashboard_/channels_/$channelId_/members'
       path: '/channels/$channelId/members'
@@ -466,6 +499,13 @@ declare module '@tanstack/react-router' {
       path: '/channels/$channelId/uploads/$uploadId'
       fullPath: '/dashboard/channels/$channelId/uploads/$uploadId'
       preLoaderRoute: typeof DashboardChannelsChannelIdUploadsUploadIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard_/channels_/$channelId_/playlists_/$playlistId': {
+      id: '/dashboard_/channels_/$channelId_/playlists_/$playlistId'
+      path: '/channels/$channelId/playlists/$playlistId'
+      fullPath: '/dashboard/channels/$channelId/playlists/$playlistId'
+      preLoaderRoute: typeof DashboardChannelsChannelIdPlaylistsPlaylistIdRouteImport
       parentRoute: typeof DashboardRoute
     }
   }
@@ -529,10 +569,12 @@ interface DashboardRouteChildren {
   DashboardChurchesChurchIdRoute: typeof DashboardChurchesChurchIdRoute
   DashboardChannelsChannelIdEditRoute: typeof DashboardChannelsChannelIdEditRoute
   DashboardChannelsChannelIdMembersRoute: typeof DashboardChannelsChannelIdMembersRoute
+  DashboardChannelsChannelIdPlaylistsRoute: typeof DashboardChannelsChannelIdPlaylistsRoute
   DashboardChannelsChannelIdUploadsRoute: typeof DashboardChannelsChannelIdUploadsRoute
   DashboardChurchesChurchIdChannelsRoute: typeof DashboardChurchesChurchIdChannelsRoute
   DashboardChurchesChurchIdLeadersRoute: typeof DashboardChurchesChurchIdLeadersRoute
   DashboardChurchesChurchIdMembersRoute: typeof DashboardChurchesChurchIdMembersRoute
+  DashboardChannelsChannelIdPlaylistsPlaylistIdRoute: typeof DashboardChannelsChannelIdPlaylistsPlaylistIdRoute
   DashboardChannelsChannelIdUploadsUploadIdRoute: typeof DashboardChannelsChannelIdUploadsUploadIdRoute
 }
 
@@ -546,12 +588,16 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardChannelsChannelIdEditRoute: DashboardChannelsChannelIdEditRoute,
   DashboardChannelsChannelIdMembersRoute:
     DashboardChannelsChannelIdMembersRoute,
+  DashboardChannelsChannelIdPlaylistsRoute:
+    DashboardChannelsChannelIdPlaylistsRoute,
   DashboardChannelsChannelIdUploadsRoute:
     DashboardChannelsChannelIdUploadsRoute,
   DashboardChurchesChurchIdChannelsRoute:
     DashboardChurchesChurchIdChannelsRoute,
   DashboardChurchesChurchIdLeadersRoute: DashboardChurchesChurchIdLeadersRoute,
   DashboardChurchesChurchIdMembersRoute: DashboardChurchesChurchIdMembersRoute,
+  DashboardChannelsChannelIdPlaylistsPlaylistIdRoute:
+    DashboardChannelsChannelIdPlaylistsPlaylistIdRoute,
   DashboardChannelsChannelIdUploadsUploadIdRoute:
     DashboardChannelsChannelIdUploadsUploadIdRoute,
 }

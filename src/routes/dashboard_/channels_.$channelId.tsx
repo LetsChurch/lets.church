@@ -8,14 +8,19 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { IconHeart, IconShield, IconVideo } from '@tabler/icons-react';
+import {
+  IconHeart,
+  IconList,
+  IconShield,
+  IconVideo,
+} from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import clsx from 'clsx';
 import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
-import styles from './-channels_.$channelId.module.css';
 import { StatCard } from './-components/stat-card';
+import styles from './-styles.module.css';
 
 export const Route = createFileRoute('/dashboard_/channels_/$channelId')({
   component: ChannelDetailsPage,
@@ -99,7 +104,7 @@ function ChannelDetailsPage() {
               renderRoot={(rootProps) => (
                 <Link
                   {...rootProps}
-                  className={clsx(rootProps.className, styles.editLink)}
+                  className={clsx(rootProps.className, styles.buttonLink)}
                   to="/dashboard/channels/$channelId/edit"
                   params={{ channelId: channel.id }}
                 >
@@ -129,9 +134,18 @@ function ChannelDetailsPage() {
         />
 
         <StatCard
+          title="Playlists"
+          to="/dashboard/channels/$channelId/playlists"
+          color="violet"
+          icon={<IconList size={22} stroke={1.5} />}
+          tooltip="Curated collections of uploads organized by theme or series"
+          value={channel._count.uploadLists}
+        />
+
+        <StatCard
           title="Members"
           to="/dashboard/channels/$channelId/members"
-          color="violet"
+          color="green"
           icon={<IconShield size={22} stroke={1.5} />}
           tooltip="Users with permissions to manage, edit, or upload content"
           value={channel._count.memberships}

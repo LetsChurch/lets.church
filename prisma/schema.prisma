@@ -508,10 +508,11 @@ model UploadListEntry {
   uploadListId   String       @map("upload_list_id") @db.Uuid
   upload         UploadRecord @relation(fields: [uploadRecordId], references: [id], onDelete: Cascade)
   uploadRecordId String       @map("upload_record_id") @db.Uuid
-  rank           String       @db.VarChar(12)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  rank           Int?
 
-  @@id([uploadListId, rank])
-  @@unique([uploadListId, uploadRecordId])
+  @@id([uploadListId, uploadRecordId])
+  @@index([uploadListId, rank, createdAt])
   @@map("upload_list_entry")
 }
 

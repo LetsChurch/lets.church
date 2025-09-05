@@ -1,6 +1,7 @@
 import {
   ChannelVisibility,
   UploadLicense,
+  UploadListType,
   UploadVisibility,
 } from '@prisma/client';
 import { z } from 'zod';
@@ -9,6 +10,7 @@ import { z } from 'zod';
 export const channelIdSchema = z.uuid();
 export const uploadIdSchema = z.uuid();
 export const userIdSchema = z.uuid();
+export const playlistIdSchema = z.uuid();
 
 export const paginationSchema = z.object({
   page: z.number().min(1).default(1),
@@ -83,8 +85,13 @@ export const uploadQuerySchema = z.object({
   uploadId: uploadIdSchema,
 });
 
-export const channelUploadsQuerySchema =
-  channelQuerySchema.and(paginationSchema);
+export const channelUploadsQuerySchema = channelQuerySchema
+  .and(paginationSchema)
+  .and(
+    z.object({
+      search: z.string().optional(),
+    }),
+  );
 
 export const userSearchSchema = z.object({
   channelId: channelIdSchema,
@@ -111,4 +118,51 @@ export const bulkSetVisibilitySchema = z.object({
       ...UploadVisibility[],
     ],
   ),
+});
+
+// Playlist schemas
+export const playlistFormSchema = z.object({
+  title: z.string().min(1, 'Playlist title is required'),
+  type: z
+    .enum(
+      Object.values(UploadListType) as [UploadListType, ...UploadListType[]],
+    )
+    .default('PLAYLIST' as UploadListType),
+});
+
+export const createPlaylistSchema = playlistFormSchema.extend({
+  channelId: channelIdSchema,
+});
+
+export const updatePlaylistSchema = playlistFormSchema.extend({
+  channelId: channelIdSchema,
+  playlistId: playlistIdSchema,
+});
+
+export const playlistQuerySchema = z.object({
+  channelId: channelIdSchema,
+  playlistId: playlistIdSchema,
+});
+
+export const deletePlaylistSchema = z.object({
+  channelId: channelIdSchema,
+  playlistId: playlistIdSchema,
+});
+
+export const addToPlaylistSchema = z.object({
+  channelId: channelIdSchema,
+  playlistId: playlistIdSchema,
+  uploadId: uploadIdSchema,
+});
+
+export const removeFromPlaylistSchema = z.object({
+  channelId: channelIdSchema,
+  playlistId: playlistIdSchema,
+  uploadId: uploadIdSchema,
+});
+
+export const reorderPlaylistSchema = z.object({
+  channelId: channelIdSchema,
+  playlistId: playlistIdSchema,
+  uploadIds: z.array(uploadIdSchema).min(1),
 });

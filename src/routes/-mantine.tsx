@@ -5,6 +5,7 @@ import {
   type MantineColorsTuple,
   MantineProvider,
 } from '@mantine/core';
+import { ModalsProvider } from '@mantine/modals';
 import {
   type NotificationData,
   Notifications,
@@ -35,8 +36,10 @@ const theme = createTheme({
 export function MantineWrapper({ children }: PropsWithChildren) {
   return (
     <MantineProvider theme={theme}>
-      <Notifications />
-      {children}
+      <ModalsProvider>
+        <Notifications />
+        {children}
+      </ModalsProvider>
     </MantineProvider>
   );
 }
