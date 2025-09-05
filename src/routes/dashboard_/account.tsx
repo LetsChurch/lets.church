@@ -1,5 +1,7 @@
 import { Button, Card, Group, Stack, Text, Title } from '@mantine/core';
-import { createFileRoute, redirect } from '@tanstack/react-router';
+import { createFileRoute, Link, redirect } from '@tanstack/react-router';
+import clsx from 'clsx';
+import styles from './-styles.module.css';
 
 export const Route = createFileRoute('/dashboard_/account')({
   component: AccountPage,
@@ -19,6 +21,8 @@ export const Route = createFileRoute('/dashboard_/account')({
   }),
 });
 
+const actionWidth = 140;
+
 function AccountPage() {
   return (
     <>
@@ -30,9 +34,20 @@ function AccountPage() {
         <Card shadow="xs" padding="lg" radius="md" withBorder>
           <Group justify="space-between" align="flex-start" mb="xs">
             <Text fw={500}>Profile Information</Text>
-            <Button variant="light" size="sm" w={120}>
-              Edit
-            </Button>
+            <Button
+              variant="light"
+              size="sm"
+              w={actionWidth}
+              renderRoot={(rootProps) => (
+                <Link
+                  {...rootProps}
+                  className={clsx(rootProps.className, styles.buttonLink)}
+                  to="/dashboard/account/profile"
+                >
+                  Edit
+                </Link>
+              )}
+            />
           </Group>
           <Text size="sm" c="dimmed">
             Update your personal information and profile settings.
@@ -42,9 +57,20 @@ function AccountPage() {
         <Card shadow="xs" padding="lg" radius="md" withBorder>
           <Group justify="space-between" align="flex-start" mb="xs">
             <Text fw={500}>Password & Security</Text>
-            <Button variant="light" size="sm" w={120}>
-              Change
-            </Button>
+            <Button
+              variant="light"
+              size="sm"
+              w={actionWidth}
+              renderRoot={(rootProps) => (
+                <Link
+                  {...rootProps}
+                  className={clsx(rootProps.className, styles.buttonLink)}
+                  to="/dashboard/account/security"
+                >
+                  Change
+                </Link>
+              )}
+            />
           </Group>
           <Text size="sm" c="dimmed">
             Manage your password and security preferences.
@@ -54,24 +80,12 @@ function AccountPage() {
         <Card shadow="xs" padding="lg" radius="md" withBorder>
           <Group justify="space-between" align="flex-start" mb="xs">
             <Text fw={500}>Notifications</Text>
-            <Button variant="light" size="sm" w={120}>
-              Configure
+            <Button variant="light" size="sm" w={actionWidth} disabled>
+              Coming Soon
             </Button>
           </Group>
           <Text size="sm" c="dimmed">
             Choose what notifications you want to receive.
-          </Text>
-        </Card>
-
-        <Card shadow="xs" padding="lg" radius="md" withBorder>
-          <Group justify="space-between" align="flex-start" mb="xs">
-            <Text fw={500}>Privacy Settings</Text>
-            <Button variant="light" size="sm" w={120}>
-              Manage
-            </Button>
-          </Group>
-          <Text size="sm" c="dimmed">
-            Control your privacy and data sharing preferences.
           </Text>
         </Card>
       </Stack>

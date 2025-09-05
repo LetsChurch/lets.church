@@ -21,7 +21,7 @@ const { fieldContext, formContext, useFieldContext, useFormContext } =
 function TextInputField(
   props: Pick<
     ComponentProps<typeof TextInput>,
-    'label' | 'placeholder' | 'required'
+    'label' | 'placeholder' | 'type' | 'required'
   >,
 ) {
   const field = useFieldContext<string>();
