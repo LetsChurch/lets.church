@@ -9,6 +9,7 @@ import {
   removeChurchMemberSchema,
   removeLeaderSchema,
   unlinkChannelSchema,
+  updateChurchSchema,
   updateLeaderSchema,
   userSearchChurchSchema,
 } from '@/schemas/dashboard';
@@ -429,5 +430,76 @@ export const churchRouter = router({
       });
 
       return { success: true };
+    }),
+
+  getChurchForEdit: churchAdminProcedure.query(async ({ ctx, input }) => {
+    moduleLogger.info('Fetching church for edit', {
+      ...input,
+      appUserId: ctx.session.appUserId,
+    });
+
+    const church = await db.organization.findFirst({
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        websiteUrl: true,
+        primaryEmail: true,
+        primaryPhoneNumber: true,
+      },
+      where: {
+        id: input.churchId,
+        type: 'CHURCH',
+      },
+    });
+
+    if (!church) {
+      moduleLogger.warn('Church not found for edit', {
+        ...input,
+        appUserId: ctx.session.appUserId,
+      });
+
+      throw new TRPCError({ code: 'NOT_FOUND' });
+    }
+
+    return church;
+  }),
+
+  updateChurch: churchAdminProcedure
+    .input(updateChurchSchema)
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Updating church', {
+        churchId: input.churchId,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        await db.organization.update({
+          where: {
+            id: input.churchId,
+          },
+          data: {
+            name: input.name,
+            description: input.description || null,
+            websiteUrl: input.websiteUrl || null,
+            primaryEmail: input.primaryEmail || null,
+            primaryPhoneNumber: input.primaryPhoneNumber || null,
+          },
+        });
+
+        moduleLogger.info('Church updated successfully', {
+          churchId: input.churchId,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { error: false };
+      } catch (e) {
+        moduleLogger.error('Church update failed', {
+          churchId: input.churchId,
+          appUserId: ctx.session.appUserId,
+          error: e instanceof Error ? e.message : String(e),
+        });
+        return { error: 'Error updating church, please try again!' };
+      }
     }),
 });

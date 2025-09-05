@@ -67,3 +67,12 @@ export const removeLeaderSchema = z.object({
   churchId: churchIdSchema,
   leaderId: z.uuid(),
 });
+
+export const updateChurchSchema = z.object({
+  churchId: churchIdSchema,
+  name: z.string().min(1, 'Name is required'),
+  description: z.string().optional(),
+  websiteUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  primaryEmail: z.string().email('Invalid email').optional().or(z.literal('')),
+  primaryPhoneNumber: z.string().optional().or(z.literal('')),
+});

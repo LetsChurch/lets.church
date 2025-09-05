@@ -10,10 +10,12 @@ import {
 } from '@mantine/core';
 import { IconShield, IconUsers, IconVideo } from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute, redirect } from '@tanstack/react-router';
+import { createFileRoute, Link, redirect } from '@tanstack/react-router';
+import clsx from 'clsx';
 import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
 import { StatCard } from './-components/stat-card';
+import styles from './-styles.module.css';
 
 export const Route = createFileRoute('/dashboard_/churches_/$churchId')({
   component: ChurchDetailsPage,
@@ -84,7 +86,23 @@ function ChurchDetailsPage() {
             )}
           </div>
         </Group>
-        <Group>{isAdmin && <Button variant="light">Edit Church</Button>}</Group>
+        <Group>
+          {isAdmin && (
+            <Button
+              variant="light"
+              renderRoot={(rootProps) => (
+                <Link
+                  {...rootProps}
+                  className={clsx(rootProps.className, styles.buttonLink)}
+                  to="/dashboard/churches/$churchId/edit"
+                  params={{ churchId: church.id }}
+                >
+                  Edit Church
+                </Link>
+              )}
+            />
+          )}
+        </Group>
       </Group>
 
       <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
