@@ -51,6 +51,19 @@ function DashboardHome() {
             Browse and connect with churches
           </Text>
         </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
+          to="/dashboard/organizations"
+        >
+          <Text fw={500}>Organizations</Text>
+          <Text size="sm" c="dimmed">
+            Browse and connect with organizations
+          </Text>
+        </Card>
       </SimpleGrid>
     </>
   );

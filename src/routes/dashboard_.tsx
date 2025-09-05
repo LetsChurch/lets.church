@@ -78,6 +78,12 @@ function DashboardLayout() {
               to="/dashboard/churches"
               active={location.pathname.startsWith('/dashboard/churches')}
             />
+            <NavLink
+              label="Organizations"
+              component={Link}
+              to="/dashboard/organizations"
+              active={location.pathname.startsWith('/dashboard/organizations')}
+            />
           </Box>
 
           <Box

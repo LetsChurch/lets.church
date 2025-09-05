@@ -8,7 +8,7 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { IconShield, IconUsers, IconVideo } from '@tabler/icons-react';
+import { IconUsers } from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import clsx from 'clsx';
@@ -17,8 +17,8 @@ import { formatDate } from '@/util/format';
 import { StatCard } from './-components/stat-card';
 import styles from './-styles.module.css';
 
-export const Route = createFileRoute('/dashboard_/churches_/$churchId')({
-  component: ChurchDetailsPage,
+export const Route = createFileRoute('/dashboard_/organizations_/$orgId')({
+  component: OrganizationDetailsPage,
   beforeLoad: async ({ context }) => {
     const hasSession = await context.queryClient.fetchQuery(
       context.trpc.common.hasValidSession.queryOptions(),
@@ -29,30 +29,30 @@ export const Route = createFileRoute('/dashboard_/churches_/$churchId')({
   },
   loader: async ({ context: { queryClient, trpc }, params }) => {
     await queryClient.ensureQueryData(
-      trpc.dashboard.churches.getChurchDetails.queryOptions({
-        churchId: params.churchId,
+      trpc.dashboard.organizations.getOrganizationDetails.queryOptions({
+        orgId: params.orgId,
       }),
     );
     return {
       backNavigation: {
-        label: 'Churches',
-        to: '/dashboard/churches',
+        label: 'Organizations',
+        to: '/dashboard/organizations',
       },
     };
   },
 });
 
-function ChurchDetailsPage() {
-  const { churchId } = Route.useParams();
+function OrganizationDetailsPage() {
+  const { orgId } = Route.useParams();
   const trpc = useTRPC();
 
-  const { data: church } = useSuspenseQuery(
-    trpc.dashboard.churches.getChurchDetails.queryOptions({
-      churchId,
+  const { data: organization } = useSuspenseQuery(
+    trpc.dashboard.organizations.getOrganizationDetails.queryOptions({
+      orgId,
     }),
   );
 
-  const { userMembership } = church;
+  const { userMembership } = organization;
   const isAdmin = userMembership?.isAdmin ?? false;
 
   return (
@@ -61,27 +61,31 @@ function ChurchDetailsPage() {
         <Group align="flex-start">
           <Avatar
             size="xl"
-            src={church.avatarPath ? `/api/media/${church.avatarPath}` : null}
-            alt={church.name}
+            src={
+              organization.avatarPath
+                ? `/api/media/${organization.avatarPath}`
+                : null
+            }
+            alt={organization.name}
           >
-            {church.name.charAt(0).toUpperCase()}
+            {organization.name.charAt(0).toUpperCase()}
           </Avatar>
           <div>
             <Group gap="sm" mb="xs">
-              <Title order={1}>{church.name}</Title>
+              <Title order={1}>{organization.name}</Title>
               <Badge color={isAdmin ? 'blue' : 'green'} size="sm">
                 {isAdmin ? 'Admin' : 'User'}
               </Badge>
             </Group>
             <Group gap="md" mb="sm">
-              <Text c="dimmed">@{church.slug}</Text>
+              <Text c="dimmed">@{organization.slug}</Text>
               <Text c="dimmed" size="sm">
-                Founded {formatDate(church.createdAt)}
+                Founded {formatDate(organization.createdAt)}
               </Text>
             </Group>
-            {church.description && (
+            {organization.description && (
               <Text size="sm" maw={600}>
-                {church.description}
+                {organization.description}
               </Text>
             )}
           </div>
@@ -94,10 +98,10 @@ function ChurchDetailsPage() {
                 <Link
                   {...rootProps}
                   className={clsx(rootProps.className, styles.buttonLink)}
-                  to="/dashboard/churches/$churchId/edit"
-                  params={{ churchId: church.id }}
+                  to="/dashboard/organizations/$orgId/edit"
+                  params={{ orgId: organization.id }}
                 >
-                  Edit Church
+                  Edit Organization
                 </Link>
               )}
             />
@@ -108,29 +112,11 @@ function ChurchDetailsPage() {
       <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
         <StatCard
           title="Users"
-          to="/dashboard/churches/$churchId/members"
+          to="/dashboard/organizations/$orgId/members"
           color="blue"
           icon={<IconUsers size={22} stroke={1.5} />}
-          tooltip="Manage active users of this church profile"
-          value={church._count.memberships}
-        />
-
-        <StatCard
-          title="Channels"
-          to="/dashboard/churches/$churchId/channels"
-          color="green"
-          icon={<IconVideo size={22} stroke={1.5} />}
-          tooltip="Manage associated content channels for this church"
-          value={church._count.channelAssociations}
-        />
-
-        <StatCard
-          title="Leaders"
-          to="/dashboard/churches/$churchId/leaders"
-          color="violet"
-          icon={<IconShield size={22} stroke={1.5} />}
-          tooltip="Manage registered leadership team users"
-          value={church._count.leaders}
+          tooltip="Manage active users of this organization profile"
+          value={organization._count.memberships}
         />
       </SimpleGrid>
     </Stack>

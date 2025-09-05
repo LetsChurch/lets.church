@@ -135,7 +135,7 @@ function ChurchMembersPage() {
   const addMemberMutation = useMutation(
     trpc.dashboard.churches.addChurchMember.mutationOptions({
       onSuccess: () => {
-        showSuccess({ message: 'Member added successfully' });
+        showSuccess({ message: 'User added successfully' });
         queryClient.invalidateQueries({
           queryKey: trpc.dashboard.churches.getChurchMembers.queryKey({
             churchId,
@@ -144,7 +144,7 @@ function ChurchMembersPage() {
         handleCloseModal();
       },
       onError: (error) => {
-        showFailure({ message: error.message || 'Failed to add member' });
+        showFailure({ message: error.message || 'Failed to add user' });
       },
     }),
   );
@@ -152,7 +152,7 @@ function ChurchMembersPage() {
   const removeMemberMutation = useMutation(
     trpc.dashboard.churches.removeChurchMember.mutationOptions({
       onSuccess: () => {
-        showSuccess({ message: 'Member removed successfully' });
+        showSuccess({ message: 'User removed successfully' });
         queryClient.invalidateQueries({
           queryKey: trpc.dashboard.churches.getChurchMembers.queryKey({
             churchId,
@@ -160,7 +160,7 @@ function ChurchMembersPage() {
         });
       },
       onError: (error) => {
-        showFailure({ message: error.message || 'Failed to remove member' });
+        showFailure({ message: error.message || 'Failed to remove user' });
       },
     }),
   );
@@ -175,7 +175,7 @@ function ChurchMembersPage() {
   const getRoleLabel = (membership: OrganizationMembershipWithUser) => {
     if (membership.isAdmin) return 'Admin';
     if (membership.canEdit) return 'Editor';
-    return 'Member';
+    return 'User';
   };
 
   const getRoleBadgeColor = (membership: OrganizationMembershipWithUser) => {
@@ -193,17 +193,17 @@ function ChurchMembersPage() {
     <Stack gap="lg">
       <Group justify="space-between" align="flex-start">
         <div>
-          <Title order={1}>Members</Title>
+          <Title order={1}>Users</Title>
           <Text c="dimmed">
-            {church.name} • {church.memberships?.length || 0} total members
+            {church.name} • {church.memberships?.length || 0} total users
           </Text>
         </div>
 
         <Tooltip
           label={
             isAdmin
-              ? 'Add a new member to this church'
-              : 'Only admins can add members'
+              ? 'Add a new user to this church profile'
+              : 'Only admins can add users'
           }
           disabled={isAdmin}
         >
@@ -212,7 +212,7 @@ function ChurchMembersPage() {
             onClick={openAddMemberModal}
             disabled={!isAdmin}
           >
-            Add Member
+            Add User
           </Button>
         </Tooltip>
       </Group>
@@ -220,7 +220,7 @@ function ChurchMembersPage() {
       <Modal
         opened={addMemberModalOpened}
         onClose={handleCloseModal}
-        title="Add Church Member"
+        title="Add Church User"
         size="md"
         centered
       >
@@ -305,7 +305,7 @@ function ChurchMembersPage() {
                       },
                       {
                         value: 'member',
-                        label: 'Member - Basic access',
+                        label: 'User - Basic access',
                       },
                     ]}
                   />
@@ -336,7 +336,7 @@ function ChurchMembersPage() {
                 disabled={!selectedUserId}
                 loading={addMemberMutation.isPending}
               >
-                Add Member
+                Add User
               </Button>
             </Group>
           </form>
@@ -346,7 +346,7 @@ function ChurchMembersPage() {
       <Table verticalSpacing="md">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>Member</Table.Th>
+            <Table.Th>User</Table.Th>
             <Table.Th>Role</Table.Th>
             <Table.Th>Joined</Table.Th>
             <Table.Th>Actions</Table.Th>
@@ -357,7 +357,7 @@ function ChurchMembersPage() {
             <Table.Tr>
               <Table.Td colSpan={4}>
                 <Text ta="center" c="dimmed" py="xl">
-                  No members found
+                  No users found
                 </Text>
               </Table.Td>
             </Table.Tr>
@@ -418,10 +418,10 @@ function ChurchMembersPage() {
                         church.userMembership?.appUserId;
                       const canRemove = isAdmin && !isSelf;
                       const tooltipText = !isAdmin
-                        ? 'Only admins can remove members'
+                        ? 'Only admins can remove users'
                         : isSelf
                           ? 'You cannot remove yourself'
-                          : 'Remove this member from the church';
+                          : 'Remove this user from the church profile';
 
                       return (
                         <Tooltip label={tooltipText}>

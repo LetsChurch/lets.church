@@ -1,10 +1,12 @@
 import {
   ActionIcon,
+  Anchor,
   Badge,
   Button,
   Card,
   Group,
   Menu,
+  Modal,
   SimpleGrid,
   Stack,
   Text,
@@ -16,13 +18,14 @@ import {
   IconSettings,
   IconUserMinus,
 } from '@tabler/icons-react';
+import { useDisclosure } from '@mantine/hooks';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { useTRPC } from '@/trpc/react';
 import classes from './-churches.module.css';
 
-export const Route = createFileRoute('/dashboard_/churches')({
-  component: ChurchesPage,
+export const Route = createFileRoute('/dashboard_/organizations')({
+  component: OrganizationsPage,
   beforeLoad: async ({ context }) => {
     const hasSession = await context.queryClient.fetchQuery(
       context.trpc.common.hasValidSession.queryOptions(),
@@ -33,7 +36,7 @@ export const Route = createFileRoute('/dashboard_/churches')({
   },
   loader: async ({ context: { queryClient, trpc } }) => {
     const data = await queryClient.ensureQueryData(
-      trpc.dashboard.churches.getChurches.queryOptions(),
+      trpc.dashboard.organizations.getOrganizations.queryOptions(),
     );
     return {
       data,
@@ -45,42 +48,43 @@ export const Route = createFileRoute('/dashboard_/churches')({
   },
 });
 
-function ChurchesPage() {
+function OrganizationsPage() {
   const trpc = useTRPC();
-  const { data: churches } = useSuspenseQuery(
-    trpc.dashboard.churches.getChurches.queryOptions(),
+  const { data: organizations } = useSuspenseQuery(
+    trpc.dashboard.organizations.getOrganizations.queryOptions(),
   );
+  const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure();
 
   return (
     <>
       <Group justify="space-between" align="center" mb="lg">
-        <Title order={1}>Churches</Title>
-        <Button>Add Church</Button>
+        <Title order={1}>Organizations</Title>
+        <Button onClick={openModal}>Add Organization</Button>
       </Group>
 
       <Stack gap="lg">
         <div>
           <Text fw={500} mb="xs">
-            Church Management
+            Organization Management
           </Text>
           <Text size="sm" c="dimmed" mb="lg">
-            Manage your church profiles and organizational information. Update
-            details, manage users, and maintain your church presence.
+            Manage your ministry organization profiles and information. Update
+            details, manage users, and maintain your organizational presence.
           </Text>
         </div>
 
         <Text fw={500} size="lg">
-          My Churches
+          My Organizations
         </Text>
 
         <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
-          {churches.map((church) => {
-            const membership = church.memberships[0];
+          {organizations.map((organization) => {
+            const membership = organization.memberships[0];
             const isAdmin = membership?.isAdmin ?? false;
 
             return (
               <Card
-                key={church.id}
+                key={organization.id}
                 shadow="xs"
                 padding="lg"
                 radius="md"
@@ -89,12 +93,12 @@ function ChurchesPage() {
               >
                 <Group justify="space-between" mb="xs">
                   <Link
-                    to="/dashboard/churches/$churchId"
-                    params={{ churchId: church.id }}
+                    to="/dashboard/organizations/$orgId"
+                    params={{ orgId: organization.id }}
                     className={classes.titleLink}
                   >
                     <Text fw={500} truncate>
-                      {church.name}
+                      {organization.name}
                     </Text>
                   </Link>
                   <Group gap="xs">
@@ -124,23 +128,45 @@ function ChurchesPage() {
                           leftSection={<IconUserMinus size={14} />}
                           color="red"
                         >
-                          Leave Church
+                          Leave Organization
                         </Menu.Item>
                       </Menu.Dropdown>
                     </Menu>
                   </Group>
                 </Group>
                 <Text size="sm" c="dimmed">
-                  {church.description ||
+                  {organization.description ||
                     (isAdmin
-                      ? 'You have administrative access to this church.'
-                      : 'You have user access to this church profile.')}
+                      ? 'You have administrative access to this organization.'
+                      : 'You have user access to this organization profile.')}
                 </Text>
               </Card>
             );
           })}
         </SimpleGrid>
       </Stack>
+
+      <Modal
+        opened={modalOpened}
+        onClose={closeModal}
+        title="Add Organization"
+        size="sm"
+        centered
+      >
+        <Stack gap="md">
+          <Text>
+            Interested in partnering with Let's Church? We'd love to hear from you! 
+            Please reach out to us at{' '}
+            <Anchor href="mailto:contact@lets.church?subject=Partnership%20Inquiry">
+              contact@lets.church
+            </Anchor>{' '}
+            to discuss how we can work together.
+          </Text>
+          <Group justify="flex-end">
+            <Button onClick={closeModal}>Okay</Button>
+          </Group>
+        </Stack>
+      </Modal>
     </>
   );
 }
