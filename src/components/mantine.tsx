@@ -2,6 +2,7 @@ import {
   Button,
   Checkbox,
   LoadingOverlay,
+  MultiSelect,
   PasswordInput,
   Radio,
   Select,
@@ -137,6 +138,28 @@ function SelectField(
   );
 }
 
+function MultiSelectField(
+  props: Pick<
+    ComponentProps<typeof MultiSelect>,
+    'label' | 'data' | 'required' | 'searchable' | 'placeholder' | 'description'
+  >,
+) {
+  const field = useFieldContext<string[]>();
+
+  return (
+    <MultiSelect
+      {...props}
+      name={field.name}
+      value={field.state.value || []}
+      onBlur={field.handleBlur}
+      onChange={(value) => field.handleChange(value)}
+      error={
+        field.state.meta.isValid ? field.state.meta.errors.join(', ') : false
+      }
+    />
+  );
+}
+
 function RadioGroupField(
   props: Pick<ComponentProps<typeof Radio.Group>, 'children'>,
 ) {
@@ -207,6 +230,7 @@ export const { useAppForm: useAppMantineForm } = createFormHook({
     CheckboxField,
     TextareaField,
     SelectField,
+    MultiSelectField,
     RadioGroupField,
     DateTimePickerField,
     TurnstileField,

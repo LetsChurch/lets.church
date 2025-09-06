@@ -4,6 +4,7 @@ import {
   Group,
   LoadingOverlay,
   Stack,
+  Text,
   Title,
 } from '@mantine/core';
 import {
@@ -11,13 +12,13 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { createFileRoute, redirect, useRouter } from '@tanstack/react-router';
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useAppMantineForm } from '@/components/mantine';
-import { showFailure, showSuccess } from '@/routes/-mantine';
 import { useTRPC } from '@/trpc/react';
+import { showFailure, showSuccess } from '../-mantine';
 
-export const Route = createFileRoute('/dashboard_/churches_/$churchId_/edit')({
-  component: ChurchEditPage,
+export const Route = createFileRoute('/dashboard_/churches_/new')({
+  component: CreateChurchPage,
   beforeLoad: async ({ context }) => {
     const hasSession = await context.queryClient.fetchQuery(
       context.trpc.common.hasValidSession.queryOptions(),
@@ -26,33 +27,20 @@ export const Route = createFileRoute('/dashboard_/churches_/$churchId_/edit')({
       return redirect({ to: '/auth/login' });
     }
   },
-  loader: async ({ context: { queryClient, trpc }, params }) => {
-    await queryClient.ensureQueryData(
-      trpc.dashboard.churches.getChurchForEdit.queryOptions({
-        churchId: params.churchId,
-      }),
-    );
+  loader: async () => {
     return {
       backNavigation: {
-        label: 'Back to church',
-        to: '/dashboard/churches/$churchId',
-        params: { churchId: params.churchId },
+        label: 'Churches',
+        to: '/dashboard/churches',
       },
     };
   },
 });
 
-function ChurchEditPage() {
-  const { churchId } = Route.useParams();
+function CreateChurchPage() {
   const trpc = useTRPC();
-  const router = useRouter();
   const queryClient = useQueryClient();
-
-  const { data: church } = useSuspenseQuery(
-    trpc.dashboard.churches.getChurchForEdit.queryOptions({
-      churchId,
-    }),
-  );
+  const navigate = useNavigate();
 
   const { data: organizationTags = [] } = useSuspenseQuery(
     trpc.dashboard.churches.getOrganizationTags.queryOptions(),
@@ -92,37 +80,25 @@ function ChurchEditPage() {
     }));
   };
 
-  const updateChurchMutation = useMutation(
-    trpc.dashboard.churches.updateChurch.mutationOptions({
+  const createMutation = useMutation(
+    trpc.dashboard.churches.createChurch.mutationOptions({
       onSuccess: async (data) => {
-        if (data.error) {
-          showFailure({
-            title: 'Error',
-            message: data.error,
-          });
-          return;
-        }
-
         showSuccess({
-          title: 'Success',
-          message: 'Church updated successfully!',
+          message: 'Church created successfully!',
         });
 
-        // Invalidate and refetch church data
         await queryClient.invalidateQueries({
-          queryKey: ['dashboard', 'churches'],
+          queryKey: trpc.dashboard.churches.getChurches.queryKey(),
         });
 
-        // Navigate back to church details
-        await router.navigate({
+        navigate({
           to: '/dashboard/churches/$churchId',
-          params: { churchId },
+          params: { churchId: data.id },
         });
       },
-      onError: () => {
+      onError: (error) => {
         showFailure({
-          title: 'Error',
-          message: 'Error updating church, please try again!',
+          message: error.message || 'Failed to add church',
         });
       },
     }),
@@ -130,16 +106,17 @@ function ChurchEditPage() {
 
   const form = useAppMantineForm({
     defaultValues: {
-      churchId,
-      name: church.name,
-      description: church.description || '',
-      websiteUrl: church.websiteUrl || '',
-      primaryEmail: church.primaryEmail || '',
-      primaryPhoneNumber: church.primaryPhoneNumber || '',
-      tags: (church.tags as string[]) || [],
+      name: '',
+      slug: '',
+      description: '',
+      websiteUrl: '',
+      primaryEmail: '',
+      primaryPhoneNumber: '',
+      tags: [] as string[],
     },
     onSubmit: async ({ value }) => {
-      updateChurchMutation.mutate(value);
+      // The validation happens server-side via the TRPC schema
+      createMutation.mutate(value);
     },
   });
 
@@ -152,7 +129,10 @@ function ChurchEditPage() {
       <Stack gap="lg">
         <Group justify="space-between" align="flex-start">
           <div>
-            <Title order={1}>Edit Church</Title>
+            <Title order={1}>Add Church</Title>
+            <Text c="dimmed" size="sm">
+              Create a new church profile
+            </Text>
           </div>
         </Group>
 
@@ -162,15 +142,23 @@ function ChurchEditPage() {
             e.stopPropagation();
             form.handleSubmit();
           }}
-          method="post"
         >
-          <Stack gap="lg">
+          <Stack gap="md">
             <form.AppField name="name">
               {(field) => (
                 <field.TextInputField
-                  label="Church Name"
+                  label="Church Name (required)"
                   placeholder="Enter church name"
                   required
+                />
+              )}
+            </form.AppField>
+
+            <form.AppField name="slug">
+              {(field) => (
+                <field.TextInputField
+                  label="Slug"
+                  placeholder="url-safe-identifier (leave empty to auto-generate)"
                 />
               )}
             </form.AppField>
@@ -179,9 +167,10 @@ function ChurchEditPage() {
               {(field) => (
                 <field.TextareaField
                   label="Description"
-                  placeholder="Enter church description..."
-                  minRows={3}
-                  maxRows={6}
+                  placeholder="Describe your church"
+                  minRows={4}
+                  maxRows={8}
+                  autosize
                 />
               )}
             </form.AppField>
@@ -190,8 +179,7 @@ function ChurchEditPage() {
               {(field) => (
                 <field.TextInputField
                   label="Website URL"
-                  placeholder="https://example.com"
-                  type="url"
+                  placeholder="https://www.yourchurch.org"
                 />
               )}
             </form.AppField>
@@ -200,7 +188,7 @@ function ChurchEditPage() {
               {(field) => (
                 <field.TextInputField
                   label="Primary Email"
-                  placeholder="contact@church.org"
+                  placeholder="contact@yourchurch.org"
                   type="email"
                 />
               )}
@@ -210,7 +198,7 @@ function ChurchEditPage() {
               {(field) => (
                 <field.TextInputField
                   label="Primary Phone Number"
-                  placeholder="(555) 123-4567"
+                  placeholder="+1 (555) 123-4567"
                   type="tel"
                 />
               )}
@@ -229,26 +217,19 @@ function ChurchEditPage() {
             </form.AppField>
 
             <Group justify="flex-end" mt="md">
-              <form.Subscribe selector={(state) => state.isDirty}>
-                {(isDirty) => (
-                  <>
-                    <Button
-                      variant="outline"
-                      disabled={!isDirty}
-                      onClick={() => form.reset()}
-                    >
-                      Reset
-                    </Button>
-                    <form.Subscribe selector={(state) => state.isSubmitting}>
-                      {(isSubmitting) => (
-                        <Button type="submit" loading={isSubmitting}>
-                          Update Church
-                        </Button>
-                      )}
-                    </form.Subscribe>
-                  </>
-                )}
-              </form.Subscribe>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  navigate({
+                    to: '/dashboard/churches',
+                  })
+                }
+              >
+                Cancel
+              </Button>
+              <Button type="submit" loading={createMutation.isPending}>
+                Add Church
+              </Button>
             </Group>
           </Stack>
         </form>

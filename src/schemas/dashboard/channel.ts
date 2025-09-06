@@ -36,6 +36,8 @@ export const channelFormSchema = z.object({
   ),
 });
 
+export const createChannelSchema = channelFormSchema;
+
 export const updateChannelSchema = channelFormSchema.extend({
   channelId: channelIdSchema,
 });

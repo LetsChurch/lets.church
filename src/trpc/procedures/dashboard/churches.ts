@@ -5,6 +5,7 @@ import {
   addLeaderSchema,
   channelSearchChurchSchema,
   churchQuerySchema,
+  createOrganizationSchema,
   linkChannelSchema,
   removeChurchMemberSchema,
   removeLeaderSchema,
@@ -56,6 +57,87 @@ const churchAdminProcedure = churchProcedure.use(async ({ ctx, next }) => {
 });
 
 export const churchRouter = router({
+  getOrganizationTags: authProcedure.query(async () => {
+    return db.organizationTag.findMany({
+      select: {
+        slug: true,
+        label: true,
+        category: true,
+      },
+      orderBy: [{ category: 'asc' }, { label: 'asc' }],
+    });
+  }),
+
+  createChurch: authProcedure
+    .input(createOrganizationSchema)
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Creating church', {
+        appUserId: ctx.session.appUserId,
+        name: input.name,
+      });
+
+      try {
+        const slug =
+          input.slug ||
+          input.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '');
+
+        // Get the tag slugs from the single tags array
+        const allTagSlugs = input.tags || [];
+
+        const church = await db.organization.create({
+          data: {
+            name: input.name,
+            slug,
+            description: input.description || null,
+            type: OrganizationType.CHURCH,
+            websiteUrl: input.websiteUrl || null,
+            primaryEmail: input.primaryEmail || null,
+            primaryPhoneNumber: input.primaryPhoneNumber || null,
+            memberships: {
+              create: {
+                appUserId: ctx.session.appUserId,
+                isAdmin: true,
+                canEdit: true,
+              },
+            },
+            tags:
+              allTagSlugs.length > 0
+                ? {
+                    createMany: {
+                      data: allTagSlugs.map((tagSlug) => ({
+                        tagSlug,
+                      })),
+                    },
+                  }
+                : undefined,
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        moduleLogger.info('Church created successfully', {
+          appUserId: ctx.session.appUserId,
+          churchId: church.id,
+        });
+
+        return church;
+      } catch (error) {
+        moduleLogger.error('Failed to create church', {
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to create church',
+        });
+      }
+    }),
+
   getChurches: authProcedure.query(async ({ ctx }) => {
     moduleLogger.info('Fetching churches for user', {
       appUserId: ctx.session.appUserId,
@@ -446,6 +528,11 @@ export const churchRouter = router({
         websiteUrl: true,
         primaryEmail: true,
         primaryPhoneNumber: true,
+        tags: {
+          select: {
+            tagSlug: true,
+          },
+        },
       },
       where: {
         id: input.churchId,
@@ -462,7 +549,11 @@ export const churchRouter = router({
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
 
-    return church;
+    // Transform tags to a flat array of strings
+    return {
+      ...church,
+      tags: church.tags.map((tag) => tag.tagSlug),
+    };
   }),
 
   updateChurch: churchAdminProcedure
@@ -474,6 +565,26 @@ export const churchRouter = router({
       });
 
       try {
+        // Handle tag updates if provided
+        if (input.tags !== undefined) {
+          // First, delete all existing tags
+          await db.organizationTagInstance.deleteMany({
+            where: {
+              organizationId: input.churchId,
+            },
+          });
+
+          // Then, create new tag instances if tags are provided
+          if (input.tags.length > 0) {
+            await db.organizationTagInstance.createMany({
+              data: input.tags.map((tagSlug) => ({
+                organizationId: input.churchId,
+                tagSlug,
+              })),
+            });
+          }
+        }
+
         await db.organization.update({
           where: {
             id: input.churchId,

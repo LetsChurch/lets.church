@@ -8,13 +8,20 @@ import {
   Text,
   Title,
 } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import {
+  IconCheck,
   IconHeart,
   IconList,
   IconShield,
   IconVideo,
+  IconX,
 } from '@tabler/icons-react';
-import { useSuspenseQuery } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import clsx from 'clsx';
 import { useTRPC } from '@/trpc/react';
@@ -24,12 +31,35 @@ import styles from './-styles.module.css';
 
 export const Route = createFileRoute('/dashboard_/channels_/$channelId')({
   component: ChannelDetailsPage,
-  beforeLoad: async ({ context }) => {
+  beforeLoad: async ({ context, params }) => {
     const hasSession = await context.queryClient.fetchQuery(
       context.trpc.common.hasValidSession.queryOptions(),
     );
     if (!hasSession) {
       return redirect({ to: '/auth/login' });
+    }
+
+    // Check if user has access to this channel (either member or site admin)
+    const currentUser = await context.queryClient.fetchQuery(
+      context.trpc.common.getCurrentUser.queryOptions(),
+    );
+
+    // Site admins can access any channel
+    if (currentUser.role === 'ADMIN') {
+      return { isSiteAdmin: true };
+    }
+
+    // Check if user is a member of this channel
+    try {
+      await context.queryClient.ensureQueryData(
+        context.trpc.dashboard.channels.getChannelDetails.queryOptions({
+          channelId: params.channelId,
+        }),
+      );
+      return { isSiteAdmin: false };
+    } catch (_error) {
+      // If user is not a member and not an admin, redirect
+      throw redirect({ to: '/dashboard' });
     }
   },
   loader: async ({ context: { queryClient, trpc }, params }) => {
@@ -50,6 +80,8 @@ export const Route = createFileRoute('/dashboard_/channels_/$channelId')({
 function ChannelDetailsPage() {
   const params = Route.useParams();
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const { isSiteAdmin } = Route.useRouteContext() as { isSiteAdmin: boolean };
 
   const { data: channel } = useSuspenseQuery(
     trpc.dashboard.channels.getChannelDetails.queryOptions({
@@ -59,6 +91,63 @@ function ChannelDetailsPage() {
 
   const { userMembership } = channel;
   const isChannelAdmin = userMembership?.isAdmin ?? false;
+  const isApproved = Boolean(channel.approvedAt);
+
+  const approveChannelMutation = useMutation(
+    trpc.dashboard.channels.approveChannel.mutationOptions({
+      onSuccess: () => {
+        notifications.show({
+          title: 'Success',
+          message: 'Channel approved successfully',
+          color: 'green',
+        });
+        queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getChannelDetails.queryKey({
+            channelId: params.channelId,
+          }),
+        });
+      },
+      onError: () => {
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to approve channel',
+          color: 'red',
+        });
+      },
+    }),
+  );
+
+  const unapproveChannelMutation = useMutation(
+    trpc.dashboard.channels.unapproveChannel.mutationOptions({
+      onSuccess: () => {
+        notifications.show({
+          title: 'Success',
+          message: 'Channel unapproved successfully',
+          color: 'orange',
+        });
+        queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getChannelDetails.queryKey({
+            channelId: params.channelId,
+          }),
+        });
+      },
+      onError: () => {
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to unapprove channel',
+          color: 'red',
+        });
+      },
+    }),
+  );
+
+  const handleApproveChannel = () => {
+    approveChannelMutation.mutate({ channelId: params.channelId });
+  };
+
+  const handleUnapproveChannel = () => {
+    unapproveChannelMutation.mutate({ channelId: params.channelId });
+  };
 
   return (
     <Stack gap="lg">
@@ -98,7 +187,27 @@ function ChannelDetailsPage() {
           </div>
         </Group>
         <Group>
-          {isChannelAdmin ? (
+          {isSiteAdmin &&
+            (!isApproved ? (
+              <Button
+                color="green"
+                leftSection={<IconCheck size={16} />}
+                onClick={handleApproveChannel}
+                loading={approveChannelMutation.isPending}
+              >
+                Approve Channel
+              </Button>
+            ) : (
+              <Button
+                color="orange"
+                leftSection={<IconX size={16} />}
+                onClick={handleUnapproveChannel}
+                loading={unapproveChannelMutation.isPending}
+              >
+                Unapprove Channel
+              </Button>
+            ))}
+          {isChannelAdmin && (
             <Button
               variant="light"
               renderRoot={(rootProps) => (
@@ -112,7 +221,7 @@ function ChannelDetailsPage() {
                 </Link>
               )}
             />
-          ) : null}
+          )}
         </Group>
       </Group>
 

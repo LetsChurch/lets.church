@@ -1,0 +1,12 @@
+.stickyHeading {
+	position: sticky;
+	top: 60px;
+	background-color: var(--mantine-color-body);
+	z-index: 10;
+	padding-top: 1rem;
+	padding-bottom: 0.5rem;
+	margin-left: -1rem;
+	margin-right: -1rem;
+	padding-left: 1rem;
+	padding-right: 1rem;
+}

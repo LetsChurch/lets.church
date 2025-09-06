@@ -8,8 +8,13 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { IconUsers } from '@tabler/icons-react';
-import { useSuspenseQuery } from '@tanstack/react-query';
+import { notifications } from '@mantine/notifications';
+import { IconCheck, IconUsers, IconX } from '@tabler/icons-react';
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import clsx from 'clsx';
 import { useTRPC } from '@/trpc/react';
@@ -19,12 +24,37 @@ import styles from './-styles.module.css';
 
 export const Route = createFileRoute('/dashboard_/organizations_/$orgId')({
   component: OrganizationDetailsPage,
-  beforeLoad: async ({ context }) => {
+  beforeLoad: async ({ context, params }) => {
     const hasSession = await context.queryClient.fetchQuery(
       context.trpc.common.hasValidSession.queryOptions(),
     );
     if (!hasSession) {
       return redirect({ to: '/auth/login' });
+    }
+
+    // Check if user has access to this organization (either member or site admin)
+    const currentUser = await context.queryClient.fetchQuery(
+      context.trpc.common.getCurrentUser.queryOptions(),
+    );
+
+    // Site admins can access any organization
+    if (currentUser.role === 'ADMIN') {
+      return { isSiteAdmin: true };
+    }
+
+    // Check if user is a member of this organization
+    try {
+      await context.queryClient.ensureQueryData(
+        context.trpc.dashboard.organizations.getOrganizationDetails.queryOptions(
+          {
+            orgId: params.orgId,
+          },
+        ),
+      );
+      return { isSiteAdmin: false };
+    } catch (_error) {
+      // If user is not a member and not an admin, redirect
+      throw redirect({ to: '/dashboard' });
     }
   },
   loader: async ({ context: { queryClient, trpc }, params }) => {
@@ -45,6 +75,8 @@ export const Route = createFileRoute('/dashboard_/organizations_/$orgId')({
 function OrganizationDetailsPage() {
   const { orgId } = Route.useParams();
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const { isSiteAdmin } = Route.useRouteContext() as { isSiteAdmin: boolean };
 
   const { data: organization } = useSuspenseQuery(
     trpc.dashboard.organizations.getOrganizationDetails.queryOptions({
@@ -54,6 +86,65 @@ function OrganizationDetailsPage() {
 
   const { userMembership } = organization;
   const isAdmin = userMembership?.isAdmin ?? false;
+  const isApproved = Boolean(organization.approvedAt);
+
+  const approveOrganizationMutation = useMutation(
+    trpc.dashboard.organizations.approveOrganization.mutationOptions({
+      onSuccess: () => {
+        notifications.show({
+          title: 'Success',
+          message: 'Organization approved successfully',
+          color: 'green',
+        });
+        queryClient.invalidateQueries({
+          queryKey:
+            trpc.dashboard.organizations.getOrganizationDetails.queryKey({
+              orgId,
+            }),
+        });
+      },
+      onError: () => {
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to approve organization',
+          color: 'red',
+        });
+      },
+    }),
+  );
+
+  const unapproveOrganizationMutation = useMutation(
+    trpc.dashboard.organizations.unapproveOrganization.mutationOptions({
+      onSuccess: () => {
+        notifications.show({
+          title: 'Success',
+          message: 'Organization unapproved successfully',
+          color: 'orange',
+        });
+        queryClient.invalidateQueries({
+          queryKey:
+            trpc.dashboard.organizations.getOrganizationDetails.queryKey({
+              orgId,
+            }),
+        });
+      },
+      onError: () => {
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to unapprove organization',
+          color: 'red',
+        });
+      },
+    }),
+  );
+
+  const handleApproveOrganization = () => {
+    approveOrganizationMutation.mutate({ orgId });
+  };
+
+  const handleUnapproveOrganization = () => {
+    unapproveOrganizationMutation.mutate({ orgId });
+  };
 
   return (
     <Stack gap="lg">
@@ -73,6 +164,9 @@ function OrganizationDetailsPage() {
           <div>
             <Group gap="sm" mb="xs">
               <Title order={1}>{organization.name}</Title>
+              <Badge color="blue" variant="light" size="sm">
+                {organization.type}
+              </Badge>
               <Badge color={isAdmin ? 'blue' : 'green'} size="sm">
                 {isAdmin ? 'Admin' : 'User'}
               </Badge>
@@ -91,6 +185,26 @@ function OrganizationDetailsPage() {
           </div>
         </Group>
         <Group>
+          {isSiteAdmin &&
+            (!isApproved ? (
+              <Button
+                color="green"
+                leftSection={<IconCheck size={16} />}
+                onClick={handleApproveOrganization}
+                loading={approveOrganizationMutation.isPending}
+              >
+                Approve Organization
+              </Button>
+            ) : (
+              <Button
+                color="orange"
+                leftSection={<IconX size={16} />}
+                onClick={handleUnapproveOrganization}
+                loading={unapproveOrganizationMutation.isPending}
+              >
+                Unapprove Organization
+              </Button>
+            ))}
           {isAdmin && (
             <Button
               variant="light"

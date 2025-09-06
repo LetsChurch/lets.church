@@ -12,7 +12,9 @@ import {
 } from '@mantine/core';
 import { IconDots, IconEdit, IconTrash } from '@tabler/icons-react';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
+import clsx from 'clsx';
 import classes from './-channels.module.css';
+import styles from './-styles.module.css';
 
 export const Route = createFileRoute('/dashboard_/channels')({
   component: ChannelsPage,
@@ -45,7 +47,17 @@ function ChannelsPage() {
     <>
       <Group justify="space-between" align="center" mb="lg">
         <Title order={1}>My Channels</Title>
-        <Button>Create Channel</Button>
+        <Button
+          renderRoot={(rootProps) => (
+            <Link
+              {...rootProps}
+              className={clsx(rootProps.className, styles.buttonLink)}
+              to="/dashboard/channels/new"
+            >
+              Create Channel
+            </Link>
+          )}
+        />
       </Group>
 
       <Stack gap="lg">

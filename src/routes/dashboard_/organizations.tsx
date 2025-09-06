@@ -12,13 +12,13 @@ import {
   Text,
   Title,
 } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
 import {
   IconDots,
   IconEye,
   IconSettings,
   IconUserMinus,
 } from '@tabler/icons-react';
-import { useDisclosure } from '@mantine/hooks';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { useTRPC } from '@/trpc/react';
@@ -155,8 +155,8 @@ function OrganizationsPage() {
       >
         <Stack gap="md">
           <Text>
-            Interested in partnering with Let's Church? We'd love to hear from you! 
-            Please reach out to us at{' '}
+            Interested in partnering with Let's Church? We'd love to hear from
+            you! Please reach out to us at{' '}
             <Anchor href="mailto:contact@lets.church?subject=Partnership%20Inquiry">
               contact@lets.church
             </Anchor>{' '}

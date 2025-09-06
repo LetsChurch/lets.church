@@ -19,12 +19,15 @@ import { Route as MainIndexRouteImport } from './routes/_main/index'
 import { Route as DashboardOrganizationsRouteImport } from './routes/dashboard_/organizations'
 import { Route as DashboardChurchesRouteImport } from './routes/dashboard_/churches'
 import { Route as DashboardChannelsRouteImport } from './routes/dashboard_/channels'
+import { Route as DashboardAdminRouteImport } from './routes/dashboard_/admin'
 import { Route as DashboardAccountRouteImport } from './routes/dashboard_/account'
 import { Route as AuthRegisterRouteImport } from './routes/auth_/register'
 import { Route as AuthLoginRouteImport } from './routes/auth_/login'
 import { Route as MainMediaIndexRouteImport } from './routes/_main/media/index'
 import { Route as DashboardOrganizationsOrgIdRouteImport } from './routes/dashboard_/organizations_.$orgId'
+import { Route as DashboardChurchesNewRouteImport } from './routes/dashboard_/churches_.new'
 import { Route as DashboardChurchesChurchIdRouteImport } from './routes/dashboard_/churches_.$churchId'
+import { Route as DashboardChannelsNewRouteImport } from './routes/dashboard_/channels_.new'
 import { Route as DashboardChannelsChannelIdRouteImport } from './routes/dashboard_/channels_.$channelId'
 import { Route as DashboardAccountSecurityRouteImport } from './routes/dashboard_/account_.security'
 import { Route as DashboardAccountProfileRouteImport } from './routes/dashboard_/account_.profile'
@@ -85,6 +88,11 @@ const DashboardChannelsRoute = DashboardChannelsRouteImport.update({
   path: '/channels',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardAdminRoute = DashboardAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardAccountRoute = DashboardAccountRouteImport.update({
   id: '/account',
   path: '/account',
@@ -111,12 +119,22 @@ const DashboardOrganizationsOrgIdRoute =
     path: '/organizations/$orgId',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardChurchesNewRoute = DashboardChurchesNewRouteImport.update({
+  id: '/churches_/new',
+  path: '/churches/new',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardChurchesChurchIdRoute =
   DashboardChurchesChurchIdRouteImport.update({
     id: '/churches_/$churchId',
     path: '/churches/$churchId',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardChannelsNewRoute = DashboardChannelsNewRouteImport.update({
+  id: '/channels_/new',
+  path: '/channels/new',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardChannelsChannelIdRoute =
   DashboardChannelsChannelIdRouteImport.update({
     id: '/channels_/$channelId',
@@ -228,6 +246,7 @@ export interface FileRoutesByFullPath {
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/dashboard/account': typeof DashboardAccountRoute
+  '/dashboard/admin': typeof DashboardAdminRoute
   '/dashboard/channels': typeof DashboardChannelsRoute
   '/dashboard/churches': typeof DashboardChurchesRoute
   '/dashboard/organizations': typeof DashboardOrganizationsRoute
@@ -236,7 +255,9 @@ export interface FileRoutesByFullPath {
   '/dashboard/account/profile': typeof DashboardAccountProfileRoute
   '/dashboard/account/security': typeof DashboardAccountSecurityRoute
   '/dashboard/channels/$channelId': typeof DashboardChannelsChannelIdRoute
+  '/dashboard/channels/new': typeof DashboardChannelsNewRoute
   '/dashboard/churches/$churchId': typeof DashboardChurchesChurchIdRoute
+  '/dashboard/churches/new': typeof DashboardChurchesNewRoute
   '/dashboard/organizations/$orgId': typeof DashboardOrganizationsOrgIdRoute
   '/media': typeof MainMediaIndexRoute
   '/dashboard/channels/$channelId/edit': typeof DashboardChannelsChannelIdEditRoute
@@ -257,6 +278,7 @@ export interface FileRoutesByTo {
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/dashboard/account': typeof DashboardAccountRoute
+  '/dashboard/admin': typeof DashboardAdminRoute
   '/dashboard/channels': typeof DashboardChannelsRoute
   '/dashboard/churches': typeof DashboardChurchesRoute
   '/dashboard/organizations': typeof DashboardOrganizationsRoute
@@ -265,7 +287,9 @@ export interface FileRoutesByTo {
   '/dashboard/account/profile': typeof DashboardAccountProfileRoute
   '/dashboard/account/security': typeof DashboardAccountSecurityRoute
   '/dashboard/channels/$channelId': typeof DashboardChannelsChannelIdRoute
+  '/dashboard/channels/new': typeof DashboardChannelsNewRoute
   '/dashboard/churches/$churchId': typeof DashboardChurchesChurchIdRoute
+  '/dashboard/churches/new': typeof DashboardChurchesNewRoute
   '/dashboard/organizations/$orgId': typeof DashboardOrganizationsOrgIdRoute
   '/media': typeof MainMediaIndexRoute
   '/dashboard/channels/$channelId/edit': typeof DashboardChannelsChannelIdEditRoute
@@ -289,6 +313,7 @@ export interface FileRoutesById {
   '/auth_/login': typeof AuthLoginRoute
   '/auth_/register': typeof AuthRegisterRoute
   '/dashboard_/account': typeof DashboardAccountRoute
+  '/dashboard_/admin': typeof DashboardAdminRoute
   '/dashboard_/channels': typeof DashboardChannelsRoute
   '/dashboard_/churches': typeof DashboardChurchesRoute
   '/dashboard_/organizations': typeof DashboardOrganizationsRoute
@@ -297,7 +322,9 @@ export interface FileRoutesById {
   '/dashboard_/account_/profile': typeof DashboardAccountProfileRoute
   '/dashboard_/account_/security': typeof DashboardAccountSecurityRoute
   '/dashboard_/channels_/$channelId': typeof DashboardChannelsChannelIdRoute
+  '/dashboard_/channels_/new': typeof DashboardChannelsNewRoute
   '/dashboard_/churches_/$churchId': typeof DashboardChurchesChurchIdRoute
+  '/dashboard_/churches_/new': typeof DashboardChurchesNewRoute
   '/dashboard_/organizations_/$orgId': typeof DashboardOrganizationsOrgIdRoute
   '/_main/media/': typeof MainMediaIndexRoute
   '/dashboard_/channels_/$channelId_/edit': typeof DashboardChannelsChannelIdEditRoute
@@ -321,6 +348,7 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/register'
     | '/dashboard/account'
+    | '/dashboard/admin'
     | '/dashboard/channels'
     | '/dashboard/churches'
     | '/dashboard/organizations'
@@ -329,7 +357,9 @@ export interface FileRouteTypes {
     | '/dashboard/account/profile'
     | '/dashboard/account/security'
     | '/dashboard/channels/$channelId'
+    | '/dashboard/channels/new'
     | '/dashboard/churches/$churchId'
+    | '/dashboard/churches/new'
     | '/dashboard/organizations/$orgId'
     | '/media'
     | '/dashboard/channels/$channelId/edit'
@@ -350,6 +380,7 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/register'
     | '/dashboard/account'
+    | '/dashboard/admin'
     | '/dashboard/channels'
     | '/dashboard/churches'
     | '/dashboard/organizations'
@@ -358,7 +389,9 @@ export interface FileRouteTypes {
     | '/dashboard/account/profile'
     | '/dashboard/account/security'
     | '/dashboard/channels/$channelId'
+    | '/dashboard/channels/new'
     | '/dashboard/churches/$churchId'
+    | '/dashboard/churches/new'
     | '/dashboard/organizations/$orgId'
     | '/media'
     | '/dashboard/channels/$channelId/edit'
@@ -381,6 +414,7 @@ export interface FileRouteTypes {
     | '/auth_/login'
     | '/auth_/register'
     | '/dashboard_/account'
+    | '/dashboard_/admin'
     | '/dashboard_/channels'
     | '/dashboard_/churches'
     | '/dashboard_/organizations'
@@ -389,7 +423,9 @@ export interface FileRouteTypes {
     | '/dashboard_/account_/profile'
     | '/dashboard_/account_/security'
     | '/dashboard_/channels_/$channelId'
+    | '/dashboard_/channels_/new'
     | '/dashboard_/churches_/$churchId'
+    | '/dashboard_/churches_/new'
     | '/dashboard_/organizations_/$orgId'
     | '/_main/media/'
     | '/dashboard_/channels_/$channelId_/edit'
@@ -499,6 +535,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardChannelsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard_/admin': {
+      id: '/dashboard_/admin'
+      path: '/admin'
+      fullPath: '/dashboard/admin'
+      preLoaderRoute: typeof DashboardAdminRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard_/account': {
       id: '/dashboard_/account'
       path: '/account'
@@ -534,11 +577,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardOrganizationsOrgIdRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard_/churches_/new': {
+      id: '/dashboard_/churches_/new'
+      path: '/churches/new'
+      fullPath: '/dashboard/churches/new'
+      preLoaderRoute: typeof DashboardChurchesNewRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard_/churches_/$churchId': {
       id: '/dashboard_/churches_/$churchId'
       path: '/churches/$churchId'
       fullPath: '/dashboard/churches/$churchId'
       preLoaderRoute: typeof DashboardChurchesChurchIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard_/channels_/new': {
+      id: '/dashboard_/channels_/new'
+      path: '/channels/new'
+      fullPath: '/dashboard/channels/new'
+      preLoaderRoute: typeof DashboardChannelsNewRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard_/channels_/$channelId': {
@@ -700,6 +757,7 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 interface DashboardRouteChildren {
   DashboardAccountRoute: typeof DashboardAccountRoute
+  DashboardAdminRoute: typeof DashboardAdminRoute
   DashboardChannelsRoute: typeof DashboardChannelsRoute
   DashboardChurchesRoute: typeof DashboardChurchesRoute
   DashboardOrganizationsRoute: typeof DashboardOrganizationsRoute
@@ -707,7 +765,9 @@ interface DashboardRouteChildren {
   DashboardAccountProfileRoute: typeof DashboardAccountProfileRoute
   DashboardAccountSecurityRoute: typeof DashboardAccountSecurityRoute
   DashboardChannelsChannelIdRoute: typeof DashboardChannelsChannelIdRoute
+  DashboardChannelsNewRoute: typeof DashboardChannelsNewRoute
   DashboardChurchesChurchIdRoute: typeof DashboardChurchesChurchIdRoute
+  DashboardChurchesNewRoute: typeof DashboardChurchesNewRoute
   DashboardOrganizationsOrgIdRoute: typeof DashboardOrganizationsOrgIdRoute
   DashboardChannelsChannelIdEditRoute: typeof DashboardChannelsChannelIdEditRoute
   DashboardChannelsChannelIdMembersRoute: typeof DashboardChannelsChannelIdMembersRoute
@@ -725,6 +785,7 @@ interface DashboardRouteChildren {
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAccountRoute: DashboardAccountRoute,
+  DashboardAdminRoute: DashboardAdminRoute,
   DashboardChannelsRoute: DashboardChannelsRoute,
   DashboardChurchesRoute: DashboardChurchesRoute,
   DashboardOrganizationsRoute: DashboardOrganizationsRoute,
@@ -732,7 +793,9 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAccountProfileRoute: DashboardAccountProfileRoute,
   DashboardAccountSecurityRoute: DashboardAccountSecurityRoute,
   DashboardChannelsChannelIdRoute: DashboardChannelsChannelIdRoute,
+  DashboardChannelsNewRoute: DashboardChannelsNewRoute,
   DashboardChurchesChurchIdRoute: DashboardChurchesChurchIdRoute,
+  DashboardChurchesNewRoute: DashboardChurchesNewRoute,
   DashboardOrganizationsOrgIdRoute: DashboardOrganizationsOrgIdRoute,
   DashboardChannelsChannelIdEditRoute: DashboardChannelsChannelIdEditRoute,
   DashboardChannelsChannelIdMembersRoute:

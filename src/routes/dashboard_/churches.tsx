@@ -18,8 +18,10 @@ import {
 } from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
+import clsx from 'clsx';
 import { useTRPC } from '@/trpc/react';
 import classes from './-churches.module.css';
+import styles from './-styles.module.css';
 
 export const Route = createFileRoute('/dashboard_/churches')({
   component: ChurchesPage,
@@ -55,7 +57,17 @@ function ChurchesPage() {
     <>
       <Group justify="space-between" align="center" mb="lg">
         <Title order={1}>Churches</Title>
-        <Button>Add Church</Button>
+        <Button
+          renderRoot={(rootProps) => (
+            <Link
+              {...rootProps}
+              className={clsx(rootProps.className, styles.buttonLink)}
+              to="/dashboard/churches/new"
+            >
+              Add Church
+            </Link>
+          )}
+        />
       </Group>
 
       <Stack gap="lg">

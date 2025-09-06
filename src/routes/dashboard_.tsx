@@ -1,5 +1,6 @@
 import { Anchor, AppShell, Box, Burger, Group, NavLink } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
+import { useQuery } from '@tanstack/react-query';
 import {
   createFileRoute,
   Link,
@@ -7,6 +8,7 @@ import {
   redirect,
   useLocation,
 } from '@tanstack/react-router';
+import { useTRPC } from '@/trpc/react';
 import { BackButton } from '@/util/back-navigation';
 import { MantineWrapper } from './-mantine';
 
@@ -25,6 +27,10 @@ export const Route = createFileRoute('/dashboard_')({
 function DashboardLayout() {
   const [opened, { toggle }] = useDisclosure();
   const location = useLocation();
+  const trpc = useTRPC();
+  const { data: currentUser } = useQuery(
+    trpc.common.getCurrentUser.queryOptions(),
+  );
 
   return (
     <MantineWrapper>
@@ -84,6 +90,14 @@ function DashboardLayout() {
               to="/dashboard/organizations"
               active={location.pathname.startsWith('/dashboard/organizations')}
             />
+            {currentUser?.role === 'ADMIN' && (
+              <NavLink
+                label="Admin"
+                component={Link}
+                to="/dashboard/admin"
+                active={location.pathname.startsWith('/dashboard/admin')}
+              />
+            )}
           </Box>
 
           <Box

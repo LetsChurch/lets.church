@@ -11,6 +11,7 @@ import {
   bulkSetVisibilitySchema,
   channelQuerySchema,
   channelUploadsQuerySchema,
+  createChannelSchema,
   createPlaylistSchema,
   createUploadSchema,
   deletePlaylistSchema,
@@ -98,6 +99,54 @@ const channelEditProcedure = channelProcedure.use(async ({ ctx, next }) => {
 });
 
 export const channelRouter = router({
+  createChannel: authProcedure
+    .input(createChannelSchema)
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Creating channel', {
+        appUserId: ctx.session.appUserId,
+        name: input.name,
+      });
+
+      try {
+        const channel = await db.channel.create({
+          data: {
+            name: input.name,
+            slug: input.slug,
+            description: input.description || null,
+            visibility: input.visibility,
+            memberships: {
+              create: {
+                appUserId: ctx.session.appUserId,
+                isAdmin: true,
+                canEdit: true,
+                canUpload: true,
+              },
+            },
+          },
+          select: {
+            id: true,
+          },
+        });
+
+        moduleLogger.info('Channel created successfully', {
+          appUserId: ctx.session.appUserId,
+          channelId: channel.id,
+        });
+
+        return channel;
+      } catch (error) {
+        moduleLogger.error('Failed to create channel', {
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to create channel',
+        });
+      }
+    }),
+
   getChannels: authProcedure.query(({ ctx }) => {
     return db.channel.findMany({
       select: {
@@ -138,6 +187,8 @@ export const channelRouter = router({
         defaultThumbnailBlurhash: true,
         createdAt: true,
         updatedAt: true,
+        approvedAt: true,
+        approvedById: true,
         memberships: {
           select: {
             isAdmin: true,
@@ -1032,4 +1083,104 @@ export const channelRouter = router({
         return true;
       },
     ),
+
+  approveChannel: authProcedure
+    .input(channelQuerySchema)
+    .use(async ({ ctx, next }) => {
+      // Only site admins can approve channels
+      if (ctx.session.appUser.role !== 'ADMIN') {
+        moduleLogger.warn('Non-admin user attempted to approve channel', {
+          appUserId: ctx.session.appUserId,
+          role: ctx.session.appUser.role,
+        });
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+      return next();
+    })
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Approving channel', {
+        channelId: input.channelId,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        await db.channel.update({
+          where: {
+            id: input.channelId,
+          },
+          data: {
+            approvedAt: new Date(),
+            approvedById: ctx.session.appUserId,
+          },
+        });
+
+        moduleLogger.info('Channel approved successfully', {
+          channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to approve channel', {
+          channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to approve channel',
+        });
+      }
+    }),
+
+  unapproveChannel: authProcedure
+    .input(channelQuerySchema)
+    .use(async ({ ctx, next }) => {
+      // Only site admins can unapprove channels
+      if (ctx.session.appUser.role !== 'ADMIN') {
+        moduleLogger.warn('Non-admin user attempted to unapprove channel', {
+          appUserId: ctx.session.appUserId,
+          role: ctx.session.appUser.role,
+        });
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+      return next();
+    })
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Unapproving channel', {
+        channelId: input.channelId,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        await db.channel.update({
+          where: {
+            id: input.channelId,
+          },
+          data: {
+            approvedAt: null,
+            approvedById: null,
+          },
+        });
+
+        moduleLogger.info('Channel unapproved successfully', {
+          channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to unapprove channel', {
+          channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to unapprove channel',
+        });
+      }
+    }),
 });

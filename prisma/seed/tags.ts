@@ -54,7 +54,7 @@ export const thirtyNineArticles = 'thirty-nine-articles';
 export const psalmsHymnsSpiritualSongsTagSlug = 'psalms-hymns-spiritual-songs';
 export const exclusivePsalmodyTagSlug = 'exclusive-psalmody';
 export const psalmsAndHymnsTagSlug = 'psalms-and-hymns';
-export const contempoaryTagSlug = 'contemporary';
+export const contemporaryTagSlug = 'contemporary';
 
 export const eldersAndDeaconsTagSlug = 'elders-and-deacons';
 export const pastorsAndDeaconsTagSlug = 'pastors-and-deacons';
@@ -404,7 +404,7 @@ const tagsData: ReadonlyArray<
   {
     category: OrganizationTagCategory.WORSHIP,
     color: 'PINK',
-    slug: contempoaryTagSlug,
+    slug: contemporaryTagSlug,
     label: 'Contemporary',
   },
   // Government

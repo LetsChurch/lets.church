@@ -97,12 +97,15 @@ export const organizationRouter = router({
           name: true,
           slug: true,
           description: true,
+          type: true,
           avatarPath: true,
           primaryEmail: true,
           primaryPhoneNumber: true,
           websiteUrl: true,
           createdAt: true,
           updatedAt: true,
+          approvedAt: true,
+          approvedById: true,
           memberships: {
             select: {
               organizationId: true,
@@ -361,6 +364,109 @@ export const organizationRouter = router({
           error: e instanceof Error ? e.message : String(e),
         });
         return { error: 'Error updating organization, please try again!' };
+      }
+    }),
+
+  approveOrganization: authProcedure
+    .input(organizationQuerySchema)
+    .use(async ({ ctx, next }) => {
+      // Only site admins can approve organizations
+      if (ctx.session.appUser.role !== 'ADMIN') {
+        moduleLogger.warn('Non-admin user attempted to approve organization', {
+          appUserId: ctx.session.appUserId,
+          role: ctx.session.appUser.role,
+        });
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+      return next();
+    })
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Approving organization', {
+        orgId: input.orgId,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        await db.organization.update({
+          where: {
+            id: input.orgId,
+          },
+          data: {
+            approvedAt: new Date(),
+            approvedById: ctx.session.appUserId,
+          },
+        });
+
+        moduleLogger.info('Organization approved successfully', {
+          orgId: input.orgId,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to approve organization', {
+          orgId: input.orgId,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to approve organization',
+        });
+      }
+    }),
+
+  unapproveOrganization: authProcedure
+    .input(organizationQuerySchema)
+    .use(async ({ ctx, next }) => {
+      // Only site admins can unapprove organizations
+      if (ctx.session.appUser.role !== 'ADMIN') {
+        moduleLogger.warn(
+          'Non-admin user attempted to unapprove organization',
+          {
+            appUserId: ctx.session.appUserId,
+            role: ctx.session.appUser.role,
+          },
+        );
+        throw new TRPCError({ code: 'FORBIDDEN' });
+      }
+      return next();
+    })
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Unapproving organization', {
+        orgId: input.orgId,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        await db.organization.update({
+          where: {
+            id: input.orgId,
+          },
+          data: {
+            approvedAt: null,
+            approvedById: null,
+          },
+        });
+
+        moduleLogger.info('Organization unapproved successfully', {
+          orgId: input.orgId,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to unapprove organization', {
+          orgId: input.orgId,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to unapprove organization',
+        });
       }
     }),
 });

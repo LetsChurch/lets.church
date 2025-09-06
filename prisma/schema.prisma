@@ -48,6 +48,8 @@ model AppUser {
   uploadViews              UploadView[]
   uploadViewRanges         UploadViewRanges[]
   uploadLists              UploadList[]
+  approvedChannels         Channel[]
+  approvedOrganizations    Organization[]
 
   @@map("app_user")
 }
@@ -168,6 +170,9 @@ model Organization {
   downstreamOrganizationAssociations           OrganizationOrganizationAssociation[] @relation("upstreamOrganization")
   automaticallyApproveOrganizationAssociations Boolean                               @default(false) @map("automatically_approve_organization_associations")
   tags                                         OrganizationTagInstance[]
+  approvedBy                                   AppUser?                              @relation(fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedById                                 String?                               @map("approved_by_id") @db.Uuid
+  approvedAt                                   DateTime?                             @map("approved_at")
   createdAt                                    DateTime                              @default(now()) @map("created_at")
   updatedAt                                    DateTime                              @updatedAt @map("updated_at")
 
@@ -282,6 +287,9 @@ model Channel {
   description              String?
   memberships              ChannelMembership[]
   organizationAssociations OrganizationChannelAssociation[]
+  approvedBy               AppUser?                         @relation(fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedById             String?                          @map("approved_by_id") @db.Uuid
+  approvedAt               DateTime?                        @map("approved_at")
   createdAt                DateTime                         @default(now()) @map("created_at")
   updatedAt                DateTime                         @updatedAt @map("updated_at")
   uploadRecords            UploadRecord[]

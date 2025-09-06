@@ -75,4 +75,5 @@ export const updateChurchSchema = z.object({
   websiteUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
   primaryEmail: z.string().email('Invalid email').optional().or(z.literal('')),
   primaryPhoneNumber: z.string().optional().or(z.literal('')),
+  tags: z.array(z.string()).optional(),
 });

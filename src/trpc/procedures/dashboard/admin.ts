@@ -1,0 +1,193 @@
+import { TRPCError } from '@trpc/server';
+import { z } from 'zod';
+import db from '@/util/db';
+import logger from '@/util/logger';
+import { authProcedure, router } from '../../trpc';
+
+const moduleLogger = logger.child({
+  module: 'trpc/procedures/dashboard/admin',
+});
+
+const adminProcedure = authProcedure.use(async ({ ctx, next }) => {
+  if (ctx.session.appUser.role !== 'ADMIN') {
+    moduleLogger.warn('Non-admin user attempted admin action', {
+      appUserId: ctx.session.appUserId,
+      role: ctx.session.appUser.role,
+    });
+
+    throw new TRPCError({ code: 'FORBIDDEN' });
+  }
+
+  return next();
+});
+
+export const adminRouter = router({
+  getPendingApprovals: adminProcedure.query(async () => {
+    moduleLogger.info('Fetching pending approvals');
+
+    const [pendingChannels, pendingOrganizations] = await Promise.all([
+      db.channel.findMany({
+        where: {
+          approvedAt: null,
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          createdAt: true,
+          memberships: {
+            select: {
+              appUser: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  emails: {
+                    select: {
+                      email: true,
+                      verifiedAt: true,
+                    },
+                    where: {
+                      verifiedAt: { not: null },
+                    },
+                    take: 1,
+                  },
+                },
+              },
+            },
+            where: {
+              isAdmin: true,
+            },
+            take: 1,
+          },
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      }),
+      db.organization.findMany({
+        where: {
+          approvedAt: null,
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          type: true,
+          createdAt: true,
+          memberships: {
+            select: {
+              appUser: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  emails: {
+                    select: {
+                      email: true,
+                      verifiedAt: true,
+                    },
+                    where: {
+                      verifiedAt: { not: null },
+                    },
+                    take: 1,
+                  },
+                },
+              },
+            },
+            where: {
+              isAdmin: true,
+            },
+            take: 1,
+          },
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      }),
+    ]);
+
+    return {
+      channels: pendingChannels,
+      organizations: pendingOrganizations,
+    };
+  }),
+
+  approveChannel: adminProcedure
+    .input(z.object({ channelId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Approving channel', {
+        channelId: input.channelId,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        await db.channel.update({
+          where: {
+            id: input.channelId,
+          },
+          data: {
+            approvedAt: new Date(),
+            approvedById: ctx.session.appUserId,
+          },
+        });
+
+        moduleLogger.info('Channel approved successfully', {
+          channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to approve channel', {
+          channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to approve channel',
+        });
+      }
+    }),
+
+  approveOrganization: adminProcedure
+    .input(z.object({ organizationId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Approving organization', {
+        organizationId: input.organizationId,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        await db.organization.update({
+          where: {
+            id: input.organizationId,
+          },
+          data: {
+            approvedAt: new Date(),
+            approvedById: ctx.session.appUserId,
+          },
+        });
+
+        moduleLogger.info('Organization approved successfully', {
+          organizationId: input.organizationId,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to approve organization', {
+          organizationId: input.organizationId,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to approve organization',
+        });
+      }
+    }),
+});
