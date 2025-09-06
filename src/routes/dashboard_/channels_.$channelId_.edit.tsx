@@ -1,9 +1,7 @@
 import {
-  Button,
   Container,
   Group,
   LoadingOverlay,
-  Radio,
   Stack,
   Text,
   Title,
@@ -14,8 +12,7 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { useAppMantineForm } from '@/components/mantine';
-import { channelFormSchema } from '@/schemas/dashboard';
+import { ChannelForm } from '@/routes/dashboard_/-components/channel-form';
 import { useTRPC } from '@/trpc/react';
 import { showFailure, showSuccess } from '../-mantine';
 
@@ -81,29 +78,16 @@ function ChannelEditPage() {
     }),
   );
 
-  const form = useAppMantineForm({
-    defaultValues: {
-      name: channel.name || '',
-      slug: channel.slug || '',
-      description: channel.description || '',
-      visibility: channel.visibility,
-    },
-    validators: {
-      onChange: channelFormSchema,
-    },
-    onSubmit: async ({ value }) => {
-      updateMutation.mutate({
-        channelId,
-        ...value,
-      });
-    },
-  });
+  const defaultValues = {
+    name: channel.name || '',
+    slug: channel.slug || '',
+    description: channel.description || '',
+    visibility: channel.visibility,
+  };
 
   return (
     <Container size="md" py="md" pos="relative">
-      <form.Subscribe selector={(state) => state.isSubmitting}>
-        {(isSubmitting) => <LoadingOverlay visible={isSubmitting} />}
-      </form.Subscribe>
+      <LoadingOverlay visible={updateMutation.isPending} />
 
       <Stack gap="lg">
         <Group justify="space-between" align="flex-start">
@@ -115,123 +99,13 @@ function ChannelEditPage() {
           </div>
         </Group>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            form.handleSubmit();
-          }}
-        >
-          <Stack gap="md">
-            <form.AppField name="name">
-              {(field) => (
-                <field.TextInputField
-                  label="Channel Name (required)"
-                  placeholder="Enter channel name"
-                  required
-                />
-              )}
-            </form.AppField>
-
-            <form.AppField name="slug">
-              {(field) => (
-                <Stack gap="xs">
-                  <field.TextInputField
-                    label="Channel Slug (required)"
-                    placeholder="channel-slug"
-                    required
-                  />
-                  <Text size="xs" c="dimmed">
-                    This will be used in your channel URL. Only letters,
-                    numbers, underscores, and hyphens are allowed.
-                  </Text>
-                </Stack>
-              )}
-            </form.AppField>
-
-            <form.AppField name="description">
-              {(field) => (
-                <field.TextareaField
-                  label="Description"
-                  placeholder="Describe your channel"
-                  minRows={4}
-                  maxRows={8}
-                  autosize
-                />
-              )}
-            </form.AppField>
-
-            <Stack gap="md">
-              <Text fw={500} size="sm">
-                Visibility
-              </Text>
-              <form.AppField name="visibility">
-                {(field) => (
-                  <field.RadioGroupField>
-                    <Stack gap="sm">
-                      <Radio
-                        value="PUBLIC"
-                        label={
-                          <div>
-                            <Text fw={500}>Public</Text>
-                            <Text size="xs" c="dimmed">
-                              Anyone can discover and view your channel
-                            </Text>
-                          </div>
-                        }
-                      />
-                      <Radio
-                        value="PRIVATE"
-                        label={
-                          <div>
-                            <Text fw={500}>Private</Text>
-                            <Text size="xs" c="dimmed">
-                              Only channel members can view content
-                            </Text>
-                          </div>
-                        }
-                      />
-                      <Radio
-                        value="UNLISTED"
-                        label={
-                          <div>
-                            <Text fw={500}>Unlisted</Text>
-                            <Text size="xs" c="dimmed">
-                              Not discoverable, but accessible with a link
-                            </Text>
-                          </div>
-                        }
-                      />
-                    </Stack>
-                  </field.RadioGroupField>
-                )}
-              </form.AppField>
-            </Stack>
-
-            <Group justify="flex-end" mt="md">
-              <form.Subscribe selector={(state) => state.isDirty}>
-                {(isDirty) => (
-                  <>
-                    <Button
-                      variant="outline"
-                      disabled={!isDirty}
-                      onClick={() => form.reset()}
-                    >
-                      Reset
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={!isDirty}
-                      loading={updateMutation.isPending}
-                    >
-                      Save Changes
-                    </Button>
-                  </>
-                )}
-              </form.Subscribe>
-            </Group>
-          </Stack>
-        </form>
+        <ChannelForm
+          mode="edit"
+          defaultValues={defaultValues}
+          onSubmit={(data) => updateMutation.mutate({ channelId, ...data })}
+          isSubmitting={updateMutation.isPending}
+          submitLabel="Save Changes"
+        />
       </Stack>
     </Container>
   );

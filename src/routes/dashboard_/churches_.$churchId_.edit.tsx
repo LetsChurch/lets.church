@@ -1,19 +1,12 @@
-import {
-  Button,
-  Container,
-  Group,
-  LoadingOverlay,
-  Stack,
-  Title,
-} from '@mantine/core';
+import { Container, Group, LoadingOverlay, Stack, Title } from '@mantine/core';
 import {
   useMutation,
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute, redirect, useRouter } from '@tanstack/react-router';
-import { useAppMantineForm } from '@/components/mantine';
 import { showFailure, showSuccess } from '@/routes/-mantine';
+import { ChurchForm } from '@/routes/dashboard_/-components/church-form';
 import { useTRPC } from '@/trpc/react';
 
 export const Route = createFileRoute('/dashboard_/churches_/$churchId_/edit')({
@@ -54,44 +47,6 @@ function ChurchEditPage() {
     }),
   );
 
-  const { data: organizationTags = [] } = useSuspenseQuery(
-    trpc.dashboard.churches.getOrganizationTags.queryOptions(),
-  );
-
-  const getGroupedTags = () => {
-    const groups: { [key: string]: string } = {
-      DENOMINATION: 'Denomination',
-      DOCTRINE: 'Doctrine',
-      ESCHATOLOGY: 'Eschatology',
-      CONFESSION: 'Confession',
-      WORSHIP: 'Worship',
-      GOVERNMENT: 'Church Government',
-      OTHER: 'Other Distinctives',
-    };
-
-    // Group tags by category
-    const groupedData: {
-      [key: string]: Array<{ value: string; label: string }>;
-    } = {};
-
-    organizationTags.forEach((tag) => {
-      const groupName = groups[tag.category] || tag.category;
-      if (!groupedData[groupName]) {
-        groupedData[groupName] = [];
-      }
-      groupedData[groupName].push({
-        value: tag.slug,
-        label: tag.label,
-      });
-    });
-
-    // Convert to Mantine's expected format
-    return Object.entries(groupedData).map(([group, items]) => ({
-      group,
-      items,
-    }));
-  };
-
   const updateChurchMutation = useMutation(
     trpc.dashboard.churches.updateChurch.mutationOptions({
       onSuccess: async (data) => {
@@ -108,12 +63,10 @@ function ChurchEditPage() {
           message: 'Church updated successfully!',
         });
 
-        // Invalidate and refetch church data
         await queryClient.invalidateQueries({
           queryKey: ['dashboard', 'churches'],
         });
 
-        // Navigate back to church details
         await router.navigate({
           to: '/dashboard/churches/$churchId',
           params: { churchId },
@@ -128,26 +81,19 @@ function ChurchEditPage() {
     }),
   );
 
-  const form = useAppMantineForm({
-    defaultValues: {
-      churchId,
-      name: church.name,
-      description: church.description || '',
-      websiteUrl: church.websiteUrl || '',
-      primaryEmail: church.primaryEmail || '',
-      primaryPhoneNumber: church.primaryPhoneNumber || '',
-      tags: (church.tags as string[]) || [],
-    },
-    onSubmit: async ({ value }) => {
-      updateChurchMutation.mutate(value);
-    },
-  });
+  const defaultValues = {
+    churchId,
+    name: church.name,
+    description: church.description || '',
+    websiteUrl: church.websiteUrl || '',
+    primaryEmail: church.primaryEmail || '',
+    primaryPhoneNumber: church.primaryPhoneNumber || '',
+    tags: (church.tags as string[]) || [],
+  };
 
   return (
     <Container size="md" py="md" pos="relative">
-      <form.Subscribe selector={(state) => state.isSubmitting}>
-        {(isSubmitting) => <LoadingOverlay visible={isSubmitting} />}
-      </form.Subscribe>
+      <LoadingOverlay visible={updateChurchMutation.isPending} />
 
       <Stack gap="lg">
         <Group justify="space-between" align="flex-start">
@@ -156,102 +102,16 @@ function ChurchEditPage() {
           </div>
         </Group>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            form.handleSubmit();
-          }}
-          method="post"
-        >
-          <Stack gap="lg">
-            <form.AppField name="name">
-              {(field) => (
-                <field.TextInputField
-                  label="Church Name"
-                  placeholder="Enter church name"
-                  required
-                />
-              )}
-            </form.AppField>
-
-            <form.AppField name="description">
-              {(field) => (
-                <field.TextareaField
-                  label="Description"
-                  placeholder="Enter church description..."
-                  minRows={3}
-                  maxRows={6}
-                />
-              )}
-            </form.AppField>
-
-            <form.AppField name="websiteUrl">
-              {(field) => (
-                <field.TextInputField
-                  label="Website URL"
-                  placeholder="https://example.com"
-                  type="url"
-                />
-              )}
-            </form.AppField>
-
-            <form.AppField name="primaryEmail">
-              {(field) => (
-                <field.TextInputField
-                  label="Primary Email"
-                  placeholder="contact@church.org"
-                  type="email"
-                />
-              )}
-            </form.AppField>
-
-            <form.AppField name="primaryPhoneNumber">
-              {(field) => (
-                <field.TextInputField
-                  label="Primary Phone Number"
-                  placeholder="(555) 123-4567"
-                  type="tel"
-                />
-              )}
-            </form.AppField>
-
-            <form.AppField name="tags" mode="array">
-              {(field) => (
-                <field.MultiSelectField
-                  label="Tags"
-                  placeholder="Search and select tags"
-                  data={getGroupedTags()}
-                  searchable
-                  description="Select tags for Denomination, Doctrine, Eschatology, Confession, Worship, Church Government, and Other Distinctives"
-                />
-              )}
-            </form.AppField>
-
-            <Group justify="flex-end" mt="md">
-              <form.Subscribe selector={(state) => state.isDirty}>
-                {(isDirty) => (
-                  <>
-                    <Button
-                      variant="outline"
-                      disabled={!isDirty}
-                      onClick={() => form.reset()}
-                    >
-                      Reset
-                    </Button>
-                    <form.Subscribe selector={(state) => state.isSubmitting}>
-                      {(isSubmitting) => (
-                        <Button type="submit" loading={isSubmitting}>
-                          Update Church
-                        </Button>
-                      )}
-                    </form.Subscribe>
-                  </>
-                )}
-              </form.Subscribe>
-            </Group>
-          </Stack>
-        </form>
+        <ChurchForm
+          mode="edit"
+          defaultValues={defaultValues}
+          onSubmit={(data) =>
+            updateChurchMutation.mutate({ ...data, churchId })
+          }
+          isSubmitting={updateChurchMutation.isPending}
+          submitLabel="Update Church"
+          showSlugField={false}
+        />
       </Stack>
     </Container>
   );
