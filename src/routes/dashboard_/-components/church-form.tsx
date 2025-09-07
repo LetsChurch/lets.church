@@ -2,6 +2,7 @@ import { Button, Group, Stack } from '@mantine/core';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { useAppMantineForm } from '@/components/mantine';
 import { useTRPC } from '@/trpc/react';
+import { OrganizationAutocomplete } from './organization-autocomplete';
 
 type ChurchFormData = {
   churchId?: string;
@@ -12,6 +13,11 @@ type ChurchFormData = {
   primaryEmail: string;
   primaryPhoneNumber: string;
   tags: string[];
+  associatedOrganizations: string[];
+  associatedOrganizationsWithStatus?: Array<{
+    organizationId: string;
+    upstreamApproved: boolean;
+  }>;
 };
 
 type ChurchFormProps = {
@@ -171,6 +177,20 @@ export function ChurchForm({
               data={getGroupedTags()}
               searchable
               description="Select tags for Denomination, Doctrine, Eschatology, Confession, Worship, Church Government, and Other Distinctives"
+            />
+          )}
+        </form.AppField>
+
+        <form.AppField name="associatedOrganizations" mode="array">
+          {(field) => (
+            <OrganizationAutocomplete
+              label="Associated Organizations"
+              placeholder="Search organizations to add..."
+              excludeChurchTypes={true}
+              description="Search and add organizations that this church is associated with"
+              value={field.state.value || []}
+              onChange={field.handleChange}
+              error={field.state.meta.errors?.[0]}
             />
           )}
         </form.AppField>

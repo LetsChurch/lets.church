@@ -9,7 +9,7 @@ import {
   Title,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconCheck, IconUsers, IconX } from '@tabler/icons-react';
+import { IconCheck, IconNetwork, IconUsers, IconX } from '@tabler/icons-react';
 import {
   useMutation,
   useQueryClient,
@@ -58,11 +58,13 @@ export const Route = createFileRoute('/dashboard_/organizations_/$orgId')({
     }
   },
   loader: async ({ context: { queryClient, trpc }, params }) => {
-    await queryClient.ensureQueryData(
-      trpc.dashboard.organizations.getOrganizationDetails.queryOptions({
-        orgId: params.orgId,
-      }),
-    );
+    await Promise.all([
+      queryClient.ensureQueryData(
+        trpc.dashboard.organizations.getOrganizationDetails.queryOptions({
+          orgId: params.orgId,
+        }),
+      ),
+    ]);
     return {
       backNavigation: {
         label: 'Organizations',
@@ -231,6 +233,21 @@ function OrganizationDetailsPage() {
           icon={<IconUsers size={22} stroke={1.5} />}
           tooltip="Manage active users of this organization profile"
           value={organization._count.memberships}
+        />
+        <StatCard
+          title="Associations"
+          to="/dashboard/organizations/$orgId/associations"
+          color="violet"
+          icon={<IconNetwork size={22} stroke={1.5} />}
+          tooltip="Manage downstream organization associations"
+          value={
+            <Text>
+              {organization._count.downstreamOrganizationAssociations}{' '}
+              <Text span size="sm" c="orange.6">
+                ({organization.unapprovedAssociationsCount} pending)
+              </Text>
+            </Text>
+          }
         />
       </SimpleGrid>
     </Stack>

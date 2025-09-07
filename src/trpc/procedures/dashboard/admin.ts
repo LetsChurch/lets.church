@@ -113,6 +113,98 @@ export const adminRouter = router({
     };
   }),
 
+  getPendingChannelApprovals: adminProcedure.query(async () => {
+    moduleLogger.info('Fetching pending channel approvals');
+
+    return db.channel.findMany({
+      where: {
+        approvedAt: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        createdAt: true,
+        avatarPath: true,
+        visibility: true,
+        memberships: {
+          select: {
+            appUser: {
+              select: {
+                id: true,
+                fullName: true,
+                emails: {
+                  select: {
+                    email: true,
+                    verifiedAt: true,
+                  },
+                  where: {
+                    verifiedAt: { not: null },
+                  },
+                  take: 1,
+                },
+              },
+            },
+          },
+          where: {
+            isAdmin: true,
+          },
+          take: 1,
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+  }),
+
+  getPendingOrganizationApprovals: adminProcedure.query(async () => {
+    moduleLogger.info('Fetching pending organization approvals');
+
+    return db.organization.findMany({
+      where: {
+        approvedAt: null,
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        type: true,
+        createdAt: true,
+        avatarPath: true,
+        memberships: {
+          select: {
+            appUser: {
+              select: {
+                id: true,
+                fullName: true,
+                emails: {
+                  select: {
+                    email: true,
+                    verifiedAt: true,
+                  },
+                  where: {
+                    verifiedAt: { not: null },
+                  },
+                  take: 1,
+                },
+              },
+            },
+          },
+          where: {
+            isAdmin: true,
+          },
+          take: 1,
+        },
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+  }),
+
   approveChannel: adminProcedure
     .input(z.object({ channelId: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -187,6 +279,76 @@ export const adminRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to approve organization',
+        });
+      }
+    }),
+
+  deleteChannel: adminProcedure
+    .input(z.object({ channelId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Deleting channel', {
+        channelId: input.channelId,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        await db.channel.delete({
+          where: {
+            id: input.channelId,
+          },
+        });
+
+        moduleLogger.info('Channel deleted successfully', {
+          channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to delete channel', {
+          channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to delete channel',
+        });
+      }
+    }),
+
+  deleteOrganization: adminProcedure
+    .input(z.object({ organizationId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Deleting organization', {
+        organizationId: input.organizationId,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        await db.organization.delete({
+          where: {
+            id: input.organizationId,
+          },
+        });
+
+        moduleLogger.info('Organization deleted successfully', {
+          organizationId: input.organizationId,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to delete organization', {
+          organizationId: input.organizationId,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to delete organization',
         });
       }
     }),

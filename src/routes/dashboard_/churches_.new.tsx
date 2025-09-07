@@ -69,6 +69,7 @@ function CreateChurchPage() {
     primaryEmail: '',
     primaryPhoneNumber: '',
     tags: [] as string[],
+    associatedOrganizations: [] as string[],
   };
 
   return (
@@ -80,7 +81,7 @@ function CreateChurchPage() {
           <div>
             <Title order={1}>Add Church</Title>
             <Text c="dimmed" size="sm">
-              Create a new church profile to manage your congregation
+              Create a new church profile
             </Text>
           </div>
         </Group>

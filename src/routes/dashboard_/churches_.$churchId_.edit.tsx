@@ -89,6 +89,12 @@ function ChurchEditPage() {
     primaryEmail: church.primaryEmail || '',
     primaryPhoneNumber: church.primaryPhoneNumber || '',
     tags: (church.tags as string[]) || [],
+    associatedOrganizations: (church.associatedOrganizations as string[]) || [],
+    associatedOrganizationsWithStatus:
+      (church.associatedOrganizationsWithStatus as Array<{
+        organizationId: string;
+        upstreamApproved: boolean;
+      }>) || [],
   };
 
   return (

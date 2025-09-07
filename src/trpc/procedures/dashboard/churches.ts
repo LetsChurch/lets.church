@@ -5,7 +5,7 @@ import {
   addLeaderSchema,
   channelSearchChurchSchema,
   churchQuerySchema,
-  createOrganizationSchema,
+  createChurchSchema,
   linkChannelSchema,
   removeChurchMemberSchema,
   removeLeaderSchema,
@@ -69,7 +69,7 @@ export const churchRouter = router({
   }),
 
   createChurch: authProcedure
-    .input(createOrganizationSchema)
+    .input(createChurchSchema)
     .mutation(async ({ ctx, input }) => {
       moduleLogger.info('Creating church', {
         appUserId: ctx.session.appUserId,
@@ -118,6 +118,21 @@ export const churchRouter = router({
             id: true,
           },
         });
+
+        // Handle organization associations if provided
+        if (
+          input.associatedOrganizations &&
+          input.associatedOrganizations.length > 0
+        ) {
+          await db.organizationOrganizationAssociation.createMany({
+            data: input.associatedOrganizations.map((upstreamOrgId) => ({
+              upstreamOrganizationId: upstreamOrgId,
+              downstreamOrganizationId: church.id,
+              downstreamApproved: true, // Church automatically approves being downstream
+              upstreamApproved: false, // Upstream organization needs to approve
+            })),
+          });
+        }
 
         moduleLogger.info('Church created successfully', {
           appUserId: ctx.session.appUserId,
@@ -533,6 +548,12 @@ export const churchRouter = router({
             tagSlug: true,
           },
         },
+        upstreamOrganizationAssociations: {
+          select: {
+            upstreamOrganizationId: true,
+            upstreamApproved: true,
+          },
+        },
       },
       where: {
         id: input.churchId,
@@ -549,10 +570,18 @@ export const churchRouter = router({
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
 
-    // Transform tags to a flat array of strings
+    // Transform tags to a flat array of strings and associated organizations
     return {
       ...church,
       tags: church.tags.map((tag) => tag.tagSlug),
+      associatedOrganizations: church.upstreamOrganizationAssociations.map(
+        (assoc) => assoc.upstreamOrganizationId,
+      ),
+      associatedOrganizationsWithStatus:
+        church.upstreamOrganizationAssociations.map((assoc) => ({
+          organizationId: assoc.upstreamOrganizationId,
+          upstreamApproved: assoc.upstreamApproved,
+        })),
     };
   }),
 
@@ -580,6 +609,28 @@ export const churchRouter = router({
               data: input.tags.map((tagSlug) => ({
                 organizationId: input.churchId,
                 tagSlug,
+              })),
+            });
+          }
+        }
+
+        // Handle organization associations if provided
+        if (input.associatedOrganizations !== undefined) {
+          // First, delete all existing upstream associations (church is downstream)
+          await db.organizationOrganizationAssociation.deleteMany({
+            where: {
+              downstreamOrganizationId: input.churchId,
+            },
+          });
+
+          // Then, create new associations if provided
+          if (input.associatedOrganizations.length > 0) {
+            await db.organizationOrganizationAssociation.createMany({
+              data: input.associatedOrganizations.map((upstreamOrgId) => ({
+                upstreamOrganizationId: upstreamOrgId,
+                downstreamOrganizationId: input.churchId,
+                downstreamApproved: true, // Church automatically approves being downstream
+                upstreamApproved: false, // Upstream organization needs to approve
               })),
             });
           }

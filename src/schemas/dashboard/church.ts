@@ -68,6 +68,17 @@ export const removeLeaderSchema = z.object({
   leaderId: z.uuid(),
 });
 
+export const createChurchSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  slug: z.string().optional(),
+  description: z.string().optional(),
+  websiteUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  primaryEmail: z.string().email('Invalid email').optional().or(z.literal('')),
+  primaryPhoneNumber: z.string().optional().or(z.literal('')),
+  tags: z.array(z.string()).optional(),
+  associatedOrganizations: z.array(z.uuid()).optional(),
+});
+
 export const updateChurchSchema = z.object({
   churchId: churchIdSchema,
   name: z.string().min(1, 'Name is required'),
@@ -76,4 +87,5 @@ export const updateChurchSchema = z.object({
   primaryEmail: z.string().email('Invalid email').optional().or(z.literal('')),
   primaryPhoneNumber: z.string().optional().or(z.literal('')),
   tags: z.array(z.string()).optional(),
+  associatedOrganizations: z.array(z.uuid()).optional(),
 });

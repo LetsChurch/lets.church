@@ -1,11 +1,19 @@
 import { Card, SimpleGrid, Text, Title } from '@mantine/core';
+import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
+import { useTRPC } from '@/trpc/react';
 
 export const Route = createFileRoute('/dashboard_/')({
   component: DashboardHome,
 });
 
 function DashboardHome() {
+  const trpc = useTRPC();
+
+  const { data: currentUser } = useSuspenseQuery(
+    trpc.common.getCurrentUser.queryOptions(),
+  );
+
   return (
     <>
       <Title order={1} mb="lg">
@@ -64,6 +72,21 @@ function DashboardHome() {
             Browse and connect with organizations
           </Text>
         </Card>
+        {currentUser.role === 'ADMIN' && (
+          <Card
+            shadow="xs"
+            padding="lg"
+            radius="md"
+            withBorder
+            component={Link}
+            to="/dashboard/admin"
+          >
+            <Text fw={500}>Admin</Text>
+            <Text size="sm" c="dimmed">
+              Manage approvals and site administration
+            </Text>
+          </Card>
+        )}
       </SimpleGrid>
     </>
   );

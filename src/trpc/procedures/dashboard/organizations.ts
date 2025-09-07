@@ -2,9 +2,14 @@ import { OrganizationType } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import {
   addOrganizationMemberSchema,
+  getAllOrganizationsSchema,
+  getOrganizationsByIdsSchema,
   organizationQuerySchema,
+  organizationRelationshipSchema,
   removeOrganizationMemberSchema,
+  searchOrganizationsSchema,
   updateOrganizationSchema,
+  upstreamAssociationActionSchema,
   userSearchOrganizationSchema,
 } from '@/schemas/dashboard';
 import db from '@/util/db';
@@ -52,6 +57,97 @@ const organizationAdminProcedure = organizationProcedure.use(
 );
 
 export const organizationRouter = router({
+  getAllOrganizations: authProcedure
+    .input(getAllOrganizationsSchema)
+    .query(async ({ input }) => {
+      moduleLogger.info('Fetching all organizations', {
+        excludeChurchTypes: input.excludeChurchTypes,
+      });
+
+      const whereClause = input.excludeChurchTypes
+        ? { type: { not: OrganizationType.CHURCH } }
+        : {};
+
+      return db.organization.findMany({
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          approvedAt: true,
+        },
+        where: whereClause,
+        orderBy: [
+          { approvedAt: 'desc' }, // Approved first
+          { name: 'asc' },
+        ],
+      });
+    }),
+
+  searchOrganizations: authProcedure
+    .input(searchOrganizationsSchema)
+    .query(async ({ input }) => {
+      moduleLogger.info('Searching organizations', {
+        query: input.query,
+        excludeChurchTypes: input.excludeChurchTypes,
+        limit: input.limit,
+      });
+
+      const whereClause = {
+        name: {
+          contains: input.query,
+          mode: 'insensitive' as const,
+        },
+        ...(input.excludeChurchTypes && {
+          type: { not: OrganizationType.CHURCH },
+        }),
+      };
+
+      return db.organization.findMany({
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          approvedAt: true,
+        },
+        where: whereClause,
+        orderBy: [
+          { approvedAt: 'desc' }, // Approved first
+          { name: 'asc' },
+        ],
+        take: input.limit,
+      });
+    }),
+
+  getOrganizationsByIds: authProcedure
+    .input(getOrganizationsByIdsSchema)
+    .query(async ({ input }) => {
+      moduleLogger.info('Fetching organizations by IDs', {
+        organizationCount: input.organizationIds.length,
+      });
+
+      if (input.organizationIds.length === 0) {
+        return [];
+      }
+
+      return db.organization.findMany({
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          approvedAt: true,
+        },
+        where: {
+          id: {
+            in: input.organizationIds,
+          },
+        },
+        orderBy: [
+          { approvedAt: 'desc' }, // Approved first
+          { name: 'asc' },
+        ],
+      });
+    }),
+
   getOrganizations: authProcedure.query(async ({ ctx }) => {
     moduleLogger.info('Fetching organizations for user', {
       appUserId: ctx.session.appUserId,
@@ -133,6 +229,7 @@ export const organizationRouter = router({
           _count: {
             select: {
               memberships: true,
+              downstreamOrganizationAssociations: true,
             },
           },
         },
@@ -151,9 +248,19 @@ export const organizationRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND' });
       }
 
+      // Get count of unapproved upstream associations
+      const unapprovedAssociationsCount =
+        await db.organizationOrganizationAssociation.count({
+          where: {
+            upstreamOrganizationId: input.orgId,
+            upstreamApproved: false,
+          },
+        });
+
       return {
         ...organization,
         userMembership: ctx.membership,
+        unapprovedAssociationsCount,
       };
     },
   ),
@@ -466,6 +573,302 @@ export const organizationRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to unapprove organization',
+        });
+      }
+    }),
+
+  getPendingDownstreamApprovals: organizationProcedure.query(
+    async ({ ctx, input }) => {
+      moduleLogger.info('Fetching pending downstream approvals', {
+        ...input,
+        appUserId: ctx.session.appUserId,
+      });
+
+      // Get the organization to make sure it's not a church
+      const organization = await db.organization.findFirst({
+        where: {
+          id: input.orgId,
+          type: OrganizationType.MINISTRY, // Only ministries can have downstream approvals
+        },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+        },
+      });
+
+      if (!organization) {
+        moduleLogger.warn('Organization not found or is not a ministry', {
+          ...input,
+          appUserId: ctx.session.appUserId,
+        });
+        throw new TRPCError({ code: 'NOT_FOUND' });
+      }
+
+      // Get all pending downstream relationship approvals
+      const pendingApprovals =
+        await db.organizationOrganizationAssociation.findMany({
+          where: {
+            upstreamOrganizationId: input.orgId,
+            upstreamApproved: false,
+          },
+          select: {
+            downstreamOrganizationId: true,
+            createdAt: true,
+            downstreamApproved: true,
+            downstreamOrganization: {
+              select: {
+                id: true,
+                name: true,
+                type: true,
+                slug: true,
+                description: true,
+                avatarPath: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+
+      return pendingApprovals;
+    },
+  ),
+
+  approveDownstreamRelationship: organizationAdminProcedure
+    .input(organizationRelationshipSchema)
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Approving downstream relationship', {
+        ...input,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        await db.organizationOrganizationAssociation.update({
+          where: {
+            upstreamOrganizationId_downstreamOrganizationId: {
+              upstreamOrganizationId: input.orgId,
+              downstreamOrganizationId: input.downstreamOrganizationId,
+            },
+          },
+          data: {
+            upstreamApproved: true,
+          },
+        });
+
+        moduleLogger.info('Downstream relationship approved successfully', {
+          ...input,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to approve downstream relationship', {
+          ...input,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to approve downstream relationship',
+        });
+      }
+    }),
+
+  rejectDownstreamRelationship: organizationAdminProcedure
+    .input(organizationRelationshipSchema)
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Rejecting downstream relationship', {
+        ...input,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        await db.organizationOrganizationAssociation.delete({
+          where: {
+            upstreamOrganizationId_downstreamOrganizationId: {
+              upstreamOrganizationId: input.orgId,
+              downstreamOrganizationId: input.downstreamOrganizationId,
+            },
+          },
+        });
+
+        moduleLogger.info('Downstream relationship rejected successfully', {
+          ...input,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to reject downstream relationship', {
+          ...input,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to reject downstream relationship',
+        });
+      }
+    }),
+
+  getUpstreamAssociations: organizationProcedure.query(
+    async ({ ctx, input }) => {
+      moduleLogger.info('Fetching upstream associations', {
+        ...input,
+        appUserId: ctx.session.appUserId,
+      });
+
+      // Get all associations where this organization is upstream
+      const upstreamAssociations =
+        await db.organizationOrganizationAssociation.findMany({
+          where: {
+            upstreamOrganizationId: input.orgId,
+          },
+          select: {
+            downstreamOrganizationId: true,
+            upstreamApproved: true,
+            downstreamApproved: true,
+            createdAt: true,
+            downstreamOrganization: {
+              select: {
+                id: true,
+                name: true,
+                type: true,
+                slug: true,
+                description: true,
+                avatarPath: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+
+      return upstreamAssociations;
+    },
+  ),
+
+  approveUpstreamAssociation: organizationAdminProcedure
+    .input(upstreamAssociationActionSchema)
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Approving upstream association', {
+        ...input,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        await db.organizationOrganizationAssociation.update({
+          where: {
+            upstreamOrganizationId_downstreamOrganizationId: {
+              upstreamOrganizationId: input.orgId,
+              downstreamOrganizationId: input.downstreamOrganizationId,
+            },
+          },
+          data: {
+            upstreamApproved: true,
+          },
+        });
+
+        moduleLogger.info('Upstream association approved successfully', {
+          ...input,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to approve upstream association', {
+          ...input,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to approve upstream association',
+        });
+      }
+    }),
+
+  unapproveUpstreamAssociation: organizationAdminProcedure
+    .input(upstreamAssociationActionSchema)
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Unapproving upstream association', {
+        ...input,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        await db.organizationOrganizationAssociation.update({
+          where: {
+            upstreamOrganizationId_downstreamOrganizationId: {
+              upstreamOrganizationId: input.orgId,
+              downstreamOrganizationId: input.downstreamOrganizationId,
+            },
+          },
+          data: {
+            upstreamApproved: false,
+          },
+        });
+
+        moduleLogger.info('Upstream association unapproved successfully', {
+          ...input,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to unapprove upstream association', {
+          ...input,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to unapprove upstream association',
+        });
+      }
+    }),
+
+  deleteUpstreamAssociation: organizationAdminProcedure
+    .input(upstreamAssociationActionSchema)
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Deleting upstream association', {
+        ...input,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        await db.organizationOrganizationAssociation.delete({
+          where: {
+            upstreamOrganizationId_downstreamOrganizationId: {
+              upstreamOrganizationId: input.orgId,
+              downstreamOrganizationId: input.downstreamOrganizationId,
+            },
+          },
+        });
+
+        moduleLogger.info('Upstream association deleted successfully', {
+          ...input,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to delete upstream association', {
+          ...input,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to delete upstream association',
         });
       }
     }),

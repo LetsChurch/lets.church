@@ -43,3 +43,27 @@ export const createOrganizationSchema = organizationFormSchema;
 export const updateOrganizationSchema = organizationFormSchema.extend({
   orgId: organizationIdSchema,
 });
+
+export const organizationRelationshipSchema = z.object({
+  orgId: organizationIdSchema,
+  downstreamOrganizationId: organizationIdSchema,
+});
+
+export const upstreamAssociationActionSchema = z.object({
+  orgId: organizationIdSchema,
+  downstreamOrganizationId: organizationIdSchema,
+});
+
+export const getAllOrganizationsSchema = z.object({
+  excludeChurchTypes: z.boolean().optional().default(false),
+});
+
+export const searchOrganizationsSchema = z.object({
+  query: z.string().min(2, 'Search query must be at least 2 characters'),
+  excludeChurchTypes: z.boolean().optional().default(false),
+  limit: z.number().int().positive().max(50).optional().default(10),
+});
+
+export const getOrganizationsByIdsSchema = z.object({
+  organizationIds: z.array(z.uuid()).max(100), // Reasonable limit
+});
