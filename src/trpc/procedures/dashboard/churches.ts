@@ -57,7 +57,11 @@ const churchAdminProcedure = churchProcedure.use(async ({ ctx, next }) => {
 });
 
 export const churchRouter = router({
-  getOrganizationTags: authProcedure.query(async () => {
+  getOrganizationTags: authProcedure.query(async ({ ctx }) => {
+    moduleLogger.info('Fetching organization tags', {
+      appUserId: ctx.session.appUserId,
+    });
+
     return db.organizationTag.findMany({
       select: {
         slug: true,
@@ -334,7 +338,13 @@ export const churchRouter = router({
 
   searchUsers: churchAdminProcedure
     .input(userSearchChurchSchema)
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      moduleLogger.info('Searching users for church', {
+        churchId: input.churchId,
+        query: input.query,
+        appUserId: ctx.session.appUserId,
+      });
+
       const users = await db.appUser.findMany({
         select: {
           id: true,
@@ -358,75 +368,146 @@ export const churchRouter = router({
         take: 10,
       });
 
+      moduleLogger.info('User search completed', {
+        churchId: input.churchId,
+        query: input.query,
+        resultCount: users.length,
+        appUserId: ctx.session.appUserId,
+      });
+
       return users;
     }),
 
   addChurchMember: churchAdminProcedure
     .input(addChurchMemberSchema)
-    .mutation(async ({ input }) => {
-      await db.organizationMembership.create({
-        data: {
-          organizationId: input.churchId,
-          appUserId: input.userId,
-          isAdmin: input.isAdmin,
-          canEdit: input.canEdit,
-        },
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Adding church member', {
+        churchId: input.churchId,
+        newMemberUserId: input.userId,
+        isAdmin: input.isAdmin,
+        canEdit: input.canEdit,
+        addedBy: ctx.session.appUserId,
       });
 
-      return { success: true };
+      try {
+        await db.organizationMembership.create({
+          data: {
+            organizationId: input.churchId,
+            appUserId: input.userId,
+            isAdmin: input.isAdmin,
+            canEdit: input.canEdit,
+          },
+        });
+
+        moduleLogger.info('Church member added successfully', {
+          churchId: input.churchId,
+          newMemberUserId: input.userId,
+          addedBy: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to add church member', {
+          churchId: input.churchId,
+          newMemberUserId: input.userId,
+          addedBy: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
     }),
 
   removeChurchMember: churchAdminProcedure
     .input(removeChurchMemberSchema)
     .mutation(async ({ ctx, input }) => {
-      // Don't allow removing the last admin
-      const adminCount = await db.organizationMembership.count({
-        where: {
-          organizationId: input.churchId,
-          isAdmin: true,
-        },
+      moduleLogger.info('Removing church member', {
+        churchId: input.churchId,
+        memberToRemove: input.appUserId,
+        removedBy: ctx.session.appUserId,
       });
 
-      const membershipToDelete = await db.organizationMembership.findUnique({
-        where: {
-          organizationId_appUserId: {
+      try {
+        // Don't allow removing the last admin
+        const adminCount = await db.organizationMembership.count({
+          where: {
             organizationId: input.churchId,
-            appUserId: input.appUserId,
+            isAdmin: true,
           },
-        },
-        select: { isAdmin: true, appUserId: true },
-      });
-
-      if (membershipToDelete?.isAdmin && adminCount <= 1) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Cannot remove the last admin from the church',
         });
-      }
 
-      // Don't allow removing yourself
-      if (membershipToDelete?.appUserId === ctx.session.appUser.id) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'You cannot remove yourself from the church',
-        });
-      }
-
-      await db.organizationMembership.delete({
-        where: {
-          organizationId_appUserId: {
-            organizationId: input.churchId,
-            appUserId: input.appUserId,
+        const membershipToDelete = await db.organizationMembership.findUnique({
+          where: {
+            organizationId_appUserId: {
+              organizationId: input.churchId,
+              appUserId: input.appUserId,
+            },
           },
-        },
-      });
+          select: { isAdmin: true, appUserId: true },
+        });
 
-      return { success: true };
+        if (membershipToDelete?.isAdmin && adminCount <= 1) {
+          moduleLogger.warn('Cannot remove last admin from church', {
+            churchId: input.churchId,
+            memberToRemove: input.appUserId,
+            removedBy: ctx.session.appUserId,
+          });
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Cannot remove the last admin from the church',
+          });
+        }
+
+        // Don't allow removing yourself
+        if (membershipToDelete?.appUserId === ctx.session.appUser.id) {
+          moduleLogger.warn('User attempted to remove themselves from church', {
+            churchId: input.churchId,
+            appUserId: ctx.session.appUserId,
+          });
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'You cannot remove yourself from the church',
+          });
+        }
+
+        await db.organizationMembership.delete({
+          where: {
+            organizationId_appUserId: {
+              organizationId: input.churchId,
+              appUserId: input.appUserId,
+            },
+          },
+        });
+
+        moduleLogger.info('Church member removed successfully', {
+          churchId: input.churchId,
+          memberRemoved: input.appUserId,
+          removedBy: ctx.session.appUserId,
+          wasAdmin: membershipToDelete?.isAdmin,
+        });
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+
+        moduleLogger.error('Failed to remove church member', {
+          churchId: input.churchId,
+          memberToRemove: input.appUserId,
+          removedBy: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
     }),
 
   searchChannels: churchAdminProcedure
     .input(channelSearchChurchSchema)
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      moduleLogger.info('Searching channels for church', {
+        churchId: input.churchId,
+        query: input.query,
+        appUserId: ctx.session.appUserId,
+      });
+
       const channels = await db.channel.findMany({
         select: {
           id: true,
@@ -451,82 +532,205 @@ export const churchRouter = router({
         take: 10,
       });
 
+      moduleLogger.info('Channel search completed', {
+        churchId: input.churchId,
+        query: input.query,
+        resultCount: channels.length,
+        appUserId: ctx.session.appUserId,
+      });
+
       return channels;
     }),
 
   linkChannel: churchAdminProcedure
     .input(linkChannelSchema)
-    .mutation(async ({ input }) => {
-      await db.organizationChannelAssociation.create({
-        data: {
-          organizationId: input.churchId,
-          channelId: input.channelId,
-          officialChannel: input.officialChannel,
-        },
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Linking channel to church', {
+        churchId: input.churchId,
+        channelId: input.channelId,
+        officialChannel: input.officialChannel,
+        linkedBy: ctx.session.appUserId,
       });
 
-      return { success: true };
+      try {
+        await db.organizationChannelAssociation.create({
+          data: {
+            organizationId: input.churchId,
+            channelId: input.channelId,
+            officialChannel: input.officialChannel,
+          },
+        });
+
+        moduleLogger.info('Channel linked to church successfully', {
+          churchId: input.churchId,
+          channelId: input.channelId,
+          officialChannel: input.officialChannel,
+          linkedBy: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to link channel to church', {
+          churchId: input.churchId,
+          channelId: input.channelId,
+          linkedBy: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
     }),
 
   unlinkChannel: churchAdminProcedure
     .input(unlinkChannelSchema)
-    .mutation(async ({ input }) => {
-      await db.organizationChannelAssociation.delete({
-        where: {
-          organizationId_channelId: {
-            organizationId: input.churchId,
-            channelId: input.channelId,
-          },
-        },
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Unlinking channel from church', {
+        churchId: input.churchId,
+        channelId: input.channelId,
+        unlinkedBy: ctx.session.appUserId,
       });
 
-      return { success: true };
+      try {
+        await db.organizationChannelAssociation.delete({
+          where: {
+            organizationId_channelId: {
+              organizationId: input.churchId,
+              channelId: input.channelId,
+            },
+          },
+        });
+
+        moduleLogger.info('Channel unlinked from church successfully', {
+          churchId: input.churchId,
+          channelId: input.channelId,
+          unlinkedBy: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to unlink channel from church', {
+          churchId: input.churchId,
+          channelId: input.channelId,
+          unlinkedBy: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
     }),
 
   addLeader: churchAdminProcedure
     .input(addLeaderSchema)
-    .mutation(async ({ input }) => {
-      await db.organizationLeader.create({
-        data: {
-          organizationId: input.churchId,
-          type: input.type,
-          name: input.name,
-          email: input.email || null,
-          phoneNumber: input.phoneNumber || null,
-        },
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Adding church leader', {
+        churchId: input.churchId,
+        leaderType: input.type,
+        leaderName: input.name,
+        addedBy: ctx.session.appUserId,
       });
 
-      return { success: true };
+      try {
+        const leader = await db.organizationLeader.create({
+          data: {
+            organizationId: input.churchId,
+            type: input.type,
+            name: input.name,
+            email: input.email || null,
+            phoneNumber: input.phoneNumber || null,
+          },
+        });
+
+        moduleLogger.info('Church leader added successfully', {
+          churchId: input.churchId,
+          leaderId: leader.id,
+          leaderType: input.type,
+          leaderName: input.name,
+          addedBy: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to add church leader', {
+          churchId: input.churchId,
+          leaderType: input.type,
+          leaderName: input.name,
+          addedBy: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
     }),
 
   updateLeader: churchAdminProcedure
     .input(updateLeaderSchema)
-    .mutation(async ({ input }) => {
-      await db.organizationLeader.update({
-        where: {
-          id: input.leaderId,
-        },
-        data: {
-          type: input.type,
-          name: input.name,
-          email: input.email || null,
-          phoneNumber: input.phoneNumber || null,
-        },
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Updating church leader', {
+        leaderId: input.leaderId,
+        leaderType: input.type,
+        leaderName: input.name,
+        updatedBy: ctx.session.appUserId,
       });
 
-      return { success: true };
+      try {
+        await db.organizationLeader.update({
+          where: {
+            id: input.leaderId,
+          },
+          data: {
+            type: input.type,
+            name: input.name,
+            email: input.email || null,
+            phoneNumber: input.phoneNumber || null,
+          },
+        });
+
+        moduleLogger.info('Church leader updated successfully', {
+          leaderId: input.leaderId,
+          leaderType: input.type,
+          leaderName: input.name,
+          updatedBy: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to update church leader', {
+          leaderId: input.leaderId,
+          leaderType: input.type,
+          leaderName: input.name,
+          updatedBy: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
     }),
 
   removeLeader: churchAdminProcedure
     .input(removeLeaderSchema)
-    .mutation(async ({ input }) => {
-      await db.organizationLeader.delete({
-        where: {
-          id: input.leaderId,
-        },
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Removing church leader', {
+        leaderId: input.leaderId,
+        removedBy: ctx.session.appUserId,
       });
 
-      return { success: true };
+      try {
+        await db.organizationLeader.delete({
+          where: {
+            id: input.leaderId,
+          },
+        });
+
+        moduleLogger.info('Church leader removed successfully', {
+          leaderId: input.leaderId,
+          removedBy: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to remove church leader', {
+          leaderId: input.leaderId,
+          removedBy: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
     }),
 
   getChurchForEdit: churchAdminProcedure.query(async ({ ctx, input }) => {

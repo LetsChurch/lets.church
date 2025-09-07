@@ -85,11 +85,12 @@ export const organizationRouter = router({
 
   searchOrganizations: authProcedure
     .input(searchOrganizationsSchema)
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       moduleLogger.info('Searching organizations', {
         query: input.query,
         excludeChurchTypes: input.excludeChurchTypes,
         limit: input.limit,
+        appUserId: ctx.session.appUserId,
       });
 
       const whereClause = {
@@ -102,7 +103,7 @@ export const organizationRouter = router({
         }),
       };
 
-      return db.organization.findMany({
+      const organizations = await db.organization.findMany({
         select: {
           id: true,
           name: true,
@@ -116,6 +117,15 @@ export const organizationRouter = router({
         ],
         take: input.limit,
       });
+
+      moduleLogger.info('Organization search completed', {
+        query: input.query,
+        resultCount: organizations.length,
+        excludeChurchTypes: input.excludeChurchTypes,
+        appUserId: ctx.session.appUserId,
+      });
+
+      return organizations;
     }),
 
   getOrganizationsByIds: authProcedure
@@ -311,7 +321,13 @@ export const organizationRouter = router({
 
   searchUsers: organizationAdminProcedure
     .input(userSearchOrganizationSchema)
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      moduleLogger.info('Searching users for organization', {
+        organizationId: input.orgId,
+        query: input.query,
+        appUserId: ctx.session.appUserId,
+      });
+
       const users = await db.appUser.findMany({
         select: {
           id: true,
@@ -335,70 +351,138 @@ export const organizationRouter = router({
         take: 10,
       });
 
+      moduleLogger.info('User search completed', {
+        organizationId: input.orgId,
+        query: input.query,
+        resultCount: users.length,
+        appUserId: ctx.session.appUserId,
+      });
+
       return users;
     }),
 
   addOrganizationMember: organizationAdminProcedure
     .input(addOrganizationMemberSchema)
-    .mutation(async ({ input }) => {
-      await db.organizationMembership.create({
-        data: {
-          organizationId: input.orgId,
-          appUserId: input.userId,
-          isAdmin: input.isAdmin,
-          canEdit: input.canEdit,
-        },
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Adding organization member', {
+        organizationId: input.orgId,
+        newMemberUserId: input.userId,
+        isAdmin: input.isAdmin,
+        canEdit: input.canEdit,
+        addedBy: ctx.session.appUserId,
       });
 
-      return { success: true };
+      try {
+        await db.organizationMembership.create({
+          data: {
+            organizationId: input.orgId,
+            appUserId: input.userId,
+            isAdmin: input.isAdmin,
+            canEdit: input.canEdit,
+          },
+        });
+
+        moduleLogger.info('Organization member added successfully', {
+          organizationId: input.orgId,
+          newMemberUserId: input.userId,
+          addedBy: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to add organization member', {
+          organizationId: input.orgId,
+          newMemberUserId: input.userId,
+          addedBy: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
     }),
 
   removeOrganizationMember: organizationAdminProcedure
     .input(removeOrganizationMemberSchema)
     .mutation(async ({ ctx, input }) => {
-      // Don't allow removing the last admin
-      const adminCount = await db.organizationMembership.count({
-        where: {
+      moduleLogger.info('Removing organization member', {
+        organizationId: input.orgId,
+        memberToRemove: input.appUserId,
+        removedBy: ctx.session.appUserId,
+      });
+
+      try {
+        // Don't allow removing the last admin
+        const adminCount = await db.organizationMembership.count({
+          where: {
+            organizationId: input.orgId,
+            isAdmin: true,
+          },
+        });
+
+        const membershipToDelete = await db.organizationMembership.findUnique({
+          where: {
+            organizationId_appUserId: {
+              organizationId: input.orgId,
+              appUserId: input.appUserId,
+            },
+          },
+          select: { isAdmin: true, appUserId: true },
+        });
+
+        if (membershipToDelete?.isAdmin && adminCount <= 1) {
+          moduleLogger.warn('Cannot remove last admin from organization', {
+            organizationId: input.orgId,
+            memberToRemove: input.appUserId,
+            removedBy: ctx.session.appUserId,
+          });
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Cannot remove the last admin from the organization',
+          });
+        }
+
+        // Don't allow removing yourself
+        if (membershipToDelete?.appUserId === ctx.session.appUser.id) {
+          moduleLogger.warn(
+            'User attempted to remove themselves from organization',
+            {
+              organizationId: input.orgId,
+              appUserId: ctx.session.appUserId,
+            },
+          );
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'You cannot remove yourself from the organization',
+          });
+        }
+
+        await db.organizationMembership.delete({
+          where: {
+            organizationId_appUserId: {
+              organizationId: input.orgId,
+              appUserId: input.appUserId,
+            },
+          },
+        });
+
+        moduleLogger.info('Organization member removed successfully', {
           organizationId: input.orgId,
-          isAdmin: true,
-        },
-      });
-
-      const membershipToDelete = await db.organizationMembership.findUnique({
-        where: {
-          organizationId_appUserId: {
-            organizationId: input.orgId,
-            appUserId: input.appUserId,
-          },
-        },
-        select: { isAdmin: true, appUserId: true },
-      });
-
-      if (membershipToDelete?.isAdmin && adminCount <= 1) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Cannot remove the last admin from the organization',
+          memberRemoved: input.appUserId,
+          removedBy: ctx.session.appUserId,
+          wasAdmin: membershipToDelete?.isAdmin,
         });
-      }
 
-      // Don't allow removing yourself
-      if (membershipToDelete?.appUserId === ctx.session.appUser.id) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'You cannot remove yourself from the organization',
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+
+        moduleLogger.error('Failed to remove organization member', {
+          organizationId: input.orgId,
+          memberToRemove: input.appUserId,
+          removedBy: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
         });
+        throw error;
       }
-
-      await db.organizationMembership.delete({
-        where: {
-          organizationId_appUserId: {
-            organizationId: input.orgId,
-            appUserId: input.appUserId,
-          },
-        },
-      });
-
-      return { success: true };
     }),
 
   getOrganizationForEdit: organizationAdminProcedure.query(

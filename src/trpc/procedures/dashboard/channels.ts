@@ -148,6 +148,10 @@ export const channelRouter = router({
     }),
 
   getChannels: authProcedure.query(({ ctx }) => {
+    moduleLogger.info('Fetching channels for user', {
+      appUserId: ctx.session.appUserId,
+    });
+
     return db.channel.findMany({
       select: {
         id: true,
@@ -377,7 +381,13 @@ export const channelRouter = router({
 
   searchUsers: channelAdminProcedure
     .input(userSearchSchema)
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      moduleLogger.info('Searching users for channel', {
+        channelId: input.channelId,
+        query: input.query,
+        appUserId: ctx.session.appUserId,
+      });
+
       const users = await db.appUser.findMany({
         select: {
           id: true,
@@ -401,71 +411,140 @@ export const channelRouter = router({
         take: 10,
       });
 
+      moduleLogger.info('User search completed', {
+        channelId: input.channelId,
+        query: input.query,
+        resultCount: users.length,
+        appUserId: ctx.session.appUserId,
+      });
+
       return users;
     }),
 
   addChannelMember: channelAdminProcedure
     .input(addMemberSchema)
-    .mutation(async ({ input }) => {
-      await db.channelMembership.create({
-        data: {
-          channelId: input.channelId,
-          appUserId: input.userId,
-          isAdmin: input.isAdmin,
-          canEdit: input.canEdit,
-          canUpload: input.canUpload,
-        },
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Adding channel member', {
+        channelId: input.channelId,
+        newMemberUserId: input.userId,
+        isAdmin: input.isAdmin,
+        canEdit: input.canEdit,
+        canUpload: input.canUpload,
+        addedBy: ctx.session.appUserId,
       });
 
-      return { success: true };
+      try {
+        await db.channelMembership.create({
+          data: {
+            channelId: input.channelId,
+            appUserId: input.userId,
+            isAdmin: input.isAdmin,
+            canEdit: input.canEdit,
+            canUpload: input.canUpload,
+          },
+        });
+
+        moduleLogger.info('Channel member added successfully', {
+          channelId: input.channelId,
+          newMemberUserId: input.userId,
+          addedBy: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to add channel member', {
+          channelId: input.channelId,
+          newMemberUserId: input.userId,
+          addedBy: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
     }),
 
   removeChannelMember: channelAdminProcedure
     .input(removeMemberSchema)
     .mutation(async ({ ctx, input }) => {
-      // Don't allow removing the last admin
-      const adminCount = await db.channelMembership.count({
-        where: {
+      moduleLogger.info('Removing channel member', {
+        channelId: input.channelId,
+        memberToRemove: input.appUserId,
+        removedBy: ctx.session.appUserId,
+      });
+
+      try {
+        // Don't allow removing the last admin
+        const adminCount = await db.channelMembership.count({
+          where: {
+            channelId: input.channelId,
+            isAdmin: true,
+          },
+        });
+
+        const membershipToDelete = await db.channelMembership.findUnique({
+          where: {
+            channelId_appUserId: {
+              channelId: input.channelId,
+              appUserId: input.appUserId,
+            },
+          },
+          select: { isAdmin: true, appUserId: true },
+        });
+
+        if (membershipToDelete?.isAdmin && adminCount <= 1) {
+          moduleLogger.warn('Cannot remove last admin from channel', {
+            channelId: input.channelId,
+            memberToRemove: input.appUserId,
+            removedBy: ctx.session.appUserId,
+          });
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Cannot remove the last admin from the channel',
+          });
+        }
+
+        // Don't allow removing yourself
+        if (membershipToDelete?.appUserId === ctx.session.appUser.id) {
+          moduleLogger.warn(
+            'User attempted to remove themselves from channel',
+            {
+              channelId: input.channelId,
+              appUserId: ctx.session.appUserId,
+            },
+          );
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'You cannot remove yourself from the channel',
+          });
+        }
+
+        await db.channelMembership.delete({
+          where: {
+            channelId_appUserId: {
+              channelId: input.channelId,
+              appUserId: input.appUserId,
+            },
+          },
+        });
+
+        moduleLogger.info('Channel member removed successfully', {
           channelId: input.channelId,
-          isAdmin: true,
-        },
-      });
-
-      const membershipToDelete = await db.channelMembership.findUnique({
-        where: {
-          channelId_appUserId: {
-            channelId: input.channelId,
-            appUserId: input.appUserId,
-          },
-        },
-        select: { isAdmin: true, appUserId: true },
-      });
-
-      if (membershipToDelete?.isAdmin && adminCount <= 1) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Cannot remove the last admin from the channel',
+          memberRemoved: input.appUserId,
+          removedBy: ctx.session.appUserId,
+          wasAdmin: membershipToDelete?.isAdmin,
         });
-      }
 
-      // Don't allow removing yourself
-      if (membershipToDelete?.appUserId === ctx.session.appUser.id) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'You cannot remove yourself from the channel',
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+
+        moduleLogger.error('Failed to remove channel member', {
+          channelId: input.channelId,
+          memberToRemove: input.appUserId,
+          removedBy: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
         });
+        throw error;
       }
-
-      await db.channelMembership.delete({
-        where: {
-          channelId_appUserId: {
-            channelId: input.channelId,
-            appUserId: input.appUserId,
-          },
-        },
-      });
-
-      return { success: true };
     }),
 
   getChannelUploads: channelProcedure
@@ -847,7 +926,12 @@ export const channelRouter = router({
     ),
 
   // Playlist procedures
-  getChannelPlaylists: channelProcedure.query(async ({ input }) => {
+  getChannelPlaylists: channelProcedure.query(async ({ ctx, input }) => {
+    moduleLogger.info('Fetching channel playlists', {
+      channelId: input.channelId,
+      appUserId: ctx.session.appUserId,
+    });
+
     const playlists = await db.uploadList.findMany({
       select: {
         id: true,
@@ -872,7 +956,13 @@ export const channelRouter = router({
 
   getPlaylistDetails: channelProcedure
     .input(playlistQuerySchema)
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      moduleLogger.info('Fetching playlist details', {
+        playlistId: input.playlistId,
+        channelId: input.channelId,
+        appUserId: ctx.session.appUserId,
+      });
+
       const playlist = await db.uploadList.findFirst({
         select: {
           id: true,
@@ -906,6 +996,11 @@ export const channelRouter = router({
       });
 
       if (!playlist) {
+        moduleLogger.warn('Playlist not found', {
+          playlistId: input.playlistId,
+          channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
+        });
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Playlist not found',
@@ -918,153 +1013,310 @@ export const channelRouter = router({
   createPlaylist: channelEditProcedure
     .input(createPlaylistSchema)
     .mutation(async ({ ctx, input }) => {
-      const playlist = await db.uploadList.create({
-        data: {
-          title: input.title,
-          type: input.type,
-          authorId: ctx.session.appUser.id,
-          channelId: input.channelId,
-        },
-        select: {
-          id: true,
-          title: true,
-          type: true,
-          createdAt: true,
-        },
+      moduleLogger.info('Creating playlist', {
+        channelId: input.channelId,
+        playlistTitle: input.title,
+        playlistType: input.type,
+        createdBy: ctx.session.appUserId,
       });
 
-      return { success: true, playlist };
+      try {
+        const playlist = await db.uploadList.create({
+          data: {
+            title: input.title,
+            type: input.type,
+            authorId: ctx.session.appUser.id,
+            channelId: input.channelId,
+          },
+          select: {
+            id: true,
+            title: true,
+            type: true,
+            createdAt: true,
+          },
+        });
+
+        moduleLogger.info('Playlist created successfully', {
+          playlistId: playlist.id,
+          channelId: input.channelId,
+          playlistTitle: input.title,
+          createdBy: ctx.session.appUserId,
+        });
+
+        return { success: true, playlist };
+      } catch (error) {
+        moduleLogger.error('Failed to create playlist', {
+          channelId: input.channelId,
+          playlistTitle: input.title,
+          createdBy: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
     }),
 
   updatePlaylist: channelEditProcedure
     .input(updatePlaylistSchema)
-    .mutation(async ({ input }) => {
-      const updatedPlaylist = await db.uploadList.update({
-        where: { id: input.playlistId },
-        data: {
-          title: input.title,
-          type: input.type,
-        },
-        select: {
-          id: true,
-          title: true,
-          type: true,
-          updatedAt: true,
-        },
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Updating playlist', {
+        playlistId: input.playlistId,
+        playlistTitle: input.title,
+        playlistType: input.type,
+        updatedBy: ctx.session.appUserId,
       });
 
-      return { success: true, playlist: updatedPlaylist };
+      try {
+        const updatedPlaylist = await db.uploadList.update({
+          where: { id: input.playlistId },
+          data: {
+            title: input.title,
+            type: input.type,
+          },
+          select: {
+            id: true,
+            title: true,
+            type: true,
+            updatedAt: true,
+          },
+        });
+
+        moduleLogger.info('Playlist updated successfully', {
+          playlistId: input.playlistId,
+          playlistTitle: input.title,
+          updatedBy: ctx.session.appUserId,
+        });
+
+        return { success: true, playlist: updatedPlaylist };
+      } catch (error) {
+        moduleLogger.error('Failed to update playlist', {
+          playlistId: input.playlistId,
+          playlistTitle: input.title,
+          updatedBy: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
     }),
 
   deletePlaylist: channelEditProcedure
     .input(deletePlaylistSchema)
-    .mutation(async ({ input }) => {
-      await db.uploadList.delete({
-        where: { id: input.playlistId },
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Deleting playlist', {
+        playlistId: input.playlistId,
+        deletedBy: ctx.session.appUserId,
       });
 
-      return { success: true };
+      try {
+        await db.uploadList.delete({
+          where: { id: input.playlistId },
+        });
+
+        moduleLogger.info('Playlist deleted successfully', {
+          playlistId: input.playlistId,
+          deletedBy: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to delete playlist', {
+          playlistId: input.playlistId,
+          deletedBy: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
     }),
 
   addToPlaylist: channelEditProcedure
     .input(addToPlaylistSchema)
-    .mutation(async ({ input }) => {
-      // Get the playlist to verify it exists and get its channelId
-      const playlist = await db.uploadList.findUnique({
-        where: { id: input.playlistId },
-        select: { id: true, channelId: true },
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Adding upload to playlist', {
+        playlistId: input.playlistId,
+        uploadId: input.uploadId,
+        addedBy: ctx.session.appUserId,
       });
 
-      if (!playlist?.channelId) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Playlist not found',
+      try {
+        // Get the playlist to verify it exists and get its channelId
+        const playlist = await db.uploadList.findUnique({
+          where: { id: input.playlistId },
+          select: { id: true, channelId: true },
         });
-      }
 
-      // Verify the upload belongs to the same channel
-      const upload = await db.uploadRecord.findFirst({
-        where: {
-          id: input.uploadId,
-          channelId: playlist.channelId,
-        },
-        select: { id: true },
-      });
+        if (!playlist?.channelId) {
+          moduleLogger.warn('Playlist not found for add to playlist', {
+            playlistId: input.playlistId,
+            uploadId: input.uploadId,
+            addedBy: ctx.session.appUserId,
+          });
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Playlist not found',
+          });
+        }
 
-      if (!upload) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Upload not found or does not belong to this channel',
+        // Verify the upload belongs to the same channel
+        const upload = await db.uploadRecord.findFirst({
+          where: {
+            id: input.uploadId,
+            channelId: playlist.channelId,
+          },
+          select: { id: true },
         });
-      }
 
-      // Check if upload is already in playlist
-      const existingEntry = await db.uploadListEntry.findUnique({
-        where: {
-          uploadListId_uploadRecordId: {
+        if (!upload) {
+          moduleLogger.warn('Upload not found or channel mismatch', {
+            playlistId: input.playlistId,
+            uploadId: input.uploadId,
+            channelId: playlist.channelId,
+            addedBy: ctx.session.appUserId,
+          });
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Upload not found or does not belong to this channel',
+          });
+        }
+
+        // Check if upload is already in playlist
+        const existingEntry = await db.uploadListEntry.findUnique({
+          where: {
+            uploadListId_uploadRecordId: {
+              uploadListId: input.playlistId,
+              uploadRecordId: input.uploadId,
+            },
+          },
+        });
+
+        if (existingEntry) {
+          moduleLogger.warn('Upload already in playlist', {
+            playlistId: input.playlistId,
+            uploadId: input.uploadId,
+            addedBy: ctx.session.appUserId,
+          });
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Upload is already in this playlist',
+          });
+        }
+
+        await db.uploadListEntry.create({
+          data: {
             uploadListId: input.playlistId,
             uploadRecordId: input.uploadId,
           },
-        },
-      });
-
-      if (existingEntry) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Upload is already in this playlist',
         });
+
+        moduleLogger.info('Upload added to playlist successfully', {
+          playlistId: input.playlistId,
+          uploadId: input.uploadId,
+          addedBy: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+
+        moduleLogger.error('Failed to add upload to playlist', {
+          playlistId: input.playlistId,
+          uploadId: input.uploadId,
+          addedBy: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
       }
-
-      await db.uploadListEntry.create({
-        data: {
-          uploadListId: input.playlistId,
-          uploadRecordId: input.uploadId,
-        },
-      });
-
-      return { success: true };
     }),
 
   removeFromPlaylist: channelEditProcedure
     .input(removeFromPlaylistSchema)
-    .mutation(async ({ input }) => {
-      const deletedEntry = await db.uploadListEntry.deleteMany({
-        where: {
-          uploadListId: input.playlistId,
-          uploadRecordId: input.uploadId,
-        },
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Removing upload from playlist', {
+        playlistId: input.playlistId,
+        uploadId: input.uploadId,
+        removedBy: ctx.session.appUserId,
       });
 
-      if (deletedEntry.count === 0) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Upload not found in playlist',
+      try {
+        const deletedEntry = await db.uploadListEntry.deleteMany({
+          where: {
+            uploadListId: input.playlistId,
+            uploadRecordId: input.uploadId,
+          },
         });
-      }
 
-      return { success: true };
+        if (deletedEntry.count === 0) {
+          moduleLogger.warn('Upload not found in playlist for removal', {
+            playlistId: input.playlistId,
+            uploadId: input.uploadId,
+            removedBy: ctx.session.appUserId,
+          });
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Upload not found in playlist',
+          });
+        }
+
+        moduleLogger.info('Upload removed from playlist successfully', {
+          playlistId: input.playlistId,
+          uploadId: input.uploadId,
+          removedBy: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+
+        moduleLogger.error('Failed to remove upload from playlist', {
+          playlistId: input.playlistId,
+          uploadId: input.uploadId,
+          removedBy: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
     }),
 
   reorderPlaylist: channelEditProcedure
     .input(reorderPlaylistSchema)
-    .mutation(async ({ input }) => {
-      await db.$transaction(
-        input.uploadIds.map((uploadId, index) =>
-          db.uploadListEntry.update({
-            where: {
-              uploadListId_uploadRecordId: {
-                uploadListId: input.playlistId,
-                uploadRecordId: uploadId,
-              },
-            },
-            data: {
-              rank: index,
-            },
-          }),
-        ),
-      );
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Reordering playlist', {
+        playlistId: input.playlistId,
+        uploadCount: input.uploadIds.length,
+        reorderedBy: ctx.session.appUserId,
+      });
 
-      return { success: true };
+      try {
+        await db.$transaction(
+          input.uploadIds.map((uploadId, index) =>
+            db.uploadListEntry.update({
+              where: {
+                uploadListId_uploadRecordId: {
+                  uploadListId: input.playlistId,
+                  uploadRecordId: uploadId,
+                },
+              },
+              data: {
+                rank: index,
+              },
+            }),
+          ),
+        );
+
+        moduleLogger.info('Playlist reordered successfully', {
+          playlistId: input.playlistId,
+          uploadCount: input.uploadIds.length,
+          reorderedBy: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to reorder playlist', {
+          playlistId: input.playlistId,
+          uploadCount: input.uploadIds.length,
+          reorderedBy: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
     }),
 
   finalizeMultipartUpload: channelUploadProcedure
