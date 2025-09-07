@@ -11,6 +11,7 @@ import {
 import { useTRPC } from '@/trpc/react';
 import { BackButton } from '@/util/back-navigation';
 import { MantineWrapper } from './-mantine';
+import { DashboardSearchBar } from './dashboard_/-components/search-bar';
 
 export const Route = createFileRoute('/dashboard_')({
   beforeLoad: async ({ context }) => {
@@ -44,35 +45,50 @@ function DashboardLayout() {
         padding="md"
       >
         <AppShell.Header>
-          <Group h="100%" px="md">
-            <Burger
-              opened={opened}
-              onClick={toggle}
-              hiddenFrom="sm"
-              size="sm"
-            />
-            <Anchor
-              component={Link}
-              to="/dashboard"
-              size="lg"
-              fw={500}
-              td="none"
-              c="inherit"
+          <Group h="100%" px="md" justify="space-between">
+            <Group>
+              <Burger
+                opened={opened}
+                onClick={toggle}
+                hiddenFrom="sm"
+                size="sm"
+              />
+              <Anchor
+                component={Link}
+                to="/dashboard"
+                size="lg"
+                fw={500}
+                td="none"
+                c="inherit"
+              >
+                <Group gap="xs">
+                  <img
+                    src="/logoicon.svg"
+                    alt="Let's Church Icon"
+                    style={{
+                      height: '1.5em',
+                      width: 'auto',
+                      position: 'relative',
+                      top: '-0.125em',
+                    }}
+                  />
+                  <span>Dashboard</span>
+                </Group>
+              </Anchor>
+            </Group>
+
+            <Box
+              style={{
+                flex: 1,
+                display: 'flex',
+                justifyContent: 'center',
+                maxWidth: 400,
+              }}
             >
-              <Group gap="xs">
-                <img
-                  src="/logoicon.svg"
-                  alt="Let's Church Icon"
-                  style={{
-                    height: '1.5em',
-                    width: 'auto',
-                    position: 'relative',
-                    top: '-0.125em',
-                  }}
-                />
-                <span>Dashboard</span>
-              </Group>
-            </Anchor>
+              <DashboardSearchBar currentUser={currentUser} />
+            </Box>
+
+            <Box style={{ width: 'auto' }} />
           </Group>
         </AppShell.Header>
 
