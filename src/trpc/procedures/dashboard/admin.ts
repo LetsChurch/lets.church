@@ -1,4 +1,5 @@
 import { TRPCError } from '@trpc/server';
+import * as argon2 from 'argon2';
 import { z } from 'zod';
 import db from '@/util/db';
 import logger from '@/util/logger';
@@ -25,91 +26,94 @@ export const adminRouter = router({
   getPendingApprovals: adminProcedure.query(async () => {
     moduleLogger.info('Fetching pending approvals');
 
-    const [pendingChannels, pendingOrganizations] = await Promise.all([
-      db.channel.findMany({
-        where: {
-          approvedAt: null,
-        },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          description: true,
-          createdAt: true,
-          memberships: {
-            select: {
-              appUser: {
-                select: {
-                  id: true,
-                  fullName: true,
-                  emails: {
-                    select: {
-                      email: true,
-                      verifiedAt: true,
+    const [pendingChannels, pendingOrganizations, userCount] =
+      await Promise.all([
+        db.channel.findMany({
+          where: {
+            approvedAt: null,
+          },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            createdAt: true,
+            memberships: {
+              select: {
+                appUser: {
+                  select: {
+                    id: true,
+                    fullName: true,
+                    emails: {
+                      select: {
+                        email: true,
+                        verifiedAt: true,
+                      },
+                      where: {
+                        verifiedAt: { not: null },
+                      },
+                      take: 1,
                     },
-                    where: {
-                      verifiedAt: { not: null },
-                    },
-                    take: 1,
                   },
                 },
               },
+              where: {
+                isAdmin: true,
+              },
+              take: 1,
             },
-            where: {
-              isAdmin: true,
-            },
-            take: 1,
           },
-        },
-        orderBy: {
-          createdAt: 'asc',
-        },
-      }),
-      db.organization.findMany({
-        where: {
-          approvedAt: null,
-        },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          description: true,
-          type: true,
-          createdAt: true,
-          memberships: {
-            select: {
-              appUser: {
-                select: {
-                  id: true,
-                  fullName: true,
-                  emails: {
-                    select: {
-                      email: true,
-                      verifiedAt: true,
+          orderBy: {
+            createdAt: 'asc',
+          },
+        }),
+        db.organization.findMany({
+          where: {
+            approvedAt: null,
+          },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            type: true,
+            createdAt: true,
+            memberships: {
+              select: {
+                appUser: {
+                  select: {
+                    id: true,
+                    fullName: true,
+                    emails: {
+                      select: {
+                        email: true,
+                        verifiedAt: true,
+                      },
+                      where: {
+                        verifiedAt: { not: null },
+                      },
+                      take: 1,
                     },
-                    where: {
-                      verifiedAt: { not: null },
-                    },
-                    take: 1,
                   },
                 },
               },
+              where: {
+                isAdmin: true,
+              },
+              take: 1,
             },
-            where: {
-              isAdmin: true,
-            },
-            take: 1,
           },
-        },
-        orderBy: {
-          createdAt: 'asc',
-        },
-      }),
-    ]);
+          orderBy: {
+            createdAt: 'asc',
+          },
+        }),
+        db.appUser.count(),
+      ]);
 
     return {
       channels: pendingChannels,
       organizations: pendingOrganizations,
+      userCount,
     };
   }),
 
@@ -462,6 +466,194 @@ export const adminRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to delete organization tag',
+        });
+      }
+    }),
+
+  getUsers: adminProcedure.query(async () => {
+    moduleLogger.info('Fetching users');
+
+    return db.appUser.findMany({
+      select: {
+        id: true,
+        username: true,
+        fullName: true,
+        role: true,
+        createdAt: true,
+        emails: {
+          select: {
+            email: true,
+            verifiedAt: true,
+          },
+          where: {
+            verifiedAt: { not: null },
+          },
+          take: 1,
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }),
+
+  getUserCount: adminProcedure.query(async () => {
+    moduleLogger.info('Fetching user count');
+
+    return db.appUser.count();
+  }),
+
+  createUser: adminProcedure
+    .input(
+      z.object({
+        username: z.string().min(1),
+        password: z.string().min(6),
+        fullName: z.string().optional(),
+        email: z.string().email(),
+        role: z.enum(['USER', 'ADMIN']),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Creating user', {
+        username: input.username,
+        email: input.email,
+        role: input.role,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        const hashedPassword = await argon2.hash(input.password);
+
+        const user = await db.appUser.create({
+          data: {
+            username: input.username,
+            password: hashedPassword,
+            fullName: input.fullName,
+            role: input.role,
+            emails: {
+              create: {
+                email: input.email,
+                verifiedAt: new Date(),
+              },
+            },
+          },
+          select: {
+            id: true,
+            username: true,
+            fullName: true,
+            role: true,
+            createdAt: true,
+            emails: {
+              select: {
+                email: true,
+                verifiedAt: true,
+              },
+              where: {
+                verifiedAt: { not: null },
+              },
+              take: 1,
+            },
+          },
+        });
+
+        moduleLogger.info('User created successfully', {
+          userId: user.id,
+          username: user.username,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return user;
+      } catch (error) {
+        moduleLogger.error('Failed to create user', {
+          username: input.username,
+          email: input.email,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to create user',
+        });
+      }
+    }),
+
+  updateUser: adminProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+        username: z.string().min(1).optional(),
+        fullName: z.string().optional(),
+        role: z.enum(['USER', 'ADMIN']).optional(),
+        email: z.string().email().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Updating user', {
+        userId: input.userId,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        const updateData: {
+          username?: string;
+          fullName?: string | null;
+          role?: 'USER' | 'ADMIN';
+        } = {};
+        if (input.username) updateData.username = input.username;
+        if (input.fullName !== undefined) updateData.fullName = input.fullName;
+        if (input.role) updateData.role = input.role;
+
+        const user = await db.appUser.update({
+          where: { id: input.userId },
+          data: updateData,
+          select: {
+            id: true,
+            username: true,
+            fullName: true,
+            role: true,
+            createdAt: true,
+            emails: {
+              select: {
+                email: true,
+                verifiedAt: true,
+              },
+              where: {
+                verifiedAt: { not: null },
+              },
+              take: 1,
+            },
+          },
+        });
+
+        if (input.email) {
+          await db.appUserEmail.updateMany({
+            where: {
+              appUserId: input.userId,
+              verifiedAt: { not: null },
+            },
+            data: {
+              email: input.email,
+            },
+          });
+        }
+
+        moduleLogger.info('User updated successfully', {
+          userId: input.userId,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return user;
+      } catch (error) {
+        moduleLogger.error('Failed to update user', {
+          userId: input.userId,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to update user',
         });
       }
     }),

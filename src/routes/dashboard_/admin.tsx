@@ -98,6 +98,24 @@ function AdminPage() {
             Manage tags for categorizing organizations
           </Text>
         </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
+          to="/dashboard/admin/users"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Users</Text>
+            <Badge color="blue" size="sm">
+              {pendingApprovals.userCount}
+            </Badge>
+          </Group>
+          <Text size="sm" c="dimmed">
+            Manage user accounts and roles
+          </Text>
+        </Card>
       </SimpleGrid>
     </>
   );
