@@ -352,4 +352,117 @@ export const adminRouter = router({
         });
       }
     }),
+
+  getOrganizationTags: adminProcedure.query(async () => {
+    moduleLogger.info('Fetching organization tags');
+
+    return db.organizationTag.findMany({
+      select: {
+        slug: true,
+        label: true,
+        description: true,
+        category: true,
+        color: true,
+      },
+      orderBy: [{ category: 'asc' }, { label: 'asc' }],
+    });
+  }),
+
+  upsertOrganizationTag: adminProcedure
+    .input(
+      z.object({
+        slug: z.string().min(1),
+        label: z.string().min(1),
+        description: z.string().optional(),
+        category: z.enum([
+          'DENOMINATION',
+          'DOCTRINE',
+          'ESCHATOLOGY',
+          'CONFESSION',
+          'WORSHIP',
+          'GOVERNMENT',
+          'OTHER',
+        ]),
+        color: z.enum([
+          'GRAY',
+          'RED',
+          'YELLOW',
+          'GREEN',
+          'BLUE',
+          'INDIGO',
+          'PURPLE',
+          'PINK',
+        ]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Upserting organization tag', {
+        slug: input.slug,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        const tag = await db.organizationTag.upsert({
+          where: { slug: input.slug },
+          create: input,
+          update: {
+            label: input.label,
+            description: input.description,
+            category: input.category,
+            color: input.color,
+          },
+        });
+
+        moduleLogger.info('Organization tag upserted successfully', {
+          tagSlug: tag.slug,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return tag;
+      } catch (error) {
+        moduleLogger.error('Failed to upsert organization tag', {
+          slug: input.slug,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to upsert organization tag',
+        });
+      }
+    }),
+
+  deleteOrganizationTag: adminProcedure
+    .input(z.object({ slug: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Deleting organization tag', {
+        tagSlug: input.slug,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        await db.organizationTag.delete({
+          where: { slug: input.slug },
+        });
+
+        moduleLogger.info('Organization tag deleted successfully', {
+          tagSlug: input.slug,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to delete organization tag', {
+          tagSlug: input.slug,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to delete organization tag',
+        });
+      }
+    }),
 });

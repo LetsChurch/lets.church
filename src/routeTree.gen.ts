@@ -29,6 +29,7 @@ import { Route as DashboardChurchesNewRouteImport } from './routes/dashboard_/ch
 import { Route as DashboardChurchesChurchIdRouteImport } from './routes/dashboard_/churches_.$churchId'
 import { Route as DashboardChannelsNewRouteImport } from './routes/dashboard_/channels_.new'
 import { Route as DashboardChannelsChannelIdRouteImport } from './routes/dashboard_/channels_.$channelId'
+import { Route as DashboardAdminOrganizationTagsRouteImport } from './routes/dashboard_/admin_.organization-tags'
 import { Route as DashboardAdminOrganizationApprovalsRouteImport } from './routes/dashboard_/admin_.organization-approvals'
 import { Route as DashboardAdminChannelApprovalsRouteImport } from './routes/dashboard_/admin_.channel-approvals'
 import { Route as DashboardAccountSecurityRouteImport } from './routes/dashboard_/account_.security'
@@ -142,6 +143,12 @@ const DashboardChannelsChannelIdRoute =
   DashboardChannelsChannelIdRouteImport.update({
     id: '/channels_/$channelId',
     path: '/channels/$channelId',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardAdminOrganizationTagsRoute =
+  DashboardAdminOrganizationTagsRouteImport.update({
+    id: '/admin_/organization-tags',
+    path: '/admin/organization-tags',
     getParentRoute: () => DashboardRoute,
   } as any)
 const DashboardAdminOrganizationApprovalsRoute =
@@ -277,6 +284,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/account/security': typeof DashboardAccountSecurityRoute
   '/dashboard/admin/channel-approvals': typeof DashboardAdminChannelApprovalsRoute
   '/dashboard/admin/organization-approvals': typeof DashboardAdminOrganizationApprovalsRoute
+  '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard/channels/$channelId': typeof DashboardChannelsChannelIdRoute
   '/dashboard/channels/new': typeof DashboardChannelsNewRoute
   '/dashboard/churches/$churchId': typeof DashboardChurchesChurchIdRoute
@@ -312,6 +320,7 @@ export interface FileRoutesByTo {
   '/dashboard/account/security': typeof DashboardAccountSecurityRoute
   '/dashboard/admin/channel-approvals': typeof DashboardAdminChannelApprovalsRoute
   '/dashboard/admin/organization-approvals': typeof DashboardAdminOrganizationApprovalsRoute
+  '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard/channels/$channelId': typeof DashboardChannelsChannelIdRoute
   '/dashboard/channels/new': typeof DashboardChannelsNewRoute
   '/dashboard/churches/$churchId': typeof DashboardChurchesChurchIdRoute
@@ -350,6 +359,7 @@ export interface FileRoutesById {
   '/dashboard_/account_/security': typeof DashboardAccountSecurityRoute
   '/dashboard_/admin_/channel-approvals': typeof DashboardAdminChannelApprovalsRoute
   '/dashboard_/admin_/organization-approvals': typeof DashboardAdminOrganizationApprovalsRoute
+  '/dashboard_/admin_/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard_/channels_/$channelId': typeof DashboardChannelsChannelIdRoute
   '/dashboard_/channels_/new': typeof DashboardChannelsNewRoute
   '/dashboard_/churches_/$churchId': typeof DashboardChurchesChurchIdRoute
@@ -388,6 +398,7 @@ export interface FileRouteTypes {
     | '/dashboard/account/security'
     | '/dashboard/admin/channel-approvals'
     | '/dashboard/admin/organization-approvals'
+    | '/dashboard/admin/organization-tags'
     | '/dashboard/channels/$channelId'
     | '/dashboard/channels/new'
     | '/dashboard/churches/$churchId'
@@ -423,6 +434,7 @@ export interface FileRouteTypes {
     | '/dashboard/account/security'
     | '/dashboard/admin/channel-approvals'
     | '/dashboard/admin/organization-approvals'
+    | '/dashboard/admin/organization-tags'
     | '/dashboard/channels/$channelId'
     | '/dashboard/channels/new'
     | '/dashboard/churches/$churchId'
@@ -460,6 +472,7 @@ export interface FileRouteTypes {
     | '/dashboard_/account_/security'
     | '/dashboard_/admin_/channel-approvals'
     | '/dashboard_/admin_/organization-approvals'
+    | '/dashboard_/admin_/organization-tags'
     | '/dashboard_/channels_/$channelId'
     | '/dashboard_/channels_/new'
     | '/dashboard_/churches_/$churchId'
@@ -644,6 +657,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardChannelsChannelIdRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard_/admin_/organization-tags': {
+      id: '/dashboard_/admin_/organization-tags'
+      path: '/admin/organization-tags'
+      fullPath: '/dashboard/admin/organization-tags'
+      preLoaderRoute: typeof DashboardAdminOrganizationTagsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard_/admin_/organization-approvals': {
       id: '/dashboard_/admin_/organization-approvals'
       path: '/admin/organization-approvals'
@@ -826,6 +846,7 @@ interface DashboardRouteChildren {
   DashboardAccountSecurityRoute: typeof DashboardAccountSecurityRoute
   DashboardAdminChannelApprovalsRoute: typeof DashboardAdminChannelApprovalsRoute
   DashboardAdminOrganizationApprovalsRoute: typeof DashboardAdminOrganizationApprovalsRoute
+  DashboardAdminOrganizationTagsRoute: typeof DashboardAdminOrganizationTagsRoute
   DashboardChannelsChannelIdRoute: typeof DashboardChannelsChannelIdRoute
   DashboardChannelsNewRoute: typeof DashboardChannelsNewRoute
   DashboardChurchesChurchIdRoute: typeof DashboardChurchesChurchIdRoute
@@ -858,6 +879,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAdminChannelApprovalsRoute: DashboardAdminChannelApprovalsRoute,
   DashboardAdminOrganizationApprovalsRoute:
     DashboardAdminOrganizationApprovalsRoute,
+  DashboardAdminOrganizationTagsRoute: DashboardAdminOrganizationTagsRoute,
   DashboardChannelsChannelIdRoute: DashboardChannelsChannelIdRoute,
   DashboardChannelsNewRoute: DashboardChannelsNewRoute,
   DashboardChurchesChurchIdRoute: DashboardChurchesChurchIdRoute,

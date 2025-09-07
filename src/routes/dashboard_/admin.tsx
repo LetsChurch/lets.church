@@ -83,6 +83,21 @@ function AdminPage() {
             Review and approve pending organizations
           </Text>
         </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
+          to="/dashboard/admin/organization-tags"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Organization Tags</Text>
+          </Group>
+          <Text size="sm" c="dimmed">
+            Manage tags for categorizing organizations
+          </Text>
+        </Card>
       </SimpleGrid>
     </>
   );
