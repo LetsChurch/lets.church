@@ -59,7 +59,19 @@ function DashboardLayout() {
               td="none"
               c="inherit"
             >
-              Dashboard
+              <Group gap="xs">
+                <img
+                  src="/logoicon.svg"
+                  alt="Let's Church Icon"
+                  style={{
+                    height: '1.5em',
+                    width: 'auto',
+                    position: 'relative',
+                    top: '-0.125em',
+                  }}
+                />
+                <span>Dashboard</span>
+              </Group>
             </Anchor>
           </Group>
         </AppShell.Header>
