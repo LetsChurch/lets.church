@@ -15,79 +15,74 @@ function DashboardHome() {
   );
 
   return (
-    <>
-      <Title order={1} mb="lg">
-        Dashboard
-      </Title>
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
+    <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
+      <Card
+        shadow="xs"
+        padding="lg"
+        radius="md"
+        withBorder
+        component={Link}
+        to="/dashboard/account"
+      >
+        <Text fw={500}>Account</Text>
+        <Text size="sm" c="dimmed">
+          Manage your account settings and profile
+        </Text>
+      </Card>
+      <Card
+        shadow="xs"
+        padding="lg"
+        radius="md"
+        withBorder
+        component={Link}
+        to="/dashboard/channels"
+      >
+        <Text fw={500}>Channels</Text>
+        <Text size="sm" c="dimmed">
+          Create and manage your channels
+        </Text>
+      </Card>
+      <Card
+        shadow="xs"
+        padding="lg"
+        radius="md"
+        withBorder
+        component={Link}
+        to="/dashboard/churches"
+      >
+        <Text fw={500}>Churches</Text>
+        <Text size="sm" c="dimmed">
+          Browse and connect with churches
+        </Text>
+      </Card>
+      <Card
+        shadow="xs"
+        padding="lg"
+        radius="md"
+        withBorder
+        component={Link}
+        to="/dashboard/organizations"
+      >
+        <Text fw={500}>Organizations</Text>
+        <Text size="sm" c="dimmed">
+          Browse and connect with organizations
+        </Text>
+      </Card>
+      {currentUser.role === 'ADMIN' && (
         <Card
           shadow="xs"
           padding="lg"
           radius="md"
           withBorder
           component={Link}
-          to="/dashboard/account"
+          to="/dashboard/admin"
         >
-          <Text fw={500}>Account</Text>
+          <Text fw={500}>Admin</Text>
           <Text size="sm" c="dimmed">
-            Manage your account settings and profile
+            Manage approvals and site administration
           </Text>
         </Card>
-        <Card
-          shadow="xs"
-          padding="lg"
-          radius="md"
-          withBorder
-          component={Link}
-          to="/dashboard/channels"
-        >
-          <Text fw={500}>Channels</Text>
-          <Text size="sm" c="dimmed">
-            Create and manage your channels
-          </Text>
-        </Card>
-        <Card
-          shadow="xs"
-          padding="lg"
-          radius="md"
-          withBorder
-          component={Link}
-          to="/dashboard/churches"
-        >
-          <Text fw={500}>Churches</Text>
-          <Text size="sm" c="dimmed">
-            Browse and connect with churches
-          </Text>
-        </Card>
-        <Card
-          shadow="xs"
-          padding="lg"
-          radius="md"
-          withBorder
-          component={Link}
-          to="/dashboard/organizations"
-        >
-          <Text fw={500}>Organizations</Text>
-          <Text size="sm" c="dimmed">
-            Browse and connect with organizations
-          </Text>
-        </Card>
-        {currentUser.role === 'ADMIN' && (
-          <Card
-            shadow="xs"
-            padding="lg"
-            radius="md"
-            withBorder
-            component={Link}
-            to="/dashboard/admin"
-          >
-            <Text fw={500}>Admin</Text>
-            <Text size="sm" c="dimmed">
-              Manage approvals and site administration
-            </Text>
-          </Card>
-        )}
-      </SimpleGrid>
-    </>
+      )}
+    </SimpleGrid>
   );
 }
