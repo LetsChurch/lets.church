@@ -26,94 +26,107 @@ export const adminRouter = router({
   getPendingApprovals: adminProcedure.query(async () => {
     moduleLogger.info('Fetching pending approvals');
 
-    const [pendingChannels, pendingOrganizations, userCount] =
-      await Promise.all([
-        db.channel.findMany({
-          where: {
-            approvedAt: null,
-          },
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            description: true,
-            createdAt: true,
-            memberships: {
-              select: {
-                appUser: {
-                  select: {
-                    id: true,
-                    fullName: true,
-                    emails: {
-                      select: {
-                        email: true,
-                        verifiedAt: true,
-                      },
-                      where: {
-                        verifiedAt: { not: null },
-                      },
-                      take: 1,
+    const [
+      pendingChannels,
+      pendingOrganizations,
+      userCount,
+      processingUploadsCount,
+    ] = await Promise.all([
+      db.channel.findMany({
+        where: {
+          approvedAt: null,
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          createdAt: true,
+          memberships: {
+            select: {
+              appUser: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  emails: {
+                    select: {
+                      email: true,
+                      verifiedAt: true,
                     },
+                    where: {
+                      verifiedAt: { not: null },
+                    },
+                    take: 1,
                   },
                 },
               },
-              where: {
-                isAdmin: true,
-              },
-              take: 1,
             },
+            where: {
+              isAdmin: true,
+            },
+            take: 1,
           },
-          orderBy: {
-            createdAt: 'asc',
-          },
-        }),
-        db.organization.findMany({
-          where: {
-            approvedAt: null,
-          },
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            description: true,
-            type: true,
-            createdAt: true,
-            memberships: {
-              select: {
-                appUser: {
-                  select: {
-                    id: true,
-                    fullName: true,
-                    emails: {
-                      select: {
-                        email: true,
-                        verifiedAt: true,
-                      },
-                      where: {
-                        verifiedAt: { not: null },
-                      },
-                      take: 1,
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      }),
+      db.organization.findMany({
+        where: {
+          approvedAt: null,
+        },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          type: true,
+          createdAt: true,
+          memberships: {
+            select: {
+              appUser: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  emails: {
+                    select: {
+                      email: true,
+                      verifiedAt: true,
                     },
+                    where: {
+                      verifiedAt: { not: null },
+                    },
+                    take: 1,
                   },
                 },
               },
-              where: {
-                isAdmin: true,
-              },
-              take: 1,
             },
+            where: {
+              isAdmin: true,
+            },
+            take: 1,
           },
-          orderBy: {
-            createdAt: 'asc',
-          },
-        }),
-        db.appUser.count(),
-      ]);
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      }),
+      db.appUser.count(),
+      db.uploadRecord.count({
+        where: {
+          OR: [
+            { transcodingFinishedAt: null },
+            { transcribingFinishedAt: null },
+          ],
+        },
+      }),
+    ]);
 
     return {
       channels: pendingChannels,
       organizations: pendingOrganizations,
       userCount,
+      processingUploadsCount,
     };
   }),
 
@@ -657,4 +670,33 @@ export const adminRouter = router({
         });
       }
     }),
+
+  getProcessingUploads: adminProcedure.query(async () => {
+    moduleLogger.info('Fetching processing uploads');
+
+    return db.uploadRecord.findMany({
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        visibility: true,
+        createdAt: true,
+        lengthSeconds: true,
+        transcodingFinishedAt: true,
+        transcribingFinishedAt: true,
+        transcodingProgress: true,
+        channel: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+      },
+      where: {
+        OR: [{ transcodingFinishedAt: null }, { transcribingFinishedAt: null }],
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }),
 });
