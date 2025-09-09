@@ -3,6 +3,7 @@ export const uploadPostProcessValues = [
   'thumbnail',
   'profileAvatar',
   'channelAvatar',
+  'organizationAvatar',
   'channelDefaultThumbnail',
 ] as const;
 

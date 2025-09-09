@@ -6,26 +6,33 @@ import {
   Grid,
   Group,
   Image,
+  Loader,
   LoadingOverlay,
   Progress,
   Radio,
   Stack,
   Text,
   Title,
+  Tooltip,
 } from '@mantine/core';
 import { Dropzone } from '@mantine/dropzone';
 import { useStore } from '@nanostores/react';
 import { IconPhoto, IconUpload, IconX } from '@tabler/icons-react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { invariant } from 'es-toolkit';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAppMantineForm } from '@/components/mantine';
 import { uploadFormSchema } from '@/schemas/dashboard';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { doMultipartUpload } from '@/util/multipart-upload';
 import { showFailure, showSuccess } from '../-mantine';
 import { $uploadProgress } from './channels_.$channelId_.uploads';
+
+const avatarOps = { avatarSize: { width: 120, height: 120 } };
 
 export const Route = createFileRoute(
   '/dashboard_/channels_/$channelId_/uploads_/$uploadId',
@@ -44,6 +51,7 @@ export const Route = createFileRoute(
       trpc.dashboard.channels.getUploadRecord.queryOptions({
         channelId: params.channelId,
         uploadId: params.uploadId,
+        ...avatarOps,
       }),
     );
     return {
@@ -67,10 +75,11 @@ function ChannelUploadPage() {
   const isUploading = typeof uploadProgress === 'number';
 
   // Single query for all upload data with conditional refetching
-  const { data } = useQuery({
+  const { data } = useSuspenseQuery({
     ...trpc.dashboard.channels.getUploadRecord.queryOptions({
       channelId,
       uploadId,
+      ...avatarOps,
     }),
     refetchInterval: (query) => {
       const data = query.state.data;
@@ -83,8 +92,6 @@ function ChannelUploadPage() {
     },
   });
 
-  invariant(data, 'Upload not found');
-
   const { upload, channel } = data;
 
   // Current processing status
@@ -94,21 +101,85 @@ function ChannelUploadPage() {
 
   const [newThumbnailFile, setNewThumbnailFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isProcessingThumbnail, setIsProcessingThumbnail] = useState(false);
+  const [thumbnailUrlBeforeUpload, setThumbnailUrlBeforeUpload] = useState<
+    string | null
+  >(null);
 
-  const resetDroppedThumbnail = () => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
-      setNewThumbnailFile(null);
+  const resetDroppedThumbnail = useCallback(() => {
+    setPreviewUrl((previewUrl) => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      return null;
+    });
+    setNewThumbnailFile(null);
+  }, []);
+
+  // Poll for thumbnail changes when processing
+  useEffect(() => {
+    if (!isProcessingThumbnail) {
+      return;
     }
-  };
+
+    const pollInterval = setInterval(async () => {
+      try {
+        await queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getUploadRecord.queryKey({
+            channelId,
+            uploadId,
+          }),
+        });
+
+        const currentData = queryClient.getQueryData(
+          trpc.dashboard.channels.getUploadRecord.queryKey({
+            channelId,
+            uploadId,
+          }),
+        ) as typeof data;
+
+        if (currentData) {
+          const currentThumbnailUrl = currentData.upload.thumbnailUrl;
+
+          // Check if thumbnail URL has changed from what it was before upload
+          if (currentThumbnailUrl !== thumbnailUrlBeforeUpload) {
+            setIsProcessingThumbnail(false);
+            setThumbnailUrlBeforeUpload(null);
+            showSuccess({
+              title: 'Thumbnail Updated',
+              message: 'Your thumbnail has been processed successfully!',
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error polling for thumbnail changes:', error);
+      }
+    }, 1000);
+
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [
+    isProcessingThumbnail,
+    thumbnailUrlBeforeUpload,
+    queryClient,
+    trpc,
+    channelId,
+    uploadId,
+  ]);
 
   const updateMutation = useMutation(
     trpc.dashboard.channels.updateUploadRecord.mutationOptions({
       onSuccess: async () => {
-        showSuccess({
-          message: 'Upload details updated successfully!',
-        });
+        // Only show success message if not processing thumbnail
+        // (thumbnail processing success will be shown by the polling effect)
+        if (!isProcessingThumbnail) {
+          showSuccess({
+            message: 'Upload details updated successfully!',
+          });
+        }
+
+        resetDroppedThumbnail();
 
         await queryClient.invalidateQueries({
           queryKey: trpc.dashboard.channels.getUploadRecord.queryKey({
@@ -148,9 +219,6 @@ function ChannelUploadPage() {
     },
   ];
 
-  const thumbnailUrl =
-    upload.overrideThumbnailPath || upload.defaultThumbnailPath;
-
   const form = useAppMantineForm({
     defaultValues: {
       title: upload.title || '',
@@ -166,6 +234,8 @@ function ChannelUploadPage() {
     },
     onSubmit: async ({ value }) => {
       if (newThumbnailFile) {
+        setThumbnailUrlBeforeUpload(upload.thumbnailUrl);
+
         const mpu =
           await trpcClient.dashboard.channels.createMultipartUpload.mutate({
             channelId,
@@ -187,6 +257,8 @@ function ChannelUploadPage() {
           s3UploadId: mpu.s3UploadId,
           s3PartETags: await uploadPromise,
         });
+
+        setIsProcessingThumbnail(true);
       }
 
       updateMutation.mutate({
@@ -217,9 +289,8 @@ function ChannelUploadPage() {
                 <form.AppField name="title">
                   {(field) => (
                     <field.TextInputField
-                      label="Title (required)"
-                      placeholder="Add a title that describes your video"
-                      required
+                      label="Title"
+                      placeholder="Add a title that describes your upload"
                     />
                   )}
                 </form.AppField>
@@ -228,7 +299,7 @@ function ChannelUploadPage() {
                   {(field) => (
                     <field.TextareaField
                       label="Description"
-                      placeholder="Tell viewers about your video"
+                      placeholder="Tell viewers about your upload"
                       minRows={4}
                       maxRows={8}
                       autosize
@@ -240,28 +311,162 @@ function ChannelUploadPage() {
                   <Text fw={500} size="sm" mb="xs">
                     Thumbnail
                   </Text>
-                  <Group gap="md" align="flex-start">
-                    {thumbnailUrl || previewUrl ? (
-                      <Box pos="relative" w={160} h={90}>
-                        <Image
-                          src={previewUrl || thumbnailUrl}
-                          alt="Video thumbnail"
-                          w={160}
-                          h={90}
-                          style={{ objectFit: 'cover', borderRadius: 4 }}
-                        />
-                        <ActionIcon
-                          pos="absolute"
-                          top={4}
-                          right={4}
-                          size="sm"
-                          variant="filled"
-                          color="dark"
-                          onClick={resetDroppedThumbnail}
+                  <Group gap="md" justify="flex-start">
+                    <Tooltip
+                      label="Click or drop image to change thumbnail"
+                      withArrow
+                      position="bottom"
+                    >
+                      <Box pos="relative" w={320} h={180}>
+                        <Dropzone
+                          onDrop={(files) => {
+                            const file = files[0];
+                            if (file) {
+                              if (previewUrl) {
+                                URL.revokeObjectURL(previewUrl);
+                              }
+                              const url = URL.createObjectURL(file);
+                              setPreviewUrl(url);
+                              setNewThumbnailFile(file);
+                            }
+                          }}
+                          maxSize={5 * 1024 ** 2}
+                          accept={['image/*']}
+                          w={320}
+                          h={180}
+                          disabled={isProcessingThumbnail}
+                          style={{
+                            borderRadius: 4,
+                            padding: 0,
+                            border: 'none',
+                            overflow: 'hidden',
+                            cursor: 'pointer',
+                          }}
+                          styles={{
+                            inner: {
+                              height: '100%',
+                              minHeight: '180px',
+                            },
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isProcessingThumbnail) {
+                              const overlay = e.currentTarget.querySelector(
+                                '.dropzone-overlay',
+                              ) as HTMLElement;
+                              if (overlay) overlay.style.opacity = '1';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isProcessingThumbnail) {
+                              const overlay = e.currentTarget.querySelector(
+                                '.dropzone-overlay',
+                              ) as HTMLElement;
+                              if (overlay) overlay.style.opacity = '0';
+                            }
+                          }}
                         >
-                          <IconX size={14} />
-                        </ActionIcon>
-                        {previewUrl ? (
+                          <Box pos="relative" w="100%" h="100%">
+                            {upload.thumbnailUrl || previewUrl ? (
+                              <Image
+                                src={previewUrl || upload.thumbnailUrl}
+                                alt="Upload thumbnail"
+                                w="100%"
+                                h="100%"
+                                style={{ objectFit: 'cover' }}
+                              />
+                            ) : (
+                              <Box
+                                w="100%"
+                                h="100%"
+                                bg="gray.1"
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                <IconPhoto
+                                  size={32}
+                                  stroke={1.5}
+                                  color="var(--mantine-color-gray-5)"
+                                />
+                              </Box>
+                            )}
+
+                            <Box
+                              pos="absolute"
+                              top={0}
+                              left={0}
+                              right={0}
+                              bottom={0}
+                              bg="rgba(0, 0, 0, 0.5)"
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                opacity: isProcessingThumbnail ? 1 : 0,
+                                transition: 'opacity 0.2s ease',
+                                pointerEvents: 'none',
+                              }}
+                              className="dropzone-overlay"
+                            >
+                              {isProcessingThumbnail ? (
+                                <Box
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: '100%',
+                                    height: '100%',
+                                  }}
+                                >
+                                  <Loader size="md" color="white" />
+                                </Box>
+                              ) : (
+                                <>
+                                  <Dropzone.Accept>
+                                    <IconUpload
+                                      size={32}
+                                      stroke={1.5}
+                                      color="white"
+                                    />
+                                  </Dropzone.Accept>
+                                  <Dropzone.Reject>
+                                    <IconX
+                                      size={32}
+                                      stroke={1.5}
+                                      color="white"
+                                    />
+                                  </Dropzone.Reject>
+                                  <Dropzone.Idle>
+                                    <IconUpload
+                                      size={32}
+                                      stroke={1.5}
+                                      color="white"
+                                    />
+                                  </Dropzone.Idle>
+                                </>
+                              )}
+                            </Box>
+                          </Box>
+                        </Dropzone>
+
+                        {newThumbnailFile && (
+                          <ActionIcon
+                            pos="absolute"
+                            top={4}
+                            right={4}
+                            size="sm"
+                            variant="filled"
+                            color="dark"
+                            onClick={resetDroppedThumbnail}
+                            style={{ zIndex: 10 }}
+                          >
+                            <IconX size={14} />
+                          </ActionIcon>
+                        )}
+
+                        {previewUrl && !isProcessingThumbnail && (
                           <Text
                             size="xs"
                             c="dimmed"
@@ -270,43 +475,9 @@ function ChannelUploadPage() {
                           >
                             New thumbnail
                           </Text>
-                        ) : null}
+                        )}
                       </Box>
-                    ) : null}
-                    <Dropzone
-                      onDrop={(files) => {
-                        const file = files[0];
-                        if (file) {
-                          if (previewUrl) {
-                            URL.revokeObjectURL(previewUrl);
-                          }
-                          const url = URL.createObjectURL(file);
-                          setPreviewUrl(url);
-                          setNewThumbnailFile(file);
-                        }
-                      }}
-                      maxSize={5 * 1024 ** 2}
-                      accept={['image/*']}
-                      w={160}
-                      h={90}
-                    >
-                      <Group
-                        justify="center"
-                        gap="xl"
-                        mih={70}
-                        style={{ pointerEvents: 'none' }}
-                      >
-                        <Dropzone.Accept>
-                          <IconUpload size={32} stroke={1.5} />
-                        </Dropzone.Accept>
-                        <Dropzone.Reject>
-                          <IconX size={32} stroke={1.5} />
-                        </Dropzone.Reject>
-                        <Dropzone.Idle>
-                          <IconPhoto size={32} stroke={1.5} />
-                        </Dropzone.Idle>
-                      </Group>
-                    </Dropzone>
+                    </Tooltip>
                   </Group>
                 </div>
 
@@ -439,7 +610,7 @@ function ChannelUploadPage() {
                 }}
               >
                 <Text c="dimmed" size="sm">
-                  Video Player Placeholder
+                  Media Player Placeholder
                 </Text>
               </Box>
             )}

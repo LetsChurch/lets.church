@@ -1,6 +1,7 @@
 import { UploadLicense } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { invariant } from 'es-toolkit';
+import { z } from 'zod';
 import {
   finalizeMultipartUploadSchema,
   multipartUploadSchema,
@@ -36,8 +37,10 @@ import logger from '@/util/logger';
 import {
   createMultipartUpload,
   createPresignedPartUploadUrls,
+  getS3ProtocolUri,
   PART_SIZE,
 } from '@/util/s3';
+import { getPublicImageUrl } from '@/util/url';
 import { authProcedure, router } from '../../trpc';
 
 const moduleLogger = logger.child({
@@ -283,6 +286,7 @@ export const channelRouter = router({
         slug: true,
         description: true,
         visibility: true,
+        avatarPath: true,
       },
       where: {
         id: input.channelId,
@@ -303,7 +307,16 @@ export const channelRouter = router({
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
 
-    return channel;
+    const { avatarPath, ...restChannel } = channel;
+
+    const avatarUrl = avatarPath
+      ? getPublicImageUrl(
+          getS3ProtocolUri('PUBLIC', avatarPath),
+          input?.avatarSize ? { resize: input.avatarSize } : undefined,
+        )
+      : null;
+
+    return { ...restChannel, avatarUrl };
   }),
 
   updateChannel: channelAdminProcedure
@@ -821,8 +834,19 @@ export const channelRouter = router({
         (m) => m.appUser.id === ctx.session.appUser.id,
       );
 
+      const { defaultThumbnailPath, overrideThumbnailPath, ...uploadRest } =
+        upload;
+      const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
+
+      const thumbnailUrl = thumbnailPath
+        ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', thumbnailPath))
+        : null;
+
       return {
-        upload,
+        upload: {
+          ...uploadRest,
+          thumbnailUrl,
+        },
         channel: {
           ...upload.channel,
           userMembership,
@@ -891,10 +915,16 @@ export const channelRouter = router({
       return { success: true, upload: updatedUpload };
     }),
 
-  createMultipartUpload: channelUploadProcedure
-    .input(multipartUploadSchema)
+  createMultipartUpload: channelAdminProcedure
+    .input(
+      multipartUploadSchema.and(
+        z.object({
+          postProcess: z.enum(['media', 'thumbnail', 'channelAvatar']),
+        }),
+      ),
+    )
     .mutation(
-      async ({ input: { targetId, uploadMimeType, postProcess, bytes } }) => {
+      async ({ input: { targetId, uploadMimeType, bytes, postProcess } }) => {
         const { uploadKey, uploadId } = await createMultipartUpload(
           'INGEST',
           targetId,
@@ -922,6 +952,23 @@ export const channelRouter = router({
           partSize: PART_SIZE,
           urls,
         };
+      },
+    ),
+
+  finalizeMultipartUpload: channelAdminProcedure
+    .input(finalizeMultipartUploadSchema)
+    .mutation(
+      async ({ ctx, input: { s3UploadId, s3UploadKey, s3PartETags } }) => {
+        const userId = ctx.session?.appUserId;
+        invariant(userId, 'No user found');
+        await completeMultipartMediaUpload(
+          s3UploadId,
+          s3UploadKey,
+          s3PartETags,
+          userId,
+        );
+
+        return true;
       },
     ),
 
@@ -1318,23 +1365,6 @@ export const channelRouter = router({
         throw error;
       }
     }),
-
-  finalizeMultipartUpload: channelUploadProcedure
-    .input(finalizeMultipartUploadSchema)
-    .mutation(
-      async ({ ctx, input: { s3UploadId, s3UploadKey, s3PartETags } }) => {
-        const userId = ctx.session?.appUserId;
-        invariant(userId, 'No user found');
-        await completeMultipartMediaUpload(
-          s3UploadId,
-          s3UploadKey,
-          s3PartETags,
-          userId,
-        );
-
-        return true;
-      },
-    ),
 
   approveChannel: authProcedure
     .input(channelQuerySchema)

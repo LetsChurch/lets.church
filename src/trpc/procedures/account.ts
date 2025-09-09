@@ -1,8 +1,25 @@
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
+import { invariant } from 'es-toolkit';
+import { z } from 'zod';
 import { passwordChangeSchema, profileUpdateSchema } from '@/schemas/account';
+import {
+  finalizeMultipartUploadSchema,
+  multipartUploadSchema,
+} from '@/schemas/common';
+import {
+  completeMultipartMediaUpload,
+  handleMultipartMediaUpload,
+} from '@/temporal';
 import db from '@/util/db';
 import logger from '@/util/logger';
+import {
+  createMultipartUpload,
+  createPresignedPartUploadUrls,
+  getS3ProtocolUri,
+  PART_SIZE,
+} from '@/util/s3';
+import { getPublicImageUrl } from '@/util/url';
 import testPassword from '@/util/zxcvbn';
 import { authProcedure } from '../trpc';
 
@@ -14,34 +31,54 @@ type ProfileUpdateResponse = { error: false } | { error: string };
 type PasswordChangeResponse = { error: false } | { error: string };
 
 export const accountProcedures = {
-  getProfile: authProcedure.query(async ({ ctx }) => {
-    const user = await db.appUser.findUnique({
-      where: { id: ctx.session.appUserId },
-      select: {
-        id: true,
-        username: true,
-        fullName: true,
-        emails: {
-          select: {
-            email: true,
+  getProfile: authProcedure
+    .input(
+      z
+        .looseObject({
+          avatarSize: z
+            .object({ width: z.number(), height: z.number() })
+            .optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const user = await db.appUser.findUnique({
+        where: { id: ctx.session.appUserId },
+        select: {
+          id: true,
+          username: true,
+          fullName: true,
+          emails: {
+            select: {
+              email: true,
+            },
           },
+          avatarPath: true,
         },
-      },
-    });
+      });
 
-    if (!user) {
-      throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
-    }
+      if (!user) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+      }
 
-    const primaryEmail = user.emails[0]?.email || '';
+      const primaryEmail = user.emails[0]?.email || '';
+      const avatarPath = user.avatarPath;
 
-    return {
-      id: user.id,
-      username: user.username,
-      fullName: user.fullName || '',
-      email: primaryEmail,
-    };
-  }),
+      const avatarUrl = avatarPath
+        ? getPublicImageUrl(
+            getS3ProtocolUri('PUBLIC', avatarPath),
+            input?.avatarSize ? { resize: input.avatarSize } : undefined,
+          )
+        : null;
+
+      return {
+        id: user.id,
+        username: user.username,
+        fullName: user.fullName || '',
+        email: primaryEmail,
+        avatarUrl,
+      };
+    }),
 
   updateProfile: authProcedure
     .input(profileUpdateSchema)
@@ -199,4 +236,53 @@ export const accountProcedures = {
         return { error: 'Error changing password, please try again!' };
       }
     }),
+
+  createMultipartUpload: authProcedure
+    .input(multipartUploadSchema)
+    .mutation(async ({ input: { targetId, uploadMimeType, bytes } }) => {
+      const { uploadKey, uploadId } = await createMultipartUpload(
+        'INGEST',
+        targetId,
+        uploadMimeType,
+      );
+
+      await handleMultipartMediaUpload(
+        targetId,
+        'INGEST',
+        uploadId,
+        uploadKey,
+        'profileAvatar',
+      );
+
+      const urls = await createPresignedPartUploadUrls(
+        'INGEST',
+        uploadId,
+        uploadKey,
+        bytes,
+      );
+
+      return {
+        s3UploadKey: uploadKey,
+        s3UploadId: uploadId,
+        partSize: PART_SIZE,
+        urls,
+      };
+    }),
+
+  finalizeMultipartUpload: authProcedure
+    .input(finalizeMultipartUploadSchema)
+    .mutation(
+      async ({ ctx, input: { s3UploadId, s3UploadKey, s3PartETags } }) => {
+        const userId = ctx.session?.appUserId;
+        invariant(userId, 'No user found');
+        await completeMultipartMediaUpload(
+          s3UploadId,
+          s3UploadKey,
+          s3PartETags,
+          userId,
+        );
+
+        return true;
+      },
+    ),
 };

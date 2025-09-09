@@ -4,6 +4,7 @@ export const churchIdSchema = z.uuid();
 
 export const churchQuerySchema = z.object({
   churchId: churchIdSchema,
+  avatarSize: z.object({ width: z.number(), height: z.number() }).optional(),
 });
 
 export const churchMemberPermissionsSchema = z.object({
@@ -50,8 +51,14 @@ export const addLeaderSchema = z.object({
   churchId: churchIdSchema,
   type: leaderTypeSchema,
   name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Invalid email').optional().or(z.literal('')),
-  phoneNumber: z.string().optional().or(z.literal('')),
+  email: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || val === '' || z.string().email().safeParse(val).success,
+      'Invalid email',
+    ),
+  phoneNumber: z.string().optional(),
 });
 
 export const updateLeaderSchema = z.object({
@@ -59,8 +66,14 @@ export const updateLeaderSchema = z.object({
   leaderId: z.uuid(),
   type: leaderTypeSchema,
   name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Invalid email').optional().or(z.literal('')),
-  phoneNumber: z.string().optional().or(z.literal('')),
+  email: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || val === '' || z.string().email().safeParse(val).success,
+      'Invalid email',
+    ),
+  phoneNumber: z.string().optional(),
 });
 
 export const removeLeaderSchema = z.object({
@@ -72,9 +85,21 @@ export const createChurchSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   slug: z.string().optional(),
   description: z.string().optional(),
-  websiteUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  primaryEmail: z.string().email('Invalid email').optional().or(z.literal('')),
-  primaryPhoneNumber: z.string().optional().or(z.literal('')),
+  websiteUrl: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || val === '' || z.string().url().safeParse(val).success,
+      'Invalid URL',
+    ),
+  primaryEmail: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || val === '' || z.string().email().safeParse(val).success,
+      'Invalid email',
+    ),
+  primaryPhoneNumber: z.string().optional(),
   tags: z.array(z.string()).optional(),
   associatedOrganizations: z.array(z.uuid()).optional(),
 });
@@ -83,9 +108,21 @@ export const updateChurchSchema = z.object({
   churchId: churchIdSchema,
   name: z.string().min(1, 'Name is required'),
   description: z.string().optional(),
-  websiteUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  primaryEmail: z.string().email('Invalid email').optional().or(z.literal('')),
-  primaryPhoneNumber: z.string().optional().or(z.literal('')),
+  websiteUrl: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || val === '' || z.string().url().safeParse(val).success,
+      'Invalid URL',
+    ),
+  primaryEmail: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || val === '' || z.string().email().safeParse(val).success,
+      'Invalid email',
+    ),
+  primaryPhoneNumber: z.string().optional(),
   tags: z.array(z.string()).optional(),
   associatedOrganizations: z.array(z.uuid()).optional(),
 });

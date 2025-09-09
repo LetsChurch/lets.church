@@ -15,6 +15,7 @@ export { default as sendEmail } from './send-email';
 export { default as sendVerificationEmail } from './send-verification-email';
 export { default as setChannelAvatar } from './set-channel-avatar';
 export { default as setChannelDefaultThumbnail } from './set-channel-default-thumbnail';
+export { default as setOrganizationAvatar } from './set-organization-avatar';
 export { default as setProfileAvatar } from './set-profile-avatar';
 export { default as setUploadThumbnail } from './set-upload-thumbnail';
 export { default as subscribeNewsletter } from './subscribe-newsletter';

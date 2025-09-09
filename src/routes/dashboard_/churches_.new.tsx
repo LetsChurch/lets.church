@@ -1,16 +1,31 @@
 import {
+  ActionIcon,
+  Box,
+  Button,
   Container,
+  Grid,
   Group,
+  Image,
   LoadingOverlay,
   Stack,
   Text,
   Title,
+  Tooltip,
 } from '@mantine/core';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Dropzone } from '@mantine/dropzone';
+import { IconPhoto, IconUpload, IconX } from '@tabler/icons-react';
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
-import { ChurchForm } from '@/routes/dashboard_/-components/church-form';
-import { useTRPC } from '@/trpc/react';
-import { showFailure, showSuccess } from '../-mantine';
+import { useCallback, useState } from 'react';
+import { useAppMantineForm } from '@/components/mantine';
+import { showFailure, showSuccess } from '@/routes/-mantine';
+import { OrganizationAutocomplete } from '@/routes/dashboard_/-components/organization-autocomplete';
+import { trpcClient, useTRPC } from '@/trpc/react';
+import { doMultipartUpload } from '@/util/multipart-upload';
 
 export const Route = createFileRoute('/dashboard_/churches_/new')({
   component: CreateChurchPage,
@@ -37,6 +52,25 @@ function CreateChurchPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
+  const { data: organizationTags = [] } = useSuspenseQuery(
+    trpc.dashboard.churches.getOrganizationTags.queryOptions(),
+  );
+
+  const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const resetDroppedAvatar = useCallback(() => {
+    if (previewUrl) {
+      setPreviewUrl((previewUrl) => {
+        if (previewUrl) {
+          URL.revokeObjectURL(previewUrl);
+        }
+        return null;
+      });
+      setNewAvatarFile(null);
+    }
+  }, [previewUrl]);
+
   const createMutation = useMutation(
     trpc.dashboard.churches.createChurch.mutationOptions({
       onSuccess: async (data) => {
@@ -61,45 +95,288 @@ function CreateChurchPage() {
     }),
   );
 
-  const defaultValues = {
-    name: '',
-    slug: '',
-    description: '',
-    websiteUrl: '',
-    primaryEmail: '',
-    primaryPhoneNumber: '',
-    tags: [] as string[],
-    associatedOrganizations: [] as string[],
+  const getGroupedTags = () => {
+    const groups: { [key: string]: string } = {
+      DENOMINATION: 'Denomination',
+      DOCTRINE: 'Doctrine',
+      ESCHATOLOGY: 'Eschatology',
+      CONFESSION: 'Confession',
+      WORSHIP: 'Worship',
+      GOVERNMENT: 'Church Government',
+      OTHER: 'Other Distinctives',
+    };
+
+    const groupedData: {
+      [key: string]: Array<{ value: string; label: string }>;
+    } = {};
+
+    organizationTags.forEach((tag) => {
+      const groupName = groups[tag.category] || tag.category;
+      if (!groupedData[groupName]) {
+        groupedData[groupName] = [];
+      }
+      groupedData[groupName].push({
+        value: tag.slug,
+        label: tag.label,
+      });
+    });
+
+    return Object.entries(groupedData).map(([group, items]) => ({
+      group,
+      items,
+    }));
   };
 
+  const form = useAppMantineForm({
+    defaultValues: {
+      name: '',
+      slug: '',
+      description: '',
+      websiteUrl: '',
+      primaryEmail: '',
+      primaryPhoneNumber: '',
+      tags: [] as string[],
+      associatedOrganizations: [] as string[],
+    },
+    onSubmit: async ({ value }) => {
+      const church = await createMutation.mutateAsync(value);
+
+      if (newAvatarFile && church.id) {
+        const mpu =
+          await trpcClient.dashboard.churches.createMultipartUpload.mutate({
+            churchId: church.id,
+            targetId: church.id,
+            uploadMimeType: newAvatarFile.type,
+            bytes: newAvatarFile.size,
+          });
+
+        const uploadPromise = doMultipartUpload(
+          newAvatarFile,
+          mpu.urls,
+          mpu.partSize,
+        );
+
+        await trpcClient.dashboard.churches.finalizeMultipartUpload.mutate({
+          churchId: church.id,
+          s3UploadKey: mpu.s3UploadKey,
+          s3UploadId: mpu.s3UploadId,
+          s3PartETags: await uploadPromise,
+        });
+      }
+    },
+  });
+
   return (
-    <Container size="md" py="md" pos="relative">
+    <Container size="xl" py="md" pos="relative">
       <LoadingOverlay visible={createMutation.isPending} />
 
-      <Stack gap="lg">
-        <Group justify="space-between" align="flex-start">
-          <div>
+      <Grid gutter="xl">
+        <Grid.Col span={{ base: 12, md: 8 }}>
+          <Stack gap="lg">
             <Title order={1}>Add Church</Title>
-            <Text c="dimmed" size="sm">
-              Create a new church profile
-            </Text>
-          </div>
-        </Group>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                form.handleSubmit();
+              }}
+            >
+              <Stack gap="md">
+                <form.AppField name="name">
+                  {(field) => (
+                    <field.TextInputField
+                      label="Church Name (required)"
+                      placeholder="Enter church name"
+                      required
+                    />
+                  )}
+                </form.AppField>
 
-        <ChurchForm
-          mode="create"
-          defaultValues={defaultValues}
-          onSubmit={createMutation.mutate}
-          isSubmitting={createMutation.isPending}
-          submitLabel="Add Church"
-          showSlugField={true}
-          onCancel={() =>
-            navigate({
-              to: '/dashboard/churches',
-            })
-          }
-        />
-      </Stack>
+                <form.AppField name="slug">
+                  {(field) => (
+                    <field.TextInputField
+                      label="Slug"
+                      placeholder="url-safe-identifier (leave empty to auto-generate)"
+                    />
+                  )}
+                </form.AppField>
+
+                <form.AppField name="description">
+                  {(field) => (
+                    <field.TextareaField
+                      label="Description"
+                      placeholder="Describe your church"
+                      minRows={4}
+                      maxRows={8}
+                      autosize
+                    />
+                  )}
+                </form.AppField>
+
+                <form.AppField name="tags" mode="array">
+                  {(field) => (
+                    <field.MultiSelectField
+                      label="Tags"
+                      placeholder="Search and select tags"
+                      data={getGroupedTags()}
+                      searchable
+                      description="Select tags for Denomination, Doctrine, Eschatology, Confession, Worship, Church Government, and Other Distinctives"
+                    />
+                  )}
+                </form.AppField>
+
+                <form.AppField name="associatedOrganizations" mode="array">
+                  {(field) => (
+                    <OrganizationAutocomplete
+                      label="Associated Organizations"
+                      placeholder="Search organizations to add..."
+                      excludeChurchTypes={true}
+                      description="Search and add organizations that this church is associated with"
+                      value={field.state.value || []}
+                      onChange={field.handleChange}
+                      error={field.state.meta.errors?.[0]}
+                    />
+                  )}
+                </form.AppField>
+              </Stack>
+            </form>
+          </Stack>
+        </Grid.Col>
+
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <Stack gap="lg" mt="lg">
+            {/* Action Buttons */}
+            <Group gap="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                flex={1}
+                onClick={() => navigate({ to: '/dashboard/churches' })}
+              >
+                Cancel
+              </Button>
+              <form.Subscribe selector={(state) => state.isSubmitting}>
+                {(isSubmitting) => (
+                  <Button
+                    size="sm"
+                    flex={1}
+                    loading={isSubmitting}
+                    onClick={() => form.handleSubmit()}
+                  >
+                    Add Church
+                  </Button>
+                )}
+              </form.Subscribe>
+            </Group>
+
+            {/* Avatar Section */}
+            <Group gap="md" justify="center">
+              {previewUrl ? (
+                <Box pos="relative" w={120} h={120}>
+                  <Image
+                    src={previewUrl}
+                    alt="Church avatar"
+                    w={120}
+                    h={120}
+                    style={{ objectFit: 'cover', borderRadius: '50%' }}
+                  />
+                  <ActionIcon
+                    pos="absolute"
+                    top={4}
+                    right={4}
+                    size="sm"
+                    variant="filled"
+                    color="dark"
+                    onClick={resetDroppedAvatar}
+                  >
+                    <IconX size={14} />
+                  </ActionIcon>
+                  <Text
+                    size="xs"
+                    c="dimmed"
+                    mt={4}
+                    style={{ textAlign: 'center' }}
+                  >
+                    Church avatar
+                  </Text>
+                </Box>
+              ) : null}
+              <Tooltip label="Add church avatar" withArrow position="bottom">
+                <div>
+                  <Dropzone
+                    onDrop={(files) => {
+                      const file = files[0];
+                      if (file) {
+                        if (previewUrl) {
+                          URL.revokeObjectURL(previewUrl);
+                        }
+                        const url = URL.createObjectURL(file);
+                        setPreviewUrl(url);
+                        setNewAvatarFile(file);
+                      }
+                    }}
+                    maxSize={5 * 1024 ** 2}
+                    accept={['image/*']}
+                    w={120}
+                    h={120}
+                    style={{
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <div style={{ pointerEvents: 'none' }}>
+                      <Dropzone.Accept>
+                        <IconUpload size={32} stroke={1.5} />
+                      </Dropzone.Accept>
+                      <Dropzone.Reject>
+                        <IconX size={32} stroke={1.5} />
+                      </Dropzone.Reject>
+                      <Dropzone.Idle>
+                        <IconPhoto size={32} stroke={1.5} />
+                      </Dropzone.Idle>
+                    </div>
+                  </Dropzone>
+                </div>
+              </Tooltip>
+            </Group>
+
+            {/* Contact Information */}
+            <Stack gap="md">
+              <form.AppField name="websiteUrl">
+                {(field) => (
+                  <field.TextInputField
+                    label="Website URL"
+                    placeholder="https://www.yourchurch.org"
+                    type="url"
+                  />
+                )}
+              </form.AppField>
+
+              <form.AppField name="primaryEmail">
+                {(field) => (
+                  <field.TextInputField
+                    label="Primary Email"
+                    placeholder="contact@yourchurch.org"
+                    type="email"
+                  />
+                )}
+              </form.AppField>
+
+              <form.AppField name="primaryPhoneNumber">
+                {(field) => (
+                  <field.TextInputField
+                    label="Primary Phone Number"
+                    placeholder="+1 (555) 123-4567"
+                    type="tel"
+                  />
+                )}
+              </form.AppField>
+            </Stack>
+          </Stack>
+        </Grid.Col>
+      </Grid>
     </Container>
   );
 }

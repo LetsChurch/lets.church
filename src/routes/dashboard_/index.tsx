@@ -1,4 +1,4 @@
-import { Card, SimpleGrid, Text, Title } from '@mantine/core';
+import { Card, SimpleGrid, Text } from '@mantine/core';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useTRPC } from '@/trpc/react';

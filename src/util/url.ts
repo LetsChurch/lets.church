@@ -1,10 +1,14 @@
-import envariant from '@knpwrs/envariant';
 import pb, { type ResizeOptions } from '@bitpatty/imgproxy-url-builder';
+import { z } from 'zod';
 
-const MEDIA_URL = envariant('MEDIA_URL');
-const IMGPROXY_URL = envariant('IMGPROXY_URL');
-const IMGPROXY_KEY = envariant('IMGPROXY_KEY');
-const IMGPROXY_SALT = envariant('IMGPROXY_SALT');
+const { MEDIA_URL, IMGPROXY_URL, IMGPROXY_KEY, IMGPROXY_SALT } = z
+  .object({
+    MEDIA_URL: z.string(),
+    IMGPROXY_URL: z.string(),
+    IMGPROXY_KEY: z.string(),
+    IMGPROXY_SALT: z.string(),
+  })
+  .parse(process.env);
 
 export function getPublicMediaUrl(key: string) {
   const url = new URL(MEDIA_URL);

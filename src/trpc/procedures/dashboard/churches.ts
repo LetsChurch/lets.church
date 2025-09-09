@@ -1,5 +1,10 @@
 import { OrganizationType } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
+import { invariant } from 'es-toolkit';
+import {
+  finalizeMultipartUploadSchema,
+  multipartUploadSchema,
+} from '@/schemas/common';
 import {
   addChurchMemberSchema,
   addLeaderSchema,
@@ -14,8 +19,19 @@ import {
   updateLeaderSchema,
   userSearchChurchSchema,
 } from '@/schemas/dashboard';
+import {
+  completeMultipartMediaUpload,
+  handleMultipartMediaUpload,
+} from '@/temporal';
 import db from '@/util/db';
 import logger from '@/util/logger';
+import {
+  createMultipartUpload,
+  createPresignedPartUploadUrls,
+  getS3ProtocolUri,
+  PART_SIZE,
+} from '@/util/s3';
+import { getPublicImageUrl } from '@/util/url';
 import { authProcedure, router } from '../../trpc';
 
 const moduleLogger = logger.child({
@@ -747,6 +763,7 @@ export const churchRouter = router({
         websiteUrl: true,
         primaryEmail: true,
         primaryPhoneNumber: true,
+        avatarPath: true,
         tags: {
           select: {
             tagSlug: true,
@@ -774,9 +791,18 @@ export const churchRouter = router({
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
 
+    const { avatarPath, ...restChurch } = church;
+    const avatarUrl = avatarPath
+      ? getPublicImageUrl(
+          getS3ProtocolUri('PUBLIC', avatarPath),
+          input?.avatarSize ? { resize: input.avatarSize } : undefined,
+        )
+      : null;
+
     // Transform tags to a flat array of strings and associated organizations
     return {
-      ...church,
+      ...restChurch,
+      avatarUrl,
       tags: church.tags.map((tag) => tag.tagSlug),
       associatedOrganizations: church.upstreamOrganizationAssociations.map(
         (assoc) => assoc.upstreamOrganizationId,
@@ -868,4 +894,53 @@ export const churchRouter = router({
         return { error: 'Error updating church, please try again!' };
       }
     }),
+
+  createMultipartUpload: churchAdminProcedure
+    .input(multipartUploadSchema)
+    .mutation(async ({ input: { targetId, uploadMimeType, bytes } }) => {
+      const { uploadKey, uploadId } = await createMultipartUpload(
+        'INGEST',
+        targetId,
+        uploadMimeType,
+      );
+
+      await handleMultipartMediaUpload(
+        targetId,
+        'INGEST',
+        uploadId,
+        uploadKey,
+        'organizationAvatar',
+      );
+
+      const urls = await createPresignedPartUploadUrls(
+        'INGEST',
+        uploadId,
+        uploadKey,
+        bytes,
+      );
+
+      return {
+        s3UploadKey: uploadKey,
+        s3UploadId: uploadId,
+        partSize: PART_SIZE,
+        urls,
+      };
+    }),
+
+  finalizeMultipartUpload: churchAdminProcedure
+    .input(finalizeMultipartUploadSchema)
+    .mutation(
+      async ({ ctx, input: { s3UploadId, s3UploadKey, s3PartETags } }) => {
+        const userId = ctx.session?.appUserId;
+        invariant(userId, 'No user found');
+        await completeMultipartMediaUpload(
+          s3UploadId,
+          s3UploadKey,
+          s3PartETags,
+          userId,
+        );
+
+        return true;
+      },
+    ),
 });

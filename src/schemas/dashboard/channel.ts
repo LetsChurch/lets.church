@@ -80,6 +80,7 @@ export const removeMemberSchema = z.object({
 // Query input schemas
 export const channelQuerySchema = z.object({
   channelId: channelIdSchema,
+  avatarSize: z.object({ width: z.number(), height: z.number() }).optional(),
 });
 
 export const uploadQuerySchema = z.object({
