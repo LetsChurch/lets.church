@@ -26,6 +26,9 @@
       "style": {
         "useImportType": "error",
         "useExportType": "error"
+      },
+      "nursery": {
+        "useSortedClasses": "error"
       }
     }
   },
