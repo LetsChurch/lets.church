@@ -1,13 +1,13 @@
 import { Link, useMatches } from '@tanstack/react-router';
 
-export interface BackNavigationConfig {
+export type BackNavigationConfig = {
   label: string;
   to: string;
-}
+};
 
-interface LoaderDataWithBackNavigation {
+type LoaderDataWithBackNavigation = {
   backNavigation?: BackNavigationConfig;
-}
+};
 
 export function BackButton() {
   const matches = useMatches();

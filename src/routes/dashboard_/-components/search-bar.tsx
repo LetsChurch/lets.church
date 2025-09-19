@@ -3,14 +3,14 @@ import { IconSearch } from '@tabler/icons-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 
-interface SearchItem {
+type SearchItem = {
   id: string;
   label: string;
   description?: string;
   route: string;
   keywords: string[];
   group: string;
-}
+};
 
 const searchItems: SearchItem[] = [
   // Main sections
@@ -128,10 +128,10 @@ const searchItems: SearchItem[] = [
   },
 ];
 
-interface DashboardSearchBarProps {
+type DashboardSearchBarProps = {
   placeholder?: string;
   currentUser?: { role: string } | null;
-}
+};
 
 export function DashboardSearchBar({
   placeholder = 'Search pages...',

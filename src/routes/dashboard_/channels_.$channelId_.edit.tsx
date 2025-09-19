@@ -22,7 +22,7 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAppMantineForm } from '@/components/mantine';
 import { showFailure, showSuccess } from '@/routes/-mantine';
 import { trpcClient, useTRPC } from '@/trpc/react';

@@ -26,26 +26,26 @@ export const userSearchBaseSchema = z.object({
 export type BasePermissions = z.infer<typeof basePermissionsSchema>;
 export type ChannelPermissions = z.infer<typeof channelPermissionsSchema>;
 
-export interface BaseMembershipUser {
+export type BaseMembershipUser = {
   id: string;
   username: string;
   fullName: string | null;
   avatarPath: string | null;
-}
+};
 
-export interface BaseMembership {
+export type BaseMembership = {
   appUserId: string;
   isAdmin: boolean;
   canEdit: boolean;
   createdAt: Date;
   appUser: BaseMembershipUser;
-}
+};
 
-export interface ChannelMembershipWithUser extends BaseMembership {
+export type ChannelMembershipWithUser = BaseMembership & {
   channelId: string;
   canUpload: boolean;
-}
+};
 
-export interface ChurchMembershipWithUser extends BaseMembership {
+export type ChurchMembershipWithUser = BaseMembership & {
   organizationId: string;
-}
+};

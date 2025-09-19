@@ -1,1 +1,85 @@
 @import "tailwindcss";
+
+/* TODO: Clean this up, add more colors, remove unused colors */
+
+:root {
+	--page-bg: var(--color-zinc-950);
+	--sidebar-bg: var(--color-zinc-950);
+	--sidebar-border: var(--color-zinc-900);
+	--card-bg: var(--color-zinc-900);
+	--card-text: var(--color-white);
+	--card-border: var(--color-white) / 0.1;
+	--primary: var(--color-indigo-500);
+	--primary-glow: var(--color-indigo-500) / 0.5;
+	--text-primary: var(--color-white);
+	--text-secondary: var(--color-zinc-300);
+	--text-muted: var(--color-zinc-400);
+	--bg-overlay: var(--color-white) / 0.05;
+	--bg-overlay-strong: var(--color-white) / 0.15;
+	--border-color: var(--color-white) / 0.1;
+}
+
+[data-theme="light"] {
+	--page-bg: var(--color-gray-100);
+	--sidebar-bg: var(--color-white);
+	--sidebar-border: var(--color-gray-400) / 0.3;
+	--card-bg: var(--color-white);
+	--card-text: var(--color-black);
+	--card-border: var(--color-gray-400) / 0.2;
+	--primary: var(--color-indigo-500);
+	--primary-glow: var(--color-indigo-500) / 0.5;
+	--text-primary: var(--color-black);
+	--text-secondary: var(--color-gray-500);
+	--text-muted: var(--color-gray-500);
+	--bg-overlay: var(--color-black) / 0.05;
+	--bg-overlay-strong: var(--color-black) / 0.1;
+	--border-color: var(--color-gray-400) / 0.2;
+}
+
+@utility bg-page {
+	background-color: var(--page-bg);
+}
+
+@utility bg-sidebar {
+	background-color: var(--sidebar-bg);
+}
+
+@utility bg-card {
+	background-color: var(--card-bg);
+}
+
+@utility text-card {
+	color: var(--card-text);
+}
+
+@utility border-sidebar {
+	border-color: var(--sidebar-border);
+}
+
+@utility border-card {
+	border-color: var(--card-border);
+}
+
+@utility text-primary {
+	color: var(--text-primary);
+}
+
+@utility text-secondary {
+	color: var(--text-secondary);
+}
+
+@utility text-muted {
+	color: var(--text-muted);
+}
+
+@utility bg-overlay {
+	background-color: var(--bg-overlay);
+}
+
+@utility bg-overlay-strong {
+	background-color: var(--bg-overlay-strong);
+}
+
+@utility border-default {
+	border-color: var(--border-color);
+}

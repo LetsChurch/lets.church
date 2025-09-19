@@ -5,6 +5,7 @@ import {
   Scripts,
 } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
+import appCss from '@/app.css?url';
 import type { AppContextType } from '@/router';
 
 const indigo = '#6366f1';
@@ -32,6 +33,7 @@ export const Route = createRootRouteWithContext<AppContextType>()({
       },
     ],
     links: [
+      { rel: 'stylesheet', href: appCss },
       {
         rel: 'shortcut icon',
         href: '/favicon.svg',
@@ -81,7 +83,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body className="bg-page">
         {children}
         <Scripts />
       </body>

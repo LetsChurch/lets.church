@@ -73,13 +73,13 @@ type OrganizationTagColor =
   | 'PURPLE'
   | 'PINK';
 
-interface OrganizationTag {
+type OrganizationTag = {
   slug: string;
   label: string;
   description?: string | null;
   category: OrganizationTagCategory;
   color: OrganizationTagColor;
-}
+};
 
 type FormData = {
   slug: string;

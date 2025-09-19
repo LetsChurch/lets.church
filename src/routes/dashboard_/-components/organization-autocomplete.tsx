@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { useTRPC } from '@/trpc/react';
 
-interface OrganizationAutocompleteProps {
+type OrganizationAutocompleteProps = {
   label?: string;
   placeholder?: string;
   value: string[];
@@ -24,7 +24,7 @@ interface OrganizationAutocompleteProps {
     organizationId: string;
     upstreamApproved: boolean;
   }>;
-}
+};
 
 export function OrganizationAutocomplete({
   label = 'Associated Organizations',

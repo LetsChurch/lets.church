@@ -9,14 +9,14 @@ import { clsx } from 'clsx';
 import type { ReactNode } from 'react';
 import classes from './stat-card.module.css';
 
-interface StatCardProps {
+type StatCardProps = {
   title: string;
   value: ReactNode;
   icon: ReactNode;
   color: 'blue' | 'green' | 'violet';
   tooltip?: string;
   to?: ValidateLinkOptions<RegisteredRouter, unknown>['to'];
-}
+};
 
 export function StatCard({
   title,
