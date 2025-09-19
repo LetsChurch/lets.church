@@ -197,7 +197,7 @@ export default function Header() {
         <div className="flex items-center gap-2">
           <Link
             to="/auth/login"
-            className="rounded-full border-1 border-white/10 bg-white/15 px-3 py-1.5 font-semibold text-sm text-white/80"
+            className="rounded-full border-top-highlight bg-white/15 px-3 py-1.5 font-semibold text-sm text-white/80"
           >
             Login
           </Link>
