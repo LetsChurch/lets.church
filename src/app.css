@@ -3,6 +3,8 @@
 /* TODO: Clean this up, add more colors, remove unused colors */
 
 :root {
+	--font-sans: "Inter Variable", sans-serif;
+
 	--page-bg: var(--color-zinc-950);
 	--sidebar-bg: var(--color-zinc-950);
 	--sidebar-border: var(--color-zinc-900);
@@ -56,10 +58,6 @@
 	border-color: var(--sidebar-border);
 }
 
-@utility border-card {
-	border-color: var(--card-border);
-}
-
 @utility text-primary {
 	color: var(--text-primary);
 }
@@ -86,7 +84,7 @@
 
 @utility border-top-highlight {
 	position: relative;
-	&::before {
+	&::after {
 		content: "";
 		position: absolute;
 		inset: 0;

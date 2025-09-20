@@ -22,7 +22,7 @@ function CarouselItem({
     <div className="w-[640px] flex-shrink-0">
       <div className="space-y-5">
         {/* Image Container */}
-        <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-card bg-card">
+        <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-top-highlight bg-card">
           <div
             className="absolute inset-0 bg-center bg-cover"
             style={{
@@ -78,7 +78,7 @@ export default function Header() {
       title: 'First Item',
       author: 'First Channel',
       imageUrl:
-        'https://unsplash.com/photos/nkUioaswtvM/download?ixid=M3wxMjA3fDB8MXxhbGx8fHx8fHx8fHwxNzU4MjM3NDE3fA&force=true&w=1920',
+        'https://unsplash.com/photos/vAij-E26haI/download?ixid=M3wxMjA3fDB8MXxhbGx8fHx8fHx8fHwxNzU4MjUyODYwfA&force=true&w=1920',
     },
     {
       title: 'Second Item',
@@ -178,9 +178,9 @@ export default function Header() {
     <div className="relative">
       {/* Background with gradient overlay */}
       <div className="-top-16 absolute inset-0 h-[244px]">
-        <div className="absolute inset-0 bg-indigo-500 opacity-40">
+        <div className="absolute inset-0 bg-indigo-500 opacity-60">
           <div
-            className="mask-[linear-gradient(to_bottom,black_0%,black_70%,transparent_100%)] absolute inset-0 bg-center bg-cover blur-md transition-all duration-1000 ease-in-out"
+            className="mask-[linear-gradient(to_bottom,black_0%,black_70%,transparent_100%)] absolute inset-0 bg-center bg-cover blur-lg brightness-200 transition-all duration-1000 ease-in-out"
             style={{
               backgroundImage: `url('${carouselItems[selectedIndex]?.imageUrl.replace('w=640&h=360', 'w=1240&h=244')}')`,
             }}

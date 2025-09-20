@@ -5,6 +5,7 @@ import {
   Scripts,
 } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
+import '@fontsource-variable/inter';
 import appCss from '@/app.css?url';
 import type { AppContextType } from '@/router';
 
