@@ -60,14 +60,12 @@ function CarouselPagination({
   onClick?: () => void;
 }) {
   return (
-    <button
-      type="button"
-      className="h-0.5 w-8 cursor-pointer overflow-hidden rounded-sm bg-gray-800"
-      onClick={onClick}
-    >
-      {isActive && (
-        <div className="h-full bg-indigo-500 shadow-indigo-500/50 shadow-lg" />
-      )}
+    <button type="button" className="cursor-pointer py-2" onClick={onClick}>
+      <div className="h-0.5 w-8 overflow-hidden rounded-sm bg-gray-800">
+        {isActive && (
+          <div className="h-full bg-indigo-500 shadow-indigo-500/50 shadow-lg" />
+        )}
+      </div>
     </button>
   );
 }
@@ -222,7 +220,7 @@ export default function Header() {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-center gap-2">
+        <div className="-mt-2 flex items-center justify-center gap-2">
           {scrollSnaps.map((item, index) => (
             <CarouselPagination
               key={item}
