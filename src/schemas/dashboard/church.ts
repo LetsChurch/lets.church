@@ -1,10 +1,11 @@
 import { z } from 'zod';
+import { AvatarSize } from './shared';
 
 export const churchIdSchema = z.uuid();
 
 export const churchQuerySchema = z.object({
   churchId: churchIdSchema,
-  avatarSize: z.object({ width: z.number(), height: z.number() }).optional(),
+  avatarSize: AvatarSize,
 });
 
 export const churchMemberPermissionsSchema = z.object({

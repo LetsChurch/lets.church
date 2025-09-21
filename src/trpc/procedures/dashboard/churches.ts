@@ -19,6 +19,7 @@ import {
   updateLeaderSchema,
   userSearchChurchSchema,
 } from '@/schemas/dashboard';
+import { getAvatarSize } from '@/schemas/dashboard/shared';
 import {
   completeMultipartMediaUpload,
   handleMultipartMediaUpload,
@@ -793,10 +794,9 @@ export const churchRouter = router({
 
     const { avatarPath, ...restChurch } = church;
     const avatarUrl = avatarPath
-      ? getPublicImageUrl(
-          getS3ProtocolUri('PUBLIC', avatarPath),
-          input?.avatarSize ? { resize: input.avatarSize } : undefined,
-        )
+      ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', avatarPath), {
+          resize: getAvatarSize(input?.avatarSize),
+        })
       : null;
 
     // Transform tags to a flat array of strings and associated organizations

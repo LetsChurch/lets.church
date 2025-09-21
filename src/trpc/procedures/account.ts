@@ -7,6 +7,7 @@ import {
   finalizeMultipartUploadSchema,
   multipartUploadSchema,
 } from '@/schemas/common';
+import { AvatarSize, getAvatarSize } from '@/schemas/dashboard/shared';
 import {
   completeMultipartMediaUpload,
   handleMultipartMediaUpload,
@@ -35,9 +36,7 @@ export const accountProcedures = {
     .input(
       z
         .looseObject({
-          avatarSize: z
-            .object({ width: z.number(), height: z.number() })
-            .optional(),
+          avatarSize: AvatarSize,
         })
         .optional(),
     )
@@ -65,10 +64,9 @@ export const accountProcedures = {
       const avatarPath = user.avatarPath;
 
       const avatarUrl = avatarPath
-        ? getPublicImageUrl(
-            getS3ProtocolUri('PUBLIC', avatarPath),
-            input?.avatarSize ? { resize: input.avatarSize } : undefined,
-          )
+        ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', avatarPath), {
+            resize: getAvatarSize(input?.avatarSize),
+          })
         : null;
 
       return {

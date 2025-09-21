@@ -27,6 +27,7 @@ import {
   uploadQuerySchema,
   userSearchSchema,
 } from '@/schemas/dashboard';
+import { getAvatarSize } from '@/schemas/dashboard/shared';
 import {
   completeMultipartMediaUpload,
   deleteUpload,
@@ -310,10 +311,9 @@ export const channelRouter = router({
     const { avatarPath, ...restChannel } = channel;
 
     const avatarUrl = avatarPath
-      ? getPublicImageUrl(
-          getS3ProtocolUri('PUBLIC', avatarPath),
-          input?.avatarSize ? { resize: input.avatarSize } : undefined,
-        )
+      ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', avatarPath), {
+          resize: getAvatarSize(input?.avatarSize),
+        })
       : null;
 
     return { ...restChannel, avatarUrl };

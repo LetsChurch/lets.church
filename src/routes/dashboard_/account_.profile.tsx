@@ -24,8 +24,6 @@ import { trpcClient, useTRPC } from '@/trpc/react';
 import { preloadImage } from '@/util/image-preload';
 import { doMultipartUpload } from '@/util/multipart-upload';
 
-const queryOps = { avatarSize: { width: 120, height: 120 } };
-
 export const Route = createFileRoute('/dashboard_/account_/profile')({
   component: ProfilePage,
   beforeLoad: async ({ context }) => {
@@ -38,7 +36,7 @@ export const Route = createFileRoute('/dashboard_/account_/profile')({
   },
   loader: async ({ context }) => {
     await context.queryClient.ensureQueryData(
-      context.trpc.account.getProfile.queryOptions(queryOps),
+      context.trpc.account.getProfile.queryOptions(),
     );
 
     return {
@@ -60,9 +58,7 @@ function ProfilePage() {
     string | null
   >(null);
 
-  const profileQuery = useSuspenseQuery(
-    trpc.account.getProfile.queryOptions(queryOps),
-  );
+  const profileQuery = useSuspenseQuery(trpc.account.getProfile.queryOptions());
 
   const resetDroppedAvatar = useCallback(() => {
     setPreviewUrl((previewUrl) => {

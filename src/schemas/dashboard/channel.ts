@@ -5,6 +5,7 @@ import {
   UploadVisibility,
 } from '@prisma/client';
 import { z } from 'zod';
+import { AvatarSize } from './shared';
 
 // Common field schemas
 export const channelIdSchema = z.uuid();
@@ -80,7 +81,7 @@ export const removeMemberSchema = z.object({
 // Query input schemas
 export const channelQuerySchema = z.object({
   channelId: channelIdSchema,
-  avatarSize: z.object({ width: z.number(), height: z.number() }).optional(),
+  avatarSize: AvatarSize,
 });
 
 export const uploadQuerySchema = z.object({

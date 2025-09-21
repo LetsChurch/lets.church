@@ -32,8 +32,6 @@ import { doMultipartUpload } from '@/util/multipart-upload';
 import { showFailure, showSuccess } from '../-mantine';
 import { $uploadProgress } from './channels_.$channelId_.uploads';
 
-const avatarOps = { avatarSize: { width: 120, height: 120 } };
-
 export const Route = createFileRoute(
   '/dashboard_/channels_/$channelId_/uploads_/$uploadId',
 )({
@@ -51,7 +49,6 @@ export const Route = createFileRoute(
       trpc.dashboard.channels.getUploadRecord.queryOptions({
         channelId: params.channelId,
         uploadId: params.uploadId,
-        ...avatarOps,
       }),
     );
     return {
@@ -79,7 +76,6 @@ function ChannelUploadPage() {
     ...trpc.dashboard.channels.getUploadRecord.queryOptions({
       channelId,
       uploadId,
-      ...avatarOps,
     }),
     refetchInterval: (query) => {
       const data = query.state.data;
