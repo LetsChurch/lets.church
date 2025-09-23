@@ -11,3 +11,34 @@ export const finalizeMultipartUploadSchema = z.object({
   s3UploadKey: z.string(),
   s3PartETags: z.array(z.string()),
 });
+
+export const AvatarSize = z.enum(['standard']).optional().default('standard');
+
+type Resize = { resize: { width: number; height?: number } };
+
+export function getAvatarResize(_size?: z.infer<typeof AvatarSize>): Resize {
+  return { resize: { width: 120, height: 120 } };
+}
+
+export const ThumbnailSize = z
+  .enum(['featured', 'saved', 'standard', 'table'])
+  .optional()
+  .default('standard');
+
+export function getThumbnailResize(
+  size?: z.infer<typeof ThumbnailSize>,
+): Resize {
+  if (size === 'featured') {
+    return { resize: { width: 1280 } };
+  }
+
+  if (size === 'saved') {
+    return { resize: { width: 228 } };
+  }
+
+  if (size === 'table') {
+    return { resize: { width: 120 } };
+  }
+
+  return { resize: { width: 1280 } };
+}

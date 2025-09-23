@@ -1,18 +1,42 @@
+import { Avatar } from './avatar';
+
 export type Props = {
-  title: string;
+  title?: string | null;
+  thumbnailUrl?: string | null;
+  channelName?: string;
+  channelAvatarUrl?: string | null;
 };
 
-export function MediaCard({ title }: Props) {
+export function MediaCard({
+  title,
+  thumbnailUrl,
+  channelName,
+  channelAvatarUrl,
+}: Props) {
   return (
     <div className="space-y-3">
-      <div className="aspect-video rounded-lg border border-top-highlight bg-card" />
+      <div className="aspect-video overflow-hidden rounded-lg border border-top-highlight bg-card">
+        {thumbnailUrl ? (
+          <img
+            src={thumbnailUrl}
+            alt={title ?? 'Untitled'}
+            className="size-full object-cover"
+          />
+        ) : null}
+      </div>
       <div className="flex flex-row items-center gap-2">
-        <div className="size-8 rounded-full bg-white" />
+        <Avatar
+          src={channelAvatarUrl}
+          alt={channelName || 'Channel'}
+          size={32}
+        />
         <div className="space-y-1">
           <h3 className="line-clamp-2 font-medium text-primary text-sm">
-            {title}
+            {title ?? 'Untitled'}
           </h3>
-          <p className="text-secondary text-xs">Channel Name</p>
+          <p className="text-secondary text-xs">
+            {channelName || 'Channel Name'}
+          </p>
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AvatarSize } from './shared';
+import { AvatarSize } from '../common';
 
 export const churchIdSchema = z.uuid();
 

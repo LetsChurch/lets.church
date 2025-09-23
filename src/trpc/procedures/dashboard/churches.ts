@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { invariant } from 'es-toolkit';
 import {
   finalizeMultipartUploadSchema,
+  getAvatarResize,
   multipartUploadSchema,
 } from '@/schemas/common';
 import {
@@ -19,7 +20,6 @@ import {
   updateLeaderSchema,
   userSearchChurchSchema,
 } from '@/schemas/dashboard';
-import { getAvatarSize } from '@/schemas/dashboard/shared';
 import {
   completeMultipartMediaUpload,
   handleMultipartMediaUpload,
@@ -794,9 +794,10 @@ export const churchRouter = router({
 
     const { avatarPath, ...restChurch } = church;
     const avatarUrl = avatarPath
-      ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', avatarPath), {
-          resize: getAvatarSize(input?.avatarSize),
-        })
+      ? getPublicImageUrl(
+          getS3ProtocolUri('PUBLIC', avatarPath),
+          getAvatarResize(input?.avatarSize),
+        )
       : null;
 
     // Transform tags to a flat array of strings and associated organizations

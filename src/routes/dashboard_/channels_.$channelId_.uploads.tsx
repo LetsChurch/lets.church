@@ -1,5 +1,6 @@
 import {
   ActionIcon,
+  AspectRatio,
   Badge,
   Box,
   Button,
@@ -619,22 +620,37 @@ function ChannelUploadsPage() {
                   <Table.Td>
                     <Group gap="sm" align="flex-start">
                       <Box pos="relative">
-                        <Box
-                          w={120}
-                          h={68}
-                          bg="gray.3"
-                          style={{
-                            borderRadius: 4,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                          }}
-                        >
-                          <Text size="xs" c="dimmed">
-                            📹
-                          </Text>
-                        </Box>
+                        <AspectRatio ratio={16 / 9} w={120}>
+                          {upload.thumbnailUrl ? (
+                            <Box
+                              component="img"
+                              src={upload.thumbnailUrl}
+                              alt={upload.title || 'Video thumbnail'}
+                              style={{
+                                borderRadius: 4,
+                                objectFit: 'cover',
+                                width: '100%',
+                                height: '100%',
+                              }}
+                            />
+                          ) : (
+                            <Box
+                              bg="gray.3"
+                              style={{
+                                borderRadius: 4,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '100%',
+                                height: '100%',
+                              }}
+                            >
+                              <Text size="xs" c="dimmed">
+                                📹
+                              </Text>
+                            </Box>
+                          )}
+                        </AspectRatio>
                         {upload.lengthSeconds && (
                           <Box
                             pos="absolute"

@@ -5,7 +5,7 @@ import {
   UploadVisibility,
 } from '@prisma/client';
 import { z } from 'zod';
-import { AvatarSize } from './shared';
+import { AvatarSize } from '../common';
 
 // Common field schemas
 export const channelIdSchema = z.uuid();

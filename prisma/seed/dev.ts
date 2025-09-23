@@ -165,6 +165,7 @@ const { id: flId, channelAssociations: flAssociations } =
     data: {
       name: 'FirstLove Publications',
       slug: 'firstlove',
+      avatarPath: 'first-love-publications/avatar.png',
       memberships: {
         create: {
           appUser: {
@@ -1328,6 +1329,7 @@ const uploadRecordData = [
     title: 'Foreword',
     uploadSizeBytes: 2986193,
     lengthSeconds: 186.566531,
+    defaultThumbnailPath: '00000000-0000-4000-8000-000000000000/00000000-0000-4000-8000-000000000000.png',
   },
   {
     ...baseUploadRecord,
@@ -1335,6 +1337,7 @@ const uploadRecordData = [
     title: 'Introduction',
     uploadSizeBytes: 3272913,
     lengthSeconds: 204.486531,
+    defaultThumbnailPath: '00000000-0000-4000-8000-000000000001/00000000-0000-4000-8000-000000000001.png',
   },
   {
     ...baseUploadRecord,
@@ -1342,6 +1345,7 @@ const uploadRecordData = [
     title: 'Chapter 1 - The Command of Christ',
     uploadSizeBytes: 22962385,
     lengthSeconds: 1435.08898,
+    defaultThumbnailPath: '00000000-0000-4000-8000-000000000002/00000000-0000-4000-8000-000000000002.png',
   },
   {
     ...baseUploadRecord,
@@ -1349,6 +1353,7 @@ const uploadRecordData = [
     title: 'Chapter 2 - The Policy of Paul',
     uploadSizeBytes: 17471697,
     lengthSeconds: 1091.918367,
+    defaultThumbnailPath: '00000000-0000-4000-8000-000000000003/00000000-0000-4000-8000-000000000003.png',
   },
   {
     ...baseUploadRecord,
@@ -1356,6 +1361,7 @@ const uploadRecordData = [
     title: 'Chapter 3 - The Triangle of Obligation',
     uploadSizeBytes: 17115345,
     lengthSeconds: 1069.708367,
+    defaultThumbnailPath: '00000000-0000-4000-8000-000000000004/00000000-0000-4000-8000-000000000004.png',
   },
   {
     ...baseUploadRecord,
@@ -1363,6 +1369,7 @@ const uploadRecordData = [
     title: 'Chapter 4 - The Burden of Support',
     uploadSizeBytes: 16812241,
     lengthSeconds: 1050.763061,
+    defaultThumbnailPath: '00000000-0000-4000-8000-000000000005/00000000-0000-4000-8000-000000000005.png',
   },
   {
     ...baseUploadRecord,
@@ -1370,6 +1377,7 @@ const uploadRecordData = [
     title: 'Chapter 5 - The Preogative of Servanthood',
     uploadSizeBytes: 19398865,
     lengthSeconds: 1212.430612,
+    defaultThumbnailPath: '00000000-0000-4000-8000-000000000006/00000000-0000-4000-8000-000000000006.png',
   },
   {
     ...baseUploadRecord,
@@ -1377,6 +1385,7 @@ const uploadRecordData = [
     title: 'Chapter 6 - The Sincerity of Ministry',
     uploadSizeBytes: 16396497,
     lengthSeconds: 1024.786531,
+    defaultThumbnailPath: '00000000-0000-4000-8000-000000000007/00000000-0000-4000-8000-000000000007.png',
   },
   {
     ...baseUploadRecord,
@@ -1384,6 +1393,7 @@ const uploadRecordData = [
     title: 'Chapter 7 - The Greed of Wolves',
     uploadSizeBytes: 19323089,
     lengthSeconds: 1207.640816,
+    defaultThumbnailPath: '00000000-0000-4000-8000-000000000008/00000000-0000-4000-8000-000000000008.png',
   },
   {
     ...baseUploadRecord,
@@ -1391,6 +1401,7 @@ const uploadRecordData = [
     title: 'Chapter 8 - The Apostles of Corinth',
     uploadSizeBytes: 17832145,
     lengthSeconds: 1114.357551,
+    defaultThumbnailPath: '00000000-0000-4000-8000-000000000009/00000000-0000-4000-8000-000000000009.png',
   },
   {
     ...baseUploadRecord,
@@ -1398,6 +1409,7 @@ const uploadRecordData = [
     title: 'Chapter 9 - The Pattern of Colabor',
     uploadSizeBytes: 18325713,
     lengthSeconds: 1145.260408,
+    defaultThumbnailPath: '00000000-0000-4000-8000-00000000000a/00000000-0000-4000-8000-00000000000a.png',
   },
   {
     ...baseUploadRecord,
@@ -1405,6 +1417,7 @@ const uploadRecordData = [
     title: 'Chapter 10 - The Testimony of History',
     uploadSizeBytes: 16933073,
     lengthSeconds: 1058.220408,
+    defaultThumbnailPath: '00000000-0000-4000-8000-00000000000b/00000000-0000-4000-8000-00000000000b.png',
   },
   {
     ...baseUploadRecord,
@@ -1412,6 +1425,7 @@ const uploadRecordData = [
     title: 'Chapter 11 - The Scope of Ministry',
     uploadSizeBytes: 17428689,
     lengthSeconds: 1089.253878,
+    defaultThumbnailPath: '00000000-0000-4000-8000-00000000000c/00000000-0000-4000-8000-00000000000c.png',
   },
   {
     ...baseUploadRecord,
@@ -1419,6 +1433,7 @@ const uploadRecordData = [
     title: 'Chapter 12 - The Challenge of Parachurch',
     uploadSizeBytes: 16756945,
     lengthSeconds: 1047.308571,
+    defaultThumbnailPath: '00000000-0000-4000-8000-00000000000d/00000000-0000-4000-8000-00000000000d.png',
   },
   {
     ...baseUploadRecord,
@@ -1426,6 +1441,7 @@ const uploadRecordData = [
     title: 'Chapter 13 - The Issue of Copyright',
     uploadSizeBytes: 18176209,
     lengthSeconds: 1135.908571,
+    defaultThumbnailPath: '00000000-0000-4000-8000-00000000000e/00000000-0000-4000-8000-00000000000e.png',
   },
   {
     ...baseUploadRecord,
@@ -1433,6 +1449,7 @@ const uploadRecordData = [
     title: 'Chapter 14 - The Path of Progress',
     uploadSizeBytes: 16425169,
     lengthSeconds: 1026.45551,
+    defaultThumbnailPath: '00000000-0000-4000-8000-00000000000f/00000000-0000-4000-8000-00000000000f.png',
   },
   {
     ...baseUploadRecord,
@@ -1440,6 +1457,7 @@ const uploadRecordData = [
     title: 'Conclusion',
     uploadSizeBytes: 1954713,
     lengthSeconds: 121.939592,
+    defaultThumbnailPath: '00000000-0000-4000-8000-000000000010/00000000-0000-4000-8000-000000000010.png',
   },
   {
     ...baseUploadRecord,
@@ -1447,6 +1465,7 @@ const uploadRecordData = [
     title: 'Appendix A - Further Study',
     uploadSizeBytes: 1343046,
     lengthSeconds: 83.748571,
+    defaultThumbnailPath: '00000000-0000-4000-8000-000000000011/00000000-0000-4000-8000-000000000011.png',
   },
   {
     ...baseUploadRecord,
@@ -1454,6 +1473,7 @@ const uploadRecordData = [
     title: 'Appendix B - Copyright in the United States',
     uploadSizeBytes: 3256996,
     lengthSeconds: 140.355918,
+    defaultThumbnailPath: '00000000-0000-4000-8000-000000000012/00000000-0000-4000-8000-000000000012.png',
   },
   {
     ...baseUploadRecord,
@@ -1461,6 +1481,7 @@ const uploadRecordData = [
     title: 'Appendix C - Copyright and Natural Law',
     uploadSizeBytes: 6713553,
     lengthSeconds: 419.526531,
+    defaultThumbnailPath: '00000000-0000-4000-8000-000000000013/00000000-0000-4000-8000-000000000013.png',
   },
 ] satisfies Array<Prisma.UploadRecordCreateManyInput>;
 

@@ -4,6 +4,8 @@ import { invariant } from 'es-toolkit';
 import { z } from 'zod';
 import {
   finalizeMultipartUploadSchema,
+  getAvatarResize,
+  getThumbnailResize,
   multipartUploadSchema,
 } from '@/schemas/common';
 import {
@@ -27,7 +29,6 @@ import {
   uploadQuerySchema,
   userSearchSchema,
 } from '@/schemas/dashboard';
-import { getAvatarSize } from '@/schemas/dashboard/shared';
 import {
   completeMultipartMediaUpload,
   deleteUpload,
@@ -311,9 +312,10 @@ export const channelRouter = router({
     const { avatarPath, ...restChannel } = channel;
 
     const avatarUrl = avatarPath
-      ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', avatarPath), {
-          resize: getAvatarSize(input?.avatarSize),
-        })
+      ? getPublicImageUrl(
+          getS3ProtocolUri('PUBLIC', avatarPath),
+          getAvatarResize(input?.avatarSize),
+        )
       : null;
 
     return { ...restChannel, avatarUrl };
@@ -606,6 +608,8 @@ export const channelRouter = router({
             visibility: true,
             createdAt: true,
             lengthSeconds: true,
+            defaultThumbnailPath: true,
+            overrideThumbnailPath: true,
             _count: {
               select: {
                 uploadViews: true,
@@ -671,12 +675,29 @@ export const channelRouter = router({
 
       const totalPages = Math.ceil(totalCount / input.limit);
 
+      const uploadsWithThumbnails = uploads.map((upload) => {
+        const { defaultThumbnailPath, overrideThumbnailPath, ...uploadRest } =
+          upload;
+        const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
+        const thumbnailUrl = thumbnailPath
+          ? getPublicImageUrl(
+              getS3ProtocolUri('PUBLIC', thumbnailPath),
+              getThumbnailResize('table'),
+            )
+          : null;
+
+        return {
+          ...uploadRest,
+          thumbnailUrl,
+        };
+      });
+
       return {
         channel: {
           ...channel,
           userMembership: ctx.membership,
         },
-        uploads,
+        uploads: uploadsWithThumbnails,
         pagination: {
           page: input.page,
           limit: input.limit,

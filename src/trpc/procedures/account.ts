@@ -4,10 +4,11 @@ import { invariant } from 'es-toolkit';
 import { z } from 'zod';
 import { passwordChangeSchema, profileUpdateSchema } from '@/schemas/account';
 import {
+  AvatarSize,
   finalizeMultipartUploadSchema,
+  getAvatarResize,
   multipartUploadSchema,
 } from '@/schemas/common';
-import { AvatarSize, getAvatarSize } from '@/schemas/dashboard/shared';
 import {
   completeMultipartMediaUpload,
   handleMultipartMediaUpload,
@@ -64,9 +65,10 @@ export const accountProcedures = {
       const avatarPath = user.avatarPath;
 
       const avatarUrl = avatarPath
-        ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', avatarPath), {
-            resize: getAvatarSize(input?.avatarSize),
-          })
+        ? getPublicImageUrl(
+            getS3ProtocolUri('PUBLIC', avatarPath),
+            getAvatarResize(input?.avatarSize),
+          )
         : null;
 
       return {
