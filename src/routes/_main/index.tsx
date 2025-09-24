@@ -195,6 +195,45 @@ function ContentSection({
 }
 
 function RecentlySaved() {
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    loop: false,
+    align: 'start',
+    containScroll: 'trimSnaps',
+    slidesToScroll: 1,
+    watchDrag: false,
+    breakpoints: {
+      '(max-width: 1023px)': { watchDrag: true },
+    },
+  });
+
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+
+    function onSelect(emblaApi: EmblaCarouselType) {
+      setCanScrollPrev(emblaApi.canScrollPrev());
+      setCanScrollNext(emblaApi.canScrollNext());
+    }
+
+    onSelect(emblaApi);
+    emblaApi.on('select', onSelect);
+
+    return () => {
+      emblaApi.off('select', onSelect);
+    };
+  }, [emblaApi]);
+
+  const savedItems = [...Array(9)].map((_item, i) => `Saved Content ${i + 1}`);
+
+  const column1 = savedItems.slice(0, 3);
+  const column2 = savedItems.slice(3, 6);
+  const column3 = savedItems.slice(6, 9);
+
   return (
     <div className="mb-8">
       <div className="mb-6 flex items-center justify-between">
@@ -207,10 +246,44 @@ function RecentlySaved() {
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-x-4 gap-y-3">
-        {[...Array(9)].map((item, i) => (
-          <SavedCard key={item} title={`Saved Content ${i + 1}`} />
-        ))}
+      <div className="relative">
+        <div
+          className="-mx-16 relative overflow-visible px-16"
+          ref={emblaRef}
+          style={{
+            maskImage:
+              'linear-gradient(to right, transparent 0%, black 64px, black calc(100% - 64px), transparent 100%)',
+            WebkitMaskImage:
+              'linear-gradient(to right, transparent 0%, black 64px, black calc(100% - 64px), transparent 100%)',
+          }}
+        >
+          <div className="flex gap-4 md:gap-6">
+            <div className="min-w-0 flex-[0_0_100%] space-y-3 md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]">
+              {column1.map((title) => (
+                <SavedCard key={title} title={title} />
+              ))}
+            </div>
+            <div className="min-w-0 flex-[0_0_100%] space-y-3 md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]">
+              {column2.map((title) => (
+                <SavedCard key={title} title={title} />
+              ))}
+            </div>
+            <div className="min-w-0 flex-[0_0_100%] space-y-3 md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]">
+              {column3.map((title) => (
+                <SavedCard key={title} title={title} />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:hidden">
+          <CarouselNavigationButtons
+            canScrollPrev={canScrollPrev}
+            canScrollNext={canScrollNext}
+            onScrollPrev={scrollPrev}
+            onScrollNext={scrollNext}
+          />
+        </div>
       </div>
     </div>
   );
