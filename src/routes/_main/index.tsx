@@ -2,7 +2,7 @@ import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import type { EmblaCarouselType } from 'embla-carousel';
 import useEmblaCarousel from 'embla-carousel-react';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, PropsWithChildren } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { CarouselNavigationButtons } from '@/components/carousel-navigation-buttons';
 import { CarouselPagination } from '@/components/carousel-pagination';
@@ -71,7 +71,8 @@ function ContentSection({
     containScroll: 'trimSnaps',
     slidesToScroll: 1,
     breakpoints: {
-      '(min-width: 768px)': { slidesToScroll: 4 },
+      '(min-width: 768px)': { slidesToScroll: 2 },
+      '(min-width: 1024px)': { slidesToScroll: 3 },
     },
   });
 
@@ -144,7 +145,7 @@ function ContentSection({
                 {uploads.map((upload) => (
                   <div
                     key={upload.id}
-                    className="min-w-0 flex-[0_0_calc(25%-18px)]"
+                    className="min-w-0 flex-[0_0_100%] md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]"
                   >
                     <MediaCard
                       title={upload.title}
@@ -155,7 +156,9 @@ function ContentSection({
                   </div>
                 ))}
                 {showViewMoreCard && viewMoreCardText && (
-                  <ViewMoreCard text={viewMoreCardText} />
+                  <div className="min-w-0 flex-[0_0_100%] md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]">
+                    <ViewMoreCard text={viewMoreCardText} />
+                  </div>
                 )}
               </div>
             </div>
@@ -253,6 +256,14 @@ function TrendingSearches() {
   );
 }
 
+function MediaGrid({ children }: PropsWithChildren) {
+  return (
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {children}
+    </div>
+  );
+}
+
 function Home() {
   const { isLoggedIn } = Route.useLoaderData();
   const trpc = useTRPC();
@@ -280,32 +291,34 @@ function Home() {
         <ContentSection
           title="Subscriptions"
           uploads={subscriptionUploads || []}
-          showViewMoreCard={!!(subscriptionUploads && subscriptionUploads.length > 0)}
+          showViewMoreCard={
+            !!(subscriptionUploads && subscriptionUploads.length > 0)
+          }
           viewMoreCardText="See more subscribed content"
           emptyTitle="Create an account to follow channels"
           emptyBody="Follow your favorite channels to get a customized feed and to ensure you don't miss new content!"
           emptyCta="Create Account"
         />
 
-        <div className="grid grid-cols-3 gap-6">
-          {trendingUploads.slice(0, 6).map((upload, i) => (
+        <MediaGrid>
+          {trendingUploads.slice(0, 6).map((upload, _i) => (
             <MediaCard
-              key={upload?.id || `trending-1-${i}`}
-              title={upload?.title || `Sample Content Title ${i + 1}`}
+              key={upload.id}
+              title={upload?.title ?? 'Untitled'}
               thumbnailUrl={upload?.thumbnailUrl}
               channelName={upload?.channel.name}
               channelAvatarUrl={upload?.channel.avatarUrl}
             />
           ))}
-        </div>
+        </MediaGrid>
 
         <RecentlySaved />
 
-        <div className="grid grid-cols-3 gap-6">
-          {trendingUploads.slice(6, 11).map((upload, i) => (
+        <MediaGrid>
+          {trendingUploads.slice(6, 11).map((upload, _i) => (
             <MediaCard
-              key={upload?.id || `trending-2-${i}`}
-              title={upload?.title || `Sample Content Title ${i + 7}`}
+              key={upload.id}
+              title={upload?.title ?? 'Untitled'}
               thumbnailUrl={upload?.thumbnailUrl}
               channelName={upload?.channel.name}
               channelAvatarUrl={upload?.channel.avatarUrl}
@@ -313,13 +326,13 @@ function Home() {
           ))}
 
           <DonateCard />
-        </div>
+        </MediaGrid>
 
-        <div className="grid grid-cols-3 gap-6">
-          {trendingUploads.slice(11, 19).map((upload, i) => (
+        <MediaGrid>
+          {trendingUploads.slice(11, 19).map((upload, _i) => (
             <MediaCard
-              key={upload?.id || `trending-3-${i}`}
-              title={upload?.title || `Sample Content Title ${i + 12}`}
+              key={upload.id}
+              title={upload?.title ?? 'Untitled'}
               thumbnailUrl={upload?.thumbnailUrl}
               channelName={upload?.channel.name}
               channelAvatarUrl={upload?.channel.avatarUrl}
@@ -327,21 +340,21 @@ function Home() {
           ))}
 
           <SearchCard />
-        </div>
+        </MediaGrid>
 
         <TrendingSearches />
 
-        <div className="grid grid-cols-3 gap-6">
-          {trendingUploads.slice(19).map((upload, i) => (
+        <MediaGrid>
+          {trendingUploads.slice(19).map((upload, _i) => (
             <MediaCard
-              key={upload?.id || `trending-4-${i}`}
-              title={upload?.title || `Sample Content Title ${i + 20}`}
+              key={upload.id}
+              title={upload?.title || 'Untitled'}
               thumbnailUrl={upload?.thumbnailUrl}
               channelName={upload?.channel.name}
               channelAvatarUrl={upload?.channel.avatarUrl}
             />
           ))}
-        </div>
+        </MediaGrid>
       </div>
     </div>
   );

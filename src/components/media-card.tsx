@@ -31,7 +31,7 @@ export function MediaCard({
           size={32}
         />
         <div className="space-y-1">
-          <h3 className="line-clamp-2 font-medium text-primary text-sm">
+          <h3 className="line-clamp-1 font-medium text-primary text-sm">
             {title ?? 'Untitled'}
           </h3>
           <p className="text-secondary text-xs">

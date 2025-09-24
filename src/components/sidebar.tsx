@@ -6,6 +6,8 @@ import {
   IconSearch,
 } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
+import { useId } from 'react';
+import { cn } from '@/util/cn';
 
 type SidebarProps = {
   className?: string;
@@ -39,10 +41,12 @@ const navigation = [
 ];
 
 function SidebarLogo() {
+  const clipId = useId();
+
   return (
     <svg width="107" height="16" role="img">
       <title>Let's Church</title>
-      <g fill="#fff" clip-path="url(#a)">
+      <g fill="#fff" clip-path={`url(#${clipId})`}>
         <path d="M83.025 4.545v2.147h-1.241c-2.23 0-3.171 1.233-3.171 3.746v3.197h2.343v1.873h-6.64v-1.873h2.136V6.6h-2.183V4.728h3.884V7.15h.045c.805-2.033 2.344-2.604 3.356-2.604h1.47Zm5.308-.137c1.884 0 2.964.96 3.056 1.05v-.73h1.93v4.065h-1.93c-.23-1.439-1.195-2.444-2.872-2.444-1.93 0-3.217 1.485-3.217 3.655 0 2.283 1.333 3.882 3.309 3.882.919 0 2.436-.343 3.263-2.124l1.77.822c-.942 2.124-2.735 3.244-5.102 3.244-3.86 0-5.538-3.197-5.538-5.801 0-3.107 2.366-5.619 5.33-5.619ZM98.076.001v5.96c1.609-1.301 2.735-1.553 3.609-1.553 1.93 0 2.987 1.119 2.987 3.175v6.052h1.862v1.873h-4.022V8.062c0-1.142-.437-1.758-1.333-1.758-.805 0-1.907.525-3.103 1.416v5.915h1.862v1.873h-5.997v-1.873h1.976V1.873h-1.954V0h4.114Z" />
         <path d="M54.093 0v5.961c1.608-1.301 2.735-1.553 3.608-1.553 1.93 0 2.987 1.119 2.987 3.175v6.052h1.862v1.873H58.53V8.062c0-1.142-.437-1.758-1.334-1.758-.804 0-1.907.525-3.102 1.416v5.915h1.862v1.873h-5.998v-1.873h1.976V1.873H49.98V0h4.113Zm12.179 4.728v7.583c0 .982.437 1.507 1.286 1.507.897 0 2.137-.525 3.103-1.37V6.6H68.8V4.728h4.022v8.907h1.862v1.873H70.66v-1.233c-1.31 1.027-2.482 1.415-3.539 1.415-1.976 0-3.01-1.118-3.01-3.243V6.6h-1.54V4.728h3.7ZM46.946 5.459c-.091-.091-1.171-1.05-3.056-1.05-2.964 0-5.332 2.511-5.33 5.618 0 2.604 1.677 5.8 5.537 5.8 2.367 0 4.16-1.119 5.102-3.243l-1.77-.822c-.827 1.781-2.344 2.124-3.263 2.124-1.976 0-3.309-1.599-3.309-3.883 0-2.169 1.287-3.654 3.217-3.654 1.677 0 2.643 1.005 2.872 2.444h1.93V4.728h-1.93v.73ZM21.738 4.728V1.12l-2.16 1.942V4.73h-1.402v1.873h1.401v6.6c0 1.621.897 2.49 2.574 2.49.322 0 .828-.07 1.586-.298v-1.918c-.505.16-.827.228-1.126.228-.574 0-.873-.297-.873-.823v-6.28h1.999V4.728h-1.999ZM27.552 2.832V0h-2.758v2.74h1.379c0 1.05-.23 1.69-1.379 1.941v1.142c1.747-.022 2.758-.822 2.758-2.991ZM33.25 5.162a5.901 5.901 0 0 0-2.642-.617c-2.23 0-3.815 1.347-3.814 3.173 0 1.005.506 1.85 1.241 2.398.827.594 1.884.845 3.033 1.028 1.494.228 2.46.388 2.46 1.416 0 .845-.897 1.348-2.23 1.348-1.402 0-2.413-.64-2.597-1.736v-.365h-1.907v3.7H28.7v-.594c.023.022.965.776 2.85.776 2.505 0 4.159-1.348 4.159-3.289 0-.776-.322-1.621-.805-2.124-.873-.936-2.344-1.165-3.608-1.347-1.47-.206-2.481-.388-2.481-1.302 0-.777.735-1.325 1.907-1.325 1.126 0 1.93.435 2.527 1.325v.663h1.885V4.727H33.25v.435Z" />
         <path
@@ -53,7 +57,7 @@ function SidebarLogo() {
         <path d="M4.136 13.634V0H.046v1.873h1.93v11.761H0v1.873h5.814v-1.873H4.136Z" />
       </g>
       <defs>
-        <clipPath id="a">
+        <clipPath id={clipId}>
           <path fill="#fff" d="M0 0h106.4v15.945H0z" />
         </clipPath>
       </defs>
@@ -64,7 +68,10 @@ function SidebarLogo() {
 export default function Sidebar({ className }: SidebarProps) {
   return (
     <div
-      className={`flex h-full w-[200px] flex-col border-sidebar border-r bg-sidebar ${className || ''}`}
+      className={cn(
+        'hidden h-full w-[200px] flex-col border-sidebar border-r bg-sidebar sm:flex',
+        className,
+      )}
     >
       {/* Logo and Menu Button */}
       <div className="flex items-center gap-3 border-sidebar border-b px-3 py-4">
@@ -83,12 +90,12 @@ export default function Sidebar({ className }: SidebarProps) {
           <Link
             key={item.name}
             to={item.href}
-            className={`group relative flex items-center rounded-lg px-4 py-2 font-medium text-sm transition-colors ${
+            className={cn(
+              `group relative flex items-center rounded-lg px-4 py-2 font-medium text-sm transition-colors`,
               item.current
                 ? 'bg-transparent text-primary'
-                : 'text-muted hover:bg-overlay hover:text-primary'
-            }
-            `}
+                : 'text-muted hover:bg-overlay hover:text-primary',
+            )}
           >
             {item.current && (
               <div className="absolute top-0 right-0 bottom-0 w-0.5 bg-indigo-500 shadow-indigo-500/50 shadow-lg" />
