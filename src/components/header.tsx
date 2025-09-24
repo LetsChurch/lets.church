@@ -21,7 +21,7 @@ function CarouselItem({
   badge = 'Featured',
 }: CarouselItemProps) {
   return (
-    <div className="w-[640px] flex-shrink-0">
+    <div className="w-[360px] flex-shrink-0 md:w-[495px] lg:w-[640px]">
       <div className="space-y-5">
         {/* Image Container */}
         <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-top-highlight bg-card">
@@ -202,7 +202,7 @@ export default function Header() {
               {carouselItems.map((item, index) => (
                 <div
                   key={item.imageUrl}
-                  className={`flex min-w-0 flex-[0_0_640px] justify-center transition-opacity duration-500 ease-in-out ${
+                  className={`flex min-w-0 flex-[0_0_360px] justify-center transition-opacity duration-500 ease-in-out md:flex-[0_0_495px] lg:flex-[0_0_640px] ${
                     index === 0 ? 'opacity-100' : 'opacity-20'
                   }`}
                 >
