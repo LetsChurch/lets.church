@@ -3,6 +3,8 @@ import type { EmblaCarouselType } from 'embla-carousel';
 import Autoplay from 'embla-carousel-autoplay';
 import useEmblaCarousel from 'embla-carousel-react';
 import { useCallback, useEffect, useState } from 'react';
+import { CarouselNavigationButtons } from './carousel-navigation-buttons';
+import { CarouselPagination } from './carousel-pagination';
 import Search from './search';
 
 type CarouselItemProps = {
@@ -52,24 +54,6 @@ function CarouselItem({
   );
 }
 
-function CarouselPagination({
-  isActive = false,
-  onClick,
-}: {
-  isActive?: boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <button type="button" className="cursor-pointer py-2" onClick={onClick}>
-      <div className="h-0.5 w-8 overflow-hidden rounded-sm bg-gray-800">
-        {isActive && (
-          <div className="h-full bg-indigo-500 shadow-indigo-500/50 shadow-lg" />
-        )}
-      </div>
-    </button>
-  );
-}
-
 export default function Header() {
   const carouselItems = [
     {
@@ -115,11 +99,17 @@ export default function Header() {
   );
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
 
   const scrollTo = useCallback(
     (index: number) => emblaApi?.scrollTo(index),
     [emblaApi],
   );
+
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
+
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
 
   useEffect(() => {
     // Preload all background images
@@ -138,6 +128,8 @@ export default function Header() {
 
     function onSelect(emblaApi: EmblaCarouselType) {
       setSelectedIndex(emblaApi.selectedScrollSnap());
+      setCanScrollPrev(emblaApi.canScrollPrev());
+      setCanScrollNext(emblaApi.canScrollNext());
     }
 
     onInit(emblaApi);
@@ -204,22 +196,31 @@ export default function Header() {
 
       {/* Carousel Banner */}
       <div className="relative z-10 pb-6">
-        <div className="overflow-hidden" ref={emblaRef}>
-          <div className="flex gap-5 px-5 pb-6">
-            {carouselItems.map((item, index) => (
-              <div
-                key={item.imageUrl}
-                className={`flex min-w-0 flex-[0_0_640px] justify-center transition-opacity duration-500 ease-in-out ${
-                  index === 0 ? 'opacity-100' : 'opacity-20'
-                }`}
-              >
-                <CarouselItem {...item} />
-              </div>
-            ))}
+        <div className="relative">
+          <div className="overflow-hidden" ref={emblaRef}>
+            <div className="flex gap-5 px-5 pb-6">
+              {carouselItems.map((item, index) => (
+                <div
+                  key={item.imageUrl}
+                  className={`flex min-w-0 flex-[0_0_640px] justify-center transition-opacity duration-500 ease-in-out ${
+                    index === 0 ? 'opacity-100' : 'opacity-20'
+                  }`}
+                >
+                  <CarouselItem {...item} />
+                </div>
+              ))}
+            </div>
           </div>
+
+          <CarouselNavigationButtons
+            canScrollPrev={canScrollPrev}
+            canScrollNext={canScrollNext}
+            onScrollPrev={scrollPrev}
+            onScrollNext={scrollNext}
+            positioning="inside"
+          />
         </div>
 
-        {/* Pagination */}
         <div className="-mt-2 flex items-center justify-center gap-2">
           {scrollSnaps.map((item, index) => (
             <CarouselPagination

@@ -124,7 +124,7 @@ export function EmptyState({
           {emptyCta ? (
             <a
               href="/"
-              className="mt-4 flex h-8 items-center rounded-full bg-indigo-500 px-3 font-bold text-primary text-sm border-top-highlight"
+              className="mt-4 flex h-8 items-center rounded-full border-top-highlight bg-indigo-500 px-3 font-bold text-primary text-sm"
             >
               {emptyCta}
             </a>

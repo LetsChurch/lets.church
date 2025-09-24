@@ -1,12 +1,18 @@
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
+import type { EmblaCarouselType } from 'embla-carousel';
+import useEmblaCarousel from 'embla-carousel-react';
 import type { ComponentProps } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { CarouselNavigationButtons } from '@/components/carousel-navigation-buttons';
+import { CarouselPagination } from '@/components/carousel-pagination';
 import { DonateCard } from '@/components/donate-card';
 import { EmptyState } from '@/components/empty-state';
 import Header from '@/components/header';
 import { MediaCard } from '@/components/media-card';
 import { SavedCard } from '@/components/saved-card';
 import { SearchCard } from '@/components/search-card';
+import { ViewMoreCard } from '@/components/view-more-card';
 import { useTRPC } from '@/trpc/react';
 
 export const Route = createFileRoute('/_main/')({
@@ -16,12 +22,10 @@ export const Route = createFileRoute('/_main/')({
       context.trpc.common.hasValidSession.queryOptions(),
     );
 
-    // Prefetch trending uploads (always available)
     await context.queryClient.ensureQueryData(
       context.trpc.home.getTrendingUploads.queryOptions({ limit: 20 }),
     );
 
-    // Prefetch subscription uploads only if logged in
     if (hasSession) {
       await context.queryClient.ensureQueryData(
         context.trpc.home.getSubscriptionUploads.queryOptions({ limit: 5 }),
@@ -38,6 +42,8 @@ function ContentSection({
   title,
   uploads,
   showViewAll = true,
+  showViewMoreCard = false,
+  viewMoreCardText,
   emptyTitle,
   emptyBody,
   emptyCta,
@@ -56,7 +62,57 @@ function ContentSection({
     };
   }>;
   showViewAll?: boolean;
+  showViewMoreCard?: boolean;
+  viewMoreCardText?: string;
 }) {
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    loop: false,
+    align: 'start',
+    containScroll: 'trimSnaps',
+    slidesToScroll: 1,
+    breakpoints: {
+      '(min-width: 768px)': { slidesToScroll: 4 },
+    },
+  });
+
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  const scrollTo = useCallback(
+    (index: number) => emblaApi?.scrollTo(index),
+    [emblaApi],
+  );
+
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
+
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+
+    function onInit(emblaApi: EmblaCarouselType) {
+      setScrollSnaps(emblaApi.scrollSnapList());
+    }
+
+    function onSelect(emblaApi: EmblaCarouselType) {
+      setSelectedIndex(emblaApi.selectedScrollSnap());
+      setCanScrollPrev(emblaApi.canScrollPrev());
+      setCanScrollNext(emblaApi.canScrollNext());
+    }
+
+    onInit(emblaApi);
+    onSelect(emblaApi);
+    emblaApi.on('reInit', onInit);
+    emblaApi.on('select', onSelect);
+
+    return () => {
+      emblaApi.off('reInit', onInit);
+      emblaApi.off('select', onSelect);
+    };
+  }, [emblaApi]);
+
   return (
     <div className="mb-8">
       <div className="mb-6 flex items-center justify-between">
@@ -72,17 +128,58 @@ function ContentSection({
       </div>
 
       {uploads.length > 0 ? (
-        <div className="grid grid-cols-4 gap-6">
-          {uploads.map((upload) => (
-            <MediaCard
-              key={upload.id}
-              title={upload.title}
-              thumbnailUrl={upload.thumbnailUrl}
-              channelName={upload.channel.name}
-              channelAvatarUrl={upload.channel.avatarUrl}
+        <>
+          <div className="relative">
+            <div
+              className="-mx-16 relative overflow-visible px-16"
+              ref={emblaRef}
+              style={{
+                maskImage:
+                  'linear-gradient(to right, transparent 0%, black 64px, black calc(100% - 64px), transparent 100%)',
+                WebkitMaskImage:
+                  'linear-gradient(to right, transparent 0%, black 64px, black calc(100% - 64px), transparent 100%)',
+              }}
+            >
+              <div className="flex gap-6">
+                {uploads.map((upload) => (
+                  <div
+                    key={upload.id}
+                    className="min-w-0 flex-[0_0_calc(25%-18px)]"
+                  >
+                    <MediaCard
+                      title={upload.title}
+                      thumbnailUrl={upload.thumbnailUrl}
+                      channelName={upload.channel.name}
+                      channelAvatarUrl={upload.channel.avatarUrl}
+                    />
+                  </div>
+                ))}
+                {showViewMoreCard && viewMoreCardText && (
+                  <ViewMoreCard text={viewMoreCardText} />
+                )}
+              </div>
+            </div>
+
+            <CarouselNavigationButtons
+              canScrollPrev={canScrollPrev}
+              canScrollNext={canScrollNext}
+              onScrollPrev={scrollPrev}
+              onScrollNext={scrollNext}
             />
-          ))}
-        </div>
+          </div>
+
+          {scrollSnaps.length > 1 && (
+            <div className="mt-4 flex items-center justify-center gap-2">
+              {scrollSnaps.map((snap, index) => (
+                <CarouselPagination
+                  key={snap}
+                  isActive={index === selectedIndex}
+                  onClick={() => scrollTo(index)}
+                />
+              ))}
+            </div>
+          )}
+        </>
       ) : (
         <EmptyState
           emptyTitle={emptyTitle}
@@ -183,8 +280,10 @@ function Home() {
         <ContentSection
           title="Subscriptions"
           uploads={subscriptionUploads || []}
+          showViewMoreCard={!!(subscriptionUploads && subscriptionUploads.length > 0)}
+          viewMoreCardText="See more subscribed content"
           emptyTitle="Create an account to follow channels"
-          emptyBody="Follow your favorite channels to get a customized feed and to ensure you don’t miss new content!"
+          emptyBody="Follow your favorite channels to get a customized feed and to ensure you don't miss new content!"
           emptyCta="Create Account"
         />
 
