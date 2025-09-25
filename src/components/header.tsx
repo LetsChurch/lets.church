@@ -1,9 +1,13 @@
+import { Avatar } from '@base-ui-components/react/avatar';
+import { Menu } from '@base-ui-components/react/menu';
 import { IconMenu2 } from '@tabler/icons-react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { EmblaCarouselType } from 'embla-carousel';
 import Autoplay from 'embla-carousel-autoplay';
 import useEmblaCarousel from 'embla-carousel-react';
 import { useCallback, useEffect, useState } from 'react';
+import { useTRPC } from '@/trpc/react';
 import { CarouselNavigationButtons } from './carousel-navigation-buttons';
 import { CarouselPagination } from './carousel-pagination';
 import Logo from './logo';
@@ -58,6 +62,13 @@ function CarouselItem({
 }
 
 export default function Header() {
+  const trpc = useTRPC();
+  const hasSessionQuery = useQuery(trpc.common.hasValidSession.queryOptions());
+  const profileQuery = useQuery({
+    ...trpc.account.getProfile.queryOptions(),
+    enabled: hasSessionQuery.data === true,
+  });
+
   const carouselItems = [
     {
       title: 'First Item',
@@ -205,14 +216,93 @@ export default function Header() {
           <Search />
         </div>
 
-        {/* Login Button */}
+        {/* Login Button or User Avatar */}
         <div className="flex items-center gap-2">
-          <Link
-            to="/auth/login"
-            className="rounded-full border-top-highlight bg-white/15 px-3 py-1.5 font-semibold text-sm text-white/80"
-          >
-            Login
-          </Link>
+          {hasSessionQuery.data && profileQuery.data ? (
+            <Menu.Root>
+              <Menu.Trigger
+                render={(props) => (
+                  <button
+                    {...props}
+                    type="button"
+                    className="size-8 flex-shrink-0 overflow-hidden rounded-full bg-white"
+                  >
+                    <Avatar.Root className="size-full">
+                      <Avatar.Image
+                        src={profileQuery.data.avatarUrl || undefined}
+                        alt={
+                          profileQuery.data.fullName ||
+                          profileQuery.data.username
+                        }
+                        className="size-full object-cover"
+                      />
+                      <Avatar.Fallback className="flex size-full items-center justify-center bg-gray-200 text-gray-600 text-xs">
+                        {(
+                          profileQuery.data.fullName ||
+                          profileQuery.data.username
+                        )
+                          .charAt(0)
+                          .toUpperCase()}
+                      </Avatar.Fallback>
+                    </Avatar.Root>
+                  </button>
+                )}
+              />
+              <Menu.Portal>
+                <Menu.Positioner side="bottom" align="end" className="z-10">
+                  <Menu.Popup className="mt-2 min-w-48 rounded-lg border-top-highlight bg-zinc-900 p-1 shadow-lg">
+                    <Menu.Item
+                      render={(props) => (
+                        <Link
+                          {...props}
+                          to="/dashboard/account"
+                          className="flex w-full items-center rounded-md px-3 py-2 text-sm text-white transition-colors hover:bg-zinc-800 focus:bg-zinc-800"
+                        >
+                          Account Settings
+                        </Link>
+                      )}
+                    />
+                    <Menu.Item
+                      render={(props) => (
+                        <Link
+                          {...props}
+                          to="/dashboard"
+                          className="flex w-full items-center rounded-md px-3 py-2 text-sm text-white transition-colors hover:bg-zinc-800 focus:bg-zinc-800"
+                        >
+                          Dashboard
+                        </Link>
+                      )}
+                    />
+                    <Menu.Separator className="my-1 h-px bg-zinc-800" />
+                    <Menu.Item
+                      render={(props) => (
+                        <form
+                          method="post"
+                          action="/auth/logout"
+                          className="contents"
+                        >
+                          <button
+                            {...props}
+                            type="submit"
+                            className="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-red-400 text-sm transition-colors hover:bg-zinc-800 focus:bg-zinc-800"
+                          >
+                            Logout
+                          </button>
+                        </form>
+                      )}
+                    />
+                  </Menu.Popup>
+                </Menu.Positioner>
+              </Menu.Portal>
+            </Menu.Root>
+          ) : (
+            <Link
+              to="/auth/login"
+              className="rounded-full border-top-highlight bg-white/15 px-3 py-1.5 font-semibold text-sm text-white/80"
+            >
+              Login
+            </Link>
+          )}
         </div>
       </div>
 
