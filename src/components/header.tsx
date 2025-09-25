@@ -176,12 +176,15 @@ export default function Header() {
           <div
             className="mask-[linear-gradient(to_bottom,black_0%,black_70%,transparent_100%)] absolute inset-0 bg-center bg-cover blur-lg brightness-200 transition-all duration-1000 ease-in-out"
             style={{
-              backgroundImage: `url('${carouselItems[selectedIndex]?.imageUrl.replace('w=640&h=360', 'w=1240&h=244')}')`,
+              backgroundImage: `url('${carouselItems[selectedIndex]?.imageUrl}')`,
             }}
           />
         </div>
         <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/0 via-zinc-950/90 to-zinc-950" />
       </div>
+
+      {/* Theme gradient */}
+      <div className="absolute inset-x-0 top-0 z-5 h-[240px] bg-gradient-to-b from-indigo-500/40 to-transparent" />
 
       {/* Top Navigation Bar */}
       <div className="relative z-10 flex h-16 items-center justify-between p-4">
