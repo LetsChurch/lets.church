@@ -166,7 +166,7 @@ export const homeProcedures = {
         const thumbnailUrl = thumbnailPath
           ? getPublicImageUrl(
               getS3ProtocolUri('PUBLIC', thumbnailPath),
-              getThumbnailResize('saved'),
+              getThumbnailResize('card'),
             )
           : null;
 
@@ -179,7 +179,7 @@ export const homeProcedures = {
         const channelDefaultThumbnailUrl = channel.defaultThumbnailPath
           ? getPublicImageUrl(
               getS3ProtocolUri('PUBLIC', channel.defaultThumbnailPath),
-              getThumbnailResize('saved'),
+              getThumbnailResize('card'),
             )
           : null;
 

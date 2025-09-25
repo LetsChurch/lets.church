@@ -21,7 +21,7 @@ export function getAvatarResize(_size?: z.infer<typeof AvatarSize>): Resize {
 }
 
 export const ThumbnailSize = z
-  .enum(['featured', 'saved', 'standard', 'table'])
+  .enum(['featured', 'card', 'saved', 'standard', 'table'])
   .optional()
   .default('standard');
 
@@ -30,6 +30,10 @@ export function getThumbnailResize(
 ): Resize {
   if (size === 'featured') {
     return { resize: { width: 1280 } };
+  }
+
+  if (size === 'card') {
+    return { resize: { width: 512 } };
   }
 
   if (size === 'saved') {
