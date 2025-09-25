@@ -52,7 +52,7 @@ export default function Sidebar({ className }: SidebarProps) {
       <div className="flex items-center gap-3 border-sidebar border-b px-3 py-4">
         <button
           type="button"
-          className="flex h-8 w-8 items-center justify-center rounded-lg bg-overlay text-primary transition-colors hover:bg-overlay-strong"
+          className="flex size-8 items-center justify-center rounded-lg bg-overlay text-primary transition-colors hover:bg-overlay-strong"
         >
           <IconMenu2 />
         </button>

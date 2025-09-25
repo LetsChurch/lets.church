@@ -193,7 +193,7 @@ export default function Header() {
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border-top-highlight bg-white/15 text-white transition-colors hover:bg-white/25"
+            className="flex size-8 items-center justify-center rounded-lg border-top-highlight bg-white/15 text-white transition-colors hover:bg-white/25"
           >
             <IconMenu2 />
           </button>

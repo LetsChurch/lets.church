@@ -32,7 +32,7 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
                 <button
                   {...props}
                   type="button"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-primary"
+                  className="flex size-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-primary"
                 >
                   <IconX />
                 </button>

@@ -183,6 +183,7 @@ const { id: flId, channelAssociations: flAssociations } =
             create: {
               name: 'FirstLove Publications',
               slug: 'firstlove',
+              avatarPath: 'first-love-publications/avatar.png',
               memberships: {
                 create: {
                   appUser: {

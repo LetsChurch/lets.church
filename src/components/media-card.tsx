@@ -1,4 +1,4 @@
-import { Avatar } from './avatar';
+import { Avatar } from '@base-ui-components/react/avatar';
 
 export type Props = {
   title?: string | null;
@@ -25,11 +25,16 @@ export function MediaCard({
         ) : null}
       </div>
       <div className="flex flex-row items-center gap-2">
-        <Avatar
-          src={channelAvatarUrl}
-          alt={channelName || 'Channel'}
-          size={32}
-        />
+        <Avatar.Root className="size-8 flex-shrink-0 overflow-hidden rounded-full bg-white">
+          <Avatar.Image
+            src={channelAvatarUrl || undefined}
+            alt={channelName || 'Channel'}
+            className="size-full object-cover"
+          />
+          <Avatar.Fallback className="flex size-full items-center justify-center bg-gray-200 text-gray-600">
+            {(channelName || 'Channel').charAt(0).toUpperCase()}
+          </Avatar.Fallback>
+        </Avatar.Root>
         <div className="space-y-1">
           <h3 className="line-clamp-1 font-medium text-primary text-sm">
             {title ?? 'Untitled'}
