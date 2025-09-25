@@ -1,3 +1,4 @@
+import { IconMenu2 } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import type { EmblaCarouselType } from 'embla-carousel';
 import Autoplay from 'embla-carousel-autoplay';
@@ -5,6 +6,8 @@ import useEmblaCarousel from 'embla-carousel-react';
 import { useCallback, useEffect, useState } from 'react';
 import { CarouselNavigationButtons } from './carousel-navigation-buttons';
 import { CarouselPagination } from './carousel-pagination';
+import Logo from './logo';
+import MobileMenu from './mobile-menu';
 import Search from './search';
 
 type CarouselItemProps = {
@@ -101,6 +104,7 @@ export default function Header() {
   const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
   const [canScrollPrev, setCanScrollPrev] = useState(false);
   const [canScrollNext, setCanScrollNext] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const scrollTo = useCallback(
     (index: number) => emblaApi?.scrollTo(index),
@@ -181,9 +185,24 @@ export default function Header() {
 
       {/* Top Navigation Bar */}
       <div className="relative z-10 flex h-16 items-center justify-between p-4">
-        <div className="w-80">
+        {/* Mobile Logo and Menu Button (visible when sidebar is hidden) */}
+        <div className="flex items-center gap-3 sm:hidden">
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border-top-highlight bg-white/15 text-white transition-colors hover:bg-white/25"
+          >
+            <IconMenu2 />
+          </button>
+          <Logo />
+        </div>
+
+        {/* Search Bar */}
+        <div className="w-80 max-sm:hidden">
           <Search />
         </div>
+
+        {/* Login Button */}
         <div className="flex items-center gap-2">
           <Link
             to="/auth/login"
@@ -231,6 +250,8 @@ export default function Header() {
           ))}
         </div>
       </div>
+
+      <MobileMenu open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen} />
     </div>
   );
 }
