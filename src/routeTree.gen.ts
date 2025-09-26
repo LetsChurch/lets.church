@@ -23,6 +23,7 @@ import { Route as DashboardAdminRouteImport } from './routes/dashboard_/admin'
 import { Route as DashboardAccountRouteImport } from './routes/dashboard_/account'
 import { Route as AuthRegisterRouteImport } from './routes/auth_/register'
 import { Route as AuthLoginRouteImport } from './routes/auth_/login'
+import { Route as MainFollowingRouteImport } from './routes/_main/following'
 import { Route as MainMediaIndexRouteImport } from './routes/_main/media/index'
 import { Route as DashboardOrganizationsOrgIdRouteImport } from './routes/dashboard_/organizations_.$orgId'
 import { Route as DashboardChurchesNewRouteImport } from './routes/dashboard_/churches_.new'
@@ -113,6 +114,11 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => AuthRoute,
+} as any)
+const MainFollowingRoute = MainFollowingRouteImport.update({
+  id: '/following',
+  path: '/following',
+  getParentRoute: () => MainRoute,
 } as any)
 const MainMediaIndexRoute = MainMediaIndexRouteImport.update({
   id: '/media/',
@@ -284,6 +290,7 @@ const AuthLogoutServerRoute = AuthLogoutServerRouteImport.update({
 export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
   '/dashboard': typeof DashboardRouteWithChildren
+  '/following': typeof MainFollowingRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/dashboard/account': typeof DashboardAccountRoute
@@ -322,6 +329,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
+  '/following': typeof MainFollowingRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/dashboard/account': typeof DashboardAccountRoute
@@ -363,6 +371,7 @@ export interface FileRoutesById {
   '/_main': typeof MainRouteWithChildren
   '/auth_': typeof AuthRouteWithChildren
   '/dashboard_': typeof DashboardRouteWithChildren
+  '/_main/following': typeof MainFollowingRoute
   '/auth_/login': typeof AuthLoginRoute
   '/auth_/register': typeof AuthRegisterRoute
   '/dashboard_/account': typeof DashboardAccountRoute
@@ -404,6 +413,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/auth'
     | '/dashboard'
+    | '/following'
     | '/auth/login'
     | '/auth/register'
     | '/dashboard/account'
@@ -442,6 +452,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
+    | '/following'
     | '/auth/login'
     | '/auth/register'
     | '/dashboard/account'
@@ -482,6 +493,7 @@ export interface FileRouteTypes {
     | '/_main'
     | '/auth_'
     | '/dashboard_'
+    | '/_main/following'
     | '/auth_/login'
     | '/auth_/register'
     | '/dashboard_/account'
@@ -639,6 +651,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth/login'
       preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof AuthRoute
+    }
+    '/_main/following': {
+      id: '/_main/following'
+      path: '/following'
+      fullPath: '/following'
+      preLoaderRoute: typeof MainFollowingRouteImport
+      parentRoute: typeof MainRoute
     }
     '/_main/media/': {
       id: '/_main/media/'
@@ -851,11 +870,13 @@ declare module '@tanstack/react-start/server' {
 }
 
 interface MainRouteChildren {
+  MainFollowingRoute: typeof MainFollowingRoute
   MainIndexRoute: typeof MainIndexRoute
   MainMediaIndexRoute: typeof MainMediaIndexRoute
 }
 
 const MainRouteChildren: MainRouteChildren = {
+  MainFollowingRoute: MainFollowingRoute,
   MainIndexRoute: MainIndexRoute,
   MainMediaIndexRoute: MainMediaIndexRoute,
 }

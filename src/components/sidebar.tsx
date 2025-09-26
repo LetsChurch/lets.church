@@ -18,25 +18,21 @@ const navigation = [
     name: 'Explore',
     icon: <IconCompass />,
     href: '/',
-    current: true,
   },
   {
     name: 'Following',
     icon: <IconFlag />,
     href: '/following',
-    current: false,
   },
   {
     name: 'Search',
     icon: <IconSearch />,
     href: '/search',
-    current: false,
   },
   {
     name: 'Library',
     icon: <IconBookmark />,
     href: '/library',
-    current: false,
   },
 ];
 
@@ -48,7 +44,6 @@ export default function Sidebar({ className }: SidebarProps) {
         className,
       )}
     >
-      {/* Logo and Menu Button */}
       <div className="flex items-center gap-3 border-sidebar border-b px-3 py-4">
         <button
           type="button"
@@ -59,22 +54,17 @@ export default function Sidebar({ className }: SidebarProps) {
         <Logo />
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 space-y-1">
         {navigation.map((item) => (
           <Link
             key={item.name}
             to={item.href}
-            className={cn(
-              `group relative flex items-center rounded-lg px-4 py-2 font-medium text-sm transition-colors`,
-              item.current
-                ? 'bg-transparent text-primary'
-                : 'text-muted hover:bg-overlay hover:text-primary',
-            )}
+            className="group relative flex items-center rounded-lg px-4 py-2 font-medium text-muted text-sm transition-colors hover:bg-overlay hover:text-primary"
+            activeProps={{
+              className:
+                'bg-transparent text-primary after:absolute after:top-0 after:right-0 after:bottom-0 after:w-0.5 after:bg-indigo-500 after:glow-md',
+            }}
           >
-            {item.current && (
-              <div className="absolute top-0 right-0 bottom-0 w-0.5 bg-indigo-500 shadow-indigo-500/50 shadow-lg" />
-            )}
             <div className="mr-3 flex-shrink-0">{item.icon}</div>
             {item.name}
           </Link>

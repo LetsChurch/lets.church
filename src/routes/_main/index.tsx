@@ -9,6 +9,7 @@ import { CarouselPagination } from '@/components/carousel-pagination';
 import { DonateCard } from '@/components/donate-card';
 import { EmptyState } from '@/components/empty-state';
 import Header from '@/components/header';
+import HeroCarousel from '@/components/hero-carousel';
 import { MediaCard } from '@/components/media-card';
 import { SavedCard } from '@/components/saved-card';
 import { SearchCard } from '@/components/search-card';
@@ -354,7 +355,9 @@ function Home() {
 
   return (
     <div className="min-h-screen bg-page">
-      <Header />
+      <Header>
+        <HeroCarousel />
+      </Header>
 
       <div className="mx-auto max-w-7xl space-y-12 px-16 py-8">
         {inProgress.length > 0 ? (

@@ -3,65 +3,16 @@ import { Menu } from '@base-ui-components/react/menu';
 import { IconMenu2 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import type { EmblaCarouselType } from 'embla-carousel';
-import Autoplay from 'embla-carousel-autoplay';
-import useEmblaCarousel from 'embla-carousel-react';
-import { useCallback, useEffect, useState } from 'react';
+import { type PropsWithChildren, useCallback, useState } from 'react';
 import { useTRPC } from '@/trpc/react';
-import { CarouselNavigationButtons } from './carousel-navigation-buttons';
-import { CarouselPagination } from './carousel-pagination';
+import HeaderContext from './header-context';
 import Logo from './logo';
 import MobileMenu from './mobile-menu';
 import Search from './search';
 
-type CarouselItemProps = {
-  title: string;
-  author: string;
-  imageUrl: string;
-  badge?: string;
-};
+type HeaderProps = PropsWithChildren;
 
-function CarouselItem({
-  title,
-  author,
-  imageUrl,
-  badge = 'Featured',
-}: CarouselItemProps) {
-  return (
-    <div className="w-[360px] flex-shrink-0 md:w-[495px] lg:w-[640px]">
-      <div className="space-y-5">
-        {/* Image Container */}
-        <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-top-highlight bg-card">
-          <div
-            className="absolute inset-0 bg-center bg-cover"
-            style={{
-              backgroundImage: `url('${imageUrl}')`,
-            }}
-          />
-          {/* Badge */}
-          <div className="absolute top-2 left-2">
-            <div className="flex items-center rounded-full border border-default bg-zinc-950/80 px-2 backdrop-blur-sm">
-              <span className="font-medium text-white text-xs">{badge}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="space-y-2 text-center">
-          <h3 className="line-clamp-1 font-bold text-lg text-primary">
-            {title}
-          </h3>
-          <div className="flex items-center justify-center gap-1.5">
-            <div className="h-4 w-4 flex-shrink-0 rounded-full bg-indigo-500" />
-            <span className="text-secondary text-sm">{author}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function Header() {
+export default function Header({ children }: HeaderProps) {
   const trpc = useTRPC();
   const hasSessionQuery = useQuery(trpc.common.hasValidSession.queryOptions());
   const profileQuery = useQuery({
@@ -69,282 +20,155 @@ export default function Header() {
     enabled: hasSessionQuery.data === true,
   });
 
-  const carouselItems = [
-    {
-      title: 'First Item',
-      author: 'First Channel',
-      imageUrl:
-        'https://unsplash.com/photos/vAij-E26haI/download?ixid=M3wxMjA3fDB8MXxhbGx8fHx8fHx8fHwxNzU4MjUyODYwfA&force=true&w=1920',
-    },
-    {
-      title: 'Second Item',
-      author: 'Second Channel',
-      imageUrl:
-        'https://unsplash.com/photos/_86u_Y0oAaM/download?ixid=M3wxMjA3fDB8MXxhbGx8fHx8fHx8fHwxNzU4MjM0MTAyfA&force=true&w=1920',
-    },
-    {
-      title: 'Third Item',
-      author: 'Third Channel',
-      imageUrl:
-        'https://unsplash.com/photos/DRgrzQQsJDA/download?ixid=M3wxMjA3fDB8MXxhbGx8fHx8fHx8fHwxNzU4MjM3NDIxfA&force=true&w=1920',
-    },
-    {
-      title: 'Fourth Item',
-      author: 'Fourth Channel',
-      imageUrl:
-        'https://unsplash.com/photos/k1bO_VTiZSs/download?ixid=M3wxMjA3fDB8MXxhbGx8fHx8fHx8fHwxNzU4MjQzNzU4fA&force=true&w=1920',
-    },
-    {
-      title: 'Fifth Item',
-      author: 'Fifth Channel',
-      imageUrl:
-        'https://unsplash.com/photos/yFKkFPvUgXc/download?ixid=M3wxMjA3fDB8MXxhbGx8fHx8fHx8fHwxNzU4MjM3NDExfA&force=true&w=1920',
-    },
-  ];
-
-  const [emblaRef, emblaApi] = useEmblaCarousel(
-    {
-      loop: true,
-      align: 'center',
-      containScroll: false,
-      slidesToScroll: 1,
-    },
-    [Autoplay({ delay: 4000, stopOnInteraction: false })],
-  );
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
-  const [canScrollPrev, setCanScrollPrev] = useState(false);
-  const [canScrollNext, setCanScrollNext] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [backgroundImageUrl, setBackgroundImageUrl] = useState<string>();
 
-  const scrollTo = useCallback(
-    (index: number) => emblaApi?.scrollTo(index),
-    [emblaApi],
-  );
-
-  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
-
-  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
-
-  useEffect(() => {
-    // Preload all background images
-    carouselItems.forEach((item) => {
-      const img = new Image();
-      img.src = item.imageUrl;
-    });
+  const setBackgroundImage = useCallback((imageUrl?: string) => {
+    setBackgroundImageUrl(imageUrl);
   }, []);
 
-  useEffect(() => {
-    if (!emblaApi) return;
-
-    function onInit(emblaApi: EmblaCarouselType) {
-      setScrollSnaps(emblaApi.scrollSnapList());
-    }
-
-    function onSelect(emblaApi: EmblaCarouselType) {
-      setSelectedIndex(emblaApi.selectedScrollSnap());
-      setCanScrollPrev(emblaApi.canScrollPrev());
-      setCanScrollNext(emblaApi.canScrollNext());
-    }
-
-    onInit(emblaApi);
-    onSelect(emblaApi);
-    emblaApi.on('reInit', onInit);
-    emblaApi.on('select', onSelect);
-
-    // Apply fade effect to slides
-    const applyFadeEffect = () => {
-      const slides = emblaApi.slideNodes();
-      const slidesInView = emblaApi.slidesInView();
-
-      slides.forEach((slide: HTMLElement, index: number) => {
-        const actualIndex = index % carouselItems.length;
-        if (slidesInView.includes(index)) {
-          slide.style.opacity = actualIndex === selectedIndex ? '1' : '0.2';
-        } else {
-          slide.style.opacity = '0.2';
-        }
-      });
-    };
-
-    emblaApi.on('scroll', applyFadeEffect);
-    emblaApi.on('select', applyFadeEffect);
-
-    // Apply fade effect only after a brief delay to let CSS take effect first
-    setTimeout(applyFadeEffect, 100);
-
-    return () => {
-      emblaApi.off('scroll', applyFadeEffect);
-      emblaApi.off('select', applyFadeEffect);
-    };
-  }, [emblaApi, selectedIndex]);
+  const hasBackground = children && backgroundImageUrl;
 
   return (
-    <div className="relative">
-      {/* Background with gradient overlay */}
-      <div className="-top-16 absolute inset-0 h-[244px]">
-        <div className="absolute inset-0 bg-indigo-500 opacity-60">
-          <div
-            className="mask-[linear-gradient(to_bottom,black_0%,black_70%,transparent_100%)] absolute inset-0 bg-center bg-cover blur-lg brightness-200 transition-all duration-1000 ease-in-out"
-            style={{
-              backgroundImage: `url('${carouselItems[selectedIndex]?.imageUrl}')`,
-            }}
-          />
-        </div>
-        <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/0 via-zinc-950/90 to-zinc-950" />
-      </div>
-
-      {/* Theme gradient */}
-      <div className="absolute inset-x-0 top-0 z-5 h-[240px] bg-gradient-to-b from-indigo-500/40 to-transparent" />
-
-      {/* Top Navigation Bar */}
-      <div className="relative z-10 flex h-16 items-center justify-between p-4">
-        {/* Mobile Logo and Menu Button (visible when sidebar is hidden) */}
-        <div className="flex items-center gap-3 sm:hidden">
-          <button
-            type="button"
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="flex size-8 items-center justify-center rounded-lg border-top-highlight bg-white/15 text-white transition-colors hover:bg-white/25"
-          >
-            <IconMenu2 />
-          </button>
-          <Logo />
-        </div>
-
-        {/* Search Bar */}
-        <div className="w-80 max-sm:hidden">
-          <Search />
-        </div>
-
-        {/* Login Button or User Avatar */}
-        <div className="flex items-center gap-2">
-          {hasSessionQuery.data && profileQuery.data ? (
-            <Menu.Root>
-              <Menu.Trigger
-                render={(props) => (
-                  <button
-                    {...props}
-                    type="button"
-                    className="size-8 flex-shrink-0 overflow-hidden rounded-full bg-white"
-                  >
-                    <Avatar.Root className="cursor-pointer">
-                      <Avatar.Image
-                        src={profileQuery.data.avatarUrl || undefined}
-                        alt={
-                          profileQuery.data.fullName ||
-                          profileQuery.data.username
-                        }
-                        className="size-full object-cover"
-                      />
-                      <Avatar.Fallback className="flex size-full items-center justify-center bg-gray-200 text-gray-600 text-xs">
-                        {(
-                          profileQuery.data.fullName ||
-                          profileQuery.data.username
-                        )
-                          .charAt(0)
-                          .toUpperCase()}
-                      </Avatar.Fallback>
-                    </Avatar.Root>
-                  </button>
-                )}
-              />
-              <Menu.Portal>
-                <Menu.Positioner side="bottom" align="end" className="z-10">
-                  <Menu.Popup className="mt-2 min-w-48 rounded-lg border-top-highlight bg-zinc-900 p-1 shadow-lg">
-                    <Menu.Item
-                      render={(props) => (
-                        <Link
-                          {...props}
-                          to="/dashboard/account"
-                          className="flex w-full items-center rounded-md px-3 py-2 text-sm text-white transition-colors hover:bg-zinc-800 focus:bg-zinc-800"
-                        >
-                          Account Settings
-                        </Link>
-                      )}
-                    />
-                    <Menu.Item
-                      render={(props) => (
-                        <Link
-                          {...props}
-                          to="/dashboard"
-                          className="flex w-full items-center rounded-md px-3 py-2 text-sm text-white transition-colors hover:bg-zinc-800 focus:bg-zinc-800"
-                        >
-                          Dashboard
-                        </Link>
-                      )}
-                    />
-                    <Menu.Separator className="my-1 h-px bg-zinc-800" />
-                    <Menu.Item
-                      render={(props) => (
-                        <form
-                          method="post"
-                          action="/auth/logout"
-                          className="contents"
-                        >
-                          <button
-                            {...props}
-                            type="submit"
-                            className="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-red-400 text-sm transition-colors hover:bg-zinc-800 focus:bg-zinc-800"
-                          >
-                            Logout
-                          </button>
-                        </form>
-                      )}
-                    />
-                  </Menu.Popup>
-                </Menu.Positioner>
-              </Menu.Portal>
-            </Menu.Root>
-          ) : (
-            <Link
-              to="/auth/login"
-              className="rounded-full border-top-highlight bg-white/15 px-3 py-1.5 font-semibold text-sm text-white/80"
-            >
-              Login
-            </Link>
-          )}
-        </div>
-      </div>
-
-      {/* Carousel Banner */}
-      <div className="relative z-10 pb-6">
-        <div className="relative">
-          <div className="overflow-hidden" ref={emblaRef}>
-            <div className="flex gap-5 px-5 pb-6">
-              {carouselItems.map((item, index) => (
+    <HeaderContext.Provider value={{ setBackgroundImage }}>
+      <div className="relative">
+        {/* Background with gradient overlay - only show when there are children */}
+        {hasBackground ? (
+          <>
+            <div className="-top-16 absolute inset-0 h-[244px]">
+              <div className="absolute inset-0 bg-indigo-500 opacity-60">
                 <div
-                  key={item.imageUrl}
-                  className={`flex min-w-0 flex-[0_0_360px] justify-center transition-opacity duration-500 ease-in-out md:flex-[0_0_495px] lg:flex-[0_0_640px] ${
-                    index === 0 ? 'opacity-100' : 'opacity-20'
-                  }`}
-                >
-                  <CarouselItem {...item} />
-                </div>
-              ))}
+                  className="mask-[linear-gradient(to_bottom,black_0%,black_70%,transparent_100%)] absolute inset-0 bg-center bg-cover blur-lg brightness-200 transition-all duration-1000 ease-in-out"
+                  style={{
+                    backgroundImage: `url('${backgroundImageUrl}')`,
+                  }}
+                />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/0 via-zinc-950/90 to-zinc-950" />
             </div>
+
+            {/* Theme gradient */}
+            <div className="absolute inset-x-0 top-0 z-5 h-[240px] bg-gradient-to-b from-indigo-500/40 to-transparent" />
+          </>
+        ) : null}
+
+        {/* Top Navigation Bar */}
+        <div className="relative z-10 flex h-16 items-center justify-between p-4">
+          {/* Mobile Logo and Menu Button (visible when sidebar is hidden) */}
+          <div className="flex items-center gap-3 sm:hidden">
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="flex size-8 items-center justify-center rounded-lg border-top-highlight bg-white/15 text-white transition-colors hover:bg-white/25"
+            >
+              <IconMenu2 />
+            </button>
+            <Logo />
           </div>
 
-          <CarouselNavigationButtons
-            canScrollPrev={canScrollPrev}
-            canScrollNext={canScrollNext}
-            onScrollPrev={scrollPrev}
-            onScrollNext={scrollNext}
-            positioning="inside"
-          />
+          {/* Search Bar */}
+          <div className="w-80 max-sm:hidden">
+            <Search />
+          </div>
+
+          {/* Login Button or User Avatar */}
+          <div className="flex items-center gap-2">
+            {hasSessionQuery.data && profileQuery.data ? (
+              <Menu.Root>
+                <Menu.Trigger
+                  render={(props) => (
+                    <button
+                      {...props}
+                      type="button"
+                      className="size-8 flex-shrink-0 overflow-hidden rounded-full bg-white"
+                    >
+                      <Avatar.Root className="cursor-pointer">
+                        <Avatar.Image
+                          src={profileQuery.data.avatarUrl || undefined}
+                          alt={
+                            profileQuery.data.fullName ||
+                            profileQuery.data.username
+                          }
+                          className="size-full object-cover"
+                        />
+                        <Avatar.Fallback className="flex size-full items-center justify-center bg-gray-200 text-gray-600 text-xs">
+                          {(
+                            profileQuery.data.fullName ||
+                            profileQuery.data.username
+                          )
+                            .charAt(0)
+                            .toUpperCase()}
+                        </Avatar.Fallback>
+                      </Avatar.Root>
+                    </button>
+                  )}
+                />
+                <Menu.Portal>
+                  <Menu.Positioner side="bottom" align="end" className="z-10">
+                    <Menu.Popup className="mt-2 min-w-48 rounded-lg border-top-highlight bg-zinc-900 p-1 shadow-lg">
+                      <Menu.Item
+                        render={(props) => (
+                          <Link
+                            {...props}
+                            to="/dashboard/account"
+                            className="flex w-full items-center rounded-md px-3 py-2 text-sm text-white transition-colors hover:bg-zinc-800 focus:bg-zinc-800"
+                          >
+                            Account Settings
+                          </Link>
+                        )}
+                      />
+                      <Menu.Item
+                        render={(props) => (
+                          <Link
+                            {...props}
+                            to="/dashboard"
+                            className="flex w-full items-center rounded-md px-3 py-2 text-sm text-white transition-colors hover:bg-zinc-800 focus:bg-zinc-800"
+                          >
+                            Dashboard
+                          </Link>
+                        )}
+                      />
+                      <Menu.Separator className="my-1 h-px bg-zinc-800" />
+                      <Menu.Item
+                        render={(props) => (
+                          <form
+                            method="post"
+                            action="/auth/logout"
+                            className="contents"
+                          >
+                            <button
+                              {...props}
+                              type="submit"
+                              className="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-red-400 text-sm transition-colors hover:bg-zinc-800 focus:bg-zinc-800"
+                            >
+                              Logout
+                            </button>
+                          </form>
+                        )}
+                      />
+                    </Menu.Popup>
+                  </Menu.Positioner>
+                </Menu.Portal>
+              </Menu.Root>
+            ) : (
+              <Link
+                to="/auth/login"
+                className="rounded-full border-top-highlight bg-white/15 px-3 py-1.5 font-semibold text-sm text-white/80"
+              >
+                Login
+              </Link>
+            )}
+          </div>
         </div>
 
-        <div className="-mt-2 flex items-center justify-center gap-2">
-          {scrollSnaps.map((item, index) => (
-            <CarouselPagination
-              key={item}
-              isActive={index === selectedIndex}
-              onClick={() => scrollTo(index)}
-            />
-          ))}
-        </div>
+        {/* Children content (like carousel, for instance) */}
+        {children}
+
+        <MobileMenu
+          open={isMobileMenuOpen}
+          onOpenChange={setIsMobileMenuOpen}
+        />
       </div>
-
-      <MobileMenu open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen} />
-    </div>
+    </HeaderContext.Provider>
   );
 }

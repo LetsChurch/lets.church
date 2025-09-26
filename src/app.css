@@ -12,7 +12,7 @@
 	--card-text: var(--color-white);
 	--card-border: var(--color-white) / 0.1;
 	--primary: var(--color-indigo-500);
-	--primary-glow: var(--color-indigo-500) / 0.5;
+	--primary-glow: var(--color-indigo-500);
 	--text-primary: var(--color-white);
 	--text-secondary: var(--color-zinc-300);
 	--text-muted: var(--color-zinc-400);
@@ -29,7 +29,6 @@
 	--card-text: var(--color-black);
 	--card-border: var(--color-gray-400) / 0.2;
 	--primary: var(--color-indigo-500);
-	--primary-glow: var(--color-indigo-500) / 0.5;
 	--text-primary: var(--color-black);
 	--text-secondary: var(--color-gray-500);
 	--text-muted: var(--color-gray-500);
@@ -103,4 +102,9 @@
 		mask-composite: exclude;
 		pointer-events: none;
 	}
+}
+
+@utility glow-md {
+	box-shadow: 0px 2px 12px 0px var(--primary-glow);
+	backdrop-filter: blur(8px);
 }

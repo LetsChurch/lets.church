@@ -1,13 +1,16 @@
 import { IconFlag } from '@tabler/icons-react';
+import { Link } from '@tanstack/react-router';
 
 export function EmptyState({
   emptyTitle,
   emptyBody,
   emptyCta,
+  emptyCtaHref = '/',
 }: {
   emptyTitle?: string;
   emptyBody?: string;
   emptyCta?: string;
+  emptyCtaHref?: string;
 }) {
   return (
     <div className="flex h-[240px] flex-col items-center justify-center rounded-2xl border border-white/15 border-dashed px-4 text-center">
@@ -122,12 +125,12 @@ export function EmptyState({
             {emptyBody}
           </h3>
           {emptyCta ? (
-            <a
-              href="/"
+            <Link
+              to={emptyCtaHref}
               className="mt-4 flex h-8 items-center rounded-full border-top-highlight bg-indigo-500 px-3 font-bold text-primary text-sm"
             >
               {emptyCta}
-            </a>
+            </Link>
           ) : null}
         </>
       ) : null}
