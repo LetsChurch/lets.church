@@ -14,7 +14,7 @@ export default function Search({
   return (
     <div
       className={cn(
-        'flex h-8 items-center gap-1 rounded-3xl border border-white/10 bg-white/5 px-3',
+        'flex h-8 items-center gap-1 rounded-3xl border border-white/10 bg-white/5 px-3 transition-all duration-200 focus-within:border-white/0 focus-within:shadow-[0_0_0_2px_theme(colors.white/0.2),0_0_20px_theme(colors.white/0.3)]',
         className,
       )}
     >

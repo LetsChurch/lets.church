@@ -227,7 +227,7 @@ export default function Header() {
                     type="button"
                     className="size-8 flex-shrink-0 overflow-hidden rounded-full bg-white"
                   >
-                    <Avatar.Root className="size-full">
+                    <Avatar.Root className="cursor-pointer">
                       <Avatar.Image
                         src={profileQuery.data.avatarUrl || undefined}
                         alt={
