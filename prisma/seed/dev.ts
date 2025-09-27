@@ -131,6 +131,8 @@ const { id: lcId, channelAssociations: lcAssociations } =
             create: {
               name: "Let's Church",
               slug: 'letschurch',
+              approvedAt: new Date(),
+              approvedById: adminUser.id,
               memberships: {
                 create: {
                   appUser: {
@@ -184,6 +186,8 @@ const { id: flId, channelAssociations: flAssociations } =
               name: 'FirstLove Publications',
               slug: 'firstlove',
               avatarPath: 'first-love-publications/avatar.png',
+              approvedAt: new Date(),
+              approvedById: adminUser.id,
               memberships: {
                 create: {
                   appUser: {
@@ -244,6 +248,8 @@ const { id: org01id, channelAssociations: org01Associations } =
             create: {
               name: 'Channel 1',
               slug: 'ch1',
+              approvedAt: new Date(),
+              approvedById: adminUser.id,
               memberships: {
                 create: {
                   appUser: {
@@ -292,6 +298,8 @@ const { id: org03Id, channelAssociations: org03Associations } =
             create: {
               name: 'Channel 3',
               slug: 'ch3',
+              approvedAt: new Date(),
+              approvedById: adminUser.id,
               memberships: {
                 create: {
                   appUser: {
@@ -364,6 +372,8 @@ const org04 = await db.organization.create({
           create: {
             name: 'Baptist, But Not Too Baptist, Sermons',
             slug: 'baptist-la',
+            approvedAt: new Date(),
+            approvedById: adminUser.id,
           },
         },
       },
@@ -436,6 +446,8 @@ const org05 = await db.organization.create({
           create: {
             name: 'Desert Debates',
             slug: 'desert-debates',
+            approvedAt: new Date(),
+            approvedById: adminUser.id,
           },
         },
       },
@@ -508,6 +520,8 @@ const org06 = await db.organization.create({
           create: {
             name: 'Paint Dries, Moss Cows',
             slug: 'pdmc',
+            approvedAt: new Date(),
+            approvedById: adminUser.id,
           },
         },
       },
@@ -575,6 +589,8 @@ const org07 = await db.organization.create({
           create: {
             name: '40 Days',
             slug: '40days',
+            approvedAt: new Date(),
+            approvedById: adminUser.id,
           },
         },
       },
@@ -642,6 +658,8 @@ const org08 = await db.organization.create({
           create: {
             name: 'Potassium Carb Sticks',
             slug: 'pc-sticks',
+            approvedAt: new Date(),
+            approvedById: adminUser.id,
           },
         },
       },
@@ -714,6 +732,8 @@ const org09 = await db.organization.create({
           create: {
             name: 'T-Shirts and Theology',
             slug: 't-shirts-and-theology',
+            approvedAt: new Date(),
+            approvedById: adminUser.id,
           },
         },
       },
@@ -787,6 +807,8 @@ const org10 = await db.organization.create({
           create: {
             name: 'Harbor Faith Tabernacle Sermons',
             slug: 'harbor-faith',
+            approvedAt: new Date(),
+            approvedById: adminUser.id,
           },
         },
       },
@@ -860,6 +882,8 @@ const org11 = await db.organization.create({
           create: {
             name: 'About Face',
             slug: 'about-face',
+            approvedAt: new Date(),
+            approvedById: adminUser.id,
           },
         },
       },
@@ -930,6 +954,8 @@ const org12 = await db.organization.create({
           create: {
             name: 'Kootny',
             slug: 'kootny',
+            approvedAt: new Date(),
+            approvedById: adminUser.id,
           },
         },
       },
@@ -1002,6 +1028,8 @@ const org13 = await db.organization.create({
           create: {
             name: 'Screwtape Sermons',
             slug: 'screwtape',
+            approvedAt: new Date(),
+            approvedById: adminUser.id,
           },
         },
       },
@@ -1071,6 +1099,8 @@ const org14 = await db.organization.create({
           create: {
             name: 'Grace Sermons',
             slug: 'grace',
+            approvedAt: new Date(),
+            approvedById: adminUser.id,
           },
         },
       },
@@ -1138,6 +1168,8 @@ const org15 = await db.organization.create({
           create: {
             name: 'Happy Sermons',
             slug: 'happy',
+            approvedAt: new Date(),
+            approvedById: adminUser.id,
           },
         },
       },
@@ -1205,6 +1237,8 @@ const org16 = await db.organization.create({
           create: {
             name: 'Clapback Sermons',
             slug: 'clapback',
+            approvedAt: new Date(),
+            approvedById: adminUser.id,
           },
         },
       },
@@ -1280,6 +1314,8 @@ for (let i = 0; i < 25; i += 1) {
             create: {
               name: faker.internet.domainWord(),
               slug: faker.internet.domainWord(),
+              approvedAt: new Date(),
+              approvedById: adminUser.id,
             },
           },
         },
