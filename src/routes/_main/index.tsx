@@ -48,11 +48,19 @@ function ContentSection({
   emptyTitle,
   emptyBody,
   emptyCta,
+  loggedOutEmptyTitle,
+  loggedOutEmptyBody,
+  loggedOutEmptyCta,
+  isLoggedIn,
 }: {
   title: string;
   emptyTitle?: string;
   emptyBody?: string;
   emptyCta?: string;
+  loggedOutEmptyTitle?: string;
+  loggedOutEmptyBody?: string;
+  loggedOutEmptyCta?: string;
+  isLoggedIn?: boolean;
   uploads: Array<{
     id: string;
     title?: string | null;
@@ -186,9 +194,9 @@ function ContentSection({
         </>
       ) : (
         <EmptyState
-          emptyTitle={emptyTitle}
-          emptyBody={emptyBody}
-          emptyCta={emptyCta}
+          emptyTitle={isLoggedIn === false ? loggedOutEmptyTitle : emptyTitle}
+          emptyBody={isLoggedIn === false ? loggedOutEmptyBody : emptyBody}
+          emptyCta={isLoggedIn === false ? loggedOutEmptyCta : emptyCta}
         />
       )}
     </div>
@@ -371,9 +379,12 @@ function Home() {
             !!(subscriptionUploads && subscriptionUploads.length > 0)
           }
           viewMoreCardText="See more subscribed content"
-          emptyTitle="Create an account to follow channels"
+          emptyTitle="You're not following any channels yet"
           emptyBody="Follow your favorite channels to get a customized feed and to ensure you don't miss new content!"
-          emptyCta="Create Account"
+          loggedOutEmptyTitle="Create an account to follow channels"
+          loggedOutEmptyBody="Follow your favorite channels to get a customized feed and to ensure you don't miss new content!"
+          loggedOutEmptyCta="Create Account"
+          isLoggedIn={isLoggedIn}
         />
 
         <MediaGrid>
