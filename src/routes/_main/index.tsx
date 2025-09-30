@@ -14,6 +14,7 @@ import { MediaCard } from '@/components/media-card';
 import { MediaGrid } from '@/components/media-grid';
 import { SavedCard } from '@/components/saved-card';
 import { SearchCard } from '@/components/search-card';
+import { TrendingSearchPill } from '@/components/trending-search-pill';
 import { ViewMoreCard } from '@/components/view-more-card';
 import { useTRPC } from '@/trpc/react';
 
@@ -326,13 +327,7 @@ function TrendingSearches() {
       </h2>
       <div className="flex flex-wrap gap-2">
         {searches.map((search) => (
-          <button
-            key={search}
-            type="button"
-            className="h-7 rounded-full border-top-highlight bg-gray-900 px-3 font-bold text-primary text-sm"
-          >
-            {search}
-          </button>
+          <TrendingSearchPill key={search} search={search} />
         ))}
       </div>
     </div>
