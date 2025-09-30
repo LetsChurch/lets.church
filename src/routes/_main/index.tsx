@@ -2,7 +2,7 @@ import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import type { EmblaCarouselType } from 'embla-carousel';
 import useEmblaCarousel from 'embla-carousel-react';
-import type { ComponentProps, PropsWithChildren } from 'react';
+import type { ComponentProps } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { CarouselNavigationButtons } from '@/components/carousel-navigation-buttons';
 import { CarouselPagination } from '@/components/carousel-pagination';
@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/empty-state';
 import Header from '@/components/header';
 import HeroCarousel from '@/components/hero-carousel';
 import { MediaCard } from '@/components/media-card';
+import { MediaGrid } from '@/components/media-grid';
 import { SavedCard } from '@/components/saved-card';
 import { SearchCard } from '@/components/search-card';
 import { ViewMoreCard } from '@/components/view-more-card';
@@ -334,14 +335,6 @@ function TrendingSearches() {
           </button>
         ))}
       </div>
-    </div>
-  );
-}
-
-function MediaGrid({ children }: PropsWithChildren) {
-  return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {children}
     </div>
   );
 }

@@ -5,10 +5,12 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { useRef, useState } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
+import { useRef, useState } from 'react';
 import { EmptyState } from '@/components/empty-state';
 import Header from '@/components/header';
+import { MediaCard } from '@/components/media-card';
+import { MediaGrid } from '@/components/media-grid';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 
@@ -113,6 +115,9 @@ export const Route = createFileRoute('/_main/following')({
       await context.queryClient.ensureQueryData(
         context.trpc.home.getFollowedChannels.queryOptions(),
       );
+      await context.queryClient.ensureQueryData(
+        context.trpc.home.getSubscriptionUploads.queryOptions({ limit: 60 }),
+      );
     }
 
     return {
@@ -140,11 +145,12 @@ function RouteComponent() {
     enabled: isLoggedIn,
   });
 
-  // Capture the initial channel list once
-  const initialChannels = useRef([
-    ...(followedChannels ?? []),
-    ...(suggestedChannels ?? []),
-  ]).current;
+  const { data: subscriptionUploads } = useQuery({
+    ...trpc.home.getSubscriptionUploads.queryOptions({ limit: 60 }),
+    enabled: isLoggedIn,
+  });
+
+  const initialSuggestedChannels = useRef(suggestedChannels ?? []).current;
 
   const [localFollowedIds, setLocalFollowedIds] = useState<Set<string>>(
     () => new Set(followedChannels?.map((c) => c.id) ?? []),
@@ -208,6 +214,7 @@ function RouteComponent() {
     }
   };
 
+  const hasFollowedChannels = followedChannels && followedChannels.length > 0;
 
   return (
     <>
@@ -220,12 +227,9 @@ function RouteComponent() {
               emptyBody="Follow your favorite channels to get a customized feed and to ensure you don't miss new content!"
               emptyCta="Create Account"
             />
-          ) : !followedChannels || followedChannels.length === 0 ? (
-            <EmptyState
-              emptyTitle="You're not following any channels yet"
-              emptyBody="Follow your favorite channels to get a customized feed and to ensure you don't miss new content!"
-            />
-          ) : followedChannels ? (
+          ) : null}
+
+          {hasFollowedChannels ? (
             <div className="my-6 overflow-hidden border-zinc-800 border-b pb-4">
               <div ref={emblaRef} className="overflow-hidden">
                 <div className="flex gap-4">
@@ -255,17 +259,32 @@ function RouteComponent() {
             </div>
           ) : null}
 
-          {initialChannels.length > 0 ? (
+          {hasFollowedChannels && subscriptionUploads ? (
+            <MediaGrid>
+              {subscriptionUploads.map((upload) => (
+                <MediaCard
+                  key={upload.id}
+                  title={upload.title}
+                  thumbnailUrl={upload.thumbnailUrl}
+                  channelName={upload.channel.name}
+                  channelAvatarUrl={upload.channel.avatarUrl}
+                />
+              ))}
+            </MediaGrid>
+          ) : isLoggedIn && !hasFollowedChannels ? (
+            <EmptyState
+              emptyTitle="You're not following any channels yet"
+              emptyBody="Follow your favorite channels to get a customized feed and to ensure you don't miss new content!"
+            />
+          ) : null}
+
+          {!hasFollowedChannels && initialSuggestedChannels.length > 0 ? (
             <div>
               <h2 className="mb-4 font-bold text-lg text-primary">
-                {isLoggedIn && followedChannels && followedChannels.length > 0
-                  ? 'All Channels'
-                  : isLoggedIn
-                    ? 'Suggested Channels'
-                    : 'Popular Channels'}
+                {isLoggedIn ? 'Suggested Channels' : 'Popular Channels'}
               </h2>
               <div className="space-y-3">
-                {initialChannels.map((channel) => (
+                {initialSuggestedChannels.map((channel) => (
                   <ChannelListItem
                     key={channel.id}
                     channel={channel}
