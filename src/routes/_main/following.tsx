@@ -5,7 +5,8 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import useEmblaCarousel from 'embla-carousel-react';
 import { EmptyState } from '@/components/empty-state';
 import Header from '@/components/header';
 import { trpcClient, useTRPC } from '@/trpc/react';
@@ -125,6 +126,11 @@ function RouteComponent() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
+  const [emblaRef] = useEmblaCarousel({
+    align: 'start',
+    dragFree: true,
+  });
+
   const { data: suggestedChannels } = useSuspenseQuery(
     trpc.home.getSuggestedChannels.queryOptions({ limit: 15 }),
   );
@@ -134,66 +140,79 @@ function RouteComponent() {
     enabled: isLoggedIn,
   });
 
+  // Capture the initial channel list once
+  const initialChannels = useRef([
+    ...(followedChannels ?? []),
+    ...(suggestedChannels ?? []),
+  ]).current;
+
+  const [localFollowedIds, setLocalFollowedIds] = useState<Set<string>>(
+    () => new Set(followedChannels?.map((c) => c.id) ?? []),
+  );
   const [followingChannels, setFollowingChannels] = useState<Set<string>>(
     new Set(),
   );
   const [unfollowingChannels, setUnfollowingChannels] = useState<Set<string>>(
     new Set(),
   );
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [isUnfollowing, setIsUnfollowing] = useState(false);
 
   const handleFollow = async (channelId: string) => {
-    if (followingChannels.has(channelId) || isFollowing) return;
+    if (followingChannels.has(channelId)) return;
 
     setFollowingChannels((prev) => new Set(prev).add(channelId));
-    setIsFollowing(true);
+    setLocalFollowedIds((prev) => new Set(prev).add(channelId));
 
     try {
       await trpcClient.home.followChannel.mutate({ channelId });
       await queryClient.invalidateQueries({
-        queryKey: trpc.home.pathKey(),
+        queryKey: trpc.home.getFollowedChannels.queryKey(),
       });
     } catch (_error) {
-      setFollowingChannels((prev) => {
+      setLocalFollowedIds((prev) => {
         const newSet = new Set(prev);
         newSet.delete(channelId);
         return newSet;
       });
     } finally {
-      setIsFollowing(false);
+      setFollowingChannels((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(channelId);
+        return newSet;
+      });
     }
   };
 
   const handleUnfollow = async (channelId: string) => {
-    if (unfollowingChannels.has(channelId) || isUnfollowing) return;
+    if (unfollowingChannels.has(channelId)) return;
 
     setUnfollowingChannels((prev) => new Set(prev).add(channelId));
-    setIsUnfollowing(true);
+    setLocalFollowedIds((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(channelId);
+      return newSet;
+    });
 
     try {
       await trpcClient.home.unfollowChannel.mutate({ channelId });
       await queryClient.invalidateQueries({
-        queryKey: trpc.home.pathKey(),
+        queryKey: trpc.home.getFollowedChannels.queryKey(),
       });
     } catch (_error) {
-      // On error, keep the channel in the unfollowing state briefly then remove
-      setTimeout(() => {
-        setUnfollowingChannels((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(channelId);
-          return newSet;
-        });
-      }, 1000);
+      setLocalFollowedIds((prev) => new Set(prev).add(channelId));
     } finally {
-      setIsUnfollowing(false);
+      setUnfollowingChannels((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(channelId);
+        return newSet;
+      });
     }
   };
+
 
   return (
     <>
       <Header />
-      <div className="px-16 py-8">
+      <div className="px-16 pb-8">
         <div className="space-y-8">
           {!isLoggedIn ? (
             <EmptyState
@@ -206,48 +225,56 @@ function RouteComponent() {
               emptyTitle="You're not following any channels yet"
               emptyBody="Follow your favorite channels to get a customized feed and to ensure you don't miss new content!"
             />
-          ) : null}
-
-          {followedChannels && followedChannels.length > 0 ? (
-            <div>
-              <h2 className="mb-4 font-bold text-lg text-primary">Following</h2>
-              <div className="space-y-3">
-                {followedChannels.map((channel) => (
-                  <ChannelListItem
-                    key={channel.id}
-                    channel={channel}
-                    isFollowed={true}
-                    isUnfollowing={
-                      unfollowingChannels.has(channel.id) || isUnfollowing
-                    }
-                    isLoggedIn={isLoggedIn}
-                    onUnfollow={handleUnfollow}
-                  />
-                ))}
+          ) : followedChannels ? (
+            <div className="my-6 overflow-hidden border-zinc-800 border-b pb-4">
+              <div ref={emblaRef} className="overflow-hidden">
+                <div className="flex gap-4">
+                  {followedChannels.map((channel) => (
+                    <Link
+                      key={channel.id}
+                      to="/"
+                      className="flex min-w-[72px] flex-shrink-0 flex-col items-center gap-1.5"
+                    >
+                      <Avatar.Root className="size-[72px] overflow-hidden rounded-full border-top-highlight">
+                        <Avatar.Image
+                          src={channel.avatarUrl || undefined}
+                          alt={channel.name}
+                          className="size-full object-cover"
+                        />
+                        <Avatar.Fallback className="flex size-full items-center justify-center rounded-full bg-indigo-500 font-bold text-white text-xl">
+                          {channel.name.charAt(0).toUpperCase()}
+                        </Avatar.Fallback>
+                      </Avatar.Root>
+                      <p className="w-full overflow-hidden text-ellipsis text-nowrap text-center font-normal text-primary text-xs opacity-60">
+                        {channel.name}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
           ) : null}
 
-          {suggestedChannels && suggestedChannels.length > 0 ? (
+          {initialChannels.length > 0 ? (
             <div>
               <h2 className="mb-4 font-bold text-lg text-primary">
                 {isLoggedIn && followedChannels && followedChannels.length > 0
-                  ? 'Suggested Channels'
+                  ? 'All Channels'
                   : isLoggedIn
                     ? 'Suggested Channels'
                     : 'Popular Channels'}
               </h2>
               <div className="space-y-3">
-                {suggestedChannels.map((channel) => (
+                {initialChannels.map((channel) => (
                   <ChannelListItem
                     key={channel.id}
                     channel={channel}
-                    isFollowed={false}
-                    isFollowing={
-                      followingChannels.has(channel.id) || isFollowing
-                    }
+                    isFollowed={localFollowedIds.has(channel.id)}
+                    isFollowing={followingChannels.has(channel.id)}
+                    isUnfollowing={unfollowingChannels.has(channel.id)}
                     isLoggedIn={isLoggedIn}
                     onFollow={handleFollow}
+                    onUnfollow={handleUnfollow}
                   />
                 ))}
               </div>

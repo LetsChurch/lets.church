@@ -373,7 +373,7 @@ function Home() {
         ) : null}
 
         <ContentSection
-          title="Subscriptions"
+          title="Following"
           uploads={subscriptionUploads || []}
           showViewMoreCard={
             !!(subscriptionUploads && subscriptionUploads.length > 0)
