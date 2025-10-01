@@ -10,9 +10,9 @@ import Logo from './logo';
 import MobileMenu from './mobile-menu';
 import Search from './search';
 
-type HeaderProps = PropsWithChildren;
+type HeaderProps = PropsWithChildren<{ defaultSearchValue?: string }>;
 
-export default function Header({ children }: HeaderProps) {
+export default function Header({ children, defaultSearchValue }: HeaderProps) {
   const trpc = useTRPC();
   const hasSessionQuery = useQuery(trpc.common.hasValidSession.queryOptions());
   const profileQuery = useQuery({
@@ -68,7 +68,7 @@ export default function Header({ children }: HeaderProps) {
 
           {/* Search Bar */}
           <div className="w-80 max-sm:hidden">
-            <Search />
+            <Search defaultValue={defaultSearchValue} />
           </div>
 
           {/* Login Button or User Avatar */}

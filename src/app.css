@@ -4,6 +4,7 @@
 
 :root {
 	--font-sans: "Inter Variable", sans-serif;
+	--font-time: "Roboto Mono Variable", monospace;
 
 	--page-bg: var(--color-zinc-950);
 	--sidebar-bg: var(--color-zinc-950);

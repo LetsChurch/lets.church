@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import '@fontsource-variable/inter';
+import '@fontsource-variable/roboto-mono';
 import appCss from '@/app.css?url';
 import type { AppContextType } from '@/router';
 

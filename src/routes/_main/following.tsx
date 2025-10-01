@@ -5,8 +5,8 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import useEmblaCarousel from 'embla-carousel-react';
 import { useRef, useState } from 'react';
+import { AvatarCarousel } from '@/components/avatar-carousel';
 import { EmptyState } from '@/components/empty-state';
 import Header from '@/components/header';
 import { MediaCard } from '@/components/media-card';
@@ -131,11 +131,6 @@ function RouteComponent() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
-  const [emblaRef] = useEmblaCarousel({
-    align: 'start',
-    dragFree: true,
-  });
-
   const { data: suggestedChannels } = useSuspenseQuery(
     trpc.home.getSuggestedChannels.queryOptions({ limit: 15 }),
   );
@@ -231,31 +226,7 @@ function RouteComponent() {
 
           {hasFollowedChannels ? (
             <div className="my-6 overflow-hidden border-zinc-800 border-b pb-4">
-              <div ref={emblaRef} className="overflow-hidden">
-                <div className="flex gap-4">
-                  {followedChannels.map((channel) => (
-                    <Link
-                      key={channel.id}
-                      to="/"
-                      className="flex min-w-[72px] flex-shrink-0 flex-col items-center gap-1.5"
-                    >
-                      <Avatar.Root className="size-[72px] overflow-hidden rounded-full border-top-highlight">
-                        <Avatar.Image
-                          src={channel.avatarUrl || undefined}
-                          alt={channel.name}
-                          className="size-full object-cover"
-                        />
-                        <Avatar.Fallback className="flex size-full items-center justify-center rounded-full bg-indigo-500 font-bold text-white text-xl">
-                          {channel.name.charAt(0).toUpperCase()}
-                        </Avatar.Fallback>
-                      </Avatar.Root>
-                      <p className="w-full overflow-hidden text-ellipsis text-nowrap text-center font-normal text-primary text-xs opacity-60">
-                        {channel.name}
-                      </p>
-                    </Link>
-                  ))}
-                </div>
-              </div>
+              <AvatarCarousel items={followedChannels} />
             </div>
           ) : null}
 
