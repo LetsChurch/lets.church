@@ -1,7 +1,11 @@
 .envrc.local
 .direnv
-gitleaks-findings.json
-node_modules
 .nitro
 .output
 .tanstack
+
+gitleaks-findings.json
+node_modules
+storybook-static
+
+*.log

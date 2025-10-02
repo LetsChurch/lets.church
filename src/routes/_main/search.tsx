@@ -4,10 +4,10 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 import { AvatarCarousel } from '@/components/avatar-carousel';
 import Header from '@/components/header';
+import { MediaCompactCard } from '@/components/media-compact-card';
 import Search from '@/components/search';
 import SearchTabs from '@/components/search-tabs';
 import { TrendingSearchPill } from '@/components/trending-search-pill';
-import { VideoCompactCard } from '@/components/video-compact-card';
 import { useTRPC } from '@/trpc/react';
 
 export const Route = createFileRoute('/_main/search')({
@@ -100,7 +100,7 @@ function SearchResults() {
 
       <div className="space-y-4">
         {sampleUploads.map((upload) => (
-          <VideoCompactCard
+          <MediaCompactCard
             key={upload.id}
             title={upload.title}
             thumbnailUrl={upload.thumbnailUrl}
@@ -118,7 +118,7 @@ function SearchResults() {
 
       <div className="space-y-4">
         {sampleUploads.map((upload) => (
-          <VideoCompactCard
+          <MediaCompactCard
             key={`church-${upload.id}`}
             title={upload.title}
             thumbnailUrl={upload.thumbnailUrl}
@@ -140,7 +140,7 @@ function SearchResults() {
 
       <div className="space-y-4">
         {sampleUploads.map((upload) => (
-          <VideoCompactCard
+          <MediaCompactCard
             key={`related-${upload.id}`}
             title={upload.title}
             thumbnailUrl={upload.thumbnailUrl}
@@ -239,7 +239,7 @@ function EmptySearch() {
         </div>
         <div className="space-y-4">
           {trendingUploads.map((upload) => (
-            <VideoCompactCard
+            <MediaCompactCard
               key={upload.id}
               title={upload.title ?? 'Untitled'}
               thumbnailUrl={upload.thumbnailUrl}

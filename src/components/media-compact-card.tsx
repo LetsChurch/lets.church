@@ -10,7 +10,7 @@ export type Props = {
   progress?: number;
 };
 
-export function VideoCompactCard({
+export function MediaCompactCard({
   title,
   thumbnailUrl,
   channelName,
@@ -33,7 +33,7 @@ export function VideoCompactCard({
         </div>
         <div className="absolute right-1.5 bottom-1.5 left-1.5 flex flex-col items-end gap-1">
           {duration ? (
-            <div className="flex h-4 items-center justify-center rounded-full bg-zinc-950/80 px-1.5 font-medium font-time text-[10px] text-white leading-none tracking-tight backdrop-blur-sm">
+            <div className="flex h-4 items-center justify-center rounded-full bg-zinc-950/80 px-1.5 font-medium font-time text-[10px] text-primary leading-none tracking-tight backdrop-blur-sm">
               {duration}
             </div>
           ) : null}
@@ -54,7 +54,7 @@ export function VideoCompactCard({
         </div>
       </div>
       <div className="flex min-w-0 flex-1 flex-col justify-between pb-px">
-        <h4 className="line-clamp-2 font-bold text-sm text-white">{title}</h4>
+        <h4 className="line-clamp-2 font-bold text-primary text-sm">{title}</h4>
         <div className="flex items-center gap-1.5">
           <Avatar.Root className="size-4 shrink-0 overflow-hidden rounded-full">
             <Avatar.Image
@@ -66,11 +66,11 @@ export function VideoCompactCard({
               {channelName.charAt(0).toUpperCase()}
             </Avatar.Fallback>
           </Avatar.Root>
-          <p className="overflow-hidden text-ellipsis whitespace-nowrap text-xs text-zinc-400">
+          <p className="overflow-hidden text-ellipsis whitespace-nowrap text-muted text-xs">
             {channelName}
           </p>
           {timestamp ? (
-            <p className="whitespace-nowrap text-xs text-zinc-400">
+            <p className="whitespace-nowrap text-muted text-xs">
               &middot; {timestamp}
             </p>
           ) : null}

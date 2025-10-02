@@ -21,7 +21,7 @@ export function TrendingUploadCard({
             className="size-full object-cover"
           />
         ) : null}
-        <div className="absolute right-1 bottom-1 rounded bg-black/80 px-1 text-white text-xs">
+        <div className="absolute right-1 bottom-1 rounded bg-black/80 px-1 text-primary text-xs">
           {duration}
         </div>
       </div>

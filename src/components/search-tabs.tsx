@@ -38,14 +38,14 @@ export default function SearchTabs({
           <div className="flex items-center justify-center gap-2">
             <span
               className={`overflow-hidden overflow-ellipsis whitespace-nowrap font-medium text-sm leading-none ${
-                activeTab === tab.id ? 'text-white' : 'text-white/70'
+                activeTab === tab.id ? 'text-primary' : 'text-primary/70'
               }`}
             >
               {tab.label}
             </span>
           </div>
           {tab.count !== undefined ? (
-            <div className="flex h-[18px] min-w-[18px] items-center justify-center rounded-[9px] bg-white/10 px-1.5 text-[10px] text-white/70">
+            <div className="flex h-[18px] min-w-[18px] items-center justify-center rounded-[9px] bg-white/10 px-1.5 text-[10px] text-primary/70">
               {tab.count > 99 ? '99+' : tab.count}
             </div>
           ) : null}

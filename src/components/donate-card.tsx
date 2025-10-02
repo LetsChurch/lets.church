@@ -1,10 +1,10 @@
 export function DonateCard() {
   return (
     <div className="flex aspect-video flex-col gap-2 rounded-lg border border-top-highlight bg-indigo-500 p-4">
-      <h3 className="font-bold text-base text-white">
+      <h3 className="font-bold text-base text-primary">
         Help share the good news
       </h3>
-      <p className="text-white text-xs leading-relaxed">
+      <p className="text-primary text-xs leading-relaxed">
         Let's Church will always remain free and without ads, sustained only by
         donations. Would you consider giving to keep our platform running?
       </p>

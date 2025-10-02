@@ -2,9 +2,9 @@ import type { EmblaCarouselType } from 'embla-carousel';
 import Autoplay from 'embla-carousel-autoplay';
 import useEmblaCarousel from 'embla-carousel-react';
 import { useCallback, useEffect, useState } from 'react';
+import { $headerBackgroundImage } from '@/stores/header';
 import { CarouselNavigationButtons } from './carousel-navigation-buttons';
 import { CarouselPagination } from './carousel-pagination';
-import { useHeader } from './header-context';
 
 type CarouselItemProps = {
   title: string;
@@ -33,7 +33,7 @@ function CarouselItem({
           {/* Badge */}
           <div className="absolute top-2 left-2">
             <div className="flex items-center rounded-full border border-default bg-zinc-950/80 px-2 backdrop-blur-sm">
-              <span className="font-medium text-white text-xs">{badge}</span>
+              <span className="font-medium text-primary text-xs">{badge}</span>
             </div>
           </div>
         </div>
@@ -87,8 +87,6 @@ export const carouselItems = [
 ];
 
 export default function HeroCarousel() {
-  const { setBackgroundImage } = useHeader();
-
   const [emblaRef, emblaApi] = useEmblaCarousel(
     {
       loop: true,
@@ -120,10 +118,10 @@ export default function HeroCarousel() {
     });
 
     // Set initial background image
-    setBackgroundImage(carouselItems[0].imageUrl);
+    $headerBackgroundImage.set(carouselItems[0].imageUrl);
 
-    return () => setBackgroundImage();
-  }, [setBackgroundImage]);
+    return () => $headerBackgroundImage.set(undefined);
+  }, []);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -135,7 +133,7 @@ export default function HeroCarousel() {
     function onSelect(emblaApi: EmblaCarouselType) {
       const newIndex = emblaApi.selectedScrollSnap();
       setSelectedIndex(newIndex);
-      setBackgroundImage(carouselItems[newIndex].imageUrl);
+      $headerBackgroundImage.set(carouselItems[newIndex].imageUrl);
       setCanScrollPrev(emblaApi.canScrollPrev());
       setCanScrollNext(emblaApi.canScrollNext());
     }
@@ -169,7 +167,7 @@ export default function HeroCarousel() {
       emblaApi.off('scroll', applyFadeEffect);
       emblaApi.off('select', applyFadeEffect);
     };
-  }, [emblaApi, selectedIndex, setBackgroundImage]);
+  }, [emblaApi, selectedIndex]);
 
   return (
     <div className="relative z-10 pb-6">

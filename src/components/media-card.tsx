@@ -5,6 +5,9 @@ export type Props = {
   thumbnailUrl?: string | null;
   channelName?: string;
   channelAvatarUrl?: string | null;
+  duration?: string;
+  timestamp?: string;
+  progress?: number;
 };
 
 export function MediaCard({
@@ -12,17 +15,43 @@ export function MediaCard({
   thumbnailUrl,
   channelName,
   channelAvatarUrl,
+  duration,
+  timestamp,
+  progress,
 }: Props) {
   return (
     <div className="space-y-3">
-      <div className="aspect-video overflow-hidden rounded-lg border border-top-highlight bg-card">
-        {thumbnailUrl ? (
-          <img
-            src={thumbnailUrl}
-            alt={title ?? 'Untitled'}
-            className="size-full object-cover"
-          />
-        ) : null}
+      <div className="relative aspect-video">
+        <div className="-translate-y-1/2 absolute top-1/2 right-0 left-0 aspect-video overflow-hidden rounded-lg border-top-highlight bg-card">
+          {thumbnailUrl ? (
+            <img
+              src={thumbnailUrl}
+              alt={title ?? 'Untitled'}
+              className="size-full object-cover"
+            />
+          ) : null}
+        </div>
+        <div className="absolute right-3 bottom-3 left-3 flex flex-col items-end gap-1">
+          {duration ? (
+            <div className="flex h-4 items-center justify-center rounded-full bg-zinc-950/80 px-1.5 font-medium font-time text-[10px] text-primary leading-none tracking-tight backdrop-blur-sm">
+              {duration}
+            </div>
+          ) : null}
+          {progress ? (
+            <div className="h-[3px] w-full rounded-sm bg-white/20 backdrop-blur-sm">
+              <div className="relative h-full rounded-md bg-indigo-500/40">
+                <div
+                  className="h-full rounded-md bg-gradient-to-r from-indigo-500/0 to-indigo-500/90"
+                  style={{ width: `${Math.min(progress, 100)}%` }}
+                />
+                <div
+                  className="absolute top-0 right-0 bottom-0 w-2 rounded-md shadow-[0px_2px_12px_0px_#6366f1] backdrop-blur-sm"
+                  style={{ right: `${100 - Math.min(progress, 100)}%` }}
+                />
+              </div>
+            </div>
+          ) : null}
+        </div>
       </div>
       <div className="flex flex-row items-center gap-2">
         <Avatar.Root className="size-8 flex-shrink-0 overflow-hidden rounded-full bg-white">
@@ -35,13 +64,23 @@ export function MediaCard({
             {(channelName || 'Channel').charAt(0).toUpperCase()}
           </Avatar.Fallback>
         </Avatar.Root>
-        <div className="space-y-1">
+        <div className="min-w-0 flex-1 space-y-1">
           <h3 className="line-clamp-1 font-medium text-primary text-sm">
             {title ?? 'Untitled'}
           </h3>
-          <p className="text-secondary text-xs">
-            {channelName || 'Channel Name'}
-          </p>
+          <div className="flex items-center gap-1">
+            <p className="overflow-hidden text-ellipsis whitespace-nowrap text-secondary text-xs">
+              {channelName || 'Channel Name'}
+            </p>
+            {timestamp ? (
+              <>
+                <div className="size-[3px] shrink-0 rounded-[2px] bg-zinc-400 opacity-50" />
+                <p className="whitespace-nowrap text-secondary text-xs">
+                  {timestamp}
+                </p>
+              </>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>

@@ -6,7 +6,7 @@ export function SearchCard() {
       <h3 className="font-bold text-base text-primary">
         Easily discover relevant content
       </h3>
-      <p className="text-white text-xs leading-relaxed">
+      <p className="text-primary text-xs leading-relaxed">
         Search by topic or bible verse, ask questions, or find just about
         anything else. We'll use intelligent search across transcripts to find
         what you're looking for.
@@ -18,7 +18,7 @@ export function SearchCard() {
             placeholder="Search or ask anything..."
             className="appearance-non flex-1 text-primary text-sm placeholder-text-muted outline-none"
           />
-          <IconSearch className="text-white/50" />
+          <IconSearch className="text-primary/50" />
         </div>
       </div>
     </div>

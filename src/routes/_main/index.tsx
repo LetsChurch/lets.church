@@ -11,10 +11,10 @@ import { EmptyState } from '@/components/empty-state';
 import Header from '@/components/header';
 import HeroCarousel from '@/components/hero-carousel';
 import { MediaCard } from '@/components/media-card';
+import { MediaCompactCard } from '@/components/media-compact-card';
 import { MediaGrid } from '@/components/media-grid';
 import { SearchCard } from '@/components/search-card';
 import { TrendingSearchPill } from '@/components/trending-search-pill';
-import { VideoCompactCard } from '@/components/video-compact-card';
 import { ViewMoreCard } from '@/components/view-more-card';
 import { useTRPC } from '@/trpc/react';
 
@@ -271,7 +271,7 @@ function RecentlySaved() {
           <div className="flex gap-4 md:gap-6">
             <div className="min-w-0 flex-[0_0_100%] space-y-3 md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]">
               {column1.map((title) => (
-                <VideoCompactCard
+                <MediaCompactCard
                   key={title}
                   title={title}
                   channelName="Channel"
@@ -282,7 +282,7 @@ function RecentlySaved() {
             </div>
             <div className="min-w-0 flex-[0_0_100%] space-y-3 md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]">
               {column2.map((title) => (
-                <VideoCompactCard
+                <MediaCompactCard
                   key={title}
                   title={title}
                   channelName="Channel"
@@ -293,7 +293,7 @@ function RecentlySaved() {
             </div>
             <div className="min-w-0 flex-[0_0_100%] space-y-3 md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]">
               {column3.map((title) => (
-                <VideoCompactCard
+                <MediaCompactCard
                   key={title}
                   title={title}
                   channelName="Channel"

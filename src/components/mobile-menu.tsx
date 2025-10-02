@@ -32,7 +32,7 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
                 <button
                   {...props}
                   type="button"
-                  className="flex size-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-primary"
+                  className="flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-zinc-800 hover:text-primary"
                 >
                   <IconX />
                 </button>
@@ -102,7 +102,7 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
             </div>
 
             <footer className="pb-6">
-              <p className="text-xs text-zinc-500">
+              <p className="text-muted text-xs">
                 Let's Church is in the public domain and is operated as a
                 non-profit.{' '}
                 <Link to="/" className="text-primary hover:text-indigo-300">
