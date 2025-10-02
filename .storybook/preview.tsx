@@ -1,6 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 
-import type { Preview, Renderer } from '@storybook/react-vite'
+import type { Preview, } from '@storybook/react-vite'
+import '@fontsource-variable/inter';
+import '@fontsource-variable/roboto-mono';
 import { withThemeByDataAttribute } from '@storybook/addon-themes'
 import {
   createMemoryHistory,
@@ -84,7 +86,7 @@ const preview: Preview = {
   },
   decorators: [
     storyRouterDecorator,
-    withThemeByDataAttribute<Renderer>({
+    withThemeByDataAttribute({
       themes: {
         light: 'light',
         dark: 'dark',
