@@ -21,6 +21,9 @@ follow service: (logs service '-f')
 restart *services:
   docker compose restart {{services}}
 
+restart-workers:
+  docker compose restart background-worker import-worker probe-worker transcribe-worker
+
 exec service +command:
   docker compose exec {{service}} {{command}}
 
