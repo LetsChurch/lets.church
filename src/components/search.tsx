@@ -61,7 +61,7 @@ export default function Search({
         {hasQuery ? null : (
           <button
             type="submit"
-            className="flex size-8 items-center justify-center rounded-full text-primary/50 transition-colors hover:bg-white/10 hover:text-primary"
+            className="flex size-8 items-center justify-center rounded-full text-white/50 transition-colors hover:bg-white/10 hover:text-white"
           >
             <IconSearch size={24} />
           </button>

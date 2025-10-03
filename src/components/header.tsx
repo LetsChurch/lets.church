@@ -149,7 +149,7 @@ export default function Header({ children, defaultSearchValue }: HeaderProps) {
           ) : (
             <Link
               to="/auth/login"
-              className="rounded-full border-top-highlight bg-white/15 px-3 py-1.5 font-semibold text-primary/80 text-sm"
+              className="rounded-full border-top-highlight bg-white/15 px-3 py-1.5 font-semibold text-sm text-white/80"
             >
               Login
             </Link>
