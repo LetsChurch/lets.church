@@ -1,7 +1,39 @@
 import { useId } from 'react';
 
-export default function Logo() {
+type Props = {
+  collapsed?: boolean;
+};
+
+export default function Logo({ collapsed = false }: Props) {
   const clipId = useId();
+
+  if (collapsed) {
+    return (
+      <svg width="18" height="16">
+        <title>Let's Church</title>
+        <g clip-path={`url(#${clipId})`}>
+          <path
+            d="M15.1019 5.36137C15.012 5.27203 13.9513 4.32959 12.1004 4.32959C9.18883 4.32959 6.86378 6.79664 6.8645 9.84803C6.8645 12.4052 8.51241 15.5452 12.3041 15.5452C14.6285 15.5452 16.3895 14.4457 17.3146 12.3598L15.5768 11.5521C14.764 13.3015 13.2742 13.638 12.3716 13.638C10.4307 13.638 9.12141 12.0679 9.12141 9.82498C9.12141 7.69441 10.3851 6.23608 12.2809 6.23608C13.9281 6.23608 14.8764 7.22319 15.1019 8.63612H16.9977V4.64374H15.1019V5.36137Z"
+            fill="white"
+          />
+          <path
+            d="M4.66224 13.3908V0H0.645047V1.83948H2.54091V13.3908H0.600098V15.2303H6.31015V13.3908H4.66224Z"
+            fill="white"
+          />
+        </g>
+        <defs>
+          <clipPath id={clipId}>
+            <rect
+              width="16.8"
+              height="15.661"
+              fill="white"
+              transform="translate(0.600098)"
+            />
+          </clipPath>
+        </defs>
+      </svg>
+    );
+  }
 
   return (
     <svg width="107" height="16" role="img">
