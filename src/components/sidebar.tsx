@@ -76,7 +76,7 @@ export default function Sidebar({ className }: SidebarProps) {
           <button
             type="button"
             onClick={() => setShowAltMenu((prev) => !prev)}
-            className="flex size-8 items-center justify-center rounded-lg bg-white/10 backdrop-blur-sm transition-colors hover:bg-white/[0.15]"
+            className="flex size-8 items-center justify-center rounded-lg transition-colors hover:bg-white/[0.15]"
           >
             {showAltMenu ? (
               <IconArrowLeft size={24} className="text-white" />
