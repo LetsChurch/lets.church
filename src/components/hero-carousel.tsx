@@ -20,10 +20,10 @@ function CarouselItem({
   badge = 'Featured',
 }: CarouselItemProps) {
   return (
-    <div className="w-[360px] flex-shrink-0 md:w-[495px] lg:w-[640px]">
+    <div className="w-90 flex-shrink-0 md:w-124 lg:w-160">
       <div className="space-y-5">
         {/* Image Container */}
-        <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-top-highlight bg-card">
+        <div className="relative aspect-video overflow-hidden rounded-2xl border-top-highlight bg-card">
           <div
             className="absolute inset-0 bg-center bg-cover"
             style={{
@@ -32,7 +32,7 @@ function CarouselItem({
           />
           {/* Badge */}
           <div className="absolute top-2 left-2">
-            <div className="flex items-center rounded-full border border-default bg-zinc-950/80 px-2 backdrop-blur-sm">
+            <div className="flex items-center rounded-full bg-zinc-950/80 px-2 backdrop-blur-sm">
               <span className="font-medium text-primary text-xs">{badge}</span>
             </div>
           </div>
