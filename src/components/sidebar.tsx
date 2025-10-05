@@ -6,7 +6,7 @@ import {
   IconBrandSafari,
   IconChevronDown,
   IconFlag,
-  IconHeart,
+  IconHeartFilled,
   IconHistory,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
@@ -47,6 +47,7 @@ export default function Sidebar({ className }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(getInitialSidebarCollapsed());
   const [showAllChannels, setShowAllChannels] = useState(false);
   const [showAltMenu, setShowAltMenu] = useState(false);
+  const [isLogoHovered, setIsLogoHovered] = useState(false);
 
   useEffect(() => {
     Cookies.set(COOKIE_NAME, JSON.stringify(collapsed));
@@ -57,11 +58,19 @@ export default function Sidebar({ className }: SidebarProps) {
     setShowAltMenu(false);
   };
 
+  const openAltMenuFromCollapsed = () => {
+    setShowAltMenu(true);
+  };
+
+  const closeAltMenu = () => {
+    setShowAltMenu(false);
+  };
+
   return (
     <div
       className={cn(
         'hidden h-full flex-col border-zinc-900 border-r bg-zinc-900/95 backdrop-blur-sm sm:flex',
-        collapsed ? 'w-14' : 'w-50',
+        collapsed && !showAltMenu ? 'w-14' : 'w-50',
         className,
       )}
     >
@@ -69,14 +78,14 @@ export default function Sidebar({ className }: SidebarProps) {
       <div
         className={cn(
           'flex h-16 items-center border-zinc-900 border-b px-3',
-          collapsed ? 'justify-center' : 'gap-[7px]',
+          collapsed && !showAltMenu ? 'justify-center' : 'gap-[7px]',
         )}
       >
-        {collapsed ? null : (
+        {collapsed && !showAltMenu ? null : (
           <button
             type="button"
-            onClick={() => setShowAltMenu((prev) => !prev)}
-            className="flex size-8 items-center justify-center rounded-lg transition-colors hover:bg-white/[0.15]"
+            onClick={showAltMenu ? closeAltMenu : () => setShowAltMenu(true)}
+            className="flex size-8 cursor-pointer items-center justify-center rounded-lg transition-colors hover:bg-white/[0.15]"
           >
             {showAltMenu ? (
               <IconArrowLeft size={24} className="text-white" />
@@ -85,11 +94,35 @@ export default function Sidebar({ className }: SidebarProps) {
             )}
           </button>
         )}
-        {collapsed ? (
+        {collapsed && !showAltMenu ? (
           <Tooltip.Provider>
             <Tooltip.Root>
-              <Tooltip.Trigger render={<Link to="/" />}>
-                <Logo collapsed />
+              <Tooltip.Trigger
+                render={<Link to="/" />}
+                onMouseEnter={() => setIsLogoHovered(true)}
+                onMouseLeave={() => setIsLogoHovered(false)}
+                className="cursor-pointer"
+              >
+                <div className="relative">
+                  <div
+                    className={cn(
+                      'transition-opacity duration-200',
+                      isLogoHovered ? 'opacity-0' : 'opacity-100',
+                    )}
+                  >
+                    <Logo collapsed />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={openAltMenuFromCollapsed}
+                    className={cn(
+                      'absolute inset-0 flex cursor-pointer items-center justify-center transition-opacity duration-200',
+                      isLogoHovered ? 'opacity-100' : 'opacity-0',
+                    )}
+                  >
+                    <IconMenu2 size={24} className="text-white" />
+                  </button>
+                </div>
               </Tooltip.Trigger>
               <Tooltip.Portal>
                 <Tooltip.Positioner
@@ -544,15 +577,15 @@ export default function Sidebar({ className }: SidebarProps) {
       )}
 
       {/* Donate Button (Collapsed) */}
-      {collapsed ? (
+      {collapsed && !showAltMenu ? (
         <div className="px-4">
           <Tooltip.Provider>
             <Tooltip.Root>
               <Tooltip.Trigger
-                className="flex size-6 items-center justify-center text-indigo-500 transition-colors hover:text-indigo-400"
+                className="flex size-6 cursor-pointer items-center justify-center text-indigo-500 transition-all hover:scale-110 hover:animate-pulse hover:text-indigo-400"
                 aria-label="Donate"
               >
-                <IconHeart size={16} />
+                <IconHeartFilled size={20} />
               </Tooltip.Trigger>
               <Tooltip.Portal>
                 <Tooltip.Positioner
@@ -572,53 +605,55 @@ export default function Sidebar({ className }: SidebarProps) {
       ) : null}
 
       {/* Collapse Button */}
-      <div className="p-4">
-        {collapsed ? (
-          <Tooltip.Provider>
-            <Tooltip.Root>
-              <Tooltip.Trigger
-                className="flex w-full items-center gap-2.5 transition-colors hover:text-white/80"
-                onClick={toggleCollapsed}
-              >
-                <div className="flex size-6 items-center justify-center">
-                  <IconLayoutSidebarLeftExpand
-                    size={16}
-                    className="text-zinc-400"
-                  />
-                </div>
-              </Tooltip.Trigger>
-              <Tooltip.Portal>
-                <Tooltip.Positioner
-                  side="right"
-                  sideOffset={8}
-                  className="z-50"
+      {showAltMenu ? null : (
+        <div className="p-4">
+          {collapsed ? (
+            <Tooltip.Provider>
+              <Tooltip.Root>
+                <Tooltip.Trigger
+                  className="flex w-full items-center gap-2.5 transition-colors hover:text-white/80"
+                  onClick={toggleCollapsed}
                 >
-                  <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-white text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
-                    Expand Sidebar
-                    <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
-                  </Tooltip.Popup>
-                </Tooltip.Positioner>
-              </Tooltip.Portal>
-            </Tooltip.Root>
-          </Tooltip.Provider>
-        ) : (
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            className="flex w-full items-center gap-2.5 transition-colors hover:text-white/80"
-          >
-            <div className="flex size-6 items-center justify-center">
-              <IconLayoutSidebarLeftCollapse
-                size={16}
-                className="text-zinc-400"
-              />
-            </div>
-            <span className="font-normal text-xs text-zinc-400">
-              Collapse Sidebar
-            </span>
-          </button>
-        )}
-      </div>
+                  <div className="flex size-6 items-center justify-center">
+                    <IconLayoutSidebarLeftExpand
+                      size={16}
+                      className="text-zinc-400"
+                    />
+                  </div>
+                </Tooltip.Trigger>
+                <Tooltip.Portal>
+                  <Tooltip.Positioner
+                    side="right"
+                    sideOffset={8}
+                    className="z-50"
+                  >
+                    <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-white text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
+                      Expand Sidebar
+                      <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
+                    </Tooltip.Popup>
+                  </Tooltip.Positioner>
+                </Tooltip.Portal>
+              </Tooltip.Root>
+            </Tooltip.Provider>
+          ) : (
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              className="flex w-full items-center gap-2.5 transition-colors hover:text-white/80"
+            >
+              <div className="flex size-6 items-center justify-center">
+                <IconLayoutSidebarLeftCollapse
+                  size={16}
+                  className="text-zinc-400"
+                />
+              </div>
+              <span className="font-normal text-xs text-zinc-400">
+                Collapse Sidebar
+              </span>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
