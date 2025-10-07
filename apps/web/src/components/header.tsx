@@ -20,7 +20,7 @@ const navLinks: Array<ComponentProps<typeof A>> = [
   { href: '/about', children: 'About' },
   { href: '/channels', children: 'Channels' },
   {
-    href: 'https://www.zeffy.com/en-US/donation-form/5da9e1c3-a8e2-4bb4-817a-5dbbb968ec6b',
+    href: 'https://givebutter.com/LetsChurch',
     children: 'Donate',
     target: '_blank',
   },

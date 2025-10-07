@@ -11,7 +11,7 @@ export default function Footer() {
     { href: '/', label: 'Home' },
     { href: '/about', label: 'About' },
     {
-      href: 'https://www.zeffy.com/en-US/donation-form/5da9e1c3-a8e2-4bb4-817a-5dbbb968ec6b',
+      href: 'https://givebutter.com/LetsChurch',
       label: 'Donate',
     },
     { href: '/about/terms', label: 'Terms' },

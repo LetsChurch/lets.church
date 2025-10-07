@@ -14,7 +14,7 @@ Let's Church, as a company, will never run ads on principle. We rely entirely on
 
 Let's Church is a 501(c)(3) non-profit organization. We provide our services completely free of charge and will never run ads. Your contribution helps pay for improvement of our platform, hosting fees, storage, and the hardware necessary to encode and transcribe audio and videos for the benefit of churches and ministries around the world. All donations are tax-deductible in the United States and go directly toward material costs for running the platform. All work being done on Let's Church is currently voluntary and no-one is currently taking a salary.
 
-<a href="https://www.zeffy.com/en-US/donation-form/5da9e1c3-a8e2-4bb4-817a-5dbbb968ec6b">Donate to Let's Church</a>
+<a href="https://givebutter.com/LetsChurch">Donate to Let's Church</a>
 
 Please do not let any giving to Let's Church interfere with giving to your local church. It is important that you first support your local community of believers before prayerfully considering how much you can give to Let's Church.
 

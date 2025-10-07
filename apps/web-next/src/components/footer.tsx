@@ -128,7 +128,7 @@ export default function Footer() {
                   </li>
                   <li>
                     <a
-                      href="https://www.zeffy.com/en-US/donation-form/5da9e1c3-a8e2-4bb4-817a-5dbbb968ec6b"
+                      href="https://givebutter.com/LetsChurch"
                       class="text-sm leading-6 text-gray-600 hover:text-gray-900"
                       target="_blank"
                     >
