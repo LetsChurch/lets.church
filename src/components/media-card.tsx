@@ -1,6 +1,8 @@
 import { Avatar } from '@base-ui-components/react/avatar';
+import { Link } from '@tanstack/react-router';
 
 export type Props = {
+  mediaId: string;
   title?: string | null;
   thumbnailUrl?: string | null;
   channelName?: string;
@@ -11,6 +13,7 @@ export type Props = {
 };
 
 export function MediaCard({
+  mediaId,
   title,
   thumbnailUrl,
   channelName,
@@ -20,7 +23,7 @@ export function MediaCard({
   progress,
 }: Props) {
   return (
-    <div className="space-y-3">
+    <div className="relative space-y-3">
       <div className="relative aspect-video">
         <div className="-translate-y-1/2 absolute top-1/2 right-0 left-0 aspect-video overflow-hidden rounded-lg border-top-highlight bg-card">
           {thumbnailUrl ? (
@@ -66,7 +69,13 @@ export function MediaCard({
         </Avatar.Root>
         <div className="min-w-0 flex-1 space-y-1">
           <h3 className="line-clamp-1 font-medium text-primary text-sm">
-            {title ?? 'Untitled'}
+            <Link
+              to="/media/$mediaId"
+              params={{ mediaId }}
+              className="after:absolute after:inset-0"
+            >
+              {title ?? 'Untitled'}
+            </Link>
           </h3>
           <div className="flex items-center gap-1">
             <p className="overflow-hidden text-ellipsis whitespace-nowrap text-secondary text-xs">

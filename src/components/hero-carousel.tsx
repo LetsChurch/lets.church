@@ -1,6 +1,7 @@
 import type { EmblaCarouselType } from 'embla-carousel';
 import Autoplay from 'embla-carousel-autoplay';
 import useEmblaCarousel from 'embla-carousel-react';
+import WheelGestures from 'embla-carousel-wheel-gestures';
 import { useCallback, useEffect, useState } from 'react';
 import { $headerBackgroundImage } from '@/stores/header';
 import { CarouselNavigationButtons } from './carousel-navigation-buttons';
@@ -94,7 +95,7 @@ export default function HeroCarousel() {
       containScroll: false,
       slidesToScroll: 1,
     },
-    [Autoplay({ delay: 4000, stopOnInteraction: false })],
+    [Autoplay({ delay: 4000, stopOnInteraction: false }), WheelGestures()],
   );
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
@@ -117,7 +118,6 @@ export default function HeroCarousel() {
       img.src = item.imageUrl;
     });
 
-    // Set initial background image
     $headerBackgroundImage.set(carouselItems[0].imageUrl);
 
     return () => $headerBackgroundImage.set(undefined);

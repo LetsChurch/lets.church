@@ -5,12 +5,12 @@ import useEmblaCarousel from 'embla-carousel-react';
 import type { ComponentProps } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { CarouselNavigationButtons } from '@/components/carousel-navigation-buttons';
-import { CarouselPagination } from '@/components/carousel-pagination';
 import { DonateCard } from '@/components/donate-card';
 import { EmptyState } from '@/components/empty-state';
 import Header from '@/components/header';
 import HeroCarousel from '@/components/hero-carousel';
 import { MediaCard } from '@/components/media-card';
+import { MediaCarousel } from '@/components/media-carousel';
 import { MediaCompactCard } from '@/components/media-compact-card';
 import { MediaGrid } from '@/components/media-grid';
 import { SearchCard } from '@/components/search-card';
@@ -76,124 +76,38 @@ function ContentSection({
   showViewMoreCard?: boolean;
   viewMoreCardText?: string;
 }) {
-  const [emblaRef, emblaApi] = useEmblaCarousel({
-    loop: false,
-    align: 'start',
-    containScroll: 'trimSnaps',
-    slidesToScroll: 1,
-    breakpoints: {
-      '(min-width: 768px)': { slidesToScroll: 2 },
-      '(min-width: 1024px)': { slidesToScroll: 3 },
-    },
-  });
-
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
-  const [canScrollPrev, setCanScrollPrev] = useState(false);
-  const [canScrollNext, setCanScrollNext] = useState(false);
-
-  const scrollTo = useCallback(
-    (index: number) => emblaApi?.scrollTo(index),
-    [emblaApi],
-  );
-
-  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
-
-  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
-
-  useEffect(() => {
-    if (!emblaApi) return;
-
-    function onInit(emblaApi: EmblaCarouselType) {
-      setScrollSnaps(emblaApi.scrollSnapList());
-    }
-
-    function onSelect(emblaApi: EmblaCarouselType) {
-      setSelectedIndex(emblaApi.selectedScrollSnap());
-      setCanScrollPrev(emblaApi.canScrollPrev());
-      setCanScrollNext(emblaApi.canScrollNext());
-    }
-
-    onInit(emblaApi);
-    onSelect(emblaApi);
-    emblaApi.on('reInit', onInit);
-    emblaApi.on('select', onSelect);
-
-    return () => {
-      emblaApi.off('reInit', onInit);
-      emblaApi.off('select', onSelect);
-    };
-  }, [emblaApi]);
+  const carouselItems = uploads.map((upload) => ({
+    id: upload.id,
+    title: upload.title,
+    thumbnailUrl: upload.thumbnailUrl,
+    channelName: upload.channel.name,
+    channelAvatarUrl: upload.channel.avatarUrl,
+  }));
 
   return (
     <div className="mb-8">
       <div className="mb-6 flex items-center justify-between">
         <h2 className="font-medium text-lg text-primary">{title}</h2>
-        {showViewAll && uploads.length > 0 && (
+        {showViewAll && uploads.length > 0 ? (
           <button
             type="button"
             className="text-muted text-sm transition-colors hover:text-primary"
           >
             View history
           </button>
-        )}
+        ) : null}
       </div>
 
       {uploads.length > 0 ? (
-        <>
-          <div className="relative">
-            <div
-              className="-mx-16 relative overflow-visible px-16"
-              ref={emblaRef}
-              style={{
-                maskImage:
-                  'linear-gradient(to right, transparent 0%, black 64px, black calc(100% - 64px), transparent 100%)',
-                WebkitMaskImage:
-                  'linear-gradient(to right, transparent 0%, black 64px, black calc(100% - 64px), transparent 100%)',
-              }}
-            >
-              <div className="flex gap-6">
-                {uploads.map((upload) => (
-                  <div
-                    key={upload.id}
-                    className="min-w-0 flex-[0_0_100%] md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]"
-                  >
-                    <MediaCard
-                      title={upload.title}
-                      thumbnailUrl={upload.thumbnailUrl}
-                      channelName={upload.channel.name}
-                      channelAvatarUrl={upload.channel.avatarUrl}
-                    />
-                  </div>
-                ))}
-                {showViewMoreCard && viewMoreCardText && (
-                  <div className="min-w-0 flex-[0_0_100%] md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]">
-                    <ViewMoreCard text={viewMoreCardText} />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <CarouselNavigationButtons
-              canScrollPrev={canScrollPrev}
-              canScrollNext={canScrollNext}
-              onScrollPrev={scrollPrev}
-              onScrollNext={scrollNext}
-            />
-          </div>
-
-          {scrollSnaps.length > 1 && (
-            <div className="mt-4 flex items-center justify-center gap-2">
-              {scrollSnaps.map((snap, index) => (
-                <CarouselPagination
-                  key={snap}
-                  isActive={index === selectedIndex}
-                  onClick={() => scrollTo(index)}
-                />
-              ))}
-            </div>
-          )}
-        </>
+        <MediaCarousel
+          items={carouselItems}
+          showPagination
+          tailerCard={
+            showViewMoreCard && viewMoreCardText ? (
+              <ViewMoreCard text={viewMoreCardText} />
+            ) : undefined
+          }
+        />
       ) : (
         <EmptyState
           emptyTitle={isLoggedIn === false ? loggedOutEmptyTitle : emptyTitle}
@@ -397,6 +311,7 @@ function Home() {
           {trendingUploads.slice(0, 6).map((upload, _i) => (
             <MediaCard
               key={upload.id}
+              mediaId={upload.id}
               title={upload?.title ?? 'Untitled'}
               thumbnailUrl={upload?.thumbnailUrl}
               channelName={upload?.channel.name}
@@ -411,6 +326,7 @@ function Home() {
           {trendingUploads.slice(6, 11).map((upload, _i) => (
             <MediaCard
               key={upload.id}
+              mediaId={upload.id}
               title={upload?.title ?? 'Untitled'}
               thumbnailUrl={upload?.thumbnailUrl}
               channelName={upload?.channel.name}
@@ -425,6 +341,7 @@ function Home() {
           {trendingUploads.slice(11, 19).map((upload, _i) => (
             <MediaCard
               key={upload.id}
+              mediaId={upload.id}
               title={upload?.title ?? 'Untitled'}
               thumbnailUrl={upload?.thumbnailUrl}
               channelName={upload?.channel.name}
@@ -441,6 +358,7 @@ function Home() {
           {trendingUploads.slice(19).map((upload, _i) => (
             <MediaCard
               key={upload.id}
+              mediaId={upload.id}
               title={upload?.title || 'Untitled'}
               thumbnailUrl={upload?.thumbnailUrl}
               channelName={upload?.channel.name}

@@ -235,6 +235,7 @@ function RouteComponent() {
               {subscriptionUploads.map((upload) => (
                 <MediaCard
                   key={upload.id}
+                  mediaId={upload.id}
                   title={upload.title}
                   thumbnailUrl={upload.thumbnailUrl}
                   channelName={upload.channel.name}

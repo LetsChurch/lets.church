@@ -7,6 +7,7 @@ import { Link } from '@tanstack/react-router';
 import { type PropsWithChildren, useState } from 'react';
 import { $headerBackgroundImage } from '@/stores/header';
 import { useTRPC } from '@/trpc/react';
+import LcLink from './lc-link';
 import Logo from './logo';
 import MobileMenu from './mobile-menu';
 import Search from './search';
@@ -24,7 +25,9 @@ export default function Header({ children, defaultSearchValue }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const backgroundImageUrl = useStore($headerBackgroundImage);
 
-  const hasBackground = children && backgroundImageUrl;
+  const hasBackground = Boolean(backgroundImageUrl);
+
+  console.log({ hasBackground });
 
   return (
     <div className="relative">
@@ -147,12 +150,7 @@ export default function Header({ children, defaultSearchValue }: HeaderProps) {
               </Menu.Portal>
             </Menu.Root>
           ) : (
-            <Link
-              to="/auth/login"
-              className="rounded-full border-top-highlight bg-white/15 px-3 py-1.5 font-semibold text-sm text-white/80"
-            >
-              Login
-            </Link>
+            <LcLink to="/auth/login">Login</LcLink>
           )}
         </div>
       </div>

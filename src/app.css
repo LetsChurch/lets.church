@@ -109,3 +109,19 @@
 	box-shadow: 0px 2px 12px 0px var(--primary-glow);
 	backdrop-filter: blur(8px);
 }
+
+@utility aspect-media {
+	aspect-ratio: var(--video-aspect-w, 16) / var(--video-aspect-h, 9);
+}
+
+@utility media-page-layout {
+	display: grid;
+	grid-template-columns: minmax(
+			0,
+			calc(
+				var(--video-max-height, 85vh) *
+				var(--video-aspect-w, 16) /
+				var(--video-aspect-h, 9)
+			)
+		) --spacing(92);
+}

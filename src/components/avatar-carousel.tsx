@@ -1,6 +1,7 @@
 import { Avatar } from '@base-ui-components/react/avatar';
 import { Link } from '@tanstack/react-router';
 import useEmblaCarousel from 'embla-carousel-react';
+import WheelGestures from 'embla-carousel-wheel-gestures';
 
 type AvatarCarouselProps = {
   items: Array<{
@@ -11,10 +12,13 @@ type AvatarCarouselProps = {
 };
 
 export function AvatarCarousel({ items }: AvatarCarouselProps) {
-  const [emblaRef] = useEmblaCarousel({
-    align: 'start',
-    dragFree: true,
-  });
+  const [emblaRef] = useEmblaCarousel(
+    {
+      align: 'start',
+      dragFree: true,
+    },
+    [WheelGestures()],
+  );
 
   return (
     <div className="overflow-hidden" ref={emblaRef}>
