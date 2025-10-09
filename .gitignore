@@ -3,6 +3,7 @@
 .nitro
 .output
 .tanstack
+.vite
 
 gitleaks-findings.json
 node_modules
