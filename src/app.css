@@ -114,7 +114,7 @@
 	aspect-ratio: var(--video-aspect-w, 16) / var(--video-aspect-h, 9);
 }
 
-@utility media-page-layout {
+@utility media-page-desktop {
 	display: grid;
 	grid-template-columns: minmax(
 			0,

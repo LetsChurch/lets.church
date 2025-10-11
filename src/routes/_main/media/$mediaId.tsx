@@ -1,7 +1,6 @@
 import { Avatar } from '@base-ui-components/react/avatar';
 import { Tabs } from '@base-ui-components/react/tabs';
 import {
-  IconBible,
   IconBookmark,
   IconDots,
   IconFlag,
@@ -18,6 +17,7 @@ import Header from '@/components/header';
 import LcButton from '@/components/lc-button';
 import LcButtonGroup from '@/components/lc-button-group';
 import { MediaCarousel } from '@/components/media-carousel';
+import { Transcript } from '@/components/transcript';
 import { $headerBackgroundImage } from '@/stores/header';
 import { useTRPC } from '@/trpc/react';
 
@@ -56,7 +56,7 @@ function RouteComponent() {
       <Header />
 
       {/* Main Content Area */}
-      <div className="media-page-layout z-5 gap-4 px-4">
+      <div className="lg:media-page-desktop z-5 gap-4 px-4">
         <div className="min-w-0">
           <div className="w-full">
             {/* Video Player */}
@@ -183,19 +183,24 @@ function RouteComponent() {
 
             {/* Info Card */}
             <Tabs.Root
-              defaultValue="info"
+              defaultValue="details"
               className="relative isolate mt-7 flex flex-col overflow-hidden rounded-2xl border-top-highlight bg-zinc-900"
             >
               {/* Tabs */}
-              <Tabs.List className="relative flex gap-4 border-zinc-800 border-b px-5">
-                <Tabs.Tab value="info" className="relative pt-1.5 pb-2">
-                  <span className="font-medium text-sm text-white/70 data-[selected]:text-white data-[selected]:opacity-100">
-                    Info
-                  </span>
-                </Tabs.Tab>
+              <Tabs.List className="relative top-0 flex gap-4 border-zinc-800 border-b bg-zinc-900 px-5">
                 <Tabs.Tab value="details" className="relative pt-1.5 pb-2">
                   <span className="font-medium text-sm text-white/70 data-[selected]:text-white data-[selected]:opacity-100">
                     Details
+                  </span>
+                </Tabs.Tab>
+                <Tabs.Tab value="summary" className="relative pt-1.5 pb-2">
+                  <span className="font-medium text-sm text-white/70 data-[selected]:text-white data-[selected]:opacity-100">
+                    Summary
+                  </span>
+                </Tabs.Tab>
+                <Tabs.Tab value="transcript" className="lg:hidden">
+                  <span className="font-medium text-sm text-white/70 data-[selected]:text-white data-[selected]:opacity-100">
+                    Transcript
                   </span>
                 </Tabs.Tab>
                 <Tabs.Indicator
@@ -208,40 +213,44 @@ function RouteComponent() {
                 />
               </Tabs.List>
 
-              {/* Info Content */}
-              <Tabs.Panel value="info" className="relative p-5 text-left">
-                <p className="text-sm text-white leading-[1.4]">
+              {/* Details Content */}
+              <Tabs.Panel value="details" className="relative text-left">
+                <p className="p-5 text-sm text-white leading-[1.4]">
                   {media.description
                     ? media.description
                     : 'No description available'}
                 </p>
-                <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-b from-zinc-900/0 via-80% via-zinc-900/90 to-zinc-900" />
-              </Tabs.Panel>
-
-              {/* Details Content */}
-              <Tabs.Panel value="details" className="relative p-5 text-left">
-                <p className="text-sm text-white leading-[1.4]">
-                  Details content goes here
-                </p>
-                <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-b from-zinc-900/0 via-80% via-zinc-900/90 to-zinc-900" />
-              </Tabs.Panel>
-
-              <div className="mx-5 border-zinc-800 border-t pt-[18px] pb-5">
-                <div className="flex gap-3">
-                  <span className="font-medium text-white/70 text-xs">
-                    {media._count.uploadViews.toLocaleString()} views
-                  </span>
-                  <span className="font-medium text-white/70 text-xs">
-                    {new Date(
-                      media.publishedAt || media.createdAt,
-                    ).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </span>
+                <div className="mx-5 border-zinc-800 border-t pt-[18px] pb-5">
+                  <div className="flex gap-3">
+                    <span className="font-medium text-white/70 text-xs">
+                      {media._count.uploadViews.toLocaleString()} views
+                    </span>
+                    <span className="font-medium text-white/70 text-xs">
+                      {new Date(
+                        media.publishedAt || media.createdAt,
+                      ).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              </Tabs.Panel>
+
+              {/* Summary Content */}
+              <Tabs.Panel value="summary" className="relative text-left">
+                <p className="p-5 text-sm text-white leading-[1.4]">
+                  Summary content goes here
+                </p>
+              </Tabs.Panel>
+
+              {/* Transcript Content */}
+              <Tabs.Panel value="transcript" className="relative text-left">
+                <div className="p-5">
+                  <Transcript />
+                </div>
+              </Tabs.Panel>
             </Tabs.Root>
 
             {/* Comments Section */}
@@ -263,7 +272,7 @@ function RouteComponent() {
             </div>
 
             {/* Related Content */}
-            <div className="mt-10">
+            <div className="mt-10 pb-4">
               <h2 className="mb-4 font-bold text-lg text-white">
                 Related Content
               </h2>
@@ -287,7 +296,7 @@ function RouteComponent() {
         </div>
 
         {/* Right Sidebar - Transcript */}
-        <div className="pb-4">
+        <div className="hidden lg:block">
           <div className="sticky top-4 bottom-4 isolate flex h-[calc(100vh-6rem)] flex-col overflow-hidden rounded-2xl border-top-highlight bg-zinc-900">
             {/* Sidebar Header */}
             <div className="flex items-center justify-between border-zinc-800 border-b px-5 py-2.5">
@@ -304,86 +313,7 @@ function RouteComponent() {
 
             {/* Transcript Items */}
             <div className="relative flex-1 overflow-y-auto p-5">
-              <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
-                {/* First section heading */}
-                <div />
-                <h4 className="font-bold text-base text-white leading-[1.4]">
-                  This is the first section heading
-                </h4>
-
-                {/* First transcript item */}
-                <div className="pt-1 font-mono text-[10px] text-indigo-500 leading-[1.4] tracking-[-0.2px]">
-                  0:05
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-sm text-white leading-[1.4]">
-                    Proident non aliquip incididunt incididunt. Nulla ad fugiat
-                    dolore deserunt aliqua cillum enim aliqua sit ad labore ex
-                    amet tempor consectetur.
-                  </p>
-                </div>
-
-                {/* Transcript Item with badge */}
-                <div className="pt-1 font-mono text-[10px] text-white/50 leading-[1.4] tracking-[-0.2px]">
-                  0:23
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-sm text-white leading-[1.4]">
-                    Voluptate reprehenderit ad incididunt voluptate aliqua velit
-                    ullamco irure duis.
-                  </p>
-                  <div className="flex gap-2 pb-1">
-                    <span className="inline-flex h-5 items-center gap-1 rounded-full bg-white/15 pr-2 pl-1 font-medium text-white/80 text-xs backdrop-blur-sm">
-                      <IconBible size={16} />
-                      Rev 19:20
-                    </span>
-                  </div>
-                </div>
-
-                {/* Transcript Item */}
-                <div className="pt-1 font-mono text-[10px] text-white/50 leading-[1.4] tracking-[-0.2px]">
-                  0:35
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-sm text-white leading-[1.4]">
-                    Aute dolor ipsum incididunt culpa velit in voluptate nostrud
-                    pariatur proident laborum non consequat ex.
-                  </p>
-                </div>
-
-                {/* Another section heading */}
-                <div />
-                <h4 className="mt-4 font-bold text-base text-white leading-[1.4]">
-                  This is another heading
-                </h4>
-
-                {/* Another section transcript item */}
-                <div className="pt-1 font-mono text-[10px] text-white/50 leading-[1.4] tracking-[-0.2px]">
-                  0:57
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-sm text-white leading-[1.4]">
-                    Aute dolor ipsum incididunt culpa velit in voluptate nostrud
-                    pariatur proident laborum non consequat ex.
-                  </p>
-                  <div className="flex gap-2 pb-1">
-                    <span className="inline-flex h-5 items-center gap-1 rounded-full bg-white/15 pr-2 pl-1 font-medium text-white/80 text-xs backdrop-blur-sm">
-                      <IconBible size={16} />
-                      Badge
-                    </span>
-                  </div>
-                </div>
-
-                {/* Transcript Item */}
-                <div className="pt-1 font-mono text-[10px] text-white/50 leading-[1.4] tracking-[-0.2px]">
-                  1:12
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-sm text-white leading-[1.4]">
-                    Culpa occaecat laborum anim eiusmod fugiat ut laborum.
-                  </p>
-                </div>
-              </div>
+              <Transcript />
 
               {/* Gradient fade at bottom */}
               <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-b from-zinc-900/0 via-80% via-zinc-900/90 to-zinc-900" />
