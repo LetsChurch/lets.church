@@ -1,4 +1,5 @@
 import { Avatar } from '@base-ui-components/react/avatar';
+import { Tabs } from '@base-ui-components/react/tabs';
 import {
   IconBible,
   IconBookmark,
@@ -181,30 +182,51 @@ function RouteComponent() {
             </div>
 
             {/* Info Card */}
-            <div className="relative isolate mt-7 flex flex-col overflow-hidden rounded-2xl border-top-highlight bg-zinc-900">
+            <Tabs.Root
+              defaultValue="info"
+              className="relative isolate mt-7 flex flex-col overflow-hidden rounded-2xl border-top-highlight bg-zinc-900"
+            >
               {/* Tabs */}
-              <div className="flex gap-4 px-5">
-                <button type="button" className="relative pt-1.5 pb-2">
-                  <span className="font-medium text-sm text-white">Info</span>
-                  <div className="glow-md absolute right-0 bottom-0 left-0 h-0.5 rounded-t-sm bg-indigo-500 backdrop-blur-sm" />
-                </button>
-                <button type="button" className="relative pt-1.5 pb-2">
-                  <span className="font-medium text-sm text-white/70">
+              <Tabs.List className="relative flex gap-4 border-zinc-800 border-b px-5">
+                <Tabs.Tab value="info" className="relative pt-1.5 pb-2">
+                  <span className="font-medium text-sm text-white/70 data-[selected]:text-white data-[selected]:opacity-100">
+                    Info
+                  </span>
+                </Tabs.Tab>
+                <Tabs.Tab value="details" className="relative pt-1.5 pb-2">
+                  <span className="font-medium text-sm text-white/70 data-[selected]:text-white data-[selected]:opacity-100">
                     Details
                   </span>
-                </button>
-              </div>
+                </Tabs.Tab>
+                <Tabs.Indicator
+                  className="glow-md absolute h-0.5 rounded-t-sm bg-indigo-500 backdrop-blur-sm"
+                  style={{
+                    left: 'var(--active-tab-left)',
+                    bottom: 0,
+                    width: 'var(--active-tab-width)',
+                  }}
+                />
+              </Tabs.List>
 
               {/* Info Content */}
-              <button type="button" className="relative p-5 text-left">
+              <Tabs.Panel value="info" className="relative p-5 text-left">
                 <p className="text-sm text-white leading-[1.4]">
                   {media.description
                     ? media.description
                     : 'No description available'}
                 </p>
                 <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-b from-zinc-900/0 via-80% via-zinc-900/90 to-zinc-900" />
-              </button>
-              <div className="border-zinc-800 border-t px-5 pt-[18px] pb-5">
+              </Tabs.Panel>
+
+              {/* Details Content */}
+              <Tabs.Panel value="details" className="relative p-5 text-left">
+                <p className="text-sm text-white leading-[1.4]">
+                  Details content goes here
+                </p>
+                <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-b from-zinc-900/0 via-80% via-zinc-900/90 to-zinc-900" />
+              </Tabs.Panel>
+
+              <div className="mx-5 border-zinc-800 border-t pt-[18px] pb-5">
                 <div className="flex gap-3">
                   <span className="font-medium text-white/70 text-xs">
                     {media._count.uploadViews.toLocaleString()} views
@@ -220,12 +242,12 @@ function RouteComponent() {
                   </span>
                 </div>
               </div>
-            </div>
+            </Tabs.Root>
 
             {/* Comments Section */}
             <div className="relative isolate mt-6 flex flex-col overflow-hidden rounded-2xl border-top-highlight bg-zinc-900">
               {/* Comments Header */}
-              <div className="flex items-center gap-1 px-5 pt-1.5 pb-2">
+              <div className="flex items-center gap-1 border-zinc-800 border-b px-5 pt-1.5 pb-2">
                 <span className="font-medium text-sm text-white">Comments</span>
                 <div className="flex h-[18px] items-center justify-center rounded-[9px] bg-white/10 px-1.5">
                   <span className="font-bold text-[10px] text-white/70 leading-none">
