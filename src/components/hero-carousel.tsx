@@ -4,6 +4,7 @@ import useEmblaCarousel from 'embla-carousel-react';
 import WheelGestures from 'embla-carousel-wheel-gestures';
 import { useCallback, useEffect, useState } from 'react';
 import { $headerBackgroundImage } from '@/stores/header';
+import { cn } from '@/util/cn';
 import { CarouselNavigationButtons } from './carousel-navigation-buttons';
 import { CarouselPagination } from './carousel-pagination';
 
@@ -176,9 +177,10 @@ export default function HeroCarousel() {
           {carouselItems.map((item, index) => (
             <div
               key={item.imageUrl}
-              className={`flex min-w-0 flex-[0_0_360px] justify-center transition-opacity duration-500 ease-in-out md:flex-[0_0_495px] lg:flex-[0_0_640px] ${
-                index === 0 ? 'opacity-100' : 'opacity-20'
-              }`}
+              className={cn(
+                'flex min-w-0 flex-[0_0_360px] justify-center transition-opacity duration-500 ease-in-out md:flex-[0_0_495px] lg:flex-[0_0_640px]',
+                index === 0 ? 'opacity-100' : 'opacity-20',
+              )}
             >
               <CarouselItem {...item} />
             </div>

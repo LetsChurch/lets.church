@@ -27,8 +27,6 @@ export default function Header({ children, defaultSearchValue }: HeaderProps) {
 
   const hasBackground = Boolean(backgroundImageUrl);
 
-  console.log({ hasBackground });
-
   return (
     <div className="relative">
       {/* Background with gradient overlay - only show when there are children */}

@@ -37,9 +37,10 @@ export default function SearchTabs({
         >
           <div className="flex items-center justify-center gap-2">
             <span
-              className={`overflow-hidden overflow-ellipsis whitespace-nowrap font-medium text-sm leading-none ${
-                activeTab === tab.id ? 'text-primary' : 'text-primary/70'
-              }`}
+              className={cn(
+                'overflow-hidden overflow-ellipsis whitespace-nowrap font-medium text-sm leading-none',
+                activeTab === tab.id ? 'text-primary' : 'text-primary/70',
+              )}
             >
               {tab.label}
             </span>

@@ -1,4 +1,5 @@
 import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
+import { cn } from '@/util/cn';
 
 type CarouselNavigationButtonsProps = {
   canScrollPrev: boolean;
@@ -24,7 +25,10 @@ export function CarouselNavigationButtons({
         <button
           type="button"
           onClick={onScrollPrev}
-          className={`absolute top-1/2 ${leftClass} -translate-y-1/2 z-20 flex h-10 w-10 items-center justify-center rounded-full border-top-highlight bg-white/10 backdrop-blur-sm transition-all hover:bg-white/20`}
+          className={cn(
+            '-translate-y-1/2 absolute top-1/2 z-20 flex h-10 w-10 items-center justify-center rounded-full border-top-highlight bg-white/10 backdrop-blur-sm transition-all hover:bg-white/20',
+            leftClass,
+          )}
         >
           <IconChevronLeft size={20} className="text-primary" />
         </button>
@@ -34,7 +38,10 @@ export function CarouselNavigationButtons({
         <button
           type="button"
           onClick={onScrollNext}
-          className={`absolute top-1/2 ${rightClass} -translate-y-1/2 z-20 flex h-10 w-10 items-center justify-center rounded-full border-top-highlight bg-white/10 backdrop-blur-sm transition-all hover:bg-white/20`}
+          className={cn(
+            '-translate-y-1/2 absolute top-1/2 z-20 flex h-10 w-10 items-center justify-center rounded-full border-top-highlight bg-white/10 backdrop-blur-sm transition-all hover:bg-white/20',
+            rightClass,
+          )}
         >
           <IconChevronRight size={20} className="text-primary" />
         </button>

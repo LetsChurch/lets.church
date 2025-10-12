@@ -232,8 +232,6 @@ export const homeProcedures = {
             )
           : null;
 
-        console.log({ avatarPath: channel.avatarPath, channelAvatarUrl });
-
         return {
           ...uploadRest,
           thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
