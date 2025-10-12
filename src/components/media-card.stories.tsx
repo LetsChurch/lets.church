@@ -23,6 +23,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
+  args: {
+    mediaId: '',
+  },
   render: () => (
     <>
       <MediaCard
@@ -86,6 +89,9 @@ export const Default: Story = {
 };
 
 export const WithoutThumbnail: Story = {
+  args: {
+    mediaId: '',
+  },
   render: () => (
     <>
       <MediaCard
@@ -117,6 +123,9 @@ export const WithoutThumbnail: Story = {
 };
 
 export const WithoutAvatar: Story = {
+  args: {
+    mediaId: '',
+  },
   render: () => (
     <>
       <MediaCard
@@ -148,6 +157,9 @@ export const WithoutAvatar: Story = {
 };
 
 export const LongTitle: Story = {
+  args: {
+    mediaId: '',
+  },
   render: () => (
     <>
       <MediaCard
@@ -183,6 +195,9 @@ export const LongTitle: Story = {
 };
 
 export const WithProgress: Story = {
+  args: {
+    mediaId: '',
+  },
   render: () => (
     <>
       <MediaCard
@@ -250,6 +265,9 @@ export const WithProgress: Story = {
 };
 
 export const Minimal: Story = {
+  args: {
+    mediaId: '',
+  },
   render: () => (
     <>
       <MediaCard

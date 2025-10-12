@@ -12,11 +12,12 @@ import {
 } from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Header from '@/components/header';
 import LcButton from '@/components/lc-button';
 import LcButtonGroup from '@/components/lc-button-group';
 import { MediaCarousel } from '@/components/media-carousel';
+import { MobileDrawer } from '@/components/mobile-drawer';
 import { Transcript } from '@/components/transcript';
 import { $headerBackgroundImage } from '@/stores/header';
 import { useTRPC } from '@/trpc/react';
@@ -35,6 +36,7 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
 function RouteComponent() {
   const params = Route.useParams();
   const trpc = useTRPC();
+  const [transcriptDialogOpen, setTranscriptDialogOpen] = useState(false);
 
   const { data: media } = useSuspenseQuery(
     trpc.media.getMediaById.queryOptions({
@@ -198,11 +200,15 @@ function RouteComponent() {
                     Summary
                   </span>
                 </Tabs.Tab>
-                <Tabs.Tab value="transcript" className="lg:hidden">
-                  <span className="font-medium text-sm text-white/70 data-[selected]:text-white data-[selected]:opacity-100">
+                <button
+                  type="button"
+                  onClick={() => setTranscriptDialogOpen(true)}
+                  className="relative pt-1.5 pb-2 lg:hidden"
+                >
+                  <span className="font-medium text-sm text-white/70 hover:text-white">
                     Transcript
                   </span>
-                </Tabs.Tab>
+                </button>
                 <Tabs.Indicator
                   className="glow-md absolute h-0.5 rounded-t-sm bg-indigo-500 backdrop-blur-sm"
                   style={{
@@ -243,13 +249,6 @@ function RouteComponent() {
                 <p className="p-5 text-sm text-white leading-[1.4]">
                   Summary content goes here
                 </p>
-              </Tabs.Panel>
-
-              {/* Transcript Content */}
-              <Tabs.Panel value="transcript" className="relative text-left">
-                <div className="p-5">
-                  <Transcript />
-                </div>
               </Tabs.Panel>
             </Tabs.Root>
 
@@ -321,6 +320,39 @@ function RouteComponent() {
           </div>
         </div>
       </div>
+
+      {/* Mobile Transcript Dialog */}
+      <MobileDrawer.Root
+        open={transcriptDialogOpen}
+        onOpenChange={setTranscriptDialogOpen}
+      >
+        <MobileDrawer.Portal>
+          <MobileDrawer.Backdrop />
+          <MobileDrawer.Content>
+            {/* Dialog Header */}
+            <div className="flex h-10 items-center justify-center gap-2 border-zinc-800 border-b border-solid px-5">
+              <div className="flex grow items-baseline gap-2 pb-0.5">
+                <MobileDrawer.Title className="font-bold text-base text-white">
+                  Transcript
+                </MobileDrawer.Title>
+              </div>
+              <MobileDrawer.Close className="flex size-7 items-center justify-center rounded-lg backdrop-blur-sm hover:bg-white/10">
+                <IconSearch size={16} className="text-white/80" />
+              </MobileDrawer.Close>
+            </div>
+
+            {/* Transcript Content */}
+            <div className="relative flex-1 overflow-y-auto">
+              <div className="p-5">
+                <Transcript />
+              </div>
+
+              {/* Gradient fade at bottom */}
+              <div className="pointer-events-none fixed right-0 bottom-0 left-0 h-8 bg-gradient-to-b from-zinc-900/0 via-80% via-zinc-900/90 to-zinc-900" />
+            </div>
+          </MobileDrawer.Content>
+        </MobileDrawer.Portal>
+      </MobileDrawer.Root>
     </div>
   );
 }
