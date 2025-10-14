@@ -89,6 +89,7 @@
     "embla-carousel-react": "^8.6.0",
     "embla-carousel-wheel-gestures": "^8.1.0",
     "es-toolkit": "^1.39.8",
+    "hls-video-element": "^1.5.8",
     "html-minifier": "^4.0.0",
     "is-ip": "^5.0.1",
     "it-all": "^3.0.9",

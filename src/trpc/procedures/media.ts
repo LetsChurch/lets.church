@@ -3,7 +3,7 @@ import { getThumbnailResize } from '@/schemas/common';
 import db from '@/util/db';
 import logger from '@/util/logger';
 import { getS3ProtocolUri } from '@/util/s3';
-import { getPublicImageUrl } from '@/util/url';
+import { getPublicImageUrl, getPublicMediaUrl } from '@/util/url';
 import { publicProcedure } from '../trpc';
 
 const moduleLogger = logger.child({
@@ -32,6 +32,7 @@ export const mediaProcedures = {
           lengthSeconds: true,
           defaultThumbnailPath: true,
           overrideThumbnailPath: true,
+          variants: true,
           channel: {
             select: {
               id: true,
@@ -65,6 +66,7 @@ export const mediaProcedures = {
         defaultThumbnailPath,
         overrideThumbnailPath,
         channel,
+        variants,
         ...mediaRest
       } = media;
 
@@ -83,6 +85,13 @@ export const mediaProcedures = {
           )
         : null;
 
+      const posterThumbnailUrl = thumbnailPath
+        ? getPublicImageUrl(
+            getS3ProtocolUri('PUBLIC', thumbnailPath),
+            getThumbnailResize('poster'),
+          )
+        : null;
+
       const channelAvatarUrl = channel.avatarPath
         ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', channel.avatarPath), {
             resize: { width: 32, height: 32 },
@@ -96,11 +105,33 @@ export const mediaProcedures = {
           )
         : null;
 
+      const channelDefaultPosterUrl = channel.defaultThumbnailPath
+        ? getPublicImageUrl(
+            getS3ProtocolUri('PUBLIC', channel.defaultThumbnailPath),
+            getThumbnailResize('poster'),
+          )
+        : null;
+
+      // Generate media source URLs based on available variants
+      const hasVideo = variants.some((v) => v.startsWith('VIDEO'));
+      const hasAudio = variants.includes('AUDIO');
+
+      const mediaSource = hasVideo
+        ? getPublicMediaUrl(`${media.id}/master.m3u8`)
+        : null;
+
+      const audioSource = hasAudio
+        ? getPublicMediaUrl(`${media.id}/AUDIO.m3u8`)
+        : null;
+
       return {
         ...mediaRest,
         thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
         fullSizeThumbnailUrl:
           fullSizeThumbnailUrl || channelDefaultThumbnailUrl,
+        posterThumbnailUrl: posterThumbnailUrl || channelDefaultPosterUrl,
+        mediaSource,
+        audioSource,
         channel: {
           id: channel.id,
           name: channel.name,

@@ -12,6 +12,7 @@ import {
 } from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
+import HlsVideo from 'hls-video-element/react';
 import { useEffect, useState } from 'react';
 import Header from '@/components/header';
 import LcButton from '@/components/lc-button';
@@ -54,7 +55,7 @@ function RouteComponent() {
   }, [media.fullSizeThumbnailUrl]);
 
   return (
-    <div className="flex h-full w-full flex-col">
+    <div className="flex size-full flex-col">
       <Header />
 
       {/* Main Content Area */}
@@ -64,11 +65,19 @@ function RouteComponent() {
             {/* Video Player */}
             <div className="relative w-full rounded-2xl bg-zinc-900">
               <div className="aspect-media w-full overflow-hidden rounded-2xl bg-black">
-                <div className="flex h-full w-full items-center justify-center">
-                  <p className="text-sm text-zinc-400">
-                    Video Player Placeholder
-                  </p>
-                </div>
+                {media.mediaSource || media.audioSource ? (
+                  <HlsVideo
+                    className="size-full"
+                    controls
+                    preload="metadata"
+                    src={media.mediaSource || media.audioSource || undefined}
+                    poster={media.posterThumbnailUrl || undefined}
+                  />
+                ) : (
+                  <div className="flex size-full items-center justify-center">
+                    <p className="text-sm text-zinc-400">No media available</p>
+                  </div>
+                )}
               </div>
             </div>
 
