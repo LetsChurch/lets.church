@@ -113,15 +113,3 @@
 @utility aspect-media {
 	aspect-ratio: var(--video-aspect-w, 16) / var(--video-aspect-h, 9);
 }
-
-@utility media-page-desktop {
-	display: grid;
-	grid-template-columns: minmax(
-			0,
-			calc(
-				var(--video-max-height, 85vh) *
-				var(--video-aspect-w, 16) /
-				var(--video-aspect-h, 9)
-			)
-		) --spacing(92);
-}

@@ -22,6 +22,7 @@ import { MobileDrawer } from '@/components/mobile-drawer';
 import { Transcript } from '@/components/transcript';
 import { $headerBackgroundImage } from '@/stores/header';
 import { useTRPC } from '@/trpc/react';
+import { useVideoLayout } from '@/util/use-video-layout';
 
 export const Route = createFileRoute('/_main/media/$mediaId')({
   component: RouteComponent,
@@ -54,24 +55,45 @@ function RouteComponent() {
     };
   }, [media.fullSizeThumbnailUrl]);
 
+  const aspectWidth = media.width ?? 1920;
+  const aspectHeight = media.height ?? 1080;
+
+  const layout = useVideoLayout({
+    aspectWidth,
+    aspectHeight,
+  });
+
   return (
     <div className="flex size-full flex-col">
       <Header />
 
       {/* Main Content Area */}
-      <div className="lg:media-page-desktop z-5 gap-4 px-4">
-        <div className="min-w-0">
+      <div
+        className="z-5 mx-4 grid gap-4"
+        style={{
+          gridTemplateColumns: layout.showSidebar
+            ? `${layout.containerWidth}px calc(var(--spacing) * 92)`
+            : '1fr',
+        }}
+      >
+        <div
+          className="min-w-0"
+          style={{ width: `${layout.containerWidth}px` }}
+        >
           <div className="w-full">
             {/* Video Player */}
             <div className="relative w-full rounded-2xl bg-zinc-900">
-              <div className="aspect-media w-full overflow-hidden rounded-2xl bg-black">
+              <div className="overflow-hidden rounded-2xl bg-black">
                 {media.mediaSource || media.audioSource ? (
                   <HlsVideo
-                    className="size-full"
                     controls
                     preload="metadata"
                     src={media.mediaSource || media.audioSource || undefined}
                     poster={media.posterThumbnailUrl || undefined}
+                    style={{
+                      width: `${layout.videoWidth}px`,
+                      height: `${layout.videoHeight}px`,
+                    }}
                   />
                 ) : (
                   <div className="flex size-full items-center justify-center">
@@ -209,15 +231,17 @@ function RouteComponent() {
                     Summary
                   </span>
                 </Tabs.Tab>
-                <button
-                  type="button"
-                  onClick={() => setTranscriptDialogOpen(true)}
-                  className="relative pt-1.5 pb-2 lg:hidden"
-                >
-                  <span className="font-medium text-sm text-white/70 hover:text-white">
-                    Transcript
-                  </span>
-                </button>
+                {!layout.showSidebar ? (
+                  <button
+                    type="button"
+                    onClick={() => setTranscriptDialogOpen(true)}
+                    className="relative pt-1.5 pb-2"
+                  >
+                    <span className="font-medium text-sm text-white/70 hover:text-white">
+                      Transcript
+                    </span>
+                  </button>
+                ) : null}
                 <Tabs.Indicator
                   className="glow-md absolute h-0.5 rounded-t-sm bg-indigo-500 backdrop-blur-sm"
                   style={{
@@ -304,30 +328,32 @@ function RouteComponent() {
         </div>
 
         {/* Right Sidebar - Transcript */}
-        <div className="hidden lg:block">
-          <div className="sticky top-4 bottom-4 isolate flex h-[calc(100vh-6rem)] flex-col overflow-hidden rounded-2xl border-top-highlight bg-zinc-900">
-            {/* Sidebar Header */}
-            <div className="flex items-center justify-between border-zinc-800 border-b px-5 py-2.5">
-              <h3 className="font-medium text-sm text-white">Transcript</h3>
-              <div className="flex items-center">
-                <button
-                  type="button"
-                  className="rounded-lg p-2 hover:bg-white/10"
-                >
-                  <IconSearch size={16} className="text-white/80" />
-                </button>
+        {layout.showSidebar ? (
+          <div>
+            <div className="sticky top-4 bottom-4 isolate flex h-[calc(100vh-6rem)] flex-col overflow-hidden rounded-2xl border-top-highlight bg-zinc-900">
+              {/* Sidebar Header */}
+              <div className="flex items-center justify-between border-zinc-800 border-b px-5 py-2.5">
+                <h3 className="font-medium text-sm text-white">Transcript</h3>
+                <div className="flex items-center">
+                  <button
+                    type="button"
+                    className="rounded-lg p-2 hover:bg-white/10"
+                  >
+                    <IconSearch size={16} className="text-white/80" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Transcript Items */}
+              <div className="relative flex-1 overflow-y-auto p-5">
+                <Transcript />
+
+                {/* Gradient fade at bottom */}
+                <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-b from-zinc-900/0 via-80% via-zinc-900/90 to-zinc-900" />
               </div>
             </div>
-
-            {/* Transcript Items */}
-            <div className="relative flex-1 overflow-y-auto p-5">
-              <Transcript />
-
-              {/* Gradient fade at bottom */}
-              <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-b from-zinc-900/0 via-80% via-zinc-900/90 to-zinc-900" />
-            </div>
           </div>
-        </div>
+        ) : null}
       </div>
 
       {/* Mobile Transcript Dialog */}

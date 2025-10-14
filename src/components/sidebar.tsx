@@ -13,10 +13,11 @@ import {
   IconMenu2,
 } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
-import { createIsomorphicFn } from '@tanstack/react-start';
-import { getCookie } from '@tanstack/react-start/server';
-import Cookies from 'js-cookie';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import {
+  getInitialSidebarCollapsed,
+  setSidebarCollapsed,
+} from '@/stores/sidebar';
 import { cn } from '@/util/cn';
 import Logo from './logo';
 
@@ -37,24 +38,16 @@ const mockChannels: Channel[] = [
   { name: 'The PRODCAST' },
 ];
 
-const COOKIE_NAME = 'lc-sidebar-collapsed';
-
-const getInitialSidebarCollapsed = createIsomorphicFn()
-  .client(() => Boolean(JSON.parse(Cookies.get(COOKIE_NAME) ?? 'false')))
-  .server(() => Boolean(JSON.parse(getCookie(COOKIE_NAME) ?? 'false')));
-
 export default function Sidebar({ className }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(getInitialSidebarCollapsed());
   const [showAllChannels, setShowAllChannels] = useState(false);
   const [showAltMenu, setShowAltMenu] = useState(false);
   const [isLogoHovered, setIsLogoHovered] = useState(false);
 
-  useEffect(() => {
-    Cookies.set(COOKIE_NAME, JSON.stringify(collapsed));
-  }, [collapsed]);
-
   const toggleCollapsed = () => {
-    setCollapsed((c) => !c);
+    const newValue = !collapsed;
+    setCollapsed(newValue);
+    setSidebarCollapsed(newValue);
     setShowAltMenu(false);
   };
 

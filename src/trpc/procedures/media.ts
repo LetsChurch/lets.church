@@ -4,6 +4,7 @@ import db from '@/util/db';
 import logger from '@/util/logger';
 import { getS3ProtocolUri } from '@/util/s3';
 import { getPublicImageUrl, getPublicMediaUrl } from '@/util/url';
+import { ffprobeSchema } from '@/util/zod';
 import { publicProcedure } from '../trpc';
 
 const moduleLogger = logger.child({
@@ -33,6 +34,7 @@ export const mediaProcedures = {
           defaultThumbnailPath: true,
           overrideThumbnailPath: true,
           variants: true,
+          probe: true,
           channel: {
             select: {
               id: true,
@@ -124,6 +126,23 @@ export const mediaProcedures = {
         ? getPublicMediaUrl(`${media.id}/AUDIO.m3u8`)
         : null;
 
+      // Extract video dimensions from probe data
+      let width: number | null = null;
+      let height: number | null = null;
+
+      if (media.probe) {
+        const parseResult = ffprobeSchema.safeParse(media.probe);
+        if (parseResult.success) {
+          const videoStream = parseResult.data.streams.find(
+            (s) => s.codec_type === 'video',
+          );
+          if (videoStream && videoStream.codec_type === 'video') {
+            width = videoStream.width;
+            height = videoStream.height;
+          }
+        }
+      }
+
       return {
         ...mediaRest,
         thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
@@ -132,6 +151,8 @@ export const mediaProcedures = {
         posterThumbnailUrl: posterThumbnailUrl || channelDefaultPosterUrl,
         mediaSource,
         audioSource,
+        width,
+        height,
         channel: {
           id: channel.id,
           name: channel.name,
