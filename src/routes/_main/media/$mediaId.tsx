@@ -22,6 +22,7 @@ import { MobileDrawer } from '@/components/mobile-drawer';
 import { Transcript } from '@/components/transcript';
 import { $headerBackgroundImage } from '@/stores/header';
 import { useTRPC } from '@/trpc/react';
+import { cn } from '@/util/cn';
 import { useVideoLayout } from '@/util/use-video-layout';
 
 export const Route = createFileRoute('/_main/media/$mediaId')({
@@ -82,8 +83,13 @@ function RouteComponent() {
         >
           <div className="w-full">
             {/* Video Player */}
-            <div className="relative w-full rounded-2xl bg-zinc-900">
-              <div className="overflow-hidden rounded-2xl bg-black">
+            <div
+              className={cn(
+                'z-100 w-full rounded-2xl bg-zinc-900',
+                layout.showSidebar ? 'relative' : 'sticky top-0',
+              )}
+            >
+              <div className="rounded-2xl bg-black">
                 {media.mediaSource || media.audioSource ? (
                   <HlsVideo
                     controls
@@ -362,7 +368,6 @@ function RouteComponent() {
         onOpenChange={setTranscriptDialogOpen}
       >
         <MobileDrawer.Portal>
-          <MobileDrawer.Backdrop />
           <MobileDrawer.Content>
             {/* Dialog Header */}
             <div className="flex h-10 items-center justify-center gap-2 border-zinc-800 border-b border-solid px-5">
@@ -371,7 +376,7 @@ function RouteComponent() {
                   Transcript
                 </MobileDrawer.Title>
               </div>
-              <MobileDrawer.Close className="flex size-7 items-center justify-center rounded-lg backdrop-blur-sm hover:bg-white/10">
+              <MobileDrawer.Close className="flex size-7 items-center justify-center rounded-lg hover:bg-white/10">
                 <IconSearch size={16} className="text-white/80" />
               </MobileDrawer.Close>
             </div>

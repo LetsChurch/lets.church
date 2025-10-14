@@ -25,7 +25,7 @@ interface VideoLayout {
 export function useVideoLayout({
   aspectWidth = 1920,
   aspectHeight = 1080,
-  minVisibleHeight = 240,
+  minVisibleHeight = 200,
   headerHeight = 64,
   contentMargins = 32, // mx-4 = 1rem = 16px on each side
   chromeBelow = 120, // title, actions, tabs area

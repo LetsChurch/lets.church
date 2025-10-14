@@ -55,6 +55,7 @@ function MobileDrawerContent({
   const [dragY, setDragY] = React.useState(0);
   const [isDragging, setIsDragging] = React.useState(false);
   const [startY, setStartY] = React.useState(0);
+  const contentRef = React.useRef<HTMLDivElement>(null);
 
   const context = React.useContext(MobileDrawerContext);
   if (!context) {
@@ -99,9 +100,33 @@ function MobileDrawerContent({
     }
   }, [open]);
 
+  // Handle click outside
+  React.useEffect(() => {
+    if (!open) return;
+
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (
+        contentRef.current &&
+        !contentRef.current.contains(event.target as Node)
+      ) {
+        onOpenChange(false);
+      }
+    };
+
+    // Use capture phase to catch the event before it bubbles
+    document.addEventListener('mousedown', handleClickOutside, true);
+    document.addEventListener('touchstart', handleClickOutside, true);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside, true);
+      document.removeEventListener('touchstart', handleClickOutside, true);
+    };
+  }, [open, onOpenChange]);
+
   return (
     <Dialog.Popup
       {...props}
+      ref={contentRef}
       className={cn(
         `fixed right-0 bottom-0 left-0 z-50 flex max-h-[85vh] flex-col overflow-hidden rounded-tl-2xl rounded-tr-2xl border border-white/10 border-solid bg-zinc-900 transition-transform duration-300 ease-out data-[ending-style]:translate-y-full data-[starting-style]:translate-y-full`,
         className,
