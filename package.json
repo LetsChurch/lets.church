@@ -98,6 +98,7 @@
     "jose": "^6.0.12",
     "js-cookie": "^3.0.5",
     "libphonenumber-js": "^1.12.10",
+    "media-chrome": "^4.14.0",
     "mjml": "^4.15.3",
     "nanostores": "^1.0.1",
     "nodemailer": "^7.0.5",

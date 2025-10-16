@@ -12,13 +12,13 @@ import {
 } from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
-import HlsVideo from 'hls-video-element/react';
 import { useEffect, useState } from 'react';
 import Header from '@/components/header';
 import LcButton from '@/components/lc-button';
 import LcButtonGroup from '@/components/lc-button-group';
 import { MediaCarousel } from '@/components/media-carousel';
 import { MobileDrawer } from '@/components/mobile-drawer';
+import { Player } from '@/components/player';
 import { Transcript } from '@/components/transcript';
 import { $headerBackgroundImage } from '@/stores/header';
 import { useTRPC } from '@/trpc/react';
@@ -89,24 +89,13 @@ function RouteComponent() {
                 layout.showSidebar ? 'relative' : 'sticky top-0',
               )}
             >
-              <div className="rounded-2xl bg-black">
-                {media.mediaSource || media.audioSource ? (
-                  <HlsVideo
-                    controls
-                    preload="metadata"
-                    src={media.mediaSource || media.audioSource || undefined}
-                    poster={media.posterThumbnailUrl || undefined}
-                    style={{
-                      width: `${layout.videoWidth}px`,
-                      height: `${layout.videoHeight}px`,
-                    }}
-                  />
-                ) : (
-                  <div className="flex size-full items-center justify-center">
-                    <p className="text-sm text-zinc-400">No media available</p>
-                  </div>
-                )}
-              </div>
+              <Player
+                mediaSource={media.mediaSource}
+                audioSource={media.audioSource}
+                posterThumbnailUrl={media.posterThumbnailUrl}
+                videoWidth={layout.videoWidth}
+                videoHeight={layout.videoHeight}
+              />
             </div>
 
             {/* Media Header */}
