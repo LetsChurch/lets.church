@@ -14,6 +14,13 @@ const moduleLogger = logger.child({
   module: 'trpc/procedures/media',
 });
 
+const TWO64 = 1n << 64n;
+const TWO63 = 1n << 63n;
+
+function u64ToSigned(u: bigint): bigint {
+  return u >= TWO63 ? u - TWO64 : u;
+}
+
 const getMediaByIdSchema = z.object({
   mediaId: z.uuid(),
 });
@@ -169,7 +176,7 @@ export const mediaProcedures = {
   createUploadView: publicProcedure
     .input(
       z.object({
-        uploadRecordId: z.string().uuid(),
+        uploadRecordId: z.uuid(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -197,9 +204,11 @@ export const mediaProcedures = {
       }
 
       // The view hash will change once daily since the salt changes once daily
-      const viewHash = xxh64(
-        ctx.session?.appUserId ?? `${clientIp ?? ''}${clientUserAgent}`,
-        BigInt(trackingSalt.salt),
+      const viewHash = u64ToSigned(
+        xxh64(
+          ctx.session?.appUserId ?? `${clientIp ?? ''}${clientUserAgent}`,
+          BigInt(trackingSalt.salt),
+        ),
       );
 
       const view = await db.uploadView.upsert({
@@ -234,7 +243,7 @@ export const mediaProcedures = {
   recordViewSeconds: publicProcedure
     .input(
       z.object({
-        uploadRecordId: z.string().uuid(),
+        uploadRecordId: z.uuid(),
         viewHash: z.string(),
         ranges: z.array(
           z.object({
