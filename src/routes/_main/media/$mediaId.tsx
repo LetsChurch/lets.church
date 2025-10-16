@@ -21,18 +21,28 @@ import { MobileDrawer } from '@/components/mobile-drawer';
 import { Player } from '@/components/player';
 import { Transcript } from '@/components/transcript';
 import { $headerBackgroundImage } from '@/stores/header';
-import { useTRPC } from '@/trpc/react';
+import { trpcClient, useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 import { useVideoLayout } from '@/util/use-video-layout';
 
 export const Route = createFileRoute('/_main/media/$mediaId')({
   component: RouteComponent,
   loader: async ({ context: { queryClient, trpc }, params }) => {
-    await queryClient.ensureQueryData(
-      trpc.media.getMediaById.queryOptions({
-        mediaId: params.mediaId,
+    const [media, viewData] = await Promise.all([
+      queryClient.ensureQueryData(
+        trpc.media.getMediaById.queryOptions({
+          mediaId: params.mediaId,
+        }),
+      ),
+      trpcClient.media.createUploadView.mutate({
+        uploadRecordId: params.mediaId,
       }),
-    );
+    ]);
+
+    return {
+      media,
+      viewHash: viewData?.viewHash ?? '',
+    };
   },
 });
 
@@ -40,6 +50,8 @@ function RouteComponent() {
   const params = Route.useParams();
   const trpc = useTRPC();
   const [transcriptDialogOpen, setTranscriptDialogOpen] = useState(false);
+  const loaderData = Route.useLoaderData();
+  const viewHash = loaderData.viewHash;
 
   const { data: media } = useSuspenseQuery(
     trpc.media.getMediaById.queryOptions({
@@ -90,6 +102,8 @@ function RouteComponent() {
               )}
             >
               <Player
+                uploadRecordId={params.mediaId}
+                viewHash={viewHash}
                 mediaSource={media.mediaSource}
                 audioSource={media.audioSource}
                 posterThumbnailUrl={media.posterThumbnailUrl}

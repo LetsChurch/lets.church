@@ -1,3 +1,5 @@
+import { useMutation } from '@tanstack/react-query';
+import type { HlsVideoElement } from 'hls-video-element';
 import HlsVideo from 'hls-video-element/react';
 import {
   MediaController,
@@ -12,6 +14,8 @@ import {
   MediaTimeDisplay,
   MediaTimeRange,
 } from 'media-chrome/react';
+import { useEffect, useRef } from 'react';
+import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 
 declare module 'react' {
@@ -21,6 +25,8 @@ declare module 'react' {
 }
 
 type Props = {
+  uploadRecordId: string;
+  viewHash: string;
   mediaSource?: string | null;
   audioSource?: string | null;
   posterThumbnailUrl?: string | null;
@@ -28,13 +34,84 @@ type Props = {
   videoHeight: number;
 };
 
+function serializeTimeRanges(
+  ranges: TimeRanges,
+): Array<{ start: number; end: number }> {
+  const res: ReturnType<typeof serializeTimeRanges> = new Array(ranges.length);
+
+  for (let i = 0; i < ranges.length; i += 1) {
+    res[i] = { start: ranges.start(i), end: ranges.end(i) };
+  }
+
+  return res;
+}
+
 export function Player({
+  uploadRecordId,
+  viewHash,
   mediaSource,
   audioSource,
   posterThumbnailUrl,
   videoWidth,
   videoHeight,
 }: Props) {
+  const trpc = useTRPC();
+  const videoRef = useRef<HlsVideoElement>(null);
+  const reportTimerRef = useRef<number | undefined>(undefined);
+
+  const recordViewSecondsMutation = useMutation(
+    trpc.media.recordViewSeconds.mutationOptions(),
+  );
+  const { mutateAsync: recordViewSeconds } = recordViewSecondsMutation;
+
+  useEffect(() => {
+    if (!videoRef.current || !viewHash) {
+      return;
+    }
+
+    async function reportTimeRanges() {
+      if (!videoRef.current) {
+        return;
+      }
+
+      try {
+        const ranges = serializeTimeRanges(videoRef.current.played);
+        if (ranges.length > 0) {
+          await recordViewSeconds({
+            uploadRecordId,
+            viewHash,
+            ranges,
+          });
+        }
+      } catch (error) {
+        console.error('[Player] Error recording view seconds', error);
+      } finally {
+        reportTimerRef.current = window.setTimeout(reportTimeRanges, 5000);
+      }
+    }
+
+    // Start the reporting timer
+    reportTimerRef.current = window.setTimeout(reportTimeRanges, 5000);
+
+    // Cleanup
+    return () => {
+      clearTimeout(reportTimerRef.current);
+      // Report one final time on unmount
+      if (videoRef.current) {
+        const ranges = serializeTimeRanges(videoRef.current.played);
+        if (ranges.length > 0) {
+          recordViewSeconds({
+            uploadRecordId,
+            viewHash,
+            ranges,
+          }).catch((error) => {
+            console.error('[Player] Error recording view seconds', error);
+          });
+        }
+      }
+    };
+  }, [uploadRecordId, viewHash, recordViewSeconds]);
+
   return (
     <div className="overflow-hidden rounded-2xl bg-black">
       {mediaSource || audioSource ? (
@@ -46,6 +123,7 @@ export function Player({
           }}
         >
           <HlsVideo
+            ref={videoRef}
             slot="media"
             preload="metadata"
             src={mediaSource || audioSource || undefined}
