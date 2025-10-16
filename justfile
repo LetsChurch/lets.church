@@ -63,7 +63,7 @@ migrate-dev:
   docker compose exec web npm run prisma:migrate:dev
   npm run prisma:generate
 
-temporal-schedule:
+temporal-schedule: restart-workers
   just temporal workflow execute --task-queue background --type updateDailySaltWorkflow --workflow-id update-daily-salt
   -just temporal schedule create --schedule-id update-daily-salt --cron @daily --overlap-policy skip --task-queue background --workflow-type updateDailySaltWorkflow --workflow-id update-daily-salt
   -just temporal schedule create --schedule-id update-upload-scores --interval 5m --overlap-policy skip --task-queue background --workflow-type updateUploadScoresWorkflow --workflow-id update-upload-scores
@@ -79,13 +79,6 @@ init: migrate-dev es-push-mappings temporal-schedule
 s3-prune-multipart-uploads:
   S3_BUCKET=${S3_INGEST_BUCKET} npm run s3:prune-multipart-uploads
 
-reset:
-  just stop
-  docker volume prune --all --force
-  just start
-  gum spin --title "Waiting for services..." -- sleep 10
-  just init seed
-
 seed-db:
   docker compose exec web npm run prisma:db:seed
 seed-s3-ingest:
@@ -94,6 +87,18 @@ seed-s3-public:
   rclone sync --fast-list --checksum -P ./seed-data/lcdevs3/letschurch-dev-public lcdevs3:letschurch-dev-public
 seed-s3: seed-s3-ingest seed-s3-public
 seed: seed-s3 seed-db
+
+reset:
+  just stop
+  docker volume prune --all --force
+  just start
+  gum spin --title "Waiting for services..." -- sleep 10
+  just init seed
+
+bootstrap:
+  just start
+  sleep 10
+  just init seed
 
 truncate:
   docker compose exec web npm run prisma:db:truncate
