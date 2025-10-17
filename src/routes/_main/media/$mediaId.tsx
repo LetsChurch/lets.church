@@ -97,7 +97,7 @@ function RouteComponent() {
             {/* Video Player */}
             <div
               className={cn(
-                'z-100 w-full rounded-2xl bg-zinc-900',
+                'z-100 w-full rounded-2xl',
                 layout.showSidebar ? 'relative' : 'sticky top-0',
               )}
             >
@@ -109,6 +109,8 @@ function RouteComponent() {
                 posterThumbnailUrl={media.posterThumbnailUrl}
                 videoWidth={layout.videoWidth}
                 videoHeight={layout.videoHeight}
+                peaksJsonUrl={media.peaksJsonUrl}
+                lengthSeconds={media.lengthSeconds}
               />
             </div>
 

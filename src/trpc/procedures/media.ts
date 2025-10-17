@@ -153,6 +153,10 @@ export const mediaProcedures = {
         }
       }
 
+      // Generate peaks URLs
+      const peaksJsonUrl = getPublicMediaUrl(`${media.id}/peaks.json`);
+      const peaksDatUrl = getPublicMediaUrl(`${media.id}/peaks.dat`);
+
       return {
         ...mediaRest,
         thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
@@ -161,6 +165,8 @@ export const mediaProcedures = {
         posterThumbnailUrl: posterThumbnailUrl || channelDefaultPosterUrl,
         mediaSource,
         audioSource,
+        peaksJsonUrl,
+        peaksDatUrl,
         width,
         height,
         channel: {
