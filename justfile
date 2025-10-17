@@ -22,7 +22,7 @@ restart *services:
   docker compose restart {{services}}
 
 restart-workers:
-  docker compose restart background-worker import-worker probe-worker transcribe-worker
+  docker compose restart background-worker import-worker probe-worker transcribe-worker transcode-worker
 
 exec service +command:
   docker compose exec {{service}} {{command}}
