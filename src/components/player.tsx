@@ -1,3 +1,4 @@
+import { useStore } from '@nanostores/react';
 import { useMutation } from '@tanstack/react-query';
 import type { HlsVideoElement } from 'hls-video-element';
 import HlsVideo from 'hls-video-element/react';
@@ -17,6 +18,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { MediaSwitcher } from '@/components/media-switcher';
 import { WaveformBackground } from '@/components/waveform-background';
+import { $currentTime, $setPlayAt } from '@/stores/player';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 
@@ -64,6 +66,7 @@ export function Player({
   const trpc = useTRPC();
   const videoRef = useRef<HlsVideoElement>(null);
   const reportTimerRef = useRef<number | undefined>(undefined);
+  const currentTime = useStore($currentTime);
 
   const hasVideo = !!mediaSource;
   const hasAudio = !!audioSource;
@@ -72,7 +75,6 @@ export function Player({
   const [mediaType, setMediaType] = useState<'video' | 'audio'>(
     hasVideo ? 'video' : 'audio',
   );
-  const [currentTime, setCurrentTime] = useState(0);
   const [savedPosition, setSavedPosition] = useState(0);
   const [savedPlayState, setSavedPlayState] = useState(false);
 
@@ -116,10 +118,14 @@ export function Player({
     const videoElement = videoRef.current;
 
     const handleTimeUpdate = () => {
-      if (videoElement) {
-        setCurrentTime(videoElement.currentTime);
-      }
+      $currentTime.set(videoElement.currentTime);
     };
+
+    const cleanSetPlayAt = $setPlayAt.listen((time) => {
+      if (time !== null) {
+        videoElement.currentTime = time;
+      }
+    });
 
     videoElement.addEventListener('timeupdate', handleTimeUpdate);
 
@@ -151,18 +157,17 @@ export function Player({
     return () => {
       clearTimeout(reportTimerRef.current);
       videoElement.removeEventListener('timeupdate', handleTimeUpdate);
+      cleanSetPlayAt();
       // Report one final time on unmount
-      if (videoElement) {
-        const ranges = serializeTimeRanges(videoElement.played);
-        if (ranges.length > 0) {
-          recordViewSeconds({
-            uploadRecordId,
-            viewHash,
-            ranges,
-          }).catch((error) => {
-            console.error('[Player] Error recording view seconds', error);
-          });
-        }
+      const ranges = serializeTimeRanges(videoElement.played);
+      if (ranges.length > 0) {
+        recordViewSeconds({
+          uploadRecordId,
+          viewHash,
+          ranges,
+        }).catch((error) => {
+          console.error('[Player] Error recording view seconds', error);
+        });
       }
     };
   }, [uploadRecordId, viewHash, recordViewSeconds]);
@@ -268,7 +273,7 @@ export function Player({
                 <MediaSeekBackwardButton
                   seekOffset={15}
                   className={cn(
-                    'size-8 rounded-lg border-top-highlight backdrop-blur-lg',
+                    'size-8 rounded-lg border-top-highlight bg-transparent backdrop-blur-lg',
                     mediaType === 'audio' && 'bg-white/10',
                   )}
                 />
@@ -302,11 +307,6 @@ export function Player({
                   <MediaDurationDisplay className="bg-transparent" />
                 </div>
 
-                {/* border-radius: 6px; */}
-                {/* background: linear-gradient(45deg, var(--indigo-5000, rgba(99, 102, 241, 0.00)) 50.08%, var(--Indigo-300, #A5B4FC) 100%), var(--indigo-500, #6366F1); */}
-                {/* box-shadow: 0 1px 6px 0 rgba(0, 0, 0, 0.50), 0 2px 12px 0 var(--indigo-500, #6366F1); */}
-                {/* backdrop-filter: blur(4px); */}
-
                 <MediaTimeRange
                   className={cn(
                     '[--media-range-bar-color:--alpha(var(--color-indigo-500)/60%)]',
@@ -319,8 +319,6 @@ export function Player({
                     height: '3px',
                     background: 'none',
                     '--media-range-track-border-radius': '3px',
-                    // '--media-range-thumb-background':
-                    //   'linear-gradient(45deg, rgba(99, 102, 241, 0) 50%, rgb(165, 180, 252) 100%), linear-gradient(90deg, rgb(99, 102, 241) 0%, rgb(99, 102, 241) 100%)',
                     '--media-range-thumb-width': '7px',
                     '--media-range-thumb-height': '7px',
                     '--media-range-thumb-border-radius': '6px',

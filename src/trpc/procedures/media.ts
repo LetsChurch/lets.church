@@ -1,5 +1,6 @@
 import { xxh64 } from '@node-rs/xxhash';
 import { getWebRequest } from '@tanstack/react-start/server';
+import { type NodeCue, parseSync as parseVtt } from 'subtitle';
 import { z } from 'zod';
 import { getThumbnailResize } from '@/schemas/common';
 import db from '@/util/db';
@@ -22,6 +23,10 @@ function u64ToSigned(u: bigint): bigint {
 }
 
 const getMediaByIdSchema = z.object({
+  mediaId: z.uuid(),
+});
+
+const getTranscriptSchema = z.object({
   mediaId: z.uuid(),
 });
 
@@ -299,5 +304,35 @@ export const mediaProcedures = {
       });
 
       return { success: true, secondsRecorded: seconds.size };
+    }),
+
+  getTranscript: publicProcedure
+    .input(getTranscriptSchema)
+    .query(async ({ input }) => {
+      moduleLogger.info('Fetching transcript', {
+        mediaId: input.mediaId,
+      });
+
+      try {
+        const url = getPublicMediaUrl(`${input.mediaId}/transcript.vtt`);
+        const res = await fetch(url);
+
+        if (!res.ok) {
+          return null;
+        }
+
+        const text = await res.text();
+        const parsed = parseVtt(text)
+          .filter((n): n is NodeCue => n.type === 'cue')
+          .map(({ data: { start, text } }) => ({ start, text }));
+
+        return parsed;
+      } catch (e) {
+        moduleLogger.error('Error fetching transcript', {
+          mediaId: input.mediaId,
+          error: e,
+        });
+        return null;
+      }
     }),
 };

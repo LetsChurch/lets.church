@@ -28,7 +28,7 @@ import { useVideoLayout } from '@/util/use-video-layout';
 export const Route = createFileRoute('/_main/media/$mediaId')({
   component: RouteComponent,
   loader: async ({ context: { queryClient, trpc }, params }) => {
-    const [media, viewData] = await Promise.all([
+    const [media, viewData, transcript] = await Promise.all([
       queryClient.ensureQueryData(
         trpc.media.getMediaById.queryOptions({
           mediaId: params.mediaId,
@@ -37,11 +37,17 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
       trpcClient.media.createUploadView.mutate({
         uploadRecordId: params.mediaId,
       }),
+      queryClient.ensureQueryData(
+        trpc.media.getTranscript.queryOptions({
+          mediaId: params.mediaId,
+        }),
+      ),
     ]);
 
     return {
       media,
       viewHash: viewData?.viewHash ?? '',
+      transcript: transcript ?? [],
     };
   },
 });
@@ -52,6 +58,7 @@ function RouteComponent() {
   const [transcriptDialogOpen, setTranscriptDialogOpen] = useState(false);
   const loaderData = Route.useLoaderData();
   const viewHash = loaderData.viewHash;
+  const transcript = loaderData.transcript;
 
   const { data: media } = useSuspenseQuery(
     trpc.media.getMediaById.queryOptions({
@@ -356,9 +363,8 @@ function RouteComponent() {
               </div>
 
               {/* Transcript Items */}
-              <div className="relative flex-1 overflow-y-auto p-5">
-                <Transcript />
-
+              <div className="relative flex-1 overflow-hidden">
+                <Transcript transcript={transcript} />
                 {/* Gradient fade at bottom */}
                 <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-b from-zinc-900/0 via-80% via-zinc-900/90 to-zinc-900" />
               </div>
@@ -387,13 +393,11 @@ function RouteComponent() {
             </div>
 
             {/* Transcript Content */}
-            <div className="relative flex-1 overflow-y-auto">
-              <div className="p-5">
-                <Transcript />
-              </div>
+            <div className="relative flex-1 overflow-hidden">
+              <Transcript transcript={transcript} />
 
               {/* Gradient fade at bottom */}
-              <div className="pointer-events-none fixed right-0 bottom-0 left-0 h-8 bg-gradient-to-b from-zinc-900/0 via-80% via-zinc-900/90 to-zinc-900" />
+              <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-b from-zinc-900/0 via-80% via-zinc-900/90 to-zinc-900" />
             </div>
           </MobileDrawer.Content>
         </MobileDrawer.Portal>
