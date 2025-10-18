@@ -9,7 +9,7 @@ import { getClientIpAddress } from '@/util/request-ip';
 import { getS3ProtocolUri } from '@/util/s3';
 import { getPublicImageUrl, getPublicMediaUrl } from '@/util/url';
 import { ffprobeSchema } from '@/util/zod';
-import { publicProcedure } from '../trpc';
+import { authProcedure, publicProcedure } from '../trpc';
 
 const moduleLogger = logger.child({
   module: 'trpc/procedures/media',
@@ -334,5 +334,147 @@ export const mediaProcedures = {
         });
         return null;
       }
+    }),
+
+  rateMedia: authProcedure
+    .input(
+      z.object({
+        mediaId: z.uuid(),
+        rating: z.enum(['LIKE', 'DISLIKE']),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { mediaId, rating } = input;
+      const userId = ctx.session.appUserId;
+
+      moduleLogger.info('Rating media', {
+        mediaId,
+        rating,
+        userId,
+      });
+
+      // Check if user already rated this media
+      const existingRating = await db.uploadUserRating.findUnique({
+        where: {
+          appUserId_uploadRecordId: {
+            appUserId: userId,
+            uploadRecordId: mediaId,
+          },
+        },
+      });
+
+      if (existingRating) {
+        if (existingRating.rating === rating) {
+          // User is clicking the same rating - remove it (toggle off)
+          await db.uploadUserRating.delete({
+            where: {
+              appUserId_uploadRecordId: {
+                appUserId: userId,
+                uploadRecordId: mediaId,
+              },
+            },
+          });
+
+          moduleLogger.info('Rating removed', {
+            mediaId,
+            rating,
+            userId,
+          });
+
+          return {
+            userRating: null,
+            previousRating: rating,
+          };
+        } else {
+          // User is changing their rating
+          await db.uploadUserRating.update({
+            where: {
+              appUserId_uploadRecordId: {
+                appUserId: userId,
+                uploadRecordId: mediaId,
+              },
+            },
+            data: {
+              rating,
+            },
+          });
+
+          moduleLogger.info('Rating updated', {
+            mediaId,
+            rating,
+            previousRating: existingRating.rating,
+            userId,
+          });
+
+          return {
+            userRating: rating,
+            previousRating: existingRating.rating,
+          };
+        }
+      } else {
+        // User is rating for the first time
+        await db.uploadUserRating.create({
+          data: {
+            appUserId: userId,
+            uploadRecordId: mediaId,
+            rating,
+          },
+        });
+
+        moduleLogger.info('New rating created', {
+          mediaId,
+          rating,
+          userId,
+        });
+
+        return {
+          userRating: rating,
+          previousRating: null,
+        };
+      }
+    }),
+
+  getMediaRating: publicProcedure
+    .input(z.object({ mediaId: z.uuid() }))
+    .query(async ({ input, ctx }) => {
+      moduleLogger.info('Fetching media rating', {
+        mediaId: input.mediaId,
+        userId: ctx.session?.appUserId,
+      });
+
+      // Get counts of likes and dislikes
+      const [likes, dislikes, userRating] = await Promise.all([
+        db.uploadUserRating.count({
+          where: {
+            uploadRecordId: input.mediaId,
+            rating: 'LIKE',
+          },
+        }),
+        db.uploadUserRating.count({
+          where: {
+            uploadRecordId: input.mediaId,
+            rating: 'DISLIKE',
+          },
+        }),
+        ctx.session
+          ? db.uploadUserRating.findUnique({
+              where: {
+                appUserId_uploadRecordId: {
+                  appUserId: ctx.session.appUserId,
+                  uploadRecordId: input.mediaId,
+                },
+              },
+              select: {
+                rating: true,
+              },
+            })
+          : null,
+      ]);
+
+      return {
+        likes,
+        dislikes,
+        userRating: userRating?.rating ?? null,
+      };
     }),
 };

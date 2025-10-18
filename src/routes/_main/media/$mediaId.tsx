@@ -1,3 +1,4 @@
+import { AlertDialog } from '@base-ui-components/react/alert-dialog';
 import { Avatar } from '@base-ui-components/react/avatar';
 import { Tabs } from '@base-ui-components/react/tabs';
 import {
@@ -10,8 +11,12 @@ import {
   IconThumbDown,
   IconThumbUp,
 } from '@tabler/icons-react';
-import { useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute } from '@tanstack/react-router';
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import Header from '@/components/header';
 import LcButton from '@/components/lc-button';
@@ -28,26 +33,36 @@ import { useVideoLayout } from '@/util/use-video-layout';
 export const Route = createFileRoute('/_main/media/$mediaId')({
   component: RouteComponent,
   loader: async ({ context: { queryClient, trpc }, params }) => {
-    const [media, viewData, transcript] = await Promise.all([
-      queryClient.ensureQueryData(
-        trpc.media.getMediaById.queryOptions({
-          mediaId: params.mediaId,
+    const [media, viewData, transcript, rating, hasSession] = await Promise.all(
+      [
+        queryClient.ensureQueryData(
+          trpc.media.getMediaById.queryOptions({
+            mediaId: params.mediaId,
+          }),
+        ),
+        trpcClient.media.createUploadView.mutate({
+          uploadRecordId: params.mediaId,
         }),
-      ),
-      trpcClient.media.createUploadView.mutate({
-        uploadRecordId: params.mediaId,
-      }),
-      queryClient.ensureQueryData(
-        trpc.media.getTranscript.queryOptions({
-          mediaId: params.mediaId,
-        }),
-      ),
-    ]);
+        queryClient.ensureQueryData(
+          trpc.media.getTranscript.queryOptions({
+            mediaId: params.mediaId,
+          }),
+        ),
+        queryClient.ensureQueryData(
+          trpc.media.getMediaRating.queryOptions({
+            mediaId: params.mediaId,
+          }),
+        ),
+        queryClient.fetchQuery(trpc.common.hasValidSession.queryOptions()),
+      ],
+    );
 
     return {
       media,
       viewHash: viewData?.viewHash ?? '',
       transcript: transcript ?? [],
+      rating,
+      isLoggedIn: hasSession,
     };
   },
 });
@@ -55,7 +70,9 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
 function RouteComponent() {
   const params = Route.useParams();
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
   const [transcriptDialogOpen, setTranscriptDialogOpen] = useState(false);
+  const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const loaderData = Route.useLoaderData();
   const viewHash = loaderData.viewHash;
   const transcript = loaderData.transcript;
@@ -65,6 +82,104 @@ function RouteComponent() {
       mediaId: params.mediaId,
     }),
   );
+
+  const { data: ratingData } = useSuspenseQuery(
+    trpc.media.getMediaRating.queryOptions({
+      mediaId: params.mediaId,
+    }),
+  );
+
+  const rateMutation = useMutation({
+    mutationFn: trpc.media.rateMedia.mutationOptions().mutationFn,
+    onMutate: async (variables) => {
+      const queryKey = trpc.media.getMediaRating.queryKey({
+        mediaId: params.mediaId,
+      });
+
+      // Cancel any outgoing refetches
+      // (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey });
+
+      // Snapshot the previous value
+      const previousRating = queryClient.getQueryData(queryKey);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(queryKey, (old) => {
+        if (!old) return old;
+
+        const result = { ...old };
+
+        // Calculate the delta based on the user's action
+        if (old.userRating === variables.rating) {
+          // Toggling off - decrement the count
+          if (variables.rating === 'LIKE') {
+            result.likes = Math.max(0, old.likes - 1);
+          } else {
+            result.dislikes = Math.max(0, old.dislikes - 1);
+          }
+          result.userRating = null;
+        } else if (old.userRating === null) {
+          // First time rating - increment the count
+          if (variables.rating === 'LIKE') {
+            result.likes = old.likes + 1;
+          } else {
+            result.dislikes = old.dislikes + 1;
+          }
+          result.userRating = variables.rating;
+        } else {
+          // Changing rating - decrement old, increment new
+          if (old.userRating === 'LIKE') {
+            result.likes = Math.max(0, old.likes - 1);
+          } else {
+            result.dislikes = Math.max(0, old.dislikes - 1);
+          }
+          if (variables.rating === 'LIKE') {
+            result.likes = old.likes + 1;
+          } else {
+            result.dislikes = old.dislikes + 1;
+          }
+          result.userRating = variables.rating;
+        }
+
+        return result;
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousRating };
+    },
+    onError: (_error, _variables, context) => {
+      // Roll back to the previous value on any error
+      if (context?.previousRating) {
+        queryClient.setQueryData(
+          trpc.media.getMediaRating.queryKey({
+            mediaId: params.mediaId,
+          }),
+          context.previousRating,
+        );
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure we have the latest data
+      queryClient.invalidateQueries({
+        queryKey: trpc.media.getMediaRating.queryKey({
+          mediaId: params.mediaId,
+        }),
+      });
+    },
+  });
+
+  const handleRate = (rating: 'LIKE' | 'DISLIKE') => {
+    // Check if user is logged in before attempting to rate
+    if (!loaderData.isLoggedIn) {
+      setLoginDialogOpen(true);
+      return;
+    }
+
+    rateMutation.mutate({
+      mediaId: params.mediaId,
+      rating,
+    });
+  };
 
   useEffect(() => {
     if (media.fullSizeThumbnailUrl) {
@@ -180,20 +295,24 @@ function RouteComponent() {
                     buttons={[
                       {
                         type: 'button',
+                        onClick: () => handleRate('LIKE'),
+                        className: cn(
+                          ratingData.userRating === 'LIKE' && 'bg-white/10',
+                        ),
                         children: (
                           <>
                             <IconThumbUp size={16} />
-                            13
+                            {ratingData.likes}
                           </>
                         ),
                       },
                       {
                         type: 'button',
-                        children: (
-                          <>
-                            <IconThumbDown size={16} />
-                          </>
+                        onClick: () => handleRate('DISLIKE'),
+                        className: cn(
+                          ratingData.userRating === 'DISLIKE' && 'bg-white/10',
                         ),
+                        children: <IconThumbDown size={16} />,
                       },
                     ]}
                   />
@@ -402,6 +521,35 @@ function RouteComponent() {
           </MobileDrawer.Content>
         </MobileDrawer.Portal>
       </MobileDrawer.Root>
+
+      {/* Login Required Alert Dialog */}
+      <AlertDialog.Root
+        open={loginDialogOpen}
+        onOpenChange={setLoginDialogOpen}
+      >
+        <AlertDialog.Portal>
+          <AlertDialog.Backdrop className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm" />
+          <AlertDialog.Popup className="-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-50 w-full max-w-md rounded-2xl border border-white/10 bg-zinc-900 p-6 shadow-xl">
+            <AlertDialog.Title className="mb-2 font-bold text-lg text-white">
+              Login Required
+            </AlertDialog.Title>
+            <AlertDialog.Description className="mb-6 text-sm text-white/70">
+              You need to be logged in to rate this content. Please sign in to
+              continue.
+            </AlertDialog.Description>
+            <div className="flex justify-end gap-3">
+              <AlertDialog.Close>
+                <LcButton>Cancel</LcButton>
+              </AlertDialog.Close>
+              <Link to="/auth/login">
+                <LcButton className="bg-indigo-600 hover:bg-indigo-700">
+                  Sign In
+                </LcButton>
+              </Link>
+            </div>
+          </AlertDialog.Popup>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
     </div>
   );
 }

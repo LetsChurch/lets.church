@@ -13,7 +13,7 @@ export default function LcButtonGroup({
   return (
     <div
       className={cn(
-        'isolate inline-flex rounded-full border-top-highlight bg-white/15 pt-px font-semibold text-sm text-white/80',
+        'isolate inline-flex overflow-clip rounded-full border-top-highlight bg-white/15 pt-px font-semibold text-sm text-white/80',
         className,
       )}
     >
