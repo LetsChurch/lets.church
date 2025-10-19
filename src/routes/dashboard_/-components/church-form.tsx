@@ -214,9 +214,13 @@ export function ChurchForm({
               )}
             </form.Subscribe>
           )}
-          <Button type="submit" loading={isSubmitting}>
-            {submitLabel}
-          </Button>
+          <form.Subscribe selector={(state) => state.isValid}>
+            {(isValid) => (
+              <Button type="submit" loading={isSubmitting} disabled={!isValid}>
+                {submitLabel}
+              </Button>
+            )}
+          </form.Subscribe>
         </Group>
       </Stack>
     </form>

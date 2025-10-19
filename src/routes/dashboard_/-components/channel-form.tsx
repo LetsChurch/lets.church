@@ -151,11 +151,16 @@ export function ChannelForm({
             </form.Subscribe>
           )}
           {mode === 'edit' ? (
-            <form.Subscribe selector={(state) => state.isDirty}>
-              {(isDirty) => (
+            <form.Subscribe
+              selector={(state) => ({
+                isDirty: state.isDirty,
+                isValid: state.isValid,
+              })}
+            >
+              {({ isDirty, isValid }) => (
                 <Button
                   type="submit"
-                  disabled={!isDirty}
+                  disabled={!isDirty || !isValid}
                   loading={isSubmitting}
                 >
                   {submitLabel}
@@ -163,9 +168,17 @@ export function ChannelForm({
               )}
             </form.Subscribe>
           ) : (
-            <Button type="submit" loading={isSubmitting}>
-              {submitLabel}
-            </Button>
+            <form.Subscribe selector={(state) => state.isValid}>
+              {(isValid) => (
+                <Button
+                  type="submit"
+                  loading={isSubmitting}
+                  disabled={!isValid}
+                >
+                  {submitLabel}
+                </Button>
+              )}
+            </form.Subscribe>
           )}
         </Group>
       </Stack>

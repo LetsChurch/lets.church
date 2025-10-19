@@ -491,9 +491,17 @@ function PlaylistDetailsPage() {
               <Button variant="subtle" onClick={closeEdit}>
                 Cancel
               </Button>
-              <Button type="submit" loading={updatePlaylistMutation.isPending}>
-                Save Changes
-              </Button>
+              <editForm.Subscribe selector={(state) => state.isValid}>
+                {(isValid) => (
+                  <Button
+                    type="submit"
+                    loading={updatePlaylistMutation.isPending}
+                    disabled={!isValid}
+                  >
+                    Save Changes
+                  </Button>
+                )}
+              </editForm.Subscribe>
             </Group>
           </Stack>
         </form>

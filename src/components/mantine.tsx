@@ -36,7 +36,11 @@ function TextInputField(
       onBlur={field.handleBlur}
       onChange={(e) => field.handleChange(e.target.value)}
       error={
-        field.state.meta.isValid ? field.state.meta.errors.join(', ') : false
+        field.state.meta.errors?.[0]
+          ? typeof field.state.meta.errors[0] === 'string'
+            ? field.state.meta.errors[0]
+            : field.state.meta.errors[0]?.message
+          : undefined
       }
     />
   );
@@ -59,7 +63,11 @@ function PasswordInputField(
       onBlur={field.handleBlur}
       onChange={(e) => field.handleChange(e.target.value)}
       error={
-        field.state.meta.isValid ? field.state.meta.errors.join(', ') : false
+        field.state.meta.errors?.[0]
+          ? typeof field.state.meta.errors[0] === 'string'
+            ? field.state.meta.errors[0]
+            : field.state.meta.errors[0]?.message
+          : undefined
       }
     />
   );
@@ -78,7 +86,11 @@ function CheckboxField(
       onChange={(e) => field.handleChange(e.currentTarget.checked)}
       onBlur={field.handleBlur}
       error={
-        field.state.meta.isValid ? field.state.meta.errors.join(', ') : false
+        field.state.meta.errors?.[0]
+          ? typeof field.state.meta.errors[0] === 'string'
+            ? field.state.meta.errors[0]
+            : field.state.meta.errors[0]?.message
+          : undefined
       }
     />
   );
@@ -113,7 +125,11 @@ function TextareaField(
       onBlur={field.handleBlur}
       onChange={(e) => field.handleChange(e.target.value)}
       error={
-        field.state.meta.isValid ? field.state.meta.errors.join(', ') : false
+        field.state.meta.errors?.[0]
+          ? typeof field.state.meta.errors[0] === 'string'
+            ? field.state.meta.errors[0]
+            : field.state.meta.errors[0]?.message
+          : undefined
       }
     />
   );
@@ -132,7 +148,11 @@ function SelectField(
       onBlur={field.handleBlur}
       onChange={(value) => field.handleChange(value || '')}
       error={
-        field.state.meta.isValid ? field.state.meta.errors.join(', ') : false
+        field.state.meta.errors?.[0]
+          ? typeof field.state.meta.errors[0] === 'string'
+            ? field.state.meta.errors[0]
+            : field.state.meta.errors[0]?.message
+          : undefined
       }
     />
   );
@@ -154,7 +174,11 @@ function MultiSelectField(
       onBlur={field.handleBlur}
       onChange={(value) => field.handleChange(value)}
       error={
-        field.state.meta.isValid ? field.state.meta.errors.join(', ') : false
+        field.state.meta.errors?.[0]
+          ? typeof field.state.meta.errors[0] === 'string'
+            ? field.state.meta.errors[0]
+            : field.state.meta.errors[0]?.message
+          : undefined
       }
     />
   );
@@ -172,7 +196,11 @@ function RadioGroupField(
       value={field.state.value}
       onChange={(value) => field.handleChange(value)}
       error={
-        field.state.meta.isValid ? field.state.meta.errors.join(', ') : false
+        field.state.meta.errors?.[0]
+          ? typeof field.state.meta.errors[0] === 'string'
+            ? field.state.meta.errors[0]
+            : field.state.meta.errors[0]?.message
+          : undefined
       }
     />
   );
@@ -198,7 +226,11 @@ function DateTimePickerField(
         field.handleChange(dateValue);
       }}
       error={
-        field.state.meta.isValid ? field.state.meta.errors.join(', ') : false
+        field.state.meta.errors?.[0]
+          ? typeof field.state.meta.errors[0] === 'string'
+            ? field.state.meta.errors[0]
+            : field.state.meta.errors[0]?.message
+          : undefined
       }
     />
   );

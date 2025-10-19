@@ -497,8 +497,13 @@ function ChannelUploadPage() {
           <Stack gap="lg" mt="lg">
             {/* Action Buttons */}
             <Group gap="sm">
-              <form.Subscribe selector={(state) => state.isDirty}>
-                {(isDirty) => (
+              <form.Subscribe
+                selector={(state) => ({
+                  isDirty: state.isDirty,
+                  isValid: state.isValid,
+                })}
+              >
+                {({ isDirty, isValid }) => (
                   <>
                     <Button
                       variant="outline"
@@ -515,7 +520,7 @@ function ChannelUploadPage() {
                     <Button
                       size="sm"
                       flex={1}
-                      disabled={!isDirty && !newThumbnailFile}
+                      disabled={(!isDirty && !newThumbnailFile) || !isValid}
                       loading={updateMutation.isPending}
                       onClick={() => form.handleSubmit()}
                     >

@@ -261,9 +261,10 @@ function ProfilePage() {
                 selector={(state) => ({
                   isSubmitting: state.isSubmitting,
                   isDirty: state.isDirty,
+                  isValid: state.isValid,
                 })}
               >
-                {({ isSubmitting, isDirty }) => (
+                {({ isSubmitting, isDirty, isValid }) => (
                   <>
                     <Button
                       variant="outline"
@@ -280,7 +281,7 @@ function ProfilePage() {
                     <Button
                       size="sm"
                       flex={1}
-                      disabled={!isDirty && !newAvatarFile}
+                      disabled={(!isDirty && !newAvatarFile) || !isValid}
                       loading={isSubmitting}
                       onClick={() => form.handleSubmit()}
                     >

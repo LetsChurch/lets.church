@@ -248,9 +248,17 @@ function PlaylistsPage() {
               <Button variant="subtle" onClick={close}>
                 Cancel
               </Button>
-              <Button type="submit" loading={createPlaylistMutation.isPending}>
-                Create
-              </Button>
+              <form.Subscribe selector={(state) => state.isValid}>
+                {(isValid) => (
+                  <Button
+                    type="submit"
+                    loading={createPlaylistMutation.isPending}
+                    disabled={!isValid}
+                  >
+                    Create
+                  </Button>
+                )}
+              </form.Subscribe>
             </Group>
           </Stack>
         </form>
