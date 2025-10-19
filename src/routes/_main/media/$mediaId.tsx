@@ -222,25 +222,18 @@ function RouteComponent() {
           style={{ width: `${layout.containerWidth}px` }}
         >
           <div className="w-full">
-            {/* Video Player */}
-            <div
-              className={cn(
-                'z-100 w-full rounded-2xl',
-                layout.showSidebar ? 'relative' : 'sticky top-0',
-              )}
-            >
-              <Player
-                uploadRecordId={params.mediaId}
-                viewHash={viewHash}
-                mediaSource={media.mediaSource}
-                audioSource={media.audioSource}
-                posterThumbnailUrl={media.posterThumbnailUrl}
-                videoWidth={layout.videoWidth}
-                videoHeight={layout.videoHeight}
-                peaksJsonUrl={media.peaksJsonUrl}
-                lengthSeconds={media.lengthSeconds}
-              />
-            </div>
+            <Player
+              uploadRecordId={params.mediaId}
+              viewHash={viewHash}
+              mediaSource={media.mediaSource}
+              audioSource={media.audioSource}
+              posterThumbnailUrl={media.posterThumbnailUrl}
+              videoWidth={layout.videoWidth}
+              videoHeight={layout.videoHeight}
+              peaksJsonUrl={media.peaksJsonUrl}
+              lengthSeconds={media.lengthSeconds}
+              videoClassName={layout.showSidebar ? null : 'sticky top-0'}
+            />
 
             {/* Media Header */}
             <div className="mt-8 flex flex-col gap-3">

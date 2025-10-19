@@ -38,6 +38,7 @@ type Props = {
   videoHeight: number;
   peaksJsonUrl?: string | null;
   lengthSeconds?: number | null;
+  videoClassName?: string | null;
 };
 
 function serializeTimeRanges(
@@ -62,6 +63,7 @@ export function Player({
   videoHeight,
   peaksJsonUrl,
   lengthSeconds,
+  videoClassName,
 }: Props) {
   const trpc = useTRPC();
   const videoRef = useRef<HlsVideoElement>(null);
@@ -175,8 +177,9 @@ export function Player({
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-2xl',
+        'relative z-100 overflow-hidden rounded-2xl',
         mediaType === 'video' && 'bg-black',
+        mediaType === 'video' && videoClassName,
       )}
     >
       {currentSource ? (
