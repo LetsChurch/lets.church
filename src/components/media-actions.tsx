@@ -1,19 +1,36 @@
 import { Dialog } from '@base-ui-components/react/dialog';
+import { Menu } from '@base-ui-components/react/menu';
 import {
+  IconArticle,
+  IconBadge4k,
+  IconBadgeCc,
+  IconBadgeHd,
   IconBookmark,
   IconBrandFacebook,
   IconBrandX,
   IconCopy,
+  IconDeviceTvOld,
+  IconDownload,
   IconFlag,
   IconShare2,
   IconThumbDown,
   IconThumbUp,
+  IconVolume,
   IconX,
 } from '@tabler/icons-react';
 import { useState } from 'react';
 import LcButton from '@/components/lc-button';
 import LcButtonGroup from '@/components/lc-button-group';
 import { cn } from '@/util/cn';
+
+type MediaDownloadKind =
+  | 'VIDEO_4K'
+  | 'VIDEO_1080P'
+  | 'VIDEO_720P'
+  | 'VIDEO_480P'
+  | 'AUDIO'
+  | 'TRANSCRIPT_VTT'
+  | 'TRANSCRIPT_TXT';
 
 type MediaActionsProps = {
   ratingData: {
@@ -25,6 +42,10 @@ type MediaActionsProps = {
   shareData: {
     title: string;
     url: string;
+  };
+  downloadData?: {
+    enabled: boolean;
+    urls: Array<{ kind: MediaDownloadKind; label: string; url: string }>;
   };
   channelData: {
     id: string;
@@ -49,10 +70,31 @@ const windowConfig = Object.entries({
   .map(([k, v]) => `${k}=${v}`)
   .join(',');
 
+function getDownloadIcon(kind: MediaDownloadKind) {
+  switch (kind) {
+    case 'VIDEO_4K':
+      return <IconBadge4k size={16} />;
+    case 'VIDEO_1080P':
+    case 'VIDEO_720P':
+      return <IconBadgeHd size={16} />;
+    case 'VIDEO_480P':
+      return <IconDeviceTvOld size={16} />;
+    case 'AUDIO':
+      return <IconVolume size={16} />;
+    case 'TRANSCRIPT_VTT':
+      return <IconBadgeCc size={16} />;
+    case 'TRANSCRIPT_TXT':
+      return <IconArticle size={16} />;
+    default:
+      return <IconDeviceTvOld size={16} />;
+  }
+}
+
 export function MediaActions({
   ratingData,
   onRate,
   shareData,
+  downloadData,
   channelData,
   onFollowToggle,
 }: MediaActionsProps) {
@@ -132,6 +174,41 @@ export function MediaActions({
         <LcButton className="p-2" onClick={handleShare}>
           <IconShare2 size={16} />
         </LcButton>
+
+        {/* Download */}
+        {downloadData?.enabled && downloadData.urls.length > 0 ? (
+          <Menu.Root>
+            <Menu.Trigger
+              render={(props) => (
+                <LcButton {...props} className="p-2">
+                  <IconDownload size={16} />
+                </LcButton>
+              )}
+            />
+            <Menu.Portal>
+              <Menu.Positioner sideOffset={8} className="z-50">
+                <Menu.Popup className="min-w-[200px] rounded-lg border border-zinc-800 border-solid bg-zinc-900 py-1 shadow-xl transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
+                  {downloadData.urls.map((download) => (
+                    <Menu.Item
+                      key={download.url}
+                      render={(props) => (
+                        <a
+                          {...props}
+                          href={download.url}
+                          download
+                          className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-white outline-none transition-colors hover:bg-zinc-800 data-[highlighted]:bg-zinc-800"
+                        >
+                          {getDownloadIcon(download.kind)}
+                          {download.label}
+                        </a>
+                      )}
+                    />
+                  ))}
+                </Menu.Popup>
+              </Menu.Positioner>
+            </Menu.Portal>
+          </Menu.Root>
+        ) : null}
 
         {/* Divider */}
         <div className="h-7 w-px bg-zinc-900" />

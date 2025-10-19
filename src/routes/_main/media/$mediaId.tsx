@@ -340,6 +340,10 @@ function RouteComponent() {
                 title: media.title ?? 'Untitled',
                 url: typeof window !== 'undefined' ? window.location.href : '',
               }}
+              downloadData={{
+                enabled: media.downloadsEnabled,
+                urls: media.downloadUrls,
+              }}
             />
 
             <MediaInfoTabs

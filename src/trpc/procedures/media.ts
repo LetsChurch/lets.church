@@ -51,6 +51,7 @@ export const mediaProcedures = {
           variants: true,
           probe: true,
           userCommentsEnabled: true,
+          downloadsEnabled: true,
           channel: {
             select: {
               id: true,
@@ -85,6 +86,7 @@ export const mediaProcedures = {
         overrideThumbnailPath,
         channel,
         variants,
+        downloadsEnabled,
         ...mediaRest
       } = media;
 
@@ -177,6 +179,70 @@ export const mediaProcedures = {
         isFollowing = !!subscription;
       }
 
+      // Generate download URLs based on available variants
+      type MediaDownloadKind =
+        | 'VIDEO_4K'
+        | 'VIDEO_1080P'
+        | 'VIDEO_720P'
+        | 'VIDEO_480P'
+        | 'AUDIO'
+        | 'TRANSCRIPT_VTT'
+        | 'TRANSCRIPT_TXT';
+
+      const downloadUrls: Array<{
+        kind: MediaDownloadKind;
+        label: string;
+        url: string;
+      }> = [];
+
+      if (downloadsEnabled) {
+        // Add video/audio downloads based on variants
+        for (const variant of variants) {
+          if (
+            variant.endsWith('_DOWNLOAD') &&
+            !variant.includes('360P') // TODO: remove 360P, see ffmpeg.ts
+          ) {
+            const ext = variant.startsWith('VIDEO') ? 'mp4' : 'm4a';
+            let kind: MediaDownloadKind = 'AUDIO';
+            let label = 'Audio';
+
+            if (variant === 'VIDEO_4K_DOWNLOAD') {
+              kind = 'VIDEO_4K';
+              label = '4k Video';
+            } else if (variant === 'VIDEO_1080P_DOWNLOAD') {
+              kind = 'VIDEO_1080P';
+              label = '1080p Video';
+            } else if (variant === 'VIDEO_720P_DOWNLOAD') {
+              kind = 'VIDEO_720P';
+              label = '720p Video';
+            } else if (variant === 'VIDEO_480P_DOWNLOAD') {
+              kind = 'VIDEO_480P';
+              label = '480p Video';
+            }
+
+            downloadUrls.push({
+              kind,
+              label,
+              url: getPublicMediaUrl(`${media.id}/${variant}.${ext}`),
+            });
+          }
+        }
+
+        // Add transcript downloads
+        downloadUrls.push(
+          {
+            kind: 'TRANSCRIPT_VTT',
+            label: 'Transcript (vtt)',
+            url: getPublicMediaUrl(`${media.id}/transcript.vtt`),
+          },
+          {
+            kind: 'TRANSCRIPT_TXT',
+            label: 'Transcript (txt)',
+            url: getPublicMediaUrl(`${media.id}/transcript.original.txt`),
+          },
+        );
+      }
+
       return {
         ...mediaRest,
         thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
@@ -189,6 +255,8 @@ export const mediaProcedures = {
         peaksDatUrl,
         width,
         height,
+        downloadsEnabled,
+        downloadUrls,
         channel: {
           id: channel.id,
           name: channel.name,

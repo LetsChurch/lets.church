@@ -1,6 +1,15 @@
 import { Avatar } from '@base-ui-components/react/avatar';
 import { MediaActions } from '@/components/media-actions';
 
+type MediaDownloadKind =
+  | 'VIDEO_4K'
+  | 'VIDEO_1080P'
+  | 'VIDEO_720P'
+  | 'VIDEO_480P'
+  | 'AUDIO'
+  | 'TRANSCRIPT_VTT'
+  | 'TRANSCRIPT_TXT';
+
 type MediaHeaderProps = {
   title: string | null;
   channel: {
@@ -22,6 +31,10 @@ type MediaHeaderProps = {
     title: string;
     url: string;
   };
+  downloadData?: {
+    enabled: boolean;
+    urls: Array<{ kind: MediaDownloadKind; label: string; url: string }>;
+  };
 };
 
 export function MediaHeader({
@@ -31,6 +44,7 @@ export function MediaHeader({
   onRate,
   onFollowToggle,
   shareData,
+  downloadData,
 }: MediaHeaderProps) {
   return (
     <div className="mt-8 flex flex-col gap-3">
@@ -67,6 +81,7 @@ export function MediaHeader({
           ratingData={ratingData}
           onRate={onRate}
           shareData={shareData}
+          downloadData={downloadData}
           channelData={{
             id: channel.id,
             isFollowing: channel.isFollowing,
