@@ -33,7 +33,7 @@ const getTranscriptSchema = z.object({
 export const mediaProcedures = {
   getMediaById: publicProcedure
     .input(getMediaByIdSchema)
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       moduleLogger.info('Fetching media by ID', {
         mediaId: input.mediaId,
       });
@@ -163,6 +163,20 @@ export const mediaProcedures = {
       const peaksJsonUrl = getPublicMediaUrl(`${media.id}/peaks.json`);
       const peaksDatUrl = getPublicMediaUrl(`${media.id}/peaks.dat`);
 
+      // Check if current user is following the channel
+      let isFollowing = false;
+      if (ctx.session?.appUserId) {
+        const subscription = await db.channelSubscription.findUnique({
+          where: {
+            appUserId_channelId: {
+              appUserId: ctx.session.appUserId,
+              channelId: channel.id,
+            },
+          },
+        });
+        isFollowing = !!subscription;
+      }
+
       return {
         ...mediaRest,
         thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
@@ -181,6 +195,7 @@ export const mediaProcedures = {
           slug: channel.slug,
           avatarUrl: channelAvatarUrl,
           subscriberCount: channel._count.subscribers,
+          isFollowing,
         },
       };
     }),

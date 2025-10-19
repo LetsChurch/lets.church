@@ -9,6 +9,7 @@ type MediaHeaderProps = {
     slug: string;
     avatarUrl: string | null;
     subscriberCount: number;
+    isFollowing: boolean;
   };
   ratingData: {
     likes: number;
@@ -16,6 +17,7 @@ type MediaHeaderProps = {
     userRating: 'LIKE' | 'DISLIKE' | null;
   };
   onRate: (rating: 'LIKE' | 'DISLIKE') => void;
+  onFollowToggle: () => void;
   shareData: {
     title: string;
     url: string;
@@ -27,6 +29,7 @@ export function MediaHeader({
   channel,
   ratingData,
   onRate,
+  onFollowToggle,
   shareData,
 }: MediaHeaderProps) {
   return (
@@ -64,6 +67,11 @@ export function MediaHeader({
           ratingData={ratingData}
           onRate={onRate}
           shareData={shareData}
+          channelData={{
+            id: channel.id,
+            isFollowing: channel.isFollowing,
+          }}
+          onFollowToggle={onFollowToggle}
         />
       </div>
     </div>

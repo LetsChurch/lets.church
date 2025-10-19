@@ -26,6 +26,11 @@ type MediaActionsProps = {
     title: string;
     url: string;
   };
+  channelData: {
+    id: string;
+    isFollowing: boolean;
+  };
+  onFollowToggle: () => void;
 };
 
 const windowConfig = Object.entries({
@@ -48,6 +53,8 @@ export function MediaActions({
   ratingData,
   onRate,
   shareData,
+  channelData,
+  onFollowToggle,
 }: MediaActionsProps) {
   const [shareModalOpen, setShareModalOpen] = useState(false);
 
@@ -136,9 +143,15 @@ export function MediaActions({
         </LcButton>
 
         {/* Follow */}
-        <LcButton className="flex items-center gap-0.5">
+        <LcButton
+          className={cn(
+            'flex items-center gap-0.5',
+            channelData.isFollowing && 'bg-white/10',
+          )}
+          onClick={onFollowToggle}
+        >
           <IconFlag size={16} />
-          Follow
+          {channelData.isFollowing ? 'Following' : 'Follow'}
         </LcButton>
 
         {/* More */}

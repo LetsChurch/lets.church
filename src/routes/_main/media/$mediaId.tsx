@@ -165,6 +165,92 @@ function RouteComponent() {
     },
   });
 
+  const followMutation = useMutation({
+    mutationFn: trpc.home.followChannel.mutationOptions().mutationFn,
+    onMutate: async () => {
+      const queryKey = trpc.media.getMediaById.queryKey({
+        mediaId: params.mediaId,
+      });
+
+      await queryClient.cancelQueries({ queryKey });
+      const previousMedia = queryClient.getQueryData(queryKey);
+
+      queryClient.setQueryData(queryKey, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          channel: {
+            ...old.channel,
+            isFollowing: true,
+            subscriberCount: old.channel.subscriberCount + 1,
+          },
+        };
+      });
+
+      return { previousMedia };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousMedia) {
+        queryClient.setQueryData(
+          trpc.media.getMediaById.queryKey({
+            mediaId: params.mediaId,
+          }),
+          context.previousMedia,
+        );
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.media.getMediaById.queryKey({
+          mediaId: params.mediaId,
+        }),
+      });
+    },
+  });
+
+  const unfollowMutation = useMutation({
+    mutationFn: trpc.home.unfollowChannel.mutationOptions().mutationFn,
+    onMutate: async () => {
+      const queryKey = trpc.media.getMediaById.queryKey({
+        mediaId: params.mediaId,
+      });
+
+      await queryClient.cancelQueries({ queryKey });
+      const previousMedia = queryClient.getQueryData(queryKey);
+
+      queryClient.setQueryData(queryKey, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          channel: {
+            ...old.channel,
+            isFollowing: false,
+            subscriberCount: Math.max(0, old.channel.subscriberCount - 1),
+          },
+        };
+      });
+
+      return { previousMedia };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousMedia) {
+        queryClient.setQueryData(
+          trpc.media.getMediaById.queryKey({
+            mediaId: params.mediaId,
+          }),
+          context.previousMedia,
+        );
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.media.getMediaById.queryKey({
+          mediaId: params.mediaId,
+        }),
+      });
+    },
+  });
+
   const handleRate = (rating: 'LIKE' | 'DISLIKE') => {
     // Check if user is logged in before attempting to rate
     if (!isLoggedIn) {
@@ -176,6 +262,24 @@ function RouteComponent() {
       mediaId: params.mediaId,
       rating,
     });
+  };
+
+  const handleFollowToggle = () => {
+    // Check if user is logged in before attempting to follow
+    if (!isLoggedIn) {
+      setLoginDialogOpen(true);
+      return;
+    }
+
+    if (media.channel.isFollowing) {
+      unfollowMutation.mutate({
+        channelId: media.channel.id,
+      });
+    } else {
+      followMutation.mutate({
+        channelId: media.channel.id,
+      });
+    }
   };
 
   useEffect(() => {
@@ -231,6 +335,7 @@ function RouteComponent() {
               channel={media.channel}
               ratingData={ratingData}
               onRate={handleRate}
+              onFollowToggle={handleFollowToggle}
               shareData={{
                 title: media.title ?? 'Untitled',
                 url: typeof window !== 'undefined' ? window.location.href : '',
