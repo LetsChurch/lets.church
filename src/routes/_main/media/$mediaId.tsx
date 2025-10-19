@@ -231,6 +231,10 @@ function RouteComponent() {
               channel={media.channel}
               ratingData={ratingData}
               onRate={handleRate}
+              shareData={{
+                title: media.title ?? 'Untitled',
+                url: typeof window !== 'undefined' ? window.location.href : '',
+              }}
             />
 
             <MediaInfoTabs

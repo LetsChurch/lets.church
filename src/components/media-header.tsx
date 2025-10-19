@@ -16,6 +16,10 @@ type MediaHeaderProps = {
     userRating: 'LIKE' | 'DISLIKE' | null;
   };
   onRate: (rating: 'LIKE' | 'DISLIKE') => void;
+  shareData: {
+    title: string;
+    url: string;
+  };
 };
 
 export function MediaHeader({
@@ -23,6 +27,7 @@ export function MediaHeader({
   channel,
   ratingData,
   onRate,
+  shareData,
 }: MediaHeaderProps) {
   return (
     <div className="mt-8 flex flex-col gap-3">
@@ -55,7 +60,11 @@ export function MediaHeader({
         </div>
 
         {/* Actions */}
-        <MediaActions ratingData={ratingData} onRate={onRate} />
+        <MediaActions
+          ratingData={ratingData}
+          onRate={onRate}
+          shareData={shareData}
+        />
       </div>
     </div>
   );
