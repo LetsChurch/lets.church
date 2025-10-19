@@ -16,6 +16,7 @@ import { MediaGrid } from '@/components/media-grid';
 import { SearchCard } from '@/components/search-card';
 import { TrendingSearchPill } from '@/components/trending-search-pill';
 import { ViewMoreCard } from '@/components/view-more-card';
+import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { useTRPC } from '@/trpc/react';
 
 export const Route = createFileRoute('/_main/')({
@@ -35,9 +36,7 @@ export const Route = createFileRoute('/_main/')({
       );
     }
 
-    return {
-      isLoggedIn: hasSession,
-    };
+    return {};
   },
 });
 
@@ -267,7 +266,7 @@ function TrendingSearches() {
 }
 
 function Home() {
-  const { isLoggedIn } = Route.useLoaderData();
+  const isLoggedIn = useIsLoggedIn();
   const trpc = useTRPC();
 
   const { data: trendingUploads } = useSuspenseQuery(

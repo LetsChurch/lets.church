@@ -13,6 +13,15 @@ import type { AppContextType } from '@/router';
 const indigo = '#6366f1';
 
 export const Route = createRootRouteWithContext<AppContextType>()({
+  loader: async ({ context: { queryClient, trpc } }) => {
+    const isLoggedIn = await queryClient.fetchQuery(
+      trpc.common.hasValidSession.queryOptions(),
+    );
+
+    return {
+      isLoggedIn,
+    };
+  },
   head: () => ({
     meta: [
       {

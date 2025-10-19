@@ -128,6 +128,8 @@ export default function Header({ children, defaultSearchValue }: HeaderProps) {
                     <Menu.Separator className="my-1 h-px bg-zinc-800" />
                     <Menu.Item
                       render={(props) => (
+                        // If this changes to something client side then make sure to invalidate the query for hasValidSession,
+                        // or even all of react-query
                         <form
                           method="post"
                           action="/auth/logout"

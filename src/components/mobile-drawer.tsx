@@ -2,11 +2,11 @@ import { Dialog } from '@base-ui-components/react/dialog';
 import * as React from 'react';
 import { cn } from '@/util/cn';
 
-interface MobileDrawerRootProps {
+type MobileDrawerRootProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
-}
+};
 
 function MobileDrawerRoot({
   open,
@@ -40,11 +40,10 @@ function MobileDrawerBackdrop(props: React.ComponentPropsWithoutRef<'div'>) {
   );
 }
 
-interface MobileDrawerContentProps
-  extends React.ComponentPropsWithoutRef<'div'> {
+type MobileDrawerContentProps = React.ComponentPropsWithoutRef<'div'> & {
   children: React.ReactNode;
   dragThreshold?: number;
-}
+};
 
 function MobileDrawerContent({
   children,
@@ -165,10 +164,10 @@ function MobileDrawerClose(
   return <Dialog.Close {...props} />;
 }
 
-interface MobileDrawerContextValue {
+type MobileDrawerContextValue = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
+};
 
 const MobileDrawerContext =
   React.createContext<MobileDrawerContextValue | null>(null);

@@ -1,0 +1,278 @@
+import { Avatar } from '@base-ui-components/react/avatar';
+import { IconThumbDown, IconThumbUp } from '@tabler/icons-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
+import { useTRPC } from '@/trpc/react';
+import { cn } from '@/util/cn';
+import LcButton from './lc-button';
+
+type CommentProps = {
+  comment: {
+    id: string;
+    text: string;
+    createdAt: Date;
+    author: {
+      id: string;
+      username: string;
+      fullName: string | null;
+      avatarPath: string | null;
+    };
+    likeCount: number;
+    replyCount?: number;
+    userRating: 'LIKE' | 'DISLIKE' | null;
+  };
+  mediaId: string;
+  onLoginRequired: () => void;
+  isReply?: boolean;
+};
+
+export function Comment({
+  comment,
+  mediaId,
+  onLoginRequired,
+  isReply = false,
+}: CommentProps) {
+  const isLoggedIn = useIsLoggedIn();
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const [showReplies, setShowReplies] = useState(false);
+  const [showReplyInput, setShowReplyInput] = useState(false);
+  const [replyText, setReplyText] = useState('');
+
+  const { data: replies } = useQuery({
+    ...trpc.media.getReplies.queryOptions({ commentId: comment.id }),
+    enabled: showReplies && !isReply,
+  });
+
+  const rateCommentMutation = useMutation({
+    mutationFn: trpc.media.rateComment.mutationOptions().mutationFn,
+    onMutate: async (variables) => {
+      // Only perform optimistic update if user is logged in
+      if (!isLoggedIn) {
+        return { previousComments: undefined };
+      }
+
+      const queryKey = trpc.media.getComments.queryKey({
+        mediaId,
+      });
+
+      await queryClient.cancelQueries({ queryKey });
+      const previousComments = queryClient.getQueryData(queryKey);
+
+      type CommentData = CommentProps['comment'];
+
+      // Optimistically update the cache
+      queryClient.setQueriesData(
+        { queryKey },
+        (old: CommentData[] | undefined) => {
+          if (!old) return old;
+          return old.map((c) => {
+            if (c.id !== comment.id) return c;
+
+            const result = { ...c };
+            if (c.userRating === variables.rating) {
+              result.likeCount = Math.max(0, c.likeCount - 1);
+              result.userRating = null;
+            } else if (c.userRating === null) {
+              if (variables.rating === 'LIKE') {
+                result.likeCount = c.likeCount + 1;
+              }
+              result.userRating = variables.rating;
+            } else {
+              if (c.userRating === 'LIKE') {
+                result.likeCount = Math.max(0, c.likeCount - 1);
+              }
+              if (variables.rating === 'LIKE') {
+                result.likeCount = c.likeCount + 1;
+              }
+              result.userRating = variables.rating;
+            }
+            return result;
+          });
+        },
+      );
+
+      return { previousComments };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousComments) {
+        queryClient.setQueryData(
+          trpc.media.getComments.queryKey({ mediaId }),
+          context.previousComments,
+        );
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.media.getComments.queryKey({ mediaId }),
+      });
+    },
+  });
+
+  const createReplyMutation = useMutation({
+    mutationFn: trpc.media.createComment.mutationOptions().mutationFn,
+    onSuccess: () => {
+      setReplyText('');
+      setShowReplyInput(false);
+      queryClient.invalidateQueries({
+        queryKey: trpc.media.getComments.queryKey({ mediaId }),
+      });
+      queryClient.invalidateQueries({
+        queryKey: trpc.media.getReplies.queryKey({ commentId: comment.id }),
+      });
+      // Auto-show replies after posting
+      setShowReplies(true);
+    },
+  });
+
+  const handleRate = (rating: 'LIKE' | 'DISLIKE') => {
+    if (!isLoggedIn) {
+      onLoginRequired();
+      return;
+    }
+
+    rateCommentMutation.mutate({
+      commentId: comment.id,
+      rating,
+    });
+  };
+
+  const handleReplyClick = () => {
+    if (!isLoggedIn) {
+      onLoginRequired();
+      return;
+    }
+    setShowReplyInput(!showReplyInput);
+  };
+
+  const handleSubmitReply = () => {
+    if (!replyText.trim()) return;
+
+    createReplyMutation.mutate({
+      mediaId,
+      text: replyText,
+      replyingToId: comment.id,
+    });
+  };
+
+  const avatarUrl = comment.author.avatarPath
+    ? `/api/media/${comment.author.avatarPath}`
+    : null;
+
+  const timeAgo = new Date(comment.createdAt).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+
+  return (
+    <div className="flex gap-3">
+      <Avatar.Root className="size-8 flex-shrink-0 overflow-hidden rounded-full">
+        {avatarUrl ? (
+          <Avatar.Image src={avatarUrl} alt={comment.author.username} />
+        ) : null}
+        <Avatar.Fallback className="flex size-full items-center justify-center bg-indigo-500 font-bold text-white text-xs">
+          {comment.author.username.charAt(0).toUpperCase()}
+        </Avatar.Fallback>
+      </Avatar.Root>
+
+      <div className="flex-1 overflow-hidden">
+        <div className="mb-1 flex items-baseline gap-2">
+          <span className="font-medium text-sm text-white">
+            {comment.author.fullName || `@${comment.author.username}`}
+          </span>
+          <span className="text-white/50 text-xs">{timeAgo}</span>
+        </div>
+
+        <p className="mb-2 whitespace-pre-wrap break-words text-sm text-white/90 leading-relaxed">
+          {comment.text}
+        </p>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => handleRate('LIKE')}
+            className={cn(
+              'flex min-w-12 items-center gap-1 rounded-lg px-2 py-1 transition-colors hover:bg-white/5',
+              comment.userRating === 'LIKE' && 'bg-white/10',
+            )}
+          >
+            <IconThumbUp size={14} className="text-white/70" />
+            <span className="text-white/70 text-xs">{comment.likeCount}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleRate('DISLIKE')}
+            className={cn(
+              'flex items-center gap-1 rounded-lg px-2 py-1 transition-colors hover:bg-white/5',
+              comment.userRating === 'DISLIKE' && 'bg-white/10',
+            )}
+          >
+            <IconThumbDown size={14} className="text-white/70" />
+          </button>
+
+          {!isReply ? (
+            <button
+              type="button"
+              onClick={handleReplyClick}
+              className="rounded-lg px-2 py-1 text-white/70 text-xs transition-colors hover:bg-white/10"
+            >
+              Reply
+            </button>
+          ) : null}
+
+          {comment.replyCount && comment.replyCount > 0 && !isReply ? (
+            <button
+              type="button"
+              onClick={() => setShowReplies(!showReplies)}
+              className="rounded-lg px-2 py-1 text-indigo-400 text-xs transition-colors hover:bg-white/10"
+            >
+              {showReplies ? 'Hide' : 'View'} {comment.replyCount}{' '}
+              {comment.replyCount === 1 ? 'reply' : 'replies'}
+            </button>
+          ) : null}
+        </div>
+
+        {showReplyInput ? (
+          <div className="mt-4">
+            <textarea
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              placeholder="Write a reply..."
+              className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/50 outline-none focus:border-indigo-500"
+              rows={3}
+            />
+            <div className="mt-2 flex justify-end gap-2">
+              <LcButton onClick={() => setShowReplyInput(false)}>
+                Cancel
+              </LcButton>
+              <LcButton
+                onClick={handleSubmitReply}
+                disabled={!replyText.trim() || createReplyMutation.isPending}
+                className="bg-indigo-600 hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {createReplyMutation.isPending ? 'Posting...' : 'Reply'}
+              </LcButton>
+            </div>
+          </div>
+        ) : null}
+
+        {showReplies && replies ? (
+          <div className="mt-4 space-y-4">
+            {replies.map((reply: CommentProps['comment']) => (
+              <Comment
+                key={reply.id}
+                comment={reply}
+                mediaId={mediaId}
+                onLoginRequired={onLoginRequired}
+                isReply
+              />
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}

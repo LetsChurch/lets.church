@@ -18,6 +18,7 @@ import {
 } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
+import { CommentsSection } from '@/components/comments-section';
 import Header from '@/components/header';
 import LcButton from '@/components/lc-button';
 import LcButtonGroup from '@/components/lc-button-group';
@@ -25,6 +26,7 @@ import { MediaCarousel } from '@/components/media-carousel';
 import { MobileDrawer } from '@/components/mobile-drawer';
 import { Player } from '@/components/player';
 import { Transcript } from '@/components/transcript';
+import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { $headerBackgroundImage } from '@/stores/header';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
@@ -33,36 +35,38 @@ import { useVideoLayout } from '@/util/use-video-layout';
 export const Route = createFileRoute('/_main/media/$mediaId')({
   component: RouteComponent,
   loader: async ({ context: { queryClient, trpc }, params }) => {
-    const [media, viewData, transcript, rating, hasSession] = await Promise.all(
-      [
-        queryClient.ensureQueryData(
-          trpc.media.getMediaById.queryOptions({
-            mediaId: params.mediaId,
-          }),
-        ),
-        trpcClient.media.createUploadView.mutate({
-          uploadRecordId: params.mediaId,
+    const [media, viewData, transcript, rating, comments] = await Promise.all([
+      queryClient.ensureQueryData(
+        trpc.media.getMediaById.queryOptions({
+          mediaId: params.mediaId,
         }),
-        queryClient.ensureQueryData(
-          trpc.media.getTranscript.queryOptions({
-            mediaId: params.mediaId,
-          }),
-        ),
-        queryClient.ensureQueryData(
-          trpc.media.getMediaRating.queryOptions({
-            mediaId: params.mediaId,
-          }),
-        ),
-        queryClient.fetchQuery(trpc.common.hasValidSession.queryOptions()),
-      ],
-    );
+      ),
+      trpcClient.media.createUploadView.mutate({
+        uploadRecordId: params.mediaId,
+      }),
+      queryClient.ensureQueryData(
+        trpc.media.getTranscript.queryOptions({
+          mediaId: params.mediaId,
+        }),
+      ),
+      queryClient.ensureQueryData(
+        trpc.media.getMediaRating.queryOptions({
+          mediaId: params.mediaId,
+        }),
+      ),
+      queryClient.ensureQueryData(
+        trpc.media.getComments.queryOptions({
+          mediaId: params.mediaId,
+        }),
+      ),
+    ]);
 
     return {
       media,
       viewHash: viewData?.viewHash ?? '',
       transcript: transcript ?? [],
       rating,
-      isLoggedIn: hasSession,
+      comments,
     };
   },
 });
@@ -71,7 +75,9 @@ function RouteComponent() {
   const params = Route.useParams();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+  const isLoggedIn = useIsLoggedIn();
   const [transcriptDialogOpen, setTranscriptDialogOpen] = useState(false);
+  const [commentsDialogOpen, setCommentsDialogOpen] = useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const loaderData = Route.useLoaderData();
   const viewHash = loaderData.viewHash;
@@ -170,7 +176,7 @@ function RouteComponent() {
 
   const handleRate = (rating: 'LIKE' | 'DISLIKE') => {
     // Check if user is logged in before attempting to rate
-    if (!loaderData.isLoggedIn) {
+    if (!isLoggedIn) {
       setLoginDialogOpen(true);
       return;
     }
@@ -369,15 +375,27 @@ function RouteComponent() {
                   </span>
                 </Tabs.Tab>
                 {!layout.showSidebar ? (
-                  <button
-                    type="button"
-                    onClick={() => setTranscriptDialogOpen(true)}
-                    className="relative pt-1.5 pb-2"
-                  >
-                    <span className="font-medium text-sm text-white/70 hover:text-white">
-                      Transcript
-                    </span>
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setTranscriptDialogOpen(true)}
+                      className="relative pt-1.5 pb-2"
+                    >
+                      <span className="font-medium text-sm text-white/70 hover:text-white">
+                        Transcript
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCommentsDialogOpen(true)}
+                      disabled={!media.userCommentsEnabled}
+                      className="relative pt-1.5 pb-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <span className="font-medium text-sm text-white/70 hover:text-white">
+                        Comments
+                      </span>
+                    </button>
+                  </>
                 ) : null}
                 <Tabs.Indicator
                   className="glow-md absolute h-0.5 rounded-t-sm bg-indigo-500 backdrop-blur-sm"
@@ -422,23 +440,14 @@ function RouteComponent() {
               </Tabs.Panel>
             </Tabs.Root>
 
-            {/* Comments Section */}
-            <div className="relative isolate mt-6 flex flex-col overflow-hidden rounded-2xl border-top-highlight bg-zinc-900">
-              {/* Comments Header */}
-              <div className="flex items-center gap-1 border-zinc-800 border-b px-5 pt-1.5 pb-2">
-                <span className="font-medium text-sm text-white">Comments</span>
-                <div className="flex h-[18px] items-center justify-center rounded-[9px] bg-white/10 px-1.5">
-                  <span className="font-bold text-[10px] text-white/70 leading-none">
-                    13
-                  </span>
-                </div>
-              </div>
-
-              {/* Comments Content */}
-              <div className="p-5">
-                <div className="text-sm text-white/70">Comments go here</div>
-              </div>
-            </div>
+            {/* Comments Section - Desktop Only */}
+            {layout.showSidebar ? (
+              <CommentsSection
+                mediaId={params.mediaId}
+                onLoginRequired={() => setLoginDialogOpen(true)}
+                commentsEnabled={media.userCommentsEnabled}
+              />
+            ) : null}
 
             {/* Related Content */}
             <div className="mt-10 pb-4">
@@ -514,6 +523,43 @@ function RouteComponent() {
             {/* Transcript Content */}
             <div className="relative flex-1 overflow-hidden">
               <Transcript transcript={transcript} />
+
+              {/* Gradient fade at bottom */}
+              <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-b from-zinc-900/0 via-80% via-zinc-900/90 to-zinc-900" />
+            </div>
+          </MobileDrawer.Content>
+        </MobileDrawer.Portal>
+      </MobileDrawer.Root>
+
+      {/* Mobile Comments Dialog */}
+      <MobileDrawer.Root
+        open={commentsDialogOpen}
+        onOpenChange={setCommentsDialogOpen}
+      >
+        <MobileDrawer.Portal>
+          <MobileDrawer.Content>
+            {/* Dialog Header */}
+            <div className="flex h-10 items-center justify-center gap-2 border-zinc-800 border-b border-solid px-5">
+              <div className="flex grow items-baseline gap-2 pb-0.5">
+                <MobileDrawer.Title className="font-bold text-base text-white">
+                  Comments
+                </MobileDrawer.Title>
+              </div>
+              <MobileDrawer.Close className="flex size-7 items-center justify-center rounded-lg hover:bg-white/10">
+                <IconMessageCircle2 size={16} className="text-white/80" />
+              </MobileDrawer.Close>
+            </div>
+
+            {/* Comments Content */}
+            <div className="relative flex-1 overflow-hidden">
+              <div className="h-full overflow-y-auto">
+                <CommentsSection
+                  mediaId={params.mediaId}
+                  onLoginRequired={() => setLoginDialogOpen(true)}
+                  showContainer={false}
+                  commentsEnabled={media.userCommentsEnabled}
+                />
+              </div>
 
               {/* Gradient fade at bottom */}
               <div className="pointer-events-none absolute right-0 bottom-0 left-0 h-8 bg-gradient-to-b from-zinc-900/0 via-80% via-zinc-900/90 to-zinc-900" />

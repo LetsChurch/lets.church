@@ -11,10 +11,11 @@ import { EmptyState } from '@/components/empty-state';
 import Header from '@/components/header';
 import { MediaCard } from '@/components/media-card';
 import { MediaGrid } from '@/components/media-grid';
+import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 
-interface ChannelListItemProps {
+type ChannelListItemProps = {
   channel: {
     id: string;
     name: string;
@@ -27,7 +28,7 @@ interface ChannelListItemProps {
   isLoggedIn: boolean;
   onFollow?: (channelId: string) => void;
   onUnfollow?: (channelId: string) => void;
-}
+};
 
 function ChannelListItem({
   channel,
@@ -120,14 +121,12 @@ export const Route = createFileRoute('/_main/following')({
       );
     }
 
-    return {
-      isLoggedIn: hasSession,
-    };
+    return {};
   },
 });
 
 function RouteComponent() {
-  const { isLoggedIn } = Route.useLoaderData();
+  const isLoggedIn = useIsLoggedIn();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 

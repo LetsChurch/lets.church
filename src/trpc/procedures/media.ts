@@ -50,6 +50,7 @@ export const mediaProcedures = {
           overrideThumbnailPath: true,
           variants: true,
           probe: true,
+          userCommentsEnabled: true,
           channel: {
             select: {
               id: true,
@@ -476,5 +477,317 @@ export const mediaProcedures = {
         dislikes,
         userRating: userRating?.rating ?? null,
       };
+    }),
+
+  getComments: publicProcedure
+    .input(z.object({ mediaId: z.uuid() }))
+    .query(async ({ input, ctx }) => {
+      moduleLogger.info('Fetching comments', {
+        mediaId: input.mediaId,
+      });
+
+      const comments = await db.uploadUserComment.findMany({
+        where: {
+          uploadRecordId: input.mediaId,
+          replyingToId: null, // Only top-level comments
+        },
+        select: {
+          id: true,
+          text: true,
+          createdAt: true,
+          score: true,
+          author: {
+            select: {
+              id: true,
+              username: true,
+              fullName: true,
+              avatarPath: true,
+            },
+          },
+          _count: {
+            select: {
+              replies: true,
+              userRatings: {
+                where: { rating: 'LIKE' },
+              },
+            },
+          },
+          userRatings: ctx.session
+            ? {
+                where: {
+                  appUserId: ctx.session.appUserId,
+                },
+                select: {
+                  rating: true,
+                },
+              }
+            : false,
+        },
+        orderBy: {
+          score: 'desc',
+        },
+      });
+
+      return comments.map((comment) => ({
+        ...comment,
+        userRating: comment.userRatings?.[0]?.rating ?? null,
+        likeCount: comment._count.userRatings,
+        replyCount: comment._count.replies,
+        userRatings: undefined,
+      }));
+    }),
+
+  getReplies: publicProcedure
+    .input(z.object({ commentId: z.uuid() }))
+    .query(async ({ input, ctx }) => {
+      moduleLogger.info('Fetching replies', {
+        commentId: input.commentId,
+      });
+
+      const replies = await db.uploadUserComment.findMany({
+        where: {
+          replyingToId: input.commentId,
+        },
+        select: {
+          id: true,
+          text: true,
+          createdAt: true,
+          score: true,
+          author: {
+            select: {
+              id: true,
+              username: true,
+              fullName: true,
+              avatarPath: true,
+            },
+          },
+          _count: {
+            select: {
+              userRatings: {
+                where: { rating: 'LIKE' },
+              },
+            },
+          },
+          userRatings: ctx.session
+            ? {
+                where: {
+                  appUserId: ctx.session.appUserId,
+                },
+                select: {
+                  rating: true,
+                },
+              }
+            : false,
+        },
+        orderBy: {
+          createdAt: 'asc',
+        },
+      });
+
+      return replies.map((reply) => ({
+        ...reply,
+        userRating: reply.userRatings?.[0]?.rating ?? null,
+        likeCount: reply._count.userRatings,
+        userRatings: undefined,
+      }));
+    }),
+
+  createComment: authProcedure
+    .input(
+      z.object({
+        mediaId: z.uuid(),
+        text: z.string().min(1).max(5000),
+        replyingToId: z.uuid().optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { mediaId, text, replyingToId } = input;
+      const userId = ctx.session.appUserId;
+
+      moduleLogger.info('Creating comment', {
+        mediaId,
+        userId,
+        replyingToId,
+      });
+
+      // Fetch the upload record with channel and visibility information
+      const upload = await db.uploadRecord.findUnique({
+        where: { id: mediaId },
+        select: {
+          id: true,
+          visibility: true,
+          channel: {
+            select: {
+              id: true,
+              visibility: true,
+            },
+          },
+        },
+      });
+
+      if (!upload) {
+        throw new Error('Media not found');
+      }
+
+      // Check authorization based on channel and upload visibility
+      const needsChannelMembership =
+        upload.channel.visibility === 'PRIVATE' ||
+        upload.visibility === 'PRIVATE';
+
+      if (needsChannelMembership) {
+        // Check if user is a member of the channel
+        const membership = await db.channelMembership.findUnique({
+          where: {
+            channelId_appUserId: {
+              channelId: upload.channel.id,
+              appUserId: userId,
+            },
+          },
+        });
+
+        if (!membership) {
+          const reason =
+            upload.channel.visibility === 'PRIVATE'
+              ? 'private channel'
+              : 'private video';
+          moduleLogger.warn('Unauthorized comment attempt', {
+            mediaId,
+            userId,
+            reason,
+          });
+          throw new Error(
+            `You must be a member of the channel to comment on this ${reason === 'private channel' ? 'channel' : 'video'}`,
+          );
+        }
+      }
+
+      const comment = await db.uploadUserComment.create({
+        data: {
+          uploadRecordId: mediaId,
+          authorId: userId,
+          text,
+          replyingToId,
+        },
+        select: {
+          id: true,
+          text: true,
+          createdAt: true,
+          score: true,
+          author: {
+            select: {
+              id: true,
+              username: true,
+              fullName: true,
+              avatarPath: true,
+            },
+          },
+        },
+      });
+
+      moduleLogger.info('Comment created successfully', {
+        commentId: comment.id,
+        mediaId,
+        userId,
+      });
+
+      return comment;
+    }),
+
+  rateComment: authProcedure
+    .input(
+      z.object({
+        commentId: z.uuid(),
+        rating: z.enum(['LIKE', 'DISLIKE']),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const { commentId, rating } = input;
+      const userId = ctx.session.appUserId;
+
+      moduleLogger.info('Rating comment', {
+        commentId,
+        rating,
+        userId,
+      });
+
+      // Check if user already rated this comment
+      const existingRating = await db.uploadUserCommentRating.findUnique({
+        where: {
+          appUserId_uploadUserCommentId: {
+            appUserId: userId,
+            uploadUserCommentId: commentId,
+          },
+        },
+      });
+
+      if (existingRating) {
+        if (existingRating.rating === rating) {
+          // User is clicking the same rating - remove it (toggle off)
+          await db.uploadUserCommentRating.delete({
+            where: {
+              appUserId_uploadUserCommentId: {
+                appUserId: userId,
+                uploadUserCommentId: commentId,
+              },
+            },
+          });
+
+          moduleLogger.info('Comment rating removed', {
+            commentId,
+            rating,
+            userId,
+          });
+
+          return {
+            userRating: null,
+            previousRating: rating,
+          };
+        } else {
+          // User is changing their rating
+          await db.uploadUserCommentRating.update({
+            where: {
+              appUserId_uploadUserCommentId: {
+                appUserId: userId,
+                uploadUserCommentId: commentId,
+              },
+            },
+            data: {
+              rating,
+            },
+          });
+
+          moduleLogger.info('Comment rating updated', {
+            commentId,
+            rating,
+            previousRating: existingRating.rating,
+            userId,
+          });
+
+          return {
+            userRating: rating,
+            previousRating: existingRating.rating,
+          };
+        }
+      } else {
+        // User is rating for the first time
+        await db.uploadUserCommentRating.create({
+          data: {
+            appUserId: userId,
+            uploadUserCommentId: commentId,
+            rating,
+          },
+        });
+
+        moduleLogger.info('New comment rating created', {
+          commentId,
+          rating,
+          userId,
+        });
+
+        return {
+          userRating: rating,
+          previousRating: null,
+        };
+      }
     }),
 };
