@@ -20,9 +20,9 @@ function MobileDrawerRoot({
   );
 }
 
-interface MobileDrawerPortalProps {
+type MobileDrawerPortalProps = {
   children: React.ReactNode;
-}
+};
 
 function MobileDrawerPortal({ children }: MobileDrawerPortalProps) {
   return <Dialog.Portal>{children}</Dialog.Portal>;

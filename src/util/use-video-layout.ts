@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import { getInitialBrowserSize } from '@/stores/browser-size';
 import {
   getInitialSidebarCollapsed,
   SIDEBAR_CHANGE_EVENT,
 } from '@/stores/sidebar';
 
-interface VideoLayoutParams {
+type VideoLayoutParams = {
   aspectWidth?: number;
   aspectHeight?: number;
   minVisibleHeight?: number;
@@ -13,14 +14,14 @@ interface VideoLayoutParams {
   chromeBelow?: number;
   transcriptSidebarWidth?: number;
   gap?: number;
-}
+};
 
-interface VideoLayout {
+type VideoLayout = {
   videoWidth: number;
   videoHeight: number;
   containerWidth: number;
   showSidebar: boolean;
-}
+};
 
 export function useVideoLayout({
   aspectWidth = 1920,
@@ -36,18 +37,11 @@ export function useVideoLayout({
     getInitialSidebarCollapsed(),
   );
   const [layout, setLayout] = useState<VideoLayout>(() => {
-    if (typeof window === 'undefined') {
-      return {
-        videoWidth: 1280,
-        videoHeight: 720,
-        containerWidth: 1280,
-        showSidebar: false,
-      };
-    }
+    const browserSize = getInitialBrowserSize();
 
     return calculateLayout({
-      vw: window.innerWidth,
-      vh: window.innerHeight,
+      vw: browserSize.width,
+      vh: browserSize.height,
       aspectWidth,
       aspectHeight,
       minVisibleHeight,
@@ -113,7 +107,7 @@ export function useVideoLayout({
   return layout;
 }
 
-interface CalculateLayoutParams extends VideoLayoutParams {
+type CalculateLayoutParams = VideoLayoutParams & {
   vw: number;
   vh: number;
   aspectWidth: number;
@@ -125,7 +119,7 @@ interface CalculateLayoutParams extends VideoLayoutParams {
   transcriptSidebarWidth: number;
   gap: number;
   pageSidebarCollapsed: boolean;
-}
+};
 
 function calculateLayout({
   vw,

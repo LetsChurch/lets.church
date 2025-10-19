@@ -4,11 +4,12 @@ import {
   Outlet,
   Scripts,
 } from '@tanstack/react-router';
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import '@fontsource-variable/inter';
 import '@fontsource-variable/roboto-mono';
 import appCss from '@/app.css?url';
 import type { AppContextType } from '@/router';
+import { setBrowserSize } from '@/stores/browser-size';
 
 const indigo = '#6366f1';
 
@@ -81,6 +82,21 @@ export const Route = createRootRouteWithContext<AppContextType>()({
 });
 
 function RootComponent() {
+  useEffect(() => {
+    // Set browser size cookie on mount and when window resizes
+    const updateBrowserSize = () => {
+      setBrowserSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    updateBrowserSize();
+
+    window.addEventListener('resize', updateBrowserSize);
+    return () => window.removeEventListener('resize', updateBrowserSize);
+  }, []);
+
   return (
     <RootDocument>
       <Outlet />
