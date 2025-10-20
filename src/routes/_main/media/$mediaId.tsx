@@ -60,6 +60,137 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
       comments,
     };
   },
+  head: ({ loaderData }) => {
+    const media = loaderData?.media;
+
+    if (!media) {
+      return {};
+    }
+
+    const title = media.title
+      ? `${media.title} - Let's Church`
+      : "Let's Church";
+    const description =
+      media.description ||
+      `Watch ${media.title || 'this video'} on Let's Church`;
+
+    // TODO: centralize the public url logic
+    const url =
+      typeof window !== 'undefined'
+        ? window.location.href
+        : `https://lets.church/media/${media.id}`;
+    const imageUrl = media.fullSizeThumbnailUrl || media.posterThumbnailUrl;
+
+    return {
+      meta: [
+        // Basic meta tags
+        {
+          title,
+        },
+        {
+          name: 'description',
+          content: description,
+        },
+        // OpenGraph tags
+        {
+          property: 'og:url',
+          content: url,
+        },
+        {
+          property: 'og:type',
+          content: 'video.other',
+        },
+        {
+          property: 'og:title',
+          content: title,
+        },
+        {
+          property: 'og:description',
+          content: description,
+        },
+        ...(imageUrl
+          ? [
+              {
+                property: 'og:image',
+                content: imageUrl,
+              },
+            ]
+          : []),
+        ...(media.width
+          ? [
+              {
+                property: 'og:image:width',
+                content: media.width.toString(),
+              },
+            ]
+          : []),
+        ...(media.height
+          ? [
+              {
+                property: 'og:image:height',
+                content: media.height.toString(),
+              },
+            ]
+          : []),
+        {
+          property: 'og:site_name',
+          content: "Let's Church",
+        },
+        // Twitter Card tags
+        {
+          name: 'twitter:card',
+          content: 'summary_large_image',
+        },
+        {
+          property: 'twitter:domain',
+          content: 'lets.church',
+        },
+        {
+          property: 'twitter:url',
+          content: url,
+        },
+        {
+          name: 'twitter:title',
+          content: title,
+        },
+        {
+          name: 'twitter:description',
+          content: description,
+        },
+        ...(imageUrl
+          ? [
+              {
+                name: 'twitter:image',
+                content: imageUrl,
+              },
+            ]
+          : []),
+        // Additional video metadata
+        ...(media.lengthSeconds
+          ? [
+              {
+                property: 'video:duration',
+                content: media.lengthSeconds.toString(),
+              },
+            ]
+          : []),
+        ...(media.publishedAt
+          ? [
+              {
+                property: 'article:published_time',
+                content: new Date(media.publishedAt).toISOString(),
+              },
+            ]
+          : []),
+      ],
+      links: [
+        {
+          rel: 'canonical',
+          href: `https://lets.church/media/${media.id}`,
+        },
+      ],
+    };
+  },
 });
 
 function RouteComponent() {
