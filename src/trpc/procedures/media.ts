@@ -1,4 +1,5 @@
 import { xxh64 } from '@node-rs/xxhash';
+import { UploadViewSource } from '@prisma/client';
 import { getWebRequest } from '@tanstack/react-start/server';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
 import { z } from 'zod';
@@ -272,10 +273,14 @@ export const mediaProcedures = {
     .input(
       z.object({
         uploadRecordId: z.uuid(),
+        source: z
+          .nativeEnum(UploadViewSource)
+          .optional()
+          .default(UploadViewSource.WEBSITE),
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const { uploadRecordId } = input;
+      const { uploadRecordId, source } = input;
       const clientIp = getClientIpAddress(getWebRequest().headers);
       const clientUserAgent = getWebRequest().headers.get('user-agent');
 
@@ -283,6 +288,7 @@ export const mediaProcedures = {
         uploadRecordId,
         clientIp,
         userId: ctx.session?.appUserId,
+        source,
       });
 
       const trackingSalt = await db.trackingSalt.findFirst({
@@ -314,6 +320,7 @@ export const mediaProcedures = {
           uploadRecordId,
           viewHash,
           appUserId: ctx.session?.appUserId ?? null,
+          source,
         },
         update: {
           count: { increment: 1 },
@@ -327,6 +334,7 @@ export const mediaProcedures = {
       moduleLogger.info('Upload view created', {
         uploadRecordId: view.uploadRecordId,
         viewHash: view.viewHash.toString(),
+        source,
       });
 
       return {

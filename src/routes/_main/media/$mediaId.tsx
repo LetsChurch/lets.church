@@ -1,4 +1,5 @@
 import { AlertDialog } from '@base-ui-components/react/alert-dialog';
+import { UploadViewSource } from '@prisma/client';
 import { IconMessageCircle2, IconSearch } from '@tabler/icons-react';
 import {
   useMutation,
@@ -34,6 +35,7 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
       ),
       trpcClient.media.createUploadView.mutate({
         uploadRecordId: params.mediaId,
+        source: UploadViewSource.WEBSITE,
       }),
       queryClient.ensureQueryData(
         trpc.media.getTranscript.queryOptions({
@@ -475,6 +477,13 @@ function RouteComponent() {
                 enabled: media.downloadsEnabled,
                 urls: media.downloadUrls,
               }}
+              mediaDimensions={
+                media.width && media.height
+                  ? { width: media.width, height: media.height }
+                  : undefined
+              }
+              hasVideo={!!media.mediaSource}
+              hasAudio={!!media.audioSource}
             />
 
             <MediaInfoTabs

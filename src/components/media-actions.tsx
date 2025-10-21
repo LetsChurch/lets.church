@@ -8,6 +8,7 @@ import {
   IconBookmark,
   IconBrandFacebook,
   IconBrandX,
+  IconCode,
   IconCopy,
   IconDeviceTvOld,
   IconDownload,
@@ -21,6 +22,8 @@ import {
 import { useState } from 'react';
 import LcButton from '@/components/lc-button';
 import LcButtonGroup from '@/components/lc-button-group';
+import { useAbortController } from '@/hooks/use-abort-controller';
+import { abortableSetTimeout } from '@/util/abortable-timeout';
 import { cn } from '@/util/cn';
 
 type MediaDownloadKind =
@@ -52,6 +55,12 @@ type MediaActionsProps = {
     isFollowing: boolean;
   };
   onFollowToggle: () => void;
+  mediaDimensions?: {
+    width: number;
+    height: number;
+  };
+  hasVideo?: boolean;
+  hasAudio?: boolean;
 };
 
 const windowConfig = Object.entries({
@@ -97,8 +106,13 @@ export function MediaActions({
   downloadData,
   channelData,
   onFollowToggle,
+  mediaDimensions,
+  hasVideo = true,
+  hasAudio = false,
 }: MediaActionsProps) {
+  const abortController = useAbortController();
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [copySuccess, setCopySuccess] = useState<string | null>(null);
 
   const handleShare = async () => {
     // Check if native share is available
@@ -130,9 +144,55 @@ export function MediaActions({
       await navigator.clipboard.writeText(
         `${shareData.title} ${shareData.url}`,
       );
-      setShareModalOpen(false);
+      setCopySuccess('link');
+      abortableSetTimeout(
+        () => {
+          setCopySuccess(null);
+          setShareModalOpen(false);
+        },
+        1500,
+        abortController.signal,
+      );
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
+    }
+  };
+
+  const handleCopyEmbed = async (type: 'video' | 'audio') => {
+    try {
+      // Extract the mediaId from the URL
+      const mediaId = shareData.url.split('/media/')[1]?.split('?')[0];
+      const baseEmbedUrl = shareData.url.replace(
+        `/media/${mediaId}`,
+        `/embed/media/${mediaId}`,
+      );
+
+      // Add type query parameter
+      const embedUrl = `${baseEmbedUrl}?type=${type}`;
+
+      let embedCode: string;
+
+      if (type === 'audio') {
+        // Audio embed: fixed height, 100% width
+        embedCode = `<iframe src="${embedUrl}" style="width: 100%; height: 150px;" frameborder="0" allowfullscreen allow="autoplay; fullscreen; picture-in-picture"></iframe>`;
+      } else {
+        // Video embed: aspect ratio based on media dimensions
+        const width = mediaDimensions?.width ?? 1920;
+        const height = mediaDimensions?.height ?? 1080;
+        const aspectRatio = `${width} / ${height}`;
+        embedCode = `<iframe src="${embedUrl}" style="width: 100%; aspect-ratio: ${aspectRatio};" frameborder="0" allowfullscreen allow="autoplay; fullscreen; picture-in-picture"></iframe>`;
+      }
+      await navigator.clipboard.writeText(embedCode);
+      setCopySuccess(`embed-${type}`);
+      abortableSetTimeout(
+        () => {
+          setCopySuccess(null);
+        },
+        1500,
+        abortController.signal,
+      );
+    } catch (error) {
+      console.error('Failed to copy embed code to clipboard:', error);
     }
   };
 
@@ -174,6 +234,59 @@ export function MediaActions({
         <LcButton className="p-2" onClick={handleShare}>
           <IconShare2 size={16} />
         </LcButton>
+
+        {/* Embed */}
+        {(hasVideo || hasAudio) && (
+          <Menu.Root>
+            <Menu.Trigger
+              render={(props) => (
+                <LcButton {...props} className="p-2">
+                  <IconCode size={16} />
+                </LcButton>
+              )}
+            />
+            <Menu.Portal>
+              <Menu.Positioner sideOffset={8} className="z-50">
+                <Menu.Popup className="min-w-[200px] rounded-lg border border-zinc-800 border-solid bg-zinc-900 py-1 shadow-xl transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
+                  {hasVideo ? (
+                    <Menu.Item
+                      render={(props) => (
+                        <button
+                          {...props}
+                          type="button"
+                          onClick={() => handleCopyEmbed('video')}
+                          className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-sm text-white outline-none transition-colors hover:bg-zinc-800 data-[highlighted]:bg-zinc-800"
+                        >
+                          <IconDeviceTvOld size={16} />
+                          {copySuccess === 'embed-video'
+                            ? 'Copied!'
+                            : 'Copy Video Embed'}
+                        </button>
+                      )}
+                    />
+                  ) : null}
+                  {hasAudio ? (
+                    <Menu.Item
+                      render={(props) => (
+                        <button
+                          {...props}
+                          type="button"
+                          onClick={() => handleCopyEmbed('audio')}
+                          className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-sm text-white outline-none transition-colors hover:bg-zinc-800 data-[highlighted]:bg-zinc-800"
+                        >
+                          <IconVolume size={16} />
+                          {copySuccess === 'embed-audio'
+                            ? 'Copied!'
+                            : 'Copy Audio Embed'}
+                        </button>
+                      )}
+                    />
+                  ) : null}
+                </Menu.Popup>
+              </Menu.Positioner>
+            </Menu.Portal>
+          </Menu.Root>
+        )}
 
         {/* Download */}
         {downloadData?.enabled && downloadData.urls.length > 0 ? (
@@ -304,10 +417,17 @@ export function MediaActions({
                 onClick={handleCopy}
                 className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
               >
-                <div className="flex size-12 items-center justify-center rounded-full bg-zinc-700">
+                <div
+                  className={cn(
+                    'flex size-12 items-center justify-center rounded-full',
+                    copySuccess === 'link' ? 'bg-green-600' : 'bg-zinc-700',
+                  )}
+                >
                   <IconCopy size={24} className="text-white" />
                 </div>
-                <span className="text-white text-xs">Copy</span>
+                <span className="text-white text-xs">
+                  {copySuccess === 'link' ? 'Copied!' : 'Copy'}
+                </span>
               </button>
             </div>
           </Dialog.Popup>

@@ -16,6 +16,7 @@ import {
   MediaTimeRange,
 } from 'media-chrome/react';
 import { useEffect, useRef, useState } from 'react';
+import Logo from '@/components/logo';
 import { MediaSwitcher } from '@/components/media-switcher';
 import { WaveformBackground } from '@/components/waveform-background';
 import { $currentTime, $setPlayAt } from '@/stores/player';
@@ -39,6 +40,7 @@ type Props = {
   peaksJsonUrl?: string | null;
   lengthSeconds?: number | null;
   videoClassName?: string | null;
+  embed?: boolean;
 };
 
 function serializeTimeRanges(
@@ -64,6 +66,7 @@ export function Player({
   peaksJsonUrl,
   lengthSeconds,
   videoClassName,
+  embed = false,
 }: Props) {
   const trpc = useTRPC();
   const videoRef = useRef<HlsVideoElement>(null);
@@ -72,7 +75,7 @@ export function Player({
 
   const hasVideo = !!mediaSource;
   const hasAudio = !!audioSource;
-  const showToggle = hasVideo && hasAudio;
+  const showToggle = hasVideo && hasAudio && !embed;
 
   const [mediaType, setMediaType] = useState<'video' | 'audio'>(
     hasVideo ? 'video' : 'audio',
@@ -177,9 +180,11 @@ export function Player({
   return (
     <div
       className={cn(
-        'relative z-100 overflow-hidden rounded-2xl',
+        'relative z-100 overflow-hidden',
+        !embed && 'rounded-2xl',
         mediaType === 'video' && 'bg-black',
         mediaType === 'video' && videoClassName,
+        mediaType === 'audio' && embed && 'w-full',
       )}
     >
       {currentSource ? (
@@ -195,8 +200,20 @@ export function Player({
             className="relative block"
             style={{
               '--media-background-color': 'none',
-              width: mediaType === 'audio' ? '100%' : `${videoWidth}px`,
-              height: mediaType === 'audio' ? '240px' : `${videoHeight}px`,
+              width:
+                mediaType === 'audio' || embed ? '100%' : `${videoWidth}px`,
+              height:
+                mediaType === 'audio' && !embed
+                  ? '240px'
+                  : embed && mediaType === 'video'
+                    ? 'auto'
+                    : embed && mediaType === 'audio'
+                      ? '100%'
+                      : `${videoHeight}px`,
+              aspectRatio:
+                embed && mediaType === 'video'
+                  ? `${videoWidth} / ${videoHeight}`
+                  : undefined,
             }}
             autohide={mediaType === 'audio' ? '-1' : '2'}
           >
@@ -222,7 +239,7 @@ export function Player({
               <div
                 className={cn(
                   'pointer-events-auto flex h-16 px-3 pt-3',
-                  showToggle ? 'justify-between' : 'justify-end',
+                  showToggle || embed ? 'justify-between' : 'justify-end',
                   mediaType === 'video' &&
                     'bg-gradient-to-b from-gray-950/70 to-transparent',
                 )}
@@ -239,6 +256,15 @@ export function Player({
                       }
                     }}
                   />
+                ) : embed ? (
+                  <a
+                    href="https://lets.church"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-start"
+                  >
+                    <Logo />
+                  </a>
                 ) : null}
                 <div className="flex items-start gap-2.5">
                   <MediaMuteButton

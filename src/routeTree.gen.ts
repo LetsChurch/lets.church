@@ -25,6 +25,7 @@ import { Route as AuthRegisterRouteImport } from './routes/auth_/register'
 import { Route as AuthLoginRouteImport } from './routes/auth_/login'
 import { Route as MainSearchRouteImport } from './routes/_main/search'
 import { Route as MainFollowingRouteImport } from './routes/_main/following'
+import { Route as EmbedMediaMediaIdRouteImport } from './routes/embed.media.$mediaId'
 import { Route as DashboardOrganizationsOrgIdRouteImport } from './routes/dashboard_/organizations_.$orgId'
 import { Route as DashboardChurchesNewRouteImport } from './routes/dashboard_/churches_.new'
 import { Route as DashboardChurchesChurchIdRouteImport } from './routes/dashboard_/churches_.$churchId'
@@ -125,6 +126,11 @@ const MainFollowingRoute = MainFollowingRouteImport.update({
   id: '/following',
   path: '/following',
   getParentRoute: () => MainRoute,
+} as any)
+const EmbedMediaMediaIdRoute = EmbedMediaMediaIdRouteImport.update({
+  id: '/embed/media/$mediaId',
+  path: '/embed/media/$mediaId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardOrganizationsOrgIdRoute =
   DashboardOrganizationsOrgIdRouteImport.update({
@@ -320,6 +326,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/churches/$churchId': typeof DashboardChurchesChurchIdRoute
   '/dashboard/churches/new': typeof DashboardChurchesNewRoute
   '/dashboard/organizations/$orgId': typeof DashboardOrganizationsOrgIdRoute
+  '/embed/media/$mediaId': typeof EmbedMediaMediaIdRoute
   '/dashboard/channels/$channelId/edit': typeof DashboardChannelsChannelIdEditRoute
   '/dashboard/channels/$channelId/members': typeof DashboardChannelsChannelIdMembersRoute
   '/dashboard/channels/$channelId/playlists': typeof DashboardChannelsChannelIdPlaylistsRoute
@@ -360,6 +367,7 @@ export interface FileRoutesByTo {
   '/dashboard/churches/$churchId': typeof DashboardChurchesChurchIdRoute
   '/dashboard/churches/new': typeof DashboardChurchesNewRoute
   '/dashboard/organizations/$orgId': typeof DashboardOrganizationsOrgIdRoute
+  '/embed/media/$mediaId': typeof EmbedMediaMediaIdRoute
   '/dashboard/channels/$channelId/edit': typeof DashboardChannelsChannelIdEditRoute
   '/dashboard/channels/$channelId/members': typeof DashboardChannelsChannelIdMembersRoute
   '/dashboard/channels/$channelId/playlists': typeof DashboardChannelsChannelIdPlaylistsRoute
@@ -403,6 +411,7 @@ export interface FileRoutesById {
   '/dashboard_/churches_/$churchId': typeof DashboardChurchesChurchIdRoute
   '/dashboard_/churches_/new': typeof DashboardChurchesNewRoute
   '/dashboard_/organizations_/$orgId': typeof DashboardOrganizationsOrgIdRoute
+  '/embed/media/$mediaId': typeof EmbedMediaMediaIdRoute
   '/dashboard_/channels_/$channelId_/edit': typeof DashboardChannelsChannelIdEditRoute
   '/dashboard_/channels_/$channelId_/members': typeof DashboardChannelsChannelIdMembersRoute
   '/dashboard_/channels_/$channelId_/playlists': typeof DashboardChannelsChannelIdPlaylistsRoute
@@ -446,6 +455,7 @@ export interface FileRouteTypes {
     | '/dashboard/churches/$churchId'
     | '/dashboard/churches/new'
     | '/dashboard/organizations/$orgId'
+    | '/embed/media/$mediaId'
     | '/dashboard/channels/$channelId/edit'
     | '/dashboard/channels/$channelId/members'
     | '/dashboard/channels/$channelId/playlists'
@@ -486,6 +496,7 @@ export interface FileRouteTypes {
     | '/dashboard/churches/$churchId'
     | '/dashboard/churches/new'
     | '/dashboard/organizations/$orgId'
+    | '/embed/media/$mediaId'
     | '/dashboard/channels/$channelId/edit'
     | '/dashboard/channels/$channelId/members'
     | '/dashboard/channels/$channelId/playlists'
@@ -528,6 +539,7 @@ export interface FileRouteTypes {
     | '/dashboard_/churches_/$churchId'
     | '/dashboard_/churches_/new'
     | '/dashboard_/organizations_/$orgId'
+    | '/embed/media/$mediaId'
     | '/dashboard_/channels_/$channelId_/edit'
     | '/dashboard_/channels_/$channelId_/members'
     | '/dashboard_/channels_/$channelId_/playlists'
@@ -547,6 +559,7 @@ export interface RootRouteChildren {
   MainRoute: typeof MainRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   DashboardRoute: typeof DashboardRouteWithChildren
+  EmbedMediaMediaIdRoute: typeof EmbedMediaMediaIdRoute
 }
 export interface FileServerRoutesByFullPath {
   '/auth/logout': typeof AuthLogoutServerRoute
@@ -677,6 +690,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/following'
       preLoaderRoute: typeof MainFollowingRouteImport
       parentRoute: typeof MainRoute
+    }
+    '/embed/media/$mediaId': {
+      id: '/embed/media/$mediaId'
+      path: '/embed/media/$mediaId'
+      fullPath: '/embed/media/$mediaId'
+      preLoaderRoute: typeof EmbedMediaMediaIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/dashboard_/organizations_/$orgId': {
       id: '/dashboard_/organizations_/$orgId'
@@ -1001,6 +1021,7 @@ const rootRouteChildren: RootRouteChildren = {
   MainRoute: MainRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   DashboardRoute: DashboardRouteWithChildren,
+  EmbedMediaMediaIdRoute: EmbedMediaMediaIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

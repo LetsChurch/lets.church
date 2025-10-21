@@ -423,6 +423,13 @@ enum Rating {
   @@map("rating")
 }
 
+enum UploadViewSource {
+  WEBSITE
+  EMBED
+
+  @@map("upload_view_source")
+}
+
 model UploadUserRating {
   appUser        AppUser      @relation(fields: [appUserId], references: [id], onDelete: Cascade)
   appUserId      String       @map("app_user_id") @db.Uuid
@@ -481,6 +488,7 @@ model UploadView {
   appUserId        String?            @map("app_user_id") @db.Uuid
   createdAt        DateTime           @default(now()) @map("created_at")
   count            Int                @default(1)
+  source           UploadViewSource?  @default(WEBSITE)
   UploadViewSecond UploadViewSecond[]
 
   @@id([uploadRecordId, viewHash])

@@ -35,6 +35,12 @@ type MediaHeaderProps = {
     enabled: boolean;
     urls: Array<{ kind: MediaDownloadKind; label: string; url: string }>;
   };
+  mediaDimensions?: {
+    width: number;
+    height: number;
+  };
+  hasVideo?: boolean;
+  hasAudio?: boolean;
 };
 
 export function MediaHeader({
@@ -45,6 +51,9 @@ export function MediaHeader({
   onFollowToggle,
   shareData,
   downloadData,
+  mediaDimensions,
+  hasVideo,
+  hasAudio,
 }: MediaHeaderProps) {
   return (
     <div className="mt-8 flex flex-col gap-3">
@@ -87,6 +96,9 @@ export function MediaHeader({
             isFollowing: channel.isFollowing,
           }}
           onFollowToggle={onFollowToggle}
+          mediaDimensions={mediaDimensions}
+          hasVideo={hasVideo}
+          hasAudio={hasAudio}
         />
       </div>
     </div>

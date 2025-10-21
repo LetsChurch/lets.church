@@ -3,6 +3,7 @@ import {
   Box,
   Button,
   Container,
+  CopyButton,
   Grid,
   Group,
   Image,
@@ -12,12 +13,19 @@ import {
   Radio,
   Stack,
   Text,
+  Textarea,
   Title,
   Tooltip,
 } from '@mantine/core';
 import { Dropzone } from '@mantine/dropzone';
 import { useStore } from '@nanostores/react';
-import { IconPhoto, IconUpload, IconX } from '@tabler/icons-react';
+import {
+  IconCheck,
+  IconCopy,
+  IconPhoto,
+  IconUpload,
+  IconX,
+} from '@tabler/icons-react';
 import {
   useMutation,
   useQueryClient,
@@ -746,6 +754,54 @@ function ChannelUploadPage() {
                   </Radio.Group>
                 )}
               </form.AppField>
+            </Stack>
+
+            {/* Embed Code */}
+            <Stack gap="md">
+              <Group justify="space-between" align="center">
+                <Text fw={500} size="sm">
+                  Embed Code
+                </Text>
+                <CopyButton
+                  value={`<iframe src="${typeof window !== 'undefined' ? window.location.origin : 'https://lets.church'}/embed/media/${uploadId}" width="1920" height="1080" frameborder="0" allowfullscreen allow="fullscreen; picture-in-picture"></iframe>`}
+                >
+                  {({ copied, copy }) => (
+                    <Tooltip label={copied ? 'Copied!' : 'Copy embed code'}>
+                      <Button
+                        size="xs"
+                        variant="light"
+                        leftSection={
+                          copied ? (
+                            <IconCheck size={14} />
+                          ) : (
+                            <IconCopy size={14} />
+                          )
+                        }
+                        onClick={copy}
+                        color={copied ? 'green' : undefined}
+                      >
+                        {copied ? 'Copied' : 'Copy'}
+                      </Button>
+                    </Tooltip>
+                  )}
+                </CopyButton>
+              </Group>
+              <Textarea
+                readOnly
+                value={`<iframe src="${typeof window !== 'undefined' ? window.location.origin : 'https://lets.church'}/embed/media/${uploadId}" width="1920" height="1080" frameborder="0" allowfullscreen allow="fullscreen; picture-in-picture"></iframe>`}
+                autosize
+                minRows={3}
+                maxRows={5}
+                styles={{
+                  input: {
+                    fontFamily: 'monospace',
+                    fontSize: '12px',
+                  },
+                }}
+              />
+              <Text size="xs" c="dimmed">
+                Use this code to embed the media player on external websites.
+              </Text>
             </Stack>
           </Stack>
         </Grid.Col>
