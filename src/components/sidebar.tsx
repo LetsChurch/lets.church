@@ -1,3 +1,4 @@
+import { Avatar } from '@base-ui-components/react/avatar';
 import { Tooltip } from '@base-ui-components/react/tooltip';
 import {
   IconArrowLeft,
@@ -12,12 +13,15 @@ import {
   IconLayoutSidebarLeftExpand,
   IconMenu2,
 } from '@tabler/icons-react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
+import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import {
   getInitialSidebarCollapsed,
   setSidebarCollapsed,
 } from '@/stores/sidebar';
+import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 import Logo from './logo';
 
@@ -25,24 +29,22 @@ type SidebarProps = {
   className?: string;
 };
 
-type Channel = {
-  name: string;
-  avatar?: string;
-};
-
-const mockChannels: Channel[] = [
-  { name: 'Conversations That Matter' },
-  { name: 'Alpha & Omega Ministries' },
-  { name: "The Shepherd's Church" },
-  { name: 'Ready4Eternity' },
-  { name: 'The PRODCAST' },
-];
-
 export default function Sidebar({ className }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(getInitialSidebarCollapsed());
   const [showAllChannels, setShowAllChannels] = useState(false);
   const [showAltMenu, setShowAltMenu] = useState(false);
   const [isLogoHovered, setIsLogoHovered] = useState(false);
+
+  const isLoggedIn = useIsLoggedIn();
+  const trpc = useTRPC();
+
+  const { data: followedChannels } = useQuery({
+    ...trpc.home.getFollowedChannels.queryOptions(),
+    enabled: isLoggedIn,
+  });
+
+  const channels = followedChannels ?? [];
+  const hasChannels = channels.length > 0;
 
   const toggleCollapsed = () => {
     const newValue = !collapsed;
@@ -290,81 +292,132 @@ export default function Sidebar({ className }: SidebarProps) {
               {/* Channel list */}
               {collapsed ? null : (
                 <div className="mt-1 flex flex-col gap-2 px-4 pt-1 pb-2">
-                  {mockChannels
-                    .slice(0, showAllChannels ? undefined : 5)
-                    .map((channel) => (
-                      <div
-                        key={channel.name}
-                        className="flex items-center gap-2.5"
-                      >
-                        <div className="flex size-6 shrink-0 items-center justify-center">
-                          <div className="size-5 overflow-hidden rounded-full bg-indigo-500" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-medium text-white/70 text-xs">
-                            {channel.name}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  <button
-                    type="button"
-                    onClick={() => setShowAllChannels(!showAllChannels)}
-                    className="flex items-center gap-2.5 text-left transition-colors hover:text-white/80"
-                  >
-                    <div className="flex size-6 items-center justify-center">
-                      <IconChevronDown
-                        size={16}
-                        className={cn(
-                          'text-zinc-400 transition-transform',
-                          showAllChannels && 'rotate-180',
-                        )}
-                      />
-                    </div>
-                    <span className="font-normal text-xs text-zinc-400">
-                      {showAllChannels ? 'Show Less' : 'Show More'}
-                    </span>
-                  </button>
+                  {!isLoggedIn ? (
+                    <Link
+                      to="/auth/register"
+                      className="text-left text-xs text-zinc-400 transition-colors hover:text-white/80"
+                    >
+                      Sign in to see channels
+                    </Link>
+                  ) : !hasChannels ? (
+                    <p className="text-left text-xs text-zinc-400">
+                      No channels yet
+                    </p>
+                  ) : (
+                    <>
+                      {channels
+                        .slice(0, showAllChannels ? undefined : 5)
+                        .map((channel) => (
+                          <Link
+                            key={channel.id}
+                            to="/channel/$slug"
+                            params={{ slug: channel.slug }}
+                            className="flex items-center gap-2.5 transition-colors hover:text-white/80"
+                          >
+                            <div className="flex size-6 shrink-0 items-center justify-center">
+                              <Avatar.Root className="size-5 overflow-hidden rounded-full border-top-highlight">
+                                <Avatar.Image
+                                  src={channel.avatarUrl || undefined}
+                                  alt={channel.name}
+                                  className="size-full object-cover"
+                                />
+                                <Avatar.Fallback className="flex size-full items-center justify-center rounded-full bg-indigo-500 font-bold text-[10px] text-white">
+                                  {channel.name.charAt(0).toUpperCase()}
+                                </Avatar.Fallback>
+                              </Avatar.Root>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-medium text-white/70 text-xs">
+                                {channel.name}
+                              </p>
+                            </div>
+                          </Link>
+                        ))}
+                      {channels.length > 5 ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowAllChannels(!showAllChannels)}
+                          className="flex items-center gap-2.5 text-left transition-colors hover:text-white/80"
+                        >
+                          <div className="flex size-6 items-center justify-center">
+                            <IconChevronDown
+                              size={16}
+                              className={cn(
+                                'text-zinc-400 transition-transform',
+                                showAllChannels && 'rotate-180',
+                              )}
+                            />
+                          </div>
+                          <span className="font-normal text-xs text-zinc-400">
+                            {showAllChannels ? 'Show Less' : 'Show More'}
+                          </span>
+                        </button>
+                      ) : null}
+                    </>
+                  )}
                 </div>
               )}
               {collapsed ? (
                 <div className="mt-1 flex flex-col gap-2 px-4 pt-1 pb-2">
-                  {mockChannels.slice(0, 5).map((channel) => (
-                    <Tooltip.Provider key={channel.name}>
-                      <Tooltip.Root>
-                        <Tooltip.Trigger className="flex size-6 shrink-0 items-center justify-center">
-                          <div className="size-5 overflow-hidden rounded-full bg-indigo-500" />
-                        </Tooltip.Trigger>
-                        <Tooltip.Portal>
-                          <Tooltip.Positioner
-                            side="right"
-                            sideOffset={8}
-                            className="z-50"
-                          >
-                            <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-white text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
-                              {channel.name}
-                              <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
-                            </Tooltip.Popup>
-                          </Tooltip.Positioner>
-                        </Tooltip.Portal>
-                      </Tooltip.Root>
-                    </Tooltip.Provider>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setShowAllChannels(!showAllChannels)}
-                    className="flex items-center justify-center"
-                  >
-                    <div className="flex size-6 items-center justify-center">
-                      <IconChevronDown
-                        size={16}
-                        className={cn(
-                          'text-zinc-400 transition-transform',
-                          showAllChannels && 'rotate-180',
-                        )}
-                      />
-                    </div>
-                  </button>
+                  {!isLoggedIn || !hasChannels ? null : (
+                    <>
+                      {channels.slice(0, 5).map((channel) => (
+                        <Tooltip.Provider key={channel.id}>
+                          <Tooltip.Root>
+                            <Tooltip.Trigger
+                              render={
+                                <Link
+                                  to="/channel/$slug"
+                                  params={{ slug: channel.slug }}
+                                />
+                              }
+                              className="flex size-6 shrink-0 items-center justify-center"
+                            >
+                              <Avatar.Root className="size-5 overflow-hidden rounded-full border-top-highlight">
+                                <Avatar.Image
+                                  src={channel.avatarUrl || undefined}
+                                  alt={channel.name}
+                                  className="size-full object-cover"
+                                />
+                                <Avatar.Fallback className="flex size-full items-center justify-center rounded-full bg-indigo-500 font-bold text-[10px] text-white">
+                                  {channel.name.charAt(0).toUpperCase()}
+                                </Avatar.Fallback>
+                              </Avatar.Root>
+                            </Tooltip.Trigger>
+                            <Tooltip.Portal>
+                              <Tooltip.Positioner
+                                side="right"
+                                sideOffset={8}
+                                className="z-50"
+                              >
+                                <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-white text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
+                                  {channel.name}
+                                  <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
+                                </Tooltip.Popup>
+                              </Tooltip.Positioner>
+                            </Tooltip.Portal>
+                          </Tooltip.Root>
+                        </Tooltip.Provider>
+                      ))}
+                      {channels.length > 5 ? (
+                        <button
+                          type="button"
+                          onClick={() => setShowAllChannels(!showAllChannels)}
+                          className="flex items-center justify-center"
+                        >
+                          <div className="flex size-6 items-center justify-center">
+                            <IconChevronDown
+                              size={16}
+                              className={cn(
+                                'text-zinc-400 transition-transform',
+                                showAllChannels && 'rotate-180',
+                              )}
+                            />
+                          </div>
+                        </button>
+                      ) : null}
+                    </>
+                  )}
                 </div>
               ) : null}
               <div className="mx-4 h-px bg-zinc-900" />

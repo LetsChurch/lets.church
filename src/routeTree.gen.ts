@@ -41,6 +41,7 @@ import { Route as DashboardAdminChannelApprovalsRouteImport } from './routes/das
 import { Route as DashboardAccountSecurityRouteImport } from './routes/dashboard_/account_.security'
 import { Route as DashboardAccountProfileRouteImport } from './routes/dashboard_/account_.profile'
 import { Route as MainMediaMediaIdRouteImport } from './routes/_main/media/$mediaId'
+import { Route as MainChannelSlugRouteImport } from './routes/_main/channel.$slug'
 import { Route as DashboardOrganizationsOrgIdMembersRouteImport } from './routes/dashboard_/organizations_.$orgId_.members'
 import { Route as DashboardOrganizationsOrgIdEditRouteImport } from './routes/dashboard_/organizations_.$orgId_.edit'
 import { Route as DashboardOrganizationsOrgIdAssociationsRouteImport } from './routes/dashboard_/organizations_.$orgId_.associations'
@@ -217,6 +218,11 @@ const MainMediaMediaIdRoute = MainMediaMediaIdRouteImport.update({
   path: '/media/$mediaId',
   getParentRoute: () => MainRoute,
 } as any)
+const MainChannelSlugRoute = MainChannelSlugRouteImport.update({
+  id: '/channel/$slug',
+  path: '/channel/$slug',
+  getParentRoute: () => MainRoute,
+} as any)
 const DashboardOrganizationsOrgIdMembersRoute =
   DashboardOrganizationsOrgIdMembersRouteImport.update({
     id: '/organizations_/$orgId_/members',
@@ -327,6 +333,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/organizations': typeof DashboardOrganizationsRoute
   '/': typeof MainIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/channel/$slug': typeof MainChannelSlugRoute
   '/media/$mediaId': typeof MainMediaMediaIdRoute
   '/dashboard/account/profile': typeof DashboardAccountProfileRoute
   '/dashboard/account/security': typeof DashboardAccountSecurityRoute
@@ -370,6 +377,7 @@ export interface FileRoutesByTo {
   '/dashboard/organizations': typeof DashboardOrganizationsRoute
   '/': typeof MainIndexRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/channel/$slug': typeof MainChannelSlugRoute
   '/media/$mediaId': typeof MainMediaMediaIdRoute
   '/dashboard/account/profile': typeof DashboardAccountProfileRoute
   '/dashboard/account/security': typeof DashboardAccountSecurityRoute
@@ -416,6 +424,7 @@ export interface FileRoutesById {
   '/dashboard_/organizations': typeof DashboardOrganizationsRoute
   '/_main/': typeof MainIndexRoute
   '/dashboard_/': typeof DashboardIndexRoute
+  '/_main/channel/$slug': typeof MainChannelSlugRoute
   '/_main/media/$mediaId': typeof MainMediaMediaIdRoute
   '/dashboard_/account_/profile': typeof DashboardAccountProfileRoute
   '/dashboard_/account_/security': typeof DashboardAccountSecurityRoute
@@ -462,6 +471,7 @@ export interface FileRouteTypes {
     | '/dashboard/organizations'
     | '/'
     | '/dashboard/'
+    | '/channel/$slug'
     | '/media/$mediaId'
     | '/dashboard/account/profile'
     | '/dashboard/account/security'
@@ -505,6 +515,7 @@ export interface FileRouteTypes {
     | '/dashboard/organizations'
     | '/'
     | '/dashboard'
+    | '/channel/$slug'
     | '/media/$mediaId'
     | '/dashboard/account/profile'
     | '/dashboard/account/security'
@@ -550,6 +561,7 @@ export interface FileRouteTypes {
     | '/dashboard_/organizations'
     | '/_main/'
     | '/dashboard_/'
+    | '/_main/channel/$slug'
     | '/_main/media/$mediaId'
     | '/dashboard_/account_/profile'
     | '/dashboard_/account_/security'
@@ -827,6 +839,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainMediaMediaIdRouteImport
       parentRoute: typeof MainRoute
     }
+    '/_main/channel/$slug': {
+      id: '/_main/channel/$slug'
+      path: '/channel/$slug'
+      fullPath: '/channel/$slug'
+      preLoaderRoute: typeof MainChannelSlugRouteImport
+      parentRoute: typeof MainRoute
+    }
     '/dashboard_/organizations_/$orgId_/members': {
       id: '/dashboard_/organizations_/$orgId_/members'
       path: '/organizations/$orgId/members'
@@ -952,6 +971,7 @@ interface MainRouteChildren {
   MainLibraryRoute: typeof MainLibraryRoute
   MainSearchRoute: typeof MainSearchRoute
   MainIndexRoute: typeof MainIndexRoute
+  MainChannelSlugRoute: typeof MainChannelSlugRoute
   MainMediaMediaIdRoute: typeof MainMediaMediaIdRoute
 }
 
@@ -961,6 +981,7 @@ const MainRouteChildren: MainRouteChildren = {
   MainLibraryRoute: MainLibraryRoute,
   MainSearchRoute: MainSearchRoute,
   MainIndexRoute: MainIndexRoute,
+  MainChannelSlugRoute: MainChannelSlugRoute,
   MainMediaMediaIdRoute: MainMediaMediaIdRoute,
 }
 

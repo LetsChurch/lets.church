@@ -44,9 +44,9 @@ export function Transcript({ transcript }: Props) {
 
     const line = containerRef.current.querySelector(
       `[data-start="${transcript[currentI]?.start}"]`,
-    ) as HTMLElement;
+    );
 
-    line.scrollIntoView({
+    line?.scrollIntoView({
       behavior: 'smooth',
       block: 'center',
       // @ts-ignore: not typed in TypeScript

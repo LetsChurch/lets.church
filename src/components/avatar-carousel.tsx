@@ -7,6 +7,7 @@ type AvatarCarouselProps = {
   items: Array<{
     id: string;
     name: string;
+    slug: string;
     avatarUrl?: string | null;
   }>;
 };
@@ -26,7 +27,8 @@ export function AvatarCarousel({ items }: AvatarCarouselProps) {
         {items.map((item) => (
           <Link
             key={item.id}
-            to="/"
+            to="/channel/$slug"
+            params={{ slug: item.slug }}
             className="flex w-[72px] flex-shrink-0 flex-col items-center gap-1.5"
           >
             <Avatar.Root className="size-[72px] overflow-hidden rounded-full border-top-highlight">

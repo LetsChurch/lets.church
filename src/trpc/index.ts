@@ -1,5 +1,6 @@
 import { accountProcedures } from './procedures/account';
 import { authProcedures } from './procedures/auth';
+import { channelProcedures } from './procedures/channel';
 import { commonProcedures } from './procedures/common';
 import { dashboardRouter } from './procedures/dashboard';
 import { homeProcedures } from './procedures/home';
@@ -11,6 +12,7 @@ export const appRouter = router({
   dashboard: dashboardRouter,
   auth: authProcedures,
   account: accountProcedures,
+  channel: channelProcedures,
   common: commonProcedures,
   home: homeProcedures,
   library: libraryProcedures,

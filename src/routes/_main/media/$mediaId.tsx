@@ -7,7 +7,7 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { CommentsSection } from '@/components/comments-section';
 import Header from '@/components/header';
 import LcButton from '@/components/lc-button';
@@ -19,7 +19,7 @@ import { Player } from '@/components/player';
 import { Transcript } from '@/components/transcript';
 import { TranscriptSidebar } from '@/components/transcript-sidebar';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
-import { $headerBackgroundImage } from '@/stores/header';
+import { useSetBackgroundImage } from '@/stores/header';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 import { useVideoLayout } from '@/util/use-video-layout';
@@ -467,14 +467,7 @@ function RouteComponent() {
     });
   };
 
-  useEffect(() => {
-    if (media.fullSizeThumbnailUrl) {
-      $headerBackgroundImage.set(media.fullSizeThumbnailUrl);
-    }
-    return () => {
-      $headerBackgroundImage.set(undefined);
-    };
-  }, [media.fullSizeThumbnailUrl]);
+  useSetBackgroundImage(media.fullSizeThumbnailUrl ?? undefined);
 
   const aspectWidth = media.width ?? 1920;
   const aspectHeight = media.height ?? 1080;

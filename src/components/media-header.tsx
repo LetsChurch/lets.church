@@ -1,4 +1,5 @@
 import { Avatar } from '@base-ui-components/react/avatar';
+import { Link } from '@tanstack/react-router';
 import { MediaActions } from '@/components/media-actions';
 
 type MediaDownloadKind =
@@ -69,7 +70,11 @@ export function MediaHeader({
       {/* Channel & Actions */}
       <div className="flex items-center gap-2.5 overflow-x-auto">
         {/* Channel Info */}
-        <div className="flex flex-shrink-0 items-center gap-1.5">
+        <Link
+          to="/channel/$slug"
+          params={{ slug: channel.slug }}
+          className="flex flex-shrink-0 items-center gap-1.5 transition-opacity hover:opacity-80"
+        >
           <Avatar.Root className="size-7 overflow-hidden rounded-full border-top-highlight">
             {channel.avatarUrl ? (
               <Avatar.Image src={channel.avatarUrl} alt={channel.name} />
@@ -87,7 +92,7 @@ export function MediaHeader({
               {channel.subscriberCount === 1 ? 'follower' : 'followers'}
             </div>
           </div>
-        </div>
+        </Link>
 
         {/* Actions */}
         <MediaActions

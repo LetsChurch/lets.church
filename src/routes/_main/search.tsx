@@ -95,7 +95,7 @@ function SearchResults() {
 
       <div className="space-y-4">
         <h2 className="font-medium text-primary">Channels</h2>
-        <AvatarCarousel items={[{ id: 'foo', name: 'Foo' }]} />
+        <AvatarCarousel items={[{ id: 'foo', name: 'Foo', slug: 'foo' }]} />
       </div>
 
       <div className="space-y-4">
@@ -113,7 +113,7 @@ function SearchResults() {
 
       <div className="space-y-4">
         <h2 className="font-medium text-primary">Churches</h2>
-        <AvatarCarousel items={[{ id: 'foo', name: 'Foo' }]} />
+        <AvatarCarousel items={[{ id: 'foo', name: 'Foo', slug: 'foo' }]} />
       </div>
 
       <div className="space-y-4">
