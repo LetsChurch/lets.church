@@ -48,6 +48,7 @@ model AppUser {
   uploadViews              UploadView[]
   uploadViewRanges         UploadViewRanges[]
   uploadLists              UploadList[]
+  savedMedia               SavedMedia[]
   approvedChannels         Channel[]
   approvedOrganizations    Organization[]
 
@@ -399,6 +400,7 @@ model UploadRecord {
   uploadViews               UploadView[]
   uploadViewRanges          UploadViewRanges[]
   uploadListEntries         UploadListEntry[]
+  savedByUsers              SavedMedia[]
 
   @@index([createdAt, id])
   @@index(score)
@@ -567,4 +569,17 @@ model SearchLogEntry {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("search_log_entry")
+}
+
+model SavedMedia {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  appUser        AppUser      @relation(fields: [appUserId], references: [id], onDelete: Cascade)
+  appUserId      String       @map("app_user_id") @db.Uuid
+  uploadRecord   UploadRecord @relation(fields: [uploadRecordId], references: [id], onDelete: Cascade)
+  uploadRecordId String       @map("upload_record_id") @db.Uuid
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@unique([appUserId, uploadRecordId])
+  @@index([appUserId, createdAt])
+  @@map("saved_media")
 }

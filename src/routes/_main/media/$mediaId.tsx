@@ -384,6 +384,46 @@ function RouteComponent() {
     },
   });
 
+  const saveMutation = useMutation({
+    mutationFn: trpc.library.saveMedia.mutationOptions().mutationFn,
+    onMutate: async () => {
+      const queryKey = trpc.media.getMediaById.queryKey({
+        mediaId: params.mediaId,
+      });
+
+      await queryClient.cancelQueries({ queryKey });
+      const previousMedia = queryClient.getQueryData(queryKey);
+
+      // TODO: should we do more of this, and less of the separate queries for mutable data?
+      queryClient.setQueryData(queryKey, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          isSaved: !old.isSaved,
+        };
+      });
+
+      return { previousMedia };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousMedia) {
+        queryClient.setQueryData(
+          trpc.media.getMediaById.queryKey({
+            mediaId: params.mediaId,
+          }),
+          context.previousMedia,
+        );
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: trpc.media.getMediaById.queryKey({
+          mediaId: params.mediaId,
+        }),
+      });
+    },
+  });
+
   const handleRate = (rating: 'LIKE' | 'DISLIKE') => {
     // Check if user is logged in before attempting to rate
     if (!isLoggedIn) {
@@ -413,6 +453,18 @@ function RouteComponent() {
         channelId: media.channel.id,
       });
     }
+  };
+
+  const handleSaveToggle = () => {
+    // Check if user is logged in before attempting to save
+    if (!isLoggedIn) {
+      setLoginDialogOpen(true);
+      return;
+    }
+
+    saveMutation.mutate({
+      mediaId: params.mediaId,
+    });
   };
 
   useEffect(() => {
@@ -469,6 +521,8 @@ function RouteComponent() {
               ratingData={ratingData}
               onRate={handleRate}
               onFollowToggle={handleFollowToggle}
+              isSaved={media.isSaved}
+              onSaveToggle={handleSaveToggle}
               shareData={{
                 title: media.title ?? 'Untitled',
                 url: typeof window !== 'undefined' ? window.location.href : '',

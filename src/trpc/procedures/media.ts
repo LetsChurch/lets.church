@@ -180,6 +180,20 @@ export const mediaProcedures = {
         isFollowing = !!subscription;
       }
 
+      // Check if current user has saved this media
+      let isSaved = false;
+      if (ctx.session?.appUserId) {
+        const savedMedia = await db.savedMedia.findUnique({
+          where: {
+            appUserId_uploadRecordId: {
+              appUserId: ctx.session.appUserId,
+              uploadRecordId: media.id,
+            },
+          },
+        });
+        isSaved = !!savedMedia;
+      }
+
       // Generate download URLs based on available variants
       type MediaDownloadKind =
         | 'VIDEO_4K'
@@ -258,6 +272,7 @@ export const mediaProcedures = {
         height,
         downloadsEnabled,
         downloadUrls,
+        isSaved,
         channel: {
           id: channel.id,
           name: channel.name,

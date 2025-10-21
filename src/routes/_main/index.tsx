@@ -1,5 +1,5 @@
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import type { EmblaCarouselType } from 'embla-carousel';
 import useEmblaCarousel from 'embla-carousel-react';
 import type { ComponentProps } from 'react';
@@ -18,6 +18,7 @@ import { TrendingSearchPill } from '@/components/trending-search-pill';
 import { ViewMoreCard } from '@/components/view-more-card';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { useTRPC } from '@/trpc/react';
+import { formatTime } from '@/util/format';
 
 export const Route = createFileRoute('/_main/')({
   component: Home,
@@ -119,6 +120,14 @@ function ContentSection({
 }
 
 function RecentlySaved() {
+  const isLoggedIn = useIsLoggedIn();
+  const trpc = useTRPC();
+
+  const { data: savedData } = useQuery({
+    ...trpc.library.getSavedMedia.queryOptions({ limit: 9 }),
+    enabled: isLoggedIn,
+  });
+
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: false,
     align: 'start',
@@ -152,7 +161,8 @@ function RecentlySaved() {
     };
   }, [emblaApi]);
 
-  const savedItems = [...Array(9)].map((_item, i) => `Saved Content ${i + 1}`);
+  const savedItems = savedData?.items ?? [];
+  const hasSavedItems = savedItems.length > 0;
 
   const column1 = savedItems.slice(0, 3);
   const column2 = savedItems.slice(3, 6);
@@ -162,71 +172,116 @@ function RecentlySaved() {
     <div className="mb-8">
       <div className="mb-6 flex items-center justify-between">
         <h2 className="font-medium text-lg text-primary">Recently Saved</h2>
-        <button
-          type="button"
-          className="text-muted text-sm transition-colors hover:text-primary"
-        >
-          View all
-        </button>
+        {hasSavedItems ? (
+          <button
+            type="button"
+            className="text-muted text-sm transition-colors hover:text-primary"
+          >
+            View all
+          </button>
+        ) : null}
       </div>
-
-      <div className="relative">
-        <div
-          className="-mx-16 relative overflow-visible px-16"
-          ref={emblaRef}
-          style={{
-            maskImage:
-              'linear-gradient(to right, transparent 0%, black 64px, black calc(100% - 64px), transparent 100%)',
-            WebkitMaskImage:
-              'linear-gradient(to right, transparent 0%, black 64px, black calc(100% - 64px), transparent 100%)',
-          }}
-        >
-          <div className="flex gap-4 md:gap-6">
-            <div className="min-w-0 flex-[0_0_100%] space-y-3 md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]">
-              {column1.map((title) => (
-                <MediaCompactCard
-                  key={title}
-                  title={title}
-                  channelName="Channel"
-                  duration="23:23"
-                  timestamp="Yesterday"
-                />
-              ))}
-            </div>
-            <div className="min-w-0 flex-[0_0_100%] space-y-3 md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]">
-              {column2.map((title) => (
-                <MediaCompactCard
-                  key={title}
-                  title={title}
-                  channelName="Channel"
-                  duration="23:23"
-                  timestamp="Yesterday"
-                />
-              ))}
-            </div>
-            <div className="min-w-0 flex-[0_0_100%] space-y-3 md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]">
-              {column3.map((title) => (
-                <MediaCompactCard
-                  key={title}
-                  title={title}
-                  channelName="Channel"
-                  duration="23:23"
-                  timestamp="Yesterday"
-                />
-              ))}
+      {hasSavedItems ? (
+        <div className="relative">
+          <div
+            className="-mx-16 relative overflow-visible px-16"
+            ref={emblaRef}
+            style={{
+              maskImage:
+                'linear-gradient(to right, transparent 0%, black 64px, black calc(100% - 64px), transparent 100%)',
+              WebkitMaskImage:
+                'linear-gradient(to right, transparent 0%, black 64px, black calc(100% - 64px), transparent 100%)',
+            }}
+          >
+            <div className="flex gap-4 md:gap-6">
+              <div className="min-w-0 flex-[0_0_100%] space-y-3 md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]">
+                {column1.map((upload) => (
+                  <Link
+                    key={upload.id}
+                    to="/media/$mediaId"
+                    params={{ mediaId: upload.id }}
+                  >
+                    <MediaCompactCard
+                      title={upload.title ?? 'Untitled'}
+                      thumbnailUrl={upload.thumbnailUrl}
+                      channelName={upload.channel.name}
+                      duration={
+                        upload.lengthSeconds
+                          ? formatTime(upload.lengthSeconds * 1000)
+                          : undefined
+                      }
+                    />
+                  </Link>
+                ))}
+              </div>
+              <div className="min-w-0 flex-[0_0_100%] space-y-3 md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]">
+                {column2.map((upload) => (
+                  <Link
+                    key={upload.id}
+                    to="/media/$mediaId"
+                    params={{ mediaId: upload.id }}
+                  >
+                    <MediaCompactCard
+                      title={upload.title ?? 'Untitled'}
+                      thumbnailUrl={upload.thumbnailUrl}
+                      channelName={upload.channel.name}
+                      duration={
+                        upload.lengthSeconds
+                          ? formatTime(upload.lengthSeconds * 1000)
+                          : undefined
+                      }
+                    />
+                  </Link>
+                ))}
+              </div>
+              <div className="min-w-0 flex-[0_0_100%] space-y-3 md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]">
+                {column3.map((upload) => (
+                  <Link
+                    key={upload.id}
+                    to="/media/$mediaId"
+                    params={{ mediaId: upload.id }}
+                  >
+                    <MediaCompactCard
+                      title={upload.title ?? 'Untitled'}
+                      thumbnailUrl={upload.thumbnailUrl}
+                      channelName={upload.channel.name}
+                      duration={
+                        upload.lengthSeconds
+                          ? formatTime(upload.lengthSeconds * 1000)
+                          : undefined
+                      }
+                    />
+                  </Link>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="lg:hidden">
-          <CarouselNavigationButtons
-            canScrollPrev={canScrollPrev}
-            canScrollNext={canScrollNext}
-            onScrollPrev={scrollPrev}
-            onScrollNext={scrollNext}
-          />
+          <div className="lg:hidden">
+            <CarouselNavigationButtons
+              canScrollPrev={canScrollPrev}
+              canScrollNext={canScrollNext}
+              onScrollPrev={scrollPrev}
+              onScrollNext={scrollNext}
+            />
+          </div>
         </div>
-      </div>
+      ) : (
+        <EmptyState
+          emptyTitle={
+            isLoggedIn
+              ? "You haven't saved anything yet"
+              : 'Sign in to see your saved content'
+          }
+          emptyBody={
+            isLoggedIn
+              ? 'Save videos to build a quick access list right on your homepage.'
+              : 'Create a free account or sign in to keep track of content you want to revisit.'
+          }
+          emptyCta={isLoggedIn ? 'Browse Content' : 'Sign In'}
+          emptyCtaHref={isLoggedIn ? '/' : '/auth/login'}
+        />
+      )}
     </div>
   );
 }

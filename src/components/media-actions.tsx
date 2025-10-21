@@ -6,6 +6,7 @@ import {
   IconBadgeCc,
   IconBadgeHd,
   IconBookmark,
+  IconBookmarkFilled,
   IconBrandFacebook,
   IconBrandX,
   IconCode,
@@ -55,6 +56,8 @@ type MediaActionsProps = {
     isFollowing: boolean;
   };
   onFollowToggle: () => void;
+  isSaved: boolean;
+  onSaveToggle: () => void;
   mediaDimensions?: {
     width: number;
     height: number;
@@ -106,6 +109,8 @@ export function MediaActions({
   downloadData,
   channelData,
   onFollowToggle,
+  isSaved,
+  onSaveToggle,
   mediaDimensions,
   hasVideo = true,
   hasAudio = false,
@@ -327,9 +332,16 @@ export function MediaActions({
         <div className="h-7 w-px bg-zinc-900" />
 
         {/* Save */}
-        <LcButton className="flex items-center gap-0.5">
-          <IconBookmark size={16} />
-          Save
+        <LcButton
+          className={cn('flex items-center gap-0.5', isSaved && 'bg-white/10')}
+          onClick={onSaveToggle}
+        >
+          {isSaved ? (
+            <IconBookmarkFilled size={16} />
+          ) : (
+            <IconBookmark size={16} />
+          )}
+          {isSaved ? 'Saved' : 'Save'}
         </LcButton>
 
         {/* Follow */}

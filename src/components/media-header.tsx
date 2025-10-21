@@ -27,6 +27,8 @@ type MediaHeaderProps = {
   };
   onRate: (rating: 'LIKE' | 'DISLIKE') => void;
   onFollowToggle: () => void;
+  isSaved: boolean;
+  onSaveToggle: () => void;
   shareData: {
     title: string;
     url: string;
@@ -49,6 +51,8 @@ export function MediaHeader({
   ratingData,
   onRate,
   onFollowToggle,
+  isSaved,
+  onSaveToggle,
   shareData,
   downloadData,
   mediaDimensions,
@@ -96,6 +100,8 @@ export function MediaHeader({
             isFollowing: channel.isFollowing,
           }}
           onFollowToggle={onFollowToggle}
+          isSaved={isSaved}
+          onSaveToggle={onSaveToggle}
           mediaDimensions={mediaDimensions}
           hasVideo={hasVideo}
           hasAudio={hasAudio}

@@ -24,6 +24,8 @@ import { Route as DashboardAccountRouteImport } from './routes/dashboard_/accoun
 import { Route as AuthRegisterRouteImport } from './routes/auth_/register'
 import { Route as AuthLoginRouteImport } from './routes/auth_/login'
 import { Route as MainSearchRouteImport } from './routes/_main/search'
+import { Route as MainLibraryRouteImport } from './routes/_main/library'
+import { Route as MainHistoryRouteImport } from './routes/_main/history'
 import { Route as MainFollowingRouteImport } from './routes/_main/following'
 import { Route as EmbedMediaMediaIdRouteImport } from './routes/embed.media.$mediaId'
 import { Route as DashboardOrganizationsOrgIdRouteImport } from './routes/dashboard_/organizations_.$orgId'
@@ -120,6 +122,16 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
 const MainSearchRoute = MainSearchRouteImport.update({
   id: '/search',
   path: '/search',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainLibraryRoute = MainLibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainHistoryRoute = MainHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
   getParentRoute: () => MainRoute,
 } as any)
 const MainFollowingRoute = MainFollowingRouteImport.update({
@@ -303,6 +315,8 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
   '/dashboard': typeof DashboardRouteWithChildren
   '/following': typeof MainFollowingRoute
+  '/history': typeof MainHistoryRoute
+  '/library': typeof MainLibraryRoute
   '/search': typeof MainSearchRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
@@ -344,6 +358,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
   '/following': typeof MainFollowingRoute
+  '/history': typeof MainHistoryRoute
+  '/library': typeof MainLibraryRoute
   '/search': typeof MainSearchRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
@@ -388,6 +404,8 @@ export interface FileRoutesById {
   '/auth_': typeof AuthRouteWithChildren
   '/dashboard_': typeof DashboardRouteWithChildren
   '/_main/following': typeof MainFollowingRoute
+  '/_main/history': typeof MainHistoryRoute
+  '/_main/library': typeof MainLibraryRoute
   '/_main/search': typeof MainSearchRoute
   '/auth_/login': typeof AuthLoginRoute
   '/auth_/register': typeof AuthRegisterRoute
@@ -432,6 +450,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/following'
+    | '/history'
+    | '/library'
     | '/search'
     | '/auth/login'
     | '/auth/register'
@@ -473,6 +493,8 @@ export interface FileRouteTypes {
   to:
     | '/auth'
     | '/following'
+    | '/history'
+    | '/library'
     | '/search'
     | '/auth/login'
     | '/auth/register'
@@ -516,6 +538,8 @@ export interface FileRouteTypes {
     | '/auth_'
     | '/dashboard_'
     | '/_main/following'
+    | '/_main/history'
+    | '/_main/library'
     | '/_main/search'
     | '/auth_/login'
     | '/auth_/register'
@@ -682,6 +706,20 @@ declare module '@tanstack/react-router' {
       path: '/search'
       fullPath: '/search'
       preLoaderRoute: typeof MainSearchRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/library': {
+      id: '/_main/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof MainLibraryRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/history': {
+      id: '/_main/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof MainHistoryRouteImport
       parentRoute: typeof MainRoute
     }
     '/_main/following': {
@@ -910,6 +948,8 @@ declare module '@tanstack/react-start/server' {
 
 interface MainRouteChildren {
   MainFollowingRoute: typeof MainFollowingRoute
+  MainHistoryRoute: typeof MainHistoryRoute
+  MainLibraryRoute: typeof MainLibraryRoute
   MainSearchRoute: typeof MainSearchRoute
   MainIndexRoute: typeof MainIndexRoute
   MainMediaMediaIdRoute: typeof MainMediaMediaIdRoute
@@ -917,6 +957,8 @@ interface MainRouteChildren {
 
 const MainRouteChildren: MainRouteChildren = {
   MainFollowingRoute: MainFollowingRoute,
+  MainHistoryRoute: MainHistoryRoute,
+  MainLibraryRoute: MainLibraryRoute,
   MainSearchRoute: MainSearchRoute,
   MainIndexRoute: MainIndexRoute,
   MainMediaMediaIdRoute: MainMediaMediaIdRoute,

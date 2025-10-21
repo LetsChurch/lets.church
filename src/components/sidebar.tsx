@@ -378,7 +378,7 @@ export default function Sidebar({ className }: SidebarProps) {
                     <Tooltip.Trigger
                       render={
                         <Link
-                          to="/"
+                          to="/library"
                           className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
                           activeProps={{
                             className: 'text-white',
@@ -408,7 +408,7 @@ export default function Sidebar({ className }: SidebarProps) {
                 </Tooltip.Provider>
               ) : (
                 <Link
-                  to="/"
+                  to="/library"
                   className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
                   activeProps={{
                     className: 'text-white',
@@ -429,7 +429,7 @@ export default function Sidebar({ className }: SidebarProps) {
                   <Tooltip.Provider>
                     <Tooltip.Root>
                       <Tooltip.Trigger
-                        render={<Link to="/" />}
+                        render={<Link to="/history" />}
                         className="flex size-6 items-center justify-center"
                       >
                         <IconHistory size={16} className="text-zinc-400" />
@@ -451,7 +451,7 @@ export default function Sidebar({ className }: SidebarProps) {
                   <Tooltip.Provider>
                     <Tooltip.Root>
                       <Tooltip.Trigger
-                        render={<Link to="/" />}
+                        render={<Link to="/library" />}
                         className="flex size-6 items-center justify-center"
                       >
                         <IconBookmarks size={16} className="text-zinc-400" />
@@ -474,7 +474,7 @@ export default function Sidebar({ className }: SidebarProps) {
               ) : (
                 <div className="mt-1 flex flex-col gap-2 px-4 pt-1 pb-2">
                   <Link
-                    to="/"
+                    to="/history"
                     className="flex items-center gap-2.5 transition-colors hover:text-white/80"
                   >
                     <div className="flex size-6 items-center justify-center">
@@ -485,7 +485,7 @@ export default function Sidebar({ className }: SidebarProps) {
                     </span>
                   </Link>
                   <Link
-                    to="/"
+                    to="/library"
                     className="flex items-center gap-2.5 transition-colors hover:text-white/80"
                   >
                     <div className="flex size-6 items-center justify-center">
