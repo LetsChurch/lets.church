@@ -156,9 +156,11 @@ function SearchResults() {
 
 function EmptySearch() {
   const trpc = useTRPC();
-  const { data: trendingUploads } = useSuspenseQuery(
+  const { data: trendingData } = useSuspenseQuery(
     trpc.home.getTrendingUploads.queryOptions({ limit: 8 }),
   );
+
+  const trendingUploads = trendingData.items;
 
   const [recentSearches, setRecentSearches] = useState([
     'Politics',

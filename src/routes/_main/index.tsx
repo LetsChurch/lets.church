@@ -1,9 +1,9 @@
-import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import type { EmblaCarouselType } from 'embla-carousel';
 import useEmblaCarousel from 'embla-carousel-react';
 import type { ComponentProps } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { CarouselNavigationButtons } from '@/components/carousel-navigation-buttons';
 import { DonateCard } from '@/components/donate-card';
 import { EmptyState } from '@/components/empty-state';
@@ -27,8 +27,11 @@ export const Route = createFileRoute('/_main/')({
       context.trpc.common.hasValidSession.queryOptions(),
     );
 
-    await context.queryClient.ensureQueryData(
-      context.trpc.home.getTrendingUploads.queryOptions({ limit: 20 }),
+    // Prefetch first page of trending uploads for infinite scroll
+    await context.queryClient.prefetchInfiniteQuery(
+      context.trpc.home.getTrendingUploads.infiniteQueryOptions({
+        limit: 22,
+      }),
     );
 
     if (hasSession) {
@@ -336,10 +339,29 @@ function TrendingSearches() {
 function Home() {
   const isLoggedIn = useIsLoggedIn();
   const trpc = useTRPC();
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  const { data: trendingUploads } = useSuspenseQuery(
-    trpc.home.getTrendingUploads.queryOptions({ limit: 20 }),
-  );
+  const {
+    data: trendingData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    ...trpc.home.getTrendingUploads.infiniteQueryOptions({
+      limit: 22,
+    }),
+    getNextPageParam: (lastPage) => {
+      if (
+        lastPage &&
+        typeof lastPage === 'object' &&
+        'nextCursor' in lastPage
+      ) {
+        return lastPage.nextCursor;
+      }
+      return undefined;
+    },
+    initialPageParam: 0,
+  });
 
   const { data: subscriptionUploads } = useQuery({
     ...trpc.home.getSubscriptionUploads.queryOptions({ limit: 5 }),
@@ -365,6 +387,28 @@ function Home() {
         : undefined,
       progress: upload.progress,
     })) ?? [];
+
+  // Flatten all pages of trending uploads
+  const allTrendingUploads =
+    trendingData?.pages.flatMap((page) => page.items) ?? [];
+
+  // Set up intersection observer for infinite scroll
+  useEffect(() => {
+    if (!loadMoreRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    observer.observe(loadMoreRef.current);
+
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   return (
     <div className="min-h-screen bg-page">
@@ -404,7 +448,7 @@ function Home() {
         <h2 className="mb-6 font-medium text-lg text-primary">Trending</h2>
 
         <MediaGrid>
-          {trendingUploads.slice(0, 6).map((upload, _i) => (
+          {allTrendingUploads.slice(0, 6).map((upload, _i) => (
             <MediaCard
               key={upload.id}
               mediaId={upload.id}
@@ -419,7 +463,7 @@ function Home() {
         <RecentlySaved />
 
         <MediaGrid>
-          {trendingUploads.slice(6, 11).map((upload, _i) => (
+          {allTrendingUploads.slice(6, 11).map((upload, _i) => (
             <MediaCard
               key={upload.id}
               mediaId={upload.id}
@@ -434,7 +478,7 @@ function Home() {
         </MediaGrid>
 
         <MediaGrid>
-          {trendingUploads.slice(11, 19).map((upload, _i) => (
+          {allTrendingUploads.slice(11, 19).map((upload, _i) => (
             <MediaCard
               key={upload.id}
               mediaId={upload.id}
@@ -451,17 +495,24 @@ function Home() {
         <TrendingSearches />
 
         <MediaGrid>
-          {trendingUploads.slice(19).map((upload, _i) => (
+          {allTrendingUploads.slice(19).map((upload, _i) => (
             <MediaCard
               key={upload.id}
               mediaId={upload.id}
-              title={upload?.title || 'Untitled'}
+              title={upload?.title ?? 'Untitled'}
               thumbnailUrl={upload?.thumbnailUrl}
               channelName={upload?.channel.name}
               channelAvatarUrl={upload?.channel.avatarUrl}
             />
           ))}
         </MediaGrid>
+
+        {/* Infinite scroll trigger */}
+        <div ref={loadMoreRef} className="h-4" />
+
+        {isFetchingNextPage ? (
+          <div className="py-8 text-center text-muted">Loading more...</div>
+        ) : null}
       </div>
     </div>
   );

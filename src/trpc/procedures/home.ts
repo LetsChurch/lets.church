@@ -12,6 +12,7 @@ const moduleLogger = logger.child({
 
 const homeUploadsQuerySchema = z.object({
   limit: z.number().min(1).max(60).default(20),
+  cursor: z.number().optional(),
 });
 
 const suggestedChannelsQuerySchema = z.object({
@@ -165,6 +166,7 @@ export const homeProcedures = {
     .query(async ({ input }) => {
       moduleLogger.info('Fetching trending uploads', {
         limit: input.limit,
+        cursor: input.cursor,
       });
 
       const uploads = await db.uploadRecord.findMany({
@@ -205,6 +207,7 @@ export const homeProcedures = {
         orderBy: {
           score: 'desc',
         },
+        skip: input.cursor ?? 0,
         take: input.limit,
       });
 
@@ -246,7 +249,15 @@ export const homeProcedures = {
         };
       });
 
-      return uploadsWithThumbnails;
+      const nextCursor =
+        uploads.length === input.limit
+          ? (input.cursor ?? 0) + input.limit
+          : undefined;
+
+      return {
+        items: uploadsWithThumbnails,
+        nextCursor,
+      };
     }),
 
   getSuggestedChannels: publicProcedure
