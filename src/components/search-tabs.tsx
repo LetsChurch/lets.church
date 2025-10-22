@@ -1,25 +1,38 @@
 import { cn } from '@/util/cn';
 
 type SearchTabsProps = {
-  activeTab?: 'all' | 'channels' | 'churches' | 'media';
+  activeTab?: 'all' | 'channels' | 'churches' | 'media' | 'transcripts';
   channelCount?: number;
   churchCount?: number;
   mediaCount?: number;
+  transcriptCount?: number;
   className?: string;
+  onTabChange?: (tab: 'media' | 'transcripts') => void;
 };
 
 export default function SearchTabs({
-  activeTab = 'all',
-  channelCount,
-  churchCount,
+  activeTab = 'media',
+  // channelCount,
+  // churchCount,
   mediaCount,
+  transcriptCount,
   className,
+  onTabChange,
 }: SearchTabsProps) {
+  // const tabs = [
+  //   { id: 'all' as const, label: 'All', count: undefined },
+  //   { id: 'channels' as const, label: 'Channels', count: channelCount },
+  //   { id: 'churches' as const, label: 'Churches', count: churchCount },
+  //   { id: 'media' as const, label: 'Media', count: mediaCount },
+  // ];
+
   const tabs = [
-    { id: 'all' as const, label: 'All', count: undefined },
-    { id: 'channels' as const, label: 'Channels', count: channelCount },
-    { id: 'churches' as const, label: 'Churches', count: churchCount },
     { id: 'media' as const, label: 'Media', count: mediaCount },
+    {
+      id: 'transcripts' as const,
+      label: 'Transcripts',
+      count: transcriptCount,
+    },
   ];
 
   return (
@@ -33,20 +46,21 @@ export default function SearchTabs({
         <button
           key={tab.id}
           type="button"
-          className="relative flex h-10 items-center justify-center gap-1"
+          onClick={() => onTabChange?.(tab.id)}
+          className="relative flex h-10 items-center gap-1 pt-1.5 pb-2"
         >
-          <div className="flex items-center justify-center gap-2">
+          <div className="flex items-center gap-2 pb-px">
             <span
               className={cn(
                 'overflow-hidden overflow-ellipsis whitespace-nowrap font-medium text-sm leading-none',
-                activeTab === tab.id ? 'text-primary' : 'text-primary/70',
+                activeTab === tab.id ? 'text-primary' : 'text-white/70',
               )}
             >
               {tab.label}
             </span>
           </div>
           {tab.count !== undefined ? (
-            <div className="flex h-[18px] min-w-[18px] items-center justify-center rounded-[9px] bg-white/10 px-1.5 text-[10px] text-primary/70">
+            <div className="flex h-[18px] min-w-[18px] items-center justify-center rounded-[9px] bg-white/10 px-1.5 pt-[2px] pb-[3px] font-bold text-[10px] text-white/70">
               {tab.count > 99 ? '99+' : tab.count}
             </div>
           ) : null}

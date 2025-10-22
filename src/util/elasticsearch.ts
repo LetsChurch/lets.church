@@ -473,7 +473,7 @@ export const MSearchResponseSchema = z.object({
               sum_other_doc_count: z.number(),
               buckets: z.array(
                 z.object({
-                  key: z.string().uuid(),
+                  key: z.uuid(),
                   doc_count: z.number(),
                 }),
               ),

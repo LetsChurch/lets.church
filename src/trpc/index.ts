@@ -6,6 +6,7 @@ import { dashboardRouter } from './procedures/dashboard';
 import { homeProcedures } from './procedures/home';
 import { libraryProcedures } from './procedures/library';
 import { mediaProcedures } from './procedures/media';
+import { searchProcedures } from './procedures/search';
 import { router } from './trpc';
 
 export const appRouter = router({
@@ -17,6 +18,7 @@ export const appRouter = router({
   home: homeProcedures,
   library: libraryProcedures,
   media: mediaProcedures,
+  search: searchProcedures,
 });
 
 export type AppRouter = typeof appRouter;

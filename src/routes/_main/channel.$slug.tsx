@@ -151,7 +151,7 @@ function RouteComponent() {
 
   return (
     <>
-      <Header />
+      <Header channelId={channel.id} />
       <div className="relative z-10 px-16 pb-8">
         {/* Channel Header */}
         <div className="mb-8 flex items-start gap-6">

@@ -12,9 +12,16 @@ import Logo from './logo';
 import MobileMenu from './mobile-menu';
 import Search from './search';
 
-type HeaderProps = PropsWithChildren<{ defaultSearchValue?: string }>;
+type HeaderProps = PropsWithChildren<{
+  defaultSearchValue?: string;
+  channelId?: string;
+}>;
 
-export default function Header({ children, defaultSearchValue }: HeaderProps) {
+export default function Header({
+  children,
+  defaultSearchValue,
+  channelId,
+}: HeaderProps) {
   const trpc = useTRPC();
   const hasSessionQuery = useQuery(trpc.common.hasValidSession.queryOptions());
   const profileQuery = useQuery({
@@ -65,7 +72,7 @@ export default function Header({ children, defaultSearchValue }: HeaderProps) {
 
         {/* Search Bar */}
         <div className="w-80 max-sm:hidden">
-          <Search defaultValue={defaultSearchValue} />
+          <Search defaultValue={defaultSearchValue} channelId={channelId} />
         </div>
 
         {/* Login Button or User Avatar */}

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { getBibleReferences } from './bible';
 
 export const identifiableSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
 });
 
 const streamUnionSchema = z
