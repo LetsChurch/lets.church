@@ -212,6 +212,7 @@ export const libraryProcedures = {
       const history = await db.uploadView.findMany({
         select: {
           createdAt: true,
+          uploadRecordId: true,
           upload: {
             select: {
               id: true,
@@ -238,6 +239,15 @@ export const libraryProcedures = {
               },
             },
           },
+          UploadViewSecond: {
+            select: {
+              second: true,
+            },
+            orderBy: {
+              second: 'desc',
+            },
+            take: 1,
+          },
         },
         where: {
           appUserId: ctx.session.appUserId,
@@ -262,43 +272,55 @@ export const libraryProcedures = {
         ? items[items.length - 1].createdAt.toISOString()
         : null;
 
-      const uploadsWithThumbnails = items.map(({ upload }) => {
-        const {
-          defaultThumbnailPath,
-          overrideThumbnailPath,
-          channel,
-          ...uploadRest
-        } = upload;
-        const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
-        const thumbnailUrl = thumbnailPath
-          ? getPublicImageUrl(
-              getS3ProtocolUri('PUBLIC', thumbnailPath),
-              getThumbnailResize('card'),
-            )
-          : null;
+      const uploadsWithThumbnails = items.map(
+        ({ upload, UploadViewSecond }) => {
+          const {
+            defaultThumbnailPath,
+            overrideThumbnailPath,
+            channel,
+            ...uploadRest
+          } = upload;
+          const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
+          const thumbnailUrl = thumbnailPath
+            ? getPublicImageUrl(
+                getS3ProtocolUri('PUBLIC', thumbnailPath),
+                getThumbnailResize('card'),
+              )
+            : null;
 
-        const channelAvatarUrl = channel.avatarPath
-          ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', channel.avatarPath), {
-              resize: { width: 32, height: 32 },
-            })
-          : null;
+          const channelAvatarUrl = channel.avatarPath
+            ? getPublicImageUrl(
+                getS3ProtocolUri('PUBLIC', channel.avatarPath),
+                {
+                  resize: { width: 32, height: 32 },
+                },
+              )
+            : null;
 
-        const channelDefaultThumbnailUrl = channel.defaultThumbnailPath
-          ? getPublicImageUrl(
-              getS3ProtocolUri('PUBLIC', channel.defaultThumbnailPath),
-              getThumbnailResize('card'),
-            )
-          : null;
+          const channelDefaultThumbnailUrl = channel.defaultThumbnailPath
+            ? getPublicImageUrl(
+                getS3ProtocolUri('PUBLIC', channel.defaultThumbnailPath),
+                getThumbnailResize('card'),
+              )
+            : null;
 
-        return {
-          ...uploadRest,
-          thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
-          channel: {
-            ...channel,
-            avatarUrl: channelAvatarUrl,
-          },
-        };
-      });
+          const lastSecond = UploadViewSecond[0]?.second;
+          const progress =
+            lastSecond !== undefined && upload.lengthSeconds
+              ? (lastSecond / upload.lengthSeconds) * 100
+              : undefined;
+
+          return {
+            ...uploadRest,
+            thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
+            progress,
+            channel: {
+              ...channel,
+              avatarUrl: channelAvatarUrl,
+            },
+          };
+        },
+      );
 
       return {
         items: uploadsWithThumbnails,

@@ -8,9 +8,17 @@ import { MediaCard } from '@/components/media-card';
 import { MediaGrid } from '@/components/media-grid';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { useTRPC } from '@/trpc/react';
+import { formatTime } from '@/util/format';
 
 export const Route = createFileRoute('/_main/history')({
   component: RouteComponent,
+  loader: async ({ context }) => {
+    await context.queryClient.prefetchInfiniteQuery(
+      context.trpc.library.getHistory.infiniteQueryOptions({
+        limit: 20,
+      }),
+    );
+  },
 });
 
 function RouteComponent() {
@@ -98,6 +106,12 @@ function RouteComponent() {
                   thumbnailUrl={upload.thumbnailUrl}
                   channelName={upload.channel.name}
                   channelAvatarUrl={upload.channel.avatarUrl}
+                  duration={
+                    upload.lengthSeconds
+                      ? formatTime(upload.lengthSeconds * 1000)
+                      : undefined
+                  }
+                  progress={upload.progress}
                 />
               ))}
             </MediaGrid>

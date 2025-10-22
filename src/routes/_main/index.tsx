@@ -32,9 +32,14 @@ export const Route = createFileRoute('/_main/')({
     );
 
     if (hasSession) {
-      await context.queryClient.ensureQueryData(
-        context.trpc.home.getSubscriptionUploads.queryOptions({ limit: 5 }),
-      );
+      await Promise.all([
+        context.queryClient.ensureQueryData(
+          context.trpc.home.getSubscriptionUploads.queryOptions({ limit: 5 }),
+        ),
+        context.queryClient.ensureQueryData(
+          context.trpc.home.getInProgressUploads.queryOptions({ limit: 5 }),
+        ),
+      ]);
     }
 
     return {};
@@ -45,6 +50,8 @@ function ContentSection({
   title,
   uploads,
   showViewAll = true,
+  viewAllText,
+  viewAllHref,
   showViewMoreCard = false,
   viewMoreCardText,
   emptyTitle,
@@ -71,8 +78,12 @@ function ContentSection({
       name: string;
       avatarUrl?: string | null;
     };
+    duration?: string;
+    progress?: number;
   }>;
   showViewAll?: boolean;
+  viewAllText?: string;
+  viewAllHref?: string;
   showViewMoreCard?: boolean;
   viewMoreCardText?: string;
 }) {
@@ -82,19 +93,21 @@ function ContentSection({
     thumbnailUrl: upload.thumbnailUrl,
     channelName: upload.channel.name,
     channelAvatarUrl: upload.channel.avatarUrl,
+    duration: upload.duration,
+    progress: upload.progress,
   }));
 
   return (
     <div className="mb-8">
       <div className="mb-6 flex items-center justify-between">
         <h2 className="font-medium text-lg text-primary">{title}</h2>
-        {showViewAll && uploads.length > 0 ? (
-          <button
-            type="button"
+        {showViewAll && uploads.length > 0 && viewAllText && viewAllHref ? (
+          <Link
+            to={viewAllHref}
             className="text-muted text-sm transition-colors hover:text-primary"
           >
-            View history
-          </button>
+            {viewAllText}
+          </Link>
         ) : null}
       </div>
 
@@ -333,7 +346,25 @@ function Home() {
     enabled: isLoggedIn,
   });
 
-  const inProgress: ComponentProps<typeof ContentSection>['uploads'] = [];
+  const { data: inProgressUploads } = useQuery({
+    ...trpc.home.getInProgressUploads.queryOptions({ limit: 5 }),
+    enabled: isLoggedIn,
+  });
+
+  const inProgress: ComponentProps<typeof ContentSection>['uploads'] =
+    inProgressUploads?.map((upload) => ({
+      id: upload.id,
+      title: upload.title,
+      thumbnailUrl: upload.thumbnailUrl,
+      channel: {
+        name: upload.channel.name,
+        avatarUrl: upload.channel.avatarUrl,
+      },
+      duration: upload.lengthSeconds
+        ? formatTime(upload.lengthSeconds * 1000)
+        : undefined,
+      progress: upload.progress,
+    })) ?? [];
 
   return (
     <div className="min-h-screen bg-page">
@@ -343,7 +374,14 @@ function Home() {
 
       <div className="mx-auto max-w-7xl space-y-12 px-16 py-8">
         {inProgress.length > 0 ? (
-          <ContentSection title="In Progress" uploads={inProgress} />
+          <ContentSection
+            title="In Progress"
+            uploads={inProgress}
+            viewAllText="View history"
+            viewAllHref="/history"
+            showViewMoreCard
+            viewMoreCardText="See your full history"
+          />
         ) : null}
 
         <ContentSection
@@ -353,6 +391,8 @@ function Home() {
             !!(subscriptionUploads && subscriptionUploads.length > 0)
           }
           viewMoreCardText="See more subscribed content"
+          viewAllText="View all subscriptions"
+          viewAllHref="/following"
           emptyTitle="You're not following any channels yet"
           emptyBody="Follow your favorite channels to get a customized feed and to ensure you don't miss new content!"
           loggedOutEmptyTitle="Create an account to follow channels"
@@ -360,6 +400,8 @@ function Home() {
           loggedOutEmptyCta="Create Account"
           isLoggedIn={isLoggedIn}
         />
+
+        <h2 className="mb-6 font-medium text-lg text-primary">Trending</h2>
 
         <MediaGrid>
           {trendingUploads.slice(0, 6).map((upload, _i) => (

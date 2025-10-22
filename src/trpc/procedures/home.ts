@@ -26,6 +26,10 @@ const unfollowChannelSchema = z.object({
   channelId: z.uuid(),
 });
 
+const inProgressUploadsQuerySchema = z.object({
+  limit: z.number().min(1).max(20).default(5),
+});
+
 export const homeProcedures = {
   getFollowedChannels: authProcedure.query(async ({ ctx }) => {
     moduleLogger.info('Fetching followed channels', {
@@ -370,5 +374,127 @@ export const homeProcedures = {
 
         throw new Error('Failed to unfollow channel');
       }
+    }),
+
+  getInProgressUploads: authProcedure
+    .input(inProgressUploadsQuerySchema)
+    .query(async ({ ctx, input }) => {
+      moduleLogger.info('Fetching in-progress uploads', {
+        appUserId: ctx.session.appUserId,
+        limit: input.limit,
+      });
+
+      // Get user's upload views with their most recent viewed seconds
+      const views = await db.uploadView.findMany({
+        where: {
+          appUserId: ctx.session.appUserId,
+        },
+        select: {
+          uploadRecordId: true,
+          createdAt: true,
+          upload: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              createdAt: true,
+              publishedAt: true,
+              lengthSeconds: true,
+              defaultThumbnailPath: true,
+              overrideThumbnailPath: true,
+              channel: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                  avatarPath: true,
+                  defaultThumbnailPath: true,
+                },
+              },
+              _count: {
+                select: {
+                  uploadViews: true,
+                },
+              },
+            },
+          },
+          UploadViewSecond: {
+            select: {
+              second: true,
+            },
+            orderBy: {
+              second: 'desc',
+            },
+            take: 1,
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        distinct: ['uploadRecordId'], // Only show each video once (most recent view)
+        take: input.limit * 3, // Fetch more since we'll filter
+      });
+
+      // Calculate progress and filter to 1-95%
+      const uploadsWithProgress = views
+        .map((view) => {
+          const lastSecond = view.UploadViewSecond[0]?.second;
+          if (lastSecond === undefined || !view.upload.lengthSeconds) {
+            return null;
+          }
+
+          const progress = (lastSecond / view.upload.lengthSeconds) * 100;
+
+          // Only include videos that are 1-95% complete
+          if (progress < 1 || progress > 95) {
+            return null;
+          }
+
+          const {
+            defaultThumbnailPath,
+            overrideThumbnailPath,
+            channel,
+            ...uploadRest
+          } = view.upload;
+          const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
+          const thumbnailUrl = thumbnailPath
+            ? getPublicImageUrl(
+                getS3ProtocolUri('PUBLIC', thumbnailPath),
+                getThumbnailResize('card'),
+              )
+            : null;
+
+          const channelAvatarUrl = channel.avatarPath
+            ? getPublicImageUrl(
+                getS3ProtocolUri('PUBLIC', channel.avatarPath),
+                {
+                  resize: { width: 32, height: 32 },
+                },
+              )
+            : null;
+
+          const channelDefaultThumbnailUrl = channel.defaultThumbnailPath
+            ? getPublicImageUrl(
+                getS3ProtocolUri('PUBLIC', channel.defaultThumbnailPath),
+                getThumbnailResize('card'),
+              )
+            : null;
+
+          return {
+            ...uploadRest,
+            thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
+            progress,
+            channel: {
+              ...channel,
+              avatarUrl: channelAvatarUrl,
+            },
+          };
+        })
+        .filter(
+          (upload): upload is NonNullable<typeof upload> => upload !== null,
+        )
+        .slice(0, input.limit);
+
+      return uploadsWithProgress;
     }),
 };

@@ -34,6 +34,9 @@ export function MediaCard({
             />
           ) : null}
         </div>
+        {progress ? (
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-950/70 to-50% to-transparent" />
+        ) : null}
         <div className="absolute right-3 bottom-3 left-3 flex flex-col items-end gap-1">
           {duration ? (
             <div className="flex h-4 items-center justify-center rounded-full bg-zinc-950/80 px-1.5 font-medium font-time text-[10px] text-primary leading-none tracking-tight backdrop-blur-sm">
@@ -41,17 +44,11 @@ export function MediaCard({
             </div>
           ) : null}
           {progress ? (
-            <div className="h-[3px] w-full rounded-sm bg-white/20 backdrop-blur-sm">
-              <div className="relative h-full rounded-md bg-indigo-500/40">
-                <div
-                  className="h-full rounded-md bg-gradient-to-r from-indigo-500/0 to-indigo-500/90"
-                  style={{ width: `${Math.min(progress, 100)}%` }}
-                />
-                <div
-                  className="absolute top-0 right-0 bottom-0 w-2 rounded-md shadow-[0px_2px_12px_0px_#6366f1] backdrop-blur-sm"
-                  style={{ right: `${100 - Math.min(progress, 100)}%` }}
-                />
-              </div>
+            <div className="h-[3px] w-full rounded-[3px] bg-white/20">
+              <div
+                className="h-full rounded-[3px] bg-indigo-500/60"
+                style={{ width: `${Math.min(progress, 100)}%` }}
+              />
             </div>
           ) : null}
         </div>

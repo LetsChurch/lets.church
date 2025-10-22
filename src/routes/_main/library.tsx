@@ -11,6 +11,13 @@ import { useTRPC } from '@/trpc/react';
 
 export const Route = createFileRoute('/_main/library')({
   component: RouteComponent,
+  loader: async ({ context }) => {
+    await context.queryClient.prefetchInfiniteQuery(
+      context.trpc.library.getSavedMedia.infiniteQueryOptions({
+        limit: 20,
+      }),
+    );
+  },
 });
 
 function RouteComponent() {
