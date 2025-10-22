@@ -1,6 +1,6 @@
 import { invariant, noop } from 'es-toolkit';
 import { pEvent } from 'p-event';
-import { firefox } from 'playwright';
+import { firefox, type Request } from 'playwright';
 import type { Logger } from '../logger';
 import type { DownloadResult } from '.';
 import { downloadUrl } from './download';
@@ -33,11 +33,11 @@ async function extractSubsplashMedia(
 
   const m3u8UrlPromise = pEvent(page, 'request', {
     filter: (req) => {
-      const u = req.url();
+      const u = (req as Request).url();
       return u.endsWith('.m3u8') || u.endsWith('.mp3');
     },
     timeout: 20_000,
-  }).then((req) => req.url());
+  }).then((req) => (req as Request).url());
 
   try {
     log.info('Clicking play button');

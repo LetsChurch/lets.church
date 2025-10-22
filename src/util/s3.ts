@@ -436,11 +436,11 @@ export async function retryablePutFile({
   return pRetry(() => putFile(otherOps), {
     signal,
     retries: maxAttempts,
-    onFailedAttempt: (error) => {
+    onFailedAttempt: (ctx) => {
       moduleLogger.warn(`Error uploading ${otherOps.key}`);
-      moduleLogger.warn(error.message);
+      moduleLogger.warn(ctx.error.message);
       moduleLogger.warn(
-        `Attempt ${error.attemptNumber} failed. There are ${error.retriesLeft} retries left.`,
+        `Attempt ${ctx.attemptNumber} failed. There are ${ctx.retriesLeft} retries left.`,
       );
     },
   });
