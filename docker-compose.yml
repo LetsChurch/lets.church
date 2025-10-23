@@ -277,7 +277,7 @@ services:
       retries: 5
 
   elasticsearch:
-    image: elasticsearch:8.5.2
+    image: elasticsearch:9.1.5
     environment:
       - cluster.routing.allocation.disk.threshold_enabled=true
       - cluster.routing.allocation.disk.watermark.low=512mb
@@ -300,7 +300,7 @@ services:
   # Development
   #
   kibana:
-    image: kibana:8.12.0
+    image: kibana:9.1.5
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch:9200
     depends_on:

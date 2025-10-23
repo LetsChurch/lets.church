@@ -30,8 +30,8 @@ function makePostFilterSpread({
   channelIds?: Array<string> | null;
   publishedAt?: PublishedAtRange | undefined;
   orderBy?: OrderBy | undefined;
-}): estypes.MsearchMultisearchBody {
-  const res: estypes.MsearchMultisearchBody = {};
+}): estypes.SearchSearchRequestBody {
+  const res: estypes.SearchSearchRequestBody = {};
 
   const must: Array<estypes.QueryDslQueryContainer> = [];
 
@@ -506,9 +506,7 @@ export async function* listIds(
     index,
     scroll: '10m',
     size: 1000,
-    body: {
-      query: { match_all: {} },
-    },
+    query: { match_all: {} },
   });
 
   let scrollId = searchRes._scroll_id;

@@ -229,7 +229,11 @@ export default async function indexDocument(
     s3UploadKey,
   );
 
-  const indexRes = await client.index(doc);
+  const indexRes = await client.index({
+    index: doc.index,
+    id: doc.id,
+    document: doc.document,
+  });
 
   invariant(
     ['created', 'updated'].includes(indexRes.result),
