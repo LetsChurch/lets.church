@@ -14,6 +14,11 @@ prune:
 build *params:
   docker compose build {{params}}
 
+up:
+  just start
+  sleep 10
+  just init seed
+
 logs service *params:
   docker compose logs {{params}} {{service}}
 follow service: (logs service '-f')
@@ -93,11 +98,6 @@ reset:
   docker volume prune --all --force
   just start
   gum spin --title "Waiting for services..." -- sleep 10
-  just init seed
-
-bootstrap:
-  just start
-  sleep 10
   just init seed
 
 truncate:
