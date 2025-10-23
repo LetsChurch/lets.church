@@ -4,6 +4,7 @@
 .output
 .tanstack
 .vite
+dist
 
 gitleaks-findings.json
 node_modules

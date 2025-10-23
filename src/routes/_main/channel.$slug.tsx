@@ -73,11 +73,8 @@ function RouteComponent() {
   });
 
   // Local state for follow status with optimistic updates
-  // TODO: do we need this local state?
   const [isFollowing, setIsFollowing] = useState(channel.isFollowing);
   const [isTogglingFollow, setIsTogglingFollow] = useState(false);
-
-  setIsFollowing(channel.isFollowing);
 
   useSetBackgroundImage(channel.defaultThumbnailUrl ?? undefined);
 

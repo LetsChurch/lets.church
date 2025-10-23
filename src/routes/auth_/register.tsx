@@ -19,7 +19,7 @@ export const Route = createFileRoute('/auth_/register')({
       context.trpc.common.hasValidSession.queryOptions(),
     );
     if (hasSession) {
-      return redirect({ to: '/' });
+      throw redirect({ to: '/' });
     }
   },
   loader: async ({ context: { queryClient, trpc } }) => ({

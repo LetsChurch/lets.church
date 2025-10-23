@@ -1,4 +1,4 @@
-import { getWebRequest, setCookie } from '@tanstack/react-start/server';
+import { getRequest, setCookie } from '@tanstack/react-start/server';
 import * as argon2 from 'argon2';
 import { loginSchema, registerSchema } from '@/schemas/auth';
 import { postUserRegistration } from '@/temporal';
@@ -25,7 +25,7 @@ export const authProcedures = {
       async ({
         input: { id, password, turnstile },
       }): Promise<HandleLoginResponse> => {
-        const clientIp = getClientIpAddress(getWebRequest().headers);
+        const clientIp = getClientIpAddress(getRequest().headers);
 
         moduleLogger.info('Login attempt', {
           userId: id,
@@ -68,7 +68,7 @@ export const authProcedures = {
   register: anonProcedure
     .input(registerSchema)
     .mutation(async ({ input: value }): Promise<HandleRegisterResponse> => {
-      const clientIp = getClientIpAddress(getWebRequest().headers);
+      const clientIp = getClientIpAddress(getRequest().headers);
 
       moduleLogger.info('Registration attempt', {
         username: value.username,

@@ -24,8 +24,11 @@ export const Route = createFileRoute('/embed/media/$mediaId')({
       }),
     ]);
 
+    // Exclude the probe field from media to avoid serialization issues
+    const { probe: _probe, ...mediaWithoutProbe } = media;
+
     return {
-      media,
+      media: mediaWithoutProbe,
       viewHash: viewData?.viewHash ?? '',
     };
   },

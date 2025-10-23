@@ -1,11 +1,11 @@
 import { invariant } from 'es-toolkit';
-import { type ExecaReturnValue, execa } from 'execa';
+import { execa, type Result } from 'execa';
 
 function getHelp(bin: string) {
   return execa(bin, ['--help']);
 }
 
-function checkCode(res: ExecaReturnValue) {
+function checkCode(res: Result) {
   invariant(
     res.exitCode === 0,
     JSON.stringify({ stdout: res.stdout, stderr: res.stderr }),

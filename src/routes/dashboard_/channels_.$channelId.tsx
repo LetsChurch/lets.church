@@ -36,7 +36,7 @@ export const Route = createFileRoute('/dashboard_/channels_/$channelId')({
       context.trpc.common.hasValidSession.queryOptions(),
     );
     if (!hasSession) {
-      return redirect({ to: '/auth/login' });
+      throw redirect({ to: '/auth/login' });
     }
 
     // Check if user has access to this channel (either member or site admin)

@@ -5,7 +5,7 @@ export const { TRPCProvider, useTRPC } = createTRPCContext<AppRouter>();
 
 import { QueryClient } from '@tanstack/react-query';
 import { createIsomorphicFn } from '@tanstack/react-start';
-import { getWebRequest } from '@tanstack/react-start/server';
+import { getRequest } from '@tanstack/react-start/server';
 import { createTRPCClient, httpBatchLink } from '@trpc/client';
 import { createTRPCOptionsProxy } from '@trpc/tanstack-react-query';
 import superjson from 'superjson';
@@ -37,7 +37,7 @@ function getUrl() {
 const getIncomingHeaders = createIsomorphicFn()
   .client(() => ({}))
   .server(() => {
-    const request = getWebRequest();
+    const request = getRequest();
     const headers: Record<string, string> = {};
 
     // Explicitly forward the cookie header for authentication during SSR

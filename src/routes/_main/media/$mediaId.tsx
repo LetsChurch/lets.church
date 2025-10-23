@@ -54,8 +54,11 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
       ),
     ]);
 
+    // Exclude the probe field from media to avoid serialization issues
+    const { probe: _probe, ...mediaWithoutProbe } = media;
+
     return {
-      media,
+      media: mediaWithoutProbe,
       viewHash: viewData?.viewHash ?? '',
       transcript: transcript ?? [],
       rating,
@@ -204,8 +207,8 @@ function RouteComponent() {
   const [commentsDialogOpen, setCommentsDialogOpen] = useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const loaderData = Route.useLoaderData();
-  const viewHash = loaderData.viewHash;
-  const transcript = loaderData.transcript;
+  const viewHash = loaderData?.viewHash ?? '';
+  const transcript = loaderData?.transcript ?? [];
 
   const { data: media } = useSuspenseQuery(
     trpc.media.getMediaById.queryOptions({

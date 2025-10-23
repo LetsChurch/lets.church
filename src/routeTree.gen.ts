@@ -8,20 +8,21 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { createServerRootRoute } from '@tanstack/react-start/server'
-
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as DashboardRouteImport } from './routes/dashboard_'
 import { Route as AuthRouteImport } from './routes/auth_'
 import { Route as MainRouteImport } from './routes/_main'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard_/index'
 import { Route as MainIndexRouteImport } from './routes/_main/index'
+import { Route as TrpcSplatRouteImport } from './routes/trpc.$'
 import { Route as DashboardOrganizationsRouteImport } from './routes/dashboard_/organizations'
 import { Route as DashboardChurchesRouteImport } from './routes/dashboard_/churches'
 import { Route as DashboardChannelsRouteImport } from './routes/dashboard_/channels'
 import { Route as DashboardAdminRouteImport } from './routes/dashboard_/admin'
 import { Route as DashboardAccountRouteImport } from './routes/dashboard_/account'
+import { Route as AuthVerifyRouteImport } from './routes/auth_/verify'
 import { Route as AuthRegisterRouteImport } from './routes/auth_/register'
+import { Route as AuthLogoutRouteImport } from './routes/auth_/logout'
 import { Route as AuthLoginRouteImport } from './routes/auth_/login'
 import { Route as MainSearchRouteImport } from './routes/_main/search'
 import { Route as MainLibraryRouteImport } from './routes/_main/library'
@@ -55,11 +56,6 @@ import { Route as DashboardChannelsChannelIdMembersRouteImport } from './routes/
 import { Route as DashboardChannelsChannelIdEditRouteImport } from './routes/dashboard_/channels_.$channelId_.edit'
 import { Route as DashboardChannelsChannelIdUploadsUploadIdRouteImport } from './routes/dashboard_/channels_.$channelId_.uploads_.$uploadId'
 import { Route as DashboardChannelsChannelIdPlaylistsPlaylistIdRouteImport } from './routes/dashboard_/channels_.$channelId_.playlists_.$playlistId'
-import { ServerRoute as TrpcSplatServerRouteImport } from './routes/trpc.$'
-import { ServerRoute as AuthVerifyServerRouteImport } from './routes/auth_/verify'
-import { ServerRoute as AuthLogoutServerRouteImport } from './routes/auth_/logout'
-
-const rootServerRouteImport = createServerRootRoute()
 
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard_',
@@ -84,6 +80,11 @@ const MainIndexRoute = MainIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => MainRoute,
+} as any)
+const TrpcSplatRoute = TrpcSplatRouteImport.update({
+  id: '/trpc/$',
+  path: '/trpc/$',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardOrganizationsRoute = DashboardOrganizationsRouteImport.update({
   id: '/organizations',
@@ -110,9 +111,19 @@ const DashboardAccountRoute = DashboardAccountRouteImport.update({
   path: '/account',
   getParentRoute: () => DashboardRoute,
 } as any)
+const AuthVerifyRoute = AuthVerifyRouteImport.update({
+  id: '/verify',
+  path: '/verify',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthRegisterRoute = AuthRegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthLogoutRoute = AuthLogoutRouteImport.update({
+  id: '/logout',
+  path: '/logout',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
@@ -301,21 +312,6 @@ const DashboardChannelsChannelIdPlaylistsPlaylistIdRoute =
     path: '/channels/$channelId/playlists/$playlistId',
     getParentRoute: () => DashboardRoute,
   } as any)
-const TrpcSplatServerRoute = TrpcSplatServerRouteImport.update({
-  id: '/trpc/$',
-  path: '/trpc/$',
-  getParentRoute: () => rootServerRouteImport,
-} as any)
-const AuthVerifyServerRoute = AuthVerifyServerRouteImport.update({
-  id: '/auth_/verify',
-  path: '/auth/verify',
-  getParentRoute: () => rootServerRouteImport,
-} as any)
-const AuthLogoutServerRoute = AuthLogoutServerRouteImport.update({
-  id: '/auth_/logout',
-  path: '/auth/logout',
-  getParentRoute: () => rootServerRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
@@ -325,12 +321,15 @@ export interface FileRoutesByFullPath {
   '/library': typeof MainLibraryRoute
   '/search': typeof MainSearchRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/logout': typeof AuthLogoutRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/auth/verify': typeof AuthVerifyRoute
   '/dashboard/account': typeof DashboardAccountRoute
   '/dashboard/admin': typeof DashboardAdminRoute
   '/dashboard/channels': typeof DashboardChannelsRoute
   '/dashboard/churches': typeof DashboardChurchesRoute
   '/dashboard/organizations': typeof DashboardOrganizationsRoute
+  '/trpc/$': typeof TrpcSplatRoute
   '/': typeof MainIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/channel/$slug': typeof MainChannelSlugRoute
@@ -369,12 +368,15 @@ export interface FileRoutesByTo {
   '/library': typeof MainLibraryRoute
   '/search': typeof MainSearchRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/logout': typeof AuthLogoutRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/auth/verify': typeof AuthVerifyRoute
   '/dashboard/account': typeof DashboardAccountRoute
   '/dashboard/admin': typeof DashboardAdminRoute
   '/dashboard/channels': typeof DashboardChannelsRoute
   '/dashboard/churches': typeof DashboardChurchesRoute
   '/dashboard/organizations': typeof DashboardOrganizationsRoute
+  '/trpc/$': typeof TrpcSplatRoute
   '/': typeof MainIndexRoute
   '/dashboard': typeof DashboardIndexRoute
   '/channel/$slug': typeof MainChannelSlugRoute
@@ -416,12 +418,15 @@ export interface FileRoutesById {
   '/_main/library': typeof MainLibraryRoute
   '/_main/search': typeof MainSearchRoute
   '/auth_/login': typeof AuthLoginRoute
+  '/auth_/logout': typeof AuthLogoutRoute
   '/auth_/register': typeof AuthRegisterRoute
+  '/auth_/verify': typeof AuthVerifyRoute
   '/dashboard_/account': typeof DashboardAccountRoute
   '/dashboard_/admin': typeof DashboardAdminRoute
   '/dashboard_/channels': typeof DashboardChannelsRoute
   '/dashboard_/churches': typeof DashboardChurchesRoute
   '/dashboard_/organizations': typeof DashboardOrganizationsRoute
+  '/trpc/$': typeof TrpcSplatRoute
   '/_main/': typeof MainIndexRoute
   '/dashboard_/': typeof DashboardIndexRoute
   '/_main/channel/$slug': typeof MainChannelSlugRoute
@@ -463,12 +468,15 @@ export interface FileRouteTypes {
     | '/library'
     | '/search'
     | '/auth/login'
+    | '/auth/logout'
     | '/auth/register'
+    | '/auth/verify'
     | '/dashboard/account'
     | '/dashboard/admin'
     | '/dashboard/channels'
     | '/dashboard/churches'
     | '/dashboard/organizations'
+    | '/trpc/$'
     | '/'
     | '/dashboard/'
     | '/channel/$slug'
@@ -507,12 +515,15 @@ export interface FileRouteTypes {
     | '/library'
     | '/search'
     | '/auth/login'
+    | '/auth/logout'
     | '/auth/register'
+    | '/auth/verify'
     | '/dashboard/account'
     | '/dashboard/admin'
     | '/dashboard/channels'
     | '/dashboard/churches'
     | '/dashboard/organizations'
+    | '/trpc/$'
     | '/'
     | '/dashboard'
     | '/channel/$slug'
@@ -553,12 +564,15 @@ export interface FileRouteTypes {
     | '/_main/library'
     | '/_main/search'
     | '/auth_/login'
+    | '/auth_/logout'
     | '/auth_/register'
+    | '/auth_/verify'
     | '/dashboard_/account'
     | '/dashboard_/admin'
     | '/dashboard_/channels'
     | '/dashboard_/churches'
     | '/dashboard_/organizations'
+    | '/trpc/$'
     | '/_main/'
     | '/dashboard_/'
     | '/_main/channel/$slug'
@@ -595,36 +609,8 @@ export interface RootRouteChildren {
   MainRoute: typeof MainRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   DashboardRoute: typeof DashboardRouteWithChildren
+  TrpcSplatRoute: typeof TrpcSplatRoute
   EmbedMediaMediaIdRoute: typeof EmbedMediaMediaIdRoute
-}
-export interface FileServerRoutesByFullPath {
-  '/auth/logout': typeof AuthLogoutServerRoute
-  '/auth/verify': typeof AuthVerifyServerRoute
-  '/trpc/$': typeof TrpcSplatServerRoute
-}
-export interface FileServerRoutesByTo {
-  '/auth/logout': typeof AuthLogoutServerRoute
-  '/auth/verify': typeof AuthVerifyServerRoute
-  '/trpc/$': typeof TrpcSplatServerRoute
-}
-export interface FileServerRoutesById {
-  __root__: typeof rootServerRouteImport
-  '/auth_/logout': typeof AuthLogoutServerRoute
-  '/auth_/verify': typeof AuthVerifyServerRoute
-  '/trpc/$': typeof TrpcSplatServerRoute
-}
-export interface FileServerRouteTypes {
-  fileServerRoutesByFullPath: FileServerRoutesByFullPath
-  fullPaths: '/auth/logout' | '/auth/verify' | '/trpc/$'
-  fileServerRoutesByTo: FileServerRoutesByTo
-  to: '/auth/logout' | '/auth/verify' | '/trpc/$'
-  id: '__root__' | '/auth_/logout' | '/auth_/verify' | '/trpc/$'
-  fileServerRoutesById: FileServerRoutesById
-}
-export interface RootServerRouteChildren {
-  AuthLogoutServerRoute: typeof AuthLogoutServerRoute
-  AuthVerifyServerRoute: typeof AuthVerifyServerRoute
-  TrpcSplatServerRoute: typeof TrpcSplatServerRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -664,6 +650,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainIndexRouteImport
       parentRoute: typeof MainRoute
     }
+    '/trpc/$': {
+      id: '/trpc/$'
+      path: '/trpc/$'
+      fullPath: '/trpc/$'
+      preLoaderRoute: typeof TrpcSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard_/organizations': {
       id: '/dashboard_/organizations'
       path: '/organizations'
@@ -699,11 +692,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAccountRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/auth_/verify': {
+      id: '/auth_/verify'
+      path: '/verify'
+      fullPath: '/auth/verify'
+      preLoaderRoute: typeof AuthVerifyRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/auth_/register': {
       id: '/auth_/register'
       path: '/register'
       fullPath: '/auth/register'
       preLoaderRoute: typeof AuthRegisterRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth_/logout': {
+      id: '/auth_/logout'
+      path: '/logout'
+      fullPath: '/auth/logout'
+      preLoaderRoute: typeof AuthLogoutRouteImport
       parentRoute: typeof AuthRoute
     }
     '/auth_/login': {
@@ -939,31 +946,6 @@ declare module '@tanstack/react-router' {
     }
   }
 }
-declare module '@tanstack/react-start/server' {
-  interface ServerFileRoutesByPath {
-    '/trpc/$': {
-      id: '/trpc/$'
-      path: '/trpc/$'
-      fullPath: '/trpc/$'
-      preLoaderRoute: typeof TrpcSplatServerRouteImport
-      parentRoute: typeof rootServerRouteImport
-    }
-    '/auth_/verify': {
-      id: '/auth_/verify'
-      path: '/auth/verify'
-      fullPath: '/auth/verify'
-      preLoaderRoute: typeof AuthVerifyServerRouteImport
-      parentRoute: typeof rootServerRouteImport
-    }
-    '/auth_/logout': {
-      id: '/auth_/logout'
-      path: '/auth/logout'
-      fullPath: '/auth/logout'
-      preLoaderRoute: typeof AuthLogoutServerRouteImport
-      parentRoute: typeof rootServerRouteImport
-    }
-  }
-}
 
 interface MainRouteChildren {
   MainFollowingRoute: typeof MainFollowingRoute
@@ -989,12 +971,16 @@ const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren)
 
 interface AuthRouteChildren {
   AuthLoginRoute: typeof AuthLoginRoute
+  AuthLogoutRoute: typeof AuthLogoutRoute
   AuthRegisterRoute: typeof AuthRegisterRoute
+  AuthVerifyRoute: typeof AuthVerifyRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthLoginRoute: AuthLoginRoute,
+  AuthLogoutRoute: AuthLogoutRoute,
   AuthRegisterRoute: AuthRegisterRoute,
+  AuthVerifyRoute: AuthVerifyRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
@@ -1084,16 +1070,17 @@ const rootRouteChildren: RootRouteChildren = {
   MainRoute: MainRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   DashboardRoute: DashboardRouteWithChildren,
+  TrpcSplatRoute: TrpcSplatRoute,
   EmbedMediaMediaIdRoute: EmbedMediaMediaIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-const rootServerRouteChildren: RootServerRouteChildren = {
-  AuthLogoutServerRoute: AuthLogoutServerRoute,
-  AuthVerifyServerRoute: AuthVerifyServerRoute,
-  TrpcSplatServerRoute: TrpcSplatServerRoute,
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
 }
-export const serverRouteTree = rootServerRouteImport
-  ._addFileChildren(rootServerRouteChildren)
-  ._addFileTypes<FileServerRouteTypes>()

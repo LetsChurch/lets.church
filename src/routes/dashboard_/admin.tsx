@@ -10,7 +10,7 @@ export const Route = createFileRoute('/dashboard_/admin')({
       context.trpc.common.hasValidSession.queryOptions(),
     );
     if (!hasSession) {
-      return redirect({ to: '/auth/login' });
+      throw redirect({ to: '/auth/login' });
     }
 
     const currentUser = await context.queryClient.fetchQuery(

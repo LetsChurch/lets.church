@@ -1,6 +1,6 @@
 import { xxh64 } from '@node-rs/xxhash';
 import { UploadViewSource } from '@prisma/client';
-import { getWebRequest } from '@tanstack/react-start/server';
+import { getRequest } from '@tanstack/react-start/server';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
 import { z } from 'zod';
 import { getThumbnailResize } from '@/schemas/common';
@@ -296,8 +296,8 @@ export const mediaProcedures = {
     )
     .mutation(async ({ input, ctx }) => {
       const { uploadRecordId, source } = input;
-      const clientIp = getClientIpAddress(getWebRequest().headers);
-      const clientUserAgent = getWebRequest().headers.get('user-agent');
+      const clientIp = getClientIpAddress(getRequest().headers);
+      const clientUserAgent = getRequest().headers.get('user-agent');
 
       moduleLogger.info('Creating upload view', {
         uploadRecordId,

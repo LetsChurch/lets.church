@@ -29,7 +29,7 @@ export const Route = createFileRoute('/dashboard_/organizations_/$orgId')({
       context.trpc.common.hasValidSession.queryOptions(),
     );
     if (!hasSession) {
-      return redirect({ to: '/auth/login' });
+      throw redirect({ to: '/auth/login' });
     }
 
     // Check if user has access to this organization (either member or site admin)

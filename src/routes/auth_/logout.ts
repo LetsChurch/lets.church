@@ -1,12 +1,14 @@
-import { redirect } from '@tanstack/react-router';
-import {
-  createServerFileRoute,
-  deleteCookie,
-} from '@tanstack/react-start/server';
+import { createFileRoute, redirect } from '@tanstack/react-router';
+import { deleteCookie } from '@tanstack/react-start/server';
 
-export const ServerRoute = createServerFileRoute('/auth_/logout').methods({
-  POST: async () => {
-    deleteCookie('lc-session');
-    return redirect({ to: '/' });
+export const Route = createFileRoute('/auth_/logout')({
+  component: () => null,
+  server: {
+    handlers: {
+      POST: async () => {
+        deleteCookie('lc-session');
+        throw redirect({ to: '/' });
+      },
+    },
   },
 });

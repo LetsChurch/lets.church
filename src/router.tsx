@@ -25,7 +25,7 @@ export type AppContextType = ReturnType<typeof createContext>;
 // TanStack Start automatically discovers and calls this createRouter function:
 // - Per-request on server (ensuring fresh QueryClient per request)
 // - Once on client during hydration
-export function createRouter() {
+export function getRouter() {
   const context = createContext();
 
   const router = createTanStackRouter({
@@ -45,10 +45,4 @@ export function createRouter() {
   });
 
   return router;
-}
-
-declare module '@tanstack/react-router' {
-  interface Register {
-    router: ReturnType<typeof createRouter>;
-  }
 }
