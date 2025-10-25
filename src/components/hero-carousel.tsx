@@ -3,7 +3,7 @@ import Autoplay from 'embla-carousel-autoplay';
 import useEmblaCarousel from 'embla-carousel-react';
 import WheelGestures from 'embla-carousel-wheel-gestures';
 import { useCallback, useEffect, useState } from 'react';
-import { $headerBackgroundImage, useSetBackgroundImage } from '@/stores/header';
+import { $headerBackgroundImage } from '@/stores/header';
 import { cn } from '@/util/cn';
 import { CarouselNavigationButtons } from './carousel-navigation-buttons';
 import { CarouselPagination } from './carousel-pagination';
@@ -101,8 +101,6 @@ export default function HeroCarousel({ items }: HeroCarouselProps) {
 
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
 
-  useSetBackgroundImage(items[0]?.imageUrl || '');
-
   useEffect(() => {
     // Preload all background images
     items.forEach((item) => {
@@ -123,7 +121,7 @@ export default function HeroCarousel({ items }: HeroCarouselProps) {
     function onSelect(emblaApi: EmblaCarouselType) {
       const newIndex = emblaApi.selectedScrollSnap();
       setSelectedIndex(newIndex);
-      $headerBackgroundImage.set(items[newIndex]?.imageUrl || '');
+      $headerBackgroundImage.set(items[newIndex]?.imageUrl || undefined);
       setCanScrollPrev(emblaApi.canScrollPrev());
       setCanScrollNext(emblaApi.canScrollNext());
     }
