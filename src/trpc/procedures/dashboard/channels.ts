@@ -610,6 +610,11 @@ export const channelRouter = router({
             lengthSeconds: true,
             defaultThumbnailPath: true,
             overrideThumbnailPath: true,
+            featuredUpload: {
+              select: {
+                uploadRecordId: true,
+              },
+            },
             _count: {
               select: {
                 uploadViews: true,
@@ -676,8 +681,12 @@ export const channelRouter = router({
       const totalPages = Math.ceil(totalCount / input.limit);
 
       const uploadsWithThumbnails = uploads.map((upload) => {
-        const { defaultThumbnailPath, overrideThumbnailPath, ...uploadRest } =
-          upload;
+        const {
+          defaultThumbnailPath,
+          overrideThumbnailPath,
+          featuredUpload,
+          ...uploadRest
+        } = upload;
         const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
         const thumbnailUrl = thumbnailPath
           ? getPublicImageUrl(
@@ -689,6 +698,7 @@ export const channelRouter = router({
         return {
           ...uploadRest,
           thumbnailUrl,
+          isFeatured: !!featuredUpload,
         };
       });
 
@@ -816,6 +826,11 @@ export const channelRouter = router({
           transcodingFinishedAt: true,
           transcribingFinishedAt: true,
           transcodingProgress: true,
+          featuredUpload: {
+            select: {
+              uploadRecordId: true,
+            },
+          },
           channel: {
             select: {
               id: true,
@@ -827,6 +842,7 @@ export const channelRouter = router({
                   appUser: {
                     select: {
                       id: true,
+                      role: true,
                     },
                   },
                 },
@@ -855,8 +871,12 @@ export const channelRouter = router({
         (m) => m.appUser.id === ctx.session.appUser.id,
       );
 
-      const { defaultThumbnailPath, overrideThumbnailPath, ...uploadRest } =
-        upload;
+      const {
+        defaultThumbnailPath,
+        overrideThumbnailPath,
+        featuredUpload,
+        ...uploadRest
+      } = upload;
       const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
 
       const thumbnailUrl = thumbnailPath
@@ -867,6 +887,7 @@ export const channelRouter = router({
         upload: {
           ...uploadRest,
           thumbnailUrl,
+          isFeatured: !!featuredUpload,
         },
         channel: {
           ...upload.channel,

@@ -8,17 +8,21 @@ import { cn } from '@/util/cn';
 import { CarouselNavigationButtons } from './carousel-navigation-buttons';
 import { CarouselPagination } from './carousel-pagination';
 
-type CarouselItemProps = {
-  title: string;
+type CarouselItemData = {
+  title: string | null;
   author: string;
-  imageUrl: string;
+  imageUrl: string | null;
+  avatarUrl: string | null;
   badge?: string;
 };
+
+type CarouselItemProps = CarouselItemData;
 
 function CarouselItem({
   title,
   author,
   imageUrl,
+  avatarUrl,
   badge = 'Featured',
 }: CarouselItemProps) {
   return (
@@ -26,12 +30,18 @@ function CarouselItem({
       <div className="space-y-5">
         {/* Image Container */}
         <div className="relative aspect-video overflow-hidden rounded-2xl border-top-highlight bg-card">
-          <div
-            className="absolute inset-0 bg-center bg-cover"
-            style={{
-              backgroundImage: `url('${imageUrl}')`,
-            }}
-          />
+          {imageUrl ? (
+            <div
+              className="absolute inset-0 bg-center bg-cover"
+              style={{
+                backgroundImage: `url('${imageUrl}')`,
+              }}
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center bg-zinc-800">
+              <span className="text-secondary text-sm">No thumbnail</span>
+            </div>
+          )}
           {/* Badge */}
           <div className="absolute top-2 left-2">
             <div className="flex items-center rounded-full bg-zinc-950/80 px-2 backdrop-blur-sm">
@@ -43,10 +53,18 @@ function CarouselItem({
         {/* Content */}
         <div className="space-y-2 text-center">
           <h3 className="line-clamp-1 font-bold text-lg text-primary">
-            {title}
+            {title || 'Untitled'}
           </h3>
           <div className="flex items-center justify-center gap-1.5">
-            <div className="h-4 w-4 flex-shrink-0 rounded-full bg-indigo-500" />
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={author}
+                className="h-4 w-4 flex-shrink-0 rounded-full object-cover"
+              />
+            ) : (
+              <div className="h-4 w-4 flex-shrink-0 rounded-full bg-indigo-500" />
+            )}
             <span className="text-secondary text-sm">{author}</span>
           </div>
         </div>
@@ -55,40 +73,11 @@ function CarouselItem({
   );
 }
 
-export const carouselItems = [
-  {
-    title: 'First Item',
-    author: 'First Channel',
-    imageUrl:
-      'https://unsplash.com/photos/vAij-E26haI/download?ixid=M3wxMjA3fDB8MXxhbGx8fHx8fHx8fHwxNzU4MjUyODYwfA&force=true&w=1920',
-  },
-  {
-    title: 'Second Item',
-    author: 'Second Channel',
-    imageUrl:
-      'https://unsplash.com/photos/_86u_Y0oAaM/download?ixid=M3wxMjA3fDB8MXxhbGx8fHx8fHx8fHwxNzU4MjM0MTAyfA&force=true&w=1920',
-  },
-  {
-    title: 'Third Item',
-    author: 'Third Channel',
-    imageUrl:
-      'https://unsplash.com/photos/DRgrzQQsJDA/download?ixid=M3wxMjA3fDB8MXxhbGx8fHx8fHx8fHwxNzU4MjM3NDIxfA&force=true&w=1920',
-  },
-  {
-    title: 'Fourth Item',
-    author: 'Fourth Channel',
-    imageUrl:
-      'https://unsplash.com/photos/k1bO_VTiZSs/download?ixid=M3wxMjA3fDB8MXxhbGx8fHx8fHx8fHwxNzU4MjQzNzU4fA&force=true&w=1920',
-  },
-  {
-    title: 'Fifth Item',
-    author: 'Fifth Channel',
-    imageUrl:
-      'https://unsplash.com/photos/yFKkFPvUgXc/download?ixid=M3wxMjA3fDB8MXxhbGx8fHx8fHx8fHwxNzU4MjM3NDExfA&force=true&w=1920',
-  },
-];
+type HeroCarouselProps = {
+  items: CarouselItemData[];
+};
 
-export default function HeroCarousel() {
+export default function HeroCarousel({ items }: HeroCarouselProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel(
     {
       loop: true,
@@ -112,15 +101,17 @@ export default function HeroCarousel() {
 
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
 
-  useSetBackgroundImage(carouselItems[0].imageUrl);
+  useSetBackgroundImage(items[0]?.imageUrl || '');
 
   useEffect(() => {
     // Preload all background images
-    carouselItems.forEach((item) => {
-      const img = new Image();
-      img.src = item.imageUrl;
+    items.forEach((item) => {
+      if (item.imageUrl) {
+        const img = new Image();
+        img.src = item.imageUrl;
+      }
     });
-  }, []);
+  }, [items]);
 
   useEffect(() => {
     if (!emblaApi) return;
@@ -132,7 +123,7 @@ export default function HeroCarousel() {
     function onSelect(emblaApi: EmblaCarouselType) {
       const newIndex = emblaApi.selectedScrollSnap();
       setSelectedIndex(newIndex);
-      $headerBackgroundImage.set(carouselItems[newIndex].imageUrl);
+      $headerBackgroundImage.set(items[newIndex]?.imageUrl || '');
       setCanScrollPrev(emblaApi.canScrollPrev());
       setCanScrollNext(emblaApi.canScrollNext());
     }
@@ -148,7 +139,7 @@ export default function HeroCarousel() {
       const slidesInView = emblaApi.slidesInView();
 
       slides.forEach((slide: HTMLElement, index: number) => {
-        const actualIndex = index % carouselItems.length;
+        const actualIndex = index % items.length;
         if (slidesInView.includes(index)) {
           slide.style.opacity = actualIndex === selectedIndex ? '1' : '0.2';
         } else {
@@ -166,15 +157,20 @@ export default function HeroCarousel() {
       emblaApi.off('scroll', applyFadeEffect);
       emblaApi.off('select', applyFadeEffect);
     };
-  }, [emblaApi, selectedIndex]);
+  }, [emblaApi, selectedIndex, items]);
+
+  // If no items, don't render the carousel
+  if (items.length === 0) {
+    return null;
+  }
 
   return (
     <div className="relative z-10 pb-6">
       <div className="overflow-hidden" ref={emblaRef}>
         <div className="flex gap-5 px-5 pb-6">
-          {carouselItems.map((item, index) => (
+          {items.map((item, index) => (
             <div
-              key={item.imageUrl}
+              key={item.imageUrl || index}
               className={cn(
                 'flex min-w-0 flex-[0_0_360px] justify-center transition-opacity duration-500 ease-in-out md:flex-[0_0_495px] lg:flex-[0_0_640px]',
                 index === 0 ? 'opacity-100' : 'opacity-20',

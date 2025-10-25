@@ -134,6 +134,21 @@ function AdminPage() {
             Monitor uploads currently being processed
           </Text>
         </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
+          to="/dashboard/admin/featured"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Featured Media</Text>
+          </Group>
+          <Text size="sm" c="dimmed">
+            Manage featured uploads on homepage carousel
+          </Text>
+        </Card>
       </SimpleGrid>
     </>
   );

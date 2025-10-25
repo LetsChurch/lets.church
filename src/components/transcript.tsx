@@ -2,6 +2,7 @@ import { useStore } from '@nanostores/react';
 import bSearch from 'binary-search';
 import { useEffect, useMemo, useRef } from 'react';
 import { $currentTime, $setPlayAt } from '@/stores/player';
+import { formatTime } from '@/util/format';
 
 type TranscriptLine = {
   start: number;
@@ -11,13 +12,6 @@ type TranscriptLine = {
 type Props = {
   transcript: Array<TranscriptLine>;
 };
-
-function formatTime(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}
 
 export function Transcript({ transcript }: Props) {
   const currentTime = useStore($currentTime);

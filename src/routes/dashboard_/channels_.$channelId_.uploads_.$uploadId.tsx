@@ -23,6 +23,8 @@ import {
   IconCheck,
   IconCopy,
   IconPhoto,
+  IconStar,
+  IconStarFilled,
   IconUpload,
   IconX,
 } from '@tabler/icons-react';
@@ -102,6 +104,14 @@ function ChannelUploadPage() {
   const isTranscoding = !upload.transcodingFinishedAt;
   const isTranscribing = !upload.transcribingFinishedAt;
   const isProcessing = isUploading || isTranscoding || isTranscribing;
+
+  // Check if user is site admin
+  // userMembership comes from the channel and contains the current user's membership
+  // which includes the appUser role
+  const isSiteAdmin =
+    channel.userMembership &&
+    'appUser' in channel.userMembership &&
+    channel.userMembership.appUser.role === 'ADMIN';
 
   const [newThumbnailFile, setNewThumbnailFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -201,6 +211,40 @@ function ChannelUploadPage() {
       onError: (error) => {
         showFailure({
           message: error.message || 'Failed to update upload details',
+        });
+      },
+    }),
+  );
+
+  const toggleFeaturedMutation = useMutation(
+    trpc.dashboard.admin.toggleFeaturedUpload.mutationOptions({
+      onSuccess: async ({ isFeatured }) => {
+        showSuccess({
+          message: isFeatured
+            ? 'Upload added to featured!'
+            : 'Upload removed from featured',
+        });
+
+        await queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getUploadRecord.queryKey({
+            channelId,
+            uploadId,
+          }),
+        });
+
+        await queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getChannelUploads.queryKey({
+            channelId,
+          }),
+        });
+
+        await queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.admin.getFeaturedUploads.queryKey(),
+        });
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to toggle featured status',
         });
       },
     }),
@@ -538,6 +582,28 @@ function ChannelUploadPage() {
                 )}
               </form.Subscribe>
             </Group>
+
+            {/* Featured Toggle - Only for site admins */}
+            {isSiteAdmin ? (
+              <Button
+                variant={upload.isFeatured ? 'filled' : 'light'}
+                color={upload.isFeatured ? 'yellow' : 'gray'}
+                leftSection={
+                  upload.isFeatured ? (
+                    <IconStarFilled size={16} />
+                  ) : (
+                    <IconStar size={16} />
+                  )
+                }
+                onClick={() => {
+                  toggleFeaturedMutation.mutate({ uploadId });
+                }}
+                loading={toggleFeaturedMutation.isPending}
+                fullWidth
+              >
+                {upload.isFeatured ? 'Remove from Featured' : 'Add to Featured'}
+              </Button>
+            ) : null}
             {/* Player or Progress Bars */}
             {isProcessing ? (
               <Stack gap="md">

@@ -508,4 +508,89 @@ export const homeProcedures = {
 
       return uploadsWithProgress;
     }),
+
+  getFeaturedUploads: publicProcedure.query(async () => {
+    moduleLogger.info('Fetching featured uploads for homepage');
+
+    const featuredUploads = await db.featuredUpload.findMany({
+      select: {
+        uploadRecord: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            lengthSeconds: true,
+            defaultThumbnailPath: true,
+            overrideThumbnailPath: true,
+            defaultThumbnailBlurhash: true,
+            overrideThumbnailBlurhash: true,
+            channel: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                avatarPath: true,
+                avatarBlurhash: true,
+              },
+            },
+          },
+        },
+      },
+      where: {
+        uploadRecord: {
+          visibility: 'PUBLIC',
+          transcodingFinishedAt: { not: null },
+          transcribingFinishedAt: { not: null },
+          channel: {
+            visibility: 'PUBLIC',
+          },
+        },
+      },
+      orderBy: {
+        rank: 'asc',
+      },
+    });
+
+    const uploadsWithUrls = featuredUploads.map(({ uploadRecord }) => {
+      const thumbnailPath =
+        uploadRecord.overrideThumbnailPath ?? uploadRecord.defaultThumbnailPath;
+      const thumbnailBlurhash =
+        uploadRecord.overrideThumbnailBlurhash ??
+        uploadRecord.defaultThumbnailBlurhash;
+
+      // Use 720p for carousel backgrounds
+      const thumbnailUrl = thumbnailPath
+        ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', thumbnailPath), {
+            resize: { width: 1280, height: 720 },
+          })
+        : null;
+
+      const channelAvatarUrl = uploadRecord.channel.avatarPath
+        ? getPublicImageUrl(
+            getS3ProtocolUri('PUBLIC', uploadRecord.channel.avatarPath),
+            {
+              resize: { width: 64, height: 64 },
+            },
+          )
+        : null;
+
+      return {
+        id: uploadRecord.id,
+        title: uploadRecord.title,
+        description: uploadRecord.description,
+        lengthSeconds: uploadRecord.lengthSeconds,
+        thumbnailUrl,
+        thumbnailBlurhash,
+        channel: {
+          id: uploadRecord.channel.id,
+          name: uploadRecord.channel.name,
+          slug: uploadRecord.channel.slug,
+          avatarUrl: channelAvatarUrl,
+          avatarBlurhash: uploadRecord.channel.avatarBlurhash,
+        },
+      };
+    });
+
+    return uploadsWithUrls;
+  }),
 };

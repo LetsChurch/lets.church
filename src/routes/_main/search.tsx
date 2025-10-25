@@ -10,6 +10,7 @@ import Search from '@/components/search';
 import SearchTabs from '@/components/search-tabs';
 import { TrendingSearchPill } from '@/components/trending-search-pill';
 import { useTRPC } from '@/trpc/react';
+import { formatTime } from '@/util/format';
 
 type TranscriptSegment = {
   start: number;
@@ -187,28 +188,6 @@ function SearchResults({ q }: { q: string }) {
     });
   };
 
-  const formatDuration = (seconds: number | null) => {
-    if (!seconds) return null;
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    if (h > 0) {
-      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    }
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
-
-  const formatTimestamp = (start: number) => {
-    const seconds = Math.floor(start / 1000);
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    if (h > 0) {
-      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    }
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
-
   // Show empty search if no results
   if (items.length === 0 && !isFetchingNextPage) {
     return <EmptySearch />;
@@ -259,11 +238,15 @@ function SearchResults({ q }: { q: string }) {
                         })
                       : undefined
                   }
-                  duration={formatDuration(item.lengthSeconds) ?? undefined}
+                  duration={
+                    item.lengthSeconds
+                      ? formatTime(item.lengthSeconds * 1000)
+                      : undefined
+                  }
                 />
                 <div className="mt-2 rounded-md bg-white/5 p-3">
                   <div className="font-mono text-muted text-xs">
-                    {formatTimestamp(firstSegment.start)}
+                    {formatTime(firstSegment.start)}
                   </div>
                   <div
                     className="text-primary/80 text-sm"
@@ -295,7 +278,11 @@ function SearchResults({ q }: { q: string }) {
                       })
                     : undefined
                 }
-                duration={formatDuration(item.lengthSeconds) ?? undefined}
+                duration={
+                  item.lengthSeconds
+                    ? formatTime(item.lengthSeconds * 1000)
+                    : undefined
+                }
               />
             </Link>
           );

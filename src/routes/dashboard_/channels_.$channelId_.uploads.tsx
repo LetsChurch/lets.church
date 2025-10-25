@@ -24,6 +24,8 @@ import {
   IconEye,
   IconEyeOff,
   IconPhoto,
+  IconStar,
+  IconStarFilled,
   IconTrash,
   IconUpload,
 } from '@tabler/icons-react';
@@ -247,6 +249,39 @@ function ChannelUploadsPage() {
             error instanceof Error
               ? error.message
               : 'Failed to update visibility',
+        });
+      },
+    }),
+  );
+
+  const toggleFeaturedMutation = useMutation(
+    trpc.dashboard.admin.toggleFeaturedUpload.mutationOptions({
+      onSuccess: ({ isFeatured }) => {
+        showSuccess({
+          message: isFeatured
+            ? 'Upload added to featured!'
+            : 'Upload removed from featured',
+        });
+
+        queryClient.invalidateQueries(
+          trpc.dashboard.channels.getChannelUploads.queryOptions({
+            channelId: params.channelId,
+            page: search.page,
+            limit: search.limit,
+          }),
+        );
+
+        queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.admin.getFeaturedUploads.queryKey(),
+        });
+      },
+      onError: (error) => {
+        console.error('Failed to toggle featured:', error);
+        showFailure({
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Failed to toggle featured',
         });
       },
     }),
@@ -706,6 +741,33 @@ function ChannelUploadsPage() {
                   </Table.Td>
                   <Table.Td onClick={(e) => e.stopPropagation()}>
                     <Group gap="xs">
+                      {isSiteAdmin ? (
+                        <Tooltip
+                          label={
+                            upload.isFeatured
+                              ? 'Remove from featured'
+                              : 'Add to featured'
+                          }
+                        >
+                          <ActionIcon
+                            variant="subtle"
+                            color={upload.isFeatured ? 'yellow' : 'gray'}
+                            size="sm"
+                            onClick={() => {
+                              toggleFeaturedMutation.mutate({
+                                uploadId: upload.id,
+                              });
+                            }}
+                            loading={toggleFeaturedMutation.isPending}
+                          >
+                            {upload.isFeatured ? (
+                              <IconStarFilled size={16} />
+                            ) : (
+                              <IconStar size={16} />
+                            )}
+                          </ActionIcon>
+                        </Tooltip>
+                      ) : null}
                       {(() => {
                         const canEditUpload =
                           (isAdmin || canEdit) && !isDeleted;

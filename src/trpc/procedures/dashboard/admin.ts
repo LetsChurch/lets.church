@@ -1,8 +1,15 @@
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
 import { z } from 'zod';
+import {
+  addFeaturedUploadSchema,
+  removeFeaturedUploadSchema,
+  reorderFeaturedUploadsSchema,
+} from '@/schemas/dashboard/admin';
 import db from '@/util/db';
 import logger from '@/util/logger';
+import { getS3ProtocolUri } from '@/util/s3';
+import { getPublicImageUrl } from '@/util/url';
 import { authProcedure, router } from '../../trpc';
 
 const moduleLogger = logger.child({
@@ -699,4 +706,390 @@ export const adminRouter = router({
       orderBy: { createdAt: 'desc' },
     });
   }),
+
+  getFeaturedUploads: adminProcedure.query(async () => {
+    moduleLogger.info('Fetching featured uploads');
+
+    const featuredUploads = await db.featuredUpload.findMany({
+      select: {
+        uploadRecordId: true,
+        rank: true,
+        createdAt: true,
+        uploadRecord: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            lengthSeconds: true,
+            defaultThumbnailPath: true,
+            overrideThumbnailPath: true,
+            defaultThumbnailBlurhash: true,
+            overrideThumbnailBlurhash: true,
+            channel: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                avatarPath: true,
+                avatarBlurhash: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        rank: 'asc',
+      },
+    });
+
+    return featuredUploads.map(({ uploadRecord, ...rest }) => {
+      const thumbnailPath =
+        uploadRecord.overrideThumbnailPath ?? uploadRecord.defaultThumbnailPath;
+
+      return {
+        ...rest,
+        uploadRecord: {
+          ...uploadRecord,
+          thumbnailUrl: thumbnailPath
+            ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', thumbnailPath), {
+                resize: { width: 120, height: 68 },
+              })
+            : null,
+        },
+      };
+    });
+  }),
+
+  addFeaturedUpload: adminProcedure
+    .input(addFeaturedUploadSchema)
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Adding featured upload', {
+        uploadId: input.uploadId,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        // Check if upload exists and is public
+        const upload = await db.uploadRecord.findUnique({
+          where: { id: input.uploadId },
+          select: {
+            id: true,
+            visibility: true,
+            transcodingFinishedAt: true,
+            transcribingFinishedAt: true,
+          },
+        });
+
+        if (!upload) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Upload not found',
+          });
+        }
+
+        if (upload.visibility !== 'PUBLIC') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Only public uploads can be featured',
+          });
+        }
+
+        if (!upload.transcodingFinishedAt || !upload.transcribingFinishedAt) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Upload must be fully processed before featuring',
+          });
+        }
+
+        // Check if already featured
+        const existing = await db.featuredUpload.findUnique({
+          where: { uploadRecordId: input.uploadId },
+        });
+
+        if (existing) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Upload is already featured',
+          });
+        }
+
+        // Get max rank
+        const maxRank = await db.featuredUpload.findFirst({
+          select: { rank: true },
+          orderBy: { rank: 'desc' },
+        });
+
+        const newRank = (maxRank?.rank ?? -1) + 1;
+
+        const featuredUpload = await db.featuredUpload.create({
+          data: {
+            uploadRecordId: input.uploadId,
+            rank: newRank,
+          },
+        });
+
+        moduleLogger.info('Featured upload added successfully', {
+          uploadId: input.uploadId,
+          rank: newRank,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return featuredUpload;
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error('Failed to add featured upload', {
+          uploadId: input.uploadId,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to add featured upload',
+        });
+      }
+    }),
+
+  removeFeaturedUpload: adminProcedure
+    .input(removeFeaturedUploadSchema)
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Removing featured upload', {
+        uploadId: input.uploadId,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        // Get the rank of the upload being removed
+        const featuredUpload = await db.featuredUpload.findUnique({
+          where: { uploadRecordId: input.uploadId },
+          select: { rank: true },
+        });
+
+        if (!featuredUpload) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Featured upload not found',
+          });
+        }
+
+        // Delete the featured upload
+        await db.featuredUpload.delete({
+          where: { uploadRecordId: input.uploadId },
+        });
+
+        // Rebalance ranks: decrement all ranks greater than the removed one
+        await db.featuredUpload.updateMany({
+          where: {
+            rank: { gt: featuredUpload.rank },
+          },
+          data: {
+            rank: { decrement: 1 },
+          },
+        });
+
+        moduleLogger.info('Featured upload removed successfully', {
+          uploadId: input.uploadId,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error('Failed to remove featured upload', {
+          uploadId: input.uploadId,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to remove featured upload',
+        });
+      }
+    }),
+
+  reorderFeaturedUploads: adminProcedure
+    .input(reorderFeaturedUploadsSchema)
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Reordering featured uploads', {
+        uploadIds: input.uploadIds,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        // Verify all uploads are currently featured
+        const existingFeatured = await db.featuredUpload.findMany({
+          select: { uploadRecordId: true },
+        });
+
+        const existingIds = new Set(
+          existingFeatured.map((f) => f.uploadRecordId),
+        );
+        const inputIds = new Set(input.uploadIds);
+
+        if (existingIds.size !== inputIds.size) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Upload count mismatch',
+          });
+        }
+
+        for (const id of input.uploadIds) {
+          if (!existingIds.has(id)) {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: `Upload ${id} is not featured`,
+            });
+          }
+        }
+
+        // Update ranks based on array order
+        await Promise.all(
+          input.uploadIds.map((uploadId, index) =>
+            db.featuredUpload.update({
+              where: { uploadRecordId: uploadId },
+              data: { rank: index },
+            }),
+          ),
+        );
+
+        moduleLogger.info('Featured uploads reordered successfully', {
+          uploadIds: input.uploadIds,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error('Failed to reorder featured uploads', {
+          uploadIds: input.uploadIds,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to reorder featured uploads',
+        });
+      }
+    }),
+
+  toggleFeaturedUpload: adminProcedure
+    .input(z.object({ uploadId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Toggling featured upload', {
+        uploadId: input.uploadId,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        // Check if upload is currently featured
+        const existing = await db.featuredUpload.findUnique({
+          where: { uploadRecordId: input.uploadId },
+        });
+
+        if (existing) {
+          // Remove from featured
+          await db.featuredUpload.delete({
+            where: { uploadRecordId: input.uploadId },
+          });
+
+          // Rebalance ranks
+          await db.featuredUpload.updateMany({
+            where: {
+              rank: { gt: existing.rank },
+            },
+            data: {
+              rank: { decrement: 1 },
+            },
+          });
+
+          moduleLogger.info('Upload removed from featured', {
+            uploadId: input.uploadId,
+            appUserId: ctx.session.appUserId,
+          });
+
+          return { isFeatured: false };
+        }
+
+        // Add to featured
+        const upload = await db.uploadRecord.findUnique({
+          where: { id: input.uploadId },
+          select: {
+            id: true,
+            visibility: true,
+            transcodingFinishedAt: true,
+            transcribingFinishedAt: true,
+          },
+        });
+
+        if (!upload) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Upload not found',
+          });
+        }
+
+        if (upload.visibility !== 'PUBLIC') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Only public uploads can be featured',
+          });
+        }
+
+        if (!upload.transcodingFinishedAt || !upload.transcribingFinishedAt) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Upload must be fully processed before featuring',
+          });
+        }
+
+        // Get max rank
+        const maxRank = await db.featuredUpload.findFirst({
+          select: { rank: true },
+          orderBy: { rank: 'desc' },
+        });
+
+        const newRank = (maxRank?.rank ?? -1) + 1;
+
+        await db.featuredUpload.create({
+          data: {
+            uploadRecordId: input.uploadId,
+            rank: newRank,
+          },
+        });
+
+        moduleLogger.info('Upload added to featured', {
+          uploadId: input.uploadId,
+          rank: newRank,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { isFeatured: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error('Failed to toggle featured upload', {
+          uploadId: input.uploadId,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to toggle featured upload',
+        });
+      }
+    }),
 });

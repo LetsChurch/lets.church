@@ -27,12 +27,17 @@ export const Route = createFileRoute('/_main/')({
       context.trpc.common.hasValidSession.queryOptions(),
     );
 
-    // Prefetch first page of trending uploads for infinite scroll
-    await context.queryClient.prefetchInfiniteQuery(
-      context.trpc.home.getTrendingUploads.infiniteQueryOptions({
-        limit: 22,
-      }),
-    );
+    // Prefetch featured uploads and first page of trending uploads for infinite scroll
+    await Promise.all([
+      context.queryClient.ensureQueryData(
+        context.trpc.home.getFeaturedUploads.queryOptions(),
+      ),
+      context.queryClient.prefetchInfiniteQuery(
+        context.trpc.home.getTrendingUploads.infiniteQueryOptions({
+          limit: 22,
+        }),
+      ),
+    ]);
 
     if (hasSession) {
       await Promise.all([
@@ -341,6 +346,10 @@ function Home() {
   const trpc = useTRPC();
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
+  const { data: featuredUploads } = useQuery(
+    trpc.home.getFeaturedUploads.queryOptions(),
+  );
+
   const {
     data: trendingData,
     fetchNextPage,
@@ -388,6 +397,15 @@ function Home() {
       progress: upload.progress,
     })) ?? [];
 
+  // Transform featured uploads for carousel
+  const carouselItems: ComponentProps<typeof HeroCarousel>['items'] =
+    featuredUploads?.map((upload) => ({
+      title: upload.title,
+      author: upload.channel.name,
+      imageUrl: upload.thumbnailUrl,
+      avatarUrl: upload.channel.avatarUrl,
+    })) ?? [];
+
   // Flatten all pages of trending uploads
   const allTrendingUploads =
     trendingData?.pages.flatMap((page) => page.items) ?? [];
@@ -413,7 +431,7 @@ function Home() {
   return (
     <div className="min-h-screen bg-page">
       <Header>
-        <HeroCarousel />
+        <HeroCarousel items={carouselItems} />
       </Header>
 
       <div className="mx-auto max-w-7xl space-y-12 px-16 py-8">

@@ -401,6 +401,7 @@ model UploadRecord {
   uploadViewRanges          UploadViewRanges[]
   uploadListEntries         UploadListEntry[]
   savedByUsers              SavedMedia[]
+  featuredUpload            FeaturedUpload?
 
   @@index([createdAt, id])
   @@index(score)
@@ -582,4 +583,16 @@ model SavedMedia {
   @@unique([appUserId, uploadRecordId])
   @@index([appUserId, createdAt])
   @@map("saved_media")
+}
+
+model FeaturedUpload {
+  uploadRecord   UploadRecord @relation(fields: [uploadRecordId], references: [id], onDelete: Cascade)
+  uploadRecordId String       @unique @map("upload_record_id") @db.Uuid
+  rank           Int
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@id([uploadRecordId])
+  @@index([rank])
+  @@map("featured_upload")
 }

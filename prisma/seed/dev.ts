@@ -1841,3 +1841,34 @@ await db.uploadRecord.create({
 });
 
 await indexDocument('upload', lordsSupperUploadId);
+
+logger.info('Seeding featured uploads');
+
+const featuredUploadsData = [
+  {
+    uploadRecordId: '00000000-0000-4000-8000-000000000001', // Introduction from The Dorean Principle
+    rank: 0,
+  },
+  {
+    uploadRecordId: prayerPitchUploadId, // Prayer Pitch Meeting - 1
+    rank: 1,
+  },
+  {
+    uploadRecordId: foreignMissionsUploadId, // Foreign Missions Pitch Meeting - 3
+    rank: 2,
+  },
+  {
+    uploadRecordId: biblicalCounselingUploadId, // Biblical Counseling Pitch Meeting - 5
+    rank: 3,
+  },
+  {
+    uploadRecordId: '00000000-0000-4000-8000-000000000010', // Conclusion from The Dorean Principle
+    rank: 4,
+  },
+] satisfies Array<Prisma.FeaturedUploadCreateManyInput>;
+
+await db.featuredUpload.createMany({
+  data: featuredUploadsData,
+});
+
+logger.info('Featured uploads seeded successfully');
