@@ -46,6 +46,7 @@
 }
 
 .uploadsTile .value .mantine-Text-root[data-c="dimmed"] {
+	/* biome-ignore lint/complexity/noImportantStyles: mantine override */
 	color: var(--mantine-color-blue-7) !important;
 }
 

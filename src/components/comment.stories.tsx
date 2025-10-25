@@ -320,7 +320,7 @@ const createMockTRPCClient = (isLoggedIn: boolean) => {
           // For single requests, return the first response directly
           // For batch requests, return the array
           const batchParam = urlObj.searchParams.get('batch');
-          const isBatch = batchParam && parseInt(batchParam) > 1;
+          const isBatch = batchParam && parseInt(batchParam, 10) > 1;
 
           const finalResponse = isBatch ? responses : responses[0];
 

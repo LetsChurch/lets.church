@@ -36,6 +36,7 @@
 		color: var(--tile-value-color);
 
 		& .mantine-Text-root[data-c="dimmed"] {
+			/* biome-ignore lint/complexity/noImportantStyles: mantine override */
 			color: var(--tile-dimmed-color) !important;
 		}
 	}

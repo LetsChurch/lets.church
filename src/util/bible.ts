@@ -508,12 +508,12 @@ export function* getBibleReferences(text: string) {
       continue;
     }
 
-    if (chapter && !verse && parseInt(chapter) > bookInfo.chapters) {
+    if (chapter && !verse && parseInt(chapter, 10) > bookInfo.chapters) {
       // If there are more chapters than the book has, attempt to correct transcription error
       const matchedChapter = chapter;
       let i = 1;
 
-      while (parseInt(matchedChapter.slice(0, i)) <= bookInfo.chapters) {
+      while (parseInt(matchedChapter.slice(0, i), 10) <= bookInfo.chapters) {
         i++;
       }
 
@@ -540,15 +540,19 @@ export function* getBibleReferences(text: string) {
       match: lastMatch[0].trim(),
       index: lastMatch.index,
       book: bookInfo.name,
-      chapter: chapter ? parseInt(chapter) : null,
+      chapter: chapter ? parseInt(chapter, 10) : null,
       chapterEnd: chapterEnd
-        ? parseInt(chapterEnd)
+        ? parseInt(chapterEnd, 10)
         : chapter
-          ? parseInt(chapter)
+          ? parseInt(chapter, 10)
           : null,
-      verse: verse ? parseInt(verse) : null,
+      verse: verse ? parseInt(verse, 10) : null,
       verseSuffix: verseSuffix ? verseSuffix : null,
-      verseEnd: verseEnd ? parseInt(verseEnd) : verse ? parseInt(verse) : null,
+      verseEnd: verseEnd
+        ? parseInt(verseEnd, 10)
+        : verse
+          ? parseInt(verse, 10)
+          : null,
       verseEndSuffix: verseEndSuffix ? verseEndSuffix : null,
     };
   }

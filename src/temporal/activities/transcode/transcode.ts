@@ -135,10 +135,11 @@ export default async function transcode(
         return;
       }
 
-      const frames = parseInt(match[1] ?? '');
+      const frames = parseInt(match[1] ?? '', 10);
       const totalFrames = parseInt(
         // TODO: get progress when nb_frames is undefined
         String(probe.streams.find((s) => s.nb_frames)?.nb_frames) ?? '',
+        10,
       );
 
       if (!Number.isNaN(frames) && !Number.isNaN(totalFrames)) {
@@ -205,7 +206,7 @@ export default async function transcode(
       activityLogger.info(`Uploaded downloadable file: ${filename}`);
       activityLogger.info('Recording download size');
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore: TODO: type safety
+      // @ts-expect-error: TODO: type safety
       const variant: UploadVariant = filename.split('.')[0];
       invariant(variant, 'variant should be defined');
       await recordDownloadSize(uploadRecordId, variant, byteSize);

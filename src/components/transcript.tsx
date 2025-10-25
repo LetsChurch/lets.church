@@ -49,7 +49,7 @@ export function Transcript({ transcript }: Props) {
     line?.scrollIntoView({
       behavior: 'smooth',
       block: 'center',
-      // @ts-ignore: not typed in TypeScript
+      // @ts-expect-error: not typed in TypeScript
       container: 'nearest',
     });
   }, [currentI, transcript]);
