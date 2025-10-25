@@ -4,6 +4,7 @@ import slugify from '@sindresorhus/slugify';
 import argon2 from 'argon2';
 import { Prisma, UploadListType } from '@prisma/client';
 import invariant from 'tiny-invariant';
+import { stripIndent } from 'proper-tags';
 import { indexDocument, waitOnTemporal } from '../../src/temporal';
 import db from '../../src/util/db';
 import logger from '../../src/util/logger';
@@ -1265,6 +1266,39 @@ const org16 = await db.organization.create({
 
 await indexDocument('organization', org16.id);
 
+const sellingJesusChannel = await db.channel.create({
+  data: {
+    name: 'Selling Jesus',
+    slug: 'selling-jesus',
+    description:
+      'Selling Jesus is a ministry that seeks to expose the commercialization of Christianity.',
+    avatarPath: 'selling-jesus/avatar.jpg',
+    approvedAt: new Date(),
+    approvedById: adminUser.id,
+    memberships: {
+      create: {
+        appUser: {
+          connect: {
+            id: adminUser.id,
+          },
+        },
+        isAdmin: true,
+      },
+    },
+    subscribers: {
+      create: {
+        appUser: {
+          connect: {
+            id: adminUser.id,
+          },
+        },
+      },
+    },
+  },
+});
+
+await indexDocument('channel', sellingJesusChannel.id);
+
 for (let i = 0; i < 25; i += 1) {
   const [nameSegment, denomination] = faker.helpers.arrayElement<
     [string, Array<string>]
@@ -1342,14 +1376,16 @@ logger.info('Created example organizations and channels');
 
 logger.info('Seeding The Dorean Principle');
 
+const firstLoveChannelId = (
+  await db.channel.findUniqueOrThrow({
+    select: { id: true },
+    where: { slug: 'firstlove' },
+  })
+).id;
+
 const baseUploadRecord = {
   appUserId: adminUser.id,
-  channelId: (
-    await db.channel.findUniqueOrThrow({
-      select: { id: true },
-      where: { slug: 'firstlove' },
-    })
-  ).id,
+  channelId: firstLoveChannelId,
   uploadFinalized: true,
   uploadFinalizedById: adminUser.id,
   license: 'CC0' as const,
@@ -1566,3 +1602,242 @@ for (const { id } of uploadRecordData) {
   await indexDocument('transcript', id, `${id}/transcript.vtt`);
   await indexDocument('upload', id);
 }
+
+logger.info('Seeding Selling Jesus');
+
+const doreanPrincipleUploadId = '00000000-0000-4000-8000-100000000000';
+
+await db.uploadRecord.create({
+  data: {
+    id: doreanPrincipleUploadId,
+    title: 'The Dorean Principle in Five Minutes',
+    description: stripIndent`
+      What things are too sacred to be sold? Should Christian ministers ever charge money for things like worship music, preaching, teaching, or counseling?
+
+      This is a quick, broad overview of a simple biblical teaching: accepting support as anything other than an act of co-labor compromises the sincerity of Christian ministry.
+
+      Ministry should be supported but never sold.
+
+      For a more thorough explanation of what is covered in this video, please read or listen to the free book, The Dorean Principle: https://thedoreanprinciple.org/
+    `,
+    appUserId: adminUser.id,
+    channelId: sellingJesusChannel.id,
+    uploadFinalized: true,
+    uploadFinalizedById: adminUser.id,
+    license: 'CC0' as const,
+    visibility: 'PUBLIC' as const,
+    variants: ['AUDIO', 'VIDEO_1080P'],
+    transcodingFinishedAt: new Date(),
+    transcribingFinishedAt: new Date(),
+    uploadSizeBytes: 180000000, // Approximate based on file sizes
+    lengthSeconds: 328.26,
+    defaultThumbnailPath: `${doreanPrincipleUploadId}/${doreanPrincipleUploadId}.jpg`,
+  },
+});
+
+await indexDocument('transcript', doreanPrincipleUploadId, 'transcript.vtt');
+await indexDocument('upload', doreanPrincipleUploadId);
+
+const prayerPitchUploadId = '00000000-0000-4000-8000-100000000001';
+
+await db.uploadRecord.create({
+  data: {
+    id: prayerPitchUploadId,
+    title: 'Prayer Pitch Meeting - 1',
+    description: stripIndent`
+      Step inside the pitch meeting that led to the commercialization of prayer! Learn from these masterminds of ministry monetization, and see how you too can begin cashing in on people's need for intercession.
+
+      Please consider learning more at:
+
+      https://sellingjesus.org/
+      https://thedoreanprinciple.org/
+      https://copy.church/
+
+      The pitch meeting format is inspired by Ryan George.
+    `,
+    appUserId: adminUser.id,
+    channelId: sellingJesusChannel.id,
+    uploadFinalized: true,
+    uploadFinalizedById: adminUser.id,
+    license: 'CC0' as const,
+    visibility: 'PUBLIC' as const,
+    variants: ['AUDIO', 'VIDEO_720P'],
+    transcodingFinishedAt: new Date(),
+    transcribingFinishedAt: new Date(),
+    uploadSizeBytes: 63000000, // Approximate based on file sizes
+    lengthSeconds: 327.88391,
+    defaultThumbnailPath: `${prayerPitchUploadId}/${prayerPitchUploadId}.jpg`,
+  },
+});
+
+await indexDocument('upload', prayerPitchUploadId);
+
+const christianBooksPitchUploadId = '00000000-0000-4000-8000-100000000002';
+
+await db.uploadRecord.create({
+  data: {
+    id: christianBooksPitchUploadId,
+    title: 'Christian Books Pitch Meeting - 2',
+    description: stripIndent`
+      Step inside the pitch meeting that led to the commercialization of Christian books! Learn from these masterminds of ministry monetization, and see how you too can begin cashing in on people's need to grow in the knowledge of the truth.
+
+      Please consider learning more at:
+
+      https://sellingjesus.org/
+      https://thedoreanprinciple.org/
+      https://copy.church/
+
+      The pitch meeting format is inspired by Ryan George.
+    `,
+    appUserId: adminUser.id,
+    channelId: sellingJesusChannel.id,
+    uploadFinalized: true,
+    uploadFinalizedById: adminUser.id,
+    license: 'CC0' as const,
+    visibility: 'PUBLIC' as const,
+    variants: ['AUDIO', 'VIDEO_720P'],
+    transcodingFinishedAt: new Date(),
+    transcribingFinishedAt: new Date(),
+    uploadSizeBytes: 63000000, // Approximate based on file sizes
+    lengthSeconds: 552.199981,
+    defaultThumbnailPath: `${christianBooksPitchUploadId}/${christianBooksPitchUploadId}.jpg`,
+  },
+});
+
+await indexDocument('upload', christianBooksPitchUploadId);
+
+const foreignMissionsUploadId = '00000000-0000-4000-8000-100000000003';
+
+await db.uploadRecord.create({
+  data: {
+    id: foreignMissionsUploadId,
+    title: 'Foreign Missions Pitch Meeting - 3',
+    description: stripIndent`
+      Step inside the pitch meeting that led to the commercialization of foreign missions! Learn from these masterminds of ministry monetization, and see how you too can begin cashing in on people's need for the gospel.
+
+      Please consider learning more at:
+
+      https://sellingjesus.org/
+      https://thedoreanprinciple.org/
+      https://copy.church/
+
+      The pitch meeting format is inspired by Ryan George.
+    `,
+    appUserId: adminUser.id,
+    channelId: sellingJesusChannel.id,
+    uploadFinalized: true,
+    uploadFinalizedById: adminUser.id,
+    license: 'CC0' as const,
+    visibility: 'PUBLIC' as const,
+    variants: ['AUDIO', 'VIDEO_720P'],
+    transcodingFinishedAt: new Date(),
+    transcribingFinishedAt: new Date(),
+    uploadSizeBytes: 177000000, // Approximate based on download size
+    lengthSeconds: 477.034367,
+    defaultThumbnailPath: `${foreignMissionsUploadId}/${foreignMissionsUploadId}.jpg`,
+  },
+});
+
+await indexDocument('upload', foreignMissionsUploadId);
+
+const copyrightUploadId = '00000000-0000-4000-8000-100000000004';
+
+await db.uploadRecord.create({
+  data: {
+    id: copyrightUploadId,
+    title: 'Copyright Pitch Meeting - 4',
+    description: stripIndent`
+      Step inside the pitch meeting that led to the copyrighting of Christian content! Learn from these masterminds of ministry monetization, and see how you too can commercialize access to Truth and undermine the gospel.
+
+      Please consider learning more at:
+
+      https://sellingjesus.org/
+      https://thedoreanprinciple.org/
+      https://copy.church/
+
+      The pitch meeting format is inspired by Ryan George.
+    `,
+    appUserId: adminUser.id,
+    channelId: sellingJesusChannel.id,
+    uploadFinalized: true,
+    uploadFinalizedById: adminUser.id,
+    license: 'CC0' as const,
+    visibility: 'PUBLIC' as const,
+    variants: ['AUDIO', 'VIDEO_720P'],
+    transcodingFinishedAt: new Date(),
+    transcribingFinishedAt: new Date(),
+    uploadSizeBytes: 162000000, // Approximate based on download size
+    lengthSeconds: 429.769433,
+    defaultThumbnailPath: `${copyrightUploadId}/${copyrightUploadId}.jpg`,
+  },
+});
+
+await indexDocument('upload', copyrightUploadId);
+
+const biblicalCounselingUploadId = '00000000-0000-4000-8000-100000000005';
+
+await db.uploadRecord.create({
+  data: {
+    id: biblicalCounselingUploadId,
+    title: 'Biblical Counseling Pitch Meeting - 5',
+    description: stripIndent`
+      Step inside the pitch meeting that led to the commercialization of biblical counseling! Learn from these masterminds of ministry monetization, and see how you too can begin cashing in on people's pain, confusion, and sin.
+
+      Please consider learning more at:
+
+      https://sellingjesus.org/
+      https://thedoreanprinciple.org/
+      https://copy.church/
+
+      The pitch meeting format is inspired by Ryan George.
+    `,
+    appUserId: adminUser.id,
+    channelId: sellingJesusChannel.id,
+    uploadFinalized: true,
+    uploadFinalizedById: adminUser.id,
+    license: 'CC0' as const,
+    visibility: 'PUBLIC' as const,
+    variants: ['AUDIO', 'VIDEO_720P'],
+    transcodingFinishedAt: new Date(),
+    transcribingFinishedAt: new Date(),
+    uploadSizeBytes: 168000000, // Approximate based on download size
+    lengthSeconds: 377.673333,
+    defaultThumbnailPath: `${biblicalCounselingUploadId}/${biblicalCounselingUploadId}.jpg`,
+  },
+});
+
+await indexDocument('upload', biblicalCounselingUploadId);
+
+const lordsSupperUploadId = '00000000-0000-4000-8000-100000000006';
+
+await db.uploadRecord.create({
+  data: {
+    id: lordsSupperUploadId,
+    title: "The Lord's Supper Pitch Meeting - 6",
+    description: stripIndent`
+      Step inside the pitch meeting that led to the commercialization of the Lord's Supper! Learn from these masterminds of ministry monetization, and see how you too can begin cashing in on the sacraments!
+
+      Please consider learning more at:
+
+      https://sellingjesus.org/
+      https://thedoreanprinciple.org/
+      https://copy.church/
+
+      The pitch meeting format is inspired by Ryan George.
+    `,
+    appUserId: adminUser.id,
+    channelId: sellingJesusChannel.id,
+    uploadFinalized: true,
+    uploadFinalizedById: adminUser.id,
+    license: 'CC0' as const,
+    visibility: 'PUBLIC' as const,
+    variants: ['AUDIO' ,'VIDEO_720P'],
+    transcodingFinishedAt: new Date(),
+    transcribingFinishedAt: new Date(),
+    uploadSizeBytes: 137000000, // Approximate based on download size
+    lengthSeconds: 313.405400,
+    defaultThumbnailPath: `${lordsSupperUploadId}/${lordsSupperUploadId}.jpg`,
+  },
+});
+
+await indexDocument('upload', lordsSupperUploadId);

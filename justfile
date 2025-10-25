@@ -87,9 +87,9 @@ s3-prune-multipart-uploads:
 seed-db:
   docker compose exec web npm run prisma:db:seed
 seed-s3-ingest:
-  rclone sync --fast-list --checksum -P ./seed-data/lcdevs3/letschurch-dev-ingest lcdevs3:letschurch-dev-ingest
+  rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-ingest lcdevs3:letschurch-dev-ingest
 seed-s3-public:
-  rclone sync --fast-list --checksum -P ./seed-data/lcdevs3/letschurch-dev-public lcdevs3:letschurch-dev-public
+  rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-public lcdevs3:letschurch-dev-public
 seed-s3: seed-s3-ingest seed-s3-public
 seed: seed-s3 seed-db
 
