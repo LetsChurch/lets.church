@@ -42,7 +42,7 @@ import {
   getS3ProtocolUri,
   PART_SIZE,
 } from '@/util/s3';
-import { getPublicImageUrl } from '@/util/url';
+import { getPublicImageUrl, getPublicMediaUrl } from '@/util/url';
 import { authProcedure, router } from '../../trpc';
 
 const moduleLogger = logger.child({
@@ -826,6 +826,7 @@ export const channelRouter = router({
           transcodingFinishedAt: true,
           transcribingFinishedAt: true,
           transcodingProgress: true,
+          variants: true,
           featuredUpload: {
             select: {
               uploadRecordId: true,
@@ -875,6 +876,7 @@ export const channelRouter = router({
         defaultThumbnailPath,
         overrideThumbnailPath,
         featuredUpload,
+        variants,
         ...uploadRest
       } = upload;
       const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
@@ -883,11 +885,25 @@ export const channelRouter = router({
         ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', thumbnailPath))
         : null;
 
+      // Generate media source URLs based on available variants
+      const hasVideo = variants.some((v) => v.startsWith('VIDEO'));
+      const hasAudio = variants.includes('AUDIO');
+
+      const mediaSource = hasVideo
+        ? getPublicMediaUrl(`${upload.id}/master.m3u8`)
+        : null;
+
+      const audioSource = hasAudio
+        ? getPublicMediaUrl(`${upload.id}/AUDIO.m3u8`)
+        : null;
+
       return {
         upload: {
           ...uploadRest,
           thumbnailUrl,
           isFeatured: !!featuredUpload,
+          mediaSource,
+          audioSource,
         },
         channel: {
           ...upload.channel,

@@ -34,12 +34,14 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
+import HlsVideo from 'hls-video-element/react';
 import { useCallback, useEffect, useState } from 'react';
 import { useAppMantineForm } from '@/components/mantine';
 import { uploadFormSchema } from '@/schemas/dashboard';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { doMultipartUpload } from '@/util/multipart-upload';
 import { showFailure, showSuccess } from '../-mantine';
+import styles from './-styles.module.css';
 import { $uploadProgress } from './channels_.$channelId_.uploads';
 
 export const Route = createFileRoute(
@@ -673,19 +675,24 @@ function ChannelUploadPage() {
                   </Box>
                 ) : null}
               </Stack>
+            ) : upload.mediaSource || upload.audioSource ? (
+              <HlsVideo
+                src={upload.mediaSource || upload.audioSource || ''}
+                className={styles.fullWidth}
+                playsInline
+                controls
+              />
             ) : (
               <Box
                 bg="gray.1"
-                h={200}
+                p="md"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 4,
+                  borderRadius: '4px',
+                  textAlign: 'center',
                 }}
               >
-                <Text c="dimmed" size="sm">
-                  Media Player Placeholder
+                <Text size="sm" c="dimmed">
+                  No media available for playback
                 </Text>
               </Box>
             )}
