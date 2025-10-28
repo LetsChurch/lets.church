@@ -2,13 +2,18 @@ import { IconX } from '@tabler/icons-react';
 import { useInfiniteQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { AvatarCarousel } from '@/components/avatar-carousel';
 import Header from '@/components/header';
 import { MediaCompactCard } from '@/components/media-compact-card';
-import Search from '@/components/search';
+import Search from '@/components/search-bar';
 import SearchTabs from '@/components/search-tabs';
 import { TrendingSearchPill } from '@/components/trending-search-pill';
+import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
+import {
+  useDeleteRecentSearch,
+  useRecentSearches,
+} from '@/hooks/use-recent-searches';
 import { useTRPC } from '@/trpc/react';
 import { formatTime } from '@/util/format';
 
@@ -299,24 +304,6 @@ function SearchResults({ q }: { q: string }) {
         </div>
       ) : null}
 
-      {/* <div className="space-y-4"> */}
-      {/*   <h2 className="font-medium text-primary">Churches</h2> */}
-      {/*   <AvatarCarousel items={[{ id: 'foo', name: 'Foo', slug: 'foo' }]} /> */}
-      {/* </div> */}
-
-      {/* <div className="space-y-4"> */}
-      {/*   {sampleUploads.map((upload) => ( */}
-      {/*     <MediaCompactCard */}
-      {/*       key={`church-${upload.id}`} */}
-      {/*       title={upload.title} */}
-      {/*       thumbnailUrl={upload.thumbnailUrl} */}
-      {/*       channelName={upload.channelName} */}
-      {/*       channelImageUrl={null} */}
-      {/*       timestamp={upload.timestamp} */}
-      {/*     /> */}
-      {/*   ))} */}
-      {/* </div> */}
-
       <div className="space-y-4">
         <h2 className="font-medium text-primary">Related Searches</h2>
         <div className="flex flex-wrap gap-2">
@@ -331,22 +318,26 @@ function SearchResults({ q }: { q: string }) {
 
 function EmptySearch() {
   const trpc = useTRPC();
+  const isLoggedIn = useIsLoggedIn();
+  const navigate = useNavigate({ from: Route.fullPath });
+
   const { data: trendingData } = useSuspenseQuery(
     trpc.home.getTrendingUploads.queryOptions({ limit: 8 }),
   );
 
   const trendingUploads = trendingData.items;
 
-  const [recentSearches, setRecentSearches] = useState([
-    'Politics',
-    'Sanctification',
-    'Eschatology',
-    'Sex',
-    'Gluttony',
-  ]);
+  const { data: recentSearches = [] } = useRecentSearches();
+  const deleteSearchMutation = useDeleteRecentSearch();
 
-  const removeRecentSearch = (search: string) => {
-    setRecentSearches((prev) => prev.filter((s) => s !== search));
+  const removeRecentSearch = (query: string) => {
+    deleteSearchMutation.mutate({ query });
+  };
+
+  const handleSearchClick = (query: string) => {
+    navigate({
+      search: { q: query, focus: 'media' as const, channelId: undefined },
+    });
   };
 
   return (
@@ -364,36 +355,31 @@ function EmptySearch() {
       </div>
 
       {/* Recent Searches */}
-      {recentSearches.length > 0 ? (
-        <div className="border-white/10 border-b py-6">
+      {isLoggedIn && recentSearches.length > 0 ? (
+        <div className="border-white/10 border-b py-6 sm:hidden">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-medium text-lg text-primary">
               Recent Searches
             </h2>
-            <button
-              type="button"
-              className="text-muted text-sm transition-colors hover:text-primary"
-            >
-              View All
-            </button>
           </div>
           <div className="space-y-2">
             {recentSearches.map((search) => (
               <div
-                key={search}
+                key={search.searchedAt.getTime()}
                 className="flex items-center justify-between py-1"
               >
                 <button
                   type="button"
+                  onClick={() => handleSearchClick(search.query)}
                   className="flex-1 text-left text-primary transition-colors hover:text-white"
                 >
-                  {search}
+                  {search.query}
                 </button>
                 <button
                   type="button"
-                  onClick={() => removeRecentSearch(search)}
+                  onClick={() => removeRecentSearch(search.query)}
                   className="flex size-7 items-center justify-center text-muted transition-colors hover:text-primary"
-                  aria-label={`Remove ${search}`}
+                  aria-label={`Remove ${search.query}`}
                 >
                   <IconX size={16} />
                 </button>

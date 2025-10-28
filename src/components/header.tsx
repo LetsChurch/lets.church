@@ -10,7 +10,7 @@ import { useTRPC } from '@/trpc/react';
 import LcLink from './lc-link';
 import Logo from './logo';
 import MobileMenu from './mobile-menu';
-import Search from './search';
+import SearchBar from './search-bar';
 
 type HeaderProps = PropsWithChildren<{
   defaultSearchValue?: string;
@@ -72,7 +72,7 @@ export default function Header({
 
         {/* Search Bar */}
         <div className="w-80 max-sm:hidden">
-          <Search defaultValue={defaultSearchValue} channelId={channelId} />
+          <SearchBar defaultValue={defaultSearchValue} channelId={channelId} />
         </div>
 
         {/* Login Button or User Avatar */}

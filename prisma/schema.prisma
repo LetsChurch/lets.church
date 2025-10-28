@@ -51,6 +51,7 @@ model AppUser {
   savedMedia               SavedMedia[]
   approvedChannels         Channel[]
   approvedOrganizations    Organization[]
+  searches                 SearchLogEntry[]
 
   @@map("app_user")
 }
@@ -564,11 +565,15 @@ model UploadList {
 }
 
 model SearchLogEntry {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  query     String
-  params    Json     @default("{}")
-  createdAt DateTime @default(now()) @map("created_at")
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  query         String
+  params        Json      @default("{}")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  appUser       AppUser?  @relation(fields: [appUserId], references: [id], onDelete: SetNull)
+  appUserId     String?   @map("app_user_id") @db.Uuid
+  userDeletedAt DateTime? @map("user_deleted_at")
 
+  @@index([appUserId, userDeletedAt, createdAt(sort: Desc)])
   @@map("search_log_entry")
 }
 

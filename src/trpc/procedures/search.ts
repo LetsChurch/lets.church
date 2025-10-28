@@ -11,7 +11,7 @@ import {
 import logger from '@/util/logger';
 import { getS3ProtocolUri } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
-import { publicProcedure } from '../trpc';
+import { authProcedure, publicProcedure } from '../trpc';
 
 const moduleLogger = logger.child({
   module: 'trpc/procedures/search',
@@ -28,7 +28,7 @@ const searchQuerySchema = z.object({
 export const searchProcedures = {
   performSearch: publicProcedure
     .input(searchQuerySchema)
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const { q, focus, channelIds, limit, cursor } = input;
 
       moduleLogger.info('Performing search', {
@@ -50,6 +50,7 @@ export const searchProcedures = {
               limit,
               cursor,
             },
+            appUserId: ctx.session?.appUserId,
           },
         });
       } catch (error) {
@@ -326,5 +327,50 @@ export const searchProcedures = {
         channels: channelsWithAvatars,
         nextCursor,
       };
+    }),
+
+  getRecentSearches: authProcedure.query(async ({ ctx }) => {
+    const recentSearches = await db.searchLogEntry.findMany({
+      where: {
+        appUserId: ctx.session.appUserId,
+        userDeletedAt: null,
+      },
+      select: {
+        query: true,
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      distinct: ['query'],
+      take: 10,
+    });
+
+    // Map createdAt to searchedAt for the API response
+    return recentSearches.map((entry) => ({
+      query: entry.query,
+      searchedAt: entry.createdAt,
+    }));
+  }),
+
+  deleteRecentSearch: authProcedure
+    .input(
+      z.object({
+        query: z.string(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      await db.searchLogEntry.updateMany({
+        where: {
+          appUserId: ctx.session.appUserId,
+          query: input.query,
+          userDeletedAt: null,
+        },
+        data: {
+          userDeletedAt: new Date(),
+        },
+      });
+
+      return { success: true };
     }),
 };
