@@ -136,49 +136,43 @@ export default function SearchBar({
         </div>
       </form>
 
-      <Autocomplete.List>
-        {(items) =>
-          items.length > 0 ? (
-            <Autocomplete.Portal>
-              <Autocomplete.Positioner sideOffset={8}>
-                <Autocomplete.Popup
-                  className={cn(
-                    'hidden overflow-hidden rounded-2xl border border-white/10 bg-black/90 shadow-xl backdrop-blur-lg sm:block',
-                    'min-w-[var(--anchor-width)]',
-                  )}
+      <Autocomplete.Portal>
+        <Autocomplete.Positioner sideOffset={8} className="data-empty:hidden">
+          <Autocomplete.Popup
+            className={cn(
+              'hidden overflow-hidden rounded-2xl border border-white/10 bg-black/90 shadow-xl backdrop-blur-lg sm:block',
+              'min-w-[var(--anchor-width)]',
+            )}
+          >
+            <Autocomplete.List className="py-2">
+              {(search) => (
+                <Autocomplete.Item
+                  key={search}
+                  value={search}
+                  className="cursor-pointer px-4 py-2.5 text-sm text-white/80 outline-none transition-colors hover:bg-white/10 hover:text-white data-[highlighted]:bg-white/10 data-[highlighted]:text-white"
                 >
-                  <Autocomplete.List className="py-2">
-                    {(search) => (
-                      <Autocomplete.Item
-                        key={search}
-                        value={search}
-                        className="cursor-pointer px-4 py-2.5 text-sm text-white/80 outline-none transition-colors hover:bg-white/10 hover:text-white data-[highlighted]:bg-white/10 data-[highlighted]:text-white"
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <IconSearch size={16} className="text-white/50" />
+                      <span>{search}</span>
+                    </div>
+                    {isLoggedIn ? (
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteSearch(e, search)}
+                        className="flex size-6 items-center justify-center text-white/30 transition-colors hover:text-white/60"
+                        aria-label={`Remove ${search}`}
                       >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3">
-                            <IconSearch size={16} className="text-white/50" />
-                            <span>{search}</span>
-                          </div>
-                          {isLoggedIn ? (
-                            <button
-                              type="button"
-                              onClick={(e) => handleDeleteSearch(e, search)}
-                              className="flex size-6 items-center justify-center text-white/30 transition-colors hover:text-white/60"
-                              aria-label={`Remove ${search}`}
-                            >
-                              <IconX size={14} />
-                            </button>
-                          ) : null}
-                        </div>
-                      </Autocomplete.Item>
-                    )}
-                  </Autocomplete.List>
-                </Autocomplete.Popup>
-              </Autocomplete.Positioner>
-            </Autocomplete.Portal>
-          ) : null
-        }
-      </Autocomplete.List>
+                        <IconX size={14} />
+                      </button>
+                    ) : null}
+                  </div>
+                </Autocomplete.Item>
+              )}
+            </Autocomplete.List>
+          </Autocomplete.Popup>
+        </Autocomplete.Positioner>
+      </Autocomplete.Portal>
     </Autocomplete.Root>
   );
 }
