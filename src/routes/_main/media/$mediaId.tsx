@@ -6,8 +6,8 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { createFileRoute, Link } from '@tanstack/react-router';
-import { useState } from 'react';
+import { createFileRoute, Link, useLocation } from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
 import { CommentsSection } from '@/components/comments-section';
 import Header from '@/components/header';
 import LcButton from '@/components/lc-button';
@@ -200,6 +200,7 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
 
 function RouteComponent() {
   const params = Route.useParams();
+  const location = useLocation();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const isLoggedIn = useIsLoggedIn();
@@ -209,6 +210,24 @@ function RouteComponent() {
   const loaderData = Route.useLoaderData();
   const viewHash = loaderData?.viewHash ?? '';
   const transcript = loaderData?.transcript ?? [];
+  const [initialTimestamp, setInitialTimestamp] = useState<number | undefined>(
+    undefined,
+  );
+
+  // Parse timestamp from URL hash on mount
+  useEffect(() => {
+    if (location.hash) {
+      const hashParams = new URLSearchParams(location.hash);
+      const t = hashParams.get('t');
+
+      if (t) {
+        const timestamp = Number.parseFloat(t);
+        if (!Number.isNaN(timestamp)) {
+          setInitialTimestamp(timestamp);
+        }
+      }
+    }
+  }, [location.hash]);
 
   const { data: media } = useSuspenseQuery(
     trpc.media.getMediaById.queryOptions({
@@ -509,6 +528,7 @@ function RouteComponent() {
               peaksJsonUrl={media.peaksJsonUrl}
               lengthSeconds={media.lengthSeconds}
               videoClassName={layout.showSidebar ? null : 'sticky top-0'}
+              initialTimestamp={initialTimestamp}
             />
 
             <MediaHeader

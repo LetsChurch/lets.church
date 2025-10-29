@@ -1,6 +1,6 @@
 import { IconX } from '@tabler/icons-react';
 import { useInfiniteQuery, useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useRef, useState } from 'react';
 import { AvatarCarousel } from '@/components/avatar-carousel';
@@ -278,10 +278,13 @@ function Result({
       {focus === 'transcripts' && segments.length > 0 ? (
         <div className="mt-2 space-y-2">
           {displayedSegments.map((segment, index) => (
-            <div
+            <Link
               // biome-ignore lint/suspicious/noArrayIndexKey: index is stable here
               key={index}
-              className="flex flex-row gap-1.5 rounded-md bg-white/5 p-3 text-primary"
+              to="/media/$mediaId"
+              params={{ mediaId: item.id }}
+              hash={`t=${segment.start / 1000}`}
+              className="relative z-10 flex cursor-pointer flex-row gap-1.5 rounded-md bg-white/5 p-3 text-primary transition-colors hover:bg-white/10"
             >
               <div className="pt-1 font-mono text-[10px] leading-[1.4] tracking-[-0.2px]">
                 {formatTime(segment.start)}
@@ -293,7 +296,7 @@ function Result({
                   __html: segment.text,
                 }}
               />
-            </div>
+            </Link>
           ))}
           {hasMultipleSegments ? (
             <button

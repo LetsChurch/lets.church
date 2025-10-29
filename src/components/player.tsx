@@ -41,6 +41,7 @@ type Props = {
   lengthSeconds?: number | null;
   videoClassName?: string | null;
   embed?: boolean;
+  initialTimestamp?: number;
 };
 
 function serializeTimeRanges(
@@ -67,6 +68,7 @@ export function Player({
   lengthSeconds,
   videoClassName,
   embed = false,
+  initialTimestamp,
 }: Props) {
   const trpc = useTRPC();
   const videoRef = useRef<HlsVideoElement>(null);
@@ -89,6 +91,39 @@ export function Player({
   const { mutateAsync: recordViewSeconds } = recordViewSecondsMutation;
 
   const currentSource = mediaType === 'video' ? mediaSource : audioSource;
+
+  // Seek to initial timestamp from URL hash
+  useEffect(() => {
+    if (!videoRef.current || initialTimestamp === undefined) {
+      return;
+    }
+
+    const videoElement = videoRef.current;
+    let hasSeekCompleted = false;
+
+    const seekToTimestamp = () => {
+      if (hasSeekCompleted) return;
+
+      console.log(`seeking to ${initialTimestamp}`);
+
+      // Check if we can seek (readyState >= HAVE_METADATA)
+      if (videoElement.readyState >= 1) {
+        videoElement.currentTime = initialTimestamp;
+        hasSeekCompleted = true;
+      }
+    };
+
+    // Try immediately in case metadata is already loaded
+    seekToTimestamp();
+
+    // Also listen for these events in case metadata isn't loaded yet
+    const ac = new AbortController();
+    videoElement.addEventListener('loadedmetadata', seekToTimestamp, ac);
+
+    return () => {
+      ac.abort();
+    };
+  }, [initialTimestamp]);
 
   // Restore position and play state when source changes
   // TODO: can this be done with renditions?
