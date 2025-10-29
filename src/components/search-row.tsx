@@ -1,7 +1,10 @@
 import { Avatar } from '@base-ui-components/react/avatar';
+import { Link } from '@tanstack/react-router';
+import type { PropsWithChildren } from 'react';
 import { formatTime } from '@/util/format';
 
-export type Props = {
+export type Props = PropsWithChildren<{
+  id: string;
   title: string;
   thumbnailUrl?: string | null;
   channelName: string;
@@ -12,9 +15,10 @@ export type Props = {
     start: number;
     text: string;
   };
-};
+}>;
 
 export function SearchRow({
+  id,
   title,
   thumbnailUrl,
   channelName,
@@ -22,9 +26,10 @@ export function SearchRow({
   timestamp,
   duration,
   transcriptSegment,
+  children,
 }: Props) {
   return (
-    <div className="flex cursor-pointer items-stretch gap-3 md:gap-4">
+    <div className="group relative flex cursor-pointer items-stretch gap-3 md:gap-4">
       <div className="relative aspect-video h-16 shrink-0 md:h-24 lg:h-32">
         <div className="-translate-y-1/2 absolute top-1/2 right-0 left-0 aspect-video overflow-hidden rounded-lg border-top-highlight bg-zinc-900">
           {thumbnailUrl ? (
@@ -43,10 +48,16 @@ export function SearchRow({
           ) : null}
         </div>
       </div>
-      <div className="flex min-w-0 flex-1 flex-col justify-between pb-px">
+      <div className="flex min-w-0 flex-1 flex-col gap-2 pb-px">
         <div className="space-y-2">
           <h4 className="line-clamp-2 font-bold text-primary text-sm md:text-base lg:text-lg">
-            {title}
+            <Link
+              to="/media/$mediaId"
+              params={{ mediaId: id }}
+              className="after:absolute after:inset-0"
+            >
+              {title}
+            </Link>
           </h4>
           {transcriptSegment ? (
             <div className="rounded-md bg-white/5 p-2 md:p-3">
@@ -81,6 +92,7 @@ export function SearchRow({
             </p>
           ) : null}
         </div>
+        {children}
       </div>
     </div>
   );

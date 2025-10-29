@@ -4,7 +4,7 @@ import useEmblaCarousel from 'embla-carousel-react';
 import WheelGestures from 'embla-carousel-wheel-gestures';
 
 type AvatarCarouselProps = {
-  items: Array<{
+  items: ReadonlyArray<{
     id: string;
     name: string;
     slug: string;

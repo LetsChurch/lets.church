@@ -1,12 +1,13 @@
 import { IconX } from '@tabler/icons-react';
 import { useInfiniteQuery, useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AvatarCarousel } from '@/components/avatar-carousel';
+import { EmptyState } from '@/components/empty-state';
 import Header from '@/components/header';
-import { MediaCompactCard } from '@/components/media-compact-card';
 import Search from '@/components/search-bar';
+import { SearchRow } from '@/components/search-row';
 import SearchTabs from '@/components/search-tabs';
 import { TrendingSearchPill } from '@/components/trending-search-pill';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
@@ -89,7 +90,7 @@ function RouteComponent() {
           <Search placeholder="Search or ask anything..." defaultValue={q} />
         </div>
 
-        {q ? <SearchResults q={q} /> : <EmptySearch />}
+        {q ? <SearchResults q={q} /> : <NoSearch />}
       </div>
     </div>
   );
@@ -101,6 +102,8 @@ const trendingSearches = [
   'Polemics',
   'Christian disagreement on parenting',
 ];
+
+const emptyArray: ReadonlyArray<unknown> = [];
 
 function SearchResults({ q }: { q: string }) {
   const { focus, channelId } = Route.useSearch();
@@ -161,23 +164,16 @@ function SearchResults({ q }: { q: string }) {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const firstPage = searchData?.pages[0];
-  const mediaCount =
-    firstPage && typeof firstPage === 'object' && 'mediaCount' in firstPage
-      ? (firstPage.mediaCount as number)
-      : 0;
-  const transcriptCount =
-    firstPage && typeof firstPage === 'object' && 'transcriptCount' in firstPage
-      ? (firstPage.transcriptCount as number)
-      : 0;
-  const channels =
-    firstPage && typeof firstPage === 'object' && 'channels' in firstPage
-      ? (firstPage.channels as Array<{
-          id: string;
-          name: string;
-          slug: string;
-          avatarUrl: string | null;
-        }>)
-      : [];
+  const mediaCount = firstPage?.mediaCount ?? 0;
+  const transcriptCount = firstPage?.transcriptCount ?? 0;
+  const channels = firstPage
+    ? firstPage.channels
+    : (emptyArray as ReadonlyArray<{
+        id: string;
+        name: string;
+        slug: string;
+        avatarUrl?: string | null;
+      }>);
 
   const items: SearchResultItem[] =
     searchData?.pages.flatMap((page) => {
@@ -193,9 +189,8 @@ function SearchResults({ q }: { q: string }) {
     });
   };
 
-  // Show empty search if no results
-  if (items.length === 0 && !isFetchingNextPage) {
-    return <EmptySearch />;
+  if (!q) {
+    return <NoSearch />;
   }
 
   return (
@@ -214,85 +209,19 @@ function SearchResults({ q }: { q: string }) {
         </div>
       ) : null}
 
-      <div className="space-y-4">
-        {items.map((item) => {
-          // Handle transcript results with segments
-          if (
-            focus === 'transcripts' &&
-            item.segments &&
-            item.segments.length > 0
-          ) {
-            const firstSegment = item.segments[0];
-            return (
-              <Link
-                key={item.id}
-                to="/media/$mediaId"
-                params={{ mediaId: item.id }}
-                search={{ t: Math.floor(firstSegment.start / 1000) }}
-                className="block"
-              >
-                <MediaCompactCard
-                  title={item.title ?? 'Untitled'}
-                  thumbnailUrl={item.thumbnailUrl}
-                  channelName={item.channel.name}
-                  channelImageUrl={item.channel.avatarUrl}
-                  timestamp={
-                    item.publishedAt
-                      ? formatDistanceToNow(new Date(item.publishedAt), {
-                          addSuffix: true,
-                        })
-                      : undefined
-                  }
-                  duration={
-                    item.lengthSeconds
-                      ? formatTime(item.lengthSeconds * 1000)
-                      : undefined
-                  }
-                />
-                <div className="mt-2 rounded-md bg-white/5 p-3">
-                  <div className="font-mono text-muted text-xs">
-                    {formatTime(firstSegment.start)}
-                  </div>
-                  <div
-                    className="text-primary/80 text-sm"
-                    // biome-ignore lint/security/noDangerouslySetInnerHtml: escaped ElasticSearch output
-                    dangerouslySetInnerHTML={{ __html: firstSegment.text }}
-                  />
-                </div>
-              </Link>
-            );
-          }
-
-          // Handle regular media results
-          return (
-            <Link
-              key={item.id}
-              to="/media/$mediaId"
-              params={{ mediaId: item.id }}
-              className="block"
-            >
-              <MediaCompactCard
-                title={item.title ?? 'Untitled'}
-                thumbnailUrl={item.thumbnailUrl}
-                channelName={item.channel.name}
-                channelImageUrl={item.channel.avatarUrl}
-                timestamp={
-                  item.publishedAt
-                    ? formatDistanceToNow(new Date(item.publishedAt), {
-                        addSuffix: true,
-                      })
-                    : undefined
-                }
-                duration={
-                  item.lengthSeconds
-                    ? formatTime(item.lengthSeconds * 1000)
-                    : undefined
-                }
-              />
-            </Link>
-          );
-        })}
-      </div>
+      {items.length > 0 ? (
+        <div className="space-y-4">
+          {items.map((item) => {
+            return <Result key={item.id} item={item} focus={focus} />;
+          })}
+        </div>
+      ) : (
+        <EmptyState
+          emptyTitle="There are no matches"
+          emptyBody="Try rephrasing your query or removing filters"
+          variant="error"
+        />
+      )}
 
       {/* Infinite scroll trigger */}
       <div ref={loadMoreRef} className="h-20" />
@@ -316,7 +245,78 @@ function SearchResults({ q }: { q: string }) {
   );
 }
 
-function EmptySearch() {
+function Result({
+  item,
+  focus,
+}: {
+  item: SearchResultItem;
+  focus: 'media' | 'transcripts' | undefined;
+}) {
+  const [showAllSegments, setShowAllSegments] = useState(false);
+  const segments = item.segments ?? [];
+  const hasMultipleSegments = segments.length > 1;
+  const displayedSegments = showAllSegments ? segments : segments.slice(0, 1);
+
+  return (
+    <SearchRow
+      id={item.id}
+      title={item.title ?? 'Untitled'}
+      thumbnailUrl={item.thumbnailUrl}
+      channelName={item.channel.name}
+      channelImageUrl={item.channel.avatarUrl}
+      timestamp={
+        item.publishedAt
+          ? formatDistanceToNow(new Date(item.publishedAt), {
+              addSuffix: true,
+            })
+          : undefined
+      }
+      duration={
+        item.lengthSeconds ? formatTime(item.lengthSeconds * 1000) : undefined
+      }
+    >
+      {focus === 'transcripts' && segments.length > 0 ? (
+        <div className="mt-2 space-y-2">
+          {displayedSegments.map((segment, index) => (
+            <div
+              // biome-ignore lint/suspicious/noArrayIndexKey: index is stable here
+              key={index}
+              className="flex flex-row gap-1.5 rounded-md bg-white/5 p-3 text-primary"
+            >
+              <div className="pt-1 font-mono text-[10px] leading-[1.4] tracking-[-0.2px]">
+                {formatTime(segment.start)}
+              </div>
+              <div
+                className="[&_mark]:-my-0.5 [&_mark]:-mx-1 text-primary/80 text-sm [&_mark]:rounded-sm [&_mark]:bg-orange-400/40 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:text-white"
+                // biome-ignore lint/security/noDangerouslySetInnerHtml: escaped ElasticSearch output
+                dangerouslySetInnerHTML={{
+                  __html: segment.text,
+                }}
+              />
+            </div>
+          ))}
+          {hasMultipleSegments ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowAllSegments((show) => !show);
+              }}
+              className="relative z-10 w-full px-1 py-0.5 text-center text-muted text-xs opacity-0 transition-all hover:text-primary group-hover:opacity-100"
+            >
+              {showAllSegments
+                ? 'Show less'
+                : `Show ${segments.length - 1} more`}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </SearchRow>
+  );
+}
+
+function NoSearch() {
   const trpc = useTRPC();
   const isLoggedIn = useIsLoggedIn();
   const navigate = useNavigate({ from: Route.fullPath });
@@ -393,17 +393,12 @@ function EmptySearch() {
       <div className="pt-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-medium text-lg text-primary">Trending</h2>
-          <button
-            type="button"
-            className="text-muted text-sm transition-colors hover:text-primary"
-          >
-            Show All
-          </button>
         </div>
         <div className="space-y-4">
           {trendingUploads.map((upload) => (
-            <MediaCompactCard
+            <SearchRow
               key={upload.id}
+              id={upload.id}
               title={upload.title ?? 'Untitled'}
               thumbnailUrl={upload.thumbnailUrl}
               channelName={upload.channel.name}

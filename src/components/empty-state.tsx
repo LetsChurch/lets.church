@@ -1,17 +1,23 @@
 import { IconFlag } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 
+export type Props = {
+  emptyTitle?: string;
+  emptyBody?: string;
+  emptyCta?: string;
+  emptyCtaHref?: string;
+  variant?: 'standard' | 'error';
+};
+
 export function EmptyState({
   emptyTitle,
   emptyBody,
   emptyCta,
   emptyCtaHref = '/',
-}: {
-  emptyTitle?: string;
-  emptyBody?: string;
-  emptyCta?: string;
-  emptyCtaHref?: string;
-}) {
+  variant = 'standard',
+}: Props) {
+  const color = variant === 'standard' ? '#6366F1' : '#EF4444';
+
   return (
     <div className="flex h-[240px] flex-col items-center justify-center rounded-2xl border border-white/15 border-dashed px-4 text-center">
       <div className="mb-4">
@@ -40,7 +46,7 @@ export function EmptyState({
               width="46"
               height="46"
               rx="23"
-              stroke="#6366F1"
+              stroke={color}
               strokeWidth="2"
               shapeRendering="crispEdges"
             />
@@ -52,7 +58,7 @@ export function EmptyState({
             width="57"
             height="57"
             rx="28.5"
-            stroke="#6366F1"
+            stroke={color}
             strokeDasharray="2 2"
           />
           <rect
@@ -62,7 +68,7 @@ export function EmptyState({
             width="67"
             height="67"
             rx="33.5"
-            stroke="#6366F1"
+            stroke={color}
             strokeDasharray="2 2"
           />
           <rect
@@ -72,7 +78,7 @@ export function EmptyState({
             width="77"
             height="77"
             rx="38.5"
-            stroke="#6366F1"
+            stroke={color}
             strokeDasharray="2 2"
           />
           <foreignObject x="31" y="31" width="16" height="16">
