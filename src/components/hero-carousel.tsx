@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router';
 import type { EmblaCarouselType } from 'embla-carousel';
 import Autoplay from 'embla-carousel-autoplay';
 import useEmblaCarousel from 'embla-carousel-react';
@@ -9,6 +10,7 @@ import { CarouselNavigationButtons } from './carousel-navigation-buttons';
 import { CarouselPagination } from './carousel-pagination';
 
 type CarouselItemData = {
+  id: string;
   title: string | null;
   author: string;
   imageUrl: string | null;
@@ -19,6 +21,7 @@ type CarouselItemData = {
 type CarouselItemProps = CarouselItemData;
 
 function CarouselItem({
+  id,
   title,
   author,
   imageUrl,
@@ -26,7 +29,7 @@ function CarouselItem({
   badge = 'Featured',
 }: CarouselItemProps) {
   return (
-    <div className="w-90 flex-shrink-0 md:w-124 lg:w-160">
+    <div className="relative w-90 flex-shrink-0 md:w-124 lg:w-160">
       <div className="space-y-5">
         {/* Image Container */}
         <div className="relative aspect-video overflow-hidden rounded-2xl border-top-highlight bg-card">
@@ -53,7 +56,13 @@ function CarouselItem({
         {/* Content */}
         <div className="space-y-2 text-center">
           <h3 className="line-clamp-1 font-bold text-lg text-primary">
-            {title || 'Untitled'}
+            <Link
+              to="/media/$mediaId"
+              params={{ mediaId: id }}
+              className="after:absolute after:inset-0"
+            >
+              {title || 'Untitled'}
+            </Link>
           </h3>
           <div className="flex items-center justify-center gap-1.5">
             {avatarUrl ? (

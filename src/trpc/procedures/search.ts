@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { getThumbnailResize } from '@/schemas/common';
+import {
+  getThumbnailResize,
+  IncomingIdSchema,
+  OutgoingIdSchema,
+} from '@/schemas/common';
 import db from '@/util/db';
 import {
   client,
@@ -20,7 +24,7 @@ const moduleLogger = logger.child({
 const searchQuerySchema = z.object({
   q: z.string().min(1),
   focus: z.enum(['media', 'transcripts']).default('media'),
-  channelIds: z.array(z.uuid()).optional().nullable(),
+  channelIds: z.array(IncomingIdSchema).optional().nullable(),
   limit: z.number().min(1).max(50).default(20),
   cursor: z.number().min(0).default(0), // Offset-based cursor
 });
@@ -121,6 +125,7 @@ export const searchProcedures = {
 
         return {
           ...channel,
+          id: OutgoingIdSchema.parse(channel.id),
           avatarUrl,
         };
       });
@@ -208,9 +213,11 @@ export const searchProcedures = {
 
             return {
               ...uploadRest,
+              id: OutgoingIdSchema.parse(uploadRest.id),
               thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
               channel: {
                 ...channel,
+                id: OutgoingIdSchema.parse(channel.id),
                 avatarUrl: channelAvatarUrl,
               },
             };
@@ -307,9 +314,11 @@ export const searchProcedures = {
 
             return {
               ...uploadRest,
+              id: OutgoingIdSchema.parse(uploadRest.id),
               thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
               channel: {
                 ...channel,
+                id: OutgoingIdSchema.parse(channel.id),
                 avatarUrl: channelAvatarUrl,
               },
               segments,

@@ -19,6 +19,7 @@ import { Player } from '@/components/player';
 import { Transcript } from '@/components/transcript';
 import { TranscriptSidebar } from '@/components/transcript-sidebar';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
+import { IncomingIdSchema } from '@/schemas/common';
 import { useSetBackgroundImage } from '@/stores/header';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
@@ -26,6 +27,14 @@ import { useVideoLayout } from '@/util/use-video-layout';
 
 export const Route = createFileRoute('/_main/media/$mediaId')({
   component: RouteComponent,
+  params: {
+    parse: (params) => ({
+      mediaId: IncomingIdSchema.parse(params.mediaId),
+    }),
+    stringify: (params) => ({
+      mediaId: params.mediaId,
+    }),
+  },
   loader: async ({ context: { queryClient, trpc }, params }) => {
     const [media, viewData, transcript, rating, comments] = await Promise.all([
       queryClient.ensureQueryData(

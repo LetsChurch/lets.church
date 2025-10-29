@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { getThumbnailResize } from '@/schemas/common';
+import {
+  getThumbnailResize,
+  IncomingIdSchema,
+  OutgoingIdSchema,
+} from '@/schemas/common';
 import db from '@/util/db';
 import logger from '@/util/logger';
 import { getS3ProtocolUri } from '@/util/s3';
@@ -20,11 +24,11 @@ const suggestedChannelsQuerySchema = z.object({
 });
 
 const followChannelSchema = z.object({
-  channelId: z.uuid(),
+  channelId: IncomingIdSchema,
 });
 
 const unfollowChannelSchema = z.object({
-  channelId: z.uuid(),
+  channelId: IncomingIdSchema,
 });
 
 const inProgressUploadsQuerySchema = z.object({
@@ -62,6 +66,7 @@ export const homeProcedures = {
 
       return {
         ...channel,
+        id: OutgoingIdSchema.parse(channel.id),
         avatarUrl,
       };
     });
@@ -150,9 +155,11 @@ export const homeProcedures = {
 
         return {
           ...uploadRest,
+          id: OutgoingIdSchema.parse(uploadRest.id),
           thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
           channel: {
             ...channel,
+            id: OutgoingIdSchema.parse(channel.id),
             avatarUrl: channelAvatarUrl,
           },
         };
@@ -241,9 +248,11 @@ export const homeProcedures = {
 
         return {
           ...uploadRest,
+          id: OutgoingIdSchema.parse(uploadRest.id),
           thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
           channel: {
             ...channel,
+            id: OutgoingIdSchema.parse(channel.id),
             avatarUrl: channelAvatarUrl,
           },
         };
@@ -311,6 +320,7 @@ export const homeProcedures = {
 
         return {
           ...channel,
+          id: OutgoingIdSchema.parse(channel.id),
           avatarUrl,
           followerCount: channel._count.subscribers,
         };
@@ -493,10 +503,12 @@ export const homeProcedures = {
 
           return {
             ...uploadRest,
+            id: OutgoingIdSchema.parse(uploadRest.id),
             thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
             progress,
             channel: {
               ...channel,
+              id: OutgoingIdSchema.parse(channel.id),
               avatarUrl: channelAvatarUrl,
             },
           };
@@ -575,14 +587,14 @@ export const homeProcedures = {
         : null;
 
       return {
-        id: uploadRecord.id,
+        id: OutgoingIdSchema.parse(uploadRecord.id),
         title: uploadRecord.title,
         description: uploadRecord.description,
         lengthSeconds: uploadRecord.lengthSeconds,
         thumbnailUrl,
         thumbnailBlurhash,
         channel: {
-          id: uploadRecord.channel.id,
+          id: OutgoingIdSchema.parse(uploadRecord.channel.id),
           name: uploadRecord.channel.name,
           slug: uploadRecord.channel.slug,
           avatarUrl: channelAvatarUrl,

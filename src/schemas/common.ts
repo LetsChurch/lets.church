@@ -1,3 +1,4 @@
+import short from 'short-uuid';
 import { z } from 'zod';
 
 export const multipartUploadSchema = z.object({
@@ -50,3 +51,40 @@ export function getThumbnailResize(
 
   return { resize: { width: 1280 } };
 }
+
+const UuidSchema = z.uuid();
+const idTranslator = short(short.constants.flickrBase58);
+
+export const IncomingIdSchema = z.string().transform((val, ctx) => {
+  if (UuidSchema.safeParse(val).success) {
+    return val.toLowerCase();
+  }
+
+  if (idTranslator.validate(val)) {
+    return idTranslator.toUUID(val).toLowerCase();
+  }
+
+  ctx.addIssue({
+    code: 'custom',
+    message: 'Invalid ID: must be a valid UUID or base58 string',
+  });
+
+  return z.NEVER;
+});
+
+export const OutgoingIdSchema = z.string().transform((val, ctx) => {
+  if (UuidSchema.safeParse(val).success) {
+    return idTranslator.fromUUID(val);
+  }
+
+  if (idTranslator.validate(val)) {
+    return val;
+  }
+
+  ctx.addIssue({
+    code: 'custom',
+    message: 'Invalid ID: must be a valid UUID or base58 string',
+  });
+
+  return z.NEVER;
+});

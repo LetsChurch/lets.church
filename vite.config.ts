@@ -19,16 +19,16 @@ export default defineConfig({
   server: {
     port: 3000,
   },
-  plugins: [
-    tsConfigPaths(),
-    tanstackStart({
-      customViteReactPlugin: true,
-    }),
-    viteReact(),
-    tailwindcss(),
-  ],
+  plugins: [tsConfigPaths(), tanstackStart(), viteReact(), tailwindcss()],
   test: {
     projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+        },
+      },
       {
         extends: true,
         plugins: [

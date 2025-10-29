@@ -400,6 +400,7 @@ function Home() {
   // Transform featured uploads for carousel
   const carouselItems: ComponentProps<typeof HeroCarousel>['items'] =
     featuredUploads?.map((upload) => ({
+      id: upload.id,
       title: upload.title,
       author: upload.channel.name,
       imageUrl: upload.thumbnailUrl,

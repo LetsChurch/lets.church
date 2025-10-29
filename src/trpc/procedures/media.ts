@@ -3,7 +3,11 @@ import { UploadViewSource } from '@prisma/client';
 import { getRequest } from '@tanstack/react-start/server';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
 import { z } from 'zod';
-import { getThumbnailResize } from '@/schemas/common';
+import {
+  getThumbnailResize,
+  IncomingIdSchema,
+  OutgoingIdSchema,
+} from '@/schemas/common';
 import db from '@/util/db';
 import logger from '@/util/logger';
 import { getClientIpAddress } from '@/util/request-ip';
@@ -24,11 +28,11 @@ function u64ToSigned(u: bigint): bigint {
 }
 
 const getMediaByIdSchema = z.object({
-  mediaId: z.uuid(),
+  mediaId: IncomingIdSchema,
 });
 
 const getTranscriptSchema = z.object({
-  mediaId: z.uuid(),
+  mediaId: IncomingIdSchema,
 });
 
 export const mediaProcedures = {
@@ -260,6 +264,7 @@ export const mediaProcedures = {
 
       return {
         ...mediaRest,
+        id: OutgoingIdSchema.parse(mediaRest.id),
         thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
         fullSizeThumbnailUrl:
           fullSizeThumbnailUrl || channelDefaultThumbnailUrl,
@@ -274,7 +279,7 @@ export const mediaProcedures = {
         downloadUrls,
         isSaved,
         channel: {
-          id: channel.id,
+          id: OutgoingIdSchema.parse(channel.id),
           name: channel.name,
           slug: channel.slug,
           avatarUrl: channelAvatarUrl,
@@ -287,7 +292,7 @@ export const mediaProcedures = {
   createUploadView: publicProcedure
     .input(
       z.object({
-        uploadRecordId: z.uuid(),
+        uploadRecordId: IncomingIdSchema,
         source: z
           .nativeEnum(UploadViewSource)
           .optional()
@@ -353,7 +358,7 @@ export const mediaProcedures = {
       });
 
       return {
-        uploadRecordId: view.uploadRecordId,
+        uploadRecordId: OutgoingIdSchema.parse(view.uploadRecordId),
         viewHash: view.viewHash.toString(),
       };
     }),
@@ -361,7 +366,7 @@ export const mediaProcedures = {
   recordViewSeconds: publicProcedure
     .input(
       z.object({
-        uploadRecordId: z.uuid(),
+        uploadRecordId: IncomingIdSchema,
         viewHash: z.string(),
         ranges: z.array(
           z.object({
@@ -446,7 +451,7 @@ export const mediaProcedures = {
   rateMedia: authProcedure
     .input(
       z.object({
-        mediaId: z.uuid(),
+        mediaId: IncomingIdSchema,
         rating: z.enum(['LIKE', 'DISLIKE']),
       }),
     )
@@ -542,7 +547,7 @@ export const mediaProcedures = {
     }),
 
   getMediaRating: publicProcedure
-    .input(z.object({ mediaId: z.uuid() }))
+    .input(z.object({ mediaId: IncomingIdSchema }))
     .query(async ({ input, ctx }) => {
       moduleLogger.info('Fetching media rating', {
         mediaId: input.mediaId,
@@ -586,7 +591,7 @@ export const mediaProcedures = {
     }),
 
   getComments: publicProcedure
-    .input(z.object({ mediaId: z.uuid() }))
+    .input(z.object({ mediaId: IncomingIdSchema }))
     .query(async ({ input, ctx }) => {
       moduleLogger.info('Fetching comments', {
         mediaId: input.mediaId,
@@ -636,6 +641,11 @@ export const mediaProcedures = {
 
       return comments.map((comment) => ({
         ...comment,
+        id: OutgoingIdSchema.parse(comment.id),
+        author: {
+          ...comment.author,
+          id: OutgoingIdSchema.parse(comment.author.id),
+        },
         userRating: comment.userRatings?.[0]?.rating ?? null,
         likeCount: comment._count.userRatings,
         replyCount: comment._count.replies,
@@ -644,7 +654,7 @@ export const mediaProcedures = {
     }),
 
   getReplies: publicProcedure
-    .input(z.object({ commentId: z.uuid() }))
+    .input(z.object({ commentId: IncomingIdSchema }))
     .query(async ({ input, ctx }) => {
       moduleLogger.info('Fetching replies', {
         commentId: input.commentId,
@@ -692,6 +702,11 @@ export const mediaProcedures = {
 
       return replies.map((reply) => ({
         ...reply,
+        id: OutgoingIdSchema.parse(reply.id),
+        author: {
+          ...reply.author,
+          id: OutgoingIdSchema.parse(reply.author.id),
+        },
         userRating: reply.userRatings?.[0]?.rating ?? null,
         likeCount: reply._count.userRatings,
         userRatings: undefined,
@@ -701,9 +716,9 @@ export const mediaProcedures = {
   createComment: authProcedure
     .input(
       z.object({
-        mediaId: z.uuid(),
+        mediaId: IncomingIdSchema,
         text: z.string().min(1).max(5000),
-        replyingToId: z.uuid().optional(),
+        replyingToId: IncomingIdSchema.optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -796,13 +811,20 @@ export const mediaProcedures = {
         userId,
       });
 
-      return comment;
+      return {
+        ...comment,
+        id: OutgoingIdSchema.parse(comment.id),
+        author: {
+          ...comment.author,
+          id: OutgoingIdSchema.parse(comment.author.id),
+        },
+      };
     }),
 
   rateComment: authProcedure
     .input(
       z.object({
-        commentId: z.uuid(),
+        commentId: IncomingIdSchema,
         rating: z.enum(['LIKE', 'DISLIKE']),
       }),
     )

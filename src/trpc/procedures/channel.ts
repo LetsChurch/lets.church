@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { getThumbnailResize } from '@/schemas/common';
+import { getThumbnailResize, OutgoingIdSchema } from '@/schemas/common';
 import db from '@/util/db';
 import logger from '@/util/logger';
 import { getS3ProtocolUri } from '@/util/s3';
@@ -119,7 +119,7 @@ export const channelProcedures = {
         : false;
 
       return {
-        id: channel.id,
+        id: OutgoingIdSchema.parse(channel.id),
         name: channel.name,
         slug: channel.slug,
         description: channel.description,
@@ -225,9 +225,11 @@ export const channelProcedures = {
 
         return {
           ...uploadRest,
+          id: OutgoingIdSchema.parse(uploadRest.id),
           thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
           channel: {
             ...channel,
+            id: OutgoingIdSchema.parse(channel.id),
             avatarUrl: channelAvatarUrl,
           },
         };

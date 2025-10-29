@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { getThumbnailResize } from '@/schemas/common';
+import {
+  getThumbnailResize,
+  IncomingIdSchema,
+  OutgoingIdSchema,
+} from '@/schemas/common';
 import db from '@/util/db';
 import logger from '@/util/logger';
 import { getS3ProtocolUri } from '@/util/s3';
@@ -11,7 +15,7 @@ const moduleLogger = logger.child({
 });
 
 const saveMediaSchema = z.object({
-  mediaId: z.uuid(),
+  mediaId: IncomingIdSchema,
 });
 
 const libraryQuerySchema = z.object({
@@ -184,9 +188,11 @@ export const libraryProcedures = {
 
         return {
           ...uploadRest,
+          id: OutgoingIdSchema.parse(uploadRest.id),
           thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
           channel: {
             ...channel,
+            id: OutgoingIdSchema.parse(channel.id),
             avatarUrl: channelAvatarUrl,
           },
         };
@@ -312,10 +318,12 @@ export const libraryProcedures = {
 
           return {
             ...uploadRest,
+            id: OutgoingIdSchema.parse(uploadRest.id),
             thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
             progress,
             channel: {
               ...channel,
+              id: OutgoingIdSchema.parse(channel.id),
               avatarUrl: channelAvatarUrl,
             },
           };
