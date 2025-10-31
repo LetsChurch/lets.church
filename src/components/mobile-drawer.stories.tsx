@@ -23,7 +23,7 @@ function MobileDrawerExample() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg bg-indigo-500 px-6 py-3 font-medium text-white hover:bg-indigo-600"
+        className="rounded-lg bg-brand px-6 py-3 font-medium text-primary hover:bg-indigo-600"
       >
         Open Drawer
       </button>
@@ -34,21 +34,21 @@ function MobileDrawerExample() {
           <MobileDrawer.Content>
             {/* Header */}
             <div className="flex h-12 items-center justify-between border-zinc-800 border-b px-5">
-              <MobileDrawer.Title className="font-bold text-lg text-white">
+              <MobileDrawer.Title className="font-bold text-lg text-primary">
                 Drawer Title
               </MobileDrawer.Title>
               <MobileDrawer.Close className="flex size-8 items-center justify-center rounded-lg hover:bg-white/10">
-                <IconX size={20} className="text-white/80" />
+                <IconX size={20} className="text-primary/80" />
               </MobileDrawer.Close>
             </div>
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-5">
-              <p className="mb-4 text-white">
+              <p className="mb-4 text-primary">
                 This is a mobile drawer component that slides up from the
                 bottom.
               </p>
-              <p className="mb-4 text-white/70">
+              <p className="mb-4 text-primary/70">
                 You can drag the handle at the top to dismiss it, or click
                 outside to close.
               </p>
@@ -59,8 +59,8 @@ function MobileDrawerExample() {
                     key={i}
                     className="rounded-lg border border-white/10 bg-white/5 p-4"
                   >
-                    <p className="text-white">Item {i + 1}</p>
-                    <p className="text-sm text-white/60">
+                    <p className="text-primary">Item {i + 1}</p>
+                    <p className="text-primary/60 text-sm">
                       This is some content in the drawer
                     </p>
                   </div>
@@ -91,7 +91,7 @@ function ShortContentExample() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg bg-indigo-500 px-6 py-3 font-medium text-white hover:bg-indigo-600"
+        className="rounded-lg bg-brand px-6 py-3 font-medium text-primary hover:bg-indigo-600"
       >
         Open Short Drawer
       </button>
@@ -102,22 +102,22 @@ function ShortContentExample() {
           <MobileDrawer.Content>
             {/* Header */}
             <div className="flex h-12 items-center justify-between border-zinc-800 border-b px-5">
-              <MobileDrawer.Title className="font-bold text-lg text-white">
+              <MobileDrawer.Title className="font-bold text-lg text-primary">
                 Quick Action
               </MobileDrawer.Title>
               <MobileDrawer.Close className="flex size-8 items-center justify-center rounded-lg hover:bg-white/10">
-                <IconX size={20} className="text-white/80" />
+                <IconX size={20} className="text-primary/80" />
               </MobileDrawer.Close>
             </div>
 
             {/* Content */}
             <div className="p-5">
-              <p className="mb-4 text-white">
+              <p className="mb-4 text-primary">
                 This drawer has shorter content.
               </p>
               <button
                 type="button"
-                className="w-full rounded-lg bg-indigo-500 px-4 py-2 font-medium text-white hover:bg-indigo-600"
+                className="w-full rounded-lg bg-brand px-4 py-2 font-medium text-primary hover:bg-indigo-600"
               >
                 Confirm Action
               </button>
@@ -146,7 +146,7 @@ function CustomThresholdExample() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg bg-indigo-500 px-6 py-3 font-medium text-white hover:bg-indigo-600"
+        className="rounded-lg bg-brand px-6 py-3 font-medium text-primary hover:bg-indigo-600"
       >
         Open (Custom Threshold)
       </button>
@@ -156,16 +156,16 @@ function CustomThresholdExample() {
           <MobileDrawer.Backdrop />
           <MobileDrawer.Content dragThreshold={50}>
             <div className="flex h-12 items-center justify-between border-zinc-800 border-b px-5">
-              <MobileDrawer.Title className="font-bold text-lg text-white">
+              <MobileDrawer.Title className="font-bold text-lg text-primary">
                 Custom Threshold (50px)
               </MobileDrawer.Title>
               <MobileDrawer.Close className="flex size-8 items-center justify-center rounded-lg hover:bg-white/10">
-                <IconX size={20} className="text-white/80" />
+                <IconX size={20} className="text-primary/80" />
               </MobileDrawer.Close>
             </div>
 
             <div className="p-5">
-              <p className="text-white">
+              <p className="text-primary">
                 This drawer closes after dragging just 50px down, making it
                 easier to dismiss.
               </p>

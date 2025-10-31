@@ -3,10 +3,11 @@ import { useInfiniteQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useRef, useState } from 'react';
+import { z } from 'zod';
 import { AvatarCarousel } from '@/components/avatar-carousel';
 import { EmptyState } from '@/components/empty-state';
 import Header from '@/components/header';
-import Search from '@/components/search-bar';
+import SearchBar from '@/components/search-bar';
 import { SearchRow } from '@/components/search-row';
 import SearchTabs from '@/components/search-tabs';
 import { TrendingSearchPill } from '@/components/trending-search-pill';
@@ -48,15 +49,21 @@ type SearchResultItem = {
 
 export const Route = createFileRoute('/_main/search')({
   component: RouteComponent,
-  validateSearch: (search: Record<string, unknown>) => ({
-    q: search.q as string | undefined,
-    focus: (search.focus as 'media' | 'transcripts' | undefined) ?? 'media',
-    channelId: search.channelId as string | undefined,
+  validateSearch: z.object({
+    q: z.string().optional(),
+    focus: z.enum(['media', 'transcripts']).catch('media'),
+    channelId: z.string().optional(),
+    sort: z.enum(['relevance', 'date-asc', 'date-desc']).optional(),
+    dateRange: z
+      .enum(['all-time', 'today', 'this-week', 'this-month', 'this-year'])
+      .optional(),
   }),
   loaderDeps: ({ search }) => ({
     q: search.q,
-    focus: search.focus ?? 'media',
+    focus: search.focus,
     channelId: search.channelId,
+    sort: search.sort,
+    dateRange: search.dateRange,
   }),
   loader: async ({ context, deps }) => {
     if (deps.q) {
@@ -67,6 +74,8 @@ export const Route = createFileRoute('/_main/search')({
           focus: deps.focus as 'media' | 'transcripts',
           channelIds: deps.channelId ? [deps.channelId] : undefined,
           limit: 20,
+          sort: deps.sort,
+          dateRange: deps.dateRange,
         }),
       );
     } else {
@@ -85,9 +94,9 @@ function RouteComponent() {
     <div className="min-h-screen bg-page">
       <Header defaultSearchValue={q} />
 
-      <div className="mx-auto max-w-7xl px-4 py-4">
+      <div className="relative z-5 mx-auto max-w-7xl px-4 py-4">
         <div className="mb-6 sm:hidden">
-          <Search placeholder="Search or ask anything..." defaultValue={q} />
+          <SearchBar defaultValue={q} />
         </div>
 
         {q ? <SearchResults q={q} /> : <NoSearch />}
@@ -106,7 +115,7 @@ const trendingSearches = [
 const emptyArray: ReadonlyArray<unknown> = [];
 
 function SearchResults({ q }: { q: string }) {
-  const { focus, channelId } = Route.useSearch();
+  const { focus, channelId, sort, dateRange } = Route.useSearch();
   const trpc = useTRPC();
   const navigate = useNavigate({ from: Route.fullPath });
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -119,9 +128,11 @@ function SearchResults({ q }: { q: string }) {
   } = useInfiniteQuery({
     ...trpc.search.performSearch.infiniteQueryOptions({
       q,
-      focus: focus ?? 'media',
+      focus,
       channelIds: channelId ? [channelId] : undefined,
       limit: 20,
+      sort,
+      dateRange,
     }),
     getNextPageParam: (lastPage) => {
       if (
@@ -290,7 +301,7 @@ function Result({
                 {formatTime(segment.start)}
               </div>
               <div
-                className="[&_mark]:-my-0.5 [&_mark]:-mx-1 text-primary/80 text-sm [&_mark]:rounded-sm [&_mark]:bg-orange-400/40 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:text-white"
+                className="[&_mark]:-my-0.5 [&_mark]:-mx-1 text-primary/80 text-sm [&_mark]:rounded-sm [&_mark]:bg-orange-400/40 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:text-primary"
                 // biome-ignore lint/security/noDangerouslySetInnerHtml: escaped ElasticSearch output
                 dangerouslySetInnerHTML={{
                   __html: segment.text,
@@ -374,7 +385,7 @@ function NoSearch() {
                 <button
                   type="button"
                   onClick={() => handleSearchClick(search.query)}
-                  className="flex-1 text-left text-primary transition-colors hover:text-white"
+                  className="flex-1 text-left text-primary transition-colors hover:text-primary"
                 >
                   {search.query}
                 </button>

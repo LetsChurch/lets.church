@@ -56,7 +56,7 @@ export function Transcript({ transcript }: Props) {
     <div ref={containerRef} className="size-full overflow-auto p-5">
       <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
         {/* <div /> */}
-        {/* <h4 className="font-bold text-base text-white leading-[1.4]"> */}
+        {/* <h4 className="font-bold text-base text-primary leading-[1.4]"> */}
         {/*   Section Heading */}
         {/* </h4> */}
 
@@ -70,15 +70,15 @@ export function Transcript({ transcript }: Props) {
             <div
               className={`pt-1 font-mono text-[10px] leading-[1.4] tracking-[-0.2px] ${
                 i === currentI
-                  ? 'text-indigo-500'
-                  : 'text-white/50 group-hover:text-white/70'
+                  ? 'text-brand'
+                  : 'text-primary/50 group-hover:text-primary/70'
               }`}
               data-start={line.start}
             >
               {formatTime(line.start)}
             </div>
             <div className="flex flex-col gap-1.5">
-              <p className="text-sm text-white leading-[1.4]">{line.text}</p>
+              <p className="text-primary text-sm leading-[1.4]">{line.text}</p>
             </div>
           </button>
         ))}

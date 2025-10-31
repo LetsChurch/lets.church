@@ -172,20 +172,20 @@ export function Comment({
         {avatarUrl ? (
           <Avatar.Image src={avatarUrl} alt={comment.author.username} />
         ) : null}
-        <Avatar.Fallback className="flex size-full items-center justify-center bg-indigo-500 font-bold text-white text-xs">
+        <Avatar.Fallback className="flex size-full items-center justify-center bg-brand font-bold text-primary text-xs">
           {comment.author.username.charAt(0).toUpperCase()}
         </Avatar.Fallback>
       </Avatar.Root>
 
       <div className="flex-1 overflow-hidden">
         <div className="mb-1 flex items-baseline gap-2">
-          <span className="font-medium text-sm text-white">
+          <span className="font-medium text-primary text-sm">
             {comment.author.fullName || `@${comment.author.username}`}
           </span>
-          <span className="text-white/50 text-xs">{timeAgo}</span>
+          <span className="text-primary/50 text-xs">{timeAgo}</span>
         </div>
 
-        <p className="mb-2 whitespace-pre-wrap break-words text-sm text-white/90 leading-relaxed">
+        <p className="mb-2 whitespace-pre-wrap break-words text-primary/90 text-sm leading-relaxed">
           {comment.text}
         </p>
 
@@ -198,8 +198,8 @@ export function Comment({
               comment.userRating === 'LIKE' && 'bg-white/10',
             )}
           >
-            <IconThumbUp size={14} className="text-white/70" />
-            <span className="text-white/70 text-xs">{comment.likeCount}</span>
+            <IconThumbUp size={14} className="text-primary/70" />
+            <span className="text-primary/70 text-xs">{comment.likeCount}</span>
           </button>
 
           <button
@@ -210,14 +210,14 @@ export function Comment({
               comment.userRating === 'DISLIKE' && 'bg-white/10',
             )}
           >
-            <IconThumbDown size={14} className="text-white/70" />
+            <IconThumbDown size={14} className="text-primary/70" />
           </button>
 
           {!isReply ? (
             <button
               type="button"
               onClick={handleReplyClick}
-              className="rounded-lg px-2 py-1 text-white/70 text-xs transition-colors hover:bg-white/10"
+              className="rounded-lg px-2 py-1 text-primary/70 text-xs transition-colors hover:bg-white/10"
             >
               Reply
             </button>
@@ -241,7 +241,7 @@ export function Comment({
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
               placeholder="Write a reply..."
-              className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/50 outline-none focus:border-indigo-500"
+              className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-primary text-sm placeholder-white/50 outline-none focus:border-brand"
               rows={3}
             />
             <div className="mt-2 flex justify-end gap-2">

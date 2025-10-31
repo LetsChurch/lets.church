@@ -90,7 +90,7 @@ function RouteComponent() {
       <Header />
       <div className="px-16 pb-8">
         <div className="mb-6">
-          <h1 className="mb-4 font-bold text-2xl text-white">Library</h1>
+          <h1 className="mb-4 font-bold text-2xl text-primary">Library</h1>
           <LibraryTabs activeTab="saved" />
         </div>
 

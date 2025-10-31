@@ -77,14 +77,15 @@ export function CommentsSection({
     <div
       className={cn(
         'relative isolate flex flex-col overflow-hidden',
-        showContainer && 'mt-6 rounded-2xl border-top-highlight bg-zinc-900',
+        showContainer && 'mt-6 rounded-2xl border-top-highlight bg-card',
       )}
     >
       {/* Comments Header */}
       <div className="flex items-center gap-1 border-zinc-800 border-b px-5 pt-1.5 pb-2">
-        <span className="font-medium text-sm text-white">Comments</span>
+        <span className="font-medium text-primary text-sm">Comments</span>
+        {/* TODO: light theme */}
         <div className="flex h-[18px] items-center justify-center rounded-[9px] bg-white/10 px-1.5">
-          <span className="font-bold text-[10px] text-white/70 leading-none">
+          <span className="font-bold text-[10px] text-primary/70 leading-none">
             {comments.length}
           </span>
         </div>
@@ -111,7 +112,7 @@ export function CommentsSection({
                   isLoggedIn ? 'Add a comment...' : 'Sign in to comment'
                 }
                 disabled={!isLoggedIn}
-                className="flex-1 resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/50 outline-none focus:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex-1 resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-primary text-sm placeholder-white/50 outline-none focus:border-brand disabled:cursor-not-allowed disabled:opacity-50"
                 rows={3}
               />
             </div>
@@ -136,7 +137,7 @@ export function CommentsSection({
           {/* Comments List */}
           <div className="p-5">
             {comments.length === 0 ? (
-              <div className="py-8 text-center text-sm text-white/50">
+              <div className="py-8 text-center text-primary/50 text-sm">
                 No comments yet. Be the first to comment!
               </div>
             ) : (
@@ -157,10 +158,10 @@ export function CommentsSection({
         <div className="flex flex-col items-center justify-center px-5 py-12">
           <IconMessageCircle2
             size={48}
-            className="mb-4 text-white/20"
+            className="mb-4 text-primary/20"
             strokeWidth={1.5}
           />
-          <p className="text-center text-sm text-white/50">
+          <p className="text-center text-primary/50 text-sm">
             Comments are turned off for this video
           </p>
         </div>

@@ -39,7 +39,7 @@ export default function Header({
       {/* Background with gradient overlay - only show when there are children */}
       {hasBackground ? (
         <div className="-top-16 absolute inset-0 h-[244px]">
-          <div className="absolute inset-0 bg-indigo-500 opacity-60">
+          <div className="absolute inset-0 bg-brand opacity-60">
             <div
               className="mask-[linear-gradient(to_bottom,black_0%,black_70%,transparent_100%)] absolute inset-0 bg-center bg-cover blur-lg brightness-200 transition-all duration-1000 ease-in-out"
               style={{
@@ -47,12 +47,12 @@ export default function Header({
               }}
             />
           </div>
-          <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/0 via-zinc-950/90 to-zinc-950" />
+          <div className="absolute inset-0 bg-gradient-to-b from-bg/0 via-bg/90 to-bg" />
         </div>
       ) : null}
 
       {/* Theme gradient */}
-      <div className="absolute inset-x-0 top-0 z-5 h-[240px] bg-gradient-to-b from-indigo-500/40 to-transparent" />
+      <div className="absolute inset-x-0 top-0 z-5 h-[240px] bg-gradient-to-b from-brand/40 to-transparent" />
 
       {/* Top Navigation Bar */}
       <div className="relative z-10 flex h-16 items-center justify-between p-4">

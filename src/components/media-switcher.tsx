@@ -38,7 +38,7 @@ export function MediaSwitcher({
         )}
         aria-label="Video"
       >
-        <IconVideo className="size-4 text-white" stroke={1.5} />
+        <IconVideo className="size-4 text-primary" stroke={1.5} />
       </Toggle>
       <Toggle
         value="audio"
@@ -51,7 +51,7 @@ export function MediaSwitcher({
         )}
         aria-label="Audio"
       >
-        <IconHeadphones className="size-4 text-white" stroke={1.5} />
+        <IconHeadphones className="size-4 text-primary" stroke={1.5} />
       </Toggle>
     </ToggleGroup>
   );

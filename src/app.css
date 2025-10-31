@@ -1,51 +1,86 @@
 @import "tailwindcss";
 
-/* TODO: Clean this up, add more colors, remove unused colors */
-
-:root {
+@theme {
 	--font-sans: "Inter Variable", sans-serif;
 	--font-time: "Roboto Mono Variable", monospace;
+}
 
+:root {
 	--page-bg: var(--color-zinc-950);
+	--bg-overlay: var(--color-white) / 0.05;
+	--bg-overlay-strong: var(--color-white) / 0.15;
+
 	--sidebar-bg: var(--color-zinc-950);
 	--sidebar-border: var(--color-zinc-900);
+
 	--card-bg: var(--color-zinc-900);
 	--card-text: var(--color-white);
 	--card-border: var(--color-white) / 0.1;
-	--primary: var(--color-indigo-500);
-	--primary-glow: var(--color-indigo-500);
-	--text-primary: var(--color-white);
-	--text-secondary: var(--color-zinc-300);
-	--text-muted: var(--color-zinc-400);
-	--bg-overlay: var(--color-white) / 0.05;
-	--bg-overlay-strong: var(--color-white) / 0.15;
+
+	--primary: var(--color-white);
+	--secondary: var(--color-zinc-300);
+	--muted: var(--color-zinc-400);
+
 	--border-color: var(--color-white) / 0.1;
+
+	--color-edge-fade: var(--color-zinc-900);
 }
 
-[data-theme="light"] {
+:root[data-theme="light"] {
 	--page-bg: var(--color-gray-100);
+	--bg-overlay: var(--color-black) / 0.05;
+	--bg-overlay-strong: var(--color-black) / 0.1;
+
 	--sidebar-bg: var(--color-white);
 	--sidebar-border: var(--color-gray-400) / 0.3;
+
 	--card-bg: var(--color-white);
 	--card-text: var(--color-black);
 	--card-border: var(--color-gray-400) / 0.2;
-	--primary: var(--color-indigo-500);
-	--text-primary: var(--color-black);
-	--text-secondary: var(--color-gray-500);
-	--text-muted: var(--color-gray-500);
-	--bg-overlay: var(--color-black) / 0.05;
-	--bg-overlay-strong: var(--color-black) / 0.1;
+
+	--primary: var(--color-gray-800);
+	--secondary: var(--color-gray-500);
+	--muted: var(--color-gray-500);
+
 	--border-color: var(--color-gray-400) / 0.2;
+
+	--color-edge-fade: var(--color-zinc-200);
+}
+
+@theme {
+	--color-bg: var(--page-bg);
+	--color-overlay: var(--bg-overlay);
+	--color-overlay-strong: var(--bg-overlay-strong);
+
+	--color-primary: var(--primary);
+	--color-secondary: var(--secondary);
+	--color-muted: var(--muted);
+
+	--color-brand: var(--color-indigo-500);
+	--color-brand-600: var(--color-indigo-600);
+	--color-brand-700: var(--color-indigo-700);
+
+	--color-edge-fade: var(--color-edge-fade);
 }
 
 @utility bg-page {
-	background-color: var(--page-bg);
+	background-color: var(--color-bg);
 }
 
+/* ============================================
+   Sidebar
+   ============================================ */
 @utility bg-sidebar {
 	background-color: var(--sidebar-bg);
 }
 
+@utility border-sidebar {
+	border-color: var(--sidebar-border);
+}
+
+/* ============================================
+   Cards
+   ============================================ */
 @utility bg-card {
 	background-color: var(--card-bg);
 }
@@ -54,30 +89,9 @@
 	color: var(--card-text);
 }
 
-@utility border-sidebar {
-	border-color: var(--sidebar-border);
-}
-
-@utility text-primary {
-	color: var(--text-primary);
-}
-
-@utility text-secondary {
-	color: var(--text-secondary);
-}
-
-@utility text-muted {
-	color: var(--text-muted);
-}
-
-@utility bg-overlay {
-	background-color: var(--bg-overlay);
-}
-
-@utility bg-overlay-strong {
-	background-color: var(--bg-overlay-strong);
-}
-
+/* ============================================
+   Borders
+   ============================================ */
 @utility border-default {
 	border-color: var(--border-color);
 }
@@ -105,8 +119,12 @@
 	}
 }
 
+/* ============================================
+	 Misc
+	 ============================================ */
+
 @utility glow-md {
-	box-shadow: 0px 2px 12px 0px var(--primary-glow);
+	box-shadow: 0px 2px 12px 0px var(--color-brand);
 	backdrop-filter: blur(8px);
 }
 

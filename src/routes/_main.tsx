@@ -8,7 +8,7 @@ export const Route = createFileRoute('/_main')({
 
 function RouteComponent() {
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen bg-page">
       <Sidebar />
       <main className="flex-1 overflow-y-auto overflow-x-hidden pb-16 sm:pb-0">
         <Outlet />

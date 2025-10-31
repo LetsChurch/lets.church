@@ -27,13 +27,17 @@ const searchQuerySchema = z.object({
   channelIds: z.array(IncomingIdSchema).optional().nullable(),
   limit: z.number().min(1).max(50).default(20),
   cursor: z.number().min(0).default(0), // Offset-based cursor
+  sort: z.enum(['relevance', 'date-asc', 'date-desc']).optional(),
+  dateRange: z
+    .enum(['all-time', 'today', 'this-week', 'this-month', 'this-year'])
+    .optional(),
 });
 
 export const searchProcedures = {
   performSearch: publicProcedure
     .input(searchQuerySchema)
     .query(async ({ input, ctx }) => {
-      const { q, focus, channelIds, limit, cursor } = input;
+      const { q, focus, channelIds, limit, cursor, sort, dateRange } = input;
 
       moduleLogger.info('Performing search', {
         query: q,
@@ -41,7 +45,54 @@ export const searchProcedures = {
         channelIds,
         limit,
         cursor,
+        sort,
+        dateRange,
       });
+
+      // Convert sort to orderBy for elasticsearch
+      const orderBy =
+        sort === 'date-asc'
+          ? 'date'
+          : sort === 'date-desc'
+            ? 'dateDesc'
+            : undefined;
+
+      // Convert dateRange to publishedAt range
+      const now = new Date();
+      let publishedAt: { gte?: string; lte?: string } | undefined;
+
+      if (dateRange && dateRange !== 'all-time') {
+        const endDate = now.toISOString();
+        let startDate: Date;
+
+        switch (dateRange) {
+          case 'today':
+            startDate = new Date(
+              now.getFullYear(),
+              now.getMonth(),
+              now.getDate(),
+            );
+            break;
+          case 'this-week':
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+            startDate.setHours(0, 0, 0, 0);
+            break;
+          case 'this-month':
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            break;
+          case 'this-year':
+            startDate = new Date(now.getFullYear(), 0, 1);
+            break;
+          default:
+            startDate = new Date(0); // Beginning of time
+        }
+
+        publishedAt = {
+          gte: startDate.toISOString(),
+          lte: endDate,
+        };
+      }
 
       // Log the search
       try {
@@ -72,9 +123,13 @@ export const searchProcedures = {
       const searches = [
         ...msearchUploads(q, cursor, mediaLimit, {
           channelIds,
+          publishedAt,
+          orderBy,
         }),
         ...msearchTranscripts(q, cursor, transcriptLimit, {
           channelIds,
+          publishedAt,
+          orderBy,
         }),
         ...msearchChannels(q, 0, 10), // Always get top 10 channels
       ];

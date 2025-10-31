@@ -110,7 +110,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       <head>
         <HeadContent />
       </head>
-      <body className="bg-page">
+      <body>
         {children}
         <Scripts />
       </body>

@@ -63,7 +63,7 @@ export function MediaHeader({
   return (
     <div className="mt-8 flex flex-col gap-3">
       {/* Title */}
-      <h1 className="font-bold text-lg text-white leading-normal">
+      <h1 className="font-bold text-lg text-primary leading-normal">
         {title ? title : 'Untitled'}
       </h1>
 
@@ -79,12 +79,12 @@ export function MediaHeader({
             {channel.avatarUrl ? (
               <Avatar.Image src={channel.avatarUrl} alt={channel.name} />
             ) : null}
-            <Avatar.Fallback className="flex size-full items-center justify-center rounded-full bg-indigo-500 font-bold text-white text-xs">
+            <Avatar.Fallback className="flex size-full items-center justify-center rounded-full bg-brand font-bold text-primary text-xs">
               {channel.name.charAt(0).toUpperCase()}
             </Avatar.Fallback>
           </Avatar.Root>
           <div className="flex flex-col gap-0.5">
-            <div className="font-semibold text-white text-xs">
+            <div className="font-semibold text-primary text-xs">
               {channel.name}
             </div>
             <div className="text-[10px] text-zinc-400">

@@ -37,7 +37,7 @@ export function AvatarCarousel({ items }: AvatarCarouselProps) {
                 alt={item.name}
                 className="size-full object-cover"
               />
-              <Avatar.Fallback className="flex size-full items-center justify-center rounded-full bg-indigo-500 font-bold text-primary text-xl">
+              <Avatar.Fallback className="flex size-full items-center justify-center rounded-full bg-brand font-bold text-primary text-xl">
                 {item.name.charAt(0).toUpperCase()}
               </Avatar.Fallback>
             </Avatar.Root>

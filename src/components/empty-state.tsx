@@ -82,7 +82,7 @@ export function EmptyState({
             strokeDasharray="2 2"
           />
           <foreignObject x="31" y="31" width="16" height="16">
-            <IconFlag size={16} color="white" />
+            <IconFlag size={16} className="text-primary" />
           </foreignObject>
           <defs>
             <filter
@@ -133,7 +133,7 @@ export function EmptyState({
           {emptyCta ? (
             <Link
               to={emptyCtaHref}
-              className="mt-4 flex h-8 items-center rounded-full border-top-highlight bg-indigo-500 px-3 font-bold text-primary text-sm"
+              className="mt-4 flex h-8 items-center rounded-full border-top-highlight bg-brand px-3 font-bold text-sm text-white"
             >
               {emptyCta}
             </Link>

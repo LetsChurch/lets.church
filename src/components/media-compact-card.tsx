@@ -43,7 +43,7 @@ export function MediaCompactCard({
           {progress ? (
             <div className="h-[3px] w-full rounded-[3px] bg-white/20">
               <div
-                className="h-full rounded-[3px] bg-indigo-500/60"
+                className="h-full rounded-[3px] bg-brand/60"
                 style={{ width: `${Math.min(progress, 100)}%` }}
               />
             </div>

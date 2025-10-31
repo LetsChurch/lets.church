@@ -158,7 +158,7 @@ function RouteComponent() {
               alt={channel.name}
               className="size-full object-cover"
             />
-            <Avatar.Fallback className="flex size-full items-center justify-center rounded-full bg-indigo-500 font-bold text-3xl text-white">
+            <Avatar.Fallback className="flex size-full items-center justify-center rounded-full bg-brand font-bold text-3xl text-primary">
               {channel.name.charAt(0).toUpperCase()}
             </Avatar.Fallback>
           </Avatar.Root>
@@ -173,7 +173,7 @@ function RouteComponent() {
             </p>
 
             {channel.description ? (
-              <p className="mb-4 text-sm text-white/80 leading-relaxed">
+              <p className="mb-4 text-primary/80 text-sm leading-relaxed">
                 {channel.description}
               </p>
             ) : null}
@@ -185,8 +185,8 @@ function RouteComponent() {
                 disabled={isTogglingFollow}
                 className={
                   isFollowing
-                    ? 'flex h-9 items-center justify-center rounded-full border border-white/10 bg-white/15 px-4 font-semibold text-sm text-white/80 backdrop-blur-sm transition-colors hover:bg-white/20 disabled:opacity-50'
-                    : 'flex h-9 items-center justify-center rounded-full border-top-highlight bg-indigo-500 px-4 font-semibold text-sm text-white transition-opacity hover:opacity-90 disabled:opacity-50'
+                    ? 'flex h-9 items-center justify-center rounded-full border border-white/10 bg-white/15 px-4 font-semibold text-primary/80 text-sm backdrop-blur-sm transition-colors hover:bg-white/20 disabled:opacity-50'
+                    : 'flex h-9 items-center justify-center rounded-full border-top-highlight bg-brand px-4 font-semibold text-primary text-sm transition-opacity hover:opacity-90 disabled:opacity-50'
                 }
               >
                 {isFollowing ? 'Following' : 'Follow'}
@@ -194,7 +194,7 @@ function RouteComponent() {
             ) : (
               <Link
                 to="/auth/register"
-                className="flex h-9 w-fit items-center justify-center rounded-full border-top-highlight bg-indigo-500 px-4 font-semibold text-sm text-white transition-opacity hover:opacity-90"
+                className="flex h-9 w-fit items-center justify-center rounded-full border-top-highlight bg-brand px-4 font-semibold text-primary text-sm transition-opacity hover:opacity-90"
               >
                 Follow
               </Link>

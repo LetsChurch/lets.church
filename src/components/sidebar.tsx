@@ -64,7 +64,7 @@ export default function Sidebar({ className }: SidebarProps) {
   return (
     <div
       className={cn(
-        'hidden h-full flex-col border-zinc-900 border-r bg-zinc-900/95 backdrop-blur-sm sm:flex',
+        'hidden h-full flex-col border-sidebar border-r bg-sidebar backdrop-blur-sm sm:flex',
         collapsed && !showAltMenu ? 'w-14' : 'w-50',
         className,
       )}
@@ -72,7 +72,7 @@ export default function Sidebar({ className }: SidebarProps) {
       {/* Header */}
       <div
         className={cn(
-          'flex h-16 items-center border-zinc-900 border-b px-3',
+          'flex h-16 items-center border-sidebar border-b px-3',
           collapsed && !showAltMenu ? 'justify-center' : 'gap-[7px]',
         )}
       >
@@ -80,12 +80,12 @@ export default function Sidebar({ className }: SidebarProps) {
           <button
             type="button"
             onClick={showAltMenu ? closeAltMenu : () => setShowAltMenu(true)}
-            className="flex size-8 cursor-pointer items-center justify-center rounded-lg transition-colors hover:bg-white/[0.15]"
+            className="flex size-8 cursor-pointer items-center justify-center rounded-lg transition-colors hover:bg-black/[0.15]"
           >
             {showAltMenu ? (
-              <IconArrowLeft size={24} className="text-white" />
+              <IconArrowLeft size={24} className="text-primary" />
             ) : (
-              <IconMenu2 size={24} className="text-white" />
+              <IconMenu2 size={24} className="text-primary" />
             )}
           </button>
         )}
@@ -115,7 +115,7 @@ export default function Sidebar({ className }: SidebarProps) {
                       isLogoHovered ? 'opacity-100' : 'opacity-0',
                     )}
                   >
-                    <IconMenu2 size={24} className="text-white" />
+                    <IconMenu2 size={24} className="text-primary" />
                   </button>
                 </div>
               </Tooltip.Trigger>
@@ -125,7 +125,7 @@ export default function Sidebar({ className }: SidebarProps) {
                   sideOffset={8}
                   className="z-50"
                 >
-                  <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-white text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
+                  <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-primary text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
                     Home
                     <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
                   </Tooltip.Popup>
@@ -148,44 +148,44 @@ export default function Sidebar({ className }: SidebarProps) {
             <div className="flex flex-col gap-2 px-1 py-3">
               <Link
                 to="/"
-                className="rounded-lg px-2 py-1.5 font-medium text-sm text-white transition-colors hover:bg-white/10"
+                className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
               >
                 Our Mission
               </Link>
               <Link
                 to="/"
-                className="rounded-lg px-2 py-1.5 font-medium text-sm text-white transition-colors hover:bg-white/10"
+                className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
               >
                 The Dorean Principle
               </Link>
               <Link
                 to="/"
-                className="rounded-lg px-2 py-1.5 font-medium text-sm text-white transition-colors hover:bg-white/10"
+                className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
               >
                 Roadmap
               </Link>
               <Link
                 to="/"
-                className="rounded-lg px-2 py-1.5 font-medium text-sm text-white transition-colors hover:bg-white/10"
+                className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
               >
                 Request a Feature
               </Link>
               <div className="mx-2 my-2.5 h-px bg-zinc-900" />
               <Link
                 to="/"
-                className="rounded-lg px-2 py-1.5 font-medium text-white/70 text-xs transition-colors hover:bg-white/10"
+                className="rounded-lg px-2 py-1.5 font-medium text-primary/70 text-xs transition-colors hover:bg-white/10"
               >
                 Terms of Service
               </Link>
               <Link
                 to="/"
-                className="rounded-lg px-2 py-1.5 font-medium text-white/70 text-xs transition-colors hover:bg-white/10"
+                className="rounded-lg px-2 py-1.5 font-medium text-primary/70 text-xs transition-colors hover:bg-white/10"
               >
                 Privacy Policy
               </Link>
               <Link
                 to="/"
-                className="rounded-lg px-2 py-1.5 font-medium text-white/70 text-xs transition-colors hover:bg-white/10"
+                className="rounded-lg px-2 py-1.5 font-medium text-primary/70 text-xs transition-colors hover:bg-white/10"
               >
                 DMCA
               </Link>
@@ -204,16 +204,16 @@ export default function Sidebar({ className }: SidebarProps) {
                           to="/"
                           className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
                           activeProps={{
-                            className: 'text-white',
+                            className: 'text-primary',
                           }}
                           inactiveProps={{
-                            className: 'text-white/70',
+                            className: 'text-primary/70',
                           }}
                         />
                       }
                     >
                       <IconBrandSafari size={24} />
-                      <div className="absolute top-0 right-0 h-full w-0.5 bg-indigo-500 opacity-0 shadow-[0px_2px_12px_0px_#6366f1] group-[.active]:opacity-100" />
+                      <div className="absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 shadow-[0px_2px_12px_0px_#6366f1] group-[.active]:opacity-100" />
                     </Tooltip.Trigger>
                     <Tooltip.Portal>
                       <Tooltip.Positioner
@@ -221,7 +221,7 @@ export default function Sidebar({ className }: SidebarProps) {
                         sideOffset={8}
                         className="z-50"
                       >
-                        <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-white text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
+                        <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-primary text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
                           Explore
                           <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
                         </Tooltip.Popup>
@@ -234,15 +234,15 @@ export default function Sidebar({ className }: SidebarProps) {
                   to="/"
                   className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
                   activeProps={{
-                    className: 'text-white',
+                    className: 'text-primary',
                   }}
                   inactiveProps={{
-                    className: 'text-white/70',
+                    className: 'text-primary/70',
                   }}
                 >
                   <IconBrandSafari size={24} />
                   <span className="pb-0.5">Explore</span>
-                  <div className="absolute top-0 right-0 h-full w-0.5 bg-indigo-500 opacity-0 shadow-[0px_2px_12px_0px_#6366f1] group-[.active]:opacity-100" />
+                  <div className="absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 shadow-[0px_2px_12px_0px_#6366f1] group-[.active]:opacity-100" />
                 </Link>
               )}
               <div className="mx-4 h-px bg-zinc-900" />
@@ -257,12 +257,12 @@ export default function Sidebar({ className }: SidebarProps) {
                       render={
                         <Link
                           to="/following"
-                          className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm text-white transition-colors hover:bg-white/5"
+                          className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-primary text-sm transition-colors hover:bg-white/5"
                         />
                       }
                     >
-                      <IconFlag size={24} className="text-white" />
-                      <div className="absolute top-0 right-0 h-full w-0.5 bg-indigo-500 opacity-0 shadow-[0px_2px_12px_0px_#6366f1] group-[.active]:opacity-100" />
+                      <IconFlag size={24} className="text-primary" />
+                      <div className="absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 shadow-[0px_2px_12px_0px_#6366f1] group-[.active]:opacity-100" />
                     </Tooltip.Trigger>
                     <Tooltip.Portal>
                       <Tooltip.Positioner
@@ -270,7 +270,7 @@ export default function Sidebar({ className }: SidebarProps) {
                         sideOffset={8}
                         className="z-50"
                       >
-                        <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-white text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
+                        <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-primary text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
                           Following
                           <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
                         </Tooltip.Popup>
@@ -281,11 +281,11 @@ export default function Sidebar({ className }: SidebarProps) {
               ) : (
                 <Link
                   to="/following"
-                  className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm text-white transition-colors hover:bg-white/5"
+                  className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-primary text-sm transition-colors hover:bg-white/5"
                 >
-                  <IconFlag size={24} className="text-white" />
+                  <IconFlag size={24} className="text-primary" />
                   <span className="pb-0.5">Following</span>
-                  <div className="absolute top-0 right-0 h-full w-0.5 bg-indigo-500 opacity-0 shadow-[0px_2px_12px_0px_#6366f1] group-[.active]:opacity-100" />
+                  <div className="absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 shadow-[0px_2px_12px_0px_#6366f1] group-[.active]:opacity-100" />
                 </Link>
               )}
 
@@ -295,7 +295,7 @@ export default function Sidebar({ className }: SidebarProps) {
                   {!isLoggedIn ? (
                     <Link
                       to="/auth/register"
-                      className="text-left text-xs text-zinc-400 transition-colors hover:text-white/80"
+                      className="text-left text-xs text-zinc-400 transition-colors hover:text-primary/80"
                     >
                       Sign in to see channels
                     </Link>
@@ -312,7 +312,7 @@ export default function Sidebar({ className }: SidebarProps) {
                             key={channel.id}
                             to="/channel/$slug"
                             params={{ slug: channel.slug }}
-                            className="flex items-center gap-2.5 transition-colors hover:text-white/80"
+                            className="flex items-center gap-2.5 transition-colors hover:text-primary/80"
                           >
                             <div className="flex size-6 shrink-0 items-center justify-center">
                               <Avatar.Root className="size-5 overflow-hidden rounded-full border-top-highlight">
@@ -321,13 +321,13 @@ export default function Sidebar({ className }: SidebarProps) {
                                   alt={channel.name}
                                   className="size-full object-cover"
                                 />
-                                <Avatar.Fallback className="flex size-full items-center justify-center rounded-full bg-indigo-500 font-bold text-[10px] text-white">
+                                <Avatar.Fallback className="flex size-full items-center justify-center rounded-full bg-brand font-bold text-[10px] text-primary">
                                   {channel.name.charAt(0).toUpperCase()}
                                 </Avatar.Fallback>
                               </Avatar.Root>
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="truncate font-medium text-white/70 text-xs">
+                              <p className="truncate font-medium text-primary/70 text-xs">
                                 {channel.name}
                               </p>
                             </div>
@@ -337,7 +337,7 @@ export default function Sidebar({ className }: SidebarProps) {
                         <button
                           type="button"
                           onClick={() => setShowAllChannels(!showAllChannels)}
-                          className="flex items-center gap-2.5 text-left transition-colors hover:text-white/80"
+                          className="flex items-center gap-2.5 text-left transition-colors hover:text-primary/80"
                         >
                           <div className="flex size-6 items-center justify-center">
                             <IconChevronDown
@@ -379,7 +379,7 @@ export default function Sidebar({ className }: SidebarProps) {
                                   alt={channel.name}
                                   className="size-full object-cover"
                                 />
-                                <Avatar.Fallback className="flex size-full items-center justify-center rounded-full bg-indigo-500 font-bold text-[10px] text-white">
+                                <Avatar.Fallback className="flex size-full items-center justify-center rounded-full bg-brand font-bold text-[10px] text-primary">
                                   {channel.name.charAt(0).toUpperCase()}
                                 </Avatar.Fallback>
                               </Avatar.Root>
@@ -390,7 +390,7 @@ export default function Sidebar({ className }: SidebarProps) {
                                 sideOffset={8}
                                 className="z-50"
                               >
-                                <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-white text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
+                                <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-primary text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
                                   {channel.name}
                                   <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
                                 </Tooltip.Popup>
@@ -434,16 +434,16 @@ export default function Sidebar({ className }: SidebarProps) {
                           to="/library"
                           className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
                           activeProps={{
-                            className: 'text-white',
+                            className: 'text-primary',
                           }}
                           inactiveProps={{
-                            className: 'text-white/70',
+                            className: 'text-primary/70',
                           }}
                         />
                       }
                     >
                       <IconBookmark size={24} />
-                      <div className="absolute top-0 right-0 h-full w-0.5 bg-indigo-500 opacity-0 shadow-[0px_2px_12px_0px_#6366f1] group-[.active]:opacity-100" />
+                      <div className="absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 shadow-[0px_2px_12px_0px_#6366f1] group-[.active]:opacity-100" />
                     </Tooltip.Trigger>
                     <Tooltip.Portal>
                       <Tooltip.Positioner
@@ -451,7 +451,7 @@ export default function Sidebar({ className }: SidebarProps) {
                         sideOffset={8}
                         className="z-50"
                       >
-                        <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-white text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
+                        <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-primary text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
                           Library
                           <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
                         </Tooltip.Popup>
@@ -464,15 +464,15 @@ export default function Sidebar({ className }: SidebarProps) {
                   to="/library"
                   className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
                   activeProps={{
-                    className: 'text-white',
+                    className: 'text-primary',
                   }}
                   inactiveProps={{
-                    className: 'text-white/70',
+                    className: 'text-primary/70',
                   }}
                 >
                   <IconBookmark size={24} />
                   <span className="pb-0.5">Library</span>
-                  <div className="absolute top-0 right-0 h-full w-0.5 bg-indigo-500 opacity-0 shadow-[0px_2px_12px_0px_#6366f1] group-[.active]:opacity-100" />
+                  <div className="absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 shadow-[0px_2px_12px_0px_#6366f1] group-[.active]:opacity-100" />
                 </Link>
               )}
 
@@ -493,7 +493,7 @@ export default function Sidebar({ className }: SidebarProps) {
                           sideOffset={8}
                           className="z-50"
                         >
-                          <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-white text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
+                          <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-primary text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
                             History
                             <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
                           </Tooltip.Popup>
@@ -515,7 +515,7 @@ export default function Sidebar({ className }: SidebarProps) {
                           sideOffset={8}
                           className="z-50"
                         >
-                          <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-white text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
+                          <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-primary text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
                             Saved Content
                             <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
                           </Tooltip.Popup>
@@ -528,7 +528,7 @@ export default function Sidebar({ className }: SidebarProps) {
                 <div className="mt-1 flex flex-col gap-2 px-4 pt-1 pb-2">
                   <Link
                     to="/history"
-                    className="flex items-center gap-2.5 transition-colors hover:text-white/80"
+                    className="flex items-center gap-2.5 transition-colors hover:text-primary/80"
                   >
                     <div className="flex size-6 items-center justify-center">
                       <IconHistory size={16} className="text-zinc-400" />
@@ -539,7 +539,7 @@ export default function Sidebar({ className }: SidebarProps) {
                   </Link>
                   <Link
                     to="/library"
-                    className="flex items-center gap-2.5 transition-colors hover:text-white/80"
+                    className="flex items-center gap-2.5 transition-colors hover:text-primary/80"
                   >
                     <div className="flex size-6 items-center justify-center">
                       <IconBookmarks size={16} className="text-zinc-400" />
@@ -558,7 +558,7 @@ export default function Sidebar({ className }: SidebarProps) {
       {/* Donate Card */}
       {collapsed || showAltMenu ? null : (
         <div className="animate-fade-in px-4">
-          <div className="overflow-hidden rounded-xl border border-white/10 bg-indigo-500 p-3">
+          <div className="overflow-hidden rounded-xl border border-white/10 bg-brand p-3">
             <div className="mb-3">
               <p className="text-center font-bold text-sm text-white leading-snug">
                 Keep sharing good news without ads.
@@ -567,7 +567,7 @@ export default function Sidebar({ className }: SidebarProps) {
             <div className="flex flex-col gap-1">
               <button
                 type="button"
-                className="rounded-full bg-white px-2.5 py-[6px] font-semibold text-indigo-500 text-xs transition-opacity hover:opacity-90"
+                className="rounded-full bg-white px-2.5 py-[6px] font-semibold text-brand text-xs transition-opacity hover:opacity-90"
               >
                 Donate Now
               </button>
@@ -585,22 +585,22 @@ export default function Sidebar({ className }: SidebarProps) {
       {/* Alternative Menu Donate Card */}
       {collapsed || !showAltMenu ? null : (
         <div className="animate-fade-in px-4">
-          <div className="overflow-hidden rounded-xl border border-white/10 bg-indigo-500 p-3">
+          <div className="overflow-hidden rounded-xl border border-white/10 bg-brand p-3">
             <div className="mb-3">
-              <p className="text-center font-bold text-sm text-white leading-snug">
+              <p className="text-center font-bold text-primary text-sm leading-snug">
                 Keep sharing good news without ads.
               </p>
             </div>
             <div className="flex flex-col gap-1">
               <button
                 type="button"
-                className="rounded-full bg-white px-2.5 py-[6px] font-semibold text-indigo-500 text-xs transition-opacity hover:opacity-90"
+                className="rounded-full bg-white px-2.5 py-[6px] font-semibold text-brand text-xs transition-opacity hover:opacity-90"
               >
                 Donate Now
               </button>
               <button
                 type="button"
-                className="rounded-full px-2.5 py-[6px] font-semibold text-white/80 text-xs transition-colors hover:bg-white/10"
+                className="rounded-full px-2.5 py-[6px] font-semibold text-primary/80 text-xs transition-colors hover:bg-white/10"
               >
                 Dismiss
               </button>
@@ -628,7 +628,7 @@ export default function Sidebar({ className }: SidebarProps) {
           <Tooltip.Provider>
             <Tooltip.Root>
               <Tooltip.Trigger
-                className="flex size-6 cursor-pointer items-center justify-center text-indigo-500 transition-all hover:scale-110 hover:animate-pulse hover:text-indigo-400"
+                className="flex size-6 cursor-pointer items-center justify-center text-brand transition-all hover:scale-110 hover:animate-pulse hover:text-indigo-400"
                 aria-label="Donate"
               >
                 <IconHeartFilled size={20} />
@@ -639,7 +639,7 @@ export default function Sidebar({ className }: SidebarProps) {
                   sideOffset={8}
                   className="z-50"
                 >
-                  <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-white text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
+                  <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-primary text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
                     Donate
                     <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
                   </Tooltip.Popup>
@@ -657,7 +657,7 @@ export default function Sidebar({ className }: SidebarProps) {
             <Tooltip.Provider>
               <Tooltip.Root>
                 <Tooltip.Trigger
-                  className="flex w-full items-center gap-2.5 transition-colors hover:text-white/80"
+                  className="flex w-full items-center gap-2.5 transition-colors hover:text-primary/80"
                   onClick={toggleCollapsed}
                 >
                   <div className="flex size-6 items-center justify-center">
@@ -673,7 +673,7 @@ export default function Sidebar({ className }: SidebarProps) {
                     sideOffset={8}
                     className="z-50"
                   >
-                    <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-white text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
+                    <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-primary text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
                       Expand Sidebar
                       <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
                     </Tooltip.Popup>
@@ -685,7 +685,7 @@ export default function Sidebar({ className }: SidebarProps) {
             <button
               type="button"
               onClick={toggleCollapsed}
-              className="flex w-full items-center gap-2.5 transition-colors hover:text-white/80"
+              className="flex w-full items-center gap-2.5 transition-colors hover:text-primary/80"
             >
               <div className="flex size-6 items-center justify-center">
                 <IconLayoutSidebarLeftCollapse

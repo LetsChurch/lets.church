@@ -40,7 +40,7 @@ export default function BottomTabBar() {
             className="relative flex min-w-0 flex-1 flex-col items-center justify-center p-3 text-muted transition-colors"
             activeProps={{
               className:
-                'after:absolute after:top-0 after:h-0.5 after:w-full after:rounded-full after:bg-indigo-500 after:glow-md',
+                'after:absolute after:top-0 after:h-0.5 after:w-full after:rounded-full after:bg-brand after:glow-md',
             }}
           >
             <div className="flex h-6 w-6 items-center justify-center">

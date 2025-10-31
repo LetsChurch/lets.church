@@ -4,8 +4,9 @@ import {
   IconSearch,
   IconX,
 } from '@tabler/icons-react';
-import { useNavigate } from '@tanstack/react-router';
+import { useLocation, useNavigate, useSearch } from '@tanstack/react-router';
 import type { FormEvent } from 'react';
+import { useState } from 'react';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import {
   useAddRecentSearch,
@@ -13,12 +14,12 @@ import {
   useRecentSearches,
 } from '@/hooks/use-recent-searches';
 import { cn } from '@/util/cn';
+import { SearchSettingsModal } from './search-settings-modal';
 
 type SearchProps = {
   placeholder?: string;
   className?: string;
   defaultValue?: string;
-  showFilters?: boolean;
   channelId?: string;
 };
 
@@ -27,11 +28,17 @@ export default function SearchBar({
   placeholder = 'Search anything...',
   className,
   defaultValue,
-  showFilters = false,
   channelId,
 }: SearchProps) {
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: '/search' });
+  const location = useLocation();
+  const searchParams = useSearch({ strict: false }) as {
+    sort?: 'relevance' | 'date-asc' | 'date-desc';
+    dateRange?: 'all-time' | 'today' | 'this-week' | 'this-month' | 'this-year';
+  };
   const isLoggedIn = useIsLoggedIn();
+  const isOnSearchPage = location.pathname === '/search';
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const { data: recentSearches = [] } = useRecentSearches();
   const { addSearch } = useAddRecentSearch();
@@ -72,14 +79,16 @@ export default function SearchBar({
   };
 
   const handleClear = () => {
-    navigate({
-      to: '/search',
-      search: {
-        q: undefined,
-        focus: 'media' as const,
-        channelId: undefined,
-      },
-    });
+    if (isOnSearchPage) {
+      navigate({
+        to: '/search',
+        search: {
+          q: undefined,
+          focus: 'media' as const,
+          channelId: undefined,
+        },
+      });
+    }
   };
 
   return (
@@ -101,32 +110,31 @@ export default function SearchBar({
         <div className="flex flex-shrink-0 items-center gap-0">
           <Autocomplete.Clear
             onClick={handleClear}
-            className="flex size-8 items-center justify-center rounded-full text-white/50 transition-colors hover:bg-white/10 hover:text-primary"
+            className="flex size-8 items-center justify-center rounded-full text-primary/50 transition-colors hover:bg-white/10 hover:text-primary"
             aria-label="Clear search"
           >
             <IconX size={24} />
           </Autocomplete.Clear>
-          {showFilters ? (
-            <Autocomplete.Value>
-              {(value) =>
-                value ? (
-                  <button
-                    type="button"
-                    className="flex size-8 items-center justify-center rounded-full text-primary/50 transition-colors hover:bg-white/10 hover:text-primary"
-                    aria-label="Filters"
-                  >
-                    <IconAdjustmentsHorizontal size={24} />
-                  </button>
-                ) : null
-              }
-            </Autocomplete.Value>
-          ) : null}
+          <Autocomplete.Value>
+            {(value) =>
+              value && isOnSearchPage ? (
+                <button
+                  type="button"
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="flex size-8 items-center justify-center rounded-full text-primary/50 transition-colors hover:bg-white/10 hover:text-primary"
+                  aria-label="Filters"
+                >
+                  <IconAdjustmentsHorizontal size={24} />
+                </button>
+              ) : null
+            }
+          </Autocomplete.Value>
           <Autocomplete.Value>
             {(value) =>
               value ? null : (
                 <button
                   type="submit"
-                  className="flex size-8 items-center justify-center rounded-full text-white/50 transition-colors hover:bg-white/10 hover:text-white"
+                  className="flex size-8 items-center justify-center rounded-full text-primary/50 transition-colors hover:bg-white/10 hover:text-primary"
                 >
                   <IconSearch size={24} />
                 </button>
@@ -149,18 +157,18 @@ export default function SearchBar({
                 <Autocomplete.Item
                   key={search}
                   value={search}
-                  className="cursor-pointer px-4 py-2.5 text-sm text-white/80 outline-none transition-colors hover:bg-white/10 hover:text-white data-[highlighted]:bg-white/10 data-[highlighted]:text-white"
+                  className="cursor-pointer px-4 py-2.5 text-primary/80 text-sm outline-none transition-colors hover:bg-white/10 hover:text-primary data-[highlighted]:bg-white/10 data-[highlighted]:text-primary"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <IconSearch size={16} className="text-white/50" />
+                      <IconSearch size={16} className="text-primary/50" />
                       <span>{search}</span>
                     </div>
                     {isLoggedIn ? (
                       <button
                         type="button"
                         onClick={(e) => handleDeleteSearch(e, search)}
-                        className="flex size-6 items-center justify-center text-white/30 transition-colors hover:text-white/60"
+                        className="flex size-6 items-center justify-center text-primary/30 transition-colors hover:text-primary/60"
                         aria-label={`Remove ${search}`}
                       >
                         <IconX size={14} />
@@ -173,6 +181,32 @@ export default function SearchBar({
           </Autocomplete.Popup>
         </Autocomplete.Positioner>
       </Autocomplete.Portal>
+
+      <SearchSettingsModal
+        open={isSettingsOpen}
+        onOpenChange={setIsSettingsOpen}
+        sort={searchParams.sort}
+        onSortChange={(sort) => {
+          navigate({
+            search: (prev) => ({ ...prev, sort }),
+          });
+        }}
+        dateRange={searchParams.dateRange}
+        onDateRangeChange={(dateRange) => {
+          navigate({
+            search: (prev) => ({ ...prev, dateRange }),
+          });
+        }}
+        onClearFilters={() => {
+          navigate({
+            search: (prev) => ({
+              ...prev,
+              sort: undefined,
+              dateRange: undefined,
+            }),
+          });
+        }}
+      />
     </Autocomplete.Root>
   );
 }

@@ -53,19 +53,19 @@ export default function SearchTabs({
             <span
               className={cn(
                 'overflow-hidden overflow-ellipsis whitespace-nowrap font-medium text-sm leading-none',
-                activeTab === tab.id ? 'text-primary' : 'text-white/70',
+                activeTab === tab.id ? 'text-primary' : 'text-primary/70',
               )}
             >
               {tab.label}
             </span>
           </div>
           {tab.count !== undefined ? (
-            <div className="flex h-[18px] min-w-[18px] items-center justify-center rounded-[9px] bg-white/10 px-1.5 pt-[2px] pb-[3px] font-bold text-[10px] text-white/70">
+            <div className="flex h-[18px] min-w-[18px] items-center justify-center rounded-[9px] bg-white/10 px-1.5 pt-[2px] pb-[3px] font-bold text-[10px] text-primary/70">
               {tab.count > 99 ? '99+' : tab.count}
             </div>
           ) : null}
           {activeTab === tab.id ? (
-            <div className="absolute right-0 bottom-0 left-0 h-[2px] rounded-tl-[1px] rounded-tr-[1px] bg-indigo-500 shadow-[0px_2px_12px_0px_#6366f1] backdrop-blur-sm" />
+            <div className="absolute right-0 bottom-0 left-0 h-[2px] rounded-tl-[1px] rounded-tr-[1px] bg-brand shadow-[0px_2px_12px_0px_#6366f1] backdrop-blur-sm" />
           ) : null}
         </button>
       ))}

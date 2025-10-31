@@ -13,8 +13,8 @@ export function LibraryTabs({ activeTab }: LibraryTabsProps) {
         className={cn(
           'px-4 py-2 font-medium text-sm',
           activeTab === 'saved'
-            ? 'border-indigo-500 border-b-2 text-white'
-            : 'text-zinc-400 hover:text-white',
+            ? 'border-brand border-b-2 text-primary'
+            : 'text-zinc-400 hover:text-primary',
         )}
       >
         Saved Content
@@ -24,8 +24,8 @@ export function LibraryTabs({ activeTab }: LibraryTabsProps) {
         className={cn(
           'px-4 py-2 font-medium text-sm',
           activeTab === 'history'
-            ? 'border-indigo-500 border-b-2 text-white'
-            : 'text-zinc-400 hover:text-white',
+            ? 'border-brand border-b-2 text-primary'
+            : 'text-zinc-400 hover:text-primary',
         )}
       >
         History

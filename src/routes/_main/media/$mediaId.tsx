@@ -586,7 +586,7 @@ function RouteComponent() {
             ) : null}
 
             <div className="mt-10 pb-4">
-              <h2 className="mb-4 font-bold text-lg text-white">
+              <h2 className="mb-4 font-bold text-lg text-primary">
                 Related Content
               </h2>
               <MediaCarousel
@@ -622,12 +622,12 @@ function RouteComponent() {
           <MobileDrawer.Content>
             <div className="flex h-10 items-center justify-center gap-2 border-zinc-800 border-b border-solid px-5">
               <div className="flex grow items-baseline gap-2 pb-0.5">
-                <MobileDrawer.Title className="font-bold text-base text-white">
+                <MobileDrawer.Title className="font-bold text-base text-primary">
                   Transcript
                 </MobileDrawer.Title>
               </div>
               <MobileDrawer.Close className="flex size-7 items-center justify-center rounded-lg hover:bg-white/10">
-                <IconSearch size={16} className="text-white/80" />
+                <IconSearch size={16} className="text-primary/80" />
               </MobileDrawer.Close>
             </div>
 
@@ -653,12 +653,12 @@ function RouteComponent() {
           <MobileDrawer.Content>
             <div className="flex h-10 items-center justify-center gap-2 border-zinc-800 border-b border-solid px-5">
               <div className="flex grow items-baseline gap-2 pb-0.5">
-                <MobileDrawer.Title className="font-bold text-base text-white">
+                <MobileDrawer.Title className="font-bold text-base text-primary">
                   Comments
                 </MobileDrawer.Title>
               </div>
               <MobileDrawer.Close className="flex size-7 items-center justify-center rounded-lg hover:bg-white/10">
-                <IconMessageCircle2 size={16} className="text-white/80" />
+                <IconMessageCircle2 size={16} className="text-primary/80" />
               </MobileDrawer.Close>
             </div>
 
@@ -690,10 +690,10 @@ function RouteComponent() {
         <AlertDialog.Portal>
           <AlertDialog.Backdrop className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm" />
           <AlertDialog.Popup className="-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-50 w-full max-w-md rounded-2xl border border-white/10 bg-zinc-900 p-6 shadow-xl">
-            <AlertDialog.Title className="mb-2 font-bold text-lg text-white">
+            <AlertDialog.Title className="mb-2 font-bold text-lg text-primary">
               Login Required
             </AlertDialog.Title>
-            <AlertDialog.Description className="mb-6 text-sm text-white/70">
+            <AlertDialog.Description className="mb-6 text-primary/70 text-sm">
               You need to be logged in to rate this content. Please sign in to
               continue.
             </AlertDialog.Description>

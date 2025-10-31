@@ -26,17 +26,17 @@ export function MediaInfoTabs({
   return (
     <Tabs.Root
       defaultValue="details"
-      className="relative isolate mt-7 flex flex-col overflow-hidden rounded-2xl border-top-highlight bg-zinc-900"
+      className="relative isolate mt-7 flex flex-col overflow-hidden rounded-2xl border-top-highlight bg-card"
     >
       {/* Tabs */}
-      <Tabs.List className="relative top-0 flex gap-4 border-zinc-800 border-b bg-zinc-900 px-5">
+      <Tabs.List className="relative top-0 flex gap-4 border-zinc-800 border-b px-5">
         <Tabs.Tab value="details" className="relative pt-1.5 pb-2">
-          <span className="font-medium text-sm text-white/70 data-[selected]:text-white data-[selected]:opacity-100">
+          <span className="font-medium text-primary/70 text-sm data-[selected]:text-primary data-[selected]:opacity-100">
             Details
           </span>
         </Tabs.Tab>
         <Tabs.Tab value="summary" className="relative pt-1.5 pb-2">
-          <span className="font-medium text-sm text-white/70 data-[selected]:text-white data-[selected]:opacity-100">
+          <span className="font-medium text-primary/70 text-sm data-[selected]:text-primary data-[selected]:opacity-100">
             Summary
           </span>
         </Tabs.Tab>
@@ -46,7 +46,7 @@ export function MediaInfoTabs({
             onClick={onTranscriptClick}
             className="relative pt-1.5 pb-2"
           >
-            <span className="font-medium text-sm text-white/70 hover:text-white">
+            <span className="font-medium text-primary/70 text-sm hover:text-primary">
               Transcript
             </span>
           </button>
@@ -58,13 +58,13 @@ export function MediaInfoTabs({
             disabled={!commentsEnabled}
             className="relative pt-1.5 pb-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <span className="font-medium text-sm text-white/70 hover:text-white">
+            <span className="font-medium text-primary/70 text-sm hover:text-primary">
               Comments
             </span>
           </button>
         ) : null}
         <Tabs.Indicator
-          className="glow-md absolute h-0.5 rounded-t-sm bg-indigo-500 backdrop-blur-sm"
+          className="glow-md absolute h-0.5 rounded-t-sm bg-brand backdrop-blur-sm"
           style={{
             left: 'var(--active-tab-left)',
             bottom: 0,
@@ -75,15 +75,15 @@ export function MediaInfoTabs({
 
       {/* Details Content */}
       <Tabs.Panel value="details" className="relative text-left">
-        <p className="p-5 text-sm text-white leading-[1.4]">
+        <p className="p-5 text-primary text-sm leading-[1.4]">
           {description ? description : 'No description available'}
         </p>
         <div className="mx-5 border-zinc-800 border-t pt-[18px] pb-5">
           <div className="flex gap-3">
-            <span className="font-medium text-white/70 text-xs">
+            <span className="font-medium text-primary/70 text-xs">
               {viewCount.toLocaleString()} views
             </span>
-            <span className="font-medium text-white/70 text-xs">
+            <span className="font-medium text-primary/70 text-xs">
               {new Date(publishedAt || createdAt).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
@@ -96,7 +96,7 @@ export function MediaInfoTabs({
 
       {/* Summary Content */}
       <Tabs.Panel value="summary" className="relative text-left">
-        <p className="p-5 text-sm text-white leading-[1.4]">
+        <p className="p-5 text-primary text-sm leading-[1.4]">
           Summary content goes here
         </p>
       </Tabs.Panel>

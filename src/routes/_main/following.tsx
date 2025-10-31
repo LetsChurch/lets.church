@@ -53,7 +53,7 @@ function ChannelListItem({
           />
           <Avatar.Fallback
             className={cn(
-              'flex size-full items-center justify-center rounded-full bg-zinc-900 font-bold text-white',
+              'flex size-full items-center justify-center rounded-full bg-zinc-900 font-bold text-primary',
               isFollowed ? 'text-sm' : 'text-lg',
             )}
           >
@@ -76,7 +76,7 @@ function ChannelListItem({
           type="button"
           onClick={() => onUnfollow?.(channel.id)}
           disabled={isUnfollowing}
-          className="flex h-7 items-center justify-center rounded-full border border-white/10 bg-white/15 px-2.5 py-1.5 font-semibold text-white/80 text-xs backdrop-blur-sm disabled:opacity-50"
+          className="flex h-7 items-center justify-center rounded-full border border-white/10 bg-white/15 px-2.5 py-1.5 font-semibold text-primary/80 text-xs backdrop-blur-sm disabled:opacity-50"
         >
           Following
         </button>
@@ -85,14 +85,14 @@ function ChannelListItem({
           type="button"
           onClick={() => onFollow?.(channel.id)}
           disabled={isFollowing}
-          className="flex h-7 items-center justify-center rounded-full border border-white/10 bg-indigo-500 px-[10px] py-[6px] font-semibold text-white text-xs disabled:opacity-50"
+          className="flex h-7 items-center justify-center rounded-full border border-white/10 bg-brand px-[10px] py-[6px] font-semibold text-primary text-xs disabled:opacity-50"
         >
           {isFollowing ? 'Following' : 'Follow'}
         </button>
       ) : (
         <Link
           to="/auth/register"
-          className="flex h-8 items-center rounded-full border-top-highlight bg-indigo-500 px-3 font-bold text-primary text-sm"
+          className="flex h-8 items-center rounded-full border-top-highlight bg-brand px-3 font-bold text-primary text-sm"
         >
           Follow
         </Link>

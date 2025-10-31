@@ -363,7 +363,7 @@ export function Player({
                     'bg-gradient-to-t from-gray-950/70 to-transparent',
                 )}
               >
-                <div className="flex justify-between font-mono font-normal text-[10px] text-white tracking-[-0.2px]">
+                <div className="flex justify-between font-mono font-normal text-[10px] text-primary tracking-[-0.2px]">
                   <MediaTimeDisplay
                     className="bg-transparent"
                     showDuration={false}
@@ -373,10 +373,10 @@ export function Player({
 
                 <MediaTimeRange
                   className={cn(
-                    '[--media-range-bar-color:--alpha(var(--color-indigo-500)/60%)]',
+                    '[--media-range-bar-color:--alpha(var(--color-brand)/60%)]',
                     '[--media-range-track-background:--alpha(var(--color-white)/20%)]',
-                    '[--media-range-thumb-background:linear-gradient(45deg,--alpha(var(--color-indigo-500)/0%)_50%,var(--color-indigo-300)_100%),var(--color-indigo-500)]',
-                    '[--media-range-thumb-box-shadow:0_1px_6px_0_--alpha(var(--color-black)/50%),0_2px_12px_0_var(--color-indigo-500)]',
+                    '[--media-range-thumb-background:linear-gradient(45deg,--alpha(var(--color-brand)/0%)_50%,var(--color-indigo-300)_100%),var(--color-brand)]',
+                    '[--media-range-thumb-box-shadow:0_1px_6px_0_--alpha(var(--color-black)/50%),0_2px_12px_0_var(--color-brand)]',
                   )}
                   style={{
                     width: '100%',

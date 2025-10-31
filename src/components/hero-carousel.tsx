@@ -72,7 +72,7 @@ function CarouselItem({
                 className="h-4 w-4 flex-shrink-0 rounded-full object-cover"
               />
             ) : (
-              <div className="h-4 w-4 flex-shrink-0 rounded-full bg-indigo-500" />
+              <div className="h-4 w-4 flex-shrink-0 rounded-full bg-brand" />
             )}
             <span className="text-secondary text-sm">{author}</span>
           </div>

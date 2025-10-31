@@ -260,7 +260,7 @@ export function MediaActions({
                           {...props}
                           type="button"
                           onClick={() => handleCopyEmbed('video')}
-                          className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-sm text-white outline-none transition-colors hover:bg-zinc-800 data-[highlighted]:bg-zinc-800"
+                          className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-primary text-sm outline-none transition-colors hover:bg-zinc-800 data-[highlighted]:bg-zinc-800"
                         >
                           <IconDeviceTvOld size={16} />
                           {copySuccess === 'embed-video'
@@ -277,7 +277,7 @@ export function MediaActions({
                           {...props}
                           type="button"
                           onClick={() => handleCopyEmbed('audio')}
-                          className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-sm text-white outline-none transition-colors hover:bg-zinc-800 data-[highlighted]:bg-zinc-800"
+                          className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-primary text-sm outline-none transition-colors hover:bg-zinc-800 data-[highlighted]:bg-zinc-800"
                         >
                           <IconVolume size={16} />
                           {copySuccess === 'embed-audio'
@@ -314,7 +314,7 @@ export function MediaActions({
                           {...props}
                           href={download.url}
                           download
-                          className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm text-white outline-none transition-colors hover:bg-zinc-800 data-[highlighted]:bg-zinc-800"
+                          className="flex cursor-pointer items-center gap-2 px-3 py-2 text-primary text-sm outline-none transition-colors hover:bg-zinc-800 data-[highlighted]:bg-zinc-800"
                         >
                           {getDownloadIcon(download.kind)}
                           {download.label}
@@ -369,7 +369,7 @@ export function MediaActions({
 
           <Dialog.Popup className="-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-50 w-full max-w-sm rounded-lg border border-zinc-800 border-solid bg-zinc-900 p-6 shadow-xl transition-all duration-300 data-[ending-style]:scale-95 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
             <div className="flex items-center justify-between pb-4">
-              <Dialog.Title className="font-semibold text-lg text-white">
+              <Dialog.Title className="font-semibold text-lg text-primary">
                 Share
               </Dialog.Title>
               <Dialog.Close
@@ -377,7 +377,7 @@ export function MediaActions({
                   <button
                     {...props}
                     type="button"
-                    className="flex size-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+                    className="flex size-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-primary"
                   >
                     <IconX size={20} />
                   </button>
@@ -401,9 +401,9 @@ export function MediaActions({
                 className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
               >
                 <div className="flex size-12 items-center justify-center rounded-full bg-blue-600">
-                  <IconBrandFacebook size={24} className="text-white" />
+                  <IconBrandFacebook size={24} className="text-primary" />
                 </div>
-                <span className="text-white text-xs">Facebook</span>
+                <span className="text-primary text-xs">Facebook</span>
               </button>
 
               <button
@@ -419,9 +419,9 @@ export function MediaActions({
                 className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
               >
                 <div className="flex size-12 items-center justify-center rounded-full bg-black">
-                  <IconBrandX size={24} className="text-white" />
+                  <IconBrandX size={24} className="text-primary" />
                 </div>
-                <span className="text-white text-xs">X</span>
+                <span className="text-primary text-xs">X</span>
               </button>
 
               <button
@@ -435,9 +435,9 @@ export function MediaActions({
                     copySuccess === 'link' ? 'bg-green-600' : 'bg-zinc-700',
                   )}
                 >
-                  <IconCopy size={24} className="text-white" />
+                  <IconCopy size={24} className="text-primary" />
                 </div>
-                <span className="text-white text-xs">
+                <span className="text-primary text-xs">
                   {copySuccess === 'link' ? 'Copied!' : 'Copy'}
                 </span>
               </button>
