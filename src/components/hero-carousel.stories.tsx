@@ -24,6 +24,7 @@ export const Default: Story = {
   args: {
     items: [
       {
+        id: '1',
         title: 'The Gospel According to Mark',
         author: 'John MacArthur',
         imageUrl: 'https://picsum.photos/seed/1/640/360',
@@ -31,6 +32,7 @@ export const Default: Story = {
         badge: 'Featured',
       },
       {
+        id: '2',
         title: 'Understanding Romans',
         author: 'R.C. Sproul',
         imageUrl: 'https://picsum.photos/seed/2/640/360',
@@ -38,6 +40,7 @@ export const Default: Story = {
         badge: 'Featured',
       },
       {
+        id: '3',
         title: 'The Book of Revelation',
         author: 'David Platt',
         imageUrl: 'https://picsum.photos/seed/3/640/360',
