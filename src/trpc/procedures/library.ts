@@ -4,7 +4,7 @@ import {
   IncomingIdSchema,
   OutgoingIdSchema,
 } from '@/schemas/common';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import logger from '@/util/logger';
 import { getS3ProtocolUri } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
@@ -36,7 +36,7 @@ export const libraryProcedures = {
       });
 
       // Check if user already saved this media
-      const existingSave = await db.savedMedia.findUnique({
+      const existingSave = await prisma.savedMedia.findUnique({
         where: {
           appUserId_uploadRecordId: {
             appUserId: userId,
@@ -47,7 +47,7 @@ export const libraryProcedures = {
 
       if (existingSave) {
         // User is clicking save again - remove it (toggle off)
-        await db.savedMedia.delete({
+        await prisma.savedMedia.delete({
           where: {
             appUserId_uploadRecordId: {
               appUserId: userId,
@@ -64,7 +64,7 @@ export const libraryProcedures = {
         return { saved: false };
       } else {
         // User is saving for the first time
-        await db.savedMedia.create({
+        await prisma.savedMedia.create({
           data: {
             appUserId: userId,
             uploadRecordId: mediaId,
@@ -83,7 +83,7 @@ export const libraryProcedures = {
   // isSaved: authProcedure
   //   .input(z.object({ mediaId: z.uuid() }))
   //   .query(async ({ input, ctx }) => {
-  //     const saved = await db.savedMedia.findUnique({
+  //     const saved = await prisma.savedMedia.findUnique({
   //       where: {
   //         appUserId_uploadRecordId: {
   //           appUserId: ctx.session.appUserId,
@@ -106,7 +106,7 @@ export const libraryProcedures = {
         cursor,
       });
 
-      const savedMedia = await db.savedMedia.findMany({
+      const savedMedia = await prisma.savedMedia.findMany({
         select: {
           createdAt: true,
           uploadRecord: {
@@ -215,7 +215,7 @@ export const libraryProcedures = {
         cursor,
       });
 
-      const history = await db.uploadView.findMany({
+      const history = await prisma.uploadView.findMany({
         select: {
           createdAt: true,
           uploadRecordId: true,

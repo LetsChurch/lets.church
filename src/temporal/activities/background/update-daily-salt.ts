@@ -1,4 +1,4 @@
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random#getting_a_random_integer_between_two_values_inclusive
 function getRandomIntInclusive(min: number, max: number) {
@@ -8,16 +8,16 @@ function getRandomIntInclusive(min: number, max: number) {
 }
 
 export default async function updateDailySalt() {
-  const old = await db.trackingSalt.findFirst({
+  const old = await prisma.trackingSalt.findFirst({
     select: { id: true },
     orderBy: { id: 'desc' },
   });
 
-  await db.trackingSalt.create({
+  await prisma.trackingSalt.create({
     data: { salt: getRandomIntInclusive(-2147483648, 2147483647) },
   });
 
   if (old) {
-    await db.trackingSalt.delete({ where: { id: old.id } });
+    await prisma.trackingSalt.delete({ where: { id: old.id } });
   }
 }

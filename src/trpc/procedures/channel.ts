@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { getThumbnailResize, OutgoingIdSchema } from '@/schemas/common';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import logger from '@/util/logger';
 import { getS3ProtocolUri } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
@@ -32,7 +32,7 @@ export const channelProcedures = {
         appUserId,
       });
 
-      const channel = await db.channel.findUnique({
+      const channel = await prisma.channel.findUnique({
         select: {
           id: true,
           name: true,
@@ -141,7 +141,7 @@ export const channelProcedures = {
         cursor,
       });
 
-      const uploads = await db.uploadRecord.findMany({
+      const uploads = await prisma.uploadRecord.findMany({
         select: {
           id: true,
           title: true,

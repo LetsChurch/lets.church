@@ -1,8 +1,8 @@
 import { invariant } from 'es-toolkit';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 
 export default async function getFinalizedUploadKey(uploadRecordId: string) {
-  const { finalizedUploadKey } = await db.uploadRecord.findUniqueOrThrow({
+  const { finalizedUploadKey } = await prisma.uploadRecord.findUniqueOrThrow({
     select: { finalizedUploadKey: true },
     where: { id: uploadRecordId },
   });

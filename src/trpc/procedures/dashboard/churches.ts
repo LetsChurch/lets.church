@@ -24,7 +24,7 @@ import {
   completeMultipartMediaUpload,
   handleMultipartMediaUpload,
 } from '@/temporal';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import logger from '@/util/logger';
 import {
   createMultipartUpload,
@@ -42,7 +42,7 @@ const moduleLogger = logger.child({
 const churchProcedure = authProcedure
   .input(churchQuerySchema)
   .use(async ({ ctx, input, next }) => {
-    const membership = await db.organizationMembership.findFirst({
+    const membership = await prisma.organizationMembership.findFirst({
       where: {
         appUserId: ctx.session.appUserId,
         organizationId: input.churchId,
@@ -79,7 +79,7 @@ export const churchRouter = router({
       appUserId: ctx.session.appUserId,
     });
 
-    return db.organizationTag.findMany({
+    return prisma.organizationTag.findMany({
       select: {
         slug: true,
         label: true,
@@ -108,7 +108,7 @@ export const churchRouter = router({
         // Get the tag slugs from the single tags array
         const allTagSlugs = input.tags || [];
 
-        const church = await db.organization.create({
+        const church = await prisma.organization.create({
           data: {
             name: input.name,
             slug,
@@ -145,7 +145,7 @@ export const churchRouter = router({
           input.associatedOrganizations &&
           input.associatedOrganizations.length > 0
         ) {
-          await db.organizationOrganizationAssociation.createMany({
+          await prisma.organizationOrganizationAssociation.createMany({
             data: input.associatedOrganizations.map((upstreamOrgId) => ({
               upstreamOrganizationId: upstreamOrgId,
               downstreamOrganizationId: church.id,
@@ -179,7 +179,7 @@ export const churchRouter = router({
       appUserId: ctx.session.appUserId,
     });
 
-    return db.organization.findMany({
+    return prisma.organization.findMany({
       select: {
         id: true,
         name: true,
@@ -212,7 +212,7 @@ export const churchRouter = router({
       appUserId: ctx.session.appUserId,
     });
 
-    const church = await db.organization.findFirst({
+    const church = await prisma.organization.findFirst({
       select: {
         id: true,
         name: true,
@@ -312,7 +312,7 @@ export const churchRouter = router({
   }),
 
   getChurchMembers: churchProcedure.query(async ({ ctx, input }) => {
-    const church = await db.organization.findFirst({
+    const church = await prisma.organization.findFirst({
       select: {
         id: true,
         name: true,
@@ -362,7 +362,7 @@ export const churchRouter = router({
         appUserId: ctx.session.appUserId,
       });
 
-      const users = await db.appUser.findMany({
+      const users = await prisma.appUser.findMany({
         select: {
           id: true,
           username: true,
@@ -407,7 +407,7 @@ export const churchRouter = router({
       });
 
       try {
-        await db.organizationMembership.create({
+        await prisma.organizationMembership.create({
           data: {
             organizationId: input.churchId,
             appUserId: input.userId,
@@ -445,14 +445,14 @@ export const churchRouter = router({
 
       try {
         // Don't allow removing the last admin
-        const adminCount = await db.organizationMembership.count({
+        const adminCount = await prisma.organizationMembership.count({
           where: {
             organizationId: input.churchId,
             isAdmin: true,
           },
         });
 
-        const membershipToDelete = await db.organizationMembership.findUnique({
+        const membershipToDelete = await prisma.organizationMembership.findUnique({
           where: {
             organizationId_appUserId: {
               organizationId: input.churchId,
@@ -486,7 +486,7 @@ export const churchRouter = router({
           });
         }
 
-        await db.organizationMembership.delete({
+        await prisma.organizationMembership.delete({
           where: {
             organizationId_appUserId: {
               organizationId: input.churchId,
@@ -525,7 +525,7 @@ export const churchRouter = router({
         appUserId: ctx.session.appUserId,
       });
 
-      const channels = await db.channel.findMany({
+      const channels = await prisma.channel.findMany({
         select: {
           id: true,
           name: true,
@@ -570,7 +570,7 @@ export const churchRouter = router({
       });
 
       try {
-        await db.organizationChannelAssociation.create({
+        await prisma.organizationChannelAssociation.create({
           data: {
             organizationId: input.churchId,
             channelId: input.channelId,
@@ -607,7 +607,7 @@ export const churchRouter = router({
       });
 
       try {
-        await db.organizationChannelAssociation.delete({
+        await prisma.organizationChannelAssociation.delete({
           where: {
             organizationId_channelId: {
               organizationId: input.churchId,
@@ -645,7 +645,7 @@ export const churchRouter = router({
       });
 
       try {
-        const leader = await db.organizationLeader.create({
+        const leader = await prisma.organizationLeader.create({
           data: {
             organizationId: input.churchId,
             type: input.type,
@@ -687,7 +687,7 @@ export const churchRouter = router({
       });
 
       try {
-        await db.organizationLeader.update({
+        await prisma.organizationLeader.update({
           where: {
             id: input.leaderId,
           },
@@ -728,7 +728,7 @@ export const churchRouter = router({
       });
 
       try {
-        await db.organizationLeader.delete({
+        await prisma.organizationLeader.delete({
           where: {
             id: input.leaderId,
           },
@@ -756,7 +756,7 @@ export const churchRouter = router({
       appUserId: ctx.session.appUserId,
     });
 
-    const church = await db.organization.findFirst({
+    const church = await prisma.organization.findFirst({
       select: {
         id: true,
         name: true,
@@ -828,7 +828,7 @@ export const churchRouter = router({
         // Handle tag updates if provided
         if (input.tags !== undefined) {
           // First, delete all existing tags
-          await db.organizationTagInstance.deleteMany({
+          await prisma.organizationTagInstance.deleteMany({
             where: {
               organizationId: input.churchId,
             },
@@ -836,7 +836,7 @@ export const churchRouter = router({
 
           // Then, create new tag instances if tags are provided
           if (input.tags.length > 0) {
-            await db.organizationTagInstance.createMany({
+            await prisma.organizationTagInstance.createMany({
               data: input.tags.map((tagSlug) => ({
                 organizationId: input.churchId,
                 tagSlug,
@@ -848,7 +848,7 @@ export const churchRouter = router({
         // Handle organization associations if provided
         if (input.associatedOrganizations !== undefined) {
           // First, delete all existing upstream associations (church is downstream)
-          await db.organizationOrganizationAssociation.deleteMany({
+          await prisma.organizationOrganizationAssociation.deleteMany({
             where: {
               downstreamOrganizationId: input.churchId,
             },
@@ -856,7 +856,7 @@ export const churchRouter = router({
 
           // Then, create new associations if provided
           if (input.associatedOrganizations.length > 0) {
-            await db.organizationOrganizationAssociation.createMany({
+            await prisma.organizationOrganizationAssociation.createMany({
               data: input.associatedOrganizations.map((upstreamOrgId) => ({
                 upstreamOrganizationId: upstreamOrgId,
                 downstreamOrganizationId: input.churchId,
@@ -867,7 +867,7 @@ export const churchRouter = router({
           }
         }
 
-        await db.organization.update({
+        await prisma.organization.update({
           where: {
             id: input.churchId,
           },

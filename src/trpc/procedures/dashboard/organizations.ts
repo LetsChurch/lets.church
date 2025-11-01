@@ -12,7 +12,7 @@ import {
   upstreamAssociationActionSchema,
   userSearchOrganizationSchema,
 } from '@/schemas/dashboard';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import logger from '@/util/logger';
 import { authProcedure, router } from '../../trpc';
 
@@ -23,7 +23,7 @@ const moduleLogger = logger.child({
 const organizationProcedure = authProcedure
   .input(organizationQuerySchema)
   .use(async ({ ctx, input, next }) => {
-    const membership = await db.organizationMembership.findFirst({
+    const membership = await prisma.organizationMembership.findFirst({
       where: {
         appUserId: ctx.session.appUserId,
         organizationId: input.orgId,
@@ -68,7 +68,7 @@ export const organizationRouter = router({
         ? { type: { not: OrganizationType.CHURCH } }
         : {};
 
-      return db.organization.findMany({
+      return prisma.organization.findMany({
         select: {
           id: true,
           name: true,
@@ -103,7 +103,7 @@ export const organizationRouter = router({
         }),
       };
 
-      const organizations = await db.organization.findMany({
+      const organizations = await prisma.organization.findMany({
         select: {
           id: true,
           name: true,
@@ -139,7 +139,7 @@ export const organizationRouter = router({
         return [];
       }
 
-      return db.organization.findMany({
+      return prisma.organization.findMany({
         select: {
           id: true,
           name: true,
@@ -163,7 +163,7 @@ export const organizationRouter = router({
       appUserId: ctx.session.appUserId,
     });
 
-    return db.organization.findMany({
+    return prisma.organization.findMany({
       select: {
         id: true,
         name: true,
@@ -197,7 +197,7 @@ export const organizationRouter = router({
         appUserId: ctx.session.appUserId,
       });
 
-      const organization = await db.organization.findFirst({
+      const organization = await prisma.organization.findFirst({
         select: {
           id: true,
           name: true,
@@ -260,7 +260,7 @@ export const organizationRouter = router({
 
       // Get count of unapproved upstream associations
       const unapprovedAssociationsCount =
-        await db.organizationOrganizationAssociation.count({
+        await prisma.organizationOrganizationAssociation.count({
           where: {
             upstreamOrganizationId: input.orgId,
             upstreamApproved: false,
@@ -277,7 +277,7 @@ export const organizationRouter = router({
 
   getOrganizationMembers: organizationProcedure.query(
     async ({ ctx, input }) => {
-      const organization = await db.organization.findFirst({
+      const organization = await prisma.organization.findFirst({
         select: {
           id: true,
           name: true,
@@ -328,7 +328,7 @@ export const organizationRouter = router({
         appUserId: ctx.session.appUserId,
       });
 
-      const users = await db.appUser.findMany({
+      const users = await prisma.appUser.findMany({
         select: {
           id: true,
           username: true,
@@ -373,7 +373,7 @@ export const organizationRouter = router({
       });
 
       try {
-        await db.organizationMembership.create({
+        await prisma.organizationMembership.create({
           data: {
             organizationId: input.orgId,
             appUserId: input.userId,
@@ -411,14 +411,14 @@ export const organizationRouter = router({
 
       try {
         // Don't allow removing the last admin
-        const adminCount = await db.organizationMembership.count({
+        const adminCount = await prisma.organizationMembership.count({
           where: {
             organizationId: input.orgId,
             isAdmin: true,
           },
         });
 
-        const membershipToDelete = await db.organizationMembership.findUnique({
+        const membershipToDelete = await prisma.organizationMembership.findUnique({
           where: {
             organizationId_appUserId: {
               organizationId: input.orgId,
@@ -455,7 +455,7 @@ export const organizationRouter = router({
           });
         }
 
-        await db.organizationMembership.delete({
+        await prisma.organizationMembership.delete({
           where: {
             organizationId_appUserId: {
               organizationId: input.orgId,
@@ -492,7 +492,7 @@ export const organizationRouter = router({
         appUserId: ctx.session.appUserId,
       });
 
-      const organization = await db.organization.findFirst({
+      const organization = await prisma.organization.findFirst({
         select: {
           id: true,
           name: true,
@@ -529,7 +529,7 @@ export const organizationRouter = router({
       });
 
       try {
-        await db.organization.update({
+        await prisma.organization.update({
           where: {
             id: input.orgId,
           },
@@ -578,7 +578,7 @@ export const organizationRouter = router({
       });
 
       try {
-        await db.organization.update({
+        await prisma.organization.update({
           where: {
             id: input.orgId,
           },
@@ -631,7 +631,7 @@ export const organizationRouter = router({
       });
 
       try {
-        await db.organization.update({
+        await prisma.organization.update({
           where: {
             id: input.orgId,
           },
@@ -669,7 +669,7 @@ export const organizationRouter = router({
       });
 
       // Get the organization to make sure it's not a church
-      const organization = await db.organization.findFirst({
+      const organization = await prisma.organization.findFirst({
         where: {
           id: input.orgId,
           type: OrganizationType.MINISTRY, // Only ministries can have downstream approvals
@@ -691,7 +691,7 @@ export const organizationRouter = router({
 
       // Get all pending downstream relationship approvals
       const pendingApprovals =
-        await db.organizationOrganizationAssociation.findMany({
+        await prisma.organizationOrganizationAssociation.findMany({
           where: {
             upstreamOrganizationId: input.orgId,
             upstreamApproved: false,
@@ -729,7 +729,7 @@ export const organizationRouter = router({
       });
 
       try {
-        await db.organizationOrganizationAssociation.update({
+        await prisma.organizationOrganizationAssociation.update({
           where: {
             upstreamOrganizationId_downstreamOrganizationId: {
               upstreamOrganizationId: input.orgId,
@@ -770,7 +770,7 @@ export const organizationRouter = router({
       });
 
       try {
-        await db.organizationOrganizationAssociation.delete({
+        await prisma.organizationOrganizationAssociation.delete({
           where: {
             upstreamOrganizationId_downstreamOrganizationId: {
               upstreamOrganizationId: input.orgId,
@@ -808,7 +808,7 @@ export const organizationRouter = router({
 
       // Get all associations where this organization is upstream
       const upstreamAssociations =
-        await db.organizationOrganizationAssociation.findMany({
+        await prisma.organizationOrganizationAssociation.findMany({
           where: {
             upstreamOrganizationId: input.orgId,
           },
@@ -846,7 +846,7 @@ export const organizationRouter = router({
       });
 
       try {
-        await db.organizationOrganizationAssociation.update({
+        await prisma.organizationOrganizationAssociation.update({
           where: {
             upstreamOrganizationId_downstreamOrganizationId: {
               upstreamOrganizationId: input.orgId,
@@ -887,7 +887,7 @@ export const organizationRouter = router({
       });
 
       try {
-        await db.organizationOrganizationAssociation.update({
+        await prisma.organizationOrganizationAssociation.update({
           where: {
             upstreamOrganizationId_downstreamOrganizationId: {
               upstreamOrganizationId: input.orgId,
@@ -928,7 +928,7 @@ export const organizationRouter = router({
       });
 
       try {
-        await db.organizationOrganizationAssociation.delete({
+        await prisma.organizationOrganizationAssociation.delete({
           where: {
             upstreamOrganizationId_downstreamOrganizationId: {
               upstreamOrganizationId: input.orgId,

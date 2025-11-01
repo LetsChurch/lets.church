@@ -1,4 +1,4 @@
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import { deleteFile } from '../../../util/s3';
 
 export default async function setProfileAvatar(
@@ -6,7 +6,7 @@ export default async function setProfileAvatar(
   path: string,
   blurhash: string,
 ) {
-  const { avatarPath: oldPath } = await db.appUser.findUniqueOrThrow({
+  const { avatarPath: oldPath } = await prisma.appUser.findUniqueOrThrow({
     where: { id: userId },
     select: { avatarPath: true },
   });
@@ -15,7 +15,7 @@ export default async function setProfileAvatar(
     await deleteFile('PUBLIC', oldPath);
   }
 
-  await db.appUser.update({
+  await prisma.appUser.update({
     where: { id: userId },
     data: { avatarPath: path, avatarBlurhash: blurhash },
   });

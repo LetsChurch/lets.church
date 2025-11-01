@@ -1,4 +1,4 @@
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import { deleteFile } from '../../../util/s3';
 
 export default async function setChannelDefaultThumbnail(
@@ -6,7 +6,7 @@ export default async function setChannelDefaultThumbnail(
   path: string,
   blurhash: string,
 ) {
-  const { defaultThumbnailPath: oldPath } = await db.channel.findUniqueOrThrow({
+  const { defaultThumbnailPath: oldPath } = await prisma.channel.findUniqueOrThrow({
     where: { id: channelid },
     select: { defaultThumbnailPath: true },
   });
@@ -15,7 +15,7 @@ export default async function setChannelDefaultThumbnail(
     await deleteFile('PUBLIC', oldPath);
   }
 
-  await db.channel.update({
+  await prisma.channel.update({
     where: { id: channelid },
     data: { defaultThumbnailPath: path, defaultThumbnailBlurhash: blurhash },
   });

@@ -6,7 +6,7 @@ import { Prisma, UploadListType } from '@prisma/client';
 import invariant from 'tiny-invariant';
 import { stripIndent } from 'proper-tags';
 import { indexDocument, waitOnTemporal } from '../../src/temporal';
-import db from '../../src/util/db';
+import { prisma } from '../../src/util/db';
 import logger from '../../src/util/logger';
 import {
   augsburgConfessionTagSlug,
@@ -42,7 +42,7 @@ await waitOnTemporal();
 const password = await argon2.hash('password', { type: argon2.argon2id });
 
 const usersData: ReadonlyArray<
-  Parameters<typeof db.appUser.create>[0]['data']
+  Parameters<typeof prisma.appUser.create>[0]['data']
 > = [
   {
     username: 'admin',
@@ -95,19 +95,19 @@ const usersData: ReadonlyArray<
 ] as const;
 
 const [adminUser, user1, user2] = await Promise.all(
-  usersData.map((d) => db.appUser.create({ data: d })),
+  usersData.map((d) => prisma.appUser.create({ data: d })),
 );
 
 invariant(adminUser && user1 && user2);
 
 const otherIds = (
-  await db.appUser.findMany({
+  await prisma.appUser.findMany({
     where: { username: { notIn: ['admin', 'user1', 'user2'] } },
   })
 ).map(({ id }) => id);
 
 const { id: lcId, channelAssociations: lcAssociations } =
-  await db.organization.create({
+  await prisma.organization.create({
     include: {
       channelAssociations: { include: { channel: { select: { id: true } } } },
     },
@@ -161,7 +161,7 @@ const { id: lcId, channelAssociations: lcAssociations } =
   });
 
 const { id: flId, channelAssociations: flAssociations } =
-  await db.organization.create({
+  await prisma.organization.create({
     include: {
       channelAssociations: { include: { channel: { select: { id: true } } } },
     },
@@ -224,7 +224,7 @@ await Promise.all([
 ]);
 
 const { id: org01id, channelAssociations: org01Associations } =
-  await db.organization.create({
+  await prisma.organization.create({
     include: {
       channelAssociations: { include: { channel: { select: { id: true } } } },
     },
@@ -274,7 +274,7 @@ await Promise.all(
 );
 
 const { id: org03Id, channelAssociations: org03Associations } =
-  await db.organization.create({
+  await prisma.organization.create({
     include: {
       channelAssociations: { include: { channel: { select: { id: true } } } },
     },
@@ -330,7 +330,7 @@ await Promise.all(
   org03Associations.map(({ channel }) => indexDocument('channel', channel.id)),
 );
 
-const org04 = await db.organization.create({
+const org04 = await prisma.organization.create({
   data: {
     name: 'Baptist, But Not Too Baptist, Community Church',
     slug: 'baptist-la',
@@ -401,7 +401,7 @@ const org04 = await db.organization.create({
 
 await indexDocument('organization', org04.id);
 
-const org05 = await db.organization.create({
+const org05 = await prisma.organization.create({
   data: {
     name: 'Desert Debaters Society',
     slug: 'desert-debaters',
@@ -475,7 +475,7 @@ const org05 = await db.organization.create({
 
 await indexDocument('organization', org05.id);
 
-const org06 = await db.organization.create({
+const org06 = await prisma.organization.create({
   data: {
     name: 'Moss Cows',
     slug: 'moss-cows',
@@ -549,7 +549,7 @@ const org06 = await db.organization.create({
 
 await indexDocument('organization', org06.id);
 
-const org07 = await db.organization.create({
+const org07 = await prisma.organization.create({
   data: {
     name: 'Gopher Wood Gospel Hall',
     slug: 'gwgh',
@@ -618,7 +618,7 @@ const org07 = await db.organization.create({
 
 await indexDocument('organization', org07.id);
 
-const org08 = await db.organization.create({
+const org08 = await prisma.organization.create({
   data: {
     name: 'Bananarama Bible Church',
     slug: 'banana',
@@ -687,7 +687,7 @@ const org08 = await db.organization.create({
 
 await indexDocument('organization', org08.id);
 
-const org09 = await db.organization.create({
+const org09 = await prisma.organization.create({
   data: {
     name: "Cotton's Finger Lutheran Church",
     slug: 'cotton',
@@ -761,7 +761,7 @@ const org09 = await db.organization.create({
 
 await indexDocument('organization', org09.id);
 
-const org10 = await db.organization.create({
+const org10 = await prisma.organization.create({
   data: {
     name: 'Harbor Faith Tabernacle',
     description:
@@ -836,7 +836,7 @@ const org10 = await db.organization.create({
 
 await indexDocument('organization', org10.id);
 
-const org11 = await db.organization.create({
+const org11 = await prisma.organization.create({
   data: {
     name: 'Mariners Metanoia Manor',
     slug: 'mariners',
@@ -911,7 +911,7 @@ const org11 = await db.organization.create({
 
 await indexDocument('organization', org11.id);
 
-const org12 = await db.organization.create({
+const org12 = await prisma.organization.create({
   data: {
     name: "Prosperity's Pitfall Pavilion",
     description:
@@ -983,7 +983,7 @@ const org12 = await db.organization.create({
 
 await indexDocument('organization', org12.id);
 
-const org13 = await db.organization.create({
+const org13 = await prisma.organization.create({
   data: {
     name: 'Screwtape Sanctuary',
     slug: 'screwtape',
@@ -1057,7 +1057,7 @@ const org13 = await db.organization.create({
 
 await indexDocument('organization', org13.id);
 
-const org14 = await db.organization.create({
+const org14 = await prisma.organization.create({
   data: {
     name: 'Solas Sanctuary',
     slug: 'solas',
@@ -1128,7 +1128,7 @@ const org14 = await db.organization.create({
 
 await indexDocument('organization', org14.id);
 
-const org15 = await db.organization.create({
+const org15 = await prisma.organization.create({
   data: {
     name: 'Sovereign Joy Sanctuary',
     slug: 'sovereign-joy',
@@ -1197,7 +1197,7 @@ const org15 = await db.organization.create({
 
 await indexDocument('organization', org15.id);
 
-const org16 = await db.organization.create({
+const org16 = await prisma.organization.create({
   data: {
     name: 'Clapback Chapel',
     slug: 'clapback',
@@ -1266,7 +1266,7 @@ const org16 = await db.organization.create({
 
 await indexDocument('organization', org16.id);
 
-const sellingJesusChannel = await db.channel.create({
+const sellingJesusChannel = await prisma.channel.create({
   data: {
     name: 'Selling Jesus',
     slug: 'selling-jesus',
@@ -1313,7 +1313,7 @@ for (let i = 0; i < 25; i += 1) {
 
   const name = `${nameSegment} Church ${faker.location.city()}`.trim();
 
-  const { id } = await db.organization.create({
+  const { id } = await prisma.organization.create({
     data: {
       name,
       slug: slugify(name),
@@ -1377,7 +1377,7 @@ logger.info('Created example organizations and channels');
 logger.info('Seeding The Dorean Principle');
 
 const firstLoveChannelId = (
-  await db.channel.findUniqueOrThrow({
+  await prisma.channel.findUniqueOrThrow({
     select: { id: true },
     where: { slug: 'firstlove' },
   })
@@ -1558,11 +1558,11 @@ const uploadRecordData = [
   },
 ] satisfies Array<Prisma.UploadRecordCreateManyInput>;
 
-await db.uploadRecord.createMany({
+await prisma.uploadRecord.createMany({
   data: uploadRecordData,
 });
 
-const series = await db.uploadList.create({
+const series = await prisma.uploadList.create({
   select: {
     id: true,
   },
@@ -1581,7 +1581,7 @@ const series = await db.uploadList.create({
 let nextRank = 0;
 
 for (const { id } of uploadRecordData) {
-  await db.uploadListEntry.create({
+  await prisma.uploadListEntry.create({
     data: {
       rank: nextRank,
       upload: {
@@ -1607,7 +1607,7 @@ logger.info('Seeding Selling Jesus');
 
 const doreanPrincipleUploadId = '00000000-0000-4000-8000-100000000000';
 
-await db.uploadRecord.create({
+await prisma.uploadRecord.create({
   data: {
     id: doreanPrincipleUploadId,
     title: 'The Dorean Principle in Five Minutes',
@@ -1640,7 +1640,7 @@ await indexDocument('upload', doreanPrincipleUploadId);
 
 const prayerPitchUploadId = '00000000-0000-4000-8000-100000000001';
 
-await db.uploadRecord.create({
+await prisma.uploadRecord.create({
   data: {
     id: prayerPitchUploadId,
     title: 'Prayer Pitch Meeting - 1',
@@ -1674,7 +1674,7 @@ await indexDocument('upload', prayerPitchUploadId);
 
 const christianBooksPitchUploadId = '00000000-0000-4000-8000-100000000002';
 
-await db.uploadRecord.create({
+await prisma.uploadRecord.create({
   data: {
     id: christianBooksPitchUploadId,
     title: 'Christian Books Pitch Meeting - 2',
@@ -1708,7 +1708,7 @@ await indexDocument('upload', christianBooksPitchUploadId);
 
 const foreignMissionsUploadId = '00000000-0000-4000-8000-100000000003';
 
-await db.uploadRecord.create({
+await prisma.uploadRecord.create({
   data: {
     id: foreignMissionsUploadId,
     title: 'Foreign Missions Pitch Meeting - 3',
@@ -1742,7 +1742,7 @@ await indexDocument('upload', foreignMissionsUploadId);
 
 const copyrightUploadId = '00000000-0000-4000-8000-100000000004';
 
-await db.uploadRecord.create({
+await prisma.uploadRecord.create({
   data: {
     id: copyrightUploadId,
     title: 'Copyright Pitch Meeting - 4',
@@ -1776,7 +1776,7 @@ await indexDocument('upload', copyrightUploadId);
 
 const biblicalCounselingUploadId = '00000000-0000-4000-8000-100000000005';
 
-await db.uploadRecord.create({
+await prisma.uploadRecord.create({
   data: {
     id: biblicalCounselingUploadId,
     title: 'Biblical Counseling Pitch Meeting - 5',
@@ -1810,7 +1810,7 @@ await indexDocument('upload', biblicalCounselingUploadId);
 
 const lordsSupperUploadId = '00000000-0000-4000-8000-100000000006';
 
-await db.uploadRecord.create({
+await prisma.uploadRecord.create({
   data: {
     id: lordsSupperUploadId,
     title: "The Lord's Supper Pitch Meeting - 6",
@@ -1867,7 +1867,7 @@ const featuredUploadsData = [
   },
 ] satisfies Array<Prisma.FeaturedUploadCreateManyInput>;
 
-await db.featuredUpload.createMany({
+await prisma.featuredUpload.createMany({
   data: featuredUploadsData,
 });
 

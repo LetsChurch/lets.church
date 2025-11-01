@@ -8,7 +8,7 @@ import {
   IncomingIdSchema,
   OutgoingIdSchema,
 } from '@/schemas/common';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import logger from '@/util/logger';
 import { getClientIpAddress } from '@/util/request-ip';
 import { getS3ProtocolUri } from '@/util/s3';
@@ -43,7 +43,7 @@ export const mediaProcedures = {
         mediaId: input.mediaId,
       });
 
-      const media = await db.uploadRecord.findUnique({
+      const media = await prisma.uploadRecord.findUnique({
         select: {
           id: true,
           title: true,
@@ -173,7 +173,7 @@ export const mediaProcedures = {
       // Check if current user is following the channel
       let isFollowing = false;
       if (ctx.session?.appUserId) {
-        const subscription = await db.channelSubscription.findUnique({
+        const subscription = await prisma.channelSubscription.findUnique({
           where: {
             appUserId_channelId: {
               appUserId: ctx.session.appUserId,
@@ -187,7 +187,7 @@ export const mediaProcedures = {
       // Check if current user has saved this media
       let isSaved = false;
       if (ctx.session?.appUserId) {
-        const savedMedia = await db.savedMedia.findUnique({
+        const savedMedia = await prisma.savedMedia.findUnique({
           where: {
             appUserId_uploadRecordId: {
               appUserId: ctx.session.appUserId,
@@ -311,7 +311,7 @@ export const mediaProcedures = {
         source,
       });
 
-      const trackingSalt = await db.trackingSalt.findFirst({
+      const trackingSalt = await prisma.trackingSalt.findFirst({
         orderBy: { id: 'desc' },
       });
 
@@ -332,7 +332,7 @@ export const mediaProcedures = {
         ),
       );
 
-      const view = await db.uploadView.upsert({
+      const view = await prisma.uploadView.upsert({
         where: {
           uploadRecordId_viewHash: { uploadRecordId, viewHash },
         },
@@ -404,7 +404,7 @@ export const mediaProcedures = {
       }));
 
       // Use createMany with skipDuplicates to handle already-tracked seconds
-      await db.uploadViewSecond.createMany({
+      await prisma.uploadViewSecond.createMany({
         data: creates,
         skipDuplicates: true,
       });
@@ -466,7 +466,7 @@ export const mediaProcedures = {
       });
 
       // Check if user already rated this media
-      const existingRating = await db.uploadUserRating.findUnique({
+      const existingRating = await prisma.uploadUserRating.findUnique({
         where: {
           appUserId_uploadRecordId: {
             appUserId: userId,
@@ -478,7 +478,7 @@ export const mediaProcedures = {
       if (existingRating) {
         if (existingRating.rating === rating) {
           // User is clicking the same rating - remove it (toggle off)
-          await db.uploadUserRating.delete({
+          await prisma.uploadUserRating.delete({
             where: {
               appUserId_uploadRecordId: {
                 appUserId: userId,
@@ -499,7 +499,7 @@ export const mediaProcedures = {
           };
         } else {
           // User is changing their rating
-          await db.uploadUserRating.update({
+          await prisma.uploadUserRating.update({
             where: {
               appUserId_uploadRecordId: {
                 appUserId: userId,
@@ -525,7 +525,7 @@ export const mediaProcedures = {
         }
       } else {
         // User is rating for the first time
-        await db.uploadUserRating.create({
+        await prisma.uploadUserRating.create({
           data: {
             appUserId: userId,
             uploadRecordId: mediaId,
@@ -556,20 +556,20 @@ export const mediaProcedures = {
 
       // Get counts of likes and dislikes
       const [likes, dislikes, userRating] = await Promise.all([
-        db.uploadUserRating.count({
+        prisma.uploadUserRating.count({
           where: {
             uploadRecordId: input.mediaId,
             rating: 'LIKE',
           },
         }),
-        db.uploadUserRating.count({
+        prisma.uploadUserRating.count({
           where: {
             uploadRecordId: input.mediaId,
             rating: 'DISLIKE',
           },
         }),
         ctx.session
-          ? db.uploadUserRating.findUnique({
+          ? prisma.uploadUserRating.findUnique({
               where: {
                 appUserId_uploadRecordId: {
                   appUserId: ctx.session.appUserId,
@@ -597,7 +597,7 @@ export const mediaProcedures = {
         mediaId: input.mediaId,
       });
 
-      const comments = await db.uploadUserComment.findMany({
+      const comments = await prisma.uploadUserComment.findMany({
         where: {
           uploadRecordId: input.mediaId,
           replyingToId: null, // Only top-level comments
@@ -660,7 +660,7 @@ export const mediaProcedures = {
         commentId: input.commentId,
       });
 
-      const replies = await db.uploadUserComment.findMany({
+      const replies = await prisma.uploadUserComment.findMany({
         where: {
           replyingToId: input.commentId,
         },
@@ -732,7 +732,7 @@ export const mediaProcedures = {
       });
 
       // Fetch the upload record with channel and visibility information
-      const upload = await db.uploadRecord.findUnique({
+      const upload = await prisma.uploadRecord.findUnique({
         where: { id: mediaId },
         select: {
           id: true,
@@ -757,7 +757,7 @@ export const mediaProcedures = {
 
       if (needsChannelMembership) {
         // Check if user is a member of the channel
-        const membership = await db.channelMembership.findUnique({
+        const membership = await prisma.channelMembership.findUnique({
           where: {
             channelId_appUserId: {
               channelId: upload.channel.id,
@@ -782,7 +782,7 @@ export const mediaProcedures = {
         }
       }
 
-      const comment = await db.uploadUserComment.create({
+      const comment = await prisma.uploadUserComment.create({
         data: {
           uploadRecordId: mediaId,
           authorId: userId,
@@ -839,7 +839,7 @@ export const mediaProcedures = {
       });
 
       // Check if user already rated this comment
-      const existingRating = await db.uploadUserCommentRating.findUnique({
+      const existingRating = await prisma.uploadUserCommentRating.findUnique({
         where: {
           appUserId_uploadUserCommentId: {
             appUserId: userId,
@@ -851,7 +851,7 @@ export const mediaProcedures = {
       if (existingRating) {
         if (existingRating.rating === rating) {
           // User is clicking the same rating - remove it (toggle off)
-          await db.uploadUserCommentRating.delete({
+          await prisma.uploadUserCommentRating.delete({
             where: {
               appUserId_uploadUserCommentId: {
                 appUserId: userId,
@@ -872,7 +872,7 @@ export const mediaProcedures = {
           };
         } else {
           // User is changing their rating
-          await db.uploadUserCommentRating.update({
+          await prisma.uploadUserCommentRating.update({
             where: {
               appUserId_uploadUserCommentId: {
                 appUserId: userId,
@@ -898,7 +898,7 @@ export const mediaProcedures = {
         }
       } else {
         // User is rating for the first time
-        await db.uploadUserCommentRating.create({
+        await prisma.uploadUserCommentRating.create({
           data: {
             appUserId: userId,
             uploadUserCommentId: commentId,

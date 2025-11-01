@@ -1,5 +1,5 @@
 import { OrganizationTagCategory } from '@prisma/client';
-import db from '../../src/util/db';
+import { prisma } from '../../src/util/db';
 
 export const nonDenomTagSlug = 'non-denominational';
 export const reformedTagSlug = 'reformed';
@@ -469,7 +469,7 @@ const tagsData: ReadonlyArray<
 ];
 
 for (const { suggests, ...tag } of tagsData) {
-  await db.organizationTag.upsert({
+  await prisma.organizationTag.upsert({
     where: { slug: tag.slug },
     create: tag,
     update: tag,
@@ -479,7 +479,7 @@ for (const { suggests, ...tag } of tagsData) {
 for (const tag of tagsData) {
   if (tag.suggests) {
     for (const suggest of tag.suggests) {
-      await db.organizationTagSuggestion.upsert({
+      await prisma.organizationTagSuggestion.upsert({
         where: {
           parentSlug_suggestedSlug: {
             parentSlug: tag.slug,

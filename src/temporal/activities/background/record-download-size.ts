@@ -1,12 +1,12 @@
 import type { UploadVariant } from '@prisma/client';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 
 export default async function recordDownloadSize(
   uploadRecordId: string,
   variant: UploadVariant,
   bytes: number,
 ) {
-  await db.uploadRecordDownloadSize.upsert({
+  await prisma.uploadRecordDownloadSize.upsert({
     where: {
       uploadRecordId_variant: {
         uploadRecordId,

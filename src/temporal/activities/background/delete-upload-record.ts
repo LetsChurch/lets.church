@@ -1,5 +1,5 @@
 import { Context } from '@temporalio/activity';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import { client as esClient } from '../../../util/elasticsearch';
 import logger from '../../../util/logger';
 import { deletePrefix } from '../../../util/s3';
@@ -18,7 +18,7 @@ export async function markUploadPrivate(id: string) {
   activityLogger.info(`Marking upload record ${id} as private`);
 
   try {
-    await db.uploadRecord.update({
+    await prisma.uploadRecord.update({
       where: { id },
       data: { visibility: 'PRIVATE' },
     });
@@ -71,7 +71,7 @@ export async function deleteUploadRecordDb(id: string) {
   activityLogger.info(`Deleting upload record from database for ${id}`);
 
   try {
-    await db.uploadRecord.delete({ where: { id } });
+    await prisma.uploadRecord.delete({ where: { id } });
   } catch (e) {
     activityLogger.info(`Error deleting from database: ${e}`);
     return false;

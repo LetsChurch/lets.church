@@ -1,5 +1,5 @@
 import pAll from 'p-all';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import logger from '@/util/logger';
 
 const moduleLogger = logger.child({
@@ -28,7 +28,7 @@ export default async function updateCommentScores() {
     temporalActivity: 'updateCommentScores',
   });
 
-  const comments = await db.uploadUserComment.findMany({
+  const comments = await prisma.uploadUserComment.findMany({
     where: {
       scoreStaleAt: {
         not: null,
@@ -44,7 +44,7 @@ export default async function updateCommentScores() {
 
   await pAll(
     comments.map(({ id, score: oldScore }) => async () => {
-      await db.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx) => {
         const [likes, dislikes] = await Promise.all([
           tx.uploadUserCommentRating.count({
             where: { uploadUserCommentId: id, rating: 'LIKE' },

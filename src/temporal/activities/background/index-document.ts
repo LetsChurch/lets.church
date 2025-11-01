@@ -1,7 +1,7 @@
 import { AddressType } from '@prisma/client';
 import { invariant } from 'es-toolkit';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import { client, escapeDocument } from '../../../util/elasticsearch';
 import logger from '../../../util/logger';
 import { getObject } from '../../../util/s3';
@@ -43,7 +43,7 @@ async function getDocument(
         transcribingFinishedAt,
         channel,
         ...upRec
-      } = await db.uploadRecord.findUniqueOrThrow({
+      } = await prisma.uploadRecord.findUniqueOrThrow({
         where: { id: documentId },
         select: {
           publishedAt: true,
@@ -83,7 +83,7 @@ async function getDocument(
         transcribingFinishedAt,
         channel,
         ...upRec
-      } = await db.uploadRecord.findUniqueOrThrow({
+      } = await prisma.uploadRecord.findUniqueOrThrow({
         where: { id: documentId },
         select: {
           publishedAt: true,
@@ -116,7 +116,7 @@ async function getDocument(
         transcribingFinishedAt,
         channel,
         ...upRec
-      } = await db.uploadRecord.findUniqueOrThrow({
+      } = await prisma.uploadRecord.findUniqueOrThrow({
         where: { id: documentId },
         select: {
           channelId: true,
@@ -144,7 +144,7 @@ async function getDocument(
     }
     case 'organization': {
       log.info('Fetching metadata');
-      const rec = await db.organization.findUniqueOrThrow({
+      const rec = await prisma.organization.findUniqueOrThrow({
         where: { id: documentId },
         select: {
           name: true,
@@ -196,7 +196,7 @@ async function getDocument(
       return {
         index: 'lc_channels',
         id: documentId,
-        document: await db.channel.findUniqueOrThrow({
+        document: await prisma.channel.findUniqueOrThrow({
           where: { id: documentId },
           select: { name: true, visibility: true },
         }),

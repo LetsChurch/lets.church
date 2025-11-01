@@ -13,7 +13,7 @@ import {
   completeMultipartMediaUpload,
   handleMultipartMediaUpload,
 } from '@/temporal';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import logger from '@/util/logger';
 import {
   createMultipartUpload,
@@ -42,7 +42,7 @@ export const accountProcedures = {
         .optional(),
     )
     .query(async ({ ctx, input }) => {
-      const user = await db.appUser.findUnique({
+      const user = await prisma.appUser.findUnique({
         where: { id: ctx.session.appUserId },
         select: {
           id: true,
@@ -89,7 +89,7 @@ export const accountProcedures = {
       });
 
       try {
-        const existingUser = await db.appUser.findFirst({
+        const existingUser = await prisma.appUser.findFirst({
           where: {
             username: input.username,
             id: { not: ctx.session.appUserId },
@@ -104,7 +104,7 @@ export const accountProcedures = {
           return { error: 'Username is already taken' };
         }
 
-        const existingEmail = await db.appUserEmail.findFirst({
+        const existingEmail = await prisma.appUserEmail.findFirst({
           where: {
             email: input.email,
             appUser: { id: { not: ctx.session.appUserId } },
@@ -119,7 +119,7 @@ export const accountProcedures = {
           return { error: 'Email is already taken' };
         }
 
-        await db.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx) => {
           await tx.appUser.update({
             where: { id: ctx.session.appUserId },
             data: {
@@ -184,7 +184,7 @@ export const accountProcedures = {
       }
 
       try {
-        const user = await db.appUser.findUnique({
+        const user = await prisma.appUser.findUnique({
           where: { id: ctx.session.appUserId },
           select: {
             id: true,
@@ -218,7 +218,7 @@ export const accountProcedures = {
           type: argon2.argon2id,
         });
 
-        await db.appUser.update({
+        await prisma.appUser.update({
           where: { id: ctx.session.appUserId },
           data: { password: newHash },
         });

@@ -1,5 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import logger from '../../../util/logger';
 
 const moduleLogger = logger.child({
@@ -19,7 +19,7 @@ export default async function updateUserActivity(
 
   activityLogger.info('Updating user');
 
-  await db.appUser.update({
+  await prisma.appUser.update({
     where: {
       id: targetId,
     },

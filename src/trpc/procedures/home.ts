@@ -4,7 +4,7 @@ import {
   IncomingIdSchema,
   OutgoingIdSchema,
 } from '@/schemas/common';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import logger from '@/util/logger';
 import { getS3ProtocolUri } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
@@ -41,7 +41,7 @@ export const homeProcedures = {
       appUserId: ctx.session.appUserId,
     });
 
-    const subscriptions = await db.channelSubscription.findMany({
+    const subscriptions = await prisma.channelSubscription.findMany({
       select: {
         channel: {
           select: {
@@ -82,7 +82,7 @@ export const homeProcedures = {
         limit: input.limit,
       });
 
-      const uploads = await db.uploadRecord.findMany({
+      const uploads = await prisma.uploadRecord.findMany({
         select: {
           id: true,
           title: true,
@@ -176,7 +176,7 @@ export const homeProcedures = {
         cursor: input.cursor,
       });
 
-      const uploads = await db.uploadRecord.findMany({
+      const uploads = await prisma.uploadRecord.findMany({
         select: {
           id: true,
           title: true,
@@ -279,7 +279,7 @@ export const homeProcedures = {
         limit: input.limit,
       });
 
-      const channels = await db.channel.findMany({
+      const channels = await prisma.channel.findMany({
         select: {
           id: true,
           name: true,
@@ -338,7 +338,7 @@ export const homeProcedures = {
       });
 
       try {
-        await db.channelSubscription.create({
+        await prisma.channelSubscription.create({
           data: {
             appUserId: ctx.session.appUserId,
             channelId: input.channelId,
@@ -371,7 +371,7 @@ export const homeProcedures = {
       });
 
       try {
-        await db.channelSubscription.delete({
+        await prisma.channelSubscription.delete({
           where: {
             appUserId_channelId: {
               appUserId: ctx.session.appUserId,
@@ -406,7 +406,7 @@ export const homeProcedures = {
       });
 
       // Get user's upload views with their most recent viewed seconds
-      const views = await db.uploadView.findMany({
+      const views = await prisma.uploadView.findMany({
         where: {
           appUserId: ctx.session.appUserId,
         },
@@ -524,7 +524,7 @@ export const homeProcedures = {
   getFeaturedUploads: publicProcedure.query(async () => {
     moduleLogger.info('Fetching featured uploads for homepage');
 
-    const featuredUploads = await db.featuredUpload.findMany({
+    const featuredUploads = await prisma.featuredUpload.findMany({
       select: {
         uploadRecord: {
           select: {

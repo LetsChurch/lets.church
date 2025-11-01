@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import logger from '@/util/logger';
 
 const { MAPBOX_GEOCODING_TOKEN } = z
@@ -87,7 +87,7 @@ export default async function geocodeOrganization(organizationId: string) {
     },
   });
 
-  const addresses = await db.organizationAddress.findMany({
+  const addresses = await prisma.organizationAddress.findMany({
     where: { organizationId, latitude: null, longitude: null },
   });
 
@@ -110,7 +110,7 @@ export default async function geocodeOrganization(organizationId: string) {
     const [feature] = parsed.features;
 
     if (feature) {
-      await db.organizationAddress.update({
+      await prisma.organizationAddress.update({
         where: { id: address.id },
         data: {
           geocodingJson: parsed,

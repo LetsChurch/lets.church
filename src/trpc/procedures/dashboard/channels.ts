@@ -34,7 +34,7 @@ import {
   deleteUpload,
   handleMultipartMediaUpload,
 } from '@/temporal';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import logger from '@/util/logger';
 import {
   createMultipartUpload,
@@ -52,7 +52,7 @@ const moduleLogger = logger.child({
 const channelProcedure = authProcedure
   .input(channelQuerySchema)
   .use(async ({ ctx, input, next }) => {
-    const membership = await db.channelMembership.findFirst({
+    const membership = await prisma.channelMembership.findFirst({
       where: { appUserId: ctx.session.appUserId, channelId: input.channelId },
     });
 
@@ -113,7 +113,7 @@ export const channelRouter = router({
       });
 
       try {
-        const channel = await db.channel.create({
+        const channel = await prisma.channel.create({
           data: {
             name: input.name,
             slug: input.slug,
@@ -157,7 +157,7 @@ export const channelRouter = router({
       appUserId: ctx.session.appUserId,
     });
 
-    return db.channel.findMany({
+    return prisma.channel.findMany({
       select: {
         id: true,
         name: true,
@@ -183,7 +183,7 @@ export const channelRouter = router({
   }),
 
   getChannelDetails: channelProcedure.query(async ({ ctx, input }) => {
-    const channel = await db.channel.findFirst({
+    const channel = await prisma.channel.findFirst({
       select: {
         id: true,
         name: true,
@@ -269,7 +269,7 @@ export const channelRouter = router({
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
 
-    const totalViews = await db.uploadView.count({
+    const totalViews = await prisma.uploadView.count({
       where: {
         upload: {
           channelId: input.channelId,
@@ -281,7 +281,7 @@ export const channelRouter = router({
   }),
 
   getChannelForEdit: channelAdminProcedure.query(async ({ ctx, input }) => {
-    const channel = await db.channel.findFirst({
+    const channel = await prisma.channel.findFirst({
       select: {
         id: true,
         name: true,
@@ -324,7 +324,7 @@ export const channelRouter = router({
   updateChannel: channelAdminProcedure
     .input(updateChannelSchema)
     .mutation(async ({ ctx, input }) => {
-      const updatedChannel = await db.channel.update({
+      const updatedChannel = await prisma.channel.update({
         where: {
           id: input.channelId,
           memberships: {
@@ -353,7 +353,7 @@ export const channelRouter = router({
     }),
 
   getChannelMembers: channelProcedure.query(async ({ ctx, input }) => {
-    const channel = await db.channel.findFirst({
+    const channel = await prisma.channel.findFirst({
       select: {
         id: true,
         name: true,
@@ -403,7 +403,7 @@ export const channelRouter = router({
         appUserId: ctx.session.appUserId,
       });
 
-      const users = await db.appUser.findMany({
+      const users = await prisma.appUser.findMany({
         select: {
           id: true,
           username: true,
@@ -449,7 +449,7 @@ export const channelRouter = router({
       });
 
       try {
-        await db.channelMembership.create({
+        await prisma.channelMembership.create({
           data: {
             channelId: input.channelId,
             appUserId: input.userId,
@@ -488,14 +488,14 @@ export const channelRouter = router({
 
       try {
         // Don't allow removing the last admin
-        const adminCount = await db.channelMembership.count({
+        const adminCount = await prisma.channelMembership.count({
           where: {
             channelId: input.channelId,
             isAdmin: true,
           },
         });
 
-        const membershipToDelete = await db.channelMembership.findUnique({
+        const membershipToDelete = await prisma.channelMembership.findUnique({
           where: {
             channelId_appUserId: {
               channelId: input.channelId,
@@ -532,7 +532,7 @@ export const channelRouter = router({
           });
         }
 
-        await db.channelMembership.delete({
+        await prisma.channelMembership.delete({
           where: {
             channelId_appUserId: {
               channelId: input.channelId,
@@ -565,7 +565,7 @@ export const channelRouter = router({
   getChannelUploads: channelProcedure
     .input(channelUploadsQuerySchema)
     .query(async ({ ctx, input }) => {
-      const channel = await db.channel.findFirst({
+      const channel = await prisma.channel.findFirst({
         select: {
           id: true,
           name: true,
@@ -600,7 +600,7 @@ export const channelRouter = router({
       const offset = (input.page - 1) * input.limit;
 
       const [uploads, totalCount] = await Promise.all([
-        db.uploadRecord.findMany({
+        prisma.uploadRecord.findMany({
           select: {
             id: true,
             title: true,
@@ -653,7 +653,7 @@ export const channelRouter = router({
           skip: offset,
           take: input.limit,
         }),
-        db.uploadRecord.count({
+        prisma.uploadRecord.count({
           where: {
             channelId: input.channelId,
             OR: [
@@ -720,7 +720,7 @@ export const channelRouter = router({
   createUploadRecord: channelUploadProcedure
     .input(createUploadSchema)
     .mutation(async ({ ctx, input }) => {
-      const { id } = await db.uploadRecord.create({
+      const { id } = await prisma.uploadRecord.create({
         data: {
           license: UploadLicense.STANDARD,
           visibility: 'PRIVATE',
@@ -744,7 +744,7 @@ export const channelRouter = router({
     .input(deleteUploadSchema)
     .mutation(async ({ input }) => {
       // Verify the upload belongs to this channel
-      const upload = await db.uploadRecord.findFirst({
+      const upload = await prisma.uploadRecord.findFirst({
         select: {
           id: true,
           channelId: true,
@@ -772,7 +772,7 @@ export const channelRouter = router({
     .input(bulkSetVisibilitySchema)
     .mutation(async ({ input }) => {
       // Verify all uploads belong to this channel
-      const uploads = await db.uploadRecord.findMany({
+      const uploads = await prisma.uploadRecord.findMany({
         select: {
           id: true,
           channelId: true,
@@ -791,7 +791,7 @@ export const channelRouter = router({
       }
 
       // Update visibility for all uploads
-      await db.uploadRecord.updateMany({
+      await prisma.uploadRecord.updateMany({
         where: {
           id: { in: input.uploadIds },
           channelId: input.channelId,
@@ -811,7 +811,7 @@ export const channelRouter = router({
   getUploadRecord: channelEditProcedure
     .input(uploadQuerySchema)
     .query(async ({ ctx, input }) => {
-      const upload = await db.uploadRecord.findFirst({
+      const upload = await prisma.uploadRecord.findFirst({
         select: {
           id: true,
           title: true,
@@ -915,7 +915,7 @@ export const channelRouter = router({
   updateUploadRecord: channelEditProcedure
     .input(updateUploadSchema)
     .mutation(async ({ input }) => {
-      const upload = await db.uploadRecord.findFirst({
+      const upload = await prisma.uploadRecord.findFirst({
         select: {
           id: true,
           channel: {
@@ -947,7 +947,7 @@ export const channelRouter = router({
         });
       }
 
-      const updatedUpload = await db.uploadRecord.update({
+      const updatedUpload = await prisma.uploadRecord.update({
         where: { id: input.uploadId },
         data: {
           title: input.title,
@@ -1037,7 +1037,7 @@ export const channelRouter = router({
       appUserId: ctx.session.appUserId,
     });
 
-    const playlists = await db.uploadList.findMany({
+    const playlists = await prisma.uploadList.findMany({
       select: {
         id: true,
         title: true,
@@ -1068,7 +1068,7 @@ export const channelRouter = router({
         appUserId: ctx.session.appUserId,
       });
 
-      const playlist = await db.uploadList.findFirst({
+      const playlist = await prisma.uploadList.findFirst({
         select: {
           id: true,
           title: true,
@@ -1126,7 +1126,7 @@ export const channelRouter = router({
       });
 
       try {
-        const playlist = await db.uploadList.create({
+        const playlist = await prisma.uploadList.create({
           data: {
             title: input.title,
             type: input.type,
@@ -1171,7 +1171,7 @@ export const channelRouter = router({
       });
 
       try {
-        const updatedPlaylist = await db.uploadList.update({
+        const updatedPlaylist = await prisma.uploadList.update({
           where: { id: input.playlistId },
           data: {
             title: input.title,
@@ -1212,7 +1212,7 @@ export const channelRouter = router({
       });
 
       try {
-        await db.uploadList.delete({
+        await prisma.uploadList.delete({
           where: { id: input.playlistId },
         });
 
@@ -1243,7 +1243,7 @@ export const channelRouter = router({
 
       try {
         // Get the playlist to verify it exists and get its channelId
-        const playlist = await db.uploadList.findUnique({
+        const playlist = await prisma.uploadList.findUnique({
           where: { id: input.playlistId },
           select: { id: true, channelId: true },
         });
@@ -1261,7 +1261,7 @@ export const channelRouter = router({
         }
 
         // Verify the upload belongs to the same channel
-        const upload = await db.uploadRecord.findFirst({
+        const upload = await prisma.uploadRecord.findFirst({
           where: {
             id: input.uploadId,
             channelId: playlist.channelId,
@@ -1283,7 +1283,7 @@ export const channelRouter = router({
         }
 
         // Check if upload is already in playlist
-        const existingEntry = await db.uploadListEntry.findUnique({
+        const existingEntry = await prisma.uploadListEntry.findUnique({
           where: {
             uploadListId_uploadRecordId: {
               uploadListId: input.playlistId,
@@ -1304,7 +1304,7 @@ export const channelRouter = router({
           });
         }
 
-        await db.uploadListEntry.create({
+        await prisma.uploadListEntry.create({
           data: {
             uploadListId: input.playlistId,
             uploadRecordId: input.uploadId,
@@ -1341,7 +1341,7 @@ export const channelRouter = router({
       });
 
       try {
-        const deletedEntry = await db.uploadListEntry.deleteMany({
+        const deletedEntry = await prisma.uploadListEntry.deleteMany({
           where: {
             uploadListId: input.playlistId,
             uploadRecordId: input.uploadId,
@@ -1390,9 +1390,9 @@ export const channelRouter = router({
       });
 
       try {
-        await db.$transaction(
+        await prisma.$transaction(
           input.uploadIds.map((uploadId, index) =>
-            db.uploadListEntry.update({
+            prisma.uploadListEntry.update({
               where: {
                 uploadListId_uploadRecordId: {
                   uploadListId: input.playlistId,
@@ -1444,7 +1444,7 @@ export const channelRouter = router({
       });
 
       try {
-        await db.channel.update({
+        await prisma.channel.update({
           where: {
             id: input.channelId,
           },
@@ -1494,7 +1494,7 @@ export const channelRouter = router({
       });
 
       try {
-        await db.channel.update({
+        await prisma.channel.update({
           where: {
             id: input.channelId,
           },

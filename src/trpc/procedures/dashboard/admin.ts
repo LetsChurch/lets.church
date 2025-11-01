@@ -6,7 +6,7 @@ import {
   removeFeaturedUploadSchema,
   reorderFeaturedUploadsSchema,
 } from '@/schemas/dashboard/admin';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import logger from '@/util/logger';
 import { getS3ProtocolUri } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
@@ -39,7 +39,7 @@ export const adminRouter = router({
       userCount,
       processingUploadsCount,
     ] = await Promise.all([
-      db.channel.findMany({
+      prisma.channel.findMany({
         where: {
           approvedAt: null,
         },
@@ -78,7 +78,7 @@ export const adminRouter = router({
           createdAt: 'asc',
         },
       }),
-      db.organization.findMany({
+      prisma.organization.findMany({
         where: {
           approvedAt: null,
         },
@@ -118,8 +118,8 @@ export const adminRouter = router({
           createdAt: 'asc',
         },
       }),
-      db.appUser.count(),
-      db.uploadRecord.count({
+      prisma.appUser.count(),
+      prisma.uploadRecord.count({
         where: {
           OR: [
             { transcodingFinishedAt: null },
@@ -140,7 +140,7 @@ export const adminRouter = router({
   getPendingChannelApprovals: adminProcedure.query(async () => {
     moduleLogger.info('Fetching pending channel approvals');
 
-    return db.channel.findMany({
+    return prisma.channel.findMany({
       where: {
         approvedAt: null,
       },
@@ -186,7 +186,7 @@ export const adminRouter = router({
   getPendingOrganizationApprovals: adminProcedure.query(async () => {
     moduleLogger.info('Fetching pending organization approvals');
 
-    return db.organization.findMany({
+    return prisma.organization.findMany({
       where: {
         approvedAt: null,
       },
@@ -238,7 +238,7 @@ export const adminRouter = router({
       });
 
       try {
-        await db.channel.update({
+        await prisma.channel.update({
           where: {
             id: input.channelId,
           },
@@ -277,7 +277,7 @@ export const adminRouter = router({
       });
 
       try {
-        await db.organization.update({
+        await prisma.organization.update({
           where: {
             id: input.organizationId,
           },
@@ -316,7 +316,7 @@ export const adminRouter = router({
       });
 
       try {
-        await db.channel.delete({
+        await prisma.channel.delete({
           where: {
             id: input.channelId,
           },
@@ -351,7 +351,7 @@ export const adminRouter = router({
       });
 
       try {
-        await db.organization.delete({
+        await prisma.organization.delete({
           where: {
             id: input.organizationId,
           },
@@ -380,7 +380,7 @@ export const adminRouter = router({
   getOrganizationTags: adminProcedure.query(async () => {
     moduleLogger.info('Fetching organization tags');
 
-    return db.organizationTag.findMany({
+    return prisma.organizationTag.findMany({
       select: {
         slug: true,
         label: true,
@@ -426,7 +426,7 @@ export const adminRouter = router({
       });
 
       try {
-        const tag = await db.organizationTag.upsert({
+        const tag = await prisma.organizationTag.upsert({
           where: { slug: input.slug },
           create: input,
           update: {
@@ -466,7 +466,7 @@ export const adminRouter = router({
       });
 
       try {
-        await db.organizationTag.delete({
+        await prisma.organizationTag.delete({
           where: { slug: input.slug },
         });
 
@@ -493,7 +493,7 @@ export const adminRouter = router({
   getUsers: adminProcedure.query(async () => {
     moduleLogger.info('Fetching users');
 
-    return db.appUser.findMany({
+    return prisma.appUser.findMany({
       select: {
         id: true,
         username: true,
@@ -520,7 +520,7 @@ export const adminRouter = router({
   getUserCount: adminProcedure.query(async () => {
     moduleLogger.info('Fetching user count');
 
-    return db.appUser.count();
+    return prisma.appUser.count();
   }),
 
   createUser: adminProcedure
@@ -544,7 +544,7 @@ export const adminRouter = router({
       try {
         const hashedPassword = await argon2.hash(input.password);
 
-        const user = await db.appUser.create({
+        const user = await prisma.appUser.create({
           data: {
             username: input.username,
             password: hashedPassword,
@@ -624,7 +624,7 @@ export const adminRouter = router({
         if (input.fullName !== undefined) updateData.fullName = input.fullName;
         if (input.role) updateData.role = input.role;
 
-        const user = await db.appUser.update({
+        const user = await prisma.appUser.update({
           where: { id: input.userId },
           data: updateData,
           select: {
@@ -647,7 +647,7 @@ export const adminRouter = router({
         });
 
         if (input.email) {
-          await db.appUserEmail.updateMany({
+          await prisma.appUserEmail.updateMany({
             where: {
               appUserId: input.userId,
               verifiedAt: { not: null },
@@ -681,7 +681,7 @@ export const adminRouter = router({
   getProcessingUploads: adminProcedure.query(async () => {
     moduleLogger.info('Fetching processing uploads');
 
-    return db.uploadRecord.findMany({
+    return prisma.uploadRecord.findMany({
       select: {
         id: true,
         title: true,
@@ -710,7 +710,7 @@ export const adminRouter = router({
   getFeaturedUploads: adminProcedure.query(async () => {
     moduleLogger.info('Fetching featured uploads');
 
-    const featuredUploads = await db.featuredUpload.findMany({
+    const featuredUploads = await prisma.featuredUpload.findMany({
       select: {
         uploadRecordId: true,
         rank: true,
@@ -770,7 +770,7 @@ export const adminRouter = router({
 
       try {
         // Check if upload exists and is public
-        const upload = await db.uploadRecord.findUnique({
+        const upload = await prisma.uploadRecord.findUnique({
           where: { id: input.uploadId },
           select: {
             id: true,
@@ -802,7 +802,7 @@ export const adminRouter = router({
         }
 
         // Check if already featured
-        const existing = await db.featuredUpload.findUnique({
+        const existing = await prisma.featuredUpload.findUnique({
           where: { uploadRecordId: input.uploadId },
         });
 
@@ -814,14 +814,14 @@ export const adminRouter = router({
         }
 
         // Get max rank
-        const maxRank = await db.featuredUpload.findFirst({
+        const maxRank = await prisma.featuredUpload.findFirst({
           select: { rank: true },
           orderBy: { rank: 'desc' },
         });
 
         const newRank = (maxRank?.rank ?? -1) + 1;
 
-        const featuredUpload = await db.featuredUpload.create({
+        const featuredUpload = await prisma.featuredUpload.create({
           data: {
             uploadRecordId: input.uploadId,
             rank: newRank,
@@ -863,7 +863,7 @@ export const adminRouter = router({
 
       try {
         // Get the rank of the upload being removed
-        const featuredUpload = await db.featuredUpload.findUnique({
+        const featuredUpload = await prisma.featuredUpload.findUnique({
           where: { uploadRecordId: input.uploadId },
           select: { rank: true },
         });
@@ -876,12 +876,12 @@ export const adminRouter = router({
         }
 
         // Delete the featured upload
-        await db.featuredUpload.delete({
+        await prisma.featuredUpload.delete({
           where: { uploadRecordId: input.uploadId },
         });
 
         // Rebalance ranks: decrement all ranks greater than the removed one
-        await db.featuredUpload.updateMany({
+        await prisma.featuredUpload.updateMany({
           where: {
             rank: { gt: featuredUpload.rank },
           },
@@ -924,7 +924,7 @@ export const adminRouter = router({
 
       try {
         // Verify all uploads are currently featured
-        const existingFeatured = await db.featuredUpload.findMany({
+        const existingFeatured = await prisma.featuredUpload.findMany({
           select: { uploadRecordId: true },
         });
 
@@ -952,7 +952,7 @@ export const adminRouter = router({
         // Update ranks based on array order
         await Promise.all(
           input.uploadIds.map((uploadId, index) =>
-            db.featuredUpload.update({
+            prisma.featuredUpload.update({
               where: { uploadRecordId: uploadId },
               data: { rank: index },
             }),
@@ -993,18 +993,18 @@ export const adminRouter = router({
 
       try {
         // Check if upload is currently featured
-        const existing = await db.featuredUpload.findUnique({
+        const existing = await prisma.featuredUpload.findUnique({
           where: { uploadRecordId: input.uploadId },
         });
 
         if (existing) {
           // Remove from featured
-          await db.featuredUpload.delete({
+          await prisma.featuredUpload.delete({
             where: { uploadRecordId: input.uploadId },
           });
 
           // Rebalance ranks
-          await db.featuredUpload.updateMany({
+          await prisma.featuredUpload.updateMany({
             where: {
               rank: { gt: existing.rank },
             },
@@ -1022,7 +1022,7 @@ export const adminRouter = router({
         }
 
         // Add to featured
-        const upload = await db.uploadRecord.findUnique({
+        const upload = await prisma.uploadRecord.findUnique({
           where: { id: input.uploadId },
           select: {
             id: true,
@@ -1054,14 +1054,14 @@ export const adminRouter = router({
         }
 
         // Get max rank
-        const maxRank = await db.featuredUpload.findFirst({
+        const maxRank = await prisma.featuredUpload.findFirst({
           select: { rank: true },
           orderBy: { rank: 'desc' },
         });
 
         const newRank = (maxRank?.rank ?? -1) + 1;
 
-        await db.featuredUpload.create({
+        await prisma.featuredUpload.create({
           data: {
             uploadRecordId: input.uploadId,
             rank: newRank,

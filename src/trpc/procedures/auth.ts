@@ -3,7 +3,7 @@ import * as argon2 from 'argon2';
 import { loginSchema, registerSchema } from '@/schemas/auth';
 import { postUserRegistration } from '@/temporal';
 import { login } from '@/util/auth';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import { createSessionJwt } from '@/util/jwt';
 import logger from '@/util/logger';
 import { getClientIpAddress } from '@/util/request-ip';
@@ -101,7 +101,7 @@ export const authProcedures = {
         const hash = await argon2.hash(value.password, {
           type: argon2.argon2id,
         });
-        const user = await db.appUser.create({
+        const user = await prisma.appUser.create({
           data: {
             username: value.username,
             fullName: value.fullName || null,

@@ -1,4 +1,4 @@
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import { deleteFile } from '@/util/s3';
 
 export default async function setChannelAvatar(
@@ -6,7 +6,7 @@ export default async function setChannelAvatar(
   path: string,
   blurhash: string,
 ) {
-  const { avatarPath: oldPath } = await db.channel.findUniqueOrThrow({
+  const { avatarPath: oldPath } = await prisma.channel.findUniqueOrThrow({
     where: { id: channelid },
     select: { avatarPath: true },
   });
@@ -15,7 +15,7 @@ export default async function setChannelAvatar(
     await deleteFile('PUBLIC', oldPath);
   }
 
-  await db.channel.update({
+  await prisma.channel.update({
     where: { id: channelid },
     data: { avatarPath: path, avatarBlurhash: blurhash },
   });

@@ -1,6 +1,6 @@
 import { stripIndent } from 'proper-tags';
 import { z } from 'zod';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import { emailHtml } from '@/util/email';
 import logger from '@/util/logger';
 import { uuidTranslator } from '@/util/uuid';
@@ -22,7 +22,7 @@ export default async function sendVerificationEmailActivity(
 ) {
   moduleLogger.info(`Sending verification email for user ${userId}`);
 
-  const emailObj = await db.appUserEmail.findUniqueOrThrow({
+  const emailObj = await prisma.appUserEmail.findUniqueOrThrow({
     select: { id: true, key: true },
     where: { email },
   });

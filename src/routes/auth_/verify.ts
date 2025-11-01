@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { z } from 'zod';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import { uuidTranslator } from '@/util/uuid';
 
 const QuerySchema = z.object({
@@ -31,7 +31,7 @@ export const Route = createFileRoute('/auth_/verify')({
           const emailIdFull = uuidTranslator.toUUID(emailId);
           const emailKeyFull = uuidTranslator.toUUID(emailKey);
 
-          const result = await db.appUserEmail.updateMany({
+          const result = await prisma.appUserEmail.updateMany({
             data: {
               verifiedAt: new Date(),
             },

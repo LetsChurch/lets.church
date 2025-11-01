@@ -4,7 +4,7 @@ import {
   IncomingIdSchema,
   OutgoingIdSchema,
 } from '@/schemas/common';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import {
   client,
   MSearchResponseSchema,
@@ -52,7 +52,7 @@ export const searchProcedures = {
       // Convert channel slugs to IDs if provided
       let channelIds = inputChannelIds;
       if (channelSlugs && channelSlugs.length > 0) {
-        const channels = await db.channel.findMany({
+        const channels = await prisma.channel.findMany({
           select: { id: true },
           where: {
             slug: { in: channelSlugs },
@@ -121,7 +121,7 @@ export const searchProcedures = {
 
       // Log the search
       try {
-        await db.searchLogEntry.create({
+        await prisma.searchLogEntry.create({
           data: {
             query: q,
             params: {
@@ -182,7 +182,7 @@ export const searchProcedures = {
 
       // Get channel data for carousel and filters
       const channelIdsFromAggs = channelAggs.map((bucket) => bucket.key);
-      const channels = await db.channel.findMany({
+      const channels = await prisma.channel.findMany({
         select: {
           id: true,
           name: true,
@@ -220,7 +220,7 @@ export const searchProcedures = {
           .map((hit) => hit._id);
 
         // Fetch full upload data from database
-        const uploads = await db.uploadRecord.findMany({
+        const uploads = await prisma.uploadRecord.findMany({
           select: {
             id: true,
             title: true,
@@ -309,7 +309,7 @@ export const searchProcedures = {
           .map((hit) => hit._id);
 
         // Fetch full upload data from database
-        const uploads = await db.uploadRecord.findMany({
+        const uploads = await prisma.uploadRecord.findMany({
           select: {
             id: true,
             title: true,
@@ -419,7 +419,7 @@ export const searchProcedures = {
     }),
 
   getRecentSearches: authProcedure.query(async ({ ctx }) => {
-    const recentSearches = await db.searchLogEntry.findMany({
+    const recentSearches = await prisma.searchLogEntry.findMany({
       where: {
         appUserId: ctx.session.appUserId,
         userDeletedAt: null,
@@ -449,7 +449,7 @@ export const searchProcedures = {
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      await db.searchLogEntry.updateMany({
+      await prisma.searchLogEntry.updateMany({
         where: {
           appUserId: ctx.session.appUserId,
           query: input.query,

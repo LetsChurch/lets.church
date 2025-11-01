@@ -1,6 +1,6 @@
 import { round } from 'es-toolkit';
 import pAll from 'p-all';
-import db from '@/util/db';
+import { prisma } from '@/util/db';
 import logger from '@/util/logger';
 
 const epoch = 1680145772760;
@@ -14,7 +14,7 @@ export default async function updateUploadScores() {
     temporalActivity: 'processImage',
   });
 
-  const uploads = await db.uploadRecord.findMany({
+  const uploads = await prisma.uploadRecord.findMany({
     where: {
       scoreStaleAt: {
         not: null,
@@ -31,7 +31,7 @@ export default async function updateUploadScores() {
 
   await pAll(
     uploads.map(({ id, publishedAt, score: oldScore }) => async () => {
-      await db.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx) => {
         const [likes, dislikes] = await Promise.all([
           tx.uploadUserRating.count({
             where: { uploadRecordId: id, rating: 'LIKE' },

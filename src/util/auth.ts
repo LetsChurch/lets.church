@@ -1,10 +1,10 @@
 import { getCookie } from '@tanstack/react-start/server';
 import argon2 from 'argon2';
-import db from './db';
+import { prisma } from './db';
 import { parseSessionJwt } from './jwt';
 
 export async function login(id: string, password: string) {
-  const user = await db.appUser.findFirst({
+  const user = await prisma.appUser.findFirst({
     where: {
       OR: [{ username: id }, { emails: { some: { email: id } } }],
     },
@@ -14,7 +14,7 @@ export async function login(id: string, password: string) {
     throw new Error('Error logging in. Please try again.');
   }
 
-  const session = await db.appSession.create({
+  const session = await prisma.appSession.create({
     data: { appUserId: user.id },
   });
 
@@ -34,7 +34,7 @@ export async function getSession() {
     return null;
   }
 
-  const session = await db.appSession.findUnique({
+  const session = await prisma.appSession.findUnique({
     where: {
       id: jwt.sub,
       expiresAt: { gt: new Date() },
