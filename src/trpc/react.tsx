@@ -10,13 +10,6 @@ import { createTRPCClient, httpBatchLink } from '@trpc/client';
 import { createTRPCOptionsProxy } from '@trpc/tanstack-react-query';
 import superjson from 'superjson';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    dehydrate: { serializeData: superjson.serialize },
-    hydrate: { deserializeData: superjson.deserialize },
-  },
-});
-
 function getUrl() {
   const base = (() => {
     if (typeof window !== 'undefined') {
@@ -75,17 +68,22 @@ export const trpcClient = createTRPCClient<AppRouter>({
 });
 
 /**
- * This is the bridge between trpc and react-query
- */
-const trpcQueryProxy = createTRPCOptionsProxy({
-  client: trpcClient,
-  queryClient: queryClient,
-});
-
-/**
  * Context for tanstack start related to trpc and react-query
+ * Creates a fresh QueryClient per request to prevent state pollution in SSR
  */
 export function getContext() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      dehydrate: { serializeData: superjson.serialize },
+      hydrate: { deserializeData: superjson.deserialize },
+    },
+  });
+
+  const trpcQueryProxy = createTRPCOptionsProxy({
+    client: trpcClient,
+    queryClient: queryClient,
+  });
+
   return {
     queryClient,
     trpc: trpcQueryProxy,
@@ -95,7 +93,13 @@ export function getContext() {
 /**
  * Convenience provider for trpc
  */
-export function Provider({ children }: { children: React.ReactNode }) {
+export function Provider({
+  children,
+  queryClient,
+}: {
+  children: React.ReactNode;
+  queryClient: QueryClient;
+}) {
   return (
     <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
       {children}
