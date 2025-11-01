@@ -14,13 +14,15 @@ import SearchBar from './search-bar';
 
 type HeaderProps = PropsWithChildren<{
   defaultSearchValue?: string;
-  channelId?: string;
+  searchPlaceholder?: string;
+  channelSlug?: string;
 }>;
 
 export default function Header({
   children,
   defaultSearchValue,
-  channelId,
+  searchPlaceholder,
+  channelSlug,
 }: HeaderProps) {
   const trpc = useTRPC();
   const hasSessionQuery = useQuery(trpc.common.hasValidSession.queryOptions());
@@ -70,7 +72,11 @@ export default function Header({
 
         {/* Search Bar */}
         <div className="w-80 max-sm:hidden">
-          <SearchBar defaultValue={defaultSearchValue} channelId={channelId} />
+          <SearchBar
+            defaultValue={defaultSearchValue}
+            placeholder={searchPlaceholder}
+            channelSlug={channelSlug}
+          />
         </div>
 
         {/* Login Button or User Avatar */}

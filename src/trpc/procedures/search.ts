@@ -25,6 +25,7 @@ const searchQuerySchema = z.object({
   q: z.string().min(1),
   focus: z.enum(['media', 'transcripts']).default('media'),
   channelIds: z.array(IncomingIdSchema).optional().nullable(),
+  channelSlugs: z.array(z.string()).optional().nullable(),
   limit: z.number().min(1).max(50).default(20),
   cursor: z.number().min(0).default(0), // Offset-based cursor
   sort: z.enum(['relevance', 'date-asc', 'date-desc']).optional(),
@@ -37,12 +38,36 @@ export const searchProcedures = {
   performSearch: publicProcedure
     .input(searchQuerySchema)
     .query(async ({ input, ctx }) => {
-      const { q, focus, channelIds, limit, cursor, sort, dateRange } = input;
+      const {
+        q,
+        focus,
+        channelIds: inputChannelIds,
+        channelSlugs,
+        limit,
+        cursor,
+        sort,
+        dateRange,
+      } = input;
+
+      // Convert channel slugs to IDs if provided
+      let channelIds = inputChannelIds;
+      if (channelSlugs && channelSlugs.length > 0) {
+        const channels = await db.channel.findMany({
+          select: { id: true },
+          where: {
+            slug: { in: channelSlugs },
+            visibility: 'PUBLIC',
+            approvedAt: { not: null },
+          },
+        });
+        channelIds = channels.map((c) => c.id);
+      }
 
       moduleLogger.info('Performing search', {
         query: q,
         focus,
         channelIds,
+        channelSlugs,
         limit,
         cursor,
         sort,
@@ -155,7 +180,7 @@ export const searchProcedures = {
           ? uploadsResponse?.aggregations?.channelIds?.buckets
           : transcriptsResponse?.aggregations?.channelIds?.buckets) ?? [];
 
-      // Get channel data for carousel
+      // Get channel data for carousel and filters
       const channelIdsFromAggs = channelAggs.map((bucket) => bucket.key);
       const channels = await db.channel.findMany({
         select: {

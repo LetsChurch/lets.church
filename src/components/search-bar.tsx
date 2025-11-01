@@ -20,7 +20,7 @@ type SearchProps = {
   placeholder?: string;
   className?: string;
   defaultValue?: string;
-  channelId?: string;
+  channelSlug?: string;
 };
 
 export default function SearchBar({
@@ -28,13 +28,14 @@ export default function SearchBar({
   placeholder = 'Search anything...',
   className,
   defaultValue,
-  channelId,
+  channelSlug,
 }: SearchProps) {
   const navigate = useNavigate({ from: '/search' });
   const location = useLocation();
   const searchParams = useSearch({ strict: false }) as {
     sort?: 'relevance' | 'date-asc' | 'date-desc';
     dateRange?: 'all-time' | 'today' | 'this-week' | 'this-month' | 'this-year';
+    channelSlugs?: string[];
   };
   const isLoggedIn = useIsLoggedIn();
   const isOnSearchPage = location.pathname === '/search';
@@ -63,7 +64,7 @@ export default function SearchBar({
         search: {
           q: searchQuery,
           focus: 'media' as const,
-          channelId: channelId ?? undefined,
+          channelSlugs: channelSlug ? [channelSlug] : undefined,
         },
       });
     }
@@ -85,7 +86,7 @@ export default function SearchBar({
         search: {
           q: undefined,
           focus: 'media' as const,
-          channelId: undefined,
+          channelSlugs: undefined,
         },
       });
     }
@@ -197,12 +198,20 @@ export default function SearchBar({
             search: (prev) => ({ ...prev, dateRange }),
           });
         }}
+        channelSlugs={searchParams.channelSlugs}
+        onChannelSlugsChange={(channelSlugs) => {
+          navigate({
+            search: (prev) => ({ ...prev, channelSlugs }),
+          });
+        }}
         onClearFilters={() => {
+          setIsSettingsOpen(false);
           navigate({
             search: (prev) => ({
               ...prev,
               sort: undefined,
               dateRange: undefined,
+              channelSlugs: undefined,
             }),
           });
         }}

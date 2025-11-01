@@ -6,10 +6,20 @@ import {
   IconChevronRight,
   // IconFlag,
 } from '@tabler/icons-react';
+import { useQuery } from '@tanstack/react-query';
+import { useSearch } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
+import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 import { MobileDrawer } from './mobile-drawer';
+
+type Channel = {
+  id: string;
+  name: string;
+  slug: string;
+  avatarUrl?: string | null;
+};
 
 type SearchSettingsModalProps = {
   open: boolean;
@@ -20,6 +30,8 @@ type SearchSettingsModalProps = {
   onDateRangeChange: (
     range: 'all-time' | 'today' | 'this-week' | 'this-month' | 'this-year',
   ) => void;
+  channelSlugs?: string[];
+  onChannelSlugsChange: (channelSlugs: string[] | undefined) => void;
   onClearFilters: () => void;
 };
 
@@ -28,7 +40,8 @@ type SearchSettingsPage =
   | 'sorting'
   | 'show-hits'
   | 'date-range'
-  | 'search-context';
+  | 'search-context'
+  | 'channels';
 
 type SearchSettingsContentProps = {
   currentPage: SearchSettingsPage;
@@ -39,6 +52,9 @@ type SearchSettingsContentProps = {
   onDateRangeChange: (
     range: 'all-time' | 'today' | 'this-week' | 'this-month' | 'this-year',
   ) => void;
+  channelSlugs: string[];
+  onChannelSlugsChange: (channelSlugs: string[] | undefined) => void;
+  availableChannels: Channel[];
   onClearFilters: () => void;
 };
 
@@ -195,6 +211,47 @@ function DateRangePage({
   );
 }
 
+function ChannelsPage({
+  onBack,
+  selectedSlugs,
+  onSlugsChange,
+  availableChannels,
+}: {
+  onBack: () => void;
+  selectedSlugs: string[];
+  onSlugsChange: (slugs: string[] | undefined) => void;
+  availableChannels: Channel[];
+}) {
+  const toggleChannel = (slug: string) => {
+    const newSlugs = selectedSlugs.includes(slug)
+      ? selectedSlugs.filter((s) => s !== slug)
+      : [...selectedSlugs, slug];
+
+    onSlugsChange(newSlugs.length > 0 ? newSlugs : undefined);
+  };
+
+  // Sort channels alphabetically by name
+  const sortedChannels = availableChannels.toSorted((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+
+  return (
+    <div className="flex w-full flex-col content-stretch items-start gap-1">
+      <BackButton onClick={onBack} label="Channels" />
+
+      {sortedChannels.map((channel) => (
+        <SelectableOption
+          key={channel.slug}
+          onClick={() => toggleChannel(channel.slug)}
+          selected={selectedSlugs.includes(channel.slug)}
+        >
+          {channel.name}
+        </SelectableOption>
+      ))}
+    </div>
+  );
+}
+
 function SortingPage({
   onBack,
   selectedSort,
@@ -239,6 +296,9 @@ function SearchSettingsContent({
   onSortChange,
   dateRange,
   onDateRangeChange,
+  channelSlugs,
+  onChannelSlugsChange,
+  availableChannels,
   onClearFilters,
 }: SearchSettingsContentProps) {
   if (currentPage === 'sorting') {
@@ -261,6 +321,51 @@ function SearchSettingsContent({
     );
   }
 
+  if (currentPage === 'channels') {
+    return (
+      <ChannelsPage
+        onBack={() => onNavigate('main')}
+        selectedSlugs={channelSlugs}
+        onSlugsChange={onChannelSlugsChange}
+        availableChannels={availableChannels}
+      />
+    );
+  }
+
+  const getDateRangeLabel = () => {
+    switch (dateRange) {
+      case 'today':
+        return 'Today';
+      case 'this-week':
+        return 'This Week';
+      case 'this-month':
+        return 'This Month';
+      case 'this-year':
+        return 'This Year';
+      default:
+        return 'All Time';
+    }
+  };
+
+  const getSortLabel = () => {
+    switch (sort) {
+      case 'date-asc':
+        return 'Date (Oldest)';
+      case 'date-desc':
+        return 'Date (Newest)';
+      default:
+        return 'Relevance';
+    }
+  };
+
+  const channelFilterLabel =
+    channelSlugs.length === 0
+      ? 'All Channels'
+      : channelSlugs.length === 1
+        ? (availableChannels.find((c) => c.slug === channelSlugs[0])?.name ??
+          '1 Channel')
+        : `${channelSlugs.length} Channels`;
+
   return (
     <div className="flex w-full flex-col content-stretch items-start gap-1">
       <SectionHeading>Display Options</SectionHeading>
@@ -273,30 +378,30 @@ function SearchSettingsContent({
         <dl className="flex w-full justify-between">
           <dt className="font-medium text-primary text-sm">Sorting</dt>
           <dd className="flex items-center font-normal text-xs text-zinc-300">
-            Relevance <IconChevronRight size={16} className="shrink-0" />
+            {getSortLabel()} <IconChevronRight size={16} className="shrink-0" />
           </dd>
         </dl>
       </button>
 
       <Divider />
 
-      {/* <SectionHeading>Filters</SectionHeading> */}
-      {/**/}
-      {/* <FilterOption */}
-      {/*   icon={<IconFlag size={16} className="shrink-0 text-primary opacity-50" />} */}
-      {/*   label="Following" */}
-      {/*   selected={false} */}
-      {/* /> */}
-      {/**/}
-      {/* <FilterOption */}
-      {/*   icon={<IconBookmark size={16} className="shrink-0 text-primary opacity-50" />} */}
-      {/*   label="Library" */}
-      {/*   selected={false} */}
-      {/* /> */}
-      {/**/}
-      {/* <Divider /> */}
+      <SectionHeading>Filters</SectionHeading>
 
-      <SectionHeading>Display Options</SectionHeading>
+      {availableChannels.length > 0 ? (
+        <button
+          type="button"
+          onClick={() => onNavigate('channels')}
+          className="flex w-full cursor-pointer items-center rounded-lg px-1 py-[7px] transition-colors hover:bg-primary/10"
+        >
+          <dl className="flex w-full justify-between">
+            <dt className="font-medium text-primary text-sm">Channels</dt>
+            <dd className="flex items-center gap-1 font-normal text-xs text-zinc-300">
+              {channelFilterLabel}{' '}
+              <IconChevronRight size={16} className="shrink-0" />
+            </dd>
+          </dl>
+        </button>
+      ) : null}
 
       <button
         type="button"
@@ -306,7 +411,8 @@ function SearchSettingsContent({
         <dl className="flex w-full justify-between">
           <dt className="font-medium text-primary text-sm">Date Range</dt>
           <dd className="flex items-center gap-1 font-normal text-xs text-zinc-300">
-            All Time <IconChevronRight size={16} className="shrink-0" />
+            {getDateRangeLabel()}{' '}
+            <IconChevronRight size={16} className="shrink-0" />
           </dd>
         </dl>
       </button>
@@ -331,10 +437,42 @@ export function SearchSettingsModal({
   onSortChange,
   dateRange = 'all-time',
   onDateRangeChange,
+  channelSlugs = [],
+  onChannelSlugsChange,
   onClearFilters,
 }: SearchSettingsModalProps) {
   const [currentPage, setCurrentPage] = useState<SearchSettingsPage>('main');
   const [isMobile, setIsMobile] = useState(false);
+  const trpc = useTRPC();
+  const searchParams = useSearch({ strict: false }) as {
+    q?: string;
+    focus?: 'media' | 'transcripts';
+    channelSlugs?: string[];
+    sort?: 'relevance' | 'date-asc' | 'date-desc';
+    dateRange?: 'all-time' | 'today' | 'this-week' | 'this-month' | 'this-year';
+  };
+
+  // Get available channels from search results (only when modal is open and we have a query)
+  const { data: searchData } = useQuery({
+    ...trpc.search.performSearch.queryOptions({
+      q: searchParams.q ?? '',
+      focus: searchParams.focus ?? 'media',
+      channelSlugs: searchParams.channelSlugs,
+      limit: 20,
+      sort: searchParams.sort,
+      dateRange: searchParams.dateRange,
+    }),
+    enabled: open && Boolean(searchParams.q),
+  });
+
+  const availableChannels =
+    searchData?.channels ??
+    ([] as Array<{
+      id: string;
+      name: string;
+      slug: string;
+      avatarUrl?: string | null;
+    }>);
 
   // Detect screen size
   useEffect(() => {
@@ -369,6 +507,9 @@ export function SearchSettingsModal({
                 onSortChange={onSortChange}
                 dateRange={dateRange}
                 onDateRangeChange={onDateRangeChange}
+                channelSlugs={channelSlugs}
+                onChannelSlugsChange={onChannelSlugsChange}
+                availableChannels={availableChannels}
                 onClearFilters={onClearFilters}
               />
 
@@ -406,6 +547,9 @@ export function SearchSettingsModal({
                   onSortChange={onSortChange}
                   dateRange={dateRange}
                   onDateRangeChange={onDateRangeChange}
+                  channelSlugs={channelSlugs}
+                  onChannelSlugsChange={onChannelSlugsChange}
+                  availableChannels={availableChannels}
                   onClearFilters={onClearFilters}
                 />
               </Dialog.Popup>

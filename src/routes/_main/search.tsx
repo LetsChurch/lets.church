@@ -52,7 +52,7 @@ export const Route = createFileRoute('/_main/search')({
   validateSearch: z.object({
     q: z.string().optional(),
     focus: z.enum(['media', 'transcripts']).catch('media'),
-    channelId: z.string().optional(),
+    channelSlugs: z.array(z.string()).optional(),
     sort: z.enum(['relevance', 'date-asc', 'date-desc']).optional(),
     dateRange: z
       .enum(['all-time', 'today', 'this-week', 'this-month', 'this-year'])
@@ -61,18 +61,18 @@ export const Route = createFileRoute('/_main/search')({
   loaderDeps: ({ search }) => ({
     q: search.q,
     focus: search.focus,
-    channelId: search.channelId,
+    channelSlugs: search.channelSlugs,
     sort: search.sort,
     dateRange: search.dateRange,
   }),
   loader: async ({ context, deps }) => {
     if (deps.q) {
-      // Prefetch search results
+      // Prefetch search results (slug-to-ID conversion happens in the procedure)
       await context.queryClient.prefetchInfiniteQuery(
         context.trpc.search.performSearch.infiniteQueryOptions({
           q: deps.q,
           focus: deps.focus as 'media' | 'transcripts',
-          channelIds: deps.channelId ? [deps.channelId] : undefined,
+          channelSlugs: deps.channelSlugs,
           limit: 20,
           sort: deps.sort,
           dateRange: deps.dateRange,
@@ -115,7 +115,7 @@ const trendingSearches = [
 const emptyArray: ReadonlyArray<unknown> = [];
 
 function SearchResults({ q }: { q: string }) {
-  const { focus, channelId, sort, dateRange } = Route.useSearch();
+  const { focus, channelSlugs, sort, dateRange } = Route.useSearch();
   const trpc = useTRPC();
   const navigate = useNavigate({ from: Route.fullPath });
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -129,7 +129,7 @@ function SearchResults({ q }: { q: string }) {
     ...trpc.search.performSearch.infiniteQueryOptions({
       q,
       focus,
-      channelIds: channelId ? [channelId] : undefined,
+      channelSlugs,
       limit: 20,
       sort,
       dateRange,
@@ -350,7 +350,7 @@ function NoSearch() {
 
   const handleSearchClick = (query: string) => {
     navigate({
-      search: { q: query, focus: 'media' as const, channelId: undefined },
+      search: { q: query, focus: 'media' as const, channelSlugs: undefined },
     });
   };
 
