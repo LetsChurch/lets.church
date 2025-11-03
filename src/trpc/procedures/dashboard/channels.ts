@@ -1,7 +1,7 @@
-import { UploadLicense } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { invariant } from 'es-toolkit';
 import { z } from 'zod';
+import { UploadLicense } from '@/generated/prisma/client';
 import {
   finalizeMultipartUploadSchema,
   getAvatarResize,

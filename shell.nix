@@ -26,6 +26,7 @@ pkgs.mkShell {
     lazydocker
     navi
     nodejs_23
+    pnpm
     rclone
     sampler
     templ

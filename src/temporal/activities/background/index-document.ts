@@ -1,6 +1,6 @@
-import { AddressType } from '@prisma/client';
 import { invariant } from 'es-toolkit';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
+import { AddressType } from '@/generated/prisma/client';
 import { prisma } from '@/util/db';
 import { client, escapeDocument } from '../../../util/elasticsearch';
 import logger from '../../../util/logger';

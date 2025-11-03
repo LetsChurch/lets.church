@@ -31,31 +31,29 @@ export default async function updateUploadScores() {
 
   await pAll(
     uploads.map(({ id, publishedAt, score: oldScore }) => async () => {
-      await prisma.$transaction(async (tx) => {
-        const [likes, dislikes] = await Promise.all([
-          tx.uploadUserRating.count({
-            where: { uploadRecordId: id, rating: 'LIKE' },
-          }),
-          tx.uploadUserRating.count({
-            where: { uploadRecordId: id, rating: 'DISLIKE' },
-          }),
-        ]);
+      const [likes, dislikes] = await Promise.all([
+        prisma.uploadUserRating.count({
+          where: { uploadRecordId: id, rating: 'LIKE' },
+        }),
+        prisma.uploadUserRating.count({
+          where: { uploadRecordId: id, rating: 'DISLIKE' },
+        }),
+      ]);
 
-        const delta = likes - dislikes;
-        const order = Math.log10(Math.max(Math.abs(delta), 1));
-        const sign = delta > 0 ? 1 : delta < 0 ? -1 : 0;
-        const seconds = Math.round((publishedAt.getTime() - epoch) / 1000);
+      const delta = likes - dislikes;
+      const order = Math.log10(Math.max(Math.abs(delta), 1));
+      const sign = delta > 0 ? 1 : delta < 0 ? -1 : 0;
+      const seconds = Math.round((publishedAt.getTime() - epoch) / 1000);
 
-        const score = round(sign * order + seconds / 45000, 7);
+      const score = round(sign * order + seconds / 45000, 7);
 
-        activityLogger.info(
-          `Upload ${id} has score ${score} (old score: ${oldScore}) (likes: ${likes}, dislikes: ${dislikes})`,
-        );
+      activityLogger.info(
+        `Upload ${id} has score ${score} (old score: ${oldScore}) (likes: ${likes}, dislikes: ${dislikes})`,
+      );
 
-        await tx.uploadRecord.update({
-          where: { id },
-          data: { score, scoreStaleAt: null },
-        });
+      await prisma.uploadRecord.update({
+        where: { id },
+        data: { score, scoreStaleAt: null },
       });
     }),
     { concurrency: 100 },

@@ -1,13 +1,13 @@
 import { stat, unlink } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { setTimeout } from 'node:timers/promises';
-import type { UploadVariant } from '@prisma/client';
 import { Context } from '@temporalio/activity';
 import { invariant, throttle } from 'es-toolkit';
 import fastGlob from 'fast-glob';
 import mime from 'mime';
 import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
+import type { UploadVariant } from '@/generated/prisma/client';
 import { runAudiowaveform } from '@/util/audiowaveform';
 import {
   getVariants,

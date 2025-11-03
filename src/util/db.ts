@@ -1,5 +1,8 @@
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import { Prisma, PrismaClient } from '@/generated/prisma/client';
+
+// Re-export Prisma namespace for use throughout the application
+export { Prisma };
 
 const { DATABASE_URL } = z
   .object({ DATABASE_URL: z.string() })
@@ -31,3 +34,16 @@ export function getLoglessClient() {
     },
   });
 }
+
+/**
+ * Transaction client type for use in Prisma transaction callbacks.
+ *
+ * This type represents the Prisma client available in transaction callbacks.
+ * With the new prisma-client generator, we directly use PrismaClient as the type
+ * since it properly includes all model accessors as getters.
+ *
+ * Related issues:
+ * - https://github.com/prisma/prisma/issues/20738 - TransactionClient doesn't support extended clients
+ * - https://github.com/prisma/prisma/issues/26841 - New prisma-client generator type checking failures
+ */
+export type TransactionClient = PrismaClient;

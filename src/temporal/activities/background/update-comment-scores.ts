@@ -44,26 +44,24 @@ export default async function updateCommentScores() {
 
   await pAll(
     comments.map(({ id, score: oldScore }) => async () => {
-      await prisma.$transaction(async (tx) => {
-        const [likes, dislikes] = await Promise.all([
-          tx.uploadUserCommentRating.count({
-            where: { uploadUserCommentId: id, rating: 'LIKE' },
-          }),
-          tx.uploadUserCommentRating.count({
-            where: { uploadUserCommentId: id, rating: 'DISLIKE' },
-          }),
-        ]);
+      const [likes, dislikes] = await Promise.all([
+        prisma.uploadUserCommentRating.count({
+          where: { uploadUserCommentId: id, rating: 'LIKE' },
+        }),
+        prisma.uploadUserCommentRating.count({
+          where: { uploadUserCommentId: id, rating: 'DISLIKE' },
+        }),
+      ]);
 
-        const score = confidence(likes, dislikes);
+      const score = confidence(likes, dislikes);
 
-        activityLogger.info(
-          `Comment ${id} has score ${score} (old score: ${oldScore}) (likes: ${likes}, dislikes: ${dislikes})`,
-        );
+      activityLogger.info(
+        `Comment ${id} has score ${score} (old score: ${oldScore}) (likes: ${likes}, dislikes: ${dislikes})`,
+      );
 
-        await tx.uploadUserComment.update({
-          where: { id },
-          data: { score, scoreStaleAt: null },
-        });
+      await prisma.uploadUserComment.update({
+        where: { id },
+        data: { score, scoreStaleAt: null },
       });
     }),
     { concurrency: 100 },

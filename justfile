@@ -7,16 +7,33 @@ default:
 
 start *params='-d --remove-orphans':
   docker compose up {{params}}
+preview *params='-d --remove-orphans':
+  docker compose -f docker-compose.yml -f docker-compose.preview.yml up {{params}}
 stop:
   docker compose down
 prune:
   docker compose down --rmi local --volumes
 build *params:
   docker compose build {{params}}
+build-preview *params:
+  docker compose -f docker-compose.yml -f docker-compose.preview.yml build {{params}}
 
+# Wait for docker services to be healthy (timeout after 60 seconds)
+check-health:
+  docker compose exec postgres sh -c 'timeout 60 sh -c "until pg_isready; do sleep 1; done"'
+  docker compose exec elasticsearch sh -c 'timeout 60 sh -c "until curl -sf elasticsearch:9200/_cat/health >/dev/null; do sleep 1; done"'
+
+# Start development services, initialize database, and seed data
 up:
   just start
-  sleep 10
+  just check-health
+  just init seed
+
+# Start preview (production) services, initialize database, and seed data
+pup:
+  @echo "🐶"
+  just preview
+  just check-health
   just init seed
 
 logs service *params:
@@ -38,8 +55,8 @@ ports:
 purge-pg:
   docker volume rm ${COMPOSE_PROJECT_NAME}_pg-data
 
-npmi:
-  just exec web npm i
+pnpmi:
+  just exec web pnpm i
 
 #
 # Development
@@ -52,21 +69,21 @@ temporal *args:
   docker compose exec temporal-admin-tools temporal {{args}}
 
 db-push:
-  docker compose exec web npm run prisma:db:push
+  docker compose exec web pnpm run prisma:db:push
 
 db-reset:
-  docker compose exec web npm run prisma:migrate:reset
+  docker compose exec web pnpm run prisma:migrate:reset
   docker compose restart postgres
 
 prisma-generate:
-  docker compose exec web npm run prisma:migrate:dev
+  docker compose exec web pnpm run prisma:migrate:dev
 
 es-push-mappings:
-  docker compose exec web npm run es:push-mappings
+  docker compose exec web pnpm run es:push-mappings
 
 migrate-dev:
-  docker compose exec web npm run prisma:migrate:dev
-  npm run prisma:generate
+  docker compose exec web pnpm run prisma:migrate:dev
+  pnpm run prisma:generate
 
 temporal-schedule: restart-workers
   just temporal workflow execute --task-queue background --type updateDailySaltWorkflow --workflow-id update-daily-salt
@@ -82,10 +99,10 @@ temporal-schedule-delete:
 init: migrate-dev es-push-mappings temporal-schedule
 
 s3-prune-multipart-uploads:
-  S3_BUCKET=${S3_INGEST_BUCKET} npm run s3:prune-multipart-uploads
+  S3_BUCKET=${S3_INGEST_BUCKET} pnpm run s3:prune-multipart-uploads
 
 seed-db:
-  docker compose exec web npm run prisma:db:seed
+  docker compose exec web pnpm run prisma:db:seed
 seed-s3-ingest:
   rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-ingest lcdevs3:letschurch-dev-ingest
 seed-s3-public:
@@ -101,15 +118,15 @@ reset:
   just init seed
 
 truncate:
-  docker compose exec web npm run prisma:db:truncate
+  docker compose exec web pnpm run prisma:db:truncate
 
 check:
-  npm run check
+  pnpm run check
 
 export CI := "1"
 
 test:
-  npm test
+  pnpm test
 
 transcribe file:
   docker compose run --rm -v $PWD:/host -w /host transcribe-worker /bin/bash -c 'ffmpeg -i {{file}} -ar 16000 -ac 1 {{file}}.wav'

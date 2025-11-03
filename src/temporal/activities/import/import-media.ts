@@ -1,10 +1,10 @@
 import { extname, join } from 'node:path';
-import type { Prisma } from '@prisma/client';
 import { Context } from '@temporalio/activity';
 import mime from 'mime';
 import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
 import { v4 as uuid } from 'uuid';
+import type { Prisma } from '@/generated/prisma/client';
 import { downloadFromUrl } from '@/util/import';
 import logger from '@/util/logger';
 import { putFile, putFileMultipart } from '@/util/s3';

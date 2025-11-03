@@ -34,7 +34,7 @@ export async function runWhisper(
       'True',
       ...extraArgs,
     ],
-    { cwd, signal },
+    { cwd, cancelSignal: signal },
   );
 
   moduleLogger.info(`runWhisper: ${proc.spawnargs.join(' ')}`);

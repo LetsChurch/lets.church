@@ -1,7 +1,7 @@
-import { UploadViewSource } from '@prisma/client';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { Player } from '@/components/player';
+import { UploadViewSource } from '@/generated/prisma/enums';
 import { trpcClient, useTRPC } from '@/trpc/react';
 
 export const Route = createFileRoute('/embed/media/$mediaId')({

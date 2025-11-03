@@ -1,10 +1,10 @@
-import type { Prisma } from '@prisma/client';
 import {
   condition,
   defineSignal,
   proxyActivities,
   setHandler,
 } from '@temporalio/workflow';
+import type { Prisma } from '@/generated/prisma/client';
 import type * as activities from '../activities/background';
 import { BACKGROUND_QUEUE } from '../queues';
 

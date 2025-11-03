@@ -1,9 +1,9 @@
 import { xxh32 } from '@node-rs/xxhash';
-import type { Prisma, UploadVariant } from '@prisma/client';
 import { Client, Connection, type WorkflowOptions } from '@temporalio/client';
 import PLazy from 'p-lazy';
 import waitOn from 'wait-on';
 import { z } from 'zod';
+import type { Prisma, UploadVariant } from '@/generated/prisma/client';
 import logger from '../util/logger';
 import type { Client as S3UtilClient } from '../util/s3';
 import type { UploadPostProcessValue } from '../util/types';

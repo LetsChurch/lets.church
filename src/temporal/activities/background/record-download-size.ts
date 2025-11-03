@@ -1,4 +1,4 @@
-import type { UploadVariant } from '@prisma/client';
+import type { UploadVariant } from '@/generated/prisma/client';
 import { prisma } from '@/util/db';
 
 export default async function recordDownloadSize(

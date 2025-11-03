@@ -1,6 +1,6 @@
-import { OrganizationType } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { invariant } from 'es-toolkit';
+import { OrganizationType } from '@/generated/prisma/client';
 import {
   finalizeMultipartUploadSchema,
   getAvatarResize,
@@ -452,15 +452,16 @@ export const churchRouter = router({
           },
         });
 
-        const membershipToDelete = await prisma.organizationMembership.findUnique({
-          where: {
-            organizationId_appUserId: {
-              organizationId: input.churchId,
-              appUserId: input.appUserId,
+        const membershipToDelete =
+          await prisma.organizationMembership.findUnique({
+            where: {
+              organizationId_appUserId: {
+                organizationId: input.churchId,
+                appUserId: input.appUserId,
+              },
             },
-          },
-          select: { isAdmin: true, appUserId: true },
-        });
+            select: { isAdmin: true, appUserId: true },
+          });
 
         if (membershipToDelete?.isAdmin && adminCount <= 1) {
           moduleLogger.warn('Cannot remove last admin from church', {

@@ -1,7 +1,7 @@
 volumes:
   es-data:
   pg-data:
-  node-modules:
+  pnpm-store:
 
 x-s3-env: &s3-env
   S3_INGEST_REGION: ${S3_INGEST_REGION}
@@ -22,8 +22,8 @@ services:
   web:
     build:
       context: .
-      target: web
-    command: npm run dev -- --host
+      target: dev
+    command: pnpm run dev --host
     restart: unless-stopped
     ports:
       - 127.0.0.1:${HOST_WEB_PORT}:3000
@@ -42,17 +42,18 @@ services:
       ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
       <<: *s3-env
     volumes:
-      - ./:/home/node/app
-      - node-modules:/home/node/app/node_modules
-      - /home/node/app/.nitro
-      - /home/node/app/.output
-      - /home/node/app/.tanstack
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+      - pnpm-store:/pnpm/store
+      - /usr/src/app/.nitro
+      - /usr/src/app/.tanstack
+      - /usr/src/app/dist
 
   background-worker:
     build:
       context: .
-      target: background-worker
-    command: npm run dev:background-worker
+      target: dev
+    command: pnpm run dev:background-worker
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -69,16 +70,17 @@ services:
       WEB_URL: ${HOST_WEB_URL}
       <<: *s3-env
     volumes:
-      - ./:/home/node/app
-      - node-modules:/home/node/app/node_modules
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+      - pnpm-store:/pnpm/store
     depends_on:
       - temporal
 
   probe-worker:
     build:
       context: .
-      target: probe-worker
-    command: npm run dev:probe-worker
+      target: dev
+    command: pnpm run dev:probe-worker
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -90,19 +92,20 @@ services:
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 5
       <<: *s3-env
     volumes:
-      - ./:/home/node/app
-      - node-modules:/home/node/app/node_modules
-      - /home/node/app/.nitro
-      - /home/node/app/.output
-      - /home/node/app/.tanstack
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+      - pnpm-store:/pnpm/store
+      - /usr/src/app/.nitro
+      - /usr/src/app/.tanstack
+      - /usr/src/app/dist
     depends_on:
       - temporal
 
   transcode-worker:
     build:
       context: .
-      target: transcode-worker
-    command: npm run dev:transcode-worker
+      target: dev
+    command: pnpm run dev:transcode-worker
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -114,11 +117,12 @@ services:
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 1
       <<: *s3-env
     volumes:
-      - ./:/home/node/app
-      - node-modules:/home/node/app/node_modules
-      - /home/node/app/.nitro
-      - /home/node/app/.output
-      - /home/node/app/.tanstack
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+      - pnpm-store:/pnpm/store
+      - /usr/src/app/.nitro
+      - /usr/src/app/.tanstack
+      - /usr/src/app/dist
     depends_on:
       - temporal
 
@@ -126,7 +130,7 @@ services:
     build:
       context: .
       target: transcribe-worker
-    command: npm run dev:transcribe-worker
+    command: pnpm run dev:transcribe-worker
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -139,19 +143,20 @@ services:
       WHISPER_MODEL: tiny.en
       <<: *s3-env
     volumes:
-      - ./:/home/node/app
-      - node-modules:/home/node/app/node_modules
-      - /home/node/app/.nitro
-      - /home/node/app/.output
-      - /home/node/app/.tanstack
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+      - pnpm-store:/pnpm/store
+      - /usr/src/app/.nitro
+      - /usr/src/app/.tanstack
+      - /usr/src/app/dist
     depends_on:
       - temporal
 
   import-worker:
     build:
       context: .
-      target: import-worker
-    command: npm run dev:import-worker
+      target: dev
+    command: pnpm run dev:import-worker
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -164,11 +169,12 @@ services:
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1m
       <<: *s3-env
     volumes:
-      - ./:/home/node/app
-      - node-modules:/home/node/app/node_modules
-      - /home/node/app/.nitro
-      - /home/node/app/.output
-      - /home/node/app/.tanstack
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+      - pnpm-store:/pnpm/store
+      - /usr/src/app/.nitro
+      - /usr/src/app/.tanstack
+      - /usr/src/app/dist
     depends_on:
       - temporal
 

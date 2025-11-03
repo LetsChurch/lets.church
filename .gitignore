@@ -2,9 +2,12 @@
 .direnv
 .nitro
 .output
-.tanstack
-.vite
+# .tanstack
+# .vite
 dist
+src/generated
+
+.pnpm-store
 
 gitleaks-findings.json
 node_modules

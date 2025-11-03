@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker';
 import parsePhoneNumber from 'libphonenumber-js';
 import slugify from '@sindresorhus/slugify';
 import argon2 from 'argon2';
-import { Prisma, UploadListType } from '@prisma/client';
+import { Prisma, UploadListType } from '@/generated/prisma/client';
 import invariant from 'tiny-invariant';
 import { stripIndent } from 'proper-tags';
 import { indexDocument, waitOnTemporal } from '../../src/temporal';

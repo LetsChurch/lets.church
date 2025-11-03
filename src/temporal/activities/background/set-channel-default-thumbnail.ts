@@ -6,10 +6,11 @@ export default async function setChannelDefaultThumbnail(
   path: string,
   blurhash: string,
 ) {
-  const { defaultThumbnailPath: oldPath } = await prisma.channel.findUniqueOrThrow({
-    where: { id: channelid },
-    select: { defaultThumbnailPath: true },
-  });
+  const { defaultThumbnailPath: oldPath } =
+    await prisma.channel.findUniqueOrThrow({
+      where: { id: channelid },
+      select: { defaultThumbnailPath: true },
+    });
 
   if (oldPath) {
     await deleteFile('PUBLIC', oldPath);

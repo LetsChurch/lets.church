@@ -12,6 +12,8 @@ import pino from 'pino';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+const { AXIOM_DATASET, AXIOM_TOKEN } = process.env;
+
 const logger = pino({
   formatters: {
     bindings(bindings) {
@@ -29,14 +31,14 @@ const logger = pino({
         target: 'pino-pretty',
         options: {},
       },
-      ...(isProduction
+      ...(isProduction && AXIOM_DATASET && AXIOM_TOKEN
         ? [
             {
               level: 'info',
               target: '@axiomhq/pino',
               options: {
-                dataset: process.env.AXIOM_DATASET,
-                token: process.env.AXIOM_TOKEN,
+                dataset: AXIOM_DATASET,
+                token: AXIOM_TOKEN,
               },
             },
           ]

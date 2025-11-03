@@ -1,0 +1,59 @@
+# Production preview overrides
+# Use with: docker compose -f docker-compose.yml -f docker-compose.preview.yml up
+
+services:
+  web:
+    build:
+      target: web
+    command: null
+    volumes: !reset []
+    environment:
+      NODE_ENV: production
+
+  background-worker:
+    build:
+      target: background-worker
+    command: null
+    volumes: !reset []
+    environment:
+      NODE_ENV: production
+      IDENTITY: ${IDENTITY:-preview}
+
+  probe-worker:
+    build:
+      target: probe-worker
+    command: null
+    volumes: !reset []
+    environment:
+      NODE_ENV: production
+      IDENTITY: ${IDENTITY:-preview}
+
+  transcode-worker:
+    build:
+      target: transcode-worker
+    command: null
+    volumes: !reset []
+    environment:
+      NODE_ENV: production
+      IDENTITY: ${IDENTITY:-preview}
+
+  transcribe-worker:
+    build:
+      target: transcribe-worker
+      args:
+        WHISPER_MODEL: ${WHISPER_MODEL:-base.en}
+    command: null
+    volumes: !reset []
+    environment:
+      NODE_ENV: production
+      IDENTITY: ${IDENTITY:-preview}
+      WHISPER_MODEL: ${WHISPER_MODEL:-base.en}
+
+  import-worker:
+    build:
+      target: import-worker
+    command: null
+    volumes: !reset []
+    environment:
+      NODE_ENV: production
+      IDENTITY: ${IDENTITY:-preview}

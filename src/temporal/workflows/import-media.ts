@@ -1,9 +1,9 @@
-import type { Prisma } from '@prisma/client';
 import {
   ParentClosePolicy,
   proxyActivities,
   startChild,
 } from '@temporalio/workflow';
+import type { Prisma } from '@/generated/prisma/client';
 import type * as importActivities from '../activities/import';
 import { IMPORT_QUEUE } from '../queues';
 import { processImageWorkflow } from './process-image';

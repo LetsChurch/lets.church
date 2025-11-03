@@ -1,8 +1,8 @@
 import { xxh64 } from '@node-rs/xxhash';
-import { UploadViewSource } from '@prisma/client';
 import { getRequest } from '@tanstack/react-start/server';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
 import { z } from 'zod';
+import { UploadViewSource } from '@/generated/prisma/client';
 import {
   getThumbnailResize,
   IncomingIdSchema,

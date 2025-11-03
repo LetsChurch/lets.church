@@ -294,7 +294,7 @@ export default function Sidebar({ className }: SidebarProps) {
                 <div className="mt-1 flex flex-col gap-2 px-4 pt-1 pb-2">
                   {!isLoggedIn ? (
                     <Link
-                      to="/auth/register"
+                      to="/auth/login"
                       className="text-left text-xs text-zinc-400 transition-colors hover:text-primary/80"
                     >
                       Sign in to see channels

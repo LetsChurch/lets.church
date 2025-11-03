@@ -1,5 +1,5 @@
-import type { Prisma, UploadVariant } from '@prisma/client';
 import { defineSignal, proxyActivities } from '@temporalio/workflow';
+import type { Prisma, UploadVariant } from '@/generated/prisma/client';
 import type * as activities from '../activities/background';
 import { BACKGROUND_QUEUE } from '../queues';
 

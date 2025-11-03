@@ -1,4 +1,4 @@
-import { OrganizationTagCategory } from '@prisma/client';
+import { OrganizationTagCategory } from '@/generated/prisma/client';
 import { prisma } from '../../src/util/db';
 
 export const nonDenomTagSlug = 'non-denominational';

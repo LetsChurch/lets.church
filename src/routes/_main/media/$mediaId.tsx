@@ -1,5 +1,4 @@
 import { AlertDialog } from '@base-ui-components/react/alert-dialog';
-import { UploadViewSource } from '@prisma/client';
 import { IconMessageCircle2, IconSearch } from '@tabler/icons-react';
 import {
   useMutation,
@@ -18,6 +17,7 @@ import { MobileDrawer } from '@/components/mobile-drawer';
 import { Player } from '@/components/player';
 import { Transcript } from '@/components/transcript';
 import { TranscriptSidebar } from '@/components/transcript-sidebar';
+import { UploadViewSource } from '@/generated/prisma/enums';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { IncomingIdSchema } from '@/schemas/common';
 import { useSetBackgroundImage } from '@/stores/header';

@@ -1,10 +1,10 @@
+import { z } from 'zod';
 import {
   ChannelVisibility,
   UploadLicense,
   UploadListType,
   UploadVisibility,
-} from '@prisma/client';
-import { z } from 'zod';
+} from '@/generated/prisma/enums';
 import { AvatarSize } from '../common';
 
 // Common field schemas

@@ -13,7 +13,7 @@ import {
   completeMultipartMediaUpload,
   handleMultipartMediaUpload,
 } from '@/temporal';
-import { prisma } from '@/util/db';
+import { prisma, type TransactionClient } from '@/util/db';
 import logger from '@/util/logger';
 import {
   createMultipartUpload,
@@ -119,7 +119,10 @@ export const accountProcedures = {
           return { error: 'Email is already taken' };
         }
 
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (txRaw) => {
+          // Type assertion required due to TypeScript limitations with Omit and getter properties
+          // See: https://github.com/prisma/prisma/issues/20738
+          const tx = txRaw as TransactionClient;
           await tx.appUser.update({
             where: { id: ctx.session.appUserId },
             data: {

@@ -1,11 +1,31 @@
-.envrc.local
-.direnv
+# Git
+.git
+
+# Build artifacts (generated during build stage)
 .nitro
 .output
-.tanstack
-gitleaks-findings.json
-node_modules
-seed-data
+dist
+src/generated
 
-# TODO: temp
+# Dependencies (installed during build stage)
+node_modules
+.pnpm-store
+
+# Environment files
+.env*
+!.env.example
+
+# Development and testing
+.vite
+storybook-static
+coverage
+
+# Logs
+*.log
+
+# Local data
+seed-data
 legacy
+
+# Tooling
+gitleaks-findings.json

@@ -10,6 +10,7 @@
     "includes": [
       ".github/**/*",
       "src/**/*",
+      "!src/generated/**/*",
       "!**/*.gen.*",
       "!**/*.module.css.d.ts",
       "./*"

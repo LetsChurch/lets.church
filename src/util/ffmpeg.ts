@@ -1,6 +1,6 @@
-import type { UploadVariant } from '@prisma/client';
 import { invariant } from 'es-toolkit';
 import { execa } from 'execa';
+import type { UploadVariant } from '@/generated/prisma/client';
 import logger from './logger';
 import { type Probe, probeIsVideoFile } from './zod';
 
@@ -423,7 +423,7 @@ export function runFfmpegEncode({
       // Outputs
       ...ffmpegEncodingArgs(variants, probe, hwAccel),
     ],
-    { cwd, signal },
+    { cwd, cancelSignal: signal },
   );
 
   moduleLogger.info(`runFfmpegEncode: ${proc.spawnargs.join(' ')}`);
@@ -456,7 +456,7 @@ export function runFfmpegThumbnails(
       `${rate}`,
       'screenshot_v1_%03d.jpg',
     ],
-    { cwd, signal },
+    { cwd, cancelSignal: signal },
   );
 
   moduleLogger.info(`runFfmpegThumbnails: ${proc.spawnargs.join(' ')}`);
@@ -482,7 +482,7 @@ export function runFfprobe(
       /* '-count_frames', */
       inputFilename,
     ],
-    { cwd, signal },
+    { cwd, cancelSignal: signal },
   );
 
   moduleLogger.info(`runFfmpegProbe: ${proc.spawnargs.join(' ')}`);
