@@ -24,6 +24,7 @@ import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 
 declare module 'react' {
+  // biome-ignore lint/style/useConsistentTypeDefinitions: external interface
   interface CSSProperties {
     [key: `--${string}`]: string | number;
   }

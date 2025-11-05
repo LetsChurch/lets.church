@@ -26,7 +26,13 @@
       "recommended": true,
       "style": {
         "useImportType": "error",
-        "useExportType": "error"
+        "useExportType": "error",
+        "useConsistentTypeDefinitions": {
+          "level": "error",
+          "options": {
+            "style": "type"
+          }
+        }
       },
       "nursery": {
         "useSortedClasses": "error"

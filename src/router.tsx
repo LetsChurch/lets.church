@@ -4,6 +4,7 @@ import { routeTree } from './routeTree.gen';
 import { getContext, Provider as TrpcProvider } from './trpc/react';
 
 declare global {
+  // biome-ignore lint/style/useConsistentTypeDefinitions: global definition
   interface Window {
     __TANSTACK_QUERY_CLIENT__: import('@tanstack/query-core').QueryClient;
   }
