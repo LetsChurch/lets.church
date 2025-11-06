@@ -90,15 +90,6 @@ function MobileDrawerContent({
       setDragY(0);
     }
   };
-
-  // Reset drag state when dialog closes
-  React.useEffect(() => {
-    if (!open) {
-      setDragY(0);
-      setIsDragging(false);
-    }
-  }, [open]);
-
   // Handle click outside
   React.useEffect(() => {
     if (!open) return;

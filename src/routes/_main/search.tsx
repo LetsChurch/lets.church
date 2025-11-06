@@ -10,7 +10,6 @@ import Header from '@/components/header';
 import SearchBar from '@/components/search-bar';
 import { SearchRow } from '@/components/search-row';
 import SearchTabs from '@/components/search-tabs';
-import { TrendingSearchPill } from '@/components/trending-search-pill';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import {
   useDeleteRecentSearch,
@@ -105,7 +104,7 @@ function RouteComponent() {
   );
 }
 
-const trendingSearches = [
+const _trendingSearches = [
   'What is sanctification?',
   'Christian political theory',
   'Polemics',

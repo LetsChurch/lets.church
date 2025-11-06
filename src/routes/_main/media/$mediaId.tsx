@@ -1,5 +1,6 @@
 import { AlertDialog } from '@base-ui-components/react/alert-dialog';
-import { IconMessageCircle2, IconSearch } from '@tabler/icons-react';
+import { useStore } from '@nanostores/react';
+import { IconMessageCircle2, IconSearch, IconX } from '@tabler/icons-react';
 import {
   useMutation,
   useQueryClient,
@@ -16,11 +17,19 @@ import { MediaInfoTabs } from '@/components/media-info-tabs';
 import { MobileDrawer } from '@/components/mobile-drawer';
 import { Player } from '@/components/player';
 import { Transcript } from '@/components/transcript';
+import { TranscriptSearchResults } from '@/components/transcript-search-results';
 import { TranscriptSidebar } from '@/components/transcript-sidebar';
 import { UploadViewSource } from '@/generated/prisma/enums';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { IncomingIdSchema } from '@/schemas/common';
 import { useSetBackgroundImage } from '@/stores/header';
+import {
+  $isSearchActive,
+  $searchQuery,
+  $searchResults,
+  performSearch,
+  resetSearch,
+} from '@/stores/transcript-search';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 import { useVideoLayout } from '@/util/use-video-layout';
@@ -206,6 +215,96 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
     };
   },
 });
+
+function MobileTranscriptDrawerContent({
+  transcript,
+}: {
+  transcript: Array<{ start: number; text: string }>;
+}) {
+  const isSearchActive = useStore($isSearchActive);
+  const searchQuery = useStore($searchQuery);
+  const searchResults = useStore($searchResults);
+
+  const handleSearchClick = () => {
+    $isSearchActive.set(true);
+  };
+
+  const handleCloseSearch = () => {
+    resetSearch();
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    $searchQuery.set(query);
+    void performSearch(query, transcript);
+  };
+
+  const hasQuery = searchQuery.trim().length > 0;
+
+  return (
+    <>
+      <div className="flex h-10 items-center gap-2 border-zinc-800 border-b border-solid px-5">
+        {isSearchActive ? (
+          <>
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                placeholder="Search transcript..."
+                className="w-full rounded-md border border-gray-600 bg-transparent px-3 py-1.5 pr-8 text-primary text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                // biome-ignore lint/a11y/noAutofocus: this is rendered by user interaction
+                autoFocus
+              />
+              {hasQuery ? (
+                <div className="-translate-y-1/2 absolute top-1/2 right-2 text-gray-400 text-xs">
+                  {searchResults.length}
+                </div>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              onClick={handleCloseSearch}
+              className="flex size-7 items-center justify-center rounded-lg hover:bg-white/10"
+              aria-label="Close search"
+            >
+              <IconX size={16} className="text-primary/80" />
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="flex grow items-baseline gap-2 pb-0.5">
+              <MobileDrawer.Title className="font-bold text-base text-primary">
+                Transcript
+              </MobileDrawer.Title>
+            </div>
+            <button
+              type="button"
+              className="flex size-7 items-center justify-center rounded-lg hover:bg-white/10"
+              onClick={handleSearchClick}
+            >
+              <IconSearch size={16} className="text-primary/80" />
+            </button>
+          </>
+        )}
+      </div>
+
+      <div
+        className={cn(
+          'relative flex min-h-0 flex-1 flex-col overflow-hidden',
+          // Gradient fade at bottom
+          'after:pointer-events-none after:absolute after:right-0 after:bottom-0 after:left-0 after:h-8 after:bg-gradient-to-b after:from-zinc-900/0 after:via-80% after:via-zinc-900/90 after:to-zinc-900',
+        )}
+      >
+        {isSearchActive && hasQuery ? (
+          <TranscriptSearchResults />
+        ) : (
+          <Transcript transcript={transcript} />
+        )}
+      </div>
+    </>
+  );
+}
 
 function RouteComponent() {
   const params = Route.useParams();
@@ -621,27 +720,8 @@ function RouteComponent() {
         onOpenChange={setTranscriptDialogOpen}
       >
         <MobileDrawer.Portal>
-          <MobileDrawer.Content>
-            <div className="flex h-10 items-center justify-center gap-2 border-zinc-800 border-b border-solid px-5">
-              <div className="flex grow items-baseline gap-2 pb-0.5">
-                <MobileDrawer.Title className="font-bold text-base text-primary">
-                  Transcript
-                </MobileDrawer.Title>
-              </div>
-              <MobileDrawer.Close className="flex size-7 items-center justify-center rounded-lg hover:bg-white/10">
-                <IconSearch size={16} className="text-primary/80" />
-              </MobileDrawer.Close>
-            </div>
-
-            <div
-              className={cn(
-                'relative flex-1 overflow-hidden',
-                // Gradient fade at bottom
-                'after:pointer-events-none after:absolute after:right-0 after:bottom-0 after:left-0 after:h-8 after:bg-gradient-to-b after:from-zinc-900/0 after:via-80% after:via-zinc-900/90 after:to-zinc-900',
-              )}
-            >
-              <Transcript transcript={transcript} />
-            </div>
+          <MobileDrawer.Content className="h-[85vh]">
+            <MobileTranscriptDrawerContent transcript={transcript} />
           </MobileDrawer.Content>
         </MobileDrawer.Portal>
       </MobileDrawer.Root>

@@ -96,6 +96,7 @@
     "es-toolkit": "^1.41.0",
     "execa": "^9.6.0",
     "fast-glob": "^3.3.3",
+    "flexsearch": "^0.8.212",
     "hls-video-element": "^1.5.8",
     "html-minifier": "^4.0.0",
     "is-ip": "^5.0.1",
