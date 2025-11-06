@@ -4,6 +4,7 @@ import {
   Outlet,
   Scripts,
 } from '@tanstack/react-router';
+import posthog from 'posthog-js';
 import { type ReactNode, useEffect } from 'react';
 import '@fontsource-variable/inter';
 import '@fontsource-variable/roboto-mono';
@@ -83,6 +84,13 @@ export const Route = createRootRouteWithContext<AppContextType>()({
 
 function RootComponent() {
   useEffect(() => {
+    // Initialize PostHog
+    posthog.init('phc_nrdBwyxcJ3Tc0g1Gq1J5Gd2w1nmpx0IIK4HQBusIu6P', {
+      api_host: 'https://us.i.posthog.com',
+      persistence: 'memory',
+      person_profiles: 'identified_only',
+    });
+
     // Set browser size cookie on mount and when window resizes
     const updateBrowserSize = () => {
       setBrowserSize({

@@ -123,6 +123,7 @@
     "pino": "^9.7.0",
     "pino-pretty": "^13.1.2",
     "playwright": "^1.56.1",
+    "posthog-js": "^1.288.0",
     "pretty-ms": "^9.3.0",
     "prisma": "^6.19.0",
     "proper-tags": "^2.0.2",
