@@ -1,4 +1,5 @@
 import { Tabs } from '@base-ui-components/react/tabs';
+import { Tooltip } from '@base-ui-components/react/tooltip';
 
 type MediaInfoTabsProps = {
   description: string | null;
@@ -35,11 +36,31 @@ export function MediaInfoTabs({
             Details
           </span>
         </Tabs.Tab>
-        <Tabs.Tab value="summary" className="relative pt-1.5 pb-2">
-          <span className="font-medium text-primary/70 text-sm data-[selected]:text-primary data-[selected]:opacity-100">
-            Summary
-          </span>
-        </Tabs.Tab>
+        <Tooltip.Provider>
+          <Tooltip.Root delay={0}>
+            <Tooltip.Trigger
+              render={
+                <Tabs.Tab
+                  value="summary"
+                  className="relative pt-1.5 pb-2"
+                  disabled
+                />
+              }
+            >
+              <span className="font-medium text-primary/30 text-sm data-[selected]:text-primary data-[selected]:opacity-100">
+                Summary
+              </span>
+            </Tooltip.Trigger>
+            <Tooltip.Portal>
+              <Tooltip.Positioner sideOffset={8} className="z-50">
+                <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-primary text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
+                  Coming soon
+                  <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
+                </Tooltip.Popup>
+              </Tooltip.Positioner>
+            </Tooltip.Portal>
+          </Tooltip.Root>
+        </Tooltip.Provider>
         {showTranscriptTab ? (
           <button
             type="button"

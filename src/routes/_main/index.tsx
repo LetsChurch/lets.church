@@ -14,7 +14,7 @@ import { MediaCarousel } from '@/components/media-carousel';
 import { MediaCompactCard } from '@/components/media-compact-card';
 import { MediaGrid } from '@/components/media-grid';
 import { SearchCard } from '@/components/search-card';
-import { TrendingSearchPill } from '@/components/trending-search-pill';
+// import { TrendingSearchPill } from '@/components/trending-search-pill';
 import { ViewMoreCard } from '@/components/view-more-card';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { useTRPC } from '@/trpc/react';
@@ -308,37 +308,40 @@ function RecentlySaved() {
 }
 
 function TrendingSearches() {
-  const searches = [
-    'Bible Study',
-    'Christian Theology',
-    'Worship',
-    'Jesus',
-    'Prayer Life',
-    'Scripture',
-    'Faith',
-    'Ministry',
-    'Sanctification',
-    'Grace',
-    'Salvation',
-    'Trinity',
-    'Holy Spirit',
-    'Church',
-    'Gospel',
-    'Hope',
-  ];
+  // const searches = [
+  //   'Bible Study',
+  //   'Christian Theology',
+  //   'Worship',
+  //   'Jesus',
+  //   'Prayer Life',
+  //   'Scripture',
+  //   'Faith',
+  //   'Ministry',
+  //   'Sanctification',
+  //   'Grace',
+  //   'Salvation',
+  //   'Trinity',
+  //   'Holy Spirit',
+  //   'Church',
+  //   'Gospel',
+  //   'Hope',
+  // ];
+  //
+  // return (
+  //   <div className="mb-8">
+  //     <h2 className="mb-6 font-medium text-lg text-primary">
+  //       Trending Searches
+  //     </h2>
+  //     <div className="flex flex-wrap gap-2">
+  //       {searches.map((search) => (
+  //         <TrendingSearchPill key={search} search={search} />
+  //       ))}
+  //     </div>
+  //   </div>
+  // );
 
-  return (
-    <div className="mb-8">
-      <h2 className="mb-6 font-medium text-lg text-primary">
-        Trending Searches
-      </h2>
-      <div className="flex flex-wrap gap-2">
-        {searches.map((search) => (
-          <TrendingSearchPill key={search} search={search} />
-        ))}
-      </div>
-    </div>
-  );
+  // TODO
+  return null;
 }
 
 function Home() {

@@ -6,10 +6,13 @@ export function SearchCard() {
       <h3 className="font-bold text-base text-primary">
         Easily discover relevant content
       </h3>
+      {/* <p className="text-primary text-xs leading-relaxed"> */}
+      {/*   Search by topic or bible verse, ask questions, or find just about */}
+      {/*   anything else. We'll use intelligent search across transcripts to find */}
+      {/*   what you're looking for. */}
+      {/* </p> */}
       <p className="text-primary text-xs leading-relaxed">
-        Search by topic or bible verse, ask questions, or find just about
-        anything else. We'll use intelligent search across transcripts to find
-        what you're looking for.
+        Search media and transcripts and find anything you're looking for.
       </p>
       <div className="mt-auto">
         <div className="flex h-10 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3">

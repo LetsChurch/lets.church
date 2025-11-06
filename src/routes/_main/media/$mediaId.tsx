@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { CommentsSection } from '@/components/comments-section';
 import Header from '@/components/header';
 import LcButton from '@/components/lc-button';
-import { MediaCarousel } from '@/components/media-carousel';
+// import { MediaCarousel } from '@/components/media-carousel';
 import { MediaHeader } from '@/components/media-header';
 import { MediaInfoTabs } from '@/components/media-info-tabs';
 import { MobileDrawer } from '@/components/mobile-drawer';
@@ -525,7 +525,8 @@ function RouteComponent() {
           className="min-w-0"
           style={{ width: `${layout.containerWidth}px` }}
         >
-          <div className="w-full">
+          {/* TODO: remove mb-10 when related content is implemented */}
+          <div className="mb-10 w-full">
             <Player
               uploadRecordId={params.mediaId}
               viewHash={viewHash}
@@ -585,26 +586,27 @@ function RouteComponent() {
               />
             ) : null}
 
-            <div className="mt-10 pb-4">
-              <h2 className="mb-4 font-bold text-lg text-primary">
-                Related Content
-              </h2>
-              <MediaCarousel
-                items={[1, 2, 3, 4, 5, 6].map((i) => ({
-                  id: `${i}`,
-                  title: `Related Video ${i}`,
-                  thumbnailUrl: null,
-                  channelName: 'Channel Name',
-                  channelAvatarUrl: null,
-                  duration: '10:23',
-                  timestamp: '2 days ago',
-                  progress: i === 1 ? 45 : undefined,
-                }))}
-                fadeMargin="-mx-4 px-4"
-                fadeSize={16}
-                buttonPositioning="inside"
-              />
-            </div>
+            {/* TODO */}
+            {/* <div className="mt-10 pb-4"> */}
+            {/*   <h2 className="mb-4 font-bold text-lg text-primary"> */}
+            {/*     Related Content */}
+            {/*   </h2> */}
+            {/*   <MediaCarousel */}
+            {/*     items={[1, 2, 3, 4, 5, 6].map((i) => ({ */}
+            {/*       id: `${i}`, */}
+            {/*       title: `Related Video ${i}`, */}
+            {/*       thumbnailUrl: null, */}
+            {/*       channelName: 'Channel Name', */}
+            {/*       channelAvatarUrl: null, */}
+            {/*       duration: '10:23', */}
+            {/*       timestamp: '2 days ago', */}
+            {/*       progress: i === 1 ? 45 : undefined, */}
+            {/*     }))} */}
+            {/*     fadeMargin="-mx-4 px-4" */}
+            {/*     fadeSize={16} */}
+            {/*     buttonPositioning="inside" */}
+            {/*   /> */}
+            {/* </div> */}
           </div>
         </div>
 

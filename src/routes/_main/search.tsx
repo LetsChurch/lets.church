@@ -244,14 +244,16 @@ function SearchResults({ q }: { q: string }) {
         </div>
       ) : null}
 
-      <div className="space-y-4">
-        <h2 className="font-medium text-primary">Related Searches</h2>
-        <div className="flex flex-wrap gap-2">
-          {trendingSearches.map((search) => (
-            <TrendingSearchPill key={search} search={search} />
-          ))}
-        </div>
-      </div>
+      {/* Related searches */}
+      {/* TODO */}
+      {/* <div className="space-y-4"> */}
+      {/*   <h2 className="font-medium text-primary">Related Searches</h2> */}
+      {/*   <div className="flex flex-wrap gap-2"> */}
+      {/*     {trendingSearches.map((search) => ( */}
+      {/*       <TrendingSearchPill key={search} search={search} /> */}
+      {/*     ))} */}
+      {/*   </div> */}
+      {/* </div> */}
     </div>
   );
 }
@@ -357,16 +359,17 @@ function NoSearch() {
   return (
     <>
       {/* Trending Searches */}
-      <div className="border-white/10 border-b pb-6">
-        <h2 className="mb-4 font-medium text-lg text-primary">
-          Trending Searches
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {trendingSearches.map((search) => (
-            <TrendingSearchPill key={search} search={search} />
-          ))}
-        </div>
-      </div>
+      {/* TODO */}
+      {/* <div className="border-white/10 border-b pb-6"> */}
+      {/*   <h2 className="mb-4 font-medium text-lg text-primary"> */}
+      {/*     Trending Searches */}
+      {/*   </h2> */}
+      {/*   <div className="flex flex-wrap gap-2"> */}
+      {/*     {trendingSearches.map((search) => ( */}
+      {/*       <TrendingSearchPill key={search} search={search} /> */}
+      {/*     ))} */}
+      {/*   </div> */}
+      {/* </div> */}
 
       {/* Recent Searches */}
       {isLoggedIn && recentSearches.length > 0 ? (

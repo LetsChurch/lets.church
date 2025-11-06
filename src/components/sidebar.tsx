@@ -18,6 +18,10 @@ import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import {
+  getInitialDonateCardDismissed,
+  setDonateCardDismissed,
+} from '@/stores/donate-card';
+import {
   getInitialSidebarCollapsed,
   setSidebarCollapsed,
 } from '@/stores/sidebar';
@@ -34,6 +38,9 @@ export default function Sidebar({ className }: SidebarProps) {
   const [showAllChannels, setShowAllChannels] = useState(false);
   const [showAltMenu, setShowAltMenu] = useState(false);
   const [isLogoHovered, setIsLogoHovered] = useState(false);
+  const [donateCardDismissed, setDonateCardDismissedState] = useState(
+    getInitialDonateCardDismissed(),
+  );
 
   const isLoggedIn = useIsLoggedIn();
   const trpc = useTRPC();
@@ -59,6 +66,11 @@ export default function Sidebar({ className }: SidebarProps) {
 
   const closeAltMenu = () => {
     setShowAltMenu(false);
+  };
+
+  const handleDismissDonateCard = () => {
+    setDonateCardDismissedState(true);
+    setDonateCardDismissed(true);
   };
 
   return (
@@ -556,7 +568,7 @@ export default function Sidebar({ className }: SidebarProps) {
       </nav>
 
       {/* Donate Card */}
-      {collapsed || showAltMenu ? null : (
+      {collapsed || showAltMenu || donateCardDismissed ? null : (
         <div className="animate-fade-in px-4">
           <div className="overflow-hidden rounded-xl border border-white/10 bg-brand p-3">
             <div className="mb-3">
@@ -565,14 +577,17 @@ export default function Sidebar({ className }: SidebarProps) {
               </p>
             </div>
             <div className="flex flex-col gap-1">
-              <button
-                type="button"
-                className="rounded-full bg-white px-2.5 py-[6px] font-semibold text-brand text-xs transition-opacity hover:opacity-90"
+              <a
+                href="https://givebutter.com/LetsChurch"
+                className="rounded-full bg-white px-2.5 py-[6px] text-center font-semibold text-brand text-xs transition-opacity hover:opacity-90"
+                target="_blank"
+                rel="noopener"
               >
                 Donate Now
-              </button>
+              </a>
               <button
                 type="button"
+                onClick={handleDismissDonateCard}
                 className="rounded-full px-2.5 py-[6px] font-semibold text-white/80 text-xs transition-colors hover:bg-white/10"
               >
                 Dismiss
@@ -583,7 +598,7 @@ export default function Sidebar({ className }: SidebarProps) {
       )}
 
       {/* Alternative Menu Donate Card */}
-      {collapsed || !showAltMenu ? null : (
+      {collapsed || !showAltMenu || donateCardDismissed ? null : (
         <div className="animate-fade-in px-4">
           <div className="overflow-hidden rounded-xl border border-white/10 bg-brand p-3">
             <div className="mb-3">
@@ -592,14 +607,17 @@ export default function Sidebar({ className }: SidebarProps) {
               </p>
             </div>
             <div className="flex flex-col gap-1">
-              <button
-                type="button"
-                className="rounded-full bg-white px-2.5 py-[6px] font-semibold text-brand text-xs transition-opacity hover:opacity-90"
+              <a
+                href="https://givebutter.com/LetsChurch"
+                className="rounded-full bg-white px-2.5 py-[6px] text-center font-semibold text-brand text-xs transition-opacity hover:opacity-90"
+                target="_blank"
+                rel="noopener"
               >
                 Donate Now
-              </button>
+              </a>
               <button
                 type="button"
+                onClick={handleDismissDonateCard}
                 className="rounded-full px-2.5 py-[6px] font-semibold text-primary/80 text-xs transition-colors hover:bg-white/10"
               >
                 Dismiss
