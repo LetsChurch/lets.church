@@ -1,5 +1,5 @@
-import { Avatar } from '@base-ui-components/react/avatar';
 import { Link } from '@tanstack/react-router';
+import { Avatar } from '@/components/avatar';
 import { MediaActions } from '@/components/media-actions';
 
 type MediaDownloadKind =
@@ -75,14 +75,13 @@ export function MediaHeader({
           params={{ slug: channel.slug }}
           className="flex flex-shrink-0 items-center gap-1.5 transition-opacity hover:opacity-80"
         >
-          <Avatar.Root className="size-7 overflow-hidden rounded-full border-top-highlight">
-            {channel.avatarUrl ? (
-              <Avatar.Image src={channel.avatarUrl} alt={channel.name} />
-            ) : null}
-            <Avatar.Fallback className="flex size-full items-center justify-center rounded-full bg-brand font-bold text-primary text-xs">
-              {channel.name.charAt(0).toUpperCase()}
-            </Avatar.Fallback>
-          </Avatar.Root>
+          <Avatar
+            src={channel.avatarUrl}
+            alt={channel.name}
+            fallbackText={channel.name.charAt(0).toUpperCase()}
+            className="size-7 border-fancy-pants"
+            fallbackClassName="bg-brand font-bold text-xs"
+          />
           <div className="flex flex-col gap-0.5">
             <div className="font-semibold text-primary text-xs">
               {channel.name}

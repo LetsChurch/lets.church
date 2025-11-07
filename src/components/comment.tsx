@@ -1,7 +1,8 @@
-import { Avatar } from '@base-ui-components/react/avatar';
 import { IconThumbDown, IconThumbUp } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Avatar } from '@/components/avatar';
+import { CommentInput } from '@/components/comment-input';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
@@ -38,7 +39,6 @@ export function Comment({
   const queryClient = useQueryClient();
   const [showReplies, setShowReplies] = useState(false);
   const [showReplyInput, setShowReplyInput] = useState(false);
-  const [replyText, setReplyText] = useState('');
 
   const { data: replies } = useQuery({
     ...trpc.media.getReplies.queryOptions({ commentId: comment.id }),
@@ -113,7 +113,6 @@ export function Comment({
   const createReplyMutation = useMutation({
     mutationFn: trpc.media.createComment.mutationOptions().mutationFn,
     onSuccess: () => {
-      setReplyText('');
       setShowReplyInput(false);
       queryClient.invalidateQueries({
         queryKey: trpc.media.getComments.queryKey({ mediaId }),
@@ -146,12 +145,10 @@ export function Comment({
     setShowReplyInput(!showReplyInput);
   };
 
-  const handleSubmitReply = () => {
-    if (!replyText.trim()) return;
-
+  const handleSubmitReply = (text: string) => {
     createReplyMutation.mutate({
       mediaId,
-      text: replyText,
+      text,
       replyingToId: comment.id,
     });
   };
@@ -168,14 +165,13 @@ export function Comment({
 
   return (
     <div className="flex gap-3">
-      <Avatar.Root className="size-8 flex-shrink-0 overflow-hidden rounded-full">
-        {avatarUrl ? (
-          <Avatar.Image src={avatarUrl} alt={comment.author.username} />
-        ) : null}
-        <Avatar.Fallback className="flex size-full items-center justify-center bg-brand font-bold text-primary text-xs">
-          {comment.author.username.charAt(0).toUpperCase()}
-        </Avatar.Fallback>
-      </Avatar.Root>
+      <Avatar
+        src={avatarUrl}
+        alt={comment.author.username}
+        fallbackText={comment.author.username.charAt(0).toUpperCase()}
+        className="size-8 flex-shrink-0"
+        fallbackClassName="text-xs"
+      />
 
       <div className="flex-1 overflow-hidden">
         <div className="mb-1 flex items-baseline gap-2">
@@ -237,23 +233,14 @@ export function Comment({
 
         {showReplyInput ? (
           <div className="mt-4">
-            <textarea
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
+            <CommentInput
+              onSubmit={handleSubmitReply}
               placeholder="Write a reply..."
-              className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-primary text-sm placeholder-white/50 outline-none focus:border-brand"
-              rows={3}
+              isPending={createReplyMutation.isPending}
             />
-            <div className="mt-2 flex justify-end gap-2">
+            <div className="mt-2 flex justify-end">
               <LcButton onClick={() => setShowReplyInput(false)}>
                 Cancel
-              </LcButton>
-              <LcButton
-                onClick={handleSubmitReply}
-                disabled={!replyText.trim() || createReplyMutation.isPending}
-                className="bg-indigo-600 hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {createReplyMutation.isPending ? 'Posting...' : 'Reply'}
               </LcButton>
             </div>
           </div>

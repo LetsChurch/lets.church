@@ -13,7 +13,7 @@ export function TrendingUploadCard({
 }) {
   return (
     <div key={id} className="flex gap-3">
-      <div className="relative aspect-video w-24 flex-shrink-0 overflow-hidden rounded-lg border border-top-highlight bg-card">
+      <div className="relative aspect-video w-24 flex-shrink-0 overflow-hidden rounded-lg border border-fancy-pants bg-zinc-100 dark:bg-zinc-900">
         {thumbnailUrl ? (
           <img
             src={thumbnailUrl}

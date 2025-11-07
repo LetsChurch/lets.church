@@ -11,6 +11,7 @@ import '@fontsource-variable/roboto-mono';
 import appCss from '@/app.css?url';
 import type { AppContextType } from '@/router';
 import { setBrowserSize } from '@/stores/browser-size';
+import { getInitialTheme, initializeTheme } from '@/stores/theme';
 
 const indigo = '#6366f1';
 
@@ -84,6 +85,9 @@ export const Route = createRootRouteWithContext<AppContextType>()({
 
 function RootComponent() {
   useEffect(() => {
+    // Initialize theme
+    initializeTheme();
+
     // Initialize PostHog
     posthog.init('phc_nrdBwyxcJ3Tc0g1Gq1J5Gd2w1nmpx0IIK4HQBusIu6P', {
       api_host: 'https://us.i.posthog.com',
@@ -113,8 +117,10 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
+  const theme = getInitialTheme();
+
   return (
-    <html lang="en">
+    <html lang="en" data-theme={theme}>
       <head>
         <HeadContent />
       </head>

@@ -1,5 +1,5 @@
-import { Avatar } from '@base-ui-components/react/avatar';
 import { Link } from '@tanstack/react-router';
+import { Avatar } from '@/components/avatar';
 
 export type Props = {
   mediaId: string;
@@ -25,7 +25,7 @@ export function MediaCard({
   return (
     <div className="relative space-y-3">
       <div className="relative aspect-video">
-        <div className="-translate-y-1/2 absolute top-1/2 right-0 left-0 aspect-video overflow-hidden rounded-lg border-top-highlight bg-card">
+        <div className="-translate-y-1/2 absolute top-1/2 right-0 left-0 aspect-video overflow-hidden rounded-lg border-fancy-pants bg-zinc-100 dark:bg-zinc-900">
           {thumbnailUrl ? (
             <img
               src={thumbnailUrl}
@@ -39,7 +39,7 @@ export function MediaCard({
         ) : null}
         <div className="absolute right-3 bottom-3 left-3 flex flex-col items-end gap-1">
           {duration ? (
-            <div className="flex h-4 items-center justify-center rounded-full bg-zinc-950/80 px-1.5 font-medium font-time text-[10px] text-primary leading-none tracking-tight backdrop-blur-sm">
+            <div className="flex h-4 items-center justify-center rounded-full bg-gray-950/50 px-1.5 font-medium font-time text-[10px] text-shadow text-white leading-none tracking-tight backdrop-blur-sm dark:bg-white/50 dark:text-gray-950">
               {duration}
             </div>
           ) : null}
@@ -54,16 +54,13 @@ export function MediaCard({
         </div>
       </div>
       <div className="flex flex-row items-center gap-2">
-        <Avatar.Root className="size-8 flex-shrink-0 overflow-hidden rounded-full bg-white">
-          <Avatar.Image
-            src={channelAvatarUrl || undefined}
-            alt={channelName || 'Channel'}
-            className="size-full object-cover"
-          />
-          <Avatar.Fallback className="flex size-full items-center justify-center bg-gray-200 text-gray-600">
-            {(channelName || 'Channel').charAt(0).toUpperCase()}
-          </Avatar.Fallback>
-        </Avatar.Root>
+        <Avatar
+          src={channelAvatarUrl || undefined}
+          alt={channelName || 'Channel'}
+          fallbackText={(channelName || 'Channel').charAt(0).toUpperCase()}
+          className="size-8 flex-shrink-0 bg-white"
+          fallbackClassName="bg-gray-200 text-gray-600"
+        />
         <div className="min-w-0 flex-1 space-y-1">
           <h3 className="line-clamp-1 font-medium text-primary text-sm">
             <Link
@@ -81,7 +78,7 @@ export function MediaCard({
             {timestamp ? (
               <>
                 <div className="size-[3px] shrink-0 rounded-[2px] bg-zinc-400 opacity-50" />
-                <p className="whitespace-nowrap text-secondary text-xs">
+                <p className="whitespace-nowrap font-time text-secondary text-xs">
                   {timestamp}
                 </p>
               </>

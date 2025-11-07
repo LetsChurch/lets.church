@@ -1,102 +1,34 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @theme {
 	--font-sans: "Inter Variable", sans-serif;
 	--font-time: "Roboto Mono Variable", monospace;
-}
 
-:root {
-	--page-bg: var(--color-zinc-950);
-	--bg-overlay: var(--color-white) / 0.05;
-	--bg-overlay-strong: var(--color-white) / 0.15;
-
-	--sidebar-bg: var(--color-zinc-950);
-	--sidebar-border: var(--color-zinc-900);
-
-	--card-bg: var(--color-zinc-900);
-	--card-text: var(--color-white);
-	--card-border: var(--color-white) / 0.1;
-
-	--primary: var(--color-white);
-	--secondary: var(--color-zinc-300);
-	--muted: var(--color-zinc-400);
-
-	--border-color: var(--color-white) / 0.1;
-
-	--color-edge-fade: var(--color-zinc-900);
-}
-
-:root[data-theme="light"] {
-	--page-bg: var(--color-gray-100);
-	--bg-overlay: var(--color-black) / 0.05;
-	--bg-overlay-strong: var(--color-black) / 0.1;
-
-	--sidebar-bg: var(--color-white);
-	--sidebar-border: var(--color-gray-400) / 0.3;
-
-	--card-bg: var(--color-white);
-	--card-text: var(--color-black);
-	--card-border: var(--color-gray-400) / 0.2;
-
-	--primary: var(--color-gray-800);
-	--secondary: var(--color-gray-500);
-	--muted: var(--color-gray-500);
-
-	--border-color: var(--color-gray-400) / 0.2;
-
+	/* Light theme - default values */
+	--color-primary: var(--color-gray-950);
+	--color-secondary: var(--color-gray-500);
+	--color-muted: var(--color-gray-500);
+	--color-page: var(--color-white);
 	--color-edge-fade: var(--color-zinc-200);
-}
 
-@theme {
-	--color-bg: var(--page-bg);
-	--color-overlay: var(--bg-overlay);
-	--color-overlay-strong: var(--bg-overlay-strong);
-
-	--color-primary: var(--primary);
-	--color-secondary: var(--secondary);
-	--color-muted: var(--muted);
-
+	/* Brand colors (theme-independent) */
 	--color-brand: var(--color-indigo-500);
 	--color-brand-600: var(--color-indigo-600);
 	--color-brand-700: var(--color-indigo-700);
-
-	--color-edge-fade: var(--color-edge-fade);
 }
 
-@utility bg-page {
-	background-color: var(--color-bg);
+/* Dark theme */
+:root[data-theme="dark"] {
+	--color-primary: var(--color-white);
+	--color-secondary: var(--color-zinc-300);
+	--color-muted: var(--color-zinc-400);
+	--color-page: var(--color-zinc-950);
+	--color-edge-fade: var(--color-zinc-900);
 }
 
-/* ============================================
-   Sidebar
-   ============================================ */
-@utility bg-sidebar {
-	background-color: var(--sidebar-bg);
-}
-
-@utility border-sidebar {
-	border-color: var(--sidebar-border);
-}
-
-/* ============================================
-   Cards
-   ============================================ */
-@utility bg-card {
-	background-color: var(--card-bg);
-}
-
-@utility text-card {
-	color: var(--card-text);
-}
-
-/* ============================================
-   Borders
-   ============================================ */
-@utility border-default {
-	border-color: var(--border-color);
-}
-
-@utility border-top-highlight {
+@utility border-fancy-pants {
 	position: relative;
 	&::after {
 		content: "";
@@ -105,10 +37,9 @@
 		border-radius: inherit;
 		padding: 1px;
 		background: linear-gradient(
-			to bottom,
-			rgba(255, 255, 255, 0.1) 0%,
-			rgba(255, 255, 255, 0) 100%,
-			transparent 100%
+			180deg,
+			rgba(9, 9, 11, 0) 0%,
+			rgba(9, 9, 11, 0.05) 100%
 		);
 		-webkit-mask:
 			linear-gradient(#fff 0 0) content-box,
@@ -117,11 +48,16 @@
 		mask-composite: exclude;
 		pointer-events: none;
 	}
-}
 
-/* ============================================
-	 Misc
-	 ============================================ */
+	&:where([data-theme="dark"], [data-theme="dark"] *)::after {
+		background: linear-gradient(
+			to bottom,
+			rgba(255, 255, 255, 0.1) 0%,
+			rgba(255, 255, 255, 0) 100%,
+			transparent 100%
+		);
+	}
+}
 
 @utility glow-md {
 	box-shadow: 0px 2px 12px 0px var(--color-brand);

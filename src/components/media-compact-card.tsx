@@ -1,4 +1,4 @@
-import { Avatar } from '@base-ui-components/react/avatar';
+import { Avatar } from '@/components/avatar';
 
 export type Props = {
   title: string;
@@ -22,7 +22,7 @@ export function MediaCompactCard({
   return (
     <div className="flex cursor-pointer items-stretch gap-3">
       <div className="relative aspect-video h-16 shrink-0">
-        <div className="-translate-y-1/2 absolute top-1/2 right-0 left-0 aspect-video overflow-hidden rounded-lg border-top-highlight bg-zinc-900">
+        <div className="-translate-y-1/2 absolute top-1/2 right-0 left-0 aspect-video overflow-hidden rounded-lg border-fancy-pants bg-zinc-900">
           {thumbnailUrl ? (
             <img
               src={thumbnailUrl}
@@ -53,16 +53,13 @@ export function MediaCompactCard({
       <div className="flex min-w-0 flex-1 flex-col justify-between pb-px">
         <h4 className="line-clamp-2 font-bold text-primary text-sm">{title}</h4>
         <div className="flex items-center gap-1.5">
-          <Avatar.Root className="size-4 shrink-0 overflow-hidden rounded-full">
-            <Avatar.Image
-              src={channelImageUrl || undefined}
-              alt={channelName}
-              className="size-full object-cover"
-            />
-            <Avatar.Fallback className="flex size-full items-center justify-center bg-gray-200 text-[8px] text-gray-600">
-              {channelName.charAt(0).toUpperCase()}
-            </Avatar.Fallback>
-          </Avatar.Root>
+          <Avatar
+            src={channelImageUrl || undefined}
+            alt={channelName}
+            fallbackText={channelName.charAt(0).toUpperCase()}
+            className="size-4 shrink-0"
+            fallbackClassName="bg-gray-200 text-gray-600 text-[8px]"
+          />
           <p className="overflow-hidden text-ellipsis whitespace-nowrap text-muted text-xs">
             {channelName}
           </p>

@@ -433,7 +433,7 @@ function Home() {
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   return (
-    <div className="min-h-screen bg-page">
+    <div className="min-h-screen bg-white dark:bg-zinc-950">
       <Header>
         <HeroCarousel items={carouselItems} />
       </Header>
@@ -478,6 +478,11 @@ function Home() {
               thumbnailUrl={upload?.thumbnailUrl}
               channelName={upload?.channel.name}
               channelAvatarUrl={upload?.channel.avatarUrl}
+              duration={
+                upload.lengthSeconds
+                  ? formatTime(upload.lengthSeconds * 1000)
+                  : undefined
+              }
             />
           ))}
         </MediaGrid>
@@ -493,6 +498,11 @@ function Home() {
               thumbnailUrl={upload?.thumbnailUrl}
               channelName={upload?.channel.name}
               channelAvatarUrl={upload?.channel.avatarUrl}
+              duration={
+                upload.lengthSeconds
+                  ? formatTime(upload.lengthSeconds * 1000)
+                  : undefined
+              }
             />
           ))}
 
@@ -508,6 +518,11 @@ function Home() {
               thumbnailUrl={upload?.thumbnailUrl}
               channelName={upload?.channel.name}
               channelAvatarUrl={upload?.channel.avatarUrl}
+              duration={
+                upload.lengthSeconds
+                  ? formatTime(upload.lengthSeconds * 1000)
+                  : undefined
+              }
             />
           ))}
 
@@ -525,6 +540,11 @@ function Home() {
               thumbnailUrl={upload?.thumbnailUrl}
               channelName={upload?.channel.name}
               channelAvatarUrl={upload?.channel.avatarUrl}
+              duration={
+                upload.lengthSeconds
+                  ? formatTime(upload.lengthSeconds * 1000)
+                  : undefined
+              }
             />
           ))}
         </MediaGrid>

@@ -61,14 +61,14 @@ type SearchSettingsContentProps = {
 // Common Components
 function SectionHeading({ children }: { children: ReactNode }) {
   return (
-    <h3 className="px-1 font-bold text-[10px] text-zinc-400 uppercase tracking-[1px]">
+    <h3 className="px-1 font-bold text-[10px] text-gray-500 uppercase tracking-[1px] dark:text-zinc-400">
       {children}
     </h3>
   );
 }
 
 function Divider() {
-  return <div className="my-2 h-px w-full bg-zinc-800" />;
+  return <div className="my-2 h-px w-full bg-gray-200 dark:bg-zinc-800" />;
 }
 
 function BackButton({
@@ -198,13 +198,15 @@ function DateRangePage({
         <input
           type="date"
           placeholder="Start date"
-          className="h-10 grow rounded-3xl border border-white/10 border-solid bg-white/5 px-3 font-medium text-sm text-white opacity-30 outline-none placeholder:text-white"
+          className="h-10 grow rounded-3xl border border-gray-950/10 border-solid bg-gray-950/5 px-3 font-medium text-primary text-sm opacity-30 outline-none placeholder:text-primary dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white"
         />
-        <span className="font-medium text-sm text-white">–</span>
+        <span className="font-medium text-primary text-sm dark:text-white">
+          –
+        </span>
         <input
           type="date"
           placeholder="End date"
-          className="h-10 grow rounded-3xl border border-white/10 border-solid bg-white/5 px-3 font-medium text-sm text-white opacity-30 outline-none placeholder:text-white"
+          className="h-10 grow rounded-3xl border border-gray-950/10 border-solid bg-gray-950/5 px-3 font-medium text-primary text-sm opacity-30 outline-none placeholder:text-primary dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white"
         />
       </div>
     </div>
@@ -377,7 +379,7 @@ function SearchSettingsContent({
       >
         <dl className="flex w-full justify-between">
           <dt className="font-medium text-primary text-sm">Sorting</dt>
-          <dd className="flex items-center font-normal text-xs text-zinc-300">
+          <dd className="flex items-center font-normal text-gray-600 text-xs dark:text-zinc-300">
             {getSortLabel()} <IconChevronRight size={16} className="shrink-0" />
           </dd>
         </dl>
@@ -395,7 +397,7 @@ function SearchSettingsContent({
         >
           <dl className="flex w-full justify-between">
             <dt className="font-medium text-primary text-sm">Channels</dt>
-            <dd className="flex items-center gap-1 font-normal text-xs text-zinc-300">
+            <dd className="flex items-center gap-1 font-normal text-gray-600 text-xs dark:text-zinc-300">
               {channelFilterLabel}{' '}
               <IconChevronRight size={16} className="shrink-0" />
             </dd>
@@ -410,7 +412,7 @@ function SearchSettingsContent({
       >
         <dl className="flex w-full justify-between">
           <dt className="font-medium text-primary text-sm">Date Range</dt>
-          <dd className="flex items-center gap-1 font-normal text-xs text-zinc-300">
+          <dd className="flex items-center gap-1 font-normal text-gray-600 text-xs dark:text-zinc-300">
             {getDateRangeLabel()}{' '}
             <IconChevronRight size={16} className="shrink-0" />
           </dd>
@@ -517,7 +519,7 @@ export function SearchSettingsModal({
               <div className="relative h-[34px] w-full shrink-0">
                 <div className="-translate-x-1/2 absolute bottom-2 left-1/2 flex h-[5px] w-36 items-center justify-center">
                   <div className="flex-none rotate-180 scale-y-[-100%]">
-                    <div className="h-[5px] w-36 rounded-[100px] bg-white" />
+                    <div className="h-[5px] w-36 rounded-[100px] bg-gray-950 dark:bg-white" />
                   </div>
                 </div>
               </div>
@@ -536,7 +538,7 @@ export function SearchSettingsModal({
             >
               <Dialog.Popup
                 className={cn(
-                  'w-sm rounded-2xl border-top-highlight bg-zinc-900 p-5 shadow-xl',
+                  'w-sm rounded-2xl border-fancy-pants bg-white p-5 shadow-xl dark:bg-zinc-900',
                   'transition-all duration-300 data-[ending-style]:scale-95 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0',
                 )}
               >

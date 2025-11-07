@@ -34,11 +34,11 @@ export function MediaSwitcher({
           'transition-all duration-200',
           'hover:bg-white/15',
           'data-[pressed]:bg-white/10',
-          'data-[pressed]:border-top-highlight',
+          'data-[pressed]:border-fancy-pants',
         )}
         aria-label="Video"
       >
-        <IconVideo className="size-4 text-primary" stroke={1.5} />
+        <IconVideo className="size-4 text-white" stroke={1.5} />
       </Toggle>
       <Toggle
         value="audio"
@@ -47,11 +47,11 @@ export function MediaSwitcher({
           'transition-all duration-200',
           'hover:bg-white/15',
           'data-[pressed]:bg-white/10',
-          'data-[pressed]:border-top-highlight',
+          'data-[pressed]:border-fancy-pants',
         )}
         aria-label="Audio"
       >
-        <IconHeadphones className="size-4 text-primary" stroke={1.5} />
+        <IconHeadphones className="size-4 text-white" stroke={1.5} />
       </Toggle>
     </ToggleGroup>
   );

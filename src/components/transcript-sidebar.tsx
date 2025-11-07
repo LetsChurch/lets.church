@@ -41,9 +41,9 @@ export function TranscriptSidebar({ transcript }: TranscriptSidebarProps) {
 
   return (
     <div>
-      <div className="sticky top-4 bottom-4 isolate flex h-[calc(100vh-6rem)] flex-col overflow-hidden rounded-2xl border-top-highlight bg-card">
+      <div className="sticky top-4 bottom-4 isolate flex h-[calc(100vh-6rem)] flex-col overflow-hidden rounded-2xl border-fancy-pants bg-zinc-100 dark:bg-zinc-900">
         {/* Sidebar Header */}
-        <div className="flex items-center gap-2 border-zinc-800 border-b px-5 py-2.5">
+        <div className="flex items-center gap-2 border-zinc-200 border-b px-5 py-2.5 dark:border-zinc-800">
           {isSearchActive ? (
             <>
               <div className="relative flex-1">
@@ -52,7 +52,7 @@ export function TranscriptSidebar({ transcript }: TranscriptSidebarProps) {
                   value={searchQuery}
                   onChange={handleSearchChange}
                   placeholder="Search transcript..."
-                  className="w-full rounded-md border border-gray-600 bg-transparent px-3 py-1.5 pr-8 text-primary text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-md border border-zinc-200 bg-transparent px-3 py-1.5 pr-8 text-primary text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-800"
                   // biome-ignore lint/a11y/noAutofocus: this is rendered by user interaction
                   autoFocus
                 />
@@ -98,7 +98,8 @@ export function TranscriptSidebar({ transcript }: TranscriptSidebarProps) {
           <div
             className={cn(
               'pointer-events-none absolute right-0 bottom-0 left-0 h-8',
-              'bg-gradient-to-b from-edge-fade/0 via-80% via-edge-fade/90 to-edge-fade',
+              'bg-gradient-to-b from-zinc-100/0 via-80% via-zinc-100/90 to-zinc-100',
+              'dark:from-edge-fade/0 dark:via-edge-fade/90 dark:to-edge-fade',
             )}
           />
         </div>

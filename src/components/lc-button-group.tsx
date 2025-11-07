@@ -13,7 +13,7 @@ export default function LcButtonGroup({
   return (
     <div
       className={cn(
-        'isolate inline-flex overflow-clip rounded-full border-top-highlight bg-white/15 pt-px font-semibold text-primary/80 text-sm',
+        'isolate inline-flex overflow-clip rounded-full border-fancy-pants bg-gray-950/10 pt-px font-semibold text-primary/80 text-sm dark:bg-white/15',
         className,
       )}
     >
@@ -24,7 +24,7 @@ export default function LcButtonGroup({
           {...btn}
           className={cn(
             'inline-flex items-center gap-0.5 px-3 py-1.5 pt-1.25',
-            i > 0 && '-ml-px border-white/10 border-l-1',
+            i > 0 && '-ml-px border-gray-950/5 border-l-1 dark:border-white/10',
             btn.className,
           )}
         />

@@ -97,7 +97,9 @@ export default function SearchBar({
       <form
         onSubmit={handleSubmit}
         className={cn(
-          'flex h-10 items-center gap-1 rounded-3xl border border-white/10 bg-white/5 px-3 transition-all duration-200 focus-within:border-white/0 focus-within:shadow-[0_0_0_2px_theme(colors.white/0.2),0_0_20px_theme(colors.white/0.3)]',
+          'flex h-10 items-center gap-1 rounded-3xl border px-3 transition-all duration-200',
+          'focus-within:border-white/0 focus-within:shadow-[0_0_0_2px_theme(colors.white/0.2),0_0_20px_theme(colors.white/0.3)]',
+          'border-gray-950/10 bg-gray-950/5 dark:border-white/10 dark:bg-white/5',
           className,
         )}
       >
@@ -105,7 +107,10 @@ export default function SearchBar({
           <Autocomplete.Input
             name="q"
             placeholder={placeholder}
-            className="w-full appearance-none font-medium text-primary text-sm leading-none placeholder-text-muted outline-none placeholder:opacity-30"
+            className={cn(
+              'w-full appearance-none font-medium text-primary text-sm leading-none outline-none',
+              'placeholder-gray-950/30 dark:placeholder-white/30',
+            )}
           />
         </div>
         <div className="flex flex-shrink-0 items-center gap-0">
@@ -135,9 +140,9 @@ export default function SearchBar({
               value ? null : (
                 <button
                   type="submit"
-                  className="flex size-8 items-center justify-center rounded-full text-primary/50 transition-colors hover:bg-white/10 hover:text-primary"
+                  className="flex size-8 items-center justify-center rounded-full transition-colors hover:bg-white/10"
                 >
-                  <IconSearch size={24} />
+                  <IconSearch size={24} className="text-primary opacity-50" />
                 </button>
               )
             }

@@ -6,7 +6,7 @@ import {
 } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Comment } from '@/components/comment';
-import LcButton from '@/components/lc-button';
+import { CommentInput } from '@/components/comment-input';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
@@ -34,7 +34,6 @@ export function CommentsSection({
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const isLoggedIn = useIsLoggedIn();
-  const [commentText, setCommentText] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { data: comments } = useSuspenseQuery(
@@ -46,7 +45,6 @@ export function CommentsSection({
   const createCommentMutation = useMutation({
     mutationFn: trpc.media.createComment.mutationOptions().mutationFn,
     onSuccess: () => {
-      setCommentText('');
       setErrorMessage(null);
       queryClient.invalidateQueries({
         queryKey: trpc.media.getComments.queryKey({
@@ -59,17 +57,15 @@ export function CommentsSection({
     },
   });
 
-  const handleSubmitComment = () => {
+  const handleSubmitComment = (text: string) => {
     if (!isLoggedIn) {
       onLoginRequired();
       return;
     }
 
-    if (!commentText.trim()) return;
-
     createCommentMutation.mutate({
       mediaId,
-      text: commentText,
+      text,
     });
   };
 
@@ -77,14 +73,14 @@ export function CommentsSection({
     <div
       className={cn(
         'relative isolate flex flex-col overflow-hidden',
-        showContainer && 'mt-6 rounded-2xl border-top-highlight bg-card',
+        showContainer &&
+          'mt-6 rounded-2xl border-fancy-pants bg-zinc-100 dark:bg-zinc-900',
       )}
     >
       {/* Comments Header */}
-      <div className="flex items-center gap-1 border-zinc-800 border-b px-5 pt-1.5 pb-2">
+      <div className="flex items-center gap-1 border-zinc-200 border-b px-5 pt-1.5 pb-2 dark:border-zinc-800">
         <span className="font-medium text-primary text-sm">Comments</span>
-        {/* TODO: light theme */}
-        <div className="flex h-[18px] items-center justify-center rounded-[9px] bg-white/10 px-1.5">
+        <div className="flex h-[18px] min-w-6 items-center justify-center rounded-[9px] bg-gray-950/10 px-1.5 dark:bg-white/10">
           <span className="font-bold text-[10px] text-primary/70 leading-none">
             {comments.length}
           </span>
@@ -94,44 +90,15 @@ export function CommentsSection({
       {commentsEnabled ? (
         <>
           {/* Comment Input */}
-          <div className="border-zinc-800 border-b p-5">
-            <div className="flex gap-3">
-              <textarea
-                value={commentText}
-                onChange={(e) => {
-                  setCommentText(e.target.value);
-                  if (errorMessage) setErrorMessage(null);
-                }}
-                onKeyDown={(e) => {
-                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                    e.preventDefault();
-                    handleSubmitComment();
-                  }
-                }}
-                placeholder={
-                  isLoggedIn ? 'Add a comment...' : 'Sign in to comment'
-                }
-                disabled={!isLoggedIn}
-                className="flex-1 resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-primary text-sm placeholder-white/50 outline-none focus:border-brand disabled:cursor-not-allowed disabled:opacity-50"
-                rows={3}
-              />
-            </div>
-            {errorMessage ? (
-              <div className="mt-2 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-red-400 text-sm">
-                {errorMessage}
-              </div>
-            ) : null}
-            <div className="mt-3 flex justify-end gap-2">
-              <LcButton
-                onClick={handleSubmitComment}
-                disabled={
-                  !commentText.trim() || createCommentMutation.isPending
-                }
-                className="bg-indigo-600 hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {createCommentMutation.isPending ? 'Posting...' : 'Comment'}
-              </LcButton>
-            </div>
+          <div className="border-zinc-200 border-b p-5 dark:border-zinc-800">
+            <CommentInput
+              onSubmit={handleSubmitComment}
+              placeholder={isLoggedIn ? 'Add a comment' : 'Sign in to comment'}
+              disabled={!isLoggedIn}
+              isPending={createCommentMutation.isPending}
+              errorMessage={errorMessage}
+              onErrorDismiss={() => setErrorMessage(null)}
+            />
           </div>
 
           {/* Comments List */}

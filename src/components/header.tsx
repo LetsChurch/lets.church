@@ -1,10 +1,10 @@
-import { Avatar } from '@base-ui-components/react/avatar';
 import { Menu } from '@base-ui-components/react/menu';
 import { useStore } from '@nanostores/react';
 import { IconMenu2 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { type PropsWithChildren, useState } from 'react';
+import { Avatar } from '@/components/avatar';
 import { $headerBackgroundImage } from '@/stores/header';
 import { useTRPC } from '@/trpc/react';
 import LcLink from './lc-link';
@@ -49,7 +49,7 @@ export default function Header({
               }}
             />
           </div>
-          <div className="absolute inset-0 bg-gradient-to-b from-bg/0 via-bg/90 to-bg" />
+          <div className="absolute inset-0 bg-gradient-to-b from-page/0 via-page/90 to-page" />
         </div>
       ) : null}
 
@@ -63,7 +63,7 @@ export default function Header({
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
-            className="flex size-8 items-center justify-center rounded-lg border-top-highlight bg-white/15 text-primary transition-colors hover:bg-white/25"
+            className="flex size-8 items-center justify-center rounded-lg border-fancy-pants bg-white/15 text-primary transition-colors hover:bg-white/25"
           >
             <IconMenu2 />
           </button>
@@ -90,36 +90,31 @@ export default function Header({
                     type="button"
                     className="size-8 flex-shrink-0 overflow-hidden rounded-full bg-white"
                   >
-                    <Avatar.Root className="cursor-pointer">
-                      <Avatar.Image
-                        src={profileQuery.data.avatarUrl || undefined}
-                        alt={
-                          profileQuery.data.fullName ||
-                          profileQuery.data.username
-                        }
-                        className="size-full object-cover"
-                      />
-                      <Avatar.Fallback className="flex size-full items-center justify-center bg-gray-200 text-gray-600 text-xs">
-                        {(
-                          profileQuery.data.fullName ||
-                          profileQuery.data.username
-                        )
-                          .charAt(0)
-                          .toUpperCase()}
-                      </Avatar.Fallback>
-                    </Avatar.Root>
+                    <Avatar
+                      src={profileQuery.data.avatarUrl || undefined}
+                      alt={
+                        profileQuery.data.fullName || profileQuery.data.username
+                      }
+                      fallbackText={(
+                        profileQuery.data.fullName || profileQuery.data.username
+                      )
+                        .charAt(0)
+                        .toUpperCase()}
+                      className="size-full cursor-pointer"
+                      fallbackClassName="bg-gray-200 text-gray-600 text-xs"
+                    />
                   </button>
                 )}
               />
               <Menu.Portal>
                 <Menu.Positioner side="bottom" align="end" className="z-10">
-                  <Menu.Popup className="mt-2 min-w-48 rounded-lg border-top-highlight bg-zinc-900 p-1 shadow-lg">
+                  <Menu.Popup className="mt-2 min-w-48 rounded-lg border-fancy-pants bg-white p-1 shadow-lg dark:bg-zinc-900">
                     <Menu.Item
                       render={(props) => (
                         <Link
                           {...props}
                           to="/dashboard/account"
-                          className="flex w-full items-center rounded-md px-3 py-2 text-primary text-sm transition-colors hover:bg-zinc-800 focus:bg-zinc-800"
+                          className="flex w-full items-center rounded-md px-3 py-2 text-primary text-sm transition-colors hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-zinc-800 dark:hover:bg-zinc-800"
                         >
                           Account Settings
                         </Link>
@@ -130,13 +125,13 @@ export default function Header({
                         <Link
                           {...props}
                           to="/dashboard"
-                          className="flex w-full items-center rounded-md px-3 py-2 text-primary text-sm transition-colors hover:bg-zinc-800 focus:bg-zinc-800"
+                          className="flex w-full items-center rounded-md px-3 py-2 text-primary text-sm transition-colors hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-zinc-800 dark:hover:bg-zinc-800"
                         >
                           Dashboard
                         </Link>
                       )}
                     />
-                    <Menu.Separator className="my-1 h-px bg-zinc-800" />
+                    <Menu.Separator className="my-1 h-px bg-gray-200 dark:bg-zinc-800" />
                     <Menu.Item
                       render={(props) => (
                         // If this changes to something client side then make sure to invalidate the query for hasValidSession,
@@ -149,7 +144,7 @@ export default function Header({
                           <button
                             {...props}
                             type="submit"
-                            className="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-red-400 text-sm transition-colors hover:bg-zinc-800 focus:bg-zinc-800"
+                            className="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-red-400 text-sm transition-colors hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-zinc-800 dark:hover:bg-zinc-800"
                           >
                             Logout
                           </button>

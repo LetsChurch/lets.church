@@ -267,7 +267,7 @@ export function Player({
               className={
                 mediaType === 'video'
                   ? 'bg-black'
-                  : 'bg-gradient-to-t from-gray-900 to-50% to-gray-900/0'
+                  : 'bg-gradient-to-t from-gray-100 to-50% to-gray-400/0 dark:from-gray-900 dark:to-gray-900/0'
               }
             />
 
@@ -306,31 +306,33 @@ export function Player({
                   <MediaMuteButton
                     tooltipPlacement="bottom"
                     className={cn(
-                      'size-7 rounded-lg border-top-highlight bg-transparent p-1 backdrop-blur-lg',
-                      mediaType === 'audio' && 'bg-white/10',
+                      'size-7 rounded-lg bg-transparent p-1',
+                      mediaType === 'video'
+                        ? 'border-fancy-pants backdrop-blur-lg'
+                        : '[--media-icon-color:var(--color-primary)]',
                     )}
                   />
                   <MediaPlaybackRateButton
                     tooltipPlacement="bottom"
                     className={cn(
-                      'size-7 rounded-lg border-top-highlight bg-transparent p-1 backdrop-blur-lg',
-                      mediaType === 'audio' && 'bg-white/10',
+                      'size-7 rounded-lg bg-transparent p-1',
+                      mediaType === 'video'
+                        ? 'border-fancy-pants backdrop-blur-lg'
+                        : 'text-primary',
                     )}
                   />
-                  <MediaPipButton
-                    tooltipPlacement="bottom"
-                    className={cn(
-                      'size-7 rounded-lg border-top-highlight bg-transparent p-1 backdrop-blur-lg',
-                      mediaType === 'audio' && 'bg-white/10',
-                    )}
-                  />
-                  <MediaFullscreenButton
-                    tooltipPlacement="bottom"
-                    className={cn(
-                      'size-7 rounded-lg border-top-highlight bg-transparent p-1 backdrop-blur-lg',
-                      mediaType === 'audio' && 'bg-white/10',
-                    )}
-                  />
+                  {mediaType === 'video' ? (
+                    <>
+                      <MediaPipButton
+                        tooltipPlacement="bottom"
+                        className="size-7 rounded-lg border-fancy-pants bg-transparent p-1 backdrop-blur-lg"
+                      />
+                      <MediaFullscreenButton
+                        tooltipPlacement="bottom"
+                        className="size-7 rounded-lg border-fancy-pants bg-transparent p-1 backdrop-blur-lg"
+                      />
+                    </>
+                  ) : null}
                 </div>
               </div>
 
@@ -338,21 +340,27 @@ export function Player({
                 <MediaSeekBackwardButton
                   seekOffset={15}
                   className={cn(
-                    'size-8 rounded-lg border-top-highlight bg-transparent backdrop-blur-lg',
-                    mediaType === 'audio' && 'bg-white/10',
+                    'size-8 rounded-lg bg-transparent',
+                    mediaType === 'video'
+                      ? 'border-fancy-pants backdrop-blur-lg'
+                      : '[--media-icon-color:var(--color-primary)]',
                   )}
                 />
                 <MediaPlayButton
                   className={cn(
-                    'size-12 rounded-lg border-top-highlight bg-transparent backdrop-blur-lg',
-                    mediaType === 'audio' && 'bg-white/10',
+                    'size-12 rounded-lg bg-transparent',
+                    mediaType === 'video'
+                      ? 'border-fancy-pants backdrop-blur-lg'
+                      : '[--media-icon-color:var(--color-primary)]',
                   )}
                 />
                 <MediaSeekForwardButton
                   seekOffset={15}
                   className={cn(
-                    'size-8 rounded-lg border-top-highlight bg-transparent backdrop-blur-lg',
-                    mediaType === 'audio' && 'bg-white/10',
+                    'size-8 rounded-lg bg-transparent',
+                    mediaType === 'video'
+                      ? 'border-fancy-pants backdrop-blur-lg'
+                      : '[--media-icon-color:var(--color-primary)]',
                   )}
                 />
               </div>
@@ -364,18 +372,29 @@ export function Player({
                     'bg-gradient-to-t from-gray-950/70 to-transparent',
                 )}
               >
-                <div className="flex justify-between font-mono font-normal text-[10px] text-primary tracking-[-0.2px]">
+                <div className="flex justify-between px-2 font-normal tracking-[-0.2px]">
                   <MediaTimeDisplay
-                    className="bg-transparent"
+                    className={cn(
+                      'bg-transparent text-xs',
+                      '[--media-text-color:var(--color-primary)]',
+                      '[--media-font:var(--font-time)]',
+                    )}
                     showDuration={false}
                   />
-                  <MediaDurationDisplay className="bg-transparent" />
+                  <MediaDurationDisplay
+                    className={cn(
+                      'bg-transparent text-xs',
+                      '[--media-text-color:var(--color-primary)]',
+                      '[--media-font:var(--font-time)]',
+                    )}
+                  />
                 </div>
 
                 <MediaTimeRange
                   className={cn(
                     '[--media-range-bar-color:--alpha(var(--color-brand)/60%)]',
-                    '[--media-range-track-background:--alpha(var(--color-white)/20%)]',
+                    '[--media-range-track-background:--alpha(var(--color-gray-950)/20%)]',
+                    'dark:[--media-range-track-background:--alpha(var(--color-white)/20%)]',
                     '[--media-range-thumb-background:linear-gradient(45deg,--alpha(var(--color-brand)/0%)_50%,var(--color-indigo-300)_100%),var(--color-brand)]',
                     '[--media-range-thumb-box-shadow:0_1px_6px_0_--alpha(var(--color-black)/50%),0_2px_12px_0_var(--color-brand)]',
                   )}

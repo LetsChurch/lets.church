@@ -33,7 +33,7 @@ function MobileDrawerBackdrop(props: React.ComponentPropsWithoutRef<'div'>) {
     <Dialog.Backdrop
       {...props}
       className={cn(
-        'fixed inset-0 z-50 bg-black/80 backdrop-blur-sm transition-opacity duration-300 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0',
+        'fixed inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity duration-300 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0',
         props.className,
       )}
     />
@@ -118,7 +118,7 @@ function MobileDrawerContent({
       {...props}
       ref={contentRef}
       className={cn(
-        `fixed right-0 bottom-0 left-0 z-50 flex max-h-[85vh] flex-col overflow-hidden rounded-tl-2xl rounded-tr-2xl border border-white/10 border-solid bg-zinc-900 transition-transform duration-300 ease-out data-[ending-style]:translate-y-full data-[starting-style]:translate-y-full`,
+        `fixed right-0 bottom-0 left-0 z-50 flex max-h-[85vh] flex-col overflow-hidden rounded-tl-2xl rounded-tr-2xl border border-gray-950/10 border-solid bg-white transition-transform duration-300 ease-out data-[ending-style]:translate-y-full data-[starting-style]:translate-y-full dark:border-white/10 dark:bg-zinc-900`,
         className,
       )}
       style={{
@@ -135,7 +135,7 @@ function MobileDrawerContent({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <div className="-translate-x-1/2 absolute top-2 left-1/2 h-[3px] w-9 rounded-[2.5px] bg-[rgba(235,235,245,0.3)]" />
+        <div className="-translate-x-1/2 absolute top-2 left-1/2 h-[3px] w-9 rounded-[2.5px] bg-gray-950/30 dark:bg-[rgba(235,235,245,0.3)]" />
       </div>
 
       {children}

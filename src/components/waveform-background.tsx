@@ -113,10 +113,10 @@ export function WaveformBackground({
           <div
             // biome-ignore lint/suspicious/noArrayIndexKey: stable array from peaks data
             key={i}
-            className="min-h-px min-w-[3px] shrink-0 grow basis-0 rounded-sm"
+            className="min-h-px min-w-[3px] shrink-0 grow basis-0 rounded-sm bg-gray-950 dark:bg-white"
             style={{
               height: `${bar.height}%`,
-              backgroundColor: `rgba(255, 255, 255, ${opacity})`,
+              opacity,
             }}
           />
         );

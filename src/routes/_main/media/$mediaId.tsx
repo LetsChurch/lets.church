@@ -243,7 +243,7 @@ function MobileTranscriptDrawerContent({
 
   return (
     <>
-      <div className="flex h-10 items-center gap-2 border-zinc-800 border-b border-solid px-5">
+      <div className="flex h-10 items-center gap-2 border-zinc-200 border-b border-solid px-5 dark:border-zinc-800">
         {isSearchActive ? (
           <>
             <div className="relative flex-1">
@@ -733,7 +733,7 @@ function RouteComponent() {
       >
         <MobileDrawer.Portal>
           <MobileDrawer.Content>
-            <div className="flex h-10 items-center justify-center gap-2 border-zinc-800 border-b border-solid px-5">
+            <div className="flex h-10 items-center justify-center gap-2 border-zinc-200 border-b border-solid px-5 dark:border-zinc-800">
               <div className="flex grow items-baseline gap-2 pb-0.5">
                 <MobileDrawer.Title className="font-bold text-base text-primary">
                   Comments

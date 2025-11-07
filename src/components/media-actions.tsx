@@ -6,7 +6,6 @@ import {
   IconBadgeCc,
   IconBadgeHd,
   IconBookmark,
-  IconBookmarkFilled,
   IconBrandFacebook,
   IconBrandX,
   IconCode,
@@ -210,7 +209,10 @@ export function MediaActions({
             {
               type: 'button',
               onClick: () => onRate('LIKE'),
-              className: cn(ratingData.userRating === 'LIKE' && 'bg-white/10'),
+              className: cn(
+                ratingData.userRating === 'LIKE' &&
+                  'bg-gray-950/15 dark:bg-white/10',
+              ),
               children: (
                 <>
                   <IconThumbUp size={16} />
@@ -222,7 +224,8 @@ export function MediaActions({
               type: 'button',
               onClick: () => onRate('DISLIKE'),
               className: cn(
-                ratingData.userRating === 'DISLIKE' && 'bg-white/10',
+                ratingData.userRating === 'DISLIKE' &&
+                  'bg-gray-950/15 dark:bg-white/10',
               ),
               children: <IconThumbDown size={16} />,
             },
@@ -329,18 +332,17 @@ export function MediaActions({
         ) : null}
 
         {/* Divider */}
-        <div className="h-7 w-px bg-zinc-900" />
+        <div className="h-7 w-px bg-vertical-divider" />
 
         {/* Save */}
         <LcButton
-          className={cn('flex items-center gap-0.5', isSaved && 'bg-white/10')}
+          className={cn(
+            'flex items-center gap-0.5',
+            isSaved && 'bg-gray-950/15 dark:bg-white/10',
+          )}
           onClick={onSaveToggle}
         >
-          {isSaved ? (
-            <IconBookmarkFilled size={16} />
-          ) : (
-            <IconBookmark size={16} />
-          )}
+          <IconBookmark size={16} />
           {isSaved ? 'Saved' : 'Save'}
         </LcButton>
 
@@ -348,7 +350,7 @@ export function MediaActions({
         <LcButton
           className={cn(
             'flex items-center gap-0.5',
-            channelData.isFollowing && 'bg-white/10',
+            channelData.isFollowing && 'bg-gray-950/15 dark:bg-white/10',
           )}
           onClick={onFollowToggle}
         >

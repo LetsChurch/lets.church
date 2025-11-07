@@ -1,6 +1,6 @@
 export function DonateCard() {
   return (
-    <div className="flex aspect-video flex-col gap-2 rounded-lg border border-top-highlight bg-brand p-4">
+    <div className="flex aspect-video flex-col gap-2 rounded-lg border-fancy-pants bg-brand p-4">
       <h3 className="font-bold text-base text-white">
         Help share the good news
       </h3>

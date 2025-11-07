@@ -1,5 +1,3 @@
-import { Avatar } from '@base-ui-components/react/avatar';
-import { Tooltip } from '@base-ui-components/react/tooltip';
 import {
   IconArrowLeft,
   IconBookmark,
@@ -16,6 +14,9 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
+import { Avatar } from '@/components/avatar';
+import { LcTooltip } from '@/components/lc-tooltip';
+import { ThemeSwitcher } from '@/components/theme-switcher';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import {
   getInitialDonateCardDismissed,
@@ -37,7 +38,6 @@ export default function Sidebar({ className }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(getInitialSidebarCollapsed());
   const [showAllChannels, setShowAllChannels] = useState(false);
   const [showAltMenu, setShowAltMenu] = useState(false);
-  const [isLogoHovered, setIsLogoHovered] = useState(false);
   const [donateCardDismissed, setDonateCardDismissedState] = useState(
     getInitialDonateCardDismissed(),
   );
@@ -76,7 +76,7 @@ export default function Sidebar({ className }: SidebarProps) {
   return (
     <div
       className={cn(
-        'hidden h-full flex-col border-sidebar border-r bg-sidebar backdrop-blur-sm sm:flex',
+        'hidden h-full flex-col border-gray-100 border-r bg-white backdrop-blur-sm sm:flex dark:border-zinc-900 dark:bg-zinc-950',
         collapsed && !showAltMenu ? 'w-14' : 'w-50',
         className,
       )}
@@ -84,7 +84,7 @@ export default function Sidebar({ className }: SidebarProps) {
       {/* Header */}
       <div
         className={cn(
-          'flex h-16 items-center border-sidebar border-b px-3',
+          'flex h-16 items-center border-gray-100 border-b px-3 dark:border-zinc-900',
           collapsed && !showAltMenu ? 'justify-center' : 'gap-[7px]',
         )}
       >
@@ -95,56 +95,30 @@ export default function Sidebar({ className }: SidebarProps) {
             className="flex size-8 cursor-pointer items-center justify-center rounded-lg transition-colors hover:bg-black/[0.15]"
           >
             {showAltMenu ? (
-              <IconArrowLeft size={24} className="text-primary" />
+              <IconArrowLeft size={24} className="text-primary/80" />
             ) : (
-              <IconMenu2 size={24} className="text-primary" />
+              <IconMenu2 size={24} className="text-primary/80" />
             )}
           </button>
         )}
         {collapsed && !showAltMenu ? (
-          <Tooltip.Provider>
-            <Tooltip.Root>
-              <Tooltip.Trigger
-                render={<Link to="/" />}
-                onMouseEnter={() => setIsLogoHovered(true)}
-                onMouseLeave={() => setIsLogoHovered(false)}
-                className="cursor-pointer"
+          <LcTooltip content="Home" side="right" render={<Link to="/" />}>
+            <div className="group relative cursor-pointer">
+              <div className="opacity-100 transition-opacity duration-200 group-hover:opacity-0">
+                <Logo collapsed />
+              </div>
+              <button
+                type="button"
+                onClick={openAltMenuFromCollapsed}
+                className={cn(
+                  'absolute inset-0 flex cursor-pointer items-center justify-center',
+                  'opacity-0 transition-opacity duration-200 group-hover:opacity-100',
+                )}
               >
-                <div className="relative">
-                  <div
-                    className={cn(
-                      'transition-opacity duration-200',
-                      isLogoHovered ? 'opacity-0' : 'opacity-100',
-                    )}
-                  >
-                    <Logo collapsed />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={openAltMenuFromCollapsed}
-                    className={cn(
-                      'absolute inset-0 flex cursor-pointer items-center justify-center transition-opacity duration-200',
-                      isLogoHovered ? 'opacity-100' : 'opacity-0',
-                    )}
-                  >
-                    <IconMenu2 size={24} className="text-primary" />
-                  </button>
-                </div>
-              </Tooltip.Trigger>
-              <Tooltip.Portal>
-                <Tooltip.Positioner
-                  side="right"
-                  sideOffset={8}
-                  className="z-50"
-                >
-                  <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-primary text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
-                    Home
-                    <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
-                  </Tooltip.Popup>
-                </Tooltip.Positioner>
-              </Tooltip.Portal>
-            </Tooltip.Root>
-          </Tooltip.Provider>
+                <IconMenu2 size={24} className="text-primary" />
+              </button>
+            </div>
+          </LcTooltip>
         ) : (
           <Link to="/">
             <Logo />
@@ -153,7 +127,7 @@ export default function Sidebar({ className }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex flex-1 flex-col border-zinc-900 border-t">
+      <nav className="flex flex-1 flex-col">
         {showAltMenu ? (
           <>
             {/* Alternative Menu */}
@@ -208,39 +182,25 @@ export default function Sidebar({ className }: SidebarProps) {
             {/* Explore */}
             <div className="py-2">
               {collapsed ? (
-                <Tooltip.Provider>
-                  <Tooltip.Root>
-                    <Tooltip.Trigger
-                      render={
-                        <Link
-                          to="/"
-                          className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
-                          activeProps={{
-                            className: 'text-primary',
-                          }}
-                          inactiveProps={{
-                            className: 'text-primary/70',
-                          }}
-                        />
-                      }
-                    >
-                      <IconBrandSafari size={24} />
-                      <div className="absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 shadow-[0px_2px_12px_0px_#6366f1] group-[.active]:opacity-100" />
-                    </Tooltip.Trigger>
-                    <Tooltip.Portal>
-                      <Tooltip.Positioner
-                        side="right"
-                        sideOffset={8}
-                        className="z-50"
-                      >
-                        <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-primary text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
-                          Explore
-                          <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
-                        </Tooltip.Popup>
-                      </Tooltip.Positioner>
-                    </Tooltip.Portal>
-                  </Tooltip.Root>
-                </Tooltip.Provider>
+                <LcTooltip
+                  content="Explore"
+                  side="right"
+                  render={
+                    <Link
+                      to="/"
+                      className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
+                      activeProps={{
+                        className: 'text-primary',
+                      }}
+                      inactiveProps={{
+                        className: 'text-primary/70',
+                      }}
+                    />
+                  }
+                >
+                  <IconBrandSafari size={24} />
+                  <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                </LcTooltip>
               ) : (
                 <Link
                   to="/"
@@ -254,50 +214,36 @@ export default function Sidebar({ className }: SidebarProps) {
                 >
                   <IconBrandSafari size={24} />
                   <span className="pb-0.5">Explore</span>
-                  <div className="absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 shadow-[0px_2px_12px_0px_#6366f1] group-[.active]:opacity-100" />
+                  <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
                 </Link>
               )}
-              <div className="mx-4 h-px bg-zinc-900" />
+              <hr className="mx-4 h-px border-gray-100 dark:border-zinc-900" />
             </div>
 
             {/* Following */}
             <div className="py-2">
               {collapsed ? (
-                <Tooltip.Provider>
-                  <Tooltip.Root>
-                    <Tooltip.Trigger
-                      render={
-                        <Link
-                          to="/following"
-                          className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-primary text-sm transition-colors hover:bg-white/5"
-                        />
-                      }
-                    >
-                      <IconFlag size={24} className="text-primary" />
-                      <div className="absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 shadow-[0px_2px_12px_0px_#6366f1] group-[.active]:opacity-100" />
-                    </Tooltip.Trigger>
-                    <Tooltip.Portal>
-                      <Tooltip.Positioner
-                        side="right"
-                        sideOffset={8}
-                        className="z-50"
-                      >
-                        <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-primary text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
-                          Following
-                          <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
-                        </Tooltip.Popup>
-                      </Tooltip.Positioner>
-                    </Tooltip.Portal>
-                  </Tooltip.Root>
-                </Tooltip.Provider>
+                <LcTooltip
+                  content="Following"
+                  side="right"
+                  render={
+                    <Link
+                      to="/following"
+                      className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-primary/70 text-sm transition-colors hover:bg-white/5"
+                    />
+                  }
+                >
+                  <IconFlag size={24} className="text-primary/70" />
+                  <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                </LcTooltip>
               ) : (
                 <Link
                   to="/following"
-                  className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-primary text-sm transition-colors hover:bg-white/5"
+                  className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-primary/70 text-sm transition-colors hover:bg-white/5"
                 >
-                  <IconFlag size={24} className="text-primary" />
+                  <IconFlag size={24} className="text-primary/70" />
                   <span className="pb-0.5">Following</span>
-                  <div className="absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 shadow-[0px_2px_12px_0px_#6366f1] group-[.active]:opacity-100" />
+                  <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
                 </Link>
               )}
 
@@ -307,12 +253,12 @@ export default function Sidebar({ className }: SidebarProps) {
                   {!isLoggedIn ? (
                     <Link
                       to="/auth/login"
-                      className="text-left text-xs text-zinc-400 transition-colors hover:text-primary/80"
+                      className="text-left text-gray-600 text-xs dark:text-gray-400"
                     >
                       Sign in to see channels
                     </Link>
                   ) : !hasChannels ? (
-                    <p className="text-left text-xs text-zinc-400">
+                    <p className="text-left text-gray-600 text-xs dark:text-gray-400">
                       No channels yet
                     </p>
                   ) : (
@@ -327,16 +273,15 @@ export default function Sidebar({ className }: SidebarProps) {
                             className="flex items-center gap-2.5 transition-colors hover:text-primary/80"
                           >
                             <div className="flex size-6 shrink-0 items-center justify-center">
-                              <Avatar.Root className="size-5 overflow-hidden rounded-full border-top-highlight">
-                                <Avatar.Image
-                                  src={channel.avatarUrl || undefined}
-                                  alt={channel.name}
-                                  className="size-full object-cover"
-                                />
-                                <Avatar.Fallback className="flex size-full items-center justify-center rounded-full bg-brand font-bold text-[10px] text-primary">
-                                  {channel.name.charAt(0).toUpperCase()}
-                                </Avatar.Fallback>
-                              </Avatar.Root>
+                              <Avatar
+                                src={channel.avatarUrl || undefined}
+                                alt={channel.name}
+                                fallbackText={channel.name
+                                  .charAt(0)
+                                  .toUpperCase()}
+                                className="size-5 border-fancy-pants"
+                                fallbackClassName="text-[10px]"
+                              />
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="truncate font-medium text-primary/70 text-xs">
@@ -355,12 +300,12 @@ export default function Sidebar({ className }: SidebarProps) {
                             <IconChevronDown
                               size={16}
                               className={cn(
-                                'text-zinc-400 transition-transform',
+                                'text-gray-600 transition-transform dark:text-gray-400',
                                 showAllChannels && 'rotate-180',
                               )}
                             />
                           </div>
-                          <span className="font-normal text-xs text-zinc-400">
+                          <span className="font-normal text-gray-600 text-xs dark:text-gray-400">
                             {showAllChannels ? 'Show Less' : 'Show More'}
                           </span>
                         </button>
@@ -374,42 +319,29 @@ export default function Sidebar({ className }: SidebarProps) {
                   {!isLoggedIn || !hasChannels ? null : (
                     <>
                       {channels.slice(0, 5).map((channel) => (
-                        <Tooltip.Provider key={channel.id}>
-                          <Tooltip.Root>
-                            <Tooltip.Trigger
-                              render={
-                                <Link
-                                  to="/channel/$slug"
-                                  params={{ slug: channel.slug }}
-                                />
-                              }
-                              className="flex size-6 shrink-0 items-center justify-center"
-                            >
-                              <Avatar.Root className="size-5 overflow-hidden rounded-full border-top-highlight">
-                                <Avatar.Image
-                                  src={channel.avatarUrl || undefined}
-                                  alt={channel.name}
-                                  className="size-full object-cover"
-                                />
-                                <Avatar.Fallback className="flex size-full items-center justify-center rounded-full bg-brand font-bold text-[10px] text-primary">
-                                  {channel.name.charAt(0).toUpperCase()}
-                                </Avatar.Fallback>
-                              </Avatar.Root>
-                            </Tooltip.Trigger>
-                            <Tooltip.Portal>
-                              <Tooltip.Positioner
-                                side="right"
-                                sideOffset={8}
-                                className="z-50"
-                              >
-                                <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-primary text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
-                                  {channel.name}
-                                  <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
-                                </Tooltip.Popup>
-                              </Tooltip.Positioner>
-                            </Tooltip.Portal>
-                          </Tooltip.Root>
-                        </Tooltip.Provider>
+                        <LcTooltip
+                          key={channel.id}
+                          content={channel.name}
+                          side="right"
+                          render={
+                            <Link
+                              to="/channel/$slug"
+                              params={{ slug: channel.slug }}
+                            />
+                          }
+                        >
+                          <div className="flex size-6 shrink-0 items-center justify-center">
+                            <Avatar
+                              src={channel.avatarUrl || undefined}
+                              alt={channel.name}
+                              fallbackText={channel.name
+                                .charAt(0)
+                                .toUpperCase()}
+                              className="size-5 border-fancy-pants"
+                              fallbackClassName="text-[10px]"
+                            />
+                          </div>
+                        </LcTooltip>
                       ))}
                       {channels.length > 5 ? (
                         <button
@@ -421,7 +353,7 @@ export default function Sidebar({ className }: SidebarProps) {
                             <IconChevronDown
                               size={16}
                               className={cn(
-                                'text-zinc-400 transition-transform',
+                                'text-gray-600 transition-transform dark:text-gray-400',
                                 showAllChannels && 'rotate-180',
                               )}
                             />
@@ -432,45 +364,34 @@ export default function Sidebar({ className }: SidebarProps) {
                   )}
                 </div>
               ) : null}
-              <div className="mx-4 h-px bg-zinc-900" />
+              <hr className="mx-4 h-px border-gray-100 dark:border-zinc-900" />
             </div>
 
             {/* Library */}
             <div className="py-2">
               {collapsed ? (
-                <Tooltip.Provider>
-                  <Tooltip.Root>
-                    <Tooltip.Trigger
-                      render={
-                        <Link
-                          to="/library"
-                          className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
-                          activeProps={{
-                            className: 'text-primary',
-                          }}
-                          inactiveProps={{
-                            className: 'text-primary/70',
-                          }}
-                        />
-                      }
-                    >
-                      <IconBookmark size={24} />
-                      <div className="absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 shadow-[0px_2px_12px_0px_#6366f1] group-[.active]:opacity-100" />
-                    </Tooltip.Trigger>
-                    <Tooltip.Portal>
-                      <Tooltip.Positioner
-                        side="right"
-                        sideOffset={8}
-                        className="z-50"
-                      >
-                        <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-primary text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
-                          Library
-                          <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
-                        </Tooltip.Popup>
-                      </Tooltip.Positioner>
-                    </Tooltip.Portal>
-                  </Tooltip.Root>
-                </Tooltip.Provider>
+                <LcTooltip
+                  content="Library"
+                  side="right"
+                  render={
+                    <Link
+                      to="/library"
+                      className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
+                      activeProps={{
+                        className: 'text-primary',
+                      }}
+                      inactiveProps={{
+                        className: 'text-primary/70',
+                      }}
+                    />
+                  }
+                >
+                  <IconBookmark size={24} />
+                  <div
+                    role="presentation"
+                    className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100"
+                  />
+                </LcTooltip>
               ) : (
                 <Link
                   to="/library"
@@ -484,57 +405,34 @@ export default function Sidebar({ className }: SidebarProps) {
                 >
                   <IconBookmark size={24} />
                   <span className="pb-0.5">Library</span>
-                  <div className="absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 shadow-[0px_2px_12px_0px_#6366f1] group-[.active]:opacity-100" />
+                  <div
+                    role="presentation"
+                    className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100"
+                  />
                 </Link>
               )}
 
               {/* Library sub-items */}
               {collapsed ? (
                 <div className="mt-1 flex flex-col gap-2 px-4 pt-1 pb-2">
-                  <Tooltip.Provider>
-                    <Tooltip.Root>
-                      <Tooltip.Trigger
-                        render={<Link to="/history" />}
-                        className="flex size-6 items-center justify-center"
-                      >
-                        <IconHistory size={16} className="text-zinc-400" />
-                      </Tooltip.Trigger>
-                      <Tooltip.Portal>
-                        <Tooltip.Positioner
-                          side="right"
-                          sideOffset={8}
-                          className="z-50"
-                        >
-                          <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-primary text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
-                            History
-                            <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
-                          </Tooltip.Popup>
-                        </Tooltip.Positioner>
-                      </Tooltip.Portal>
-                    </Tooltip.Root>
-                  </Tooltip.Provider>
-                  <Tooltip.Provider>
-                    <Tooltip.Root>
-                      <Tooltip.Trigger
-                        render={<Link to="/library" />}
-                        className="flex size-6 items-center justify-center"
-                      >
-                        <IconBookmarks size={16} className="text-zinc-400" />
-                      </Tooltip.Trigger>
-                      <Tooltip.Portal>
-                        <Tooltip.Positioner
-                          side="right"
-                          sideOffset={8}
-                          className="z-50"
-                        >
-                          <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-primary text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
-                            Saved Content
-                            <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
-                          </Tooltip.Popup>
-                        </Tooltip.Positioner>
-                      </Tooltip.Portal>
-                    </Tooltip.Root>
-                  </Tooltip.Provider>
+                  <LcTooltip
+                    content="History"
+                    side="right"
+                    render={<Link to="/history" />}
+                  >
+                    <div className="flex size-6 items-center justify-center">
+                      <IconHistory size={16} className="text-primary/70" />
+                    </div>
+                  </LcTooltip>
+                  <LcTooltip
+                    content="Saved Content"
+                    side="right"
+                    render={<Link to="/library" />}
+                  >
+                    <div className="flex size-6 items-center justify-center">
+                      <IconBookmarks size={16} className="text-primary/70" />
+                    </div>
+                  </LcTooltip>
                 </div>
               ) : (
                 <div className="mt-1 flex flex-col gap-2 px-4 pt-1 pb-2">
@@ -543,9 +441,9 @@ export default function Sidebar({ className }: SidebarProps) {
                     className="flex items-center gap-2.5 transition-colors hover:text-primary/80"
                   >
                     <div className="flex size-6 items-center justify-center">
-                      <IconHistory size={16} className="text-zinc-400" />
+                      <IconHistory size={16} className="text-primary/70" />
                     </div>
-                    <span className="font-normal text-xs text-zinc-400">
+                    <span className="font-normal text-gray-600 text-xs dark:text-gray-400">
                       History
                     </span>
                   </Link>
@@ -554,9 +452,9 @@ export default function Sidebar({ className }: SidebarProps) {
                     className="flex items-center gap-2.5 transition-colors hover:text-primary/80"
                   >
                     <div className="flex size-6 items-center justify-center">
-                      <IconBookmarks size={16} className="text-zinc-400" />
+                      <IconBookmarks size={16} className="text-primary/70" />
                     </div>
-                    <span className="font-normal text-xs text-zinc-400">
+                    <span className="font-normal text-gray-600 text-xs dark:text-gray-400">
                       Saved Content
                     </span>
                   </Link>
@@ -643,62 +541,47 @@ export default function Sidebar({ className }: SidebarProps) {
       {/* Donate Button (Collapsed) */}
       {collapsed && !showAltMenu ? (
         <div className="px-4">
-          <Tooltip.Provider>
-            <Tooltip.Root>
-              <Tooltip.Trigger
-                className="flex size-6 cursor-pointer items-center justify-center text-brand transition-all hover:scale-110 hover:animate-pulse hover:text-indigo-400"
-                aria-label="Donate"
-              >
-                <IconHeartFilled size={20} />
-              </Tooltip.Trigger>
-              <Tooltip.Portal>
-                <Tooltip.Positioner
-                  side="right"
-                  sideOffset={8}
-                  className="z-50"
-                >
-                  <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-primary text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
-                    Donate
-                    <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
-                  </Tooltip.Popup>
-                </Tooltip.Positioner>
-              </Tooltip.Portal>
-            </Tooltip.Root>
-          </Tooltip.Provider>
+          <LcTooltip content="Donate" side="right">
+            <a
+              className="flex size-6 cursor-pointer items-center justify-center text-brand transition-all hover:scale-110 hover:animate-pulse hover:text-indigo-400"
+              href="https://givebutter.com/LetsChurch"
+              target="_blank"
+              rel="noopener"
+            >
+              <IconHeartFilled size={20} />
+            </a>
+          </LcTooltip>
         </div>
       ) : null}
+
+      {/* Theme Switcher */}
+      {showAltMenu ? null : (
+        <>
+          <div className="px-4 pb-3">
+            <hr className="h-px border-gray-100 dark:border-zinc-900" />
+          </div>
+          <ThemeSwitcher collapsed={collapsed && !showAltMenu} />
+        </>
+      )}
 
       {/* Collapse Button */}
       {showAltMenu ? null : (
         <div className="p-4">
           {collapsed ? (
-            <Tooltip.Provider>
-              <Tooltip.Root>
-                <Tooltip.Trigger
-                  className="flex w-full items-center gap-2.5 transition-colors hover:text-primary/80"
-                  onClick={toggleCollapsed}
-                >
-                  <div className="flex size-6 items-center justify-center">
-                    <IconLayoutSidebarLeftExpand
-                      size={16}
-                      className="text-zinc-400"
-                    />
-                  </div>
-                </Tooltip.Trigger>
-                <Tooltip.Portal>
-                  <Tooltip.Positioner
-                    side="right"
-                    sideOffset={8}
-                    className="z-50"
-                  >
-                    <Tooltip.Popup className="rounded-lg bg-zinc-900 px-2 py-1.5 font-semibold text-primary text-xs shadow-[0_20px_25px_-5px_rgba(0,0,0,0.9),0_8px_10px_-6px_rgba(0,0,0,0.9)]">
-                      Expand Sidebar
-                      <Tooltip.Arrow className="data-[side=bottom]:top-[-4px] data-[side=left]:right-[-4px] data-[side=top]:bottom-[-4px] data-[side=right]:left-[-4px]" />
-                    </Tooltip.Popup>
-                  </Tooltip.Positioner>
-                </Tooltip.Portal>
-              </Tooltip.Root>
-            </Tooltip.Provider>
+            <LcTooltip content="Expand Sidebar" side="right">
+              <button
+                type="button"
+                className="flex w-full items-center gap-2.5 transition-colors hover:text-primary/80"
+                onClick={toggleCollapsed}
+              >
+                <div className="flex size-6 items-center justify-center">
+                  <IconLayoutSidebarLeftExpand
+                    size={16}
+                    className="text-gray-600 dark:text-gray-400"
+                  />
+                </div>
+              </button>
+            </LcTooltip>
           ) : (
             <button
               type="button"
@@ -708,10 +591,10 @@ export default function Sidebar({ className }: SidebarProps) {
               <div className="flex size-6 items-center justify-center">
                 <IconLayoutSidebarLeftCollapse
                   size={16}
-                  className="text-zinc-400"
+                  className="text-gray-600 dark:text-gray-400"
                 />
               </div>
-              <span className="font-normal text-xs text-zinc-400">
+              <span className="font-normal text-gray-600 text-xs dark:text-gray-400">
                 Collapse Sidebar
               </span>
             </button>

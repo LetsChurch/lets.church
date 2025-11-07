@@ -1,4 +1,3 @@
-import { Avatar } from '@base-ui-components/react/avatar';
 import {
   useQuery,
   useQueryClient,
@@ -6,6 +5,7 @@ import {
 } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useRef, useState } from 'react';
+import { Avatar } from '@/components/avatar';
 import { AvatarCarousel } from '@/components/avatar-carousel';
 import { EmptyState } from '@/components/empty-state';
 import Header from '@/components/header';
@@ -45,21 +45,16 @@ function ChannelListItem({
       className="flex items-center justify-between rounded-lg bg-surface-100 p-4"
     >
       <div className="flex items-center space-x-3">
-        <Avatar.Root className="size-10 overflow-hidden rounded-full border-top-highlight">
-          <Avatar.Image
-            src={channel.avatarUrl || undefined}
-            alt={channel.name}
-            className="size-full object-cover"
-          />
-          <Avatar.Fallback
-            className={cn(
-              'flex size-full items-center justify-center rounded-full bg-zinc-900 font-bold text-primary',
-              isFollowed ? 'text-sm' : 'text-lg',
-            )}
-          >
-            {channel.name.charAt(0).toUpperCase()}
-          </Avatar.Fallback>
-        </Avatar.Root>
+        <Avatar
+          src={channel.avatarUrl || undefined}
+          alt={channel.name}
+          fallbackText={channel.name.charAt(0).toUpperCase()}
+          className="size-10 border-fancy-pants"
+          fallbackClassName={cn(
+            'bg-zinc-900 font-bold',
+            isFollowed ? 'text-sm' : 'text-lg',
+          )}
+        />
         <div className="min-w-0 flex-1">
           <h3 className="truncate font-bold text-primary text-sm">
             {channel.name}
@@ -92,7 +87,7 @@ function ChannelListItem({
       ) : (
         <Link
           to="/auth/register"
-          className="flex h-8 items-center rounded-full border-top-highlight bg-brand px-3 font-bold text-primary text-sm"
+          className="flex h-8 items-center rounded-full border-fancy-pants bg-brand px-3 font-bold text-primary text-sm"
         >
           Follow
         </Link>

@@ -32,7 +32,7 @@ function CarouselItem({
     <div className="relative w-90 flex-shrink-0 md:w-124 lg:w-160">
       <div className="space-y-5">
         {/* Image Container */}
-        <div className="relative aspect-video overflow-hidden rounded-2xl border-top-highlight bg-card">
+        <div className="relative aspect-video overflow-hidden rounded-2xl border-fancy-pants bg-zinc-100 dark:bg-zinc-900">
           {imageUrl ? (
             <div
               className="absolute inset-0 bg-center bg-cover"
@@ -47,8 +47,10 @@ function CarouselItem({
           )}
           {/* Badge */}
           <div className="absolute top-2 left-2">
-            <div className="flex items-center rounded-full bg-zinc-950/80 px-2 backdrop-blur-sm">
-              <span className="font-medium text-primary text-xs">{badge}</span>
+            <div className="flex items-center rounded-full bg-gray-950/50 px-2 backdrop-blur-sm dark:bg-white/50">
+              <span className="font-medium text-shadow text-white text-xs dark:text-gray-950">
+                {badge}
+              </span>
             </div>
           </div>
         </div>

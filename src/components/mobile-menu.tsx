@@ -4,6 +4,7 @@ import { Link } from '@tanstack/react-router';
 import { cn } from '@/util/cn';
 import { DonateCard } from './donate-card';
 import Logo from './logo';
+import { ThemeSwitcher } from './theme-switcher';
 
 type MobileMenuProps = {
   open: boolean;
@@ -20,19 +21,19 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
 
         <Dialog.Popup
           className={cn(
-            'fixed top-0 left-0 z-50 h-full w-80 bg-zinc-900',
+            'fixed top-0 left-0 z-50 h-full w-80 bg-white dark:bg-zinc-900',
             'data-[ending-style]:-translate-x-full data-[starting-style]:-translate-x-full',
             'transition-transform duration-300 ease-in-out',
           )}
         >
-          <div className="flex items-center justify-between border-zinc-800 border-b px-4 py-4">
+          <div className="flex items-center justify-between border-gray-200 border-b px-4 py-4 dark:border-zinc-800">
             <Logo />
             <Dialog.Close
               render={(props) => (
                 <button
                   {...props}
                   type="button"
-                  className="flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-zinc-800 hover:text-primary"
+                  className="flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-gray-100 hover:text-primary dark:hover:bg-zinc-800"
                 >
                   <IconX />
                 </button>
@@ -40,7 +41,7 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
             />
           </div>
 
-          <div className="border-zinc-800 border-t px-4">
+          <div className="border-gray-200 border-t px-4 dark:border-zinc-800">
             <div className="space-y-3 py-6">
               <Link
                 to="/"
@@ -72,8 +73,13 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
               </Link>
             </div>
 
+            {/* Theme Switcher */}
+            <div className="border-gray-200 border-t py-6 dark:border-zinc-800">
+              <ThemeSwitcher />
+            </div>
+
             {/* Legal Links */}
-            <div className="space-y-3 border-zinc-800 border-t py-6">
+            <div className="space-y-3 border-gray-200 border-t py-6 dark:border-zinc-800">
               <Link
                 to="/"
                 onClick={handleClose}

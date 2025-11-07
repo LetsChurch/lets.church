@@ -12,7 +12,7 @@ export default function LcButton({
     <button
       {...props}
       className={cn(
-        'rounded-full border-top-highlight bg-white/15 px-3 py-1.5 font-semibold text-primary/80 text-sm',
+        'rounded-full border-fancy-pants bg-gray-950/10 px-3 py-1.5 font-semibold text-primary/80 text-sm dark:bg-white/15',
         className,
       )}
     >
