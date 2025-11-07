@@ -1670,6 +1670,7 @@ await prisma.uploadRecord.create({
   },
 });
 
+await indexDocument('transcript', prayerPitchUploadId, 'transcript.vtt');
 await indexDocument('upload', prayerPitchUploadId);
 
 const christianBooksPitchUploadId = '00000000-0000-4000-8000-100000000002';
@@ -1704,6 +1705,7 @@ await prisma.uploadRecord.create({
   },
 });
 
+await indexDocument('transcript', christianBooksPitchUploadId, 'transcript.vtt');
 await indexDocument('upload', christianBooksPitchUploadId);
 
 const foreignMissionsUploadId = '00000000-0000-4000-8000-100000000003';
@@ -1738,6 +1740,7 @@ await prisma.uploadRecord.create({
   },
 });
 
+await indexDocument('transcript', foreignMissionsUploadId, 'transcript.vtt');
 await indexDocument('upload', foreignMissionsUploadId);
 
 const copyrightUploadId = '00000000-0000-4000-8000-100000000004';
@@ -1772,6 +1775,7 @@ await prisma.uploadRecord.create({
   },
 });
 
+await indexDocument('transcript', copyrightUploadId, 'transcript.vtt');
 await indexDocument('upload', copyrightUploadId);
 
 const biblicalCounselingUploadId = '00000000-0000-4000-8000-100000000005';
@@ -1806,6 +1810,7 @@ await prisma.uploadRecord.create({
   },
 });
 
+await indexDocument('transcript', biblicalCounselingUploadId, 'transcript.vtt');
 await indexDocument('upload', biblicalCounselingUploadId);
 
 const lordsSupperUploadId = '00000000-0000-4000-8000-100000000006';
@@ -1840,6 +1845,7 @@ await prisma.uploadRecord.create({
   },
 });
 
+await indexDocument('transcript', lordsSupperUploadId, 'transcript.vtt');
 await indexDocument('upload', lordsSupperUploadId);
 
 logger.info('Seeding featured uploads');
