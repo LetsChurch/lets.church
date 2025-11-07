@@ -29,6 +29,7 @@ services:
       - 127.0.0.1:${HOST_WEB_PORT}:3000
     environment:
       NODE_ENV: development
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       ELASTICSEARCH_URL: http://elasticsearch:9200
       IMGPROXY_KEY: ${IMGPROXY_KEY}
@@ -39,6 +40,7 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       TURNSTILE_SITE_KEY: 1x00000000000000000000AA
       TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
+      WEB_URL: ${HOST_WEB_URL}
       ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
       <<: *s3-env
     volumes:

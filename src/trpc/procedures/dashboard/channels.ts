@@ -1,5 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { invariant } from 'es-toolkit';
+import { stripIndent } from 'proper-tags';
 import { z } from 'zod';
 import { UploadLicense } from '@/generated/prisma/client';
 import {
@@ -30,11 +31,15 @@ import {
   userSearchSchema,
 } from '@/schemas/dashboard';
 import {
+  client,
   completeMultipartMediaUpload,
   deleteUpload,
   handleMultipartMediaUpload,
 } from '@/temporal';
+import { BACKGROUND_QUEUE } from '@/temporal/queues';
+import { sendEmailWorkflow } from '@/temporal/workflows/send-email';
 import { prisma } from '@/util/db';
+import { emailHtml } from '@/util/email';
 import logger from '@/util/logger';
 import {
   createMultipartUpload,
@@ -48,6 +53,13 @@ import { authProcedure, router } from '../../trpc';
 const moduleLogger = logger.child({
   module: 'trpc/procedures/dashboard/channel',
 });
+
+const { ADMIN_EMAIL, WEB_URL } = z
+  .object({
+    ADMIN_EMAIL: z.string().email(),
+    WEB_URL: z.string().url(),
+  })
+  .parse(process.env);
 
 const channelProcedure = authProcedure
   .input(channelQuerySchema)
@@ -130,6 +142,8 @@ export const channelRouter = router({
           },
           select: {
             id: true,
+            name: true,
+            slug: true,
           },
         });
 
@@ -137,6 +151,79 @@ export const channelRouter = router({
           appUserId: ctx.session.appUserId,
           channelId: channel.id,
         });
+
+        // Send admin notification email
+        try {
+          const user = await prisma.appUser.findUnique({
+            where: { id: ctx.session.appUserId },
+            select: {
+              username: true,
+              fullName: true,
+              emails: {
+                where: { verifiedAt: { not: null } },
+                select: { email: true },
+                take: 1,
+              },
+            },
+          });
+
+          const approvalUrl = `${WEB_URL}/dashboard/admin/channel-approvals`;
+          const subject = `New Channel Approval Request: ${channel.name}`;
+          const text = stripIndent`
+            A new channel has been created and is pending approval.
+
+            Channel Name: ${channel.name}
+            Channel Slug: ${channel.slug}
+            Creator: ${user?.fullName || user?.username || 'Unknown'}
+            ${user?.emails[0]?.email ? `Creator Email: ${user.emails[0].email}` : ''}
+
+            Please visit ${approvalUrl} to review and approve this channel.
+          `;
+          const html = emailHtml(
+            'New Channel Approval Request',
+            stripIndent`
+              A new channel has been created and is pending approval.
+
+              <b>Channel Name:</b> ${channel.name}<br>
+              <b>Channel Slug:</b> ${channel.slug}<br>
+              <b>Creator:</b> ${user?.fullName || user?.username || 'Unknown'}<br>
+              ${user?.emails[0]?.email ? `<b>Creator Email:</b> ${user.emails[0].email}<br>` : ''}
+
+              Please <a href="${approvalUrl}">click here</a> to review and approve this channel.
+
+              Alternatively, visit: ${approvalUrl}
+            `,
+          ).html;
+
+          await (await client).workflow.start(sendEmailWorkflow, {
+            args: [
+              {
+                from: 'hello@lets.church',
+                to: ADMIN_EMAIL,
+                subject,
+                text,
+                html,
+              },
+            ],
+            workflowId: `channel-approval:${channel.id}:${Date.now()}`,
+            taskQueue: BACKGROUND_QUEUE,
+            retry: { maximumAttempts: 5 },
+          });
+
+          moduleLogger.info('Admin notification email workflow started', {
+            channelId: channel.id,
+            adminEmail: ADMIN_EMAIL,
+          });
+        } catch (emailError) {
+          // Log but don't fail the channel creation if email fails
+          moduleLogger.error('Failed to send admin notification email', {
+            channelId: channel.id,
+            error:
+              emailError instanceof Error
+                ? emailError.message
+                : String(emailError),
+          });
+        }
 
         return channel;
       } catch (error) {
