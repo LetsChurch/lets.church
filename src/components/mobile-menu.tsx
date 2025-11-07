@@ -44,28 +44,21 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
           <div className="border-gray-200 border-t px-4 dark:border-zinc-800">
             <div className="space-y-3 py-6">
               <Link
-                to="/"
+                to="/about"
                 onClick={handleClose}
                 className="block font-semibold text-lg text-primary hover:text-indigo-400"
               >
                 Our Mission
               </Link>
               <Link
-                to="/"
+                to="/about/dorean"
                 onClick={handleClose}
                 className="block font-semibold text-lg text-primary hover:text-indigo-400"
               >
                 The Dorean Principle
               </Link>
               <Link
-                to="/"
-                onClick={handleClose}
-                className="block font-semibold text-lg text-primary hover:text-indigo-400"
-              >
-                Roadmap
-              </Link>
-              <Link
-                to="/"
+                to="/about/feature-request"
                 onClick={handleClose}
                 className="block font-semibold text-lg text-primary hover:text-indigo-400"
               >
@@ -81,25 +74,25 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
             {/* Legal Links */}
             <div className="space-y-3 border-gray-200 border-t py-6 dark:border-zinc-800">
               <Link
-                to="/"
+                to="/about/terms"
                 onClick={handleClose}
                 className="block font-medium text-primary text-sm hover:text-primary"
               >
                 Terms of Service
               </Link>
               <Link
-                to="/"
+                to="/about/privacy"
                 onClick={handleClose}
                 className="block font-medium text-primary text-sm hover:text-primary"
               >
                 Privacy Policy
               </Link>
               <Link
-                to="/"
+                to="/about/dmca"
                 onClick={handleClose}
                 className="block font-medium text-primary text-sm hover:text-primary"
               >
-                DCMA
+                DMCA
               </Link>
             </div>
 
@@ -111,7 +104,10 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
               <p className="text-muted text-xs">
                 Let's Church is in the public domain and is operated as a
                 non-profit.{' '}
-                <Link to="/" className="text-primary hover:text-indigo-300">
+                <Link
+                  to="/about"
+                  className="text-primary hover:text-indigo-300"
+                >
                   Learn more
                 </Link>
               </p>
