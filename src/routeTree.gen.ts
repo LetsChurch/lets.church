@@ -30,6 +30,7 @@ import { Route as MainHistoryRouteImport } from './routes/_main/history'
 import { Route as MainFollowingRouteImport } from './routes/_main/following'
 import { Route as MainAboutIndexRouteImport } from './routes/_main/about/index'
 import { Route as EmbedMediaMediaIdRouteImport } from './routes/embed.media.$mediaId'
+import { Route as EmbedChannelSlugRouteImport } from './routes/embed.channel.$slug'
 import { Route as DashboardOrganizationsOrgIdRouteImport } from './routes/dashboard_/organizations_.$orgId'
 import { Route as DashboardChurchesNewRouteImport } from './routes/dashboard_/churches_.new'
 import { Route as DashboardChurchesChurchIdRouteImport } from './routes/dashboard_/churches_.$churchId'
@@ -166,6 +167,11 @@ const MainAboutIndexRoute = MainAboutIndexRouteImport.update({
 const EmbedMediaMediaIdRoute = EmbedMediaMediaIdRouteImport.update({
   id: '/embed/media/$mediaId',
   path: '/embed/media/$mediaId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmbedChannelSlugRoute = EmbedChannelSlugRouteImport.update({
+  id: '/embed/channel/$slug',
+  path: '/embed/channel/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardOrganizationsOrgIdRoute =
@@ -394,6 +400,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/churches/$churchId': typeof DashboardChurchesChurchIdRoute
   '/dashboard/churches/new': typeof DashboardChurchesNewRoute
   '/dashboard/organizations/$orgId': typeof DashboardOrganizationsOrgIdRoute
+  '/embed/channel/$slug': typeof EmbedChannelSlugRoute
   '/embed/media/$mediaId': typeof EmbedMediaMediaIdRoute
   '/about': typeof MainAboutIndexRoute
   '/dashboard/channels/$channelId/edit': typeof DashboardChannelsChannelIdEditRoute
@@ -448,6 +455,7 @@ export interface FileRoutesByTo {
   '/dashboard/churches/$churchId': typeof DashboardChurchesChurchIdRoute
   '/dashboard/churches/new': typeof DashboardChurchesNewRoute
   '/dashboard/organizations/$orgId': typeof DashboardOrganizationsOrgIdRoute
+  '/embed/channel/$slug': typeof EmbedChannelSlugRoute
   '/embed/media/$mediaId': typeof EmbedMediaMediaIdRoute
   '/about': typeof MainAboutIndexRoute
   '/dashboard/channels/$channelId/edit': typeof DashboardChannelsChannelIdEditRoute
@@ -505,6 +513,7 @@ export interface FileRoutesById {
   '/dashboard_/churches_/$churchId': typeof DashboardChurchesChurchIdRoute
   '/dashboard_/churches_/new': typeof DashboardChurchesNewRoute
   '/dashboard_/organizations_/$orgId': typeof DashboardOrganizationsOrgIdRoute
+  '/embed/channel/$slug': typeof EmbedChannelSlugRoute
   '/embed/media/$mediaId': typeof EmbedMediaMediaIdRoute
   '/_main/about/': typeof MainAboutIndexRoute
   '/dashboard_/channels_/$channelId_/edit': typeof DashboardChannelsChannelIdEditRoute
@@ -562,6 +571,7 @@ export interface FileRouteTypes {
     | '/dashboard/churches/$churchId'
     | '/dashboard/churches/new'
     | '/dashboard/organizations/$orgId'
+    | '/embed/channel/$slug'
     | '/embed/media/$mediaId'
     | '/about'
     | '/dashboard/channels/$channelId/edit'
@@ -616,6 +626,7 @@ export interface FileRouteTypes {
     | '/dashboard/churches/$churchId'
     | '/dashboard/churches/new'
     | '/dashboard/organizations/$orgId'
+    | '/embed/channel/$slug'
     | '/embed/media/$mediaId'
     | '/about'
     | '/dashboard/channels/$channelId/edit'
@@ -672,6 +683,7 @@ export interface FileRouteTypes {
     | '/dashboard_/churches_/$churchId'
     | '/dashboard_/churches_/new'
     | '/dashboard_/organizations_/$orgId'
+    | '/embed/channel/$slug'
     | '/embed/media/$mediaId'
     | '/_main/about/'
     | '/dashboard_/channels_/$channelId_/edit'
@@ -694,6 +706,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   DashboardRoute: typeof DashboardRouteWithChildren
   TrpcSplatRoute: typeof TrpcSplatRoute
+  EmbedChannelSlugRoute: typeof EmbedChannelSlugRoute
   EmbedMediaMediaIdRoute: typeof EmbedMediaMediaIdRoute
 }
 
@@ -844,6 +857,13 @@ declare module '@tanstack/react-router' {
       path: '/embed/media/$mediaId'
       fullPath: '/embed/media/$mediaId'
       preLoaderRoute: typeof EmbedMediaMediaIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/embed/channel/$slug': {
+      id: '/embed/channel/$slug'
+      path: '/embed/channel/$slug'
+      fullPath: '/embed/channel/$slug'
+      preLoaderRoute: typeof EmbedChannelSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard_/organizations_/$orgId': {
@@ -1218,6 +1238,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   DashboardRoute: DashboardRouteWithChildren,
   TrpcSplatRoute: TrpcSplatRoute,
+  EmbedChannelSlugRoute: EmbedChannelSlugRoute,
   EmbedMediaMediaIdRoute: EmbedMediaMediaIdRoute,
 }
 export const routeTree = rootRouteImport
