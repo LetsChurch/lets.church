@@ -133,44 +133,44 @@ export default function Sidebar({ className }: SidebarProps) {
             {/* Alternative Menu */}
             <div className="flex flex-col gap-2 px-1 py-3">
               <Link
-                to="/"
+                to="/about"
                 className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
               >
                 Our Mission
               </Link>
               <Link
-                to="/"
+                to="/about/dorean"
                 className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
               >
                 The Dorean Principle
               </Link>
+              {/* <Link */}
+              {/*   to="/about/roadmap" */}
+              {/*   className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10" */}
+              {/* > */}
+              {/*   Roadmap */}
+              {/* </Link> */}
               <Link
-                to="/"
-                className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
-              >
-                Roadmap
-              </Link>
-              <Link
-                to="/"
+                to="/about/feature-request"
                 className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
               >
                 Request a Feature
               </Link>
               <div className="mx-2 my-2.5 h-px bg-zinc-900" />
               <Link
-                to="/"
+                to="/about/terms"
                 className="rounded-lg px-2 py-1.5 font-medium text-primary/70 text-xs transition-colors hover:bg-white/10"
               >
                 Terms of Service
               </Link>
               <Link
-                to="/"
+                to="/about/privacy"
                 className="rounded-lg px-2 py-1.5 font-medium text-primary/70 text-xs transition-colors hover:bg-white/10"
               >
                 Privacy Policy
               </Link>
               <Link
-                to="/"
+                to="/about/dmca"
                 className="rounded-lg px-2 py-1.5 font-medium text-primary/70 text-xs transition-colors hover:bg-white/10"
               >
                 DMCA

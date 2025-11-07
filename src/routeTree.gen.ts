@@ -28,6 +28,7 @@ import { Route as MainSearchRouteImport } from './routes/_main/search'
 import { Route as MainLibraryRouteImport } from './routes/_main/library'
 import { Route as MainHistoryRouteImport } from './routes/_main/history'
 import { Route as MainFollowingRouteImport } from './routes/_main/following'
+import { Route as MainAboutIndexRouteImport } from './routes/_main/about/index'
 import { Route as EmbedMediaMediaIdRouteImport } from './routes/embed.media.$mediaId'
 import { Route as DashboardOrganizationsOrgIdRouteImport } from './routes/dashboard_/organizations_.$orgId'
 import { Route as DashboardChurchesNewRouteImport } from './routes/dashboard_/churches_.new'
@@ -44,6 +45,11 @@ import { Route as DashboardAccountSecurityRouteImport } from './routes/dashboard
 import { Route as DashboardAccountProfileRouteImport } from './routes/dashboard_/account_.profile'
 import { Route as MainMediaMediaIdRouteImport } from './routes/_main/media/$mediaId'
 import { Route as MainChannelSlugRouteImport } from './routes/_main/channel.$slug'
+import { Route as MainAboutTermsRouteImport } from './routes/_main/about/terms'
+import { Route as MainAboutPrivacyRouteImport } from './routes/_main/about/privacy'
+import { Route as MainAboutFeatureRequestRouteImport } from './routes/_main/about/feature-request'
+import { Route as MainAboutDoreanRouteImport } from './routes/_main/about/dorean'
+import { Route as MainAboutDmcaRouteImport } from './routes/_main/about/dmca'
 import { Route as DashboardOrganizationsOrgIdMembersRouteImport } from './routes/dashboard_/organizations_.$orgId_.members'
 import { Route as DashboardOrganizationsOrgIdEditRouteImport } from './routes/dashboard_/organizations_.$orgId_.edit'
 import { Route as DashboardOrganizationsOrgIdAssociationsRouteImport } from './routes/dashboard_/organizations_.$orgId_.associations'
@@ -152,6 +158,11 @@ const MainFollowingRoute = MainFollowingRouteImport.update({
   path: '/following',
   getParentRoute: () => MainRoute,
 } as any)
+const MainAboutIndexRoute = MainAboutIndexRouteImport.update({
+  id: '/about/',
+  path: '/about/',
+  getParentRoute: () => MainRoute,
+} as any)
 const EmbedMediaMediaIdRoute = EmbedMediaMediaIdRouteImport.update({
   id: '/embed/media/$mediaId',
   path: '/embed/media/$mediaId',
@@ -238,6 +249,31 @@ const MainMediaMediaIdRoute = MainMediaMediaIdRouteImport.update({
 const MainChannelSlugRoute = MainChannelSlugRouteImport.update({
   id: '/channel/$slug',
   path: '/channel/$slug',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainAboutTermsRoute = MainAboutTermsRouteImport.update({
+  id: '/about/terms',
+  path: '/about/terms',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainAboutPrivacyRoute = MainAboutPrivacyRouteImport.update({
+  id: '/about/privacy',
+  path: '/about/privacy',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainAboutFeatureRequestRoute = MainAboutFeatureRequestRouteImport.update({
+  id: '/about/feature-request',
+  path: '/about/feature-request',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainAboutDoreanRoute = MainAboutDoreanRouteImport.update({
+  id: '/about/dorean',
+  path: '/about/dorean',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainAboutDmcaRoute = MainAboutDmcaRouteImport.update({
+  id: '/about/dmca',
+  path: '/about/dmca',
   getParentRoute: () => MainRoute,
 } as any)
 const DashboardOrganizationsOrgIdMembersRoute =
@@ -338,6 +374,11 @@ export interface FileRoutesByFullPath {
   '/trpc/$': typeof TrpcSplatRoute
   '/': typeof MainIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/about/dmca': typeof MainAboutDmcaRoute
+  '/about/dorean': typeof MainAboutDoreanRoute
+  '/about/feature-request': typeof MainAboutFeatureRequestRoute
+  '/about/privacy': typeof MainAboutPrivacyRoute
+  '/about/terms': typeof MainAboutTermsRoute
   '/channel/$slug': typeof MainChannelSlugRoute
   '/media/$mediaId': typeof MainMediaMediaIdRoute
   '/dashboard/account/profile': typeof DashboardAccountProfileRoute
@@ -354,6 +395,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/churches/new': typeof DashboardChurchesNewRoute
   '/dashboard/organizations/$orgId': typeof DashboardOrganizationsOrgIdRoute
   '/embed/media/$mediaId': typeof EmbedMediaMediaIdRoute
+  '/about': typeof MainAboutIndexRoute
   '/dashboard/channels/$channelId/edit': typeof DashboardChannelsChannelIdEditRoute
   '/dashboard/channels/$channelId/members': typeof DashboardChannelsChannelIdMembersRoute
   '/dashboard/channels/$channelId/playlists': typeof DashboardChannelsChannelIdPlaylistsRoute
@@ -386,6 +428,11 @@ export interface FileRoutesByTo {
   '/trpc/$': typeof TrpcSplatRoute
   '/': typeof MainIndexRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/about/dmca': typeof MainAboutDmcaRoute
+  '/about/dorean': typeof MainAboutDoreanRoute
+  '/about/feature-request': typeof MainAboutFeatureRequestRoute
+  '/about/privacy': typeof MainAboutPrivacyRoute
+  '/about/terms': typeof MainAboutTermsRoute
   '/channel/$slug': typeof MainChannelSlugRoute
   '/media/$mediaId': typeof MainMediaMediaIdRoute
   '/dashboard/account/profile': typeof DashboardAccountProfileRoute
@@ -402,6 +449,7 @@ export interface FileRoutesByTo {
   '/dashboard/churches/new': typeof DashboardChurchesNewRoute
   '/dashboard/organizations/$orgId': typeof DashboardOrganizationsOrgIdRoute
   '/embed/media/$mediaId': typeof EmbedMediaMediaIdRoute
+  '/about': typeof MainAboutIndexRoute
   '/dashboard/channels/$channelId/edit': typeof DashboardChannelsChannelIdEditRoute
   '/dashboard/channels/$channelId/members': typeof DashboardChannelsChannelIdMembersRoute
   '/dashboard/channels/$channelId/playlists': typeof DashboardChannelsChannelIdPlaylistsRoute
@@ -437,6 +485,11 @@ export interface FileRoutesById {
   '/trpc/$': typeof TrpcSplatRoute
   '/_main/': typeof MainIndexRoute
   '/dashboard_/': typeof DashboardIndexRoute
+  '/_main/about/dmca': typeof MainAboutDmcaRoute
+  '/_main/about/dorean': typeof MainAboutDoreanRoute
+  '/_main/about/feature-request': typeof MainAboutFeatureRequestRoute
+  '/_main/about/privacy': typeof MainAboutPrivacyRoute
+  '/_main/about/terms': typeof MainAboutTermsRoute
   '/_main/channel/$slug': typeof MainChannelSlugRoute
   '/_main/media/$mediaId': typeof MainMediaMediaIdRoute
   '/dashboard_/account_/profile': typeof DashboardAccountProfileRoute
@@ -453,6 +506,7 @@ export interface FileRoutesById {
   '/dashboard_/churches_/new': typeof DashboardChurchesNewRoute
   '/dashboard_/organizations_/$orgId': typeof DashboardOrganizationsOrgIdRoute
   '/embed/media/$mediaId': typeof EmbedMediaMediaIdRoute
+  '/_main/about/': typeof MainAboutIndexRoute
   '/dashboard_/channels_/$channelId_/edit': typeof DashboardChannelsChannelIdEditRoute
   '/dashboard_/channels_/$channelId_/members': typeof DashboardChannelsChannelIdMembersRoute
   '/dashboard_/channels_/$channelId_/playlists': typeof DashboardChannelsChannelIdPlaylistsRoute
@@ -488,6 +542,11 @@ export interface FileRouteTypes {
     | '/trpc/$'
     | '/'
     | '/dashboard/'
+    | '/about/dmca'
+    | '/about/dorean'
+    | '/about/feature-request'
+    | '/about/privacy'
+    | '/about/terms'
     | '/channel/$slug'
     | '/media/$mediaId'
     | '/dashboard/account/profile'
@@ -504,6 +563,7 @@ export interface FileRouteTypes {
     | '/dashboard/churches/new'
     | '/dashboard/organizations/$orgId'
     | '/embed/media/$mediaId'
+    | '/about'
     | '/dashboard/channels/$channelId/edit'
     | '/dashboard/channels/$channelId/members'
     | '/dashboard/channels/$channelId/playlists'
@@ -536,6 +596,11 @@ export interface FileRouteTypes {
     | '/trpc/$'
     | '/'
     | '/dashboard'
+    | '/about/dmca'
+    | '/about/dorean'
+    | '/about/feature-request'
+    | '/about/privacy'
+    | '/about/terms'
     | '/channel/$slug'
     | '/media/$mediaId'
     | '/dashboard/account/profile'
@@ -552,6 +617,7 @@ export interface FileRouteTypes {
     | '/dashboard/churches/new'
     | '/dashboard/organizations/$orgId'
     | '/embed/media/$mediaId'
+    | '/about'
     | '/dashboard/channels/$channelId/edit'
     | '/dashboard/channels/$channelId/members'
     | '/dashboard/channels/$channelId/playlists'
@@ -586,6 +652,11 @@ export interface FileRouteTypes {
     | '/trpc/$'
     | '/_main/'
     | '/dashboard_/'
+    | '/_main/about/dmca'
+    | '/_main/about/dorean'
+    | '/_main/about/feature-request'
+    | '/_main/about/privacy'
+    | '/_main/about/terms'
     | '/_main/channel/$slug'
     | '/_main/media/$mediaId'
     | '/dashboard_/account_/profile'
@@ -602,6 +673,7 @@ export interface FileRouteTypes {
     | '/dashboard_/churches_/new'
     | '/dashboard_/organizations_/$orgId'
     | '/embed/media/$mediaId'
+    | '/_main/about/'
     | '/dashboard_/channels_/$channelId_/edit'
     | '/dashboard_/channels_/$channelId_/members'
     | '/dashboard_/channels_/$channelId_/playlists'
@@ -760,6 +832,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainFollowingRouteImport
       parentRoute: typeof MainRoute
     }
+    '/_main/about/': {
+      id: '/_main/about/'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof MainAboutIndexRouteImport
+      parentRoute: typeof MainRoute
+    }
     '/embed/media/$mediaId': {
       id: '/embed/media/$mediaId'
       path: '/embed/media/$mediaId'
@@ -872,6 +951,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainChannelSlugRouteImport
       parentRoute: typeof MainRoute
     }
+    '/_main/about/terms': {
+      id: '/_main/about/terms'
+      path: '/about/terms'
+      fullPath: '/about/terms'
+      preLoaderRoute: typeof MainAboutTermsRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/about/privacy': {
+      id: '/_main/about/privacy'
+      path: '/about/privacy'
+      fullPath: '/about/privacy'
+      preLoaderRoute: typeof MainAboutPrivacyRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/about/feature-request': {
+      id: '/_main/about/feature-request'
+      path: '/about/feature-request'
+      fullPath: '/about/feature-request'
+      preLoaderRoute: typeof MainAboutFeatureRequestRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/about/dorean': {
+      id: '/_main/about/dorean'
+      path: '/about/dorean'
+      fullPath: '/about/dorean'
+      preLoaderRoute: typeof MainAboutDoreanRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/about/dmca': {
+      id: '/_main/about/dmca'
+      path: '/about/dmca'
+      fullPath: '/about/dmca'
+      preLoaderRoute: typeof MainAboutDmcaRouteImport
+      parentRoute: typeof MainRoute
+    }
     '/dashboard_/organizations_/$orgId_/members': {
       id: '/dashboard_/organizations_/$orgId_/members'
       path: '/organizations/$orgId/members'
@@ -972,8 +1086,14 @@ interface MainRouteChildren {
   MainLibraryRoute: typeof MainLibraryRoute
   MainSearchRoute: typeof MainSearchRoute
   MainIndexRoute: typeof MainIndexRoute
+  MainAboutDmcaRoute: typeof MainAboutDmcaRoute
+  MainAboutDoreanRoute: typeof MainAboutDoreanRoute
+  MainAboutFeatureRequestRoute: typeof MainAboutFeatureRequestRoute
+  MainAboutPrivacyRoute: typeof MainAboutPrivacyRoute
+  MainAboutTermsRoute: typeof MainAboutTermsRoute
   MainChannelSlugRoute: typeof MainChannelSlugRoute
   MainMediaMediaIdRoute: typeof MainMediaMediaIdRoute
+  MainAboutIndexRoute: typeof MainAboutIndexRoute
 }
 
 const MainRouteChildren: MainRouteChildren = {
@@ -982,8 +1102,14 @@ const MainRouteChildren: MainRouteChildren = {
   MainLibraryRoute: MainLibraryRoute,
   MainSearchRoute: MainSearchRoute,
   MainIndexRoute: MainIndexRoute,
+  MainAboutDmcaRoute: MainAboutDmcaRoute,
+  MainAboutDoreanRoute: MainAboutDoreanRoute,
+  MainAboutFeatureRequestRoute: MainAboutFeatureRequestRoute,
+  MainAboutPrivacyRoute: MainAboutPrivacyRoute,
+  MainAboutTermsRoute: MainAboutTermsRoute,
   MainChannelSlugRoute: MainChannelSlugRoute,
   MainMediaMediaIdRoute: MainMediaMediaIdRoute,
+  MainAboutIndexRoute: MainAboutIndexRoute,
 }
 
 const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren)
