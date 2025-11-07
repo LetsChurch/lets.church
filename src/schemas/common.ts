@@ -21,13 +21,10 @@ export function getAvatarResize(_size?: z.infer<typeof AvatarSize>): Resize {
   return { resize: { width: 120, height: 120 } };
 }
 
-export const ThumbnailSize = z
-  .enum(['featured', 'card', 'saved', 'standard', 'table', 'poster'])
-  .optional()
-  .default('standard');
+export const ThumbnailSize = z.enum(['featured', 'card', 'table', 'poster']);
 
 export function getThumbnailResize(
-  size?: z.infer<typeof ThumbnailSize>,
+  size: z.infer<typeof ThumbnailSize>,
 ): Resize {
   if (size === 'featured') {
     return { resize: { width: 1280 } };
@@ -39,10 +36,6 @@ export function getThumbnailResize(
 
   if (size === 'card') {
     return { resize: { width: 512 } };
-  }
-
-  if (size === 'saved') {
-    return { resize: { width: 228 } };
   }
 
   if (size === 'table') {
