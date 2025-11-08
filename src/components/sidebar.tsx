@@ -2,8 +2,8 @@ import {
   IconArrowLeft,
   IconBookmark,
   IconBookmarks,
-  IconBrandSafari,
   IconChevronDown,
+  IconCompass,
   IconFlag,
   IconHeartFilled,
   IconHistory,
@@ -29,6 +29,41 @@ import {
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 import Logo from './logo';
+
+type SidebarDonateCardProps = {
+  onDismiss?: () => void;
+};
+
+function SidebarDonateCard({ onDismiss }: SidebarDonateCardProps) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-white/10 bg-brand p-3">
+      <div className="mb-3">
+        <p className="text-center font-bold text-sm text-white leading-snug">
+          Keep sharing good news without ads.
+        </p>
+      </div>
+      <div className="flex flex-col gap-1">
+        <a
+          href="https://givebutter.com/LetsChurch"
+          className="rounded-full bg-white px-2.5 py-[6px] text-center font-semibold text-brand text-xs transition-opacity hover:opacity-90"
+          target="_blank"
+          rel="noopener"
+        >
+          Donate Now
+        </a>
+        {onDismiss ? (
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="rounded-full px-2.5 py-[6px] font-semibold text-white/80 text-xs transition-colors hover:bg-white/10"
+          >
+            Dismiss
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 type SidebarProps = {
   className?: string;
@@ -102,7 +137,7 @@ export default function Sidebar({ className }: SidebarProps) {
           </button>
         )}
         {collapsed && !showAltMenu ? (
-          <LcTooltip content="Home" side="right" render={<Link to="/" />}>
+          <LcTooltip content="More" side="right">
             <div className="group relative cursor-pointer">
               <div className="opacity-100 transition-opacity duration-200 group-hover:opacity-0">
                 <Logo collapsed />
@@ -198,7 +233,7 @@ export default function Sidebar({ className }: SidebarProps) {
                     />
                   }
                 >
-                  <IconBrandSafari size={24} />
+                  <IconCompass size={24} />
                   <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
                 </LcTooltip>
               ) : (
@@ -212,7 +247,7 @@ export default function Sidebar({ className }: SidebarProps) {
                     className: 'text-primary/70',
                   }}
                 >
-                  <IconBrandSafari size={24} />
+                  <IconCompass size={24} />
                   <span className="pb-0.5">Explore</span>
                   <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
                 </Link>
@@ -468,60 +503,14 @@ export default function Sidebar({ className }: SidebarProps) {
       {/* Donate Card */}
       {collapsed || showAltMenu || donateCardDismissed ? null : (
         <div className="animate-fade-in px-4">
-          <div className="overflow-hidden rounded-xl border border-white/10 bg-brand p-3">
-            <div className="mb-3">
-              <p className="text-center font-bold text-sm text-white leading-snug">
-                Keep sharing good news without ads.
-              </p>
-            </div>
-            <div className="flex flex-col gap-1">
-              <a
-                href="https://givebutter.com/LetsChurch"
-                className="rounded-full bg-white px-2.5 py-[6px] text-center font-semibold text-brand text-xs transition-opacity hover:opacity-90"
-                target="_blank"
-                rel="noopener"
-              >
-                Donate Now
-              </a>
-              <button
-                type="button"
-                onClick={handleDismissDonateCard}
-                className="rounded-full px-2.5 py-[6px] font-semibold text-white/80 text-xs transition-colors hover:bg-white/10"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
+          <SidebarDonateCard onDismiss={handleDismissDonateCard} />
         </div>
       )}
 
       {/* Alternative Menu Donate Card */}
       {collapsed || !showAltMenu || donateCardDismissed ? null : (
         <div className="animate-fade-in px-4">
-          <div className="overflow-hidden rounded-xl border border-white/10 bg-brand p-3">
-            <div className="mb-3">
-              <p className="text-center font-bold text-primary text-sm leading-snug">
-                Keep sharing good news without ads.
-              </p>
-            </div>
-            <div className="flex flex-col gap-1">
-              <a
-                href="https://givebutter.com/LetsChurch"
-                className="rounded-full bg-white px-2.5 py-[6px] text-center font-semibold text-brand text-xs transition-opacity hover:opacity-90"
-                target="_blank"
-                rel="noopener"
-              >
-                Donate Now
-              </a>
-              <button
-                type="button"
-                onClick={handleDismissDonateCard}
-                className="rounded-full px-2.5 py-[6px] font-semibold text-primary/80 text-xs transition-colors hover:bg-white/10"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
+          <SidebarDonateCard onDismiss={handleDismissDonateCard} />
         </div>
       )}
 
@@ -531,7 +520,7 @@ export default function Sidebar({ className }: SidebarProps) {
           <p className="font-normal text-[10px] text-zinc-500 leading-snug">
             Let's Church is in the public domain and is operated as a{' '}
             non-profit.{' '}
-            <Link to="/" className="underline">
+            <Link to="/about" className="underline">
               Learn more
             </Link>
           </p>

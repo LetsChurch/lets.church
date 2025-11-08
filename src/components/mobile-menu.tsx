@@ -2,9 +2,43 @@ import { Dialog } from '@base-ui-components/react/dialog';
 import { IconX } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { cn } from '@/util/cn';
-import { DonateCard } from './donate-card';
 import Logo from './logo';
 import { ThemeSwitcher } from './theme-switcher';
+
+type MobileMenuDonateCardProps = {
+  onDismiss?: () => void;
+};
+
+function MobileMenuDonateCard({ onDismiss }: MobileMenuDonateCardProps) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-white/10 bg-brand p-3">
+      <div className="mb-3">
+        <p className="text-center font-bold text-sm text-white leading-snug">
+          Keep sharing good news without ads.
+        </p>
+      </div>
+      <div className="flex flex-col gap-1">
+        <a
+          href="https://givebutter.com/LetsChurch"
+          className="rounded-full bg-white px-2.5 py-[6px] text-center font-semibold text-brand text-xs transition-opacity hover:opacity-90"
+          target="_blank"
+          rel="noopener"
+        >
+          Donate Now
+        </a>
+        {onDismiss ? (
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="rounded-full px-2.5 py-[6px] font-semibold text-white/80 text-xs transition-colors hover:bg-white/10"
+          >
+            Dismiss
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 type MobileMenuProps = {
   open: boolean;
@@ -97,7 +131,7 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
             </div>
 
             <div className="mb-6">
-              <DonateCard />
+              <MobileMenuDonateCard />
             </div>
 
             <footer className="pb-6">

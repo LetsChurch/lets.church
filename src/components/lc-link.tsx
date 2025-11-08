@@ -10,7 +10,10 @@ export default function LcLink({ className, children, ...props }: LcLinkProps) {
     <Link
       {...props}
       className={cn(
-        'rounded-full border-fancy-pants bg-white/15 px-3 py-1.5 font-semibold text-primary/80 text-sm',
+        'flex h-10 items-center gap-1 rounded-3xl border px-3 transition-all duration-200',
+        'focus-within:border-white/0 focus-within:shadow-[0_0_0_2px_theme(colors.white/0.2),0_0_20px_theme(colors.white/0.3)]',
+        'border-gray-950/10 bg-gray-950/5 dark:border-white/10 dark:bg-white/5',
+        'font-semibold text-primary text-sm hover:border-white/20',
         className,
       )}
     >
