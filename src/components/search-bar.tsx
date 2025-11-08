@@ -4,7 +4,7 @@ import {
   IconSearch,
   IconX,
 } from '@tabler/icons-react';
-import { useLocation, useNavigate, useSearch } from '@tanstack/react-router';
+import { useLocation, useNavigate } from '@tanstack/react-router';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
@@ -13,6 +13,7 @@ import {
   useDeleteRecentSearch,
   useRecentSearches,
 } from '@/hooks/use-recent-searches';
+import { useSearchFilters } from '@/hooks/use-search-filters';
 import { cn } from '@/util/cn';
 import { SearchSettingsModal } from './search-settings-modal';
 
@@ -32,11 +33,14 @@ export default function SearchBar({
 }: SearchProps) {
   const navigate = useNavigate({ from: '/search' });
   const location = useLocation();
-  const searchParams = useSearch({ strict: false }) as {
-    sort?: 'relevance' | 'date-asc' | 'date-desc';
-    dateRange?: 'all-time' | 'today' | 'this-week' | 'this-month' | 'this-year';
-    channelSlugs?: string[];
-  };
+  const {
+    filters,
+    setSort,
+    setDateRange,
+    setChannelSlugs,
+    clearFilters,
+    hasActiveFilters,
+  } = useSearchFilters();
   const isLoggedIn = useIsLoggedIn();
   const isOnSearchPage = location.pathname === '/search';
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -127,7 +131,12 @@ export default function SearchBar({
                 <button
                   type="button"
                   onClick={() => setIsSettingsOpen(true)}
-                  className="flex size-8 items-center justify-center rounded-full text-primary/50 transition-colors hover:bg-white/10 hover:text-primary"
+                  className={cn(
+                    'flex size-8 items-center justify-center rounded-full transition-colors hover:bg-white/10',
+                    hasActiveFilters
+                      ? 'text-brand hover:text-brand'
+                      : 'text-primary/50 hover:text-primary',
+                  )}
                   aria-label="Filters"
                 >
                   <IconAdjustmentsHorizontal size={24} />
@@ -191,34 +200,15 @@ export default function SearchBar({
       <SearchSettingsModal
         open={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}
-        sort={searchParams.sort}
-        onSortChange={(sort) => {
-          navigate({
-            search: (prev) => ({ ...prev, sort }),
-          });
-        }}
-        dateRange={searchParams.dateRange}
-        onDateRangeChange={(dateRange) => {
-          navigate({
-            search: (prev) => ({ ...prev, dateRange }),
-          });
-        }}
-        channelSlugs={searchParams.channelSlugs}
-        onChannelSlugsChange={(channelSlugs) => {
-          navigate({
-            search: (prev) => ({ ...prev, channelSlugs }),
-          });
-        }}
+        sort={filters.sort}
+        onSortChange={setSort}
+        dateRange={filters.dateRange}
+        onDateRangeChange={setDateRange}
+        channelSlugs={filters.channelSlugs}
+        onChannelSlugsChange={setChannelSlugs}
         onClearFilters={() => {
           setIsSettingsOpen(false);
-          navigate({
-            search: (prev) => ({
-              ...prev,
-              sort: undefined,
-              dateRange: undefined,
-              channelSlugs: undefined,
-            }),
-          });
+          clearFilters();
         }}
       />
     </Autocomplete.Root>

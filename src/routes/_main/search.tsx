@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { AvatarCarousel } from '@/components/avatar-carousel';
 import { EmptyState } from '@/components/empty-state';
+import { FilterBar } from '@/components/filter-bar';
 import Header from '@/components/header';
 import SearchBar from '@/components/search-bar';
 import { SearchRow } from '@/components/search-row';
@@ -15,6 +16,7 @@ import {
   useDeleteRecentSearch,
   useRecentSearches,
 } from '@/hooks/use-recent-searches';
+import { useSearchFilters } from '@/hooks/use-search-filters';
 import { useTRPC } from '@/trpc/react';
 import { formatTime } from '@/util/format';
 
@@ -115,6 +117,7 @@ const emptyArray: ReadonlyArray<unknown> = [];
 
 function SearchResults({ q }: { q: string }) {
   const { focus, channelSlugs, sort, dateRange } = Route.useSearch();
+  const { hasActiveFilters } = useSearchFilters();
   const trpc = useTRPC();
   const navigate = useNavigate({ from: Route.fullPath });
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -205,6 +208,12 @@ function SearchResults({ q }: { q: string }) {
 
   return (
     <div className="space-y-8">
+      {hasActiveFilters ? (
+        <div className="space-y-4">
+          <FilterBar />
+        </div>
+      ) : null}
+
       <SearchTabs
         activeTab={focus === 'transcripts' ? 'transcripts' : 'media'}
         mediaCount={mediaCount}

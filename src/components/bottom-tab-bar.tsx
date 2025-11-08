@@ -31,7 +31,7 @@ const navigation = [
 
 export default function BottomTabBar() {
   return (
-    <div className="fixed right-0 bottom-0 left-0 z-30 bg-white dark:bg-gray-950 sm:hidden">
+    <div className="fixed right-0 bottom-0 left-0 z-30 bg-white sm:hidden dark:bg-gray-950">
       <nav className="flex items-center justify-around px-4">
         {navigation.map((item) => (
           <Link
