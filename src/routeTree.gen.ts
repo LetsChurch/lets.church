@@ -28,6 +28,7 @@ import { Route as MainSearchRouteImport } from './routes/_main/search'
 import { Route as MainLibraryRouteImport } from './routes/_main/library'
 import { Route as MainHistoryRouteImport } from './routes/_main/history'
 import { Route as MainFollowingRouteImport } from './routes/_main/following'
+import { Route as MainSlugRouteImport } from './routes/_main/$slug'
 import { Route as MainAboutIndexRouteImport } from './routes/_main/about/index'
 import { Route as EmbedMediaMediaIdRouteImport } from './routes/embed.media.$mediaId'
 import { Route as EmbedChannelSlugRouteImport } from './routes/embed.channel.$slug'
@@ -157,6 +158,11 @@ const MainHistoryRoute = MainHistoryRouteImport.update({
 const MainFollowingRoute = MainFollowingRouteImport.update({
   id: '/following',
   path: '/following',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainSlugRoute = MainSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
   getParentRoute: () => MainRoute,
 } as any)
 const MainAboutIndexRoute = MainAboutIndexRouteImport.update({
@@ -364,6 +370,7 @@ const DashboardChannelsChannelIdPlaylistsPlaylistIdRoute =
 export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
   '/dashboard': typeof DashboardRouteWithChildren
+  '/$slug': typeof MainSlugRoute
   '/following': typeof MainFollowingRoute
   '/history': typeof MainHistoryRoute
   '/library': typeof MainLibraryRoute
@@ -419,6 +426,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
+  '/$slug': typeof MainSlugRoute
   '/following': typeof MainFollowingRoute
   '/history': typeof MainHistoryRoute
   '/library': typeof MainLibraryRoute
@@ -477,6 +485,7 @@ export interface FileRoutesById {
   '/_main': typeof MainRouteWithChildren
   '/auth_': typeof AuthRouteWithChildren
   '/dashboard_': typeof DashboardRouteWithChildren
+  '/_main/$slug': typeof MainSlugRoute
   '/_main/following': typeof MainFollowingRoute
   '/_main/history': typeof MainHistoryRoute
   '/_main/library': typeof MainLibraryRoute
@@ -535,6 +544,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/auth'
     | '/dashboard'
+    | '/$slug'
     | '/following'
     | '/history'
     | '/library'
@@ -590,6 +600,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
+    | '/$slug'
     | '/following'
     | '/history'
     | '/library'
@@ -647,6 +658,7 @@ export interface FileRouteTypes {
     | '/_main'
     | '/auth_'
     | '/dashboard_'
+    | '/_main/$slug'
     | '/_main/following'
     | '/_main/history'
     | '/_main/library'
@@ -843,6 +855,13 @@ declare module '@tanstack/react-router' {
       path: '/following'
       fullPath: '/following'
       preLoaderRoute: typeof MainFollowingRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/$slug': {
+      id: '/_main/$slug'
+      path: '/$slug'
+      fullPath: '/$slug'
+      preLoaderRoute: typeof MainSlugRouteImport
       parentRoute: typeof MainRoute
     }
     '/_main/about/': {
@@ -1101,6 +1120,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface MainRouteChildren {
+  MainSlugRoute: typeof MainSlugRoute
   MainFollowingRoute: typeof MainFollowingRoute
   MainHistoryRoute: typeof MainHistoryRoute
   MainLibraryRoute: typeof MainLibraryRoute
@@ -1117,6 +1137,7 @@ interface MainRouteChildren {
 }
 
 const MainRouteChildren: MainRouteChildren = {
+  MainSlugRoute: MainSlugRoute,
   MainFollowingRoute: MainFollowingRoute,
   MainHistoryRoute: MainHistoryRoute,
   MainLibraryRoute: MainLibraryRoute,
