@@ -1,5 +1,5 @@
 import { prisma } from '@/util/db';
-import { deleteFile } from '../../../util/s3';
+import { publicS3 } from '../../../util/s3';
 
 export default async function setOrganizationAvatar(
   organizationId: string,
@@ -12,7 +12,7 @@ export default async function setOrganizationAvatar(
   });
 
   if (oldPath) {
-    await deleteFile('PUBLIC', oldPath);
+    await publicS3.deleteFile(oldPath);
   }
 
   await prisma.organization.update({

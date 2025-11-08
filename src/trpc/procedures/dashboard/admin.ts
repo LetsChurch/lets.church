@@ -8,7 +8,7 @@ import {
 } from '@/schemas/dashboard/admin';
 import { prisma } from '@/util/db';
 import logger from '@/util/logger';
-import { getS3ProtocolUri } from '@/util/s3';
+import { publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
 import { authProcedure, router } from '../../trpc';
 
@@ -751,7 +751,7 @@ export const adminRouter = router({
         uploadRecord: {
           ...uploadRecord,
           thumbnailUrl: thumbnailPath
-            ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', thumbnailPath), {
+            ? getPublicImageUrl(publicS3.getS3ProtocolUri(thumbnailPath), {
                 resize: { width: 120, height: 68 },
               })
             : null,

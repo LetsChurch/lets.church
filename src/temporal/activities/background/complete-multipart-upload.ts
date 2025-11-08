@@ -1,10 +1,11 @@
-import { type Client, completeMultipartUpload } from '../../../util/s3';
+import { getS3Client, type S3ClientId } from '../../../util/s3';
 
 export default async function completeMultipartUploadAction(
-  to: Client,
+  clientId: S3ClientId,
   uploadId: string,
   uploadKey: string,
   eTags: Array<string>,
 ) {
-  await completeMultipartUpload(to, uploadId, uploadKey, eTags);
+  const client = getS3Client(clientId);
+  await client.completeMultipartUpload(uploadId, uploadKey, eTags);
 }

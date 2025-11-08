@@ -6,7 +6,7 @@ import {
 } from '@/schemas/common';
 import { prisma } from '@/util/db';
 import logger from '@/util/logger';
-import { getS3ProtocolUri } from '@/util/s3';
+import { publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
 import { authProcedure, publicProcedure } from '../trpc';
 
@@ -59,7 +59,7 @@ export const homeProcedures = {
 
     const channelsWithAvatars = subscriptions.map(({ channel }) => {
       const avatarUrl = channel.avatarPath
-        ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', channel.avatarPath), {
+        ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
             resize: { width: 64, height: 64 },
           })
         : null;
@@ -135,20 +135,20 @@ export const homeProcedures = {
         const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
         const thumbnailUrl = thumbnailPath
           ? getPublicImageUrl(
-              getS3ProtocolUri('PUBLIC', thumbnailPath),
+              publicS3.getS3ProtocolUri(thumbnailPath),
               getThumbnailResize('card'),
             )
           : null;
 
         const channelAvatarUrl = channel.avatarPath
-          ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', channel.avatarPath), {
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
               resize: { width: 32, height: 32 },
             })
           : null;
 
         const channelDefaultThumbnailUrl = channel.defaultThumbnailPath
           ? getPublicImageUrl(
-              getS3ProtocolUri('PUBLIC', channel.defaultThumbnailPath),
+              publicS3.getS3ProtocolUri(channel.defaultThumbnailPath),
               getThumbnailResize('card'),
             )
           : null;
@@ -228,20 +228,20 @@ export const homeProcedures = {
         const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
         const thumbnailUrl = thumbnailPath
           ? getPublicImageUrl(
-              getS3ProtocolUri('PUBLIC', thumbnailPath),
+              publicS3.getS3ProtocolUri(thumbnailPath),
               getThumbnailResize('card'),
             )
           : null;
 
         const channelAvatarUrl = channel.avatarPath
-          ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', channel.avatarPath), {
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
               resize: { width: 32, height: 32 },
             })
           : null;
 
         const channelDefaultThumbnailUrl = channel.defaultThumbnailPath
           ? getPublicImageUrl(
-              getS3ProtocolUri('PUBLIC', channel.defaultThumbnailPath),
+              publicS3.getS3ProtocolUri(channel.defaultThumbnailPath),
               getThumbnailResize('card'),
             )
           : null;
@@ -313,7 +313,7 @@ export const homeProcedures = {
 
       const channelsWithAvatars = channels.map((channel) => {
         const avatarUrl = channel.avatarPath
-          ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', channel.avatarPath), {
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
               resize: { width: 64, height: 64 },
             })
           : null;
@@ -480,14 +480,14 @@ export const homeProcedures = {
           const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
           const thumbnailUrl = thumbnailPath
             ? getPublicImageUrl(
-                getS3ProtocolUri('PUBLIC', thumbnailPath),
+                publicS3.getS3ProtocolUri(thumbnailPath),
                 getThumbnailResize('card'),
               )
             : null;
 
           const channelAvatarUrl = channel.avatarPath
             ? getPublicImageUrl(
-                getS3ProtocolUri('PUBLIC', channel.avatarPath),
+                publicS3.getS3ProtocolUri(channel.avatarPath),
                 {
                   resize: { width: 32, height: 32 },
                 },
@@ -496,7 +496,7 @@ export const homeProcedures = {
 
           const channelDefaultThumbnailUrl = channel.defaultThumbnailPath
             ? getPublicImageUrl(
-                getS3ProtocolUri('PUBLIC', channel.defaultThumbnailPath),
+                publicS3.getS3ProtocolUri(channel.defaultThumbnailPath),
                 getThumbnailResize('card'),
               )
             : null;
@@ -572,14 +572,14 @@ export const homeProcedures = {
 
       // Use 720p for carousel backgrounds
       const thumbnailUrl = thumbnailPath
-        ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', thumbnailPath), {
+        ? getPublicImageUrl(publicS3.getS3ProtocolUri(thumbnailPath), {
             resize: { width: 1280, height: 720 },
           })
         : null;
 
       const channelAvatarUrl = uploadRecord.channel.avatarPath
         ? getPublicImageUrl(
-            getS3ProtocolUri('PUBLIC', uploadRecord.channel.avatarPath),
+            publicS3.getS3ProtocolUri(uploadRecord.channel.avatarPath),
             {
               resize: { width: 64, height: 64 },
             },

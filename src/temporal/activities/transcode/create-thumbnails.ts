@@ -10,7 +10,7 @@ import { rimraf } from 'rimraf';
 import { runFfmpegThumbnails } from '../../../util/ffmpeg';
 import { concatThumbs, imageToBlurhash } from '../../../util/images';
 import logger from '../../../util/logger';
-import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
+import { ingestS3, publicS3 } from '../../../util/s3';
 import type { Probe } from '../../../util/zod';
 import { updateUploadRecord } from '../..';
 
@@ -40,7 +40,7 @@ export default async function createThumbnails(
   await mkdirp(workingDir);
   const downloadPath = join(workingDir, 'download');
 
-  await streamObjectToFile('INGEST', s3UploadKey, downloadPath, () =>
+  await ingestS3.streamObjectToFile(s3UploadKey, downloadPath, () =>
     Context.current().heartbeat('download'),
   );
 
@@ -73,8 +73,7 @@ export default async function createThumbnails(
       Context.current().heartbeat();
       activityLogger.info(`Uploading thumbnail: ${largestThumbnail}`);
       const key = `${uploadRecordId}/${basename(largestThumbnail)}`;
-      await retryablePutFile({
-        to: 'PUBLIC',
+      await publicS3.retryablePutFile({
         key,
         contentType: 'image/jpeg',
         path: largestThumbnail,
@@ -114,8 +113,7 @@ export default async function createThumbnails(
 
       Context.current().heartbeat();
       activityLogger.info(`Uploading thumbnail: ${path}`);
-      await retryablePutFile({
-        to: 'PUBLIC',
+      await publicS3.retryablePutFile({
         key: `${uploadRecordId}/${basename(path)}`,
         contentType: 'image/jpeg',
         path,
@@ -137,8 +135,7 @@ export default async function createThumbnails(
     await concatThumbs(workingDir, pickedThumbnails);
     activityLogger.info('Uploading hovernail');
     const path = join(workingDir, 'hovernail.jpg');
-    await retryablePutFile({
-      to: 'PUBLIC',
+    await publicS3.retryablePutFile({
       key: `${uploadRecordId}/hovernail.jpg`,
       contentType: 'image/jpeg',
       contentLength: (await stat(path)).size,

@@ -15,12 +15,7 @@ import {
 } from '@/temporal';
 import { prisma, type TransactionClient } from '@/util/db';
 import logger from '@/util/logger';
-import {
-  createMultipartUpload,
-  createPresignedPartUploadUrls,
-  getS3ProtocolUri,
-  PART_SIZE,
-} from '@/util/s3';
+import { ingestS3, PART_SIZE, publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
 import testPassword from '@/util/zxcvbn';
 import { authProcedure } from '../trpc';
@@ -66,7 +61,7 @@ export const accountProcedures = {
 
       const avatarUrl = avatarPath
         ? getPublicImageUrl(
-            getS3ProtocolUri('PUBLIC', avatarPath),
+            publicS3.getS3ProtocolUri(avatarPath),
             getAvatarResize(input?.avatarSize),
           )
         : null;
@@ -243,8 +238,7 @@ export const accountProcedures = {
   createMultipartUpload: authProcedure
     .input(multipartUploadSchema)
     .mutation(async ({ input: { targetId, uploadMimeType, bytes } }) => {
-      const { uploadKey, uploadId } = await createMultipartUpload(
-        'INGEST',
+      const { uploadKey, uploadId } = await ingestS3.createMultipartUpload(
         targetId,
         uploadMimeType,
       );
@@ -257,8 +251,7 @@ export const accountProcedures = {
         'profileAvatar',
       );
 
-      const urls = await createPresignedPartUploadUrls(
-        'INGEST',
+      const urls = await ingestS3.createPresignedPartUploadUrls(
         uploadId,
         uploadKey,
         bytes,

@@ -6,7 +6,7 @@ import { nanoid } from 'nanoid';
 import { rimraf } from 'rimraf';
 import { imageToBlurhash, imgJson, jpegOptim, oxiPng } from '@/util/images';
 import logger from '@/util/logger';
-import { retryablePutFile, streamObjectToFile } from '@/util/s3';
+import { ingestS3, publicS3 } from '@/util/s3';
 import type { UploadPostProcessValue } from '@/util/types';
 
 const moduleLogger = logger.child({
@@ -37,7 +37,7 @@ export default async function processImage(
 
   try {
     await mkdirp(dir);
-    await streamObjectToFile('INGEST', s3UploadKey, downloadPath);
+    await ingestS3.streamObjectToFile(s3UploadKey, downloadPath);
 
     Context.current().heartbeat();
 
@@ -47,8 +47,7 @@ export default async function processImage(
 
     activityLogger.info('Uploading probe');
 
-    await retryablePutFile({
-      to: 'INGEST',
+    await ingestS3.retryablePutFile({
       key: `${s3UploadKey}.imagemagick.json`,
       contentType: 'application/json',
       body: Buffer.from(JSON.stringify(json, null, 2)),
@@ -69,8 +68,7 @@ export default async function processImage(
       json.mimeType,
     )}`;
 
-    await retryablePutFile({
-      to: 'PUBLIC',
+    await publicS3.retryablePutFile({
       key: path,
       contentType: json.mimeType,
       path: downloadPath,

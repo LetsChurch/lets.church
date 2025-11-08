@@ -5,7 +5,7 @@ import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
 import logger from '@/util/logger';
 import { runAudiowaveform } from '../../../util/audiowaveform';
-import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
+import { ingestS3, publicS3 } from '../../../util/s3';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/transcode/generate-peaks',
@@ -35,7 +35,7 @@ export default async function generatePeaks(
     await mkdirp(workingDir);
     const downloadPath = join(workingDir, 'download');
 
-    await streamObjectToFile('INGEST', s3UploadKey, downloadPath, () =>
+    await ingestS3.streamObjectToFile(s3UploadKey, downloadPath, () =>
       Context.current().heartbeat('download'),
     );
 
@@ -51,8 +51,7 @@ export default async function generatePeaks(
     activityLogger.info('Queuing upload of peaks');
     activityLogger.info('Uploading peak json');
     Context.current().heartbeat(`Uploading peak json`);
-    await retryablePutFile({
-      to: 'PUBLIC',
+    await publicS3.retryablePutFile({
       key: `${uploadRecordId}/peaks.json`,
       contentType: 'application/json',
       path: peakFiles.json,
@@ -63,8 +62,7 @@ export default async function generatePeaks(
     activityLogger.info('Uploaded peak json');
     activityLogger.info('Uploading peak dat');
     Context.current().heartbeat(`Uploading peak dat`);
-    await retryablePutFile({
-      to: 'PUBLIC',
+    await publicS3.retryablePutFile({
       key: `${uploadRecordId}/peaks.dat`,
       contentType: 'application/octet-stream',
       path: peakFiles.dat,

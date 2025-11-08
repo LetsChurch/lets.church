@@ -44,12 +44,16 @@ services:
       ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
       <<: *s3-env
     volumes:
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
-      - pnpm-store:/pnpm/store
-      - /usr/src/app/.nitro
-      - /usr/src/app/.tanstack
-      - /usr/src/app/dist
+      - ./src:/usr/src/app/src
+      - ./prisma:/usr/src/app/prisma
+      - ./package.json:/usr/src/app/package.json
+      - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
+      - ./tsconfig.json:/usr/src/app/tsconfig.json
+      - ./public:/usr/src/app/public
+      - ./elasticsearch:/usr/src/app/elasticsearch
+      - ./vite.config.ts:/usr/src/app/vite.config.ts
+      - ./postcss.config.cjs:/usr/src/app/postcss.config.cjs
+      - ./biome.json:/usr/src/app/biome.json
 
   background-worker:
     build:
@@ -72,9 +76,11 @@ services:
       WEB_URL: ${HOST_WEB_URL}
       <<: *s3-env
     volumes:
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
-      - pnpm-store:/pnpm/store
+      - ./src:/usr/src/app/src
+      - ./prisma:/usr/src/app/prisma
+      - ./package.json:/usr/src/app/package.json
+      - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
+      - ./tsconfig.json:/usr/src/app/tsconfig.json
     depends_on:
       - temporal
 
@@ -94,12 +100,11 @@ services:
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 5
       <<: *s3-env
     volumes:
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
-      - pnpm-store:/pnpm/store
-      - /usr/src/app/.nitro
-      - /usr/src/app/.tanstack
-      - /usr/src/app/dist
+      - ./src:/usr/src/app/src
+      - ./prisma:/usr/src/app/prisma
+      - ./package.json:/usr/src/app/package.json
+      - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
+      - ./tsconfig.json:/usr/src/app/tsconfig.json
     depends_on:
       - temporal
 
@@ -119,12 +124,11 @@ services:
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 1
       <<: *s3-env
     volumes:
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
-      - pnpm-store:/pnpm/store
-      - /usr/src/app/.nitro
-      - /usr/src/app/.tanstack
-      - /usr/src/app/dist
+      - ./src:/usr/src/app/src
+      - ./prisma:/usr/src/app/prisma
+      - ./package.json:/usr/src/app/package.json
+      - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
+      - ./tsconfig.json:/usr/src/app/tsconfig.json
     depends_on:
       - temporal
 
@@ -145,12 +149,11 @@ services:
       WHISPER_MODEL: tiny.en
       <<: *s3-env
     volumes:
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
-      - pnpm-store:/pnpm/store
-      - /usr/src/app/.nitro
-      - /usr/src/app/.tanstack
-      - /usr/src/app/dist
+      - ./src:/usr/src/app/src
+      - ./prisma:/usr/src/app/prisma
+      - ./package.json:/usr/src/app/package.json
+      - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
+      - ./tsconfig.json:/usr/src/app/tsconfig.json
     depends_on:
       - temporal
 
@@ -171,12 +174,11 @@ services:
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1m
       <<: *s3-env
     volumes:
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
-      - pnpm-store:/pnpm/store
-      - /usr/src/app/.nitro
-      - /usr/src/app/.tanstack
-      - /usr/src/app/dist
+      - ./src:/usr/src/app/src
+      - ./prisma:/usr/src/app/prisma
+      - ./package.json:/usr/src/app/package.json
+      - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
+      - ./tsconfig.json:/usr/src/app/tsconfig.json
     depends_on:
       - temporal
 

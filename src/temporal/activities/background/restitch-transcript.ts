@@ -1,7 +1,7 @@
 import { Context } from '@temporalio/activity';
 import { invariant } from 'es-toolkit';
 import logger from '../../../util/logger';
-import { getObject, retryablePutFile } from '../../../util/s3';
+import { publicS3 } from '../../../util/s3';
 import {
   stitchTranscript,
   whisperJsonSchema,
@@ -21,8 +21,7 @@ export default async function restitchTranscript(uploadRecordId: string) {
     },
   });
 
-  const { Body: json } = await getObject(
-    'PUBLIC',
+  const { Body: json } = await publicS3.getObject(
     `${uploadRecordId}/transcript.original.json`,
   );
   invariant(json, 'transcript.original.json not found');
@@ -35,8 +34,7 @@ export default async function restitchTranscript(uploadRecordId: string) {
 
   const transcriptKey = `${uploadRecordId}/transcript.vtt`;
 
-  await retryablePutFile({
-    to: 'PUBLIC',
+  await publicS3.retryablePutFile({
     key: transcriptKey,
     contentType: 'text/vtt',
     body: fixedVtt,

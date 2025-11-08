@@ -1,5 +1,5 @@
 import { prisma } from '@/util/db';
-import { deleteFile } from '../../../util/s3';
+import { publicS3 } from '../../../util/s3';
 
 export default async function setChannelDefaultThumbnail(
   channelid: string,
@@ -13,7 +13,7 @@ export default async function setChannelDefaultThumbnail(
     });
 
   if (oldPath) {
-    await deleteFile('PUBLIC', oldPath);
+    await publicS3.deleteFile(oldPath);
   }
 
   await prisma.channel.update({

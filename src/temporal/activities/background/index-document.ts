@@ -4,7 +4,7 @@ import { AddressType } from '@/generated/prisma/client';
 import { prisma } from '@/util/db';
 import { client, escapeDocument } from '../../../util/elasticsearch';
 import logger from '../../../util/logger';
-import { getObject } from '../../../util/s3';
+import { publicS3 } from '../../../util/s3';
 import { stitchToHtml, whisperJsonSchema } from '../../../util/whisper';
 import { transcriptSegmentSchema } from '../../../util/zod';
 
@@ -29,7 +29,7 @@ async function getDocument(
     case 'transcript': {
       log.info('Fetching transcript');
       invariant(s3UploadKey, 'uploadKey is required for transcript');
-      const res = await getObject('PUBLIC', s3UploadKey);
+      const res = await publicS3.getObject(s3UploadKey);
       const body = await res.Body?.transformToString('utf-8');
       invariant(body, `No object with key ${s3UploadKey} found`);
       const parsed = parseVtt(body)
@@ -71,7 +71,7 @@ async function getDocument(
     case 'transcriptHtml': {
       log.info('Fetching transcript');
       invariant(s3UploadKey, 'uploadKey is required for transcript');
-      const res = await getObject('PUBLIC', s3UploadKey);
+      const res = await publicS3.getObject(s3UploadKey);
       const body = await res.Body?.transformToString('utf-8');
       invariant(body, `No object with key ${s3UploadKey} found`);
       const html = stitchToHtml(whisperJsonSchema.parse(JSON.parse(body)));

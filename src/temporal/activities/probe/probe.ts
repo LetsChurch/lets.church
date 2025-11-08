@@ -4,7 +4,7 @@ import { invariant } from 'es-toolkit';
 import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
 import logger from '@/util/logger';
-import { headObject, retryablePutFile, streamObjectToFile } from '@/util/s3';
+import { ingestS3 } from '@/util/s3';
 import { ffprobeSchema } from '@/util/zod';
 import { runFfprobe } from '../../../util/ffmpeg';
 import { updateUploadRecord } from '../..';
@@ -39,10 +39,10 @@ export default async function probe(
     await mkdirp(workingDir);
 
     const downloadPath = join(workingDir, 'download');
-    const uploadSizeBytes = (await headObject('INGEST', s3UploadKey))
+    const uploadSizeBytes = (await ingestS3.headObject(s3UploadKey))
       ?.ContentLength;
     invariant(uploadSizeBytes, 'Invalid uploadSizeBytes');
-    await streamObjectToFile('INGEST', s3UploadKey, downloadPath, {
+    await ingestS3.streamObjectToFile(s3UploadKey, downloadPath, {
       heartbeat: () => Context.current().heartbeat('download'),
     });
     await mkdirp(workingDir);
@@ -65,8 +65,7 @@ export default async function probe(
     const parsedProbeJson = JSON.parse(probeJson);
     const schemaParsedProbe = ffprobeSchema.parse(parsedProbeJson);
 
-    await retryablePutFile({
-      to: 'INGEST',
+    await ingestS3.retryablePutFile({
       key: `${uploadRecordId}/probe.json`,
       contentType: 'application/json',
       body: Buffer.from(probeJson),

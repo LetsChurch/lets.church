@@ -12,7 +12,7 @@ import {
   whisperJsonToVtt,
 } from '@/util/whisper';
 import logger from '../../../util/logger';
-import { retryablePutFile, streamObjectToFile } from '../../../util/s3';
+import { ingestS3, publicS3 } from '../../../util/s3';
 import { updateUploadRecord } from '../..';
 
 const moduleLogger = logger.child({
@@ -45,8 +45,7 @@ export default async function transcribe(
     await mkdirp(workingDir);
     const downloadPath = join(workingDir, 'download');
 
-    await streamObjectToFile(
-      'INGEST',
+    await ingestS3.streamObjectToFile(
       s3UploadKey,
       downloadPath,
       () => () => Context.current().heartbeat('download'),
@@ -65,8 +64,7 @@ export default async function transcribe(
 
         const ext = extname(file).slice(1);
         const key = `${uploadRecordId}/transcript.original.${ext}`;
-        await retryablePutFile({
-          to: 'PUBLIC',
+        await publicS3.retryablePutFile({
           key,
           contentType: mime.getType(ext) ?? 'text/plain',
           path: file,
@@ -95,8 +93,7 @@ export default async function transcribe(
     const transcriptKey = `${uploadRecordId}/transcript.vtt`;
     const transcriptJsonKey = `${uploadRecordId}/transcript.original.json`;
 
-    await retryablePutFile({
-      to: 'PUBLIC',
+    await publicS3.retryablePutFile({
       key: transcriptKey,
       contentType: 'text/vtt',
       body: fixedVtt,

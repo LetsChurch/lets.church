@@ -16,11 +16,7 @@ import {
   variantsToMasterVideoPlaylist,
 } from '@/util/ffmpeg';
 import logger from '@/util/logger';
-import {
-  putFileMultipart,
-  retryablePutFile,
-  streamObjectToFile,
-} from '@/util/s3';
+import { ingestS3, publicS3 } from '@/util/s3';
 import type { Probe } from '@/util/zod';
 import { recordDownloadSize, updateUploadRecord } from '../..';
 
@@ -48,8 +44,7 @@ async function uploadSegments(id: string, dir: string, log: typeof logger) {
     Context.current().heartbeat(`Starting upload: ${path}`);
     log.info(`Uploading media segment: ${path}`);
 
-    await retryablePutFile({
-      to: 'PUBLIC',
+    await publicS3.retryablePutFile({
       key: `${id}/${basename(path)}`,
       contentType: 'video/mp2ts',
       contentLength: (await stat(path)).size,
@@ -96,7 +91,7 @@ export default async function transcode(
 
     await mkdirp(workingDir);
     const downloadPath = join(workingDir, 'download');
-    await streamObjectToFile('INGEST', s3UploadKey, downloadPath, () =>
+    await ingestS3.streamObjectToFile(s3UploadKey, downloadPath, () =>
       Context.current().heartbeat('download'),
     );
     const { width, height } = probe.streams.find(
@@ -191,12 +186,11 @@ export default async function transcode(
       Context.current().heartbeat(`Uploading downloadable file`);
       activityLogger.info(`Uploading downloadable file: ${filename}`);
       const byteSize = (await stat(path)).size;
-      await putFileMultipart({
-        to: 'PUBLIC',
+      await publicS3.putFileMultipart({
         key: `${uploadRecordId}/${filename}`,
         contentType,
         path,
-        onProgress: (progress) =>
+        onProgress: (progress: number) =>
           Context.current().heartbeat(
             `upload ${Math.round(progress * 1000) / 10}%`,
           ),
@@ -224,8 +218,7 @@ export default async function transcode(
       const filename = basename(path);
       Context.current().heartbeat(`Uploading playlist file`);
       activityLogger.info(`Uploading playlist file: ${filename}`);
-      await retryablePutFile({
-        to: 'PUBLIC',
+      await publicS3.retryablePutFile({
         key: `${uploadRecordId}/${filename}`,
         contentType: 'application/x-mpegURL',
         path,
@@ -248,8 +241,7 @@ export default async function transcode(
       const playlistBuffer = Buffer.from(
         variantsToMasterVideoPlaylist(variants),
       );
-      await retryablePutFile({
-        to: 'PUBLIC',
+      await publicS3.retryablePutFile({
         key: `${uploadRecordId}/master.m3u8`,
         contentType: 'application/x-mpegURL',
         body: playlistBuffer,
@@ -277,8 +269,7 @@ export default async function transcode(
     activityLogger.info('Queuing upload of peaks');
     activityLogger.info('Uploading peak json');
     Context.current().heartbeat(`Uploading peak json`);
-    await retryablePutFile({
-      to: 'PUBLIC',
+    await publicS3.retryablePutFile({
       key: `${uploadRecordId}/peaks.json`,
       contentType: 'application/json',
       path: peakFiles.json,
@@ -289,8 +280,7 @@ export default async function transcode(
     activityLogger.info('Uploaded peak json');
     activityLogger.info('Uploading peak dat');
     Context.current().heartbeat(`Uploading peak dat`);
-    await retryablePutFile({
-      to: 'PUBLIC',
+    await publicS3.retryablePutFile({
       key: `${uploadRecordId}/peaks.dat`,
       contentType: 'application/octet-stream',
       path: peakFiles.dat,
@@ -304,8 +294,7 @@ export default async function transcode(
     activityLogger.info('Queueing upload of logs');
     activityLogger.info('Uploading stdout');
     Context.current().heartbeat('queueing stdout upload');
-    await retryablePutFile({
-      to: 'INGEST',
+    await ingestS3.retryablePutFile({
       key: `${uploadRecordId}/stdout.txt`,
       contentType: 'text/plain',
       body: Buffer.from(stdout.join('')),
@@ -314,8 +303,7 @@ export default async function transcode(
     activityLogger.info('Done uploading stdout');
     Context.current().heartbeat('queueing stderr upload');
     activityLogger.info('Uploading stderr');
-    await retryablePutFile({
-      to: 'INGEST',
+    await ingestS3.retryablePutFile({
       key: `${uploadRecordId}/stderr.txt`,
       contentType: 'text/plain',
       body: Buffer.from(stderr.join('')),

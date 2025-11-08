@@ -2,7 +2,7 @@ import { Context } from '@temporalio/activity';
 import { prisma } from '@/util/db';
 import { client as esClient } from '../../../util/elasticsearch';
 import logger from '../../../util/logger';
-import { deletePrefix } from '../../../util/s3';
+import { ingestS3, publicS3 } from '../../../util/s3';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/delete-upload-record',
@@ -86,13 +86,13 @@ export async function deleteUploadRecordS3Objects(id: string) {
     id,
   });
 
-  const ingestCount = await deletePrefix('INGEST', id, () => {
+  const ingestCount = await ingestS3.deletePrefix(id, () => {
     Context.current().heartbeat('deleteUploadRecordS3Objects: INGEST');
   });
   activityLogger.info(`Done deleting prefix ${id} from ingest bucket`);
 
   activityLogger.info(`Deleting prefix ${id} from public bucket`);
-  const publicCount = await deletePrefix('PUBLIC', id, () =>
+  const publicCount = await publicS3.deletePrefix(id, () =>
     Context.current().heartbeat('deleteUploadRecordS3Objects: PUBLIC'),
   );
   activityLogger.info(`Done deleting prefix ${id} from public bucket`);

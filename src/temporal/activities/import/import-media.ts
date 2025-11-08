@@ -7,7 +7,7 @@ import { v4 as uuid } from 'uuid';
 import type { Prisma } from '@/generated/prisma/client';
 import { downloadFromUrl } from '@/util/import';
 import logger from '@/util/logger';
-import { putFile, putFileMultipart } from '@/util/s3';
+import { ingestS3 } from '@/util/s3';
 import { createUploadRecord, updateUploadRecord } from '../..';
 
 const moduleLogger = logger.child({
@@ -54,19 +54,19 @@ export default async function importMedia(
     );
     mediaUploadKey = `${uploadRecordId}/${uuid()}`;
 
-    await putFileMultipart({
+    await ingestS3.putFileMultipart({
       key: mediaUploadKey,
       contentType:
         mime.getType(extname(mediaPath)) ?? 'application/octet-stream',
       path: mediaPath,
-      onProgress: (progress) =>
+      onProgress: (progress: number) =>
         heartbeat(`uploading ${Math.round(progress * 1000) / 10}%`),
     });
 
     if (thumbnailPath) {
       thumbnailUploadKey = `${uploadRecordId}/${uuid()}`;
 
-      await putFile({
+      await ingestS3.putFile({
         key: thumbnailUploadKey,
         contentType:
           mime.getType(extname(thumbnailPath)) ?? 'application/octet-stream',

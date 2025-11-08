@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { getThumbnailResize, OutgoingIdSchema } from '@/schemas/common';
 import { prisma } from '@/util/db';
 import logger from '@/util/logger';
-import { getS3ProtocolUri } from '@/util/s3';
+import { publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
 import { publicProcedure } from '../trpc';
 
@@ -93,7 +93,7 @@ export const channelProcedures = {
       }
 
       const avatarUrl = channel.avatarPath
-        ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', channel.avatarPath), {
+        ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
             resize: { width: 128, height: 128 },
           })
         : null;
@@ -106,8 +106,7 @@ export const channelProcedures = {
       const defaultThumbnailUrl =
         channel.defaultThumbnailPath || fallbackThumbnailPath
           ? getPublicImageUrl(
-              getS3ProtocolUri(
-                'PUBLIC',
+              publicS3.getS3ProtocolUri(
                 channel.defaultThumbnailPath ?? fallbackThumbnailPath ?? '',
               ),
               { resize: { width: 1920, height: 1080 } },
@@ -205,20 +204,20 @@ export const channelProcedures = {
         const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
         const thumbnailUrl = thumbnailPath
           ? getPublicImageUrl(
-              getS3ProtocolUri('PUBLIC', thumbnailPath),
+              publicS3.getS3ProtocolUri(thumbnailPath),
               getThumbnailResize('card'),
             )
           : null;
 
         const channelAvatarUrl = channel.avatarPath
-          ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', channel.avatarPath), {
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
               resize: { width: 32, height: 32 },
             })
           : null;
 
         const channelDefaultThumbnailUrl = channel.defaultThumbnailPath
           ? getPublicImageUrl(
-              getS3ProtocolUri('PUBLIC', channel.defaultThumbnailPath),
+              publicS3.getS3ProtocolUri(channel.defaultThumbnailPath),
               getThumbnailResize('card'),
             )
           : null;

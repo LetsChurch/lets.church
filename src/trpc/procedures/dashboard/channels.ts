@@ -41,12 +41,7 @@ import { sendEmailWorkflow } from '@/temporal/workflows/send-email';
 import { prisma } from '@/util/db';
 import { emailHtml } from '@/util/email';
 import logger from '@/util/logger';
-import {
-  createMultipartUpload,
-  createPresignedPartUploadUrls,
-  getS3ProtocolUri,
-  PART_SIZE,
-} from '@/util/s3';
+import { ingestS3, PART_SIZE, publicS3 } from '@/util/s3';
 import { getPublicImageUrl, getPublicMediaUrl } from '@/util/url';
 import { authProcedure, router } from '../../trpc';
 
@@ -400,7 +395,7 @@ export const channelRouter = router({
 
     const avatarUrl = avatarPath
       ? getPublicImageUrl(
-          getS3ProtocolUri('PUBLIC', avatarPath),
+          publicS3.getS3ProtocolUri(avatarPath),
           getAvatarResize(input?.avatarSize),
         )
       : null;
@@ -777,7 +772,7 @@ export const channelRouter = router({
         const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
         const thumbnailUrl = thumbnailPath
           ? getPublicImageUrl(
-              getS3ProtocolUri('PUBLIC', thumbnailPath),
+              publicS3.getS3ProtocolUri(thumbnailPath),
               getThumbnailResize('table'),
             )
           : null;
@@ -969,7 +964,7 @@ export const channelRouter = router({
       const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
 
       const thumbnailUrl = thumbnailPath
-        ? getPublicImageUrl(getS3ProtocolUri('PUBLIC', thumbnailPath))
+        ? getPublicImageUrl(publicS3.getS3ProtocolUri(thumbnailPath))
         : null;
 
       // Generate media source URLs based on available variants
@@ -1070,9 +1065,7 @@ export const channelRouter = router({
     )
     .mutation(
       async ({ input: { targetId, uploadMimeType, bytes, postProcess } }) => {
-        const { uploadKey, uploadId } = await createMultipartUpload(
-          'INGEST',
-          targetId,
+        const { uploadKey, uploadId } = await ingestS3.createMultipartUpload(targetId,
           uploadMimeType,
         );
 
@@ -1084,9 +1077,7 @@ export const channelRouter = router({
           postProcess,
         );
 
-        const urls = await createPresignedPartUploadUrls(
-          'INGEST',
-          uploadId,
+        const urls = await ingestS3.createPresignedPartUploadUrls(uploadId,
           uploadKey,
           bytes,
         );

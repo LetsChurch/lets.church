@@ -1,9 +1,10 @@
-import { abortMultipartUpload, type Client } from '../../../util/s3';
+import { getS3Client, type S3ClientId } from '../../../util/s3';
 
 export default async function abortMultipartUploadAction(
-  to: Client,
+  clientId: S3ClientId,
   uploadId: string,
   uploadKey: string,
 ) {
-  await abortMultipartUpload(to, uploadId, uploadKey);
+  const client = getS3Client(clientId);
+  await client.abortMultipartUpload(uploadId, uploadKey);
 }

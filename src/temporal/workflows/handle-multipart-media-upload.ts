@@ -7,7 +7,7 @@ import {
   startChild,
 } from '@temporalio/workflow';
 import type { UploadPostProcessValue } from '@/util/types';
-import type { Client } from '../../util/s3';
+import type { S3ClientId } from '../../util/s3';
 import type * as activities from '../activities/background';
 import { BACKGROUND_QUEUE } from '../queues';
 import { processImageWorkflow } from './process-image';
@@ -26,7 +26,7 @@ export const uploadDoneSignal =
 
 export async function handleMultipartMediaUploadWorkflow(
   targetId: string,
-  to: Client,
+  clientId: S3ClientId,
   s3UploadId: string,
   s3UploadKey: string,
   postProcess: UploadPostProcessValue,
@@ -46,7 +46,7 @@ export async function handleMultipartMediaUploadWorkflow(
       await finalizeUploadRecord(targetId, finalizingUserId, s3UploadKey);
     }
 
-    await completeMultipartUpload(to, s3UploadId, s3UploadKey, eTags);
+    await completeMultipartUpload(clientId, s3UploadId, s3UploadKey, eTags);
 
     if (postProcess === 'media') {
       await startChild(processMediaWorkflow, {
@@ -70,6 +70,6 @@ export async function handleMultipartMediaUploadWorkflow(
       });
     }
   } else {
-    await abortMultipartUpload(to, s3UploadId, s3UploadKey);
+    await abortMultipartUpload(clientId, s3UploadId, s3UploadKey);
   }
 }

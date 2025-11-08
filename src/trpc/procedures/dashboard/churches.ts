@@ -26,12 +26,7 @@ import {
 } from '@/temporal';
 import { prisma } from '@/util/db';
 import logger from '@/util/logger';
-import {
-  createMultipartUpload,
-  createPresignedPartUploadUrls,
-  getS3ProtocolUri,
-  PART_SIZE,
-} from '@/util/s3';
+import { ingestS3, PART_SIZE, publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
 import { authProcedure, router } from '../../trpc';
 
@@ -796,7 +791,7 @@ export const churchRouter = router({
     const { avatarPath, ...restChurch } = church;
     const avatarUrl = avatarPath
       ? getPublicImageUrl(
-          getS3ProtocolUri('PUBLIC', avatarPath),
+          publicS3.getS3ProtocolUri(avatarPath),
           getAvatarResize(input?.avatarSize),
         )
       : null;
@@ -900,9 +895,7 @@ export const churchRouter = router({
   createMultipartUpload: churchAdminProcedure
     .input(multipartUploadSchema)
     .mutation(async ({ input: { targetId, uploadMimeType, bytes } }) => {
-      const { uploadKey, uploadId } = await createMultipartUpload(
-        'INGEST',
-        targetId,
+      const { uploadKey, uploadId } = await ingestS3.createMultipartUpload(targetId,
         uploadMimeType,
       );
 
@@ -914,9 +907,7 @@ export const churchRouter = router({
         'organizationAvatar',
       );
 
-      const urls = await createPresignedPartUploadUrls(
-        'INGEST',
-        uploadId,
+      const urls = await ingestS3.createPresignedPartUploadUrls(uploadId,
         uploadKey,
         bytes,
       );

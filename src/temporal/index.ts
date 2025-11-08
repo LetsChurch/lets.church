@@ -5,7 +5,7 @@ import waitOn from 'wait-on';
 import { z } from 'zod';
 import type { Prisma, UploadVariant } from '@/generated/prisma/client';
 import logger from '../util/logger';
-import type { Client as S3UtilClient } from '../util/s3';
+import type { S3ClientId } from '../util/s3';
 import type { UploadPostProcessValue } from '../util/types';
 import type { DocumentKind } from './activities/background/index-document';
 import { BACKGROUND_QUEUE } from './queues';
@@ -57,7 +57,7 @@ function makeMultipartMediaUploadWorkflowId(
 
 export async function handleMultipartMediaUpload(
   uploadRecordId: string,
-  to: S3UtilClient,
+  clientId: S3ClientId,
   s3UploadId: string,
   s3UploadKey: string,
   postProcess: UploadPostProcessValue,
@@ -66,7 +66,7 @@ export async function handleMultipartMediaUpload(
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     workflowId: makeMultipartMediaUploadWorkflowId(s3UploadId, s3UploadKey),
-    args: [uploadRecordId, to, s3UploadId, s3UploadKey, postProcess],
+    args: [uploadRecordId, clientId, s3UploadId, s3UploadKey, postProcess],
   });
 }
 
