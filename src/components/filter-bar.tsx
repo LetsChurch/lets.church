@@ -16,23 +16,25 @@ function FilterBadge({ label, onRemove }: FilterBadgeProps) {
   return (
     <div
       className={cn(
-        'group relative flex h-5 shrink-0 items-center overflow-hidden rounded-full border px-3 font-medium text-xs backdrop-blur-sm',
+        'group relative flex h-5 shrink-0 items-center gap-1.5 rounded-full border pr-1 pl-3 font-medium text-xs backdrop-blur-sm',
         'border-gray-950/10 bg-gray-950/10 text-primary/80',
         'dark:border-white/10 dark:bg-white/15',
+        'md:overflow-hidden md:pr-3',
       )}
     >
       <span className="relative">{label}</span>
       <div
         className={cn(
-          'pointer-events-none absolute top-0 right-0 bottom-0 w-16 opacity-0 transition-opacity group-hover:opacity-100',
+          'pointer-events-none absolute top-0 right-0 bottom-0 w-16 opacity-0 transition-opacity',
           'bg-gradient-to-r from-transparent via-white/50 to-white',
           'dark:via-zinc-950/50 dark:to-zinc-950',
+          'hidden md:block md:group-hover:opacity-100',
         )}
       />
       <button
         type="button"
         onClick={onRemove}
-        className="-translate-y-1/2 absolute top-1/2 right-2 z-10 flex size-4 items-center justify-center opacity-0 transition-opacity group-hover:opacity-100"
+        className="md:-translate-y-1/2 relative z-10 flex size-4 items-center justify-center md:absolute md:top-1/2 md:right-2 md:opacity-0 md:transition-opacity md:group-hover:opacity-100"
         aria-label={`Remove ${label} filter`}
       >
         <IconX size={12} className="text-primary/80" />
