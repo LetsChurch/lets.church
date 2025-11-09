@@ -9,6 +9,7 @@ import {
   Image,
   Loader,
   LoadingOverlay,
+  Modal,
   Progress,
   Radio,
   Stack,
@@ -25,6 +26,7 @@ import {
   IconPhoto,
   IconStar,
   IconStarFilled,
+  IconTrash,
   IconUpload,
   IconX,
 } from '@tabler/icons-react';
@@ -33,7 +35,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { createFileRoute, redirect } from '@tanstack/react-router';
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import HlsVideo from 'hls-video-element/react';
 import { useCallback, useEffect, useState } from 'react';
 import { useAppMantineForm } from '@/components/mantine';
@@ -42,7 +44,10 @@ import { trpcClient, useTRPC } from '@/trpc/react';
 import { doMultipartUpload } from '@/util/multipart-upload';
 import { showFailure, showSuccess } from '../-mantine';
 import styles from './-styles.module.css';
-import { $uploadProgress } from './channels_.$channelId_.uploads';
+import {
+  $deletedUploads,
+  $uploadProgress,
+} from './channels_.$channelId_.uploads';
 
 export const Route = createFileRoute(
   '/dashboard_/channels_/$channelId_/uploads_/$uploadId',
@@ -74,6 +79,7 @@ export const Route = createFileRoute(
 
 function ChannelUploadPage() {
   const { channelId, uploadId } = Route.useParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const trpc = useTRPC();
 
@@ -115,7 +121,13 @@ function ChannelUploadPage() {
     'appUser' in channel.userMembership &&
     channel.userMembership.appUser.role === 'ADMIN';
 
+  // Permission logic matching the uploads list page
+  const isChannelAdmin = channel.userMembership?.isAdmin ?? false;
+  const isAdmin = isChannelAdmin || isSiteAdmin;
+  const canDelete = isAdmin; // Only channel admins and site admins can delete
+
   const [newThumbnailFile, setNewThumbnailFile] = useState<File | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isProcessingThumbnail, setIsProcessingThumbnail] = useState(false);
   const [thumbnailUrlBeforeUpload, setThumbnailUrlBeforeUpload] = useState<
@@ -247,6 +259,26 @@ function ChannelUploadPage() {
       onError: (error) => {
         showFailure({
           message: error.message || 'Failed to toggle featured status',
+        });
+      },
+    }),
+  );
+
+  const deleteUploadMutation = useMutation(
+    trpc.dashboard.channels.deleteUploadRecord.mutationOptions({
+      onSuccess: async ({ uploadId }) => {
+        $deletedUploads.setKey(uploadId, true);
+        showSuccess({ message: 'Upload deletion started successfully' });
+        setShowDeleteModal(false);
+
+        // Navigate back to the uploads list
+        await navigate({
+          to: `/dashboard/channels/${channelId}/uploads`,
+        });
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to delete upload',
         });
       },
     }),
@@ -606,6 +638,20 @@ function ChannelUploadPage() {
                 {upload.isFeatured ? 'Remove from Featured' : 'Add to Featured'}
               </Button>
             ) : null}
+
+            {/* Delete Button - Only for channel admins and site admins */}
+            {canDelete ? (
+              <Button
+                variant="light"
+                color="red"
+                leftSection={<IconTrash size={16} />}
+                onClick={() => setShowDeleteModal(true)}
+                fullWidth
+              >
+                Delete Upload
+              </Button>
+            ) : null}
+
             {/* Player or Progress Bars */}
             {isProcessing ? (
               <Stack gap="md">
@@ -879,6 +925,46 @@ function ChannelUploadPage() {
           </Stack>
         </Grid.Col>
       </Grid>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        opened={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Confirm Delete"
+        centered
+      >
+        <Stack gap="md">
+          <Text>
+            Are you sure you want to delete the upload "
+            {upload.title || 'Untitled Upload'}"?
+          </Text>
+          <Text size="sm" c="dimmed">
+            This action cannot be undone. The upload will be permanently removed
+            from all storage systems.
+          </Text>
+          <Group justify="flex-end" gap="sm">
+            <Button
+              variant="default"
+              onClick={() => setShowDeleteModal(false)}
+              disabled={deleteUploadMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="red"
+              onClick={() => {
+                deleteUploadMutation.mutate({
+                  channelId,
+                  uploadId,
+                });
+              }}
+              loading={deleteUploadMutation.isPending}
+            >
+              Delete Upload
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Container>
   );
 }
