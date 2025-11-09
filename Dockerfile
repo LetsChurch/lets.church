@@ -42,6 +42,7 @@ RUN pnpm run build
 FROM build AS dev
 COPY --from=build-audiowaveform /home/build/audiowaveform/build/audiowaveform /usr/bin/
 COPY --from=jauderho/yt-dlp:2025.03.31 /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
+COPY --from=videah/oxipng:7.0.0 /usr/local/bin/oxipng /usr/local/bin/oxipng
 RUN apt-get update && apt-get install -y --no-install-recommends python3 imagemagick jpegoptim ffmpeg && \
   rm -rf /var/lib/apt/lists/*
 
