@@ -295,12 +295,9 @@ export const libraryProcedures = {
             : null;
 
           const channelAvatarUrl = channel.avatarPath
-            ? getPublicImageUrl(
-                publicS3.getS3ProtocolUri(channel.avatarPath),
-                {
-                  resize: { width: 32, height: 32 },
-                },
-              )
+            ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
+                resize: { width: 32, height: 32 },
+              })
             : null;
 
           const channelDefaultThumbnailUrl = channel.defaultThumbnailPath

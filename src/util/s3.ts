@@ -78,7 +78,7 @@ export class LcS3Client {
     return `s3://${this.bucket}/${key}`;
   }
 
-async createMultipartUpload(key: string, contentType: string) {
+  async createMultipartUpload(key: string, contentType: string) {
     const { UploadId: uploadId, Key: uploadKey } = await this.client.send(
       new CreateMultipartUploadCommand({
         Bucket: this.bucket,
@@ -92,7 +92,7 @@ async createMultipartUpload(key: string, contentType: string) {
     return { uploadId, uploadKey };
   }
 
-createPresignedPartUploadUrl(
+  createPresignedPartUploadUrl(
     uploadId: string,
     uploadKey: string,
     part: number,
@@ -114,7 +114,7 @@ createPresignedPartUploadUrl(
     );
   }
 
-async createPresignedPartUploadUrls(
+  async createPresignedPartUploadUrls(
     uploadId: string,
     uploadKey: string,
     size: number,
@@ -126,7 +126,7 @@ async createPresignedPartUploadUrls(
     );
   }
 
-async completeMultipartUpload(
+  async completeMultipartUpload(
     uploadId: string,
     uploadKey: string,
     eTags: Array<string>,
@@ -143,7 +143,7 @@ async completeMultipartUpload(
     );
   }
 
-async abortMultipartUpload(uploadId: string, uploadKey: string) {
+  async abortMultipartUpload(uploadId: string, uploadKey: string) {
     await this.client.send(
       new AbortMultipartUploadCommand({
         Bucket: this.bucket,
@@ -153,7 +153,7 @@ async abortMultipartUpload(uploadId: string, uploadKey: string) {
     );
   }
 
-async createPresignedUploadUrl(key: string, contentType: string) {
+  async createPresignedUploadUrl(key: string, contentType: string) {
     return getSignedUrl(
       this.client,
       new PutObjectCommand({
@@ -165,8 +165,7 @@ async createPresignedUploadUrl(key: string, contentType: string) {
     );
   }
 
-
-async headObject(key: string) {
+  async headObject(key: string) {
     try {
       return await this.client.headObject({
         Bucket: this.bucket,
@@ -178,14 +177,14 @@ async headObject(key: string) {
     }
   }
 
-async getObject(key: string) {
+  async getObject(key: string) {
     return this.client.getObject({
       Bucket: this.bucket,
       Key: key,
     });
   }
 
-async streamObjectToFile(
+  async streamObjectToFile(
     key: string,
     path: string,
     extra?:
@@ -219,7 +218,7 @@ async streamObjectToFile(
     );
   }
 
-async *listObjects(prefix?: string) {
+  async *listObjects(prefix?: string) {
     let continuationToken: string | undefined;
 
     do {
@@ -241,7 +240,7 @@ async *listObjects(prefix?: string) {
     } while (continuationToken);
   }
 
-async *listKeys(prefix?: string) {
+  async *listKeys(prefix?: string) {
     for await (const { Key } of this.listObjects(prefix)) {
       if (Key) {
         yield Key;
@@ -249,7 +248,7 @@ async *listKeys(prefix?: string) {
     }
   }
 
-async *listPrefixes() {
+  async *listPrefixes() {
     const seen = new Set();
 
     for await (const key of this.listKeys()) {
@@ -263,7 +262,7 @@ async *listPrefixes() {
     }
   }
 
-async putFile({
+  async putFile({
     key,
     contentType,
     body,
@@ -286,7 +285,7 @@ async putFile({
     return this.client.send(cmd);
   }
 
-async putFileMultipart({
+  async putFileMultipart({
     key,
     contentType,
     path,
@@ -357,7 +356,7 @@ async putFileMultipart({
     }
   }
 
-async retryablePutFile({
+  async retryablePutFile({
     maxAttempts = 5,
     signal,
     ...otherOps
@@ -381,7 +380,7 @@ async retryablePutFile({
     });
   }
 
-async deleteFile(key: string) {
+  async deleteFile(key: string) {
     const cmd = new DeleteObjectCommand({
       Bucket: this.bucket,
       Key: key,
@@ -389,7 +388,7 @@ async deleteFile(key: string) {
     return this.client.send(cmd);
   }
 
-async deletePrefix(prefix: string, heartbeat = noop) {
+  async deletePrefix(prefix: string, heartbeat = noop) {
     let totalCount = 0;
     let currentCount = 0;
 
@@ -464,9 +463,9 @@ export function getS3Client(clientId: S3ClientId): LcS3Client {
 
 export async function getPublicUrlWithFilename(key: string, filename: string) {
   return getSignedUrl(
-    publicS3['client'],
+    publicS3.client,
     new GetObjectCommand({
-      Bucket: publicS3['bucket'],
+      Bucket: publicS3.bucket,
       Key: key,
       ResponseContentDisposition: `attachment; filename="${sanitizeFilename(
         filename,

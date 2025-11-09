@@ -895,7 +895,8 @@ export const churchRouter = router({
   createMultipartUpload: churchAdminProcedure
     .input(multipartUploadSchema)
     .mutation(async ({ input: { targetId, uploadMimeType, bytes } }) => {
-      const { uploadKey, uploadId } = await ingestS3.createMultipartUpload(targetId,
+      const { uploadKey, uploadId } = await ingestS3.createMultipartUpload(
+        targetId,
         uploadMimeType,
       );
 
@@ -907,7 +908,8 @@ export const churchRouter = router({
         'organizationAvatar',
       );
 
-      const urls = await ingestS3.createPresignedPartUploadUrls(uploadId,
+      const urls = await ingestS3.createPresignedPartUploadUrls(
+        uploadId,
         uploadKey,
         bytes,
       );
