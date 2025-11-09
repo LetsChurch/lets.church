@@ -439,6 +439,26 @@ export class LcS3Client {
 
     return totalCount;
   }
+
+  async getSignedGetObject(
+    key: string,
+    options?: {
+      expiresIn?: number;
+      responseContentDisposition?: string;
+    },
+  ) {
+    return getSignedUrl(
+      this.client,
+      new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        ...(options?.responseContentDisposition
+          ? { ResponseContentDisposition: options.responseContentDisposition }
+          : {}),
+      }),
+      options?.expiresIn ? { expiresIn: options.expiresIn } : undefined,
+    );
+  }
 }
 
 export const ingestS3 = new LcS3Client({
@@ -462,16 +482,11 @@ export function getS3Client(clientId: S3ClientId): LcS3Client {
 }
 
 export async function getPublicUrlWithFilename(key: string, filename: string) {
-  return getSignedUrl(
-    publicS3.client,
-    new GetObjectCommand({
-      Bucket: publicS3.bucket,
-      Key: key,
-      ResponseContentDisposition: `attachment; filename="${sanitizeFilename(
-        filename,
-      )}"`,
-    }),
-  );
+  return publicS3.getSignedGetObject(key, {
+    responseContentDisposition: `attachment; filename="${sanitizeFilename(
+      filename,
+    )}"`,
+  });
 }
 
 export async function createPresignedPartUploadUrls(
