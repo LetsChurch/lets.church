@@ -1,16 +1,30 @@
 {
   "compilerOptions": {
-    "jsx": "react-jsx",
-    "moduleResolution": "Bundler",
+    "target": "ES2022",
     "module": "ESNext",
-    "isolatedModules": true,
-    "target": "ES2024",
-    "noEmit": true,
+    "moduleResolution": "bundler",
     "strict": true,
     "skipLibCheck": true,
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "lib": ["ES2022"]
   },
-  "include": ["src/**/*"]
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/db"
+    },
+    {
+      "path": "./packages/elasticsearch"
+    },
+    {
+      "path": "./packages/s3"
+    },
+    {
+      "path": "./packages/util"
+    },
+    {
+      "path": "./packages/web"
+    }
+  ]
 }

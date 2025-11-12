@@ -23,7 +23,7 @@ services:
     build:
       context: .
       target: dev
-    command: pnpm run dev --host
+    command: pnpm --filter @letschurch/web run dev --host
     restart: unless-stopped
     ports:
       - 127.0.0.1:${HOST_WEB_PORT}:3000
@@ -44,22 +44,20 @@ services:
       ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
       <<: *s3-env
     volumes:
-      - ./src:/usr/src/app/src
-      - ./prisma:/usr/src/app/prisma
-      - ./package.json:/usr/src/app/package.json
+      - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
-      - ./tsconfig.json:/usr/src/app/tsconfig.json
-      - ./public:/usr/src/app/public
-      - ./elasticsearch:/usr/src/app/elasticsearch
-      - ./vite.config.ts:/usr/src/app/vite.config.ts
-      - ./postcss.config.cjs:/usr/src/app/postcss.config.cjs
-      - ./biome.json:/usr/src/app/biome.json
+      - ./packages/util:/usr/src/app/packages/util
+      - ./packages/s3:/usr/src/app/packages/s3
+      - ./packages/db:/usr/src/app/packages/db
+      - /usr/src/app/packages/db/src/generated
+      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - ./packages/web:/usr/src/app/packages/web
 
   background-worker:
     build:
       context: .
       target: dev
-    command: pnpm run dev:background-worker
+    command: pnpm --filter @letschurch/web run dev:background-worker
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -76,11 +74,14 @@ services:
       WEB_URL: ${HOST_WEB_URL}
       <<: *s3-env
     volumes:
-      - ./src:/usr/src/app/src
-      - ./prisma:/usr/src/app/prisma
-      - ./package.json:/usr/src/app/package.json
+      - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
-      - ./tsconfig.json:/usr/src/app/tsconfig.json
+      - ./packages/util:/usr/src/app/packages/util
+      - ./packages/s3:/usr/src/app/packages/s3
+      - ./packages/db:/usr/src/app/packages/db
+      - /usr/src/app/packages/db/src/generated
+      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - ./packages/web:/usr/src/app/packages/web
     depends_on:
       - temporal
 
@@ -88,7 +89,7 @@ services:
     build:
       context: .
       target: dev
-    command: pnpm run dev:probe-worker
+    command: pnpm --filter @letschurch/web run dev:probe-worker
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -100,11 +101,14 @@ services:
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 5
       <<: *s3-env
     volumes:
-      - ./src:/usr/src/app/src
-      - ./prisma:/usr/src/app/prisma
-      - ./package.json:/usr/src/app/package.json
+      - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
-      - ./tsconfig.json:/usr/src/app/tsconfig.json
+      - ./packages/util:/usr/src/app/packages/util
+      - ./packages/s3:/usr/src/app/packages/s3
+      - ./packages/db:/usr/src/app/packages/db
+      - /usr/src/app/packages/db/src/generated
+      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - ./packages/web:/usr/src/app/packages/web
     depends_on:
       - temporal
 
@@ -112,7 +116,7 @@ services:
     build:
       context: .
       target: dev
-    command: pnpm run dev:transcode-worker
+    command: pnpm --filter @letschurch/web run dev:transcode-worker
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -124,11 +128,14 @@ services:
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 1
       <<: *s3-env
     volumes:
-      - ./src:/usr/src/app/src
-      - ./prisma:/usr/src/app/prisma
-      - ./package.json:/usr/src/app/package.json
+      - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
-      - ./tsconfig.json:/usr/src/app/tsconfig.json
+      - ./packages/util:/usr/src/app/packages/util
+      - ./packages/s3:/usr/src/app/packages/s3
+      - ./packages/db:/usr/src/app/packages/db
+      - /usr/src/app/packages/db/src/generated
+      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - ./packages/web:/usr/src/app/packages/web
     depends_on:
       - temporal
 
@@ -136,7 +143,7 @@ services:
     build:
       context: .
       target: transcribe-worker
-    command: pnpm run dev:transcribe-worker
+    command: pnpm --filter @letschurch/web run dev:transcribe-worker
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -149,11 +156,14 @@ services:
       WHISPER_MODEL: tiny.en
       <<: *s3-env
     volumes:
-      - ./src:/usr/src/app/src
-      - ./prisma:/usr/src/app/prisma
-      - ./package.json:/usr/src/app/package.json
+      - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
-      - ./tsconfig.json:/usr/src/app/tsconfig.json
+      - ./packages/util:/usr/src/app/packages/util
+      - ./packages/s3:/usr/src/app/packages/s3
+      - ./packages/db:/usr/src/app/packages/db
+      - /usr/src/app/packages/db/src/generated
+      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - ./packages/web:/usr/src/app/packages/web
     depends_on:
       - temporal
 
@@ -161,7 +171,7 @@ services:
     build:
       context: .
       target: dev
-    command: pnpm run dev:import-worker
+    command: pnpm --filter @letschurch/web run dev:import-worker
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -174,11 +184,14 @@ services:
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1m
       <<: *s3-env
     volumes:
-      - ./src:/usr/src/app/src
-      - ./prisma:/usr/src/app/prisma
-      - ./package.json:/usr/src/app/package.json
+      - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
-      - ./tsconfig.json:/usr/src/app/tsconfig.json
+      - ./packages/util:/usr/src/app/packages/util
+      - ./packages/s3:/usr/src/app/packages/s3
+      - ./packages/db:/usr/src/app/packages/db
+      - /usr/src/app/packages/db/src/generated
+      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - ./packages/web:/usr/src/app/packages/web
     depends_on:
       - temporal
 

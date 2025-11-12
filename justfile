@@ -11,8 +11,12 @@ preview *params='-d --remove-orphans':
   docker compose -f docker-compose.yml -f docker-compose.preview.yml up {{params}}
 stop:
   docker compose down
+stop-preview:
+  docker compose -f docker-compose.yml -f docker-compose.preview.yml down
 prune:
   docker compose down --rmi local --volumes
+prune-preview:
+  docker compose -f docker-compose.yml -f docker-compose.preview.yml down --rmi local --volumes
 build *params:
   docker compose build {{params}}
 build-preview *params:
@@ -33,8 +37,15 @@ up:
 pup:
   @echo "🐶"
   just preview
-  just check-health
-  just init seed
+  @echo "Waiting for migration services to complete..."
+  @timeout 20 sh -c 'until docker compose -f docker-compose.yml -f docker-compose.preview.yml ps --status exited | grep -q "db-migrate.*Exited (0)"; do sleep 1; done' || echo "Warning: db-migrate timeout"
+  @timeout 120 sh -c 'until docker compose -f docker-compose.yml -f docker-compose.preview.yml ps --status exited | grep -q "elasticsearch-migrate.*Exited (0)"; do sleep 1; done' || echo "Warning: elasticsearch-migrate timeout"
+  @echo "Migrations completed successfully!"
+  just seed
+
+ppup:
+  just prune-preview
+  just pup
 
 logs service *params:
   docker compose logs {{params}} {{service}}
@@ -56,7 +67,7 @@ purge-pg:
   docker volume rm ${COMPOSE_PROJECT_NAME}_pg-data
 
 pnpmi:
-  just exec web pnpm i
+  just exec web pnpm install
 
 #
 # Development
@@ -69,21 +80,21 @@ temporal *args:
   docker compose exec temporal-admin-tools temporal {{args}}
 
 db-push:
-  docker compose exec web pnpm run prisma:db:push
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run prisma:db:push'
 
 db-reset:
-  docker compose exec web pnpm run prisma:migrate:reset
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run prisma:migrate:reset'
   docker compose restart postgres
 
 prisma-generate:
-  docker compose exec web pnpm run prisma:migrate:dev
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run prisma:migrate:dev'
 
 es-push-mappings:
-  docker compose exec web pnpm run es:push-mappings
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/elasticsearch run push-mappings'
 
 migrate-dev:
-  docker compose exec web pnpm run prisma:migrate:dev
-  pnpm run prisma:generate
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run prisma:migrate:dev'
+  pnpm --filter @letschurch/db run prisma:generate
 
 temporal-schedule: restart-workers
   just temporal workflow execute --task-queue background --type updateDailySaltWorkflow --workflow-id update-daily-salt
@@ -99,10 +110,10 @@ temporal-schedule-delete:
 init: migrate-dev es-push-mappings temporal-schedule
 
 s3-prune-multipart-uploads:
-  S3_BUCKET=${S3_INGEST_BUCKET} pnpm run s3:prune-multipart-uploads
+  S3_BUCKET=${S3_INGEST_BUCKET} pnpm --filter @letschurch/web run s3:prune-multipart-uploads
 
 seed-db:
-  docker compose exec web pnpm run prisma:db:seed
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run prisma:db:seed'
 seed-s3-ingest:
   rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-ingest lcdevs3:letschurch-dev-ingest
 seed-s3-public:
@@ -118,15 +129,21 @@ reset:
   just init seed
 
 truncate:
-  docker compose exec web pnpm run prisma:db:truncate
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run prisma:db:truncate'
 
 check:
-  pnpm run check
+  pnpm -r run check
+
+fix:
+  pnpm -r run fix
+
+ffix:
+  pnpm -r run fix!
 
 export CI := "1"
 
 test:
-  pnpm test
+  pnpm -r test
 
 transcribe file:
   docker compose run --rm -v $PWD:/host -w /host transcribe-worker /bin/bash -c 'ffmpeg -i {{file}} -ar 16000 -ac 1 {{file}}.wav'

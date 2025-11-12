@@ -2,6 +2,28 @@
 # Use with: docker compose -f docker-compose.yml -f docker-compose.preview.yml up
 
 services:
+  # Migration Services
+  db-migrate:
+    build:
+      target: db-migrate
+    restart: "no"
+    environment:
+      DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  elasticsearch-migrate:
+    build:
+      target: elasticsearch-migrate
+    restart: "no"
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  # Application Services
   web:
     build:
       target: web
@@ -9,6 +31,11 @@ services:
     volumes: !reset []
     environment:
       NODE_ENV: production
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+      elasticsearch-migrate:
+        condition: service_completed_successfully
 
   background-worker:
     build:
@@ -18,6 +45,11 @@ services:
     environment:
       NODE_ENV: production
       IDENTITY: ${IDENTITY:-preview}
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+      elasticsearch-migrate:
+        condition: service_completed_successfully
 
   probe-worker:
     build:
@@ -27,6 +59,11 @@ services:
     environment:
       NODE_ENV: production
       IDENTITY: ${IDENTITY:-preview}
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+      elasticsearch-migrate:
+        condition: service_completed_successfully
 
   transcode-worker:
     build:
@@ -36,6 +73,11 @@ services:
     environment:
       NODE_ENV: production
       IDENTITY: ${IDENTITY:-preview}
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+      elasticsearch-migrate:
+        condition: service_completed_successfully
 
   transcribe-worker:
     build:
@@ -48,6 +90,11 @@ services:
       NODE_ENV: production
       IDENTITY: ${IDENTITY:-preview}
       WHISPER_MODEL: ${WHISPER_MODEL:-base.en}
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+      elasticsearch-migrate:
+        condition: service_completed_successfully
 
   import-worker:
     build:
@@ -57,3 +104,8 @@ services:
     environment:
       NODE_ENV: production
       IDENTITY: ${IDENTITY:-preview}
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+      elasticsearch-migrate:
+        condition: service_completed_successfully

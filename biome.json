@@ -3,40 +3,20 @@
   "vcs": {
     "enabled": true,
     "clientKind": "git",
-    "useIgnoreFile": true
+    "useIgnoreFile": false
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": [
-      ".github/**/*",
-      "src/**/*",
-      "!src/generated/**/*",
-      "!**/*.gen.*",
-      "!**/*.module.css.d.ts",
-      "./*"
-    ]
+    "includes": ["scripts/**/*", "!packages/**/*"]
   },
   "formatter": {
     "enabled": true,
-    "indentStyle": "tab"
+    "indentStyle": "space"
   },
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
-      "style": {
-        "useImportType": "error",
-        "useExportType": "error",
-        "useConsistentTypeDefinitions": {
-          "level": "error",
-          "options": {
-            "style": "type"
-          }
-        }
-      },
-      "nursery": {
-        "useSortedClasses": "error"
-      }
+      "recommended": true
     }
   },
   "javascript": {
@@ -44,20 +24,13 @@
       "quoteStyle": "single",
       "semicolons": "always",
       "indentStyle": "space",
-      "indentWidth": 2,
-      "trailingCommas": "all"
+      "indentWidth": 2
     }
   },
   "json": {
     "formatter": {
       "indentStyle": "space",
-      "indentWidth": 2,
-      "trailingCommas": "none"
-    }
-  },
-  "css": {
-    "parser": {
-      "tailwindDirectives": true
+      "indentWidth": 2
     }
   },
   "assist": {

@@ -1,0 +1,102 @@
+import { join } from 'node:path';
+import logger from '@letschurch/util';
+import { Context } from '@temporalio/activity';
+import { invariant } from 'es-toolkit';
+import { mkdirp } from 'mkdirp';
+import { rimraf } from 'rimraf';
+import { runFfprobe } from '../../../util/ffmpeg';
+import { ingestS3 } from '../../../util/s3';
+import { ffprobeSchema } from '../../../util/zod';
+import { updateUploadRecord } from '../..';
+
+const WORK_DIR = process.env.PROBE_WORKING_DIRECTORY ?? '/data/probe';
+
+const moduleLogger = logger.child({
+  module: 'temporal/activities/probe/probe',
+});
+
+export default async function probe(
+  uploadRecordId: string,
+  s3UploadKey: string,
+) {
+  const activityLogger = moduleLogger.child({
+    temporalActivity: 'probe',
+    args: {
+      uploadRecordId,
+      s3UploadKey,
+    },
+  });
+
+  const signal = Context.current().cancellationSignal;
+
+  const workingDir = join(WORK_DIR, uploadRecordId);
+
+  const stdErrLines: Array<string> = [];
+  const stdOutLines: Array<string> = [];
+
+  try {
+    activityLogger.info('Making working directory');
+    await mkdirp(workingDir);
+
+    const downloadPath = join(workingDir, 'download');
+    const uploadSizeBytes = (await ingestS3.headObject(s3UploadKey))
+      ?.ContentLength;
+    invariant(uploadSizeBytes, 'Invalid uploadSizeBytes');
+    await ingestS3.streamObjectToFile(s3UploadKey, downloadPath, {
+      heartbeat: () => Context.current().heartbeat('download'),
+    });
+    await mkdirp(workingDir);
+
+    activityLogger.info(`Probing ${downloadPath}`);
+
+    const proc = runFfprobe(workingDir, downloadPath, signal);
+
+    proc.stdout?.on('data', (data) => {
+      stdOutLines.push(String(data));
+    });
+
+    proc.stderr?.on('data', (data) => {
+      stdErrLines.push(String(data));
+    });
+
+    await proc;
+
+    const probeJson = stdOutLines.join('');
+    const parsedProbeJson = JSON.parse(probeJson);
+    const schemaParsedProbe = ffprobeSchema.parse(parsedProbeJson);
+
+    await ingestS3.retryablePutFile({
+      key: `${uploadRecordId}/probe.json`,
+      contentType: 'application/json',
+      body: Buffer.from(probeJson),
+      signal,
+    });
+
+    await updateUploadRecord(uploadRecordId, {
+      probe: probeJson,
+      uploadSizeBytes,
+      lengthSeconds: parseFloat(schemaParsedProbe.format.duration),
+      // TODO: temporarily set portrait videos to private
+      ...(schemaParsedProbe.streams.some(
+        (s) => s.codec_type === 'video' && s.height > s.width,
+      )
+        ? { visibility: 'PRIVATE' }
+        : {}),
+    });
+
+    return schemaParsedProbe;
+  } catch (e) {
+    activityLogger
+      .child({
+        meta: JSON.stringify({
+          stdout: stdOutLines.join(''),
+          stderr: stdErrLines.join(''),
+        }),
+      })
+      .error(e instanceof Error ? e.message : e);
+    throw e;
+  } finally {
+    activityLogger.info('Removing working directory');
+    await rimraf(workingDir);
+  }
+}

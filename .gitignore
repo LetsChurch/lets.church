@@ -1,16 +1,7 @@
 .envrc.local
 .direnv
-.nitro
-.output
-# .tanstack
-# .vite
-dist
-src/generated
-
-.pnpm-store
 
 gitleaks-findings.json
 node_modules
-storybook-static
 
 *.log

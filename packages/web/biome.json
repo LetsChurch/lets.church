@@ -1,0 +1,51 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.3.4/schema.json",
+  "extends": ["../../biome.json"],
+  "vcs": {
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "src/**/*",
+      "!src/generated/**/*",
+      "!**/*.gen.*",
+      "!**/*.module.css.d.ts",
+      "./*"
+    ]
+  },
+  "formatter": {
+    "indentStyle": "tab"
+  },
+  "linter": {
+    "rules": {
+      "style": {
+        "useImportType": "error",
+        "useExportType": "error",
+        "useConsistentTypeDefinitions": {
+          "level": "error",
+          "options": {
+            "style": "type"
+          }
+        }
+      },
+      "nursery": {
+        "useSortedClasses": "error"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "trailingCommas": "all"
+    }
+  },
+  "json": {
+    "formatter": {
+      "trailingCommas": "none"
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  }
+}

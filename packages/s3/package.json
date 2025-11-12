@@ -1,0 +1,35 @@
+{
+  "name": "@letschurch/s3",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "check": "pnpm run /^check:/",
+    "check:biome": "biome check",
+    "check:ts": "tsc --noEmit",
+    "fix": "biome check --write",
+    "fix!": "biome check --write --unsafe"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.777.0",
+    "@aws-sdk/s3-request-presigner": "3.777.0",
+    "es-toolkit": "catalog:",
+    "p-map": "catalog:",
+    "p-retry": "catalog:",
+    "pino": "catalog:",
+    "sanitize-filename": "^1.6.3",
+    "type-fest": "catalog:",
+    "uuid": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

@@ -21,23 +21,42 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends openssl libs
 
 FROM base AS deps
 WORKDIR /usr/src/app
-COPY package.json pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages/util/package.json ./packages/util/
+COPY packages/s3/package.json ./packages/s3/
+COPY packages/db/package.json ./packages/db/
+COPY packages/elasticsearch/package.json ./packages/elasticsearch/
+COPY packages/web/package.json ./packages/web/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 FROM base AS prod-deps
 WORKDIR /usr/src/app
-COPY package.json pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages/util/package.json ./packages/util/
+COPY packages/s3/package.json ./packages/s3/
+COPY packages/db/package.json ./packages/db/
+COPY packages/elasticsearch/package.json ./packages/elasticsearch/
+COPY packages/web/package.json ./packages/web/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
 
 FROM base AS build
 WORKDIR /usr/src/app
 COPY --from=deps /usr/src/app/node_modules ./node_modules
-COPY . .
+COPY --from=deps /usr/src/app/packages/util/node_modules ./packages/util/node_modules
+COPY --from=deps /usr/src/app/packages/s3/node_modules ./packages/s3/node_modules
+COPY --from=deps /usr/src/app/packages/db/node_modules ./packages/db/node_modules
+COPY --from=deps /usr/src/app/packages/elasticsearch/node_modules ./packages/elasticsearch/node_modules
+COPY --from=deps /usr/src/app/packages/web/node_modules ./packages/web/node_modules
+COPY pnpm-workspace.yaml tsconfig.json ./
+COPY packages/util ./packages/util
+COPY packages/s3 ./packages/s3
+COPY packages/db ./packages/db
+COPY packages/elasticsearch ./packages/elasticsearch
+COPY packages/web ./packages/web
 ENV NODE_ENV=production
 ENV VITE_SENTRY_DSN=https://d641f53f296e7abff3b6b269a4decfc4@o387306.ingest.sentry.io/4506108399190016
 ENV VITE_TURNSTILE_SITEKEY=0x4AAAAAAAEHhiqW0UvoZTf3
-RUN pnpm exec prisma generate
-RUN pnpm run build
+RUN pnpm run -r build
 
 FROM build AS dev
 COPY --from=build-audiowaveform /home/build/audiowaveform/build/audiowaveform /usr/bin/
@@ -48,15 +67,35 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 imagema
 
 FROM base AS prod
 WORKDIR /usr/src/app
+COPY pnpm-workspace.yaml ./
 COPY --from=prod-deps /usr/src/app/node_modules ./node_modules
-COPY --from=build /usr/src/app/package.json ./package.json
-COPY --from=build /usr/src/app/tsconfig.json ./tsconfig.json
-COPY --from=build /usr/src/app/prisma ./prisma
-COPY --from=build /usr/src/app/elasticsearch ./elasticsearch
-COPY --from=build /usr/src/app/src ./src
-COPY --from=build /usr/src/app/dist ./dist
-COPY --from=build /usr/src/app/.output ./.output
-# COPY --from=build /usr/src/app/.nitro ./.nitro
+COPY --from=prod-deps /usr/src/app/packages/util/node_modules ./packages/util/node_modules
+COPY --from=prod-deps /usr/src/app/packages/s3/node_modules ./packages/s3/node_modules
+COPY --from=prod-deps /usr/src/app/packages/db/node_modules ./packages/db/node_modules
+COPY --from=prod-deps /usr/src/app/packages/elasticsearch/node_modules ./packages/elasticsearch/node_modules
+COPY --from=prod-deps /usr/src/app/packages/web/node_modules ./packages/web/node_modules
+COPY --from=build /usr/src/app/packages/util/package.json ./packages/util/package.json
+COPY --from=build /usr/src/app/packages/util/src ./packages/util/src
+COPY --from=build /usr/src/app/packages/s3/package.json ./packages/s3/package.json
+COPY --from=build /usr/src/app/packages/s3/src ./packages/s3/src
+COPY --from=build /usr/src/app/packages/db/package.json ./packages/db/package.json
+COPY --from=build /usr/src/app/packages/db/src ./packages/db/src
+COPY --from=build /usr/src/app/packages/db/prisma ./packages/db/prisma
+COPY --from=build /usr/src/app/packages/elasticsearch/package.json ./packages/elasticsearch/package.json
+COPY --from=build /usr/src/app/packages/elasticsearch/src ./packages/elasticsearch/src
+COPY --from=build /usr/src/app/packages/web/package.json ./packages/web/package.json
+COPY --from=build /usr/src/app/packages/web/src ./packages/web/src
+COPY --from=build /usr/src/app/packages/web/dist ./packages/web/dist
+COPY --from=build /usr/src/app/packages/web/.output ./packages/web/.output
+WORKDIR /usr/src/app/packages/web
+
+FROM prod AS db-migrate
+WORKDIR /usr/src/app/packages/db
+CMD ["pnpm", "run", "prisma:migrate:deploy"]
+
+FROM prod AS elasticsearch-migrate
+WORKDIR /usr/src/app/packages/elasticsearch
+CMD ["pnpm", "run", "push-mappings"]
 
 FROM prod AS web
 CMD ["pnpm", "run", "start"]
@@ -106,9 +145,24 @@ RUN apt-get update && \
   apt-get clean && \
   pip3 install --no-cache-dir git+https://github.com/Softcatala/whisper-ctranslate2.git@0.2.9
 WORKDIR /usr/src/app
+COPY pnpm-workspace.yaml ./
 COPY --from=prod-deps /usr/src/app/node_modules ./node_modules
-# COPY --from=build /usr/src/app/dist ./dist
-COPY --from=build /usr/src/app/src ./src
-COPY package.json tsconfig.json ./
+COPY --from=prod-deps /usr/src/app/packages/util/node_modules ./packages/util/node_modules
+COPY --from=prod-deps /usr/src/app/packages/s3/node_modules ./packages/s3/node_modules
+COPY --from=prod-deps /usr/src/app/packages/db/node_modules ./packages/db/node_modules
+COPY --from=prod-deps /usr/src/app/packages/elasticsearch/node_modules ./packages/elasticsearch/node_modules
+COPY --from=prod-deps /usr/src/app/packages/web/node_modules ./packages/web/node_modules
+COPY --from=build /usr/src/app/packages/util/package.json ./packages/util/package.json
+COPY --from=build /usr/src/app/packages/util/src ./packages/util/src
+COPY --from=build /usr/src/app/packages/s3/package.json ./packages/s3/package.json
+COPY --from=build /usr/src/app/packages/s3/src ./packages/s3/src
+COPY --from=build /usr/src/app/packages/db/package.json ./packages/db/package.json
+COPY --from=build /usr/src/app/packages/db/src ./packages/db/src
+COPY --from=build /usr/src/app/packages/db/prisma ./packages/db/prisma
+COPY --from=build /usr/src/app/packages/elasticsearch/package.json ./packages/elasticsearch/package.json
+COPY --from=build /usr/src/app/packages/elasticsearch/src ./packages/elasticsearch/src
+COPY --from=build /usr/src/app/packages/web/package.json ./packages/web/package.json
+COPY --from=build /usr/src/app/packages/web/src ./packages/web/src
+WORKDIR /usr/src/app/packages/web
 ENV NODE_ENV=production
 CMD ["pnpm", "run", "start:transcribe-worker"]
