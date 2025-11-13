@@ -4,12 +4,20 @@ import {
   proxyActivities,
   startChild,
 } from '@temporalio/workflow';
-import type * as importActivities from '../activities/import';
 import { IMPORT_QUEUE } from '../queues';
 import { processImageWorkflow } from './process-image';
 import { processMediaWorkflow } from './process-media';
 
-const { importMedia } = proxyActivities<typeof importActivities>({
+const { importMedia } = proxyActivities<{
+  importMedia: (
+    url: string,
+    data: Prisma.UploadRecordCreateArgs['data'] & { trimSilence?: boolean },
+  ) => Promise<{
+    uploadRecordId: string;
+    mediaUploadKey: string;
+    thumbnailUploadKey: string | null;
+  }>;
+}>({
   startToCloseTimeout: '10 hours',
   heartbeatTimeout: '5 hours',
   taskQueue: IMPORT_QUEUE,

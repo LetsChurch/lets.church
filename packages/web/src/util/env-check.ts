@@ -30,8 +30,3 @@ export async function checkAudiowaveform() {
   const res = await getHelp('audiowaveform');
   checkCode(res);
 }
-
-export async function checkYtDlp() {
-  const res = await getHelp('yt-dlp');
-  checkCode(res);
-}

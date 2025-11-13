@@ -21,6 +21,7 @@ import {
   createUploadSchema,
   deletePlaylistSchema,
   deleteUploadSchema,
+  importMediaSchema,
   playlistQuerySchema,
   removeFromPlaylistSchema,
   removeMemberSchema,
@@ -36,6 +37,7 @@ import {
   completeMultipartMediaUpload,
   deleteUpload,
   handleMultipartMediaUpload,
+  importMedia,
 } from '@/temporal';
 import { BACKGROUND_QUEUE } from '@/temporal/queues';
 import { sendEmailWorkflow } from '@/temporal/workflows/send-email';
@@ -1599,6 +1601,55 @@ export const channelRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to unapprove channel',
+        });
+      }
+    }),
+
+  importMedia: channelUploadProcedure
+    .input(importMediaSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const { channelId, url, ...workflowData } = input;
+
+        // Get channel and user info for the workflow
+        const [channel, user] = await Promise.all([
+          prisma.channel.findUniqueOrThrow({
+            where: { id: channelId },
+            select: { slug: true },
+          }),
+          prisma.appUser.findUniqueOrThrow({
+            where: { id: ctx.session.appUserId },
+            select: { username: true },
+          }),
+        ]);
+
+        // Start the import workflow
+        await importMedia({
+          url,
+          username: user.username,
+          channelSlug: channel.slug,
+          taskQueue: BACKGROUND_QUEUE,
+          ...workflowData,
+        });
+
+        moduleLogger.info('Import workflow started', {
+          url,
+          channelId,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to start import workflow', {
+          url: input.url,
+          channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to start import',
         });
       }
     }),

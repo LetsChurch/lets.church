@@ -9,17 +9,23 @@ import {
   Menu,
   Modal,
   Pagination,
+  Select,
   Stack,
   Table,
   Text,
+  Textarea,
+  TextInput,
   Title,
   Tooltip,
 } from '@mantine/core';
+import { DateInput } from '@mantine/dates';
 import { Dropzone } from '@mantine/dropzone';
 import { useDisclosure, useSelection } from '@mantine/hooks';
+import { notifications } from '@mantine/notifications';
 import { useStore } from '@nanostores/react';
 import {
   IconChevronDown,
+  IconDownload,
   IconEdit,
   IconEye,
   IconEyeOff,
@@ -39,6 +45,7 @@ import { invariant } from 'es-toolkit';
 import { map } from 'nanostores';
 import { useState } from 'react';
 import { z } from 'zod';
+import type { UploadLicense, UploadVisibility } from '@/generated/prisma/enums';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { formatDate, formatTime } from '@/util/format';
 import { doMultipartUpload } from '@/util/multipart-upload';
@@ -316,10 +323,63 @@ function ChannelUploadsPage() {
     { open: openUploadModal, close: closeUploadModal },
   ] = useDisclosure();
 
+  const [
+    importModalOpened,
+    { open: openImportModal, close: closeImportModal },
+  ] = useDisclosure();
+
+  const [importFormData, setImportFormData] = useState({
+    url: '',
+    title: '',
+    description: '',
+    license: 'STANDARD' as UploadLicense,
+    visibility: 'PUBLIC' as UploadVisibility,
+    publishedAt: new Date(),
+    userCommentsEnabled: true,
+    trimSilence: false,
+  });
+
   const handleDrop = ([file]: File[]) => {
     setCurrentFile(file);
     createUploadMutation.mutate({
       channelId: channel.id,
+    });
+  };
+
+  const importMediaMutation = useMutation(
+    trpc.dashboard.channels.importMedia.mutationOptions({
+      onSuccess: () => {
+        notifications.show({
+          title: 'Import Started',
+          message: 'Media import is in progress',
+          color: 'blue',
+        });
+        closeImportModal();
+        setImportFormData({
+          url: '',
+          title: '',
+          description: '',
+          license: 'STANDARD',
+          visibility: 'PUBLIC',
+          publishedAt: new Date(),
+          userCommentsEnabled: true,
+          trimSilence: false,
+        });
+      },
+      onError: () => {
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to start import',
+          color: 'red',
+        });
+      },
+    }),
+  );
+
+  const handleImportMedia = () => {
+    importMediaMutation.mutate({
+      channelId: channel.id,
+      ...importFormData,
     });
   };
 
@@ -333,14 +393,26 @@ function ChannelUploadsPage() {
           </Text>
         </div>
 
-        {canUpload && (
-          <Button
-            leftSection={<IconUpload size={16} />}
-            onClick={openUploadModal}
-          >
-            Upload
-          </Button>
-        )}
+        <Group>
+          {isSiteAdmin && (
+            <Button
+              variant="light"
+              color="blue"
+              leftSection={<IconDownload size={16} />}
+              onClick={openImportModal}
+            >
+              Import URL
+            </Button>
+          )}
+          {canUpload && (
+            <Button
+              leftSection={<IconUpload size={16} />}
+              onClick={openUploadModal}
+            >
+              Upload
+            </Button>
+          )}
+        </Group>
       </Group>
 
       {selection.length > 0 ? (
@@ -510,6 +582,133 @@ function ChannelUploadsPage() {
             Learn more
           </Text>
         </Text>
+      </Modal>
+
+      <Modal
+        opened={importModalOpened}
+        onClose={closeImportModal}
+        title="Import Media from URL"
+        size="lg"
+        centered
+      >
+        <Stack gap="md">
+          <TextInput
+            label="URL"
+            placeholder="https://example.com/video.mp4"
+            required
+            value={importFormData.url}
+            onChange={(e) =>
+              setImportFormData({
+                ...importFormData,
+                url: e.currentTarget.value,
+              })
+            }
+          />
+
+          <TextInput
+            label="Title"
+            placeholder="Video title"
+            required
+            value={importFormData.title}
+            onChange={(e) =>
+              setImportFormData({
+                ...importFormData,
+                title: e.currentTarget.value,
+              })
+            }
+          />
+
+          <Textarea
+            label="Description"
+            placeholder="Video description"
+            rows={3}
+            value={importFormData.description}
+            onChange={(e) =>
+              setImportFormData({
+                ...importFormData,
+                description: e.currentTarget.value,
+              })
+            }
+          />
+
+          <Select
+            label="License"
+            data={[
+              { value: 'STANDARD', label: 'Standard' },
+              { value: 'PUBLIC_DOMAIN', label: 'Public Domain' },
+            ]}
+            value={importFormData.license}
+            onChange={(value) =>
+              setImportFormData({
+                ...importFormData,
+                license: value as UploadLicense,
+              })
+            }
+          />
+
+          <Select
+            label="Visibility"
+            data={[
+              { value: 'PUBLIC', label: 'Public' },
+              { value: 'UNLISTED', label: 'Unlisted' },
+              { value: 'PRIVATE', label: 'Private' },
+            ]}
+            value={importFormData.visibility}
+            onChange={(value) =>
+              setImportFormData({
+                ...importFormData,
+                visibility: value as UploadVisibility,
+              })
+            }
+          />
+
+          <DateInput
+            label="Published Date"
+            value={importFormData.publishedAt}
+            onChange={(value) => {
+              const date = value ? new Date(value) : new Date();
+              setImportFormData({
+                ...importFormData,
+                publishedAt: date,
+              });
+            }}
+          />
+
+          <Checkbox
+            label="Enable user comments"
+            checked={importFormData.userCommentsEnabled}
+            onChange={(e) =>
+              setImportFormData({
+                ...importFormData,
+                userCommentsEnabled: e.currentTarget.checked,
+              })
+            }
+          />
+
+          <Checkbox
+            label="Trim silence"
+            checked={importFormData.trimSilence}
+            onChange={(e) =>
+              setImportFormData({
+                ...importFormData,
+                trimSilence: e.currentTarget.checked,
+              })
+            }
+          />
+
+          <Group justify="flex-end" mt="md">
+            <Button variant="subtle" onClick={closeImportModal}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleImportMedia}
+              loading={importMediaMutation.isPending}
+              disabled={!importFormData.url || !importFormData.title}
+            >
+              Start Import
+            </Button>
+          </Group>
+        </Stack>
       </Modal>
 
       <Modal

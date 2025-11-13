@@ -8,7 +8,7 @@ import { rimraf } from 'rimraf';
 import { v4 as uuid } from 'uuid';
 import { downloadFromUrl } from '../../../util/import';
 import { ingestS3 } from '../../../util/s3';
-import { createUploadRecord, updateUploadRecord } from '../..';
+import { createUploadRecord, updateUploadRecord } from '../../client';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/import/import-media',

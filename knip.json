@@ -15,7 +15,10 @@
       "entry": [
         "src/routeTree.gen.ts!",
         "src/router.tsx",
-        "src/temporal/workers/*.ts",
+        "src/temporal/workers/background-worker.ts",
+        "src/temporal/workers/probe-worker.ts",
+        "src/temporal/workers/transcode-worker.ts",
+        "src/temporal/workers/transcribe-worker.ts",
         "src/temporal/activities/*/index.ts",
         "src/temporal/workflows/index.ts",
         "vite.config.ts",
@@ -37,7 +40,6 @@
         "convert",
         "oxipng",
         "jpegoptim",
-        "yt-dlp",
         "whisper-ctranslate2"
       ]
     },
@@ -58,6 +60,10 @@
     "packages/util": {
       "entry": "src/index.ts",
       "ignoreDependencies": ["@axiomhq/pino", "pino-pretty"]
+    },
+    "packages/import-worker": {
+      "entry": "src/index.ts",
+      "ignoreBinaries": ["yt-dlp", "ffmpeg"]
     }
   }
 }

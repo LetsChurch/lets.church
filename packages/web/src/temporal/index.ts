@@ -15,6 +15,7 @@ import {
   deleteUploadWorkflow,
   geocodeOrganizationWorkflow,
   handleMultipartMediaUploadWorkflow,
+  importMediaWorkflow,
   indexDocumentWorkflow,
   postUserRegistrationWorkflow,
   sendEmailWorkflow,
@@ -202,6 +203,18 @@ export async function deleteUpload(uploadRecordId: string) {
     taskQueue: BACKGROUND_QUEUE,
     args: [uploadRecordId],
     workflowId: `deleteUpload:${uploadRecordId}:${Date.now()}`,
+  });
+}
+
+export async function importMedia(
+  ...args: Parameters<typeof importMediaWorkflow>
+) {
+  const url = args[0].url;
+  return (await client).workflow.start(importMediaWorkflow, {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    args,
+    workflowId: `importMedia:${xxh32(url)}:${Date.now()}`,
   });
 }
 

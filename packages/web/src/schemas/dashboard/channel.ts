@@ -170,3 +170,15 @@ export const reorderPlaylistSchema = z.object({
   playlistId: playlistIdSchema,
   uploadIds: z.array(uploadIdSchema).min(1),
 });
+
+export const importMediaSchema = z.object({
+  channelId: channelIdSchema,
+  url: z.string().url('Please enter a valid URL'),
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
+  license: z.enum(UploadLicense).default('STANDARD' as UploadLicense),
+  visibility: z.enum(UploadVisibility).default('PUBLIC' as UploadVisibility),
+  publishedAt: z.date(),
+  userCommentsEnabled: z.boolean().default(true),
+  trimSilence: z.boolean().default(false),
+});

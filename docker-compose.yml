@@ -171,7 +171,7 @@ services:
     build:
       context: .
       target: dev
-    command: pnpm --filter @letschurch/web run dev:import-worker
+    command: pnpm --filter @letschurch/import-worker run dev
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -191,7 +191,7 @@ services:
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
       - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
-      - ./packages/web:/usr/src/app/packages/web
+      - ./packages/import-worker:/usr/src/app/packages/import-worker
     depends_on:
       - temporal
 
