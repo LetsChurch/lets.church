@@ -48,7 +48,7 @@ export async function recordDownloadSize(
 ) {
   return (await client).workflow.start(recordDownloadSizeWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
-    workflowId: `recordDownloadSize:${uploadRecordId}`,
+    workflowId: `recordDownloadSize:${uploadRecordId}:${variant}`,
     args: [uploadRecordId, variant, bytes],
     retry: {
       maximumAttempts: 8,
