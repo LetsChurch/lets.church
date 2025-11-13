@@ -4,15 +4,15 @@ import { Context } from '@temporalio/activity';
 import { invariant } from 'es-toolkit';
 import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
-import { runFfprobe } from '../../../util/ffmpeg';
-import { ingestS3 } from '../../../util/s3';
-import { ffprobeSchema } from '../../../util/zod';
-import { updateUploadRecord } from '../..';
+import { runFfprobe } from '../util/ffmpeg';
+import { ingestS3 } from '../util/s3';
+import { updateUploadRecord } from '../util/temporal';
+import { ffprobeSchema } from '../util/zod';
 
 const WORK_DIR = process.env.PROBE_WORKING_DIRECTORY ?? '/data/probe';
 
 const moduleLogger = logger.child({
-  module: 'temporal/activities/probe/probe',
+  module: 'activities/probe',
 });
 
 export default async function probe(

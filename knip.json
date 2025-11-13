@@ -16,7 +16,6 @@
         "src/routeTree.gen.ts!",
         "src/router.tsx",
         "src/temporal/workers/background-worker.ts",
-        "src/temporal/workers/probe-worker.ts",
         "src/temporal/workers/transcode-worker.ts",
         "src/temporal/workers/transcribe-worker.ts",
         "src/temporal/activities/*/index.ts",
@@ -34,8 +33,6 @@
         "entry": ["src/**/*.stories.{ts,tsx}"]
       },
       "ignoreBinaries": [
-        "ffmpeg",
-        "ffprobe",
         "audiowaveform",
         "convert",
         "oxipng",
@@ -64,6 +61,10 @@
     "packages/import-worker": {
       "entry": "src/index.ts",
       "ignoreBinaries": ["yt-dlp", "ffmpeg"]
+    },
+    "packages/probe-worker": {
+      "entry": "src/index.ts",
+      "ignoreBinaries": ["ffmpeg", "ffprobe"]
     }
   }
 }

@@ -1,4 +1,5 @@
 import { AlertDialog } from '@base-ui-components/react/alert-dialog';
+import { UploadViewSource } from '@letschurch/db/types';
 import { useStore } from '@nanostores/react';
 import { IconMessageCircle2, IconSearch, IconX } from '@tabler/icons-react';
 import {
@@ -19,7 +20,6 @@ import { Player } from '@/components/player';
 import { Transcript } from '@/components/transcript';
 import { TranscriptSearchResults } from '@/components/transcript-search-results';
 import { TranscriptSidebar } from '@/components/transcript-sidebar';
-import { UploadViewSource } from '@/generated/prisma/enums';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { IncomingIdSchema } from '@/schemas/common';
 import { useSetBackgroundImage } from '@/stores/header';

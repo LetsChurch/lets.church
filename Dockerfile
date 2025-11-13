@@ -28,6 +28,7 @@ COPY packages/db/package.json ./packages/db/
 COPY packages/elasticsearch/package.json ./packages/elasticsearch/
 COPY packages/web/package.json ./packages/web/
 COPY packages/import-worker/package.json ./packages/import-worker/
+COPY packages/probe-worker/package.json ./packages/probe-worker/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 FROM base AS prod-deps
@@ -39,6 +40,7 @@ COPY packages/db/package.json ./packages/db/
 COPY packages/elasticsearch/package.json ./packages/elasticsearch/
 COPY packages/web/package.json ./packages/web/
 COPY packages/import-worker/package.json ./packages/import-worker/
+COPY packages/probe-worker/package.json ./packages/probe-worker/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
 
 FROM base AS build
@@ -50,6 +52,7 @@ COPY --from=deps /usr/src/app/packages/db/node_modules ./packages/db/node_module
 COPY --from=deps /usr/src/app/packages/elasticsearch/node_modules ./packages/elasticsearch/node_modules
 COPY --from=deps /usr/src/app/packages/web/node_modules ./packages/web/node_modules
 COPY --from=deps /usr/src/app/packages/import-worker/node_modules ./packages/import-worker/node_modules
+COPY --from=deps /usr/src/app/packages/probe-worker/node_modules ./packages/probe-worker/node_modules
 COPY pnpm-workspace.yaml tsconfig.json ./
 COPY packages/util ./packages/util
 COPY packages/s3 ./packages/s3
@@ -57,6 +60,7 @@ COPY packages/db ./packages/db
 COPY packages/elasticsearch ./packages/elasticsearch
 COPY packages/web ./packages/web
 COPY packages/import-worker ./packages/import-worker
+COPY packages/probe-worker ./packages/probe-worker
 ENV NODE_ENV=production
 ENV VITE_SENTRY_DSN=https://d641f53f296e7abff3b6b269a4decfc4@o387306.ingest.sentry.io/4506108399190016
 ENV VITE_TURNSTILE_SITEKEY=0x4AAAAAAAEHhiqW0UvoZTf3
@@ -79,6 +83,7 @@ COPY --from=prod-deps /usr/src/app/packages/db/node_modules ./packages/db/node_m
 COPY --from=prod-deps /usr/src/app/packages/elasticsearch/node_modules ./packages/elasticsearch/node_modules
 COPY --from=prod-deps /usr/src/app/packages/web/node_modules ./packages/web/node_modules
 COPY --from=prod-deps /usr/src/app/packages/import-worker/node_modules ./packages/import-worker/node_modules
+COPY --from=prod-deps /usr/src/app/packages/probe-worker/node_modules ./packages/probe-worker/node_modules
 COPY --from=build /usr/src/app/packages/util/package.json ./packages/util/package.json
 COPY --from=build /usr/src/app/packages/util/src ./packages/util/src
 COPY --from=build /usr/src/app/packages/s3/package.json ./packages/s3/package.json
@@ -94,6 +99,8 @@ COPY --from=build /usr/src/app/packages/web/dist ./packages/web/dist
 COPY --from=build /usr/src/app/packages/web/.output ./packages/web/.output
 COPY --from=build /usr/src/app/packages/import-worker/package.json ./packages/import-worker/package.json
 COPY --from=build /usr/src/app/packages/import-worker/src ./packages/import-worker/src
+COPY --from=build /usr/src/app/packages/probe-worker/package.json ./packages/probe-worker/package.json
+COPY --from=build /usr/src/app/packages/probe-worker/src ./packages/probe-worker/src
 WORKDIR /usr/src/app/packages/web
 
 FROM prod AS db-migrate
@@ -116,7 +123,7 @@ CMD ["pnpm", "run", "start:background-worker"]
 FROM prod AS probe-worker
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && \
   rm -rf /var/lib/apt/lists/*
-CMD ["pnpm", "run", "start:probe-worker"]
+CMD ["pnpm", "--filter", "@letschurch/probe-worker", "run", "start"]
 
 FROM prod AS transcode-worker
 RUN apt-get update && apt-get install -y --no-install-recommends imagemagick jpegoptim ffmpeg && \
@@ -130,7 +137,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 ffmpeg 
 COPY --from=jauderho/yt-dlp:2025.03.31 /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
 RUN /usr/local/bin/yt-dlp --update --update-to nightly
 # Playwright needs to be installed after copying node_modules
-RUN pnpm exec playwright install --with-deps firefox
+RUN pnpm --filter @letschurch/import-worker exec playwright install --with-deps firefox
 CMD ["pnpm", "--filter", "@letschurch/import-worker", "run", "start"]
 
 FROM nvidia/cuda:12.6.2-cudnn-runtime-ubuntu22.04 AS transcribe-worker

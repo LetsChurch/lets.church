@@ -1,3 +1,4 @@
+import type { UploadLicense, UploadVisibility } from '@letschurch/db/types';
 import {
   ActionIcon,
   AspectRatio,
@@ -45,7 +46,6 @@ import { invariant } from 'es-toolkit';
 import { map } from 'nanostores';
 import { useState } from 'react';
 import { z } from 'zod';
-import type { UploadLicense, UploadVisibility } from '@/generated/prisma/enums';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { formatDate, formatTime } from '@/util/format';
 import { doMultipartUpload } from '@/util/multipart-upload';

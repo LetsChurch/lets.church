@@ -89,12 +89,12 @@ services:
     build:
       context: .
       target: dev
-    command: pnpm --filter @letschurch/web run dev:probe-worker
+    command: pnpm --filter @letschurch/probe-worker run dev
     restart: unless-stopped
     environment:
       NODE_ENV: development
       SENTRY_DSN: ${SENTRY_TRANSCODE_WORKER_DSN}
-      SERVICE_NAME: transcode-worker
+      SERVICE_NAME: probe-worker
       IDENTITY: dev
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
@@ -109,6 +109,7 @@ services:
       - /usr/src/app/packages/db/src/generated
       - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
       - ./packages/web:/usr/src/app/packages/web
+      - ./packages/probe-worker:/usr/src/app/packages/probe-worker
     depends_on:
       - temporal
 

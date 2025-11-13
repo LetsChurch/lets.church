@@ -1,10 +1,11 @@
 import * as Sentry from '@sentry/node';
 import { NativeConnection, Worker } from '@temporalio/worker';
 import { z } from 'zod';
-import { checkFfmpeg } from '../../util/env-check';
-import { waitOnTemporal } from '..';
-import * as activities from '../activities/probe';
-import { PROBE_QUEUE } from '../queues';
+import * as activities from './activities';
+import { checkFfmpeg } from './util/env-check';
+import { waitOnTemporal } from './util/temporal';
+
+const PROBE_QUEUE = 'probe';
 
 const {
   IDENTITY,
