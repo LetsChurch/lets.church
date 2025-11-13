@@ -1,10 +1,11 @@
 import * as Sentry from '@sentry/node';
 import { NativeConnection, Worker } from '@temporalio/worker';
 import { z } from 'zod';
-import { checkAudiowaveform, checkFfmpeg } from '../../util/env-check';
-import { waitOnTemporal } from '..';
-import * as activities from '../activities/transcode';
-import { TRANSCODE_QUEUE } from '../queues';
+import * as activities from './activities';
+import { checkAudiowaveform, checkFfmpeg } from './util/env-check';
+import { waitOnTemporal } from './util/temporal';
+
+const TRANSCODE_QUEUE = 'transcode';
 
 const {
   IDENTITY,

@@ -29,6 +29,7 @@ COPY packages/elasticsearch/package.json ./packages/elasticsearch/
 COPY packages/web/package.json ./packages/web/
 COPY packages/import-worker/package.json ./packages/import-worker/
 COPY packages/probe-worker/package.json ./packages/probe-worker/
+COPY packages/transcode-worker/package.json ./packages/transcode-worker/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 FROM base AS prod-deps
@@ -41,6 +42,7 @@ COPY packages/elasticsearch/package.json ./packages/elasticsearch/
 COPY packages/web/package.json ./packages/web/
 COPY packages/import-worker/package.json ./packages/import-worker/
 COPY packages/probe-worker/package.json ./packages/probe-worker/
+COPY packages/transcode-worker/package.json ./packages/transcode-worker/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
 
 FROM base AS build
@@ -53,6 +55,7 @@ COPY --from=deps /usr/src/app/packages/elasticsearch/node_modules ./packages/ela
 COPY --from=deps /usr/src/app/packages/web/node_modules ./packages/web/node_modules
 COPY --from=deps /usr/src/app/packages/import-worker/node_modules ./packages/import-worker/node_modules
 COPY --from=deps /usr/src/app/packages/probe-worker/node_modules ./packages/probe-worker/node_modules
+COPY --from=deps /usr/src/app/packages/transcode-worker/node_modules ./packages/transcode-worker/node_modules
 COPY pnpm-workspace.yaml tsconfig.json ./
 COPY packages/util ./packages/util
 COPY packages/s3 ./packages/s3
@@ -61,6 +64,7 @@ COPY packages/elasticsearch ./packages/elasticsearch
 COPY packages/web ./packages/web
 COPY packages/import-worker ./packages/import-worker
 COPY packages/probe-worker ./packages/probe-worker
+COPY packages/transcode-worker ./packages/transcode-worker
 ENV NODE_ENV=production
 ENV VITE_SENTRY_DSN=https://d641f53f296e7abff3b6b269a4decfc4@o387306.ingest.sentry.io/4506108399190016
 ENV VITE_TURNSTILE_SITEKEY=0x4AAAAAAAEHhiqW0UvoZTf3
@@ -84,6 +88,7 @@ COPY --from=prod-deps /usr/src/app/packages/elasticsearch/node_modules ./package
 COPY --from=prod-deps /usr/src/app/packages/web/node_modules ./packages/web/node_modules
 COPY --from=prod-deps /usr/src/app/packages/import-worker/node_modules ./packages/import-worker/node_modules
 COPY --from=prod-deps /usr/src/app/packages/probe-worker/node_modules ./packages/probe-worker/node_modules
+COPY --from=prod-deps /usr/src/app/packages/transcode-worker/node_modules ./packages/transcode-worker/node_modules
 COPY --from=build /usr/src/app/packages/util/package.json ./packages/util/package.json
 COPY --from=build /usr/src/app/packages/util/src ./packages/util/src
 COPY --from=build /usr/src/app/packages/s3/package.json ./packages/s3/package.json
@@ -101,6 +106,8 @@ COPY --from=build /usr/src/app/packages/import-worker/package.json ./packages/im
 COPY --from=build /usr/src/app/packages/import-worker/src ./packages/import-worker/src
 COPY --from=build /usr/src/app/packages/probe-worker/package.json ./packages/probe-worker/package.json
 COPY --from=build /usr/src/app/packages/probe-worker/src ./packages/probe-worker/src
+COPY --from=build /usr/src/app/packages/transcode-worker/package.json ./packages/transcode-worker/package.json
+COPY --from=build /usr/src/app/packages/transcode-worker/src ./packages/transcode-worker/src
 WORKDIR /usr/src/app/packages/web
 
 FROM prod AS db-migrate
@@ -129,7 +136,7 @@ FROM prod AS transcode-worker
 RUN apt-get update && apt-get install -y --no-install-recommends imagemagick jpegoptim ffmpeg && \
   rm -rf /var/lib/apt/lists/*
 COPY --from=build-audiowaveform /home/build/audiowaveform/build/audiowaveform /usr/bin/
-CMD ["pnpm", "run", "start:transcode-worker"]
+CMD ["pnpm", "--filter", "@letschurch/transcode-worker", "run", "start"]
 
 FROM prod AS import-worker
 RUN apt-get update && apt-get install -y --no-install-recommends python3 ffmpeg && \

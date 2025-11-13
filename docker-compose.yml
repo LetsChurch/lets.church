@@ -117,7 +117,7 @@ services:
     build:
       context: .
       target: dev
-    command: pnpm --filter @letschurch/web run dev:transcode-worker
+    command: pnpm --filter @letschurch/transcode-worker run dev
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -136,7 +136,7 @@ services:
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
       - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
-      - ./packages/web:/usr/src/app/packages/web
+      - ./packages/transcode-worker:/usr/src/app/packages/transcode-worker
     depends_on:
       - temporal
 

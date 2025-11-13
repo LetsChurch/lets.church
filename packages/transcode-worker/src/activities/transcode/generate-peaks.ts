@@ -4,8 +4,8 @@ import logger from '@letschurch/util';
 import { Context } from '@temporalio/activity';
 import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
-import { runAudiowaveform } from '../../../util/audiowaveform';
-import { ingestS3, publicS3 } from '../../../util/s3';
+import { runAudiowaveform } from '../../util/audiowaveform';
+import { ingestS3, publicS3 } from '../../util/s3';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/transcode/generate-peaks',

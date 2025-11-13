@@ -9,16 +9,19 @@ import fastGlob from 'fast-glob';
 import mime from 'mime';
 import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
-import { runAudiowaveform } from '../../../util/audiowaveform';
+import {
+  recordDownloadSize,
+  updateUploadRecord,
+} from '../../temporal/workflows/update-upload-record';
+import { runAudiowaveform } from '../../util/audiowaveform';
 import {
   getVariants,
   type HwAccel,
   runFfmpegEncode,
   variantsToMasterVideoPlaylist,
-} from '../../../util/ffmpeg';
-import { ingestS3, publicS3 } from '../../../util/s3';
-import type { Probe } from '../../../util/zod';
-import { recordDownloadSize, updateUploadRecord } from '../..';
+} from '../../util/ffmpeg';
+import { ingestS3, publicS3 } from '../../util/s3';
+import type { Probe } from '../../util/zod';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/transcode/transcode',

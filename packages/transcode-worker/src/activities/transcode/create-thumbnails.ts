@@ -1,5 +1,6 @@
 import { stat } from 'node:fs/promises';
 import { basename, join } from 'node:path';
+import logger from '@letschurch/util';
 import { Context } from '@temporalio/activity';
 import { chunk, compact, maxBy } from 'es-toolkit';
 import fastGlob from 'fast-glob';
@@ -7,12 +8,11 @@ import { mkdirp } from 'mkdirp';
 import pMap from 'p-map';
 import pRetry from 'p-retry';
 import { rimraf } from 'rimraf';
-import { runFfmpegThumbnails } from '../../../util/ffmpeg';
-import { concatThumbs, imageToBlurhash } from '../../../util/images';
-import logger from '../../../util/logger';
-import { ingestS3, publicS3 } from '../../../util/s3';
-import type { Probe } from '../../../util/zod';
-import { updateUploadRecord } from '../..';
+import { updateUploadRecord } from '../../temporal/workflows/update-upload-record';
+import { runFfmpegThumbnails } from '../../util/ffmpeg';
+import { concatThumbs, imageToBlurhash } from '../../util/images';
+import { ingestS3, publicS3 } from '../../util/s3';
+import type { Probe } from '../../util/zod';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/transcode/create-thumbnails',

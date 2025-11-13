@@ -16,7 +16,6 @@
         "src/routeTree.gen.ts!",
         "src/router.tsx",
         "src/temporal/workers/background-worker.ts",
-        "src/temporal/workers/transcode-worker.ts",
         "src/temporal/workers/transcribe-worker.ts",
         "src/temporal/activities/*/index.ts",
         "src/temporal/workflows/index.ts",
@@ -65,6 +64,10 @@
     "packages/probe-worker": {
       "entry": "src/index.ts",
       "ignoreBinaries": ["ffmpeg", "ffprobe"]
+    },
+    "packages/transcode-worker": {
+      "entry": "src/index.ts",
+      "ignoreBinaries": ["audiowaveform", "convert", "ffmpeg"]
     }
   }
 }

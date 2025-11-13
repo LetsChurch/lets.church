@@ -5,13 +5,11 @@
   "scripts": {
     "dev": "vite dev",
     "dev:background-worker": "NODE_ENV=development tsx watch src/temporal/workers/background-worker.ts",
-    "dev:transcode-worker": "NODE_ENV=development tsx watch src/temporal/workers/transcode-worker.ts",
     "dev:transcribe-worker": "NODE_ENV=development tsx watch src/temporal/workers/transcribe-worker.ts",
     "build": "vite build",
     "test": "vitest",
     "start": "node .output/server/index.mjs",
     "start:background-worker": "NODE_ENV=production tsx src/temporal/workers/background-worker.ts",
-    "start:transcode-worker": "NODE_ENV=production tsx src/temporal/workers/transcode-worker.ts",
     "start:transcribe-worker": "NODE_ENV=production tsx src/temporal/workers/transcribe-worker.ts",
     "check": "pnpm run /^check:/",
     "check:biome": "biome check",
