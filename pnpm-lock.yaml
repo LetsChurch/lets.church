@@ -39,6 +39,9 @@ catalogs:
     uuid:
       specifier: ^13.0.0
       version: 13.0.0
+    vitest:
+      specifier: ^3.2.4
+      version: 3.2.4
     wait-on:
       specifier: ^9.0.1
       version: 9.0.1
@@ -365,9 +368,6 @@ importers:
       '@letschurch/util':
         specifier: workspace:*
         version: link:../util
-      '@node-rs/xxhash':
-        specifier: ^1.7.6
-        version: 1.7.6
       '@sentry/node':
         specifier: ^10.23.0
         version: 10.23.0
@@ -380,9 +380,6 @@ importers:
       '@temporalio/worker':
         specifier: ^1.13.1
         version: 1.13.1(@swc/helpers@0.5.17)
-      '@temporalio/workflow':
-        specifier: ^1.13.1
-        version: 1.13.1
       blurhash:
         specifier: ^2.0.5
         version: 2.0.5
@@ -438,6 +435,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.4(@types/node@24.10.0)(@vitest/browser@3.2.4)(jiti@2.6.1)(lightningcss@1.30.2)(sugarss@5.0.1(postcss@8.5.6))(terser@5.43.1)(tsx@4.20.6)
 
   packages/util:
     dependencies:
@@ -664,9 +664,6 @@ importers:
       p-lazy:
         specifier: ^5.0.0
         version: 5.0.0
-      p-map:
-        specifier: 'catalog:'
-        version: 7.0.3
       p-progress:
         specifier: ^1.0.0
         version: 1.0.0
@@ -819,7 +816,7 @@ importers:
         specifier: ^5.1.4
         version: 5.1.4(typescript@5.9.3)(vite@7.1.12(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(sugarss@5.0.1(postcss@8.5.6))(terser@5.43.1)(tsx@4.20.6))
       vitest:
-        specifier: ^3.2.4
+        specifier: 'catalog:'
         version: 3.2.4(@types/node@24.10.0)(@vitest/browser@3.2.4)(jiti@2.6.1)(lightningcss@1.30.2)(sugarss@5.0.1(postcss@8.5.6))(terser@5.43.1)(tsx@4.20.6)
 
 packages:

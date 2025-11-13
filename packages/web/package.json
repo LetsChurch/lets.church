@@ -88,7 +88,6 @@
     "nodemailer": "^7.0.10",
     "p-all": "^5.0.1",
     "p-lazy": "^5.0.0",
-    "p-map": "catalog:",
     "p-progress": "^1.0.0",
     "p-retry": "catalog:",
     "posthog-js": "^1.288.0",
@@ -141,6 +140,6 @@
     "vite": "^7.1.12",
     "vite-plugin-static-copy": "^3.1.4",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.2.4"
+    "vitest": "catalog:"
   }
 }

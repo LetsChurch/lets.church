@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "NODE_ENV=development tsx watch src/index.ts",
     "start": "NODE_ENV=production tsx src/index.ts",
+    "test": "vitest",
     "check": "pnpm run /^check:/",
     "check:biome": "biome check",
     "check:ts": "tsc --noEmit",
@@ -18,12 +19,10 @@
     "@letschurch/db": "workspace:*",
     "@letschurch/s3": "workspace:*",
     "@letschurch/util": "workspace:*",
-    "@node-rs/xxhash": "^1.7.6",
     "@sentry/node": "^10.23.0",
     "@temporalio/activity": "^1.13.1",
     "@temporalio/client": "^1.13.1",
     "@temporalio/worker": "^1.13.1",
-    "@temporalio/workflow": "^1.13.1",
     "blurhash": "^2.0.5",
     "es-toolkit": "catalog:",
     "execa": "^9.6.0",
@@ -43,6 +42,7 @@
     "@biomejs/biome": "catalog:",
     "@types/node": "catalog:",
     "@types/wait-on": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

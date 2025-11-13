@@ -67,7 +67,7 @@
     },
     "packages/transcode-worker": {
       "entry": "src/index.ts",
-      "ignoreBinaries": ["audiowaveform", "convert", "ffmpeg"]
+      "ignoreBinaries": ["audiowaveform", "convert", "ffmpeg", "ffprobe", "oxipng", "jpegoptim"]
     }
   }
 }
