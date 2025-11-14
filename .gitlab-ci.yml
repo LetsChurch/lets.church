@@ -1,0 +1,188 @@
+variables:
+  GIT_LFS_SKIP_SMUDGE: "1"
+
+stages:
+  - setup
+  - check
+  - test
+  - build
+  - deploy
+  - notify
+
+#   ____ _   _ _____ ____ _  __
+#  / ___| | | | ____/ ___| |/ /
+# | |   | |_| |  _|| |   | ' /
+# | |___|  _  | |__| |___| . \
+#  \____|_| |_|_____\____|_|\_\
+
+check-gateway:
+  image: node:23.6.0-slim
+  stage: check
+  script:
+    - cd $CI_PROJECT_DIR/services/gateway
+    - npm ci --cache $CI_PROJECT_DIR/.npm --prefer-offline
+    - npm run check
+  cache:
+    key:
+      files:
+        - $CI_PROJECT_DIR/services/gateway/package-lock.json
+    paths:
+      - $CI_PROJECT_DIR/.npm/
+
+check-web:
+  image: node:23.6.1-bookworm-slim
+  stage: check
+  script:
+    - cd $CI_PROJECT_DIR/apps/web
+    - npm ci --cache $CI_PROJECT_DIR/.npm --prefer-offline
+    - npm run check
+  cache:
+    key:
+      files:
+        - $CI_PROJECT_DIR/apps/web/package-lock.json
+    paths:
+      - $CI_PROJECT_DIR/.npm
+
+check-web-next:
+  image: oven/bun:1.2.0-slim
+  stage: check
+  script:
+    - cd $CI_PROJECT_DIR/apps/web-next
+    - bun install
+    - bun run check
+  cache:
+    key:
+      files:
+        - $CI_PROJECT_DIR/apps/web-next/bun.lockb
+    paths:
+      - $HOME/.bun/install/cache
+
+check-scripts:
+  image: oven/bun:1.2.0-slim
+  stage: check
+  script:
+    - cd $CI_PROJECT_DIR/scripts
+    - bun install
+    - bun run check
+  cache:
+    key:
+      files:
+        - $CI_PROJECT_DIR/scripts/bun.lockb
+    paths:
+      - $HOME/.bun/install/cache
+
+test-gateway:
+  image: node:23.6.0-slim
+  stage: check
+  script:
+    - cd $CI_PROJECT_DIR/services/gateway
+    - npm ci --cache .npm --prefer-offline
+    - npm test
+  cache:
+    key:
+      files:
+        - $CI_PROJECT_DIR/services/gateway/package-lock.json
+    paths:
+      - $CI_PROJECT_DIR/.npm/
+
+#  ____  _   _ ___ _     ____
+# | __ )| | | |_ _| |   |  _ \
+# |  _ \| | | || || |   | | | |
+# | |_) | |_| || || |___| |_| |
+# |____/ \___/|___|_____|____/
+
+.build-common: &build-common
+  image: docker:24.0.1
+  services:
+    - docker:24.0.1-dind
+  stage: build
+  only:
+    - kyrios
+  before_script:
+    - apk add --no-cache curl
+    - curl https://depot.dev/install-cli.sh | DEPOT_INSTALL_DIR=/usr/local/bin sh
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+
+build-gateway:
+  <<: *build-common
+  script:
+    - cd services/gateway
+    - depot build --platform linux/amd64,linux/arm64 --target server -t registry.gitlab.com/letschurch/lets.church/gateway:${CI_COMMIT_SHORT_SHA} . --push
+
+build-background-worker:
+  <<: *build-common
+  script:
+    - cd services/gateway
+    - depot build --platform linux/amd64,linux/arm64 --target background-worker -t registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA} . --push
+
+build-probe-worker:
+  <<: *build-common
+  script:
+    - cd services/gateway
+    - depot build --platform linux/amd64,linux/arm64 --target probe-worker -t registry.gitlab.com/letschurch/lets.church/probe-worker:${CI_COMMIT_SHORT_SHA} . --push
+
+build-import-worker:
+  <<: *build-common
+  script:
+    - cd services/gateway
+    - depot build --platform linux/amd64,linux/arm64 --target import-worker -t registry.gitlab.com/letschurch/lets.church/import-worker:${CI_COMMIT_SHORT_SHA} . --push
+
+build-transcode-worker:
+  <<: *build-common
+  script:
+    - cd services/gateway
+    - depot build --platform linux/amd64,linux/arm64 --target transcode-worker -t registry.gitlab.com/letschurch/lets.church/transcode-worker:${CI_COMMIT_SHORT_SHA} . --push
+
+build-transcribe-worker:
+  <<: *build-common
+  script:
+    - cd services/gateway
+    - depot build --platform linux/amd64,linux/arm64 --target transcribe-worker --build-arg WHISPER_MODEL=large-v2 -t registry.gitlab.com/letschurch/lets.church/transcribe-worker:${CI_COMMIT_SHORT_SHA} . --push
+
+build-web:
+  <<: *build-common
+  script:
+    - cd apps/web
+    - depot build --platform linux/amd64,linux/arm64 -t registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA} . --push
+
+build-web-next:
+  <<: *build-common
+  script:
+    - cd apps/web-next
+    - depot build --platform linux/amd64,linux/arm64 -t registry.gitlab.com/letschurch/lets.church/web-next:${CI_COMMIT_SHORT_SHA} . --push
+
+#  ____             _
+# |  _ \  ___ _ __ | | ___  _   _
+# | | | |/ _ \ '_ \| |/ _ \| | | |
+# | |_| |  __/ |_) | | (_) | |_| |
+# |____/ \___| .__/|_|\___/ \__, |
+#            |_|            |___/
+
+deploy-k8s:
+  image: ubuntu:24.04
+  stage: deploy
+  only:
+    - kyrios
+  before_script:
+    - apt-get update && apt-get install -y bsdmainutils curl git git-lfs gnupg just openssl
+
+    # Install transcrypt
+    - git clone https://github.com/elasticdog/transcrypt.git /tmp/transcrypt
+    - git --git-dir=/tmp/transcrypt/.git --work-tree=/tmp/transcrypt reset --hard fb66f78cd69906915627a7c41ba02428dd88e19d
+    - ln -s /tmp/transcrypt/transcrypt /usr/local/bin/transcrypt
+
+    # Decrypt transcrypt files
+    - transcrypt -F -y -c $TRANSCRYPT_CIPHER -p "$TRANSCRYPT_PASSWORD"
+
+    # Install kubectl
+    - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    - chmod +x kubectl
+    - mv kubectl /usr/local/bin/
+
+    # Install kustomize
+    - curl -s https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash
+    - mv kustomize /usr/local/bin/
+  script:
+    - cd infra/k8s/prod
+    - just deploy-set-images prod $CI_COMMIT_SHORT_SHA
+    - kubectl apply -k .
