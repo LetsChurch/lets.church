@@ -1,68 +1,68 @@
 .value {
-	font-size: 24px;
-	font-weight: 700;
-	line-height: 1;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .icon {
-	color: light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3));
+  color: light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3));
 }
 
 .title {
-	font-weight: 700;
-	text-transform: uppercase;
-	&::after {
-		display: block;
-		content: "";
-		position: absolute;
-		inset: 0;
-	}
+  font-weight: 700;
+  text-transform: uppercase;
+  &::after {
+    display: block;
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
 }
 
 .root {
-	position: relative;
-	border-color: var(--tile-border-color);
-	background-color: var(--tile-bg-color);
+  position: relative;
+  border-color: var(--tile-border-color);
+  background-color: var(--tile-bg-color);
 
-	& .icon {
-		color: var(--tile-icon-color);
-	}
+  & .icon {
+    color: var(--tile-icon-color);
+  }
 
-	& .title {
-		color: var(--tile-title-color);
-	}
+  & .title {
+    color: var(--tile-title-color);
+  }
 
-	& .value {
-		color: var(--tile-value-color);
+  & .value {
+    color: var(--tile-value-color);
 
-		& .mantine-Text-root[data-c="dimmed"] {
-			/* biome-ignore lint/complexity/noImportantStyles: mantine override */
-			color: var(--tile-dimmed-color) !important;
-		}
-	}
+    & .mantine-Text-root[data-c="dimmed"] {
+      /* biome-ignore lint/complexity/noImportantStyles: mantine override */
+      color: var(--tile-dimmed-color) !important;
+    }
+  }
 }
 
 .blue {
-	--tile-border-color: var(--mantine-color-blue-3);
-	--tile-bg-color: var(--mantine-color-blue-0);
-	--tile-icon-color: var(--mantine-color-blue-6);
-	--tile-title-color: var(--mantine-color-blue-8);
-	--tile-value-color: var(--mantine-color-blue-9);
-	--tile-dimmed-color: var(--mantine-color-blue-7);
+  --tile-border-color: var(--mantine-color-blue-3);
+  --tile-bg-color: var(--mantine-color-blue-0);
+  --tile-icon-color: var(--mantine-color-blue-6);
+  --tile-title-color: var(--mantine-color-blue-8);
+  --tile-value-color: var(--mantine-color-blue-9);
+  --tile-dimmed-color: var(--mantine-color-blue-7);
 }
 
 .green {
-	--tile-border-color: var(--mantine-color-green-3);
-	--tile-bg-color: var(--mantine-color-green-0);
-	--tile-icon-color: var(--mantine-color-green-6);
-	--tile-title-color: var(--mantine-color-green-8);
-	--tile-value-color: var(--mantine-color-green-9);
+  --tile-border-color: var(--mantine-color-green-3);
+  --tile-bg-color: var(--mantine-color-green-0);
+  --tile-icon-color: var(--mantine-color-green-6);
+  --tile-title-color: var(--mantine-color-green-8);
+  --tile-value-color: var(--mantine-color-green-9);
 }
 
 .violet {
-	--tile-border-color: var(--mantine-color-violet-3);
-	--tile-bg-color: var(--mantine-color-violet-0);
-	--tile-icon-color: var(--mantine-color-violet-6);
-	--tile-title-color: var(--mantine-color-violet-8);
-	--tile-value-color: var(--mantine-color-violet-9);
+  --tile-border-color: var(--mantine-color-violet-3);
+  --tile-bg-color: var(--mantine-color-violet-0);
+  --tile-icon-color: var(--mantine-color-violet-6);
+  --tile-title-color: var(--mantine-color-violet-8);
+  --tile-value-color: var(--mantine-color-violet-9);
 }

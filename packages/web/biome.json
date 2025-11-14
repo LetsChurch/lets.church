@@ -13,34 +13,11 @@
       "./*"
     ]
   },
-  "formatter": {
-    "indentStyle": "tab"
-  },
   "linter": {
     "rules": {
-      "style": {
-        "useImportType": "error",
-        "useExportType": "error",
-        "useConsistentTypeDefinitions": {
-          "level": "error",
-          "options": {
-            "style": "type"
-          }
-        }
-      },
       "nursery": {
         "useSortedClasses": "error"
       }
-    }
-  },
-  "javascript": {
-    "formatter": {
-      "trailingCommas": "all"
-    }
-  },
-  "json": {
-    "formatter": {
-      "trailingCommas": "none"
     }
   },
   "css": {
