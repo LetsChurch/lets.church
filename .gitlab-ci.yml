@@ -43,7 +43,7 @@ test:
     - corepack enable
   script:
     - pnpm install --frozen-lockfile
-    - pnpm exec playwright install
+    - pnpm --filter @letschurch/web exec playwright install --with-deps
     - pnpm -r run test
   cache:
     key:
