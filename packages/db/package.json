@@ -39,7 +39,7 @@
     "@sindresorhus/slugify": "^3.0.0",
     "argon2": "^0.44.0",
     "es-toolkit": "catalog:",
-    "libphonenumber-js": "^1.12.25",
+    "libphonenumber-js": "^1.12.26",
     "prisma": "^6.19.0",
     "proper-tags": "^2.0.2",
     "tsx": "catalog:",

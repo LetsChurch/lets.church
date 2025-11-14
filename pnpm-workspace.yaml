@@ -3,6 +3,11 @@ packages:
 
 catalog:
   "@biomejs/biome": "2.3.4"
+  "@sentry/node": "^10.25.0"
+  "@temporalio/activity": "^1.13.2"
+  "@temporalio/client": "^1.13.2"
+  "@temporalio/worker": "^1.13.2"
+  "@temporalio/workflow": "^1.13.2"
   "@types/node": "^24.10.0"
   "@types/wait-on": "^5.3.4"
   "es-toolkit": "^1.41.0"
