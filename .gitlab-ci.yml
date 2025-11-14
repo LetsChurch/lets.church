@@ -45,11 +45,14 @@ test:
     - pnpm --filter @letschurch/web exec playwright install --with-deps
     - pnpm -r run test
   cache:
-    key:
-      files:
-        - pnpm-lock.yaml
-    paths:
-      - .pnpm-store
+    - key:
+        files:
+          - pnpm-lock.yaml
+      paths:
+        - .pnpm-store
+    - key: playwright-$CI_COMMIT_REF_SLUG
+      paths:
+        - /root/.cache/ms-playwright
 
 #  ____  _   _ ___ _     ____
 # | __ )| | | |_ _| |   |  _ \

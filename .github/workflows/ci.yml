@@ -57,8 +57,26 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "version=$(pnpm --filter @letschurch/web list @playwright/test --depth=0 --json | jq -r '.[0].version')" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
       - name: Install Playwright with dependencies
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm --filter @letschurch/web exec playwright install --with-deps
+
+      - name: Install Playwright system dependencies only
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter @letschurch/web exec playwright install-deps
 
       - name: Run tests
         run: pnpm -r run test
