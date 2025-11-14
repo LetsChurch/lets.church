@@ -3,8 +3,7 @@ variables:
 
 stages:
   - setup
-  - check
-  - test
+  - verify
   - build
   - deploy
   - notify
@@ -17,7 +16,7 @@ stages:
 
 check:
   image: node:24.4.1-slim
-  stage: check
+  stage: verify
   before_script:
     - corepack enable
   script:
@@ -38,7 +37,7 @@ check:
 
 test:
   image: node:24.4.1-slim
-  stage: test
+  stage: verify
   before_script:
     - corepack enable
   script:
