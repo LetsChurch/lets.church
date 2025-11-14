@@ -1,5 +1,6 @@
 import {
   ActionIcon,
+  Alert,
   Box,
   Button,
   Container,
@@ -23,6 +24,7 @@ import { useStore } from '@nanostores/react';
 import {
   IconCheck,
   IconCopy,
+  IconEyeOff,
   IconPhoto,
   IconStar,
   IconStarFilled,
@@ -356,6 +358,26 @@ function ChannelUploadPage() {
       <form.Subscribe selector={(state) => state.isSubmitting}>
         {(isSubmitting) => <LoadingOverlay visible={isSubmitting} />}
       </form.Subscribe>
+
+      {/* Private Upload Warning Banner */}
+      <form.Subscribe selector={(state) => state.values.visibility}>
+        {(visibility) =>
+          visibility === 'PRIVATE' ? (
+            <Alert
+              variant="light"
+              color="yellow"
+              title="Private Upload"
+              icon={<IconEyeOff size={16} />}
+              mb="lg"
+            >
+              This upload is currently private and only visible to members of{' '}
+              {channel.name}. To make it viewable to everyone, change the
+              visibility setting to "Public" below.
+            </Alert>
+          ) : null
+        }
+      </form.Subscribe>
+
       <Grid gutter="xl">
         <Grid.Col span={{ base: 12, md: 8 }}>
           <Stack gap="lg">
