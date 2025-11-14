@@ -1,11 +1,10 @@
+import * as activities from '@letschurch/temporal/activities/probe';
+import { PROBE_QUEUE } from '@letschurch/temporal/queues';
+import { waitOnTemporal } from '@letschurch/temporal/util/temporal';
 import * as Sentry from '@sentry/node';
 import { NativeConnection, Worker } from '@temporalio/worker';
 import { z } from 'zod';
-import * as activities from './activities';
 import { checkFfmpeg } from './util/env-check';
-import { waitOnTemporal } from './util/temporal';
-
-const PROBE_QUEUE = 'probe';
 
 const {
   IDENTITY,

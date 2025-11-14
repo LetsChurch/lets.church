@@ -24,10 +24,25 @@
       "path": "./packages/util"
     },
     {
-      "path": "./packages/web"
+      "path": "./packages/temporal"
+    },
+    {
+      "path": "./packages/background-worker"
     },
     {
       "path": "./packages/import-worker"
+    },
+    {
+      "path": "./packages/probe-worker"
+    },
+    {
+      "path": "./packages/transcode-worker"
+    },
+    {
+      "path": "./packages/transcribe-worker"
+    },
+    {
+      "path": "./packages/web"
     }
   ]
 }

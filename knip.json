@@ -15,10 +15,6 @@
       "entry": [
         "src/routeTree.gen.ts!",
         "src/router.tsx",
-        "src/temporal/workers/background-worker.ts",
-        "src/temporal/workers/transcribe-worker.ts",
-        "src/temporal/activities/*/index.ts",
-        "src/temporal/workflows/index.ts",
         "vite.config.ts",
         ".storybook/main.ts",
         "src/app.css"
@@ -31,13 +27,7 @@
         "config": [".storybook/main.ts"],
         "entry": ["src/**/*.stories.{ts,tsx}"]
       },
-      "ignoreBinaries": [
-        "audiowaveform",
-        "convert",
-        "oxipng",
-        "jpegoptim",
-        "whisper-ctranslate2"
-      ]
+      "ignoreBinaries": ["whisper-ctranslate2"]
     },
     "packages/db": {
       "entry": [
@@ -57,6 +47,12 @@
       "entry": "src/index.ts",
       "ignoreDependencies": ["@axiomhq/pino", "pino-pretty"]
     },
+    "packages/temporal": {
+      "ignoreBinaries": ["audiowaveform", "convert", "ffmpeg", "ffprobe", "jpegoptim", "oxipng", "whisper-ctranslate2", "yt-dlp"]
+    },
+    "packages/background-worker": {
+      "entry": "src/index.ts"
+    },
     "packages/import-worker": {
       "entry": "src/index.ts",
       "ignoreBinaries": ["yt-dlp", "ffmpeg"]
@@ -68,6 +64,10 @@
     "packages/transcode-worker": {
       "entry": "src/index.ts",
       "ignoreBinaries": ["audiowaveform", "convert", "ffmpeg", "ffprobe", "oxipng", "jpegoptim"]
+    },
+    "packages/transcribe-worker": {
+      "entry": "src/index.ts",
+      "ignoreBinaries": ["whisper-ctranslate2"]
     }
   }
 }

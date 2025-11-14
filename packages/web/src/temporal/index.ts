@@ -1,15 +1,7 @@
 import type { Prisma, UploadVariant } from '@letschurch/db';
-import { xxh32 } from '@node-rs/xxhash';
-import { Client, Connection, type WorkflowOptions } from '@temporalio/client';
-import PLazy from 'p-lazy';
-import waitOn from 'wait-on';
-import { z } from 'zod';
-import logger from '../util/logger';
-import type { S3ClientId } from '../util/s3';
-import type { UploadPostProcessValue } from '../util/types';
-import type { DocumentKind } from './activities/background/index-document';
-import { BACKGROUND_QUEUE } from './queues';
-import { emptySignal } from './signals';
+import type { DocumentKind } from '@letschurch/temporal/activities/background/index-document';
+import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
+import { emptySignal } from '@letschurch/temporal/signals';
 import {
   createUploadRecordWorkflow,
   deleteUploadWorkflow,
@@ -22,12 +14,20 @@ import {
   updateUploadRecordSignal,
   updateUploadRecordWorkflow,
   uploadDoneSignal,
-} from './workflows';
-import { recordDownloadSizeWorkflow } from './workflows/record-download-size';
+} from '@letschurch/temporal/workflows/background';
+import { recordDownloadSizeWorkflow } from '@letschurch/temporal/workflows/background/record-download-size';
 import {
   completeResetPasswordSignal,
   resetPasswordWorkflow,
-} from './workflows/reset-password';
+} from '@letschurch/temporal/workflows/background/reset-password';
+import { xxh32 } from '@node-rs/xxhash';
+import { Client, Connection, type WorkflowOptions } from '@temporalio/client';
+import PLazy from 'p-lazy';
+import waitOn from 'wait-on';
+import { z } from 'zod';
+import logger from '../util/logger';
+import type { S3ClientId } from '../util/s3';
+import type { UploadPostProcessValue } from '../util/types';
 
 const moduleLogger = logger.child({ module: 'temporal' });
 

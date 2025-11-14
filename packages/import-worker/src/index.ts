@@ -1,8 +1,8 @@
+import * as importActivities from '@letschurch/temporal/activities/import';
+import { IMPORT_QUEUE } from '@letschurch/temporal/queues';
 import * as Sentry from '@sentry/node';
 import { NativeConnection, Worker } from '@temporalio/worker';
 import { z } from 'zod';
-import * as importActivities from './temporal/activities/import';
-import { IMPORT_QUEUE } from './temporal/queues';
 import { checkYtDlp } from './util/env-check';
 
 const {

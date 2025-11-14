@@ -1,4 +1,7 @@
 import { prisma, UploadLicense } from '@letschurch/db';
+import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
+import { emailHtml } from '@letschurch/temporal/util/email';
+import { sendEmailWorkflow } from '@letschurch/temporal/workflows/background/send-email';
 import logger from '@letschurch/util';
 import { TRPCError } from '@trpc/server';
 import { invariant } from 'es-toolkit';
@@ -39,9 +42,6 @@ import {
   handleMultipartMediaUpload,
   importMedia,
 } from '@/temporal';
-import { BACKGROUND_QUEUE } from '@/temporal/queues';
-import { sendEmailWorkflow } from '@/temporal/workflows/send-email';
-import { emailHtml } from '@/util/email';
 import { ingestS3, PART_SIZE, publicS3 } from '@/util/s3';
 import { getPublicImageUrl, getPublicMediaUrl } from '@/util/url';
 import { authProcedure, router } from '../../trpc';
@@ -52,8 +52,8 @@ const moduleLogger = logger.child({
 
 const { ADMIN_EMAIL, WEB_URL } = z
   .object({
-    ADMIN_EMAIL: z.string().email(),
-    WEB_URL: z.string().url(),
+    ADMIN_EMAIL: z.email(),
+    WEB_URL: z.url(),
   })
   .parse(process.env);
 

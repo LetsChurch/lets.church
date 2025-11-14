@@ -134,6 +134,9 @@ truncate:
 check:
   pnpm -r run check
 
+knip:
+  pnpm knip
+
 fix:
   pnpm -r run fix
 

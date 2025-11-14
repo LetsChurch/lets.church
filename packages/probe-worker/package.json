@@ -15,27 +15,17 @@
     "fix!": "biome check --write --unsafe"
   },
   "dependencies": {
-    "@letschurch/db": "workspace:*",
-    "@letschurch/s3": "workspace:*",
-    "@letschurch/util": "workspace:*",
+    "@letschurch/temporal": "workspace:*",
     "@sentry/node": "^10.23.0",
-    "@temporalio/activity": "^1.13.1",
-    "@temporalio/client": "^1.13.1",
     "@temporalio/worker": "^1.13.1",
-    "@temporalio/workflow": "^1.13.1",
     "es-toolkit": "catalog:",
     "execa": "^9.6.0",
-    "mkdirp": "^3.0.1",
-    "p-lazy": "^5.0.0",
-    "rimraf": "^6.1.0",
     "tsx": "catalog:",
-    "wait-on": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
     "@types/node": "catalog:",
-    "@types/wait-on": "catalog:",
     "typescript": "catalog:"
   }
 }

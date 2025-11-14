@@ -51,13 +51,14 @@ services:
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
       - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - ./packages/temporal:/usr/src/app/packages/temporal
       - ./packages/web:/usr/src/app/packages/web
 
   background-worker:
     build:
       context: .
       target: dev
-    command: pnpm --filter @letschurch/web run dev:background-worker
+    command: pnpm --filter @letschurch/background-worker run dev
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -81,7 +82,8 @@ services:
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
       - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
-      - ./packages/web:/usr/src/app/packages/web
+      - ./packages/temporal:/usr/src/app/packages/temporal
+      - ./packages/background-worker:/usr/src/app/packages/background-worker
     depends_on:
       - temporal
 
@@ -108,7 +110,7 @@ services:
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
       - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
-      - ./packages/web:/usr/src/app/packages/web
+      - ./packages/temporal:/usr/src/app/packages/temporal
       - ./packages/probe-worker:/usr/src/app/packages/probe-worker
     depends_on:
       - temporal
@@ -136,6 +138,7 @@ services:
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
       - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - ./packages/temporal:/usr/src/app/packages/temporal
       - ./packages/transcode-worker:/usr/src/app/packages/transcode-worker
     depends_on:
       - temporal
@@ -144,7 +147,7 @@ services:
     build:
       context: .
       target: transcribe-worker
-    command: pnpm --filter @letschurch/web run dev:transcribe-worker
+    command: pnpm --filter @letschurch/transcribe-worker run dev
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -164,7 +167,8 @@ services:
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
       - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
-      - ./packages/web:/usr/src/app/packages/web
+      - ./packages/temporal:/usr/src/app/packages/temporal
+      - ./packages/transcribe-worker:/usr/src/app/packages/transcribe-worker
     depends_on:
       - temporal
 
@@ -192,6 +196,7 @@ services:
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
       - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - ./packages/temporal:/usr/src/app/packages/temporal
       - ./packages/import-worker:/usr/src/app/packages/import-worker
     depends_on:
       - temporal
