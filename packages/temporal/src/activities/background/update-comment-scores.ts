@@ -1,0 +1,69 @@
+import { prisma } from '@letschurch/db';
+import logger from '@letschurch/util';
+import pAll from 'p-all';
+
+const moduleLogger = logger.child({
+  module: 'temporal/activities/background/update-comment-scores',
+});
+
+function confidence(likes: number, dislikes: number): number {
+  const n = likes + dislikes;
+
+  if (n === 0) {
+    return 0;
+  }
+
+  const z = 1.281551565545;
+  const p = likes / n;
+
+  const left = p + (1 / (2 * n)) * z ** 2;
+  const right = z * Math.sqrt((p * (1 - p) + z ** 2 / (4 * n)) / n);
+  const under = 1 + (1 / n) * z ** 2;
+
+  return (left - right) / under;
+}
+
+export default async function updateCommentScores() {
+  const activityLogger = moduleLogger.child({
+    temporalActivity: 'updateCommentScores',
+  });
+
+  const comments = await prisma.uploadUserComment.findMany({
+    where: {
+      scoreStaleAt: {
+        not: null,
+      },
+    },
+    select: {
+      id: true,
+      score: true,
+    },
+  });
+
+  activityLogger.info(`Updating scores for ${comments.length} comments...`);
+
+  await pAll(
+    comments.map(({ id, score: oldScore }) => async () => {
+      const [likes, dislikes] = await Promise.all([
+        prisma.uploadUserCommentRating.count({
+          where: { uploadUserCommentId: id, rating: 'LIKE' },
+        }),
+        prisma.uploadUserCommentRating.count({
+          where: { uploadUserCommentId: id, rating: 'DISLIKE' },
+        }),
+      ]);
+
+      const score = confidence(likes, dislikes);
+
+      activityLogger.info(
+        `Comment ${id} has score ${score} (old score: ${oldScore}) (likes: ${likes}, dislikes: ${dislikes})`,
+      );
+
+      await prisma.uploadUserComment.update({
+        where: { id },
+        data: { score, scoreStaleAt: null },
+      });
+    }),
+    { concurrency: 100 },
+  );
+}

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "tags": [
+    "-lintignore"
+  ],
+  "ignore": [
+    "seed-data/**"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "workspaces": {
+    ".": {
+      "entry": "scripts/*.ts"
+    },
+    "packages/web": {
+      "entry": [
+        "src/routeTree.gen.ts!",
+        "src/router.tsx",
+        "vite.config.ts",
+        ".storybook/main.ts",
+        "src/app.css"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}",
+        ".storybook/**/*.{ts,tsx}"
+      ],
+      "storybook": {
+        "config": [".storybook/main.ts"],
+        "entry": ["src/**/*.stories.{ts,tsx}"]
+      },
+      "ignoreBinaries": ["whisper-ctranslate2"]
+    },
+    "packages/db": {
+      "entry": [
+        "src/index.ts",
+        "prisma/seed/dev.ts"
+      ],
+      "project": [
+        "src/**/*.ts",
+        "prisma/seed/**/*.ts",
+        "prisma/truncate.ts"
+      ],
+      "ignoreDependencies": ["@prisma/client"]
+    },
+    "packages/elasticsearch": {},
+    "packages/s3": {},
+    "packages/util": {
+      "entry": "src/index.ts",
+      "ignoreDependencies": ["@axiomhq/pino", "pino-pretty"]
+    },
+    "packages/temporal": {
+      "ignoreBinaries": ["audiowaveform", "convert", "ffmpeg", "ffprobe", "jpegoptim", "oxipng", "whisper-ctranslate2", "yt-dlp"]
+    },
+    "packages/background-worker": {
+      "entry": "src/index.ts"
+    },
+    "packages/import-worker": {
+      "entry": "src/index.ts",
+      "ignoreBinaries": ["yt-dlp", "ffmpeg"]
+    },
+    "packages/probe-worker": {
+      "entry": "src/index.ts",
+      "ignoreBinaries": ["ffmpeg", "ffprobe"]
+    },
+    "packages/transcode-worker": {
+      "entry": "src/index.ts",
+      "ignoreBinaries": ["audiowaveform", "convert", "ffmpeg", "ffprobe", "oxipng", "jpegoptim"]
+    },
+    "packages/transcribe-worker": {
+      "entry": "src/index.ts",
+      "ignoreBinaries": ["whisper-ctranslate2"]
+    }
+  }
+}

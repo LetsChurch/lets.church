@@ -1,7 +1,0 @@
-fmt-go:
-  go fmt
-
-fmt: fmt-go
-
-dump-schema:
- PGPASSWORD=$PG_PASSWORD pg_dump -h localhost -p $HOST_PG_PORT -U $PG_USER -d $PG_DATABASE -s -f ./internal/data/schema.sql

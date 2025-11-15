@@ -2,7 +2,6 @@ resources:
   - config.yml
   - axiom-syslog-proxy-deployment.yml
   - elasticsearch-deployment.yml
-  - gateway-deployment.yml
   - imgproxy-deployment.yml
   - kibana-deployment.yml
   - listmonk-deployment.yml
@@ -16,11 +15,12 @@ resources:
   - background-worker-deployment.yml
   - background-low-priority-worker-deployment.yml
   - import-worker-deployment.yml
+  - probe-worker-deployment.yml
   - transcode-worker-deployment.yml
+  - transcribe-worker-deployment.yml
 configMapGenerator:
   - name: web-config
-    literals:
-      - GRAPHQL_URL="http://gateway:3000/graphql"
+    literals: []
   - name: gateway-config
     literals:
       - ELASTICSEARCH_URL="http://elasticsearch:9200"
@@ -67,6 +67,14 @@ configMapGenerator:
     literals:
       - TEMPORAL_SHUTDOWN_GRACE_TIME=1h
       - MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS=1
+      - IDENTITY=(CLOUD1)
+  - name: probe-worker-config
+    literals:
+      - TEMPORAL_SHUTDOWN_GRACE_TIME=1m
+      - IDENTITY=(CLOUD1)
+  - name: transcribe-worker-config
+    literals:
+      - TEMPORAL_SHUTDOWN_GRACE_TIME=1h
       - IDENTITY=(CLOUD1)
   - name: elasticsearch-config
     literals:

@@ -1,0 +1,32 @@
+{
+  "name": "@letschurch/import-worker",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "dev": "NODE_ENV=development tsx watch src/index.ts",
+    "start": "NODE_ENV=production tsx src/index.ts",
+    "check": "pnpm run /^check:/",
+    "check:biome": "biome check",
+    "check:ts": "tsc --noEmit",
+    "fix": "biome check --write",
+    "fix!": "biome check --write --unsafe"
+  },
+  "dependencies": {
+    "@letschurch/temporal": "workspace:*",
+    "@sentry/node": "catalog:",
+    "@temporalio/worker": "catalog:",
+    "es-toolkit": "catalog:",
+    "execa": "^9.6.0",
+    "playwright": "^1.56.1",
+    "tsx": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "lib": ["ES2022"]
+  },
+  "files": [],
+  "references": [
+    {
+      "path": "./packages/db"
+    },
+    {
+      "path": "./packages/elasticsearch"
+    },
+    {
+      "path": "./packages/s3"
+    },
+    {
+      "path": "./packages/util"
+    },
+    {
+      "path": "./packages/temporal"
+    },
+    {
+      "path": "./packages/background-worker"
+    },
+    {
+      "path": "./packages/import-worker"
+    },
+    {
+      "path": "./packages/probe-worker"
+    },
+    {
+      "path": "./packages/transcode-worker"
+    },
+    {
+      "path": "./packages/transcribe-worker"
+    },
+    {
+      "path": "./packages/web"
+    }
+  ]
+}

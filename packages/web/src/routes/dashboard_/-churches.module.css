@@ -1,0 +1,16 @@
+.card {
+  position: relative;
+}
+
+.titleLink {
+  color: inherit;
+  text-decoration: none;
+  flex: 1;
+  min-width: 0;
+  &::after {
+    display: block;
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+}

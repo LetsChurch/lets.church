@@ -1,0 +1,465 @@
+import { prisma } from '@letschurch/db';
+import {
+  client,
+  MSearchResponseSchema,
+  msearchChannels,
+  msearchTranscripts,
+  msearchUploads,
+} from '@letschurch/elasticsearch';
+import logger from '@letschurch/util';
+import { z } from 'zod';
+import {
+  getThumbnailResize,
+  IncomingIdSchema,
+  OutgoingIdSchema,
+} from '@/schemas/common';
+import { publicS3 } from '@/util/s3';
+import { getPublicImageUrl } from '@/util/url';
+import { authProcedure, publicProcedure } from '../trpc';
+
+const moduleLogger = logger.child({
+  module: 'trpc/procedures/search',
+});
+
+const searchQuerySchema = z.object({
+  q: z.string().min(1),
+  focus: z.enum(['media', 'transcripts']).default('media'),
+  channelIds: z.array(IncomingIdSchema).optional().nullable(),
+  channelSlugs: z.array(z.string()).optional().nullable(),
+  limit: z.number().min(1).max(50).default(20),
+  cursor: z.number().min(0).default(0), // Offset-based cursor
+  sort: z.enum(['relevance', 'date-asc', 'date-desc']).optional(),
+  dateRange: z
+    .enum(['all-time', 'today', 'this-week', 'this-month', 'this-year'])
+    .optional(),
+});
+
+export const searchProcedures = {
+  performSearch: publicProcedure
+    .input(searchQuerySchema)
+    .query(async ({ input, ctx }) => {
+      const {
+        q,
+        focus,
+        channelIds: inputChannelIds,
+        channelSlugs,
+        limit,
+        cursor,
+        sort,
+        dateRange,
+      } = input;
+
+      // Convert channel slugs to IDs if provided
+      let channelIds = inputChannelIds;
+      if (channelSlugs && channelSlugs.length > 0) {
+        const channels = await prisma.channel.findMany({
+          select: { id: true },
+          where: {
+            slug: { in: channelSlugs },
+            visibility: 'PUBLIC',
+            approvedAt: { not: null },
+          },
+        });
+        channelIds = channels.map((c) => c.id);
+      }
+
+      moduleLogger.info('Performing search', {
+        query: q,
+        focus,
+        channelIds,
+        channelSlugs,
+        limit,
+        cursor,
+        sort,
+        dateRange,
+      });
+
+      // Convert sort to orderBy for elasticsearch
+      const orderBy =
+        sort === 'date-asc'
+          ? 'date'
+          : sort === 'date-desc'
+            ? 'dateDesc'
+            : undefined;
+
+      // Convert dateRange to publishedAt range
+      const now = new Date();
+      let publishedAt: { gte?: string; lte?: string } | undefined;
+
+      if (dateRange && dateRange !== 'all-time') {
+        const endDate = now.toISOString();
+        let startDate: Date;
+
+        switch (dateRange) {
+          case 'today':
+            startDate = new Date(
+              now.getFullYear(),
+              now.getMonth(),
+              now.getDate(),
+            );
+            break;
+          case 'this-week':
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
+            startDate.setHours(0, 0, 0, 0);
+            break;
+          case 'this-month':
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            break;
+          case 'this-year':
+            startDate = new Date(now.getFullYear(), 0, 1);
+            break;
+          default:
+            startDate = new Date(0); // Beginning of time
+        }
+
+        publishedAt = {
+          gte: startDate.toISOString(),
+          lte: endDate,
+        };
+      }
+
+      // Log the search
+      try {
+        await prisma.searchLogEntry.create({
+          data: {
+            query: q,
+            params: {
+              focus,
+              channelIds: channelIds ?? [],
+              limit,
+              cursor,
+            },
+            appUserId: ctx.session?.appUserId,
+          },
+        });
+      } catch (error) {
+        moduleLogger.error('Failed to log search', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // Don't fail the search if logging fails
+      }
+
+      // Determine which index to focus on and which to get metadata only
+      const mediaLimit = focus === 'media' ? limit : 0;
+      const transcriptLimit = focus === 'transcripts' ? limit : 0;
+
+      // Prepare multisearch body
+      const searches = [
+        ...msearchUploads(q, cursor, mediaLimit, {
+          channelIds,
+          publishedAt,
+          orderBy,
+        }),
+        ...msearchTranscripts(q, cursor, transcriptLimit, {
+          channelIds,
+          publishedAt,
+          orderBy,
+        }),
+        ...msearchChannels(q, 0, 10), // Always get top 10 channels
+      ];
+
+      // Perform the multisearch
+      const response = await client.msearch({
+        searches,
+      });
+
+      // Parse and validate the response
+      const parsed = MSearchResponseSchema.parse(response);
+
+      const [uploadsResponse, transcriptsResponse, _channelsResponse] =
+        parsed.responses;
+
+      // Extract counts
+      const mediaCount = uploadsResponse?.hits.total.value ?? 0;
+      const transcriptCount = transcriptsResponse?.hits.total.value ?? 0;
+
+      // Extract channel aggregations from the focused response
+      const channelAggs =
+        (focus === 'media'
+          ? uploadsResponse?.aggregations?.channelIds?.buckets
+          : transcriptsResponse?.aggregations?.channelIds?.buckets) ?? [];
+
+      // Get channel data for carousel and filters
+      const channelIdsFromAggs = channelAggs.map((bucket) => bucket.key);
+      const channels = await prisma.channel.findMany({
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          avatarPath: true,
+        },
+        where: {
+          id: { in: channelIdsFromAggs },
+          visibility: 'PUBLIC',
+          approvedAt: { not: null },
+        },
+      });
+
+      const channelsWithAvatars = channels.map((channel) => {
+        const avatarUrl = channel.avatarPath
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
+              resize: { width: 64, height: 64 },
+            })
+          : null;
+
+        return {
+          ...channel,
+          id: OutgoingIdSchema.parse(channel.id),
+          avatarUrl,
+        };
+      });
+
+      // Process results based on focus
+      let items: Array<unknown> = [];
+
+      if (focus === 'media' && uploadsResponse) {
+        // Get upload IDs from hits
+        const uploadIds = uploadsResponse.hits.hits
+          .filter((hit) => hit._index === 'lc_uploads_v2')
+          .map((hit) => hit._id);
+
+        // Fetch full upload data from database
+        const uploads = await prisma.uploadRecord.findMany({
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            createdAt: true,
+            publishedAt: true,
+            lengthSeconds: true,
+            defaultThumbnailPath: true,
+            overrideThumbnailPath: true,
+            channel: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                avatarPath: true,
+                defaultThumbnailPath: true,
+              },
+            },
+            _count: {
+              select: {
+                uploadViews: true,
+              },
+            },
+          },
+          where: {
+            id: { in: uploadIds },
+          },
+        });
+
+        // Create a map for quick lookup
+        const uploadsMap = new Map(uploads.map((u) => [u.id, u]));
+
+        // Map uploads to include thumbnails, preserving Elasticsearch order
+        items = uploadIds
+          .map((id) => uploadsMap.get(id))
+          .filter((upload): upload is NonNullable<typeof upload> =>
+            Boolean(upload),
+          )
+          .map((upload) => {
+            const {
+              defaultThumbnailPath,
+              overrideThumbnailPath,
+              channel,
+              ...uploadRest
+            } = upload;
+
+            const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
+            const thumbnailUrl = thumbnailPath
+              ? getPublicImageUrl(
+                  publicS3.getS3ProtocolUri(thumbnailPath),
+                  getThumbnailResize('card'),
+                )
+              : null;
+
+            const channelAvatarUrl = channel.avatarPath
+              ? getPublicImageUrl(
+                  publicS3.getS3ProtocolUri(channel.avatarPath),
+                  {
+                    resize: { width: 32, height: 32 },
+                  },
+                )
+              : null;
+
+            const channelDefaultThumbnailUrl = channel.defaultThumbnailPath
+              ? getPublicImageUrl(
+                  publicS3.getS3ProtocolUri(channel.defaultThumbnailPath),
+                  getThumbnailResize('card'),
+                )
+              : null;
+
+            return {
+              ...uploadRest,
+              id: OutgoingIdSchema.parse(uploadRest.id),
+              thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
+              channel: {
+                ...channel,
+                id: OutgoingIdSchema.parse(channel.id),
+                avatarUrl: channelAvatarUrl,
+              },
+            };
+          });
+      } else if (focus === 'transcripts' && transcriptsResponse) {
+        // Get upload IDs from transcript hits
+        const uploadIds = transcriptsResponse.hits.hits
+          .filter((hit) => hit._index === 'lc_transcripts')
+          .map((hit) => hit._id);
+
+        // Fetch full upload data from database
+        const uploads = await prisma.uploadRecord.findMany({
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            createdAt: true,
+            publishedAt: true,
+            lengthSeconds: true,
+            defaultThumbnailPath: true,
+            overrideThumbnailPath: true,
+            channel: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+                avatarPath: true,
+                defaultThumbnailPath: true,
+              },
+            },
+            _count: {
+              select: {
+                uploadViews: true,
+              },
+            },
+          },
+          where: {
+            id: { in: uploadIds },
+          },
+        });
+
+        // Create a map for quick lookup
+        const uploadsMap = new Map(uploads.map((u) => [u.id, u]));
+
+        // Map transcript hits to include upload data and transcript segments
+        items = transcriptsResponse.hits.hits
+          .filter((hit) => hit._index === 'lc_transcripts')
+          .map((hit) => {
+            const upload = uploadsMap.get(hit._id);
+            if (!upload) return null;
+
+            const {
+              defaultThumbnailPath,
+              overrideThumbnailPath,
+              channel,
+              ...uploadRest
+            } = upload;
+
+            const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
+            const thumbnailUrl = thumbnailPath
+              ? getPublicImageUrl(
+                  publicS3.getS3ProtocolUri(thumbnailPath),
+                  getThumbnailResize('card'),
+                )
+              : null;
+
+            const channelAvatarUrl = channel.avatarPath
+              ? getPublicImageUrl(
+                  publicS3.getS3ProtocolUri(channel.avatarPath),
+                  {
+                    resize: { width: 32, height: 32 },
+                  },
+                )
+              : null;
+
+            const channelDefaultThumbnailUrl = channel.defaultThumbnailPath
+              ? getPublicImageUrl(
+                  publicS3.getS3ProtocolUri(channel.defaultThumbnailPath),
+                  getThumbnailResize('card'),
+                )
+              : null;
+
+            // Extract transcript segments from inner_hits
+            const segments =
+              ('inner_hits' in hit &&
+                hit.inner_hits?.segments?.hits?.hits?.map((innerHit) => ({
+                  start: innerHit._source.start,
+                  end: innerHit._source.end,
+                  text:
+                    innerHit.highlight?.['segments.text']?.[0] ??
+                    innerHit._source.text,
+                }))) ??
+              [];
+
+            return {
+              ...uploadRest,
+              id: OutgoingIdSchema.parse(uploadRest.id),
+              thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
+              channel: {
+                ...channel,
+                id: OutgoingIdSchema.parse(channel.id),
+                avatarUrl: channelAvatarUrl,
+              },
+              segments,
+            };
+          })
+          .filter((item): item is NonNullable<typeof item> => item !== null);
+      }
+
+      const nextCursor = items.length === limit ? cursor + limit : null;
+
+      return {
+        items,
+        mediaCount,
+        transcriptCount,
+        channels: channelsWithAvatars,
+        nextCursor,
+      };
+    }),
+
+  getRecentSearches: authProcedure.query(async ({ ctx }) => {
+    const recentSearches = await prisma.searchLogEntry.findMany({
+      where: {
+        appUserId: ctx.session.appUserId,
+        userDeletedAt: null,
+      },
+      select: {
+        query: true,
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      distinct: ['query'],
+      take: 10,
+    });
+
+    // Map createdAt to searchedAt for the API response
+    return recentSearches.map((entry) => ({
+      query: entry.query,
+      searchedAt: entry.createdAt,
+    }));
+  }),
+
+  deleteRecentSearch: authProcedure
+    .input(
+      z.object({
+        query: z.string(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      await prisma.searchLogEntry.updateMany({
+        where: {
+          appUserId: ctx.session.appUserId,
+          query: input.query,
+          userDeletedAt: null,
+        },
+        data: {
+          userDeletedAt: new Date(),
+        },
+      });
+
+      return { success: true };
+    }),
+};

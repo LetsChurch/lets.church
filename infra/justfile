@@ -27,12 +27,12 @@ deploy-check-vars:
 deploy-set-images env hash:
   #!/usr/bin/env bash
   cd k8s/{{env}}
-  kustomize edit set image registry.gitlab.com/letschurch/lets.church/gateway:{{hash}}
+  kustomize edit set image registry.gitlab.com/letschurch/lets.church/db-migrate:{{hash}}
+  kustomize edit set image registry.gitlab.com/letschurch/lets.church/elasticsearch-migrate:{{hash}}
+  kustomize edit set image registry.gitlab.com/letschurch/lets.church/web:{{hash}}
   kustomize edit set image registry.gitlab.com/letschurch/lets.church/background-worker:{{hash}}
   kustomize edit set image registry.gitlab.com/letschurch/lets.church/import-worker:{{hash}}
   kustomize edit set image registry.gitlab.com/letschurch/lets.church/transcode-worker:{{hash}}
-  kustomize edit set image registry.gitlab.com/letschurch/lets.church/web:{{hash}}
-  kustomize edit set image registry.gitlab.com/letschurch/lets.church/web-next:{{hash}}
 
 deploy env: deploy-check-vars
   just deploy-set-images {{env}} $CI_COMMIT_SHORT_SHA

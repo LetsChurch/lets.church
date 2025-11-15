@@ -1,4 +1,8 @@
 .envrc.local
 .direnv
-.hermit
+
 gitleaks-findings.json
+node_modules
+
+*.log
+*.tsbuildinfo

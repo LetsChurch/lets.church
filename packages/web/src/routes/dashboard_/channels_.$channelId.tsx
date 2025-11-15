@@ -1,0 +1,273 @@
+import {
+  Avatar,
+  Badge,
+  Button,
+  Group,
+  SimpleGrid,
+  Stack,
+  Text,
+  Title,
+} from '@mantine/core';
+import { notifications } from '@mantine/notifications';
+import {
+  IconCheck,
+  IconHeart,
+  IconList,
+  IconShield,
+  IconVideo,
+  IconX,
+} from '@tabler/icons-react';
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
+import { createFileRoute, Link, redirect } from '@tanstack/react-router';
+import clsx from 'clsx';
+import { useTRPC } from '@/trpc/react';
+import { formatDate } from '@/util/format';
+import { StatCard } from './-components/stat-card';
+import styles from './-styles.module.css';
+
+export const Route = createFileRoute('/dashboard_/channels_/$channelId')({
+  component: ChannelDetailsPage,
+  beforeLoad: async ({ context, params }) => {
+    const hasSession = await context.queryClient.fetchQuery(
+      context.trpc.common.hasValidSession.queryOptions(),
+    );
+    if (!hasSession) {
+      throw redirect({ to: '/auth/login' });
+    }
+
+    // Check if user has access to this channel (either member or site admin)
+    const currentUser = await context.queryClient.fetchQuery(
+      context.trpc.common.getCurrentUser.queryOptions(),
+    );
+
+    // Site admins can access any channel
+    if (currentUser.role === 'ADMIN') {
+      return { isSiteAdmin: true };
+    }
+
+    // Check if user is a member of this channel
+    try {
+      await context.queryClient.ensureQueryData(
+        context.trpc.dashboard.channels.getChannelDetails.queryOptions({
+          channelId: params.channelId,
+        }),
+      );
+      return { isSiteAdmin: false };
+    } catch (_error) {
+      // If user is not a member and not an admin, redirect
+      throw redirect({ to: '/dashboard' });
+    }
+  },
+  loader: async ({ context: { queryClient, trpc }, params }) => {
+    await queryClient.ensureQueryData(
+      trpc.dashboard.channels.getChannelDetails.queryOptions({
+        channelId: params.channelId,
+      }),
+    );
+    return {
+      backNavigation: {
+        label: 'My Channels',
+        to: '/dashboard/channels',
+      },
+    };
+  },
+});
+
+function ChannelDetailsPage() {
+  const params = Route.useParams();
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const { isSiteAdmin } = Route.useRouteContext() as { isSiteAdmin: boolean };
+
+  const { data: channel } = useSuspenseQuery(
+    trpc.dashboard.channels.getChannelDetails.queryOptions({
+      channelId: params.channelId,
+    }),
+  );
+
+  const { userMembership } = channel;
+  const isChannelAdmin = userMembership?.isAdmin ?? false;
+  const isApproved = Boolean(channel.approvedAt);
+
+  const approveChannelMutation = useMutation(
+    trpc.dashboard.channels.approveChannel.mutationOptions({
+      onSuccess: () => {
+        notifications.show({
+          title: 'Success',
+          message: 'Channel approved successfully',
+          color: 'green',
+        });
+        queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getChannelDetails.queryKey({
+            channelId: params.channelId,
+          }),
+        });
+      },
+      onError: () => {
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to approve channel',
+          color: 'red',
+        });
+      },
+    }),
+  );
+
+  const unapproveChannelMutation = useMutation(
+    trpc.dashboard.channels.unapproveChannel.mutationOptions({
+      onSuccess: () => {
+        notifications.show({
+          title: 'Success',
+          message: 'Channel unapproved successfully',
+          color: 'orange',
+        });
+        queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getChannelDetails.queryKey({
+            channelId: params.channelId,
+          }),
+        });
+      },
+      onError: () => {
+        notifications.show({
+          title: 'Error',
+          message: 'Failed to unapprove channel',
+          color: 'red',
+        });
+      },
+    }),
+  );
+
+  const handleApproveChannel = () => {
+    approveChannelMutation.mutate({ channelId: params.channelId });
+  };
+
+  const handleUnapproveChannel = () => {
+    unapproveChannelMutation.mutate({ channelId: params.channelId });
+  };
+
+  return (
+    <Stack gap="lg">
+      <Group justify="space-between" align="flex-start">
+        <Group align="flex-start">
+          <Avatar
+            size="xl"
+            src={channel.avatarPath ? `/api/media/${channel.avatarPath}` : null}
+            alt={channel.name}
+          >
+            {channel.name.charAt(0).toUpperCase()}
+          </Avatar>
+          <div>
+            <Group gap="sm" mb="xs">
+              <Title order={1}>{channel.name}</Title>
+              <Badge
+                color={channel.visibility === 'PUBLIC' ? 'green' : 'orange'}
+                size="sm"
+              >
+                {channel.visibility}
+              </Badge>
+              <Badge color={isChannelAdmin ? 'blue' : 'green'} size="sm">
+                {isChannelAdmin ? 'Admin' : 'Member'}
+              </Badge>
+            </Group>
+            <Group gap="md" mb="sm">
+              <Text c="dimmed">@{channel.slug}</Text>
+              <Text c="dimmed" size="sm">
+                Created {formatDate(channel.createdAt)}
+              </Text>
+            </Group>
+            {channel.description && (
+              <Text size="sm" maw={600}>
+                {channel.description}
+              </Text>
+            )}
+          </div>
+        </Group>
+        <Group>
+          {isSiteAdmin &&
+            (!isApproved ? (
+              <Button
+                color="green"
+                leftSection={<IconCheck size={16} />}
+                onClick={handleApproveChannel}
+                loading={approveChannelMutation.isPending}
+              >
+                Approve Channel
+              </Button>
+            ) : (
+              <Button
+                color="orange"
+                leftSection={<IconX size={16} />}
+                onClick={handleUnapproveChannel}
+                loading={unapproveChannelMutation.isPending}
+              >
+                Unapprove Channel
+              </Button>
+            ))}
+          {isChannelAdmin && (
+            <Button
+              variant="light"
+              renderRoot={(rootProps) => (
+                <Link
+                  {...rootProps}
+                  className={clsx(rootProps.className, styles.buttonLink)}
+                  to="/dashboard/channels/$channelId/edit"
+                  params={{ channelId: channel.id }}
+                >
+                  Edit Channel
+                </Link>
+              )}
+            />
+          )}
+        </Group>
+      </Group>
+
+      <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
+        <StatCard
+          title="Uploads"
+          to="/dashboard/channels/$channelId/uploads"
+          color="blue"
+          icon={<IconVideo size={22} stroke={1.5} />}
+          tooltip="Uploaded media files on this channel"
+          value={
+            <Text>
+              {channel._count.uploadRecords}{' '}
+              <Text span size="sm" c="blue.6">
+                ({channel.totalViews.toLocaleString()} views)
+              </Text>
+            </Text>
+          }
+        />
+
+        <StatCard
+          title="Playlists"
+          to="/dashboard/channels/$channelId/playlists"
+          color="violet"
+          icon={<IconList size={22} stroke={1.5} />}
+          tooltip="Curated collections of uploads organized by theme or series"
+          value={channel._count.uploadLists}
+        />
+
+        <StatCard
+          title="Members"
+          to="/dashboard/channels/$channelId/members"
+          color="green"
+          icon={<IconShield size={22} stroke={1.5} />}
+          tooltip="Users with permissions to manage, edit, or upload content"
+          value={channel._count.memberships}
+        />
+
+        <StatCard
+          title="Subscribers"
+          color="green"
+          icon={<IconHeart size={22} stroke={1.5} />}
+          tooltip="Users following this channel for new content notifications"
+          value={channel._count.subscribers}
+        />
+      </SimpleGrid>
+    </Stack>
+  );
+}

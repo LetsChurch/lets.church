@@ -3,8 +3,7 @@ variables:
 
 stages:
   - setup
-  - check
-  - test
+  - verify
   - build
   - deploy
   - notify
@@ -15,75 +14,45 @@ stages:
 # | |___|  _  | |__| |___| . \
 #  \____|_| |_|_____\____|_|\_\
 
-check-gateway:
-  image: node:23.6.0-slim
-  stage: check
+check:
+  image: node:24.4.1-slim
+  stage: verify
+  before_script:
+    - corepack enable
   script:
-    - cd $CI_PROJECT_DIR/services/gateway
-    - npm ci --cache $CI_PROJECT_DIR/.npm --prefer-offline
-    - npm run check
+    - pnpm install --frozen-lockfile
+    - pnpm -r run check
   cache:
     key:
       files:
-        - $CI_PROJECT_DIR/services/gateway/package-lock.json
+        - pnpm-lock.yaml
     paths:
-      - $CI_PROJECT_DIR/.npm/
+      - .pnpm-store
 
-check-web:
-  image: node:23.6.1-bookworm-slim
-  stage: check
-  script:
-    - cd $CI_PROJECT_DIR/apps/web
-    - npm ci --cache $CI_PROJECT_DIR/.npm --prefer-offline
-    - npm run check
-  cache:
-    key:
-      files:
-        - $CI_PROJECT_DIR/apps/web/package-lock.json
-    paths:
-      - $CI_PROJECT_DIR/.npm
+#  _____ _____ ____ _____
+# |_   _| ____/ ___|_   _|
+#   | | |  _| \___ \ | |
+#   | | | |___ ___) || |
+#   |_| |_____|____/ |_|
 
-check-web-next:
-  image: oven/bun:1.2.0-slim
-  stage: check
+test:
+  image: node:24.4.1-slim
+  stage: verify
+  before_script:
+    - corepack enable
   script:
-    - cd $CI_PROJECT_DIR/apps/web-next
-    - bun install
-    - bun run check
+    - pnpm install --frozen-lockfile
+    - pnpm --filter @letschurch/web exec playwright install --with-deps
+    - pnpm -r run test
   cache:
-    key:
-      files:
-        - $CI_PROJECT_DIR/apps/web-next/bun.lockb
-    paths:
-      - $HOME/.bun/install/cache
-
-check-scripts:
-  image: oven/bun:1.2.0-slim
-  stage: check
-  script:
-    - cd $CI_PROJECT_DIR/scripts
-    - bun install
-    - bun run check
-  cache:
-    key:
-      files:
-        - $CI_PROJECT_DIR/scripts/bun.lockb
-    paths:
-      - $HOME/.bun/install/cache
-
-test-gateway:
-  image: node:23.6.0-slim
-  stage: check
-  script:
-    - cd $CI_PROJECT_DIR/services/gateway
-    - npm ci --cache .npm --prefer-offline
-    - npm test
-  cache:
-    key:
-      files:
-        - $CI_PROJECT_DIR/services/gateway/package-lock.json
-    paths:
-      - $CI_PROJECT_DIR/.npm/
+    - key:
+        files:
+          - pnpm-lock.yaml
+      paths:
+        - .pnpm-store
+    - key: playwright-$CI_COMMIT_REF_SLUG
+      paths:
+        - /root/.cache/ms-playwright
 
 #  ____  _   _ ___ _     ____
 # | __ )| | | |_ _| |   |  _ \
@@ -103,53 +72,45 @@ test-gateway:
     - curl https://depot.dev/install-cli.sh | DEPOT_INSTALL_DIR=/usr/local/bin sh
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
 
-build-gateway:
+build-db-migrate:
   <<: *build-common
   script:
-    - cd services/gateway
-    - depot build --platform linux/amd64,linux/arm64 --target server -t registry.gitlab.com/letschurch/lets.church/gateway:${CI_COMMIT_SHORT_SHA} . --push
+    - depot build --platform linux/amd64,linux/arm64 --target db-migrate -t registry.gitlab.com/letschurch/lets.church/db-migrate:${CI_COMMIT_SHORT_SHA} . --push
+
+build-elasticsearch-migrate:
+  <<: *build-common
+  script:
+    - depot build --platform linux/amd64,linux/arm64 --target elasticsearch-migrate -t registry.gitlab.com/letschurch/lets.church/elasticsearch-migrate:${CI_COMMIT_SHORT_SHA} . --push
+
+build-web:
+  <<: *build-common
+  script:
+    - depot build --platform linux/amd64,linux/arm64 --target web -t registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA} . --push
 
 build-background-worker:
   <<: *build-common
   script:
-    - cd services/gateway
     - depot build --platform linux/amd64,linux/arm64 --target background-worker -t registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA} . --push
 
 build-probe-worker:
   <<: *build-common
   script:
-    - cd services/gateway
     - depot build --platform linux/amd64,linux/arm64 --target probe-worker -t registry.gitlab.com/letschurch/lets.church/probe-worker:${CI_COMMIT_SHORT_SHA} . --push
-
-build-import-worker:
-  <<: *build-common
-  script:
-    - cd services/gateway
-    - depot build --platform linux/amd64,linux/arm64 --target import-worker -t registry.gitlab.com/letschurch/lets.church/import-worker:${CI_COMMIT_SHORT_SHA} . --push
 
 build-transcode-worker:
   <<: *build-common
   script:
-    - cd services/gateway
     - depot build --platform linux/amd64,linux/arm64 --target transcode-worker -t registry.gitlab.com/letschurch/lets.church/transcode-worker:${CI_COMMIT_SHORT_SHA} . --push
+
+build-import-worker:
+  <<: *build-common
+  script:
+    - depot build --platform linux/amd64,linux/arm64 --target import-worker -t registry.gitlab.com/letschurch/lets.church/import-worker:${CI_COMMIT_SHORT_SHA} . --push
 
 build-transcribe-worker:
   <<: *build-common
   script:
-    - cd services/gateway
     - depot build --platform linux/amd64,linux/arm64 --target transcribe-worker --build-arg WHISPER_MODEL=large-v2 -t registry.gitlab.com/letschurch/lets.church/transcribe-worker:${CI_COMMIT_SHORT_SHA} . --push
-
-build-web:
-  <<: *build-common
-  script:
-    - cd apps/web
-    - depot build --platform linux/amd64,linux/arm64 -t registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA} . --push
-
-build-web-next:
-  <<: *build-common
-  script:
-    - cd apps/web-next
-    - depot build --platform linux/amd64,linux/arm64 -t registry.gitlab.com/letschurch/lets.church/web-next:${CI_COMMIT_SHORT_SHA} . --push
 
 #  ____             _
 # |  _ \  ___ _ __ | | ___  _   _

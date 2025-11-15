@@ -1,0 +1,36 @@
+{
+  "name": "@letschurch/elasticsearch",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "check": "pnpm run /^check:/",
+    "check:biome": "biome check",
+    "check:ts": "tsc --noEmit",
+    "fix": "biome check --write",
+    "fix!": "biome check --write --unsafe",
+    "push-mappings": "tsx src/mappings.ts"
+  },
+  "dependencies": {
+    "@letschurch/util": "workspace:*",
+    "@elastic/elasticsearch": "^9.2.0",
+    "jest-diff": "^30.2.0",
+    "picocolors": "^1.1.1",
+    "tsx": "catalog:",
+    "type-fest": "catalog:",
+    "wait-on": "catalog:",
+    "xss": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@types/node": "catalog:",
+    "@types/wait-on": "catalog:",
+    "typescript": "catalog:"
+  }
+}

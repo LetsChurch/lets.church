@@ -1,0 +1,18 @@
+# Git
+.git
+
+# Build artifacts (generated during build stage)
+packages/web/.nitro
+packages/web/.output
+packages/web/dist
+packages/db/src/generated
+
+# Dependencies (installed during build stage)
+packages/*/node_modules
+.pnpm-store
+
+# Local data
+seed-data
+
+# Tooling
+gitleaks-findings.json

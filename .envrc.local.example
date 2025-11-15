@@ -27,6 +27,8 @@ export RCLONE_CONFIG_MAPTILES_ENDPOINT=
 export RCLONE_CONFIG_MAPTILES_ACCESS_KEY_ID=
 export RCLONE_CONFIG_MAPTILES_SECRET_ACCESS_KEY=
 
+export ADMIN_EMAIL=admin@example.com
+
 KUBECONFIG=$PWD/infra/kubeconfig.yaml
 
 if [ -f $PWD/infra/kubeconfig.yaml ]; then

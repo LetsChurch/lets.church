@@ -1,0 +1,5 @@
+.nitro
+.output
+dist
+storybook-static
+src/generated

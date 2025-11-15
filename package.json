@@ -1,0 +1,25 @@
+{
+  "name": "@letschurch/root",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "check": "pnpm run /^check:/",
+    "check:biome": "biome check",
+    "check:ts": "tsc --noEmit",
+    "fix": "biome check --write",
+    "fix!": "biome check --write --unsafe",
+    "s3:prune-multipart-uploads": "bun ./scripts/s3-prune-multipart-uploads.ts",
+    "knip": "knip"
+  },
+  "license": "UNLICENSE",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.224.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@types/node": "catalog:",
+    "knip": "^5.69.1",
+    "typescript": "catalog:"
+  }
+}

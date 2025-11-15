@@ -1,19 +1,7 @@
 volumes:
-  auth-hooks-node-modules:
-  background-worker-node-modules:
   es-data:
-  faktory-data:
-  gateway-node-modules:
-  import-worker-node-modules:
   pg-data:
-  transcode-worker-node-modules:
-  transcribe-worker-node-modules:
-  web-go-node-modules:
-  web-node-modules:
-  web-astro-node-modules:
-  web-next-node-modules:
-  web-next-dot-output:
-  web-next-dot-vinxi:
+  pnpm-store:
 
 x-s3-env: &s3-env
   S3_INGEST_REGION: ${S3_INGEST_REGION}
@@ -33,140 +21,44 @@ services:
   #
   web:
     build:
-      context: ./apps/web
-      dockerfile: Dockerfile
-    command: npm run dev
+      context: .
+      target: dev
+    command: pnpm --filter @letschurch/web run dev --host
     restart: unless-stopped
     ports:
       - 127.0.0.1:${HOST_WEB_PORT}:3000
     environment:
       NODE_ENV: development
-      GRAPHQL_URL: http://gateway:3000/graphql
-    volumes:
-      - ./apps/web:/home/node/app
-      - web-node-modules:/home/node/app/node_modules
-    depends_on:
-      - gateway
-  web-next:
-    build:
-      context: ./apps/web-next
-      dockerfile: Dockerfile
-    command: bun run dev
-    restart: unless-stopped
-    ports:
-      - 127.0.0.1:${HOST_WEB_NEXT_PORT}:3000
-      - 127.0.0.1:${HOST_WEB_HMR_PORT}:${INTERNAL_WEB_HMR_PORT}
-    environment:
-      NODE_ENV: development
-      COOKIE_SECRET: ${WEB_COOKIE_SECRET}
-      GRAPHQL_URL: http://gateway:3000/graphql
-      INTERNAL_WEB_HMR_PORT: ${INTERNAL_WEB_HMR_PORT}
-      VITE_MAPBOX_MAP_TOKEN: ${MAPBOX_MAP_TOKEN}
-      VITE_MAPBOX_SEARCHBOX_TOKEN: ${MAPBOX_SEARCHBOX_TOKEN}
-    volumes:
-      - ./apps/web-next:/home/bun/app
-      - web-next-node-modules:/home/bun/app/node_modules
-      - web-next-dot-vinxi:/home/bun/app/.vinxi
-      - web-next-dot-output:/home/bun/app/.output
-    depends_on:
-      - gateway
-  web-go:
-    build:
-      context: ./services/web
-      dockerfile: Dockerfile
-      target: build
-    command: ./dev.sh
-    restart: unless-stopped
-    ports:
-      - 127.0.0.1:${HOST_WEB_GO_PORT}:3000
-    environment:
-      APP_ENV: development
-      COOKIE_SECRET: ${WEB_COOKIE_SECRET}
-      DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
-      FAKTORY_URL: tcp://faktory:7419
-      IMGPROXY_KEY: ${IMGPROXY_KEY}
-      IMGPROXY_SALT: ${IMGPROXY_SALT}
-      IMGPROXY_URL: ${IMGPROXY_URL}
-      JWT_SECRET: ${JWT_SECRET}
-      LISTMONK_INTERNAL_URL: http://listmonk:9000
-      MEDIA_URL: ${MEDIA_URL}
-      PUBLIC_URL: ${HOST_WEB_GO_URL}
-      ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
-      <<: *s3-env
-    volumes:
-      - ./services/web:/usr/src/app
-      - web-go-node-modules:/usr/src/app/node_modules
-    depends_on:
-      - postgres
-      - elasticsearch
-  web-astro:
-    build:
-      context: ./apps/web-astro
-      dockerfile: Dockerfile
-    command: bun run dev --host
-    restart: unless-stopped
-    ports:
-      - 127.0.0.1:${HOST_WEB_ASTRO_PORT}:4321
-    environment:
-      NODE_ENV: development
-      COOKIE_SECRET: ${WEB_COOKIE_SECRET}
-      DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
-      GRAPHQL_URL: http://gateway:3000/graphql
-      HOST: 0.0.0.0
-      IMGPROXY_KEY: ${IMGPROXY_KEY}
-      IMGPROXY_SALT: ${IMGPROXY_SALT}
-      IMGPROXY_URL: ${IMGPROXY_URL}
-      LISTMONK_INTERNAL_URL: http://listmonk:9000
-      MEDIA_URL: ${MEDIA_URL}
-      PUBLIC_MAPBOX_MAP_TOKEN: ${MAPBOX_MAP_TOKEN}
-      PUBLIC_MAPBOX_SEARCHBOX_TOKEN: ${MAPBOX_SEARCHBOX_TOKEN}
-      PUBLIC_URL: ${HOST_WEB_GO_URL}
-      TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA"
-      ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
-    volumes:
-      - ./apps/web-astro:/home/bun/app
-      - web-astro-node-modules:/home/bun/app/node_modules
-    depends_on:
-      - gateway
-
-  gateway:
-    build:
-      context: ./services/gateway
-      target: server
-    command: npm run dev:server
-    restart: unless-stopped
-    ports:
-      - 127.0.0.1:${HOST_GATEWAY_PORT}:3000
-    environment:
-      NODE_ENV: development
-      SENTRY_DSN: ${SENTRY_GATEWAY_DSN}
-      SERVICE_NAME: gateway
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       ELASTICSEARCH_URL: http://elasticsearch:9200
       IMGPROXY_KEY: ${IMGPROXY_KEY}
       IMGPROXY_SALT: ${IMGPROXY_SALT}
       IMGPROXY_URL: ${IMGPROXY_URL}
       JWT_SECRET: ${JWT_SECRET}
-      LISTMONK_INTERNAL_URL: http://listmonk:9000
-      MAPBOX_GEOCODING_TOKEN: ${MAPBOX_GEOCODING_TOKEN}
       MEDIA_URL: ${MEDIA_URL}
       TEMPORAL_ADDRESS: temporal:7233
-      WEB_URL: ${WEB_URL}
+      TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+      TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
+      WEB_URL: ${HOST_WEB_URL}
       ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
       <<: *s3-env
     volumes:
-      - ./services/gateway:/home/node/app
-      - gateway-node-modules:/home/node/app/node_modules
-    depends_on:
-      - elasticsearch
-      - postgres
-      - temporal
+      - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
+      - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
+      - ./packages/util:/usr/src/app/packages/util
+      - ./packages/s3:/usr/src/app/packages/s3
+      - ./packages/db:/usr/src/app/packages/db
+      - /usr/src/app/packages/db/src/generated
+      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - ./packages/temporal:/usr/src/app/packages/temporal
+      - ./packages/web:/usr/src/app/packages/web
 
   background-worker:
     build:
-      context: ./services/gateway
-      target: background-worker
-    command: npm run dev:background-worker
+      context: .
+      target: dev
+    command: pnpm --filter @letschurch/background-worker run dev
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -175,58 +67,59 @@ services:
       IDENTITY: dev
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
       ELASTICSEARCH_URL: http://elasticsearch:9200
+      LISTMONK_INTERNAL_URL: http://listmonk:9000
       MAPBOX_GEOCODING_TOKEN: ${MAPBOX_GEOCODING_TOKEN}
+      SMTP_URL: smtp://mailpit:1025?pool=true
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1m
+      WEB_URL: ${HOST_WEB_URL}
       <<: *s3-env
-      SMTP_URL: smtp://mailpit:1025?pool=true
     volumes:
-      - ./services/gateway:/home/node/app
-      - background-worker-node-modules:/home/node/app/node_modules
+      - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
+      - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
+      - ./packages/util:/usr/src/app/packages/util
+      - ./packages/s3:/usr/src/app/packages/s3
+      - ./packages/db:/usr/src/app/packages/db
+      - /usr/src/app/packages/db/src/generated
+      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - ./packages/temporal:/usr/src/app/packages/temporal
+      - ./packages/background-worker:/usr/src/app/packages/background-worker
     depends_on:
       - temporal
 
-  background-worker-go:
-    build:
-      context: ./services/web
-      dockerfile: Dockerfile
-      target: build
-    command: watchexec --restart --exts go -- go run cmd/background-worker/main.go
-    restart: unless-stopped
-    environment:
-      APP_ENV: development
-      FAKTORY_URL: tcp://faktory:7419
-      SERVICE_NAME: background-worker
-      SMTP_URL: smtp://mailpit:1025
-    volumes:
-      - ./services/web:/usr/src/app
-
   probe-worker:
     build:
-      context: ./services/gateway
-      target: probe-worker
-    command: npm run dev:probe-worker
+      context: .
+      target: dev
+    command: pnpm --filter @letschurch/probe-worker run dev
     restart: unless-stopped
     environment:
       NODE_ENV: development
       SENTRY_DSN: ${SENTRY_TRANSCODE_WORKER_DSN}
-      SERVICE_NAME: transcode-worker
+      SERVICE_NAME: probe-worker
       IDENTITY: dev
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 5
       <<: *s3-env
     volumes:
-      - ./services/gateway:/home/node/app
-      - transcode-worker-node-modules:/home/node/app/node_modules
+      - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
+      - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
+      - ./packages/util:/usr/src/app/packages/util
+      - ./packages/s3:/usr/src/app/packages/s3
+      - ./packages/db:/usr/src/app/packages/db
+      - /usr/src/app/packages/db/src/generated
+      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - ./packages/temporal:/usr/src/app/packages/temporal
+      - ./packages/probe-worker:/usr/src/app/packages/probe-worker
     depends_on:
       - temporal
 
   transcode-worker:
     build:
-      context: ./services/gateway
-      target: transcode-worker
-    command: npm run dev:transcode-worker
+      context: .
+      target: dev
+    command: pnpm --filter @letschurch/transcode-worker run dev
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -238,16 +131,23 @@ services:
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 1
       <<: *s3-env
     volumes:
-      - ./services/gateway:/home/node/app
-      - transcode-worker-node-modules:/home/node/app/node_modules
+      - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
+      - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
+      - ./packages/util:/usr/src/app/packages/util
+      - ./packages/s3:/usr/src/app/packages/s3
+      - ./packages/db:/usr/src/app/packages/db
+      - /usr/src/app/packages/db/src/generated
+      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - ./packages/temporal:/usr/src/app/packages/temporal
+      - ./packages/transcode-worker:/usr/src/app/packages/transcode-worker
     depends_on:
       - temporal
 
   transcribe-worker:
     build:
-      context: ./services/gateway
+      context: .
       target: transcribe-worker
-    command: npm run dev:transcribe-worker
+    command: pnpm --filter @letschurch/transcribe-worker run dev
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -260,16 +160,23 @@ services:
       WHISPER_MODEL: tiny.en
       <<: *s3-env
     volumes:
-      - ./services/gateway:/home/node/app
-      - transcribe-worker-node-modules:/home/node/app/node_modules
+      - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
+      - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
+      - ./packages/util:/usr/src/app/packages/util
+      - ./packages/s3:/usr/src/app/packages/s3
+      - ./packages/db:/usr/src/app/packages/db
+      - /usr/src/app/packages/db/src/generated
+      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - ./packages/temporal:/usr/src/app/packages/temporal
+      - ./packages/transcribe-worker:/usr/src/app/packages/transcribe-worker
     depends_on:
       - temporal
 
   import-worker:
     build:
-      context: ./services/gateway
-      target: import-worker
-    command: npm run dev:import-worker
+      context: .
+      target: dev
+    command: pnpm --filter @letschurch/import-worker run dev
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -282,8 +189,15 @@ services:
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1m
       <<: *s3-env
     volumes:
-      - ./services/gateway:/home/node/app
-      - import-worker-node-modules:/home/node/app/node_modules
+      - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
+      - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
+      - ./packages/util:/usr/src/app/packages/util
+      - ./packages/s3:/usr/src/app/packages/s3
+      - ./packages/db:/usr/src/app/packages/db
+      - /usr/src/app/packages/db/src/generated
+      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - ./packages/temporal:/usr/src/app/packages/temporal
+      - ./packages/import-worker:/usr/src/app/packages/import-worker
     depends_on:
       - temporal
 
@@ -319,14 +233,6 @@ services:
     ports:
       - 127.0.0.1:${HOST_IMGPROXY_PORT}:8080
 
-  faktory:
-    image: contribsys/faktory:1.9.0
-    ports:
-      - 127.0.0.1:${HOST_FAKTORY_PORT}:7419
-      - 127.0.0.1:${HOST_FAKTORY_UI_PORT}:7420
-    volumes:
-      - faktory-data:/var/lib/faktory/db
-
   temporal:
     image: temporalio/auto-setup:1.22.4.0
     environment:
@@ -334,7 +240,7 @@ services:
       SKIP_DB_CREATE: true # Database is already created via init script
       DB: postgresql # Database vendor
       DB_PORT: 5432 # Database port
-      POSTGRES_SEEDS: postgres # Databae server
+      POSTGRES_SEEDS: postgres # Database server
       POSTGRES_USER: temporal # Database user
       POSTGRES_PWD: password # Database user password
       DBNAME: temporal # Database on server
@@ -400,7 +306,7 @@ services:
       retries: 5
 
   elasticsearch:
-    image: elasticsearch:8.5.2
+    image: elasticsearch:9.1.5
     environment:
       - cluster.routing.allocation.disk.threshold_enabled=true
       - cluster.routing.allocation.disk.watermark.low=512mb
@@ -423,7 +329,7 @@ services:
   # Development
   #
   kibana:
-    image: kibana:8.12.0
+    image: kibana:9.1.5
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch:9200
     depends_on:
