@@ -16,7 +16,7 @@ patches:
       kind: PostgresCluster
       name: pg
 configMapGenerator:
-  - name: gateway-config
+  - name: web-config
     behavior: merge
     literals:
       - IMGPROXY_URL="https://images.letschurch.cloud"
