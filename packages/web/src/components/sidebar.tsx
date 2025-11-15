@@ -163,149 +163,208 @@ export default function Sidebar({ className }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex flex-1 flex-col">
-        {showAltMenu ? (
-          <>
-            {/* Alternative Menu */}
-            <div className="flex flex-col gap-2 px-1 py-3">
-              <Link
-                to="/about"
-                className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
-              >
-                Our Mission
-              </Link>
-              <Link
-                to="/about/dorean"
-                className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
-              >
-                The Dorean Principle
-              </Link>
-              {/* <Link */}
-              {/*   to="/about/roadmap" */}
-              {/*   className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10" */}
-              {/* > */}
-              {/*   Roadmap */}
-              {/* </Link> */}
-              <Link
-                to="/about/feature-request"
-                className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
-              >
-                Request a Feature
-              </Link>
-              <div className="mx-2 my-2.5 h-px bg-zinc-900" />
-              <Link
-                to="/about/terms"
-                className="rounded-lg px-2 py-1.5 font-medium text-primary/70 text-xs transition-colors hover:bg-white/10"
-              >
-                Terms of Service
-              </Link>
-              <Link
-                to="/about/privacy"
-                className="rounded-lg px-2 py-1.5 font-medium text-primary/70 text-xs transition-colors hover:bg-white/10"
-              >
-                Privacy Policy
-              </Link>
-              <Link
-                to="/about/dmca"
-                className="rounded-lg px-2 py-1.5 font-medium text-primary/70 text-xs transition-colors hover:bg-white/10"
-              >
-                DMCA
-              </Link>
-            </div>
-          </>
-        ) : (
-          <>
-            {/* Explore */}
-            <div className="py-2">
-              {collapsed ? (
-                <LcTooltip
-                  content="Explore"
-                  side="right"
-                  render={
-                    <Link
-                      to="/"
-                      className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
-                      activeProps={{
-                        className: 'text-primary',
-                      }}
-                      inactiveProps={{
-                        className: 'text-primary/70',
-                      }}
-                    />
-                  }
-                >
-                  <IconCompass size={24} />
-                  <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
-                </LcTooltip>
-              ) : (
+        <LcTooltip.Provider>
+          {showAltMenu ? (
+            <>
+              {/* Alternative Menu */}
+              <div className="flex flex-col gap-2 px-1 py-3">
                 <Link
-                  to="/"
-                  className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
-                  activeProps={{
-                    className: 'text-primary',
-                  }}
-                  inactiveProps={{
-                    className: 'text-primary/70',
-                  }}
+                  to="/about"
+                  className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
                 >
-                  <IconCompass size={24} />
-                  <span className="pb-0.5">Explore</span>
-                  <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                  Our Mission
                 </Link>
-              )}
-              <hr className="mx-4 h-px border-gray-100 dark:border-zinc-900" />
-            </div>
-
-            {/* Following */}
-            <div className="py-2">
-              {collapsed ? (
-                <LcTooltip
-                  content="Following"
-                  side="right"
-                  render={
-                    <Link
-                      to="/following"
-                      className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-primary/70 text-sm transition-colors hover:bg-white/5"
-                    />
-                  }
-                >
-                  <IconFlag size={24} className="text-primary/70" />
-                  <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
-                </LcTooltip>
-              ) : (
                 <Link
-                  to="/following"
-                  className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-primary/70 text-sm transition-colors hover:bg-white/5"
+                  to="/about/dorean"
+                  className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
                 >
-                  <IconFlag size={24} className="text-primary/70" />
-                  <span className="pb-0.5">Following</span>
-                  <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                  The Dorean Principle
                 </Link>
-              )}
+                {/* <Link */}
+                {/*   to="/about/roadmap" */}
+                {/*   className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10" */}
+                {/* > */}
+                {/*   Roadmap */}
+                {/* </Link> */}
+                <Link
+                  to="/about/feature-request"
+                  className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
+                >
+                  Request a Feature
+                </Link>
+                <div className="mx-2 my-2.5 h-px bg-zinc-900" />
+                <Link
+                  to="/about/terms"
+                  className="rounded-lg px-2 py-1.5 font-medium text-primary/70 text-xs transition-colors hover:bg-white/10"
+                >
+                  Terms of Service
+                </Link>
+                <Link
+                  to="/about/privacy"
+                  className="rounded-lg px-2 py-1.5 font-medium text-primary/70 text-xs transition-colors hover:bg-white/10"
+                >
+                  Privacy Policy
+                </Link>
+                <Link
+                  to="/about/dmca"
+                  className="rounded-lg px-2 py-1.5 font-medium text-primary/70 text-xs transition-colors hover:bg-white/10"
+                >
+                  DMCA
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Explore */}
+              <div className="py-2">
+                {collapsed ? (
+                  <LcTooltip
+                    content="Explore"
+                    side="right"
+                    render={
+                      <Link
+                        to="/"
+                        className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
+                        activeProps={{
+                          className: 'text-primary',
+                        }}
+                        inactiveProps={{
+                          className: 'text-primary/70',
+                        }}
+                      />
+                    }
+                  >
+                    <IconCompass size={24} />
+                    <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                  </LcTooltip>
+                ) : (
+                  <Link
+                    to="/"
+                    className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
+                    activeProps={{
+                      className: 'text-primary',
+                    }}
+                    inactiveProps={{
+                      className: 'text-primary/70',
+                    }}
+                  >
+                    <IconCompass size={24} />
+                    <span className="pb-0.5">Explore</span>
+                    <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                  </Link>
+                )}
+                <hr className="mx-4 h-px border-gray-100 dark:border-zinc-900" />
+              </div>
 
-              {/* Channel list */}
-              {collapsed ? null : (
-                <div className="mt-1 flex flex-col gap-2 px-4 pt-1 pb-2">
-                  {!isLoggedIn ? (
-                    <Link
-                      to="/auth/login"
-                      className="text-left text-gray-600 text-xs dark:text-gray-400"
-                    >
-                      Sign in to see channels
-                    </Link>
-                  ) : !hasChannels ? (
-                    <p className="text-left text-gray-600 text-xs dark:text-gray-400">
-                      No channels yet
-                    </p>
-                  ) : (
-                    <>
-                      {channels
-                        .slice(0, showAllChannels ? undefined : 5)
-                        .map((channel) => (
-                          <Link
+              {/* Following */}
+              <div className="py-2">
+                {collapsed ? (
+                  <LcTooltip
+                    content="Following"
+                    side="right"
+                    render={
+                      <Link
+                        to="/following"
+                        className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-primary/70 text-sm transition-colors hover:bg-white/5"
+                      />
+                    }
+                  >
+                    <IconFlag size={24} className="text-primary/70" />
+                    <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                  </LcTooltip>
+                ) : (
+                  <Link
+                    to="/following"
+                    className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-primary/70 text-sm transition-colors hover:bg-white/5"
+                  >
+                    <IconFlag size={24} className="text-primary/70" />
+                    <span className="pb-0.5">Following</span>
+                    <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                  </Link>
+                )}
+
+                {/* Channel list */}
+                {collapsed ? null : (
+                  <div className="mt-1 flex flex-col gap-2 px-4 pt-1 pb-2">
+                    {!isLoggedIn ? (
+                      <Link
+                        to="/auth/login"
+                        className="text-left text-gray-600 text-xs dark:text-gray-400"
+                      >
+                        Sign in to see channels
+                      </Link>
+                    ) : !hasChannels ? (
+                      <p className="text-left text-gray-600 text-xs dark:text-gray-400">
+                        No channels yet
+                      </p>
+                    ) : (
+                      <>
+                        {channels
+                          .slice(0, showAllChannels ? undefined : 5)
+                          .map((channel) => (
+                            <Link
+                              key={channel.id}
+                              to="/channel/$slug"
+                              params={{ slug: channel.slug }}
+                              className="flex items-center gap-2.5 transition-colors hover:text-primary/80"
+                            >
+                              <div className="flex size-6 shrink-0 items-center justify-center">
+                                <Avatar
+                                  src={channel.avatarUrl || undefined}
+                                  alt={channel.name}
+                                  fallbackText={channel.name
+                                    .charAt(0)
+                                    .toUpperCase()}
+                                  className="size-5 border-fancy-pants"
+                                  fallbackClassName="text-[10px]"
+                                />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate font-medium text-primary/70 text-xs">
+                                  {channel.name}
+                                </p>
+                              </div>
+                            </Link>
+                          ))}
+                        {channels.length > 5 ? (
+                          <button
+                            type="button"
+                            onClick={() => setShowAllChannels(!showAllChannels)}
+                            className="flex items-center gap-2.5 text-left transition-colors hover:text-primary/80"
+                          >
+                            <div className="flex size-6 items-center justify-center">
+                              <IconChevronDown
+                                size={16}
+                                className={cn(
+                                  'text-gray-600 transition-transform dark:text-gray-400',
+                                  showAllChannels && 'rotate-180',
+                                )}
+                              />
+                            </div>
+                            <span className="font-normal text-gray-600 text-xs dark:text-gray-400">
+                              {showAllChannels ? 'Show Less' : 'Show More'}
+                            </span>
+                          </button>
+                        ) : null}
+                      </>
+                    )}
+                  </div>
+                )}
+                {collapsed ? (
+                  <div className="mt-1 flex flex-col gap-2 px-4 pt-1 pb-2">
+                    {!isLoggedIn || !hasChannels ? null : (
+                      <>
+                        {channels.slice(0, 5).map((channel) => (
+                          <LcTooltip
                             key={channel.id}
-                            to="/channel/$slug"
-                            params={{ slug: channel.slug }}
-                            className="flex items-center gap-2.5 transition-colors hover:text-primary/80"
+                            content={channel.name}
+                            side="right"
+                            render={
+                              <Link
+                                to="/channel/$slug"
+                                params={{ slug: channel.slug }}
+                              />
+                            }
                           >
                             <div className="flex size-6 shrink-0 items-center justify-center">
                               <Avatar
@@ -318,186 +377,129 @@ export default function Sidebar({ className }: SidebarProps) {
                                 fallbackClassName="text-[10px]"
                               />
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate font-medium text-primary/70 text-xs">
-                                {channel.name}
-                              </p>
-                            </div>
-                          </Link>
+                          </LcTooltip>
                         ))}
-                      {channels.length > 5 ? (
-                        <button
-                          type="button"
-                          onClick={() => setShowAllChannels(!showAllChannels)}
-                          className="flex items-center gap-2.5 text-left transition-colors hover:text-primary/80"
-                        >
-                          <div className="flex size-6 items-center justify-center">
-                            <IconChevronDown
-                              size={16}
-                              className={cn(
-                                'text-gray-600 transition-transform dark:text-gray-400',
-                                showAllChannels && 'rotate-180',
-                              )}
-                            />
-                          </div>
-                          <span className="font-normal text-gray-600 text-xs dark:text-gray-400">
-                            {showAllChannels ? 'Show Less' : 'Show More'}
-                          </span>
-                        </button>
-                      ) : null}
-                    </>
-                  )}
-                </div>
-              )}
-              {collapsed ? (
-                <div className="mt-1 flex flex-col gap-2 px-4 pt-1 pb-2">
-                  {!isLoggedIn || !hasChannels ? null : (
-                    <>
-                      {channels.slice(0, 5).map((channel) => (
-                        <LcTooltip
-                          key={channel.id}
-                          content={channel.name}
-                          side="right"
-                          render={
-                            <Link
-                              to="/channel/$slug"
-                              params={{ slug: channel.slug }}
-                            />
-                          }
-                        >
-                          <div className="flex size-6 shrink-0 items-center justify-center">
-                            <Avatar
-                              src={channel.avatarUrl || undefined}
-                              alt={channel.name}
-                              fallbackText={channel.name
-                                .charAt(0)
-                                .toUpperCase()}
-                              className="size-5 border-fancy-pants"
-                              fallbackClassName="text-[10px]"
-                            />
-                          </div>
-                        </LcTooltip>
-                      ))}
-                      {channels.length > 5 ? (
-                        <button
-                          type="button"
-                          onClick={() => setShowAllChannels(!showAllChannels)}
-                          className="flex items-center justify-center"
-                        >
-                          <div className="flex size-6 items-center justify-center">
-                            <IconChevronDown
-                              size={16}
-                              className={cn(
-                                'text-gray-600 transition-transform dark:text-gray-400',
-                                showAllChannels && 'rotate-180',
-                              )}
-                            />
-                          </div>
-                        </button>
-                      ) : null}
-                    </>
-                  )}
-                </div>
-              ) : null}
-              <hr className="mx-4 h-px border-gray-100 dark:border-zinc-900" />
-            </div>
+                        {channels.length > 5 ? (
+                          <button
+                            type="button"
+                            onClick={() => setShowAllChannels(!showAllChannels)}
+                            className="flex items-center justify-center"
+                          >
+                            <div className="flex size-6 items-center justify-center">
+                              <IconChevronDown
+                                size={16}
+                                className={cn(
+                                  'text-gray-600 transition-transform dark:text-gray-400',
+                                  showAllChannels && 'rotate-180',
+                                )}
+                              />
+                            </div>
+                          </button>
+                        ) : null}
+                      </>
+                    )}
+                  </div>
+                ) : null}
+                <hr className="mx-4 h-px border-gray-100 dark:border-zinc-900" />
+              </div>
 
-            {/* Library */}
-            <div className="py-2">
-              {collapsed ? (
-                <LcTooltip
-                  content="Library"
-                  side="right"
-                  render={
-                    <Link
-                      to="/library"
-                      className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
-                      activeProps={{
-                        className: 'text-primary',
-                      }}
-                      inactiveProps={{
-                        className: 'text-primary/70',
-                      }}
+              {/* Library */}
+              <div className="py-2">
+                {collapsed ? (
+                  <LcTooltip
+                    content="Library"
+                    side="right"
+                    render={
+                      <Link
+                        to="/library"
+                        className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
+                        activeProps={{
+                          className: 'text-primary',
+                        }}
+                        inactiveProps={{
+                          className: 'text-primary/70',
+                        }}
+                      />
+                    }
+                  >
+                    <IconBookmark size={24} />
+                    <div
+                      role="presentation"
+                      className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100"
                     />
-                  }
-                >
-                  <IconBookmark size={24} />
-                  <div
-                    role="presentation"
-                    className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100"
-                  />
-                </LcTooltip>
-              ) : (
-                <Link
-                  to="/library"
-                  className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
-                  activeProps={{
-                    className: 'text-primary',
-                  }}
-                  inactiveProps={{
-                    className: 'text-primary/70',
-                  }}
-                >
-                  <IconBookmark size={24} />
-                  <span className="pb-0.5">Library</span>
-                  <div
-                    role="presentation"
-                    className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100"
-                  />
-                </Link>
-              )}
-
-              {/* Library sub-items */}
-              {collapsed ? (
-                <div className="mt-1 flex flex-col gap-2 px-4 pt-1 pb-2">
-                  <LcTooltip
-                    content="History"
-                    side="right"
-                    render={<Link to="/history" />}
-                  >
-                    <div className="flex size-6 items-center justify-center">
-                      <IconHistory size={16} className="text-primary/70" />
-                    </div>
                   </LcTooltip>
-                  <LcTooltip
-                    content="Saved Content"
-                    side="right"
-                    render={<Link to="/library" />}
-                  >
-                    <div className="flex size-6 items-center justify-center">
-                      <IconBookmarks size={16} className="text-primary/70" />
-                    </div>
-                  </LcTooltip>
-                </div>
-              ) : (
-                <div className="mt-1 flex flex-col gap-2 px-4 pt-1 pb-2">
-                  <Link
-                    to="/history"
-                    className="flex items-center gap-2.5 transition-colors hover:text-primary/80"
-                  >
-                    <div className="flex size-6 items-center justify-center">
-                      <IconHistory size={16} className="text-primary/70" />
-                    </div>
-                    <span className="font-normal text-gray-600 text-xs dark:text-gray-400">
-                      History
-                    </span>
-                  </Link>
+                ) : (
                   <Link
                     to="/library"
-                    className="flex items-center gap-2.5 transition-colors hover:text-primary/80"
+                    className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
+                    activeProps={{
+                      className: 'text-primary',
+                    }}
+                    inactiveProps={{
+                      className: 'text-primary/70',
+                    }}
                   >
-                    <div className="flex size-6 items-center justify-center">
-                      <IconBookmarks size={16} className="text-primary/70" />
-                    </div>
-                    <span className="font-normal text-gray-600 text-xs dark:text-gray-400">
-                      Saved Content
-                    </span>
+                    <IconBookmark size={24} />
+                    <span className="pb-0.5">Library</span>
+                    <div
+                      role="presentation"
+                      className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100"
+                    />
                   </Link>
-                </div>
-              )}
-            </div>
-          </>
-        )}
+                )}
+
+                {/* Library sub-items */}
+                {collapsed ? (
+                  <div className="mt-1 flex flex-col gap-2 px-4 pt-1 pb-2">
+                    <LcTooltip
+                      content="History"
+                      side="right"
+                      render={<Link to="/history" />}
+                    >
+                      <div className="flex size-6 items-center justify-center">
+                        <IconHistory size={16} className="text-primary/70" />
+                      </div>
+                    </LcTooltip>
+                    <LcTooltip
+                      content="Saved Content"
+                      side="right"
+                      render={<Link to="/library" />}
+                    >
+                      <div className="flex size-6 items-center justify-center">
+                        <IconBookmarks size={16} className="text-primary/70" />
+                      </div>
+                    </LcTooltip>
+                  </div>
+                ) : (
+                  <div className="mt-1 flex flex-col gap-2 px-4 pt-1 pb-2">
+                    <Link
+                      to="/history"
+                      className="flex items-center gap-2.5 transition-colors hover:text-primary/80"
+                    >
+                      <div className="flex size-6 items-center justify-center">
+                        <IconHistory size={16} className="text-primary/70" />
+                      </div>
+                      <span className="font-normal text-gray-600 text-xs dark:text-gray-400">
+                        History
+                      </span>
+                    </Link>
+                    <Link
+                      to="/library"
+                      className="flex items-center gap-2.5 transition-colors hover:text-primary/80"
+                    >
+                      <div className="flex size-6 items-center justify-center">
+                        <IconBookmarks size={16} className="text-primary/70" />
+                      </div>
+                      <span className="font-normal text-gray-600 text-xs dark:text-gray-400">
+                        Saved Content
+                      </span>
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </LcTooltip.Provider>
       </nav>
 
       {/* Donate Card */}
@@ -527,69 +529,71 @@ export default function Sidebar({ className }: SidebarProps) {
         </div>
       )}
 
-      {/* Donate Button (Collapsed) */}
-      {collapsed && !showAltMenu ? (
-        <div className="px-4">
-          <LcTooltip content="Donate" side="right">
-            <a
-              className="flex size-6 cursor-pointer items-center justify-center text-brand transition-all hover:scale-110 hover:animate-pulse hover:text-indigo-400"
-              href="https://givebutter.com/LetsChurch"
-              target="_blank"
-              rel="noopener"
-            >
-              <IconHeartFilled size={20} />
-            </a>
-          </LcTooltip>
-        </div>
-      ) : null}
-
-      {/* Theme Switcher */}
-      {showAltMenu ? null : (
-        <>
-          <div className="px-4 pb-3">
-            <hr className="h-px border-gray-100 dark:border-zinc-900" />
+      <LcTooltip.Provider>
+        {/* Donate Button (Collapsed) */}
+        {collapsed && !showAltMenu ? (
+          <div className="px-4">
+            <LcTooltip content="Donate" side="right">
+              <a
+                className="flex size-6 cursor-pointer items-center justify-center text-brand transition-all hover:scale-110 hover:animate-pulse hover:text-indigo-400"
+                href="https://givebutter.com/LetsChurch"
+                target="_blank"
+                rel="noopener"
+              >
+                <IconHeartFilled size={20} />
+              </a>
+            </LcTooltip>
           </div>
-          <ThemeSwitcher collapsed={collapsed && !showAltMenu} />
-        </>
-      )}
+        ) : null}
 
-      {/* Collapse Button */}
-      {showAltMenu ? null : (
-        <div className="p-4">
-          {collapsed ? (
-            <LcTooltip content="Expand Sidebar" side="right">
+        {/* Theme Switcher */}
+        {showAltMenu ? null : (
+          <>
+            <div className="px-4 pb-3">
+              <hr className="h-px border-gray-100 dark:border-zinc-900" />
+            </div>
+            <ThemeSwitcher collapsed={collapsed && !showAltMenu} />
+          </>
+        )}
+
+        {/* Collapse Button */}
+        {showAltMenu ? null : (
+          <div className="p-4">
+            {collapsed ? (
+              <LcTooltip content="Expand Sidebar" side="right">
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2.5 transition-colors hover:text-primary/80"
+                  onClick={toggleCollapsed}
+                >
+                  <div className="flex size-6 items-center justify-center">
+                    <IconLayoutSidebarLeftExpand
+                      size={16}
+                      className="text-gray-600 dark:text-gray-400"
+                    />
+                  </div>
+                </button>
+              </LcTooltip>
+            ) : (
               <button
                 type="button"
-                className="flex w-full items-center gap-2.5 transition-colors hover:text-primary/80"
                 onClick={toggleCollapsed}
+                className="flex w-full items-center gap-2.5 transition-colors hover:text-primary/80"
               >
                 <div className="flex size-6 items-center justify-center">
-                  <IconLayoutSidebarLeftExpand
+                  <IconLayoutSidebarLeftCollapse
                     size={16}
                     className="text-gray-600 dark:text-gray-400"
                   />
                 </div>
+                <span className="font-normal text-gray-600 text-xs dark:text-gray-400">
+                  Collapse Sidebar
+                </span>
               </button>
-            </LcTooltip>
-          ) : (
-            <button
-              type="button"
-              onClick={toggleCollapsed}
-              className="flex w-full items-center gap-2.5 transition-colors hover:text-primary/80"
-            >
-              <div className="flex size-6 items-center justify-center">
-                <IconLayoutSidebarLeftCollapse
-                  size={16}
-                  className="text-gray-600 dark:text-gray-400"
-                />
-              </div>
-              <span className="font-normal text-gray-600 text-xs dark:text-gray-400">
-                Collapse Sidebar
-              </span>
-            </button>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
+      </LcTooltip.Provider>
     </div>
   );
 }
