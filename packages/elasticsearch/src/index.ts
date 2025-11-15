@@ -30,8 +30,8 @@ function makePostFilterSpread({
   channelIds?: Array<string> | null;
   publishedAt?: PublishedAtRange | undefined;
   orderBy?: OrderBy | undefined;
-}): estypes.SearchSearchRequestBody {
-  const res: estypes.SearchSearchRequestBody = {};
+}): Partial<estypes.SearchRequest> {
+  const res: Partial<estypes.SearchRequest> = {};
 
   const must: Array<estypes.QueryDslQueryContainer> = [];
 

@@ -306,7 +306,7 @@ services:
       retries: 5
 
   elasticsearch:
-    image: elasticsearch:9.1.5
+    image: elasticsearch:8.19.7
     environment:
       - cluster.routing.allocation.disk.threshold_enabled=true
       - cluster.routing.allocation.disk.watermark.low=512mb

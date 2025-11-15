@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@letschurch/util": "workspace:*",
-    "@elastic/elasticsearch": "^9.2.0",
+    "@elastic/elasticsearch": "^8.19.1",
     "jest-diff": "^30.2.0",
     "picocolors": "^1.1.1",
     "tsx": "catalog:",
