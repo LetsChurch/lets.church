@@ -1,4 +1,4 @@
-import { Button, Group, Stack } from '@mantine/core';
+import { Button, Group, Stack, Text } from '@mantine/core';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { useAppMantineForm } from '@/components/mantine';
 import { useTRPC } from '@/trpc/react';
