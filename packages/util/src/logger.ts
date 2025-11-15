@@ -18,8 +18,15 @@ import 'pino-pretty';
 const isProduction = process.env.NODE_ENV === 'production';
 
 const env = z
-  .object({ AXIOM_DATASET: z.string(), AXIOM_TOKEN: z.string() })
+  .object({
+    AXIOM_DATASET: z.string().optional(),
+    AXIOM_TOKEN: z.string().optional(),
+  })
   .parse(process.env);
+
+if (!env.AXIOM_DATASET || !env.AXIOM_TOKEN) {
+  console.warn('Missing Axiom configuration');
+}
 
 const logger = pino({
   formatters: {
@@ -33,7 +40,7 @@ const logger = pino({
   },
   transport: {
     targets: [
-      ...(!isProduction
+      ...(!isProduction || !env.AXIOM_DATASET || !env.AXIOM_TOKEN
         ? [
             {
               level: 'info',
