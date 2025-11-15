@@ -29,7 +29,7 @@ spec:
           image: registry.gitlab.com/letschurch/lets.church/elasticsearch-migrate:latest
           envFrom:
             - configMapRef:
-                name: gateway-config
+                name: web-config
       containers:
         - image: registry.gitlab.com/letschurch/lets.church/background-worker:latest
           name: background-low-priority-worker
@@ -48,7 +48,7 @@ spec:
               value: background-low-priority-worker
           envFrom:
             - configMapRef:
-                name: gateway-config
+                name: web-config
             - configMapRef:
                 name: temporal-client-config
             - configMapRef:

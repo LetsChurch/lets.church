@@ -29,7 +29,7 @@ spec:
           image: registry.gitlab.com/letschurch/lets.church/elasticsearch-migrate:latest
           envFrom:
             - configMapRef:
-                name: gateway-config
+                name: web-config
       containers:
         - image: registry.gitlab.com/letschurch/lets.church/web:latest
           name: web
@@ -44,6 +44,12 @@ spec:
                   name: pg-pguser-letschurch
                   key: uri
           envFrom:
+            - secretRef:
+                name: axiom-secret
+            - secretRef:
+                name: s3-secret
+            - secretRef:
+                name: smtp-secret
             - secretRef:
                 name: turnstile-secret
             - configMapRef:

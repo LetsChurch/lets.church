@@ -4,7 +4,7 @@ namespace: local
 resources:
   - ../base
 configMapGenerator:
-  - name: gateway-config
+  - name: web-config
     behavior: merge
     literals:
       - MEDIA_URL="https://media-preview.letschurch.cloud"
