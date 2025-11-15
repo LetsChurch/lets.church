@@ -15,9 +15,7 @@ resources:
   - background-worker-deployment.yml
   - background-low-priority-worker-deployment.yml
   - import-worker-deployment.yml
-  - probe-worker-deployment.yml
   - transcode-worker-deployment.yml
-  - transcribe-worker-deployment.yml
 configMapGenerator:
   - name: web-config
     literals: []
