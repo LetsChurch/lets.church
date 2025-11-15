@@ -59,11 +59,6 @@ services:
     environment:
       NODE_ENV: production
       IDENTITY: ${IDENTITY:-preview}
-    depends_on:
-      db-migrate:
-        condition: service_completed_successfully
-      elasticsearch-migrate:
-        condition: service_completed_successfully
 
   transcode-worker:
     build:
@@ -73,11 +68,6 @@ services:
     environment:
       NODE_ENV: production
       IDENTITY: ${IDENTITY:-preview}
-    depends_on:
-      db-migrate:
-        condition: service_completed_successfully
-      elasticsearch-migrate:
-        condition: service_completed_successfully
 
   transcribe-worker:
     build:
@@ -90,11 +80,6 @@ services:
       NODE_ENV: production
       IDENTITY: ${IDENTITY:-preview}
       WHISPER_MODEL: ${WHISPER_MODEL:-base.en}
-    depends_on:
-      db-migrate:
-        condition: service_completed_successfully
-      elasticsearch-migrate:
-        condition: service_completed_successfully
 
   import-worker:
     build:
@@ -104,8 +89,3 @@ services:
     environment:
       NODE_ENV: production
       IDENTITY: ${IDENTITY:-preview}
-    depends_on:
-      db-migrate:
-        condition: service_completed_successfully
-      elasticsearch-migrate:
-        condition: service_completed_successfully

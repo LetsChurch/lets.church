@@ -16,6 +16,20 @@ spec:
         app: background-worker
     spec:
       restartPolicy: Always
+      initContainers:
+        - name: db-migrate
+          image: registry.gitlab.com/letschurch/lets.church/db-migrate:latest
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pguser-letschurch
+                  key: uri
+        - name: elasticsearch-migrate
+          image: registry.gitlab.com/letschurch/lets.church/elasticsearch-migrate:latest
+          envFrom:
+            - configMapRef:
+                name: gateway-config
       containers:
         - image: registry.gitlab.com/letschurch/lets.church/background-worker:latest
           name: background-worker
