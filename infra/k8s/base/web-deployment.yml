@@ -46,6 +46,8 @@ spec:
           envFrom:
             - secretRef:
                 name: turnstile-secret
+            - configMapRef:
+                name: temporal-client-config
             - secretRef:
                 name: web-secret
             - configMapRef:
