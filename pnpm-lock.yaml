@@ -339,6 +339,9 @@ importers:
       '@letschurch/util':
         specifier: workspace:*
         version: link:../util
+      '@node-rs/xxhash':
+        specifier: ^1.7.6
+        version: 1.7.6
       '@temporalio/activity':
         specifier: 'catalog:'
         version: 1.13.2
@@ -531,6 +534,9 @@ importers:
       pino-pretty:
         specifier: ^13.1.2
         version: 13.1.2
+      zod:
+        specifier: 'catalog:'
+        version: 4.1.12
     devDependencies:
       '@biomejs/biome':
         specifier: 'catalog:'
