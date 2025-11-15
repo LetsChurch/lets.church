@@ -38,6 +38,11 @@ spec:
           env:
             - name: SERVICE_NAME
               value: web
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: pg-pguser-letschurch
+                  key: uri
           envFrom:
             - secretRef:
                 name: turnstile-secret
