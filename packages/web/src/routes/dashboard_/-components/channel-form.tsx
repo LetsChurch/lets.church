@@ -61,8 +61,9 @@ export function ChannelForm({
                 required
               />
               <Text size="xs" c="dimmed">
-                This will be used in your channel URL. Only letters, numbers,
-                underscores, and hyphens are allowed.
+                This creates your channel's web address. You can use letters,
+                numbers, dashes (-), and underscores (_). For example:
+                "first-baptist" or "pastor_john"
               </Text>
             </Stack>
           )}

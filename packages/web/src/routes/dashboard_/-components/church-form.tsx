@@ -107,10 +107,17 @@ export function ChurchForm({
         {showSlugField && (
           <form.AppField name="slug">
             {(field) => (
-              <field.TextInputField
-                label="Slug"
-                placeholder="url-safe-identifier (leave empty to auto-generate)"
-              />
+              <Stack gap="xs">
+                <field.TextInputField
+                  label="Web Address Name"
+                  placeholder="first-baptist-church (leave empty to auto-create)"
+                />
+                <Text size="xs" c="dimmed">
+                  Optional. This creates your church's web address. You can use
+                  letters, numbers, dashes (-), and underscores (_). If left
+                  empty, we'll create one for you.
+                </Text>
+              </Stack>
             )}
           </form.AppField>
         )}
