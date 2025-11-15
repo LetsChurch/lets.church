@@ -1,4 +1,9 @@
 import pino from 'pino';
+import * as z from 'zod';
+// Explicit imports to prevent tree-shaking by bundlers (Vite, Webpack)
+// See: https://github.com/pinojs/pino/issues/1964
+import '@axiomhq/pino';
+import 'pino-pretty';
 
 /**
  * Logger fields:
@@ -12,7 +17,9 @@ import pino from 'pino';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-const { AXIOM_DATASET, AXIOM_TOKEN } = process.env;
+const env = z
+  .object({ AXIOM_DATASET: z.string(), AXIOM_TOKEN: z.string() })
+  .parse(process.env);
 
 const logger = pino({
   formatters: {
@@ -35,14 +42,14 @@ const logger = pino({
             },
           ]
         : []),
-      ...(isProduction && AXIOM_DATASET && AXIOM_TOKEN
+      ...(isProduction && env.AXIOM_DATASET && env.AXIOM_TOKEN
         ? [
             {
               level: 'info',
               target: '@axiomhq/pino',
               options: {
-                dataset: AXIOM_DATASET,
-                token: AXIOM_TOKEN,
+                dataset: env.AXIOM_DATASET,
+                token: env.AXIOM_TOKEN,
               },
             },
           ]
