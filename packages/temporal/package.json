@@ -30,6 +30,7 @@
     "@letschurch/elasticsearch": "workspace:*",
     "@letschurch/s3": "workspace:*",
     "@letschurch/util": "workspace:*",
+    "@node-rs/xxhash": "^1.7.6",
     "@temporalio/activity": "catalog:",
     "@temporalio/client": "catalog:",
     "@temporalio/workflow": "catalog:",
@@ -50,7 +51,6 @@
     "p-lazy": "^5.0.0",
     "p-map": "catalog:",
     "p-retry": "catalog:",
-    "wait-on": "catalog:",
     "playwright": "^1.56.1",
     "proper-tags": "^2.0.2",
     "rimraf": "^6.1.0",
@@ -58,6 +58,7 @@
     "short-uuid": "^5.2.0",
     "subtitle": "^4.2.2-alpha.0",
     "uuid": "catalog:",
+    "wait-on": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
