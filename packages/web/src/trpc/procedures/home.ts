@@ -540,6 +540,7 @@ export const homeProcedures = {
                 slug: true,
                 avatarPath: true,
                 avatarBlurhash: true,
+                defaultThumbnailPath: true,
               },
             },
           },
@@ -574,6 +575,18 @@ export const homeProcedures = {
           })
         : null;
 
+      const channelDefaultThumbnailUrl = uploadRecord.channel
+        .defaultThumbnailPath
+        ? getPublicImageUrl(
+            publicS3.getS3ProtocolUri(
+              uploadRecord.channel.defaultThumbnailPath,
+            ),
+            {
+              resize: { width: 1280, height: 720 },
+            },
+          )
+        : null;
+
       const channelAvatarUrl = uploadRecord.channel.avatarPath
         ? getPublicImageUrl(
             publicS3.getS3ProtocolUri(uploadRecord.channel.avatarPath),
@@ -588,7 +601,7 @@ export const homeProcedures = {
         title: uploadRecord.title,
         description: uploadRecord.description,
         lengthSeconds: uploadRecord.lengthSeconds,
-        thumbnailUrl,
+        thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
         thumbnailBlurhash,
         channel: {
           id: OutgoingIdSchema.parse(uploadRecord.channel.id),

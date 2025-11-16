@@ -733,6 +733,7 @@ export const adminRouter = router({
                 slug: true,
                 avatarPath: true,
                 avatarBlurhash: true,
+                defaultThumbnailPath: true,
               },
             },
           },
@@ -747,15 +748,29 @@ export const adminRouter = router({
       const thumbnailPath =
         uploadRecord.overrideThumbnailPath ?? uploadRecord.defaultThumbnailPath;
 
+      const thumbnailUrl = thumbnailPath
+        ? getPublicImageUrl(publicS3.getS3ProtocolUri(thumbnailPath), {
+            resize: { width: 120, height: 68 },
+          })
+        : null;
+
+      const channelDefaultThumbnailUrl = uploadRecord.channel
+        .defaultThumbnailPath
+        ? getPublicImageUrl(
+            publicS3.getS3ProtocolUri(
+              uploadRecord.channel.defaultThumbnailPath,
+            ),
+            {
+              resize: { width: 120, height: 68 },
+            },
+          )
+        : null;
+
       return {
         ...rest,
         uploadRecord: {
           ...uploadRecord,
-          thumbnailUrl: thumbnailPath
-            ? getPublicImageUrl(publicS3.getS3ProtocolUri(thumbnailPath), {
-                resize: { width: 120, height: 68 },
-              })
-            : null,
+          thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
         },
       };
     });
