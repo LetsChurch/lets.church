@@ -17,6 +17,11 @@ stages:
 check:
   image: node:24.4.1-slim
   stage: verify
+  only:
+    changes:
+      - packages/**/*
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
   before_script:
     - corepack enable
   script:
@@ -38,6 +43,11 @@ check:
 test:
   image: node:24.4.1-slim
   stage: verify
+  only:
+    changes:
+      - packages/**/*
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
   before_script:
     - corepack enable
   script:
