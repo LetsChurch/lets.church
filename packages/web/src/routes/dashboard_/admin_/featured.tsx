@@ -212,17 +212,11 @@ function FeaturedUploadsPage() {
   const autocompleteData = availableUploads.map((upload) => ({
     value: upload.id,
     label: upload.title || 'Untitled',
-    upload,
   }));
 
   const handleAutocompleteSelect = (value: string) => {
-    const selectedUpload = autocompleteData.find(
-      (option) => option.label === value,
-    );
-
-    if (selectedUpload) {
-      handleAddToFeatured(selectedUpload.value);
-    }
+    // When using object data with value/label, onOptionSubmit receives the value
+    handleAddToFeatured(value);
 
     setTimeout(() => {
       setSearchValue(''); // Clear after current event loop
@@ -241,7 +235,7 @@ function FeaturedUploadsPage() {
       <Autocomplete
         label="Add Upload to Featured"
         placeholder="Search uploads to feature..."
-        data={autocompleteData.map((option) => option.label)}
+        data={autocompleteData}
         value={searchValue}
         onChange={setSearchValue}
         onOptionSubmit={handleAutocompleteSelect}
