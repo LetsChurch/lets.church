@@ -33,13 +33,6 @@ export default defineConfig((_config) => ({
           src: path.join(dirname, '../db/src/generated/prisma/*.node'),
           dest: '.',
         },
-        {
-          src: path.join(
-            dirname,
-            '../util/node_modules/@axiomhq/pino/dist/cjs',
-          ),
-          dest: 'node_modules/@axiomhq/pino/dist',
-        },
       ],
     }),
   ],
@@ -47,7 +40,6 @@ export default defineConfig((_config) => ({
     noExternal: ['@tanstack/react-start', '@tanstack/react-router'],
     external: [
       '.prisma/client',
-      '@axiomhq/pino',
       '@letschurch/temporal',
       '@node-rs/xxhash',
       '@prisma/client',
@@ -68,7 +60,6 @@ export default defineConfig((_config) => ({
       'rimraf',
       'sharp',
       'subtitle',
-      'thread-stream',
     ],
   },
   test: {

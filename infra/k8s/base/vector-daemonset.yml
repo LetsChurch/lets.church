@@ -1,0 +1,160 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vector
+  namespace: letschurch-prod
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vector
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+      - nodes
+      - pods
+    verbs:
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: vector
+subjects:
+  - kind: ServiceAccount
+    name: vector
+    namespace: letschurch-prod
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vector-config
+  namespace: letschurch-prod
+data:
+  vector.yaml: |
+    # Vector configuration for Kubernetes log collection
+    # Collects logs from all pods and sends them to Axiom
+
+    sources:
+      kubernetes_logs:
+        type: kubernetes_logs
+        # Only collect logs from letschurch-prod namespace
+        namespace_labels:
+          "kubernetes.io/metadata.name": "letschurch-prod"
+        # Add pod metadata to logs
+        namespace_annotation_fields:
+          namespace_labels: ""
+        pod_annotation_fields:
+          pod_annotations: ""
+          pod_labels: ""
+
+    transforms:
+      # Parse JSON logs from Pino
+      parse_json:
+        type: remap
+        inputs:
+          - kubernetes_logs
+        source: |
+          # Try to parse the message as JSON (Pino logs)
+          parsed, err = parse_json(.message)
+          if err == null {
+            . = merge(., parsed)
+          }
+
+    sinks:
+      axiom:
+        type: axiom
+        inputs:
+          - parse_json
+        dataset: "${AXIOM_DATASET}"
+        token: "${AXIOM_TOKEN}"
+        compression: zstd
+        # Batch settings for efficiency
+        batch:
+          max_bytes: 1048576  # 1MB
+          timeout_secs: 5
+        # Buffer settings for reliability
+        buffer:
+          type: disk
+          max_size: 268435488  # 256MB
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: vector
+  namespace: letschurch-prod
+spec:
+  selector:
+    matchLabels:
+      app: vector
+  template:
+    metadata:
+      labels:
+        app: vector
+    spec:
+      serviceAccountName: vector
+      containers:
+        - name: vector
+          image: timberio/vector:0.41.1-alpine
+          env:
+            - name: AXIOM_DATASET
+              valueFrom:
+                secretKeyRef:
+                  name: vector-secret
+                  key: AXIOM_DATASET
+            - name: AXIOM_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vector-secret
+                  key: AXIOM_TOKEN
+            - name: VECTOR_SELF_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: VECTOR_SELF_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: VECTOR_SELF_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          volumeMounts:
+            - name: config
+              mountPath: /etc/vector
+              readOnly: true
+            - name: var-log
+              mountPath: /var/log
+              readOnly: true
+            - name: var-lib
+              mountPath: /var/lib
+              readOnly: true
+            - name: data
+              mountPath: /vector-data-dir
+      volumes:
+        - name: config
+          configMap:
+            name: vector-config
+        - name: var-log
+          hostPath:
+            path: /var/log
+        - name: var-lib
+          hostPath:
+            path: /var/lib
+        - name: data
+          emptyDir: {}

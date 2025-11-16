@@ -1,9 +1,4 @@
 import pino from 'pino';
-import * as z from 'zod';
-// Explicit imports to prevent tree-shaking by bundlers (Vite, Webpack)
-// See: https://github.com/pinojs/pino/issues/1964
-import '@axiomhq/pino';
-import 'pino-pretty';
 
 /**
  * Logger fields:
@@ -17,17 +12,6 @@ import 'pino-pretty';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-const env = z
-  .object({
-    AXIOM_DATASET: z.string().optional(),
-    AXIOM_TOKEN: z.string().optional(),
-  })
-  .parse(process.env);
-
-if (!env.AXIOM_DATASET || !env.AXIOM_TOKEN) {
-  console.warn('Missing Axiom configuration');
-}
-
 const logger = pino({
   formatters: {
     bindings(bindings) {
@@ -38,31 +22,17 @@ const logger = pino({
       };
     },
   },
-  transport: {
-    targets: [
-      ...(!isProduction || !env.AXIOM_DATASET || !env.AXIOM_TOKEN
-        ? [
-            {
-              level: 'info',
-              target: 'pino-pretty',
-              options: {},
-            },
-          ]
-        : []),
-      ...(isProduction && env.AXIOM_DATASET && env.AXIOM_TOKEN
-        ? [
-            {
-              level: 'info',
-              target: '@axiomhq/pino',
-              options: {
-                dataset: env.AXIOM_DATASET,
-                token: env.AXIOM_TOKEN,
-              },
-            },
-          ]
-        : []),
-    ],
-  },
+  // Only use pino-pretty transport in development for readability
+  // In production, log to stdout as JSON (standard for containerized apps)
+  // Logs are collected by Vector DaemonSet and shipped to Axiom
+  ...(!isProduction && {
+    transport: {
+      target: 'pino-pretty',
+      options: {
+        colorize: true,
+      },
+    },
+  }),
 });
 
 export default logger;

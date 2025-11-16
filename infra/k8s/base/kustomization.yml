@@ -9,6 +9,7 @@ resources:
   - pgweb-deployment.yml
   - temporal-deployment.yml
   - temporal-ui-deployment.yml
+  - vector-daemonset.yml
   - web-deployment.yml
   - web-next-deployment.yml
   # Workers
