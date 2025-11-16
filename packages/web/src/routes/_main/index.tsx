@@ -52,6 +52,84 @@ export const Route = createFileRoute('/_main/')({
 
     return {};
   },
+  head: () => {
+    const title = "Let's Church - Free Christian Video Hosting and Streaming";
+    const description =
+      'Discover and share Christian content freely. Watch sermons, Bible studies, worship services, and more from churches around the world.';
+    const url = 'https://lets.church';
+    const imageUrl = 'https://lets.church/og-image.png';
+
+    return {
+      meta: [
+        // Basic meta tags
+        {
+          title,
+        },
+        {
+          name: 'description',
+          content: description,
+        },
+        // OpenGraph tags
+        {
+          property: 'og:url',
+          content: url,
+        },
+        {
+          property: 'og:type',
+          content: 'website',
+        },
+        {
+          property: 'og:title',
+          content: title,
+        },
+        {
+          property: 'og:description',
+          content: description,
+        },
+        {
+          property: 'og:image',
+          content: imageUrl,
+        },
+        {
+          property: 'og:image:width',
+          content: '1200',
+        },
+        {
+          property: 'og:image:height',
+          content: '630',
+        },
+        {
+          property: 'og:site_name',
+          content: "Let's Church",
+        },
+        // Twitter Card tags
+        {
+          name: 'twitter:card',
+          content: 'summary_large_image',
+        },
+        {
+          property: 'twitter:domain',
+          content: 'lets.church',
+        },
+        {
+          property: 'twitter:url',
+          content: url,
+        },
+        {
+          name: 'twitter:title',
+          content: title,
+        },
+        {
+          name: 'twitter:description',
+          content: description,
+        },
+        {
+          name: 'twitter:image',
+          content: imageUrl,
+        },
+      ],
+    };
+  },
 });
 
 function ContentSection({
