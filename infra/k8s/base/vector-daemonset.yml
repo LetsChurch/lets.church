@@ -47,8 +47,7 @@ data:
       kubernetes_logs:
         type: kubernetes_logs
         # Only collect logs from letschurch-prod namespace
-        namespace_labels:
-          "kubernetes.io/metadata.name": "letschurch-prod"
+        extra_namespace_label_selector: "kubernetes.io/metadata.name=letschurch-prod"
         # Add pod metadata to logs
         namespace_annotation_fields:
           namespace_labels: ""
@@ -65,8 +64,8 @@ data:
         source: |
           # Try to parse the message as JSON (Pino logs)
           parsed, err = parse_json(.message)
-          if err == null {
-            . = merge(., parsed)
+          if err == null && is_object(parsed) {
+            . = merge!(., parsed)
           }
 
     sinks:
@@ -81,10 +80,10 @@ data:
         batch:
           max_bytes: 1048576  # 1MB
           timeout_secs: 5
-        # Buffer settings for reliability
+        # Buffer settings for reliability (use memory buffer instead of disk)
         buffer:
-          type: disk
-          max_size: 268435488  # 256MB
+          type: memory
+          max_events: 10000
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -141,9 +140,8 @@ spec:
             - name: var-log
               mountPath: /var/log
               readOnly: true
-            - name: var-lib
-              mountPath: /var/lib
-              readOnly: true
+            - name: var-lib-vector
+              mountPath: /var/lib/vector
             - name: data
               mountPath: /vector-data-dir
       volumes:
@@ -153,8 +151,7 @@ spec:
         - name: var-log
           hostPath:
             path: /var/log
-        - name: var-lib
-          hostPath:
-            path: /var/lib
+        - name: var-lib-vector
+          emptyDir: {}
         - name: data
           emptyDir: {}
