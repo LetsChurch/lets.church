@@ -1,3 +1,4 @@
+import { logger } from '@letschurch/util';
 import { z } from 'zod';
 import { PrismaClient } from './generated/prisma/client';
 
@@ -10,16 +11,49 @@ const { DATABASE_URL } = z
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
-export const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
-    log: ['query', 'info'],
+const createPrismaClient = () => {
+  const client = new PrismaClient({
+    log: [
+      { emit: 'event', level: 'query' },
+      { emit: 'event', level: 'error' },
+      { emit: 'event', level: 'info' },
+      { emit: 'event', level: 'warn' },
+    ],
     datasources: {
       db: {
         url: DATABASE_URL,
       },
     },
   });
+
+  // Wire up Prisma logging to Pino
+  client.$on(
+    'query' as never,
+    (e: { query: string; duration: number; params: string }) => {
+      // TODO: consider debug level
+      logger.info(
+        { query: e.query, duration: e.duration, params: e.params },
+        'prisma:query',
+      );
+    },
+  );
+
+  client.$on('info' as never, (e: { message: string }) => {
+    logger.info({ message: e.message }, 'prisma:info');
+  });
+
+  client.$on('warn' as never, (e: { message: string }) => {
+    logger.warn({ message: e.message }, 'prisma:warn');
+  });
+
+  client.$on('error' as never, (e: { message: string }) => {
+    logger.error({ message: e.message }, 'prisma:error');
+  });
+
+  return client;
+};
+
+export const prisma = globalForPrisma.prisma || createPrismaClient();
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
