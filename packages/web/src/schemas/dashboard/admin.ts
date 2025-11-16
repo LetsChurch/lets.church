@@ -1,17 +1,15 @@
 import { z } from 'zod';
-
-// Common field schemas
-export const uploadIdSchema = z.string().uuid();
+import { IncomingIdSchema } from '../common';
 
 // Featured upload schemas
 export const addFeaturedUploadSchema = z.object({
-  uploadId: uploadIdSchema,
+  uploadId: IncomingIdSchema,
 });
 
 export const removeFeaturedUploadSchema = z.object({
-  uploadId: uploadIdSchema,
+  uploadId: IncomingIdSchema,
 });
 
 export const reorderFeaturedUploadsSchema = z.object({
-  uploadIds: z.array(uploadIdSchema).min(1),
+  uploadIds: z.array(IncomingIdSchema).min(1),
 });

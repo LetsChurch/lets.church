@@ -216,6 +216,7 @@ function FeaturedUploadsPage() {
 
   const handleAutocompleteSelect = (value: string) => {
     // When using object data with value/label, onOptionSubmit receives the value
+    // The schema will automatically convert base58 IDs to UUIDs
     handleAddToFeatured(value);
 
     setTimeout(() => {
