@@ -70,7 +70,7 @@ test:
 # | |_) | |_| || || |___| |_| |
 # |____/ \___/|___|_____|____/
 
-.build-common: &build-common
+build-all:
   image: docker:24.0.1
   services:
     - docker:24.0.1-dind
@@ -81,46 +81,8 @@ test:
     - apk add --no-cache curl
     - curl https://depot.dev/install-cli.sh | DEPOT_INSTALL_DIR=/usr/local/bin sh
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-
-build-db-migrate:
-  <<: *build-common
   script:
-    - depot build --platform linux/amd64,linux/arm64 --target db-migrate -t registry.gitlab.com/letschurch/lets.church/db-migrate:${CI_COMMIT_SHORT_SHA} . --push
-
-build-elasticsearch-migrate:
-  <<: *build-common
-  script:
-    - depot build --platform linux/amd64,linux/arm64 --target elasticsearch-migrate -t registry.gitlab.com/letschurch/lets.church/elasticsearch-migrate:${CI_COMMIT_SHORT_SHA} . --push
-
-build-web:
-  <<: *build-common
-  script:
-    - depot build --platform linux/amd64,linux/arm64 --target web -t registry.gitlab.com/letschurch/lets.church/web:${CI_COMMIT_SHORT_SHA} . --push
-
-build-background-worker:
-  <<: *build-common
-  script:
-    - depot build --platform linux/amd64,linux/arm64 --target background-worker -t registry.gitlab.com/letschurch/lets.church/background-worker:${CI_COMMIT_SHORT_SHA} . --push
-
-build-probe-worker:
-  <<: *build-common
-  script:
-    - depot build --platform linux/amd64,linux/arm64 --target probe-worker -t registry.gitlab.com/letschurch/lets.church/probe-worker:${CI_COMMIT_SHORT_SHA} . --push
-
-build-transcode-worker:
-  <<: *build-common
-  script:
-    - depot build --platform linux/amd64,linux/arm64 --target transcode-worker -t registry.gitlab.com/letschurch/lets.church/transcode-worker:${CI_COMMIT_SHORT_SHA} . --push
-
-build-import-worker:
-  <<: *build-common
-  script:
-    - depot build --platform linux/amd64,linux/arm64 --target import-worker -t registry.gitlab.com/letschurch/lets.church/import-worker:${CI_COMMIT_SHORT_SHA} . --push
-
-build-transcribe-worker:
-  <<: *build-common
-  script:
-    - depot build --platform linux/amd64,linux/arm64 --target transcribe-worker --build-arg WHISPER_MODEL=large-v2 -t registry.gitlab.com/letschurch/lets.church/transcribe-worker:${CI_COMMIT_SHORT_SHA} . --push
+    - TAG=${CI_COMMIT_SHORT_SHA} depot bake -f docker-bake.hcl --push
 
 #  ____             _
 # |  _ \  ___ _ __ | | ___  _   _
