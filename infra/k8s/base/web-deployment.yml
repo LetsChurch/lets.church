@@ -47,6 +47,8 @@ spec:
             - secretRef:
                 name: axiom-secret
             - secretRef:
+                name: imgproxy-secret
+            - secretRef:
                 name: s3-secret
             - secretRef:
                 name: smtp-secret
