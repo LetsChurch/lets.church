@@ -49,7 +49,11 @@ spec:
             - secretRef:
                 name: imgproxy-secret
             - secretRef:
+                name: jwt-secret
+            - secretRef:
                 name: s3-secret
+            - secretRef:
+                name: sentry-secret
             - secretRef:
                 name: smtp-secret
             - secretRef:
