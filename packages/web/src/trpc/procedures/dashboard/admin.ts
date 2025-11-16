@@ -3,6 +3,7 @@ import logger from '@letschurch/util';
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
 import { z } from 'zod';
+import { IncomingIdSchema } from '@/schemas/common';
 import {
   addFeaturedUploadSchema,
   removeFeaturedUploadSchema,
@@ -984,7 +985,7 @@ export const adminRouter = router({
     }),
 
   toggleFeaturedUpload: adminProcedure
-    .input(z.object({ uploadId: z.string().uuid() }))
+    .input(z.object({ uploadId: IncomingIdSchema }))
     .mutation(async ({ ctx, input }) => {
       moduleLogger.info('Toggling featured upload', {
         uploadId: input.uploadId,

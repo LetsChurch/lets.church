@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { IncomingIdSchema } from '../common';
 
-export const organizationIdSchema = z.uuid();
+export const organizationIdSchema = IncomingIdSchema;
 
 export const organizationQuerySchema = z.object({
   orgId: organizationIdSchema,
@@ -14,13 +15,13 @@ export const organizationMemberPermissionsSchema = z.object({
 export const addOrganizationMemberSchema = z
   .object({
     orgId: organizationIdSchema,
-    userId: z.uuid(),
+    userId: IncomingIdSchema,
   })
   .and(organizationMemberPermissionsSchema);
 
 export const removeOrganizationMemberSchema = z.object({
   orgId: organizationIdSchema,
-  appUserId: z.uuid(),
+  appUserId: IncomingIdSchema,
 });
 
 export const userSearchOrganizationSchema = z.object({
@@ -65,5 +66,5 @@ export const searchOrganizationsSchema = z.object({
 });
 
 export const getOrganizationsByIdsSchema = z.object({
-  organizationIds: z.array(z.uuid()).max(100), // Reasonable limit
+  organizationIds: z.array(IncomingIdSchema).max(100), // Reasonable limit
 });

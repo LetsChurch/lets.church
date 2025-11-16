@@ -5,13 +5,13 @@ import {
   UploadVisibility,
 } from '@letschurch/db/types';
 import { z } from 'zod';
-import { AvatarSize } from '../common';
+import { AvatarSize, IncomingIdSchema } from '../common';
 
 // Common field schemas
-export const channelIdSchema = z.uuid();
-export const uploadIdSchema = z.uuid();
-export const userIdSchema = z.uuid();
-export const playlistIdSchema = z.uuid();
+export const channelIdSchema = IncomingIdSchema;
+export const uploadIdSchema = IncomingIdSchema;
+export const userIdSchema = IncomingIdSchema;
+export const playlistIdSchema = IncomingIdSchema;
 
 export const paginationSchema = z.object({
   page: z.number().min(1).default(1),

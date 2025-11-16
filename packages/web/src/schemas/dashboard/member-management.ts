@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { IncomingIdSchema } from '../common';
 
-export const userIdSchema = z.uuid();
+export const userIdSchema = IncomingIdSchema;
 
 export const basePermissionsSchema = z.object({
   isAdmin: z.boolean().default(false),

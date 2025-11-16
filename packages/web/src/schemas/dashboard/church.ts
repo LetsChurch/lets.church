@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { AvatarSize } from '../common';
+import { AvatarSize, IncomingIdSchema } from '../common';
 
-export const churchIdSchema = z.uuid();
+export const churchIdSchema = IncomingIdSchema;
 
 export const churchQuerySchema = z.object({
   churchId: churchIdSchema,
@@ -16,13 +16,13 @@ export const churchMemberPermissionsSchema = z.object({
 export const addChurchMemberSchema = z
   .object({
     churchId: churchIdSchema,
-    userId: z.uuid(),
+    userId: IncomingIdSchema,
   })
   .and(churchMemberPermissionsSchema);
 
 export const removeChurchMemberSchema = z.object({
   churchId: churchIdSchema,
-  appUserId: z.uuid(),
+  appUserId: IncomingIdSchema,
 });
 
 export const userSearchChurchSchema = z.object({
@@ -37,13 +37,13 @@ export const channelSearchChurchSchema = z.object({
 
 export const linkChannelSchema = z.object({
   churchId: churchIdSchema,
-  channelId: z.uuid(),
+  channelId: IncomingIdSchema,
   officialChannel: z.boolean().default(false),
 });
 
 export const unlinkChannelSchema = z.object({
   churchId: churchIdSchema,
-  channelId: z.uuid(),
+  channelId: IncomingIdSchema,
 });
 
 export const leaderTypeSchema = z.enum(['ELDER', 'DEACON', 'OTHER']);
@@ -64,7 +64,7 @@ export const addLeaderSchema = z.object({
 
 export const updateLeaderSchema = z.object({
   churchId: churchIdSchema,
-  leaderId: z.uuid(),
+  leaderId: IncomingIdSchema,
   type: leaderTypeSchema,
   name: z.string().min(1, 'Name is required'),
   email: z
@@ -79,7 +79,7 @@ export const updateLeaderSchema = z.object({
 
 export const removeLeaderSchema = z.object({
   churchId: churchIdSchema,
-  leaderId: z.uuid(),
+  leaderId: IncomingIdSchema,
 });
 
 export const createChurchSchema = z.object({
@@ -102,7 +102,7 @@ export const createChurchSchema = z.object({
     ),
   primaryPhoneNumber: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  associatedOrganizations: z.array(z.uuid()).optional(),
+  associatedOrganizations: z.array(IncomingIdSchema).optional(),
 });
 
 export const updateChurchSchema = z.object({
@@ -125,5 +125,5 @@ export const updateChurchSchema = z.object({
     ),
   primaryPhoneNumber: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  associatedOrganizations: z.array(z.uuid()).optional(),
+  associatedOrganizations: z.array(IncomingIdSchema).optional(),
 });
