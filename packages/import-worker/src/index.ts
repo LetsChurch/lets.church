@@ -38,9 +38,9 @@ const importWorker = await Worker.create({
   activities: importActivities,
   taskQueue: IMPORT_QUEUE,
   shutdownGraceTime: TEMPORAL_SHUTDOWN_GRACE_TIME,
-  maxConcurrentWorkflowTaskExecutions: parseInt(
-    MAX_CONCURRENT_WORKFLOW_TASK_EXECUTIONS,
-    10,
+  maxConcurrentWorkflowTaskExecutions: Math.max(
+    2,
+    parseInt(MAX_CONCURRENT_WORKFLOW_TASK_EXECUTIONS, 10),
   ),
   maxConcurrentActivityTaskExecutions: parseInt(
     MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS,
