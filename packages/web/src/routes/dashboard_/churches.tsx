@@ -9,6 +9,7 @@ import {
   Stack,
   Text,
   Title,
+  Tooltip,
 } from '@mantine/core';
 import {
   IconDots,
@@ -110,9 +111,18 @@ function ChurchesPage() {
                     </Text>
                   </Link>
                   <Group gap="xs">
-                    <Badge color={isAdmin ? 'blue' : 'green'} size="sm">
-                      {isAdmin ? 'Admin' : 'User'}
-                    </Badge>
+                    <Tooltip
+                      label={
+                        isAdmin
+                          ? 'You can edit this church profile and manage settings'
+                          : 'You have access to view this church profile'
+                      }
+                      withArrow
+                    >
+                      <Badge color={isAdmin ? 'blue' : 'green'} size="sm">
+                        {isAdmin ? 'Admin' : 'User'}
+                      </Badge>
+                    </Tooltip>
                     <Menu shadow="md" width={200}>
                       <Menu.Target>
                         <ActionIcon

@@ -34,6 +34,7 @@ export function setTheme(theme: Theme) {
   if (typeof window !== 'undefined') {
     Cookies.set(THEME_COOKIE_NAME, theme);
     document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-mantine-color-scheme', theme);
     window.dispatchEvent(
       new CustomEvent(THEME_CHANGE_EVENT, { detail: { theme } }),
     );
@@ -44,5 +45,6 @@ export function initializeTheme() {
   if (typeof window !== 'undefined') {
     const theme = getInitialTheme();
     document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-mantine-color-scheme', theme);
   }
 }

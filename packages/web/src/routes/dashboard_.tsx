@@ -1,5 +1,6 @@
 import { Anchor, AppShell, Box, Burger, Group, NavLink } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
+import { IconHelp } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import {
   createFileRoute,
@@ -11,7 +12,9 @@ import {
 import { useTRPC } from '@/trpc/react';
 import { BackButton } from '@/util/back-navigation';
 import { MantineWrapper } from './-mantine';
+import { HelpModal } from './dashboard_/-components/help-modal';
 import { DashboardSearchBar } from './dashboard_/-components/search-bar';
+import styles from './dashboard_/-styles.module.css';
 
 export const Route = createFileRoute('/dashboard_')({
   beforeLoad: async ({ context }) => {
@@ -27,6 +30,7 @@ export const Route = createFileRoute('/dashboard_')({
 
 function DashboardLayout() {
   const [opened, { toggle }] = useDisclosure();
+  const [helpOpened, { open: openHelp, close: closeHelp }] = useDisclosure();
   const location = useLocation();
   const trpc = useTRPC();
   const { data: currentUser } = useQuery(
@@ -133,11 +137,24 @@ function DashboardLayout() {
             pt="md"
             style={{ borderTop: '1px solid var(--mantine-color-gray-3)' }}
           >
-            <Anchor component={Link} to="/" fw={500}>
+            <NavLink
+              label="Help"
+              leftSection={<IconHelp size={16} />}
+              onClick={openHelp}
+              mb="xs"
+            />
+            <Anchor
+              component={Link}
+              to="/"
+              fw={500}
+              className={styles.backLink}
+            >
               ← Back to Let's Church
             </Anchor>
           </Box>
         </AppShell.Navbar>
+
+        <HelpModal opened={helpOpened} onClose={closeHelp} />
 
         <AppShell.Main>
           <Box mb="md">

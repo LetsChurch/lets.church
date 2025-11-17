@@ -5,3 +5,11 @@
 .fullWidth {
   width: 100%;
 }
+
+.backLink {
+  color: inherit;
+}
+
+[data-theme="dark"] .backLink {
+  color: white;
+}

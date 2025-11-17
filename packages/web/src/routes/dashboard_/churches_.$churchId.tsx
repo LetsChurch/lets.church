@@ -111,7 +111,7 @@ function ChurchDetailsPage() {
           to="/dashboard/churches/$churchId/members"
           color="blue"
           icon={<IconUsers size={22} stroke={1.5} />}
-          tooltip="Manage active users of this church profile"
+          tooltip="People who can view and edit this church profile"
           value={church._count.memberships}
         />
 
@@ -120,7 +120,7 @@ function ChurchDetailsPage() {
           to="/dashboard/churches/$churchId/channels"
           color="green"
           icon={<IconVideo size={22} stroke={1.5} />}
-          tooltip="Manage associated content channels for this church"
+          tooltip="Media channels associated with this church"
           value={church._count.channelAssociations}
         />
 
@@ -129,7 +129,7 @@ function ChurchDetailsPage() {
           to="/dashboard/churches/$churchId/leaders"
           color="violet"
           icon={<IconShield size={22} stroke={1.5} />}
-          tooltip="Manage registered leadership team users"
+          tooltip="Church pastors, elders, and ministry leadership"
           value={church._count.leaders}
         />
       </SimpleGrid>

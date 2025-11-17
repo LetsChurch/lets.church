@@ -33,16 +33,33 @@
   background-color: var(--mantine-color-blue-0);
 }
 
+[data-theme="dark"] .uploadsTile {
+  border-color: var(--mantine-color-blue-8);
+  background-color: var(--mantine-color-blue-9);
+}
+
 .uploadsTile .icon {
   color: var(--mantine-color-blue-6);
+}
+
+[data-theme="dark"] .uploadsTile .icon {
+  color: var(--mantine-color-blue-4);
 }
 
 .uploadsTile .title {
   color: var(--mantine-color-blue-8);
 }
 
+[data-theme="dark"] .uploadsTile .title {
+  color: var(--mantine-color-blue-3);
+}
+
 .uploadsTile .value {
   color: var(--mantine-color-blue-9);
+}
+
+[data-theme="dark"] .uploadsTile .value {
+  color: var(--mantine-color-blue-2);
 }
 
 .uploadsTile .value .mantine-Text-root[data-c="dimmed"] {
@@ -50,21 +67,43 @@
   color: var(--mantine-color-blue-7) !important;
 }
 
+[data-theme="dark"] .uploadsTile .value .mantine-Text-root[data-c="dimmed"] {
+  /* biome-ignore lint/complexity/noImportantStyles: mantine override */
+  color: var(--mantine-color-blue-4) !important;
+}
+
 .subscribersTile {
   border-color: var(--mantine-color-green-3);
   background-color: var(--mantine-color-green-0);
+}
+
+[data-theme="dark"] .subscribersTile {
+  border-color: var(--mantine-color-green-8);
+  background-color: var(--mantine-color-green-9);
 }
 
 .subscribersTile .icon {
   color: var(--mantine-color-green-6);
 }
 
+[data-theme="dark"] .subscribersTile .icon {
+  color: var(--mantine-color-green-4);
+}
+
 .subscribersTile .title {
   color: var(--mantine-color-green-8);
 }
 
+[data-theme="dark"] .subscribersTile .title {
+  color: var(--mantine-color-green-3);
+}
+
 .subscribersTile .value {
   color: var(--mantine-color-green-9);
+}
+
+[data-theme="dark"] .subscribersTile .value {
+  color: var(--mantine-color-green-2);
 }
 
 .membersTile {
@@ -72,14 +111,31 @@
   background-color: var(--mantine-color-violet-0);
 }
 
+[data-theme="dark"] .membersTile {
+  border-color: var(--mantine-color-violet-8);
+  background-color: var(--mantine-color-violet-9);
+}
+
 .membersTile .icon {
   color: var(--mantine-color-violet-6);
+}
+
+[data-theme="dark"] .membersTile .icon {
+  color: var(--mantine-color-violet-4);
 }
 
 .membersTile .title {
   color: var(--mantine-color-violet-8);
 }
 
+[data-theme="dark"] .membersTile .title {
+  color: var(--mantine-color-violet-3);
+}
+
 .membersTile .value {
   color: var(--mantine-color-violet-9);
+}
+
+[data-theme="dark"] .membersTile .value {
+  color: var(--mantine-color-violet-2);
 }

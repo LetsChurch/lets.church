@@ -51,6 +51,15 @@
   --tile-dimmed-color: var(--mantine-color-blue-7);
 }
 
+[data-theme="dark"] .blue {
+  --tile-border-color: var(--mantine-color-blue-8);
+  --tile-bg-color: var(--mantine-color-blue-9);
+  --tile-icon-color: var(--mantine-color-blue-4);
+  --tile-title-color: var(--mantine-color-blue-3);
+  --tile-value-color: var(--mantine-color-blue-2);
+  --tile-dimmed-color: var(--mantine-color-blue-4);
+}
+
 .green {
   --tile-border-color: var(--mantine-color-green-3);
   --tile-bg-color: var(--mantine-color-green-0);
@@ -59,10 +68,26 @@
   --tile-value-color: var(--mantine-color-green-9);
 }
 
+[data-theme="dark"] .green {
+  --tile-border-color: var(--mantine-color-green-8);
+  --tile-bg-color: var(--mantine-color-green-9);
+  --tile-icon-color: var(--mantine-color-green-4);
+  --tile-title-color: var(--mantine-color-green-3);
+  --tile-value-color: var(--mantine-color-green-2);
+}
+
 .violet {
   --tile-border-color: var(--mantine-color-violet-3);
   --tile-bg-color: var(--mantine-color-violet-0);
   --tile-icon-color: var(--mantine-color-violet-6);
   --tile-title-color: var(--mantine-color-violet-8);
   --tile-value-color: var(--mantine-color-violet-9);
+}
+
+[data-theme="dark"] .violet {
+  --tile-border-color: var(--mantine-color-violet-8);
+  --tile-bg-color: var(--mantine-color-violet-9);
+  --tile-icon-color: var(--mantine-color-violet-4);
+  --tile-title-color: var(--mantine-color-violet-3);
+  --tile-value-color: var(--mantine-color-violet-2);
 }

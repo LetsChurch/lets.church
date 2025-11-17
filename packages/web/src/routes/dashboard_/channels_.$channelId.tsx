@@ -231,7 +231,7 @@ function ChannelDetailsPage() {
           to="/dashboard/channels/$channelId/uploads"
           color="blue"
           icon={<IconVideo size={22} stroke={1.5} />}
-          tooltip="Uploaded media files on this channel"
+          tooltip="Videos and audio files uploaded to this channel"
           value={
             <Text>
               {channel._count.uploadRecords}{' '}
@@ -247,7 +247,7 @@ function ChannelDetailsPage() {
           to="/dashboard/channels/$channelId/playlists"
           color="violet"
           icon={<IconList size={22} stroke={1.5} />}
-          tooltip="Curated collections of uploads organized by theme or series"
+          tooltip="Collections of media organized by theme or series"
           value={channel._count.uploadLists}
         />
 
@@ -256,7 +256,7 @@ function ChannelDetailsPage() {
           to="/dashboard/channels/$channelId/members"
           color="green"
           icon={<IconShield size={22} stroke={1.5} />}
-          tooltip="Users with permissions to manage, edit, or upload content"
+          tooltip="People who can manage and upload content to this channel"
           value={channel._count.memberships}
         />
 
@@ -264,7 +264,7 @@ function ChannelDetailsPage() {
           title="Subscribers"
           color="green"
           icon={<IconHeart size={22} stroke={1.5} />}
-          tooltip="Users following this channel for new content notifications"
+          tooltip="People following this channel for updates"
           value={channel._count.subscribers}
         />
       </SimpleGrid>

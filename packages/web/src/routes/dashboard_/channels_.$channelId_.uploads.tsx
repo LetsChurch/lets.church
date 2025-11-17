@@ -460,42 +460,60 @@ function ChannelUploadsPage() {
                       Change visibility for {selection.length} upload
                       {selection.length > 1 ? 's' : ''}
                     </Menu.Label>
-                    <Menu.Item
-                      leftSection={<IconEye size={16} />}
-                      onClick={() => {
-                        bulkSetVisibilityMutation.mutate({
-                          channelId: channel.id,
-                          uploadIds: selection,
-                          visibility: 'PUBLIC',
-                        });
-                      }}
+                    <Tooltip
+                      label="Visible to everyone and appears in search results"
+                      position="left"
+                      withArrow
                     >
-                      Public
-                    </Menu.Item>
-                    <Menu.Item
-                      leftSection={<IconEye size={16} stroke={1} />}
-                      onClick={() => {
-                        bulkSetVisibilityMutation.mutate({
-                          channelId: channel.id,
-                          uploadIds: selection,
-                          visibility: 'UNLISTED',
-                        });
-                      }}
+                      <Menu.Item
+                        leftSection={<IconEye size={16} />}
+                        onClick={() => {
+                          bulkSetVisibilityMutation.mutate({
+                            channelId: channel.id,
+                            uploadIds: selection,
+                            visibility: 'PUBLIC',
+                          });
+                        }}
+                      >
+                        Public
+                      </Menu.Item>
+                    </Tooltip>
+                    <Tooltip
+                      label="Only visible to people with the link, won't appear in searches"
+                      position="left"
+                      withArrow
                     >
-                      Unlisted
-                    </Menu.Item>
-                    <Menu.Item
-                      leftSection={<IconEyeOff size={16} />}
-                      onClick={() => {
-                        bulkSetVisibilityMutation.mutate({
-                          channelId: channel.id,
-                          uploadIds: selection,
-                          visibility: 'PRIVATE',
-                        });
-                      }}
+                      <Menu.Item
+                        leftSection={<IconEye size={16} stroke={1} />}
+                        onClick={() => {
+                          bulkSetVisibilityMutation.mutate({
+                            channelId: channel.id,
+                            uploadIds: selection,
+                            visibility: 'UNLISTED',
+                          });
+                        }}
+                      >
+                        Unlisted
+                      </Menu.Item>
+                    </Tooltip>
+                    <Tooltip
+                      label="Only visible to you and channel members"
+                      position="left"
+                      withArrow
                     >
-                      Private
-                    </Menu.Item>
+                      <Menu.Item
+                        leftSection={<IconEyeOff size={16} />}
+                        onClick={() => {
+                          bulkSetVisibilityMutation.mutate({
+                            channelId: channel.id,
+                            uploadIds: selection,
+                            visibility: 'PRIVATE',
+                          });
+                        }}
+                      >
+                        Private
+                      </Menu.Item>
+                    </Tooltip>
                   </Menu.Dropdown>
                 </Menu>
               )}
@@ -633,8 +651,13 @@ function ChannelUploadsPage() {
 
           <Select
             label="License"
+            description={
+              importFormData.license === 'STANDARD'
+                ? 'You retain all rights'
+                : 'Free for anyone to use without restrictions'
+            }
             data={[
-              { value: 'STANDARD', label: 'Standard' },
+              { value: 'STANDARD', label: 'Standard License' },
               { value: 'PUBLIC_DOMAIN', label: 'Public Domain' },
             ]}
             value={importFormData.license}
@@ -648,6 +671,13 @@ function ChannelUploadsPage() {
 
           <Select
             label="Visibility"
+            description={
+              importFormData.visibility === 'PUBLIC'
+                ? 'Visible to everyone and appears in search results'
+                : importFormData.visibility === 'UNLISTED'
+                  ? "Only visible to people with the link, won't appear in searches"
+                  : 'Only visible to you and channel members'
+            }
             data={[
               { value: 'PUBLIC', label: 'Public' },
               { value: 'UNLISTED', label: 'Unlisted' },

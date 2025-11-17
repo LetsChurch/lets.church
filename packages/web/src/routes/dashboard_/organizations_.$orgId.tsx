@@ -231,7 +231,7 @@ function OrganizationDetailsPage() {
           to="/dashboard/organizations/$orgId/members"
           color="blue"
           icon={<IconUsers size={22} stroke={1.5} />}
-          tooltip="Manage active users of this organization profile"
+          tooltip="People who can view and edit this organization profile"
           value={organization._count.memberships}
         />
         <StatCard
@@ -239,7 +239,7 @@ function OrganizationDetailsPage() {
           to="/dashboard/organizations/$orgId/associations"
           color="violet"
           icon={<IconNetwork size={22} stroke={1.5} />}
-          tooltip="Manage downstream organization associations"
+          tooltip="Churches and organizations connected to this organization"
           value={
             <Text>
               {organization._count.downstreamOrganizationAssociations}{' '}

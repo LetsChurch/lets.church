@@ -129,7 +129,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
   const theme = getInitialTheme();
 
   return (
-    <html lang="en" data-theme={theme}>
+    <html lang="en" data-theme={theme} data-mantine-color-scheme={theme}>
       <head>
         <HeadContent />
       </head>

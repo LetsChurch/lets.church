@@ -103,7 +103,7 @@ function OrganizationsPage() {
                   </Link>
                   <Group gap="xs">
                     <Badge color={isAdmin ? 'blue' : 'green'} size="sm">
-                      {isAdmin ? 'Admin' : 'User'}
+                      {isAdmin ? 'Admin' : 'Member'}
                     </Badge>
                     <Menu shadow="md" width={200}>
                       <Menu.Target>
@@ -138,7 +138,7 @@ function OrganizationsPage() {
                   {organization.description ||
                     (isAdmin
                       ? 'You have administrative access to this organization.'
-                      : 'You have user access to this organization profile.')}
+                      : 'You are a member of this organization.')}
                 </Text>
               </Card>
             );
