@@ -4,6 +4,7 @@ import {
   Outlet,
   Scripts,
 } from '@tanstack/react-router';
+import Plausible from 'plausible-tracker';
 import posthog from 'posthog-js';
 import { type ReactNode, useEffect } from 'react';
 import '@fontsource-variable/inter';
@@ -94,6 +95,14 @@ function RootComponent() {
       persistence: 'memory',
       person_profiles: 'identified_only',
     });
+
+    // Initialize Plausible
+    const plausible = Plausible({
+      domain: 'lets.church',
+    });
+
+    plausible.enableAutoPageviews();
+    plausible.enableAutoOutboundTracking();
 
     // Set browser size cookie on mount and when window resizes
     const updateBrowserSize = () => {
