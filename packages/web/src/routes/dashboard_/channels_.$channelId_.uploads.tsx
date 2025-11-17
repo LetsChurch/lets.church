@@ -542,6 +542,7 @@ function ChannelUploadsPage() {
           onDrop={handleDrop}
           accept={{
             'video/*': ['.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm'],
+            'audio/*': ['.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a'],
           }}
           maxSize={5 * 1024 * 1024 * 1024} // 5GB
           multiple={false}
