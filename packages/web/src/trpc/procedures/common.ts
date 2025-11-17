@@ -1,7 +1,7 @@
 import { prisma } from '@letschurch/db';
-import logger from '@letschurch/util';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
+import logger from '@/util/logger';
 import { authProcedure, publicProcedure } from '../trpc';
 
 const moduleLogger = logger.child({
@@ -60,8 +60,19 @@ export const commonProcedures = {
 
         if (upload) {
           const outgoingId = OutgoingIdSchema.parse(idResult.data);
+
+          moduleLogger.info('Slug resolved to media upload', {
+            slug,
+            uploadId: outgoingId,
+          });
+
           return { type: 'media' as const, id: outgoingId };
         }
+
+        moduleLogger.info('Slug parsed as ID but upload not found', {
+          slug,
+          parsedId: idResult.data,
+        });
       }
 
       // Try to find a channel with this slug
@@ -71,7 +82,23 @@ export const commonProcedures = {
       });
 
       if (channel && channel.visibility === 'PUBLIC' && channel.approvedAt) {
+        moduleLogger.info('Slug resolved to channel', {
+          slug,
+          visibility: channel.visibility,
+          approved: Boolean(channel.approvedAt),
+        });
+
         return { type: 'channel' as const, slug };
+      }
+
+      if (channel) {
+        moduleLogger.info('Channel found but not accessible', {
+          slug,
+          visibility: channel.visibility,
+          approved: Boolean(channel.approvedAt),
+        });
+      } else {
+        moduleLogger.info('Slug not found', { slug });
       }
 
       return { type: 'not-found' as const };

@@ -2,7 +2,6 @@ import { prisma, UploadLicense } from '@letschurch/db';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
 import { emailHtml } from '@letschurch/temporal/util/email';
 import { sendEmailWorkflow } from '@letschurch/temporal/workflows/background/send-email';
-import logger from '@letschurch/util';
 import { TRPCError } from '@trpc/server';
 import { invariant } from 'es-toolkit';
 import { stripIndent } from 'proper-tags';
@@ -42,6 +41,7 @@ import {
   handleMultipartMediaUpload,
   importMedia,
 } from '@/temporal';
+import logger from '@/util/logger';
 import { ingestS3, PART_SIZE, publicS3 } from '@/util/s3';
 import { getPublicImageUrl, getPublicMediaUrl } from '@/util/url';
 import { authProcedure, router } from '../../trpc';

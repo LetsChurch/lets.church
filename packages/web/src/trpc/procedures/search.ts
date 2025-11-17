@@ -6,13 +6,13 @@ import {
   msearchTranscripts,
   msearchUploads,
 } from '@letschurch/elasticsearch';
-import logger from '@letschurch/util';
 import { z } from 'zod';
 import {
   getThumbnailResize,
   IncomingIdSchema,
   OutgoingIdSchema,
 } from '@/schemas/common';
+import logger from '@/util/logger';
 import { publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
 import { authProcedure, publicProcedure } from '../trpc';
@@ -61,6 +61,12 @@ export const searchProcedures = {
           },
         });
         channelIds = channels.map((c) => c.id);
+
+        moduleLogger.info('Converted channel slugs to IDs', {
+          slugsProvided: channelSlugs.length,
+          channelsFound: channels.length,
+          channelIds,
+        });
       }
 
       moduleLogger.info('Performing search', {
@@ -117,6 +123,12 @@ export const searchProcedures = {
           gte: startDate.toISOString(),
           lte: endDate,
         };
+
+        moduleLogger.info('Applied date range filter', {
+          dateRange,
+          startDate: startDate.toISOString(),
+          endDate,
+        });
       }
 
       // Log the search
@@ -132,6 +144,10 @@ export const searchProcedures = {
             },
             appUserId: ctx.session?.appUserId,
           },
+        });
+
+        moduleLogger.info('Search query logged to database', {
+          userId: ctx.session?.appUserId,
         });
       } catch (error) {
         moduleLogger.error('Failed to log search', {
@@ -160,6 +176,13 @@ export const searchProcedures = {
       ];
 
       // Perform the multisearch
+      moduleLogger.info('Executing ElasticSearch multisearch', {
+        searchCount: searches.length / 2, // Each search has header + body
+        mediaLimit,
+        transcriptLimit,
+        channelsLimit: 10,
+      });
+
       const response = await client.msearch({
         searches,
       });
@@ -167,12 +190,22 @@ export const searchProcedures = {
       // Parse and validate the response
       const parsed = MSearchResponseSchema.parse(response);
 
+      moduleLogger.info('ElasticSearch multisearch completed', {
+        responseCount: parsed.responses.length,
+      });
+
       const [uploadsResponse, transcriptsResponse, _channelsResponse] =
         parsed.responses;
 
       // Extract counts
       const mediaCount = uploadsResponse?.hits.total.value ?? 0;
       const transcriptCount = transcriptsResponse?.hits.total.value ?? 0;
+
+      moduleLogger.info('Search result counts', {
+        mediaCount,
+        transcriptCount,
+        focus,
+      });
 
       // Extract channel aggregations from the focused response
       const channelAggs =
@@ -194,6 +227,11 @@ export const searchProcedures = {
           visibility: 'PUBLIC',
           approvedAt: { not: null },
         },
+      });
+
+      moduleLogger.info('Fetched channel aggregation data', {
+        aggregatedChannels: channelIdsFromAggs.length,
+        channelsFound: channels.length,
       });
 
       const channelsWithAvatars = channels.map((channel) => {
@@ -218,6 +256,10 @@ export const searchProcedures = {
         const uploadIds = uploadsResponse.hits.hits
           .filter((hit) => hit._index === 'lc_uploads_v2')
           .map((hit) => hit._id);
+
+        moduleLogger.info('Processing media search results', {
+          hitsFromElasticsearch: uploadIds.length,
+        });
 
         // Fetch full upload data from database
         const uploads = await prisma.uploadRecord.findMany({
@@ -252,6 +294,12 @@ export const searchProcedures = {
 
         // Create a map for quick lookup
         const uploadsMap = new Map(uploads.map((u) => [u.id, u]));
+
+        moduleLogger.info('Fetched upload data from database', {
+          uploadsRequested: uploadIds.length,
+          uploadsFound: uploads.length,
+          uploadsMissing: uploadIds.length - uploads.length,
+        });
 
         // Map uploads to include thumbnails, preserving Elasticsearch order
         items = uploadIds
@@ -308,6 +356,10 @@ export const searchProcedures = {
           .filter((hit) => hit._index === 'lc_transcripts')
           .map((hit) => hit._id);
 
+        moduleLogger.info('Processing transcript search results', {
+          hitsFromElasticsearch: uploadIds.length,
+        });
+
         // Fetch full upload data from database
         const uploads = await prisma.uploadRecord.findMany({
           select: {
@@ -341,6 +393,12 @@ export const searchProcedures = {
 
         // Create a map for quick lookup
         const uploadsMap = new Map(uploads.map((u) => [u.id, u]));
+
+        moduleLogger.info('Fetched upload data for transcripts from database', {
+          uploadsRequested: uploadIds.length,
+          uploadsFound: uploads.length,
+          uploadsMissing: uploadIds.length - uploads.length,
+        });
 
         // Map transcript hits to include upload data and transcript segments
         items = transcriptsResponse.hits.hits
@@ -409,6 +467,13 @@ export const searchProcedures = {
 
       const nextCursor = items.length === limit ? cursor + limit : null;
 
+      moduleLogger.info('Search completed successfully', {
+        itemsReturned: items.length,
+        hasMore: nextCursor !== null,
+        nextCursor,
+        channelsReturned: channelsWithAvatars.length,
+      });
+
       return {
         items,
         mediaCount,
@@ -435,6 +500,11 @@ export const searchProcedures = {
       take: 10,
     });
 
+    moduleLogger.info('Retrieved recent searches', {
+      userId: ctx.session.appUserId,
+      searchCount: recentSearches.length,
+    });
+
     // Map createdAt to searchedAt for the API response
     return recentSearches.map((entry) => ({
       query: entry.query,
@@ -449,7 +519,7 @@ export const searchProcedures = {
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      await prisma.searchLogEntry.updateMany({
+      const result = await prisma.searchLogEntry.updateMany({
         where: {
           appUserId: ctx.session.appUserId,
           query: input.query,
@@ -458,6 +528,12 @@ export const searchProcedures = {
         data: {
           userDeletedAt: new Date(),
         },
+      });
+
+      moduleLogger.info('Deleted recent search', {
+        userId: ctx.session.appUserId,
+        query: input.query,
+        entriesDeleted: result.count,
       });
 
       return { success: true };

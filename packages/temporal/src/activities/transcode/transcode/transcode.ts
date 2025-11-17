@@ -2,7 +2,6 @@ import { stat, unlink } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { setTimeout } from 'node:timers/promises';
 import type { UploadVariant } from '@letschurch/db';
-import logger from '@letschurch/util';
 import { Context } from '@temporalio/activity';
 import { invariant, throttle } from 'es-toolkit';
 import fastGlob from 'fast-glob';
@@ -17,6 +16,7 @@ import {
   runFfmpegEncode,
   variantsToMasterVideoPlaylist,
 } from '../../../util/ffmpeg';
+import logger from '../../../util/logger';
 import { ingestS3, publicS3 } from '../../../util/s3';
 import type { Probe } from '../../../util/zod';
 

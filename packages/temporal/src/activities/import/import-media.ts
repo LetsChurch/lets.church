@@ -1,6 +1,5 @@
 import { extname, join } from 'node:path';
 import type { Prisma } from '@letschurch/db';
-import logger from '@letschurch/util';
 import { Context } from '@temporalio/activity';
 import mime from 'mime';
 import { mkdirp } from 'mkdirp';
@@ -8,6 +7,7 @@ import { rimraf } from 'rimraf';
 import { v4 as uuid } from 'uuid';
 import { createUploadRecord, updateUploadRecord } from '../../client';
 import { downloadFromUrl } from '../../util/import';
+import logger from '../../util/logger';
 import { ingestS3 } from '../../util/s3';
 
 const moduleLogger = logger.child({

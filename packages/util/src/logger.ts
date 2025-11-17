@@ -1,5 +1,9 @@
 import pino from 'pino';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
+const REDACT_PATHS = ['password', 'cookie'];
+
 /**
  * Logger fields:
  *   - serviceName: Name of the service
@@ -9,10 +13,7 @@ import pino from 'pino';
  *   - args.targetId: The id of the resource that was targeted
  *   - meta: Stringified JSON for additional data that won't be indexed as a field
  */
-
-const isProduction = process.env.NODE_ENV === 'production';
-
-const logger = pino({
+export const logger = pino({
   formatters: {
     bindings(bindings) {
       return {
@@ -21,6 +22,11 @@ const logger = pino({
         identity: process.env.IDENTITY ?? 'unknown',
       };
     },
+  },
+  // Redact sensitive information using pino's built-in redaction
+  redact: {
+    paths: REDACT_PATHS,
+    censor: '[REDACTED]',
   },
   // Only use pino-pretty transport in development for readability
   // In production, log to stdout as JSON (standard for containerized apps)
@@ -34,7 +40,5 @@ const logger = pino({
     },
   }),
 });
-
-export default logger;
 
 export type Logger = typeof logger;

@@ -1,7 +1,7 @@
 import type { UploadVariant } from '@letschurch/db';
-import logger from '@letschurch/util';
 import { invariant } from 'es-toolkit';
 import { execa } from 'execa';
+import logger from '../util/logger';
 import { type Probe, probeIsVideoFile } from './zod';
 
 const moduleLogger = logger.child({ module: 'util/ffmpeg' });

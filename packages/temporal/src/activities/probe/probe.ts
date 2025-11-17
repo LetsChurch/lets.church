@@ -1,10 +1,10 @@
 import { join } from 'node:path';
-import logger from '@letschurch/util';
 import { Context } from '@temporalio/activity';
 import { invariant } from 'es-toolkit';
 import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
 import { runFfprobe } from '../../util/ffmpeg';
+import logger from '../../util/logger';
 import { ingestS3 } from '../../util/s3';
 import { updateUploadRecord } from '../../util/temporal';
 import { ffprobeSchema } from '../../util/zod';
@@ -27,6 +27,12 @@ export default async function probe(
     },
   });
 
+  activityLogger.info('Probe activity started', {
+    uploadRecordId,
+    s3UploadKey,
+    workingDir: WORK_DIR,
+  });
+
   const signal = Context.current().cancellationSignal;
 
   const workingDir = join(WORK_DIR, uploadRecordId);
@@ -39,16 +45,46 @@ export default async function probe(
     await mkdirp(workingDir);
 
     const downloadPath = join(workingDir, 'download');
+
+    activityLogger.info('Fetching file metadata from S3', {
+      bucket: 'ingest',
+      key: s3UploadKey,
+    });
+
     const uploadSizeBytes = (await ingestS3.headObject(s3UploadKey))
       ?.ContentLength;
     invariant(uploadSizeBytes, 'Invalid uploadSizeBytes');
+
+    activityLogger.info('Starting file download from S3', {
+      sizeBytes: uploadSizeBytes,
+      sizeMB: (uploadSizeBytes / 1024 / 1024).toFixed(2),
+      destination: downloadPath,
+    });
+
+    const downloadStart = Date.now();
     await ingestS3.streamObjectToFile(s3UploadKey, downloadPath, {
       heartbeat: () => Context.current().heartbeat('download'),
     });
+    const downloadDuration = Date.now() - downloadStart;
+
+    activityLogger.info('Download complete', {
+      durationMs: downloadDuration,
+      speedMBps: (
+        uploadSizeBytes /
+        1024 /
+        1024 /
+        (downloadDuration / 1000)
+      ).toFixed(2),
+    });
+
     await mkdirp(workingDir);
 
-    activityLogger.info(`Probing ${downloadPath}`);
+    activityLogger.info('Starting ffprobe', {
+      filePath: downloadPath,
+      fileSizeMB: (uploadSizeBytes / 1024 / 1024).toFixed(2),
+    });
 
+    const probeStart = Date.now();
     const proc = runFfprobe(workingDir, downloadPath, signal);
 
     proc.stdout?.on('data', (data) => {
@@ -60,10 +96,44 @@ export default async function probe(
     });
 
     await proc;
+    const probeDuration = Date.now() - probeStart;
+
+    activityLogger.info('ffprobe completed', {
+      durationMs: probeDuration,
+    });
 
     const probeJson = stdOutLines.join('');
     const parsedProbeJson = JSON.parse(probeJson);
     const schemaParsedProbe = ffprobeSchema.parse(parsedProbeJson);
+
+    // Log probe results
+    const videoStream = schemaParsedProbe.streams.find(
+      (s) => s.codec_type === 'video',
+    );
+    const audioStream = schemaParsedProbe.streams.find(
+      (s) => s.codec_type === 'audio',
+    );
+    const isPortrait = videoStream && videoStream.height > videoStream.width;
+
+    activityLogger.info('Media probe results', {
+      format: schemaParsedProbe.format.format_name,
+      duration: parseFloat(schemaParsedProbe.format.duration),
+      streamCount: schemaParsedProbe.streams.length,
+      videoCodec: videoStream?.codec_name,
+      videoResolution: videoStream
+        ? `${videoStream.width}x${videoStream.height}`
+        : null,
+      videoFps: videoStream?.avg_frame_rate,
+      audioCodec: audioStream?.codec_name,
+      audioChannels: audioStream?.channels,
+      audioSampleRate: audioStream?.sample_rate,
+      isPortrait,
+    });
+
+    activityLogger.info('Uploading probe results to S3', {
+      key: `${uploadRecordId}/probe.json`,
+      sizeKB: (probeJson.length / 1024).toFixed(2),
+    });
 
     await ingestS3.retryablePutFile({
       key: `${uploadRecordId}/probe.json`,
@@ -72,31 +142,53 @@ export default async function probe(
       signal,
     });
 
+    const visibilityUpdate = schemaParsedProbe.streams.some(
+      (s) => s.codec_type === 'video' && s.height > s.width,
+    )
+      ? { visibility: 'PRIVATE' as const }
+      : {};
+
+    if (visibilityUpdate.visibility) {
+      activityLogger.info(
+        'Setting upload visibility to PRIVATE (portrait video detected)',
+      );
+    }
+
+    activityLogger.info('Updating upload record with probe data');
+
     await updateUploadRecord(uploadRecordId, {
       probe: probeJson,
       uploadSizeBytes,
       lengthSeconds: parseFloat(schemaParsedProbe.format.duration),
       // TODO: temporarily set portrait videos to private
-      ...(schemaParsedProbe.streams.some(
-        (s) => s.codec_type === 'video' && s.height > s.width,
-      )
-        ? { visibility: 'PRIVATE' }
-        : {}),
+      ...visibilityUpdate,
+    });
+
+    activityLogger.info('Probe activity completed successfully', {
+      totalDurationMs: Date.now() - probeStart + downloadDuration,
+      mediaLengthSeconds: parseFloat(schemaParsedProbe.format.duration),
     });
 
     return schemaParsedProbe;
   } catch (e) {
-    activityLogger
-      .child({
-        meta: JSON.stringify({
-          stdout: stdOutLines.join(''),
-          stderr: stdErrLines.join(''),
-        }),
-      })
-      .error(e instanceof Error ? e.message : e);
+    const error = e instanceof Error ? e : new Error(String(e));
+
+    activityLogger.error('Probe activity failed', {
+      error: error.message,
+      stack: error.stack,
+      uploadRecordId,
+      s3UploadKey,
+      meta: JSON.stringify({
+        stdout: stdOutLines.join(''),
+        stderr: stdErrLines.join(''),
+      }),
+    });
+
     throw e;
   } finally {
-    activityLogger.info('Removing working directory');
+    activityLogger.info('Removing working directory', {
+      workingDir,
+    });
     await rimraf(workingDir);
   }
 }

@@ -1,5 +1,4 @@
 import { OrganizationType, prisma } from '@letschurch/db';
-import logger from '@letschurch/util';
 import { TRPCError } from '@trpc/server';
 import { invariant } from 'es-toolkit';
 import {
@@ -25,6 +24,7 @@ import {
   completeMultipartMediaUpload,
   handleMultipartMediaUpload,
 } from '@/temporal';
+import logger from '@/util/logger';
 import { ingestS3, PART_SIZE, publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
 import { authProcedure, router } from '../../trpc';

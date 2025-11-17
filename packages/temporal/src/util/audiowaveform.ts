@@ -1,7 +1,7 @@
 import { join } from 'node:path';
-import logger from '@letschurch/util';
 import { noop } from 'es-toolkit';
 import { execa } from 'execa';
+import logger from '../util/logger';
 
 const moduleLogger = logger.child({ module: 'util/ffmpeg' });
 

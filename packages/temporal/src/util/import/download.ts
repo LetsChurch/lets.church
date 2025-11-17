@@ -2,14 +2,14 @@ import { createWriteStream } from 'node:fs';
 import { join } from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import type logger from '@letschurch/util';
+import type { Logger } from '@letschurch/util';
 import { noop } from 'es-toolkit';
 import { nanoid } from 'nanoid';
 
 export async function downloadUrl(
   input: URL | string,
   dir: string,
-  log: typeof logger,
+  log: Logger,
   heartbeat: (s: string) => unknown = noop,
 ): Promise<string> {
   const url = new URL(input);

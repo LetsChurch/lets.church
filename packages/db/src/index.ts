@@ -1,6 +1,10 @@
-import { logger } from '@letschurch/util';
+import { logger as baseLogger } from '@letschurch/util';
 import { z } from 'zod';
 import { PrismaClient } from './generated/prisma/client';
+
+const logger = baseLogger.child({
+  package: '@letschurch/db',
+});
 
 // Re-export everything from the generated Prisma client
 export * from './generated/prisma/client';

@@ -1,5 +1,4 @@
 import { prisma, UploadViewSource } from '@letschurch/db';
-import logger from '@letschurch/util';
 import { xxh64 } from '@node-rs/xxhash';
 import { getRequest } from '@tanstack/react-start/server';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
@@ -9,6 +8,7 @@ import {
   IncomingIdSchema,
   OutgoingIdSchema,
 } from '@/schemas/common';
+import logger from '@/util/logger';
 import { getClientIpAddress } from '@/util/request-ip';
 import { publicS3 } from '@/util/s3';
 import { getPublicImageUrl, getPublicMediaUrl } from '@/util/url';

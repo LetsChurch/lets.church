@@ -1,8 +1,8 @@
 import type { Prisma } from '@letschurch/db';
-import logger from '@letschurch/util';
 import waitOn from 'wait-on';
 import { z } from 'zod';
 import { updateUploadRecord as updateUploadRecordClient } from '../client';
+import logger from './logger';
 
 const moduleLogger = logger.child({ module: 'temporal' });
 

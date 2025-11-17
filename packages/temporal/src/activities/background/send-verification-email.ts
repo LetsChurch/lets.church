@@ -1,10 +1,10 @@
 import { prisma } from '@letschurch/db';
-import logger from '@letschurch/util';
 import { stripIndent } from 'proper-tags';
 import { z } from 'zod';
 import { client } from '../../client';
 import { BACKGROUND_QUEUE } from '../../queues';
 import { emailHtml } from '../../util/email';
+import logger from '../../util/logger';
 import { uuidTranslator } from '../../util/uuid';
 import { sendEmailWorkflow } from '../../workflows/background/send-email';
 

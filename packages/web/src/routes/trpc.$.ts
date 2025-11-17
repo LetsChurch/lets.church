@@ -1,8 +1,8 @@
-import logger from '@letschurch/util';
 import { createFileRoute } from '@tanstack/react-router';
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import { appRouter } from '@/trpc';
 import { createContext } from '@/trpc/context';
+import logger from '@/util/logger';
 
 const moduleLogger = logger.child({
   module: 'routes/trpc',

@@ -1,11 +1,11 @@
 import { prisma } from '@letschurch/db';
-import logger from '@letschurch/util';
 import { getRequest, setCookie } from '@tanstack/react-start/server';
 import * as argon2 from 'argon2';
 import { loginSchema, registerSchema } from '@/schemas/auth';
 import { postUserRegistration } from '@/temporal';
 import { login } from '@/util/auth';
 import { createSessionJwt } from '@/util/jwt';
+import logger from '@/util/logger';
 import { getClientIpAddress } from '@/util/request-ip';
 import { validateTurnstile } from '@/util/turnstile';
 import testPassword from '@/util/zxcvbn';

@@ -1,6 +1,6 @@
-import logger from '@letschurch/util';
 import { initTRPC, TRPCError } from '@trpc/server';
 import superjson from 'superjson';
+import logger from '@/util/logger';
 import type { Context } from './context';
 
 const moduleLogger = logger.child({
@@ -11,32 +11,98 @@ const t = initTRPC.context<Context>().create({ transformer: superjson });
 
 export const router = t.router;
 
-export const publicProcedure = t.procedure;
+/**
+ * Logging middleware for all tRPC procedures
+ * Logs procedure calls, execution time, and errors
+ */
+const loggingMiddleware = t.middleware(
+  async ({ path, type, next, ctx, input }) => {
+    const start = Date.now();
+    const userId = ctx.session?.appUserId;
 
-export const anonProcedure = t.procedure.use(({ ctx, next }) => {
-  if (ctx.session) {
-    moduleLogger.warn('anonProcedure: session found when none expected');
-    throw new TRPCError({ code: 'FORBIDDEN' });
-  }
+    // Log procedure start
+    moduleLogger.info(
+      {
+        procedure: path,
+        type,
+        userId,
+        input,
+      },
+      `tRPC ${type}: ${path}`,
+    );
 
-  return next({
-    ctx: {
-      ...ctx,
-      session: null,
-    },
+    try {
+      const result = await next();
+      const durationMs = Date.now() - start;
+
+      // Log successful completion
+      moduleLogger.info(
+        {
+          procedure: path,
+          type,
+          userId,
+          durationMs,
+          success: true,
+        },
+        `tRPC ${type} completed: ${path}`,
+      );
+
+      return result;
+    } catch (error) {
+      const durationMs = Date.now() - start;
+      const errorObj =
+        error instanceof Error ? error : new Error(String(error));
+
+      // Log error
+      moduleLogger.error(
+        {
+          procedure: path,
+          type,
+          userId,
+          durationMs,
+          error: errorObj.message,
+          stack: errorObj.stack,
+          errorName: errorObj.name,
+          input,
+        },
+        `tRPC ${type} error: ${path}`,
+      );
+
+      throw error;
+    }
+  },
+);
+
+export const publicProcedure = t.procedure.use(loggingMiddleware);
+
+export const anonProcedure = t.procedure
+  .use(loggingMiddleware)
+  .use(({ ctx, next }) => {
+    if (ctx.session) {
+      moduleLogger.warn('anonProcedure: session found when none expected');
+      throw new TRPCError({ code: 'FORBIDDEN' });
+    }
+
+    return next({
+      ctx: {
+        ...ctx,
+        session: null,
+      },
+    });
   });
-});
 
-export const authProcedure = t.procedure.use(({ ctx, next }) => {
-  if (!ctx.session) {
-    moduleLogger.warn('authProcedure: no session found');
-    throw new TRPCError({ code: 'UNAUTHORIZED' });
-  }
+export const authProcedure = t.procedure
+  .use(loggingMiddleware)
+  .use(({ ctx, next }) => {
+    if (!ctx.session) {
+      moduleLogger.warn('authProcedure: no session found');
+      throw new TRPCError({ code: 'UNAUTHORIZED' });
+    }
 
-  return next({
-    ctx: {
-      ...ctx,
-      session: ctx.session, // Known non-null
-    },
+    return next({
+      ctx: {
+        ...ctx,
+        session: ctx.session, // Known non-null
+      },
+    });
   });
-});

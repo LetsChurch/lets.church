@@ -1,6 +1,6 @@
 import { prisma } from '@letschurch/db';
-import logger from '@letschurch/util';
 import { z } from 'zod';
+import logger from '../../util/logger';
 
 const { MAPBOX_GEOCODING_TOKEN } = z
   .object({ MAPBOX_GEOCODING_TOKEN: z.string() })

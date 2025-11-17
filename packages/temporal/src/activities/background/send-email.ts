@@ -1,6 +1,6 @@
-import logger from '@letschurch/util';
 import { createTransport, type SendMailOptions } from 'nodemailer';
 import { z } from 'zod';
+import logger from '../../util/logger';
 
 const { SMTP_URL } = z.object({ SMTP_URL: z.string() }).parse(process.env);
 

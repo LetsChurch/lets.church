@@ -1,11 +1,11 @@
 import { prisma } from '@letschurch/db';
-import logger from '@letschurch/util';
 import { z } from 'zod';
 import {
   getThumbnailResize,
   IncomingIdSchema,
   OutgoingIdSchema,
 } from '@/schemas/common';
+import logger from '@/util/logger';
 import { publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
 import { authProcedure, publicProcedure } from '../trpc';

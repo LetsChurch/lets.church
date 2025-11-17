@@ -1,5 +1,5 @@
-import logger from '@letschurch/util';
 import { z } from 'zod';
+import logger from '../../util/logger';
 
 const { LISTMONK_INTERNAL_URL } = z
   .object({ LISTMONK_INTERNAL_URL: z.string() })

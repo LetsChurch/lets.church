@@ -1,11 +1,11 @@
 import { join } from 'node:path';
-import logger from '@letschurch/util';
 import { Context } from '@temporalio/activity';
 import mime from 'mime';
 import { mkdirp } from 'mkdirp';
 import { nanoid } from 'nanoid';
 import { rimraf } from 'rimraf';
 import { imageToBlurhash, imgJson, jpegOptim, oxiPng } from '../../util/images';
+import logger from '../../util/logger';
 import { ingestS3, publicS3 } from '../../util/s3';
 import type { UploadPostProcessValue } from '../../util/types';
 

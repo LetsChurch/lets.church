@@ -1,5 +1,4 @@
 import { prisma } from '@letschurch/db';
-import logger from '@letschurch/util';
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
 import { z } from 'zod';
@@ -9,6 +8,7 @@ import {
   removeFeaturedUploadSchema,
   reorderFeaturedUploadsSchema,
 } from '@/schemas/dashboard/admin';
+import logger from '@/util/logger';
 import { publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
 import { authProcedure, router } from '../../trpc';

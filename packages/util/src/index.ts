@@ -1,5 +1,3 @@
-import loggerInstance from './logger';
-
+// Logging utilities
 export type { Logger } from './logger';
-export { loggerInstance as logger };
-export default loggerInstance;
+export { logger } from './logger';

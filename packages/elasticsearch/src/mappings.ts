@@ -1,8 +1,12 @@
 import type { estypes } from '@elastic/elasticsearch';
-import { logger } from '@letschurch/util';
+import { logger as baseLogger } from '@letschurch/util';
 import { diff } from 'jest-diff';
 import pc from 'picocolors';
 import { client, waitForElasticsearch } from './index';
+
+const logger = baseLogger.child({
+  package: '@letschurch/elasticsearch',
+});
 
 const moduleLogger = logger.child({ module: 'elasticsearch/mappings' });
 

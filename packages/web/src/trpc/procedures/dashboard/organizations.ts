@@ -1,5 +1,4 @@
 import { OrganizationType, prisma } from '@letschurch/db';
-import logger from '@letschurch/util';
 import { TRPCError } from '@trpc/server';
 import {
   addOrganizationMemberSchema,
@@ -13,6 +12,7 @@ import {
   upstreamAssociationActionSchema,
   userSearchOrganizationSchema,
 } from '@/schemas/dashboard';
+import logger from '@/util/logger';
 import { authProcedure, router } from '../../trpc';
 
 const moduleLogger = logger.child({

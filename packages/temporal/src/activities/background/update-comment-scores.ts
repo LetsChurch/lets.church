@@ -1,6 +1,6 @@
 import { prisma } from '@letschurch/db';
-import logger from '@letschurch/util';
 import pAll from 'p-all';
+import logger from '../../util/logger';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/update-comment-scores',
