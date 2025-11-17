@@ -18,11 +18,14 @@
     "fix!": "biome check --write --unsafe",
     "tcm": "tcm src",
     "storybook": "storybook dev -p 6006",
-    "build:storybook": "storybook build"
+    "build:storybook": "storybook build",
+    "seed": "tsx src/seed/dev.ts",
+    "seed:tags": "tsx src/seed/tags.ts"
   },
   "dependencies": {
     "@base-ui-components/react": "^1.0.0-beta.4",
     "@bitpatty/imgproxy-url-builder": "^2.0.0",
+    "@faker-js/faker": "^10.1.0",
     "@fontsource-variable/inter": "^5.2.8",
     "@fontsource-variable/roboto-mono": "^5.2.8",
     "@hello-pangea/dnd": "^18.0.1",
@@ -72,6 +75,7 @@
     "is-ip": "^5.0.1",
     "jose": "^6.1.1",
     "js-cookie": "^3.0.5",
+    "libphonenumber-js": "^1.12.26",
     "media-chrome": "^4.15.1",
     "nanostores": "^1.0.1",
     "p-lazy": "^5.0.0",
@@ -82,6 +86,7 @@
     "proper-tags": "^2.0.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "@sindresorhus/slugify": "^3.0.0",
     "short-uuid": "^5.2.0",
     "subtitle": "^4.2.2-alpha.0",
     "superjson": "^2.2.5",

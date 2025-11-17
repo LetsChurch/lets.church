@@ -1,14 +1,11 @@
 import type { Prisma, UploadVariant } from '@letschurch/db';
-import type { DocumentKind } from '@letschurch/temporal/activities/background/index-document';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
-import { emptySignal } from '@letschurch/temporal/signals';
 import {
   createUploadRecordWorkflow,
   deleteUploadWorkflow,
   geocodeOrganizationWorkflow,
   handleMultipartMediaUploadWorkflow,
   importMediaWorkflow,
-  indexDocumentWorkflow,
   postUserRegistrationWorkflow,
   sendEmailWorkflow,
   updateUploadRecordSignal,
@@ -28,6 +25,8 @@ import { z } from 'zod';
 import logger from '../util/logger';
 import type { S3ClientId } from '../util/s3';
 import type { UploadPostProcessValue } from '../util/types';
+
+export { indexDocument } from '@letschurch/temporal/client';
 
 const moduleLogger = logger.child({ module: 'temporal' });
 
@@ -123,23 +122,6 @@ export async function recordDownloadSize(
     taskQueue: BACKGROUND_QUEUE,
     workflowId: `recordDownloadSize:${uploadRecordId}`,
     args: [uploadRecordId, variant, bytes],
-    retry: {
-      maximumAttempts: 8,
-    },
-  });
-}
-
-export async function indexDocument(
-  kind: DocumentKind,
-  uploadId: string,
-  uploadKey?: string,
-) {
-  return (await client).workflow.signalWithStart(indexDocumentWorkflow, {
-    taskQueue: BACKGROUND_QUEUE,
-    workflowId: `${kind}:${uploadId}`,
-    args: [kind, uploadId, uploadKey],
-    signal: emptySignal,
-    signalArgs: [],
     retry: {
       maximumAttempts: 8,
     },

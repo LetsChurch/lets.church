@@ -1,11 +1,28 @@
 import { faker } from '@faker-js/faker';
-import parsePhoneNumber from 'libphonenumber-js';
+import { prisma } from '@letschurch/db';
+import {
+  type Prisma,
+  UploadListType,
+} from '@letschurch/db/generated/prisma/client';
+import { indexDocument } from '@letschurch/temporal/client';
 import slugify from '@sindresorhus/slugify';
 import argon2 from 'argon2';
-import { Prisma, UploadListType } from '../../src/generated/prisma/client';
 import { invariant } from 'es-toolkit';
+import parsePhoneNumber from 'libphonenumber-js';
 import { stripIndent } from 'proper-tags';
-import { prisma } from '../../src';
+import bananarama from './geocoding/bananarama-bible-church';
+import baptistLa from './geocoding/baptist-la';
+import clapback from './geocoding/clapback-chapel';
+import cotton from './geocoding/cottons-finger-lutheran-church';
+import desertDebaters from './geocoding/desert-debaters';
+import gwgh from './geocoding/gwgh';
+import harbor from './geocoding/harbor-faith-tabernacle';
+import mariners from './geocoding/mariners-metanoia-manor';
+import mossCows from './geocoding/moss-cows';
+import ppp from './geocoding/prosperitys-pitfall-pavilion';
+import screwtape from './geocoding/screwtape-sanctuary';
+import solas from './geocoding/solas-sanctuary';
+import sovereignJoy from './geocoding/sovereign-joy-sanctuary';
 import {
   augsburgConfessionTagSlug,
   baptistTagSlug,
@@ -20,23 +37,8 @@ import {
   reformedBaptistTagSlug,
   reformedTagSlug,
 } from './tags';
-import baptistLa from './geocoding/baptist-la';
-import desertDebaters from './geocoding/desert-debaters';
-import gwgh from './geocoding/gwgh';
-import bananarama from './geocoding/bananarama-bible-church';
-import clapback from './geocoding/clapback-chapel';
-import cotton from './geocoding/cottons-finger-lutheran-church';
-import harbor from './geocoding/harbor-faith-tabernacle';
-import mariners from './geocoding/mariners-metanoia-manor';
-import mossCows from './geocoding/moss-cows';
-import ppp from './geocoding/prosperitys-pitfall-pavilion';
-import screwtape from './geocoding/screwtape-sanctuary';
-import solas from './geocoding/solas-sanctuary';
-import sovereignJoy from './geocoding/sovereign-joy-sanctuary';
 
 faker.seed(1337);
-
-// await waitOnTemporal();
 
 const password = await argon2.hash('password', { type: argon2.argon2id });
 
@@ -97,7 +99,10 @@ const [adminUser, user1, user2] = await Promise.all(
   usersData.map((d) => prisma.appUser.create({ data: d })),
 );
 
-invariant(adminUser && user1 && user2);
+invariant(
+  adminUser && user1 && user2,
+  'Failed to create adminUser, user1, or user2',
+);
 
 const otherIds = (
   await prisma.appUser.findMany({
@@ -214,12 +219,12 @@ const { id: flId, channelAssociations: flAssociations } =
     },
   });
 
-// await indexDocument('organization', lcId);
-// await indexDocument('organization', flId);
+await indexDocument('organization', lcId);
+await indexDocument('organization', flId);
 
 await Promise.all([
-  // ...indexDocument('channel', channel.id)),
-  // ...indexDocument('channel', channel.id)),
+  indexDocument('channel', lcAssociations[0].channel.id),
+  indexDocument('channel', flAssociations[0].channel.id),
 ]);
 
 const { id: org01id, channelAssociations: org01Associations } =
@@ -267,10 +272,10 @@ const { id: org01id, channelAssociations: org01Associations } =
     },
   });
 
-// await indexDocument('organization', org01id);
-// await Promise.all(
-//   org01Associations.map(({ channel }) => indexDocument('channel', channel.id)),
-// );
+await indexDocument('organization', org01id);
+await Promise.all(
+  org01Associations.map(({ channel }) => indexDocument('channel', channel.id)),
+);
 
 const { id: org03Id, channelAssociations: org03Associations } =
   await prisma.organization.create({
@@ -324,10 +329,10 @@ const { id: org03Id, channelAssociations: org03Associations } =
     },
   });
 
-// await indexDocument('organization', org03Id);
-// await Promise.all(
-//   org03Associations.map(({ channel }) => indexDocument('channel', channel.id)),
-// );
+await indexDocument('organization', org03Id);
+await Promise.all(
+  org03Associations.map(({ channel }) => indexDocument('channel', channel.id)),
+);
 
 const org04 = await prisma.organization.create({
   data: {
@@ -398,7 +403,7 @@ const org04 = await prisma.organization.create({
   },
 });
 
-// await indexDocument('organization', org04.id);
+await indexDocument('organization', org04.id);
 
 const org05 = await prisma.organization.create({
   data: {
@@ -472,7 +477,7 @@ const org05 = await prisma.organization.create({
   },
 });
 
-// await indexDocument('organization', org05.id);
+await indexDocument('organization', org05.id);
 
 const org06 = await prisma.organization.create({
   data: {
@@ -546,7 +551,7 @@ const org06 = await prisma.organization.create({
   },
 });
 
-// await indexDocument('organization', org06.id);
+await indexDocument('organization', org06.id);
 
 const org07 = await prisma.organization.create({
   data: {
@@ -615,7 +620,7 @@ const org07 = await prisma.organization.create({
   },
 });
 
-// await indexDocument('organization', org07.id);
+await indexDocument('organization', org07.id);
 
 const org08 = await prisma.organization.create({
   data: {
@@ -684,7 +689,7 @@ const org08 = await prisma.organization.create({
   },
 });
 
-// await indexDocument('organization', org08.id);
+await indexDocument('organization', org08.id);
 
 const org09 = await prisma.organization.create({
   data: {
@@ -758,7 +763,7 @@ const org09 = await prisma.organization.create({
   },
 });
 
-// await indexDocument('organization', org09.id);
+await indexDocument('organization', org09.id);
 
 const org10 = await prisma.organization.create({
   data: {
@@ -833,7 +838,7 @@ const org10 = await prisma.organization.create({
   },
 });
 
-// await indexDocument('organization', org10.id);
+await indexDocument('organization', org10.id);
 
 const org11 = await prisma.organization.create({
   data: {
@@ -908,7 +913,7 @@ const org11 = await prisma.organization.create({
   },
 });
 
-// await indexDocument('organization', org11.id);
+await indexDocument('organization', org11.id);
 
 const org12 = await prisma.organization.create({
   data: {
@@ -980,7 +985,7 @@ const org12 = await prisma.organization.create({
   },
 });
 
-// await indexDocument('organization', org12.id);
+await indexDocument('organization', org12.id);
 
 const org13 = await prisma.organization.create({
   data: {
@@ -1054,7 +1059,7 @@ const org13 = await prisma.organization.create({
   },
 });
 
-// await indexDocument('organization', org13.id);
+await indexDocument('organization', org13.id);
 
 const org14 = await prisma.organization.create({
   data: {
@@ -1125,7 +1130,7 @@ const org14 = await prisma.organization.create({
   },
 });
 
-// await indexDocument('organization', org14.id);
+await indexDocument('organization', org14.id);
 
 const org15 = await prisma.organization.create({
   data: {
@@ -1194,7 +1199,7 @@ const org15 = await prisma.organization.create({
   },
 });
 
-// await indexDocument('organization', org15.id);
+await indexDocument('organization', org15.id);
 
 const org16 = await prisma.organization.create({
   data: {
@@ -1263,7 +1268,7 @@ const org16 = await prisma.organization.create({
   },
 });
 
-// await indexDocument('organization', org16.id);
+await indexDocument('organization', org16.id);
 
 const sellingJesusChannel = await prisma.channel.create({
   data: {
@@ -1296,7 +1301,7 @@ const sellingJesusChannel = await prisma.channel.create({
   },
 });
 
-// await indexDocument('channel', sellingJesusChannel.id);
+await indexDocument('channel', sellingJesusChannel.id);
 
 for (let i = 0; i < 25; i += 1) {
   const [nameSegment, denomination] = faker.helpers.arrayElement<
@@ -1366,10 +1371,10 @@ for (let i = 0; i < 25; i += 1) {
     },
   });
 
-  // await indexDocument('organization', id);
+  await indexDocument('organization', id);
 }
 
-// await indexDocument('organization', lcId);
+await indexDocument('organization', lcId);
 
 // logger.info('Created example organizations and channels');
 
@@ -1401,7 +1406,8 @@ const uploadRecordData = [
     title: 'Foreword',
     uploadSizeBytes: 2986193,
     lengthSeconds: 186.566531,
-    defaultThumbnailPath: '00000000-0000-4000-8000-000000000000/00000000-0000-4000-8000-000000000000.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-000000000000/00000000-0000-4000-8000-000000000000.png',
   },
   {
     ...baseUploadRecord,
@@ -1409,7 +1415,8 @@ const uploadRecordData = [
     title: 'Introduction',
     uploadSizeBytes: 3272913,
     lengthSeconds: 204.486531,
-    defaultThumbnailPath: '00000000-0000-4000-8000-000000000001/00000000-0000-4000-8000-000000000001.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-000000000001/00000000-0000-4000-8000-000000000001.png',
   },
   {
     ...baseUploadRecord,
@@ -1417,7 +1424,8 @@ const uploadRecordData = [
     title: 'Chapter 1 - The Command of Christ',
     uploadSizeBytes: 22962385,
     lengthSeconds: 1435.08898,
-    defaultThumbnailPath: '00000000-0000-4000-8000-000000000002/00000000-0000-4000-8000-000000000002.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-000000000002/00000000-0000-4000-8000-000000000002.png',
   },
   {
     ...baseUploadRecord,
@@ -1425,7 +1433,8 @@ const uploadRecordData = [
     title: 'Chapter 2 - The Policy of Paul',
     uploadSizeBytes: 17471697,
     lengthSeconds: 1091.918367,
-    defaultThumbnailPath: '00000000-0000-4000-8000-000000000003/00000000-0000-4000-8000-000000000003.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-000000000003/00000000-0000-4000-8000-000000000003.png',
   },
   {
     ...baseUploadRecord,
@@ -1433,7 +1442,8 @@ const uploadRecordData = [
     title: 'Chapter 3 - The Triangle of Obligation',
     uploadSizeBytes: 17115345,
     lengthSeconds: 1069.708367,
-    defaultThumbnailPath: '00000000-0000-4000-8000-000000000004/00000000-0000-4000-8000-000000000004.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-000000000004/00000000-0000-4000-8000-000000000004.png',
   },
   {
     ...baseUploadRecord,
@@ -1441,7 +1451,8 @@ const uploadRecordData = [
     title: 'Chapter 4 - The Burden of Support',
     uploadSizeBytes: 16812241,
     lengthSeconds: 1050.763061,
-    defaultThumbnailPath: '00000000-0000-4000-8000-000000000005/00000000-0000-4000-8000-000000000005.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-000000000005/00000000-0000-4000-8000-000000000005.png',
   },
   {
     ...baseUploadRecord,
@@ -1449,7 +1460,8 @@ const uploadRecordData = [
     title: 'Chapter 5 - The Preogative of Servanthood',
     uploadSizeBytes: 19398865,
     lengthSeconds: 1212.430612,
-    defaultThumbnailPath: '00000000-0000-4000-8000-000000000006/00000000-0000-4000-8000-000000000006.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-000000000006/00000000-0000-4000-8000-000000000006.png',
   },
   {
     ...baseUploadRecord,
@@ -1457,7 +1469,8 @@ const uploadRecordData = [
     title: 'Chapter 6 - The Sincerity of Ministry',
     uploadSizeBytes: 16396497,
     lengthSeconds: 1024.786531,
-    defaultThumbnailPath: '00000000-0000-4000-8000-000000000007/00000000-0000-4000-8000-000000000007.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-000000000007/00000000-0000-4000-8000-000000000007.png',
   },
   {
     ...baseUploadRecord,
@@ -1465,7 +1478,8 @@ const uploadRecordData = [
     title: 'Chapter 7 - The Greed of Wolves',
     uploadSizeBytes: 19323089,
     lengthSeconds: 1207.640816,
-    defaultThumbnailPath: '00000000-0000-4000-8000-000000000008/00000000-0000-4000-8000-000000000008.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-000000000008/00000000-0000-4000-8000-000000000008.png',
   },
   {
     ...baseUploadRecord,
@@ -1473,7 +1487,8 @@ const uploadRecordData = [
     title: 'Chapter 8 - The Apostles of Corinth',
     uploadSizeBytes: 17832145,
     lengthSeconds: 1114.357551,
-    defaultThumbnailPath: '00000000-0000-4000-8000-000000000009/00000000-0000-4000-8000-000000000009.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-000000000009/00000000-0000-4000-8000-000000000009.png',
   },
   {
     ...baseUploadRecord,
@@ -1481,7 +1496,8 @@ const uploadRecordData = [
     title: 'Chapter 9 - The Pattern of Colabor',
     uploadSizeBytes: 18325713,
     lengthSeconds: 1145.260408,
-    defaultThumbnailPath: '00000000-0000-4000-8000-00000000000a/00000000-0000-4000-8000-00000000000a.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-00000000000a/00000000-0000-4000-8000-00000000000a.png',
   },
   {
     ...baseUploadRecord,
@@ -1489,7 +1505,8 @@ const uploadRecordData = [
     title: 'Chapter 10 - The Testimony of History',
     uploadSizeBytes: 16933073,
     lengthSeconds: 1058.220408,
-    defaultThumbnailPath: '00000000-0000-4000-8000-00000000000b/00000000-0000-4000-8000-00000000000b.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-00000000000b/00000000-0000-4000-8000-00000000000b.png',
   },
   {
     ...baseUploadRecord,
@@ -1497,7 +1514,8 @@ const uploadRecordData = [
     title: 'Chapter 11 - The Scope of Ministry',
     uploadSizeBytes: 17428689,
     lengthSeconds: 1089.253878,
-    defaultThumbnailPath: '00000000-0000-4000-8000-00000000000c/00000000-0000-4000-8000-00000000000c.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-00000000000c/00000000-0000-4000-8000-00000000000c.png',
   },
   {
     ...baseUploadRecord,
@@ -1505,7 +1523,8 @@ const uploadRecordData = [
     title: 'Chapter 12 - The Challenge of Parachurch',
     uploadSizeBytes: 16756945,
     lengthSeconds: 1047.308571,
-    defaultThumbnailPath: '00000000-0000-4000-8000-00000000000d/00000000-0000-4000-8000-00000000000d.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-00000000000d/00000000-0000-4000-8000-00000000000d.png',
   },
   {
     ...baseUploadRecord,
@@ -1513,7 +1532,8 @@ const uploadRecordData = [
     title: 'Chapter 13 - The Issue of Copyright',
     uploadSizeBytes: 18176209,
     lengthSeconds: 1135.908571,
-    defaultThumbnailPath: '00000000-0000-4000-8000-00000000000e/00000000-0000-4000-8000-00000000000e.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-00000000000e/00000000-0000-4000-8000-00000000000e.png',
   },
   {
     ...baseUploadRecord,
@@ -1521,7 +1541,8 @@ const uploadRecordData = [
     title: 'Chapter 14 - The Path of Progress',
     uploadSizeBytes: 16425169,
     lengthSeconds: 1026.45551,
-    defaultThumbnailPath: '00000000-0000-4000-8000-00000000000f/00000000-0000-4000-8000-00000000000f.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-00000000000f/00000000-0000-4000-8000-00000000000f.png',
   },
   {
     ...baseUploadRecord,
@@ -1529,7 +1550,8 @@ const uploadRecordData = [
     title: 'Conclusion',
     uploadSizeBytes: 1954713,
     lengthSeconds: 121.939592,
-    defaultThumbnailPath: '00000000-0000-4000-8000-000000000010/00000000-0000-4000-8000-000000000010.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-000000000010/00000000-0000-4000-8000-000000000010.png',
   },
   {
     ...baseUploadRecord,
@@ -1537,7 +1559,8 @@ const uploadRecordData = [
     title: 'Appendix A - Further Study',
     uploadSizeBytes: 1343046,
     lengthSeconds: 83.748571,
-    defaultThumbnailPath: '00000000-0000-4000-8000-000000000011/00000000-0000-4000-8000-000000000011.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-000000000011/00000000-0000-4000-8000-000000000011.png',
   },
   {
     ...baseUploadRecord,
@@ -1545,7 +1568,8 @@ const uploadRecordData = [
     title: 'Appendix B - Copyright in the United States',
     uploadSizeBytes: 3256996,
     lengthSeconds: 140.355918,
-    defaultThumbnailPath: '00000000-0000-4000-8000-000000000012/00000000-0000-4000-8000-000000000012.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-000000000012/00000000-0000-4000-8000-000000000012.png',
   },
   {
     ...baseUploadRecord,
@@ -1553,7 +1577,8 @@ const uploadRecordData = [
     title: 'Appendix C - Copyright and Natural Law',
     uploadSizeBytes: 6713553,
     lengthSeconds: 419.526531,
-    defaultThumbnailPath: '00000000-0000-4000-8000-000000000013/00000000-0000-4000-8000-000000000013.png',
+    defaultThumbnailPath:
+      '00000000-0000-4000-8000-000000000013/00000000-0000-4000-8000-000000000013.png',
   },
 ] satisfies Array<Prisma.UploadRecordCreateManyInput>;
 
@@ -1598,8 +1623,8 @@ for (const { id } of uploadRecordData) {
 
   nextRank += 1;
 
-  // await indexDocument('transcript', id, `${id}/transcript.vtt`);
-  // await indexDocument('upload', id);
+  await indexDocument('transcript', id, `${id}/transcript.vtt`);
+  await indexDocument('upload', id);
 }
 
 // logger.info('Seeding Selling Jesus');
@@ -1634,8 +1659,12 @@ await prisma.uploadRecord.create({
   },
 });
 
-// await indexDocument('transcript', doreanPrincipleUploadId, `${doreanPrincipleUploadId}/transcript.vtt`);
-// await indexDocument('upload', doreanPrincipleUploadId);
+await indexDocument(
+  'transcript',
+  doreanPrincipleUploadId,
+  `${doreanPrincipleUploadId}/transcript.vtt`,
+);
+await indexDocument('upload', doreanPrincipleUploadId);
 
 const prayerPitchUploadId = '00000000-0000-4000-8000-100000000001';
 
@@ -1669,8 +1698,12 @@ await prisma.uploadRecord.create({
   },
 });
 
-// await indexDocument('transcript', prayerPitchUploadId, `${prayerPitchUploadId}/transcript.vtt`);
-// await indexDocument('upload', prayerPitchUploadId);
+await indexDocument(
+  'transcript',
+  prayerPitchUploadId,
+  `${prayerPitchUploadId}/transcript.vtt`,
+);
+await indexDocument('upload', prayerPitchUploadId);
 
 const christianBooksPitchUploadId = '00000000-0000-4000-8000-100000000002';
 
@@ -1704,8 +1737,12 @@ await prisma.uploadRecord.create({
   },
 });
 
-// await indexDocument('transcript', christianBooksPitchUploadId, `${christianBooksPitchUploadId}/transcript.vtt`);
-// await indexDocument('upload', christianBooksPitchUploadId);
+await indexDocument(
+  'transcript',
+  christianBooksPitchUploadId,
+  `${christianBooksPitchUploadId}/transcript.vtt`,
+);
+await indexDocument('upload', christianBooksPitchUploadId);
 
 const foreignMissionsUploadId = '00000000-0000-4000-8000-100000000003';
 
@@ -1739,8 +1776,12 @@ await prisma.uploadRecord.create({
   },
 });
 
-// await indexDocument('transcript', foreignMissionsUploadId, `${foreignMissionsUploadId}/transcript.vtt`);
-// await indexDocument('upload', foreignMissionsUploadId);
+await indexDocument(
+  'transcript',
+  foreignMissionsUploadId,
+  `${foreignMissionsUploadId}/transcript.vtt`,
+);
+await indexDocument('upload', foreignMissionsUploadId);
 
 const copyrightUploadId = '00000000-0000-4000-8000-100000000004';
 
@@ -1774,8 +1815,12 @@ await prisma.uploadRecord.create({
   },
 });
 
-// await indexDocument('transcript', copyrightUploadId, `${copyrightUploadId}/transcript.vtt`);
-// await indexDocument('upload', copyrightUploadId);
+await indexDocument(
+  'transcript',
+  copyrightUploadId,
+  `${copyrightUploadId}/transcript.vtt`,
+);
+await indexDocument('upload', copyrightUploadId);
 
 const biblicalCounselingUploadId = '00000000-0000-4000-8000-100000000005';
 
@@ -1809,8 +1854,12 @@ await prisma.uploadRecord.create({
   },
 });
 
-// await indexDocument('transcript', biblicalCounselingUploadId, `${biblicalCounselingUploadId}/transcript.vtt`);
-// await indexDocument('upload', biblicalCounselingUploadId);
+await indexDocument(
+  'transcript',
+  biblicalCounselingUploadId,
+  `${biblicalCounselingUploadId}/transcript.vtt`,
+);
+await indexDocument('upload', biblicalCounselingUploadId);
 
 const lordsSupperUploadId = '00000000-0000-4000-8000-100000000006';
 
@@ -1835,17 +1884,21 @@ await prisma.uploadRecord.create({
     uploadFinalizedById: adminUser.id,
     license: 'CC0' as const,
     visibility: 'PUBLIC' as const,
-    variants: ['AUDIO' ,'VIDEO_720P'],
+    variants: ['AUDIO', 'VIDEO_720P'],
     transcodingFinishedAt: new Date(),
     transcribingFinishedAt: new Date(),
     uploadSizeBytes: 137000000, // Approximate based on download size
-    lengthSeconds: 313.405400,
+    lengthSeconds: 313.4054,
     defaultThumbnailPath: `${lordsSupperUploadId}/${lordsSupperUploadId}.jpg`,
   },
 });
 
-// await indexDocument('transcript', lordsSupperUploadId, `${lordsSupperUploadId}/transcript.vtt`);
-// await indexDocument('upload', lordsSupperUploadId);
+await indexDocument(
+  'transcript',
+  lordsSupperUploadId,
+  `${lordsSupperUploadId}/transcript.vtt`,
+);
+await indexDocument('upload', lordsSupperUploadId);
 
 // logger.info('Seeding featured uploads');
 

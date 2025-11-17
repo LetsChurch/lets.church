@@ -121,33 +121,18 @@ importers:
 
   packages/db:
     dependencies:
-      '@faker-js/faker':
-        specifier: ^10.1.0
-        version: 10.1.0
       '@letschurch/util':
         specifier: workspace:*
         version: link:../util
       '@prisma/client':
         specifier: 6.19.0
         version: 6.19.0(prisma@6.19.0(magicast@0.3.5)(typescript@5.9.3))(typescript@5.9.3)
-      '@sindresorhus/slugify':
-        specifier: ^3.0.0
-        version: 3.0.0
-      argon2:
-        specifier: ^0.44.0
-        version: 0.44.0
       es-toolkit:
         specifier: 'catalog:'
         version: 1.41.0
-      libphonenumber-js:
-        specifier: ^1.12.26
-        version: 1.12.26
       prisma:
         specifier: ^6.19.0
         version: 6.19.0(magicast@0.3.5)(typescript@5.9.3)
-      proper-tags:
-        specifier: ^2.0.2
-        version: 2.0.2
       tsx:
         specifier: 'catalog:'
         version: 4.20.6
@@ -550,6 +535,9 @@ importers:
       '@bitpatty/imgproxy-url-builder':
         specifier: ^2.0.0
         version: 2.0.0
+      '@faker-js/faker':
+        specifier: ^10.1.0
+        version: 10.1.0
       '@fontsource-variable/inter':
         specifier: ^5.2.8
         version: 5.2.8
@@ -601,6 +589,9 @@ importers:
       '@node-rs/xxhash':
         specifier: ^1.7.6
         version: 1.7.6
+      '@sindresorhus/slugify':
+        specifier: ^3.0.0
+        version: 3.0.0
       '@standard-schema/spec':
         specifier: ^1.0.0
         version: 1.0.0
@@ -697,6 +688,9 @@ importers:
       js-cookie:
         specifier: ^3.0.5
         version: 3.0.5
+      libphonenumber-js:
+        specifier: ^1.12.26
+        version: 1.12.26
       media-chrome:
         specifier: ^4.15.1
         version: 4.15.1(react@19.2.0)

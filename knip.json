@@ -17,7 +17,8 @@
         "src/router.tsx",
         "vite.config.ts",
         ".storybook/main.ts",
-        "src/app.css"
+        "src/app.css",
+        "src/seed/dev.ts"
       ],
       "project": [
         "src/**/*.{ts,tsx}",
@@ -31,12 +32,10 @@
     },
     "packages/db": {
       "entry": [
-        "src/index.ts",
-        "prisma/seed/dev.ts"
+        "src/index.ts"
       ],
       "project": [
         "src/**/*.ts",
-        "prisma/seed/**/*.ts",
         "prisma/truncate.ts"
       ],
       "ignoreDependencies": ["@prisma/client"]

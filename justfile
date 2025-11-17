@@ -113,7 +113,7 @@ s3-prune-multipart-uploads:
   S3_BUCKET=${S3_INGEST_BUCKET} pnpm --filter @letschurch/web run s3:prune-multipart-uploads
 
 seed-db:
-  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run prisma:db:seed'
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run seed'
 seed-s3-ingest:
   rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-ingest lcdevs3:letschurch-dev-ingest
 seed-s3-public:

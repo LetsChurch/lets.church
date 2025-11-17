@@ -3,9 +3,12 @@ import { Client, Connection, type WorkflowOptions } from '@temporalio/client';
 import PLazy from 'p-lazy';
 import waitOn from 'wait-on';
 import { z } from 'zod';
+import type { DocumentKind } from '../activities/background/index-document';
+import { emptySignal } from '../signals';
 import logger from '../util/logger';
 import {
   createUploadRecordWorkflow,
+  indexDocumentWorkflow,
   recordDownloadSizeWorkflow,
   updateUploadRecordSignal,
   updateUploadRecordWorkflow,
@@ -81,6 +84,23 @@ export async function recordDownloadSize(
     args: [uploadRecordId, variant, bytes],
     retry: {
       maximumAttempts: 5,
+    },
+  });
+}
+
+export async function indexDocument(
+  kind: DocumentKind,
+  uploadId: string,
+  uploadKey?: string,
+) {
+  return (await client).workflow.signalWithStart(indexDocumentWorkflow, {
+    taskQueue: BACKGROUND_QUEUE,
+    workflowId: `${kind}:${uploadId}`,
+    args: [kind, uploadId, uploadKey],
+    signal: emptySignal,
+    signalArgs: [],
+    retry: {
+      maximumAttempts: 8,
     },
   });
 }

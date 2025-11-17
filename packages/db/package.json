@@ -7,7 +7,8 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./types": "./src/types.ts"
+    "./types": "./src/types.ts",
+    "./generated/prisma/client": "./src/generated/prisma/client.ts"
   },
   "scripts": {
     "build": "prisma generate",
@@ -24,24 +25,14 @@
     "prisma:migrate:reset": "prisma migrate reset",
     "prisma:db:push": "prisma db push",
     "prisma:db:push:force": "prisma db push --accept-data-loss",
-    "prisma:db:seed": "prisma db seed",
-    "prisma:db:seed-tags": "tsx prisma/seed/tags.ts",
     "prisma:db:truncate": "tsx prisma/truncate.ts",
     "prisma:generate": "prisma generate"
   },
-  "prisma": {
-    "seed": "pnpm exec tsx prisma/seed/dev.ts"
-  },
   "dependencies": {
-    "@faker-js/faker": "^10.1.0",
     "@letschurch/util": "workspace:*",
     "@prisma/client": "6.19.0",
-    "@sindresorhus/slugify": "^3.0.0",
-    "argon2": "^0.44.0",
     "es-toolkit": "catalog:",
-    "libphonenumber-js": "^1.12.26",
     "prisma": "^6.19.0",
-    "proper-tags": "^2.0.2",
     "tsx": "catalog:",
     "zod": "catalog:"
   },

@@ -1,5 +1,5 @@
-import { OrganizationTagCategory } from '../../src/generated/prisma/client';
-import { prisma } from '../../src';
+import { prisma } from '@letschurch/db';
+import { OrganizationTagCategory } from '@letschurch/db/generated/prisma/client';
 
 export const nonDenomTagSlug = 'non-denominational';
 export const reformedTagSlug = 'reformed';
@@ -68,7 +68,7 @@ export const weeklyFellowshipMealTagSlug = 'weekly-fellowship-meal';
 export const monthlyFellowshipMealTagSlug = 'monthly-fellowship-meal';
 
 const tagsData: ReadonlyArray<
-  Parameters<typeof db.organizationTag.upsert>[0]['create'] & {
+  Parameters<typeof prisma.organizationTag.upsert>[0]['create'] & {
     suggests?: Array<string>;
   }
 > = [
@@ -468,7 +468,7 @@ const tagsData: ReadonlyArray<
   },
 ];
 
-for (const { suggests, ...tag } of tagsData) {
+for (const { suggests: _suggests, ...tag } of tagsData) {
   await prisma.organizationTag.upsert({
     where: { slug: tag.slug },
     create: tag,
