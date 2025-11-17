@@ -15,6 +15,7 @@ import { Route as MainRouteImport } from './routes/_main'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard_/index'
 import { Route as MainIndexRouteImport } from './routes/_main/index'
 import { Route as TrpcSplatRouteImport } from './routes/trpc.$'
+import { Route as MediaRssDotxmlRouteImport } from './routes/media.rss[.]xml'
 import { Route as DashboardOrganizationsRouteImport } from './routes/dashboard_/organizations'
 import { Route as DashboardChurchesRouteImport } from './routes/dashboard_/churches'
 import { Route as DashboardChannelsRouteImport } from './routes/dashboard_/channels'
@@ -45,6 +46,8 @@ import { Route as DashboardAdminFeaturedRouteImport } from './routes/dashboard_/
 import { Route as DashboardAdminChannelApprovalsRouteImport } from './routes/dashboard_/admin_.channel-approvals'
 import { Route as DashboardAccountSecurityRouteImport } from './routes/dashboard_/account_.security'
 import { Route as DashboardAccountProfileRouteImport } from './routes/dashboard_/account_.profile'
+import { Route as ChannelSlugRssDotxmlRouteImport } from './routes/channel.$slug.rss[.]xml'
+import { Route as ChannelSlugPodcastDotxmlRouteImport } from './routes/channel.$slug.podcast[.]xml'
 import { Route as MainMediaMediaIdRouteImport } from './routes/_main/media/$mediaId'
 import { Route as MainChannelSlugRouteImport } from './routes/_main/channel.$slug'
 import { Route as MainAboutTermsRouteImport } from './routes/_main/about/terms'
@@ -93,6 +96,11 @@ const MainIndexRoute = MainIndexRouteImport.update({
 const TrpcSplatRoute = TrpcSplatRouteImport.update({
   id: '/trpc/$',
   path: '/trpc/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MediaRssDotxmlRoute = MediaRssDotxmlRouteImport.update({
+  id: '/media/rss.xml',
+  path: '/media/rss.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardOrganizationsRoute = DashboardOrganizationsRouteImport.update({
@@ -253,6 +261,17 @@ const DashboardAccountProfileRoute = DashboardAccountProfileRouteImport.update({
   path: '/account/profile',
   getParentRoute: () => DashboardRoute,
 } as any)
+const ChannelSlugRssDotxmlRoute = ChannelSlugRssDotxmlRouteImport.update({
+  id: '/channel/$slug/rss.xml',
+  path: '/channel/$slug/rss.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChannelSlugPodcastDotxmlRoute =
+  ChannelSlugPodcastDotxmlRouteImport.update({
+    id: '/channel/$slug/podcast.xml',
+    path: '/channel/$slug/podcast.xml',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const MainMediaMediaIdRoute = MainMediaMediaIdRouteImport.update({
   id: '/media/$mediaId',
   path: '/media/$mediaId',
@@ -384,6 +403,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/channels': typeof DashboardChannelsRoute
   '/dashboard/churches': typeof DashboardChurchesRoute
   '/dashboard/organizations': typeof DashboardOrganizationsRoute
+  '/media/rss.xml': typeof MediaRssDotxmlRoute
   '/trpc/$': typeof TrpcSplatRoute
   '/': typeof MainIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
@@ -394,6 +414,8 @@ export interface FileRoutesByFullPath {
   '/about/terms': typeof MainAboutTermsRoute
   '/channel/$slug': typeof MainChannelSlugRoute
   '/media/$mediaId': typeof MainMediaMediaIdRoute
+  '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
+  '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
   '/dashboard/account/profile': typeof DashboardAccountProfileRoute
   '/dashboard/account/security': typeof DashboardAccountSecurityRoute
   '/dashboard/admin/channel-approvals': typeof DashboardAdminChannelApprovalsRoute
@@ -440,6 +462,7 @@ export interface FileRoutesByTo {
   '/dashboard/channels': typeof DashboardChannelsRoute
   '/dashboard/churches': typeof DashboardChurchesRoute
   '/dashboard/organizations': typeof DashboardOrganizationsRoute
+  '/media/rss.xml': typeof MediaRssDotxmlRoute
   '/trpc/$': typeof TrpcSplatRoute
   '/': typeof MainIndexRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -450,6 +473,8 @@ export interface FileRoutesByTo {
   '/about/terms': typeof MainAboutTermsRoute
   '/channel/$slug': typeof MainChannelSlugRoute
   '/media/$mediaId': typeof MainMediaMediaIdRoute
+  '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
+  '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
   '/dashboard/account/profile': typeof DashboardAccountProfileRoute
   '/dashboard/account/security': typeof DashboardAccountSecurityRoute
   '/dashboard/admin/channel-approvals': typeof DashboardAdminChannelApprovalsRoute
@@ -499,6 +524,7 @@ export interface FileRoutesById {
   '/dashboard_/channels': typeof DashboardChannelsRoute
   '/dashboard_/churches': typeof DashboardChurchesRoute
   '/dashboard_/organizations': typeof DashboardOrganizationsRoute
+  '/media/rss.xml': typeof MediaRssDotxmlRoute
   '/trpc/$': typeof TrpcSplatRoute
   '/_main/': typeof MainIndexRoute
   '/dashboard_/': typeof DashboardIndexRoute
@@ -509,6 +535,8 @@ export interface FileRoutesById {
   '/_main/about/terms': typeof MainAboutTermsRoute
   '/_main/channel/$slug': typeof MainChannelSlugRoute
   '/_main/media/$mediaId': typeof MainMediaMediaIdRoute
+  '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
+  '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
   '/dashboard_/account_/profile': typeof DashboardAccountProfileRoute
   '/dashboard_/account_/security': typeof DashboardAccountSecurityRoute
   '/dashboard_/admin_/channel-approvals': typeof DashboardAdminChannelApprovalsRoute
@@ -558,6 +586,7 @@ export interface FileRouteTypes {
     | '/dashboard/channels'
     | '/dashboard/churches'
     | '/dashboard/organizations'
+    | '/media/rss.xml'
     | '/trpc/$'
     | '/'
     | '/dashboard/'
@@ -568,6 +597,8 @@ export interface FileRouteTypes {
     | '/about/terms'
     | '/channel/$slug'
     | '/media/$mediaId'
+    | '/channel/$slug/podcast.xml'
+    | '/channel/$slug/rss.xml'
     | '/dashboard/account/profile'
     | '/dashboard/account/security'
     | '/dashboard/admin/channel-approvals'
@@ -614,6 +645,7 @@ export interface FileRouteTypes {
     | '/dashboard/channels'
     | '/dashboard/churches'
     | '/dashboard/organizations'
+    | '/media/rss.xml'
     | '/trpc/$'
     | '/'
     | '/dashboard'
@@ -624,6 +656,8 @@ export interface FileRouteTypes {
     | '/about/terms'
     | '/channel/$slug'
     | '/media/$mediaId'
+    | '/channel/$slug/podcast.xml'
+    | '/channel/$slug/rss.xml'
     | '/dashboard/account/profile'
     | '/dashboard/account/security'
     | '/dashboard/admin/channel-approvals'
@@ -672,6 +706,7 @@ export interface FileRouteTypes {
     | '/dashboard_/channels'
     | '/dashboard_/churches'
     | '/dashboard_/organizations'
+    | '/media/rss.xml'
     | '/trpc/$'
     | '/_main/'
     | '/dashboard_/'
@@ -682,6 +717,8 @@ export interface FileRouteTypes {
     | '/_main/about/terms'
     | '/_main/channel/$slug'
     | '/_main/media/$mediaId'
+    | '/channel/$slug/podcast.xml'
+    | '/channel/$slug/rss.xml'
     | '/dashboard_/account_/profile'
     | '/dashboard_/account_/security'
     | '/dashboard_/admin_/channel-approvals'
@@ -717,7 +754,10 @@ export interface RootRouteChildren {
   MainRoute: typeof MainRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   DashboardRoute: typeof DashboardRouteWithChildren
+  MediaRssDotxmlRoute: typeof MediaRssDotxmlRoute
   TrpcSplatRoute: typeof TrpcSplatRoute
+  ChannelSlugPodcastDotxmlRoute: typeof ChannelSlugPodcastDotxmlRoute
+  ChannelSlugRssDotxmlRoute: typeof ChannelSlugRssDotxmlRoute
   EmbedChannelSlugRoute: typeof EmbedChannelSlugRoute
   EmbedMediaMediaIdRoute: typeof EmbedMediaMediaIdRoute
 }
@@ -764,6 +804,13 @@ declare module '@tanstack/react-router' {
       path: '/trpc/$'
       fullPath: '/trpc/$'
       preLoaderRoute: typeof TrpcSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/media/rss.xml': {
+      id: '/media/rss.xml'
+      path: '/media/rss.xml'
+      fullPath: '/media/rss.xml'
+      preLoaderRoute: typeof MediaRssDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard_/organizations': {
@@ -975,6 +1022,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/account/profile'
       preLoaderRoute: typeof DashboardAccountProfileRouteImport
       parentRoute: typeof DashboardRoute
+    }
+    '/channel/$slug/rss.xml': {
+      id: '/channel/$slug/rss.xml'
+      path: '/channel/$slug/rss.xml'
+      fullPath: '/channel/$slug/rss.xml'
+      preLoaderRoute: typeof ChannelSlugRssDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/channel/$slug/podcast.xml': {
+      id: '/channel/$slug/podcast.xml'
+      path: '/channel/$slug/podcast.xml'
+      fullPath: '/channel/$slug/podcast.xml'
+      preLoaderRoute: typeof ChannelSlugPodcastDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_main/media/$mediaId': {
       id: '/_main/media/$mediaId'
@@ -1258,7 +1319,10 @@ const rootRouteChildren: RootRouteChildren = {
   MainRoute: MainRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   DashboardRoute: DashboardRouteWithChildren,
+  MediaRssDotxmlRoute: MediaRssDotxmlRoute,
   TrpcSplatRoute: TrpcSplatRoute,
+  ChannelSlugPodcastDotxmlRoute: ChannelSlugPodcastDotxmlRoute,
+  ChannelSlugRssDotxmlRoute: ChannelSlugRssDotxmlRoute,
   EmbedChannelSlugRoute: EmbedChannelSlugRoute,
   EmbedMediaMediaIdRoute: EmbedMediaMediaIdRoute,
 }
