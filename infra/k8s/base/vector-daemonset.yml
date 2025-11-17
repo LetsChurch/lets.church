@@ -75,7 +75,6 @@ data:
           - parse_json
         dataset: "${AXIOM_DATASET}"
         token: "${AXIOM_TOKEN}"
-        compression: zstd
         # Batch settings for efficiency
         batch:
           max_bytes: 1048576  # 1MB
