@@ -289,6 +289,10 @@ export const searchProcedures = {
           },
           where: {
             id: { in: uploadIds },
+            channel: {
+              visibility: 'PUBLIC',
+              approvedAt: { not: null },
+            },
           },
         });
 
@@ -388,6 +392,10 @@ export const searchProcedures = {
           },
           where: {
             id: { in: uploadIds },
+            channel: {
+              visibility: 'PUBLIC',
+              approvedAt: { not: null },
+            },
           },
         });
 

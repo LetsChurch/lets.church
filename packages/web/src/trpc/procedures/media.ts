@@ -63,6 +63,8 @@ export const mediaProcedures = {
               slug: true,
               avatarPath: true,
               defaultThumbnailPath: true,
+              visibility: true,
+              approvedAt: true,
               _count: {
                 select: {
                   subscribers: true,
@@ -82,6 +84,20 @@ export const mediaProcedures = {
       });
 
       if (!media) {
+        throw new Error('Media not found');
+      }
+
+      // Check if channel is approved and public
+      if (media.channel.visibility !== 'PUBLIC' || !media.channel.approvedAt) {
+        moduleLogger.warn(
+          'Access denied to media from unapproved/non-public channel',
+          {
+            mediaId: input.mediaId,
+            channelId: media.channel.id,
+            channelVisibility: media.channel.visibility,
+            channelApproved: Boolean(media.channel.approvedAt),
+          },
+        );
         throw new Error('Media not found');
       }
 

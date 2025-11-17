@@ -112,6 +112,8 @@ export const homeProcedures = {
           transcribingFinishedAt: { not: null },
           visibility: 'PUBLIC',
           channel: {
+            visibility: 'PUBLIC',
+            approvedAt: { not: null },
             subscribers: {
               some: {
                 appUserId: ctx.session.appUserId,
@@ -209,6 +211,7 @@ export const homeProcedures = {
           visibility: 'PUBLIC',
           channel: {
             visibility: 'PUBLIC',
+            approvedAt: { not: null },
           },
         },
         orderBy: {
@@ -553,6 +556,7 @@ export const homeProcedures = {
           transcribingFinishedAt: { not: null },
           channel: {
             visibility: 'PUBLIC',
+            approvedAt: { not: null },
           },
         },
       },
