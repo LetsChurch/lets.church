@@ -375,7 +375,7 @@ export const mediaProcedures = {
         ),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { uploadRecordId, viewHash, ranges } = input;
 
       moduleLogger.info('Recording view seconds', {
@@ -394,19 +394,39 @@ export const mediaProcedures = {
         }
       }
 
-      // Create records for each second
       const viewHashBigInt = BigInt(viewHash);
+
+      // Create records for each second
       const creates = Array.from(seconds).map((second) => ({
         uploadRecordId,
         viewHash: viewHashBigInt,
         second,
       }));
 
-      // Use createMany with skipDuplicates to handle already-tracked seconds
-      await prisma.uploadViewSecond.createMany({
-        data: creates,
-        skipDuplicates: true,
-      });
+      // Ensure the parent UploadView exists and create child records in a transaction
+      await prisma.$transaction([
+        prisma.uploadView.upsert({
+          where: {
+            uploadRecordId_viewHash: {
+              uploadRecordId,
+              viewHash: viewHashBigInt,
+            },
+          },
+          create: {
+            uploadRecordId,
+            viewHash: viewHashBigInt,
+            appUserId: ctx.session?.appUserId ?? null,
+            source: UploadViewSource.WEBSITE,
+          },
+          update: {
+            count: { increment: 1 },
+          },
+        }),
+        prisma.uploadViewSecond.createMany({
+          data: creates,
+          skipDuplicates: true,
+        }),
+      ]);
 
       moduleLogger.info('View seconds recorded', {
         uploadRecordId,
