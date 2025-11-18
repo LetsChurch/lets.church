@@ -68,6 +68,43 @@
   aspect-ratio: var(--video-aspect-w, 16) / var(--video-aspect-h, 9);
 }
 
+@utility fade-bottom {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 2rem;
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--color-edge-fade) 0%, transparent) 0%,
+      color-mix(in srgb, var(--color-edge-fade) 90%, transparent) 80%,
+      var(--color-edge-fade) 100%
+    );
+    pointer-events: none;
+  }
+}
+
+@utility fade-horizontal {
+  --fade-size: 64px;
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black var(--fade-size),
+    black calc(100% - var(--fade-size)),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black var(--fade-size),
+    black calc(100% - var(--fade-size)),
+    transparent 100%
+  );
+}
+
 @utility prose {
   color: var(--color-primary);
   max-width: 65ch;

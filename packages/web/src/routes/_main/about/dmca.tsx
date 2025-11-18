@@ -6,7 +6,7 @@ export const Route = createFileRoute('/_main/about/dmca')({
 
 function RouteComponent() {
   return (
-    <>
+    <article className="prose prose-lg prose-gray dark:prose-invert mx-auto max-w-4xl px-4 py-8">
       <h1>DMCA policy</h1>
       <p>
         This Digital Millennium Copyright Act policy (&#8220;Policy&#8221;)
@@ -270,6 +270,6 @@ function RouteComponent() {
       <p>
         <small>This document was last updated on May 3, 2023</small>
       </p>
-    </>
+    </article>
   );
 }

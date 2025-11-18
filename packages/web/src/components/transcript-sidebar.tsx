@@ -9,7 +9,6 @@ import {
   performSearch,
   resetSearch,
 } from '@/stores/transcript-search';
-import { cn } from '@/util/cn';
 
 type TranscriptSidebarProps = {
   transcript: Array<{
@@ -88,20 +87,12 @@ export function TranscriptSidebar({ transcript }: TranscriptSidebarProps) {
         </div>
 
         {/* Transcript Items */}
-        <div className="relative flex-1 overflow-hidden">
+        <div className="fade-bottom flex-1 overflow-hidden">
           {isSearchActive && hasQuery ? (
             <TranscriptSearchResults />
           ) : (
             <Transcript transcript={transcript} />
           )}
-          {/* Gradient fade at bottom */}
-          <div
-            className={cn(
-              'pointer-events-none absolute right-0 bottom-0 left-0 h-8',
-              'bg-gradient-to-b from-zinc-100/0 via-80% via-zinc-100/90 to-zinc-100',
-              'dark:from-edge-fade/0 dark:via-edge-fade/90 dark:to-edge-fade',
-            )}
-          />
         </div>
       </div>
     </div>

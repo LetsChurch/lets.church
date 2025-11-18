@@ -1,5 +1,3 @@
-import { Dialog } from '@base-ui-components/react/dialog';
-import { Menu } from '@base-ui-components/react/menu';
 import {
   IconArticle,
   IconBadge4k,
@@ -17,11 +15,12 @@ import {
   IconThumbDown,
   IconThumbUp,
   IconVolume,
-  IconX,
 } from '@tabler/icons-react';
 import { useState } from 'react';
 import LcButton from '@/components/lc-button';
 import LcButtonGroup from '@/components/lc-button-group';
+import { LcMenu, MenuItemButton, MenuItemLink } from '@/components/lc-menu';
+import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { useAbortController } from '@/hooks/use-abort-controller';
 import { abortableSetTimeout } from '@/util/abortable-timeout';
 import { cn } from '@/util/cn';
@@ -245,90 +244,70 @@ export function MediaActions({
 
         {/* Embed */}
         {(hasVideo || hasAudio) && (
-          <Menu.Root>
-            <Menu.Trigger
+          <LcMenu.Root>
+            <LcMenu.Trigger
               render={(props) => (
                 <LcButton {...props} className="p-2">
                   <IconCode size={16} />
                 </LcButton>
               )}
             />
-            <Menu.Portal>
-              <Menu.Positioner sideOffset={8} className="z-50">
-                <Menu.Popup className="min-w-[200px] rounded-lg border border-zinc-800 border-solid bg-zinc-900 py-1 shadow-xl transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
+            <LcMenu.Portal>
+              <LcMenu.Positioner sideOffset={8}>
+                <LcMenu.Popup>
                   {hasVideo ? (
-                    <Menu.Item
-                      render={(props) => (
-                        <button
-                          {...props}
-                          type="button"
-                          onClick={() => handleCopyEmbed('video')}
-                          className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-primary text-sm outline-none transition-colors hover:bg-zinc-800 data-[highlighted]:bg-zinc-800"
-                        >
-                          <IconDeviceTvOld size={16} />
-                          {copySuccess === 'embed-video'
-                            ? 'Copied!'
-                            : 'Copy Video Embed'}
-                        </button>
-                      )}
-                    />
+                    <MenuItemButton
+                      onClick={() => handleCopyEmbed('video')}
+                      icon={<IconDeviceTvOld size={16} />}
+                    >
+                      {copySuccess === 'embed-video'
+                        ? 'Copied!'
+                        : 'Copy Video Embed'}
+                    </MenuItemButton>
                   ) : null}
                   {hasAudio ? (
-                    <Menu.Item
-                      render={(props) => (
-                        <button
-                          {...props}
-                          type="button"
-                          onClick={() => handleCopyEmbed('audio')}
-                          className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-primary text-sm outline-none transition-colors hover:bg-zinc-800 data-[highlighted]:bg-zinc-800"
-                        >
-                          <IconVolume size={16} />
-                          {copySuccess === 'embed-audio'
-                            ? 'Copied!'
-                            : 'Copy Audio Embed'}
-                        </button>
-                      )}
-                    />
+                    <MenuItemButton
+                      onClick={() => handleCopyEmbed('audio')}
+                      icon={<IconVolume size={16} />}
+                    >
+                      {copySuccess === 'embed-audio'
+                        ? 'Copied!'
+                        : 'Copy Audio Embed'}
+                    </MenuItemButton>
                   ) : null}
-                </Menu.Popup>
-              </Menu.Positioner>
-            </Menu.Portal>
-          </Menu.Root>
+                </LcMenu.Popup>
+              </LcMenu.Positioner>
+            </LcMenu.Portal>
+          </LcMenu.Root>
         )}
 
         {/* Download */}
         {downloadData?.enabled && downloadData.urls.length > 0 ? (
-          <Menu.Root>
-            <Menu.Trigger
+          <LcMenu.Root>
+            <LcMenu.Trigger
               render={(props) => (
                 <LcButton {...props} className="p-2">
                   <IconDownload size={16} />
                 </LcButton>
               )}
             />
-            <Menu.Portal>
-              <Menu.Positioner sideOffset={8} className="z-50">
-                <Menu.Popup className="min-w-[200px] rounded-lg border border-zinc-800 border-solid bg-zinc-900 py-1 shadow-xl transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
+            <LcMenu.Portal>
+              <LcMenu.Positioner sideOffset={8}>
+                <LcMenu.Popup>
                   {downloadData.urls.map((download) => (
-                    <Menu.Item
+                    <MenuItemLink
                       key={download.url}
-                      render={(props) => (
-                        <a
-                          {...props}
-                          href={download.url}
-                          download
-                          className="flex cursor-pointer items-center gap-2 px-3 py-2 text-primary text-sm outline-none transition-colors hover:bg-zinc-800 data-[highlighted]:bg-zinc-800"
-                        >
-                          {getDownloadIcon(download.kind)}
-                          {download.label}
-                        </a>
-                      )}
-                    />
+                      href={download.url}
+                      download
+                      icon={getDownloadIcon(download.kind)}
+                    >
+                      {download.label}
+                    </MenuItemLink>
                   ))}
-                </Menu.Popup>
-              </Menu.Positioner>
-            </Menu.Portal>
-          </Menu.Root>
+                </LcMenu.Popup>
+              </LcMenu.Positioner>
+            </LcMenu.Portal>
+          </LcMenu.Root>
         ) : null}
 
         {/* Divider */}
@@ -365,27 +344,11 @@ export function MediaActions({
       </div>
 
       {/* Share Modal */}
-      <Dialog.Root open={shareModalOpen} onOpenChange={setShareModalOpen}>
-        <Dialog.Portal>
-          <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ease-in-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
-
-          <Dialog.Popup className="-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-50 w-full max-w-sm rounded-lg border border-zinc-800 border-solid bg-zinc-900 p-6 shadow-xl transition-all duration-300 data-[ending-style]:scale-95 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
-            <div className="flex items-center justify-between pb-4">
-              <Dialog.Title className="font-semibold text-lg text-primary">
-                Share
-              </Dialog.Title>
-              <Dialog.Close
-                render={(props) => (
-                  <button
-                    {...props}
-                    type="button"
-                    className="flex size-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-primary"
-                  >
-                    <IconX size={20} />
-                  </button>
-                )}
-              />
-            </div>
+      <LcModal.Root open={shareModalOpen} onOpenChange={setShareModalOpen}>
+        <LcModal.Portal>
+          <LcModal.Backdrop />
+          <LcModal.Popup>
+            <ModalHeader title="Share" />
 
             <div className="flex items-center justify-center gap-6 py-6">
               <button
@@ -434,7 +397,9 @@ export function MediaActions({
                 <div
                   className={cn(
                     'flex size-12 items-center justify-center rounded-full',
-                    copySuccess === 'link' ? 'bg-green-600' : 'bg-zinc-700',
+                    copySuccess === 'link'
+                      ? 'bg-green-600'
+                      : 'bg-gray-200 dark:bg-zinc-700',
                   )}
                 >
                   <IconCopy size={24} className="text-primary" />
@@ -444,9 +409,9 @@ export function MediaActions({
                 </span>
               </button>
             </div>
-          </Dialog.Popup>
-        </Dialog.Portal>
-      </Dialog.Root>
+          </LcModal.Popup>
+        </LcModal.Portal>
+      </LcModal.Root>
     </>
   );
 }

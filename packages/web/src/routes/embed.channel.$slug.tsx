@@ -212,7 +212,7 @@ function EmbedSearchBar({
         onSubmit={handleSubmit}
         className={cn(
           'flex h-10 items-center gap-1 rounded-3xl border px-3 transition-all duration-200',
-          'focus-within:border-gray-950/20 focus-within:shadow-[0_0_0_2px_theme(colors.gray.950/0.1)]',
+          'focus-within:border-gray-950/20 focus-within:shadow-[0_0_0_2px_--theme(--color-gray-950/0.1)]',
           'border-gray-950/10 bg-gray-950/5',
         )}
       >
@@ -226,7 +226,7 @@ function EmbedSearchBar({
             )}
           />
         </div>
-        <div className="flex flex-shrink-0 items-center gap-0">
+        <div className="flex shrink-0 items-center gap-0">
           <Autocomplete.Clear
             onClick={handleClear}
             className="flex size-8 items-center justify-center rounded-full text-gray-950/50 transition-colors hover:bg-gray-950/10 hover:text-gray-950"

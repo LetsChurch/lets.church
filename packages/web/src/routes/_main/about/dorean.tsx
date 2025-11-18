@@ -6,7 +6,7 @@ export const Route = createFileRoute('/_main/about/dorean')({
 
 function RouteComponent() {
   return (
-    <article className="prose prose-gray dark:prose-invert max-w-none px-4 py-8">
+    <article className="prose prose-gray dark:prose-invert mx-auto max-w-4xl px-4 py-8">
       <h1>Should Ministry Be Free?</h1>
 
       <p className="lead">

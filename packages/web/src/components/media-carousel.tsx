@@ -30,7 +30,7 @@ export function MediaCarousel({
   items,
   showPagination = false,
   tailerCard: viewMoreCard,
-  fadeMargin = '-mx-16 px-16',
+  fadeMargin = 'sm:-mx-16 sm:px-16',
   fadeSize = 64,
   buttonPositioning = 'outside',
 }: MediaCarouselProps) {
@@ -90,11 +90,13 @@ export function MediaCarousel({
     <>
       <div className="relative">
         <div
-          className={cn('relative overflow-visible', fadeMargin)}
+          className={cn(
+            'sm:fade-horizontal relative overflow-visible',
+            fadeMargin,
+          )}
           ref={emblaRef}
           style={{
-            maskImage: `linear-gradient(to right, transparent 0%, black ${fadeSize}px, black calc(100% - ${fadeSize}px), transparent 100%)`,
-            WebkitMaskImage: `linear-gradient(to right, transparent 0%, black ${fadeSize}px, black calc(100% - ${fadeSize}px), transparent 100%)`,
+            '--fade-size': `${fadeSize}px`,
           }}
         >
           <div className="flex gap-6">

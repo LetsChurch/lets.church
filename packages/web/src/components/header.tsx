@@ -1,10 +1,9 @@
-import { Menu } from '@base-ui-components/react/menu';
 import { useStore } from '@nanostores/react';
 import { IconMenu2 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from '@tanstack/react-router';
 import { type PropsWithChildren, useState } from 'react';
 import { Avatar } from '@/components/avatar';
+import { LcMenu, MenuItemRouterLink } from '@/components/lc-menu';
 import { $headerBackgroundImage } from '@/stores/header';
 import { useTRPC } from '@/trpc/react';
 import LcLink from './lc-link';
@@ -82,8 +81,8 @@ export default function Header({
         {/* Login Button or User Avatar */}
         <div className="flex items-center gap-2">
           {hasSessionQuery.data && profileQuery.data ? (
-            <Menu.Root>
-              <Menu.Trigger
+            <LcMenu.Root>
+              <LcMenu.Trigger
                 render={(props) => (
                   <button
                     {...props}
@@ -106,33 +105,17 @@ export default function Header({
                   </button>
                 )}
               />
-              <Menu.Portal>
-                <Menu.Positioner side="bottom" align="end" className="z-10">
-                  <Menu.Popup className="mt-2 min-w-48 rounded-lg border-fancy-pants bg-white p-1 shadow-lg dark:bg-zinc-900">
-                    <Menu.Item
-                      render={(props) => (
-                        <Link
-                          {...props}
-                          to="/dashboard/account"
-                          className="flex w-full items-center rounded-md px-3 py-2 text-primary text-sm transition-colors hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-zinc-800 dark:hover:bg-zinc-800"
-                        >
-                          Account Settings
-                        </Link>
-                      )}
-                    />
-                    <Menu.Item
-                      render={(props) => (
-                        <Link
-                          {...props}
-                          to="/dashboard"
-                          className="flex w-full items-center rounded-md px-3 py-2 text-primary text-sm transition-colors hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-zinc-800 dark:hover:bg-zinc-800"
-                        >
-                          Dashboard
-                        </Link>
-                      )}
-                    />
-                    <Menu.Separator className="my-1 h-px bg-gray-200 dark:bg-zinc-800" />
-                    <Menu.Item
+              <LcMenu.Portal>
+                <LcMenu.Positioner side="bottom" align="end">
+                  <LcMenu.Popup className="mt-2 min-w-48 shadow-lg">
+                    <MenuItemRouterLink to="/dashboard/account">
+                      Account Settings
+                    </MenuItemRouterLink>
+                    <MenuItemRouterLink to="/dashboard">
+                      Dashboard
+                    </MenuItemRouterLink>
+                    <LcMenu.Separator />
+                    <LcMenu.Item
                       render={(props) => (
                         // If this changes to something client side then make sure to invalidate the query for hasValidSession,
                         // or even all of react-query
@@ -144,17 +127,17 @@ export default function Header({
                           <button
                             {...props}
                             type="submit"
-                            className="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-red-400 text-sm transition-colors hover:bg-gray-100 focus:bg-gray-100 dark:focus:bg-zinc-800 dark:hover:bg-zinc-800"
+                            className="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-red-400 text-sm transition-colors hover:bg-gray-100 focus:bg-gray-100 data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-zinc-800 dark:focus:bg-zinc-800 dark:hover:bg-zinc-800"
                           >
                             Logout
                           </button>
                         </form>
                       )}
                     />
-                  </Menu.Popup>
-                </Menu.Positioner>
-              </Menu.Portal>
-            </Menu.Root>
+                  </LcMenu.Popup>
+                </LcMenu.Positioner>
+              </LcMenu.Portal>
+            </LcMenu.Root>
           ) : (
             <LcLink to="/auth/login">Login</LcLink>
           )}

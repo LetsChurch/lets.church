@@ -29,6 +29,7 @@ import { Route as MainSearchRouteImport } from './routes/_main/search'
 import { Route as MainLibraryRouteImport } from './routes/_main/library'
 import { Route as MainHistoryRouteImport } from './routes/_main/history'
 import { Route as MainFollowingRouteImport } from './routes/_main/following'
+import { Route as MainAboutRouteImport } from './routes/_main.about'
 import { Route as MainSlugRouteImport } from './routes/_main/$slug'
 import { Route as MainAboutIndexRouteImport } from './routes/_main/about/index'
 import { Route as EmbedMediaMediaIdRouteImport } from './routes/embed.media.$mediaId'
@@ -52,7 +53,6 @@ import { Route as MainMediaMediaIdRouteImport } from './routes/_main/media/$medi
 import { Route as MainChannelSlugRouteImport } from './routes/_main/channel.$slug'
 import { Route as MainAboutTermsRouteImport } from './routes/_main/about/terms'
 import { Route as MainAboutPrivacyRouteImport } from './routes/_main/about/privacy'
-import { Route as MainAboutFeatureRequestRouteImport } from './routes/_main/about/feature-request'
 import { Route as MainAboutDoreanRouteImport } from './routes/_main/about/dorean'
 import { Route as MainAboutDmcaRouteImport } from './routes/_main/about/dmca'
 import { Route as DashboardOrganizationsOrgIdMembersRouteImport } from './routes/dashboard_/organizations_.$orgId_.members'
@@ -168,15 +168,20 @@ const MainFollowingRoute = MainFollowingRouteImport.update({
   path: '/following',
   getParentRoute: () => MainRoute,
 } as any)
+const MainAboutRoute = MainAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => MainRoute,
+} as any)
 const MainSlugRoute = MainSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
   getParentRoute: () => MainRoute,
 } as any)
 const MainAboutIndexRoute = MainAboutIndexRouteImport.update({
-  id: '/about/',
-  path: '/about/',
-  getParentRoute: () => MainRoute,
+  id: '/',
+  path: '/',
+  getParentRoute: () => MainAboutRoute,
 } as any)
 const EmbedMediaMediaIdRoute = EmbedMediaMediaIdRouteImport.update({
   id: '/embed/media/$mediaId',
@@ -283,29 +288,24 @@ const MainChannelSlugRoute = MainChannelSlugRouteImport.update({
   getParentRoute: () => MainRoute,
 } as any)
 const MainAboutTermsRoute = MainAboutTermsRouteImport.update({
-  id: '/about/terms',
-  path: '/about/terms',
-  getParentRoute: () => MainRoute,
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => MainAboutRoute,
 } as any)
 const MainAboutPrivacyRoute = MainAboutPrivacyRouteImport.update({
-  id: '/about/privacy',
-  path: '/about/privacy',
-  getParentRoute: () => MainRoute,
-} as any)
-const MainAboutFeatureRequestRoute = MainAboutFeatureRequestRouteImport.update({
-  id: '/about/feature-request',
-  path: '/about/feature-request',
-  getParentRoute: () => MainRoute,
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => MainAboutRoute,
 } as any)
 const MainAboutDoreanRoute = MainAboutDoreanRouteImport.update({
-  id: '/about/dorean',
-  path: '/about/dorean',
-  getParentRoute: () => MainRoute,
+  id: '/dorean',
+  path: '/dorean',
+  getParentRoute: () => MainAboutRoute,
 } as any)
 const MainAboutDmcaRoute = MainAboutDmcaRouteImport.update({
-  id: '/about/dmca',
-  path: '/about/dmca',
-  getParentRoute: () => MainRoute,
+  id: '/dmca',
+  path: '/dmca',
+  getParentRoute: () => MainAboutRoute,
 } as any)
 const DashboardOrganizationsOrgIdMembersRoute =
   DashboardOrganizationsOrgIdMembersRouteImport.update({
@@ -390,6 +390,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
   '/dashboard': typeof DashboardRouteWithChildren
   '/$slug': typeof MainSlugRoute
+  '/about': typeof MainAboutRouteWithChildren
   '/following': typeof MainFollowingRoute
   '/history': typeof MainHistoryRoute
   '/library': typeof MainLibraryRoute
@@ -409,7 +410,6 @@ export interface FileRoutesByFullPath {
   '/dashboard/': typeof DashboardIndexRoute
   '/about/dmca': typeof MainAboutDmcaRoute
   '/about/dorean': typeof MainAboutDoreanRoute
-  '/about/feature-request': typeof MainAboutFeatureRequestRoute
   '/about/privacy': typeof MainAboutPrivacyRoute
   '/about/terms': typeof MainAboutTermsRoute
   '/channel/$slug': typeof MainChannelSlugRoute
@@ -431,7 +431,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/organizations/$orgId': typeof DashboardOrganizationsOrgIdRoute
   '/embed/channel/$slug': typeof EmbedChannelSlugRoute
   '/embed/media/$mediaId': typeof EmbedMediaMediaIdRoute
-  '/about': typeof MainAboutIndexRoute
+  '/about/': typeof MainAboutIndexRoute
   '/dashboard/channels/$channelId/edit': typeof DashboardChannelsChannelIdEditRoute
   '/dashboard/channels/$channelId/members': typeof DashboardChannelsChannelIdMembersRoute
   '/dashboard/channels/$channelId/playlists': typeof DashboardChannelsChannelIdPlaylistsRoute
@@ -468,7 +468,6 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardIndexRoute
   '/about/dmca': typeof MainAboutDmcaRoute
   '/about/dorean': typeof MainAboutDoreanRoute
-  '/about/feature-request': typeof MainAboutFeatureRequestRoute
   '/about/privacy': typeof MainAboutPrivacyRoute
   '/about/terms': typeof MainAboutTermsRoute
   '/channel/$slug': typeof MainChannelSlugRoute
@@ -511,6 +510,7 @@ export interface FileRoutesById {
   '/auth_': typeof AuthRouteWithChildren
   '/dashboard_': typeof DashboardRouteWithChildren
   '/_main/$slug': typeof MainSlugRoute
+  '/_main/about': typeof MainAboutRouteWithChildren
   '/_main/following': typeof MainFollowingRoute
   '/_main/history': typeof MainHistoryRoute
   '/_main/library': typeof MainLibraryRoute
@@ -530,7 +530,6 @@ export interface FileRoutesById {
   '/dashboard_/': typeof DashboardIndexRoute
   '/_main/about/dmca': typeof MainAboutDmcaRoute
   '/_main/about/dorean': typeof MainAboutDoreanRoute
-  '/_main/about/feature-request': typeof MainAboutFeatureRequestRoute
   '/_main/about/privacy': typeof MainAboutPrivacyRoute
   '/_main/about/terms': typeof MainAboutTermsRoute
   '/_main/channel/$slug': typeof MainChannelSlugRoute
@@ -573,6 +572,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/$slug'
+    | '/about'
     | '/following'
     | '/history'
     | '/library'
@@ -592,7 +592,6 @@ export interface FileRouteTypes {
     | '/dashboard/'
     | '/about/dmca'
     | '/about/dorean'
-    | '/about/feature-request'
     | '/about/privacy'
     | '/about/terms'
     | '/channel/$slug'
@@ -614,7 +613,7 @@ export interface FileRouteTypes {
     | '/dashboard/organizations/$orgId'
     | '/embed/channel/$slug'
     | '/embed/media/$mediaId'
-    | '/about'
+    | '/about/'
     | '/dashboard/channels/$channelId/edit'
     | '/dashboard/channels/$channelId/members'
     | '/dashboard/channels/$channelId/playlists'
@@ -651,7 +650,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/about/dmca'
     | '/about/dorean'
-    | '/about/feature-request'
     | '/about/privacy'
     | '/about/terms'
     | '/channel/$slug'
@@ -693,6 +691,7 @@ export interface FileRouteTypes {
     | '/auth_'
     | '/dashboard_'
     | '/_main/$slug'
+    | '/_main/about'
     | '/_main/following'
     | '/_main/history'
     | '/_main/library'
@@ -712,7 +711,6 @@ export interface FileRouteTypes {
     | '/dashboard_/'
     | '/_main/about/dmca'
     | '/_main/about/dorean'
-    | '/_main/about/feature-request'
     | '/_main/about/privacy'
     | '/_main/about/terms'
     | '/_main/channel/$slug'
@@ -904,6 +902,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainFollowingRouteImport
       parentRoute: typeof MainRoute
     }
+    '/_main/about': {
+      id: '/_main/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof MainAboutRouteImport
+      parentRoute: typeof MainRoute
+    }
     '/_main/$slug': {
       id: '/_main/$slug'
       path: '/$slug'
@@ -913,10 +918,10 @@ declare module '@tanstack/react-router' {
     }
     '/_main/about/': {
       id: '/_main/about/'
-      path: '/about'
-      fullPath: '/about'
+      path: '/'
+      fullPath: '/about/'
       preLoaderRoute: typeof MainAboutIndexRouteImport
-      parentRoute: typeof MainRoute
+      parentRoute: typeof MainAboutRoute
     }
     '/embed/media/$mediaId': {
       id: '/embed/media/$mediaId'
@@ -1053,38 +1058,31 @@ declare module '@tanstack/react-router' {
     }
     '/_main/about/terms': {
       id: '/_main/about/terms'
-      path: '/about/terms'
+      path: '/terms'
       fullPath: '/about/terms'
       preLoaderRoute: typeof MainAboutTermsRouteImport
-      parentRoute: typeof MainRoute
+      parentRoute: typeof MainAboutRoute
     }
     '/_main/about/privacy': {
       id: '/_main/about/privacy'
-      path: '/about/privacy'
+      path: '/privacy'
       fullPath: '/about/privacy'
       preLoaderRoute: typeof MainAboutPrivacyRouteImport
-      parentRoute: typeof MainRoute
-    }
-    '/_main/about/feature-request': {
-      id: '/_main/about/feature-request'
-      path: '/about/feature-request'
-      fullPath: '/about/feature-request'
-      preLoaderRoute: typeof MainAboutFeatureRequestRouteImport
-      parentRoute: typeof MainRoute
+      parentRoute: typeof MainAboutRoute
     }
     '/_main/about/dorean': {
       id: '/_main/about/dorean'
-      path: '/about/dorean'
+      path: '/dorean'
       fullPath: '/about/dorean'
       preLoaderRoute: typeof MainAboutDoreanRouteImport
-      parentRoute: typeof MainRoute
+      parentRoute: typeof MainAboutRoute
     }
     '/_main/about/dmca': {
       id: '/_main/about/dmca'
-      path: '/about/dmca'
+      path: '/dmca'
       fullPath: '/about/dmca'
       preLoaderRoute: typeof MainAboutDmcaRouteImport
-      parentRoute: typeof MainRoute
+      parentRoute: typeof MainAboutRoute
     }
     '/dashboard_/organizations_/$orgId_/members': {
       id: '/dashboard_/organizations_/$orgId_/members'
@@ -1180,38 +1178,48 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface MainAboutRouteChildren {
+  MainAboutDmcaRoute: typeof MainAboutDmcaRoute
+  MainAboutDoreanRoute: typeof MainAboutDoreanRoute
+  MainAboutPrivacyRoute: typeof MainAboutPrivacyRoute
+  MainAboutTermsRoute: typeof MainAboutTermsRoute
+  MainAboutIndexRoute: typeof MainAboutIndexRoute
+}
+
+const MainAboutRouteChildren: MainAboutRouteChildren = {
+  MainAboutDmcaRoute: MainAboutDmcaRoute,
+  MainAboutDoreanRoute: MainAboutDoreanRoute,
+  MainAboutPrivacyRoute: MainAboutPrivacyRoute,
+  MainAboutTermsRoute: MainAboutTermsRoute,
+  MainAboutIndexRoute: MainAboutIndexRoute,
+}
+
+const MainAboutRouteWithChildren = MainAboutRoute._addFileChildren(
+  MainAboutRouteChildren,
+)
+
 interface MainRouteChildren {
   MainSlugRoute: typeof MainSlugRoute
+  MainAboutRoute: typeof MainAboutRouteWithChildren
   MainFollowingRoute: typeof MainFollowingRoute
   MainHistoryRoute: typeof MainHistoryRoute
   MainLibraryRoute: typeof MainLibraryRoute
   MainSearchRoute: typeof MainSearchRoute
   MainIndexRoute: typeof MainIndexRoute
-  MainAboutDmcaRoute: typeof MainAboutDmcaRoute
-  MainAboutDoreanRoute: typeof MainAboutDoreanRoute
-  MainAboutFeatureRequestRoute: typeof MainAboutFeatureRequestRoute
-  MainAboutPrivacyRoute: typeof MainAboutPrivacyRoute
-  MainAboutTermsRoute: typeof MainAboutTermsRoute
   MainChannelSlugRoute: typeof MainChannelSlugRoute
   MainMediaMediaIdRoute: typeof MainMediaMediaIdRoute
-  MainAboutIndexRoute: typeof MainAboutIndexRoute
 }
 
 const MainRouteChildren: MainRouteChildren = {
   MainSlugRoute: MainSlugRoute,
+  MainAboutRoute: MainAboutRouteWithChildren,
   MainFollowingRoute: MainFollowingRoute,
   MainHistoryRoute: MainHistoryRoute,
   MainLibraryRoute: MainLibraryRoute,
   MainSearchRoute: MainSearchRoute,
   MainIndexRoute: MainIndexRoute,
-  MainAboutDmcaRoute: MainAboutDmcaRoute,
-  MainAboutDoreanRoute: MainAboutDoreanRoute,
-  MainAboutFeatureRequestRoute: MainAboutFeatureRequestRoute,
-  MainAboutPrivacyRoute: MainAboutPrivacyRoute,
-  MainAboutTermsRoute: MainAboutTermsRoute,
   MainChannelSlugRoute: MainChannelSlugRoute,
   MainMediaMediaIdRoute: MainMediaMediaIdRoute,
-  MainAboutIndexRoute: MainAboutIndexRoute,
 }
 
 const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren)

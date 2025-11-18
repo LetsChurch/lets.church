@@ -30,15 +30,6 @@ export function EmptyState({
           className="mx-auto"
         >
           <title>Empty</title>
-          <foreignObject x="3" y="5" width="72" height="72">
-            <div
-              style={{
-                backdropFilter: 'blur(4px)',
-                height: '100%',
-                width: '100%',
-              }}
-            />
-          </foreignObject>
           <g filter="url(#filter0_d_144_5508)">
             <rect
               x="16"
@@ -48,7 +39,6 @@ export function EmptyState({
               rx="23"
               stroke={color}
               strokeWidth="2"
-              shapeRendering="crispEdges"
             />
           </g>
           <rect

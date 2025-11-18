@@ -208,7 +208,7 @@ function RouteComponent() {
   return (
     <>
       <Header />
-      <div className="px-16 pb-8">
+      <div className="pb-8 sm:px-16">
         <div className="space-y-8">
           {!isLoggedIn ? (
             <EmptyState

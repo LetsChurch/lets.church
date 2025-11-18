@@ -20,7 +20,7 @@ function MobileMenuDonateCard({ onDismiss }: MobileMenuDonateCardProps) {
       <div className="flex flex-col gap-1">
         <a
           href="https://givebutter.com/LetsChurch"
-          className="rounded-full bg-white px-2.5 py-[6px] text-center font-semibold text-brand text-xs transition-opacity hover:opacity-90"
+          className="rounded-full bg-white px-2.5 py-1.5 text-center font-semibold text-brand text-xs transition-opacity hover:opacity-90"
           target="_blank"
           rel="noopener"
         >
@@ -30,7 +30,7 @@ function MobileMenuDonateCard({ onDismiss }: MobileMenuDonateCardProps) {
           <button
             type="button"
             onClick={onDismiss}
-            className="rounded-full px-2.5 py-[6px] font-semibold text-white/80 text-xs transition-colors hover:bg-white/10"
+            className="rounded-full px-2.5 py-1.5 font-semibold text-white/80 text-xs transition-colors hover:bg-white/10"
           >
             Dismiss
           </button>
@@ -51,12 +51,12 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange} modal>
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ease-in-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
+        <Dialog.Backdrop className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ease-in-out data-ending-style:opacity-0 data-starting-style:opacity-0" />
 
         <Dialog.Popup
           className={cn(
             'fixed top-0 left-0 z-50 h-full w-80 bg-white dark:bg-zinc-900',
-            'data-[ending-style]:-translate-x-full data-[starting-style]:-translate-x-full',
+            'data-ending-style:-translate-x-full data-starting-style:-translate-x-full',
             'transition-transform duration-300 ease-in-out',
           )}
         >
@@ -90,13 +90,6 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
                 className="block font-semibold text-lg text-primary hover:text-indigo-400"
               >
                 The Dorean Principle
-              </Link>
-              <Link
-                to="/about/feature-request"
-                onClick={handleClose}
-                className="block font-semibold text-lg text-primary hover:text-indigo-400"
-              >
-                Request a Feature
               </Link>
             </div>
 

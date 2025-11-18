@@ -31,7 +31,6 @@ import {
   resetSearch,
 } from '@/stores/transcript-search';
 import { trpcClient, useTRPC } from '@/trpc/react';
-import { cn } from '@/util/cn';
 import { useVideoLayout } from '@/util/use-video-layout';
 
 export const Route = createFileRoute('/_main/media/$mediaId')({
@@ -289,13 +288,7 @@ function MobileTranscriptDrawerContent({
         )}
       </div>
 
-      <div
-        className={cn(
-          'relative flex min-h-0 flex-1 flex-col overflow-hidden',
-          // Gradient fade at bottom
-          'after:pointer-events-none after:absolute after:right-0 after:bottom-0 after:left-0 after:h-8 after:bg-gradient-to-b after:from-zinc-900/0 after:via-80% after:via-zinc-900/90 after:to-zinc-900',
-        )}
-      >
+      <div className="fade-bottom flex min-h-0 flex-1 flex-col overflow-hidden">
         {isSearchActive && hasQuery ? (
           <TranscriptSearchResults />
         ) : (
@@ -744,13 +737,7 @@ function RouteComponent() {
               </MobileDrawer.Close>
             </div>
 
-            <div
-              className={cn(
-                'relative flex-1 overflow-hidden',
-                // Gradient fade at bottom
-                'after:pointer-events-none after:absolute after:right-0 after:bottom-0 after:left-0 after:h-8 after:bg-gradient-to-b after:from-zinc-900/0 after:via-80% after:via-zinc-900/90 after:to-zinc-900',
-              )}
-            >
+            <div className="fade-bottom flex-1 overflow-hidden">
               <div className="h-full overflow-y-auto">
                 <CommentsSection
                   mediaId={params.mediaId}

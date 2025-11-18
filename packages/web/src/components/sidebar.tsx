@@ -45,7 +45,7 @@ function SidebarDonateCard({ onDismiss }: SidebarDonateCardProps) {
       <div className="flex flex-col gap-1">
         <a
           href="https://givebutter.com/LetsChurch"
-          className="rounded-full bg-white px-2.5 py-[6px] text-center font-semibold text-brand text-xs transition-opacity hover:opacity-90"
+          className="rounded-full bg-white px-2.5 py-1.5 text-center font-semibold text-brand text-xs transition-opacity hover:opacity-90"
           target="_blank"
           rel="noopener"
         >
@@ -55,7 +55,7 @@ function SidebarDonateCard({ onDismiss }: SidebarDonateCardProps) {
           <button
             type="button"
             onClick={onDismiss}
-            className="rounded-full px-2.5 py-[6px] font-semibold text-white/80 text-xs transition-colors hover:bg-white/10"
+            className="rounded-full px-2.5 py-1.5 font-semibold text-white/80 text-xs transition-colors hover:bg-white/10"
           >
             Dismiss
           </button>
@@ -127,7 +127,7 @@ export default function Sidebar({ className }: SidebarProps) {
           <button
             type="button"
             onClick={showAltMenu ? closeAltMenu : () => setShowAltMenu(true)}
-            className="flex size-8 cursor-pointer items-center justify-center rounded-lg transition-colors hover:bg-black/[0.15]"
+            className="flex size-8 cursor-pointer items-center justify-center rounded-lg transition-colors hover:bg-black/15"
           >
             {showAltMenu ? (
               <IconArrowLeft size={24} className="text-primary/80" />
@@ -186,12 +186,6 @@ export default function Sidebar({ className }: SidebarProps) {
                 {/* > */}
                 {/*   Roadmap */}
                 {/* </Link> */}
-                <Link
-                  to="/about/feature-request"
-                  className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
-                >
-                  Request a Feature
-                </Link>
                 <div className="mx-2 my-2.5 h-px bg-zinc-900" />
                 <Link
                   to="/about/terms"
