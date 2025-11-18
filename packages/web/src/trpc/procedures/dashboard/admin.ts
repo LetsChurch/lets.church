@@ -8,6 +8,11 @@ import {
   removeFeaturedUploadSchema,
   reorderFeaturedUploadsSchema,
 } from '@/schemas/dashboard/admin';
+import {
+  cancelMigrateViewRanges,
+  getMigrateViewRangesProgress,
+  startMigrateViewRanges,
+} from '@/temporal';
 import logger from '@/util/logger';
 import { publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
@@ -1108,4 +1113,104 @@ export const adminRouter = router({
         });
       }
     }),
+
+  // View Ranges Migration procedures
+  getViewRangesMigrationStatus: adminProcedure.query(async () => {
+    moduleLogger.info('Fetching view ranges migration status');
+
+    const [remainingCount, secondsCount, progress] = await Promise.all([
+      prisma.uploadViewRanges.count(),
+      prisma.uploadViewSecond.count(),
+      getMigrateViewRangesProgress(),
+    ]);
+
+    return {
+      remainingCount,
+      secondsCount,
+      workflowStatus: progress,
+    };
+  }),
+
+  startViewRangesMigration: adminProcedure
+    .input(
+      z.object({
+        batchSize: z.number().min(1).max(1000).default(100),
+        delayBetweenBatchesMs: z.number().min(0).max(10000).default(100),
+        maxRows: z.number().min(1).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Starting view ranges migration', {
+        batchSize: input.batchSize,
+        delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+        maxRows: input.maxRows,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        // Check if migration is already running
+        const progress = await getMigrateViewRangesProgress();
+        if (progress?.status === 'running') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Migration is already running',
+          });
+        }
+
+        await startMigrateViewRanges({
+          batchSize: input.batchSize,
+          delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+          maxRows: input.maxRows,
+        });
+
+        moduleLogger.info('View ranges migration started successfully', {
+          batchSize: input.batchSize,
+          delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+          maxRows: input.maxRows,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error('Failed to start view ranges migration', {
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to start migration',
+        });
+      }
+    }),
+
+  cancelViewRangesMigration: adminProcedure.mutation(async ({ ctx }) => {
+    moduleLogger.info('Cancelling view ranges migration', {
+      appUserId: ctx.session.appUserId,
+    });
+
+    try {
+      await cancelMigrateViewRanges();
+
+      moduleLogger.info('View ranges migration cancelled successfully', {
+        appUserId: ctx.session.appUserId,
+      });
+
+      return { success: true };
+    } catch (error) {
+      moduleLogger.error('Failed to cancel view ranges migration', {
+        appUserId: ctx.session.appUserId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to cancel migration',
+      });
+    }
+  }),
 });

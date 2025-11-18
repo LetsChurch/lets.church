@@ -4,8 +4,11 @@ import {
   createUploadRecordWorkflow,
   deleteUploadWorkflow,
   geocodeOrganizationWorkflow,
+  getMigrationProgressQuery,
   handleMultipartMediaUploadWorkflow,
   importMediaWorkflow,
+  type MigrateViewRangesWorkflowParams,
+  migrateViewRangesWorkflow,
   postUserRegistrationWorkflow,
   sendEmailWorkflow,
   updateUploadRecordSignal,
@@ -208,4 +211,66 @@ export async function waitOnTemporal() {
   });
 
   moduleLogger.info('Temporal is available!');
+}
+
+const MIGRATE_VIEW_RANGES_WORKFLOW_ID = 'migrateViewRanges';
+
+export async function startMigrateViewRanges(
+  params: MigrateViewRangesWorkflowParams,
+) {
+  return (await client).workflow.start(migrateViewRangesWorkflow, {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    workflowId: MIGRATE_VIEW_RANGES_WORKFLOW_ID,
+    args: [params],
+  });
+}
+
+export async function getMigrateViewRangesProgress() {
+  try {
+    const handle = (await client).workflow.getHandle(
+      MIGRATE_VIEW_RANGES_WORKFLOW_ID,
+    );
+    const description = await handle.describe();
+
+    if (description.status.name === 'RUNNING') {
+      const progress = await handle.query(getMigrationProgressQuery);
+      return {
+        status: 'running' as const,
+        ...progress,
+      };
+    }
+
+    if (description.status.name === 'COMPLETED') {
+      return {
+        status: 'completed' as const,
+        totalProcessed: 0,
+        totalSecondsCreated: 0,
+        remaining: 0,
+        batchesCompleted: 0,
+      };
+    }
+
+    return {
+      status: description.status.name.toLowerCase() as
+        | 'failed'
+        | 'cancelled'
+        | 'terminated'
+        | 'timed_out',
+      totalProcessed: 0,
+      totalSecondsCreated: 0,
+      remaining: 0,
+      batchesCompleted: 0,
+    };
+  } catch {
+    // Workflow doesn't exist
+    return null;
+  }
+}
+
+export async function cancelMigrateViewRanges() {
+  const handle = (await client).workflow.getHandle(
+    MIGRATE_VIEW_RANGES_WORKFLOW_ID,
+  );
+  await handle.cancel();
 }
