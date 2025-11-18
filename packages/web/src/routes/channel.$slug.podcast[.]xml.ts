@@ -153,7 +153,7 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
                   )
                 : null;
 
-            const uploadUrl = `${siteUrl}/watch?v=${upload.id}`;
+            const uploadUrl = `${siteUrl}/media/${upload.id}`;
             const audioDownloadUrl = getPublicMediaUrl(
               `${upload.id}/AUDIO_DOWNLOAD.m4a`,
             );

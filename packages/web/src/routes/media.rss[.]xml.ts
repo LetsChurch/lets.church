@@ -85,7 +85,7 @@ export const Route = createFileRoute('/media/rss.xml')({
                   )
                 : null;
 
-            const uploadUrl = `${siteUrl}/watch?v=${upload.id}`;
+            const uploadUrl = `${siteUrl}/media/${upload.id}`;
             const channelUrl = `${siteUrl}/channel/${upload.channel.slug}`;
 
             const content = [
