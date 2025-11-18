@@ -18,7 +18,9 @@ type CarouselItemData = {
   badge?: string;
 };
 
-type CarouselItemProps = CarouselItemData;
+type CarouselItemProps = CarouselItemData & {
+  isActive?: boolean;
+};
 
 function CarouselItem({
   id,
@@ -27,15 +29,21 @@ function CarouselItem({
   imageUrl,
   avatarUrl,
   badge = 'Featured',
+  isActive = false,
 }: CarouselItemProps) {
   return (
-    <div className="relative w-90 flex-shrink-0 md:w-124 lg:w-160">
+    <div
+      className={cn(
+        'relative w-90 flex-shrink-0 md:w-124 lg:w-160',
+        isActive && 'group',
+      )}
+    >
       <div className="space-y-5">
         {/* Image Container */}
         <div className="relative aspect-video overflow-hidden rounded-2xl border-fancy-pants bg-zinc-100 dark:bg-zinc-900">
           {imageUrl ? (
             <div
-              className="absolute inset-0 bg-center bg-cover"
+              className="absolute inset-0 bg-center bg-cover transition-transform duration-300 ease-out-expo will-change-transform group-hover:scale-[1.01]"
               style={{
                 backgroundImage: `url('${imageUrl}')`,
               }}
@@ -185,7 +193,7 @@ export default function HeroCarousel({ items }: HeroCarouselProps) {
                 index === 0 ? 'opacity-100' : 'opacity-20',
               )}
             >
-              <CarouselItem {...item} />
+              <CarouselItem {...item} isActive={index === selectedIndex} />
             </div>
           ))}
         </div>

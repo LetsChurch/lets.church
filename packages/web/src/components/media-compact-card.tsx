@@ -20,14 +20,14 @@ export function MediaCompactCard({
   progress,
 }: Props) {
   return (
-    <div className="flex cursor-pointer items-stretch gap-3">
+    <div className="group flex cursor-pointer items-stretch gap-3">
       <div className="relative aspect-video h-16 shrink-0">
         <div className="-translate-y-1/2 absolute top-1/2 right-0 left-0 aspect-video overflow-hidden rounded-lg border-fancy-pants bg-zinc-900">
           {thumbnailUrl ? (
             <img
               src={thumbnailUrl}
               alt={title}
-              className="size-full object-cover"
+              className="size-full object-cover transition-transform duration-300 ease-out-expo will-change-transform group-hover:scale-[1.01]"
             />
           ) : null}
         </div>

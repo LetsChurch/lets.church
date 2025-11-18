@@ -17,6 +17,9 @@
   --color-brand: var(--color-indigo-500);
   --color-brand-600: var(--color-indigo-600);
   --color-brand-700: var(--color-indigo-700);
+
+  /* Custom easing */
+  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
 }
 
 /* Dark theme */

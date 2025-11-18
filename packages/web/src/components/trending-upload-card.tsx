@@ -12,13 +12,13 @@ export function TrendingUploadCard({
   duration?: string;
 }) {
   return (
-    <div key={id} className="flex gap-3">
+    <div key={id} className="group flex gap-3">
       <div className="relative aspect-video w-24 flex-shrink-0 overflow-hidden rounded-lg border border-fancy-pants bg-zinc-100 dark:bg-zinc-900">
         {thumbnailUrl ? (
           <img
             src={thumbnailUrl}
             alt={title ?? 'Untitled'}
-            className="size-full object-cover"
+            className="size-full object-cover transition-transform duration-300 ease-out-expo will-change-transform group-hover:scale-[1.01]"
           />
         ) : null}
         <div className="absolute right-1 bottom-1 rounded bg-black/80 px-1 text-primary text-xs">

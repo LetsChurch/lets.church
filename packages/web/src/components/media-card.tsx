@@ -23,14 +23,14 @@ export function MediaCard({
   progress,
 }: Props) {
   return (
-    <div className="relative space-y-3">
+    <div className="group relative space-y-3">
       <div className="relative aspect-video">
         <div className="-translate-y-1/2 absolute top-1/2 right-0 left-0 aspect-video overflow-hidden rounded-lg border-fancy-pants bg-zinc-100 dark:bg-zinc-900">
           {thumbnailUrl ? (
             <img
               src={thumbnailUrl}
               alt={title ?? 'Untitled'}
-              className="size-full object-cover"
+              className="size-full object-cover transition-transform duration-300 ease-out-expo will-change-transform group-hover:scale-[1.01]"
             />
           ) : null}
         </div>
