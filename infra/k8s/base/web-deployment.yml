@@ -45,7 +45,7 @@ spec:
                   key: uri
           envFrom:
             - secretRef:
-                name: axiom-secret
+                name: axiom-pino-secret
             - secretRef:
                 name: imgproxy-secret
             - secretRef:
@@ -57,11 +57,11 @@ spec:
             - secretRef:
                 name: smtp-secret
             - secretRef:
-                name: turnstile-secret
+                name: cloudflare-secret
             - configMapRef:
                 name: temporal-client-config
             - secretRef:
-                name: web-secret
+                name: web-app-secret
             - configMapRef:
                 name: web-config
           readinessProbe:

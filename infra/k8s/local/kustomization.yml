@@ -9,12 +9,38 @@ configMapGenerator:
     literals:
       - MEDIA_URL="https://media-preview.letschurch.cloud"
 secretGenerator:
-  - name: imgproxy-config
+  # Observability (stub secrets for local development)
+  - name: axiom-pino-secret
+    literals:
+      - AXIOM_DATASET=local
+      - AXIOM_TOKEN=local-dev-token
+  - name: vector-secret
+    literals:
+      - AXIOM_DATASET=local
+      - AXIOM_TOKEN=local-dev-token
+  - name: sentry-secret
+    literals:
+      - SENTRY_GATEWAY_DSN=
+      - SENTRY_BACKGROUND_WORKER_DSN=
+      - SENTRY_TRANSCODE_WORKER_DSN=
+      - SENTRY_TRANSCRIBE_WORKER_DSN=
+      - SENTRY_IMPORT_WORKER_DSN=
+
+  # Infrastructure
+  - name: cloudflare-secret
+    literals:
+      - CF_TUNNEL_TOKEN=local-dev-token
+      - TURNSTILE_SITE_KEY=1x00000000000000000000AA
+      - TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+  - name: imgproxy-secret
     envs:
       - imgproxy.env
-  - name: jwt-secret
-    literals:
-      - JWT_SECRET=a5f09624d6106947a62e904ef1f31d880e3c4dde7ac74d67828c197a7f72ec973ca5ccae1210ddad78e590b3734511c0a943fe8ed366640ffb09d5edc9da097a
+  - name: s3-secret
+    envs:
+      - s3.env
+  - name: smtp-secret
+    envs:
+      - smtp.env
   - name: temporal-server-secrets
     literals:
       - POSTGRES_USER=temporal
@@ -23,12 +49,18 @@ secretGenerator:
     literals:
       - POSTGRES_PASSWORD=password
       - DATABASE_URL=postgres://letschurch:password@postgres:5432/letschurch
-  - name: s3-secret
-    envs:
-      - s3.env
-  - name: smtp-secret
-    envs:
-      - smtp.env
   - name: init-sql
     files:
       - init.sql
+
+  # Application
+  - name: jwt-secret
+    literals:
+      - JWT_SECRET=a5f09624d6106947a62e904ef1f31d880e3c4dde7ac74d67828c197a7f72ec973ca5ccae1210ddad78e590b3734511c0a943fe8ed366640ffb09d5edc9da097a
+  - name: mapbox-secret
+    literals:
+      - MAPBOX_GEOCODING_TOKEN=
+      - VITE_MAPBOX_SEARCHBOX_TOKEN=
+  - name: web-app-secret
+    literals:
+      - ADMIN_EMAIL=admin@localhost

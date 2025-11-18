@@ -22,45 +22,44 @@ configMapGenerator:
       - IMGPROXY_URL="https://images.letschurch.cloud"
       - MEDIA_URL="https://letschurch-media.b-cdn.net"
 secretGenerator:
-  - name: axiom-secret
+  # Observability
+  - name: axiom-pino-secret
     envs:
-      - axiom.crypt.env
-  - name: axiom-syslog-proxy
-    envs:
-      - axiom-syslog-proxy.crypt.env
+      - axiom-pino.crypt.env
   - name: vector-secret
     envs:
       - vector.crypt.env
-  - name: cf-tunnel-secret
+  - name: sentry-secret
     envs:
-      - cf-tunnel.crypt.env
+      - sentry.crypt.env
+
+  # Infrastructure
+  - name: cloudflare-secret
+    envs:
+      - cloudflare.crypt.env
   - name: imgproxy-secret
     envs:
       - imgproxy.crypt.env
+  - name: s3-secret
+    envs:
+      - s3.crypt.env
+  - name: smtp-secret
+    envs:
+      - smtp.crypt.env
+  - name: pgo-backup-creds
+    files:
+      - pgo-backup-creds.crypt.conf
+
+  # Application
   - name: jwt-secret
     envs:
       - jwt.crypt.env
   - name: mapbox-secret
     envs:
       - mapbox.crypt.env
-  - name: pgo-backup-creds
-    files:
-      - pgo-backup-creds.crypt.conf
-  - name: s3-secret
+  - name: web-app-secret
     envs:
-      - s3.crypt.env
-  - name: sentry-secret
-    envs:
-      - sentry.crypt.env
-  - name: smtp-secret
-    envs:
-      - smtp.crypt.env
-  - name: turnstile-secret
-    envs:
-      - turnstile.crypt.env
-  - name: web-secret
-    envs:
-      - web.crypt.env
+      - web-app.crypt.env
 
 generatorOptions:
   disableNameSuffixHash: true

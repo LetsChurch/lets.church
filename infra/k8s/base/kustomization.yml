@@ -1,6 +1,5 @@
 resources:
   - config.yml
-  - axiom-syslog-proxy-deployment.yml
   - elasticsearch-deployment.yml
   - imgproxy-deployment.yml
   - kibana-deployment.yml

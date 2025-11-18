@@ -36,11 +36,11 @@ spec:
                   key: VITE_MAPBOX_SEARCHBOX_TOKEN
           envFrom:
             - secretRef:
-                name: turnstile-secret
+                name: cloudflare-secret
             - configMapRef:
                 name: web-config
             - secretRef:
-                name: web-secret
+                name: web-app-secret
 ---
 apiVersion: v1
 kind: Service

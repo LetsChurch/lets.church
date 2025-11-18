@@ -36,6 +36,6 @@ spec:
             - configMapRef:
                 name: transcode-worker-config
             - secretRef:
-                name: axiom-secret
+                name: axiom-pino-secret
             - secretRef:
                 name: s3-secret

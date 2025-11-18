@@ -33,6 +33,6 @@ spec:
             - configMapRef:
                 name: probe-worker-config
             - secretRef:
-                name: axiom-secret
+                name: axiom-pino-secret
             - secretRef:
                 name: s3-secret

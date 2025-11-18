@@ -28,7 +28,7 @@ spec:
             - $(CF_TUNNEL_TOKEN)
           envFrom:
             - secretRef:
-                name: cf-tunnel-secret
+                name: cloudflare-secret
           image: cloudflare/cloudflared:2025.4.0
           name: cloudflared
           livenessProbe:
