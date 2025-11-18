@@ -43,29 +43,9 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-l
 FROM base AS build
 WORKDIR /usr/src/app
 COPY --from=deps /usr/src/app/node_modules ./node_modules
-COPY --from=deps /usr/src/app/packages/util/node_modules ./packages/util/node_modules
-COPY --from=deps /usr/src/app/packages/s3/node_modules ./packages/s3/node_modules
-COPY --from=deps /usr/src/app/packages/db/node_modules ./packages/db/node_modules
-COPY --from=deps /usr/src/app/packages/elasticsearch/node_modules ./packages/elasticsearch/node_modules
-COPY --from=deps /usr/src/app/packages/temporal/node_modules ./packages/temporal/node_modules
-COPY --from=deps /usr/src/app/packages/background-worker/node_modules ./packages/background-worker/node_modules
-COPY --from=deps /usr/src/app/packages/web/node_modules ./packages/web/node_modules
-COPY --from=deps /usr/src/app/packages/import-worker/node_modules ./packages/import-worker/node_modules
-COPY --from=deps /usr/src/app/packages/probe-worker/node_modules ./packages/probe-worker/node_modules
-COPY --from=deps /usr/src/app/packages/transcode-worker/node_modules ./packages/transcode-worker/node_modules
-COPY --from=deps /usr/src/app/packages/transcribe-worker/node_modules ./packages/transcribe-worker/node_modules
+COPY --from=deps /usr/src/app/packages/ ./packages/
 COPY pnpm-workspace.yaml tsconfig.json ./
-COPY packages/util ./packages/util
-COPY packages/s3 ./packages/s3
-COPY packages/db ./packages/db
-COPY packages/elasticsearch ./packages/elasticsearch
-COPY packages/temporal ./packages/temporal
-COPY packages/background-worker ./packages/background-worker
-COPY packages/web ./packages/web
-COPY packages/import-worker ./packages/import-worker
-COPY packages/probe-worker ./packages/probe-worker
-COPY packages/transcode-worker ./packages/transcode-worker
-COPY packages/transcribe-worker ./packages/transcribe-worker
+COPY packages/ ./packages/
 ENV NODE_ENV=production
 ENV VITE_SENTRY_DSN=https://d641f53f296e7abff3b6b269a4decfc4@o387306.ingest.sentry.io/4506108399190016
 ENV VITE_TURNSTILE_SITEKEY=0x4AAAAAAAEHhiqW0UvoZTf3
@@ -85,30 +65,39 @@ WORKDIR /usr/src/app
 COPY pnpm-workspace.yaml ./
 # Copy all node_modules
 COPY --from=prod-deps /usr/src/app/node_modules ./node_modules
-COPY --from=prod-deps /usr/src/app/packages/util/node_modules ./packages/util/node_modules
-COPY --from=prod-deps /usr/src/app/packages/s3/node_modules ./packages/s3/node_modules
-COPY --from=prod-deps /usr/src/app/packages/db/node_modules ./packages/db/node_modules
-COPY --from=prod-deps /usr/src/app/packages/elasticsearch/node_modules ./packages/elasticsearch/node_modules
-COPY --from=prod-deps /usr/src/app/packages/temporal/node_modules ./packages/temporal/node_modules
-COPY --from=prod-deps /usr/src/app/packages/background-worker/node_modules ./packages/background-worker/node_modules
-COPY --from=prod-deps /usr/src/app/packages/web/node_modules ./packages/web/node_modules
-COPY --from=prod-deps /usr/src/app/packages/import-worker/node_modules ./packages/import-worker/node_modules
-COPY --from=prod-deps /usr/src/app/packages/probe-worker/node_modules ./packages/probe-worker/node_modules
-COPY --from=prod-deps /usr/src/app/packages/transcode-worker/node_modules ./packages/transcode-worker/node_modules
-COPY --from=prod-deps /usr/src/app/packages/transcribe-worker/node_modules ./packages/transcribe-worker/node_modules
+COPY --from=prod-deps /usr/src/app/packages/ ./packages/
 # Copy package sources
-COPY --from=build /usr/src/app/packages/util ./packages/util/
-COPY --from=build /usr/src/app/packages/s3 ./packages/s3/
-COPY --from=build /usr/src/app/packages/db ./packages/db/
-COPY --from=build /usr/src/app/packages/elasticsearch ./packages/elasticsearch/
-COPY --from=build /usr/src/app/packages/temporal ./packages/temporal/
-COPY --from=build /usr/src/app/packages/background-worker ./packages/background-worker/
-COPY --from=build /usr/src/app/packages/web ./packages/web/
-COPY --from=build /usr/src/app/packages/import-worker ./packages/import-worker/
-COPY --from=build /usr/src/app/packages/probe-worker ./packages/probe-worker/
-COPY --from=build /usr/src/app/packages/transcode-worker ./packages/transcode-worker/
-COPY --from=build /usr/src/app/packages/transcribe-worker ./packages/transcribe-worker/
+COPY --from=build /usr/src/app/packages/ ./packages/
 RUN chown -R nodeapp:nodeapp /usr/src/app
+USER nodeapp
+
+# Base stage for workers with image processing dependencies
+FROM prod AS prod-with-image-tools
+USER root
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+  --mount=type=cache,target=/var/lib/apt,sharing=locked \
+  apt-get update && apt-get install -y --no-install-recommends imagemagick jpegoptim && \
+  rm -rf /var/lib/apt/lists/*
+COPY --from=videah/oxipng:7.0.0 /usr/local/bin/oxipng /usr/local/bin/oxipng
+USER nodeapp
+
+# Base stage for workers with ffmpeg
+FROM prod AS prod-with-ffmpeg
+USER root
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+  --mount=type=cache,target=/var/lib/apt,sharing=locked \
+  apt-get update && apt-get install -y --no-install-recommends ffmpeg && \
+  rm -rf /var/lib/apt/lists/*
+USER nodeapp
+
+# Base stage for workers with both image tools and ffmpeg
+FROM prod AS prod-with-media-tools
+USER root
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+  --mount=type=cache,target=/var/lib/apt,sharing=locked \
+  apt-get update && apt-get install -y --no-install-recommends imagemagick jpegoptim ffmpeg && \
+  rm -rf /var/lib/apt/lists/*
+COPY --from=videah/oxipng:7.0.0 /usr/local/bin/oxipng /usr/local/bin/oxipng
 USER nodeapp
 
 FROM prod AS db-migrate
@@ -123,37 +112,29 @@ FROM prod AS web
 WORKDIR /usr/src/app/packages/web
 CMD ["pnpm", "run", "start"]
 
-FROM prod AS background-worker
-USER root
-RUN apt-get update && apt-get install -y --no-install-recommends imagemagick jpegoptim && \
-  rm -rf /var/lib/apt/lists/*
-COPY --from=videah/oxipng:7.0.0 /usr/local/bin/oxipng /usr/local/bin/oxipng
-USER nodeapp
+FROM prod-with-image-tools AS background-worker
 CMD ["pnpm", "--filter", "@letschurch/background-worker", "run", "start"]
 
-FROM prod AS probe-worker
-USER root
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && \
-  rm -rf /var/lib/apt/lists/*
-USER nodeapp
+FROM prod-with-ffmpeg AS probe-worker
 CMD ["pnpm", "--filter", "@letschurch/probe-worker", "run", "start"]
 
-FROM prod AS transcode-worker
+FROM prod-with-media-tools AS transcode-worker
 USER root
-RUN apt-get update && apt-get install -y --no-install-recommends imagemagick jpegoptim ffmpeg && \
-  rm -rf /var/lib/apt/lists/*
 COPY --from=build-audiowaveform /home/build/audiowaveform/build/audiowaveform /usr/bin/
 USER nodeapp
 CMD ["pnpm", "--filter", "@letschurch/transcode-worker", "run", "start"]
 
-FROM prod AS import-worker
+FROM prod-with-ffmpeg AS import-worker
 USER root
-RUN apt-get update && apt-get install -y --no-install-recommends python3 ffmpeg && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+  --mount=type=cache,target=/var/lib/apt,sharing=locked \
+  apt-get update && apt-get install -y --no-install-recommends python3 && \
   rm -rf /var/lib/apt/lists/*
 COPY --from=jauderho/yt-dlp:2025.03.31 /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
 RUN /usr/local/bin/yt-dlp --update --update-to nightly
 # Playwright needs to be installed after copying node_modules
-RUN pnpm --filter @letschurch/import-worker exec playwright install --with-deps firefox
+RUN --mount=type=cache,target=/root/.cache/ms-playwright \
+  pnpm --filter @letschurch/import-worker exec playwright install --with-deps firefox
 USER nodeapp
 CMD ["pnpm", "--filter", "@letschurch/import-worker", "run", "start"]
 
@@ -170,10 +151,17 @@ RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
   ln -s /usr/local/lib/node_modules/corepack/dist/corepack.js /usr/local/bin/corepack
 RUN corepack enable
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+  --mount=type=cache,target=/var/lib/apt,sharing=locked \
+  --mount=type=cache,target=/root/.cache/pip \
+  --mount=type=cache,target=/tmp/whisper-models \
+  apt-get update && \
   apt-get install -y --no-install-recommends ca-certificates curl gnupg python3 python3-pip git ffmpeg && \
   mkdir -p /opt/whisper/models && \
-  curl https://data.letschurch.cloud/whisper-ctranslate2/models/${WHISPER_MODEL}.tar.gz | tar -xz -C /opt/whisper/models && \
+  if [ ! -f /tmp/whisper-models/${WHISPER_MODEL}.tar.gz ]; then \
+    curl -o /tmp/whisper-models/${WHISPER_MODEL}.tar.gz https://data.letschurch.cloud/whisper-ctranslate2/models/${WHISPER_MODEL}.tar.gz; \
+  fi && \
+  tar -xzf /tmp/whisper-models/${WHISPER_MODEL}.tar.gz -C /opt/whisper/models && \
   rm -rf /var/lib/apt/lists/* && \
   apt-get clean && \
   pip3 install --no-cache-dir git+https://github.com/Softcatala/whisper-ctranslate2.git@0.2.9
@@ -181,19 +169,9 @@ WORKDIR /usr/src/app
 COPY pnpm-workspace.yaml ./
 # Copy node_modules
 COPY --from=prod-deps /usr/src/app/node_modules ./node_modules
-COPY --from=prod-deps /usr/src/app/packages/util/node_modules ./packages/util/node_modules
-COPY --from=prod-deps /usr/src/app/packages/s3/node_modules ./packages/s3/node_modules
-COPY --from=prod-deps /usr/src/app/packages/db/node_modules ./packages/db/node_modules
-COPY --from=prod-deps /usr/src/app/packages/elasticsearch/node_modules ./packages/elasticsearch/node_modules
-COPY --from=prod-deps /usr/src/app/packages/temporal/node_modules ./packages/temporal/node_modules
-COPY --from=prod-deps /usr/src/app/packages/transcribe-worker/node_modules ./packages/transcribe-worker/node_modules
+COPY --from=prod-deps /usr/src/app/packages/ ./packages/
 # Copy package sources
-COPY --from=build /usr/src/app/packages/util ./packages/util/
-COPY --from=build /usr/src/app/packages/s3 ./packages/s3/
-COPY --from=build /usr/src/app/packages/db ./packages/db/
-COPY --from=build /usr/src/app/packages/elasticsearch ./packages/elasticsearch/
-COPY --from=build /usr/src/app/packages/temporal ./packages/temporal/
-COPY --from=build /usr/src/app/packages/transcribe-worker ./packages/transcribe-worker/
+COPY --from=build /usr/src/app/packages/ ./packages/
 RUN chown -R nodeapp:nodeapp /usr/src/app
 USER nodeapp
 WORKDIR /usr/src/app
