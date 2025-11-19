@@ -29,6 +29,9 @@ export const Route = createFileRoute('/dashboard_/admin')({
       queryClient.ensureQueryData(
         trpc.dashboard.admin.getViewRangesMigrationStatus.queryOptions(),
       ),
+      queryClient.ensureQueryData(
+        trpc.dashboard.admin.getUploadBackupStats.queryOptions(),
+      ),
     ]);
     return {
       backNavigation: {
@@ -48,6 +51,10 @@ function AdminPage() {
 
   const { data: migrationStatus } = useSuspenseQuery(
     trpc.dashboard.admin.getViewRangesMigrationStatus.queryOptions(),
+  );
+
+  const { data: backupStats } = useSuspenseQuery(
+    trpc.dashboard.admin.getUploadBackupStats.queryOptions(),
   );
 
   return (
@@ -187,6 +194,35 @@ function AdminPage() {
           </Group>
           <Text size="sm" c="dimmed">
             Migrate UploadViewRanges to UploadViewSecond
+          </Text>
+        </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
+          to="/dashboard/admin/upload-backups"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Upload Backups</Text>
+            <Badge
+              color={
+                backupStats.stats.notBackedUp === 0
+                  ? 'green'
+                  : backupStats.stats.backupFailed > 0
+                    ? 'red'
+                    : 'orange'
+              }
+              size="sm"
+            >
+              {backupStats.stats.notBackedUp === 0
+                ? 'Done'
+                : backupStats.stats.notBackedUp.toLocaleString()}
+            </Badge>
+          </Group>
+          <Text size="sm" c="dimmed">
+            Manage S3 backups for uploaded media
           </Text>
         </Card>
       </SimpleGrid>

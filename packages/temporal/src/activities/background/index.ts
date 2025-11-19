@@ -1,6 +1,24 @@
 export { default as abortMultipartUpload } from './abort-multipart-upload';
+export {
+  backfillUploadStatesBatch,
+  getBackfillCount,
+} from './backfill-upload-states';
+export { default as backupToGlacier, retryBackup } from './backup-to-glacier';
 export { default as completeMultipartUpload } from './complete-multipart-upload';
 export { default as createUploadRecord } from './create-upload-record';
+export {
+  countUploadStatesByStatus,
+  createUploadState,
+  getUploadState,
+  getUploadStateByKey,
+  getUploadStatesToBackup,
+  updateUploadStateBackupStatus,
+} from './create-upload-state';
+export {
+  deleteGlacierBackupsByPrefix,
+  deleteUploadRecordGlacierBackups,
+  deleteUploadStateAndBackup,
+} from './delete-glacier-backup';
 export { default as deleteOldThumbnails } from './delete-old-thumbnails';
 export * from './delete-upload-record';
 export { default as finalizeUploadRecord } from './finalize-upload-record';

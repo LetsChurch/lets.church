@@ -1,4 +1,5 @@
 import { prisma } from '@letschurch/db';
+import { parseS3Env } from '@letschurch/s3';
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
 import { z } from 'zod';
@@ -9,8 +10,14 @@ import {
   reorderFeaturedUploadsSchema,
 } from '@/schemas/dashboard/admin';
 import {
+  cancelBackfillUploadStates,
+  cancelBulkBackupToGlacier,
   cancelMigrateViewRanges,
+  getBackfillUploadStatesProgress,
+  getBulkBackupToGlacierProgress,
   getMigrateViewRangesProgress,
+  startBackfillUploadStates,
+  startBulkBackupToGlacier,
   startMigrateViewRanges,
 } from '@/temporal';
 import logger from '@/util/logger';
@@ -1213,4 +1220,263 @@ export const adminRouter = router({
       });
     }
   }),
+
+  // Upload Backup procedures
+  getUploadBackupStats: adminProcedure.query(async () => {
+    moduleLogger.info('Fetching upload backup stats');
+
+    const [statusCounts, backfillProgress, bulkBackupProgress] =
+      await Promise.all([
+        prisma.uploadState.groupBy({
+          by: ['backupStatus'],
+          _count: { id: true },
+        }),
+        getBackfillUploadStatesProgress(),
+        getBulkBackupToGlacierProgress(),
+      ]);
+
+    const stats = {
+      notBackedUp: 0,
+      backingUp: 0,
+      backedUp: 0,
+      backupFailed: 0,
+      total: 0,
+    };
+
+    for (const result of statusCounts) {
+      stats.total += result._count.id;
+      switch (result.backupStatus) {
+        case 'NOT_BACKED_UP':
+          stats.notBackedUp = result._count.id;
+          break;
+        case 'BACKING_UP':
+          stats.backingUp = result._count.id;
+          break;
+        case 'BACKED_UP':
+          stats.backedUp = result._count.id;
+          break;
+        case 'BACKUP_FAILED':
+          stats.backupFailed = result._count.id;
+          break;
+      }
+    }
+
+    return {
+      stats,
+      backfillStatus: backfillProgress,
+      bulkBackupStatus: bulkBackupProgress,
+    };
+  }),
+
+  startBackfillUploadStates: adminProcedure
+    .input(
+      z.object({
+        batchSize: z.number().min(1).max(1000).default(100),
+        delayBetweenBatchesMs: z.number().min(0).max(10000).default(100),
+        maxRows: z.number().min(1).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Starting backfill upload states', {
+        batchSize: input.batchSize,
+        delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+        maxRows: input.maxRows,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        // Check if backfill is already running
+        const progress = await getBackfillUploadStatesProgress();
+        if (progress?.status === 'running') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Backfill is already running',
+          });
+        }
+
+        const s3Env = parseS3Env();
+
+        await startBackfillUploadStates({
+          batchSize: input.batchSize,
+          delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+          ingestBucket: s3Env.S3_INGEST_BUCKET,
+          maxRows: input.maxRows,
+        });
+
+        moduleLogger.info('Backfill upload states started successfully', {
+          batchSize: input.batchSize,
+          delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+          maxRows: input.maxRows,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error('Failed to start backfill upload states', {
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to start backfill',
+        });
+      }
+    }),
+
+  cancelBackfillUploadStates: adminProcedure.mutation(async ({ ctx }) => {
+    moduleLogger.info('Cancelling backfill upload states', {
+      appUserId: ctx.session.appUserId,
+    });
+
+    try {
+      await cancelBackfillUploadStates();
+
+      moduleLogger.info('Backfill upload states cancelled successfully', {
+        appUserId: ctx.session.appUserId,
+      });
+
+      return { success: true };
+    } catch (error) {
+      moduleLogger.error('Failed to cancel backfill upload states', {
+        appUserId: ctx.session.appUserId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to cancel backfill',
+      });
+    }
+  }),
+
+  startBulkBackupToGlacier: adminProcedure
+    .input(
+      z.object({
+        batchSize: z.number().min(1).max(100).default(10),
+        delayBetweenBatchesMs: z.number().min(0).max(60000).default(1000),
+        maxUploads: z.number().min(1).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Starting bulk backup to Glacier', {
+        batchSize: input.batchSize,
+        delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+        maxUploads: input.maxUploads,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        // Check if bulk backup is already running
+        const progress = await getBulkBackupToGlacierProgress();
+        if (progress?.status === 'running') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Bulk backup is already running',
+          });
+        }
+
+        await startBulkBackupToGlacier({
+          batchSize: input.batchSize,
+          delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+          maxUploads: input.maxUploads,
+        });
+
+        moduleLogger.info('Bulk backup to Glacier started successfully', {
+          batchSize: input.batchSize,
+          delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+          maxUploads: input.maxUploads,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error('Failed to start bulk backup to Glacier', {
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to start bulk backup',
+        });
+      }
+    }),
+
+  cancelBulkBackupToGlacier: adminProcedure.mutation(async ({ ctx }) => {
+    moduleLogger.info('Cancelling bulk backup to Glacier', {
+      appUserId: ctx.session.appUserId,
+    });
+
+    try {
+      await cancelBulkBackupToGlacier();
+
+      moduleLogger.info('Bulk backup to Glacier cancelled successfully', {
+        appUserId: ctx.session.appUserId,
+      });
+
+      return { success: true };
+    } catch (error) {
+      moduleLogger.error('Failed to cancel bulk backup to Glacier', {
+        appUserId: ctx.session.appUserId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to cancel bulk backup',
+      });
+    }
+  }),
+
+  getFailedBackups: adminProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+      }),
+    )
+    .query(async ({ input }) => {
+      moduleLogger.info('Fetching failed backups');
+
+      const [failedBackups, totalCount] = await Promise.all([
+        prisma.uploadState.findMany({
+          where: { backupStatus: 'BACKUP_FAILED' },
+          orderBy: { updatedAt: 'desc' },
+          take: input.limit,
+          skip: input.offset,
+          select: {
+            id: true,
+            s3Key: true,
+            s3Bucket: true,
+            uploadType: true,
+            sizeBytes: true,
+            createdAt: true,
+            updatedAt: true,
+            uploadRecord: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+          },
+        }),
+        prisma.uploadState.count({
+          where: { backupStatus: 'BACKUP_FAILED' },
+        }),
+      ]);
+
+      return {
+        failedBackups,
+        totalCount,
+      };
+    }),
 });

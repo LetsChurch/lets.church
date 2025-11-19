@@ -41,6 +41,7 @@ import { Route as DashboardChannelsNewRouteImport } from './routes/dashboard_/ch
 import { Route as DashboardChannelsChannelIdRouteImport } from './routes/dashboard_/channels_.$channelId'
 import { Route as DashboardAdminViewRangesMigrationRouteImport } from './routes/dashboard_/admin_.view-ranges-migration'
 import { Route as DashboardAdminUsersRouteImport } from './routes/dashboard_/admin_.users'
+import { Route as DashboardAdminUploadBackupsRouteImport } from './routes/dashboard_/admin_.upload-backups'
 import { Route as DashboardAdminProcessingUploadsRouteImport } from './routes/dashboard_/admin_.processing-uploads'
 import { Route as DashboardAdminOrganizationTagsRouteImport } from './routes/dashboard_/admin_.organization-tags'
 import { Route as DashboardAdminOrganizationApprovalsRouteImport } from './routes/dashboard_/admin_.organization-approvals'
@@ -233,6 +234,12 @@ const DashboardAdminUsersRoute = DashboardAdminUsersRouteImport.update({
   path: '/admin/users',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardAdminUploadBackupsRoute =
+  DashboardAdminUploadBackupsRouteImport.update({
+    id: '/admin_/upload-backups',
+    path: '/admin/upload-backups',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardAdminProcessingUploadsRoute =
   DashboardAdminProcessingUploadsRouteImport.update({
     id: '/admin_/processing-uploads',
@@ -430,6 +437,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/organization-approvals': typeof DashboardAdminOrganizationApprovalsRoute
   '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard/admin/processing-uploads': typeof DashboardAdminProcessingUploadsRoute
+  '/dashboard/admin/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
   '/dashboard/admin/view-ranges-migration': typeof DashboardAdminViewRangesMigrationRoute
   '/dashboard/channels/$channelId': typeof DashboardChannelsChannelIdRoute
@@ -489,6 +497,7 @@ export interface FileRoutesByTo {
   '/dashboard/admin/organization-approvals': typeof DashboardAdminOrganizationApprovalsRoute
   '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard/admin/processing-uploads': typeof DashboardAdminProcessingUploadsRoute
+  '/dashboard/admin/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
   '/dashboard/admin/view-ranges-migration': typeof DashboardAdminViewRangesMigrationRoute
   '/dashboard/channels/$channelId': typeof DashboardChannelsChannelIdRoute
@@ -552,6 +561,7 @@ export interface FileRoutesById {
   '/dashboard_/admin_/organization-approvals': typeof DashboardAdminOrganizationApprovalsRoute
   '/dashboard_/admin_/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard_/admin_/processing-uploads': typeof DashboardAdminProcessingUploadsRoute
+  '/dashboard_/admin_/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard_/admin_/users': typeof DashboardAdminUsersRoute
   '/dashboard_/admin_/view-ranges-migration': typeof DashboardAdminViewRangesMigrationRoute
   '/dashboard_/channels_/$channelId': typeof DashboardChannelsChannelIdRoute
@@ -615,6 +625,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/organization-approvals'
     | '/dashboard/admin/organization-tags'
     | '/dashboard/admin/processing-uploads'
+    | '/dashboard/admin/upload-backups'
     | '/dashboard/admin/users'
     | '/dashboard/admin/view-ranges-migration'
     | '/dashboard/channels/$channelId'
@@ -674,6 +685,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/organization-approvals'
     | '/dashboard/admin/organization-tags'
     | '/dashboard/admin/processing-uploads'
+    | '/dashboard/admin/upload-backups'
     | '/dashboard/admin/users'
     | '/dashboard/admin/view-ranges-migration'
     | '/dashboard/channels/$channelId'
@@ -736,6 +748,7 @@ export interface FileRouteTypes {
     | '/dashboard_/admin_/organization-approvals'
     | '/dashboard_/admin_/organization-tags'
     | '/dashboard_/admin_/processing-uploads'
+    | '/dashboard_/admin_/upload-backups'
     | '/dashboard_/admin_/users'
     | '/dashboard_/admin_/view-ranges-migration'
     | '/dashboard_/channels_/$channelId'
@@ -997,6 +1010,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/users'
       fullPath: '/dashboard/admin/users'
       preLoaderRoute: typeof DashboardAdminUsersRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard_/admin_/upload-backups': {
+      id: '/dashboard_/admin_/upload-backups'
+      path: '/admin/upload-backups'
+      fullPath: '/dashboard/admin/upload-backups'
+      preLoaderRoute: typeof DashboardAdminUploadBackupsRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard_/admin_/processing-uploads': {
@@ -1274,6 +1294,7 @@ interface DashboardRouteChildren {
   DashboardAdminOrganizationApprovalsRoute: typeof DashboardAdminOrganizationApprovalsRoute
   DashboardAdminOrganizationTagsRoute: typeof DashboardAdminOrganizationTagsRoute
   DashboardAdminProcessingUploadsRoute: typeof DashboardAdminProcessingUploadsRoute
+  DashboardAdminUploadBackupsRoute: typeof DashboardAdminUploadBackupsRoute
   DashboardAdminUsersRoute: typeof DashboardAdminUsersRoute
   DashboardAdminViewRangesMigrationRoute: typeof DashboardAdminViewRangesMigrationRoute
   DashboardChannelsChannelIdRoute: typeof DashboardChannelsChannelIdRoute
@@ -1311,6 +1332,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
     DashboardAdminOrganizationApprovalsRoute,
   DashboardAdminOrganizationTagsRoute: DashboardAdminOrganizationTagsRoute,
   DashboardAdminProcessingUploadsRoute: DashboardAdminProcessingUploadsRoute,
+  DashboardAdminUploadBackupsRoute: DashboardAdminUploadBackupsRoute,
   DashboardAdminUsersRoute: DashboardAdminUsersRoute,
   DashboardAdminViewRangesMigrationRoute:
     DashboardAdminViewRangesMigrationRoute,

@@ -1,9 +1,15 @@
 import type { Prisma, UploadVariant } from '@letschurch/db';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
 import {
+  type BackfillUploadStatesWorkflowParams,
+  type BulkBackupToGlacierWorkflowParams,
+  backfillUploadStatesWorkflow,
+  bulkBackupToGlacierWorkflow,
   createUploadRecordWorkflow,
   deleteUploadWorkflow,
   geocodeOrganizationWorkflow,
+  getBackfillProgressQuery,
+  getBulkBackupProgressQuery,
   getMigrationProgressQuery,
   handleMultipartMediaUploadWorkflow,
   importMediaWorkflow,
@@ -272,5 +278,123 @@ export async function cancelMigrateViewRanges() {
   const handle = (await client).workflow.getHandle(
     MIGRATE_VIEW_RANGES_WORKFLOW_ID,
   );
+  await handle.cancel();
+}
+
+// Backfill Upload States Workflow
+const BACKFILL_UPLOAD_STATES_WORKFLOW_ID = 'backfillUploadStates';
+
+export async function startBackfillUploadStates(
+  params: BackfillUploadStatesWorkflowParams,
+) {
+  return (await client).workflow.start(backfillUploadStatesWorkflow, {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    workflowId: BACKFILL_UPLOAD_STATES_WORKFLOW_ID,
+    args: [params],
+  });
+}
+
+export async function getBackfillUploadStatesProgress() {
+  try {
+    const handle = (await client).workflow.getHandle(
+      BACKFILL_UPLOAD_STATES_WORKFLOW_ID,
+    );
+    const description = await handle.describe();
+
+    if (description.status.name === 'RUNNING') {
+      const progress = await handle.query(getBackfillProgressQuery);
+      return {
+        status: 'running' as const,
+        ...progress,
+      };
+    }
+
+    if (description.status.name === 'COMPLETED') {
+      return {
+        status: 'completed' as const,
+        totalCreated: 0,
+        remaining: 0,
+        batchesCompleted: 0,
+      };
+    }
+
+    return {
+      status: description.status.name.toLowerCase() as
+        | 'failed'
+        | 'cancelled'
+        | 'terminated'
+        | 'timed_out',
+      totalCreated: 0,
+      remaining: 0,
+      batchesCompleted: 0,
+    };
+  } catch {
+    // Workflow doesn't exist
+    return null;
+  }
+}
+
+export async function cancelBackfillUploadStates() {
+  const handle = (await client).workflow.getHandle(
+    BACKFILL_UPLOAD_STATES_WORKFLOW_ID,
+  );
+  await handle.cancel();
+}
+
+// Bulk Backup to Glacier Workflow
+const BULK_BACKUP_WORKFLOW_ID = 'bulkBackupToGlacier';
+
+export async function startBulkBackupToGlacier(
+  params: BulkBackupToGlacierWorkflowParams,
+) {
+  return (await client).workflow.start(bulkBackupToGlacierWorkflow, {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    workflowId: BULK_BACKUP_WORKFLOW_ID,
+    args: [params],
+  });
+}
+
+export async function getBulkBackupToGlacierProgress() {
+  try {
+    const handle = (await client).workflow.getHandle(BULK_BACKUP_WORKFLOW_ID);
+    const description = await handle.describe();
+
+    if (description.status.name === 'RUNNING') {
+      const progress = await handle.query(getBulkBackupProgressQuery);
+      return {
+        status: 'running' as const,
+        ...progress,
+      };
+    }
+
+    if (description.status.name === 'COMPLETED') {
+      return {
+        status: 'completed' as const,
+        totalStarted: 0,
+        batchesCompleted: 0,
+        remaining: 0,
+      };
+    }
+
+    return {
+      status: description.status.name.toLowerCase() as
+        | 'failed'
+        | 'cancelled'
+        | 'terminated'
+        | 'timed_out',
+      totalStarted: 0,
+      batchesCompleted: 0,
+      remaining: 0,
+    };
+  } catch {
+    // Workflow doesn't exist
+    return null;
+  }
+}
+
+export async function cancelBulkBackupToGlacier() {
+  const handle = (await client).workflow.getHandle(BULK_BACKUP_WORKFLOW_ID);
   await handle.cancel();
 }

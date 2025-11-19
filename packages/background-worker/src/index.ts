@@ -1,6 +1,6 @@
 import path from 'node:path';
 import * as activities from '@letschurch/temporal/activities/background';
-import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
+import { BACKGROUND_QUEUE, GLACIER_QUEUE } from '@letschurch/temporal/queues';
 import { waitOnTemporal } from '@letschurch/temporal/util/temporal';
 import * as Sentry from '@sentry/node';
 import { NativeConnection, Worker } from '@temporalio/worker';
@@ -30,9 +30,13 @@ const workflowsPath = new URL(
   import.meta.url,
 ).pathname;
 
+const connection = await NativeConnection.connect({
+  address: TEMPORAL_ADDRESS,
+});
+
 const backgroundWorker = await Worker.create({
   identity: `background-worker ${IDENTITY}`,
-  connection: await NativeConnection.connect({ address: TEMPORAL_ADDRESS }),
+  connection,
   // TODO: prebundle
   workflowsPath,
   activities,
@@ -40,4 +44,13 @@ const backgroundWorker = await Worker.create({
   shutdownGraceTime: TEMPORAL_SHUTDOWN_GRACE_TIME,
 });
 
-await backgroundWorker.run();
+const glacierWorker = await Worker.create({
+  identity: `glacier-worker ${IDENTITY}`,
+  connection,
+  activities: { backupToGlacier: activities.backupToGlacier },
+  taskQueue: GLACIER_QUEUE,
+  shutdownGraceTime: TEMPORAL_SHUTDOWN_GRACE_TIME,
+  maxConcurrentActivityTaskExecutions: 2,
+});
+
+await Promise.all([backgroundWorker.run(), glacierWorker.run()]);

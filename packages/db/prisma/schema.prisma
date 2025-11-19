@@ -57,6 +57,7 @@ model AppUser {
   approvedChannels         Channel[]
   approvedOrganizations    Organization[]
   searches                 SearchLogEntry[]
+  uploadStates             UploadState[]
 
   @@map("app_user")
 }
@@ -182,6 +183,7 @@ model Organization {
   approvedAt                                   DateTime?                             @map("approved_at")
   createdAt                                    DateTime                              @default(now()) @map("created_at")
   updatedAt                                    DateTime                              @updatedAt @map("updated_at")
+  uploadStates                                 UploadState[]
 
   @@map("organization")
 }
@@ -304,6 +306,7 @@ model Channel {
   subscribers              ChannelSubscription[]
   defaultThumbnailPath     String?                          @map("default_thumbnail_path") @db.VarChar(255)
   defaultThumbnailBlurhash String?                          @map("default_thumbnail_blurhash") @db.VarChar(255)
+  uploadStates             UploadState[]
 
   @@map("channel")
 }
@@ -362,6 +365,56 @@ enum UploadVariant {
   @@map("upload_variant")
 }
 
+enum UploadStateType {
+  MEDIA
+  THUMBNAIL
+  PROFILE_AVATAR
+  CHANNEL_AVATAR
+  ORGANIZATION_AVATAR
+  CHANNEL_DEFAULT_THUMBNAIL
+
+  @@map("upload_state_type")
+}
+
+enum BackupStatus {
+  NOT_BACKED_UP
+  BACKING_UP
+  BACKED_UP
+  BACKUP_FAILED
+
+  @@map("backup_status")
+}
+
+model UploadState {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  s3Key          String          @unique @map("s3_key")
+  s3Bucket       String          @map("s3_bucket")
+  uploadType     UploadStateType @map("upload_type")
+  sizeBytes      BigInt?         @map("size_bytes")
+
+  // Source reference (polymorphic - only one should be set based on uploadType)
+  uploadRecordId String?       @map("upload_record_id") @db.Uuid
+  uploadRecord   UploadRecord? @relation(fields: [uploadRecordId], references: [id], onDelete: SetNull)
+  appUserId      String?       @map("app_user_id") @db.Uuid
+  appUser        AppUser?      @relation(fields: [appUserId], references: [id], onDelete: SetNull)
+  channelId      String?       @map("channel_id") @db.Uuid
+  channel        Channel?      @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  organizationId String?       @map("organization_id") @db.Uuid
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  // Backup status
+  backupStatus BackupStatus @default(NOT_BACKED_UP) @map("backup_status")
+  backupKey    String?      @map("backup_key")
+  backedUpAt   DateTime?    @map("backed_up_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([backupStatus])
+  @@index([uploadType])
+  @@map("upload_state")
+}
+
 // TODO: How should we handle cascading deletes?
 model UploadRecord {
   id                        String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -408,6 +461,7 @@ model UploadRecord {
   uploadListEntries         UploadListEntry[]
   savedByUsers              SavedMedia[]
   featuredUpload            FeaturedUpload?
+  uploadStates              UploadState[]
 
   @@index([createdAt, id])
   @@index(score)

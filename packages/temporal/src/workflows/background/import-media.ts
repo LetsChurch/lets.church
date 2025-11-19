@@ -72,7 +72,7 @@ export async function importMediaWorkflow({
     taskQueue,
     workflowId: `processMedia:${mediaUploadKey}`,
     args: [uploadRecordId],
-    parentClosePolicy: ParentClosePolicy.PARENT_CLOSE_POLICY_ABANDON,
+    parentClosePolicy: ParentClosePolicy.ABANDON,
     retry: { maximumAttempts: 5 },
   });
 
@@ -81,7 +81,7 @@ export async function importMediaWorkflow({
       taskQueue,
       workflowId: `processImage:${thumbnailUploadKey}`,
       args: [uploadRecordId, thumbnailUploadKey, 'thumbnail'],
-      parentClosePolicy: ParentClosePolicy.PARENT_CLOSE_POLICY_ABANDON,
+      parentClosePolicy: ParentClosePolicy.ABANDON,
       retry: { maximumAttempts: 5 },
     });
   }

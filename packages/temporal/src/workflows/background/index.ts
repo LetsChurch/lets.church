@@ -1,8 +1,20 @@
+export {
+  type BackfillUploadStatesWorkflowParams,
+  backfillUploadStatesWorkflow,
+  getBackfillProgressQuery,
+} from './backfill-upload-states';
+export { backupToGlacierWorkflow } from './backup-to-glacier';
+export {
+  type BulkBackupToGlacierWorkflowParams,
+  bulkBackupToGlacierWorkflow,
+  getBulkBackupProgressQuery,
+} from './bulk-backup-to-glacier';
 export { createUploadRecordWorkflow } from './create-upload-record';
 export { deleteUploadWorkflow } from './delete-upload';
 export { generatePeaksWorkflow } from './generate-peaks';
 export { geocodeOrganizationWorkflow } from './geocode-organization';
 export {
+  type HandleMultipartMediaUploadParams,
   handleMultipartMediaUploadWorkflow,
   uploadDoneSignal,
 } from './handle-multipart-media-upload';

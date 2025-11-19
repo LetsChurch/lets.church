@@ -10,16 +10,18 @@ const { deleteUploadRecordDb, deleteUploadRecordSearch, markUploadPrivate } =
     retry: { maximumAttempts: 5 },
   });
 
-const { deleteUploadRecordS3Objects } = proxyActivities<typeof activities>({
-  startToCloseTimeout: '10 minute',
-  heartbeatTimeout: '1 minute',
-  taskQueue: BACKGROUND_QUEUE,
-  retry: { maximumAttempts: 5 },
-});
+const { deleteUploadRecordS3Objects, deleteUploadRecordGlacierBackups } =
+  proxyActivities<typeof activities>({
+    startToCloseTimeout: '10 minute',
+    heartbeatTimeout: '1 minute',
+    taskQueue: BACKGROUND_QUEUE,
+    retry: { maximumAttempts: 5 },
+  });
 
 export async function deleteUploadWorkflow(uploadRecordId: string) {
   await markUploadPrivate(uploadRecordId);
   await deleteUploadRecordSearch(uploadRecordId);
   await deleteUploadRecordS3Objects(uploadRecordId);
+  await deleteUploadRecordGlacierBackups(uploadRecordId);
   await deleteUploadRecordDb(uploadRecordId);
 }

@@ -13,6 +13,7 @@ import {
   ListObjectsV2Command,
   PutObjectCommand,
   S3,
+  type StorageClass,
   UploadPartCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -27,7 +28,7 @@ import { z } from 'zod';
 
 export const PART_SIZE = 10_000_000;
 
-export type S3ClientId = 'INGEST' | 'PUBLIC';
+export type S3ClientId = 'INGEST' | 'PUBLIC' | 'BACKUP';
 
 export type S3Config = {
   bucket: string;
@@ -39,12 +40,14 @@ export type S3Config = {
 
 export type LcS3ClientOptions = S3Config & {
   logger?: Logger;
+  storageClass?: StorageClass;
 };
 
 export class LcS3Client {
   private readonly client: S3;
   private readonly bucket: string;
   private readonly logger?: Logger;
+  private readonly storageClass?: StorageClass;
 
   constructor({
     bucket,
@@ -53,9 +56,11 @@ export class LcS3Client {
     accessKeyId,
     secretAccessKey,
     logger,
+    storageClass,
   }: LcS3ClientOptions) {
     this.bucket = bucket;
     this.logger = logger;
+    this.storageClass = storageClass;
     this.client = new S3({
       region,
       endpoint,
@@ -70,12 +75,27 @@ export class LcS3Client {
     return `s3://${this.bucket}/${key}`;
   }
 
+  /**
+   * Get the underlying S3 client for direct access if needed.
+   */
+  getS3Client(): S3 {
+    return this.client;
+  }
+
+  /**
+   * Get the bucket name.
+   */
+  getBucket(): string {
+    return this.bucket;
+  }
+
   async createMultipartUpload(key: string, contentType: string) {
     const { UploadId: uploadId, Key: uploadKey } = await this.client.send(
       new CreateMultipartUploadCommand({
         Bucket: this.bucket,
         Key: `${key}/${uuid()}`,
         ContentType: contentType,
+        ...(this.storageClass ? { StorageClass: this.storageClass } : {}),
       }),
     );
 
@@ -273,6 +293,7 @@ export class LcS3Client {
       ContentType: contentType,
       Body: body ? body : createReadStream(path),
       ...(contentLength ? { ContentLength: contentLength } : {}),
+      ...(this.storageClass ? { StorageClass: this.storageClass } : {}),
     });
     return this.client.send(cmd);
   }
@@ -299,6 +320,7 @@ export class LcS3Client {
         Bucket: this.bucket,
         Key: key,
         ContentType: contentType,
+        ...(this.storageClass ? { StorageClass: this.storageClass } : {}),
       }),
     );
 
@@ -456,12 +478,14 @@ export class LcS3Client {
 export type CreateS3ClientsOptions = {
   ingest: S3Config;
   public: S3Config;
+  backup: S3Config;
   logger?: Logger;
 };
 
 export function createS3Clients({
   ingest,
   public: pub,
+  backup,
   logger,
 }: CreateS3ClientsOptions) {
   const ingestS3 = new LcS3Client({
@@ -472,16 +496,24 @@ export function createS3Clients({
     ...pub,
     logger: logger?.child({ module: 's3/public' }),
   });
+  const backupS3 = new LcS3Client({
+    ...backup,
+    logger: logger?.child({ module: 's3/backup' }),
+    storageClass: 'DEEP_ARCHIVE',
+  });
 
-  return { ingestS3, publicS3 };
+  return { ingestS3, publicS3, backupS3 };
 }
 
 export function getS3Client(
   clientId: S3ClientId,
   ingestS3: LcS3Client,
   publicS3: LcS3Client,
+  backupS3: LcS3Client,
 ): LcS3Client {
-  return clientId === 'INGEST' ? ingestS3 : publicS3;
+  if (clientId === 'INGEST') return ingestS3;
+  if (clientId === 'PUBLIC') return publicS3;
+  return backupS3;
 }
 
 export async function getPublicUrlWithFilename(
@@ -518,6 +550,38 @@ export function parseS3Env() {
       S3_PUBLIC_ENDPOINT: z.string(),
       S3_PUBLIC_ACCESS_KEY_ID: z.string(),
       S3_PUBLIC_SECRET_ACCESS_KEY: z.string(),
+      S3_BACKUP_BUCKET: z.string(),
+      S3_BACKUP_REGION: z.string(),
+      S3_BACKUP_ENDPOINT: z.string(),
+      S3_BACKUP_ACCESS_KEY_ID: z.string(),
+      S3_BACKUP_SECRET_ACCESS_KEY: z.string(),
     })
     .parse(process.env);
+}
+
+export function getS3ConfigFromEnv() {
+  const env = parseS3Env();
+  return {
+    ingest: {
+      bucket: env.S3_INGEST_BUCKET,
+      region: env.S3_INGEST_REGION,
+      endpoint: env.S3_INGEST_ENDPOINT,
+      accessKeyId: env.S3_INGEST_ACCESS_KEY_ID,
+      secretAccessKey: env.S3_INGEST_SECRET_ACCESS_KEY,
+    },
+    public: {
+      bucket: env.S3_PUBLIC_BUCKET,
+      region: env.S3_PUBLIC_REGION,
+      endpoint: env.S3_PUBLIC_ENDPOINT,
+      accessKeyId: env.S3_PUBLIC_ACCESS_KEY_ID,
+      secretAccessKey: env.S3_PUBLIC_SECRET_ACCESS_KEY,
+    },
+    backup: {
+      bucket: env.S3_BACKUP_BUCKET,
+      region: env.S3_BACKUP_REGION,
+      endpoint: env.S3_BACKUP_ENDPOINT,
+      accessKeyId: env.S3_BACKUP_ACCESS_KEY_ID,
+      secretAccessKey: env.S3_BACKUP_SECRET_ACCESS_KEY,
+    },
+  };
 }
