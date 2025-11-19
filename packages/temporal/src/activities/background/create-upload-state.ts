@@ -111,7 +111,7 @@ export async function getUploadStateByKey(s3Key: string) {
 export async function getUploadStatesToBackup(
   limit: number,
   offset: number = 0,
-) {
+): Promise<Array<{ id: string }>> {
   return prisma.uploadState.findMany({
     where: {
       backupStatus: 'NOT_BACKED_UP',
@@ -121,6 +121,9 @@ export async function getUploadStatesToBackup(
     },
     take: limit,
     skip: offset,
+    select: {
+      id: true,
+    },
   });
 }
 
