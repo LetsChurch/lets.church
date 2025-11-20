@@ -128,6 +128,32 @@ export async function getUploadStatesToBackup(
 }
 
 /**
+ * Atomically claim a batch of upload states for backup by marking them as BACKING_UP.
+ * This prevents other workflows from selecting the same uploads.
+ * Returns the IDs of the claimed uploads.
+ */
+export async function claimUploadStatesForBackup(
+  limit: number,
+): Promise<Array<{ id: string }>> {
+  // Use a raw query to atomically select and update in one operation
+  // This prevents race conditions where multiple batches select the same uploads
+  const claimed = await prisma.$queryRaw<Array<{ id: string }>>`
+    UPDATE "UploadState"
+    SET "backupStatus" = 'BACKING_UP', "updatedAt" = NOW()
+    WHERE id IN (
+      SELECT id FROM "UploadState"
+      WHERE "backupStatus" = 'NOT_BACKED_UP'
+      ORDER BY "createdAt" ASC
+      LIMIT ${limit}
+      FOR UPDATE SKIP LOCKED
+    )
+    RETURNING id
+  `;
+
+  return claimed;
+}
+
+/**
  * Count upload states by backup status.
  */
 export async function countUploadStatesByStatus() {

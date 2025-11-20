@@ -11,14 +11,13 @@ import type * as activities from '../../activities/background';
 import { BACKGROUND_QUEUE } from '../../queues';
 import { backupToGlacierWorkflow } from './backup-to-glacier';
 
-const { getUploadStatesToBackup, countUploadStatesByStatus } = proxyActivities<
-  typeof activities
->({
-  startToCloseTimeout: '2 minutes',
-  heartbeatTimeout: '1 minute',
-  taskQueue: BACKGROUND_QUEUE,
-  retry: { maximumAttempts: 3 },
-});
+const { claimUploadStatesForBackup, countUploadStatesByStatus } =
+  proxyActivities<typeof activities>({
+    startToCloseTimeout: '2 minutes',
+    heartbeatTimeout: '1 minute',
+    taskQueue: BACKGROUND_QUEUE,
+    retry: { maximumAttempts: 3 },
+  });
 
 // Query to get current progress
 export const getBulkBackupProgressQuery = defineQuery<{
@@ -83,27 +82,43 @@ export async function bulkBackupToGlacierWorkflow(
       break;
     }
 
-    // Fetch a batch of uploads to backup
-    const uploads = await getUploadStatesToBackup(batchSize, 0);
+    // Determine how many to claim in this batch
+    const claimLimit =
+      maxUploads !== undefined
+        ? Math.min(batchSize, maxUploads - currentStarted)
+        : batchSize;
+
+    if (claimLimit <= 0) {
+      break;
+    }
+
+    // Atomically claim a batch of uploads by marking them as BACKING_UP
+    // This prevents subsequent batches from selecting the same uploads
+    const uploads = await claimUploadStatesForBackup(claimLimit);
 
     if (uploads.length === 0) {
       break;
     }
 
-    // Launch child workflows for each upload
+    // Launch child workflows for each claimed upload
     for (const upload of uploads) {
-      // Check maxUploads limit
-      if (maxUploads !== undefined && currentStarted >= maxUploads) {
-        break;
+      try {
+        await startChild(backupToGlacierWorkflow, {
+          args: [upload.id],
+          workflowId: `backupToGlacier:${upload.id}`,
+          taskQueue: BACKGROUND_QUEUE,
+          parentClosePolicy: ParentClosePolicy.ABANDON,
+          retry: { maximumAttempts: 3 },
+        });
+      } catch (err) {
+        // If workflow already exists, that's fine - it's already being backed up
+        const isAlreadyStartedError =
+          err instanceof Error &&
+          err.name === 'WorkflowExecutionAlreadyStartedError';
+        if (!isAlreadyStartedError) {
+          throw err;
+        }
       }
-
-      await startChild(backupToGlacierWorkflow, {
-        args: [upload.id],
-        workflowId: `backupToGlacier:${upload.id}`,
-        taskQueue: BACKGROUND_QUEUE,
-        parentClosePolicy: ParentClosePolicy.ABANDON,
-        retry: { maximumAttempts: 3 },
-      });
 
       currentStarted += 1;
     }

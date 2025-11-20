@@ -7,6 +7,7 @@ export { default as backupToGlacier, retryBackup } from './backup-to-glacier';
 export { default as completeMultipartUpload } from './complete-multipart-upload';
 export { default as createUploadRecord } from './create-upload-record';
 export {
+  claimUploadStatesForBackup,
   countUploadStatesByStatus,
   createUploadState,
   getUploadState,
