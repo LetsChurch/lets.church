@@ -20,6 +20,7 @@ import {
   IconFileInfo,
   IconPlayerPause,
   IconPlayerPlay,
+  IconRefresh,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
@@ -129,6 +130,22 @@ function RouteComponent() {
 
   const cancelSizesMutation = useMutation(
     trpc.dashboard.admin.cancelBackfillUploadStateSizes.mutationOptions({
+      onSuccess: () => {
+        refetch();
+      },
+    }),
+  );
+
+  const retryFailedBackupMutation = useMutation(
+    trpc.dashboard.admin.retryFailedBackup.mutationOptions({
+      onSuccess: () => {
+        refetch();
+      },
+    }),
+  );
+
+  const retryAllFailedBackupsMutation = useMutation(
+    trpc.dashboard.admin.retryAllFailedBackups.mutationOptions({
       onSuccess: () => {
         refetch();
       },
@@ -672,6 +689,41 @@ function RouteComponent() {
               <Badge color="red">{failedBackups.totalCount} total</Badge>
             </Group>
 
+            <Alert
+              icon={<IconAlertCircle size={16} />}
+              title="Failed Backups"
+              color="red"
+            >
+              These backups failed during processing. You can retry individual
+              backups or reset all failed backups to try again.
+            </Alert>
+
+            <Group>
+              <Button
+                leftSection={<IconRefresh size={16} />}
+                onClick={() => retryAllFailedBackupsMutation.mutate()}
+                loading={retryAllFailedBackupsMutation.isPending}
+                color="blue"
+              >
+                Retry All Failed Backups
+              </Button>
+            </Group>
+
+            {retryAllFailedBackupsMutation.isSuccess && (
+              <Alert color="green" title="Success">
+                Successfully reset {retryAllFailedBackupsMutation.data.count}{' '}
+                failed backup
+                {retryAllFailedBackupsMutation.data.count === 1 ? '' : 's'} to
+                retry. Start the bulk backup to process them.
+              </Alert>
+            )}
+
+            {retryAllFailedBackupsMutation.error && (
+              <Alert color="red" title="Error">
+                {retryAllFailedBackupsMutation.error.message}
+              </Alert>
+            )}
+
             <Table>
               <Table.Thead>
                 <Table.Tr>
@@ -680,6 +732,7 @@ function RouteComponent() {
                   <Table.Th>Size</Table.Th>
                   <Table.Th>Upload</Table.Th>
                   <Table.Th>Failed At</Table.Th>
+                  <Table.Th>Actions</Table.Th>
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
@@ -711,6 +764,21 @@ function RouteComponent() {
                       <Text size="xs">
                         {new Date(backup.updatedAt).toLocaleDateString()}
                       </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Button
+                        size="xs"
+                        variant="light"
+                        leftSection={<IconRefresh size={14} />}
+                        onClick={() =>
+                          retryFailedBackupMutation.mutate({
+                            uploadStateId: backup.id,
+                          })
+                        }
+                        loading={retryFailedBackupMutation.isPending}
+                      >
+                        Retry
+                      </Button>
                     </Table.Td>
                   </Table.Tr>
                 ))}

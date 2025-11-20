@@ -1589,4 +1589,98 @@ export const adminRouter = router({
         totalCount,
       };
     }),
+
+  retryFailedBackup: adminProcedure
+    .input(
+      z.object({
+        uploadStateId: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      moduleLogger.info('Retrying failed backup', {
+        uploadStateId: input.uploadStateId,
+      });
+
+      try {
+        const uploadState = await prisma.uploadState.findUnique({
+          where: { id: input.uploadStateId },
+        });
+
+        if (!uploadState) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Upload state not found',
+          });
+        }
+
+        if (uploadState.backupStatus !== 'BACKUP_FAILED') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Upload is not in BACKUP_FAILED state, current status: ${uploadState.backupStatus}`,
+          });
+        }
+
+        await prisma.uploadState.update({
+          where: { id: input.uploadStateId },
+          data: {
+            backupStatus: 'NOT_BACKED_UP',
+            backupKey: null,
+            backedUpAt: null,
+          },
+        });
+
+        moduleLogger.info('Successfully reset failed backup to NOT_BACKED_UP', {
+          uploadStateId: input.uploadStateId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error('Failed to retry backup', {
+          error: error instanceof Error ? error.message : String(error),
+          uploadStateId: input.uploadStateId,
+        });
+
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to retry backup',
+        });
+      }
+    }),
+
+  retryAllFailedBackups: adminProcedure.mutation(async () => {
+    moduleLogger.info('Retrying all failed backups');
+
+    try {
+      const result = await prisma.uploadState.updateMany({
+        where: { backupStatus: 'BACKUP_FAILED' },
+        data: {
+          backupStatus: 'NOT_BACKED_UP',
+          backupKey: null,
+          backedUpAt: null,
+        },
+      });
+
+      moduleLogger.info(
+        'Successfully reset all failed backups to NOT_BACKED_UP',
+        {
+          count: result.count,
+        },
+      );
+
+      return { success: true, count: result.count };
+    } catch (error) {
+      moduleLogger.error('Failed to retry all backups', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to retry all backups',
+      });
+    }
+  }),
 });
