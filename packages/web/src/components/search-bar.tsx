@@ -96,13 +96,34 @@ export default function SearchBar({
     }
   };
 
+  const handleAutocompleteSelect = (value: string | null) => {
+    if (value?.trim()) {
+      if (isLoggedIn) {
+        addSearch(value);
+      }
+
+      navigate({
+        to: '/search',
+        search: {
+          q: value,
+          focus: 'media' as const,
+          channelSlugs: channelSlug ? [channelSlug] : undefined,
+        },
+      });
+    }
+  };
+
   return (
-    <Autocomplete.Root defaultValue={defaultValue} items={searchQueries}>
+    <Autocomplete.Root
+      defaultValue={defaultValue}
+      items={searchQueries}
+      onValueChange={(value) => handleAutocompleteSelect(value)}
+    >
       <form
         onSubmit={handleSubmit}
         className={cn(
           'flex h-10 items-center gap-1 rounded-3xl border px-3 transition-all duration-200',
-          'focus-within:border-white/0 focus-within:shadow-[0_0_0_2px_theme(colors.white/0.2),0_0_20px_theme(colors.white/0.3)]',
+          'focus-within:border-white/0 focus-within:shadow-[0_0_0_2px_--theme(--color-white/0.2),0_0_20px_--theme(--color-white/0.3)]',
           'border-gray-950/10 bg-gray-950/5 dark:border-white/10 dark:bg-white/5',
           className,
         )}
@@ -117,10 +138,10 @@ export default function SearchBar({
             )}
           />
         </div>
-        <div className="flex flex-shrink-0 items-center gap-0">
+        <div className="flex shrink-0 items-center gap-0">
           <Autocomplete.Clear
             onClick={handleClear}
-            className="flex size-8 items-center justify-center rounded-full text-primary/50 transition-colors hover:bg-white/10 hover:text-primary"
+            className="flex size-8 items-center justify-center rounded-full text-primary opacity-50 transition-colors hover:bg-white/10 hover:text-primary"
             aria-label="Clear search"
           >
             <IconX size={24} />
@@ -135,7 +156,7 @@ export default function SearchBar({
                     'flex size-8 items-center justify-center rounded-full transition-colors hover:bg-white/10',
                     hasActiveFilters
                       ? 'text-brand hover:text-brand'
-                      : 'text-primary/50 hover:text-primary',
+                      : 'text-primary opacity-50 hover:text-primary',
                   )}
                   aria-label="Filters"
                 >
@@ -160,11 +181,14 @@ export default function SearchBar({
       </form>
 
       <Autocomplete.Portal>
-        <Autocomplete.Positioner sideOffset={8} className="data-empty:hidden">
+        <Autocomplete.Positioner
+          sideOffset={8}
+          className="z-50 data-empty:hidden"
+        >
           <Autocomplete.Popup
             className={cn(
               'hidden overflow-hidden rounded-2xl border border-white/10 bg-black/90 shadow-xl backdrop-blur-lg sm:block',
-              'min-w-[var(--anchor-width)]',
+              'min-w-(--anchor-width)',
             )}
           >
             <Autocomplete.List className="py-2">
@@ -172,11 +196,14 @@ export default function SearchBar({
                 <Autocomplete.Item
                   key={search}
                   value={search}
-                  className="cursor-pointer px-4 py-2.5 text-primary/80 text-sm outline-none transition-colors hover:bg-white/10 hover:text-primary data-[highlighted]:bg-white/10 data-[highlighted]:text-primary"
+                  className="cursor-pointer px-4 py-2.5 text-primary/80 text-sm outline-none transition-colors hover:bg-white/10 hover:text-primary data-highlighted:bg-white/10 data-highlighted:text-primary"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <IconSearch size={16} className="text-primary/50" />
+                      <IconSearch
+                        size={16}
+                        className="text-primary opacity-50"
+                      />
                       <span>{search}</span>
                     </div>
                     {isLoggedIn ? (

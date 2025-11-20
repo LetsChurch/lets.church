@@ -9,6 +9,7 @@ import { Avatar } from '@/components/avatar';
 import { AvatarCarousel } from '@/components/avatar-carousel';
 import { EmptyState } from '@/components/empty-state';
 import Header from '@/components/header';
+import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { MediaCard } from '@/components/media-card';
 import { MediaGrid } from '@/components/media-grid';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
@@ -28,6 +29,7 @@ type ChannelListItemProps = {
   isLoggedIn: boolean;
   onFollow?: (channelId: string) => void;
   onUnfollow?: (channelId: string) => void;
+  onSignedOutFollow?: () => void;
 };
 
 function ChannelListItem({
@@ -38,6 +40,7 @@ function ChannelListItem({
   isLoggedIn,
   onFollow,
   onUnfollow,
+  onSignedOutFollow,
 }: ChannelListItemProps) {
   return (
     <div
@@ -80,17 +83,18 @@ function ChannelListItem({
           type="button"
           onClick={() => onFollow?.(channel.id)}
           disabled={isFollowing}
-          className="flex h-7 items-center justify-center rounded-full border border-white/10 bg-brand px-[10px] py-[6px] font-semibold text-primary text-xs disabled:opacity-50"
+          className="flex h-7 items-center justify-center rounded-full border border-white/10 bg-brand px-2.5 py-1.5 font-semibold text-primary text-xs disabled:opacity-50"
         >
           {isFollowing ? 'Following' : 'Follow'}
         </button>
       ) : (
-        <Link
-          to="/auth/register"
+        <button
+          type="button"
+          onClick={onSignedOutFollow}
           className="flex h-8 items-center rounded-full border-fancy-pants bg-brand px-3 font-bold text-primary text-sm"
         >
           Follow
-        </Link>
+        </button>
       )}
     </div>
   );
@@ -150,6 +154,12 @@ function RouteComponent() {
   const [unfollowingChannels, setUnfollowingChannels] = useState<Set<string>>(
     new Set(),
   );
+  const [signInModalOpen, setSignInModalOpen] = useState(false);
+  const [unfollowConfirmOpen, setUnfollowConfirmOpen] = useState(false);
+  const [channelToUnfollow, setChannelToUnfollow] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const handleFollow = async (channelId: string) => {
     if (followingChannels.has(channelId)) return;
@@ -177,7 +187,15 @@ function RouteComponent() {
     }
   };
 
-  const handleUnfollow = async (channelId: string) => {
+  const handleUnfollowRequest = (channelId: string, channelName: string) => {
+    setChannelToUnfollow({ id: channelId, name: channelName });
+    setUnfollowConfirmOpen(true);
+  };
+
+  const handleUnfollowConfirm = async () => {
+    if (!channelToUnfollow) return;
+    const channelId = channelToUnfollow.id;
+
     if (unfollowingChannels.has(channelId)) return;
 
     setUnfollowingChannels((prev) => new Set(prev).add(channelId));
@@ -200,6 +218,8 @@ function RouteComponent() {
         newSet.delete(channelId);
         return newSet;
       });
+      setUnfollowConfirmOpen(false);
+      setChannelToUnfollow(null);
     }
   };
 
@@ -208,7 +228,7 @@ function RouteComponent() {
   return (
     <>
       <Header />
-      <div className="pb-8 sm:px-16">
+      <div className="isolate pb-8 sm:px-16">
         <div className="space-y-8">
           {!isLoggedIn ? (
             <EmptyState
@@ -259,7 +279,10 @@ function RouteComponent() {
                     isUnfollowing={unfollowingChannels.has(channel.id)}
                     isLoggedIn={isLoggedIn}
                     onFollow={handleFollow}
-                    onUnfollow={handleUnfollow}
+                    onUnfollow={(channelId) =>
+                      handleUnfollowRequest(channelId, channel.name)
+                    }
+                    onSignedOutFollow={() => setSignInModalOpen(true)}
                   />
                 ))}
               </div>
@@ -267,6 +290,75 @@ function RouteComponent() {
           ) : null}
         </div>
       </div>
+
+      {/* Sign In Modal */}
+      <LcModal.Root open={signInModalOpen} onOpenChange={setSignInModalOpen}>
+        <LcModal.Portal>
+          <LcModal.Backdrop />
+          <LcModal.Popup>
+            <ModalHeader title="Create an Account" />
+            <p className="mb-6 text-secondary text-sm">
+              Create an account to follow channels and get a customized feed
+              with your favorite content!
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setSignInModalOpen(false)}
+                className="flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-2 font-semibold text-primary text-sm"
+              >
+                Cancel
+              </button>
+              <Link
+                to="/auth/register"
+                className="flex flex-1 items-center justify-center rounded-lg bg-brand px-4 py-2 font-semibold text-primary text-sm"
+                onClick={() => setSignInModalOpen(false)}
+              >
+                Create Account
+              </Link>
+            </div>
+          </LcModal.Popup>
+        </LcModal.Portal>
+      </LcModal.Root>
+
+      {/* Unfollow Confirmation Modal */}
+      <LcModal.Root
+        open={unfollowConfirmOpen}
+        onOpenChange={setUnfollowConfirmOpen}
+      >
+        <LcModal.Portal>
+          <LcModal.Backdrop />
+          <LcModal.Popup>
+            <ModalHeader title="Unfollow Channel" />
+            <p className="mb-6 text-secondary text-sm">
+              Are you sure you want to unfollow{' '}
+              <span className="font-semibold text-primary">
+                {channelToUnfollow?.name}
+              </span>
+              ? You will no longer see their content in your feed.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setUnfollowConfirmOpen(false);
+                  setChannelToUnfollow(null);
+                }}
+                className="flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-2 font-semibold text-primary text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleUnfollowConfirm}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2 font-semibold text-sm text-white"
+              >
+                Unfollow
+              </button>
+            </div>
+          </LcModal.Popup>
+        </LcModal.Portal>
+      </LcModal.Root>
     </>
   );
 }

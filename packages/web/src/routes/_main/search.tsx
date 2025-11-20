@@ -95,7 +95,7 @@ function RouteComponent() {
     <div className="min-h-screen bg-white dark:bg-zinc-950">
       <Header defaultSearchValue={q} />
 
-      <div className="relative z-5 mx-auto max-w-7xl px-4 py-4">
+      <div className="mx-auto max-w-7xl px-4 py-4">
         <div className="mb-6 sm:hidden">
           <SearchBar defaultValue={q} />
         </div>

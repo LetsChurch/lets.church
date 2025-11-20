@@ -281,7 +281,7 @@ function RecentlySaved() {
         ) : null}
       </div>
       {hasSavedItems ? (
-        <div className="relative">
+        <div className="relative isolate">
           <div
             className="sm:-mx-16 relative overflow-visible sm:px-16"
             ref={emblaRef}
@@ -516,7 +516,7 @@ function Home() {
         <HeroCarousel items={carouselItems} />
       </Header>
 
-      <div className="mx-auto max-w-7xl space-y-12 px-4 py-8 sm:px-16">
+      <div className="isolate mx-auto max-w-7xl space-y-12 px-4 py-8 sm:px-16">
         {inProgress.length > 0 ? (
           <ContentSection
             title="In Progress"

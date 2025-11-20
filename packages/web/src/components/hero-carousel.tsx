@@ -34,7 +34,7 @@ function CarouselItem({
   return (
     <div
       className={cn(
-        'relative w-90 flex-shrink-0 md:w-124 lg:w-160',
+        'relative w-90 shrink-0 md:w-124 lg:w-160',
         isActive && 'group',
       )}
     >
@@ -79,10 +79,10 @@ function CarouselItem({
               <img
                 src={avatarUrl}
                 alt={author}
-                className="h-4 w-4 flex-shrink-0 rounded-full object-cover"
+                className="h-4 w-4 shrink-0 rounded-full object-cover"
               />
             ) : (
-              <div className="h-4 w-4 flex-shrink-0 rounded-full bg-brand" />
+              <div className="h-4 w-4 shrink-0 rounded-full bg-brand" />
             )}
             <span className="text-secondary text-sm">{author}</span>
           </div>
@@ -182,7 +182,7 @@ export default function HeroCarousel({ items }: HeroCarouselProps) {
   }
 
   return (
-    <div className="relative z-10 pb-6">
+    <div className="relative isolate pb-6">
       <div className="overflow-hidden" ref={emblaRef}>
         <div className="flex gap-5 px-5 pb-6">
           {items.map((item, index) => (

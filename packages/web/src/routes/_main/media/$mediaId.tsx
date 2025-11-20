@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { CommentsSection } from '@/components/comments-section';
 import Header from '@/components/header';
 import LcButton from '@/components/lc-button';
+import { LcModal, ModalHeader } from '@/components/lc-modal';
 // import { MediaCarousel } from '@/components/media-carousel';
 import { MediaHeader } from '@/components/media-header';
 import { MediaInfoTabs } from '@/components/media-info-tabs';
@@ -308,6 +309,10 @@ function RouteComponent() {
   const [transcriptDialogOpen, setTranscriptDialogOpen] = useState(false);
   const [commentsDialogOpen, setCommentsDialogOpen] = useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
+  const [loginDialogAction, setLoginDialogAction] = useState<
+    'rate' | 'save' | 'follow' | 'comment'
+  >('rate');
+  const [unfollowConfirmOpen, setUnfollowConfirmOpen] = useState(false);
   const loaderData = Route.useLoaderData();
   const viewHash = loaderData?.viewHash ?? '';
   const transcript = loaderData?.transcript ?? [];
@@ -550,6 +555,7 @@ function RouteComponent() {
   const handleRate = (rating: 'LIKE' | 'DISLIKE') => {
     // Check if user is logged in before attempting to rate
     if (!isLoggedIn) {
+      setLoginDialogAction('rate');
       setLoginDialogOpen(true);
       return;
     }
@@ -563,14 +569,13 @@ function RouteComponent() {
   const handleFollowToggle = () => {
     // Check if user is logged in before attempting to follow
     if (!isLoggedIn) {
+      setLoginDialogAction('follow');
       setLoginDialogOpen(true);
       return;
     }
 
     if (media.channel.isFollowing) {
-      unfollowMutation.mutate({
-        channelId: media.channel.id,
-      });
+      setUnfollowConfirmOpen(true);
     } else {
       followMutation.mutate({
         channelId: media.channel.id,
@@ -578,9 +583,17 @@ function RouteComponent() {
     }
   };
 
+  const handleUnfollowConfirm = () => {
+    unfollowMutation.mutate({
+      channelId: media.channel.id,
+    });
+    setUnfollowConfirmOpen(false);
+  };
+
   const handleSaveToggle = () => {
     // Check if user is logged in before attempting to save
     if (!isLoggedIn) {
+      setLoginDialogAction('save');
       setLoginDialogOpen(true);
       return;
     }
@@ -606,7 +619,7 @@ function RouteComponent() {
 
       {/* Main Content Area */}
       <div
-        className="z-5 mx-4 grid gap-4"
+        className="mx-4 grid gap-4"
         style={{
           gridTemplateColumns: layout.showSidebar
             ? `${layout.containerWidth}px calc(var(--spacing) * 92)`
@@ -620,6 +633,7 @@ function RouteComponent() {
           {/* TODO: remove mb-10 when related content is implemented */}
           <div className="mb-10 w-full">
             <Player
+              key={params.mediaId}
               uploadRecordId={params.mediaId}
               viewHash={viewHash}
               mediaSource={media.mediaSource}
@@ -673,7 +687,10 @@ function RouteComponent() {
             {layout.showSidebar ? (
               <CommentsSection
                 mediaId={params.mediaId}
-                onLoginRequired={() => setLoginDialogOpen(true)}
+                onLoginRequired={() => {
+                  setLoginDialogAction('comment');
+                  setLoginDialogOpen(true);
+                }}
                 commentsEnabled={media.userCommentsEnabled}
               />
             ) : null}
@@ -741,7 +758,10 @@ function RouteComponent() {
               <div className="h-full overflow-y-auto">
                 <CommentsSection
                   mediaId={params.mediaId}
-                  onLoginRequired={() => setLoginDialogOpen(true)}
+                  onLoginRequired={() => {
+                    setLoginDialogAction('comment');
+                    setLoginDialogOpen(true);
+                  }}
                   showContainer={false}
                   commentsEnabled={media.userCommentsEnabled}
                 />
@@ -763,8 +783,14 @@ function RouteComponent() {
               Login Required
             </AlertDialog.Title>
             <AlertDialog.Description className="mb-6 text-primary/70 text-sm">
-              You need to be logged in to rate this content. Please sign in to
-              continue.
+              {loginDialogAction === 'rate'
+                ? 'You need to be logged in to rate this content.'
+                : loginDialogAction === 'save'
+                  ? 'You need to be logged in to save this content to your library.'
+                  : loginDialogAction === 'follow'
+                    ? 'You need to be logged in to follow this channel.'
+                    : 'You need to be logged in to comment on this content.'}{' '}
+              Please sign in to continue.
             </AlertDialog.Description>
             <div className="flex justify-end gap-3">
               <AlertDialog.Close>
@@ -779,6 +805,42 @@ function RouteComponent() {
           </AlertDialog.Popup>
         </AlertDialog.Portal>
       </AlertDialog.Root>
+
+      {/* Unfollow Confirmation Modal */}
+      <LcModal.Root
+        open={unfollowConfirmOpen}
+        onOpenChange={setUnfollowConfirmOpen}
+      >
+        <LcModal.Portal>
+          <LcModal.Backdrop />
+          <LcModal.Popup>
+            <ModalHeader title="Unfollow Channel" />
+            <p className="mb-6 text-secondary text-sm">
+              Are you sure you want to unfollow{' '}
+              <span className="font-semibold text-primary">
+                {media.channel.name}
+              </span>
+              ? You will no longer see their content in your feed.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setUnfollowConfirmOpen(false)}
+                className="flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-2 font-semibold text-primary text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleUnfollowConfirm}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2 font-semibold text-sm text-white"
+              >
+                Unfollow
+              </button>
+            </div>
+          </LcModal.Popup>
+        </LcModal.Portal>
+      </LcModal.Root>
     </div>
   );
 }

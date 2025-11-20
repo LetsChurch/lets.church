@@ -23,7 +23,7 @@ export function CarouselNavigationButtons({
           type="button"
           onClick={onScrollPrev}
           className={cn(
-            '-translate-y-1/2 absolute top-1/2 z-20 flex h-10 w-10 items-center justify-center rounded-full border-fancy-pants bg-white/10 backdrop-blur-sm transition-all hover:bg-white/20',
+            '-translate-y-1/2 absolute top-1/2 flex h-10 w-10 items-center justify-center rounded-full border-fancy-pants bg-white/10 backdrop-blur-sm transition-all hover:bg-white/20',
             positioning === 'inside' ? 'left-4' : '-left-6',
           )}
         >
@@ -36,7 +36,7 @@ export function CarouselNavigationButtons({
           type="button"
           onClick={onScrollNext}
           className={cn(
-            '-translate-y-1/2 absolute top-1/2 z-20 flex h-10 w-10 items-center justify-center rounded-full border-fancy-pants bg-white/10 backdrop-blur-sm transition-all hover:bg-white/20',
+            '-translate-y-1/2 absolute top-1/2 flex h-10 w-10 items-center justify-center rounded-full border-fancy-pants bg-white/10 backdrop-blur-sm transition-all hover:bg-white/20',
             positioning === 'inside' ? 'right-4' : '-right-6',
           )}
         >

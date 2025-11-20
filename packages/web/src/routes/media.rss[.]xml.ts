@@ -26,7 +26,7 @@ export const Route = createFileRoute('/media/rss.xml')({
             id: `${siteUrl}/media/rss.xml`,
             link: siteUrl,
             language: 'en',
-            favicon: `${siteUrl}/favicon.ico`,
+            favicon: `${siteUrl}/favicon.svg`,
             copyright: `All rights reserved ${new Date().getFullYear()}, Let's Church`,
             feedLinks: {
               rss: `${siteUrl}/media/rss.xml`,

@@ -44,7 +44,7 @@ export function SearchCard() {
               className="flex-1 appearance-none bg-transparent font-medium text-primary text-sm outline-none placeholder:text-gray-950/30 dark:placeholder:text-white/30"
             />
             <button type="submit" className="flex items-center">
-              <IconSearch className="text-primary/50" />
+              <IconSearch className="text-primary opacity-50" />
             </button>
           </div>
         </form>

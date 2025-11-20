@@ -1,7 +1,9 @@
 import { useStore } from '@nanostores/react';
+import { IconRewindBackward10, IconRewindForward10 } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
 import type { HlsVideoElement } from 'hls-video-element';
 import HlsVideo from 'hls-video-element/react';
+import type { MediaController as MediaControllerElement } from 'media-chrome';
 import {
   MediaController,
   MediaDurationDisplay,
@@ -73,6 +75,7 @@ export function Player({
 }: Props) {
   const trpc = useTRPC();
   const videoRef = useRef<HlsVideoElement>(null);
+  const controllerRef = useRef<MediaControllerElement>(null);
   const reportTimerRef = useRef<number | undefined>(undefined);
   const currentTime = useStore($currentTime);
 
@@ -85,6 +88,11 @@ export function Player({
   );
   const [savedPosition, setSavedPosition] = useState(0);
   const [savedPlayState, setSavedPlayState] = useState(false);
+  const [seekFeedback, setSeekFeedback] = useState<{
+    direction: 'forward' | 'backward';
+    visible: boolean;
+  } | null>(null);
+  const seekFeedbackTimeoutRef = useRef<number | undefined>(undefined);
 
   const recordViewSecondsMutation = useMutation(
     trpc.media.recordViewSeconds.mutationOptions(),
@@ -92,6 +100,71 @@ export function Player({
   const { mutateAsync: recordViewSeconds } = recordViewSecondsMutation;
 
   const currentSource = mediaType === 'video' ? mediaSource : audioSource;
+
+  // For audio mode, ensure controls are visible on mount by triggering user activity
+  useEffect(() => {
+    if (mediaType === 'audio' && controllerRef.current) {
+      // Dispatch a pointermove event to trigger activity detection
+      // This ensures controls are visible immediately for audio-only content
+      controllerRef.current.dispatchEvent(
+        new PointerEvent('pointermove', { bubbles: true }),
+      );
+    }
+  }, [mediaType]);
+
+  // Keyboard shortcuts for media controls
+  useEffect(() => {
+    if (!videoRef.current) {
+      return;
+    }
+
+    const videoElement = videoRef.current;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      const showSeekFeedback = (direction: 'forward' | 'backward') => {
+        clearTimeout(seekFeedbackTimeoutRef.current);
+        setSeekFeedback({ direction, visible: true });
+        seekFeedbackTimeoutRef.current = window.setTimeout(() => {
+          setSeekFeedback(null);
+        }, 500);
+      };
+
+      switch (e.key.toLowerCase()) {
+        case 'k':
+          if (videoElement.paused) {
+            videoElement.play();
+          } else {
+            videoElement.pause();
+          }
+          break;
+        case 'j':
+          videoElement.currentTime = Math.max(0, videoElement.currentTime - 10);
+          showSeekFeedback('backward');
+          break;
+        case 'l':
+          videoElement.currentTime = Math.min(
+            videoElement.duration || 0,
+            videoElement.currentTime + 10,
+          );
+          showSeekFeedback('forward');
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   // Seek to initial timestamp from URL hash
   useEffect(() => {
@@ -216,7 +289,7 @@ export function Player({
   return (
     <div
       className={cn(
-        'relative z-100 overflow-hidden',
+        'relative overflow-hidden',
         !embed && 'rounded-2xl',
         mediaType === 'video' && 'bg-black',
         mediaType === 'video' && videoClassName,
@@ -233,7 +306,9 @@ export function Player({
             />
           )}
           <MediaController
-            className="relative block"
+            key={mediaType}
+            ref={controllerRef}
+            className="group relative block [&[userinactive]:not([mediapaused])]:cursor-none"
             style={{
               '--media-background-color': 'none',
               width:
@@ -264,34 +339,50 @@ export function Player({
                   : undefined
               }
               playsInline
+              autoplay
               className={
                 mediaType === 'video'
                   ? 'bg-black'
-                  : 'bg-gradient-to-t from-gray-100 to-50% to-gray-400/0 dark:from-gray-900 dark:to-gray-900/0'
+                  : 'bg-linear-to-t from-gray-100 to-50% to-gray-400/0 dark:from-gray-900 dark:to-gray-900/0'
               }
             />
 
-            <div className="pointer-events-none absolute inset-0 flex flex-col">
+            <div
+              className={cn(
+                'pointer-events-none absolute inset-0 flex flex-col transition-opacity duration-300',
+                mediaType === 'video' &&
+                  'group-[[userinactive]:not([mediapaused])]:opacity-0',
+              )}
+            >
               <div
                 className={cn(
-                  'pointer-events-auto flex h-16 px-3 pt-3',
+                  'pointer-events-auto flex h-16 px-3 pt-3 group-[[mediaisfullscreen]]:h-24 group-[[mediaisfullscreen]]:px-6 group-[[mediaisfullscreen]]:pt-6',
                   showToggle || embed ? 'justify-between' : 'justify-end',
+                  showToggle && 'group-[[mediaisfullscreen]]:justify-end',
                   mediaType === 'video' &&
-                    'bg-gradient-to-b from-gray-950/70 to-transparent',
+                    'bg-linear-to-b from-gray-950/70 to-transparent',
                 )}
+                onPointerMove={() => {
+                  // Trigger activity detection on MediaController
+                  controllerRef.current?.dispatchEvent(
+                    new PointerEvent('pointermove', { bubbles: true }),
+                  );
+                }}
               >
                 {showToggle ? (
-                  <MediaSwitcher
-                    value={mediaType}
-                    onValueChange={(value) => {
-                      if (value && videoRef.current) {
-                        // Save current position and play state
-                        setSavedPosition(videoRef.current.currentTime);
-                        setSavedPlayState(!videoRef.current.paused);
-                        setMediaType(value);
-                      }
-                    }}
-                  />
+                  <div className="group-[[mediaisfullscreen]]:hidden">
+                    <MediaSwitcher
+                      value={mediaType}
+                      onValueChange={(value) => {
+                        if (value && videoRef.current) {
+                          // Save current position and play state
+                          setSavedPosition(videoRef.current.currentTime);
+                          setSavedPlayState(!videoRef.current.paused);
+                          setMediaType(value);
+                        }
+                      }}
+                    />
+                  </div>
                 ) : embed ? (
                   <a
                     href="https://lets.church"
@@ -302,11 +393,11 @@ export function Player({
                     <Logo />
                   </a>
                 ) : null}
-                <div className="flex items-start gap-2.5">
+                <div className="flex items-start gap-2.5 group-[[mediaisfullscreen]]:gap-4">
                   <MediaMuteButton
                     tooltipPlacement="bottom"
                     className={cn(
-                      'size-7 rounded-lg bg-transparent p-1',
+                      'size-7 rounded-lg bg-transparent p-1 group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5',
                       mediaType === 'video'
                         ? 'border-fancy-pants backdrop-blur-lg'
                         : '[--media-icon-color:var(--color-primary)]',
@@ -315,7 +406,7 @@ export function Player({
                   <MediaPlaybackRateButton
                     tooltipPlacement="bottom"
                     className={cn(
-                      'size-7 rounded-lg bg-transparent p-1',
+                      'size-7 rounded-lg bg-transparent p-1 group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5',
                       mediaType === 'video'
                         ? 'border-fancy-pants backdrop-blur-lg'
                         : 'text-primary',
@@ -325,22 +416,30 @@ export function Player({
                     <>
                       <MediaPipButton
                         tooltipPlacement="bottom"
-                        className="size-7 rounded-lg border-fancy-pants bg-transparent p-1 backdrop-blur-lg"
+                        className="size-7 rounded-lg border-fancy-pants bg-transparent p-1 backdrop-blur-lg group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5"
                       />
                       <MediaFullscreenButton
                         tooltipPlacement="bottom"
-                        className="size-7 rounded-lg border-fancy-pants bg-transparent p-1 backdrop-blur-lg"
+                        className="size-7 rounded-lg border-fancy-pants bg-transparent p-1 backdrop-blur-lg group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5"
                       />
                     </>
                   ) : null}
                 </div>
               </div>
 
-              <div className="pointer-events-auto flex grow items-center justify-center gap-6">
+              <div
+                className="pointer-events-auto relative flex grow items-center justify-center gap-6 group-[[mediaisfullscreen]]:gap-10"
+                onPointerMove={() => {
+                  // Trigger activity detection on MediaController
+                  controllerRef.current?.dispatchEvent(
+                    new PointerEvent('pointermove', { bubbles: true }),
+                  );
+                }}
+              >
                 <MediaSeekBackwardButton
                   seekOffset={15}
                   className={cn(
-                    'size-8 rounded-lg bg-transparent',
+                    'size-8 rounded-lg bg-transparent group-[[mediaisfullscreen]]:size-12',
                     mediaType === 'video'
                       ? 'border-fancy-pants backdrop-blur-lg'
                       : '[--media-icon-color:var(--color-primary)]',
@@ -348,7 +447,7 @@ export function Player({
                 />
                 <MediaPlayButton
                   className={cn(
-                    'size-12 rounded-lg bg-transparent',
+                    'size-12 rounded-lg bg-transparent group-[[mediaisfullscreen]]:size-18',
                     mediaType === 'video'
                       ? 'border-fancy-pants backdrop-blur-lg'
                       : '[--media-icon-color:var(--color-primary)]',
@@ -357,7 +456,7 @@ export function Player({
                 <MediaSeekForwardButton
                   seekOffset={15}
                   className={cn(
-                    'size-8 rounded-lg bg-transparent',
+                    'size-8 rounded-lg bg-transparent group-[[mediaisfullscreen]]:size-12',
                     mediaType === 'video'
                       ? 'border-fancy-pants backdrop-blur-lg'
                       : '[--media-icon-color:var(--color-primary)]',
@@ -367,15 +466,15 @@ export function Player({
 
               <div
                 className={cn(
-                  'pointer-events-auto flex h-16 flex-col justify-end gap-1 px-4 pb-4',
+                  'pointer-events-auto flex h-16 flex-col justify-end gap-1 px-4 pb-4 group-[[mediaisfullscreen]]:h-24 group-[[mediaisfullscreen]]:gap-2 group-[[mediaisfullscreen]]:px-8 group-[[mediaisfullscreen]]:pb-8',
                   mediaType === 'video' &&
-                    'bg-gradient-to-t from-gray-950/70 to-transparent',
+                    'bg-linear-to-t from-gray-950/70 to-transparent',
                 )}
               >
                 <div className="flex justify-between px-2 font-normal tracking-[-0.2px]">
                   <MediaTimeDisplay
                     className={cn(
-                      'bg-transparent text-xs',
+                      'bg-transparent text-xs group-[[mediaisfullscreen]]:text-base',
                       '[--media-text-color:var(--color-primary)]',
                       '[--media-font:var(--font-time)]',
                     )}
@@ -383,7 +482,7 @@ export function Player({
                   />
                   <MediaDurationDisplay
                     className={cn(
-                      'bg-transparent text-xs',
+                      'bg-transparent text-xs group-[[mediaisfullscreen]]:text-base',
                       '[--media-text-color:var(--color-primary)]',
                       '[--media-font:var(--font-time)]',
                     )}
@@ -397,6 +496,7 @@ export function Player({
                     'dark:[--media-range-track-background:--alpha(var(--color-white)/20%)]',
                     '[--media-range-thumb-background:linear-gradient(45deg,--alpha(var(--color-brand)/0%)_50%,var(--color-indigo-300)_100%),var(--color-brand)]',
                     '[--media-range-thumb-box-shadow:0_1px_6px_0_--alpha(var(--color-black)/50%),0_2px_12px_0_var(--color-brand)]',
+                    'group-[[mediaisfullscreen]]:h-[5px]',
                   )}
                   style={{
                     width: '100%',
@@ -411,6 +511,22 @@ export function Player({
               </div>
             </div>
           </MediaController>
+
+          {/* Seek feedback layer - independent of controls visibility */}
+          {seekFeedback && (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              {seekFeedback.direction === 'backward' && (
+                <div className="-translate-x-1/2 absolute left-1/4 flex size-16 animate-ping items-center justify-center rounded-full bg-black/50">
+                  <IconRewindBackward10 className="size-8 text-white" />
+                </div>
+              )}
+              {seekFeedback.direction === 'forward' && (
+                <div className="absolute right-1/4 flex size-16 translate-x-1/2 animate-ping items-center justify-center rounded-full bg-black/50">
+                  <IconRewindForward10 className="size-8 text-white" />
+                </div>
+              )}
+            </div>
+          )}
         </>
       ) : (
         <div className="flex size-full items-center justify-center">

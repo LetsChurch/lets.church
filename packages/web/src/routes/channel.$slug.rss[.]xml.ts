@@ -85,7 +85,7 @@ export const Route = createFileRoute('/channel/$slug/rss.xml')({
             id: `${siteUrl}/channel/${channel.slug}/rss.xml`,
             link: channelUrl,
             language: 'en',
-            favicon: `${siteUrl}/favicon.ico`,
+            favicon: `${siteUrl}/favicon.svg`,
             copyright: `All rights reserved ${new Date().getFullYear()}, ${channel.name}`,
             feedLinks: {
               rss: `${siteUrl}/channel/${channel.slug}/rss.xml`,

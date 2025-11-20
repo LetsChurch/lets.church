@@ -153,7 +153,7 @@ function RouteComponent() {
         channelSlug={channel.slug}
         searchPlaceholder={`Search in ${channel.name}...`}
       />
-      <div className="relative z-10 px-16 pb-8">
+      <div className="px-16 pb-8">
         {/* Channel Header */}
         <div className="mb-8 flex items-start gap-6">
           <Avatar

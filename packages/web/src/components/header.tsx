@@ -52,11 +52,11 @@ export default function Header({
         </div>
       ) : null}
 
-      {/* Theme gradient */}
-      <div className="absolute inset-x-0 top-0 z-5 h-[240px] bg-gradient-to-b from-brand/40 to-transparent" />
+      {/* Theme gradient - uses ::after pseudo-element via CSS class */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[240px] bg-gradient-to-b from-brand/40 to-transparent" />
 
       {/* Top Navigation Bar */}
-      <div className="relative z-10 flex h-16 items-center justify-between p-4">
+      <div className="relative flex h-16 items-center justify-between p-4">
         {/* Mobile Logo and Menu Button (visible when sidebar is hidden) */}
         <div className="flex items-center gap-3 sm:hidden">
           <button

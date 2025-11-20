@@ -169,7 +169,7 @@ export function Comment({
         src={avatarUrl}
         alt={comment.author.username}
         fallbackText={comment.author.username.charAt(0).toUpperCase()}
-        className="size-8 flex-shrink-0"
+        className="size-8 shrink-0"
         fallbackClassName="text-xs"
       />
 
@@ -181,7 +181,7 @@ export function Comment({
           <span className="text-primary/50 text-xs">{timeAgo}</span>
         </div>
 
-        <p className="mb-2 whitespace-pre-wrap break-words text-primary/90 text-sm leading-relaxed">
+        <p className="wrap-break-word mb-2 whitespace-pre-wrap text-primary/90 text-sm leading-relaxed">
           {comment.text}
         </p>
 

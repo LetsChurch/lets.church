@@ -14,7 +14,10 @@ import type { AppContextType } from '@/router';
 import { setBrowserSize } from '@/stores/browser-size';
 import { getInitialTheme, initializeTheme } from '@/stores/theme';
 
-const indigo = '#6366f1';
+const brand = '#6366f1';
+// Brand colors from the translucent gradient over the page background
+const brandColorLight = '#BFBFFF';
+const brandColorDark = '#2B2B6E';
 
 export const Route = createRootRouteWithContext<AppContextType>()({
   loader: async ({ context: { queryClient, trpc } }) => {
@@ -44,7 +47,13 @@ export const Route = createRootRouteWithContext<AppContextType>()({
       },
       {
         name: 'theme-color',
-        content: indigo,
+        media: '(prefers-color-scheme: light)',
+        content: brandColorLight,
+      },
+      {
+        name: 'theme-color',
+        media: '(prefers-color-scheme: dark)',
+        content: brandColorDark,
       },
     ],
     links: [
@@ -77,7 +86,7 @@ export const Route = createRootRouteWithContext<AppContextType>()({
       {
         rel: 'mask-icon',
         href: '/favicon.svg',
-        color: indigo,
+        color: brand,
       },
     ],
   }),

@@ -88,7 +88,7 @@ export function MediaCarousel({
 
   return (
     <>
-      <div className="relative">
+      <div className="relative isolate">
         <div
           className={cn(
             'sm:fade-horizontal relative overflow-visible',

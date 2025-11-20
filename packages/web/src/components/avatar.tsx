@@ -18,7 +18,13 @@ export function Avatar({
 }: AvatarProps) {
   return (
     <BaseAvatar.Root className={cn('overflow-hidden rounded-full', className)}>
-      {src ? <BaseAvatar.Image src={src} alt={alt} /> : null}
+      {src ? (
+        <BaseAvatar.Image
+          src={src}
+          alt={alt}
+          className="size-full object-cover"
+        />
+      ) : null}
       <BaseAvatar.Fallback
         className={cn(
           'flex size-full items-center justify-center bg-brand font-bold text-white',

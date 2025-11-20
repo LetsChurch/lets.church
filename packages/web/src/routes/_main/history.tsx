@@ -89,7 +89,7 @@ function RouteComponent() {
   return (
     <>
       <Header />
-      <div className="pb-8 sm:px-16">
+      <div className="isolate pb-8 sm:px-16">
         <div className="mb-6">
           <h1 className="mb-4 font-bold text-2xl text-primary">Library</h1>
           <LibraryTabs activeTab="history" />
