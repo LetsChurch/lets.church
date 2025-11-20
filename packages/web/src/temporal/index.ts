@@ -1,14 +1,17 @@
 import type { Prisma, UploadVariant } from '@letschurch/db';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
 import {
+  type BackfillUploadStateSizesWorkflowParams,
   type BackfillUploadStatesWorkflowParams,
   type BulkBackupToGlacierWorkflowParams,
+  backfillUploadStateSizesWorkflow,
   backfillUploadStatesWorkflow,
   bulkBackupToGlacierWorkflow,
   createUploadRecordWorkflow,
   deleteUploadWorkflow,
   geocodeOrganizationWorkflow,
   getBackfillProgressQuery,
+  getBackfillSizesProgressQuery,
   getBulkBackupProgressQuery,
   getMigrationProgressQuery,
   handleMultipartMediaUploadWorkflow,
@@ -396,5 +399,66 @@ export async function getBulkBackupToGlacierProgress() {
 
 export async function cancelBulkBackupToGlacier() {
   const handle = (await client).workflow.getHandle(BULK_BACKUP_WORKFLOW_ID);
+  await handle.cancel();
+}
+
+// Backfill Upload State Sizes Workflow
+const BACKFILL_SIZES_WORKFLOW_ID = 'backfillUploadStateSizes';
+
+export async function startBackfillUploadStateSizes(
+  params: BackfillUploadStateSizesWorkflowParams,
+) {
+  return (await client).workflow.start(backfillUploadStateSizesWorkflow, {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    workflowId: BACKFILL_SIZES_WORKFLOW_ID,
+    args: [params],
+  });
+}
+
+export async function getBackfillUploadStateSizesProgress() {
+  try {
+    const handle = (await client).workflow.getHandle(
+      BACKFILL_SIZES_WORKFLOW_ID,
+    );
+    const description = await handle.describe();
+
+    if (description.status.name === 'RUNNING') {
+      const progress = await handle.query(getBackfillSizesProgressQuery);
+      return {
+        status: 'running' as const,
+        ...progress,
+      };
+    }
+
+    if (description.status.name === 'COMPLETED') {
+      return {
+        status: 'completed' as const,
+        totalUpdated: 0,
+        totalSkipped: 0,
+        remaining: 0,
+        batchesCompleted: 0,
+      };
+    }
+
+    return {
+      status: description.status.name.toLowerCase() as
+        | 'failed'
+        | 'cancelled'
+        | 'terminated'
+        | 'timed_out',
+      totalUpdated: 0,
+      totalSkipped: 0,
+      remaining: 0,
+      batchesCompleted: 0,
+    };
+  } catch {
+    // Workflow doesn't exist
+    return null;
+  }
+}
+
+export async function cancelBackfillUploadStateSizes() {
+  const handle = (await client).workflow.getHandle(BACKFILL_SIZES_WORKFLOW_ID);
   await handle.cancel();
 }

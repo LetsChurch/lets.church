@@ -10,12 +10,15 @@ import {
   reorderFeaturedUploadsSchema,
 } from '@/schemas/dashboard/admin';
 import {
+  cancelBackfillUploadStateSizes,
   cancelBackfillUploadStates,
   cancelBulkBackupToGlacier,
   cancelMigrateViewRanges,
+  getBackfillUploadStateSizesProgress,
   getBackfillUploadStatesProgress,
   getBulkBackupToGlacierProgress,
   getMigrateViewRangesProgress,
+  startBackfillUploadStateSizes,
   startBackfillUploadStates,
   startBulkBackupToGlacier,
   startMigrateViewRanges,
@@ -1225,15 +1228,28 @@ export const adminRouter = router({
   getUploadBackupStats: adminProcedure.query(async () => {
     moduleLogger.info('Fetching upload backup stats');
 
-    const [statusCounts, backfillProgress, bulkBackupProgress] =
-      await Promise.all([
-        prisma.uploadState.groupBy({
-          by: ['backupStatus'],
-          _count: { id: true },
-        }),
-        getBackfillUploadStatesProgress(),
-        getBulkBackupToGlacierProgress(),
-      ]);
+    const [
+      statusCounts,
+      totalStorageResult,
+      nullSizeBytesCount,
+      backfillProgress,
+      backfillSizesProgress,
+      bulkBackupProgress,
+    ] = await Promise.all([
+      prisma.uploadState.groupBy({
+        by: ['backupStatus'],
+        _count: { id: true },
+      }),
+      prisma.uploadState.aggregate({
+        _sum: { sizeBytes: true },
+      }),
+      prisma.uploadState.count({
+        where: { sizeBytes: null },
+      }),
+      getBackfillUploadStatesProgress(),
+      getBackfillUploadStateSizesProgress(),
+      getBulkBackupToGlacierProgress(),
+    ]);
 
     const stats = {
       notBackedUp: 0,
@@ -1241,6 +1257,8 @@ export const adminRouter = router({
       backedUp: 0,
       backupFailed: 0,
       total: 0,
+      totalStorageBytes: totalStorageResult._sum.sizeBytes?.toString() ?? '0',
+      nullSizeBytesCount,
     };
 
     for (const result of statusCounts) {
@@ -1264,6 +1282,7 @@ export const adminRouter = router({
     return {
       stats,
       backfillStatus: backfillProgress,
+      backfillSizesStatus: backfillSizesProgress,
       bulkBackupStatus: bulkBackupProgress,
     };
   }),
@@ -1350,6 +1369,97 @@ export const adminRouter = router({
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to cancel backfill',
+      });
+    }
+  }),
+
+  // Backfill Upload State Sizes procedures
+  startBackfillUploadStateSizes: adminProcedure
+    .input(
+      z.object({
+        batchSize: z.number().min(1).max(1000).default(100),
+        delayBetweenBatchesMs: z.number().min(0).max(10000).default(500),
+        maxRows: z.number().min(1).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Starting backfill upload state sizes', {
+        batchSize: input.batchSize,
+        delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+        maxRows: input.maxRows,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        // Check if backfill is already running
+        const progress = await getBackfillUploadStateSizesProgress();
+        if (progress?.status === 'running') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Backfill sizes is already running',
+          });
+        }
+
+        const s3Env = parseS3Env();
+
+        await startBackfillUploadStateSizes({
+          batchSize: input.batchSize,
+          delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+          ingestBucket: s3Env.S3_INGEST_BUCKET,
+          ingestEndpoint: s3Env.S3_INGEST_ENDPOINT,
+          ingestRegion: s3Env.S3_INGEST_REGION,
+          ingestAccessKeyId: s3Env.S3_INGEST_ACCESS_KEY_ID,
+          ingestSecretAccessKey: s3Env.S3_INGEST_SECRET_ACCESS_KEY,
+          maxRows: input.maxRows,
+        });
+
+        moduleLogger.info('Backfill upload state sizes started successfully', {
+          batchSize: input.batchSize,
+          delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+          maxRows: input.maxRows,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error('Failed to start backfill upload state sizes', {
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to start backfill sizes',
+        });
+      }
+    }),
+
+  cancelBackfillUploadStateSizes: adminProcedure.mutation(async ({ ctx }) => {
+    moduleLogger.info('Cancelling backfill upload state sizes', {
+      appUserId: ctx.session.appUserId,
+    });
+
+    try {
+      await cancelBackfillUploadStateSizes();
+
+      moduleLogger.info('Backfill upload state sizes cancelled successfully', {
+        appUserId: ctx.session.appUserId,
+      });
+
+      return { success: true };
+    } catch (error) {
+      moduleLogger.error('Failed to cancel backfill upload state sizes', {
+        appUserId: ctx.session.appUserId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to cancel backfill sizes',
       });
     }
   }),

@@ -1,5 +1,9 @@
 export { default as abortMultipartUpload } from './abort-multipart-upload';
 export {
+  backfillUploadStateSizesBatch,
+  getBackfillSizesCount,
+} from './backfill-upload-state-sizes';
+export {
   backfillUploadStatesBatch,
   getBackfillCount,
 } from './backfill-upload-states';

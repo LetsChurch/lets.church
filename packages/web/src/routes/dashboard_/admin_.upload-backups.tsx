@@ -17,6 +17,7 @@ import {
   IconCheck,
   IconCloudUpload,
   IconDatabase,
+  IconFileInfo,
   IconPlayerPause,
   IconPlayerPlay,
   IconX,
@@ -69,6 +70,10 @@ function RouteComponent() {
   const [backupDelayMs, setBackupDelayMs] = useState<number | string>(1000);
   const [backupMaxUploads, setBackupMaxUploads] = useState<number | string>('');
 
+  const [sizesBatchSize, setSizesBatchSize] = useState<number | string>(100);
+  const [sizesDelayMs, setSizesDelayMs] = useState<number | string>(500);
+  const [sizesMaxRows, setSizesMaxRows] = useState<number | string>('');
+
   const { data: status, refetch } = useSuspenseQuery({
     ...trpc.dashboard.admin.getUploadBackupStats.queryOptions(),
     refetchInterval: 2000,
@@ -114,8 +119,35 @@ function RouteComponent() {
     }),
   );
 
+  const startSizesMutation = useMutation(
+    trpc.dashboard.admin.startBackfillUploadStateSizes.mutationOptions({
+      onSuccess: () => {
+        refetch();
+      },
+    }),
+  );
+
+  const cancelSizesMutation = useMutation(
+    trpc.dashboard.admin.cancelBackfillUploadStateSizes.mutationOptions({
+      onSuccess: () => {
+        refetch();
+      },
+    }),
+  );
+
   const isBackfillRunning = status.backfillStatus?.status === 'running';
   const isBackupRunning = status.bulkBackupStatus?.status === 'running';
+  const isSizesRunning = status.backfillSizesStatus?.status === 'running';
+
+  // Format bytes to human readable
+  const formatBytes = (bytes: string | number) => {
+    const num = typeof bytes === 'string' ? Number.parseInt(bytes, 10) : bytes;
+    if (num === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+    const i = Math.floor(Math.log(num) / Math.log(k));
+    return `${Number.parseFloat((num / k ** i).toFixed(2))} ${sizes[i]}`;
+  };
 
   const getStatusBadge = (
     workflowStatus: { status: string } | null | undefined,
@@ -179,18 +211,23 @@ function RouteComponent() {
             </Card>
             <Card withBorder p="md">
               <Text size="sm" c="dimmed">
+                Total Storage
+              </Text>
+              <Text size="xl" fw={700}>
+                {formatBytes(status.stats.totalStorageBytes)}
+              </Text>
+              {status.stats.nullSizeBytesCount > 0 && (
+                <Text size="xs" c="orange">
+                  {status.stats.nullSizeBytesCount} missing sizes
+                </Text>
+              )}
+            </Card>
+            <Card withBorder p="md">
+              <Text size="sm" c="dimmed">
                 Not Backed Up
               </Text>
               <Text size="xl" fw={700} c="orange">
                 {status.stats.notBackedUp.toLocaleString()}
-              </Text>
-            </Card>
-            <Card withBorder p="md">
-              <Text size="sm" c="dimmed">
-                Backing Up
-              </Text>
-              <Text size="xl" fw={700} c="blue">
-                {status.stats.backingUp.toLocaleString()}
               </Text>
             </Card>
             <Card withBorder p="md">
@@ -347,6 +384,143 @@ function RouteComponent() {
           )}
         </Stack>
       </Card>
+
+      {/* Backfill File Sizes Section */}
+      {status.stats.nullSizeBytesCount > 0 && (
+        <Card withBorder>
+          <Stack gap="md">
+            <Group justify="space-between">
+              <Title order={3}>
+                <Group gap="xs">
+                  <IconFileInfo size={20} />
+                  Backfill File Sizes
+                </Group>
+              </Title>
+              {getStatusBadge(status.backfillSizesStatus)}
+            </Group>
+
+            <Text size="sm" c="dimmed">
+              Populate missing file sizes for UploadState records by querying
+              the ingest S3 bucket. This is needed for accurate storage
+              statistics.
+            </Text>
+
+            {isSizesRunning && status.backfillSizesStatus ? (
+              <>
+                <Group grow>
+                  <Card withBorder p="sm">
+                    <Text size="xs" c="dimmed">
+                      Updated
+                    </Text>
+                    <Text fw={600}>
+                      {status.backfillSizesStatus.totalUpdated?.toLocaleString() ??
+                        0}
+                    </Text>
+                  </Card>
+                  <Card withBorder p="sm">
+                    <Text size="xs" c="dimmed">
+                      Skipped
+                    </Text>
+                    <Text fw={600}>
+                      {status.backfillSizesStatus.totalSkipped?.toLocaleString() ??
+                        0}
+                    </Text>
+                  </Card>
+                  <Card withBorder p="sm">
+                    <Text size="xs" c="dimmed">
+                      Remaining
+                    </Text>
+                    <Text fw={600}>
+                      {status.backfillSizesStatus.remaining?.toLocaleString() ??
+                        0}
+                    </Text>
+                  </Card>
+                  <Card withBorder p="sm">
+                    <Text size="xs" c="dimmed">
+                      Batches
+                    </Text>
+                    <Text fw={600}>
+                      {status.backfillSizesStatus.batchesCompleted?.toLocaleString() ??
+                        0}
+                    </Text>
+                  </Card>
+                </Group>
+
+                <Button
+                  color="red"
+                  leftSection={<IconPlayerPause size={16} />}
+                  onClick={() => cancelSizesMutation.mutate()}
+                  loading={cancelSizesMutation.isPending}
+                >
+                  Cancel Backfill Sizes
+                </Button>
+              </>
+            ) : (
+              <>
+                <Alert
+                  icon={<IconAlertCircle size={16} />}
+                  title="Missing Sizes"
+                  color="orange"
+                >
+                  {status.stats.nullSizeBytesCount.toLocaleString()} upload
+                  states are missing file size information.
+                </Alert>
+
+                <Group grow>
+                  <NumberInput
+                    label="Batch Size"
+                    description="Records per batch"
+                    value={sizesBatchSize}
+                    onChange={setSizesBatchSize}
+                    min={1}
+                    max={1000}
+                    size="sm"
+                  />
+                  <NumberInput
+                    label="Delay (ms)"
+                    description="Between batches"
+                    value={sizesDelayMs}
+                    onChange={setSizesDelayMs}
+                    min={0}
+                    max={10000}
+                    size="sm"
+                  />
+                  <NumberInput
+                    label="Max Rows"
+                    description="Leave empty for all"
+                    value={sizesMaxRows}
+                    onChange={setSizesMaxRows}
+                    min={1}
+                    placeholder="All"
+                    size="sm"
+                  />
+                </Group>
+
+                <Button
+                  leftSection={<IconPlayerPlay size={16} />}
+                  onClick={() =>
+                    startSizesMutation.mutate({
+                      batchSize: Number(sizesBatchSize),
+                      delayBetweenBatchesMs: Number(sizesDelayMs),
+                      maxRows:
+                        sizesMaxRows === '' ? undefined : Number(sizesMaxRows),
+                    })
+                  }
+                  loading={startSizesMutation.isPending}
+                >
+                  Start Backfill Sizes
+                </Button>
+
+                {startSizesMutation.error && (
+                  <Alert color="red" title="Error">
+                    {startSizesMutation.error.message}
+                  </Alert>
+                )}
+              </>
+            )}
+          </Stack>
+        </Card>
+      )}
 
       {/* Bulk Backup Section */}
       <Card withBorder>

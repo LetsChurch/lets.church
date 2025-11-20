@@ -9,8 +9,14 @@ import { backupS3, ingestS3, publicS3 } from '../../util/s3';
 
 const WORK_DIR = process.env.BACKUP_WORKING_DIRECTORY ?? '/data/backup';
 
+// S3 has a 5GB limit for single PUT requests
+// Use multipart upload for files larger than this threshold
+const MULTIPART_THRESHOLD = 4.5 * 1024 * 1024 * 1024; // 4.5GB to be safe
+
 /**
  * Backs up a file from S3 to backup storage with DEEP_ARCHIVE storage class.
+ * For large files (>4.5GB), uses multipart upload to avoid the 5GB PUT limit.
+ * Multipart uploads can handle files up to 5TB.
  * Updates the UploadState record with the backup status.
  */
 export default async function backupToGlacier(
@@ -73,14 +79,28 @@ export default async function backupToGlacier(
 
     heartbeat('Uploading to backup');
 
-    // Upload from disk to backup with DEEP_ARCHIVE storage class
-    const readStream = createReadStream(localFilePath);
-    await backupS3.putFile({
-      key: uploadState.s3Key,
-      contentType: sourceObject.ContentType ?? 'application/octet-stream',
-      body: readStream,
-      contentLength: sizeBytes,
-    });
+    // Use multipart upload for large files to avoid size limits
+    const backupKey = uploadState.s3Key;
+    if (sizeBytes > MULTIPART_THRESHOLD) {
+      logger.info(`Using multipart upload for large file: ${sizeBytes} bytes`);
+      await backupS3.putFileMultipart({
+        key: backupKey,
+        contentType: sourceObject.ContentType ?? 'application/octet-stream',
+        path: localFilePath,
+        onProgress: (progress) => {
+          heartbeat(`Uploading: ${(progress * 100).toFixed(1)}%`);
+        },
+      });
+    } else {
+      // Use single PUT for smaller files
+      const readStream = createReadStream(localFilePath);
+      await backupS3.putFile({
+        key: backupKey,
+        contentType: sourceObject.ContentType ?? 'application/octet-stream',
+        body: readStream,
+        contentLength: sizeBytes,
+      });
+    }
 
     heartbeat('Backup complete, updating status');
 
@@ -89,7 +109,7 @@ export default async function backupToGlacier(
       where: { id: uploadStateId },
       data: {
         backupStatus: 'BACKED_UP',
-        backupKey: uploadState.s3Key,
+        backupKey,
         sizeBytes: BigInt(sizeBytes),
         backedUpAt: new Date(),
       },
@@ -99,7 +119,7 @@ export default async function backupToGlacier(
       `Successfully backed up ${uploadState.s3Key} (${sizeBytes} bytes)`,
     );
 
-    return { backupKey: uploadState.s3Key, sizeBytes };
+    return { backupKey, sizeBytes };
   } catch (error) {
     // Update status to BACKUP_FAILED on error
     await prisma.uploadState.update({

@@ -1,4 +1,9 @@
 export {
+  type BackfillUploadStateSizesWorkflowParams,
+  backfillUploadStateSizesWorkflow,
+  getBackfillSizesProgressQuery,
+} from './backfill-upload-state-sizes';
+export {
   type BackfillUploadStatesWorkflowParams,
   backfillUploadStatesWorkflow,
   getBackfillProgressQuery,

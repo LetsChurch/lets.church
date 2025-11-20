@@ -59,13 +59,19 @@ export async function handleMultipartMediaUploadWorkflow(
       await finalizeUploadRecord(targetId, finalizingUserId, s3UploadKey);
     }
 
-    await completeMultipartUpload(clientId, s3UploadId, s3UploadKey, eTags);
+    const sizeBytes = await completeMultipartUpload(
+      clientId,
+      s3UploadId,
+      s3UploadKey,
+      eTags,
+    );
 
     // Create UploadState record and launch backup workflow
     const uploadStateId = await createUploadState({
       s3Key: s3UploadKey,
       clientId,
       uploadType: postProcess,
+      sizeBytes,
       uploadRecordId:
         postProcess === 'media' || postProcess === 'thumbnail'
           ? targetId
