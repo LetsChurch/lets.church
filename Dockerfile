@@ -18,21 +18,27 @@ RUN corepack enable
 # Prisma Dependencies
 RUN apt-get update -y && apt-get install -y --no-install-recommends openssl libssl-dev ca-certificates curl && \
   rm -rf /var/lib/apt/lists/*
+# Create directories before user creation to avoid needing root later
+RUN mkdir -p /usr/src/app /data
+WORKDIR /usr/src/app
+# Create user early to avoid expensive chown operations later
+RUN groupadd -r nodeapp && useradd -r -g nodeapp -m nodeapp && \
+  chown -R nodeapp:nodeapp /usr/src/app /data
+USER nodeapp
 
 FROM base AS package-json
-WORKDIR /usr/src/app
-COPY pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY packages/util/package.json ./packages/util/
-COPY packages/s3/package.json ./packages/s3/
-COPY packages/db/package.json ./packages/db/
-COPY packages/elasticsearch/package.json ./packages/elasticsearch/
-COPY packages/temporal/package.json ./packages/temporal/
-COPY packages/background-worker/package.json ./packages/background-worker/
-COPY packages/web/package.json ./packages/web/
-COPY packages/import-worker/package.json ./packages/import-worker/
-COPY packages/probe-worker/package.json ./packages/probe-worker/
-COPY packages/transcode-worker/package.json ./packages/transcode-worker/
-COPY packages/transcribe-worker/package.json ./packages/transcribe-worker/
+COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY --chown=nodeapp:nodeapp packages/util/package.json ./packages/util/
+COPY --chown=nodeapp:nodeapp packages/s3/package.json ./packages/s3/
+COPY --chown=nodeapp:nodeapp packages/db/package.json ./packages/db/
+COPY --chown=nodeapp:nodeapp packages/elasticsearch/package.json ./packages/elasticsearch/
+COPY --chown=nodeapp:nodeapp packages/temporal/package.json ./packages/temporal/
+COPY --chown=nodeapp:nodeapp packages/background-worker/package.json ./packages/background-worker/
+COPY --chown=nodeapp:nodeapp packages/web/package.json ./packages/web/
+COPY --chown=nodeapp:nodeapp packages/import-worker/package.json ./packages/import-worker/
+COPY --chown=nodeapp:nodeapp packages/probe-worker/package.json ./packages/probe-worker/
+COPY --chown=nodeapp:nodeapp packages/transcode-worker/package.json ./packages/transcode-worker/
+COPY --chown=nodeapp:nodeapp packages/transcribe-worker/package.json ./packages/transcribe-worker/
 
 FROM package-json AS deps
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
@@ -41,11 +47,10 @@ FROM package-json AS prod-deps
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
 
 FROM base AS build
-WORKDIR /usr/src/app
-COPY --from=deps /usr/src/app/node_modules ./node_modules
-COPY --from=deps /usr/src/app/packages/ ./packages/
-COPY pnpm-workspace.yaml tsconfig.json ./
-COPY packages/ ./packages/
+COPY --chown=nodeapp:nodeapp --from=deps /usr/src/app/node_modules ./node_modules
+COPY --chown=nodeapp:nodeapp --from=deps /usr/src/app/packages/ ./packages/
+COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml tsconfig.json ./
+COPY --chown=nodeapp:nodeapp packages/ ./packages/
 ENV NODE_ENV=production
 ENV VITE_SENTRY_DSN=https://d641f53f296e7abff3b6b269a4decfc4@o387306.ingest.sentry.io/4506108399190016
 ENV VITE_TURNSTILE_SITEKEY=0x4AAAAAAAEHhiqW0UvoZTf3
@@ -59,17 +64,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 imagema
   rm -rf /var/lib/apt/lists/*
 
 FROM base AS prod
-RUN groupadd -r nodeapp && useradd -r -g nodeapp -m nodeapp
-RUN mkdir -p /data && chown -R nodeapp:nodeapp /data
-WORKDIR /usr/src/app
-COPY pnpm-workspace.yaml ./
+COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml ./
 # Copy all node_modules
-COPY --from=prod-deps /usr/src/app/node_modules ./node_modules
-COPY --from=prod-deps /usr/src/app/packages/ ./packages/
+COPY --chown=nodeapp:nodeapp --from=prod-deps /usr/src/app/node_modules ./node_modules
+COPY --chown=nodeapp:nodeapp --from=prod-deps /usr/src/app/packages/ ./packages/
 # Copy package sources
-COPY --from=build /usr/src/app/packages/ ./packages/
-RUN chown -R nodeapp:nodeapp /usr/src/app
-USER nodeapp
+COPY --chown=nodeapp:nodeapp --from=build /usr/src/app/packages/ ./packages/
 
 # Base stage for workers with image processing dependencies
 FROM prod AS prod-with-image-tools
@@ -140,8 +140,6 @@ CMD ["pnpm", "--filter", "@letschurch/import-worker", "run", "start"]
 
 FROM nvidia/cuda:12.6.2-cudnn-runtime-ubuntu22.04 AS transcribe-worker
 ARG WHISPER_MODEL=tiny.en
-RUN groupadd -r nodeapp && useradd -r -g nodeapp -m nodeapp
-RUN mkdir -p /data && chown -R nodeapp:nodeapp /data
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 COPY --from=node:24.4.1-slim /usr/local/bin/node /usr/local/bin/
@@ -165,15 +163,18 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   rm -rf /var/lib/apt/lists/* && \
   apt-get clean && \
   pip3 install --no-cache-dir git+https://github.com/Softcatala/whisper-ctranslate2.git@0.2.9
+# Create directories before user creation to avoid needing root later
+RUN mkdir -p /usr/src/app /data
 WORKDIR /usr/src/app
-COPY pnpm-workspace.yaml ./
+# Create user early to avoid expensive chown operations later
+RUN groupadd -r nodeapp && useradd -r -g nodeapp -m nodeapp && \
+  chown -R nodeapp:nodeapp /usr/src/app /data
+COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml ./
 # Copy node_modules
-COPY --from=prod-deps /usr/src/app/node_modules ./node_modules
-COPY --from=prod-deps /usr/src/app/packages/ ./packages/
+COPY --chown=nodeapp:nodeapp --from=prod-deps /usr/src/app/node_modules ./node_modules
+COPY --chown=nodeapp:nodeapp --from=prod-deps /usr/src/app/packages/ ./packages/
 # Copy package sources
-COPY --from=build /usr/src/app/packages/ ./packages/
-RUN chown -R nodeapp:nodeapp /usr/src/app
+COPY --chown=nodeapp:nodeapp --from=build /usr/src/app/packages/ ./packages/
 USER nodeapp
-WORKDIR /usr/src/app
 ENV NODE_ENV=production
 CMD ["pnpm", "--filter", "@letschurch/transcribe-worker", "run", "start"]
