@@ -138,12 +138,12 @@ export async function claimUploadStatesForBackup(
   // Use a raw query to atomically select and update in one operation
   // This prevents race conditions where multiple batches select the same uploads
   const claimed = await prisma.$queryRaw<Array<{ id: string }>>`
-    UPDATE "UploadState"
-    SET "backupStatus" = 'BACKING_UP', "updatedAt" = NOW()
+    UPDATE "upload_state"
+    SET "backup_status" = 'BACKING_UP', "updated_at" = NOW()
     WHERE id IN (
-      SELECT id FROM "UploadState"
-      WHERE "backupStatus" = 'NOT_BACKED_UP'
-      ORDER BY "createdAt" ASC
+      SELECT id FROM "upload_state"
+      WHERE "backup_status" = 'NOT_BACKED_UP'
+      ORDER BY "created_at" ASC
       LIMIT ${limit}
       FOR UPDATE SKIP LOCKED
     )
