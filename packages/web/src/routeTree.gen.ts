@@ -46,6 +46,7 @@ import { Route as DashboardAdminProcessingUploadsRouteImport } from './routes/da
 import { Route as DashboardAdminOrganizationTagsRouteImport } from './routes/dashboard_/admin_.organization-tags'
 import { Route as DashboardAdminOrganizationApprovalsRouteImport } from './routes/dashboard_/admin_.organization-approvals'
 import { Route as DashboardAdminFeaturedRouteImport } from './routes/dashboard_/admin_/featured'
+import { Route as DashboardAdminFailedUploadsRouteImport } from './routes/dashboard_/admin_.failed-uploads'
 import { Route as DashboardAdminChannelApprovalsRouteImport } from './routes/dashboard_/admin_.channel-approvals'
 import { Route as DashboardAccountSecurityRouteImport } from './routes/dashboard_/account_.security'
 import { Route as DashboardAccountProfileRouteImport } from './routes/dashboard_/account_.profile'
@@ -263,6 +264,12 @@ const DashboardAdminFeaturedRoute = DashboardAdminFeaturedRouteImport.update({
   path: '/admin/featured',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardAdminFailedUploadsRoute =
+  DashboardAdminFailedUploadsRouteImport.update({
+    id: '/admin_/failed-uploads',
+    path: '/admin/failed-uploads',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardAdminChannelApprovalsRoute =
   DashboardAdminChannelApprovalsRouteImport.update({
     id: '/admin_/channel-approvals',
@@ -433,6 +440,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/account/profile': typeof DashboardAccountProfileRoute
   '/dashboard/account/security': typeof DashboardAccountSecurityRoute
   '/dashboard/admin/channel-approvals': typeof DashboardAdminChannelApprovalsRoute
+  '/dashboard/admin/failed-uploads': typeof DashboardAdminFailedUploadsRoute
   '/dashboard/admin/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard/admin/organization-approvals': typeof DashboardAdminOrganizationApprovalsRoute
   '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
@@ -493,6 +501,7 @@ export interface FileRoutesByTo {
   '/dashboard/account/profile': typeof DashboardAccountProfileRoute
   '/dashboard/account/security': typeof DashboardAccountSecurityRoute
   '/dashboard/admin/channel-approvals': typeof DashboardAdminChannelApprovalsRoute
+  '/dashboard/admin/failed-uploads': typeof DashboardAdminFailedUploadsRoute
   '/dashboard/admin/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard/admin/organization-approvals': typeof DashboardAdminOrganizationApprovalsRoute
   '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
@@ -557,6 +566,7 @@ export interface FileRoutesById {
   '/dashboard_/account_/profile': typeof DashboardAccountProfileRoute
   '/dashboard_/account_/security': typeof DashboardAccountSecurityRoute
   '/dashboard_/admin_/channel-approvals': typeof DashboardAdminChannelApprovalsRoute
+  '/dashboard_/admin_/failed-uploads': typeof DashboardAdminFailedUploadsRoute
   '/dashboard_/admin_/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard_/admin_/organization-approvals': typeof DashboardAdminOrganizationApprovalsRoute
   '/dashboard_/admin_/organization-tags': typeof DashboardAdminOrganizationTagsRoute
@@ -621,6 +631,7 @@ export interface FileRouteTypes {
     | '/dashboard/account/profile'
     | '/dashboard/account/security'
     | '/dashboard/admin/channel-approvals'
+    | '/dashboard/admin/failed-uploads'
     | '/dashboard/admin/featured'
     | '/dashboard/admin/organization-approvals'
     | '/dashboard/admin/organization-tags'
@@ -681,6 +692,7 @@ export interface FileRouteTypes {
     | '/dashboard/account/profile'
     | '/dashboard/account/security'
     | '/dashboard/admin/channel-approvals'
+    | '/dashboard/admin/failed-uploads'
     | '/dashboard/admin/featured'
     | '/dashboard/admin/organization-approvals'
     | '/dashboard/admin/organization-tags'
@@ -744,6 +756,7 @@ export interface FileRouteTypes {
     | '/dashboard_/account_/profile'
     | '/dashboard_/account_/security'
     | '/dashboard_/admin_/channel-approvals'
+    | '/dashboard_/admin_/failed-uploads'
     | '/dashboard_/admin_/featured'
     | '/dashboard_/admin_/organization-approvals'
     | '/dashboard_/admin_/organization-tags'
@@ -1047,6 +1060,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAdminFeaturedRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard_/admin_/failed-uploads': {
+      id: '/dashboard_/admin_/failed-uploads'
+      path: '/admin/failed-uploads'
+      fullPath: '/dashboard/admin/failed-uploads'
+      preLoaderRoute: typeof DashboardAdminFailedUploadsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard_/admin_/channel-approvals': {
       id: '/dashboard_/admin_/channel-approvals'
       path: '/admin/channel-approvals'
@@ -1290,6 +1310,7 @@ interface DashboardRouteChildren {
   DashboardAccountProfileRoute: typeof DashboardAccountProfileRoute
   DashboardAccountSecurityRoute: typeof DashboardAccountSecurityRoute
   DashboardAdminChannelApprovalsRoute: typeof DashboardAdminChannelApprovalsRoute
+  DashboardAdminFailedUploadsRoute: typeof DashboardAdminFailedUploadsRoute
   DashboardAdminFeaturedRoute: typeof DashboardAdminFeaturedRoute
   DashboardAdminOrganizationApprovalsRoute: typeof DashboardAdminOrganizationApprovalsRoute
   DashboardAdminOrganizationTagsRoute: typeof DashboardAdminOrganizationTagsRoute
@@ -1327,6 +1348,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAccountProfileRoute: DashboardAccountProfileRoute,
   DashboardAccountSecurityRoute: DashboardAccountSecurityRoute,
   DashboardAdminChannelApprovalsRoute: DashboardAdminChannelApprovalsRoute,
+  DashboardAdminFailedUploadsRoute: DashboardAdminFailedUploadsRoute,
   DashboardAdminFeaturedRoute: DashboardAdminFeaturedRoute,
   DashboardAdminOrganizationApprovalsRoute:
     DashboardAdminOrganizationApprovalsRoute,

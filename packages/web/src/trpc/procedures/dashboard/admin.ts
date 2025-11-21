@@ -2,6 +2,7 @@ import { prisma } from '@letschurch/db';
 import { parseS3Env } from '@letschurch/s3';
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
+import pFilter from 'p-filter';
 import { z } from 'zod';
 import { IncomingIdSchema } from '@/schemas/common';
 import {
@@ -14,6 +15,7 @@ import {
   cancelBackfillUploadStates,
   cancelBulkBackupToGlacier,
   cancelMigrateViewRanges,
+  client,
   getBackfillUploadStateSizesProgress,
   getBackfillUploadStatesProgress,
   getBulkBackupToGlacierProgress,
@@ -1683,4 +1685,258 @@ export const adminRouter = router({
       });
     }
   }),
+
+  getFailedUploads: adminProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+      }),
+    )
+    .query(async ({ input }) => {
+      moduleLogger.info('Fetching failed uploads');
+
+      try {
+        // Get uploads that have been finalized but not fully processed
+        const failedUploads = await prisma.uploadRecord.findMany({
+          where: {
+            uploadFinalized: true,
+            finalizedUploadKey: { not: null },
+            OR: [
+              {
+                transcodingStartedAt: null,
+                transcodingFinishedAt: null,
+              },
+              {
+                transcodingStartedAt: { not: null },
+                transcodingFinishedAt: null,
+              },
+              {
+                transcribingStartedAt: { not: null },
+                transcribingFinishedAt: null,
+              },
+            ],
+          },
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            createdAt: true,
+            uploadFinalizedAt: true,
+            finalizedUploadKey: true,
+            transcodingStartedAt: true,
+            transcodingFinishedAt: true,
+            transcribingStartedAt: true,
+            transcribingFinishedAt: true,
+            channel: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+            createdBy: {
+              select: {
+                id: true,
+                username: true,
+                fullName: true,
+              },
+            },
+          },
+          orderBy: { uploadFinalizedAt: 'desc' },
+          take: input.limit,
+          skip: input.offset,
+        });
+
+        const totalCount = await prisma.uploadRecord.count({
+          where: {
+            uploadFinalized: true,
+            finalizedUploadKey: { not: null },
+            OR: [
+              {
+                transcodingStartedAt: null,
+                transcodingFinishedAt: null,
+              },
+              {
+                transcodingStartedAt: { not: null },
+                transcodingFinishedAt: null,
+              },
+              {
+                transcribingStartedAt: { not: null },
+                transcribingFinishedAt: null,
+              },
+            ],
+          },
+        });
+
+        // Filter out uploads that are currently processing
+        const temporalClient = await client;
+        const actuallyFailedUploads = await pFilter(
+          failedUploads,
+          async (upload) => {
+            if (!upload.finalizedUploadKey) {
+              return true; // Include uploads without a finalized key
+            }
+
+            try {
+              const workflowId = `processMedia:${upload.finalizedUploadKey}`;
+              const handle = temporalClient.workflow.getHandle(workflowId);
+              const description = await handle.describe();
+
+              // Exclude uploads with running workflows
+              return description.status.name !== 'RUNNING';
+            } catch {
+              // Workflow doesn't exist or can't be accessed - include the upload
+              return true;
+            }
+          },
+          { concurrency: 25 },
+        );
+
+        return {
+          uploads: actuallyFailedUploads,
+          totalCount,
+        };
+      } catch (error) {
+        moduleLogger.error('Failed to fetch failed uploads', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch failed uploads',
+        });
+      }
+    }),
+
+  retryUploadProcessing: adminProcedure
+    .input(
+      z.object({
+        uploadRecordId: z.string().uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Retrying upload processing', {
+        uploadRecordId: input.uploadRecordId,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        const upload = await prisma.uploadRecord.findUnique({
+          where: { id: input.uploadRecordId },
+          select: {
+            id: true,
+            uploadFinalized: true,
+            finalizedUploadKey: true,
+            transcodingFinishedAt: true,
+            transcribingFinishedAt: true,
+          },
+        });
+
+        if (!upload) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Upload not found',
+          });
+        }
+
+        if (!upload.uploadFinalized || !upload.finalizedUploadKey) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Upload is not finalized',
+          });
+        }
+
+        // Check if already processed
+        if (upload.transcodingFinishedAt && upload.transcribingFinishedAt) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Upload is already fully processed',
+          });
+        }
+
+        // Check if workflow is already running
+        const temporalClient = await client;
+        const workflowId = `processMedia:${upload.finalizedUploadKey}`;
+
+        try {
+          const handle = temporalClient.workflow.getHandle(workflowId);
+          const description = await handle.describe();
+
+          if (description.status.name === 'RUNNING') {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Processing workflow is already running',
+            });
+          }
+        } catch (error) {
+          // Workflow doesn't exist, which is fine - we'll start it
+          if (error instanceof TRPCError) {
+            throw error;
+          }
+        }
+
+        // Import the workflow from temporal package
+        const { processMediaWorkflow } = await import(
+          '@letschurch/temporal/workflows/background'
+        );
+        const { BACKGROUND_QUEUE } = await import(
+          '@letschurch/temporal/queues'
+        );
+
+        // Determine what needs to be processed
+        let scope: 'transcode' | 'transcribe' | 'everything' = 'everything';
+        if (upload.transcodingFinishedAt && !upload.transcribingFinishedAt) {
+          scope = 'transcribe';
+        } else if (
+          !upload.transcodingFinishedAt &&
+          upload.transcribingFinishedAt
+        ) {
+          scope = 'transcode';
+        }
+
+        // Reset timestamps to allow reprocessing
+        await prisma.uploadRecord.update({
+          where: { id: input.uploadRecordId },
+          data: {
+            transcodingStartedAt: null,
+            transcodingFinishedAt: null,
+            transcribingStartedAt: null,
+            transcribingFinishedAt: null,
+          },
+        });
+
+        // Start the workflow
+        await temporalClient.workflow.start(processMediaWorkflow, {
+          taskQueue: BACKGROUND_QUEUE,
+          workflowId,
+          args: [input.uploadRecordId, scope],
+          retry: { maximumAttempts: 5 },
+        });
+
+        moduleLogger.info('Upload processing workflow started', {
+          uploadRecordId: input.uploadRecordId,
+          workflowId,
+          scope,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error('Failed to retry upload processing', {
+          uploadRecordId: input.uploadRecordId,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to retry upload processing',
+        });
+      }
+    }),
 });

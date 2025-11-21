@@ -1,0 +1,225 @@
+import {
+  ActionIcon,
+  Badge,
+  Box,
+  Button,
+  Group,
+  Stack,
+  Table,
+  Text,
+  Title,
+  Tooltip,
+} from '@mantine/core';
+import { IconRefresh } from '@tabler/icons-react';
+import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
+import { useTRPC } from '@/trpc/react';
+import { formatDate } from '@/util/format';
+
+export const Route = createFileRoute('/dashboard_/admin_/failed-uploads')({
+  component: RouteComponent,
+  beforeLoad: async ({ context }) => {
+    const hasSession = await context.queryClient.fetchQuery(
+      context.trpc.common.hasValidSession.queryOptions(),
+    );
+    if (!hasSession) {
+      throw redirect({ to: '/auth/login' });
+    }
+
+    const currentUser = await context.queryClient.fetchQuery(
+      context.trpc.common.getCurrentUser.queryOptions(),
+    );
+
+    if (currentUser.role !== 'ADMIN') {
+      throw redirect({ to: '/dashboard' });
+    }
+  },
+  loader: async ({ context: { queryClient, trpc } }) => {
+    await queryClient.ensureQueryData(
+      trpc.dashboard.admin.getFailedUploads.queryOptions({
+        limit: 50,
+        offset: 0,
+      }),
+    );
+    return {
+      backNavigation: {
+        label: 'Admin',
+        to: '/dashboard/admin',
+      },
+    };
+  },
+});
+
+function RouteComponent() {
+  const trpc = useTRPC();
+  const navigate = useNavigate();
+
+  const { data, refetch } = useSuspenseQuery({
+    ...trpc.dashboard.admin.getFailedUploads.queryOptions({
+      limit: 50,
+      offset: 0,
+    }),
+    refetchInterval: 10000, // Refresh every 10 seconds
+  });
+
+  const retryMutation = useMutation(
+    trpc.dashboard.admin.retryUploadProcessing.mutationOptions({
+      onSuccess: () => {
+        refetch();
+      },
+    }),
+  );
+
+  const handleRetry = (uploadRecordId: string) => {
+    retryMutation.mutate({ uploadRecordId });
+  };
+
+  const getStatusBadge = (upload: (typeof data.uploads)[0]) => {
+    const {
+      transcodingStartedAt,
+      transcodingFinishedAt,
+      transcribingStartedAt,
+      transcribingFinishedAt,
+    } = upload;
+
+    if (!transcodingStartedAt && !transcribingStartedAt) {
+      return (
+        <Badge color="red" size="sm">
+          Not Started
+        </Badge>
+      );
+    }
+
+    if (transcodingStartedAt && !transcodingFinishedAt) {
+      return (
+        <Badge color="orange" size="sm">
+          Transcoding Failed
+        </Badge>
+      );
+    }
+
+    if (transcribingStartedAt && !transcribingFinishedAt) {
+      return (
+        <Badge color="orange" size="sm">
+          Transcribing Failed
+        </Badge>
+      );
+    }
+
+    return (
+      <Badge color="gray" size="sm">
+        Unknown
+      </Badge>
+    );
+  };
+
+  return (
+    <Stack gap="lg">
+      <Group justify="space-between" align="flex-start">
+        <div>
+          <Title order={1}>Failed Uploads</Title>
+          <Text c="dimmed">
+            {data.uploads.length} failed uploads (out of {data.totalCount} total
+            unprocessed)
+          </Text>
+        </div>
+        <Button
+          leftSection={<IconRefresh size={16} />}
+          onClick={() => refetch()}
+          variant="light"
+        >
+          Refresh
+        </Button>
+      </Group>
+
+      <Table verticalSpacing="md">
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th>Upload</Table.Th>
+            <Table.Th>Channel</Table.Th>
+            <Table.Th>Uploaded By</Table.Th>
+            <Table.Th>Status</Table.Th>
+            <Table.Th>Finalized</Table.Th>
+            <Table.Th>Actions</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {data.uploads.length === 0 ? (
+            <Table.Tr>
+              <Table.Td colSpan={6}>
+                <Text ta="center" c="dimmed" py="xl">
+                  No failed uploads found
+                </Text>
+              </Table.Td>
+            </Table.Tr>
+          ) : (
+            data.uploads.map((upload) => (
+              <Table.Tr
+                key={upload.id}
+                style={{ cursor: 'pointer' }}
+                onClick={(e) => {
+                  // Don't navigate if clicking on the retry button
+                  if ((e.target as HTMLElement).closest('button')) {
+                    return;
+                  }
+                  navigate({
+                    to: `/dashboard/channels/${upload.channel.id}/uploads/${upload.id}`,
+                  });
+                }}
+              >
+                <Table.Td>
+                  <Box style={{ maxWidth: 400 }}>
+                    <Text fw={500} lineClamp={2} size="sm">
+                      {upload.title || 'Untitled'}
+                    </Text>
+                    {upload.description ? (
+                      <Text size="xs" c="dimmed" lineClamp={2} mt={2}>
+                        {upload.description}
+                      </Text>
+                    ) : null}
+                  </Box>
+                </Table.Td>
+                <Table.Td>
+                  <Text size="sm" fw={500}>
+                    {upload.channel.name}
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    @{upload.channel.slug}
+                  </Text>
+                </Table.Td>
+                <Table.Td>
+                  <Text size="sm">
+                    {upload.createdBy.fullName || upload.createdBy.username}
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    @{upload.createdBy.username}
+                  </Text>
+                </Table.Td>
+                <Table.Td>{getStatusBadge(upload)}</Table.Td>
+                <Table.Td>
+                  <Text size="sm">
+                    {upload.uploadFinalizedAt
+                      ? formatDate(upload.uploadFinalizedAt, 'short')
+                      : 'N/A'}
+                  </Text>
+                </Table.Td>
+                <Table.Td onClick={(e) => e.stopPropagation()}>
+                  <Tooltip label="Retry processing">
+                    <ActionIcon
+                      variant="light"
+                      color="blue"
+                      onClick={() => handleRetry(upload.id)}
+                      loading={retryMutation.isPending}
+                    >
+                      <IconRefresh size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                </Table.Td>
+              </Table.Tr>
+            ))
+          )}
+        </Table.Tbody>
+      </Table>
+    </Stack>
+  );
+}

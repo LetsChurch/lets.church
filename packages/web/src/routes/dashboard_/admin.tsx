@@ -32,6 +32,12 @@ export const Route = createFileRoute('/dashboard_/admin')({
       queryClient.ensureQueryData(
         trpc.dashboard.admin.getUploadBackupStats.queryOptions(),
       ),
+      queryClient.ensureQueryData(
+        trpc.dashboard.admin.getFailedUploads.queryOptions({
+          limit: 1,
+          offset: 0,
+        }),
+      ),
     ]);
     return {
       backNavigation: {
@@ -55,6 +61,13 @@ function AdminPage() {
 
   const { data: backupStats } = useSuspenseQuery(
     trpc.dashboard.admin.getUploadBackupStats.queryOptions(),
+  );
+
+  const { data: failedUploads } = useSuspenseQuery(
+    trpc.dashboard.admin.getFailedUploads.queryOptions({
+      limit: 1,
+      offset: 0,
+    }),
   );
 
   return (
@@ -148,6 +161,29 @@ function AdminPage() {
           </Group>
           <Text size="sm" c="dimmed">
             Monitor uploads currently being processed
+          </Text>
+        </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
+          to="/dashboard/admin/failed-uploads"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Failed Uploads</Text>
+            <Badge
+              color={failedUploads.uploads.length === 0 ? 'green' : 'red'}
+              size="sm"
+            >
+              {failedUploads.uploads.length === 0
+                ? 'None'
+                : failedUploads.uploads.length}
+            </Badge>
+          </Group>
+          <Text size="sm" c="dimmed">
+            Retry uploads that failed to process
           </Text>
         </Card>
         <Card
