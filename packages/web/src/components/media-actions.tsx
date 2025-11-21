@@ -17,7 +17,7 @@ import {
   IconVolume,
 } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import LcButton from '@/components/lc-button';
 import LcButtonGroup from '@/components/lc-button-group';
 import { LcMenu, MenuItemButton, MenuItemLink } from '@/components/lc-menu';
@@ -119,6 +119,22 @@ export function MediaActions({
   const abortController = useAbortController();
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showLeftFade, setShowLeftFade] = useState(false);
+  const [showRightFade, setShowRightFade] = useState(false);
+
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+    setShowLeftFade(scrollLeft > 0);
+    setShowRightFade(scrollLeft < scrollWidth - clientWidth - 1);
+  }, []);
+
+  useEffect(() => {
+    handleScroll();
+    window.addEventListener('resize', handleScroll);
+    return () => window.removeEventListener('resize', handleScroll);
+  }, [handleScroll]);
 
   const handleShare = async () => {
     // Check if native share is available
@@ -204,14 +220,25 @@ export function MediaActions({
 
   return (
     <>
-      <div className="-mx-4 flex min-w-0 items-center gap-2 sm:mx-0">
+      <div className="-mx-4 sm:-mx-4 flex min-w-0 items-center gap-2">
         {/* Scrollable area with shadows */}
         <div className="relative min-w-0">
           {/* Left fade shadow */}
-          <div className="pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-4 bg-gradient-to-r from-page to-transparent sm:w-0" />
+          <div
+            className={cn(
+              'pointer-events-none absolute top-0 bottom-0 left-0 z-10 transition-opacity duration-200',
+              'w-4 bg-gradient-to-r from-page to-transparent',
+              'sm:w-9 sm:from-40%',
+              showLeftFade ? 'opacity-100' : 'opacity-0',
+            )}
+          />
 
           {/* Scrollable content */}
-          <div className="flex items-center gap-2.5 overflow-x-auto px-4 py-1 sm:px-0">
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="flex items-center gap-2.5 overflow-x-auto px-4 py-1"
+          >
             {/* Channel Link */}
             {channelLink}
 
@@ -278,11 +305,16 @@ export function MediaActions({
           </div>
 
           {/* Right fade shadow */}
-          <div className="-right-px pointer-events-none absolute top-0 bottom-0 z-10 w-4 bg-gradient-to-l from-page to-transparent sm:w-0" />
+          <div
+            className={cn(
+              '-right-px pointer-events-none absolute top-0 bottom-0 z-10 w-4 bg-gradient-to-l from-page to-transparent transition-opacity duration-200 sm:w-9 sm:from-40% sm:from-page',
+              showRightFade ? 'opacity-100' : 'opacity-0',
+            )}
+          />
         </div>
 
         {/* More (Embed, Download) - always visible */}
-        <div className="shrink-0 pr-4 sm:pr-0">
+        <div className="shrink-0 pr-4">
           <LcMenu.Root>
             <LcMenu.Trigger
               render={(props) => (
