@@ -17,7 +17,7 @@ spec:
     spec:
       restartPolicy: Always
       containers:
-        - image: metabase/metabase:v0.51.3.6
+        - image: metabase/metabase:v0.57.3.1
           name: metabase
           ports:
             - containerPort: 3000
