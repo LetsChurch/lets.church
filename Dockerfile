@@ -57,11 +57,13 @@ ENV VITE_TURNSTILE_SITEKEY=0x4AAAAAAAEHhiqW0UvoZTf3
 RUN pnpm run -r build
 
 FROM build AS dev
+USER root
 COPY --from=build-audiowaveform /home/build/audiowaveform/build/audiowaveform /usr/bin/
 COPY --from=jauderho/yt-dlp:2025.03.31 /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
 COPY --from=videah/oxipng:7.0.0 /usr/local/bin/oxipng /usr/local/bin/oxipng
 RUN apt-get update && apt-get install -y --no-install-recommends python3 imagemagick jpegoptim ffmpeg && \
   rm -rf /var/lib/apt/lists/*
+USER nodeapp
 
 FROM base AS prod
 COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml ./
