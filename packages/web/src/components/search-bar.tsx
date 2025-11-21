@@ -96,16 +96,17 @@ export default function SearchBar({
     }
   };
 
-  const handleAutocompleteSelect = (value: string | null) => {
-    if (value?.trim()) {
+  const handleItemClick = (searchQuery: string) => {
+    if (searchQuery.trim()) {
+      // Optimistically update the cache if logged in
       if (isLoggedIn) {
-        addSearch(value);
+        addSearch(searchQuery);
       }
 
       navigate({
         to: '/search',
         search: {
-          q: value,
+          q: searchQuery,
           focus: 'media' as const,
           channelSlugs: channelSlug ? [channelSlug] : undefined,
         },
@@ -114,11 +115,7 @@ export default function SearchBar({
   };
 
   return (
-    <Autocomplete.Root
-      defaultValue={defaultValue}
-      items={searchQueries}
-      onValueChange={(value) => handleAutocompleteSelect(value)}
-    >
+    <Autocomplete.Root defaultValue={defaultValue} items={searchQueries}>
       <form
         onSubmit={handleSubmit}
         className={cn(
@@ -196,6 +193,7 @@ export default function SearchBar({
                 <Autocomplete.Item
                   key={search}
                   value={search}
+                  onClick={() => handleItemClick(search)}
                   className="cursor-pointer px-4 py-2.5 text-primary/80 text-sm outline-none transition-colors hover:bg-white/10 hover:text-primary data-highlighted:bg-white/10 data-highlighted:text-primary"
                 >
                   <div className="flex items-center justify-between gap-3">
