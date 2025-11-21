@@ -2,8 +2,8 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 import { EmptyState } from '@/components/empty-state';
-import Header from '@/components/header';
 import { LibraryTabs } from '@/components/library-tabs';
+import MainLayout from '@/components/main-layout';
 import { MediaCard } from '@/components/media-card';
 import { MediaGrid } from '@/components/media-grid';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
@@ -86,59 +86,56 @@ function RouteComponent() {
   const hasItems = savedItems.length > 0;
 
   return (
-    <>
-      <Header />
-      <div className="isolate pb-8 sm:px-16">
-        <div className="mb-6">
-          <h1 className="mb-4 font-bold text-2xl text-primary">Library</h1>
-          <LibraryTabs activeTab="saved" />
-        </div>
-
-        {hasItems ? (
-          <>
-            <MediaGrid>
-              {savedItems.map((upload) => (
-                <MediaCard
-                  key={upload.id}
-                  mediaId={upload.id}
-                  title={upload.title}
-                  thumbnailUrl={upload.thumbnailUrl}
-                  channelName={upload.channel.name}
-                  channelAvatarUrl={upload.channel.avatarUrl}
-                />
-              ))}
-            </MediaGrid>
-
-            {/* Infinite scroll trigger */}
-            <div ref={loadMoreRef} className="h-20" />
-
-            {/* Loading indicator */}
-            {isFetchingNextSaved ? (
-              <div className="flex justify-center py-8">
-                <div className="text-sm text-zinc-400">Loading more...</div>
-              </div>
-            ) : null}
-          </>
-        ) : (
-          <EmptyState
-            emptyTitle={
-              !isLoggedIn
-                ? 'Sign in to access your library'
-                : "You haven't saved any content yet"
-            }
-            emptyBody="Save videos to watch later, catalog your favorite content, track your watch history—and then easily search it all!"
-            {...(!isLoggedIn
-              ? {
-                  emptyCta: 'Sign In',
-                  emptyCtaHref: '/auth/login',
-                }
-              : {
-                  emptyCta: 'Browse Content',
-                  emptyCtaHref: '/',
-                })}
-          />
-        )}
+    <MainLayout>
+      <div className="mb-6">
+        <h1 className="mb-4 font-bold text-2xl text-primary">Library</h1>
+        <LibraryTabs activeTab="saved" />
       </div>
-    </>
+
+      {hasItems ? (
+        <>
+          <MediaGrid>
+            {savedItems.map((upload) => (
+              <MediaCard
+                key={upload.id}
+                mediaId={upload.id}
+                title={upload.title}
+                thumbnailUrl={upload.thumbnailUrl}
+                channelName={upload.channel.name}
+                channelAvatarUrl={upload.channel.avatarUrl}
+              />
+            ))}
+          </MediaGrid>
+
+          {/* Infinite scroll trigger */}
+          <div ref={loadMoreRef} className="h-20" />
+
+          {/* Loading indicator */}
+          {isFetchingNextSaved ? (
+            <div className="flex justify-center py-8">
+              <div className="text-sm text-zinc-400">Loading more...</div>
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <EmptyState
+          emptyTitle={
+            !isLoggedIn
+              ? 'Sign in to access your library'
+              : "You haven't saved any content yet"
+          }
+          emptyBody="Save videos to watch later, catalog your favorite content, track your watch history—and then easily search it all!"
+          {...(!isLoggedIn
+            ? {
+                emptyCta: 'Sign In',
+                emptyCtaHref: '/auth/login',
+              }
+            : {
+                emptyCta: 'Browse Content',
+                emptyCtaHref: '/',
+              })}
+        />
+      )}
+    </MainLayout>
   );
 }

@@ -7,7 +7,7 @@ export const Route = createFileRoute('/_main/about/terms')({
 function RouteComponent() {
   return (
     <article className="prose prose-lg prose-gray dark:prose-invert mx-auto max-w-4xl px-4 py-8">
-      <h1>Terms and conditions</h1>
+      <h2>Terms and conditions</h2>
       <p>
         These terms and conditions (&#8220;Agreement&#8221;) set forth the
         general terms and conditions of your use of the{' '}

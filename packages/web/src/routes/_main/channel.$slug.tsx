@@ -8,7 +8,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useRef, useState } from 'react';
 import { Avatar } from '@/components/avatar';
 import { EmptyState } from '@/components/empty-state';
-import Header from '@/components/header';
+import MainLayout from '@/components/main-layout';
 import { MediaCard } from '@/components/media-card';
 import { MediaGrid } from '@/components/media-grid';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
@@ -148,108 +148,106 @@ function RouteComponent() {
   const hasMedia = mediaItems.length > 0;
 
   return (
-    <>
-      <Header
-        channelSlug={channel.slug}
-        searchPlaceholder={`Search in ${channel.name}...`}
-      />
-      <div className="px-16 pb-8">
-        {/* Channel Header */}
-        <div className="mb-8 flex items-start gap-6">
-          <Avatar
-            src={channel.avatarUrl || undefined}
-            alt={channel.name}
-            fallbackText={channel.name.charAt(0).toUpperCase()}
-            className="size-24 border-fancy-pants"
-            fallbackClassName="bg-brand font-bold text-3xl"
-          />
+    <MainLayout
+      channelSlug={channel.slug}
+      searchPlaceholder={`Search in ${channel.name}...`}
+      containerClassName="px-16 pb-8"
+    >
+      {/* Channel Header */}
+      <div className="mb-8 flex items-start gap-6">
+        <Avatar
+          src={channel.avatarUrl || undefined}
+          alt={channel.name}
+          fallbackText={channel.name.charAt(0).toUpperCase()}
+          className="size-24 border-fancy-pants"
+          fallbackClassName="bg-brand font-bold text-3xl"
+        />
 
-          <div className="flex-1">
-            <h1 className="mb-2 font-bold text-3xl text-primary">
-              {channel.name}
-            </h1>
-            <p className="mb-3 text-sm text-zinc-400">
-              {channel.subscriberCount.toLocaleString()}{' '}
-              {channel.subscriberCount === 1 ? 'follower' : 'followers'}
+        <div className="flex-1">
+          <h1 className="mb-2 font-bold text-3xl text-primary">
+            {channel.name}
+          </h1>
+          <p className="mb-3 text-sm text-zinc-400">
+            {channel.subscriberCount.toLocaleString()}{' '}
+            {channel.subscriberCount === 1 ? 'follower' : 'followers'}
+          </p>
+
+          {channel.description ? (
+            <p className="mb-4 text-primary/80 text-sm leading-relaxed">
+              {channel.description}
             </p>
+          ) : null}
 
-            {channel.description ? (
-              <p className="mb-4 text-primary/80 text-sm leading-relaxed">
-                {channel.description}
-              </p>
-            ) : null}
-
-            {isLoggedIn ? (
-              <button
-                type="button"
-                onClick={handleFollowToggle}
-                disabled={isTogglingFollow}
-                className={
-                  isFollowing
-                    ? 'flex h-9 items-center justify-center rounded-full border border-white/10 bg-white/15 px-4 font-semibold text-primary/80 text-sm backdrop-blur-sm transition-colors hover:bg-white/20 disabled:opacity-50'
-                    : 'flex h-9 items-center justify-center rounded-full border-fancy-pants bg-brand px-4 font-semibold text-primary text-sm transition-opacity hover:opacity-90 disabled:opacity-50'
-                }
-              >
-                {isFollowing ? 'Following' : 'Follow'}
-              </button>
-            ) : (
-              <Link
-                to="/auth/register"
-                className="flex h-9 w-fit items-center justify-center rounded-full border-fancy-pants bg-brand px-4 font-semibold text-primary text-sm transition-opacity hover:opacity-90"
-              >
-                Follow
-              </Link>
-            )}
-          </div>
+          {isLoggedIn ? (
+            <button
+              type="button"
+              onClick={handleFollowToggle}
+              disabled={isTogglingFollow}
+              className={
+                isFollowing
+                  ? 'flex h-9 items-center justify-center rounded-full border border-white/10 bg-white/15 px-4 font-semibold text-primary/80 text-sm backdrop-blur-sm transition-colors hover:bg-white/20 disabled:opacity-50'
+                  : 'flex h-9 items-center justify-center rounded-full border-fancy-pants bg-brand px-4 font-semibold text-primary text-sm transition-opacity hover:opacity-90 disabled:opacity-50'
+              }
+            >
+              {isFollowing ? 'Following' : 'Follow'}
+            </button>
+          ) : (
+            <Link
+              to="/auth/register"
+              className="flex h-9 w-fit items-center justify-center rounded-full border-fancy-pants bg-brand px-4 font-semibold text-primary text-sm transition-opacity hover:opacity-90"
+            >
+              Follow
+            </Link>
+          )}
         </div>
-
-        {/* Media Grid */}
-        {hasMedia ? (
-          <>
-            <MediaGrid>
-              {mediaItems.map((upload) => (
-                <MediaCard
-                  key={upload.id}
-                  mediaId={upload.id}
-                  title={upload.title}
-                  thumbnailUrl={upload.thumbnailUrl}
-                  channelName={upload.channel.name}
-                  channelAvatarUrl={upload.channel.avatarUrl}
-                  duration={
-                    upload.lengthSeconds
-                      ? formatTime(upload.lengthSeconds * 1000)
-                      : undefined
-                  }
-                  timestamp={
-                    upload.publishedAt
-                      ? formatDistanceToNow(new Date(upload.publishedAt), {
-                          addSuffix: true,
-                        })
-                      : undefined
-                  }
-                />
-              ))}
-            </MediaGrid>
-
-            {/* Infinite scroll trigger */}
-            <div ref={loadMoreRef} className="h-20" />
-
-            {/* Loading indicator */}
-            {isFetchingNextPage ? (
-              <div className="flex justify-center py-8">
-                <div className="text-sm text-zinc-400">Loading more...</div>
-              </div>
-            ) : null}
-          </>
-        ) : (
-          <EmptyState
-            emptyTitle="No content yet"
-            emptyBody="This channel hasn't uploaded any content yet. Check back later!"
-            emptyCta="Browse Content"
-            emptyCtaHref="/"
-          />
-        )}
       </div>
-    </>
+
+      {/* Media Grid */}
+      {hasMedia ? (
+        <>
+          <MediaGrid>
+            {mediaItems.map((upload) => (
+              <MediaCard
+                key={upload.id}
+                mediaId={upload.id}
+                title={upload.title}
+                thumbnailUrl={upload.thumbnailUrl}
+                channelName={upload.channel.name}
+                channelAvatarUrl={upload.channel.avatarUrl}
+                duration={
+                  upload.lengthSeconds
+                    ? formatTime(upload.lengthSeconds * 1000)
+                    : undefined
+                }
+                timestamp={
+                  upload.publishedAt
+                    ? formatDistanceToNow(new Date(upload.publishedAt), {
+                        addSuffix: true,
+                      })
+                    : undefined
+                }
+              />
+            ))}
+          </MediaGrid>
+
+          {/* Infinite scroll trigger */}
+          <div ref={loadMoreRef} className="h-20" />
+
+          {/* Loading indicator */}
+          {isFetchingNextPage ? (
+            <div className="flex justify-center py-8">
+              <div className="text-sm text-zinc-400">Loading more...</div>
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <EmptyState
+          emptyTitle="No content yet"
+          emptyBody="This channel hasn't uploaded any content yet. Check back later!"
+          emptyCta="Browse Content"
+          emptyCtaHref="/"
+        />
+      )}
+    </MainLayout>
   );
 }

@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { EmptyState } from '@/components/empty-state';
-import Header from '@/components/header';
+import MainLayout from '@/components/main-layout';
 
 export const Route = createFileRoute('/_main/$slug')({
   loader: async ({ params, context }) => {
@@ -24,17 +24,14 @@ export const Route = createFileRoute('/_main/$slug')({
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
-      <div className="flex flex-1 items-center justify-center p-4">
-        <EmptyState
-          variant="error"
-          emptyTitle="Seeking but Not Finding?"
-          emptyBody="This page seems to have wandered off the narrow path. Let's get you back to the good news."
-          emptyCta="Explore"
-          emptyCtaHref="/"
-        />
-      </div>
-    </div>
+    <MainLayout containerClassName="flex flex-1 items-center justify-center p-4">
+      <EmptyState
+        variant="error"
+        emptyTitle="Seeking but Not Finding?"
+        emptyBody="This page seems to have wandered off the narrow path. Let's get you back to the good news."
+        emptyCta="Explore"
+        emptyCtaHref="/"
+      />
+    </MainLayout>
   );
 }

@@ -7,7 +7,7 @@ export const Route = createFileRoute('/_main/about/dorean')({
 function RouteComponent() {
   return (
     <article className="prose prose-gray dark:prose-invert mx-auto max-w-4xl px-4 py-8">
-      <h1>Should Ministry Be Free?</h1>
+      <h2>Should Ministry Be Free?</h2>
 
       <p className="lead">
         Billions of dollars change hands in the name of Christ. Christian book
@@ -31,7 +31,7 @@ function RouteComponent() {
         the clarity required for true discernment.
       </p>
 
-      <h2>The Command of Christ</h2>
+      <h3>The Command of Christ</h3>
 
       <p>As Jesus sends out the disciples, he says the following:</p>
 
@@ -105,7 +105,7 @@ function RouteComponent() {
         &ldquo;the laborer deserves his food.&rdquo;
       </p>
 
-      <h2>The Policy of Paul</h2>
+      <h3>The Policy of Paul</h3>
 
       <p>
         If you have not previously investigated the matter of ministry
@@ -158,7 +158,7 @@ function RouteComponent() {
         God who has commissioned him.
       </p>
 
-      <h2>The Judgment of John</h2>
+      <h3>The Judgment of John</h3>
 
       <p>
         In perhaps the clearest Scriptural instance of colabor, the apostle John
@@ -201,7 +201,7 @@ function RouteComponent() {
         characterize a financial gift from unbelievers.
       </p>
 
-      <h2>The Faith of the Fathers</h2>
+      <h3>The Faith of the Fathers</h3>
 
       <p>
         The fact that the early church rejected ministerial reciprocity and
@@ -235,7 +235,7 @@ function RouteComponent() {
         there is need for continued Reformation.
       </p>
 
-      <h2>Conclusion</h2>
+      <h3>Conclusion</h3>
 
       <p>
         What do we take away from all this? One should not exchange money for

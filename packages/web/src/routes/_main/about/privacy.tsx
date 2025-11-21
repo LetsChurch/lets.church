@@ -7,7 +7,7 @@ export const Route = createFileRoute('/_main/about/privacy')({
 function RouteComponent() {
   return (
     <article className="prose prose-lg prose-gray dark:prose-invert mx-auto max-w-4xl px-4 py-8">
-      <h1>Privacy policy</h1>
+      <h2>Privacy policy</h2>
       <p>
         We respect your privacy and are committed to protecting it through our
         compliance with this privacy policy (&#8220;Policy&#8221;). This Policy

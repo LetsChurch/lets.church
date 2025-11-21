@@ -7,8 +7,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { CarouselNavigationButtons } from '@/components/carousel-navigation-buttons';
 import { DonateCard } from '@/components/donate-card';
 import { EmptyState } from '@/components/empty-state';
-import Header from '@/components/header';
 import HeroCarousel from '@/components/hero-carousel';
+import MainLayout from '@/components/main-layout';
 import { MediaCard } from '@/components/media-card';
 import { MediaCarousel } from '@/components/media-carousel';
 import { MediaCompactCard } from '@/components/media-compact-card';
@@ -511,127 +511,124 @@ function Home() {
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950">
-      <Header>
-        <HeroCarousel items={carouselItems} />
-      </Header>
-
-      <div className="isolate mx-auto max-w-7xl space-y-12 px-4 py-8 sm:px-16">
-        {inProgress.length > 0 ? (
-          <ContentSection
-            title="In Progress"
-            uploads={inProgress}
-            viewAllText="View history"
-            viewAllHref="/history"
-            showViewMoreCard
-            viewMoreCardText="See your full history"
-          />
-        ) : null}
-
+    <MainLayout
+      headerChildren={<HeroCarousel items={carouselItems} />}
+      containerClassName="mx-auto max-w-7xl space-y-12 px-4 py-8 sm:px-16"
+    >
+      {inProgress.length > 0 ? (
         <ContentSection
-          title="Following"
-          uploads={subscriptionUploads || []}
-          showViewMoreCard={
-            !!(subscriptionUploads && subscriptionUploads.length > 0)
-          }
-          viewMoreCardText="See more subscribed content"
-          viewAllText="View all subscriptions"
-          viewAllHref="/following"
-          emptyTitle="You're not following any channels yet"
-          emptyBody="Follow your favorite channels to get a customized feed and to ensure you don't miss new content!"
-          loggedOutEmptyTitle="Create an account to follow channels"
-          loggedOutEmptyBody="Follow your favorite channels to get a customized feed and to ensure you don't miss new content!"
-          loggedOutEmptyCta="Create Account"
-          isLoggedIn={isLoggedIn}
+          title="In Progress"
+          uploads={inProgress}
+          viewAllText="View history"
+          viewAllHref="/history"
+          showViewMoreCard
+          viewMoreCardText="See your full history"
         />
+      ) : null}
 
-        <MediaGrid>
-          {allTrendingUploads.slice(0, 6).map((upload, _i) => (
-            <MediaCard
-              key={upload.id}
-              mediaId={upload.id}
-              title={upload?.title ?? 'Untitled'}
-              thumbnailUrl={upload?.thumbnailUrl}
-              channelName={upload?.channel.name}
-              channelAvatarUrl={upload?.channel.avatarUrl}
-              duration={
-                upload.lengthSeconds
-                  ? formatTime(upload.lengthSeconds * 1000)
-                  : undefined
-              }
-            />
-          ))}
-        </MediaGrid>
+      <ContentSection
+        title="Following"
+        uploads={subscriptionUploads || []}
+        showViewMoreCard={
+          !!(subscriptionUploads && subscriptionUploads.length > 0)
+        }
+        viewMoreCardText="See more subscribed content"
+        viewAllText="View all subscriptions"
+        viewAllHref="/following"
+        emptyTitle="You're not following any channels yet"
+        emptyBody="Follow your favorite channels to get a customized feed and to ensure you don't miss new content!"
+        loggedOutEmptyTitle="Create an account to follow channels"
+        loggedOutEmptyBody="Follow your favorite channels to get a customized feed and to ensure you don't miss new content!"
+        loggedOutEmptyCta="Create Account"
+        isLoggedIn={isLoggedIn}
+      />
 
-        <RecentlySaved />
+      <MediaGrid>
+        {allTrendingUploads.slice(0, 6).map((upload, _i) => (
+          <MediaCard
+            key={upload.id}
+            mediaId={upload.id}
+            title={upload?.title ?? 'Untitled'}
+            thumbnailUrl={upload?.thumbnailUrl}
+            channelName={upload?.channel.name}
+            channelAvatarUrl={upload?.channel.avatarUrl}
+            duration={
+              upload.lengthSeconds
+                ? formatTime(upload.lengthSeconds * 1000)
+                : undefined
+            }
+          />
+        ))}
+      </MediaGrid>
 
-        <MediaGrid>
-          {allTrendingUploads.slice(6, 11).map((upload, _i) => (
-            <MediaCard
-              key={upload.id}
-              mediaId={upload.id}
-              title={upload?.title ?? 'Untitled'}
-              thumbnailUrl={upload?.thumbnailUrl}
-              channelName={upload?.channel.name}
-              channelAvatarUrl={upload?.channel.avatarUrl}
-              duration={
-                upload.lengthSeconds
-                  ? formatTime(upload.lengthSeconds * 1000)
-                  : undefined
-              }
-            />
-          ))}
+      <RecentlySaved />
 
-          <DonateCard />
-        </MediaGrid>
+      <MediaGrid>
+        {allTrendingUploads.slice(6, 11).map((upload, _i) => (
+          <MediaCard
+            key={upload.id}
+            mediaId={upload.id}
+            title={upload?.title ?? 'Untitled'}
+            thumbnailUrl={upload?.thumbnailUrl}
+            channelName={upload?.channel.name}
+            channelAvatarUrl={upload?.channel.avatarUrl}
+            duration={
+              upload.lengthSeconds
+                ? formatTime(upload.lengthSeconds * 1000)
+                : undefined
+            }
+          />
+        ))}
 
-        <MediaGrid>
-          {allTrendingUploads.slice(11, 19).map((upload, _i) => (
-            <MediaCard
-              key={upload.id}
-              mediaId={upload.id}
-              title={upload?.title ?? 'Untitled'}
-              thumbnailUrl={upload?.thumbnailUrl}
-              channelName={upload?.channel.name}
-              channelAvatarUrl={upload?.channel.avatarUrl}
-              duration={
-                upload.lengthSeconds
-                  ? formatTime(upload.lengthSeconds * 1000)
-                  : undefined
-              }
-            />
-          ))}
+        <DonateCard />
+      </MediaGrid>
 
-          <SearchCard />
-        </MediaGrid>
+      <MediaGrid>
+        {allTrendingUploads.slice(11, 19).map((upload, _i) => (
+          <MediaCard
+            key={upload.id}
+            mediaId={upload.id}
+            title={upload?.title ?? 'Untitled'}
+            thumbnailUrl={upload?.thumbnailUrl}
+            channelName={upload?.channel.name}
+            channelAvatarUrl={upload?.channel.avatarUrl}
+            duration={
+              upload.lengthSeconds
+                ? formatTime(upload.lengthSeconds * 1000)
+                : undefined
+            }
+          />
+        ))}
 
-        <TrendingSearches />
+        <SearchCard />
+      </MediaGrid>
 
-        <MediaGrid>
-          {allTrendingUploads.slice(19).map((upload, _i) => (
-            <MediaCard
-              key={upload.id}
-              mediaId={upload.id}
-              title={upload?.title ?? 'Untitled'}
-              thumbnailUrl={upload?.thumbnailUrl}
-              channelName={upload?.channel.name}
-              channelAvatarUrl={upload?.channel.avatarUrl}
-              duration={
-                upload.lengthSeconds
-                  ? formatTime(upload.lengthSeconds * 1000)
-                  : undefined
-              }
-            />
-          ))}
-        </MediaGrid>
+      <TrendingSearches />
 
-        {/* Infinite scroll trigger */}
-        <div ref={loadMoreRef} className="h-4" />
+      <MediaGrid>
+        {allTrendingUploads.slice(19).map((upload, _i) => (
+          <MediaCard
+            key={upload.id}
+            mediaId={upload.id}
+            title={upload?.title ?? 'Untitled'}
+            thumbnailUrl={upload?.thumbnailUrl}
+            channelName={upload?.channel.name}
+            channelAvatarUrl={upload?.channel.avatarUrl}
+            duration={
+              upload.lengthSeconds
+                ? formatTime(upload.lengthSeconds * 1000)
+                : undefined
+            }
+          />
+        ))}
+      </MediaGrid>
 
-        {isFetchingNextPage ? (
-          <div className="py-8 text-center text-muted">Loading more...</div>
-        ) : null}
-      </div>
-    </div>
+      {/* Infinite scroll trigger */}
+      <div ref={loadMoreRef} className="h-4" />
+
+      {isFetchingNextPage ? (
+        <div className="py-8 text-center text-muted">Loading more...</div>
+      ) : null}
+    </MainLayout>
   );
 }

@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router';
-import Header from '@/components/header';
+import MainLayout from '@/components/main-layout';
 
 export const Route = createFileRoute('/_main/about')({
   component: RouteComponent,
@@ -7,9 +7,8 @@ export const Route = createFileRoute('/_main/about')({
 
 function RouteComponent() {
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950">
-      <Header />
+    <MainLayout containerClassName="">
       <Outlet />
-    </div>
+    </MainLayout>
   );
 }

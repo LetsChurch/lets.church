@@ -7,7 +7,7 @@ export const Route = createFileRoute('/_main/about/dmca')({
 function RouteComponent() {
   return (
     <article className="prose prose-lg prose-gray dark:prose-invert mx-auto max-w-4xl px-4 py-8">
-      <h1>DMCA policy</h1>
+      <h2>DMCA policy</h2>
       <p>
         This Digital Millennium Copyright Act policy (&#8220;Policy&#8221;)
         applies to the <a href="https://lets.church">lets.church</a> website

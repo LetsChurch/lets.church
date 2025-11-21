@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { AvatarCarousel } from '@/components/avatar-carousel';
 import { EmptyState } from '@/components/empty-state';
 import { FilterBar } from '@/components/filter-bar';
-import Header from '@/components/header';
+import MainLayout from '@/components/main-layout';
 import SearchBar from '@/components/search-bar';
 import { SearchRow } from '@/components/search-row';
 import SearchTabs from '@/components/search-tabs';
@@ -92,17 +92,17 @@ function RouteComponent() {
   const { q } = Route.useSearch();
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950">
-      <Header defaultSearchValue={q} />
-
-      <div className="mx-auto max-w-7xl px-4 py-4">
+    <MainLayout
+      defaultSearchValue={q}
+      containerClassName="mx-auto max-w-7xl px-4 py-4"
+      headerChildren={
         <div className="mb-6 sm:hidden">
           <SearchBar defaultValue={q} />
         </div>
-
-        {q ? <SearchResults q={q} /> : <NoSearch />}
-      </div>
-    </div>
+      }
+    >
+      {q ? <SearchResults q={q} /> : <NoSearch />}
+    </MainLayout>
   );
 }
 

@@ -8,8 +8,8 @@ import { useRef, useState } from 'react';
 import { Avatar } from '@/components/avatar';
 import { AvatarCarousel } from '@/components/avatar-carousel';
 import { EmptyState } from '@/components/empty-state';
-import Header from '@/components/header';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
+import MainLayout from '@/components/main-layout';
 import { MediaCard } from '@/components/media-card';
 import { MediaGrid } from '@/components/media-grid';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
@@ -227,8 +227,7 @@ function RouteComponent() {
 
   return (
     <>
-      <Header />
-      <div className="isolate pb-8 sm:px-16">
+      <MainLayout>
         <div className="space-y-8">
           {!isLoggedIn ? (
             <EmptyState
@@ -289,7 +288,7 @@ function RouteComponent() {
             </div>
           ) : null}
         </div>
-      </div>
+      </MainLayout>
 
       {/* Sign In Modal */}
       <LcModal.Root open={signInModalOpen} onOpenChange={setSignInModalOpen}>

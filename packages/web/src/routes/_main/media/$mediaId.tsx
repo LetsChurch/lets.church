@@ -10,9 +10,9 @@ import {
 import { createFileRoute, Link, useLocation } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { CommentsSection } from '@/components/comments-section';
-import Header from '@/components/header';
 import LcButton from '@/components/lc-button';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
+import MainLayout from '@/components/main-layout';
 // import { MediaCarousel } from '@/components/media-carousel';
 import { MediaHeader } from '@/components/media-header';
 import { MediaInfoTabs } from '@/components/media-info-tabs';
@@ -614,12 +614,10 @@ function RouteComponent() {
   });
 
   return (
-    <div className="flex size-full flex-col">
-      <Header />
-
+    <MainLayout containerClassName="mx-4">
       {/* Main Content Area */}
       <div
-        className="mx-4 grid gap-4"
+        className="grid gap-4"
         style={{
           gridTemplateColumns: layout.showSidebar
             ? `${layout.containerWidth}px calc(var(--spacing) * 92)`
@@ -841,6 +839,6 @@ function RouteComponent() {
           </LcModal.Popup>
         </LcModal.Portal>
       </LcModal.Root>
-    </div>
+    </MainLayout>
   );
 }

@@ -48,12 +48,12 @@ export default function Header({
               }}
             />
           </div>
-          <div className="absolute inset-0 bg-gradient-to-b from-page/0 via-page/90 to-page" />
+          <div className="absolute inset-0 bg-linear-to-b from-page/0 via-page/90 to-page" />
         </div>
       ) : null}
 
       {/* Theme gradient - uses ::after pseudo-element via CSS class */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[240px] bg-gradient-to-b from-brand/40 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-60 bg-linear-to-b from-brand/40 to-transparent" />
 
       {/* Top Navigation Bar */}
       <div className="relative flex h-16 items-center justify-between p-4">
@@ -87,7 +87,7 @@ export default function Header({
                   <button
                     {...props}
                     type="button"
-                    className="size-8 flex-shrink-0 overflow-hidden rounded-full bg-white"
+                    className="size-8 shrink-0 overflow-hidden rounded-full bg-white"
                   >
                     <Avatar
                       src={profileQuery.data.avatarUrl || undefined}
@@ -127,7 +127,7 @@ export default function Header({
                           <button
                             {...props}
                             type="submit"
-                            className="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-red-400 text-sm transition-colors hover:bg-gray-100 focus:bg-gray-100 data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-zinc-800 dark:focus:bg-zinc-800 dark:hover:bg-zinc-800"
+                            className="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-red-400 text-sm transition-colors hover:bg-gray-100 focus:bg-gray-100 data-highlighted:bg-gray-100 dark:data-highlighted:bg-zinc-800 dark:focus:bg-zinc-800 dark:hover:bg-zinc-800"
                           >
                             Logout
                           </button>
