@@ -545,8 +545,6 @@ function Home() {
           isLoggedIn={isLoggedIn}
         />
 
-        <h2 className="mb-6 font-medium text-lg text-primary">Trending</h2>
-
         <MediaGrid>
           {allTrendingUploads.slice(0, 6).map((upload, _i) => (
             <MediaCard

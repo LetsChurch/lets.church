@@ -10,6 +10,7 @@ export type Props = {
   duration?: string;
   timestamp?: string;
   progress?: number;
+  size?: 'default' | 'small';
 };
 
 export function MediaCard({
@@ -21,7 +22,10 @@ export function MediaCard({
   duration,
   timestamp,
   progress,
+  size = 'default',
 }: Props) {
+  const _isSmall = size === 'small';
+
   return (
     <div className="group relative space-y-3">
       <div className="relative aspect-video">

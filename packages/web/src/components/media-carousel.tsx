@@ -42,7 +42,7 @@ export function MediaCarousel({
       slidesToScroll: 1,
       breakpoints: {
         '(min-width: 768px)': { slidesToScroll: 2 },
-        '(min-width: 1024px)': { slidesToScroll: 3 },
+        '(min-width: 1024px)': { slidesToScroll: 4 },
       },
     },
     [WheelGestures()],
@@ -99,11 +99,11 @@ export function MediaCarousel({
             '--fade-size': `${fadeSize}px`,
           }}
         >
-          <div className="flex gap-6">
+          <div className="flex gap-4">
             {items.map((item) => (
               <div
                 key={item.id}
-                className="min-w-0 flex-[0_0_100%] md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]"
+                className="min-w-0 flex-[0_0_75%] md:flex-[0_0_calc(50%-4px)] lg:flex-[0_0_calc(26%-12px)]"
               >
                 <MediaCard
                   mediaId={item.id}
@@ -114,11 +114,12 @@ export function MediaCarousel({
                   duration={item.duration}
                   timestamp={item.timestamp}
                   progress={item.progress}
+                  size="small"
                 />
               </div>
             ))}
             {viewMoreCard ? (
-              <div className="min-w-0 flex-[0_0_100%] md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]">
+              <div className="min-w-0 flex-[0_0_75%] md:flex-[0_0_calc(50%-4px)] lg:flex-[0_0_calc(26%-12px)]">
                 {viewMoreCard}
               </div>
             ) : null}
