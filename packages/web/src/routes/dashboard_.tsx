@@ -66,16 +66,14 @@ function DashboardLayout() {
                 c="inherit"
               >
                 <Group gap="xs">
-                  <img
-                    src="/logoicon.svg"
-                    alt="Let's Church Icon"
-                    style={{
-                      height: '1.5em',
-                      width: 'auto',
-                      position: 'relative',
-                      top: '-0.125em',
-                    }}
-                  />
+                  <svg
+                    viewBox="0 0 650 650"
+                    className={styles.dashboardLogo}
+                    aria-label="Let's Church Icon"
+                  >
+                    <title>Let's Church Icon</title>
+                    <use href="/logoicon.svg#logoicon" />
+                  </svg>
                   <span>Dashboard</span>
                 </Group>
               </Anchor>
