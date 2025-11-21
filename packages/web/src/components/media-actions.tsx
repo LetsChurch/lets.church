@@ -9,13 +9,14 @@ import {
   IconCode,
   IconCopy,
   IconDeviceTvOld,
-  IconDownload,
+  IconDots,
   IconFlag,
   IconShare2,
   IconThumbDown,
   IconThumbUp,
   IconVolume,
 } from '@tabler/icons-react';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import LcButton from '@/components/lc-button';
 import LcButtonGroup from '@/components/lc-button-group';
@@ -62,6 +63,7 @@ type MediaActionsProps = {
   };
   hasVideo?: boolean;
   hasAudio?: boolean;
+  channelLink?: ReactNode;
 };
 
 const windowConfig = Object.entries({
@@ -112,6 +114,7 @@ export function MediaActions({
   mediaDimensions,
   hasVideo = true,
   hasAudio = false,
+  channelLink,
 }: MediaActionsProps) {
   const abortController = useAbortController();
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -201,64 +204,101 @@ export function MediaActions({
 
   return (
     <>
-      <div className="ml-auto flex flex-shrink-0 items-center gap-2.5">
-        {/* Reactions */}
-        <LcButtonGroup
-          buttons={[
-            {
-              type: 'button',
-              onClick: () => onRate('LIKE'),
-              className: cn(
-                ratingData.userRating === 'LIKE' &&
-                  'bg-gray-950/15 dark:bg-white/10',
-              ),
-              children: (
-                <>
-                  <IconThumbUp size={16} />
-                  {ratingData.likes}
-                </>
-              ),
-            },
-            {
-              type: 'button',
-              onClick: () => onRate('DISLIKE'),
-              className: cn(
-                ratingData.userRating === 'DISLIKE' &&
-                  'bg-gray-950/15 dark:bg-white/10',
-              ),
-              children: <IconThumbDown size={16} />,
-            },
-          ]}
-        />
+      <div className="-mx-4 flex min-w-0 items-center gap-2 sm:mx-0">
+        {/* Scrollable area with shadows */}
+        <div className="relative min-w-0">
+          {/* Left fade shadow */}
+          <div className="pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-4 bg-gradient-to-r from-page to-transparent sm:w-0" />
 
-        {/* Comments */}
-        {/* <LcButton className="flex items-center gap-0.5"> */}
-        {/*   <IconMessageCircle2 size={16} /> */}
-        {/*   13 */}
-        {/* </LcButton> */}
+          {/* Scrollable content */}
+          <div className="flex items-center gap-2.5 overflow-x-auto px-4 py-1 sm:px-0">
+            {/* Channel Link */}
+            {channelLink}
 
-        {/* Share */}
-        <LcButton className="p-2" onClick={handleShare}>
-          <IconShare2 size={16} />
-        </LcButton>
+            {/* Ratings */}
+            <LcButtonGroup
+              buttons={[
+                {
+                  type: 'button',
+                  onClick: () => onRate('LIKE'),
+                  className: cn(
+                    ratingData.userRating === 'LIKE' &&
+                      'bg-gray-950/15 dark:bg-white/10',
+                  ),
+                  children: (
+                    <>
+                      <IconThumbUp size={16} />
+                      {ratingData.likes}
+                    </>
+                  ),
+                },
+                {
+                  type: 'button',
+                  onClick: () => onRate('DISLIKE'),
+                  className: cn(
+                    ratingData.userRating === 'DISLIKE' &&
+                      'bg-gray-950/15 dark:bg-white/10',
+                  ),
+                  children: <IconThumbDown size={16} />,
+                },
+              ]}
+            />
 
-        {/* Embed */}
-        {(hasVideo || hasAudio) && (
+            {/* Share */}
+            <LcButton className="p-2" onClick={handleShare}>
+              <IconShare2 size={16} />
+            </LcButton>
+
+            {/* Divider */}
+            <div className="h-7 w-px shrink-0 bg-vertical-divider" />
+
+            {/* Save */}
+            <LcButton
+              className={cn(
+                'flex items-center gap-0.5',
+                isSaved && 'bg-gray-950/15 dark:bg-white/10',
+              )}
+              onClick={onSaveToggle}
+            >
+              <IconBookmark size={16} />
+              {isSaved ? 'Saved' : 'Save'}
+            </LcButton>
+
+            {/* Follow */}
+            <LcButton
+              className={cn(
+                'flex items-center gap-0.5',
+                channelData.isFollowing && 'bg-gray-950/15 dark:bg-white/10',
+              )}
+              onClick={onFollowToggle}
+            >
+              <IconFlag size={16} />
+              {channelData.isFollowing ? 'Following' : 'Follow'}
+            </LcButton>
+          </div>
+
+          {/* Right fade shadow */}
+          <div className="-right-px pointer-events-none absolute top-0 bottom-0 z-10 w-4 bg-gradient-to-l from-page to-transparent sm:w-0" />
+        </div>
+
+        {/* More (Embed, Download) - always visible */}
+        <div className="shrink-0 pr-4 sm:pr-0">
           <LcMenu.Root>
             <LcMenu.Trigger
               render={(props) => (
                 <LcButton {...props} className="p-2">
-                  <IconCode size={16} />
+                  <IconDots size={16} />
                 </LcButton>
               )}
             />
             <LcMenu.Portal>
               <LcMenu.Positioner sideOffset={8}>
                 <LcMenu.Popup>
+                  {/* Embed */}
                   {hasVideo ? (
                     <MenuItemButton
                       onClick={() => handleCopyEmbed('video')}
-                      icon={<IconDeviceTvOld size={16} />}
+                      icon={<IconCode size={16} />}
                     >
                       {copySuccess === 'embed-video'
                         ? 'Copied!'
@@ -268,79 +308,32 @@ export function MediaActions({
                   {hasAudio ? (
                     <MenuItemButton
                       onClick={() => handleCopyEmbed('audio')}
-                      icon={<IconVolume size={16} />}
+                      icon={<IconCode size={16} />}
                     >
                       {copySuccess === 'embed-audio'
                         ? 'Copied!'
                         : 'Copy Audio Embed'}
                     </MenuItemButton>
                   ) : null}
+
+                  {/* Download */}
+                  {downloadData?.enabled && downloadData.urls.length > 0
+                    ? downloadData.urls.map((download) => (
+                        <MenuItemLink
+                          key={download.url}
+                          href={download.url}
+                          download
+                          icon={getDownloadIcon(download.kind)}
+                        >
+                          {download.label}
+                        </MenuItemLink>
+                      ))
+                    : null}
                 </LcMenu.Popup>
               </LcMenu.Positioner>
             </LcMenu.Portal>
           </LcMenu.Root>
-        )}
-
-        {/* Download */}
-        {downloadData?.enabled && downloadData.urls.length > 0 ? (
-          <LcMenu.Root>
-            <LcMenu.Trigger
-              render={(props) => (
-                <LcButton {...props} className="p-2">
-                  <IconDownload size={16} />
-                </LcButton>
-              )}
-            />
-            <LcMenu.Portal>
-              <LcMenu.Positioner sideOffset={8}>
-                <LcMenu.Popup>
-                  {downloadData.urls.map((download) => (
-                    <MenuItemLink
-                      key={download.url}
-                      href={download.url}
-                      download
-                      icon={getDownloadIcon(download.kind)}
-                    >
-                      {download.label}
-                    </MenuItemLink>
-                  ))}
-                </LcMenu.Popup>
-              </LcMenu.Positioner>
-            </LcMenu.Portal>
-          </LcMenu.Root>
-        ) : null}
-
-        {/* Divider */}
-        <div className="h-7 w-px bg-vertical-divider" />
-
-        {/* Save */}
-        <LcButton
-          className={cn(
-            'flex items-center gap-0.5',
-            isSaved && 'bg-gray-950/15 dark:bg-white/10',
-          )}
-          onClick={onSaveToggle}
-        >
-          <IconBookmark size={16} />
-          {isSaved ? 'Saved' : 'Save'}
-        </LcButton>
-
-        {/* Follow */}
-        <LcButton
-          className={cn(
-            'flex items-center gap-0.5',
-            channelData.isFollowing && 'bg-gray-950/15 dark:bg-white/10',
-          )}
-          onClick={onFollowToggle}
-        >
-          <IconFlag size={16} />
-          {channelData.isFollowing ? 'Following' : 'Follow'}
-        </LcButton>
-
-        {/* More */}
-        {/* <LcButton className="p-1.5"> */}
-        {/*   <IconDots size={16} /> */}
-        {/* </LcButton> */}
+        </div>
       </div>
 
       {/* Share Modal */}

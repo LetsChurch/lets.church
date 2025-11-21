@@ -68,49 +68,46 @@ export function MediaHeader({
       </h1>
 
       {/* Channel & Actions */}
-      <div className="flex items-center gap-2.5 overflow-x-auto">
-        {/* Channel Info */}
-        <Link
-          to="/channel/$slug"
-          params={{ slug: channel.slug }}
-          className="flex flex-shrink-0 items-center gap-1.5 transition-opacity hover:opacity-80"
-        >
-          <Avatar
-            src={channel.avatarUrl}
-            alt={channel.name}
-            fallbackText={channel.name.charAt(0).toUpperCase()}
-            className="size-7 border-fancy-pants"
-            fallbackClassName="bg-brand font-bold text-xs"
-          />
-          <div className="flex flex-col gap-0.5">
-            <div className="font-semibold text-primary text-xs">
-              {channel.name}
+      <MediaActions
+        ratingData={ratingData}
+        onRate={onRate}
+        shareData={shareData}
+        downloadData={downloadData}
+        channelData={{
+          id: channel.id,
+          isFollowing: channel.isFollowing,
+        }}
+        onFollowToggle={onFollowToggle}
+        isSaved={isSaved}
+        onSaveToggle={onSaveToggle}
+        mediaDimensions={mediaDimensions}
+        hasVideo={hasVideo}
+        hasAudio={hasAudio}
+        channelLink={
+          <Link
+            to="/channel/$slug"
+            params={{ slug: channel.slug }}
+            className="flex shrink-0 items-center gap-1.5 transition-opacity hover:opacity-80"
+          >
+            <Avatar
+              src={channel.avatarUrl}
+              alt={channel.name}
+              fallbackText={channel.name.charAt(0).toUpperCase()}
+              className="size-7 border-fancy-pants"
+              fallbackClassName="bg-brand font-bold text-xs"
+            />
+            <div className="flex flex-col gap-0.5">
+              <div className="font-semibold text-primary text-xs">
+                {channel.name}
+              </div>
+              <div className="text-[10px] text-zinc-400">
+                {channel.subscriberCount.toLocaleString()}{' '}
+                {channel.subscriberCount === 1 ? 'follower' : 'followers'}
+              </div>
             </div>
-            <div className="text-[10px] text-zinc-400">
-              {channel.subscriberCount.toLocaleString()}{' '}
-              {channel.subscriberCount === 1 ? 'follower' : 'followers'}
-            </div>
-          </div>
-        </Link>
-
-        {/* Actions */}
-        <MediaActions
-          ratingData={ratingData}
-          onRate={onRate}
-          shareData={shareData}
-          downloadData={downloadData}
-          channelData={{
-            id: channel.id,
-            isFollowing: channel.isFollowing,
-          }}
-          onFollowToggle={onFollowToggle}
-          isSaved={isSaved}
-          onSaveToggle={onSaveToggle}
-          mediaDimensions={mediaDimensions}
-          hasVideo={hasVideo}
-          hasAudio={hasAudio}
-        />
-      </div>
+          </Link>
+        }
+      />
     </div>
   );
 }
