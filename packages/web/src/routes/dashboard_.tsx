@@ -1,4 +1,12 @@
-import { Anchor, AppShell, Box, Burger, Group, NavLink } from '@mantine/core';
+import {
+  Anchor,
+  AppShell,
+  Box,
+  Burger,
+  Group,
+  NavLink,
+  UnstyledButton,
+} from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconHelp } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
@@ -135,12 +143,42 @@ function DashboardLayout() {
             pt="md"
             style={{ borderTop: '1px solid var(--mantine-color-gray-3)' }}
           >
-            <NavLink
-              label="Help"
-              leftSection={<IconHelp size={16} />}
+            <UnstyledButton
               onClick={openHelp}
               mb="xs"
-            />
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                width: '100%',
+                padding: 'var(--mantine-spacing-xs) var(--mantine-spacing-sm)',
+                borderRadius: 'var(--mantine-radius-sm)',
+                fontSize: 'var(--mantine-font-size-sm)',
+                fontWeight: 500,
+                textDecoration: 'none',
+                color: 'var(--mantine-color-text)',
+                transition: 'background-color 100ms ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  'var(--mantine-color-gray-0)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              <Box
+                component="span"
+                mr="sm"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <IconHelp size={16} />
+              </Box>
+              <span>Help</span>
+            </UnstyledButton>
             <Anchor
               component={Link}
               to="/"
