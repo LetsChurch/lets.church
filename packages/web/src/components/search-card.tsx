@@ -36,7 +36,7 @@ export function SearchCard() {
       </p>
       <div className="mt-auto">
         <form onSubmit={handleSubmit}>
-          <div className="flex h-10 items-center gap-2 rounded-full border border-gray-950/10 bg-gray-950/5 px-3 dark:border-white/10 dark:bg-white/5">
+          <div className="flex h-10 items-center gap-2 rounded-full border border-gray-950/10 bg-gray-950/5 px-3 transition-colors focus-within:border-gray-950/30 focus-within:bg-gray-950/10 hover:border-gray-950/20 hover:bg-gray-950/10 dark:border-white/10 dark:bg-white/5 dark:hover:border-white/20 dark:hover:bg-white/10 dark:focus-within:border-white/30 dark:focus-within:bg-white/10">
             <input
               type="text"
               name="q"

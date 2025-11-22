@@ -22,6 +22,7 @@ import LcButton from '@/components/lc-button';
 import LcButtonGroup from '@/components/lc-button-group';
 import { LcMenu, MenuItemButton, MenuItemLink } from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
+import { LcTooltip } from '@/components/lc-tooltip';
 import { useAbortController } from '@/hooks/use-abort-controller';
 import { abortableSetTimeout } from '@/util/abortable-timeout';
 import { cn } from '@/util/cn';
@@ -219,7 +220,7 @@ export function MediaActions({
   };
 
   return (
-    <>
+    <LcTooltip.Provider>
       <div className="-mx-4 sm:-mx-4 flex min-w-0 items-center gap-2">
         {/* Scrollable area with shadows */}
         <div className="relative min-w-0">
@@ -227,7 +228,7 @@ export function MediaActions({
           <div
             className={cn(
               'pointer-events-none absolute top-0 bottom-0 left-0 z-10 transition-opacity duration-200',
-              'w-4 bg-gradient-to-r from-page to-transparent',
+              'w-4 bg-linear-to-r from-page to-transparent',
               'sm:w-9 sm:from-40%',
               showLeftFade ? 'opacity-100' : 'opacity-0',
             )}
@@ -252,6 +253,7 @@ export function MediaActions({
                     ratingData.userRating === 'LIKE' &&
                       'bg-gray-950/15 dark:bg-white/10',
                   ),
+                  tooltip: 'Like',
                   children: (
                     <>
                       <IconThumbUp size={16} />
@@ -266,15 +268,18 @@ export function MediaActions({
                     ratingData.userRating === 'DISLIKE' &&
                       'bg-gray-950/15 dark:bg-white/10',
                   ),
+                  tooltip: 'Dislike',
                   children: <IconThumbDown size={16} />,
                 },
               ]}
             />
 
             {/* Share */}
-            <LcButton className="p-2" onClick={handleShare}>
-              <IconShare2 size={16} />
-            </LcButton>
+            <LcTooltip content="Share">
+              <LcButton className="p-2" onClick={handleShare}>
+                <IconShare2 size={16} />
+              </LcButton>
+            </LcTooltip>
 
             {/* Divider */}
             <div className="h-7 w-px shrink-0 bg-vertical-divider" />
@@ -307,7 +312,7 @@ export function MediaActions({
           {/* Right fade shadow */}
           <div
             className={cn(
-              '-right-px pointer-events-none absolute top-0 bottom-0 z-10 w-4 bg-gradient-to-l from-page to-transparent transition-opacity duration-200 sm:w-9 sm:from-40% sm:from-page',
+              '-right-px pointer-events-none absolute top-0 bottom-0 z-10 w-4 bg-linear-to-l from-page to-transparent transition-opacity duration-200 sm:w-9 sm:from-40% sm:from-page',
               showRightFade ? 'opacity-100' : 'opacity-0',
             )}
           />
@@ -324,7 +329,7 @@ export function MediaActions({
               )}
             />
             <LcMenu.Portal>
-              <LcMenu.Positioner sideOffset={8}>
+              <LcMenu.Positioner sideOffset={8} align="start">
                 <LcMenu.Popup>
                   {/* Embed */}
                   {hasVideo ? (
@@ -357,7 +362,7 @@ export function MediaActions({
                           download
                           icon={getDownloadIcon(download.kind)}
                         >
-                          {download.label}
+                          Download {download.label}
                         </MenuItemLink>
                       ))
                     : null}
@@ -437,6 +442,6 @@ export function MediaActions({
           </LcModal.Popup>
         </LcModal.Portal>
       </LcModal.Root>
-    </>
+    </LcTooltip.Provider>
   );
 }

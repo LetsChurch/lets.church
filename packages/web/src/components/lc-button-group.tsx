@@ -1,9 +1,10 @@
-import type { ComponentPropsWithoutRef } from 'react';
+import { type ComponentPropsWithoutRef, Fragment } from 'react';
 import { cn } from '@/util/cn';
+import { LcTooltip } from './lc-tooltip';
 
 type LcButtonGroupProps = {
   className?: string;
-  buttons: Array<ComponentPropsWithoutRef<'button'>>;
+  buttons: Array<ComponentPropsWithoutRef<'button'> & { tooltip?: string }>;
 };
 
 export default function LcButtonGroup({
@@ -17,18 +18,31 @@ export default function LcButtonGroup({
         className,
       )}
     >
-      {buttons.map((btn, i) => (
-        <button
-          // biome-ignore lint/suspicious/noArrayIndexKey: Fixed groups
-          key={i}
-          {...btn}
-          className={cn(
-            'inline-flex items-center gap-0.5 px-3 py-1.5 pt-1.25',
-            i > 0 && '-ml-px border-gray-950/5 border-l-1 dark:border-white/10',
-            btn.className,
-          )}
-        />
-      ))}
+      {buttons.map(({ tooltip, ...btn }, i) => {
+        const content = (
+          <button
+            {...btn}
+            className={cn(
+              'inline-flex items-center gap-0.5 px-3 py-1.5 pt-1.25',
+              i > 0 && '-ml-px border-gray-950/5 border-l dark:border-white/10',
+              btn.className,
+            )}
+          />
+        );
+
+        return (
+          <Fragment
+            // biome-ignore lint/suspicious/noArrayIndexKey: Fixed groups
+            key={i}
+          >
+            {tooltip ? (
+              <LcTooltip content={tooltip}>{content}</LcTooltip>
+            ) : (
+              content
+            )}
+          </Fragment>
+        );
+      })}
     </div>
   );
 }

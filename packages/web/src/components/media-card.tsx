@@ -1,3 +1,4 @@
+import { IconHeadphones } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { Avatar } from '@/components/avatar';
 
@@ -36,7 +37,14 @@ export function MediaCard({
               alt={title ?? 'Untitled'}
               className="size-full object-cover transition-transform duration-300 ease-out-expo will-change-transform group-hover:scale-[1.01]"
             />
-          ) : null}
+          ) : (
+            <div className="relative flex size-full items-center justify-center bg-gradient-to-b from-brand/20 via-15% via-transparent to-transparent">
+              <IconHeadphones
+                size={64}
+                className="text-zinc-400 dark:text-zinc-600"
+              />
+            </div>
+          )}
         </div>
         {progress ? (
           <div className="absolute inset-0 bg-gradient-to-t from-gray-950/70 to-50% to-transparent" />

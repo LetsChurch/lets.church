@@ -1,14 +1,18 @@
 import prettyMs from 'pretty-ms';
 
 /**
- * Formats milliseconds to time format (HH:MM:SS or MM:SS)
+ * Formats milliseconds to time format (H:MM:SS or M:SS)
  * @param ms - Duration in milliseconds
- * @returns Formatted time string with leading zeros
+ * @returns Formatted time string without leading zeros on the most significant unit
  */
 export function formatTime(ms: number) {
   const res = prettyMs(ms, { colonNotation: true, secondsDecimalDigits: 0 });
-  const sections = res.split(':').length;
-  return res.padStart(sections * 2 + sections - 1, '0');
+  const parts = res.split(':');
+
+  // Don't pad the first (most significant) part, but pad all others to 2 digits
+  return parts
+    .map((part, index) => (index === 0 ? part : part.padStart(2, '0')))
+    .join(':');
 }
 
 /**

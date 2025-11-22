@@ -24,6 +24,7 @@ type MediaCarouselProps = {
   fadeMargin?: string;
   fadeSize?: number;
   buttonPositioning?: 'inside' | 'outside';
+  className?: string;
 };
 
 export function MediaCarousel({
@@ -33,6 +34,7 @@ export function MediaCarousel({
   fadeMargin = 'sm:-mx-16 sm:px-16',
   fadeSize = 64,
   buttonPositioning = 'outside',
+  className,
 }: MediaCarouselProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel(
     {
@@ -88,7 +90,7 @@ export function MediaCarousel({
 
   return (
     <>
-      <div className="relative isolate">
+      <div className={cn('relative isolate', className)}>
         <div
           className={cn(
             'sm:fade-horizontal relative overflow-visible',

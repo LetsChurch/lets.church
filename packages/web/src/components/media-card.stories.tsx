@@ -293,3 +293,45 @@ export const Minimal: Story = {
     </>
   ),
 };
+
+export const EmptyState: Story = {
+  args: {
+    mediaId: '',
+  },
+  render: () => (
+    <>
+      <MediaCard
+        mediaId="31"
+        title="Sunday Morning Sermon"
+        channelName="First Baptist Church"
+        channelAvatarUrl="https://picsum.photos/seed/2/100/100"
+        duration="45:23"
+        timestamp="2 days ago"
+      />
+      <MediaCard
+        mediaId="32"
+        title="Wednesday Night Bible Study"
+        channelName="Community Church"
+        channelAvatarUrl="https://picsum.photos/seed/4/100/100"
+        duration="1:23:45"
+        timestamp="1 week ago"
+      />
+      <MediaCard
+        mediaId="33"
+        title="Audio Devotional: Morning Prayer"
+        channelName="Grace Chapel"
+        channelAvatarUrl="https://picsum.photos/seed/6/100/100"
+        duration="15:30"
+        timestamp="Today"
+      />
+      <MediaCard
+        mediaId="34"
+        title="Podcast Episode: The Gospel Today"
+        channelName="City Church"
+        channelAvatarUrl="https://picsum.photos/seed/8/100/100"
+        duration="52:10"
+        timestamp="3 days ago"
+      />
+    </>
+  ),
+};

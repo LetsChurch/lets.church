@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, type LinkProps } from '@tanstack/react-router';
 import type { EmblaCarouselType } from 'embla-carousel';
 import useEmblaCarousel from 'embla-carousel-react';
 import type { ComponentProps } from 'react';
@@ -140,6 +140,7 @@ function ContentSection({
   viewAllHref,
   showViewMoreCard = false,
   viewMoreCardText,
+  viewMoreCardHref,
   emptyTitle,
   emptyBody,
   emptyCta,
@@ -172,6 +173,7 @@ function ContentSection({
   viewAllHref?: string;
   showViewMoreCard?: boolean;
   viewMoreCardText?: string;
+  viewMoreCardHref?: LinkProps['to'];
 }) {
   const carouselItems = uploads.map((upload) => ({
     id: upload.id,
@@ -200,12 +202,12 @@ function ContentSection({
       {uploads.length > 0 ? (
         <MediaCarousel
           items={carouselItems}
-          showPagination
           tailerCard={
-            showViewMoreCard && viewMoreCardText ? (
-              <ViewMoreCard text={viewMoreCardText} />
+            showViewMoreCard && viewMoreCardText && viewMoreCardHref ? (
+              <ViewMoreCard text={viewMoreCardText} to={viewMoreCardHref} />
             ) : undefined
           }
+          className="mb-16"
         />
       ) : (
         <EmptyState
@@ -293,7 +295,7 @@ function RecentlySaved() {
             }}
           >
             <div className="flex gap-4 md:gap-6">
-              <div className="min-w-0 flex-[0_0_100%] space-y-3 md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]">
+              <div className="flex min-w-0 flex-[0_0_100%] flex-col gap-2 space-y-3 md:flex-[0_0_calc(50%-12px)] lg:flex-[0_0_calc(33.333%-16px)]">
                 {column1.map((upload) => (
                   <Link
                     key={upload.id}
@@ -523,6 +525,7 @@ function Home() {
           viewAllHref="/history"
           showViewMoreCard
           viewMoreCardText="See your full history"
+          viewMoreCardHref="/history"
         />
       ) : null}
 
@@ -533,7 +536,8 @@ function Home() {
           !!(subscriptionUploads && subscriptionUploads.length > 0)
         }
         viewMoreCardText="See more subscribed content"
-        viewAllText="View all subscriptions"
+        viewMoreCardHref="/following"
+        viewAllText="View all"
         viewAllHref="/following"
         emptyTitle="You're not following any channels yet"
         emptyBody="Follow your favorite channels to get a customized feed and to ensure you don't miss new content!"

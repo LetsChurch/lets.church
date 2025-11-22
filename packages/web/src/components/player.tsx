@@ -18,6 +18,7 @@ import {
   MediaTimeRange,
 } from 'media-chrome/react';
 import { useEffect, useRef, useState } from 'react';
+import { LcTooltip } from '@/components/lc-tooltip';
 import Logo from '@/components/logo';
 import { MediaSwitcher } from '@/components/media-switcher';
 import { WaveformBackground } from '@/components/waveform-background';
@@ -287,252 +288,262 @@ export function Player({
   }, [uploadRecordId, viewHash, recordViewSeconds]);
 
   return (
-    <div
-      className={cn(
-        'relative overflow-hidden',
-        !embed && 'rounded-2xl',
-        mediaType === 'video' && 'bg-black',
-        mediaType === 'video' && videoClassName,
-        mediaType === 'audio' && embed && 'w-full',
-      )}
-    >
-      {currentSource ? (
-        <>
-          {mediaType === 'audio' && (
-            <WaveformBackground
-              peaksJsonUrl={peaksJsonUrl}
-              currentTime={currentTime}
-              lengthSeconds={lengthSeconds ?? undefined}
-            />
-          )}
-          <MediaController
-            key={mediaType}
-            ref={controllerRef}
-            className="group relative block [&[userinactive]:not([mediapaused])]:cursor-none"
-            style={{
-              '--media-background-color': 'none',
-              width:
-                mediaType === 'audio' || embed ? '100%' : `${videoWidth}px`,
-              height:
-                mediaType === 'audio' && !embed
-                  ? '240px'
-                  : embed && mediaType === 'video'
-                    ? 'auto'
-                    : embed && mediaType === 'audio'
-                      ? '100%'
-                      : `${videoHeight}px`,
-              aspectRatio:
-                embed && mediaType === 'video'
-                  ? `${videoWidth} / ${videoHeight}`
-                  : undefined,
-            }}
-            autohide={mediaType === 'audio' ? '-1' : '2'}
-          >
-            <HlsVideo
-              ref={videoRef}
-              slot="media"
-              preload="metadata"
-              src={currentSource}
-              poster={
-                mediaType === 'video'
-                  ? posterThumbnailUrl || undefined
-                  : undefined
-              }
-              playsInline
-              autoplay
-              className={
-                mediaType === 'video'
-                  ? 'bg-black'
-                  : 'bg-linear-to-t from-gray-100 to-50% to-gray-400/0 dark:from-gray-900 dark:to-gray-900/0'
-              }
-            />
-
-            <div
-              className={cn(
-                'pointer-events-none absolute inset-0 flex flex-col transition-opacity duration-300',
-                mediaType === 'video' &&
-                  'group-[[userinactive]:not([mediapaused])]:opacity-0',
-              )}
+    <LcTooltip.Provider>
+      <div
+        className={cn(
+          'relative overflow-hidden',
+          !embed && 'rounded-2xl',
+          mediaType === 'video' && 'bg-black',
+          mediaType === 'video' && videoClassName,
+          mediaType === 'audio' && embed && 'w-full',
+        )}
+      >
+        {currentSource ? (
+          <>
+            {mediaType === 'audio' && (
+              <WaveformBackground
+                peaksJsonUrl={peaksJsonUrl}
+                currentTime={currentTime}
+                lengthSeconds={lengthSeconds ?? undefined}
+              />
+            )}
+            <MediaController
+              key={mediaType}
+              ref={controllerRef}
+              className="group relative block [&[userinactive]:not([mediapaused])]:cursor-none"
+              style={{
+                '--media-background-color': 'none',
+                width:
+                  mediaType === 'audio' || embed ? '100%' : `${videoWidth}px`,
+                height:
+                  mediaType === 'audio' && !embed
+                    ? '240px'
+                    : embed && mediaType === 'video'
+                      ? 'auto'
+                      : embed && mediaType === 'audio'
+                        ? '100%'
+                        : `${videoHeight}px`,
+                aspectRatio:
+                  embed && mediaType === 'video'
+                    ? `${videoWidth} / ${videoHeight}`
+                    : undefined,
+              }}
+              autohide={mediaType === 'audio' ? '-1' : '2'}
             >
+              <HlsVideo
+                ref={videoRef}
+                slot="media"
+                preload="metadata"
+                src={currentSource}
+                poster={
+                  mediaType === 'video'
+                    ? posterThumbnailUrl || undefined
+                    : undefined
+                }
+                playsInline
+                autoplay
+                className={
+                  mediaType === 'video'
+                    ? 'bg-black'
+                    : 'bg-linear-to-t from-gray-100 to-50% to-gray-400/0 dark:from-gray-900 dark:to-gray-900/0'
+                }
+              />
+
               <div
                 className={cn(
-                  'pointer-events-auto flex h-16 px-3 pt-3 group-[[mediaisfullscreen]]:h-24 group-[[mediaisfullscreen]]:px-6 group-[[mediaisfullscreen]]:pt-6',
-                  showToggle || embed ? 'justify-between' : 'justify-end',
-                  showToggle && 'group-[[mediaisfullscreen]]:justify-end',
+                  'pointer-events-none absolute inset-0 flex flex-col transition-opacity duration-300',
                   mediaType === 'video' &&
-                    'bg-linear-to-b from-gray-950/70 to-transparent',
+                    'group-[[userinactive]:not([mediapaused])]:opacity-0',
                 )}
-                onPointerMove={() => {
-                  // Trigger activity detection on MediaController
-                  controllerRef.current?.dispatchEvent(
-                    new PointerEvent('pointermove', { bubbles: true }),
-                  );
-                }}
               >
-                {showToggle ? (
-                  <div className="group-[[mediaisfullscreen]]:hidden">
-                    <MediaSwitcher
-                      value={mediaType}
-                      onValueChange={(value) => {
-                        if (value && videoRef.current) {
-                          // Save current position and play state
-                          setSavedPosition(videoRef.current.currentTime);
-                          setSavedPlayState(!videoRef.current.paused);
-                          setMediaType(value);
-                        }
-                      }}
-                    />
+                <div
+                  className={cn(
+                    'pointer-events-auto flex h-16 px-3 pt-3 group-[[mediaisfullscreen]]:h-24 group-[[mediaisfullscreen]]:px-6 group-[[mediaisfullscreen]]:pt-6',
+                    showToggle || embed ? 'justify-between' : 'justify-end',
+                    showToggle && 'group-[[mediaisfullscreen]]:justify-end',
+                    mediaType === 'video' &&
+                      'bg-linear-to-b from-gray-950/70 to-transparent',
+                  )}
+                  onPointerMove={() => {
+                    // Trigger activity detection on MediaController
+                    controllerRef.current?.dispatchEvent(
+                      new PointerEvent('pointermove', { bubbles: true }),
+                    );
+                  }}
+                >
+                  {showToggle ? (
+                    <div className="group-[[mediaisfullscreen]]:hidden">
+                      <MediaSwitcher
+                        value={mediaType}
+                        onValueChange={(value) => {
+                          if (value && videoRef.current) {
+                            // Save current position and play state
+                            setSavedPosition(videoRef.current.currentTime);
+                            setSavedPlayState(!videoRef.current.paused);
+                            setMediaType(value);
+                          }
+                        }}
+                      />
+                    </div>
+                  ) : embed ? (
+                    <a
+                      href="https://lets.church"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-start"
+                    >
+                      <Logo />
+                    </a>
+                  ) : null}
+                  <div className="flex items-start gap-2.5 group-[[mediaisfullscreen]]:gap-4">
+                    <LcTooltip content="Mute" side="bottom">
+                      <MediaMuteButton
+                        noTooltip
+                        className={cn(
+                          'size-7 rounded-lg bg-transparent p-1 group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5',
+                          mediaType === 'video'
+                            ? 'border-fancy-pants backdrop-blur-lg'
+                            : '[--media-icon-color:var(--color-primary)]',
+                        )}
+                      />
+                    </LcTooltip>
+                    <LcTooltip content="Playback Rate" side="bottom">
+                      <MediaPlaybackRateButton
+                        noTooltip
+                        className={cn(
+                          'size-7 rounded-lg bg-transparent p-1 group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5',
+                          mediaType === 'video'
+                            ? 'border-fancy-pants backdrop-blur-lg'
+                            : 'text-primary',
+                        )}
+                      />
+                    </LcTooltip>
+                    {mediaType === 'video' ? (
+                      <>
+                        <LcTooltip content="Picture in Picture" side="bottom">
+                          <MediaPipButton
+                            noTooltip
+                            className="size-7 rounded-lg border-fancy-pants bg-transparent p-1 backdrop-blur-lg group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5"
+                          />
+                        </LcTooltip>
+                        <LcTooltip content="Fullscreen" side="bottom">
+                          <MediaFullscreenButton
+                            noTooltip
+                            className="size-7 rounded-lg border-fancy-pants bg-transparent p-1 backdrop-blur-lg group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5"
+                          />
+                        </LcTooltip>
+                      </>
+                    ) : null}
                   </div>
-                ) : embed ? (
-                  <a
-                    href="https://lets.church"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-start"
-                  >
-                    <Logo />
-                  </a>
-                ) : null}
-                <div className="flex items-start gap-2.5 group-[[mediaisfullscreen]]:gap-4">
-                  <MediaMuteButton
-                    tooltipPlacement="bottom"
+                </div>
+
+                <div
+                  className="pointer-events-auto relative flex grow items-center justify-center gap-6 group-[[mediaisfullscreen]]:gap-10"
+                  onPointerMove={() => {
+                    // Trigger activity detection on MediaController
+                    controllerRef.current?.dispatchEvent(
+                      new PointerEvent('pointermove', { bubbles: true }),
+                    );
+                  }}
+                >
+                  <MediaSeekBackwardButton
+                    seekOffset={15}
                     className={cn(
-                      'size-7 rounded-lg bg-transparent p-1 group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5',
+                      'size-8 rounded-lg bg-transparent group-[[mediaisfullscreen]]:size-12',
                       mediaType === 'video'
                         ? 'border-fancy-pants backdrop-blur-lg'
                         : '[--media-icon-color:var(--color-primary)]',
                     )}
                   />
-                  <MediaPlaybackRateButton
-                    tooltipPlacement="bottom"
+                  <MediaPlayButton
                     className={cn(
-                      'size-7 rounded-lg bg-transparent p-1 group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5',
+                      'size-12 rounded-lg bg-transparent group-[[mediaisfullscreen]]:size-18',
                       mediaType === 'video'
                         ? 'border-fancy-pants backdrop-blur-lg'
-                        : 'text-primary',
+                        : '[--media-icon-color:var(--color-primary)]',
                     )}
                   />
-                  {mediaType === 'video' ? (
-                    <>
-                      <MediaPipButton
-                        tooltipPlacement="bottom"
-                        className="size-7 rounded-lg border-fancy-pants bg-transparent p-1 backdrop-blur-lg group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5"
-                      />
-                      <MediaFullscreenButton
-                        tooltipPlacement="bottom"
-                        className="size-7 rounded-lg border-fancy-pants bg-transparent p-1 backdrop-blur-lg group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5"
-                      />
-                    </>
-                  ) : null}
+                  <MediaSeekForwardButton
+                    seekOffset={15}
+                    className={cn(
+                      'size-8 rounded-lg bg-transparent group-[[mediaisfullscreen]]:size-12',
+                      mediaType === 'video'
+                        ? 'border-fancy-pants backdrop-blur-lg'
+                        : '[--media-icon-color:var(--color-primary)]',
+                    )}
+                  />
+                </div>
+
+                <div
+                  className={cn(
+                    'pointer-events-auto flex h-16 flex-col justify-end gap-1 px-4 pb-4 group-[[mediaisfullscreen]]:h-24 group-[[mediaisfullscreen]]:gap-2 group-[[mediaisfullscreen]]:px-8 group-[[mediaisfullscreen]]:pb-8',
+                    mediaType === 'video' &&
+                      'bg-linear-to-t from-gray-950/70 to-transparent',
+                  )}
+                >
+                  <div className="flex justify-between px-2 font-normal tracking-[-0.2px]">
+                    <MediaTimeDisplay
+                      className={cn(
+                        'bg-transparent text-xs group-[[mediaisfullscreen]]:text-base',
+                        '[--media-text-color:var(--color-primary)]',
+                        '[--media-font:var(--font-time)]',
+                      )}
+                      showDuration={false}
+                    />
+                    <MediaDurationDisplay
+                      className={cn(
+                        'bg-transparent text-xs group-[[mediaisfullscreen]]:text-base',
+                        '[--media-text-color:var(--color-primary)]',
+                        '[--media-font:var(--font-time)]',
+                      )}
+                    />
+                  </div>
+
+                  <MediaTimeRange
+                    className={cn(
+                      '[--media-range-bar-color:--alpha(var(--color-brand)/60%)]',
+                      '[--media-range-track-background:--alpha(var(--color-gray-950)/20%)]',
+                      'dark:[--media-range-track-background:--alpha(var(--color-white)/20%)]',
+                      '[--media-range-thumb-background:linear-gradient(45deg,--alpha(var(--color-brand)/0%)_50%,var(--color-indigo-300)_100%),var(--color-brand)]',
+                      '[--media-range-thumb-box-shadow:0_1px_6px_0_--alpha(var(--color-black)/50%),0_2px_12px_0_var(--color-brand)]',
+                      'group-[[mediaisfullscreen]]:h-[5px]',
+                    )}
+                    style={{
+                      width: '100%',
+                      height: '3px',
+                      background: 'none',
+                      '--media-range-track-border-radius': '3px',
+                      '--media-range-thumb-width': '7px',
+                      '--media-range-thumb-height': '7px',
+                      '--media-range-thumb-border-radius': '6px',
+                    }}
+                  />
                 </div>
               </div>
+            </MediaController>
 
-              <div
-                className="pointer-events-auto relative flex grow items-center justify-center gap-6 group-[[mediaisfullscreen]]:gap-10"
-                onPointerMove={() => {
-                  // Trigger activity detection on MediaController
-                  controllerRef.current?.dispatchEvent(
-                    new PointerEvent('pointermove', { bubbles: true }),
-                  );
-                }}
-              >
-                <MediaSeekBackwardButton
-                  seekOffset={15}
-                  className={cn(
-                    'size-8 rounded-lg bg-transparent group-[[mediaisfullscreen]]:size-12',
-                    mediaType === 'video'
-                      ? 'border-fancy-pants backdrop-blur-lg'
-                      : '[--media-icon-color:var(--color-primary)]',
-                  )}
-                />
-                <MediaPlayButton
-                  className={cn(
-                    'size-12 rounded-lg bg-transparent group-[[mediaisfullscreen]]:size-18',
-                    mediaType === 'video'
-                      ? 'border-fancy-pants backdrop-blur-lg'
-                      : '[--media-icon-color:var(--color-primary)]',
-                  )}
-                />
-                <MediaSeekForwardButton
-                  seekOffset={15}
-                  className={cn(
-                    'size-8 rounded-lg bg-transparent group-[[mediaisfullscreen]]:size-12',
-                    mediaType === 'video'
-                      ? 'border-fancy-pants backdrop-blur-lg'
-                      : '[--media-icon-color:var(--color-primary)]',
-                  )}
-                />
-              </div>
-
-              <div
-                className={cn(
-                  'pointer-events-auto flex h-16 flex-col justify-end gap-1 px-4 pb-4 group-[[mediaisfullscreen]]:h-24 group-[[mediaisfullscreen]]:gap-2 group-[[mediaisfullscreen]]:px-8 group-[[mediaisfullscreen]]:pb-8',
-                  mediaType === 'video' &&
-                    'bg-linear-to-t from-gray-950/70 to-transparent',
+            {/* Seek feedback layer - independent of controls visibility */}
+            {seekFeedback && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                {seekFeedback.direction === 'backward' && (
+                  <div className="-translate-x-1/2 absolute left-1/4 flex size-16 animate-ping items-center justify-center rounded-full bg-black/50">
+                    <IconRewindBackward10 className="size-8 text-white" />
+                  </div>
                 )}
-              >
-                <div className="flex justify-between px-2 font-normal tracking-[-0.2px]">
-                  <MediaTimeDisplay
-                    className={cn(
-                      'bg-transparent text-xs group-[[mediaisfullscreen]]:text-base',
-                      '[--media-text-color:var(--color-primary)]',
-                      '[--media-font:var(--font-time)]',
-                    )}
-                    showDuration={false}
-                  />
-                  <MediaDurationDisplay
-                    className={cn(
-                      'bg-transparent text-xs group-[[mediaisfullscreen]]:text-base',
-                      '[--media-text-color:var(--color-primary)]',
-                      '[--media-font:var(--font-time)]',
-                    )}
-                  />
-                </div>
-
-                <MediaTimeRange
-                  className={cn(
-                    '[--media-range-bar-color:--alpha(var(--color-brand)/60%)]',
-                    '[--media-range-track-background:--alpha(var(--color-gray-950)/20%)]',
-                    'dark:[--media-range-track-background:--alpha(var(--color-white)/20%)]',
-                    '[--media-range-thumb-background:linear-gradient(45deg,--alpha(var(--color-brand)/0%)_50%,var(--color-indigo-300)_100%),var(--color-brand)]',
-                    '[--media-range-thumb-box-shadow:0_1px_6px_0_--alpha(var(--color-black)/50%),0_2px_12px_0_var(--color-brand)]',
-                    'group-[[mediaisfullscreen]]:h-[5px]',
-                  )}
-                  style={{
-                    width: '100%',
-                    height: '3px',
-                    background: 'none',
-                    '--media-range-track-border-radius': '3px',
-                    '--media-range-thumb-width': '7px',
-                    '--media-range-thumb-height': '7px',
-                    '--media-range-thumb-border-radius': '6px',
-                  }}
-                />
+                {seekFeedback.direction === 'forward' && (
+                  <div className="absolute right-1/4 flex size-16 translate-x-1/2 animate-ping items-center justify-center rounded-full bg-black/50">
+                    <IconRewindForward10 className="size-8 text-white" />
+                  </div>
+                )}
               </div>
-            </div>
-          </MediaController>
-
-          {/* Seek feedback layer - independent of controls visibility */}
-          {seekFeedback && (
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              {seekFeedback.direction === 'backward' && (
-                <div className="-translate-x-1/2 absolute left-1/4 flex size-16 animate-ping items-center justify-center rounded-full bg-black/50">
-                  <IconRewindBackward10 className="size-8 text-white" />
-                </div>
-              )}
-              {seekFeedback.direction === 'forward' && (
-                <div className="absolute right-1/4 flex size-16 translate-x-1/2 animate-ping items-center justify-center rounded-full bg-black/50">
-                  <IconRewindForward10 className="size-8 text-white" />
-                </div>
-              )}
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="flex size-full items-center justify-center">
-          <p className="text-sm text-zinc-400">No media available</p>
-        </div>
-      )}
-    </div>
+            )}
+          </>
+        ) : (
+          <div className="flex size-full items-center justify-center">
+            <p className="text-sm text-zinc-400">No media available</p>
+          </div>
+        )}
+      </div>
+    </LcTooltip.Provider>
   );
 }
