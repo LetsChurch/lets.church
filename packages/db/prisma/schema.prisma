@@ -660,3 +660,30 @@ model FeaturedUpload {
   @@index([rank])
   @@map("featured_upload")
 }
+
+enum NewsletterListType {
+  PUBLIC  @map("public")
+  PRIVATE @map("private")
+
+  @@map("newsletter_list_type")
+}
+
+enum NewsletterListOptin {
+  SINGLE @map("single")
+  DOUBLE @map("double")
+
+  @@map("newsletter_list_optin")
+}
+
+model NewsletterMailingList {
+  listmonkUuid            String                 @id @map("listmonk_uuid") @db.Uuid
+  name                    String
+  type                    NewsletterListType     @default(PUBLIC)
+  optin                   NewsletterListOptin    @default(SINGLE)
+  enabled                 Boolean                @default(true)
+  subscribeOnRegistration Boolean                @default(false) @map("subscribe_on_registration")
+  createdAt               DateTime               @default(now()) @map("created_at")
+  updatedAt               DateTime               @updatedAt @map("updated_at")
+
+  @@map("newsletter_mailing_list")
+}

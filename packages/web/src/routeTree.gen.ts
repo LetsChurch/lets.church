@@ -45,11 +45,13 @@ import { Route as DashboardAdminUploadBackupsRouteImport } from './routes/dashbo
 import { Route as DashboardAdminProcessingUploadsRouteImport } from './routes/dashboard_/admin_.processing-uploads'
 import { Route as DashboardAdminOrganizationTagsRouteImport } from './routes/dashboard_/admin_.organization-tags'
 import { Route as DashboardAdminOrganizationApprovalsRouteImport } from './routes/dashboard_/admin_.organization-approvals'
+import { Route as DashboardAdminNewsletterListsRouteImport } from './routes/dashboard_/admin_.newsletter-lists'
 import { Route as DashboardAdminFeaturedRouteImport } from './routes/dashboard_/admin_/featured'
 import { Route as DashboardAdminFailedUploadsRouteImport } from './routes/dashboard_/admin_.failed-uploads'
 import { Route as DashboardAdminChannelApprovalsRouteImport } from './routes/dashboard_/admin_.channel-approvals'
 import { Route as DashboardAccountSecurityRouteImport } from './routes/dashboard_/account_.security'
 import { Route as DashboardAccountProfileRouteImport } from './routes/dashboard_/account_.profile'
+import { Route as DashboardAccountNewsletterRouteImport } from './routes/dashboard_/account_.newsletter'
 import { Route as ChannelSlugRssDotxmlRouteImport } from './routes/channel.$slug.rss[.]xml'
 import { Route as ChannelSlugPodcastDotxmlRouteImport } from './routes/channel.$slug.podcast[.]xml'
 import { Route as MainMediaMediaIdRouteImport } from './routes/_main/media/$mediaId'
@@ -259,6 +261,12 @@ const DashboardAdminOrganizationApprovalsRoute =
     path: '/admin/organization-approvals',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardAdminNewsletterListsRoute =
+  DashboardAdminNewsletterListsRouteImport.update({
+    id: '/admin_/newsletter-lists',
+    path: '/admin/newsletter-lists',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardAdminFeaturedRoute = DashboardAdminFeaturedRouteImport.update({
   id: '/admin_/featured',
   path: '/admin/featured',
@@ -287,6 +295,12 @@ const DashboardAccountProfileRoute = DashboardAccountProfileRouteImport.update({
   path: '/account/profile',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardAccountNewsletterRoute =
+  DashboardAccountNewsletterRouteImport.update({
+    id: '/account_/newsletter',
+    path: '/account/newsletter',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const ChannelSlugRssDotxmlRoute = ChannelSlugRssDotxmlRouteImport.update({
   id: '/channel/$slug/rss.xml',
   path: '/channel/$slug/rss.xml',
@@ -437,11 +451,13 @@ export interface FileRoutesByFullPath {
   '/media/$mediaId': typeof MainMediaMediaIdRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
+  '/dashboard/account/newsletter': typeof DashboardAccountNewsletterRoute
   '/dashboard/account/profile': typeof DashboardAccountProfileRoute
   '/dashboard/account/security': typeof DashboardAccountSecurityRoute
   '/dashboard/admin/channel-approvals': typeof DashboardAdminChannelApprovalsRoute
   '/dashboard/admin/failed-uploads': typeof DashboardAdminFailedUploadsRoute
   '/dashboard/admin/featured': typeof DashboardAdminFeaturedRoute
+  '/dashboard/admin/newsletter-lists': typeof DashboardAdminNewsletterListsRoute
   '/dashboard/admin/organization-approvals': typeof DashboardAdminOrganizationApprovalsRoute
   '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard/admin/processing-uploads': typeof DashboardAdminProcessingUploadsRoute
@@ -498,11 +514,13 @@ export interface FileRoutesByTo {
   '/media/$mediaId': typeof MainMediaMediaIdRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
+  '/dashboard/account/newsletter': typeof DashboardAccountNewsletterRoute
   '/dashboard/account/profile': typeof DashboardAccountProfileRoute
   '/dashboard/account/security': typeof DashboardAccountSecurityRoute
   '/dashboard/admin/channel-approvals': typeof DashboardAdminChannelApprovalsRoute
   '/dashboard/admin/failed-uploads': typeof DashboardAdminFailedUploadsRoute
   '/dashboard/admin/featured': typeof DashboardAdminFeaturedRoute
+  '/dashboard/admin/newsletter-lists': typeof DashboardAdminNewsletterListsRoute
   '/dashboard/admin/organization-approvals': typeof DashboardAdminOrganizationApprovalsRoute
   '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard/admin/processing-uploads': typeof DashboardAdminProcessingUploadsRoute
@@ -563,11 +581,13 @@ export interface FileRoutesById {
   '/_main/media/$mediaId': typeof MainMediaMediaIdRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
+  '/dashboard_/account_/newsletter': typeof DashboardAccountNewsletterRoute
   '/dashboard_/account_/profile': typeof DashboardAccountProfileRoute
   '/dashboard_/account_/security': typeof DashboardAccountSecurityRoute
   '/dashboard_/admin_/channel-approvals': typeof DashboardAdminChannelApprovalsRoute
   '/dashboard_/admin_/failed-uploads': typeof DashboardAdminFailedUploadsRoute
   '/dashboard_/admin_/featured': typeof DashboardAdminFeaturedRoute
+  '/dashboard_/admin_/newsletter-lists': typeof DashboardAdminNewsletterListsRoute
   '/dashboard_/admin_/organization-approvals': typeof DashboardAdminOrganizationApprovalsRoute
   '/dashboard_/admin_/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard_/admin_/processing-uploads': typeof DashboardAdminProcessingUploadsRoute
@@ -628,11 +648,13 @@ export interface FileRouteTypes {
     | '/media/$mediaId'
     | '/channel/$slug/podcast.xml'
     | '/channel/$slug/rss.xml'
+    | '/dashboard/account/newsletter'
     | '/dashboard/account/profile'
     | '/dashboard/account/security'
     | '/dashboard/admin/channel-approvals'
     | '/dashboard/admin/failed-uploads'
     | '/dashboard/admin/featured'
+    | '/dashboard/admin/newsletter-lists'
     | '/dashboard/admin/organization-approvals'
     | '/dashboard/admin/organization-tags'
     | '/dashboard/admin/processing-uploads'
@@ -689,11 +711,13 @@ export interface FileRouteTypes {
     | '/media/$mediaId'
     | '/channel/$slug/podcast.xml'
     | '/channel/$slug/rss.xml'
+    | '/dashboard/account/newsletter'
     | '/dashboard/account/profile'
     | '/dashboard/account/security'
     | '/dashboard/admin/channel-approvals'
     | '/dashboard/admin/failed-uploads'
     | '/dashboard/admin/featured'
+    | '/dashboard/admin/newsletter-lists'
     | '/dashboard/admin/organization-approvals'
     | '/dashboard/admin/organization-tags'
     | '/dashboard/admin/processing-uploads'
@@ -753,11 +777,13 @@ export interface FileRouteTypes {
     | '/_main/media/$mediaId'
     | '/channel/$slug/podcast.xml'
     | '/channel/$slug/rss.xml'
+    | '/dashboard_/account_/newsletter'
     | '/dashboard_/account_/profile'
     | '/dashboard_/account_/security'
     | '/dashboard_/admin_/channel-approvals'
     | '/dashboard_/admin_/failed-uploads'
     | '/dashboard_/admin_/featured'
+    | '/dashboard_/admin_/newsletter-lists'
     | '/dashboard_/admin_/organization-approvals'
     | '/dashboard_/admin_/organization-tags'
     | '/dashboard_/admin_/processing-uploads'
@@ -1053,6 +1079,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAdminOrganizationApprovalsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard_/admin_/newsletter-lists': {
+      id: '/dashboard_/admin_/newsletter-lists'
+      path: '/admin/newsletter-lists'
+      fullPath: '/dashboard/admin/newsletter-lists'
+      preLoaderRoute: typeof DashboardAdminNewsletterListsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard_/admin_/featured': {
       id: '/dashboard_/admin_/featured'
       path: '/admin/featured'
@@ -1086,6 +1119,13 @@ declare module '@tanstack/react-router' {
       path: '/account/profile'
       fullPath: '/dashboard/account/profile'
       preLoaderRoute: typeof DashboardAccountProfileRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard_/account_/newsletter': {
+      id: '/dashboard_/account_/newsletter'
+      path: '/account/newsletter'
+      fullPath: '/dashboard/account/newsletter'
+      preLoaderRoute: typeof DashboardAccountNewsletterRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/channel/$slug/rss.xml': {
@@ -1307,11 +1347,13 @@ interface DashboardRouteChildren {
   DashboardChurchesRoute: typeof DashboardChurchesRoute
   DashboardOrganizationsRoute: typeof DashboardOrganizationsRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
+  DashboardAccountNewsletterRoute: typeof DashboardAccountNewsletterRoute
   DashboardAccountProfileRoute: typeof DashboardAccountProfileRoute
   DashboardAccountSecurityRoute: typeof DashboardAccountSecurityRoute
   DashboardAdminChannelApprovalsRoute: typeof DashboardAdminChannelApprovalsRoute
   DashboardAdminFailedUploadsRoute: typeof DashboardAdminFailedUploadsRoute
   DashboardAdminFeaturedRoute: typeof DashboardAdminFeaturedRoute
+  DashboardAdminNewsletterListsRoute: typeof DashboardAdminNewsletterListsRoute
   DashboardAdminOrganizationApprovalsRoute: typeof DashboardAdminOrganizationApprovalsRoute
   DashboardAdminOrganizationTagsRoute: typeof DashboardAdminOrganizationTagsRoute
   DashboardAdminProcessingUploadsRoute: typeof DashboardAdminProcessingUploadsRoute
@@ -1345,11 +1387,13 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardChurchesRoute: DashboardChurchesRoute,
   DashboardOrganizationsRoute: DashboardOrganizationsRoute,
   DashboardIndexRoute: DashboardIndexRoute,
+  DashboardAccountNewsletterRoute: DashboardAccountNewsletterRoute,
   DashboardAccountProfileRoute: DashboardAccountProfileRoute,
   DashboardAccountSecurityRoute: DashboardAccountSecurityRoute,
   DashboardAdminChannelApprovalsRoute: DashboardAdminChannelApprovalsRoute,
   DashboardAdminFailedUploadsRoute: DashboardAdminFailedUploadsRoute,
   DashboardAdminFeaturedRoute: DashboardAdminFeaturedRoute,
+  DashboardAdminNewsletterListsRoute: DashboardAdminNewsletterListsRoute,
   DashboardAdminOrganizationApprovalsRoute:
     DashboardAdminOrganizationApprovalsRoute,
   DashboardAdminOrganizationTagsRoute: DashboardAdminOrganizationTagsRoute,

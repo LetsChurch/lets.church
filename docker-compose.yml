@@ -41,6 +41,9 @@ services:
       IMGPROXY_SALT: ${IMGPROXY_SALT}
       IMGPROXY_URL: ${IMGPROXY_URL}
       JWT_SECRET: ${JWT_SECRET}
+      LISTMONK_INTERNAL_URL: http://listmonk:9000
+      LISTMONK_API_USER: ${LISTMONK_API_USER}
+      LISTMONK_API_TOKEN: ${LISTMONK_API_TOKEN}
       MEDIA_URL: ${MEDIA_URL}
       TEMPORAL_ADDRESS: temporal:7233
       TURNSTILE_SITE_KEY: 1x00000000000000000000AA
@@ -210,20 +213,26 @@ services:
   # Vendor Services
   #
   listmonk:
-    image: listmonk/listmonk:v3.0.0
-    command:
-      [
-        sh,
-        -c,
-        "yes | ./listmonk --install --config config-demo.toml && ./listmonk --config config-demo.toml",
-      ]
+    image: listmonk/listmonk:v5.1.0
+    command: [sh, -c, "./listmonk --install --yes && ./listmonk"]
     environment:
       LISTMONK_db__host: postgres
+      LISTMONK_db__port: 5432
+      LISTMONK_db__user: listmonk
+      LISTMONK_db__password: listmonk
+      LISTMONK_db__database: listmonk
+      LISTMONK_db__ssl_mode: disable
+      LISTMONK_app__address: 0.0.0.0:9000
+      LISTMONK_ADMIN_USER: ${LISTMONK_USER}
+      LISTMONK_ADMIN_PASSWORD: ${LISTMONK_PASSWORD}
       TZ: US/Eastern
     ports:
       - "127.0.0.1:${HOST_LISTMONK_PORT}:9000"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
 
   imgproxy:
     image: darthsim/imgproxy:v3.21.0

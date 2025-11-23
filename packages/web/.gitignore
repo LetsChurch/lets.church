@@ -1,5 +1,6 @@
 .nitro
 .output
+.vite
 dist
 storybook-static
 src/generated

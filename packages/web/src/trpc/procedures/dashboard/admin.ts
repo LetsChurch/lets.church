@@ -29,6 +29,7 @@ import logger from '@/util/logger';
 import { publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
 import { authProcedure, router } from '../../trpc';
+import { newsletterListsRouter } from '../newsletter-lists';
 
 const moduleLogger = logger.child({
   module: 'trpc/procedures/dashboard/admin',
@@ -1939,4 +1940,6 @@ export const adminRouter = router({
         });
       }
     }),
+
+  newsletterLists: newsletterListsRouter,
 });

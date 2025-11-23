@@ -16,7 +16,7 @@ export const getInitialDonateCardDismissed = createIsomorphicFn()
 export function setDonateCardDismissed(dismissed: boolean) {
   if (typeof window !== 'undefined') {
     Cookies.set(DONATE_CARD_COOKIE_NAME, JSON.stringify(dismissed), {
-      expires: 7, // 7 days
+      expires: 14, // 14 days
     });
     window.dispatchEvent(
       new CustomEvent(DONATE_CARD_CHANGE_EVENT, { detail: { dismissed } }),

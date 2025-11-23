@@ -20,6 +20,7 @@ configMapGenerator:
     behavior: merge
     literals:
       - IMGPROXY_URL="https://images.letschurch.cloud"
+      - LISTMONK_INTERNAL_URL="http://listmonk"
       - MEDIA_URL="https://letschurch-media.b-cdn.net"
 secretGenerator:
   # Observability
@@ -40,6 +41,9 @@ secretGenerator:
   - name: imgproxy-secret
     envs:
       - imgproxy.crypt.env
+  - name: listmonk-secret
+    envs:
+      - listmonk.crypt.env
   - name: s3-secret
     envs:
       - s3.crypt.env

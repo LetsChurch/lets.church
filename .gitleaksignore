@@ -21,6 +21,7 @@ infra/k8s/prod/imgproxy.crypt.env:generic-api-key:5
 infra/k8s/prod/imgproxy.crypt.env:generic-api-key:6
 infra/k8s/prod/imgproxy.crypt.env:generic-api-key:7
 infra/k8s/prod/jwt.crypt.env:generic-api-key:1
+infra/k8s/prod/listmonk.crypt.env:generic-api-key:2
 infra/k8s/prod/mapbox.crypt.env:generic-api-key:1
 infra/k8s/prod/mapbox.crypt.env:generic-api-key:2
 infra/k8s/prod/mapbox.crypt.env:generic-api-key:3

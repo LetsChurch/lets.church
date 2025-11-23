@@ -34,6 +34,11 @@ export RCLONE_CONFIG_MAPTILES_SECRET_ACCESS_KEY=
 
 export ADMIN_EMAIL=admin@example.com
 
+export LISTMONK_USER=admin
+export LISTMONK_PASSWORD=password
+export LISTMONK_API_USER=api
+export LISTMONK_API_TOKEN=generate
+
 KUBECONFIG=$PWD/infra/kubeconfig.yaml
 
 if [ -f $PWD/infra/kubeconfig.yaml ]; then

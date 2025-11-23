@@ -79,6 +79,29 @@ function AccountPage() {
 
         <Card shadow="xs" padding="lg" radius="md" withBorder>
           <Group justify="space-between" align="flex-start" mb="xs">
+            <Text fw={500}>Newsletter Subscription</Text>
+            <Button
+              variant="light"
+              size="sm"
+              w={actionWidth}
+              renderRoot={(rootProps) => (
+                <Link
+                  {...rootProps}
+                  className={clsx(rootProps.className, styles.buttonLink)}
+                  to="/dashboard/account/newsletter"
+                >
+                  Manage
+                </Link>
+              )}
+            />
+          </Group>
+          <Text size="sm" c="dimmed">
+            Subscribe or unsubscribe from the Let's Church newsletter.
+          </Text>
+        </Card>
+
+        <Card shadow="xs" padding="lg" radius="md" withBorder>
+          <Group justify="space-between" align="flex-start" mb="xs">
             <Text fw={500}>Notifications</Text>
             <Button variant="light" size="sm" w={actionWidth} disabled>
               Coming Soon

@@ -261,6 +261,21 @@ function AdminPage() {
             Manage S3 backups for uploaded media
           </Text>
         </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
+          to="/dashboard/admin/newsletter-lists"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Newsletter Lists</Text>
+          </Group>
+          <Text size="sm" c="dimmed">
+            Configure mailing list subscriptions
+          </Text>
+        </Card>
       </SimpleGrid>
     </>
   );

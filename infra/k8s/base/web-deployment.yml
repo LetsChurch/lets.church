@@ -51,6 +51,8 @@ spec:
             - secretRef:
                 name: jwt-secret
             - secretRef:
+                name: listmonk-secret
+            - secretRef:
                 name: s3-secret
             - secretRef:
                 name: sentry-secret

@@ -13,6 +13,7 @@ import { MediaCard } from '@/components/media-card';
 import { MediaCarousel } from '@/components/media-carousel';
 import { MediaCompactCard } from '@/components/media-compact-card';
 import { MediaGrid } from '@/components/media-grid';
+import { NewsletterCard } from '@/components/newsletter-card';
 import { SearchCard } from '@/components/search-card';
 // import { TrendingSearchPill } from '@/components/trending-search-pill';
 import { ViewMoreCard } from '@/components/view-more-card';
@@ -28,13 +29,14 @@ export const Route = createFileRoute('/_main/')({
     );
 
     // Prefetch featured uploads and first page of trending uploads for infinite scroll
+    // Need at least 35 uploads to cover content up to the newsletter tile without jumps
     await Promise.all([
       context.queryClient.ensureQueryData(
         context.trpc.home.getFeaturedUploads.queryOptions(),
       ),
       context.queryClient.prefetchInfiniteQuery(
         context.trpc.home.getTrendingUploads.infiniteQueryOptions({
-          limit: 22,
+          limit: 36,
         }),
       ),
     ]);
@@ -440,7 +442,7 @@ function Home() {
     isFetchingNextPage,
   } = useInfiniteQuery({
     ...trpc.home.getTrendingUploads.infiniteQueryOptions({
-      limit: 22,
+      limit: 36,
     }),
     getNextPageParam: (lastPage) => {
       if (
@@ -610,7 +612,27 @@ function Home() {
       <TrendingSearches />
 
       <MediaGrid>
-        {allTrendingUploads.slice(19).map((upload, _i) => (
+        {allTrendingUploads.slice(19, 35).map((upload, _i) => (
+          <MediaCard
+            key={upload.id}
+            mediaId={upload.id}
+            title={upload?.title ?? 'Untitled'}
+            thumbnailUrl={upload?.thumbnailUrl}
+            channelName={upload?.channel.name}
+            channelAvatarUrl={upload?.channel.avatarUrl}
+            duration={
+              upload.lengthSeconds
+                ? formatTime(upload.lengthSeconds * 1000)
+                : undefined
+            }
+          />
+        ))}
+
+        <NewsletterCard />
+      </MediaGrid>
+
+      <MediaGrid>
+        {allTrendingUploads.slice(35).map((upload, _i) => (
           <MediaCard
             key={upload.id}
             mediaId={upload.id}
