@@ -96,7 +96,7 @@ function RouteComponent() {
       defaultSearchValue={q}
       containerClassName="mx-auto max-w-7xl px-4 py-4"
       headerChildren={
-        <div className="mb-6 sm:hidden">
+        <div className="mb-6 px-4 sm:hidden">
           <SearchBar defaultValue={q} />
         </div>
       }

@@ -129,6 +129,7 @@ export default function SearchBar({
         <div className="min-w-0 flex-1 px-1 pb-0.5">
           <Autocomplete.Input
             name="q"
+            type="search"
             placeholder={placeholder}
             className={cn(
               'w-full appearance-none font-medium text-primary text-sm leading-none outline-none',

@@ -70,7 +70,7 @@ export default function Header({
         </div>
 
         {/* Search Bar */}
-        <div className="w-80 max-sm:hidden">
+        <div className="hidden w-80 sm:block">
           <SearchBar
             defaultValue={defaultSearchValue}
             placeholder={searchPlaceholder}
