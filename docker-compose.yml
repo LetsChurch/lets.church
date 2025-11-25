@@ -342,6 +342,25 @@ services:
   #
   # Development
   #
+  storybook:
+    build:
+      context: .
+      target: dev
+    command: pnpm --filter @letschurch/web run storybook
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:${HOST_STORYBOOK_PORT}:6006
+    volumes:
+      - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
+      - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
+      - ./packages/util:/usr/src/app/packages/util
+      - ./packages/s3:/usr/src/app/packages/s3
+      - ./packages/db:/usr/src/app/packages/db
+      - /usr/src/app/packages/db/src/generated
+      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - ./packages/temporal:/usr/src/app/packages/temporal
+      - ./packages/web:/usr/src/app/packages/web
+
   kibana:
     image: kibana:9.1.5
     environment:

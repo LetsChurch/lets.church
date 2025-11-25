@@ -17,7 +17,7 @@
     "fix": "biome check --write",
     "fix!": "biome check --write --unsafe",
     "tcm": "tcm src",
-    "storybook": "storybook dev -p 6006",
+    "storybook": "storybook dev -p 6006 --no-open",
     "build:storybook": "storybook build",
     "seed": "tsx src/seed/dev.ts",
     "seed:tags": "tsx src/seed/tags.ts"

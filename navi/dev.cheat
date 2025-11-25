@@ -35,6 +35,9 @@ DATABASE_URL=$HOST_DATABASE_URL  npm --prefix $(git rev-parse --show-toplevel)/s
 # Open pgweb
 open http://localhost:${HOST_PGWEB_PORT}
 
+# Open Storybook
+open http://localhost:${HOST_STORYBOOK_PORT}
+
 # View raw (encrypted) file as committed
 git show HEAD:<encrypted_file> --no-textconv
 
