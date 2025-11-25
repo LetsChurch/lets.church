@@ -163,7 +163,7 @@ export const channelRouter = router({
             },
           });
 
-          const approvalUrl = `${WEB_URL}/dashboard/admin/channel-approvals`;
+          const approvalUrl = `${WEB_URL}/dashboard/admin/channels?filter=pending`;
           const subject = `New Channel Approval Request: ${channel.name}`;
           const text = stripIndent`
             A new channel has been created and is pending approval.

@@ -50,7 +50,7 @@ import { Route as DashboardAdminOrganizationApprovalsRouteImport } from './route
 import { Route as DashboardAdminNewsletterListsRouteImport } from './routes/dashboard_/admin_.newsletter-lists'
 import { Route as DashboardAdminFeaturedRouteImport } from './routes/dashboard_/admin_/featured'
 import { Route as DashboardAdminFailedUploadsRouteImport } from './routes/dashboard_/admin_.failed-uploads'
-import { Route as DashboardAdminChannelApprovalsRouteImport } from './routes/dashboard_/admin_.channel-approvals'
+import { Route as DashboardAdminChannelsRouteImport } from './routes/dashboard_/admin_.channels'
 import { Route as DashboardAccountSecurityRouteImport } from './routes/dashboard_/account_.security'
 import { Route as DashboardAccountProfileRouteImport } from './routes/dashboard_/account_.profile'
 import { Route as DashboardAccountNewsletterRouteImport } from './routes/dashboard_/account_.newsletter'
@@ -290,12 +290,11 @@ const DashboardAdminFailedUploadsRoute =
     path: '/admin/failed-uploads',
     getParentRoute: () => DashboardRoute,
   } as any)
-const DashboardAdminChannelApprovalsRoute =
-  DashboardAdminChannelApprovalsRouteImport.update({
-    id: '/admin_/channel-approvals',
-    path: '/admin/channel-approvals',
-    getParentRoute: () => DashboardRoute,
-  } as any)
+const DashboardAdminChannelsRoute = DashboardAdminChannelsRouteImport.update({
+  id: '/admin_/channels',
+  path: '/admin/channels',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardAccountSecurityRoute =
   DashboardAccountSecurityRouteImport.update({
     id: '/account_/security',
@@ -468,7 +467,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/account/newsletter': typeof DashboardAccountNewsletterRoute
   '/dashboard/account/profile': typeof DashboardAccountProfileRoute
   '/dashboard/account/security': typeof DashboardAccountSecurityRoute
-  '/dashboard/admin/channel-approvals': typeof DashboardAdminChannelApprovalsRoute
+  '/dashboard/admin/channels': typeof DashboardAdminChannelsRoute
   '/dashboard/admin/failed-uploads': typeof DashboardAdminFailedUploadsRoute
   '/dashboard/admin/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard/admin/newsletter-lists': typeof DashboardAdminNewsletterListsRoute
@@ -533,7 +532,7 @@ export interface FileRoutesByTo {
   '/dashboard/account/newsletter': typeof DashboardAccountNewsletterRoute
   '/dashboard/account/profile': typeof DashboardAccountProfileRoute
   '/dashboard/account/security': typeof DashboardAccountSecurityRoute
-  '/dashboard/admin/channel-approvals': typeof DashboardAdminChannelApprovalsRoute
+  '/dashboard/admin/channels': typeof DashboardAdminChannelsRoute
   '/dashboard/admin/failed-uploads': typeof DashboardAdminFailedUploadsRoute
   '/dashboard/admin/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard/admin/newsletter-lists': typeof DashboardAdminNewsletterListsRoute
@@ -602,7 +601,7 @@ export interface FileRoutesById {
   '/dashboard_/account_/newsletter': typeof DashboardAccountNewsletterRoute
   '/dashboard_/account_/profile': typeof DashboardAccountProfileRoute
   '/dashboard_/account_/security': typeof DashboardAccountSecurityRoute
-  '/dashboard_/admin_/channel-approvals': typeof DashboardAdminChannelApprovalsRoute
+  '/dashboard_/admin_/channels': typeof DashboardAdminChannelsRoute
   '/dashboard_/admin_/failed-uploads': typeof DashboardAdminFailedUploadsRoute
   '/dashboard_/admin_/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard_/admin_/newsletter-lists': typeof DashboardAdminNewsletterListsRoute
@@ -671,7 +670,7 @@ export interface FileRouteTypes {
     | '/dashboard/account/newsletter'
     | '/dashboard/account/profile'
     | '/dashboard/account/security'
-    | '/dashboard/admin/channel-approvals'
+    | '/dashboard/admin/channels'
     | '/dashboard/admin/failed-uploads'
     | '/dashboard/admin/featured'
     | '/dashboard/admin/newsletter-lists'
@@ -736,7 +735,7 @@ export interface FileRouteTypes {
     | '/dashboard/account/newsletter'
     | '/dashboard/account/profile'
     | '/dashboard/account/security'
-    | '/dashboard/admin/channel-approvals'
+    | '/dashboard/admin/channels'
     | '/dashboard/admin/failed-uploads'
     | '/dashboard/admin/featured'
     | '/dashboard/admin/newsletter-lists'
@@ -804,7 +803,7 @@ export interface FileRouteTypes {
     | '/dashboard_/account_/newsletter'
     | '/dashboard_/account_/profile'
     | '/dashboard_/account_/security'
-    | '/dashboard_/admin_/channel-approvals'
+    | '/dashboard_/admin_/channels'
     | '/dashboard_/admin_/failed-uploads'
     | '/dashboard_/admin_/featured'
     | '/dashboard_/admin_/newsletter-lists'
@@ -1138,11 +1137,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAdminFailedUploadsRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/dashboard_/admin_/channel-approvals': {
-      id: '/dashboard_/admin_/channel-approvals'
-      path: '/admin/channel-approvals'
-      fullPath: '/dashboard/admin/channel-approvals'
-      preLoaderRoute: typeof DashboardAdminChannelApprovalsRouteImport
+    '/dashboard_/admin_/channels': {
+      id: '/dashboard_/admin_/channels'
+      path: '/admin/channels'
+      fullPath: '/dashboard/admin/channels'
+      preLoaderRoute: typeof DashboardAdminChannelsRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard_/account_/security': {
@@ -1392,7 +1391,7 @@ interface DashboardRouteChildren {
   DashboardAccountNewsletterRoute: typeof DashboardAccountNewsletterRoute
   DashboardAccountProfileRoute: typeof DashboardAccountProfileRoute
   DashboardAccountSecurityRoute: typeof DashboardAccountSecurityRoute
-  DashboardAdminChannelApprovalsRoute: typeof DashboardAdminChannelApprovalsRoute
+  DashboardAdminChannelsRoute: typeof DashboardAdminChannelsRoute
   DashboardAdminFailedUploadsRoute: typeof DashboardAdminFailedUploadsRoute
   DashboardAdminFeaturedRoute: typeof DashboardAdminFeaturedRoute
   DashboardAdminNewsletterListsRoute: typeof DashboardAdminNewsletterListsRoute
@@ -1432,7 +1431,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAccountNewsletterRoute: DashboardAccountNewsletterRoute,
   DashboardAccountProfileRoute: DashboardAccountProfileRoute,
   DashboardAccountSecurityRoute: DashboardAccountSecurityRoute,
-  DashboardAdminChannelApprovalsRoute: DashboardAdminChannelApprovalsRoute,
+  DashboardAdminChannelsRoute: DashboardAdminChannelsRoute,
   DashboardAdminFailedUploadsRoute: DashboardAdminFailedUploadsRoute,
   DashboardAdminFeaturedRoute: DashboardAdminFeaturedRoute,
   DashboardAdminNewsletterListsRoute: DashboardAdminNewsletterListsRoute,

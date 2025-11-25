@@ -82,16 +82,18 @@ function AdminPage() {
           radius="md"
           withBorder
           component={Link}
-          to="/dashboard/admin/channel-approvals"
+          to="/dashboard/admin/channels"
         >
           <Group justify="space-between" mb="xs">
-            <Text fw={500}>Channel Approvals</Text>
-            <Badge color="orange" size="sm">
-              {pendingApprovals.channels.length}
-            </Badge>
+            <Text fw={500}>Channels</Text>
+            {pendingApprovals.channels.length > 0 ? (
+              <Badge color="orange" size="sm">
+                {pendingApprovals.channels.length} pending
+              </Badge>
+            ) : null}
           </Group>
           <Text size="sm" c="dimmed">
-            Review and approve pending channels
+            Manage all channels and approvals
           </Text>
         </Card>
         <Card

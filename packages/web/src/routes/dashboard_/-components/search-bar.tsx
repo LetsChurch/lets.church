@@ -103,11 +103,11 @@ const searchItems: SearchItem[] = [
     group: 'Admin',
   },
   {
-    id: 'admin-channel-approvals',
-    label: 'Channel Approvals',
-    description: 'Review channel approval requests',
-    route: '/dashboard/admin/channel-approvals',
-    keywords: ['approvals', 'channel', 'review', 'admin'],
+    id: 'admin-channels',
+    label: 'Channels',
+    description: 'Manage all channels and approvals',
+    route: '/dashboard/admin/channels',
+    keywords: ['channels', 'approvals', 'review', 'admin', 'manage'],
     group: 'Admin',
   },
   {

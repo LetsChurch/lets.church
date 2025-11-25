@@ -206,6 +206,103 @@ export const adminRouter = router({
     });
   }),
 
+  getAllChannels: adminProcedure
+    .input(
+      z
+        .object({
+          filter: z.enum(['all', 'pending', 'approved']).optional(),
+          search: z.string().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ input }) => {
+      moduleLogger.info('Fetching all channels', {
+        filter: input?.filter,
+        search: input?.search,
+      });
+
+      const where: {
+        approvedAt?: { not: null } | null;
+        OR?: Array<
+          | { name: { contains: string; mode: 'insensitive' } }
+          | { slug: { contains: string; mode: 'insensitive' } }
+        >;
+      } = {};
+
+      if (input?.filter === 'pending') {
+        where.approvedAt = null;
+      } else if (input?.filter === 'approved') {
+        where.approvedAt = { not: null };
+      }
+
+      if (input?.search) {
+        where.OR = [
+          { name: { contains: input.search, mode: 'insensitive' } },
+          { slug: { contains: input.search, mode: 'insensitive' } },
+        ];
+      }
+
+      const [channels, totalCount, pendingCount, approvedCount] =
+        await Promise.all([
+          prisma.channel.findMany({
+            where,
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              description: true,
+              createdAt: true,
+              approvedAt: true,
+              avatarPath: true,
+              visibility: true,
+              memberships: {
+                select: {
+                  appUser: {
+                    select: {
+                      id: true,
+                      fullName: true,
+                      emails: {
+                        select: {
+                          email: true,
+                          verifiedAt: true,
+                        },
+                        where: {
+                          verifiedAt: { not: null },
+                        },
+                        take: 1,
+                      },
+                    },
+                  },
+                },
+                where: {
+                  isAdmin: true,
+                },
+                take: 1,
+              },
+              _count: {
+                select: {
+                  uploadRecords: true,
+                  subscribers: true,
+                },
+              },
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+          }),
+          prisma.channel.count({ where }),
+          prisma.channel.count({ where: { approvedAt: null } }),
+          prisma.channel.count({ where: { approvedAt: { not: null } } }),
+        ]);
+
+      return {
+        channels,
+        totalCount,
+        pendingCount,
+        approvedCount,
+      };
+    }),
+
   getPendingOrganizationApprovals: adminProcedure.query(async () => {
     moduleLogger.info('Fetching pending organization approvals');
 
