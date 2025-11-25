@@ -38,7 +38,7 @@ export function MediaCard({
               className="size-full object-cover transition-transform duration-300 ease-out-expo will-change-transform group-hover:scale-[1.01]"
             />
           ) : (
-            <div className="relative flex size-full items-center justify-center bg-gradient-to-b from-brand/20 via-15% via-transparent to-transparent">
+            <div className="relative flex size-full items-center justify-center bg-gradient-to-b from-brand/20 via-33% via-transparent to-transparent">
               <IconHeadphones
                 size={64}
                 className="text-zinc-400 dark:text-zinc-600"

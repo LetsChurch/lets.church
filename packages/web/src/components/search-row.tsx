@@ -1,3 +1,4 @@
+import { IconHeadphones } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import type { PropsWithChildren } from 'react';
 import { Avatar } from '@/components/avatar';
@@ -38,7 +39,14 @@ export function SearchRow({
               alt={title}
               className="size-full object-cover"
             />
-          ) : null}
+          ) : (
+            <div className="relative flex size-full items-center justify-center bg-gradient-to-b from-brand/20 via-33% via-transparent to-transparent">
+              <IconHeadphones
+                size={64}
+                className="text-zinc-400 dark:text-zinc-600"
+              />
+            </div>
+          )}
         </div>
         <div className="absolute right-1.5 bottom-1.5 left-1.5 flex flex-col items-end gap-1 md:right-2 md:bottom-2 md:left-2">
           {duration ? (
