@@ -502,18 +502,20 @@ export function SearchSettingsModal({
           <MobileDrawer.Portal>
             <MobileDrawer.Backdrop />
             <MobileDrawer.Content>
-              <SearchSettingsContent
-                currentPage={currentPage}
-                onNavigate={setCurrentPage}
-                sort={sort}
-                onSortChange={onSortChange}
-                dateRange={dateRange}
-                onDateRangeChange={onDateRangeChange}
-                channelSlugs={channelSlugs}
-                onChannelSlugsChange={onChannelSlugsChange}
-                availableChannels={availableChannels}
-                onClearFilters={onClearFilters}
-              />
+              <div className="min-h-0 flex-1 overflow-y-auto p-5">
+                <SearchSettingsContent
+                  currentPage={currentPage}
+                  onNavigate={setCurrentPage}
+                  sort={sort}
+                  onSortChange={onSortChange}
+                  dateRange={dateRange}
+                  onDateRangeChange={onDateRangeChange}
+                  channelSlugs={channelSlugs}
+                  onChannelSlugsChange={onChannelSlugsChange}
+                  availableChannels={availableChannels}
+                  onClearFilters={onClearFilters}
+                />
+              </div>
 
               {/* Home Indicator */}
               <div className="relative h-[34px] w-full shrink-0">
@@ -538,22 +540,24 @@ export function SearchSettingsModal({
             >
               <Dialog.Popup
                 className={cn(
-                  'w-sm rounded-2xl border-fancy-pants bg-white p-5 shadow-xl dark:bg-zinc-900',
+                  'flex max-h-[85vh] w-sm flex-col rounded-2xl border-fancy-pants bg-white shadow-xl dark:bg-zinc-900',
                   'transition-all duration-300 data-[ending-style]:scale-95 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0',
                 )}
               >
-                <SearchSettingsContent
-                  currentPage={currentPage}
-                  onNavigate={setCurrentPage}
-                  sort={sort}
-                  onSortChange={onSortChange}
-                  dateRange={dateRange}
-                  onDateRangeChange={onDateRangeChange}
-                  channelSlugs={channelSlugs}
-                  onChannelSlugsChange={onChannelSlugsChange}
-                  availableChannels={availableChannels}
-                  onClearFilters={onClearFilters}
-                />
+                <div className="overflow-y-auto p-5">
+                  <SearchSettingsContent
+                    currentPage={currentPage}
+                    onNavigate={setCurrentPage}
+                    sort={sort}
+                    onSortChange={onSortChange}
+                    dateRange={dateRange}
+                    onDateRangeChange={onDateRangeChange}
+                    channelSlugs={channelSlugs}
+                    onChannelSlugsChange={onChannelSlugsChange}
+                    availableChannels={availableChannels}
+                    onClearFilters={onClearFilters}
+                  />
+                </div>
               </Dialog.Popup>
             </Dialog.Backdrop>
           </Dialog.Portal>
