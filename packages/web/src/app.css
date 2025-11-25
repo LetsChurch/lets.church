@@ -214,3 +214,13 @@
     color: var(--color-secondary);
   }
 }
+
+@layer base {
+  input[type="search"] {
+    &::-webkit-search-cancel-button {
+      -webkit-appearance: none;
+      appearance: none;
+      display: none;
+    }
+  }
+}
