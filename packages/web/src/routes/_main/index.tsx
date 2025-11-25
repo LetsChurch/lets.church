@@ -612,7 +612,7 @@ function Home() {
       <TrendingSearches />
 
       <MediaGrid>
-        {allTrendingUploads.slice(19, 35).map((upload, _i) => (
+        {allTrendingUploads.slice(19, 36).map((upload, _i) => (
           <MediaCard
             key={upload.id}
             mediaId={upload.id}
@@ -632,7 +632,7 @@ function Home() {
       </MediaGrid>
 
       <MediaGrid>
-        {allTrendingUploads.slice(35).map((upload, _i) => (
+        {allTrendingUploads.slice(36).map((upload, _i) => (
           <MediaCard
             key={upload.id}
             mediaId={upload.id}
