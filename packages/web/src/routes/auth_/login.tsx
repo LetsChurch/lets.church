@@ -130,6 +130,17 @@ function LoginRoute() {
               </Text>
             </Link>
           </Text>
+          <Text size="sm" ta="center" c="dimmed">
+            Forgot your password?{' '}
+            <Link
+              to="/auth/forgot-password"
+              style={{ textDecoration: 'none', color: 'inherit' }}
+            >
+              <Text component="span" c="blue" style={{ cursor: 'pointer' }}>
+                Reset it here
+              </Text>
+            </Link>
+          </Text>
         </Stack>
       </form>
     </Paper>

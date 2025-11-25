@@ -22,6 +22,7 @@ import {
   getBulkBackupToGlacierProgress,
   getCleanupStaleUploadStatesProgress,
   getMigrateViewRangesProgress,
+  resetPassword,
   startBackfillUploadStateSizes,
   startBackfillUploadStates,
   startBulkBackupToGlacier,
@@ -527,9 +528,6 @@ export const adminRouter = router({
             email: true,
             verifiedAt: true,
           },
-          where: {
-            verifiedAt: { not: null },
-          },
           take: 1,
         },
       },
@@ -696,6 +694,82 @@ export const adminRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to update user',
+        });
+      }
+    }),
+
+  resetUserPassword: adminProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Resetting user password', {
+        userId: input.userId,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        const user = await prisma.appUser.findUnique({
+          where: { id: input.userId },
+          select: {
+            id: true,
+            username: true,
+            emails: {
+              select: { email: true, key: true },
+              take: 1,
+            },
+          },
+        });
+
+        if (!user) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'User not found',
+          });
+        }
+
+        const emailRecord = user.emails[0];
+
+        if (!emailRecord) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'User has no email address',
+          });
+        }
+
+        const { generateResetPasswordEmail } = await import(
+          '@/util/reset-password-email'
+        );
+        const { text, html } = generateResetPasswordEmail(
+          user.id,
+          user.username,
+          emailRecord.key,
+        );
+
+        await resetPassword(user.id, user.id, emailRecord.email, text, html);
+
+        moduleLogger.info('User password reset initiated', {
+          userId: input.userId,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error('Failed to reset user password', {
+          userId: input.userId,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to reset user password',
         });
       }
     }),

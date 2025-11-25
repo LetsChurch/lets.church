@@ -3,6 +3,7 @@ import {
   Badge,
   Button,
   Group,
+  Menu,
   Modal,
   Stack,
   Table,
@@ -10,7 +11,8 @@ import {
   Title,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconEdit, IconPlus } from '@tabler/icons-react';
+import { modals } from '@mantine/modals';
+import { IconDots, IconEdit, IconKey, IconPlus } from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
@@ -131,6 +133,41 @@ function UsersPage() {
     open();
   };
 
+  const handleResetPassword = (userId: string) => {
+    modals.openConfirmModal({
+      title: 'Reset Password',
+      children: (
+        <Text size="sm">
+          Are you sure you want to reset this user's password? A password reset
+          email will be sent to the user.
+        </Text>
+      ),
+      labels: { confirm: 'Reset Password', cancel: 'Cancel' },
+      confirmProps: { color: 'red' },
+      onConfirm: async () => {
+        try {
+          await trpcClient.dashboard.admin.resetUserPassword.mutate({ userId });
+          modals.open({
+            title: 'Success',
+            children: (
+              <Text size="sm">Password reset email sent successfully!</Text>
+            ),
+          });
+        } catch (error) {
+          console.error('Failed to reset password:', error);
+          modals.open({
+            title: 'Error',
+            children: (
+              <Text size="sm" c="red">
+                Failed to reset password. Please try again.
+              </Text>
+            ),
+          });
+        }
+      },
+    });
+  };
+
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'ADMIN':
@@ -154,6 +191,7 @@ function UsersPage() {
       <Table>
         <Table.Thead>
           <Table.Tr>
+            <Table.Th>Username</Table.Th>
             <Table.Th>Name</Table.Th>
             <Table.Th>Email</Table.Th>
             <Table.Th>Role</Table.Th>
@@ -162,37 +200,64 @@ function UsersPage() {
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {users.map((user) => (
-            <Table.Tr key={user.id}>
-              <Table.Td>
-                <Text fw={500}>{user.fullName || 'No name'}</Text>
-              </Table.Td>
-              <Table.Td>
-                <Text size="sm" c="dimmed">
-                  {user.emails[0]?.email || 'No email'}
-                </Text>
-              </Table.Td>
-              <Table.Td>
-                <Badge color={getRoleBadgeColor(user.role)} size="sm">
-                  {user.role}
-                </Badge>
-              </Table.Td>
-              <Table.Td>
-                <Text size="sm" c="dimmed">
-                  {new Date(user.createdAt).toLocaleDateString()}
-                </Text>
-              </Table.Td>
-              <Table.Td>
-                <ActionIcon
-                  variant="light"
-                  onClick={() => handleEdit(user)}
-                  size="sm"
-                >
-                  <IconEdit size={14} />
-                </ActionIcon>
-              </Table.Td>
-            </Table.Tr>
-          ))}
+          {users.map((user) => {
+            const email = user.emails[0];
+            return (
+              <Table.Tr key={user.id}>
+                <Table.Td>
+                  <Text fw={500}>{user.username}</Text>
+                </Table.Td>
+                <Table.Td>
+                  <Text size="sm">{user.fullName || 'No name'}</Text>
+                </Table.Td>
+                <Table.Td>
+                  <Group gap="xs">
+                    <Text size="sm" c="dimmed">
+                      {email?.email || 'No email'}
+                    </Text>
+                    {email && !email.verifiedAt ? (
+                      <Badge size="xs" color="yellow">
+                        Unverified
+                      </Badge>
+                    ) : null}
+                  </Group>
+                </Table.Td>
+                <Table.Td>
+                  <Badge color={getRoleBadgeColor(user.role)} size="sm">
+                    {user.role}
+                  </Badge>
+                </Table.Td>
+                <Table.Td>
+                  <Text size="sm" c="dimmed">
+                    {new Date(user.createdAt).toLocaleDateString()}
+                  </Text>
+                </Table.Td>
+                <Table.Td>
+                  <Menu shadow="md" width={200}>
+                    <Menu.Target>
+                      <ActionIcon variant="light" size="sm">
+                        <IconDots size={14} />
+                      </ActionIcon>
+                    </Menu.Target>
+                    <Menu.Dropdown>
+                      <Menu.Item
+                        leftSection={<IconEdit size={14} />}
+                        onClick={() => handleEdit(user)}
+                      >
+                        Edit User
+                      </Menu.Item>
+                      <Menu.Item
+                        leftSection={<IconKey size={14} />}
+                        onClick={() => handleResetPassword(user.id)}
+                      >
+                        Reset Password
+                      </Menu.Item>
+                    </Menu.Dropdown>
+                  </Menu>
+                </Table.Td>
+              </Table.Tr>
+            );
+          })}
         </Table.Tbody>
       </Table>
 

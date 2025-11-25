@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
-import { appRouter } from '@/trpc';
 import { createContext } from '@/trpc/context';
+import { appRouter } from '@/trpc/router';
 import logger from '@/util/logger';
 
 const moduleLogger = logger.child({
