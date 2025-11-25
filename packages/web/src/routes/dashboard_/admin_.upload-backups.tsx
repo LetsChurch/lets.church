@@ -21,6 +21,7 @@ import {
   IconPlayerPause,
   IconPlayerPlay,
   IconRefresh,
+  IconTrash,
   IconX,
 } from '@tabler/icons-react';
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
@@ -67,6 +68,15 @@ function RouteComponent() {
   const [backfillDelayMs, setBackfillDelayMs] = useState<number | string>(100);
   const [backfillMaxRows, setBackfillMaxRows] = useState<number | string>('');
 
+  const [cleanupBatchSize, setCleanupBatchSize] = useState<number | string>(
+    100,
+  );
+  const [cleanupDelayMs, setCleanupDelayMs] = useState<number | string>(100);
+  const [cleanupOlderThanDays, setCleanupOlderThanDays] = useState<
+    number | string
+  >(30);
+  const [cleanupMaxRows, setCleanupMaxRows] = useState<number | string>('');
+
   const [backupBatchSize, setBackupBatchSize] = useState<number | string>(10);
   const [backupDelayMs, setBackupDelayMs] = useState<number | string>(1000);
   const [backupMaxUploads, setBackupMaxUploads] = useState<number | string>('');
@@ -98,6 +108,22 @@ function RouteComponent() {
 
   const cancelBackfillMutation = useMutation(
     trpc.dashboard.admin.cancelBackfillUploadStates.mutationOptions({
+      onSuccess: () => {
+        refetch();
+      },
+    }),
+  );
+
+  const startCleanupMutation = useMutation(
+    trpc.dashboard.admin.startCleanupStaleUploadStates.mutationOptions({
+      onSuccess: () => {
+        refetch();
+      },
+    }),
+  );
+
+  const cancelCleanupMutation = useMutation(
+    trpc.dashboard.admin.cancelCleanupStaleUploadStates.mutationOptions({
       onSuccess: () => {
         refetch();
       },
@@ -153,6 +179,7 @@ function RouteComponent() {
   );
 
   const isBackfillRunning = status.backfillStatus?.status === 'running';
+  const isCleanupRunning = status.cleanupStatus?.status === 'running';
   const isBackupRunning = status.bulkBackupStatus?.status === 'running';
   const isSizesRunning = status.backfillSizesStatus?.status === 'running';
 
@@ -395,6 +422,145 @@ function RouteComponent() {
               {startBackfillMutation.error && (
                 <Alert color="red" title="Error">
                   {startBackfillMutation.error.message}
+                </Alert>
+              )}
+            </>
+          )}
+        </Stack>
+      </Card>
+
+      {/* Cleanup Stale Upload States Section */}
+      <Card withBorder>
+        <Stack gap="md">
+          <Group justify="space-between">
+            <Title order={3}>
+              <Group gap="xs">
+                <IconTrash size={20} />
+                Cleanup Stale Upload States
+              </Group>
+            </Title>
+            {getStatusBadge(status.cleanupStatus)}
+          </Group>
+
+          <Text size="sm" c="dimmed">
+            Delete UploadState records that are not backed up and older than a
+            specified threshold. This helps remove tracking records for uploads
+            that no longer exist or were never completed.
+          </Text>
+
+          {isCleanupRunning && status.cleanupStatus ? (
+            <>
+              <Group grow>
+                <Card withBorder p="sm">
+                  <Text size="xs" c="dimmed">
+                    Deleted
+                  </Text>
+                  <Text fw={600}>
+                    {status.cleanupStatus.totalDeleted?.toLocaleString() ?? 0}
+                  </Text>
+                </Card>
+                <Card withBorder p="sm">
+                  <Text size="xs" c="dimmed">
+                    Remaining
+                  </Text>
+                  <Text fw={600}>
+                    {status.cleanupStatus.remaining?.toLocaleString() ?? 0}
+                  </Text>
+                </Card>
+                <Card withBorder p="sm">
+                  <Text size="xs" c="dimmed">
+                    Batches
+                  </Text>
+                  <Text fw={600}>
+                    {status.cleanupStatus.batchesCompleted?.toLocaleString() ??
+                      0}
+                  </Text>
+                </Card>
+              </Group>
+
+              <Button
+                color="red"
+                leftSection={<IconPlayerPause size={16} />}
+                onClick={() => cancelCleanupMutation.mutate()}
+                loading={cancelCleanupMutation.isPending}
+              >
+                Cancel Cleanup
+              </Button>
+            </>
+          ) : (
+            <>
+              <Group grow>
+                <NumberInput
+                  label="Batch Size"
+                  description="Records per batch"
+                  value={cleanupBatchSize}
+                  onChange={setCleanupBatchSize}
+                  min={1}
+                  max={1000}
+                  size="sm"
+                />
+                <NumberInput
+                  label="Delay (ms)"
+                  description="Between batches"
+                  value={cleanupDelayMs}
+                  onChange={setCleanupDelayMs}
+                  min={0}
+                  max={10000}
+                  size="sm"
+                />
+                <NumberInput
+                  label="Older Than (days)"
+                  description="Delete records older than"
+                  value={cleanupOlderThanDays}
+                  onChange={setCleanupOlderThanDays}
+                  min={1}
+                  max={365}
+                  size="sm"
+                />
+                <NumberInput
+                  label="Max Rows"
+                  description="Leave empty for all"
+                  value={cleanupMaxRows}
+                  onChange={setCleanupMaxRows}
+                  min={1}
+                  placeholder="All"
+                  size="sm"
+                />
+              </Group>
+
+              <Alert
+                icon={<IconAlertCircle size={16} />}
+                title="Warning"
+                color="yellow"
+              >
+                This will permanently delete UploadState records that are NOT
+                backed up and older than the specified threshold. Make sure to
+                back up any uploads you want to keep before running this
+                cleanup.
+              </Alert>
+
+              <Button
+                leftSection={<IconTrash size={16} />}
+                color="red"
+                onClick={() =>
+                  startCleanupMutation.mutate({
+                    batchSize: Number(cleanupBatchSize),
+                    delayBetweenBatchesMs: Number(cleanupDelayMs),
+                    olderThanDays: Number(cleanupOlderThanDays),
+                    maxRows:
+                      cleanupMaxRows === ''
+                        ? undefined
+                        : Number(cleanupMaxRows),
+                  })
+                }
+                loading={startCleanupMutation.isPending}
+              >
+                Start Cleanup
+              </Button>
+
+              {startCleanupMutation.error && (
+                <Alert color="red" title="Error">
+                  {startCleanupMutation.error.message}
                 </Alert>
               )}
             </>

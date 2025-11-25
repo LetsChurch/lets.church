@@ -1,4 +1,9 @@
 export {
+  type BackfillOriginalImageUploadStatesWorkflowParams,
+  backfillOriginalImageUploadStatesWorkflow,
+  getBackfillOriginalImagesProgressQuery,
+} from './backfill-original-image-upload-states';
+export {
   type BackfillUploadStateSizesWorkflowParams,
   backfillUploadStateSizesWorkflow,
   getBackfillSizesProgressQuery,
@@ -14,6 +19,11 @@ export {
   bulkBackupToGlacierWorkflow,
   getBulkBackupProgressQuery,
 } from './bulk-backup-to-glacier';
+export {
+  type CleanupStaleUploadStatesWorkflowParams,
+  cleanupStaleUploadStatesWorkflow,
+  getCleanupProgressQuery,
+} from './cleanup-stale-upload-states';
 export { createUploadRecordWorkflow } from './create-upload-record';
 export { deleteUploadWorkflow } from './delete-upload';
 export { generatePeaksWorkflow } from './generate-peaks';

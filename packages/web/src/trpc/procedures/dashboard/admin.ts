@@ -14,15 +14,18 @@ import {
   cancelBackfillUploadStateSizes,
   cancelBackfillUploadStates,
   cancelBulkBackupToGlacier,
+  cancelCleanupStaleUploadStates,
   cancelMigrateViewRanges,
   client,
   getBackfillUploadStateSizesProgress,
   getBackfillUploadStatesProgress,
   getBulkBackupToGlacierProgress,
+  getCleanupStaleUploadStatesProgress,
   getMigrateViewRangesProgress,
   startBackfillUploadStateSizes,
   startBackfillUploadStates,
   startBulkBackupToGlacier,
+  startCleanupStaleUploadStates,
   startMigrateViewRanges,
 } from '@/temporal';
 import logger from '@/util/logger';
@@ -1238,6 +1241,7 @@ export const adminRouter = router({
       backfillProgress,
       backfillSizesProgress,
       bulkBackupProgress,
+      cleanupProgress,
     ] = await Promise.all([
       prisma.uploadState.groupBy({
         by: ['backupStatus'],
@@ -1252,6 +1256,7 @@ export const adminRouter = router({
       getBackfillUploadStatesProgress(),
       getBackfillUploadStateSizesProgress(),
       getBulkBackupToGlacierProgress(),
+      getCleanupStaleUploadStatesProgress(),
     ]);
 
     const stats = {
@@ -1287,6 +1292,7 @@ export const adminRouter = router({
       backfillStatus: backfillProgress,
       backfillSizesStatus: backfillSizesProgress,
       bulkBackupStatus: bulkBackupProgress,
+      cleanupStatus: cleanupProgress,
     };
   }),
 
@@ -1372,6 +1378,94 @@ export const adminRouter = router({
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to cancel backfill',
+      });
+    }
+  }),
+
+  // Cleanup Stale Upload States procedures
+  startCleanupStaleUploadStates: adminProcedure
+    .input(
+      z.object({
+        batchSize: z.number().min(1).max(1000).default(100),
+        delayBetweenBatchesMs: z.number().min(0).max(10000).default(100),
+        olderThanDays: z.number().min(1).max(365).default(30),
+        maxRows: z.number().min(1).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Starting cleanup stale upload states', {
+        batchSize: input.batchSize,
+        delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+        olderThanDays: input.olderThanDays,
+        maxRows: input.maxRows,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        // Check if cleanup is already running
+        const progress = await getCleanupStaleUploadStatesProgress();
+        if (progress?.status === 'running') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Cleanup is already running',
+          });
+        }
+
+        await startCleanupStaleUploadStates({
+          batchSize: input.batchSize,
+          delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+          olderThanDays: input.olderThanDays,
+          maxRows: input.maxRows,
+        });
+
+        moduleLogger.info('Cleanup stale upload states started successfully', {
+          batchSize: input.batchSize,
+          delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+          olderThanDays: input.olderThanDays,
+          maxRows: input.maxRows,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error('Failed to start cleanup stale upload states', {
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to start cleanup',
+        });
+      }
+    }),
+
+  cancelCleanupStaleUploadStates: adminProcedure.mutation(async ({ ctx }) => {
+    moduleLogger.info('Cancelling cleanup stale upload states', {
+      appUserId: ctx.session.appUserId,
+    });
+
+    try {
+      await cancelCleanupStaleUploadStates();
+
+      moduleLogger.info('Cleanup stale upload states cancelled successfully', {
+        appUserId: ctx.session.appUserId,
+      });
+
+      return { success: true };
+    } catch (error) {
+      moduleLogger.error('Failed to cancel cleanup stale upload states', {
+        appUserId: ctx.session.appUserId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to cancel cleanup',
       });
     }
   }),

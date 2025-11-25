@@ -1,5 +1,9 @@
 export { default as abortMultipartUpload } from './abort-multipart-upload';
 export {
+  type BackfillOriginalImageBatchResult,
+  backfillOriginalImageUploadStatesBatch,
+} from './backfill-original-image-upload-states';
+export {
   backfillUploadStateSizesBatch,
   getBackfillSizesCount,
 } from './backfill-upload-state-sizes';
@@ -8,6 +12,11 @@ export {
   getBackfillCount,
 } from './backfill-upload-states';
 export { default as backupToGlacier, retryBackup } from './backup-to-glacier';
+export {
+  type CleanupStaleUploadStatesResult,
+  cleanupStaleUploadStatesBatch,
+  getStaleUploadStatesCount,
+} from './cleanup-stale-upload-states';
 export { default as completeMultipartUpload } from './complete-multipart-upload';
 export { default as createUploadRecord } from './create-upload-record';
 export {

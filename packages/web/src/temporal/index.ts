@@ -7,12 +7,15 @@ import {
   backfillUploadStateSizesWorkflow,
   backfillUploadStatesWorkflow,
   bulkBackupToGlacierWorkflow,
+  type CleanupStaleUploadStatesWorkflowParams,
+  cleanupStaleUploadStatesWorkflow,
   createUploadRecordWorkflow,
   deleteUploadWorkflow,
   geocodeOrganizationWorkflow,
   getBackfillProgressQuery,
   getBackfillSizesProgressQuery,
   getBulkBackupProgressQuery,
+  getCleanupProgressQuery,
   getMigrationProgressQuery,
   handleMultipartMediaUploadWorkflow,
   importMediaWorkflow,
@@ -341,6 +344,65 @@ export async function getBackfillUploadStatesProgress() {
 export async function cancelBackfillUploadStates() {
   const handle = (await client).workflow.getHandle(
     BACKFILL_UPLOAD_STATES_WORKFLOW_ID,
+  );
+  await handle.cancel();
+}
+
+// Cleanup Stale Upload States Workflow
+const CLEANUP_STALE_UPLOAD_STATES_WORKFLOW_ID = 'cleanupStaleUploadStates';
+
+export async function startCleanupStaleUploadStates(
+  params: CleanupStaleUploadStatesWorkflowParams,
+) {
+  return (await client).workflow.start(cleanupStaleUploadStatesWorkflow, {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    workflowId: CLEANUP_STALE_UPLOAD_STATES_WORKFLOW_ID,
+    args: [params],
+  });
+}
+
+export async function getCleanupStaleUploadStatesProgress() {
+  try {
+    const handle = (await client).workflow.getHandle(
+      CLEANUP_STALE_UPLOAD_STATES_WORKFLOW_ID,
+    );
+    const description = await handle.describe();
+
+    if (description.status.name === 'RUNNING') {
+      const progress = await handle.query(getCleanupProgressQuery);
+      return {
+        status: 'running' as const,
+        ...progress,
+      };
+    }
+
+    if (description.status.name === 'COMPLETED') {
+      return {
+        status: 'completed' as const,
+        totalDeleted: 0,
+        remaining: 0,
+        batchesCompleted: 0,
+      };
+    }
+
+    return {
+      status: description.status.name.toLowerCase() as
+        | 'failed'
+        | 'cancelled'
+        | 'terminated',
+      totalDeleted: 0,
+      remaining: 0,
+      batchesCompleted: 0,
+    };
+  } catch (_error) {
+    return null;
+  }
+}
+
+export async function cancelCleanupStaleUploadStates() {
+  const handle = (await client).workflow.getHandle(
+    CLEANUP_STALE_UPLOAD_STATES_WORKFLOW_ID,
   );
   await handle.cancel();
 }
