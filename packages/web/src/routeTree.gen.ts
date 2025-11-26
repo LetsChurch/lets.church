@@ -201,9 +201,9 @@ const MainAboutIndexRoute = MainAboutIndexRouteImport.update({
   getParentRoute: () => MainAboutRoute,
 } as any)
 const EmbedMediaMediaIdRoute = EmbedMediaMediaIdRouteImport.update({
-  id: '/embed/media/$mediaId',
-  path: '/embed/media/$mediaId',
-  getParentRoute: () => rootRouteImport,
+  id: '/media/$mediaId',
+  path: '/media/$mediaId',
+  getParentRoute: () => EmbedRoute,
 } as any)
 const EmbedChannelSlugRoute = EmbedChannelSlugRouteImport.update({
   id: '/embed/channel/$slug',
@@ -845,7 +845,6 @@ export interface RootRouteChildren {
   ChannelSlugPodcastDotxmlRoute: typeof ChannelSlugPodcastDotxmlRoute
   ChannelSlugRssDotxmlRoute: typeof ChannelSlugRssDotxmlRoute
   EmbedChannelSlugRoute: typeof EmbedChannelSlugRoute
-  EmbedMediaMediaIdRoute: typeof EmbedMediaMediaIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1027,10 +1026,10 @@ declare module '@tanstack/react-router' {
     }
     '/embed/media/$mediaId': {
       id: '/embed/media/$mediaId'
-      path: '/embed/media/$mediaId'
+      path: '/media/$mediaId'
       fullPath: '/embed/media/$mediaId'
       preLoaderRoute: typeof EmbedMediaMediaIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof EmbedRoute
     }
     '/embed/channel/$slug': {
       id: '/embed/channel/$slug'
@@ -1484,7 +1483,6 @@ const rootRouteChildren: RootRouteChildren = {
   ChannelSlugPodcastDotxmlRoute: ChannelSlugPodcastDotxmlRoute,
   ChannelSlugRssDotxmlRoute: ChannelSlugRssDotxmlRoute,
   EmbedChannelSlugRoute: EmbedChannelSlugRoute,
-  EmbedMediaMediaIdRoute: EmbedMediaMediaIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -486,7 +486,17 @@ function SearchResults({ q, channelSlug }: { q: string; channelSlug: string }) {
 
   const handleTabChange = (newFocus: 'media' | 'transcripts') => {
     navigate({
-      search: (prev) => ({ ...prev, focus: newFocus }),
+      search: (prev: {
+        q?: string;
+        focus: 'media' | 'transcripts';
+        sort?: 'relevance' | 'date-asc' | 'date-desc';
+        dateRange?:
+          | 'all-time'
+          | 'today'
+          | 'this-week'
+          | 'this-month'
+          | 'this-year';
+      }) => ({ ...prev, focus: newFocus }),
     });
   };
 

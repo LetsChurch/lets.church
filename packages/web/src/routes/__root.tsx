@@ -3,6 +3,7 @@ import {
   HeadContent,
   Outlet,
   Scripts,
+  useMatches,
 } from '@tanstack/react-router';
 import Plausible from 'plausible-tracker';
 import posthog from 'posthog-js';
@@ -94,9 +95,16 @@ export const Route = createRootRouteWithContext<AppContextType>()({
 });
 
 function RootComponent() {
+  const matches = useMatches();
+  const isEmbedRoute = matches.some((match) =>
+    match.routeId.startsWith('/embed'),
+  );
+
   useEffect(() => {
-    // Initialize theme
-    initializeTheme();
+    // Initialize theme (skip for embed routes as they're always light)
+    if (!isEmbedRoute) {
+      initializeTheme();
+    }
 
     // Initialize PostHog
     posthog.init('phc_nrdBwyxcJ3Tc0g1Gq1J5Gd2w1nmpx0IIK4HQBusIu6P', {
@@ -125,7 +133,7 @@ function RootComponent() {
 
     window.addEventListener('resize', updateBrowserSize);
     return () => window.removeEventListener('resize', updateBrowserSize);
-  }, []);
+  }, [isEmbedRoute]);
 
   return (
     <RootDocument>
@@ -135,7 +143,15 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
-  const theme = getInitialTheme();
+  const matches = useMatches();
+
+  // Check if we're on an embed route
+  const isEmbedRoute = matches.some((match) =>
+    match.routeId.startsWith('/embed'),
+  );
+
+  // Force light theme for embed routes, otherwise use user's theme
+  const theme = isEmbedRoute ? 'light' : getInitialTheme();
 
   return (
     <html lang="en" data-theme={theme} data-mantine-color-scheme={theme}>
