@@ -13,7 +13,7 @@ import {
   notifications,
 } from '@mantine/notifications';
 import Cookies from 'js-cookie';
-import { type PropsWithChildren, useEffect, useState } from 'react';
+import type { PropsWithChildren } from 'react';
 import {
   getInitialTheme,
   THEME_CHANGE_EVENT,
@@ -81,12 +81,7 @@ const colorSchemeManager = {
 };
 
 export function MantineWrapper({ children }: PropsWithChildren) {
-  const [defaultColorScheme, setDefaultColorScheme] =
-    useState<MantineColorScheme>('light');
-
-  useEffect(() => {
-    setDefaultColorScheme(getInitialTheme());
-  }, []);
+  const defaultColorScheme = getInitialTheme();
 
   return (
     <MantineProvider
