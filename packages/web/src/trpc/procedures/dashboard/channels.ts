@@ -60,11 +60,12 @@ const { ADMIN_EMAIL, WEB_URL } = z
 const channelProcedure = authProcedure
   .input(channelQuerySchema)
   .use(async ({ ctx, input, next }) => {
+    const isSiteAdmin = ctx.session.appUser.role === 'ADMIN';
     const membership = await prisma.channelMembership.findFirst({
       where: { appUserId: ctx.session.appUserId, channelId: input.channelId },
     });
 
-    if (!membership) {
+    if (!membership && !isSiteAdmin) {
       moduleLogger.warn('No membership found for channel procedure', {
         ...input,
       });
@@ -76,7 +77,10 @@ const channelProcedure = authProcedure
   });
 
 const channelAdminProcedure = channelProcedure.use(async ({ ctx, next }) => {
-  if (!ctx.membership.isAdmin) {
+  const isSiteAdmin = ctx.session.appUser.role === 'ADMIN';
+  const isChannelAdmin = ctx.membership?.isAdmin ?? false;
+
+  if (!isChannelAdmin && !isSiteAdmin) {
     moduleLogger.warn('User is not admin of channel', {
       appUserId: ctx.session.appUserId,
     });
@@ -88,7 +92,11 @@ const channelAdminProcedure = channelProcedure.use(async ({ ctx, next }) => {
 });
 
 const channelUploadProcedure = channelProcedure.use(async ({ ctx, next }) => {
-  if (!ctx.membership.isAdmin && !ctx.membership.canUpload) {
+  const isSiteAdmin = ctx.session.appUser.role === 'ADMIN';
+  const canUpload =
+    ctx.membership?.isAdmin || ctx.membership?.canUpload || false;
+
+  if (!canUpload && !isSiteAdmin) {
     moduleLogger.warn('User cannot upload to channel', {
       appUserId: ctx.session.appUserId,
     });
@@ -100,7 +108,10 @@ const channelUploadProcedure = channelProcedure.use(async ({ ctx, next }) => {
 });
 
 const channelEditProcedure = channelProcedure.use(async ({ ctx, next }) => {
-  if (!ctx.membership.isAdmin && !ctx.membership.canEdit) {
+  const isSiteAdmin = ctx.session.appUser.role === 'ADMIN';
+  const canEdit = ctx.membership?.isAdmin || ctx.membership?.canEdit || false;
+
+  if (!canEdit && !isSiteAdmin) {
     moduleLogger.warn('User cannot edit content in channel', {
       appUserId: ctx.session.appUserId,
     });
@@ -266,6 +277,8 @@ export const channelRouter = router({
   }),
 
   getChannelDetails: channelProcedure.query(async ({ ctx, input }) => {
+    const isSiteAdmin = ctx.session.appUser.role === 'ADMIN';
+
     const channel = await prisma.channel.findFirst({
       select: {
         id: true,
@@ -335,11 +348,16 @@ export const channelRouter = router({
       },
       where: {
         id: input.channelId,
-        memberships: {
-          some: {
-            appUserId: ctx.session.appUser.id,
-          },
-        },
+        // Only filter by membership for non-admin users
+        ...(isSiteAdmin
+          ? {}
+          : {
+              memberships: {
+                some: {
+                  appUserId: ctx.session.appUser.id,
+                },
+              },
+            }),
       },
     });
 
@@ -364,6 +382,8 @@ export const channelRouter = router({
   }),
 
   getChannelForEdit: channelAdminProcedure.query(async ({ ctx, input }) => {
+    const isSiteAdmin = ctx.session.appUser.role === 'ADMIN';
+
     const channel = await prisma.channel.findFirst({
       select: {
         id: true,
@@ -375,12 +395,17 @@ export const channelRouter = router({
       },
       where: {
         id: input.channelId,
-        memberships: {
-          some: {
-            appUserId: ctx.session.appUser.id,
-            isAdmin: true,
-          },
-        },
+        // Only filter by admin membership for non-site-admin users
+        ...(isSiteAdmin
+          ? {}
+          : {
+              memberships: {
+                some: {
+                  appUserId: ctx.session.appUser.id,
+                  isAdmin: true,
+                },
+              },
+            }),
       },
     });
 
