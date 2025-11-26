@@ -25,6 +25,11 @@ export {
   getCleanupProgressQuery,
 } from './cleanup-stale-upload-states';
 export { createUploadRecordWorkflow } from './create-upload-record';
+export {
+  type DeleteChannelProgressState,
+  deleteChannelWorkflow,
+  getDeleteChannelProgressQuery,
+} from './delete-channel';
 export { deleteUploadWorkflow } from './delete-upload';
 export { generatePeaksWorkflow } from './generate-peaks';
 export { geocodeOrganizationWorkflow } from './geocode-organization';

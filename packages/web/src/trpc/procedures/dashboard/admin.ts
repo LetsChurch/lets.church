@@ -1,5 +1,7 @@
 import { prisma } from '@letschurch/db';
 import { parseS3Env } from '@letschurch/s3';
+import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
+import { deleteChannelWorkflow } from '@letschurch/temporal/workflows/background';
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
 import pFilter from 'p-filter';
@@ -253,6 +255,7 @@ export const adminRouter = router({
               description: true,
               createdAt: true,
               approvedAt: true,
+              deletedAt: true,
               avatarPath: true,
               visibility: true,
               memberships: {
@@ -428,28 +431,43 @@ export const adminRouter = router({
     }),
 
   deleteChannel: adminProcedure
-    .input(z.object({ channelId: z.string() }))
+    .input(
+      z.object({
+        channelId: z.string(),
+        channelName: z.string(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Deleting channel', {
+      moduleLogger.info('Starting async channel deletion', {
         channelId: input.channelId,
+        channelName: input.channelName,
         appUserId: ctx.session.appUserId,
       });
 
       try {
-        await prisma.channel.delete({
-          where: {
-            id: input.channelId,
+        const temporalClient = await client;
+        const workflowHandle = await temporalClient.workflow.start(
+          deleteChannelWorkflow,
+          {
+            taskQueue: BACKGROUND_QUEUE,
+            workflowId: `deleteChannel:${input.channelId}:${Date.now()}`,
+            args: [input.channelId, input.channelName],
+            retry: { maximumAttempts: 5 },
           },
-        });
+        );
 
-        moduleLogger.info('Channel deleted successfully', {
+        moduleLogger.info('Channel deletion workflow started', {
           channelId: input.channelId,
+          workflowId: workflowHandle.workflowId,
           appUserId: ctx.session.appUserId,
         });
 
-        return { success: true };
+        return {
+          success: true,
+          workflowId: workflowHandle.workflowId,
+        };
       } catch (error) {
-        moduleLogger.error('Failed to delete channel', {
+        moduleLogger.error('Failed to start channel deletion workflow', {
           channelId: input.channelId,
           appUserId: ctx.session.appUserId,
           error: error instanceof Error ? error.message : String(error),
@@ -457,7 +475,7 @@ export const adminRouter = router({
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to delete channel',
+          message: 'Failed to start channel deletion',
         });
       }
     }),
@@ -646,7 +664,7 @@ export const adminRouter = router({
         username: z.string().min(1),
         password: z.string().min(6),
         fullName: z.string().optional(),
-        email: z.string().email(),
+        email: z.email(),
         role: z.enum(['USER', 'ADMIN']),
       }),
     )
@@ -722,7 +740,7 @@ export const adminRouter = router({
         username: z.string().min(1).optional(),
         fullName: z.string().optional(),
         role: z.enum(['USER', 'ADMIN']).optional(),
-        email: z.string().email().optional(),
+        email: z.email().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -1861,7 +1879,7 @@ export const adminRouter = router({
   retryFailedBackup: adminProcedure
     .input(
       z.object({
-        uploadStateId: z.string().uuid(),
+        uploadStateId: z.uuid(),
       }),
     )
     .mutation(async ({ input }) => {
@@ -2078,7 +2096,7 @@ export const adminRouter = router({
   retryUploadProcessing: adminProcedure
     .input(
       z.object({
-        uploadRecordId: z.string().uuid(),
+        uploadRecordId: z.uuid(),
       }),
     )
     .mutation(async ({ ctx, input }) => {

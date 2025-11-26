@@ -11,7 +11,7 @@ import {
   TextInput,
   Title,
 } from '@mantine/core';
-import { useDebouncedValue } from '@mantine/hooks';
+import { useDebouncedValue, useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import {
   IconCheck,
@@ -27,6 +27,7 @@ import {
 } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
+import { DeleteChannelModal } from '@/components/delete-channel-modal';
 import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
 
@@ -81,6 +82,14 @@ function ChannelApprovalsPage() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch] = useDebouncedValue(searchQuery, 300);
+  const [
+    deleteModalOpened,
+    { open: openDeleteModal, close: closeDeleteModal },
+  ] = useDisclosure(false);
+  const [channelToDelete, setChannelToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const { data } = useSuspenseQuery(
     trpc.dashboard.admin.getAllChannels.queryOptions({
@@ -117,10 +126,13 @@ function ChannelApprovalsPage() {
     trpc.dashboard.admin.deleteChannel.mutationOptions({
       onSuccess: () => {
         notifications.show({
-          title: 'Success',
-          message: 'Channel deleted successfully',
-          color: 'green',
+          title: 'Deletion Started',
+          message:
+            'Channel deletion is in progress. This may take several minutes.',
+          color: 'blue',
         });
+        closeDeleteModal();
+        setChannelToDelete(null);
         queryClient.invalidateQueries({
           queryKey: trpc.dashboard.admin.getAllChannels.queryKey(),
         });
@@ -128,7 +140,7 @@ function ChannelApprovalsPage() {
       onError: () => {
         notifications.show({
           title: 'Error',
-          message: 'Failed to delete channel',
+          message: 'Failed to start channel deletion',
           color: 'red',
         });
       },
@@ -139,8 +151,18 @@ function ChannelApprovalsPage() {
     approveChannelMutation.mutate({ channelId });
   };
 
-  const handleDeleteChannel = (channelId: string) => {
-    deleteChannelMutation.mutate({ channelId });
+  const handleDeleteChannel = (channelId: string, channelName: string) => {
+    setChannelToDelete({ id: channelId, name: channelName });
+    openDeleteModal();
+  };
+
+  const confirmDeleteChannel = () => {
+    if (channelToDelete) {
+      deleteChannelMutation.mutate({
+        channelId: channelToDelete.id,
+        channelName: channelToDelete.name,
+      });
+    }
   };
 
   return (
@@ -248,6 +270,10 @@ function ChannelApprovalsPage() {
                           <div>
                             <Text
                               fw={500}
+                              td={
+                                channel.deletedAt ? 'line-through' : undefined
+                              }
+                              c={channel.deletedAt ? 'dimmed' : undefined}
                               renderRoot={(rootProps) => (
                                 <Link
                                   {...rootProps}
@@ -262,14 +288,24 @@ function ChannelApprovalsPage() {
                                 </Link>
                               )}
                             />
-                            <Text size="xs" c="dimmed">
+                            <Text
+                              size="xs"
+                              c="dimmed"
+                              td={
+                                channel.deletedAt ? 'line-through' : undefined
+                              }
+                            >
                               @{channel.slug}
                             </Text>
                           </div>
                         </Group>
                       </Table.Td>
                       <Table.Td>
-                        {channel.approvedAt ? (
+                        {channel.deletedAt ? (
+                          <Badge color="red" variant="light" size="sm">
+                            Deleting
+                          </Badge>
+                        ) : channel.approvedAt ? (
                           <Badge color="green" variant="light" size="sm">
                             Approved
                           </Badge>
@@ -349,7 +385,9 @@ function ChannelApprovalsPage() {
                             color="red"
                             variant="light"
                             size="sm"
-                            onClick={() => handleDeleteChannel(channel.id)}
+                            onClick={() =>
+                              handleDeleteChannel(channel.id, channel.name)
+                            }
                             loading={
                               deleteChannelMutation.isPending &&
                               deleteChannelMutation.variables?.channelId ===
@@ -369,6 +407,16 @@ function ChannelApprovalsPage() {
           </Tabs.Panel>
         </Tabs>
       </Stack>
+
+      {channelToDelete ? (
+        <DeleteChannelModal
+          opened={deleteModalOpened}
+          onClose={closeDeleteModal}
+          onConfirm={confirmDeleteChannel}
+          channelName={channelToDelete.name}
+          isDeleting={deleteChannelMutation.isPending}
+        />
+      ) : null}
     </Container>
   );
 }

@@ -77,11 +77,21 @@ export const commonProcedures = {
 
       // Try to find a channel with this slug
       const channel = await prisma.channel.findUnique({
-        where: { slug },
-        select: { slug: true, visibility: true, approvedAt: true },
+        where: { slug, deletedAt: null },
+        select: {
+          slug: true,
+          visibility: true,
+          approvedAt: true,
+          deletedAt: true,
+        },
       });
 
-      if (channel && channel.visibility === 'PUBLIC' && channel.approvedAt) {
+      if (
+        channel &&
+        channel.visibility === 'PUBLIC' &&
+        channel.approvedAt &&
+        !channel.deletedAt
+      ) {
         moduleLogger.info('Slug resolved to channel', {
           slug,
           visibility: channel.visibility,

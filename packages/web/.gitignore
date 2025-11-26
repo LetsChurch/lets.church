@@ -1,5 +1,6 @@
 .nitro
 .output
+.tanstack
 .vite
 dist
 storybook-static

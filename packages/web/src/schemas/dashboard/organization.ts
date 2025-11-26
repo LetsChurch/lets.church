@@ -34,7 +34,7 @@ export const organizationFormSchema = z.object({
   slug: z.string().optional(),
   description: z.string().optional(),
   websiteUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  primaryEmail: z.string().email('Invalid email').optional().or(z.literal('')),
+  primaryEmail: z.email('Invalid email').optional().or(z.literal('')),
   primaryPhoneNumber: z.string().optional().or(z.literal('')),
   tags: z.array(z.string()).optional(),
 });

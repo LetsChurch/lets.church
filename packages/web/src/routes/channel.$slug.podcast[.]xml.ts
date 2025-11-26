@@ -32,9 +32,11 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
               defaultThumbnailPath: true,
               visibility: true,
               approvedAt: true,
+              deletedAt: true,
             },
             where: {
               slug,
+              deletedAt: null,
             },
           });
 
@@ -48,7 +50,11 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
             });
           }
 
-          if (channel.visibility !== 'PUBLIC' || !channel.approvedAt) {
+          if (
+            channel.visibility !== 'PUBLIC' ||
+            !channel.approvedAt ||
+            channel.deletedAt
+          ) {
             moduleLogger.warn('Channel not accessible', {
               slug,
               visibility: channel.visibility,
@@ -129,6 +135,7 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
                 slug,
                 visibility: 'PUBLIC',
                 approvedAt: { not: null },
+                deletedAt: null,
               },
             },
             orderBy: {

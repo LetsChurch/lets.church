@@ -42,6 +42,7 @@ export const channelProcedures = {
           defaultThumbnailPath: true,
           visibility: true,
           approvedAt: true,
+          deletedAt: true,
           _count: {
             select: {
               subscribers: true,
@@ -75,6 +76,7 @@ export const channelProcedures = {
         },
         where: {
           slug,
+          deletedAt: null,
         },
       });
 
@@ -83,11 +85,16 @@ export const channelProcedures = {
         throw new Error('Channel not found');
       }
 
-      if (channel.visibility !== 'PUBLIC' || !channel.approvedAt) {
+      if (
+        channel.visibility !== 'PUBLIC' ||
+        !channel.approvedAt ||
+        channel.deletedAt
+      ) {
         moduleLogger.warn('Channel not accessible', {
           slug,
           visibility: channel.visibility,
           approved: Boolean(channel.approvedAt),
+          deleted: Boolean(channel.deletedAt),
         });
         throw new Error('Channel not found');
       }
@@ -173,6 +180,7 @@ export const channelProcedures = {
             slug,
             visibility: 'PUBLIC',
             approvedAt: { not: null },
+            deletedAt: null,
           },
           ...(cursor
             ? {

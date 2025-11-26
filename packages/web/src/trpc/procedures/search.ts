@@ -58,6 +58,7 @@ export const searchProcedures = {
             slug: { in: channelSlugs },
             visibility: 'PUBLIC',
             approvedAt: { not: null },
+            deletedAt: null,
           },
         });
         channelIds = channels.map((c) => c.id);
@@ -226,6 +227,7 @@ export const searchProcedures = {
           id: { in: channelIdsFromAggs },
           visibility: 'PUBLIC',
           approvedAt: { not: null },
+          deletedAt: null,
         },
       });
 

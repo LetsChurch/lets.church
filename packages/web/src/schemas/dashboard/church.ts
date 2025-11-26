@@ -56,7 +56,7 @@ export const addLeaderSchema = z.object({
     .string()
     .optional()
     .refine(
-      (val) => !val || val === '' || z.string().email().safeParse(val).success,
+      (val) => !val || val === '' || z.email().safeParse(val).success,
       'Invalid email',
     ),
   phoneNumber: z.string().optional(),
@@ -71,7 +71,7 @@ export const updateLeaderSchema = z.object({
     .string()
     .optional()
     .refine(
-      (val) => !val || val === '' || z.string().email().safeParse(val).success,
+      (val) => !val || val === '' || z.email().safeParse(val).success,
       'Invalid email',
     ),
   phoneNumber: z.string().optional(),
@@ -97,7 +97,7 @@ export const createChurchSchema = z.object({
     .string()
     .optional()
     .refine(
-      (val) => !val || val === '' || z.string().email().safeParse(val).success,
+      (val) => !val || val === '' || z.email().safeParse(val).success,
       'Invalid email',
     ),
   primaryPhoneNumber: z.string().optional(),
@@ -120,7 +120,7 @@ export const updateChurchSchema = z.object({
     .string()
     .optional()
     .refine(
-      (val) => !val || val === '' || z.string().email().safeParse(val).success,
+      (val) => !val || val === '' || z.email().safeParse(val).success,
       'Invalid email',
     ),
   primaryPhoneNumber: z.string().optional(),

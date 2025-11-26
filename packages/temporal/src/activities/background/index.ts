@@ -29,6 +29,13 @@ export {
   updateUploadStateBackupStatus,
 } from './create-upload-state';
 export {
+  deleteChannelAssociations,
+  deleteChannelDb,
+  deleteChannelFiles,
+  getChannelUploadIds,
+  markChannelDeleted,
+} from './delete-channel';
+export {
   deleteGlacierBackupsByPrefix,
   deleteUploadRecordGlacierBackups,
   deleteUploadStateAndBackup,

@@ -49,11 +49,15 @@ export const homeProcedures = {
             name: true,
             slug: true,
             avatarPath: true,
+            deletedAt: true,
           },
         },
       },
       where: {
         appUserId: ctx.session.appUserId,
+        channel: {
+          deletedAt: null,
+        },
       },
     });
 
@@ -114,6 +118,7 @@ export const homeProcedures = {
           channel: {
             visibility: 'PUBLIC',
             approvedAt: { not: null },
+            deletedAt: null,
             subscribers: {
               some: {
                 appUserId: ctx.session.appUserId,
@@ -212,6 +217,7 @@ export const homeProcedures = {
           channel: {
             visibility: 'PUBLIC',
             approvedAt: { not: null },
+            deletedAt: null,
           },
         },
         orderBy: {
@@ -298,6 +304,7 @@ export const homeProcedures = {
         where: {
           visibility: 'PUBLIC',
           approvedAt: { not: null },
+          deletedAt: null,
           ...(appUserId && {
             subscribers: {
               none: {
@@ -557,6 +564,7 @@ export const homeProcedures = {
           channel: {
             visibility: 'PUBLIC',
             approvedAt: { not: null },
+            deletedAt: null,
           },
         },
       },
