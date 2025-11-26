@@ -278,6 +278,21 @@ function AdminPage() {
             Configure mailing list subscriptions
           </Text>
         </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
+          to="/dashboard/admin/searches"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Search Logs</Text>
+          </Group>
+          <Text size="sm" c="dimmed">
+            View search queries and analytics
+          </Text>
+        </Card>
       </SimpleGrid>
     </>
   );

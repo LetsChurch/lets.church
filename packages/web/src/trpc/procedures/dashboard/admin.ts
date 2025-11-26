@@ -2443,5 +2443,58 @@ export const adminRouter = router({
     }
   }),
 
+  getSearchLogs: adminProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+      }),
+    )
+    .query(async ({ input }) => {
+      moduleLogger.info('Fetching search logs', {
+        limit: input.limit,
+        offset: input.offset,
+      });
+
+      const [searchLogs, totalCount] = await Promise.all([
+        prisma.searchLogEntry.findMany({
+          where: {
+            userDeletedAt: null,
+          },
+          select: {
+            id: true,
+            query: true,
+            params: true,
+            createdAt: true,
+            mediaCount: true,
+            transcriptCount: true,
+            channelCount: true,
+            appUser: {
+              select: {
+                id: true,
+                username: true,
+                fullName: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: input.limit,
+          skip: input.offset,
+        }),
+        prisma.searchLogEntry.count({
+          where: {
+            userDeletedAt: null,
+          },
+        }),
+      ]);
+
+      return {
+        searchLogs,
+        totalCount,
+      };
+    }),
+
   newsletterLists: newsletterListsRouter,
 });

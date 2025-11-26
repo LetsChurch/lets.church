@@ -625,15 +625,19 @@ model UploadList {
 }
 
 model SearchLogEntry {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  query         String
-  params        Json      @default("{}")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  appUser       AppUser?  @relation(fields: [appUserId], references: [id], onDelete: SetNull)
-  appUserId     String?   @map("app_user_id") @db.Uuid
-  userDeletedAt DateTime? @map("user_deleted_at")
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  query           String
+  params          Json      @default("{}")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  appUser         AppUser?  @relation(fields: [appUserId], references: [id], onDelete: SetNull)
+  appUserId       String?   @map("app_user_id") @db.Uuid
+  userDeletedAt   DateTime? @map("user_deleted_at")
+  mediaCount      Int       @default(0) @map("media_count")
+  transcriptCount Int       @default(0) @map("transcript_count")
+  channelCount    Int       @default(0) @map("channel_count")
 
   @@index([appUserId, userDeletedAt, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
   @@map("search_log_entry")
 }
 

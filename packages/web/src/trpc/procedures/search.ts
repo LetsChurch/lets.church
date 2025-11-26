@@ -132,30 +132,8 @@ export const searchProcedures = {
         });
       }
 
-      // Log the search
-      try {
-        await prisma.searchLogEntry.create({
-          data: {
-            query: q,
-            params: {
-              focus,
-              channelIds: channelIds ?? [],
-              limit,
-              cursor,
-            },
-            appUserId: ctx.session?.appUserId,
-          },
-        });
-
-        moduleLogger.info('Search query logged to database', {
-          userId: ctx.session?.appUserId,
-        });
-      } catch (error) {
-        moduleLogger.error('Failed to log search', {
-          error: error instanceof Error ? error.message : String(error),
-        });
-        // Don't fail the search if logging fails
-      }
+      // We'll log the search after getting results to capture counts
+      let searchLogEntryId: string | null = null;
 
       // Determine which index to focus on and which to get metadata only
       const mediaLimit = focus === 'media' ? limit : 0;
@@ -208,6 +186,135 @@ export const searchProcedures = {
         focus,
       });
 
+      // Log the search with result counts
+      // Check referer to detect focus switches (tab changes on same search page)
+      try {
+        const referer = ctx.req.headers.get('referer');
+        let shouldSkipLogging = false;
+
+        moduleLogger.info(
+          {
+            referer,
+            currentQuery: q,
+            currentFocus: focus,
+          },
+          'Referer check',
+        );
+
+        // Parse referer URL to check if it's from the same search with different focus
+        if (referer) {
+          try {
+            const refererUrl = new URL(referer);
+            const refererParams = new URLSearchParams(refererUrl.search);
+            const refererQuery = refererParams.get('q');
+            const refererFocus = refererParams.get('focus') || 'media';
+            const refererChannelSlugs = refererParams.getAll('channelSlugs');
+            const refererSort = refererParams.get('sort');
+            const refererDateRange = refererParams.get('dateRange');
+
+            // Check if coming from same search with different focus
+            const isFromSearchPage = refererUrl.pathname === '/search';
+            const isSameQuery = refererQuery === q;
+            const isDifferentFocus = refererFocus !== focus;
+
+            // Compare filters (only if they exist in the referer)
+            const hasSameChannelSlugs =
+              refererChannelSlugs.length === 0 ||
+              JSON.stringify(refererChannelSlugs.sort()) ===
+                JSON.stringify((channelSlugs ?? []).sort());
+            const hasSameSort = !refererSort || refererSort === sort;
+            const hasSameDateRange =
+              !refererDateRange || refererDateRange === dateRange;
+
+            moduleLogger.info(
+              {
+                refererUrl: refererUrl.toString(),
+                refererPathname: refererUrl.pathname,
+                refererQuery,
+                refererFocus,
+                refererChannelSlugs,
+                refererSort,
+                refererDateRange,
+                isFromSearchPage,
+                isSameQuery,
+                isDifferentFocus,
+                hasSameChannelSlugs,
+                hasSameSort,
+                hasSameDateRange,
+              },
+              'Referer parsed',
+            );
+
+            if (
+              isFromSearchPage &&
+              isSameQuery &&
+              isDifferentFocus &&
+              hasSameChannelSlugs &&
+              hasSameSort &&
+              hasSameDateRange
+            ) {
+              shouldSkipLogging = true;
+
+              moduleLogger.info(
+                {
+                  userId: ctx.session?.appUserId,
+                  query: q,
+                  referer,
+                  previousFocus: refererFocus,
+                  newFocus: focus,
+                },
+                'Skipping duplicate search (focus switch detected via referer)',
+              );
+            }
+          } catch (urlError) {
+            // Invalid referer URL, ignore
+            moduleLogger.warn(
+              {
+                referer,
+                error:
+                  urlError instanceof Error
+                    ? urlError.message
+                    : String(urlError),
+              },
+              'Failed to parse referer URL',
+            );
+          }
+        }
+
+        if (!shouldSkipLogging) {
+          const logEntry = await prisma.searchLogEntry.create({
+            data: {
+              query: q,
+              params: {
+                focus,
+                channelIds: channelIds ?? [],
+                limit,
+                cursor,
+                sort,
+                dateRange,
+              },
+              appUserId: ctx.session?.appUserId,
+              mediaCount,
+              transcriptCount,
+              channelCount: 0, // Will be updated after we fetch channels
+            },
+          });
+
+          searchLogEntryId = logEntry.id;
+
+          moduleLogger.info('Search query logged to database', {
+            userId: ctx.session?.appUserId,
+            searchLogId: searchLogEntryId,
+            referer,
+          });
+        }
+      } catch (error) {
+        moduleLogger.error('Failed to log search', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // Don't fail the search if logging fails
+      }
+
       // Extract channel aggregations from the focused response
       const channelAggs =
         (focus === 'media'
@@ -235,6 +342,22 @@ export const searchProcedures = {
         aggregatedChannels: channelIdsFromAggs.length,
         channelsFound: channels.length,
       });
+
+      // Update the search log entry with channel count (only if we logged this search)
+      if (searchLogEntryId) {
+        try {
+          await prisma.searchLogEntry.update({
+            where: { id: searchLogEntryId },
+            data: {
+              channelCount: channels.length,
+            },
+          });
+        } catch (error) {
+          moduleLogger.error('Failed to update search log channel count', {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
 
       const channelsWithAvatars = channels.map((channel) => {
         const avatarUrl = channel.avatarPath

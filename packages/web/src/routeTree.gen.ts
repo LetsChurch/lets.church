@@ -44,6 +44,7 @@ import { Route as DashboardChannelsChannelIdRouteImport } from './routes/dashboa
 import { Route as DashboardAdminViewRangesMigrationRouteImport } from './routes/dashboard_/admin_.view-ranges-migration'
 import { Route as DashboardAdminUsersRouteImport } from './routes/dashboard_/admin_.users'
 import { Route as DashboardAdminUploadBackupsRouteImport } from './routes/dashboard_/admin_.upload-backups'
+import { Route as DashboardAdminSearchesRouteImport } from './routes/dashboard_/admin_/searches'
 import { Route as DashboardAdminProcessingUploadsRouteImport } from './routes/dashboard_/admin_.processing-uploads'
 import { Route as DashboardAdminOrganizationTagsRouteImport } from './routes/dashboard_/admin_.organization-tags'
 import { Route as DashboardAdminOrganizationApprovalsRouteImport } from './routes/dashboard_/admin_.organization-approvals'
@@ -201,9 +202,9 @@ const MainAboutIndexRoute = MainAboutIndexRouteImport.update({
   getParentRoute: () => MainAboutRoute,
 } as any)
 const EmbedMediaMediaIdRoute = EmbedMediaMediaIdRouteImport.update({
-  id: '/media/$mediaId',
-  path: '/media/$mediaId',
-  getParentRoute: () => EmbedRoute,
+  id: '/embed/media/$mediaId',
+  path: '/embed/media/$mediaId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const EmbedChannelSlugRoute = EmbedChannelSlugRouteImport.update({
   id: '/embed/channel/$slug',
@@ -255,6 +256,11 @@ const DashboardAdminUploadBackupsRoute =
     path: '/admin/upload-backups',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardAdminSearchesRoute = DashboardAdminSearchesRouteImport.update({
+  id: '/admin_/searches',
+  path: '/admin/searches',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardAdminProcessingUploadsRoute =
   DashboardAdminProcessingUploadsRouteImport.update({
     id: '/admin_/processing-uploads',
@@ -474,6 +480,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/organization-approvals': typeof DashboardAdminOrganizationApprovalsRoute
   '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard/admin/processing-uploads': typeof DashboardAdminProcessingUploadsRoute
+  '/dashboard/admin/searches': typeof DashboardAdminSearchesRoute
   '/dashboard/admin/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
   '/dashboard/admin/view-ranges-migration': typeof DashboardAdminViewRangesMigrationRoute
@@ -539,6 +546,7 @@ export interface FileRoutesByTo {
   '/dashboard/admin/organization-approvals': typeof DashboardAdminOrganizationApprovalsRoute
   '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard/admin/processing-uploads': typeof DashboardAdminProcessingUploadsRoute
+  '/dashboard/admin/searches': typeof DashboardAdminSearchesRoute
   '/dashboard/admin/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
   '/dashboard/admin/view-ranges-migration': typeof DashboardAdminViewRangesMigrationRoute
@@ -608,6 +616,7 @@ export interface FileRoutesById {
   '/dashboard_/admin_/organization-approvals': typeof DashboardAdminOrganizationApprovalsRoute
   '/dashboard_/admin_/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard_/admin_/processing-uploads': typeof DashboardAdminProcessingUploadsRoute
+  '/dashboard_/admin_/searches': typeof DashboardAdminSearchesRoute
   '/dashboard_/admin_/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard_/admin_/users': typeof DashboardAdminUsersRoute
   '/dashboard_/admin_/view-ranges-migration': typeof DashboardAdminViewRangesMigrationRoute
@@ -677,6 +686,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/organization-approvals'
     | '/dashboard/admin/organization-tags'
     | '/dashboard/admin/processing-uploads'
+    | '/dashboard/admin/searches'
     | '/dashboard/admin/upload-backups'
     | '/dashboard/admin/users'
     | '/dashboard/admin/view-ranges-migration'
@@ -742,6 +752,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/organization-approvals'
     | '/dashboard/admin/organization-tags'
     | '/dashboard/admin/processing-uploads'
+    | '/dashboard/admin/searches'
     | '/dashboard/admin/upload-backups'
     | '/dashboard/admin/users'
     | '/dashboard/admin/view-ranges-migration'
@@ -810,6 +821,7 @@ export interface FileRouteTypes {
     | '/dashboard_/admin_/organization-approvals'
     | '/dashboard_/admin_/organization-tags'
     | '/dashboard_/admin_/processing-uploads'
+    | '/dashboard_/admin_/searches'
     | '/dashboard_/admin_/upload-backups'
     | '/dashboard_/admin_/users'
     | '/dashboard_/admin_/view-ranges-migration'
@@ -845,6 +857,7 @@ export interface RootRouteChildren {
   ChannelSlugPodcastDotxmlRoute: typeof ChannelSlugPodcastDotxmlRoute
   ChannelSlugRssDotxmlRoute: typeof ChannelSlugRssDotxmlRoute
   EmbedChannelSlugRoute: typeof EmbedChannelSlugRoute
+  EmbedMediaMediaIdRoute: typeof EmbedMediaMediaIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1026,10 +1039,10 @@ declare module '@tanstack/react-router' {
     }
     '/embed/media/$mediaId': {
       id: '/embed/media/$mediaId'
-      path: '/media/$mediaId'
+      path: '/embed/media/$mediaId'
       fullPath: '/embed/media/$mediaId'
       preLoaderRoute: typeof EmbedMediaMediaIdRouteImport
-      parentRoute: typeof EmbedRoute
+      parentRoute: typeof rootRouteImport
     }
     '/embed/channel/$slug': {
       id: '/embed/channel/$slug'
@@ -1092,6 +1105,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/upload-backups'
       fullPath: '/dashboard/admin/upload-backups'
       preLoaderRoute: typeof DashboardAdminUploadBackupsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard_/admin_/searches': {
+      id: '/dashboard_/admin_/searches'
+      path: '/admin/searches'
+      fullPath: '/dashboard/admin/searches'
+      preLoaderRoute: typeof DashboardAdminSearchesRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard_/admin_/processing-uploads': {
@@ -1397,6 +1417,7 @@ interface DashboardRouteChildren {
   DashboardAdminOrganizationApprovalsRoute: typeof DashboardAdminOrganizationApprovalsRoute
   DashboardAdminOrganizationTagsRoute: typeof DashboardAdminOrganizationTagsRoute
   DashboardAdminProcessingUploadsRoute: typeof DashboardAdminProcessingUploadsRoute
+  DashboardAdminSearchesRoute: typeof DashboardAdminSearchesRoute
   DashboardAdminUploadBackupsRoute: typeof DashboardAdminUploadBackupsRoute
   DashboardAdminUsersRoute: typeof DashboardAdminUsersRoute
   DashboardAdminViewRangesMigrationRoute: typeof DashboardAdminViewRangesMigrationRoute
@@ -1438,6 +1459,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
     DashboardAdminOrganizationApprovalsRoute,
   DashboardAdminOrganizationTagsRoute: DashboardAdminOrganizationTagsRoute,
   DashboardAdminProcessingUploadsRoute: DashboardAdminProcessingUploadsRoute,
+  DashboardAdminSearchesRoute: DashboardAdminSearchesRoute,
   DashboardAdminUploadBackupsRoute: DashboardAdminUploadBackupsRoute,
   DashboardAdminUsersRoute: DashboardAdminUsersRoute,
   DashboardAdminViewRangesMigrationRoute:
@@ -1483,6 +1505,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChannelSlugPodcastDotxmlRoute: ChannelSlugPodcastDotxmlRoute,
   ChannelSlugRssDotxmlRoute: ChannelSlugRssDotxmlRoute,
   EmbedChannelSlugRoute: EmbedChannelSlugRoute,
+  EmbedMediaMediaIdRoute: EmbedMediaMediaIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
