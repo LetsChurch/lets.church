@@ -68,3 +68,4 @@ export { default as updateDailySalt } from './update-daily-salt';
 export { default as updateUploadRecord } from './update-upload-record';
 export { default as updateUploadScores } from './update-upload-scores';
 export { default as updateUser } from './update-user';
+export { default as verifyUserEmail } from './verify-user-email';

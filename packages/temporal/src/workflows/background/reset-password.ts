@@ -8,7 +8,9 @@ import { invariant } from 'es-toolkit';
 import type * as activities from '../../activities/background';
 import { BACKGROUND_QUEUE } from '../../queues';
 
-const { sendEmail, updateUser } = proxyActivities<typeof activities>({
+const { sendEmail, updateUser, verifyUserEmail } = proxyActivities<
+  typeof activities
+>({
   startToCloseTimeout: '1 minute',
   taskQueue: BACKGROUND_QUEUE,
   retry: { maximumAttempts: 8 },
@@ -41,5 +43,6 @@ export async function resetPasswordWorkflow(
   if (await condition(() => Boolean(newHash), '15 minutes')) {
     invariant(newHash, 'New password hash is required');
     await updateUser(userId, { password: newHash });
+    await verifyUserEmail(userId);
   }
 }

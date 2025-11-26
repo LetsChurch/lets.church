@@ -889,6 +889,84 @@ export const adminRouter = router({
       }
     }),
 
+  resendVerificationEmail: adminProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info('Resending verification email', {
+        userId: input.userId,
+        appUserId: ctx.session.appUserId,
+      });
+
+      try {
+        const user = await prisma.appUser.findUnique({
+          where: { id: input.userId },
+          select: {
+            id: true,
+            username: true,
+            emails: {
+              select: { email: true, verifiedAt: true },
+              take: 1,
+            },
+          },
+        });
+
+        if (!user) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'User not found',
+          });
+        }
+
+        const emailRecord = user.emails[0];
+
+        if (!emailRecord) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'User has no email address',
+          });
+        }
+
+        if (emailRecord.verifiedAt) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Email is already verified',
+          });
+        }
+
+        const { sendVerificationEmail } = await import(
+          '@letschurch/temporal/activities/background'
+        );
+
+        await sendVerificationEmail(user.id, user.username, emailRecord.email);
+
+        moduleLogger.info('Verification email sent', {
+          userId: input.userId,
+          appUserId: ctx.session.appUserId,
+        });
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error('Failed to resend verification email', {
+          userId: input.userId,
+          appUserId: ctx.session.appUserId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to resend verification email',
+        });
+      }
+    }),
+
   getProcessingUploads: adminProcedure.query(async () => {
     moduleLogger.info('Fetching processing uploads');
 

@@ -12,7 +12,13 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { modals } from '@mantine/modals';
-import { IconDots, IconEdit, IconKey, IconPlus } from '@tabler/icons-react';
+import {
+  IconDots,
+  IconEdit,
+  IconKey,
+  IconMail,
+  IconPlus,
+} from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
@@ -168,6 +174,42 @@ function UsersPage() {
     });
   };
 
+  const handleResendVerificationEmail = (userId: string) => {
+    modals.openConfirmModal({
+      title: 'Resend Verification Email',
+      children: (
+        <Text size="sm">
+          Are you sure you want to resend the verification email to this user?
+        </Text>
+      ),
+      labels: { confirm: 'Resend Email', cancel: 'Cancel' },
+      confirmProps: { color: 'blue' },
+      onConfirm: async () => {
+        try {
+          await trpcClient.dashboard.admin.resendVerificationEmail.mutate({
+            userId,
+          });
+          modals.open({
+            title: 'Success',
+            children: (
+              <Text size="sm">Verification email sent successfully!</Text>
+            ),
+          });
+        } catch (error) {
+          console.error('Failed to resend verification email:', error);
+          modals.open({
+            title: 'Error',
+            children: (
+              <Text size="sm" c="red">
+                Failed to resend verification email. Please try again.
+              </Text>
+            ),
+          });
+        }
+      },
+    });
+  };
+
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'ADMIN':
@@ -252,6 +294,14 @@ function UsersPage() {
                       >
                         Reset Password
                       </Menu.Item>
+                      {email && !email.verifiedAt ? (
+                        <Menu.Item
+                          leftSection={<IconMail size={14} />}
+                          onClick={() => handleResendVerificationEmail(user.id)}
+                        >
+                          Resend Verification Email
+                        </Menu.Item>
+                      ) : null}
                     </Menu.Dropdown>
                   </Menu>
                 </Table.Td>
