@@ -1,4 +1,5 @@
 import {
+  ActionIcon,
   Badge,
   Box,
   Group,
@@ -7,12 +8,14 @@ import {
   Table,
   Text,
   Title,
+  Tooltip,
 } from '@mantine/core';
-import { IconEye, IconEyeOff } from '@tabler/icons-react';
-import { useSuspenseQuery } from '@tanstack/react-query';
+import { IconEye, IconEyeOff, IconRefresh } from '@tabler/icons-react';
+import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useTRPC } from '@/trpc/react';
 import { formatDate, formatTime } from '@/util/format';
+import { showFailure, showSuccess } from '../-mantine';
 
 export const Route = createFileRoute('/dashboard_/admin_/processing-uploads')({
   component: RouteComponent,
@@ -49,10 +52,26 @@ function RouteComponent() {
   const trpc = useTRPC();
   const navigate = useNavigate();
 
-  const { data: uploads } = useSuspenseQuery({
+  const { data: uploads, refetch } = useSuspenseQuery({
     ...trpc.dashboard.admin.getProcessingUploads.queryOptions(),
     refetchInterval: 2000,
   });
+
+  const retryMutation = useMutation(
+    trpc.dashboard.admin.retryUploadProcessing.mutationOptions({
+      onSuccess: async () => {
+        showSuccess({
+          message: 'Upload processing restarted successfully!',
+        });
+        await refetch();
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to retry upload processing',
+        });
+      },
+    }),
+  );
 
   const transcodingCount = uploads.filter(
     (upload) => !upload.transcodingFinishedAt,
@@ -103,9 +122,9 @@ function RouteComponent() {
             <Table.Th>Video</Table.Th>
             <Table.Th>Channel</Table.Th>
             <Table.Th>Visibility</Table.Th>
-            <Table.Th>Transcoding</Table.Th>
-            <Table.Th>Transcribing</Table.Th>
+            <Table.Th>Processing</Table.Th>
             <Table.Th>Created</Table.Th>
+            <Table.Th>Actions</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -123,16 +142,15 @@ function RouteComponent() {
               const isTranscribing = !upload.transcribingFinishedAt;
 
               return (
-                <Table.Tr
-                  key={upload.id}
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => {
-                    navigate({
-                      to: `/dashboard/channels/${upload.channel.id}/uploads/${upload.id}`,
-                    });
-                  }}
-                >
-                  <Table.Td>
+                <Table.Tr key={upload.id}>
+                  <Table.Td
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      navigate({
+                        to: `/dashboard/channels/${upload.channel.id}/uploads/${upload.id}`,
+                      });
+                    }}
+                  >
                     <Group gap="sm" align="flex-start">
                       <Box pos="relative">
                         <Box
@@ -151,7 +169,7 @@ function RouteComponent() {
                             📹
                           </Text>
                         </Box>
-                        {upload.lengthSeconds && (
+                        {upload.lengthSeconds ? (
                           <Box
                             pos="absolute"
                             bottom={4}
@@ -169,7 +187,7 @@ function RouteComponent() {
                           >
                             {formatTime(upload.lengthSeconds * 1000)}
                           </Box>
-                        )}
+                        ) : null}
                       </Box>
                       <Box style={{ flex: 1, minWidth: 0 }}>
                         <Text fw={500} lineClamp={2} size="sm">
@@ -187,7 +205,14 @@ function RouteComponent() {
                       </Box>
                     </Group>
                   </Table.Td>
-                  <Table.Td>
+                  <Table.Td
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      navigate({
+                        to: `/dashboard/channels/${upload.channel.id}/uploads/${upload.id}`,
+                      });
+                    }}
+                  >
                     <Text size="sm" fw={500}>
                       {upload.channel.name}
                     </Text>
@@ -195,7 +220,14 @@ function RouteComponent() {
                       @{upload.channel.slug}
                     </Text>
                   </Table.Td>
-                  <Table.Td>
+                  <Table.Td
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      navigate({
+                        to: `/dashboard/channels/${upload.channel.id}/uploads/${upload.id}`,
+                      });
+                    }}
+                  >
                     <Badge
                       color={getVisibilityColor(upload.visibility)}
                       size="sm"
@@ -204,42 +236,87 @@ function RouteComponent() {
                       {upload.visibility}
                     </Badge>
                   </Table.Td>
-                  <Table.Td>
-                    <Box w={100}>
-                      <Progress
-                        value={
-                          isTranscoding ? upload.transcodingProgress * 100 : 100
-                        }
-                        size="md"
-                        animated={isTranscoding}
-                        striped={isTranscoding}
-                        color={isTranscoding ? undefined : 'green'}
-                      />
-                      <Text size="xs" c="dimmed" mt="xs">
-                        {isTranscoding
-                          ? `${Math.round(upload.transcodingProgress * 100)}%`
-                          : 'Complete'}
-                      </Text>
-                    </Box>
+                  <Table.Td
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      navigate({
+                        to: `/dashboard/channels/${upload.channel.id}/uploads/${upload.id}`,
+                      });
+                    }}
+                  >
+                    <Stack gap="md">
+                      <Box>
+                        <Text size="sm" fw={500} mb="xs">
+                          {isTranscoding
+                            ? 'Transcoding video...'
+                            : 'Transcoding complete'}
+                        </Text>
+                        <Progress
+                          value={
+                            isTranscoding
+                              ? upload.transcodingProgress * 100
+                              : 100
+                          }
+                          size="lg"
+                          animated={isTranscoding}
+                          striped={isTranscoding}
+                          color={isTranscoding ? undefined : 'green'}
+                        />
+                        <Text size="xs" c="dimmed" mt="xs">
+                          {isTranscoding
+                            ? `${Math.round(upload.transcodingProgress * 100)}% complete`
+                            : 'Video transcoding finished'}
+                        </Text>
+                      </Box>
+                      <Box>
+                        <Text size="sm" fw={500} mb="xs">
+                          {isTranscribing
+                            ? 'Transcribing audio...'
+                            : 'Transcription complete'}
+                        </Text>
+                        <Progress
+                          value={100}
+                          size="lg"
+                          animated={isTranscribing}
+                          striped={isTranscribing}
+                          color={isTranscribing ? undefined : 'green'}
+                        />
+                        <Text size="xs" c="dimmed" mt="xs">
+                          {isTranscribing
+                            ? 'Processing audio transcript'
+                            : 'Audio transcription finished'}
+                        </Text>
+                      </Box>
+                    </Stack>
                   </Table.Td>
-                  <Table.Td>
-                    <Box w={100}>
-                      <Progress
-                        value={100}
-                        size="md"
-                        animated={isTranscribing}
-                        striped={isTranscribing}
-                        color={isTranscribing ? undefined : 'green'}
-                      />
-                      <Text size="xs" c="dimmed" mt="xs">
-                        {isTranscribing ? 'Processing' : 'Complete'}
-                      </Text>
-                    </Box>
-                  </Table.Td>
-                  <Table.Td>
+                  <Table.Td
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      navigate({
+                        to: `/dashboard/channels/${upload.channel.id}/uploads/${upload.id}`,
+                      });
+                    }}
+                  >
                     <Text size="sm">
                       {formatDate(upload.createdAt, 'short')}
                     </Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Tooltip label="Retry processing">
+                      <ActionIcon
+                        variant="light"
+                        color="blue"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          retryMutation.mutate({
+                            uploadRecordId: upload.id,
+                          });
+                        }}
+                        loading={retryMutation.isPending}
+                      >
+                        <IconRefresh size={16} />
+                      </ActionIcon>
+                    </Tooltip>
                   </Table.Td>
                 </Table.Tr>
               );

@@ -2179,17 +2179,6 @@ export const adminRouter = router({
           scope = 'transcode';
         }
 
-        // Reset timestamps to allow reprocessing
-        await prisma.uploadRecord.update({
-          where: { id: input.uploadRecordId },
-          data: {
-            transcodingStartedAt: null,
-            transcodingFinishedAt: null,
-            transcribingStartedAt: null,
-            transcribingFinishedAt: null,
-          },
-        });
-
         // Start the workflow
         await temporalClient.workflow.start(processMediaWorkflow, {
           taskQueue: BACKGROUND_QUEUE,
