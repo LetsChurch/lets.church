@@ -387,11 +387,11 @@ enum BackupStatus {
 }
 
 model UploadState {
-  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  s3Key          String          @unique @map("s3_key")
-  s3Bucket       String          @map("s3_bucket")
-  uploadType     UploadStateType @map("upload_type")
-  sizeBytes      BigInt?         @map("size_bytes")
+  id         String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  s3Key      String          @unique @map("s3_key")
+  s3Bucket   String          @map("s3_bucket")
+  uploadType UploadStateType @map("upload_type")
+  sizeBytes  BigInt?         @map("size_bytes")
 
   // Source reference (polymorphic - only one should be set based on uploadType)
   uploadRecordId String?       @map("upload_record_id") @db.Uuid
@@ -681,14 +681,14 @@ enum NewsletterListOptin {
 }
 
 model NewsletterMailingList {
-  listmonkUuid            String                 @id @map("listmonk_uuid") @db.Uuid
+  listmonkUuid            String              @id @map("listmonk_uuid") @db.Uuid
   name                    String
-  type                    NewsletterListType     @default(PUBLIC)
-  optin                   NewsletterListOptin    @default(SINGLE)
-  enabled                 Boolean                @default(true)
-  subscribeOnRegistration Boolean                @default(false) @map("subscribe_on_registration")
-  createdAt               DateTime               @default(now()) @map("created_at")
-  updatedAt               DateTime               @updatedAt @map("updated_at")
+  type                    NewsletterListType  @default(PUBLIC)
+  optin                   NewsletterListOptin @default(SINGLE)
+  enabled                 Boolean             @default(true)
+  subscribeOnRegistration Boolean             @default(false) @map("subscribe_on_registration")
+  createdAt               DateTime            @default(now()) @map("created_at")
+  updatedAt               DateTime            @updatedAt @map("updated_at")
 
   @@map("newsletter_mailing_list")
 }
