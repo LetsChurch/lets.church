@@ -2,6 +2,7 @@ import {
   ActionIcon,
   Badge,
   Box,
+  Button,
   Group,
   Progress,
   Stack,
@@ -73,6 +74,22 @@ function RouteComponent() {
     }),
   );
 
+  const bulkRetryMutation = useMutation(
+    trpc.dashboard.admin.bulkRetryProcessingUploads.mutationOptions({
+      onSuccess: async ({ retriedCount, skippedCount }) => {
+        showSuccess({
+          message: `Bulk retry initiated: ${retriedCount} upload${retriedCount !== 1 ? 's' : ''} restarted${skippedCount > 0 ? `, ${skippedCount} skipped (already running)` : ''}`,
+        });
+        await refetch();
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to bulk retry processing uploads',
+        });
+      },
+    }),
+  );
+
   const transcodingCount = uploads.filter(
     (upload) => !upload.transcodingFinishedAt,
   ).length;
@@ -114,6 +131,19 @@ function RouteComponent() {
             {transcribingCount} transcribing
           </Text>
         </div>
+        {uploads.length > 0 ? (
+          <Button
+            variant="light"
+            color="blue"
+            leftSection={<IconRefresh size={16} />}
+            onClick={() => {
+              bulkRetryMutation.mutate();
+            }}
+            loading={bulkRetryMutation.isPending}
+          >
+            Retry All Without Active Workflow
+          </Button>
+        ) : null}
       </Group>
 
       <Table verticalSpacing="md">

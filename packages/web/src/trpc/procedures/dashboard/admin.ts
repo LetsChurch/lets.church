@@ -2179,6 +2179,16 @@ export const adminRouter = router({
           scope = 'transcode';
         }
 
+        await prisma.uploadRecord.update({
+          where: { id: input.uploadRecordId },
+          data: {
+            transcodingStartedAt: null,
+            transcodingFinishedAt: null,
+            transcribingStartedAt: null,
+            transcribingFinishedAt: null,
+          },
+        });
+
         // Start the workflow
         await temporalClient.workflow.start(processMediaWorkflow, {
           taskQueue: BACKGROUND_QUEUE,
@@ -2212,6 +2222,148 @@ export const adminRouter = router({
         });
       }
     }),
+
+  bulkRetryProcessingUploads: adminProcedure.mutation(async ({ ctx }) => {
+    moduleLogger.info('Bulk retrying processing uploads', {
+      appUserId: ctx.session.appUserId,
+    });
+
+    try {
+      // Get all processing uploads
+      const processingUploads = await prisma.uploadRecord.findMany({
+        where: {
+          uploadFinalized: true,
+          finalizedUploadKey: { not: null },
+          OR: [
+            { transcodingFinishedAt: null },
+            { transcribingFinishedAt: null },
+          ],
+        },
+        select: {
+          id: true,
+          finalizedUploadKey: true,
+          transcodingFinishedAt: true,
+          transcribingFinishedAt: true,
+        },
+      });
+
+      if (processingUploads.length === 0) {
+        moduleLogger.info('No processing uploads to retry', {
+          appUserId: ctx.session.appUserId,
+        });
+        return { success: true, retriedCount: 0, skippedCount: 0 };
+      }
+
+      // Filter out uploads with active workflows
+      const temporalClient = await client;
+      const uploadsToRetry = await pFilter(
+        processingUploads,
+        async (upload) => {
+          if (!upload.finalizedUploadKey) {
+            return false;
+          }
+
+          try {
+            const workflowId = `processMedia:${upload.finalizedUploadKey}`;
+            const handle = temporalClient.workflow.getHandle(workflowId);
+            const description = await handle.describe();
+
+            // Exclude uploads with running workflows
+            return description.status.name !== 'RUNNING';
+          } catch {
+            // Workflow doesn't exist - include the upload
+            return true;
+          }
+        },
+        { concurrency: 25 },
+      );
+
+      moduleLogger.info('Filtered uploads for bulk retry', {
+        totalProcessing: processingUploads.length,
+        toRetry: uploadsToRetry.length,
+        skipped: processingUploads.length - uploadsToRetry.length,
+        appUserId: ctx.session.appUserId,
+      });
+
+      // Import the workflow from temporal package
+      const { processMediaWorkflow } = await import(
+        '@letschurch/temporal/workflows/background'
+      );
+      const { BACKGROUND_QUEUE } = await import('@letschurch/temporal/queues');
+
+      let retriedCount = 0;
+
+      // Retry each upload
+      for (const upload of uploadsToRetry) {
+        try {
+          // Determine what needs to be processed
+          let scope: 'transcode' | 'transcribe' | 'everything' = 'everything';
+          if (upload.transcodingFinishedAt && !upload.transcribingFinishedAt) {
+            scope = 'transcribe';
+          } else if (
+            !upload.transcodingFinishedAt &&
+            upload.transcribingFinishedAt
+          ) {
+            scope = 'transcode';
+          }
+
+          await prisma.uploadRecord.update({
+            where: { id: upload.id },
+            data: {
+              transcodingStartedAt: null,
+              transcodingFinishedAt: null,
+              transcribingStartedAt: null,
+              transcribingFinishedAt: null,
+            },
+          });
+
+          const workflowId = `processMedia:${upload.finalizedUploadKey}`;
+          await temporalClient.workflow.start(processMediaWorkflow, {
+            taskQueue: BACKGROUND_QUEUE,
+            workflowId,
+            args: [upload.id, scope],
+            retry: { maximumAttempts: 5 },
+          });
+
+          retriedCount++;
+
+          moduleLogger.info('Bulk retry: Started workflow', {
+            uploadId: upload.id,
+            workflowId,
+            scope,
+            appUserId: ctx.session.appUserId,
+          });
+        } catch (error) {
+          moduleLogger.error('Bulk retry: Failed to start workflow', {
+            uploadId: upload.id,
+            error: error instanceof Error ? error.message : String(error),
+            appUserId: ctx.session.appUserId,
+          });
+          // Continue with other uploads even if one fails
+        }
+      }
+
+      const skippedCount = processingUploads.length - retriedCount;
+
+      moduleLogger.info('Bulk retry processing uploads completed', {
+        retriedCount,
+        skippedCount,
+        appUserId: ctx.session.appUserId,
+      });
+
+      return { success: true, retriedCount, skippedCount };
+    } catch (error) {
+      moduleLogger.error('Failed to bulk retry processing uploads', {
+        appUserId: ctx.session.appUserId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to bulk retry processing uploads',
+      });
+    }
+  }),
 
   newsletterLists: newsletterListsRouter,
 });
