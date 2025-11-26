@@ -281,8 +281,8 @@ export const searchProcedures = {
           }
         }
 
-        // Only log if query is not empty or whitespace
-        if (!shouldSkipLogging && q.trim().length > 0) {
+        // Only log if query is not empty or whitespace AND this is the initial search (not pagination)
+        if (!shouldSkipLogging && q.trim().length > 0 && cursor === 0) {
           const logEntry = await prisma.searchLogEntry.create({
             data: {
               query: q,
