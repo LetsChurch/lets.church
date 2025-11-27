@@ -23,11 +23,13 @@ export default async function processImage(
 ) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'processImage',
-    args: {
-      targetId,
-      s3UploadKey,
+    context: {
+      args: {
+        targetId,
+        s3UploadKey,
+      },
+      meta: JSON.stringify({ postProcess }),
     },
-    meta: JSON.stringify({ postProcess }),
   });
 
   Context.current().heartbeat();
@@ -85,7 +87,10 @@ export default async function processImage(
 
     return { path, blurhash };
   } catch (e) {
-    activityLogger.error(e instanceof Error ? e.message : e);
+    activityLogger.error(
+      { err: e instanceof Error ? e : new Error(String(e)) },
+      'Failed to process image',
+    );
     throw e;
   } finally {
     activityLogger.info('Removing working directory');

@@ -43,10 +43,13 @@ const moduleLogger = logger.child({
 
 const adminProcedure = authProcedure.use(async ({ ctx, next }) => {
   if (ctx.session.appUser.role !== 'ADMIN') {
-    moduleLogger.warn('Non-admin user attempted admin action', {
-      appUserId: ctx.session.appUserId,
-      role: ctx.session.appUser.role,
-    });
+    moduleLogger.warn(
+      {
+        appUserId: ctx.session.appUserId,
+        context: { role: ctx.session.appUser.role },
+      },
+      'Non-admin user attempted admin action',
+    );
 
     throw new TRPCError({ code: 'FORBIDDEN' });
   }
@@ -218,10 +221,15 @@ export const adminRouter = router({
         .optional(),
     )
     .query(async ({ input }) => {
-      moduleLogger.info('Fetching all channels', {
-        filter: input?.filter,
-        search: input?.search,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            filter: input?.filter,
+            search: input?.search,
+          },
+        },
+        'Fetching all channels',
+      );
 
       const where: {
         approvedAt?: { not: null } | null;
@@ -355,10 +363,13 @@ export const adminRouter = router({
   approveChannel: adminProcedure
     .input(z.object({ channelId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Approving channel', {
-        channelId: input.channelId,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
+        },
+        'Approving channel',
+      );
 
       try {
         await prisma.channel.update({
@@ -371,18 +382,26 @@ export const adminRouter = router({
           },
         });
 
-        moduleLogger.info('Channel approved successfully', {
-          channelId: input.channelId,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            channelId: input.channelId,
+            appUserId: ctx.session.appUserId,
+          },
+          'Channel approved successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to approve channel', {
-          channelId: input.channelId,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            channelId: input.channelId,
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to approve channel',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -394,10 +413,13 @@ export const adminRouter = router({
   approveOrganization: adminProcedure
     .input(z.object({ organizationId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Approving organization', {
-        organizationId: input.organizationId,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          organizationId: input.organizationId,
+          appUserId: ctx.session.appUserId,
+        },
+        'Approving organization',
+      );
 
       try {
         await prisma.organization.update({
@@ -410,18 +432,26 @@ export const adminRouter = router({
           },
         });
 
-        moduleLogger.info('Organization approved successfully', {
-          organizationId: input.organizationId,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            organizationId: input.organizationId,
+            appUserId: ctx.session.appUserId,
+          },
+          'Organization approved successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to approve organization', {
-          organizationId: input.organizationId,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            organizationId: input.organizationId,
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to approve organization',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -438,11 +468,14 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Starting async channel deletion', {
-        channelId: input.channelId,
-        channelName: input.channelName,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
+          context: { channelName: input.channelName },
+        },
+        'Starting async channel deletion',
+      );
 
       try {
         const temporalClient = await client;
@@ -456,22 +489,30 @@ export const adminRouter = router({
           },
         );
 
-        moduleLogger.info('Channel deletion workflow started', {
-          channelId: input.channelId,
-          workflowId: workflowHandle.workflowId,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            channelId: input.channelId,
+            appUserId: ctx.session.appUserId,
+            workflowId: workflowHandle.workflowId,
+          },
+          'Channel deletion workflow started',
+        );
 
         return {
           success: true,
           workflowId: workflowHandle.workflowId,
         };
       } catch (error) {
-        moduleLogger.error('Failed to start channel deletion workflow', {
-          channelId: input.channelId,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            channelId: input.channelId,
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to start channel deletion workflow',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -483,10 +524,13 @@ export const adminRouter = router({
   deleteOrganization: adminProcedure
     .input(z.object({ organizationId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Deleting organization', {
-        organizationId: input.organizationId,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          organizationId: input.organizationId,
+          appUserId: ctx.session.appUserId,
+        },
+        'Deleting organization',
+      );
 
       try {
         await prisma.organization.delete({
@@ -495,18 +539,26 @@ export const adminRouter = router({
           },
         });
 
-        moduleLogger.info('Organization deleted successfully', {
-          organizationId: input.organizationId,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            organizationId: input.organizationId,
+            appUserId: ctx.session.appUserId,
+          },
+          'Organization deleted successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to delete organization', {
-          organizationId: input.organizationId,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            organizationId: input.organizationId,
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to delete organization',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -558,10 +610,15 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Upserting organization tag', {
-        slug: input.slug,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            slug: input.slug,
+          },
+        },
+        'Upserting organization tag',
+      );
 
       try {
         const tag = await prisma.organizationTag.upsert({
@@ -575,18 +632,28 @@ export const adminRouter = router({
           },
         });
 
-        moduleLogger.info('Organization tag upserted successfully', {
-          tagSlug: tag.slug,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              tagSlug: tag.slug,
+            },
+          },
+          'Organization tag upserted successfully',
+        );
 
         return tag;
       } catch (error) {
-        moduleLogger.error('Failed to upsert organization tag', {
-          slug: input.slug,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              slug: input.slug,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to upsert organization tag',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -598,28 +665,43 @@ export const adminRouter = router({
   deleteOrganizationTag: adminProcedure
     .input(z.object({ slug: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Deleting organization tag', {
-        tagSlug: input.slug,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            tagSlug: input.slug,
+          },
+        },
+        'Deleting organization tag',
+      );
 
       try {
         await prisma.organizationTag.delete({
           where: { slug: input.slug },
         });
 
-        moduleLogger.info('Organization tag deleted successfully', {
-          tagSlug: input.slug,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              tagSlug: input.slug,
+            },
+          },
+          'Organization tag deleted successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to delete organization tag', {
-          tagSlug: input.slug,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              tagSlug: input.slug,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to delete organization tag',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -669,12 +751,17 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Creating user', {
-        username: input.username,
-        email: input.email,
-        role: input.role,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            username: input.username,
+            email: input.email,
+            role: input.role,
+          },
+        },
+        'Creating user',
+      );
 
       try {
         const hashedPassword = await argon2.hash(input.password);
@@ -711,20 +798,30 @@ export const adminRouter = router({
           },
         });
 
-        moduleLogger.info('User created successfully', {
-          userId: user.id,
-          username: user.username,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              createdAppUserId: user.id,
+              createdAppUserUsername: user.username,
+            },
+          },
+          'User created successfully',
+        );
 
         return user;
       } catch (error) {
-        moduleLogger.error('Failed to create user', {
-          username: input.username,
-          email: input.email,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              username: input.username,
+              email: input.email,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to create user',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -736,7 +833,7 @@ export const adminRouter = router({
   updateUser: adminProcedure
     .input(
       z.object({
-        userId: z.string(),
+        appUserId: z.string(),
         username: z.string().min(1).optional(),
         fullName: z.string().optional(),
         role: z.enum(['USER', 'ADMIN']).optional(),
@@ -744,10 +841,16 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Updating user', {
-        userId: input.userId,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          targetId: input.appUserId,
+          context: {
+            updatedAppUserId: input.appUserId,
+          },
+        },
+        'Updating user',
+      );
 
       try {
         const updateData: {
@@ -760,7 +863,7 @@ export const adminRouter = router({
         if (input.role) updateData.role = input.role;
 
         const user = await prisma.appUser.update({
-          where: { id: input.userId },
+          where: { id: input.appUserId },
           data: updateData,
           select: {
             id: true,
@@ -784,7 +887,7 @@ export const adminRouter = router({
         if (input.email) {
           await prisma.appUserEmail.updateMany({
             where: {
-              appUserId: input.userId,
+              appUserId: input.appUserId,
               verifiedAt: { not: null },
             },
             data: {
@@ -793,18 +896,29 @@ export const adminRouter = router({
           });
         }
 
-        moduleLogger.info('User updated successfully', {
-          userId: input.userId,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.appUserId,
+            context: {
+              updatedAppUserId: input.appUserId,
+            },
+          },
+          'User updated successfully',
+        );
 
         return user;
       } catch (error) {
-        moduleLogger.error('Failed to update user', {
-          userId: input.userId,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to update user',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -820,10 +934,13 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Resetting user password', {
-        userId: input.userId,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          targetId: input.userId,
+        },
+        'Resetting user password',
+      );
 
       try {
         const user = await prisma.appUser.findUnique({
@@ -865,10 +982,13 @@ export const adminRouter = router({
 
         await resetPassword(user.id, user.id, emailRecord.email, text, html);
 
-        moduleLogger.info('User password reset initiated', {
-          userId: input.userId,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.userId,
+          },
+          'User password reset initiated',
+        );
 
         return { success: true };
       } catch (error) {
@@ -876,11 +996,16 @@ export const adminRouter = router({
           throw error;
         }
 
-        moduleLogger.error('Failed to reset user password', {
-          userId: input.userId,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.userId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to reset user password',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -896,10 +1021,13 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Resending verification email', {
-        userId: input.userId,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          targetId: input.userId,
+        },
+        'Resending verification email',
+      );
 
       try {
         const user = await prisma.appUser.findUnique({
@@ -943,10 +1071,13 @@ export const adminRouter = router({
 
         await sendVerificationEmail(user.id, user.username, emailRecord.email);
 
-        moduleLogger.info('Verification email sent', {
-          userId: input.userId,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.userId,
+          },
+          'Verification email sent',
+        );
 
         return { success: true };
       } catch (error) {
@@ -954,11 +1085,16 @@ export const adminRouter = router({
           throw error;
         }
 
-        moduleLogger.error('Failed to resend verification email', {
-          userId: input.userId,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.userId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to resend verification email',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1067,10 +1203,13 @@ export const adminRouter = router({
   addFeaturedUpload: adminProcedure
     .input(addFeaturedUploadSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Adding featured upload', {
-        uploadId: input.uploadId,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          uploadId: input.uploadId,
+          appUserId: ctx.session.appUserId,
+        },
+        'Adding featured upload',
+      );
 
       try {
         // Check if upload exists and is public
@@ -1132,11 +1271,16 @@ export const adminRouter = router({
           },
         });
 
-        moduleLogger.info('Featured upload added successfully', {
-          uploadId: input.uploadId,
-          rank: newRank,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            uploadId: input.uploadId,
+            appUserId: ctx.session.appUserId,
+            context: {
+              rank: newRank,
+            },
+          },
+          'Featured upload added successfully',
+        );
 
         return featuredUpload;
       } catch (error) {
@@ -1144,11 +1288,16 @@ export const adminRouter = router({
           throw error;
         }
 
-        moduleLogger.error('Failed to add featured upload', {
-          uploadId: input.uploadId,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            uploadId: input.uploadId,
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to add featured upload',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1160,10 +1309,13 @@ export const adminRouter = router({
   removeFeaturedUpload: adminProcedure
     .input(removeFeaturedUploadSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Removing featured upload', {
-        uploadId: input.uploadId,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          uploadId: input.uploadId,
+          appUserId: ctx.session.appUserId,
+        },
+        'Removing featured upload',
+      );
 
       try {
         // Get the rank of the upload being removed
@@ -1194,10 +1346,13 @@ export const adminRouter = router({
           },
         });
 
-        moduleLogger.info('Featured upload removed successfully', {
-          uploadId: input.uploadId,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            uploadId: input.uploadId,
+            appUserId: ctx.session.appUserId,
+          },
+          'Featured upload removed successfully',
+        );
 
         return { success: true };
       } catch (error) {
@@ -1205,11 +1360,16 @@ export const adminRouter = router({
           throw error;
         }
 
-        moduleLogger.error('Failed to remove featured upload', {
-          uploadId: input.uploadId,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            uploadId: input.uploadId,
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to remove featured upload',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1221,10 +1381,15 @@ export const adminRouter = router({
   reorderFeaturedUploads: adminProcedure
     .input(reorderFeaturedUploadsSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Reordering featured uploads', {
-        uploadIds: input.uploadIds,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            uploadIds: input.uploadIds,
+          },
+        },
+        'Reordering featured uploads',
+      );
 
       try {
         // Verify all uploads are currently featured
@@ -1263,10 +1428,15 @@ export const adminRouter = router({
           ),
         );
 
-        moduleLogger.info('Featured uploads reordered successfully', {
-          uploadIds: input.uploadIds,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              uploadIds: input.uploadIds,
+            },
+          },
+          'Featured uploads reordered successfully',
+        );
 
         return { success: true };
       } catch (error) {
@@ -1274,11 +1444,16 @@ export const adminRouter = router({
           throw error;
         }
 
-        moduleLogger.error('Failed to reorder featured uploads', {
-          uploadIds: input.uploadIds,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              uploadIds: input.uploadIds,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to reorder featured uploads',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1290,10 +1465,13 @@ export const adminRouter = router({
   toggleFeaturedUpload: adminProcedure
     .input(z.object({ uploadId: IncomingIdSchema }))
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Toggling featured upload', {
-        uploadId: input.uploadId,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          uploadId: input.uploadId,
+          appUserId: ctx.session.appUserId,
+        },
+        'Toggling featured upload',
+      );
 
       try {
         // Check if upload is currently featured
@@ -1317,10 +1495,13 @@ export const adminRouter = router({
             },
           });
 
-          moduleLogger.info('Upload removed from featured', {
-            uploadId: input.uploadId,
-            appUserId: ctx.session.appUserId,
-          });
+          moduleLogger.info(
+            {
+              uploadId: input.uploadId,
+              appUserId: ctx.session.appUserId,
+            },
+            'Upload removed from featured',
+          );
 
           return { isFeatured: false };
         }
@@ -1372,11 +1553,16 @@ export const adminRouter = router({
           },
         });
 
-        moduleLogger.info('Upload added to featured', {
-          uploadId: input.uploadId,
-          rank: newRank,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            uploadId: input.uploadId,
+            appUserId: ctx.session.appUserId,
+            context: {
+              rank: newRank,
+            },
+          },
+          'Upload added to featured',
+        );
 
         return { isFeatured: true };
       } catch (error) {
@@ -1384,11 +1570,16 @@ export const adminRouter = router({
           throw error;
         }
 
-        moduleLogger.error('Failed to toggle featured upload', {
-          uploadId: input.uploadId,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            uploadId: input.uploadId,
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to toggle featured upload',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1423,12 +1614,17 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Starting view ranges migration', {
-        batchSize: input.batchSize,
-        delayBetweenBatchesMs: input.delayBetweenBatchesMs,
-        maxRows: input.maxRows,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            batchSize: input.batchSize,
+            delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+            maxRows: input.maxRows,
+          },
+        },
+        'Starting view ranges migration',
+      );
 
       try {
         // Check if migration is already running
@@ -1446,12 +1642,17 @@ export const adminRouter = router({
           maxRows: input.maxRows,
         });
 
-        moduleLogger.info('View ranges migration started successfully', {
-          batchSize: input.batchSize,
-          delayBetweenBatchesMs: input.delayBetweenBatchesMs,
-          maxRows: input.maxRows,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              batchSize: input.batchSize,
+              delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+              maxRows: input.maxRows,
+            },
+          },
+          'View ranges migration started successfully',
+        );
 
         return { success: true };
       } catch (error) {
@@ -1459,10 +1660,15 @@ export const adminRouter = router({
           throw error;
         }
 
-        moduleLogger.error('Failed to start view ranges migration', {
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to start view ranges migration',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1472,23 +1678,34 @@ export const adminRouter = router({
     }),
 
   cancelViewRangesMigration: adminProcedure.mutation(async ({ ctx }) => {
-    moduleLogger.info('Cancelling view ranges migration', {
-      appUserId: ctx.session.appUserId,
-    });
+    moduleLogger.info(
+      {
+        appUserId: ctx.session.appUserId,
+      },
+      'Cancelling view ranges migration',
+    );
 
     try {
       await cancelMigrateViewRanges();
 
-      moduleLogger.info('View ranges migration cancelled successfully', {
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'View ranges migration cancelled successfully',
+      );
 
       return { success: true };
     } catch (error) {
-      moduleLogger.error('Failed to cancel view ranges migration', {
-        appUserId: ctx.session.appUserId,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      moduleLogger.error(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        },
+        'Failed to cancel view ranges migration',
+      );
 
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
@@ -1572,12 +1789,17 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Starting backfill upload states', {
-        batchSize: input.batchSize,
-        delayBetweenBatchesMs: input.delayBetweenBatchesMs,
-        maxRows: input.maxRows,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            batchSize: input.batchSize,
+            delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+            maxRows: input.maxRows,
+          },
+        },
+        'Starting backfill upload states',
+      );
 
       try {
         // Check if backfill is already running
@@ -1598,12 +1820,17 @@ export const adminRouter = router({
           maxRows: input.maxRows,
         });
 
-        moduleLogger.info('Backfill upload states started successfully', {
-          batchSize: input.batchSize,
-          delayBetweenBatchesMs: input.delayBetweenBatchesMs,
-          maxRows: input.maxRows,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              batchSize: input.batchSize,
+              delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+              maxRows: input.maxRows,
+            },
+          },
+          'Backfill upload states started successfully',
+        );
 
         return { success: true };
       } catch (error) {
@@ -1611,10 +1838,15 @@ export const adminRouter = router({
           throw error;
         }
 
-        moduleLogger.error('Failed to start backfill upload states', {
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to start backfill upload states',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1624,23 +1856,34 @@ export const adminRouter = router({
     }),
 
   cancelBackfillUploadStates: adminProcedure.mutation(async ({ ctx }) => {
-    moduleLogger.info('Cancelling backfill upload states', {
-      appUserId: ctx.session.appUserId,
-    });
+    moduleLogger.info(
+      {
+        appUserId: ctx.session.appUserId,
+      },
+      'Cancelling backfill upload states',
+    );
 
     try {
       await cancelBackfillUploadStates();
 
-      moduleLogger.info('Backfill upload states cancelled successfully', {
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'Backfill upload states cancelled successfully',
+      );
 
       return { success: true };
     } catch (error) {
-      moduleLogger.error('Failed to cancel backfill upload states', {
-        appUserId: ctx.session.appUserId,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      moduleLogger.error(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        },
+        'Failed to cancel backfill upload states',
+      );
 
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
@@ -1660,13 +1903,18 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Starting cleanup stale upload states', {
-        batchSize: input.batchSize,
-        delayBetweenBatchesMs: input.delayBetweenBatchesMs,
-        olderThanDays: input.olderThanDays,
-        maxRows: input.maxRows,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            batchSize: input.batchSize,
+            delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+            olderThanDays: input.olderThanDays,
+            maxRows: input.maxRows,
+          },
+        },
+        'Starting cleanup stale upload states',
+      );
 
       try {
         // Check if cleanup is already running
@@ -1685,13 +1933,18 @@ export const adminRouter = router({
           maxRows: input.maxRows,
         });
 
-        moduleLogger.info('Cleanup stale upload states started successfully', {
-          batchSize: input.batchSize,
-          delayBetweenBatchesMs: input.delayBetweenBatchesMs,
-          olderThanDays: input.olderThanDays,
-          maxRows: input.maxRows,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              batchSize: input.batchSize,
+              delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+              olderThanDays: input.olderThanDays,
+              maxRows: input.maxRows,
+            },
+          },
+          'Cleanup stale upload states started successfully',
+        );
 
         return { success: true };
       } catch (error) {
@@ -1699,10 +1952,15 @@ export const adminRouter = router({
           throw error;
         }
 
-        moduleLogger.error('Failed to start cleanup stale upload states', {
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to start cleanup stale upload states',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1712,23 +1970,34 @@ export const adminRouter = router({
     }),
 
   cancelCleanupStaleUploadStates: adminProcedure.mutation(async ({ ctx }) => {
-    moduleLogger.info('Cancelling cleanup stale upload states', {
-      appUserId: ctx.session.appUserId,
-    });
+    moduleLogger.info(
+      {
+        appUserId: ctx.session.appUserId,
+      },
+      'Cancelling cleanup stale upload states',
+    );
 
     try {
       await cancelCleanupStaleUploadStates();
 
-      moduleLogger.info('Cleanup stale upload states cancelled successfully', {
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'Cleanup stale upload states cancelled successfully',
+      );
 
       return { success: true };
     } catch (error) {
-      moduleLogger.error('Failed to cancel cleanup stale upload states', {
-        appUserId: ctx.session.appUserId,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      moduleLogger.error(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        },
+        'Failed to cancel cleanup stale upload states',
+      );
 
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
@@ -1747,12 +2016,17 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Starting backfill upload state sizes', {
-        batchSize: input.batchSize,
-        delayBetweenBatchesMs: input.delayBetweenBatchesMs,
-        maxRows: input.maxRows,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            batchSize: input.batchSize,
+            delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+            maxRows: input.maxRows,
+          },
+        },
+        'Starting backfill upload state sizes',
+      );
 
       try {
         // Check if backfill is already running
@@ -1777,12 +2051,17 @@ export const adminRouter = router({
           maxRows: input.maxRows,
         });
 
-        moduleLogger.info('Backfill upload state sizes started successfully', {
-          batchSize: input.batchSize,
-          delayBetweenBatchesMs: input.delayBetweenBatchesMs,
-          maxRows: input.maxRows,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              batchSize: input.batchSize,
+              delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+              maxRows: input.maxRows,
+            },
+          },
+          'Backfill upload state sizes started successfully',
+        );
 
         return { success: true };
       } catch (error) {
@@ -1790,10 +2069,15 @@ export const adminRouter = router({
           throw error;
         }
 
-        moduleLogger.error('Failed to start backfill upload state sizes', {
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to start backfill upload state sizes',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1803,23 +2087,34 @@ export const adminRouter = router({
     }),
 
   cancelBackfillUploadStateSizes: adminProcedure.mutation(async ({ ctx }) => {
-    moduleLogger.info('Cancelling backfill upload state sizes', {
-      appUserId: ctx.session.appUserId,
-    });
+    moduleLogger.info(
+      {
+        appUserId: ctx.session.appUserId,
+      },
+      'Cancelling backfill upload state sizes',
+    );
 
     try {
       await cancelBackfillUploadStateSizes();
 
-      moduleLogger.info('Backfill upload state sizes cancelled successfully', {
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'Backfill upload state sizes cancelled successfully',
+      );
 
       return { success: true };
     } catch (error) {
-      moduleLogger.error('Failed to cancel backfill upload state sizes', {
-        appUserId: ctx.session.appUserId,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      moduleLogger.error(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        },
+        'Failed to cancel backfill upload state sizes',
+      );
 
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
@@ -1837,12 +2132,17 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Starting bulk backup to Glacier', {
-        batchSize: input.batchSize,
-        delayBetweenBatchesMs: input.delayBetweenBatchesMs,
-        maxUploads: input.maxUploads,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            batchSize: input.batchSize,
+            delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+            maxUploads: input.maxUploads,
+          },
+        },
+        'Starting bulk backup to Glacier',
+      );
 
       try {
         // Check if bulk backup is already running
@@ -1860,12 +2160,17 @@ export const adminRouter = router({
           maxUploads: input.maxUploads,
         });
 
-        moduleLogger.info('Bulk backup to Glacier started successfully', {
-          batchSize: input.batchSize,
-          delayBetweenBatchesMs: input.delayBetweenBatchesMs,
-          maxUploads: input.maxUploads,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              batchSize: input.batchSize,
+              delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+              maxUploads: input.maxUploads,
+            },
+          },
+          'Bulk backup to Glacier started successfully',
+        );
 
         return { success: true };
       } catch (error) {
@@ -1873,10 +2178,15 @@ export const adminRouter = router({
           throw error;
         }
 
-        moduleLogger.error('Failed to start bulk backup to Glacier', {
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to start bulk backup to Glacier',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1886,23 +2196,34 @@ export const adminRouter = router({
     }),
 
   cancelBulkBackupToGlacier: adminProcedure.mutation(async ({ ctx }) => {
-    moduleLogger.info('Cancelling bulk backup to Glacier', {
-      appUserId: ctx.session.appUserId,
-    });
+    moduleLogger.info(
+      {
+        appUserId: ctx.session.appUserId,
+      },
+      'Cancelling bulk backup to Glacier',
+    );
 
     try {
       await cancelBulkBackupToGlacier();
 
-      moduleLogger.info('Bulk backup to Glacier cancelled successfully', {
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'Bulk backup to Glacier cancelled successfully',
+      );
 
       return { success: true };
     } catch (error) {
-      moduleLogger.error('Failed to cancel bulk backup to Glacier', {
-        appUserId: ctx.session.appUserId,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      moduleLogger.error(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        },
+        'Failed to cancel bulk backup to Glacier',
+      );
 
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
@@ -1961,9 +2282,14 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ input }) => {
-      moduleLogger.info('Retrying failed backup', {
-        uploadStateId: input.uploadStateId,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            uploadStateId: input.uploadStateId,
+          },
+        },
+        'Retrying failed backup',
+      );
 
       try {
         const uploadState = await prisma.uploadState.findUnique({
@@ -1993,16 +2319,26 @@ export const adminRouter = router({
           },
         });
 
-        moduleLogger.info('Successfully reset failed backup to NOT_BACKED_UP', {
-          uploadStateId: input.uploadStateId,
-        });
+        moduleLogger.info(
+          {
+            context: {
+              uploadStateId: input.uploadStateId,
+            },
+          },
+          'Successfully reset failed backup to NOT_BACKED_UP',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to retry backup', {
-          error: error instanceof Error ? error.message : String(error),
-          uploadStateId: input.uploadStateId,
-        });
+        moduleLogger.error(
+          {
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+              uploadStateId: input.uploadStateId,
+            },
+          },
+          'Failed to retry backup',
+        );
 
         if (error instanceof TRPCError) {
           throw error;
@@ -2029,17 +2365,24 @@ export const adminRouter = router({
       });
 
       moduleLogger.info(
-        'Successfully reset all failed backups to NOT_BACKED_UP',
         {
-          count: result.count,
+          context: {
+            count: result.count,
+          },
         },
+        'Successfully reset all failed backups to NOT_BACKED_UP',
       );
 
       return { success: true, count: result.count };
     } catch (error) {
-      moduleLogger.error('Failed to retry all backups', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      moduleLogger.error(
+        {
+          context: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        },
+        'Failed to retry all backups',
+      );
 
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
@@ -2160,9 +2503,14 @@ export const adminRouter = router({
           totalCount,
         };
       } catch (error) {
-        moduleLogger.error('Failed to fetch failed uploads', {
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to fetch failed uploads',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -2178,10 +2526,13 @@ export const adminRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Retrying upload processing', {
-        uploadRecordId: input.uploadRecordId,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          targetId: input.uploadRecordId,
+        },
+        'Retrying upload processing',
+      );
 
       try {
         const upload = await prisma.uploadRecord.findUnique({
@@ -2275,12 +2626,13 @@ export const adminRouter = router({
           retry: { maximumAttempts: 5 },
         });
 
-        moduleLogger.info('Upload processing workflow started', {
-          uploadRecordId: input.uploadRecordId,
-          workflowId,
-          scope,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.uploadRecordId,
+          },
+          'Upload processing workflow started',
+        );
 
         return { success: true };
       } catch (error) {
@@ -2288,11 +2640,16 @@ export const adminRouter = router({
           throw error;
         }
 
-        moduleLogger.error('Failed to retry upload processing', {
-          uploadRecordId: input.uploadRecordId,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.uploadRecordId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to retry upload processing',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -2302,9 +2659,12 @@ export const adminRouter = router({
     }),
 
   bulkRetryProcessingUploads: adminProcedure.mutation(async ({ ctx }) => {
-    moduleLogger.info('Bulk retrying processing uploads', {
-      appUserId: ctx.session.appUserId,
-    });
+    moduleLogger.info(
+      {
+        appUserId: ctx.session.appUserId,
+      },
+      'Bulk retrying processing uploads',
+    );
 
     try {
       // Get all processing uploads
@@ -2325,19 +2685,44 @@ export const adminRouter = router({
         },
       });
 
-      if (processingUploads.length === 0) {
-        moduleLogger.info('No processing uploads to retry', {
+      moduleLogger.info(
+        {
           appUserId: ctx.session.appUserId,
-        });
+          context: {
+            count: processingUploads.length,
+          },
+        },
+        'Found processing uploads',
+      );
+
+      if (processingUploads.length === 0) {
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+          },
+          'No processing uploads to retry',
+        );
         return { success: true, retriedCount: 0, skippedCount: 0 };
       }
 
       // Filter out uploads with active workflows
       const temporalClient = await client;
+      let _checkedCount = 0;
       const uploadsToRetry = await pFilter(
         processingUploads,
         async (upload) => {
+          _checkedCount++;
+
           if (!upload.finalizedUploadKey) {
+            moduleLogger.info(
+              {
+                uploadId: upload.id,
+                context: {
+                  totalToCheck: processingUploads.length,
+                },
+              },
+              'Bulk retry filter: Upload has no finalized key',
+            );
             return false;
           }
 
@@ -2346,22 +2731,53 @@ export const adminRouter = router({
             const handle = temporalClient.workflow.getHandle(workflowId);
             const description = await handle.describe();
 
+            const isRunning = description.status.name === 'RUNNING';
+
+            moduleLogger.info(
+              {
+                uploadId: upload.id,
+                context: {
+                  workflowStatus: description.status.name,
+                  willInclude: !isRunning,
+                  totalToCheck: processingUploads.length,
+                },
+              },
+              'Bulk retry filter: Workflow found',
+            );
+
             // Exclude uploads with running workflows
-            return description.status.name !== 'RUNNING';
-          } catch {
+            return !isRunning;
+          } catch (error) {
             // Workflow doesn't exist - include the upload
+            moduleLogger.info(
+              {
+                uploadId: upload.id,
+                workflowId: `processMedia:${upload.finalizedUploadKey}`,
+                context: {
+                  willInclude: true,
+                  totalToCheck: processingUploads.length,
+                  error: error instanceof Error ? error.message : String(error),
+                },
+              },
+              'Bulk retry filter: Workflow not found',
+            );
             return true;
           }
         },
         { concurrency: 25 },
       );
 
-      moduleLogger.info('Filtered uploads for bulk retry', {
-        totalProcessing: processingUploads.length,
-        toRetry: uploadsToRetry.length,
-        skipped: processingUploads.length - uploadsToRetry.length,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            totalProcessing: processingUploads.length,
+            toRetry: uploadsToRetry.length,
+            skipped: processingUploads.length - uploadsToRetry.length,
+          },
+        },
+        'Filtered uploads for bulk retry',
+      );
 
       // Import the workflow from temporal package
       const { processMediaWorkflow } = await import(
@@ -2371,8 +2787,29 @@ export const adminRouter = router({
 
       let retriedCount = 0;
 
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            uploadsToRetry: uploadsToRetry.length,
+          },
+        },
+        'Starting bulk retry loop',
+      );
+
       // Retry each upload
       for (const upload of uploadsToRetry) {
+        moduleLogger.info(
+          {
+            uploadId: upload.id,
+            appUserId: ctx.session.appUserId,
+            context: {
+              totalToRetry: uploadsToRetry.length,
+            },
+          },
+          'Bulk retry: Processing upload',
+        );
+
         try {
           // Determine what needs to be processed
           let scope: 'transcode' | 'transcribe' | 'everything' = 'everything';
@@ -2385,6 +2822,17 @@ export const adminRouter = router({
             scope = 'transcode';
           }
 
+          moduleLogger.info(
+            {
+              uploadId: upload.id,
+              context: {
+                transcodingFinished: !!upload.transcodingFinishedAt,
+                transcribingFinished: !!upload.transcribingFinishedAt,
+              },
+            },
+            'Bulk retry: Determined scope',
+          );
+
           await prisma.uploadRecord.update({
             where: { id: upload.id },
             data: {
@@ -2394,6 +2842,13 @@ export const adminRouter = router({
               transcribingFinishedAt: null,
             },
           });
+
+          moduleLogger.info(
+            {
+              uploadId: upload.id,
+            },
+            'Bulk retry: Reset upload record timestamps',
+          );
 
           const workflowId = `processMedia:${upload.finalizedUploadKey}`;
           await temporalClient.workflow.start(processMediaWorkflow, {
@@ -2405,36 +2860,53 @@ export const adminRouter = router({
 
           retriedCount++;
 
-          moduleLogger.info('Bulk retry: Started workflow', {
-            uploadId: upload.id,
-            workflowId,
-            scope,
-            appUserId: ctx.session.appUserId,
-          });
+          moduleLogger.info(
+            {
+              uploadId: upload.id,
+              appUserId: ctx.session.appUserId,
+              context: {
+                totalToRetry: uploadsToRetry.length,
+                retriedSoFar: retriedCount,
+              },
+            },
+            'Bulk retry: Started workflow',
+          );
         } catch (error) {
-          moduleLogger.error('Bulk retry: Failed to start workflow', {
-            uploadId: upload.id,
-            error: error instanceof Error ? error.message : String(error),
-            appUserId: ctx.session.appUserId,
-          });
+          moduleLogger.error(
+            {
+              uploadId: upload.id,
+              appUserId: ctx.session.appUserId,
+              context: {
+                totalToRetry: uploadsToRetry.length,
+                error: error instanceof Error ? error.message : String(error),
+              },
+            },
+            'Bulk retry: Failed to start workflow',
+          );
           // Continue with other uploads even if one fails
         }
       }
 
       const skippedCount = processingUploads.length - retriedCount;
 
-      moduleLogger.info('Bulk retry processing uploads completed', {
-        retriedCount,
-        skippedCount,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'Bulk retry processing uploads completed',
+      );
 
       return { success: true, retriedCount, skippedCount };
     } catch (error) {
-      moduleLogger.error('Failed to bulk retry processing uploads', {
-        appUserId: ctx.session.appUserId,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      moduleLogger.error(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        },
+        'Failed to bulk retry processing uploads',
+      );
 
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
@@ -2451,10 +2923,15 @@ export const adminRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      moduleLogger.info('Fetching search logs', {
-        limit: input.limit,
-        offset: input.offset,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            limit: input.limit,
+            offset: input.offset,
+          },
+        },
+        'Fetching search logs',
+      );
 
       const [searchLogs, totalCount] = await Promise.all([
         prisma.searchLogEntry.findMany({

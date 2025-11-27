@@ -114,9 +114,14 @@ export const Route = createFileRoute('/media/rss.xml')({
             });
           }
 
-          moduleLogger.info('Media RSS feed generated successfully', {
-            itemCount: uploads.length,
-          });
+          moduleLogger.info(
+            {
+              context: {
+                itemCount: uploads.length,
+              },
+            },
+            'Media RSS feed generated successfully',
+          );
 
           return new Response(feed.rss2(), {
             status: 200,
@@ -126,9 +131,14 @@ export const Route = createFileRoute('/media/rss.xml')({
             },
           });
         } catch (error) {
-          moduleLogger.error('Failed to generate media RSS feed', {
-            error: error instanceof Error ? error.message : String(error),
-          });
+          moduleLogger.error(
+            {
+              context: {
+                error: error instanceof Error ? error.message : String(error),
+              },
+            },
+            'Failed to generate media RSS feed',
+          );
 
           return new Response('Internal Server Error', {
             status: 500,

@@ -44,10 +44,12 @@ const churchProcedure = authProcedure
     });
 
     if (!membership) {
-      moduleLogger.warn('No membership found for church procedure', {
-        ...input,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.warn(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'No membership found for church procedure',
+      );
 
       throw new TRPCError({ code: 'UNAUTHORIZED' });
     }
@@ -57,9 +59,12 @@ const churchProcedure = authProcedure
 
 const churchAdminProcedure = churchProcedure.use(async ({ ctx, next }) => {
   if (!ctx.membership.isAdmin) {
-    moduleLogger.warn('User is not admin of church', {
-      appUserId: ctx.session.appUserId,
-    });
+    moduleLogger.warn(
+      {
+        appUserId: ctx.session.appUserId,
+      },
+      'User is not admin of church',
+    );
 
     throw new TRPCError({ code: 'FORBIDDEN' });
   }
@@ -69,9 +74,12 @@ const churchAdminProcedure = churchProcedure.use(async ({ ctx, next }) => {
 
 export const churchRouter = router({
   getOrganizationTags: authProcedure.query(async ({ ctx }) => {
-    moduleLogger.info('Fetching organization tags', {
-      appUserId: ctx.session.appUserId,
-    });
+    moduleLogger.info(
+      {
+        appUserId: ctx.session.appUserId,
+      },
+      'Fetching organization tags',
+    );
 
     return prisma.organizationTag.findMany({
       select: {
@@ -86,10 +94,15 @@ export const churchRouter = router({
   createChurch: authProcedure
     .input(createChurchSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Creating church', {
-        appUserId: ctx.session.appUserId,
-        name: input.name,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            name: input.name,
+          },
+        },
+        'Creating church',
+      );
 
       try {
         const slug =
@@ -149,17 +162,27 @@ export const churchRouter = router({
           });
         }
 
-        moduleLogger.info('Church created successfully', {
-          appUserId: ctx.session.appUserId,
-          churchId: church.id,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              churchId: church.id,
+            },
+          },
+          'Church created successfully',
+        );
 
         return church;
       } catch (error) {
-        moduleLogger.error('Failed to create church', {
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to create church',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -169,9 +192,12 @@ export const churchRouter = router({
     }),
 
   getChurches: authProcedure.query(async ({ ctx }) => {
-    moduleLogger.info('Fetching churches for user', {
-      appUserId: ctx.session.appUserId,
-    });
+    moduleLogger.info(
+      {
+        appUserId: ctx.session.appUserId,
+      },
+      'Fetching churches for user',
+    );
 
     return prisma.organization.findMany({
       select: {
@@ -201,10 +227,12 @@ export const churchRouter = router({
   }),
 
   getChurchDetails: churchProcedure.query(async ({ ctx, input }) => {
-    moduleLogger.info('Fetching church details', {
-      ...input,
-      appUserId: ctx.session.appUserId,
-    });
+    moduleLogger.info(
+      {
+        appUserId: ctx.session.appUserId,
+      },
+      'Fetching church details',
+    );
 
     const church = await prisma.organization.findFirst({
       select: {
@@ -291,10 +319,12 @@ export const churchRouter = router({
     });
 
     if (!church) {
-      moduleLogger.warn('Church not found', {
-        ...input,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.warn(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'Church not found',
+      );
 
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
@@ -337,9 +367,7 @@ export const churchRouter = router({
     });
 
     if (!church) {
-      moduleLogger.warn('Church not found for members', {
-        ...input,
-      });
+      moduleLogger.warn('Church not found for members');
 
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
@@ -350,11 +378,16 @@ export const churchRouter = router({
   searchUsers: churchAdminProcedure
     .input(userSearchChurchSchema)
     .query(async ({ ctx, input }) => {
-      moduleLogger.info('Searching users for church', {
-        churchId: input.churchId,
-        query: input.query,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            churchId: input.churchId,
+            query: input.query,
+          },
+        },
+        'Searching users for church',
+      );
 
       const users = await prisma.appUser.findMany({
         select: {
@@ -379,12 +412,17 @@ export const churchRouter = router({
         take: 10,
       });
 
-      moduleLogger.info('User search completed', {
-        churchId: input.churchId,
-        query: input.query,
-        resultCount: users.length,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            churchId: input.churchId,
+            query: input.query,
+            resultCount: users.length,
+          },
+        },
+        'User search completed',
+      );
 
       return users;
     }),
@@ -392,13 +430,18 @@ export const churchRouter = router({
   addChurchMember: churchAdminProcedure
     .input(addChurchMemberSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Adding church member', {
-        churchId: input.churchId,
-        newMemberUserId: input.userId,
-        isAdmin: input.isAdmin,
-        canEdit: input.canEdit,
-        addedBy: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            churchId: input.churchId,
+            newMemberUserId: input.userId,
+            isAdmin: input.isAdmin,
+            canEdit: input.canEdit,
+            addedBy: ctx.session.appUserId,
+          },
+        },
+        'Adding church member',
+      );
 
       try {
         await prisma.organizationMembership.create({
@@ -410,20 +453,30 @@ export const churchRouter = router({
           },
         });
 
-        moduleLogger.info('Church member added successfully', {
-          churchId: input.churchId,
-          newMemberUserId: input.userId,
-          addedBy: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            context: {
+              churchId: input.churchId,
+              newMemberUserId: input.userId,
+              addedBy: ctx.session.appUserId,
+            },
+          },
+          'Church member added successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to add church member', {
-          churchId: input.churchId,
-          newMemberUserId: input.userId,
-          addedBy: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            context: {
+              churchId: input.churchId,
+              newMemberUserId: input.userId,
+              addedBy: ctx.session.appUserId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to add church member',
+        );
         throw error;
       }
     }),
@@ -431,11 +484,16 @@ export const churchRouter = router({
   removeChurchMember: churchAdminProcedure
     .input(removeChurchMemberSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Removing church member', {
-        churchId: input.churchId,
-        memberToRemove: input.appUserId,
-        removedBy: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            churchId: input.churchId,
+            memberToRemove: input.appUserId,
+            removedBy: ctx.session.appUserId,
+          },
+        },
+        'Removing church member',
+      );
 
       try {
         // Don't allow removing the last admin
@@ -458,11 +516,16 @@ export const churchRouter = router({
           });
 
         if (membershipToDelete?.isAdmin && adminCount <= 1) {
-          moduleLogger.warn('Cannot remove last admin from church', {
-            churchId: input.churchId,
-            memberToRemove: input.appUserId,
-            removedBy: ctx.session.appUserId,
-          });
+          moduleLogger.warn(
+            {
+              context: {
+                churchId: input.churchId,
+                memberToRemove: input.appUserId,
+                removedBy: ctx.session.appUserId,
+              },
+            },
+            'Cannot remove last admin from church',
+          );
           throw new TRPCError({
             code: 'BAD_REQUEST',
             message: 'Cannot remove the last admin from the church',
@@ -471,10 +534,15 @@ export const churchRouter = router({
 
         // Don't allow removing yourself
         if (membershipToDelete?.appUserId === ctx.session.appUser.id) {
-          moduleLogger.warn('User attempted to remove themselves from church', {
-            churchId: input.churchId,
-            appUserId: ctx.session.appUserId,
-          });
+          moduleLogger.warn(
+            {
+              appUserId: ctx.session.appUserId,
+              context: {
+                churchId: input.churchId,
+              },
+            },
+            'User attempted to remove themselves from church',
+          );
           throw new TRPCError({
             code: 'BAD_REQUEST',
             message: 'You cannot remove yourself from the church',
@@ -490,23 +558,33 @@ export const churchRouter = router({
           },
         });
 
-        moduleLogger.info('Church member removed successfully', {
-          churchId: input.churchId,
-          memberRemoved: input.appUserId,
-          removedBy: ctx.session.appUserId,
-          wasAdmin: membershipToDelete?.isAdmin,
-        });
+        moduleLogger.info(
+          {
+            context: {
+              churchId: input.churchId,
+              memberRemoved: input.appUserId,
+              removedBy: ctx.session.appUserId,
+              wasAdmin: membershipToDelete?.isAdmin,
+            },
+          },
+          'Church member removed successfully',
+        );
 
         return { success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
 
-        moduleLogger.error('Failed to remove church member', {
-          churchId: input.churchId,
-          memberToRemove: input.appUserId,
-          removedBy: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            context: {
+              churchId: input.churchId,
+              memberToRemove: input.appUserId,
+              removedBy: ctx.session.appUserId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to remove church member',
+        );
         throw error;
       }
     }),
@@ -514,11 +592,16 @@ export const churchRouter = router({
   searchChannels: churchAdminProcedure
     .input(channelSearchChurchSchema)
     .query(async ({ ctx, input }) => {
-      moduleLogger.info('Searching channels for church', {
-        churchId: input.churchId,
-        query: input.query,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            churchId: input.churchId,
+            query: input.query,
+          },
+        },
+        'Searching channels for church',
+      );
 
       const channels = await prisma.channel.findMany({
         select: {
@@ -544,12 +627,17 @@ export const churchRouter = router({
         take: 10,
       });
 
-      moduleLogger.info('Channel search completed', {
-        churchId: input.churchId,
-        query: input.query,
-        resultCount: channels.length,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            churchId: input.churchId,
+            query: input.query,
+            resultCount: channels.length,
+          },
+        },
+        'Channel search completed',
+      );
 
       return channels;
     }),
@@ -557,12 +645,17 @@ export const churchRouter = router({
   linkChannel: churchAdminProcedure
     .input(linkChannelSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Linking channel to church', {
-        churchId: input.churchId,
-        channelId: input.channelId,
-        officialChannel: input.officialChannel,
-        linkedBy: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          channelId: input.channelId,
+          context: {
+            churchId: input.churchId,
+            officialChannel: input.officialChannel,
+            linkedBy: ctx.session.appUserId,
+          },
+        },
+        'Linking channel to church',
+      );
 
       try {
         await prisma.organizationChannelAssociation.create({
@@ -573,21 +666,31 @@ export const churchRouter = router({
           },
         });
 
-        moduleLogger.info('Channel linked to church successfully', {
-          churchId: input.churchId,
-          channelId: input.channelId,
-          officialChannel: input.officialChannel,
-          linkedBy: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            channelId: input.channelId,
+            context: {
+              churchId: input.churchId,
+              officialChannel: input.officialChannel,
+              linkedBy: ctx.session.appUserId,
+            },
+          },
+          'Channel linked to church successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to link channel to church', {
-          churchId: input.churchId,
-          channelId: input.channelId,
-          linkedBy: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            channelId: input.channelId,
+            context: {
+              churchId: input.churchId,
+              linkedBy: ctx.session.appUserId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to link channel to church',
+        );
         throw error;
       }
     }),
@@ -595,11 +698,16 @@ export const churchRouter = router({
   unlinkChannel: churchAdminProcedure
     .input(unlinkChannelSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Unlinking channel from church', {
-        churchId: input.churchId,
-        channelId: input.channelId,
-        unlinkedBy: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          channelId: input.channelId,
+          context: {
+            churchId: input.churchId,
+            unlinkedBy: ctx.session.appUserId,
+          },
+        },
+        'Unlinking channel from church',
+      );
 
       try {
         await prisma.organizationChannelAssociation.delete({
@@ -611,20 +719,30 @@ export const churchRouter = router({
           },
         });
 
-        moduleLogger.info('Channel unlinked from church successfully', {
-          churchId: input.churchId,
-          channelId: input.channelId,
-          unlinkedBy: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            channelId: input.channelId,
+            context: {
+              churchId: input.churchId,
+              unlinkedBy: ctx.session.appUserId,
+            },
+          },
+          'Channel unlinked from church successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to unlink channel from church', {
-          churchId: input.churchId,
-          channelId: input.channelId,
-          unlinkedBy: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            channelId: input.channelId,
+            context: {
+              churchId: input.churchId,
+              unlinkedBy: ctx.session.appUserId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to unlink channel from church',
+        );
         throw error;
       }
     }),
@@ -632,12 +750,17 @@ export const churchRouter = router({
   addLeader: churchAdminProcedure
     .input(addLeaderSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Adding church leader', {
-        churchId: input.churchId,
-        leaderType: input.type,
-        leaderName: input.name,
-        addedBy: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            churchId: input.churchId,
+            leaderType: input.type,
+            leaderName: input.name,
+            addedBy: ctx.session.appUserId,
+          },
+        },
+        'Adding church leader',
+      );
 
       try {
         const leader = await prisma.organizationLeader.create({
@@ -650,23 +773,33 @@ export const churchRouter = router({
           },
         });
 
-        moduleLogger.info('Church leader added successfully', {
-          churchId: input.churchId,
-          leaderId: leader.id,
-          leaderType: input.type,
-          leaderName: input.name,
-          addedBy: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            context: {
+              churchId: input.churchId,
+              leaderId: leader.id,
+              leaderType: input.type,
+              leaderName: input.name,
+              addedBy: ctx.session.appUserId,
+            },
+          },
+          'Church leader added successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to add church leader', {
-          churchId: input.churchId,
-          leaderType: input.type,
-          leaderName: input.name,
-          addedBy: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            context: {
+              churchId: input.churchId,
+              leaderType: input.type,
+              leaderName: input.name,
+              addedBy: ctx.session.appUserId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to add church leader',
+        );
         throw error;
       }
     }),
@@ -674,12 +807,17 @@ export const churchRouter = router({
   updateLeader: churchAdminProcedure
     .input(updateLeaderSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Updating church leader', {
-        leaderId: input.leaderId,
-        leaderType: input.type,
-        leaderName: input.name,
-        updatedBy: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            leaderId: input.leaderId,
+            leaderType: input.type,
+            leaderName: input.name,
+            updatedBy: ctx.session.appUserId,
+          },
+        },
+        'Updating church leader',
+      );
 
       try {
         await prisma.organizationLeader.update({
@@ -694,22 +832,32 @@ export const churchRouter = router({
           },
         });
 
-        moduleLogger.info('Church leader updated successfully', {
-          leaderId: input.leaderId,
-          leaderType: input.type,
-          leaderName: input.name,
-          updatedBy: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            context: {
+              leaderId: input.leaderId,
+              leaderType: input.type,
+              leaderName: input.name,
+              updatedBy: ctx.session.appUserId,
+            },
+          },
+          'Church leader updated successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to update church leader', {
-          leaderId: input.leaderId,
-          leaderType: input.type,
-          leaderName: input.name,
-          updatedBy: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            context: {
+              leaderId: input.leaderId,
+              leaderType: input.type,
+              leaderName: input.name,
+              updatedBy: ctx.session.appUserId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to update church leader',
+        );
         throw error;
       }
     }),
@@ -717,10 +865,15 @@ export const churchRouter = router({
   removeLeader: churchAdminProcedure
     .input(removeLeaderSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Removing church leader', {
-        leaderId: input.leaderId,
-        removedBy: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            leaderId: input.leaderId,
+            removedBy: ctx.session.appUserId,
+          },
+        },
+        'Removing church leader',
+      );
 
       try {
         await prisma.organizationLeader.delete({
@@ -729,27 +882,39 @@ export const churchRouter = router({
           },
         });
 
-        moduleLogger.info('Church leader removed successfully', {
-          leaderId: input.leaderId,
-          removedBy: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            context: {
+              leaderId: input.leaderId,
+              removedBy: ctx.session.appUserId,
+            },
+          },
+          'Church leader removed successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to remove church leader', {
-          leaderId: input.leaderId,
-          removedBy: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            context: {
+              leaderId: input.leaderId,
+              removedBy: ctx.session.appUserId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to remove church leader',
+        );
         throw error;
       }
     }),
 
   getChurchForEdit: churchAdminProcedure.query(async ({ ctx, input }) => {
-    moduleLogger.info('Fetching church for edit', {
-      ...input,
-      appUserId: ctx.session.appUserId,
-    });
+    moduleLogger.info(
+      {
+        appUserId: ctx.session.appUserId,
+      },
+      'Fetching church for edit',
+    );
 
     const church = await prisma.organization.findFirst({
       select: {
@@ -779,10 +944,12 @@ export const churchRouter = router({
     });
 
     if (!church) {
-      moduleLogger.warn('Church not found for edit', {
-        ...input,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.warn(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'Church not found for edit',
+      );
 
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
@@ -814,10 +981,15 @@ export const churchRouter = router({
   updateChurch: churchAdminProcedure
     .input(updateChurchSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Updating church', {
-        churchId: input.churchId,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            churchId: input.churchId,
+          },
+        },
+        'Updating church',
+      );
 
       try {
         // Handle tag updates if provided
@@ -875,18 +1047,28 @@ export const churchRouter = router({
           },
         });
 
-        moduleLogger.info('Church updated successfully', {
-          churchId: input.churchId,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              churchId: input.churchId,
+            },
+          },
+          'Church updated successfully',
+        );
 
         return { error: false };
       } catch (e) {
-        moduleLogger.error('Church update failed', {
-          churchId: input.churchId,
-          appUserId: ctx.session.appUserId,
-          error: e instanceof Error ? e.message : String(e),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              churchId: input.churchId,
+              error: e instanceof Error ? e.message : String(e),
+            },
+          },
+          'Church update failed',
+        );
         return { error: 'Error updating church, please try again!' };
       }
     }),

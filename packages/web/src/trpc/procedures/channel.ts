@@ -27,10 +27,10 @@ export const channelProcedures = {
       const { slug } = input;
       const appUserId = ctx.session?.appUserId;
 
-      moduleLogger.info('Fetching channel by slug', {
-        slug,
-        appUserId,
-      });
+      moduleLogger.info(
+        { appUserId, context: { slug } },
+        'Fetching channel by slug',
+      );
 
       const channel = await prisma.channel.findUnique({
         select: {
@@ -81,7 +81,7 @@ export const channelProcedures = {
       });
 
       if (!channel) {
-        moduleLogger.warn('Channel not found', { slug });
+        moduleLogger.warn({ context: { slug } }, 'Channel not found');
         throw new Error('Channel not found');
       }
 
@@ -90,12 +90,17 @@ export const channelProcedures = {
         !channel.approvedAt ||
         channel.deletedAt
       ) {
-        moduleLogger.warn('Channel not accessible', {
-          slug,
-          visibility: channel.visibility,
-          approved: Boolean(channel.approvedAt),
-          deleted: Boolean(channel.deletedAt),
-        });
+        moduleLogger.warn(
+          {
+            context: {
+              slug,
+              visibility: channel.visibility,
+              approved: Boolean(channel.approvedAt),
+              deleted: Boolean(channel.deletedAt),
+            },
+          },
+          'Channel not accessible',
+        );
         throw new Error('Channel not found');
       }
 
@@ -141,11 +146,10 @@ export const channelProcedures = {
     .query(async ({ input }) => {
       const { slug, limit, cursor } = input;
 
-      moduleLogger.info('Fetching channel media', {
-        slug,
-        limit,
-        cursor,
-      });
+      moduleLogger.info(
+        { context: { slug, limit, cursor } },
+        'Fetching channel media',
+      );
 
       const uploads = await prisma.uploadRecord.findMany({
         select: {

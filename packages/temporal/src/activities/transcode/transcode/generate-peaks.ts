@@ -19,9 +19,11 @@ export default async function generatePeaks(
 ) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'generatePeaks',
-    args: {
-      uploadRecordId,
-      s3UploadKey,
+    context: {
+      args: {
+        uploadRecordId,
+        s3UploadKey,
+      },
     },
   });
 
@@ -72,7 +74,10 @@ export default async function generatePeaks(
     Context.current().heartbeat('Uploaded peak dat');
     activityLogger.info('Uploaded peak dat');
   } catch (e) {
-    activityLogger.error(e instanceof Error ? e.message : e);
+    activityLogger.error(
+      { err: e instanceof Error ? e : new Error(String(e)) },
+      'Failed to generate peaks',
+    );
   } finally {
     activityLogger.info(`Removing work directory: ${workingDir}`);
     await rimraf(workingDir);

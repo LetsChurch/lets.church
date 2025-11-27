@@ -63,23 +63,25 @@ export const searchProcedures = {
         });
         channelIds = channels.map((c) => c.id);
 
-        moduleLogger.info('Converted channel slugs to IDs', {
-          slugsProvided: channelSlugs.length,
-          channelsFound: channels.length,
-          channelIds,
-        });
+        moduleLogger.info(
+          {
+            context: {
+              slugsProvided: channelSlugs.length,
+              channelsFound: channels.length,
+            },
+          },
+          'Converted channel slugs to IDs',
+        );
       }
 
-      moduleLogger.info('Performing search', {
-        query: q,
-        focus,
-        channelIds,
-        channelSlugs,
-        limit,
-        cursor,
-        sort,
-        dateRange,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            query: q,
+          },
+        },
+        'Performing search',
+      );
 
       // Convert sort to orderBy for elasticsearch
       const orderBy =
@@ -125,11 +127,14 @@ export const searchProcedures = {
           lte: endDate,
         };
 
-        moduleLogger.info('Applied date range filter', {
-          dateRange,
-          startDate: startDate.toISOString(),
-          endDate,
-        });
+        moduleLogger.info(
+          {
+            context: {
+              startDate: startDate.toISOString(),
+            },
+          },
+          'Applied date range filter',
+        );
       }
 
       // We'll log the search after getting results to capture counts
@@ -155,12 +160,15 @@ export const searchProcedures = {
       ];
 
       // Perform the multisearch
-      moduleLogger.info('Executing ElasticSearch multisearch', {
-        searchCount: searches.length / 2, // Each search has header + body
-        mediaLimit,
-        transcriptLimit,
-        channelsLimit: 10,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            searchCount: searches.length / 2, // Each search has header + body
+            channelsLimit: 10,
+          },
+        },
+        'Executing ElasticSearch multisearch',
+      );
 
       const response = await client.msearch({
         searches,
@@ -169,9 +177,14 @@ export const searchProcedures = {
       // Parse and validate the response
       const parsed = MSearchResponseSchema.parse(response);
 
-      moduleLogger.info('ElasticSearch multisearch completed', {
-        responseCount: parsed.responses.length,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            responseCount: parsed.responses.length,
+          },
+        },
+        'ElasticSearch multisearch completed',
+      );
 
       const [uploadsResponse, transcriptsResponse, _channelsResponse] =
         parsed.responses;
@@ -180,11 +193,7 @@ export const searchProcedures = {
       const mediaCount = uploadsResponse?.hits.total.value ?? 0;
       const transcriptCount = transcriptsResponse?.hits.total.value ?? 0;
 
-      moduleLogger.info('Search result counts', {
-        mediaCount,
-        transcriptCount,
-        focus,
-      });
+      moduleLogger.info('Search result counts');
 
       // Log the search with result counts
       // Check referer to detect focus switches (tab changes on same search page)
@@ -194,9 +203,11 @@ export const searchProcedures = {
 
         moduleLogger.info(
           {
-            referer,
-            currentQuery: q,
-            currentFocus: focus,
+            context: {
+              referer,
+              currentQuery: q,
+              currentFocus: focus,
+            },
           },
           'Referer check',
         );
@@ -228,19 +239,21 @@ export const searchProcedures = {
 
             moduleLogger.info(
               {
-                refererUrl: refererUrl.toString(),
-                refererPathname: refererUrl.pathname,
-                refererQuery,
-                refererFocus,
-                refererChannelSlugs,
-                refererSort,
-                refererDateRange,
-                isFromSearchPage,
-                isSameQuery,
-                isDifferentFocus,
-                hasSameChannelSlugs,
-                hasSameSort,
-                hasSameDateRange,
+                context: {
+                  refererUrl: refererUrl.toString(),
+                  refererPathname: refererUrl.pathname,
+                  refererQuery,
+                  refererFocus,
+                  refererChannelSlugs,
+                  refererSort,
+                  refererDateRange,
+                  isFromSearchPage,
+                  isSameQuery,
+                  isDifferentFocus,
+                  hasSameChannelSlugs,
+                  hasSameSort,
+                  hasSameDateRange,
+                },
               },
               'Referer parsed',
             );
@@ -257,11 +270,13 @@ export const searchProcedures = {
 
               moduleLogger.info(
                 {
-                  userId: ctx.session?.appUserId,
-                  query: q,
-                  referer,
-                  previousFocus: refererFocus,
-                  newFocus: focus,
+                  appUserId: ctx.session?.appUserId,
+                  context: {
+                    query: q,
+                    referer,
+                    previousFocus: refererFocus,
+                    newFocus: focus,
+                  },
                 },
                 'Skipping duplicate search (focus switch detected via referer)',
               );
@@ -270,11 +285,13 @@ export const searchProcedures = {
             // Invalid referer URL, ignore
             moduleLogger.warn(
               {
-                referer,
-                error:
-                  urlError instanceof Error
-                    ? urlError.message
-                    : String(urlError),
+                context: {
+                  referer,
+                  error:
+                    urlError instanceof Error
+                      ? urlError.message
+                      : String(urlError),
+                },
               },
               'Failed to parse referer URL',
             );
@@ -303,16 +320,25 @@ export const searchProcedures = {
 
           searchLogEntryId = logEntry.id;
 
-          moduleLogger.info('Search query logged to database', {
-            userId: ctx.session?.appUserId,
-            searchLogId: searchLogEntryId,
-            referer,
-          });
+          moduleLogger.info(
+            {
+              context: {
+                userId: ctx.session?.appUserId,
+                searchLogId: searchLogEntryId,
+              },
+            },
+            'Search query logged to database',
+          );
         }
       } catch (error) {
-        moduleLogger.error('Failed to log search', {
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to log search',
+        );
         // Don't fail the search if logging fails
       }
 
@@ -339,10 +365,15 @@ export const searchProcedures = {
         },
       });
 
-      moduleLogger.info('Fetched channel aggregation data', {
-        aggregatedChannels: channelIdsFromAggs.length,
-        channelsFound: channels.length,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            aggregatedChannels: channelIdsFromAggs.length,
+            channelsFound: channels.length,
+          },
+        },
+        'Fetched channel aggregation data',
+      );
 
       // Update the search log entry with channel count (only if we logged this search)
       if (searchLogEntryId) {
@@ -354,9 +385,14 @@ export const searchProcedures = {
             },
           });
         } catch (error) {
-          moduleLogger.error('Failed to update search log channel count', {
-            error: error instanceof Error ? error.message : String(error),
-          });
+          moduleLogger.error(
+            {
+              context: {
+                error: error instanceof Error ? error.message : String(error),
+              },
+            },
+            'Failed to update search log channel count',
+          );
         }
       }
 
@@ -383,9 +419,14 @@ export const searchProcedures = {
           .filter((hit) => hit._index === 'lc_uploads_v2')
           .map((hit) => hit._id);
 
-        moduleLogger.info('Processing media search results', {
-          hitsFromElasticsearch: uploadIds.length,
-        });
+        moduleLogger.info(
+          {
+            context: {
+              hitsFromElasticsearch: uploadIds.length,
+            },
+          },
+          'Processing media search results',
+        );
 
         // Fetch full upload data from database
         const uploads = await prisma.uploadRecord.findMany({
@@ -425,11 +466,16 @@ export const searchProcedures = {
         // Create a map for quick lookup
         const uploadsMap = new Map(uploads.map((u) => [u.id, u]));
 
-        moduleLogger.info('Fetched upload data from database', {
-          uploadsRequested: uploadIds.length,
-          uploadsFound: uploads.length,
-          uploadsMissing: uploadIds.length - uploads.length,
-        });
+        moduleLogger.info(
+          {
+            context: {
+              uploadsRequested: uploadIds.length,
+              uploadsFound: uploads.length,
+              uploadsMissing: uploadIds.length - uploads.length,
+            },
+          },
+          'Fetched upload data from database',
+        );
 
         // Map uploads to include thumbnails, preserving Elasticsearch order
         items = uploadIds
@@ -486,9 +532,14 @@ export const searchProcedures = {
           .filter((hit) => hit._index === 'lc_transcripts')
           .map((hit) => hit._id);
 
-        moduleLogger.info('Processing transcript search results', {
-          hitsFromElasticsearch: uploadIds.length,
-        });
+        moduleLogger.info(
+          {
+            context: {
+              hitsFromElasticsearch: uploadIds.length,
+            },
+          },
+          'Processing transcript search results',
+        );
 
         // Fetch full upload data from database
         const uploads = await prisma.uploadRecord.findMany({
@@ -528,11 +579,16 @@ export const searchProcedures = {
         // Create a map for quick lookup
         const uploadsMap = new Map(uploads.map((u) => [u.id, u]));
 
-        moduleLogger.info('Fetched upload data for transcripts from database', {
-          uploadsRequested: uploadIds.length,
-          uploadsFound: uploads.length,
-          uploadsMissing: uploadIds.length - uploads.length,
-        });
+        moduleLogger.info(
+          {
+            context: {
+              uploadsRequested: uploadIds.length,
+              uploadsFound: uploads.length,
+              uploadsMissing: uploadIds.length - uploads.length,
+            },
+          },
+          'Fetched upload data for transcripts from database',
+        );
 
         // Map transcript hits to include upload data and transcript segments
         items = transcriptsResponse.hits.hits
@@ -601,12 +657,16 @@ export const searchProcedures = {
 
       const nextCursor = items.length === limit ? cursor + limit : null;
 
-      moduleLogger.info('Search completed successfully', {
-        itemsReturned: items.length,
-        hasMore: nextCursor !== null,
-        nextCursor,
-        channelsReturned: channelsWithAvatars.length,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            itemsReturned: items.length,
+            hasMore: nextCursor !== null,
+            channelsReturned: channelsWithAvatars.length,
+          },
+        },
+        'Search completed successfully',
+      );
 
       return {
         items,
@@ -634,10 +694,15 @@ export const searchProcedures = {
       take: 10,
     });
 
-    moduleLogger.info('Retrieved recent searches', {
-      userId: ctx.session.appUserId,
-      searchCount: recentSearches.length,
-    });
+    moduleLogger.info(
+      {
+        context: {
+          userId: ctx.session.appUserId,
+          searchCount: recentSearches.length,
+        },
+      },
+      'Retrieved recent searches',
+    );
 
     // Map createdAt to searchedAt for the API response
     return recentSearches.map((entry) => ({
@@ -664,11 +729,16 @@ export const searchProcedures = {
         },
       });
 
-      moduleLogger.info('Deleted recent search', {
-        userId: ctx.session.appUserId,
-        query: input.query,
-        entriesDeleted: result.count,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            userId: ctx.session.appUserId,
+            query: input.query,
+            entriesDeleted: result.count,
+          },
+        },
+        'Deleted recent search',
+      );
 
       return { success: true };
     }),

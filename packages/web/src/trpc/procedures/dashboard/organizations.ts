@@ -30,10 +30,12 @@ const organizationProcedure = authProcedure
     });
 
     if (!membership) {
-      moduleLogger.warn('No membership found for organization procedure', {
-        ...input,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.warn(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'No membership found for organization procedure',
+      );
 
       throw new TRPCError({ code: 'UNAUTHORIZED' });
     }
@@ -44,9 +46,12 @@ const organizationProcedure = authProcedure
 const organizationAdminProcedure = organizationProcedure.use(
   async ({ ctx, next }) => {
     if (!ctx.membership.isAdmin) {
-      moduleLogger.warn('User is not admin of organization', {
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.warn(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'User is not admin of organization',
+      );
 
       throw new TRPCError({ code: 'FORBIDDEN' });
     }
@@ -59,9 +64,14 @@ export const organizationRouter = router({
   getAllOrganizations: authProcedure
     .input(getAllOrganizationsSchema)
     .query(async ({ input }) => {
-      moduleLogger.info('Fetching all organizations', {
-        excludeChurchTypes: input.excludeChurchTypes,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            excludeChurchTypes: input.excludeChurchTypes,
+          },
+        },
+        'Fetching all organizations',
+      );
 
       const whereClause = input.excludeChurchTypes
         ? { type: { not: OrganizationType.CHURCH } }
@@ -85,12 +95,17 @@ export const organizationRouter = router({
   searchOrganizations: authProcedure
     .input(searchOrganizationsSchema)
     .query(async ({ ctx, input }) => {
-      moduleLogger.info('Searching organizations', {
-        query: input.query,
-        excludeChurchTypes: input.excludeChurchTypes,
-        limit: input.limit,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            query: input.query,
+            excludeChurchTypes: input.excludeChurchTypes,
+            limit: input.limit,
+          },
+        },
+        'Searching organizations',
+      );
 
       const whereClause = {
         name: {
@@ -117,12 +132,17 @@ export const organizationRouter = router({
         take: input.limit,
       });
 
-      moduleLogger.info('Organization search completed', {
-        query: input.query,
-        resultCount: organizations.length,
-        excludeChurchTypes: input.excludeChurchTypes,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            query: input.query,
+            resultCount: organizations.length,
+            excludeChurchTypes: input.excludeChurchTypes,
+          },
+        },
+        'Organization search completed',
+      );
 
       return organizations;
     }),
@@ -130,9 +150,14 @@ export const organizationRouter = router({
   getOrganizationsByIds: authProcedure
     .input(getOrganizationsByIdsSchema)
     .query(async ({ input }) => {
-      moduleLogger.info('Fetching organizations by IDs', {
-        organizationCount: input.organizationIds.length,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            organizationCount: input.organizationIds.length,
+          },
+        },
+        'Fetching organizations by IDs',
+      );
 
       if (input.organizationIds.length === 0) {
         return [];
@@ -158,9 +183,12 @@ export const organizationRouter = router({
     }),
 
   getOrganizations: authProcedure.query(async ({ ctx }) => {
-    moduleLogger.info('Fetching organizations for user', {
-      appUserId: ctx.session.appUserId,
-    });
+    moduleLogger.info(
+      {
+        appUserId: ctx.session.appUserId,
+      },
+      'Fetching organizations for user',
+    );
 
     return prisma.organization.findMany({
       select: {
@@ -191,10 +219,12 @@ export const organizationRouter = router({
 
   getOrganizationDetails: organizationProcedure.query(
     async ({ ctx, input }) => {
-      moduleLogger.info('Fetching organization details', {
-        ...input,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'Fetching organization details',
+      );
 
       const organization = await prisma.organization.findFirst({
         select: {
@@ -249,10 +279,12 @@ export const organizationRouter = router({
       });
 
       if (!organization) {
-        moduleLogger.warn('Organization not found', {
-          ...input,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.warn(
+          {
+            appUserId: ctx.session.appUserId,
+          },
+          'Organization not found',
+        );
 
         throw new TRPCError({ code: 'NOT_FOUND' });
       }
@@ -307,9 +339,7 @@ export const organizationRouter = router({
       });
 
       if (!organization) {
-        moduleLogger.warn('Organization not found for members', {
-          ...input,
-        });
+        moduleLogger.warn('Organization not found for members');
 
         throw new TRPCError({ code: 'NOT_FOUND' });
       }
@@ -321,11 +351,16 @@ export const organizationRouter = router({
   searchUsers: organizationAdminProcedure
     .input(userSearchOrganizationSchema)
     .query(async ({ ctx, input }) => {
-      moduleLogger.info('Searching users for organization', {
-        organizationId: input.orgId,
-        query: input.query,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          organizationId: input.orgId,
+          appUserId: ctx.session.appUserId,
+          context: {
+            query: input.query,
+          },
+        },
+        'Searching users for organization',
+      );
 
       const users = await prisma.appUser.findMany({
         select: {
@@ -350,12 +385,17 @@ export const organizationRouter = router({
         take: 10,
       });
 
-      moduleLogger.info('User search completed', {
-        organizationId: input.orgId,
-        query: input.query,
-        resultCount: users.length,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          organizationId: input.orgId,
+          appUserId: ctx.session.appUserId,
+          context: {
+            query: input.query,
+            resultCount: users.length,
+          },
+        },
+        'User search completed',
+      );
 
       return users;
     }),
@@ -363,13 +403,18 @@ export const organizationRouter = router({
   addOrganizationMember: organizationAdminProcedure
     .input(addOrganizationMemberSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Adding organization member', {
-        organizationId: input.orgId,
-        newMemberUserId: input.userId,
-        isAdmin: input.isAdmin,
-        canEdit: input.canEdit,
-        addedBy: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          organizationId: input.orgId,
+          context: {
+            newMemberUserId: input.userId,
+            isAdmin: input.isAdmin,
+            canEdit: input.canEdit,
+            addedBy: ctx.session.appUserId,
+          },
+        },
+        'Adding organization member',
+      );
 
       try {
         await prisma.organizationMembership.create({
@@ -381,20 +426,30 @@ export const organizationRouter = router({
           },
         });
 
-        moduleLogger.info('Organization member added successfully', {
-          organizationId: input.orgId,
-          newMemberUserId: input.userId,
-          addedBy: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            organizationId: input.orgId,
+            context: {
+              newMemberUserId: input.userId,
+              addedBy: ctx.session.appUserId,
+            },
+          },
+          'Organization member added successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to add organization member', {
-          organizationId: input.orgId,
-          newMemberUserId: input.userId,
-          addedBy: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            organizationId: input.orgId,
+            context: {
+              newMemberUserId: input.userId,
+              addedBy: ctx.session.appUserId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to add organization member',
+        );
         throw error;
       }
     }),
@@ -402,11 +457,16 @@ export const organizationRouter = router({
   removeOrganizationMember: organizationAdminProcedure
     .input(removeOrganizationMemberSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Removing organization member', {
-        organizationId: input.orgId,
-        memberToRemove: input.appUserId,
-        removedBy: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          organizationId: input.orgId,
+          context: {
+            memberToRemove: input.appUserId,
+            removedBy: ctx.session.appUserId,
+          },
+        },
+        'Removing organization member',
+      );
 
       try {
         // Don't allow removing the last admin
@@ -429,11 +489,16 @@ export const organizationRouter = router({
           });
 
         if (membershipToDelete?.isAdmin && adminCount <= 1) {
-          moduleLogger.warn('Cannot remove last admin from organization', {
-            organizationId: input.orgId,
-            memberToRemove: input.appUserId,
-            removedBy: ctx.session.appUserId,
-          });
+          moduleLogger.warn(
+            {
+              organizationId: input.orgId,
+              context: {
+                memberToRemove: input.appUserId,
+                removedBy: ctx.session.appUserId,
+              },
+            },
+            'Cannot remove last admin from organization',
+          );
           throw new TRPCError({
             code: 'BAD_REQUEST',
             message: 'Cannot remove the last admin from the organization',
@@ -443,11 +508,11 @@ export const organizationRouter = router({
         // Don't allow removing yourself
         if (membershipToDelete?.appUserId === ctx.session.appUser.id) {
           moduleLogger.warn(
-            'User attempted to remove themselves from organization',
             {
               organizationId: input.orgId,
               appUserId: ctx.session.appUserId,
             },
+            'User attempted to remove themselves from organization',
           );
           throw new TRPCError({
             code: 'BAD_REQUEST',
@@ -464,33 +529,45 @@ export const organizationRouter = router({
           },
         });
 
-        moduleLogger.info('Organization member removed successfully', {
-          organizationId: input.orgId,
-          memberRemoved: input.appUserId,
-          removedBy: ctx.session.appUserId,
-          wasAdmin: membershipToDelete?.isAdmin,
-        });
+        moduleLogger.info(
+          {
+            organizationId: input.orgId,
+            context: {
+              memberRemoved: input.appUserId,
+              removedBy: ctx.session.appUserId,
+              wasAdmin: membershipToDelete?.isAdmin,
+            },
+          },
+          'Organization member removed successfully',
+        );
 
         return { success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
 
-        moduleLogger.error('Failed to remove organization member', {
-          organizationId: input.orgId,
-          memberToRemove: input.appUserId,
-          removedBy: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            organizationId: input.orgId,
+            context: {
+              memberToRemove: input.appUserId,
+              removedBy: ctx.session.appUserId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to remove organization member',
+        );
         throw error;
       }
     }),
 
   getOrganizationForEdit: organizationAdminProcedure.query(
     async ({ ctx, input }) => {
-      moduleLogger.info('Fetching organization for edit', {
-        ...input,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'Fetching organization for edit',
+      );
 
       const organization = await prisma.organization.findFirst({
         select: {
@@ -508,10 +585,12 @@ export const organizationRouter = router({
       });
 
       if (!organization) {
-        moduleLogger.warn('Organization not found for edit', {
-          ...input,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.warn(
+          {
+            appUserId: ctx.session.appUserId,
+          },
+          'Organization not found for edit',
+        );
 
         throw new TRPCError({ code: 'NOT_FOUND' });
       }
@@ -523,10 +602,15 @@ export const organizationRouter = router({
   updateOrganization: organizationAdminProcedure
     .input(updateOrganizationSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Updating organization', {
-        orgId: input.orgId,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            orgId: input.orgId,
+          },
+        },
+        'Updating organization',
+      );
 
       try {
         await prisma.organization.update({
@@ -542,18 +626,28 @@ export const organizationRouter = router({
           },
         });
 
-        moduleLogger.info('Organization updated successfully', {
-          orgId: input.orgId,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              orgId: input.orgId,
+            },
+          },
+          'Organization updated successfully',
+        );
 
         return { error: false };
       } catch (e) {
-        moduleLogger.error('Organization update failed', {
-          orgId: input.orgId,
-          appUserId: ctx.session.appUserId,
-          error: e instanceof Error ? e.message : String(e),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              orgId: input.orgId,
+              error: e instanceof Error ? e.message : String(e),
+            },
+          },
+          'Organization update failed',
+        );
         return { error: 'Error updating organization, please try again!' };
       }
     }),
@@ -563,19 +657,29 @@ export const organizationRouter = router({
     .use(async ({ ctx, next }) => {
       // Only site admins can approve organizations
       if (ctx.session.appUser.role !== 'ADMIN') {
-        moduleLogger.warn('Non-admin user attempted to approve organization', {
-          appUserId: ctx.session.appUserId,
-          role: ctx.session.appUser.role,
-        });
+        moduleLogger.warn(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              role: ctx.session.appUser.role,
+            },
+          },
+          'Non-admin user attempted to approve organization',
+        );
         throw new TRPCError({ code: 'FORBIDDEN' });
       }
       return next();
     })
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Approving organization', {
-        orgId: input.orgId,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            orgId: input.orgId,
+          },
+        },
+        'Approving organization',
+      );
 
       try {
         await prisma.organization.update({
@@ -588,18 +692,28 @@ export const organizationRouter = router({
           },
         });
 
-        moduleLogger.info('Organization approved successfully', {
-          orgId: input.orgId,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              orgId: input.orgId,
+            },
+          },
+          'Organization approved successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to approve organization', {
-          orgId: input.orgId,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              orgId: input.orgId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to approve organization',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -614,21 +728,26 @@ export const organizationRouter = router({
       // Only site admins can unapprove organizations
       if (ctx.session.appUser.role !== 'ADMIN') {
         moduleLogger.warn(
-          'Non-admin user attempted to unapprove organization',
           {
             appUserId: ctx.session.appUserId,
-            role: ctx.session.appUser.role,
+            context: { role: ctx.session.appUser.role },
           },
+          'Non-admin user attempted to unapprove organization',
         );
         throw new TRPCError({ code: 'FORBIDDEN' });
       }
       return next();
     })
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Unapproving organization', {
-        orgId: input.orgId,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            orgId: input.orgId,
+          },
+        },
+        'Unapproving organization',
+      );
 
       try {
         await prisma.organization.update({
@@ -641,18 +760,28 @@ export const organizationRouter = router({
           },
         });
 
-        moduleLogger.info('Organization unapproved successfully', {
-          orgId: input.orgId,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              orgId: input.orgId,
+            },
+          },
+          'Organization unapproved successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to unapprove organization', {
-          orgId: input.orgId,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              orgId: input.orgId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to unapprove organization',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -663,10 +792,12 @@ export const organizationRouter = router({
 
   getPendingDownstreamApprovals: organizationProcedure.query(
     async ({ ctx, input }) => {
-      moduleLogger.info('Fetching pending downstream approvals', {
-        ...input,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'Fetching pending downstream approvals',
+      );
 
       // Get the organization to make sure it's not a church
       const organization = await prisma.organization.findFirst({
@@ -682,10 +813,12 @@ export const organizationRouter = router({
       });
 
       if (!organization) {
-        moduleLogger.warn('Organization not found or is not a ministry', {
-          ...input,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.warn(
+          {
+            appUserId: ctx.session.appUserId,
+          },
+          'Organization not found or is not a ministry',
+        );
         throw new TRPCError({ code: 'NOT_FOUND' });
       }
 
@@ -723,10 +856,12 @@ export const organizationRouter = router({
   approveDownstreamRelationship: organizationAdminProcedure
     .input(organizationRelationshipSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Approving downstream relationship', {
-        ...input,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'Approving downstream relationship',
+      );
 
       try {
         await prisma.organizationOrganizationAssociation.update({
@@ -741,18 +876,24 @@ export const organizationRouter = router({
           },
         });
 
-        moduleLogger.info('Downstream relationship approved successfully', {
-          ...input,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+          },
+          'Downstream relationship approved successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to approve downstream relationship', {
-          ...input,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to approve downstream relationship',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -764,10 +905,12 @@ export const organizationRouter = router({
   rejectDownstreamRelationship: organizationAdminProcedure
     .input(organizationRelationshipSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Rejecting downstream relationship', {
-        ...input,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'Rejecting downstream relationship',
+      );
 
       try {
         await prisma.organizationOrganizationAssociation.delete({
@@ -779,18 +922,24 @@ export const organizationRouter = router({
           },
         });
 
-        moduleLogger.info('Downstream relationship rejected successfully', {
-          ...input,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+          },
+          'Downstream relationship rejected successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to reject downstream relationship', {
-          ...input,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to reject downstream relationship',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -801,10 +950,12 @@ export const organizationRouter = router({
 
   getUpstreamAssociations: organizationProcedure.query(
     async ({ ctx, input }) => {
-      moduleLogger.info('Fetching upstream associations', {
-        ...input,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'Fetching upstream associations',
+      );
 
       // Get all associations where this organization is upstream
       const upstreamAssociations =
@@ -840,10 +991,12 @@ export const organizationRouter = router({
   approveUpstreamAssociation: organizationAdminProcedure
     .input(upstreamAssociationActionSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Approving upstream association', {
-        ...input,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'Approving upstream association',
+      );
 
       try {
         await prisma.organizationOrganizationAssociation.update({
@@ -858,18 +1011,24 @@ export const organizationRouter = router({
           },
         });
 
-        moduleLogger.info('Upstream association approved successfully', {
-          ...input,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+          },
+          'Upstream association approved successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to approve upstream association', {
-          ...input,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to approve upstream association',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -881,10 +1040,12 @@ export const organizationRouter = router({
   unapproveUpstreamAssociation: organizationAdminProcedure
     .input(upstreamAssociationActionSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Unapproving upstream association', {
-        ...input,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'Unapproving upstream association',
+      );
 
       try {
         await prisma.organizationOrganizationAssociation.update({
@@ -899,18 +1060,24 @@ export const organizationRouter = router({
           },
         });
 
-        moduleLogger.info('Upstream association unapproved successfully', {
-          ...input,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+          },
+          'Upstream association unapproved successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to unapprove upstream association', {
-          ...input,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to unapprove upstream association',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -922,10 +1089,12 @@ export const organizationRouter = router({
   deleteUpstreamAssociation: organizationAdminProcedure
     .input(upstreamAssociationActionSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Deleting upstream association', {
-        ...input,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'Deleting upstream association',
+      );
 
       try {
         await prisma.organizationOrganizationAssociation.delete({
@@ -937,18 +1106,24 @@ export const organizationRouter = router({
           },
         });
 
-        moduleLogger.info('Upstream association deleted successfully', {
-          ...input,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+          },
+          'Upstream association deleted successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to delete upstream association', {
-          ...input,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to delete upstream association',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',

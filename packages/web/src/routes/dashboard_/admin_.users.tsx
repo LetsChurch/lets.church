@@ -94,7 +94,7 @@ function UsersPage() {
       try {
         if (editingUser) {
           await trpcClient.dashboard.admin.updateUser.mutate({
-            userId: editingUser.id,
+            appUserId: editingUser.id,
             username: value.username,
             fullName: value.fullName,
             email: value.email,

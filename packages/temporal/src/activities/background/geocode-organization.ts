@@ -82,8 +82,10 @@ const geocodeResSchema = z
 export default async function geocodeOrganization(organizationId: string) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'geocodeOrganization',
-    args: {
-      organizationId,
+    context: {
+      args: {
+        organizationId,
+      },
     },
   });
 
@@ -104,7 +106,7 @@ export default async function geocodeOrganization(organizationId: string) {
       `https://api.mapbox.com/search/geocode/v6/forward?q=${q}&permanent=true&access_token=${MAPBOX_GEOCODING_TOKEN}`,
     );
     const json = await res.json();
-    activityLogger.info({ meta: JSON.stringify({ json }) });
+    activityLogger.info({ context: { meta: JSON.stringify({ json }) } });
 
     const parsed = geocodeResSchema.parse(json);
     const [feature] = parsed.features;

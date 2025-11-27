@@ -19,9 +19,11 @@ export function createProcedureLogger(
   context: TrpcLogContext,
 ): Logger {
   return baseLogger.child({
-    procedure: context.procedure,
-    userId: context.userId,
-    clientIp: context.clientIp,
+    appUserId: context.userId,
+    context: {
+      procedure: context.procedure,
+      clientIp: context.clientIp,
+    },
   });
 }
 
@@ -32,12 +34,15 @@ export function logProcedureStart(
   logger: Logger,
   procedure: string,
   input: unknown,
-  context?: Omit<TrpcLogContext, 'procedure'>,
+  ctx?: Omit<TrpcLogContext, 'procedure'>,
 ): void {
   logger.info(
     {
-      ...context,
-      input,
+      appUserId: ctx?.userId as string | undefined,
+      context: {
+        ...ctx,
+        input,
+      },
     },
     `tRPC procedure started: ${procedure}`,
   );
@@ -54,8 +59,10 @@ export function logProcedureSuccess(
 ): void {
   logger.info(
     {
-      ...metadata,
-      durationMs,
+      context: {
+        ...metadata,
+        durationMs,
+      },
     },
     `tRPC procedure completed: ${procedure}`,
   );
@@ -68,16 +75,14 @@ export function logProcedureError(
   logger: Logger,
   procedure: string,
   error: Error | unknown,
-  context?: Record<string, unknown>,
+  ctx?: Record<string, unknown>,
 ): void {
   const errorObj = error instanceof Error ? error : new Error(String(error));
 
   logger.error(
     {
-      ...context,
-      error: errorObj.message,
-      stack: errorObj.stack,
-      errorName: errorObj.name,
+      err: errorObj,
+      context: ctx,
     },
     `tRPC procedure error: ${procedure}`,
   );

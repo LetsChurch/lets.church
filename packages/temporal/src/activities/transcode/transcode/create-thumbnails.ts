@@ -27,9 +27,11 @@ export default async function createThumbnails(
 ) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'createThumbnails',
-    args: {
-      uploadRecordId,
-      s3UploadKey,
+    context: {
+      args: {
+        uploadRecordId,
+        s3UploadKey,
+      },
     },
   });
 
@@ -131,7 +133,7 @@ export default async function createThumbnails(
       ),
     );
     Context.current().heartbeat();
-    activityLogger.info({ pickedThumbnails });
+    activityLogger.info({ context: { pickedThumbnails } });
     await concatThumbs(workingDir, pickedThumbnails);
     activityLogger.info('Uploading hovernail');
     const path = join(workingDir, 'hovernail.jpg');
@@ -145,7 +147,10 @@ export default async function createThumbnails(
     Context.current().heartbeat();
     activityLogger.info('Done uploading hovernail');
   } catch (e) {
-    activityLogger.error(e instanceof Error ? e.message : e);
+    activityLogger.error(
+      { err: e instanceof Error ? e : new Error(String(e)) },
+      'Failed to create thumbnails',
+    );
     throw e;
   } finally {
     await rimraf(workingDir);

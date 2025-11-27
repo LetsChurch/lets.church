@@ -216,33 +216,37 @@ const serverMappings = Object.fromEntries(
     ),
 );
 
-moduleLogger.info({ serverMappings });
+moduleLogger.info({ context: { serverMappings } });
 
 // Show a preview of what will be deployed using jest-diff
-moduleLogger.info('Preview of index mapping changes:');
 moduleLogger.info(
-  diff(
-    serverMappings,
-    Object.fromEntries(
-      Object.entries(targetMappings).map(([k, { properties }]) => [
-        k,
-        { properties },
-      ]),
-    ),
-    {
-      aAnnotation: 'Server',
-      aColor: pc.red,
-      bAnnotation: 'Target',
-      bColor: pc.green,
+  {
+    context: {
+      diff: diff(
+        serverMappings,
+        Object.fromEntries(
+          Object.entries(targetMappings).map(([k, { properties }]) => [
+            k,
+            { properties },
+          ]),
+        ),
+        {
+          aAnnotation: 'Server',
+          aColor: pc.red,
+          bAnnotation: 'Target',
+          bColor: pc.green,
+        },
+      ),
     },
-  ),
+  },
+  'Preview of index mapping changes',
 );
 
 const serverIndexNames = new Set(Object.keys(serverMappings));
 
 // Do the deployment
 for (const [name, mappings] of Object.entries(targetMappings)) {
-  // If ther server doesn't have an index by the given name, create it
+  // If the server doesn't have an index by the given name, create it
   if (!serverIndexNames.has(name)) {
     moduleLogger.info(`Creating index: ${name}`);
     await client.indices.create({ index: name, settings: mappings.settings });

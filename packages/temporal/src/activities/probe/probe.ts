@@ -21,17 +21,24 @@ export default async function probe(
 ) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'probe',
-    args: {
-      uploadRecordId,
-      s3UploadKey,
+    context: {
+      args: {
+        uploadRecordId,
+        s3UploadKey,
+      },
     },
   });
 
-  activityLogger.info('Probe activity started', {
-    uploadRecordId,
-    s3UploadKey,
-    workingDir: WORK_DIR,
-  });
+  activityLogger.info(
+    {
+      uploadId: uploadRecordId,
+      s3UploadKey,
+      context: {
+        workingDir: WORK_DIR,
+      },
+    },
+    'Probe activity started',
+  );
 
   const signal = Context.current().cancellationSignal;
 
@@ -46,20 +53,30 @@ export default async function probe(
 
     const downloadPath = join(workingDir, 'download');
 
-    activityLogger.info('Fetching file metadata from S3', {
-      bucket: 'ingest',
-      key: s3UploadKey,
-    });
+    activityLogger.info(
+      {
+        context: {
+          bucket: 'ingest',
+          key: s3UploadKey,
+        },
+      },
+      'Fetching file metadata from S3',
+    );
 
     const uploadSizeBytes = (await ingestS3.headObject(s3UploadKey))
       ?.ContentLength;
     invariant(uploadSizeBytes, 'Invalid uploadSizeBytes');
 
-    activityLogger.info('Starting file download from S3', {
-      sizeBytes: uploadSizeBytes,
-      sizeMB: (uploadSizeBytes / 1024 / 1024).toFixed(2),
-      destination: downloadPath,
-    });
+    activityLogger.info(
+      {
+        context: {
+          sizeBytes: uploadSizeBytes,
+          sizeMB: (uploadSizeBytes / 1024 / 1024).toFixed(2),
+          destination: downloadPath,
+        },
+      },
+      'Starting file download from S3',
+    );
 
     const downloadStart = Date.now();
     await ingestS3.streamObjectToFile(s3UploadKey, downloadPath, {
@@ -67,22 +84,32 @@ export default async function probe(
     });
     const downloadDuration = Date.now() - downloadStart;
 
-    activityLogger.info('Download complete', {
-      durationMs: downloadDuration,
-      speedMBps: (
-        uploadSizeBytes /
-        1024 /
-        1024 /
-        (downloadDuration / 1000)
-      ).toFixed(2),
-    });
+    activityLogger.info(
+      {
+        context: {
+          durationMs: downloadDuration,
+          speedMBps: (
+            uploadSizeBytes /
+            1024 /
+            1024 /
+            (downloadDuration / 1000)
+          ).toFixed(2),
+        },
+      },
+      'Download complete',
+    );
 
     await mkdirp(workingDir);
 
-    activityLogger.info('Starting ffprobe', {
-      filePath: downloadPath,
-      fileSizeMB: (uploadSizeBytes / 1024 / 1024).toFixed(2),
-    });
+    activityLogger.info(
+      {
+        context: {
+          filePath: downloadPath,
+          fileSizeMB: (uploadSizeBytes / 1024 / 1024).toFixed(2),
+        },
+      },
+      'Starting ffprobe',
+    );
 
     const probeStart = Date.now();
     const proc = runFfprobe(workingDir, downloadPath, signal);
@@ -98,9 +125,14 @@ export default async function probe(
     await proc;
     const probeDuration = Date.now() - probeStart;
 
-    activityLogger.info('ffprobe completed', {
-      durationMs: probeDuration,
-    });
+    activityLogger.info(
+      {
+        context: {
+          durationMs: probeDuration,
+        },
+      },
+      'ffprobe completed',
+    );
 
     const probeJson = stdOutLines.join('');
     const parsedProbeJson = JSON.parse(probeJson);
@@ -115,25 +147,36 @@ export default async function probe(
     );
     const isPortrait = videoStream && videoStream.height > videoStream.width;
 
-    activityLogger.info('Media probe results', {
-      format: schemaParsedProbe.format.format_name,
-      duration: parseFloat(schemaParsedProbe.format.duration),
-      streamCount: schemaParsedProbe.streams.length,
-      videoCodec: videoStream?.codec_name,
-      videoResolution: videoStream
-        ? `${videoStream.width}x${videoStream.height}`
-        : null,
-      videoFps: videoStream?.avg_frame_rate,
-      audioCodec: audioStream?.codec_name,
-      audioChannels: audioStream?.channels,
-      audioSampleRate: audioStream?.sample_rate,
-      isPortrait,
-    });
+    activityLogger.info(
+      {
+        context: {
+          format: schemaParsedProbe.format.format_name,
+          duration: parseFloat(schemaParsedProbe.format.duration),
+          streamCount: schemaParsedProbe.streams.length,
+          videoCodec: videoStream?.codec_name,
+          videoResolution: videoStream
+            ? `${videoStream.width}x${videoStream.height}`
+            : null,
+          videoFps: videoStream?.avg_frame_rate,
+          audioCodec: audioStream?.codec_name,
+          audioChannels: audioStream?.channels,
+          audioSampleRate: audioStream?.sample_rate,
+          isPortrait,
+        },
+      },
+      'Media probe results',
+    );
 
-    activityLogger.info('Uploading probe results to S3', {
-      key: `${uploadRecordId}/probe.json`,
-      sizeKB: (probeJson.length / 1024).toFixed(2),
-    });
+    activityLogger.info(
+      {
+        uploadId: uploadRecordId,
+        context: {
+          key: `${uploadRecordId}/probe.json`,
+          sizeKB: (probeJson.length / 1024).toFixed(2),
+        },
+      },
+      'Uploading probe results to S3',
+    );
 
     await ingestS3.retryablePutFile({
       key: `${uploadRecordId}/probe.json`,
@@ -164,31 +207,44 @@ export default async function probe(
       ...visibilityUpdate,
     });
 
-    activityLogger.info('Probe activity completed successfully', {
-      totalDurationMs: Date.now() - probeStart + downloadDuration,
-      mediaLengthSeconds: parseFloat(schemaParsedProbe.format.duration),
-    });
+    activityLogger.info(
+      {
+        context: {
+          totalDurationMs: Date.now() - probeStart + downloadDuration,
+          mediaLengthSeconds: parseFloat(schemaParsedProbe.format.duration),
+        },
+      },
+      'Probe activity completed successfully',
+    );
 
     return schemaParsedProbe;
   } catch (e) {
     const error = e instanceof Error ? e : new Error(String(e));
 
-    activityLogger.error('Probe activity failed', {
-      error: error.message,
-      stack: error.stack,
-      uploadRecordId,
-      s3UploadKey,
-      meta: JSON.stringify({
-        stdout: stdOutLines.join(''),
-        stderr: stdErrLines.join(''),
-      }),
-    });
+    activityLogger.error(
+      {
+        uploadId: uploadRecordId,
+        s3UploadKey,
+        context: {
+          error: error.message,
+          stack: error.stack,
+          stdout: stdOutLines.join(''),
+          stderr: stdErrLines.join(''),
+        },
+      },
+      'Probe activity failed',
+    );
 
     throw e;
   } finally {
-    activityLogger.info('Removing working directory', {
-      workingDir,
-    });
+    activityLogger.info(
+      {
+        context: {
+          workingDir,
+        },
+      },
+      'Removing working directory',
+    );
     await rimraf(workingDir);
   }
 }

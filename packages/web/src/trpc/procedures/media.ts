@@ -38,9 +38,14 @@ export const mediaProcedures = {
   getMediaById: publicProcedure
     .input(getMediaByIdSchema)
     .query(async ({ input, ctx }) => {
-      moduleLogger.info('Fetching media by ID', {
-        mediaId: input.mediaId,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            mediaId: input.mediaId,
+          },
+        },
+        'Fetching media by ID',
+      );
 
       const media = await prisma.uploadRecord.findUnique({
         select: {
@@ -90,13 +95,15 @@ export const mediaProcedures = {
       // Check if channel is approved and public
       if (media.channel.visibility !== 'PUBLIC' || !media.channel.approvedAt) {
         moduleLogger.warn(
-          'Access denied to media from unapproved/non-public channel',
           {
-            mediaId: input.mediaId,
+            uploadId: input.mediaId,
             channelId: media.channel.id,
-            channelVisibility: media.channel.visibility,
-            channelApproved: Boolean(media.channel.approvedAt),
+            context: {
+              channelVisibility: media.channel.visibility,
+              channelApproved: Boolean(media.channel.approvedAt),
+            },
           },
+          'Access denied to media from unapproved/non-public channel',
         );
         throw new Error('Media not found');
       }
@@ -309,7 +316,7 @@ export const mediaProcedures = {
       z.object({
         uploadRecordId: IncomingIdSchema,
         source: z
-          .nativeEnum(UploadViewSource)
+          .enum(UploadViewSource)
           .optional()
           .default(UploadViewSource.WEBSITE),
       }),
@@ -319,23 +326,29 @@ export const mediaProcedures = {
       const clientIp = getClientIpAddress(getRequest().headers);
       const clientUserAgent = getRequest().headers.get('user-agent');
 
-      moduleLogger.info('Creating upload view', {
-        uploadRecordId,
-        clientIp,
-        userId: ctx.session?.appUserId,
-        source,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            userId: ctx.session?.appUserId,
+          },
+        },
+        'Creating upload view',
+      );
 
       const trackingSalt = await prisma.trackingSalt.findFirst({
         orderBy: { id: 'desc' },
       });
 
       if (!trackingSalt || !clientUserAgent) {
-        moduleLogger.warn('Missing tracking salt or user agent', {
-          uploadRecordId,
-          hasTrackingSalt: !!trackingSalt,
-          hasUserAgent: !!clientUserAgent,
-        });
+        moduleLogger.warn(
+          {
+            context: {
+              hasTrackingSalt: !!trackingSalt,
+              hasUserAgent: !!clientUserAgent,
+            },
+          },
+          'Missing tracking salt or user agent',
+        );
         return null;
       }
 
@@ -366,11 +379,15 @@ export const mediaProcedures = {
         },
       });
 
-      moduleLogger.info('Upload view created', {
-        uploadRecordId: view.uploadRecordId,
-        viewHash: view.viewHash.toString(),
-        source,
-      });
+      moduleLogger.info(
+        {
+          uploadRecordId: view.uploadRecordId,
+          context: {
+            viewHash: view.viewHash.toString(),
+          },
+        },
+        'Upload view created',
+      );
 
       return {
         uploadRecordId: OutgoingIdSchema.parse(view.uploadRecordId),
@@ -394,11 +411,14 @@ export const mediaProcedures = {
     .mutation(async ({ input, ctx }) => {
       const { uploadRecordId, viewHash, ranges } = input;
 
-      moduleLogger.info('Recording view seconds', {
-        uploadRecordId,
-        viewHash,
-        rangeCount: ranges.length,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            rangeCount: ranges.length,
+          },
+        },
+        'Recording view seconds',
+      );
 
       // Convert ranges to individual seconds
       const seconds = new Set<number>();
@@ -444,11 +464,14 @@ export const mediaProcedures = {
         }),
       ]);
 
-      moduleLogger.info('View seconds recorded', {
-        uploadRecordId,
-        viewHash,
-        secondsRecorded: seconds.size,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            secondsRecorded: seconds.size,
+          },
+        },
+        'View seconds recorded',
+      );
 
       return { success: true, secondsRecorded: seconds.size };
     }),
@@ -456,9 +479,14 @@ export const mediaProcedures = {
   getTranscript: publicProcedure
     .input(getTranscriptSchema)
     .query(async ({ input }) => {
-      moduleLogger.info('Fetching transcript', {
-        mediaId: input.mediaId,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            mediaId: input.mediaId,
+          },
+        },
+        'Fetching transcript',
+      );
 
       try {
         const url = getPublicMediaUrl(`${input.mediaId}/transcript.vtt`);
@@ -475,10 +503,15 @@ export const mediaProcedures = {
 
         return parsed;
       } catch (e) {
-        moduleLogger.error('Error fetching transcript', {
-          mediaId: input.mediaId,
-          error: e,
-        });
+        moduleLogger.error(
+          {
+            context: {
+              mediaId: input.mediaId,
+              error: e,
+            },
+          },
+          'Error fetching transcript',
+        );
         return null;
       }
     }),
@@ -494,11 +527,7 @@ export const mediaProcedures = {
       const { mediaId, rating } = input;
       const userId = ctx.session.appUserId;
 
-      moduleLogger.info('Rating media', {
-        mediaId,
-        rating,
-        userId,
-      });
+      moduleLogger.info('Rating media');
 
       // Check if user already rated this media
       const existingRating = await prisma.uploadUserRating.findUnique({
@@ -522,11 +551,7 @@ export const mediaProcedures = {
             },
           });
 
-          moduleLogger.info('Rating removed', {
-            mediaId,
-            rating,
-            userId,
-          });
+          moduleLogger.info('Rating removed');
 
           return {
             userRating: null,
@@ -546,12 +571,14 @@ export const mediaProcedures = {
             },
           });
 
-          moduleLogger.info('Rating updated', {
-            mediaId,
-            rating,
-            previousRating: existingRating.rating,
-            userId,
-          });
+          moduleLogger.info(
+            {
+              context: {
+                previousRating: existingRating.rating,
+              },
+            },
+            'Rating updated',
+          );
 
           return {
             userRating: rating,
@@ -568,11 +595,7 @@ export const mediaProcedures = {
           },
         });
 
-        moduleLogger.info('New rating created', {
-          mediaId,
-          rating,
-          userId,
-        });
+        moduleLogger.info('New rating created');
 
         return {
           userRating: rating,
@@ -584,10 +607,15 @@ export const mediaProcedures = {
   getMediaRating: publicProcedure
     .input(z.object({ mediaId: IncomingIdSchema }))
     .query(async ({ input, ctx }) => {
-      moduleLogger.info('Fetching media rating', {
-        mediaId: input.mediaId,
-        userId: ctx.session?.appUserId,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            mediaId: input.mediaId,
+            userId: ctx.session?.appUserId,
+          },
+        },
+        'Fetching media rating',
+      );
 
       // Get counts of likes and dislikes
       const [likes, dislikes, userRating] = await Promise.all([
@@ -628,9 +656,14 @@ export const mediaProcedures = {
   getComments: publicProcedure
     .input(z.object({ mediaId: IncomingIdSchema }))
     .query(async ({ input, ctx }) => {
-      moduleLogger.info('Fetching comments', {
-        mediaId: input.mediaId,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            mediaId: input.mediaId,
+          },
+        },
+        'Fetching comments',
+      );
 
       const comments = await prisma.uploadUserComment.findMany({
         where: {
@@ -691,9 +724,14 @@ export const mediaProcedures = {
   getReplies: publicProcedure
     .input(z.object({ commentId: IncomingIdSchema }))
     .query(async ({ input, ctx }) => {
-      moduleLogger.info('Fetching replies', {
-        commentId: input.commentId,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            commentId: input.commentId,
+          },
+        },
+        'Fetching replies',
+      );
 
       const replies = await prisma.uploadUserComment.findMany({
         where: {
@@ -760,11 +798,7 @@ export const mediaProcedures = {
       const { mediaId, text, replyingToId } = input;
       const userId = ctx.session.appUserId;
 
-      moduleLogger.info('Creating comment', {
-        mediaId,
-        userId,
-        replyingToId,
-      });
+      moduleLogger.info('Creating comment');
 
       // Fetch the upload record with channel and visibility information
       const upload = await prisma.uploadRecord.findUnique({
@@ -806,11 +840,7 @@ export const mediaProcedures = {
             upload.channel.visibility === 'PRIVATE'
               ? 'private channel'
               : 'private video';
-          moduleLogger.warn('Unauthorized comment attempt', {
-            mediaId,
-            userId,
-            reason,
-          });
+          moduleLogger.warn('Unauthorized comment attempt');
           throw new Error(
             `You must be a member of the channel to comment on this ${reason === 'private channel' ? 'channel' : 'video'}`,
           );
@@ -840,11 +870,14 @@ export const mediaProcedures = {
         },
       });
 
-      moduleLogger.info('Comment created successfully', {
-        commentId: comment.id,
-        mediaId,
-        userId,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            commentId: comment.id,
+          },
+        },
+        'Comment created successfully',
+      );
 
       return {
         ...comment,
@@ -867,11 +900,7 @@ export const mediaProcedures = {
       const { commentId, rating } = input;
       const userId = ctx.session.appUserId;
 
-      moduleLogger.info('Rating comment', {
-        commentId,
-        rating,
-        userId,
-      });
+      moduleLogger.info('Rating comment');
 
       // Check if user already rated this comment
       const existingRating = await prisma.uploadUserCommentRating.findUnique({
@@ -895,11 +924,7 @@ export const mediaProcedures = {
             },
           });
 
-          moduleLogger.info('Comment rating removed', {
-            commentId,
-            rating,
-            userId,
-          });
+          moduleLogger.info('Comment rating removed');
 
           return {
             userRating: null,
@@ -919,12 +944,14 @@ export const mediaProcedures = {
             },
           });
 
-          moduleLogger.info('Comment rating updated', {
-            commentId,
-            rating,
-            previousRating: existingRating.rating,
-            userId,
-          });
+          moduleLogger.info(
+            {
+              context: {
+                previousRating: existingRating.rating,
+              },
+            },
+            'Comment rating updated',
+          );
 
           return {
             userRating: rating,
@@ -941,11 +968,7 @@ export const mediaProcedures = {
           },
         });
 
-        moduleLogger.info('New comment rating created', {
-          commentId,
-          rating,
-          userId,
-        });
+        moduleLogger.info('New comment rating created');
 
         return {
           userRating: rating,

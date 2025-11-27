@@ -36,22 +36,28 @@ const createPrismaClient = () => {
     (e: { query: string; duration: number; params: string }) => {
       // TODO: consider debug level
       logger.info(
-        { query: e.query, duration: e.duration, params: e.params },
+        {
+          context: {
+            query: e.query,
+            duration: e.duration,
+            params: e.params,
+          },
+        },
         'prisma:query',
       );
     },
   );
 
   client.$on('info' as never, (e: { message: string }) => {
-    logger.info({ message: e.message }, 'prisma:info');
+    logger.info({ context: { message: e.message } }, 'prisma:info');
   });
 
   client.$on('warn' as never, (e: { message: string }) => {
-    logger.warn({ message: e.message }, 'prisma:warn');
+    logger.warn({ context: { message: e.message } }, 'prisma:warn');
   });
 
   client.$on('error' as never, (e: { message: string }) => {
-    logger.error({ message: e.message }, 'prisma:error');
+    logger.error({ context: { message: e.message } }, 'prisma:error');
   });
 
   return client;

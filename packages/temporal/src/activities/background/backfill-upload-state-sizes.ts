@@ -90,10 +90,16 @@ export async function backfillUploadStateSizesBatch(
         skipped++;
       }
     } catch (error) {
-      logger.error(`Error getting size for UploadState ${uploadState.id}`, {
-        error: error instanceof Error ? error.message : String(error),
-        s3Key: uploadState.s3Key,
-      });
+      logger.error(
+        {
+          context: {
+            uploadStateId: uploadState.id,
+            error: error instanceof Error ? error.message : String(error),
+            s3Key: uploadState.s3Key,
+          },
+        },
+        `Error getting size for UploadState ${uploadState.id}`,
+      );
       skipped++;
     }
   }

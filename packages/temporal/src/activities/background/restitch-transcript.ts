@@ -16,8 +16,10 @@ const moduleLogger = logger.child({
 export default async function restitchTranscript(uploadRecordId: string) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'restitchTranscript',
-    args: {
-      uploadRecordId,
+    context: {
+      args: {
+        uploadRecordId,
+      },
     },
   });
 

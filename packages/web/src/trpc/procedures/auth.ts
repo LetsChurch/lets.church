@@ -32,16 +32,16 @@ export const authProcedures = {
       }): Promise<HandleLoginResponse> => {
         const clientIp = getClientIpAddress(getRequest().headers);
 
-        moduleLogger.info('Login attempt', {
-          userId: id,
-          clientIp,
-        });
+        moduleLogger.info(
+          { context: { userId: id, clientIp } },
+          'Login attempt',
+        );
 
         if (!(await validateTurnstile(turnstile, clientIp))) {
-          moduleLogger.warn('Login failed - invalid CAPTCHA', {
-            userId: id,
-            clientIp,
-          });
+          moduleLogger.warn(
+            { context: { userId: id, clientIp } },
+            'Login failed - invalid CAPTCHA',
+          );
           return { error: 'Invalid CAPTCHA' };
         }
 
@@ -52,19 +52,23 @@ export const authProcedures = {
             sameSite: 'lax',
           });
 
-          moduleLogger.info('Login successful', {
-            userId: id,
-            sessionId: session.id,
-            clientIp,
-          });
+          moduleLogger.info(
+            { context: { userId: id, sessionId: session.id, clientIp } },
+            'Login successful',
+          );
 
           return { error: false };
         } catch (e) {
-          moduleLogger.warn('Login failed - invalid credentials', {
-            userId: id,
-            clientIp,
-            error: e instanceof Error ? e.message : String(e),
-          });
+          moduleLogger.warn(
+            {
+              context: {
+                userId: id,
+                clientIp,
+                error: e instanceof Error ? e.message : String(e),
+              },
+            },
+            'Login failed - invalid credentials',
+          );
           return { error: 'Invalid user id or password' };
         }
       },
@@ -75,30 +79,42 @@ export const authProcedures = {
     .mutation(async ({ input: value }): Promise<HandleRegisterResponse> => {
       const clientIp = getClientIpAddress(getRequest().headers);
 
-      moduleLogger.info('Registration attempt', {
-        username: value.username,
-        email: value.email,
-        clientIp,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            username: value.username,
+            email: value.email,
+          },
+        },
+        'Registration attempt',
+      );
 
       if (!(await validateTurnstile(value.turnstile, clientIp))) {
-        moduleLogger.warn('Registration failed - invalid CAPTCHA', {
-          username: value.username,
-          email: value.email,
-          clientIp,
-        });
+        moduleLogger.warn(
+          {
+            context: {
+              username: value.username,
+              email: value.email,
+            },
+          },
+          'Registration failed - invalid CAPTCHA',
+        );
         return { error: 'Invalid CAPTCHA' };
       }
 
       const passwordTest = testPassword(value.password);
 
       if (passwordTest) {
-        moduleLogger.warn('Registration failed - weak password', {
-          username: value.username,
-          email: value.email,
-          passwordError: passwordTest,
-          clientIp,
-        });
+        moduleLogger.warn(
+          {
+            context: {
+              username: value.username,
+              email: value.email,
+              passwordError: passwordTest,
+            },
+          },
+          'Registration failed - weak password',
+        );
         return { error: passwordTest };
       }
 
@@ -126,21 +142,29 @@ export const authProcedures = {
           subscribeToNewsletter: value.subscribeNewsletter,
         });
 
-        moduleLogger.info('Registration successful', {
-          userId: user.id,
-          username: value.username,
-          email: value.email,
-          clientIp,
-        });
+        moduleLogger.info(
+          {
+            context: {
+              userId: user.id,
+              username: value.username,
+              email: value.email,
+            },
+          },
+          'Registration successful',
+        );
 
         return { error: false };
       } catch (e) {
-        moduleLogger.error('Registration failed - database error', {
-          username: value.username,
-          email: value.email,
-          clientIp,
-          error: e instanceof Error ? e.message : String(e),
-        });
+        moduleLogger.error(
+          {
+            context: {
+              username: value.username,
+              email: value.email,
+              error: e instanceof Error ? e.message : String(e),
+            },
+          },
+          'Registration failed - database error',
+        );
         return { error: 'Error registering a new account, please try again!' };
       }
     }),
@@ -156,16 +180,24 @@ export const authProcedures = {
       async ({ input }): Promise<{ error: false } | { error: string }> => {
         const clientIp = getClientIpAddress(getRequest().headers);
 
-        moduleLogger.info('Password reset request', {
-          identifier: input.identifier,
-          clientIp,
-        });
+        moduleLogger.info(
+          {
+            context: {
+              identifier: input.identifier,
+            },
+          },
+          'Password reset request',
+        );
 
         if (!(await validateTurnstile(input.turnstile, clientIp))) {
-          moduleLogger.warn('Password reset failed - invalid CAPTCHA', {
-            identifier: input.identifier,
-            clientIp,
-          });
+          moduleLogger.warn(
+            {
+              context: {
+                identifier: input.identifier,
+              },
+            },
+            'Password reset failed - invalid CAPTCHA',
+          );
           return { error: 'Invalid CAPTCHA' };
         }
 
@@ -217,33 +249,49 @@ export const authProcedures = {
                 html,
               );
 
-              moduleLogger.info('Password reset email sent', {
-                userId: user.id,
-                identifier: input.identifier,
-                clientIp,
-              });
+              moduleLogger.info(
+                {
+                  context: {
+                    userId: user.id,
+                    identifier: input.identifier,
+                  },
+                },
+                'Password reset email sent',
+              );
             } else {
-              moduleLogger.warn('Password reset - user has no email', {
-                userId: user.id,
-                identifier: input.identifier,
-                clientIp,
-              });
+              moduleLogger.warn(
+                {
+                  context: {
+                    userId: user.id,
+                    identifier: input.identifier,
+                  },
+                },
+                'Password reset - user has no email',
+              );
             }
           } else {
-            moduleLogger.info('Password reset - user not found', {
-              identifier: input.identifier,
-              clientIp,
-            });
+            moduleLogger.info(
+              {
+                context: {
+                  identifier: input.identifier,
+                },
+              },
+              'Password reset - user not found',
+            );
           }
 
           // Generic success message that doesn't leak information
           return { error: false };
         } catch (e) {
-          moduleLogger.error('Password reset failed - error', {
-            identifier: input.identifier,
-            clientIp,
-            error: e instanceof Error ? e.message : String(e),
-          });
+          moduleLogger.error(
+            {
+              context: {
+                identifier: input.identifier,
+                error: e instanceof Error ? e.message : String(e),
+              },
+            },
+            'Password reset failed - error',
+          );
           return {
             error:
               'An error occurred processing your request. Please try again.',
@@ -260,21 +308,14 @@ export const authProcedures = {
       }),
     )
     .mutation(async ({ input: { userId, password } }) => {
-      const clientIp = getClientIpAddress(getRequest().headers);
+      const _clientIp = getClientIpAddress(getRequest().headers);
 
-      moduleLogger.info('Complete password reset attempt', {
-        userId,
-        clientIp,
-      });
+      moduleLogger.info('Complete password reset attempt');
 
       try {
         const passwordError = testPassword(password);
         if (passwordError) {
-          moduleLogger.warn('Password reset failed - weak password', {
-            userId,
-            clientIp,
-            passwordError,
-          });
+          moduleLogger.warn('Password reset failed - weak password');
           return { error: passwordError };
         }
 
@@ -284,18 +325,18 @@ export const authProcedures = {
 
         await completeResetPassword(userId, hash);
 
-        moduleLogger.info('Password reset completed', {
-          userId,
-          clientIp,
-        });
+        moduleLogger.info('Password reset completed');
 
         return { error: false };
       } catch (e) {
-        moduleLogger.error('Complete password reset failed', {
-          userId,
-          clientIp,
-          error: e instanceof Error ? e.message : String(e),
-        });
+        moduleLogger.error(
+          {
+            context: {
+              error: e instanceof Error ? e.message : String(e),
+            },
+          },
+          'Complete password reset failed',
+        );
         return {
           error: 'Failed to reset password. Please try again.',
         };

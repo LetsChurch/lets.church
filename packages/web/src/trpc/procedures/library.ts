@@ -30,10 +30,7 @@ export const libraryProcedures = {
       const { mediaId } = input;
       const userId = ctx.session.appUserId;
 
-      moduleLogger.info('Toggling saved media', {
-        mediaId,
-        userId,
-      });
+      moduleLogger.info('Toggling saved media');
 
       // Check if user already saved this media
       const existingSave = await prisma.savedMedia.findUnique({
@@ -56,10 +53,7 @@ export const libraryProcedures = {
           },
         });
 
-        moduleLogger.info('Media unsaved', {
-          mediaId,
-          userId,
-        });
+        moduleLogger.info('Media unsaved');
 
         return { saved: false };
       } else {
@@ -71,10 +65,7 @@ export const libraryProcedures = {
           },
         });
 
-        moduleLogger.info('Media saved', {
-          mediaId,
-          userId,
-        });
+        moduleLogger.info('Media saved');
 
         return { saved: true };
       }
@@ -100,11 +91,12 @@ export const libraryProcedures = {
     .query(async ({ input, ctx }) => {
       const { limit, cursor } = input;
 
-      moduleLogger.info('Fetching saved media', {
-        appUserId: ctx.session.appUserId,
-        limit,
-        cursor,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'Fetching saved media',
+      );
 
       const savedMedia = await prisma.savedMedia.findMany({
         select: {
@@ -209,11 +201,12 @@ export const libraryProcedures = {
     .query(async ({ input, ctx }) => {
       const { limit, cursor } = input;
 
-      moduleLogger.info('Fetching watch history', {
-        appUserId: ctx.session.appUserId,
-        limit,
-        cursor,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'Fetching watch history',
+      );
 
       const history = await prisma.uploadView.findMany({
         select: {

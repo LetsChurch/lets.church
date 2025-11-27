@@ -21,9 +21,11 @@ export function createActivityLogger(
 ): Logger {
   return baseLogger.child({
     temporalActivity: context.temporalActivity,
-    args: context.args ?? {},
     workflowId: context.workflowId,
-    runId: context.runId,
+    context: {
+      args: context.args ?? {},
+      runId: context.runId,
+    },
   });
 }
 
@@ -38,8 +40,10 @@ export function logActivityStart(
 ): void {
   logger.info(
     {
-      args: args ?? {},
-      meta: metadata,
+      context: {
+        args: args ?? {},
+        meta: metadata,
+      },
     },
     `Activity started: ${activity}`,
   );
@@ -59,8 +63,10 @@ export function logActivityProgress(
 
   logger.info(
     {
-      progress: progressData,
-      meta: metadata,
+      context: {
+        progress: progressData,
+        meta: metadata,
+      },
     },
     `Activity progress: ${activity}`,
   );
@@ -77,8 +83,10 @@ export function logActivitySuccess(
 ): void {
   logger.info(
     {
-      summary: summary ?? {},
-      durationMs,
+      context: {
+        summary: summary ?? {},
+        durationMs,
+      },
     },
     `Activity completed: ${activity}`,
   );
@@ -91,7 +99,7 @@ export function logActivityError(
   logger: Logger,
   activity: string,
   error: Error | unknown,
-  context?: {
+  ctx?: {
     stdout?: string;
     stderr?: string;
     args?: Record<string, unknown>;
@@ -102,17 +110,17 @@ export function logActivityError(
 
   logger.error(
     {
-      error: errorObj.message,
-      stack: errorObj.stack,
-      errorName: errorObj.name,
-      args: context?.args,
-      meta: context
-        ? {
-            stdout: context.stdout,
-            stderr: context.stderr,
-            ...context,
-          }
-        : undefined,
+      err: errorObj,
+      context: {
+        args: ctx?.args,
+        meta: ctx
+          ? {
+              stdout: ctx.stdout,
+              stderr: ctx.stderr,
+              ...ctx,
+            }
+          : undefined,
+      },
     },
     `Activity error: ${activity}`,
   );
@@ -121,15 +129,17 @@ export function logActivityError(
 /**
  * Measure execution time of a Temporal activity
  */
-export function measureActivityDuration<T>(
+export async function measureActivityDuration<T>(
   fn: () => T | Promise<T>,
 ): Promise<{ result: T; durationMs: number }> {
   const start = Date.now();
 
-  return Promise.resolve(fn()).then((result) => ({
+  const result = await Promise.resolve(fn());
+
+  return {
     result,
     durationMs: Date.now() - start,
-  }));
+  };
 }
 
 /**

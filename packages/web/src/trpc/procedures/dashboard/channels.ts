@@ -66,9 +66,7 @@ const channelProcedure = authProcedure
     });
 
     if (!membership && !isSiteAdmin) {
-      moduleLogger.warn('No membership found for channel procedure', {
-        ...input,
-      });
+      moduleLogger.warn('No membership found for channel procedure');
 
       throw new TRPCError({ code: 'UNAUTHORIZED' });
     }
@@ -81,9 +79,12 @@ const channelAdminProcedure = channelProcedure.use(async ({ ctx, next }) => {
   const isChannelAdmin = ctx.membership?.isAdmin ?? false;
 
   if (!isChannelAdmin && !isSiteAdmin) {
-    moduleLogger.warn('User is not admin of channel', {
-      appUserId: ctx.session.appUserId,
-    });
+    moduleLogger.warn(
+      {
+        appUserId: ctx.session.appUserId,
+      },
+      'User is not admin of channel',
+    );
 
     throw new TRPCError({ code: 'FORBIDDEN' });
   }
@@ -97,9 +98,12 @@ const channelUploadProcedure = channelProcedure.use(async ({ ctx, next }) => {
     ctx.membership?.isAdmin || ctx.membership?.canUpload || false;
 
   if (!canUpload && !isSiteAdmin) {
-    moduleLogger.warn('User cannot upload to channel', {
-      appUserId: ctx.session.appUserId,
-    });
+    moduleLogger.warn(
+      {
+        appUserId: ctx.session.appUserId,
+      },
+      'User cannot upload to channel',
+    );
 
     throw new TRPCError({ code: 'FORBIDDEN' });
   }
@@ -112,9 +116,12 @@ const channelEditProcedure = channelProcedure.use(async ({ ctx, next }) => {
   const canEdit = ctx.membership?.isAdmin || ctx.membership?.canEdit || false;
 
   if (!canEdit && !isSiteAdmin) {
-    moduleLogger.warn('User cannot edit content in channel', {
-      appUserId: ctx.session.appUserId,
-    });
+    moduleLogger.warn(
+      {
+        appUserId: ctx.session.appUserId,
+      },
+      'User cannot edit content in channel',
+    );
 
     throw new TRPCError({ code: 'FORBIDDEN' });
   }
@@ -126,10 +133,15 @@ export const channelRouter = router({
   createChannel: authProcedure
     .input(createChannelSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Creating channel', {
-        appUserId: ctx.session.appUserId,
-        name: input.name,
-      });
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            name: input.name,
+          },
+        },
+        'Creating channel',
+      );
 
       try {
         const channel = await prisma.channel.create({
@@ -154,10 +166,13 @@ export const channelRouter = router({
           },
         });
 
-        moduleLogger.info('Channel created successfully', {
-          appUserId: ctx.session.appUserId,
-          channelId: channel.id,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            channelId: channel.id,
+          },
+          'Channel created successfully',
+        );
 
         // Send admin notification email
         try {
@@ -217,27 +232,42 @@ export const channelRouter = router({
             retry: { maximumAttempts: 5 },
           });
 
-          moduleLogger.info('Admin notification email workflow started', {
-            channelId: channel.id,
-            adminEmail: ADMIN_EMAIL,
-          });
+          moduleLogger.info(
+            {
+              channelId: channel.id,
+              context: {
+                adminEmail: ADMIN_EMAIL,
+              },
+            },
+            'Admin notification email workflow started',
+          );
         } catch (emailError) {
           // Log but don't fail the channel creation if email fails
-          moduleLogger.error('Failed to send admin notification email', {
-            channelId: channel.id,
-            error:
-              emailError instanceof Error
-                ? emailError.message
-                : String(emailError),
-          });
+          moduleLogger.error(
+            {
+              channelId: channel.id,
+              context: {
+                error:
+                  emailError instanceof Error
+                    ? emailError.message
+                    : String(emailError),
+              },
+            },
+            'Failed to send admin notification email',
+          );
         }
 
         return channel;
       } catch (error) {
-        moduleLogger.error('Failed to create channel', {
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to create channel',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -247,9 +277,12 @@ export const channelRouter = router({
     }),
 
   getChannels: authProcedure.query(({ ctx }) => {
-    moduleLogger.info('Fetching channels for user', {
-      appUserId: ctx.session.appUserId,
-    });
+    moduleLogger.info(
+      {
+        appUserId: ctx.session.appUserId,
+      },
+      'Fetching channels for user',
+    );
 
     return prisma.channel.findMany({
       select: {
@@ -362,10 +395,12 @@ export const channelRouter = router({
     });
 
     if (!channel) {
-      moduleLogger.warn('No channel found for user', {
-        ...input,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.warn(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'No channel found for user',
+      );
 
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
@@ -410,9 +445,7 @@ export const channelRouter = router({
     });
 
     if (!channel) {
-      moduleLogger.warn('Channel not found for editing', {
-        ...input,
-      });
+      moduleLogger.warn('Channel not found for editing');
 
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
@@ -492,9 +525,7 @@ export const channelRouter = router({
     });
 
     if (!channel) {
-      moduleLogger.warn('Channel not found for members', {
-        ...input,
-      });
+      moduleLogger.warn('Channel not found for members');
 
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
@@ -505,11 +536,16 @@ export const channelRouter = router({
   searchUsers: channelAdminProcedure
     .input(userSearchSchema)
     .query(async ({ ctx, input }) => {
-      moduleLogger.info('Searching users for channel', {
-        channelId: input.channelId,
-        query: input.query,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
+          context: {
+            query: input.query,
+          },
+        },
+        'Searching users for channel',
+      );
 
       const users = await prisma.appUser.findMany({
         select: {
@@ -534,12 +570,17 @@ export const channelRouter = router({
         take: 10,
       });
 
-      moduleLogger.info('User search completed', {
-        channelId: input.channelId,
-        query: input.query,
-        resultCount: users.length,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
+          context: {
+            query: input.query,
+            resultCount: users.length,
+          },
+        },
+        'User search completed',
+      );
 
       return users;
     }),
@@ -547,14 +588,19 @@ export const channelRouter = router({
   addChannelMember: channelAdminProcedure
     .input(addMemberSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Adding channel member', {
-        channelId: input.channelId,
-        newMemberUserId: input.userId,
-        isAdmin: input.isAdmin,
-        canEdit: input.canEdit,
-        canUpload: input.canUpload,
-        addedBy: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          channelId: input.channelId,
+          context: {
+            newMemberUserId: input.userId,
+            isAdmin: input.isAdmin,
+            canEdit: input.canEdit,
+            canUpload: input.canUpload,
+            addedBy: ctx.session.appUserId,
+          },
+        },
+        'Adding channel member',
+      );
 
       try {
         await prisma.channelMembership.create({
@@ -567,20 +613,30 @@ export const channelRouter = router({
           },
         });
 
-        moduleLogger.info('Channel member added successfully', {
-          channelId: input.channelId,
-          newMemberUserId: input.userId,
-          addedBy: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            channelId: input.channelId,
+            context: {
+              newMemberUserId: input.userId,
+              addedBy: ctx.session.appUserId,
+            },
+          },
+          'Channel member added successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to add channel member', {
-          channelId: input.channelId,
-          newMemberUserId: input.userId,
-          addedBy: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            channelId: input.channelId,
+            context: {
+              newMemberUserId: input.userId,
+              addedBy: ctx.session.appUserId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to add channel member',
+        );
         throw error;
       }
     }),
@@ -588,11 +644,16 @@ export const channelRouter = router({
   removeChannelMember: channelAdminProcedure
     .input(removeMemberSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Removing channel member', {
-        channelId: input.channelId,
-        memberToRemove: input.appUserId,
-        removedBy: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          channelId: input.channelId,
+          context: {
+            memberToRemove: input.appUserId,
+            removedBy: ctx.session.appUserId,
+          },
+        },
+        'Removing channel member',
+      );
 
       try {
         // Don't allow removing the last admin
@@ -614,11 +675,16 @@ export const channelRouter = router({
         });
 
         if (membershipToDelete?.isAdmin && adminCount <= 1) {
-          moduleLogger.warn('Cannot remove last admin from channel', {
-            channelId: input.channelId,
-            memberToRemove: input.appUserId,
-            removedBy: ctx.session.appUserId,
-          });
+          moduleLogger.warn(
+            {
+              channelId: input.channelId,
+              context: {
+                memberToRemove: input.appUserId,
+                removedBy: ctx.session.appUserId,
+              },
+            },
+            'Cannot remove last admin from channel',
+          );
           throw new TRPCError({
             code: 'BAD_REQUEST',
             message: 'Cannot remove the last admin from the channel',
@@ -628,11 +694,11 @@ export const channelRouter = router({
         // Don't allow removing yourself
         if (membershipToDelete?.appUserId === ctx.session.appUser.id) {
           moduleLogger.warn(
-            'User attempted to remove themselves from channel',
             {
               channelId: input.channelId,
               appUserId: ctx.session.appUserId,
             },
+            'User attempted to remove themselves from channel',
           );
           throw new TRPCError({
             code: 'BAD_REQUEST',
@@ -649,23 +715,33 @@ export const channelRouter = router({
           },
         });
 
-        moduleLogger.info('Channel member removed successfully', {
-          channelId: input.channelId,
-          memberRemoved: input.appUserId,
-          removedBy: ctx.session.appUserId,
-          wasAdmin: membershipToDelete?.isAdmin,
-        });
+        moduleLogger.info(
+          {
+            channelId: input.channelId,
+            context: {
+              memberRemoved: input.appUserId,
+              removedBy: ctx.session.appUserId,
+              wasAdmin: membershipToDelete?.isAdmin,
+            },
+          },
+          'Channel member removed successfully',
+        );
 
         return { success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
 
-        moduleLogger.error('Failed to remove channel member', {
-          channelId: input.channelId,
-          memberToRemove: input.appUserId,
-          removedBy: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            channelId: input.channelId,
+            context: {
+              memberToRemove: input.appUserId,
+              removedBy: ctx.session.appUserId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to remove channel member',
+        );
         throw error;
       }
     }),
@@ -698,9 +774,7 @@ export const channelRouter = router({
       });
 
       if (!channel) {
-        moduleLogger.warn('Channel not found for uploads', {
-          ...input,
-        });
+        moduleLogger.warn('Channel not found for uploads');
 
         throw new TRPCError({ code: 'NOT_FOUND' });
       }
@@ -966,9 +1040,7 @@ export const channelRouter = router({
       });
 
       if (!upload) {
-        moduleLogger.warn('Upload not found', {
-          ...input,
-        });
+        moduleLogger.warn('Upload not found');
 
         throw new TRPCError({
           code: 'NOT_FOUND',
@@ -1138,10 +1210,13 @@ export const channelRouter = router({
 
   // Playlist procedures
   getChannelPlaylists: channelProcedure.query(async ({ ctx, input }) => {
-    moduleLogger.info('Fetching channel playlists', {
-      channelId: input.channelId,
-      appUserId: ctx.session.appUserId,
-    });
+    moduleLogger.info(
+      {
+        channelId: input.channelId,
+        appUserId: ctx.session.appUserId,
+      },
+      'Fetching channel playlists',
+    );
 
     const playlists = await prisma.uploadList.findMany({
       select: {
@@ -1168,11 +1243,16 @@ export const channelRouter = router({
   getPlaylistDetails: channelProcedure
     .input(playlistQuerySchema)
     .query(async ({ ctx, input }) => {
-      moduleLogger.info('Fetching playlist details', {
-        playlistId: input.playlistId,
-        channelId: input.channelId,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
+          context: {
+            playlistId: input.playlistId,
+          },
+        },
+        'Fetching playlist details',
+      );
 
       const playlist = await prisma.uploadList.findFirst({
         select: {
@@ -1207,11 +1287,16 @@ export const channelRouter = router({
       });
 
       if (!playlist) {
-        moduleLogger.warn('Playlist not found', {
-          playlistId: input.playlistId,
-          channelId: input.channelId,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.warn(
+          {
+            channelId: input.channelId,
+            appUserId: ctx.session.appUserId,
+            context: {
+              playlistId: input.playlistId,
+            },
+          },
+          'Playlist not found',
+        );
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Playlist not found',
@@ -1224,12 +1309,17 @@ export const channelRouter = router({
   createPlaylist: channelEditProcedure
     .input(createPlaylistSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Creating playlist', {
-        channelId: input.channelId,
-        playlistTitle: input.title,
-        playlistType: input.type,
-        createdBy: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          channelId: input.channelId,
+          context: {
+            playlistTitle: input.title,
+            playlistType: input.type,
+            createdBy: ctx.session.appUserId,
+          },
+        },
+        'Creating playlist',
+      );
 
       try {
         const playlist = await prisma.uploadList.create({
@@ -1247,21 +1337,31 @@ export const channelRouter = router({
           },
         });
 
-        moduleLogger.info('Playlist created successfully', {
-          playlistId: playlist.id,
-          channelId: input.channelId,
-          playlistTitle: input.title,
-          createdBy: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            channelId: input.channelId,
+            context: {
+              playlistId: playlist.id,
+              playlistTitle: input.title,
+              createdBy: ctx.session.appUserId,
+            },
+          },
+          'Playlist created successfully',
+        );
 
         return { success: true, playlist };
       } catch (error) {
-        moduleLogger.error('Failed to create playlist', {
-          channelId: input.channelId,
-          playlistTitle: input.title,
-          createdBy: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            channelId: input.channelId,
+            context: {
+              playlistTitle: input.title,
+              createdBy: ctx.session.appUserId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to create playlist',
+        );
         throw error;
       }
     }),
@@ -1269,12 +1369,17 @@ export const channelRouter = router({
   updatePlaylist: channelEditProcedure
     .input(updatePlaylistSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Updating playlist', {
-        playlistId: input.playlistId,
-        playlistTitle: input.title,
-        playlistType: input.type,
-        updatedBy: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            playlistId: input.playlistId,
+            playlistTitle: input.title,
+            playlistType: input.type,
+            updatedBy: ctx.session.appUserId,
+          },
+        },
+        'Updating playlist',
+      );
 
       try {
         const updatedPlaylist = await prisma.uploadList.update({
@@ -1291,20 +1396,30 @@ export const channelRouter = router({
           },
         });
 
-        moduleLogger.info('Playlist updated successfully', {
-          playlistId: input.playlistId,
-          playlistTitle: input.title,
-          updatedBy: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            context: {
+              playlistId: input.playlistId,
+              playlistTitle: input.title,
+              updatedBy: ctx.session.appUserId,
+            },
+          },
+          'Playlist updated successfully',
+        );
 
         return { success: true, playlist: updatedPlaylist };
       } catch (error) {
-        moduleLogger.error('Failed to update playlist', {
-          playlistId: input.playlistId,
-          playlistTitle: input.title,
-          updatedBy: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            context: {
+              playlistId: input.playlistId,
+              playlistTitle: input.title,
+              updatedBy: ctx.session.appUserId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to update playlist',
+        );
         throw error;
       }
     }),
@@ -1312,28 +1427,43 @@ export const channelRouter = router({
   deletePlaylist: channelEditProcedure
     .input(deletePlaylistSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Deleting playlist', {
-        playlistId: input.playlistId,
-        deletedBy: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            playlistId: input.playlistId,
+            deletedBy: ctx.session.appUserId,
+          },
+        },
+        'Deleting playlist',
+      );
 
       try {
         await prisma.uploadList.delete({
           where: { id: input.playlistId },
         });
 
-        moduleLogger.info('Playlist deleted successfully', {
-          playlistId: input.playlistId,
-          deletedBy: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            context: {
+              playlistId: input.playlistId,
+              deletedBy: ctx.session.appUserId,
+            },
+          },
+          'Playlist deleted successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to delete playlist', {
-          playlistId: input.playlistId,
-          deletedBy: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            context: {
+              playlistId: input.playlistId,
+              deletedBy: ctx.session.appUserId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to delete playlist',
+        );
         throw error;
       }
     }),
@@ -1341,11 +1471,16 @@ export const channelRouter = router({
   addToPlaylist: channelEditProcedure
     .input(addToPlaylistSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Adding upload to playlist', {
-        playlistId: input.playlistId,
-        uploadId: input.uploadId,
-        addedBy: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          uploadId: input.uploadId,
+          context: {
+            playlistId: input.playlistId,
+            addedBy: ctx.session.appUserId,
+          },
+        },
+        'Adding upload to playlist',
+      );
 
       try {
         // Get the playlist to verify it exists and get its channelId
@@ -1355,11 +1490,16 @@ export const channelRouter = router({
         });
 
         if (!playlist?.channelId) {
-          moduleLogger.warn('Playlist not found for add to playlist', {
-            playlistId: input.playlistId,
-            uploadId: input.uploadId,
-            addedBy: ctx.session.appUserId,
-          });
+          moduleLogger.warn(
+            {
+              uploadId: input.uploadId,
+              context: {
+                playlistId: input.playlistId,
+                addedBy: ctx.session.appUserId,
+              },
+            },
+            'Playlist not found for add to playlist',
+          );
           throw new TRPCError({
             code: 'NOT_FOUND',
             message: 'Playlist not found',
@@ -1376,12 +1516,17 @@ export const channelRouter = router({
         });
 
         if (!upload) {
-          moduleLogger.warn('Upload not found or channel mismatch', {
-            playlistId: input.playlistId,
-            uploadId: input.uploadId,
-            channelId: playlist.channelId,
-            addedBy: ctx.session.appUserId,
-          });
+          moduleLogger.warn(
+            {
+              uploadId: input.uploadId,
+              channelId: playlist.channelId,
+              context: {
+                playlistId: input.playlistId,
+                addedBy: ctx.session.appUserId,
+              },
+            },
+            'Upload not found or channel mismatch',
+          );
           throw new TRPCError({
             code: 'NOT_FOUND',
             message: 'Upload not found or does not belong to this channel',
@@ -1399,11 +1544,16 @@ export const channelRouter = router({
         });
 
         if (existingEntry) {
-          moduleLogger.warn('Upload already in playlist', {
-            playlistId: input.playlistId,
-            uploadId: input.uploadId,
-            addedBy: ctx.session.appUserId,
-          });
+          moduleLogger.warn(
+            {
+              uploadId: input.uploadId,
+              context: {
+                playlistId: input.playlistId,
+                addedBy: ctx.session.appUserId,
+              },
+            },
+            'Upload already in playlist',
+          );
           throw new TRPCError({
             code: 'BAD_REQUEST',
             message: 'Upload is already in this playlist',
@@ -1417,22 +1567,32 @@ export const channelRouter = router({
           },
         });
 
-        moduleLogger.info('Upload added to playlist successfully', {
-          playlistId: input.playlistId,
-          uploadId: input.uploadId,
-          addedBy: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            uploadId: input.uploadId,
+            context: {
+              playlistId: input.playlistId,
+              addedBy: ctx.session.appUserId,
+            },
+          },
+          'Upload added to playlist successfully',
+        );
 
         return { success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
 
-        moduleLogger.error('Failed to add upload to playlist', {
-          playlistId: input.playlistId,
-          uploadId: input.uploadId,
-          addedBy: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            uploadId: input.uploadId,
+            context: {
+              playlistId: input.playlistId,
+              addedBy: ctx.session.appUserId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to add upload to playlist',
+        );
         throw error;
       }
     }),
@@ -1440,11 +1600,16 @@ export const channelRouter = router({
   removeFromPlaylist: channelEditProcedure
     .input(removeFromPlaylistSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Removing upload from playlist', {
-        playlistId: input.playlistId,
-        uploadId: input.uploadId,
-        removedBy: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          uploadId: input.uploadId,
+          context: {
+            playlistId: input.playlistId,
+            removedBy: ctx.session.appUserId,
+          },
+        },
+        'Removing upload from playlist',
+      );
 
       try {
         const deletedEntry = await prisma.uploadListEntry.deleteMany({
@@ -1455,33 +1620,48 @@ export const channelRouter = router({
         });
 
         if (deletedEntry.count === 0) {
-          moduleLogger.warn('Upload not found in playlist for removal', {
-            playlistId: input.playlistId,
-            uploadId: input.uploadId,
-            removedBy: ctx.session.appUserId,
-          });
+          moduleLogger.warn(
+            {
+              uploadId: input.uploadId,
+              context: {
+                playlistId: input.playlistId,
+                removedBy: ctx.session.appUserId,
+              },
+            },
+            'Upload not found in playlist for removal',
+          );
           throw new TRPCError({
             code: 'NOT_FOUND',
             message: 'Upload not found in playlist',
           });
         }
 
-        moduleLogger.info('Upload removed from playlist successfully', {
-          playlistId: input.playlistId,
-          uploadId: input.uploadId,
-          removedBy: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            uploadId: input.uploadId,
+            context: {
+              playlistId: input.playlistId,
+              removedBy: ctx.session.appUserId,
+            },
+          },
+          'Upload removed from playlist successfully',
+        );
 
         return { success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
 
-        moduleLogger.error('Failed to remove upload from playlist', {
-          playlistId: input.playlistId,
-          uploadId: input.uploadId,
-          removedBy: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            uploadId: input.uploadId,
+            context: {
+              playlistId: input.playlistId,
+              removedBy: ctx.session.appUserId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to remove upload from playlist',
+        );
         throw error;
       }
     }),
@@ -1489,11 +1669,16 @@ export const channelRouter = router({
   reorderPlaylist: channelEditProcedure
     .input(reorderPlaylistSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Reordering playlist', {
-        playlistId: input.playlistId,
-        uploadCount: input.uploadIds.length,
-        reorderedBy: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            playlistId: input.playlistId,
+            uploadCount: input.uploadIds.length,
+            reorderedBy: ctx.session.appUserId,
+          },
+        },
+        'Reordering playlist',
+      );
 
       try {
         await prisma.$transaction(
@@ -1512,20 +1697,30 @@ export const channelRouter = router({
           ),
         );
 
-        moduleLogger.info('Playlist reordered successfully', {
-          playlistId: input.playlistId,
-          uploadCount: input.uploadIds.length,
-          reorderedBy: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            context: {
+              playlistId: input.playlistId,
+              uploadCount: input.uploadIds.length,
+              reorderedBy: ctx.session.appUserId,
+            },
+          },
+          'Playlist reordered successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to reorder playlist', {
-          playlistId: input.playlistId,
-          uploadCount: input.uploadIds.length,
-          reorderedBy: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            context: {
+              playlistId: input.playlistId,
+              uploadCount: input.uploadIds.length,
+              reorderedBy: ctx.session.appUserId,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to reorder playlist',
+        );
         throw error;
       }
     }),
@@ -1535,19 +1730,27 @@ export const channelRouter = router({
     .use(async ({ ctx, next }) => {
       // Only site admins can approve channels
       if (ctx.session.appUser.role !== 'ADMIN') {
-        moduleLogger.warn('Non-admin user attempted to approve channel', {
-          appUserId: ctx.session.appUserId,
-          role: ctx.session.appUser.role,
-        });
+        moduleLogger.warn(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              role: ctx.session.appUser.role,
+            },
+          },
+          'Non-admin user attempted to approve channel',
+        );
         throw new TRPCError({ code: 'FORBIDDEN' });
       }
       return next();
     })
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Approving channel', {
-        channelId: input.channelId,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
+        },
+        'Approving channel',
+      );
 
       try {
         await prisma.channel.update({
@@ -1560,18 +1763,26 @@ export const channelRouter = router({
           },
         });
 
-        moduleLogger.info('Channel approved successfully', {
-          channelId: input.channelId,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            channelId: input.channelId,
+            appUserId: ctx.session.appUserId,
+          },
+          'Channel approved successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to approve channel', {
-          channelId: input.channelId,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            channelId: input.channelId,
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to approve channel',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1585,19 +1796,27 @@ export const channelRouter = router({
     .use(async ({ ctx, next }) => {
       // Only site admins can unapprove channels
       if (ctx.session.appUser.role !== 'ADMIN') {
-        moduleLogger.warn('Non-admin user attempted to unapprove channel', {
-          appUserId: ctx.session.appUserId,
-          role: ctx.session.appUser.role,
-        });
+        moduleLogger.warn(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              role: ctx.session.appUser.role,
+            },
+          },
+          'Non-admin user attempted to unapprove channel',
+        );
         throw new TRPCError({ code: 'FORBIDDEN' });
       }
       return next();
     })
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Unapproving channel', {
-        channelId: input.channelId,
-        appUserId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
+        },
+        'Unapproving channel',
+      );
 
       try {
         await prisma.channel.update({
@@ -1610,18 +1829,26 @@ export const channelRouter = router({
           },
         });
 
-        moduleLogger.info('Channel unapproved successfully', {
-          channelId: input.channelId,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            channelId: input.channelId,
+            appUserId: ctx.session.appUserId,
+          },
+          'Channel unapproved successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to unapprove channel', {
-          channelId: input.channelId,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            channelId: input.channelId,
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to unapprove channel',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1657,20 +1884,26 @@ export const channelRouter = router({
           ...workflowData,
         });
 
-        moduleLogger.info('Import workflow started', {
-          url,
-          channelId,
-          appUserId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+          },
+          'Import workflow started',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to start import workflow', {
-          url: input.url,
-          channelId: input.channelId,
-          appUserId: ctx.session.appUserId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            channelId: input.channelId,
+            appUserId: ctx.session.appUserId,
+            context: {
+              url: input.url,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to start import workflow',
+        );
 
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',

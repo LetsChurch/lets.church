@@ -17,10 +17,10 @@ import {
   UploadPartCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import type { Logger } from '@letschurch/util';
 import { invariant, noop } from 'es-toolkit';
 import pMap from 'p-map';
 import pRetry from 'p-retry';
-import type { Logger } from 'pino';
 import sanitizeFilename from 'sanitize-filename';
 import type { MergeExclusive } from 'type-fest';
 import { v4 as uuid } from 'uuid';
@@ -184,7 +184,9 @@ export class LcS3Client {
         Key: key,
       });
     } catch (e) {
-      this.logger?.error(e);
+      this.logger?.error({
+        err: e instanceof Error ? e : new Error(String(e)),
+      });
       return null;
     }
   }

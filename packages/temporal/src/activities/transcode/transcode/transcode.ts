@@ -69,8 +69,10 @@ export default async function transcode(
 ) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'transcode',
-    args: {
-      s3UploadKey,
+    context: {
+      args: {
+        s3UploadKey,
+      },
     },
   });
 
@@ -319,12 +321,17 @@ export default async function transcode(
   } catch (e) {
     activityLogger
       .child({
-        meta: JSON.stringify({
-          stdout: stdout.join(''),
-          stderr: stderr.join(''),
-        }),
+        context: {
+          meta: JSON.stringify({
+            stdout: stdout.join(''),
+            stderr: stderr.join(''),
+          }),
+        },
       })
-      .error(e instanceof Error ? e.message : e);
+      .error(
+        { err: e instanceof Error ? e : new Error(String(e)) },
+        'Failed to transcode',
+      );
     await updateUploadRecord(uploadRecordId, {
       transcodingStartedAt: null,
       transcodingFinishedAt: null,

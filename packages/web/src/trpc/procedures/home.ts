@@ -37,9 +37,10 @@ const inProgressUploadsQuerySchema = z.object({
 
 export const homeProcedures = {
   getFollowedChannels: authProcedure.query(async ({ ctx }) => {
-    moduleLogger.info('Fetching followed channels', {
-      appUserId: ctx.session.appUserId,
-    });
+    moduleLogger.info(
+      { appUserId: ctx.session.appUserId },
+      'Fetching followed channels',
+    );
 
     const subscriptions = await prisma.channelSubscription.findMany({
       select: {
@@ -81,10 +82,10 @@ export const homeProcedures = {
   getSubscriptionUploads: authProcedure
     .input(homeUploadsQuerySchema)
     .query(async ({ ctx, input }) => {
-      moduleLogger.info('Fetching subscription uploads', {
-        appUserId: ctx.session.appUserId,
-        limit: input.limit,
-      });
+      moduleLogger.info(
+        { appUserId: ctx.session.appUserId, context: { limit: input.limit } },
+        'Fetching subscription uploads',
+      );
 
       const uploads = await prisma.uploadRecord.findMany({
         select: {
@@ -178,10 +179,10 @@ export const homeProcedures = {
   getTrendingUploads: publicProcedure
     .input(homeUploadsQuerySchema)
     .query(async ({ input }) => {
-      moduleLogger.info('Fetching trending uploads', {
-        limit: input.limit,
-        cursor: input.cursor,
-      });
+      moduleLogger.info(
+        { context: { limit: input.limit, cursor: input.cursor } },
+        'Fetching trending uploads',
+      );
 
       const uploads = await prisma.uploadRecord.findMany({
         select: {
@@ -283,10 +284,10 @@ export const homeProcedures = {
     .query(async ({ ctx, input }) => {
       const appUserId = ctx.session?.appUserId;
 
-      moduleLogger.info('Fetching suggested channels', {
-        appUserId,
-        limit: input.limit,
-      });
+      moduleLogger.info(
+        { appUserId, context: { limit: input.limit } },
+        'Fetching suggested channels',
+      );
 
       const channels = await prisma.channel.findMany({
         select: {
@@ -342,10 +343,10 @@ export const homeProcedures = {
   followChannel: authProcedure
     .input(followChannelSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Following channel', {
-        appUserId: ctx.session.appUserId,
-        channelId: input.channelId,
-      });
+      moduleLogger.info(
+        { appUserId: ctx.session.appUserId, channelId: input.channelId },
+        'Following channel',
+      );
 
       try {
         await prisma.channelSubscription.create({
@@ -355,18 +356,23 @@ export const homeProcedures = {
           },
         });
 
-        moduleLogger.info('Channel followed successfully', {
-          appUserId: ctx.session.appUserId,
-          channelId: input.channelId,
-        });
+        moduleLogger.info(
+          { appUserId: ctx.session.appUserId, channelId: input.channelId },
+          'Channel followed successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to follow channel', {
-          appUserId: ctx.session.appUserId,
-          channelId: input.channelId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            channelId: input.channelId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to follow channel',
+        );
 
         throw new Error('Failed to follow channel');
       }
@@ -375,10 +381,10 @@ export const homeProcedures = {
   unfollowChannel: authProcedure
     .input(unfollowChannelSchema)
     .mutation(async ({ ctx, input }) => {
-      moduleLogger.info('Unfollowing channel', {
-        appUserId: ctx.session.appUserId,
-        channelId: input.channelId,
-      });
+      moduleLogger.info(
+        { appUserId: ctx.session.appUserId, channelId: input.channelId },
+        'Unfollowing channel',
+      );
 
       try {
         await prisma.channelSubscription.delete({
@@ -390,18 +396,23 @@ export const homeProcedures = {
           },
         });
 
-        moduleLogger.info('Channel unfollowed successfully', {
-          appUserId: ctx.session.appUserId,
-          channelId: input.channelId,
-        });
+        moduleLogger.info(
+          { appUserId: ctx.session.appUserId, channelId: input.channelId },
+          'Channel unfollowed successfully',
+        );
 
         return { success: true };
       } catch (error) {
-        moduleLogger.error('Failed to unfollow channel', {
-          appUserId: ctx.session.appUserId,
-          channelId: input.channelId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            channelId: input.channelId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to unfollow channel',
+        );
 
         throw new Error('Failed to unfollow channel');
       }
@@ -410,10 +421,10 @@ export const homeProcedures = {
   getInProgressUploads: authProcedure
     .input(inProgressUploadsQuerySchema)
     .query(async ({ ctx, input }) => {
-      moduleLogger.info('Fetching in-progress uploads', {
-        appUserId: ctx.session.appUserId,
-        limit: input.limit,
-      });
+      moduleLogger.info(
+        { appUserId: ctx.session.appUserId, context: { limit: input.limit } },
+        'Fetching in-progress uploads',
+      );
 
       // Get user's upload views with their most recent viewed seconds
       const views = await prisma.uploadView.findMany({

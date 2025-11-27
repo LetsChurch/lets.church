@@ -81,7 +81,10 @@ async function downloadSubsplashThumbnail(
 
     return null;
   } catch (e) {
-    log.error('Error downloading thumbnail', e);
+    log.error(
+      { err: e instanceof Error ? e : new Error(String(e)) },
+      'Error downloading thumbnail',
+    );
     return null;
   } finally {
     await browser.close();

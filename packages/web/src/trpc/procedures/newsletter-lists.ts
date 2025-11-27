@@ -18,10 +18,15 @@ const { LISTMONK_INTERNAL_URL, LISTMONK_API_USER, LISTMONK_API_TOKEN } = z
 
 const adminProcedure = authProcedure.use(async ({ ctx, next }) => {
   if (ctx.session.appUser.role !== 'ADMIN') {
-    moduleLogger.warn('Non-admin user attempted admin action', {
-      appUserId: ctx.session.appUserId,
-      role: ctx.session.appUser.role,
-    });
+    moduleLogger.warn(
+      {
+        appUserId: ctx.session.appUserId,
+        context: {
+          role: ctx.session.appUser.role,
+        },
+      },
+      'Non-admin user attempted admin action',
+    );
 
     throw new TRPCError({ code: 'FORBIDDEN' });
   }
@@ -77,10 +82,15 @@ export const newsletterListsRouter = router({
       });
 
       if (!response.ok) {
-        moduleLogger.error('Failed to fetch lists from Listmonk', {
-          status: response.status,
-          statusText: response.statusText,
-        });
+        moduleLogger.error(
+          {
+            context: {
+              status: response.status,
+              statusText: response.statusText,
+            },
+          },
+          'Failed to fetch lists from Listmonk',
+        );
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to fetch lists from Listmonk',
@@ -89,13 +99,18 @@ export const newsletterListsRouter = router({
 
       const data = (await response.json()) as ListmonkApiResponse;
 
-      moduleLogger.info('Successfully fetched lists from Listmonk', {
-        count: data.data.results.length,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            count: data.data.results.length,
+          },
+        },
+        'Successfully fetched lists from Listmonk',
+      );
 
       return data.data.results;
-    } catch (error) {
-      moduleLogger.error('Error fetching lists from Listmonk', { error });
+    } catch (_error) {
+      moduleLogger.error('Error fetching lists from Listmonk');
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to fetch lists from Listmonk',
@@ -112,9 +127,14 @@ export const newsletterListsRouter = router({
       },
     });
 
-    moduleLogger.info('Successfully fetched configured lists', {
-      count: lists.length,
-    });
+    moduleLogger.info(
+      {
+        context: {
+          count: lists.length,
+        },
+      },
+      'Successfully fetched configured lists',
+    );
 
     return lists;
   }),
@@ -144,10 +164,15 @@ export const newsletterListsRouter = router({
       });
 
       if (!response.ok) {
-        moduleLogger.error('Failed to fetch lists from Listmonk', {
-          status: response.status,
-          statusText: response.statusText,
-        });
+        moduleLogger.error(
+          {
+            context: {
+              status: response.status,
+              statusText: response.statusText,
+            },
+          },
+          'Failed to fetch lists from Listmonk',
+        );
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to fetch lists from Listmonk',
@@ -178,16 +203,21 @@ export const newsletterListsRouter = router({
         ),
       );
 
-      moduleLogger.info('Successfully synced lists from Listmonk', {
-        count: syncedLists.length,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            count: syncedLists.length,
+          },
+        },
+        'Successfully synced lists from Listmonk',
+      );
 
       return {
         syncedCount: syncedLists.length,
         lists: syncedLists,
       };
-    } catch (error) {
-      moduleLogger.error('Error syncing lists from Listmonk', { error });
+    } catch (_error) {
+      moduleLogger.error('Error syncing lists from Listmonk');
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to sync lists from Listmonk',
@@ -206,7 +236,7 @@ export const newsletterListsRouter = router({
       }),
     )
     .mutation(async ({ input }) => {
-      moduleLogger.info('Updating list configuration', { input });
+      moduleLogger.info('Updating list configuration');
 
       const updated = await prisma.newsletterMailingList.update({
         where: { listmonkUuid: input.listmonkUuid },
@@ -220,9 +250,14 @@ export const newsletterListsRouter = router({
         },
       });
 
-      moduleLogger.info('Successfully updated list configuration', {
-        listmonkUuid: input.listmonkUuid,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            listmonkUuid: input.listmonkUuid,
+          },
+        },
+        'Successfully updated list configuration',
+      );
 
       return updated;
     }),

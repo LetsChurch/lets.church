@@ -47,7 +47,7 @@ export async function deleteUploadRecordGlacierBackups(
         deletedCount += 1;
       } catch (error) {
         activityLogger.error(
-          error,
+          { err: error instanceof Error ? error : new Error(String(error)) },
           `Failed to delete backup object ${uploadState.backupKey}`,
         );
         // Continue with other deletions even if one fails
@@ -77,7 +77,7 @@ export async function deleteGlacierBackupsByPrefix(
 ): Promise<number> {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'deleteGlacierBackupsByPrefix',
-    prefix,
+    context: { prefix },
   });
 
   activityLogger.info(`Deleting backups with prefix ${prefix}`);
@@ -110,7 +110,7 @@ export async function deleteUploadStateAndBackup(
 ): Promise<boolean> {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'deleteUploadStateAndBackup',
-    uploadStateId,
+    context: { uploadStateId },
   });
 
   const uploadState = await prisma.uploadState.findUnique({
@@ -129,7 +129,7 @@ export async function deleteUploadStateAndBackup(
       activityLogger.info(`Deleted backup object ${uploadState.backupKey}`);
     } catch (error) {
       activityLogger.error(
-        error,
+        { err: error instanceof Error ? error : new Error(String(error)) },
         `Failed to delete backup object ${uploadState.backupKey}`,
       );
       throw error;

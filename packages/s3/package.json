@@ -18,6 +18,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "3.777.0",
     "@aws-sdk/s3-request-presigner": "3.777.0",
+    "@letschurch/util": "workspace:*",
     "es-toolkit": "catalog:",
     "p-map": "catalog:",
     "p-retry": "catalog:",

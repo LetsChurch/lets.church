@@ -18,15 +18,17 @@ export const router = t.router;
 const loggingMiddleware = t.middleware(
   async ({ path, type, next, ctx, input }) => {
     const start = Date.now();
-    const userId = ctx.session?.appUserId;
+    const appUserId = ctx.session?.appUserId;
 
     // Log procedure start
     moduleLogger.info(
       {
-        procedure: path,
-        type,
-        userId,
-        input,
+        appUserId,
+        context: {
+          procedure: path,
+          type,
+          input,
+        },
       },
       `tRPC ${type}: ${path}`,
     );
@@ -38,11 +40,13 @@ const loggingMiddleware = t.middleware(
       // Log successful completion
       moduleLogger.info(
         {
-          procedure: path,
-          type,
-          userId,
-          durationMs,
-          success: true,
+          appUserId,
+          context: {
+            procedure: path,
+            type,
+            durationMs,
+            success: true,
+          },
         },
         `tRPC ${type} completed: ${path}`,
       );
@@ -56,14 +60,15 @@ const loggingMiddleware = t.middleware(
       // Log error
       moduleLogger.error(
         {
-          procedure: path,
-          type,
-          userId,
-          durationMs,
-          error: errorObj.message,
-          stack: errorObj.stack,
-          errorName: errorObj.name,
-          input,
+          appUserId,
+          err: errorObj,
+          context: {
+            procedure: path,
+            type,
+            durationMs,
+            errorName: errorObj.name,
+            input,
+          },
         },
         `tRPC ${type} error: ${path}`,
       );

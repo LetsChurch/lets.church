@@ -78,10 +78,15 @@ export const accountProcedures = {
   updateProfile: authProcedure
     .input(profileUpdateSchema)
     .mutation(async ({ ctx, input }): Promise<ProfileUpdateResponse> => {
-      moduleLogger.info('Profile update attempt', {
-        userId: ctx.session.appUserId,
-        username: input.username,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            userId: ctx.session.appUserId,
+            username: input.username,
+          },
+        },
+        'Profile update attempt',
+      );
 
       try {
         const existingUser = await prisma.appUser.findFirst({
@@ -92,10 +97,15 @@ export const accountProcedures = {
         });
 
         if (existingUser) {
-          moduleLogger.warn('Profile update failed - username taken', {
-            userId: ctx.session.appUserId,
-            username: input.username,
-          });
+          moduleLogger.warn(
+            {
+              context: {
+                userId: ctx.session.appUserId,
+                username: input.username,
+              },
+            },
+            'Profile update failed - username taken',
+          );
           return { error: 'Username is already taken' };
         }
 
@@ -107,10 +117,15 @@ export const accountProcedures = {
         });
 
         if (existingEmail) {
-          moduleLogger.warn('Profile update failed - email taken', {
-            userId: ctx.session.appUserId,
-            email: input.email,
-          });
+          moduleLogger.warn(
+            {
+              context: {
+                userId: ctx.session.appUserId,
+                email: input.email,
+              },
+            },
+            'Profile update failed - email taken',
+          );
           return { error: 'Email is already taken' };
         }
 
@@ -148,18 +163,28 @@ export const accountProcedures = {
           }
         });
 
-        moduleLogger.info('Profile update successful', {
-          userId: ctx.session.appUserId,
-          username: input.username,
-        });
+        moduleLogger.info(
+          {
+            context: {
+              userId: ctx.session.appUserId,
+              username: input.username,
+            },
+          },
+          'Profile update successful',
+        );
 
         return { error: false };
       } catch (e) {
-        moduleLogger.error('Profile update failed - database error', {
-          userId: ctx.session.appUserId,
-          username: input.username,
-          error: e instanceof Error ? e.message : String(e),
-        });
+        moduleLogger.error(
+          {
+            context: {
+              userId: ctx.session.appUserId,
+              username: input.username,
+              error: e instanceof Error ? e.message : String(e),
+            },
+          },
+          'Profile update failed - database error',
+        );
         return { error: 'Error updating profile, please try again!' };
       }
     }),
@@ -167,17 +192,27 @@ export const accountProcedures = {
   changePassword: authProcedure
     .input(passwordChangeSchema)
     .mutation(async ({ ctx, input }): Promise<PasswordChangeResponse> => {
-      moduleLogger.info('Password change attempt', {
-        userId: ctx.session.appUserId,
-      });
+      moduleLogger.info(
+        {
+          context: {
+            userId: ctx.session.appUserId,
+          },
+        },
+        'Password change attempt',
+      );
 
       const passwordTest = testPassword(input.newPassword);
 
       if (passwordTest) {
-        moduleLogger.warn('Password change failed - weak password', {
-          userId: ctx.session.appUserId,
-          passwordError: passwordTest,
-        });
+        moduleLogger.warn(
+          {
+            context: {
+              userId: ctx.session.appUserId,
+              passwordError: passwordTest,
+            },
+          },
+          'Password change failed - weak password',
+        );
         return { error: passwordTest };
       }
 
@@ -191,9 +226,14 @@ export const accountProcedures = {
         });
 
         if (!user) {
-          moduleLogger.error('Password change failed - user not found', {
-            userId: ctx.session.appUserId,
-          });
+          moduleLogger.error(
+            {
+              context: {
+                userId: ctx.session.appUserId,
+              },
+            },
+            'Password change failed - user not found',
+          );
           throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
         }
 
@@ -204,10 +244,10 @@ export const accountProcedures = {
 
         if (!isCurrentPasswordValid) {
           moduleLogger.warn(
-            'Password change failed - invalid current password',
             {
-              userId: ctx.session.appUserId,
+              appUserId: ctx.session.appUserId,
             },
+            'Password change failed - invalid current password',
           );
           return { error: 'Current password is incorrect' };
         }
@@ -221,16 +261,26 @@ export const accountProcedures = {
           data: { password: newHash },
         });
 
-        moduleLogger.info('Password change successful', {
-          userId: ctx.session.appUserId,
-        });
+        moduleLogger.info(
+          {
+            context: {
+              userId: ctx.session.appUserId,
+            },
+          },
+          'Password change successful',
+        );
 
         return { error: false };
       } catch (e) {
-        moduleLogger.error('Password change failed - database error', {
-          userId: ctx.session.appUserId,
-          error: e instanceof Error ? e.message : String(e),
-        });
+        moduleLogger.error(
+          {
+            context: {
+              userId: ctx.session.appUserId,
+              error: e instanceof Error ? e.message : String(e),
+            },
+          },
+          'Password change failed - database error',
+        );
         return { error: 'Error changing password, please try again!' };
       }
     }),

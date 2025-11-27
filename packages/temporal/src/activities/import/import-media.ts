@@ -25,11 +25,13 @@ export default async function importMedia(
 ) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'importMedia',
-    args: {
-      url,
-      channelSlug: data.channel?.connect?.slug,
+    context: {
+      args: {
+        url,
+        channelSlug: data.channel?.connect?.slug,
+      },
+      meta: JSON.stringify({ data }),
     },
-    meta: JSON.stringify({ data }),
   });
 
   const heartbeat = (arg?: string) => Context.current().heartbeat(arg);
@@ -79,7 +81,10 @@ export default async function importMedia(
       uploadFinalizedAt: new Date(),
     });
   } catch (e) {
-    activityLogger.error(e instanceof Error ? e.message : e);
+    activityLogger.error(
+      { err: e instanceof Error ? e : new Error(String(e)) },
+      'Failed to import media',
+    );
     throw e;
   } finally {
     await rimraf(dir);

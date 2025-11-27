@@ -27,17 +27,24 @@ export default async function transcribe(
 ) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'transcribe',
-    args: {
-      uploadRecordId,
-      s3UploadKey,
+    context: {
+      args: {
+        uploadRecordId,
+        s3UploadKey,
+      },
     },
   });
 
-  activityLogger.info('Transcription activity started', {
-    uploadRecordId,
-    s3UploadKey,
-    workingDir: WORK_DIR,
-  });
+  activityLogger.info(
+    {
+      uploadId: uploadRecordId,
+      s3UploadKey,
+      context: {
+        workingDir: WORK_DIR,
+      },
+    },
+    'Transcription activity started',
+  );
 
   Context.current().heartbeat('job start');
   const signal = Context.current().cancellationSignal;
@@ -51,11 +58,16 @@ export default async function transcribe(
     await mkdirp(workingDir);
     const downloadPath = join(workingDir, 'download');
 
-    activityLogger.info('Starting download from S3', {
-      bucket: 'ingest',
-      key: s3UploadKey,
-      destination: downloadPath,
-    });
+    activityLogger.info(
+      {
+        context: {
+          bucket: 'ingest',
+          key: s3UploadKey,
+          destination: downloadPath,
+        },
+      },
+      'Starting download from S3',
+    );
 
     const downloadStart = Date.now();
     await ingestS3.streamObjectToFile(
@@ -67,22 +79,32 @@ export default async function transcribe(
     const downloadedSize = (await stat(downloadPath)).size;
     const downloadDuration = Date.now() - downloadStart;
 
-    activityLogger.info('Download complete', {
-      sizeBytes: downloadedSize,
-      sizeMB: (downloadedSize / 1024 / 1024).toFixed(2),
-      durationMs: downloadDuration,
-      speedMBps: (
-        downloadedSize /
-        1024 /
-        1024 /
-        (downloadDuration / 1000)
-      ).toFixed(2),
-    });
+    activityLogger.info(
+      {
+        context: {
+          sizeBytes: downloadedSize,
+          sizeMB: (downloadedSize / 1024 / 1024).toFixed(2),
+          durationMs: downloadDuration,
+          speedMBps: (
+            downloadedSize /
+            1024 /
+            1024 /
+            (downloadDuration / 1000)
+          ).toFixed(2),
+        },
+      },
+      'Download complete',
+    );
 
-    activityLogger.info('Starting Whisper transcription', {
-      audioPath: downloadPath,
-      audioSizeMB: (downloadedSize / 1024 / 1024).toFixed(2),
-    });
+    activityLogger.info(
+      {
+        context: {
+          audioPath: downloadPath,
+          audioSizeMB: (downloadedSize / 1024 / 1024).toFixed(2),
+        },
+      },
+      'Starting Whisper transcription',
+    );
 
     const whisperStart = Date.now();
     const outputFiles = await runWhisper(workingDir, downloadPath, signal, () =>
@@ -90,18 +112,28 @@ export default async function transcribe(
     );
     const whisperDuration = Date.now() - whisperStart;
 
-    activityLogger.info('Whisper transcription complete', {
-      durationMs: whisperDuration,
-      durationMinutes: (whisperDuration / 1000 / 60).toFixed(2),
-      outputFiles: outputFiles.map((f) => extname(f)),
-      outputFileCount: outputFiles.length,
-    });
+    activityLogger.info(
+      {
+        context: {
+          durationMs: whisperDuration,
+          durationMinutes: (whisperDuration / 1000 / 60).toFixed(2),
+          outputFiles: outputFiles.map((f) => extname(f)),
+          outputFileCount: outputFiles.length,
+        },
+      },
+      'Whisper transcription complete',
+    );
 
     Context.current().heartbeat('whisper done');
 
-    activityLogger.info('Uploading original transcript files to S3', {
-      fileCount: outputFiles.length,
-    });
+    activityLogger.info(
+      {
+        context: {
+          fileCount: outputFiles.length,
+        },
+      },
+      'Uploading original transcript files to S3',
+    );
 
     const keys = await Promise.all(
       outputFiles.map(async (file) => {
@@ -109,11 +141,16 @@ export default async function transcribe(
         const ext = extname(file).slice(1);
         const key = `${uploadRecordId}/transcript.original.${ext}`;
 
-        activityLogger.info('Uploading transcript file', {
-          file: extname(file),
-          key,
-          sizeMB: (fileSize / 1024 / 1024).toFixed(2),
-        });
+        activityLogger.info(
+          {
+            context: {
+              file: extname(file),
+              key,
+              sizeMB: (fileSize / 1024 / 1024).toFixed(2),
+            },
+          },
+          'Uploading transcript file',
+        );
 
         const uploadStart = Date.now();
         await publicS3.retryablePutFile({
@@ -124,10 +161,15 @@ export default async function transcribe(
           signal,
         });
 
-        activityLogger.info('Transcript file uploaded', {
-          key,
-          durationMs: Date.now() - uploadStart,
-        });
+        activityLogger.info(
+          {
+            context: {
+              key,
+              durationMs: Date.now() - uploadStart,
+            },
+          },
+          'Transcript file uploaded',
+        );
 
         Context.current().heartbeat(`done uploading ${key}`);
 
@@ -146,15 +188,25 @@ export default async function transcribe(
     const fixedJson = stitchTranscript(whisperJson);
     const fixedVtt = Buffer.from(whisperJsonToVtt(fixedJson));
 
-    activityLogger.info('Transcript processed', {
-      segmentCount: fixedJson.segments.length,
-      vttSizeKB: (fixedVtt.length / 1024).toFixed(2),
-    });
+    activityLogger.info(
+      {
+        context: {
+          segmentCount: fixedJson.segments.length,
+          vttSizeKB: (fixedVtt.length / 1024).toFixed(2),
+        },
+      },
+      'Transcript processed',
+    );
 
-    activityLogger.info('Uploading fixed transcript', {
-      format: 'VTT',
-      sizeMB: (fixedVtt.length / 1024 / 1024).toFixed(2),
-    });
+    activityLogger.info(
+      {
+        context: {
+          format: 'VTT',
+          sizeMB: (fixedVtt.length / 1024 / 1024).toFixed(2),
+        },
+      },
+      'Uploading fixed transcript',
+    );
 
     const transcriptKey = `${uploadRecordId}/transcript.vtt`;
     const transcriptJsonKey = `${uploadRecordId}/transcript.original.json`;
@@ -168,10 +220,15 @@ export default async function transcribe(
       signal,
     });
 
-    activityLogger.info('Fixed transcript uploaded', {
-      key: transcriptKey,
-      durationMs: Date.now() - vttUploadStart,
-    });
+    activityLogger.info(
+      {
+        context: {
+          key: transcriptKey,
+          durationMs: Date.now() - vttUploadStart,
+        },
+      },
+      'Fixed transcript uploaded',
+    );
 
     Context.current().heartbeat('done uploading fixed transcript');
 
@@ -179,23 +236,33 @@ export default async function transcribe(
       transcribingFinishedAt: new Date(),
     });
 
-    activityLogger.info('Transcription activity completed successfully', {
-      transcriptKey,
-      transcriptJsonKey,
-      additionalKeys: keys.length,
-      totalDurationMs: Date.now() - whisperStart + downloadDuration,
-    });
+    activityLogger.info(
+      {
+        context: {
+          transcriptKey,
+          transcriptJsonKey,
+          additionalKeys: keys.length,
+          totalDurationMs: Date.now() - whisperStart + downloadDuration,
+        },
+      },
+      'Transcription activity completed successfully',
+    );
 
     return { transcriptKey, transcriptJsonKey, additionalKeys: keys };
   } catch (e) {
     const error = e instanceof Error ? e : new Error(String(e));
 
-    activityLogger.error('Transcription activity failed', {
-      error: error.message,
-      stack: error.stack,
-      uploadRecordId,
-      s3UploadKey,
-    });
+    activityLogger.error(
+      {
+        uploadId: uploadRecordId,
+        s3UploadKey,
+        context: {
+          error: error.message,
+          stack: error.stack,
+        },
+      },
+      'Transcription activity failed',
+    );
 
     await updateUploadRecord(uploadRecordId, {
       transcribingStartedAt: null,
@@ -203,9 +270,14 @@ export default async function transcribe(
     });
     throw e;
   } finally {
-    activityLogger.info('Cleaning up working directory', {
-      workingDir,
-    });
+    activityLogger.info(
+      {
+        context: {
+          workingDir,
+        },
+      },
+      'Cleaning up working directory',
+    );
     await rimraf(workingDir);
   }
 }

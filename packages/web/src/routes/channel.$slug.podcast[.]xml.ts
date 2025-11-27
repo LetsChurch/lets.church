@@ -17,7 +17,7 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
       GET: async ({ params }) => {
         const { slug } = params;
 
-        moduleLogger.info('Generating channel podcast feed', { slug });
+        moduleLogger.info('Generating channel podcast feed');
 
         try {
           const siteUrl = process.env.PUBLIC_URL || 'https://lets.church';
@@ -41,7 +41,7 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
           });
 
           if (!channel) {
-            moduleLogger.warn('Channel not found', { slug });
+            moduleLogger.warn('Channel not found');
             return new Response('Channel not found', {
               status: 404,
               headers: {
@@ -55,11 +55,15 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
             !channel.approvedAt ||
             channel.deletedAt
           ) {
-            moduleLogger.warn('Channel not accessible', {
-              slug,
-              visibility: channel.visibility,
-              approved: Boolean(channel.approvedAt),
-            });
+            moduleLogger.warn(
+              {
+                context: {
+                  visibility: channel.visibility,
+                  approved: Boolean(channel.approvedAt),
+                },
+              },
+              'Channel not accessible',
+            );
             return new Response('Channel not found', {
               status: 404,
               headers: {
@@ -195,11 +199,15 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
             });
           }
 
-          moduleLogger.info('Channel podcast feed generated successfully', {
-            slug,
-            channelName: channel.name,
-            itemCount: uploads.length,
-          });
+          moduleLogger.info(
+            {
+              context: {
+                channelName: channel.name,
+                itemCount: uploads.length,
+              },
+            },
+            'Channel podcast feed generated successfully',
+          );
 
           const xml = feed.buildXml();
 
@@ -211,10 +219,14 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
             },
           });
         } catch (error) {
-          moduleLogger.error('Failed to generate channel podcast feed', {
-            slug,
-            error: error instanceof Error ? error.message : String(error),
-          });
+          moduleLogger.error(
+            {
+              context: {
+                error: error instanceof Error ? error.message : String(error),
+              },
+            },
+            'Failed to generate channel podcast feed',
+          );
 
           return new Response('Internal Server Error', {
             status: 500,

@@ -12,8 +12,10 @@ const moduleLogger = logger.child({
 export default async function deleteOldThumbnails(id: string) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'deleteOldThumbnails',
-    args: {
-      id,
+    context: {
+      args: {
+        id,
+      },
     },
   });
 

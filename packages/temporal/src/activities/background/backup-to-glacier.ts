@@ -127,7 +127,10 @@ export default async function backupToGlacier(
       data: { backupStatus: 'BACKUP_FAILED' },
     });
 
-    logger.error(error, `Failed to backup ${uploadState.s3Key}`);
+    logger.error(
+      { err: error instanceof Error ? error : new Error(String(error)) },
+      `Failed to backup ${uploadState.s3Key}`,
+    );
 
     throw error;
   } finally {
@@ -136,7 +139,12 @@ export default async function backupToGlacier(
       await rm(workDir, { recursive: true, force: true });
     } catch (cleanupError) {
       logger.warn(
-        cleanupError,
+        {
+          err:
+            cleanupError instanceof Error
+              ? cleanupError
+              : new Error(String(cleanupError)),
+        },
         `Failed to clean up work directory: ${workDir}`,
       );
     }

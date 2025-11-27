@@ -13,8 +13,10 @@ export default async function updateUserActivity(
 ) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'updateUserActivity',
-    args: { targetId },
-    meta: JSON.stringify({ data }),
+    context: {
+      args: { targetId },
+      meta: JSON.stringify({ data }),
+    },
   });
 
   activityLogger.info('Updating user');

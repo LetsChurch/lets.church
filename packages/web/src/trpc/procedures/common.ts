@@ -16,19 +16,22 @@ export const commonProcedures = {
   hasValidSession: publicProcedure.query(async ({ ctx }): Promise<boolean> => {
     const hasSession = Boolean(ctx.session);
 
-    moduleLogger.info('Session validation check', {
-      hasSession,
-      sessionId: ctx.session?.id,
-    });
+    moduleLogger.info(
+      { context: { hasSession, sessionId: ctx.session?.id } },
+      'Session validation check',
+    );
 
     return hasSession;
   }),
 
   getCurrentUser: authProcedure.query(async ({ ctx }) => {
-    moduleLogger.info('Current user info requested', {
-      appUserId: ctx.session.appUserId,
-      role: ctx.session.appUser.role,
-    });
+    moduleLogger.info(
+      {
+        appUserId: ctx.session.appUserId,
+        context: { role: ctx.session.appUser.role },
+      },
+      'Current user info requested',
+    );
 
     return {
       id: ctx.session.appUser.id,
@@ -46,7 +49,7 @@ export const commonProcedures = {
     .query(async ({ input }) => {
       const { slug } = input;
 
-      moduleLogger.info('Looking up slug', { slug });
+      moduleLogger.info({ context: { slug } }, 'Looking up slug');
 
       // Try to parse as an ID first
       const idResult = IncomingIdSchema.safeParse(slug);
@@ -61,18 +64,18 @@ export const commonProcedures = {
         if (upload) {
           const outgoingId = OutgoingIdSchema.parse(idResult.data);
 
-          moduleLogger.info('Slug resolved to media upload', {
-            slug,
-            uploadId: outgoingId,
-          });
+          moduleLogger.info(
+            { uploadId: outgoingId, context: { slug } },
+            'Slug resolved to media upload',
+          );
 
           return { type: 'media' as const, id: outgoingId };
         }
 
-        moduleLogger.info('Slug parsed as ID but upload not found', {
-          slug,
-          parsedId: idResult.data,
-        });
+        moduleLogger.info(
+          { context: { slug, parsedId: idResult.data } },
+          'Slug parsed as ID but upload not found',
+        );
       }
 
       // Try to find a channel with this slug
@@ -92,23 +95,33 @@ export const commonProcedures = {
         channel.approvedAt &&
         !channel.deletedAt
       ) {
-        moduleLogger.info('Slug resolved to channel', {
-          slug,
-          visibility: channel.visibility,
-          approved: Boolean(channel.approvedAt),
-        });
+        moduleLogger.info(
+          {
+            context: {
+              slug,
+              visibility: channel.visibility,
+              approved: Boolean(channel.approvedAt),
+            },
+          },
+          'Slug resolved to channel',
+        );
 
         return { type: 'channel' as const, slug };
       }
 
       if (channel) {
-        moduleLogger.info('Channel found but not accessible', {
-          slug,
-          visibility: channel.visibility,
-          approved: Boolean(channel.approvedAt),
-        });
+        moduleLogger.info(
+          {
+            context: {
+              slug,
+              visibility: channel.visibility,
+              approved: Boolean(channel.approvedAt),
+            },
+          },
+          'Channel found but not accessible',
+        );
       } else {
-        moduleLogger.info('Slug not found', { slug });
+        moduleLogger.info({ context: { slug } }, 'Slug not found');
       }
 
       return { type: 'not-found' as const };

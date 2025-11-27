@@ -44,7 +44,7 @@ export async function migrateViewRangesBatch(batchSize: number): Promise<{
 }> {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'migrateViewRangesBatch',
-    batchSize,
+    context: { batchSize },
   });
 
   activityLogger.info('Starting batch migration');

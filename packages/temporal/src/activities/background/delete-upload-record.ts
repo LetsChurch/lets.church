@@ -11,8 +11,10 @@ const moduleLogger = logger.child({
 export async function markUploadPrivate(id: string) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'markUploadPrivate',
-    args: {
-      id,
+    context: {
+      args: {
+        id,
+      },
     },
   });
   activityLogger.info(`Marking upload record ${id} as private`);
@@ -33,7 +35,7 @@ export async function markUploadPrivate(id: string) {
 export async function deleteUploadRecordSearch(id: string) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'deleteUploadRecordSearch',
-    id,
+    context: { id },
   });
 
   try {
@@ -66,7 +68,7 @@ export async function deleteUploadRecordSearch(id: string) {
 export async function deleteUploadRecordDb(id: string) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'deleteUploadRecordDb',
-    id,
+    context: { id },
   });
   activityLogger.info(`Deleting upload record from database for ${id}`);
 
@@ -83,7 +85,7 @@ export async function deleteUploadRecordDb(id: string) {
 export async function deleteUploadRecordS3Objects(id: string) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'deleteUploadRecordS3Objects',
-    id,
+    context: { id },
   });
 
   const ingestCount = await ingestS3.deletePrefix(id, () => {

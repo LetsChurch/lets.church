@@ -32,21 +32,20 @@ export const newsletterProcedures = {
       }): Promise<SubscribeResponse> => {
         const clientIp = getClientIpAddress(getRequest().headers);
 
-        moduleLogger.info('Newsletter subscription attempt', {
-          email,
-          clientIp,
-        });
+        moduleLogger.info('Newsletter subscription attempt');
 
         // Validate Turnstile
         try {
           const isValid = await validateTurnstile(turnstileToken, clientIp);
           if (!isValid) {
             moduleLogger.warn(
-              'Newsletter subscription failed - invalid CAPTCHA',
               {
-                email,
-                clientIp,
+                context: {
+                  email,
+                  clientIp,
+                },
               },
+              'Newsletter subscription failed - invalid CAPTCHA',
             );
             return {
               success: false,
@@ -54,11 +53,14 @@ export const newsletterProcedures = {
             };
           }
         } catch (e) {
-          moduleLogger.error('Turnstile validation error', {
-            email,
-            clientIp,
-            error: e instanceof Error ? e.message : String(e),
-          });
+          moduleLogger.error(
+            {
+              context: {
+                error: e instanceof Error ? e.message : String(e),
+              },
+            },
+            'Turnstile validation error',
+          );
           return {
             success: false,
             error: 'Verification failed. Please try again.',
@@ -135,7 +137,12 @@ export const newsletterProcedures = {
               JSON.stringify(errorDetails, null, 2),
             );
 
-            moduleLogger.error('Listmonk API error', errorDetails);
+            moduleLogger.error(
+              {
+                context: errorDetails,
+              },
+              'Listmonk API error',
+            );
             return {
               success: false,
               error:
@@ -144,25 +151,37 @@ export const newsletterProcedures = {
           }
 
           const responseText = await response.text();
-          moduleLogger.info('Newsletter subscription successful', {
-            email,
-            responseBody: responseText,
-          });
+          moduleLogger.info(
+            {
+              context: {
+                responseBody: responseText,
+              },
+            },
+            'Newsletter subscription successful',
+          );
 
           return { success: true };
         } catch (e) {
           // Handle network errors, timeouts, etc.
           if (e instanceof Error) {
             if (e.name === 'AbortError') {
-              moduleLogger.error('Newsletter subscription timeout', {
-                email,
-                error: 'Request timeout',
-              });
+              moduleLogger.error(
+                {
+                  context: {
+                    error: 'Request timeout',
+                  },
+                },
+                'Newsletter subscription timeout',
+              );
             } else {
-              moduleLogger.error('Newsletter subscription error', {
-                email,
-                error: e.message,
-              });
+              moduleLogger.error(
+                {
+                  context: {
+                    error: e.message,
+                  },
+                },
+                'Newsletter subscription error',
+              );
             }
           }
 

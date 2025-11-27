@@ -13,7 +13,7 @@ catalog:
   "es-toolkit": "^1.41.0"
   "p-map": "^7.0.3"
   "p-retry": "^7.1.0"
-  "pino": "^9.7.0"
+  "pino": "^10.1.0"
   "tsx": "^4.20.6"
   "type-fest": "^5.2.0"
   "typescript": "^5.9.3"

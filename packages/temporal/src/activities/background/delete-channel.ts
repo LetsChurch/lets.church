@@ -10,7 +10,7 @@ const moduleLogger = logger.child({
 export async function markChannelDeleted(channelId: string): Promise<boolean> {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'markChannelDeleted',
-    args: { channelId },
+    context: { args: { channelId } },
   });
   activityLogger.info(`Marking channel ${channelId} as deleted`);
 
@@ -35,7 +35,7 @@ export async function getChannelUploadIds(
 ): Promise<string[]> {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'getChannelUploadIds',
-    args: { channelId },
+    context: { args: { channelId } },
   });
   activityLogger.info(`Getting upload IDs for channel ${channelId}`);
 
@@ -60,7 +60,7 @@ export async function getChannelUploadIds(
 export async function deleteChannelFiles(channelId: string): Promise<number> {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'deleteChannelFiles',
-    args: { channelId },
+    context: { args: { channelId } },
   });
   activityLogger.info(`Deleting files for channel ${channelId}`);
 
@@ -174,7 +174,7 @@ export async function deleteChannelAssociations(
 ): Promise<boolean> {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'deleteChannelAssociations',
-    args: { channelId },
+    context: { args: { channelId } },
   });
   activityLogger.info(`Deleting associations for channel ${channelId}`);
 
@@ -218,7 +218,7 @@ export async function deleteChannelAssociations(
 export async function deleteChannelDb(channelId: string): Promise<boolean> {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'deleteChannelDb',
-    args: { channelId },
+    context: { args: { channelId } },
   });
   activityLogger.info(`Deleting channel ${channelId} from database`);
 
