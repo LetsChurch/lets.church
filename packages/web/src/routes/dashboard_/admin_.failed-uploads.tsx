@@ -15,6 +15,7 @@ import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
+import { showFailure, showSuccess } from '../-mantine';
 
 export const Route = createFileRoute('/dashboard_/admin_/failed-uploads')({
   component: RouteComponent,
@@ -64,8 +65,32 @@ function RouteComponent() {
 
   const retryMutation = useMutation(
     trpc.dashboard.admin.retryUploadProcessing.mutationOptions({
-      onSuccess: () => {
-        refetch();
+      onSuccess: async () => {
+        showSuccess({
+          message: 'Upload processing restarted successfully!',
+        });
+        await refetch();
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to retry upload processing',
+        });
+      },
+    }),
+  );
+
+  const bulkRetryMutation = useMutation(
+    trpc.dashboard.admin.bulkRetryProcessingUploads.mutationOptions({
+      onSuccess: async ({ retriedCount, skippedCount }) => {
+        showSuccess({
+          message: `Bulk retry initiated: ${retriedCount} upload${retriedCount !== 1 ? 's' : ''} restarted${skippedCount > 0 ? `, ${skippedCount} skipped (already running)` : ''}`,
+        });
+        await refetch();
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to bulk retry processing uploads',
+        });
       },
     }),
   );
@@ -123,13 +148,19 @@ function RouteComponent() {
             unprocessed)
           </Text>
         </div>
-        <Button
-          leftSection={<IconRefresh size={16} />}
-          onClick={() => refetch()}
-          variant="light"
-        >
-          Refresh
-        </Button>
+        {data.uploads.length > 0 ? (
+          <Button
+            variant="light"
+            color="blue"
+            leftSection={<IconRefresh size={16} />}
+            onClick={() => {
+              bulkRetryMutation.mutate();
+            }}
+            loading={bulkRetryMutation.isPending}
+          >
+            Retry All Without Active Workflow
+          </Button>
+        ) : null}
       </Group>
 
       <Table verticalSpacing="md">

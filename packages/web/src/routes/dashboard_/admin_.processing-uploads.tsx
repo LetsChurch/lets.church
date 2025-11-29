@@ -1,22 +1,18 @@
 import {
-  ActionIcon,
   Badge,
   Box,
-  Button,
   Group,
   Progress,
   Stack,
   Table,
   Text,
   Title,
-  Tooltip,
 } from '@mantine/core';
-import { IconEye, IconEyeOff, IconRefresh } from '@tabler/icons-react';
-import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
+import { IconEye, IconEyeOff } from '@tabler/icons-react';
+import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useTRPC } from '@/trpc/react';
 import { formatDate, formatTime } from '@/util/format';
-import { showFailure, showSuccess } from '../-mantine';
 
 export const Route = createFileRoute('/dashboard_/admin_/processing-uploads')({
   component: RouteComponent,
@@ -53,42 +49,10 @@ function RouteComponent() {
   const trpc = useTRPC();
   const navigate = useNavigate();
 
-  const { data: uploads, refetch } = useSuspenseQuery({
+  const { data: uploads } = useSuspenseQuery({
     ...trpc.dashboard.admin.getProcessingUploads.queryOptions(),
     refetchInterval: 2000,
   });
-
-  const retryMutation = useMutation(
-    trpc.dashboard.admin.retryUploadProcessing.mutationOptions({
-      onSuccess: async () => {
-        showSuccess({
-          message: 'Upload processing restarted successfully!',
-        });
-        await refetch();
-      },
-      onError: (error) => {
-        showFailure({
-          message: error.message || 'Failed to retry upload processing',
-        });
-      },
-    }),
-  );
-
-  const bulkRetryMutation = useMutation(
-    trpc.dashboard.admin.bulkRetryProcessingUploads.mutationOptions({
-      onSuccess: async ({ retriedCount, skippedCount }) => {
-        showSuccess({
-          message: `Bulk retry initiated: ${retriedCount} upload${retriedCount !== 1 ? 's' : ''} restarted${skippedCount > 0 ? `, ${skippedCount} skipped (already running)` : ''}`,
-        });
-        await refetch();
-      },
-      onError: (error) => {
-        showFailure({
-          message: error.message || 'Failed to bulk retry processing uploads',
-        });
-      },
-    }),
-  );
 
   const transcodingCount = uploads.filter(
     (upload) => !upload.transcodingFinishedAt,
@@ -123,28 +87,13 @@ function RouteComponent() {
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between" align="flex-start">
-        <div>
-          <Title order={1}>Processing Uploads</Title>
-          <Text c="dimmed">
-            {uploads.length} total uploads • {transcodingCount} transcoding •{' '}
-            {transcribingCount} transcribing
-          </Text>
-        </div>
-        {uploads.length > 0 ? (
-          <Button
-            variant="light"
-            color="blue"
-            leftSection={<IconRefresh size={16} />}
-            onClick={() => {
-              bulkRetryMutation.mutate();
-            }}
-            loading={bulkRetryMutation.isPending}
-          >
-            Retry All Without Active Workflow
-          </Button>
-        ) : null}
-      </Group>
+      <div>
+        <Title order={1}>Processing Uploads</Title>
+        <Text c="dimmed">
+          {uploads.length} total uploads • {transcodingCount} transcoding •{' '}
+          {transcribingCount} transcribing
+        </Text>
+      </div>
 
       <Table verticalSpacing="md">
         <Table.Thead>
@@ -154,13 +103,12 @@ function RouteComponent() {
             <Table.Th>Visibility</Table.Th>
             <Table.Th>Processing</Table.Th>
             <Table.Th>Created</Table.Th>
-            <Table.Th>Actions</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
           {uploads.length === 0 ? (
             <Table.Tr>
-              <Table.Td colSpan={6}>
+              <Table.Td colSpan={5}>
                 <Text ta="center" c="dimmed" py="xl">
                   No uploads currently processing
                 </Text>
@@ -330,23 +278,6 @@ function RouteComponent() {
                     <Text size="sm">
                       {formatDate(upload.createdAt, 'short')}
                     </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Tooltip label="Retry processing">
-                      <ActionIcon
-                        variant="light"
-                        color="blue"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          retryMutation.mutate({
-                            uploadRecordId: upload.id,
-                          });
-                        }}
-                        loading={retryMutation.isPending}
-                      >
-                        <IconRefresh size={16} />
-                      </ActionIcon>
-                    </Tooltip>
                   </Table.Td>
                 </Table.Tr>
               );

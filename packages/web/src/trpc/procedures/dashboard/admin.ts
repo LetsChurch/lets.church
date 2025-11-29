@@ -1106,30 +1106,79 @@ export const adminRouter = router({
   getProcessingUploads: adminProcedure.query(async () => {
     moduleLogger.info('Fetching processing uploads');
 
-    return prisma.uploadRecord.findMany({
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        visibility: true,
-        createdAt: true,
-        lengthSeconds: true,
-        transcodingFinishedAt: true,
-        transcribingFinishedAt: true,
-        transcodingProgress: true,
-        channel: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
+    try {
+      // Get uploads that are not fully processed
+      const allProcessingUploads = await prisma.uploadRecord.findMany({
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          visibility: true,
+          createdAt: true,
+          lengthSeconds: true,
+          transcodingFinishedAt: true,
+          transcribingFinishedAt: true,
+          transcodingProgress: true,
+          finalizedUploadKey: true,
+          channel: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
           },
         },
-      },
-      where: {
-        OR: [{ transcodingFinishedAt: null }, { transcribingFinishedAt: null }],
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        where: {
+          OR: [
+            { transcodingFinishedAt: null },
+            { transcribingFinishedAt: null },
+          ],
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      // Filter to only include uploads with active workflows
+      const temporalClient = await client;
+      const uploadsWithActiveWorkflows = await pFilter(
+        allProcessingUploads,
+        async (upload) => {
+          if (!upload.finalizedUploadKey) {
+            return false; // No workflow if no finalized key
+          }
+
+          try {
+            const workflowId = `processMedia:${upload.finalizedUploadKey}`;
+            const handle = temporalClient.workflow.getHandle(workflowId);
+            const description = await handle.describe();
+
+            // Only include uploads with running workflows
+            return description.status.name === 'RUNNING';
+          } catch {
+            // Workflow doesn't exist or can't be accessed - exclude the upload
+            return false;
+          }
+        },
+        { concurrency: 25 },
+      );
+
+      return uploadsWithActiveWorkflows.map(
+        ({ finalizedUploadKey: _, ...upload }) => upload,
+      );
+    } catch (error) {
+      moduleLogger.error(
+        {
+          context: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        },
+        'Failed to fetch processing uploads',
+      );
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch processing uploads',
+      });
+    }
   }),
 
   getFeaturedUploads: adminProcedure.query(async () => {
