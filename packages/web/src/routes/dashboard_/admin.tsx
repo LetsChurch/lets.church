@@ -1,5 +1,13 @@
-import { Badge, Card, Group, SimpleGrid, Text, Title } from '@mantine/core';
-import { useSuspenseQuery } from '@tanstack/react-query';
+import {
+  Badge,
+  Card,
+  Group,
+  Loader,
+  SimpleGrid,
+  Text,
+  Title,
+} from '@mantine/core';
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { useTRPC } from '@/trpc/react';
 
@@ -32,12 +40,6 @@ export const Route = createFileRoute('/dashboard_/admin')({
       queryClient.ensureQueryData(
         trpc.dashboard.admin.getUploadBackupStats.queryOptions(),
       ),
-      queryClient.ensureQueryData(
-        trpc.dashboard.admin.getFailedUploads.queryOptions({
-          limit: 1,
-          offset: 0,
-        }),
-      ),
     ]);
     return {
       backNavigation: {
@@ -63,11 +65,12 @@ function AdminPage() {
     trpc.dashboard.admin.getUploadBackupStats.queryOptions(),
   );
 
-  const { data: failedUploads } = useSuspenseQuery(
-    trpc.dashboard.admin.getFailedUploads.queryOptions({
-      limit: 1,
-      offset: 0,
-    }),
+  // Lazy-load counts that require workflow status checks
+  const { data: processingUploadsCount, isLoading: isLoadingProcessing } =
+    useQuery(trpc.dashboard.admin.getProcessingUploadsCount.queryOptions());
+
+  const { data: failedUploadsCount, isLoading: isLoadingFailed } = useQuery(
+    trpc.dashboard.admin.getFailedUploadsCount.queryOptions(),
   );
 
   return (
@@ -157,9 +160,13 @@ function AdminPage() {
         >
           <Group justify="space-between" mb="xs">
             <Text fw={500}>Processing Uploads</Text>
-            <Badge color="yellow" size="sm">
-              {pendingApprovals.processingUploadsCount}
-            </Badge>
+            {isLoadingProcessing ? (
+              <Loader size="xs" />
+            ) : (
+              <Badge color="yellow" size="sm">
+                {processingUploadsCount ?? 0}
+              </Badge>
+            )}
           </Group>
           <Text size="sm" c="dimmed">
             Monitor uploads currently being processed
@@ -175,14 +182,16 @@ function AdminPage() {
         >
           <Group justify="space-between" mb="xs">
             <Text fw={500}>Failed Uploads</Text>
-            <Badge
-              color={failedUploads.uploads.length === 0 ? 'green' : 'red'}
-              size="sm"
-            >
-              {failedUploads.uploads.length === 0
-                ? 'None'
-                : failedUploads.uploads.length}
-            </Badge>
+            {isLoadingFailed ? (
+              <Loader size="xs" />
+            ) : (
+              <Badge
+                color={failedUploadsCount === 0 ? 'green' : 'red'}
+                size="sm"
+              >
+                {failedUploadsCount === 0 ? 'None' : failedUploadsCount}
+              </Badge>
+            )}
           </Group>
           <Text size="sm" c="dimmed">
             Retry uploads that failed to process

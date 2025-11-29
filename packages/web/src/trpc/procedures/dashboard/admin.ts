@@ -4,7 +4,6 @@ import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
 import { deleteChannelWorkflow } from '@letschurch/temporal/workflows/background';
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
-import pFilter from 'p-filter';
 import { z } from 'zod';
 import { IncomingIdSchema } from '@/schemas/common';
 import {
@@ -33,6 +32,10 @@ import {
 } from '@/temporal';
 import logger from '@/util/logger';
 import { publicS3 } from '@/util/s3';
+import {
+  filterUploadsWithActiveWorkflows,
+  filterUploadsWithoutActiveWorkflows,
+} from '@/util/temporal-workflow';
 import { getPublicImageUrl } from '@/util/url';
 import { authProcedure, router } from '../../trpc';
 import { newsletterListsRouter } from '../newsletter-lists';
@@ -61,107 +64,94 @@ export const adminRouter = router({
   getPendingApprovals: adminProcedure.query(async () => {
     moduleLogger.info('Fetching pending approvals');
 
-    const [
-      pendingChannels,
-      pendingOrganizations,
-      userCount,
-      processingUploadsCount,
-    ] = await Promise.all([
-      prisma.channel.findMany({
-        where: {
-          approvedAt: null,
-        },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          description: true,
-          createdAt: true,
-          memberships: {
-            select: {
-              appUser: {
-                select: {
-                  id: true,
-                  fullName: true,
-                  emails: {
-                    select: {
-                      email: true,
-                      verifiedAt: true,
+    const [pendingChannels, pendingOrganizations, userCount] =
+      await Promise.all([
+        prisma.channel.findMany({
+          where: {
+            approvedAt: null,
+          },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            createdAt: true,
+            memberships: {
+              select: {
+                appUser: {
+                  select: {
+                    id: true,
+                    fullName: true,
+                    emails: {
+                      select: {
+                        email: true,
+                        verifiedAt: true,
+                      },
+                      where: {
+                        verifiedAt: { not: null },
+                      },
+                      take: 1,
                     },
-                    where: {
-                      verifiedAt: { not: null },
-                    },
-                    take: 1,
                   },
                 },
               },
+              where: {
+                isAdmin: true,
+              },
+              take: 1,
             },
-            where: {
-              isAdmin: true,
-            },
-            take: 1,
           },
-        },
-        orderBy: {
-          createdAt: 'asc',
-        },
-      }),
-      prisma.organization.findMany({
-        where: {
-          approvedAt: null,
-        },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          description: true,
-          type: true,
-          createdAt: true,
-          memberships: {
-            select: {
-              appUser: {
-                select: {
-                  id: true,
-                  fullName: true,
-                  emails: {
-                    select: {
-                      email: true,
-                      verifiedAt: true,
+          orderBy: {
+            createdAt: 'asc',
+          },
+        }),
+        prisma.organization.findMany({
+          where: {
+            approvedAt: null,
+          },
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            type: true,
+            createdAt: true,
+            memberships: {
+              select: {
+                appUser: {
+                  select: {
+                    id: true,
+                    fullName: true,
+                    emails: {
+                      select: {
+                        email: true,
+                        verifiedAt: true,
+                      },
+                      where: {
+                        verifiedAt: { not: null },
+                      },
+                      take: 1,
                     },
-                    where: {
-                      verifiedAt: { not: null },
-                    },
-                    take: 1,
                   },
                 },
               },
+              where: {
+                isAdmin: true,
+              },
+              take: 1,
             },
-            where: {
-              isAdmin: true,
-            },
-            take: 1,
           },
-        },
-        orderBy: {
-          createdAt: 'asc',
-        },
-      }),
-      prisma.appUser.count(),
-      prisma.uploadRecord.count({
-        where: {
-          OR: [
-            { transcodingFinishedAt: null },
-            { transcribingFinishedAt: null },
-          ],
-        },
-      }),
-    ]);
+          orderBy: {
+            createdAt: 'asc',
+          },
+        }),
+        prisma.appUser.count(),
+      ]);
 
     return {
       channels: pendingChannels,
       organizations: pendingOrganizations,
       userCount,
-      processingUploadsCount,
     };
   }),
 
@@ -1103,6 +1093,45 @@ export const adminRouter = router({
       }
     }),
 
+  getProcessingUploadsCount: adminProcedure.query(async () => {
+    moduleLogger.info('Fetching processing uploads count');
+
+    try {
+      // Get uploads that are not fully processed
+      const allProcessingUploads = await prisma.uploadRecord.findMany({
+        select: {
+          finalizedUploadKey: true,
+        },
+        where: {
+          OR: [
+            { transcodingFinishedAt: null },
+            { transcribingFinishedAt: null },
+          ],
+        },
+      });
+
+      // Filter to only include uploads with active workflows
+      const uploadsWithActiveWorkflows =
+        await filterUploadsWithActiveWorkflows(allProcessingUploads);
+
+      return uploadsWithActiveWorkflows.length;
+    } catch (error) {
+      moduleLogger.error(
+        {
+          context: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        },
+        'Failed to fetch processing uploads count',
+      );
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch processing uploads count',
+      });
+    }
+  }),
+
   getProcessingUploads: adminProcedure.query(async () => {
     moduleLogger.info('Fetching processing uploads');
 
@@ -1138,28 +1167,8 @@ export const adminRouter = router({
       });
 
       // Filter to only include uploads with active workflows
-      const temporalClient = await client;
-      const uploadsWithActiveWorkflows = await pFilter(
-        allProcessingUploads,
-        async (upload) => {
-          if (!upload.finalizedUploadKey) {
-            return false; // No workflow if no finalized key
-          }
-
-          try {
-            const workflowId = `processMedia:${upload.finalizedUploadKey}`;
-            const handle = temporalClient.workflow.getHandle(workflowId);
-            const description = await handle.describe();
-
-            // Only include uploads with running workflows
-            return description.status.name === 'RUNNING';
-          } catch {
-            // Workflow doesn't exist or can't be accessed - exclude the upload
-            return false;
-          }
-        },
-        { concurrency: 25 },
-      );
+      const uploadsWithActiveWorkflows =
+        await filterUploadsWithActiveWorkflows(allProcessingUploads);
 
       return uploadsWithActiveWorkflows.map(
         ({ finalizedUploadKey: _, ...upload }) => upload,
@@ -2440,6 +2449,57 @@ export const adminRouter = router({
     }
   }),
 
+  getFailedUploadsCount: adminProcedure.query(async () => {
+    moduleLogger.info('Fetching failed uploads count');
+
+    try {
+      // Get uploads that have been finalized but not fully processed
+      const failedUploads = await prisma.uploadRecord.findMany({
+        where: {
+          uploadFinalized: true,
+          finalizedUploadKey: { not: null },
+          OR: [
+            {
+              transcodingStartedAt: null,
+              transcodingFinishedAt: null,
+            },
+            {
+              transcodingStartedAt: { not: null },
+              transcodingFinishedAt: null,
+            },
+            {
+              transcribingStartedAt: { not: null },
+              transcribingFinishedAt: null,
+            },
+          ],
+        },
+        select: {
+          finalizedUploadKey: true,
+        },
+      });
+
+      // Filter out uploads that are currently processing
+      const actuallyFailedUploads =
+        await filterUploadsWithoutActiveWorkflows(failedUploads);
+
+      return actuallyFailedUploads.length;
+    } catch (error) {
+      moduleLogger.error(
+        {
+          context: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        },
+        'Failed to fetch failed uploads count',
+      );
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch failed uploads count',
+      });
+    }
+  }),
+
   getFailedUploads: adminProcedure
     .input(
       z.object({
@@ -2524,28 +2584,8 @@ export const adminRouter = router({
         });
 
         // Filter out uploads that are currently processing
-        const temporalClient = await client;
-        const actuallyFailedUploads = await pFilter(
-          failedUploads,
-          async (upload) => {
-            if (!upload.finalizedUploadKey) {
-              return true; // Include uploads without a finalized key
-            }
-
-            try {
-              const workflowId = `processMedia:${upload.finalizedUploadKey}`;
-              const handle = temporalClient.workflow.getHandle(workflowId);
-              const description = await handle.describe();
-
-              // Exclude uploads with running workflows
-              return description.status.name !== 'RUNNING';
-            } catch {
-              // Workflow doesn't exist or can't be accessed - include the upload
-              return true;
-            }
-          },
-          { concurrency: 25 },
-        );
+        const actuallyFailedUploads =
+          await filterUploadsWithoutActiveWorkflows(failedUploads);
 
         return {
           uploads: actuallyFailedUploads,
@@ -2755,66 +2795,8 @@ export const adminRouter = router({
       }
 
       // Filter out uploads with active workflows
-      const temporalClient = await client;
-      let _checkedCount = 0;
-      const uploadsToRetry = await pFilter(
-        processingUploads,
-        async (upload) => {
-          _checkedCount++;
-
-          if (!upload.finalizedUploadKey) {
-            moduleLogger.info(
-              {
-                uploadId: upload.id,
-                context: {
-                  totalToCheck: processingUploads.length,
-                },
-              },
-              'Bulk retry filter: Upload has no finalized key',
-            );
-            return false;
-          }
-
-          try {
-            const workflowId = `processMedia:${upload.finalizedUploadKey}`;
-            const handle = temporalClient.workflow.getHandle(workflowId);
-            const description = await handle.describe();
-
-            const isRunning = description.status.name === 'RUNNING';
-
-            moduleLogger.info(
-              {
-                uploadId: upload.id,
-                context: {
-                  workflowStatus: description.status.name,
-                  willInclude: !isRunning,
-                  totalToCheck: processingUploads.length,
-                },
-              },
-              'Bulk retry filter: Workflow found',
-            );
-
-            // Exclude uploads with running workflows
-            return !isRunning;
-          } catch (error) {
-            // Workflow doesn't exist - include the upload
-            moduleLogger.info(
-              {
-                uploadId: upload.id,
-                workflowId: `processMedia:${upload.finalizedUploadKey}`,
-                context: {
-                  willInclude: true,
-                  totalToCheck: processingUploads.length,
-                  error: error instanceof Error ? error.message : String(error),
-                },
-              },
-              'Bulk retry filter: Workflow not found',
-            );
-            return true;
-          }
-        },
-        { concurrency: 25 },
-      );
+      const uploadsToRetry =
+        await filterUploadsWithoutActiveWorkflows(processingUploads);
 
       moduleLogger.info(
         {
@@ -2834,6 +2816,7 @@ export const adminRouter = router({
       );
       const { BACKGROUND_QUEUE } = await import('@letschurch/temporal/queues');
 
+      const temporalClient = await client;
       let retriedCount = 0;
 
       moduleLogger.info(
