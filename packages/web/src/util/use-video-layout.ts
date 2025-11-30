@@ -16,11 +16,15 @@ type VideoLayoutParams = {
   gap?: number;
 };
 
-type VideoLayout = {
+type VideoLayoutResult = {
   videoWidth: number;
   videoHeight: number;
   containerWidth: number;
   showSidebar: boolean;
+};
+
+type VideoLayout = VideoLayoutResult & {
+  setTranscriptWidth: (width: number) => void;
 };
 
 export function useVideoLayout({
@@ -36,7 +40,13 @@ export function useVideoLayout({
   const [pageSidebarCollapsed, setPageSidebarCollapsed] = useState(
     getInitialSidebarCollapsed(),
   );
-  const [layout, setLayout] = useState<VideoLayout>(() => {
+
+  // Track the dynamic transcript sidebar width
+  const [dynamicTranscriptWidth, setDynamicTranscriptWidth] = useState(
+    transcriptSidebarWidth,
+  );
+
+  const [layout, setLayout] = useState<VideoLayoutResult>(() => {
     const browserSize = getInitialBrowserSize();
 
     return calculateLayout({
@@ -48,7 +58,7 @@ export function useVideoLayout({
       headerHeight,
       contentMargins,
       chromeBelow,
-      transcriptSidebarWidth,
+      transcriptSidebarWidth: dynamicTranscriptWidth,
       gap,
       pageSidebarCollapsed,
     });
@@ -66,7 +76,7 @@ export function useVideoLayout({
           headerHeight,
           contentMargins,
           chromeBelow,
-          transcriptSidebarWidth,
+          transcriptSidebarWidth: dynamicTranscriptWidth,
           gap,
           pageSidebarCollapsed,
         }),
@@ -99,12 +109,12 @@ export function useVideoLayout({
     headerHeight,
     contentMargins,
     chromeBelow,
-    transcriptSidebarWidth,
+    dynamicTranscriptWidth,
     gap,
     pageSidebarCollapsed,
   ]);
 
-  return layout;
+  return { ...layout, setTranscriptWidth: setDynamicTranscriptWidth };
 }
 
 type CalculateLayoutParams = VideoLayoutParams & {
@@ -133,7 +143,7 @@ function calculateLayout({
   transcriptSidebarWidth,
   gap,
   pageSidebarCollapsed,
-}: CalculateLayoutParams): VideoLayout {
+}: CalculateLayoutParams): VideoLayoutResult {
   const aspect = aspectWidth / aspectHeight;
 
   // Page sidebar widths: w-14 = 3.5rem = 56px, w-50 = 12.5rem = 200px

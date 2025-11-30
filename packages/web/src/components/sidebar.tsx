@@ -119,7 +119,7 @@ export default function Sidebar({ className }: SidebarProps) {
       {/* Header */}
       <div
         className={cn(
-          'flex h-16 items-center border-gray-100 border-b px-3 dark:border-zinc-900',
+          'flex h-(--header-height) items-center border-gray-100 border-b px-3 dark:border-zinc-900',
           collapsed && !showAltMenu ? 'justify-center' : 'gap-[7px]',
         )}
       >

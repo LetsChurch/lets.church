@@ -18,6 +18,9 @@
   --color-brand-600: var(--color-indigo-600);
   --color-brand-700: var(--color-indigo-700);
 
+  /* Layout dimensions */
+  --header-height: calc(var(--spacing) * 16); /* 64px */
+
   /* Custom easing */
   --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
 }

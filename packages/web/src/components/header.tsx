@@ -56,7 +56,7 @@ export default function Header({
       <div className="pointer-events-none absolute inset-x-0 top-0 h-60 bg-linear-to-b from-brand/40 to-transparent" />
 
       {/* Top Navigation Bar */}
-      <div className="relative flex h-16 items-center justify-between p-4">
+      <div className="relative flex h-(--header-height) items-center justify-between p-4">
         {/* Mobile Logo and Menu Button (visible when sidebar is hidden) */}
         <div className="flex items-center gap-3 sm:hidden">
           <button

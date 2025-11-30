@@ -21,6 +21,7 @@ import { Player } from '@/components/player';
 import { Transcript } from '@/components/transcript';
 import { TranscriptSearchResults } from '@/components/transcript-search-results';
 import { TranscriptSidebar } from '@/components/transcript-sidebar';
+import { WindowSplitter } from '@/components/window-splitter';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { IncomingIdSchema } from '@/schemas/common';
 import { useSetBackgroundImage } from '@/stores/header';
@@ -31,6 +32,11 @@ import {
   performSearch,
   resetSearch,
 } from '@/stores/transcript-search';
+import {
+  DEFAULT_TRANSCRIPT_WIDTH,
+  getInitialTranscriptWidth,
+  setTranscriptWidth as saveTranscriptWidth,
+} from '@/stores/transcript-width';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { useVideoLayout } from '@/util/use-video-layout';
 
@@ -318,6 +324,9 @@ function RouteComponent() {
   const transcript = loaderData?.transcript ?? [];
   const [initialTimestamp, setInitialTimestamp] = useState<number | undefined>(
     undefined,
+  );
+  const [transcriptWidth, setTranscriptWidth] = useState(
+    getInitialTranscriptWidth(),
   );
 
   // Parse timestamp from URL hash on mount
@@ -611,21 +620,28 @@ function RouteComponent() {
   const layout = useVideoLayout({
     aspectWidth,
     aspectHeight,
+    transcriptSidebarWidth: transcriptWidth,
   });
+
+  const handleTranscriptWidthChange = (width: number) => {
+    setTranscriptWidth(width);
+    layout.setTranscriptWidth(width);
+    saveTranscriptWidth(width);
+  };
 
   return (
     <MainLayout containerClassName="mx-4">
       {/* Main Content Area */}
       <div
-        className="grid gap-4"
+        className="grid"
         style={{
           gridTemplateColumns: layout.showSidebar
-            ? `${layout.containerWidth}px calc(var(--spacing) * 92)`
+            ? `${layout.containerWidth}px auto ${transcriptWidth}px`
             : '1fr',
         }}
       >
         <div
-          className="min-w-0"
+          className="mb-10 min-w-0"
           style={{ width: `${layout.containerWidth}px` }}
         >
           {/* TODO: remove mb-10 when related content is implemented */}
@@ -718,7 +734,18 @@ function RouteComponent() {
         </div>
 
         {layout.showSidebar ? (
-          <TranscriptSidebar transcript={transcript} />
+          <>
+            <WindowSplitter
+              initialWidth={transcriptWidth}
+              minWidth={250}
+              maxWidth={800}
+              defaultWidth={DEFAULT_TRANSCRIPT_WIDTH}
+              onWidthChange={handleTranscriptWidthChange}
+            />
+            <div style={{ width: `${transcriptWidth}px` }}>
+              <TranscriptSidebar transcript={transcript} />
+            </div>
+          </>
         ) : null}
       </div>
 
