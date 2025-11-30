@@ -132,9 +132,18 @@ export function MediaActions({
   }, []);
 
   useEffect(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+
     handleScroll();
-    window.addEventListener('resize', handleScroll);
-    return () => window.removeEventListener('resize', handleScroll);
+
+    // Use ResizeObserver to detect when the container size changes
+    const resizeObserver = new ResizeObserver(handleScroll);
+    resizeObserver.observe(element);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
   }, [handleScroll]);
 
   const handleShare = async () => {
