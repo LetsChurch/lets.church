@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { cn } from '@/util/cn';
 
 type WindowSplitterProps = {
   /**
@@ -141,15 +142,13 @@ export function WindowSplitter({
     >
       {/* Visual indicator */}
       <div
-        className={`h-full w-1 transition-colors ${
+        className={cn(
+          `before:-left-2 before:-right-2 h-full w-1 rounded-full transition-colors before:absolute before:inset-y-0 before:content-[''] group-focus:bg-blue-500`,
           isDragging
             ? 'bg-blue-500'
-            : 'bg-transparent group-hover:bg-zinc-300 dark:group-hover:bg-zinc-700'
-        } group-focus:bg-blue-500`}
+            : 'bg-transparent group-hover:bg-zinc-400 dark:group-hover:bg-zinc-700',
+        )}
       />
-
-      {/* Expanded hit area */}
-      <div className="-left-2 -right-2 absolute inset-y-0" />
     </div>
   );
 }
