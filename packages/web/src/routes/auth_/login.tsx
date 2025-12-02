@@ -68,7 +68,16 @@ function LoginRoute() {
   });
 
   return (
-    <Paper radius="md" p="lg" mt="xl" w="28rem" ml="auto" mr="auto" withBorder>
+    <Paper
+      radius="md"
+      p="lg"
+      mt="xl"
+      maw="28rem"
+      w="100%"
+      ml="auto"
+      mr="auto"
+      withBorder
+    >
       <Text size="lg" fw={500}>
         Sign in to your account
       </Text>
