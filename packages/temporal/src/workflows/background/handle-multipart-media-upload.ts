@@ -59,7 +59,7 @@ export async function handleMultipartMediaUploadWorkflow(
       await finalizeUploadRecord(targetId, finalizingUserId, s3UploadKey);
     }
 
-    const sizeBytes = await completeMultipartUpload(
+    const sizeBytesStr = await completeMultipartUpload(
       clientId,
       s3UploadId,
       s3UploadKey,
@@ -67,11 +67,12 @@ export async function handleMultipartMediaUploadWorkflow(
     );
 
     // Create UploadState record and launch backup workflow
+    // Pass size as string since Temporal cannot serialize bigint
     const uploadStateId = await createUploadState({
       s3Key: s3UploadKey,
       clientId,
       uploadType: postProcess,
-      sizeBytes,
+      sizeBytes: sizeBytesStr,
       uploadRecordId:
         postProcess === 'media' || postProcess === 'thumbnail'
           ? targetId

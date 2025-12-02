@@ -5,11 +5,12 @@ export default async function completeMultipartUploadAction(
   uploadId: string,
   uploadKey: string,
   eTags: Array<string>,
-): Promise<bigint> {
+): Promise<string> {
   const client = getS3Client(clientId);
   await client.completeMultipartUpload(uploadId, uploadKey, eTags);
 
   // Get the file size after upload completion
+  // Return as string since Temporal cannot serialize bigint
   const head = await client.headObject(uploadKey);
-  return BigInt(head?.ContentLength ?? 0);
+  return String(head?.ContentLength ?? 0);
 }
