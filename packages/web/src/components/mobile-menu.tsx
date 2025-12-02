@@ -61,7 +61,9 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
           )}
         >
           <div className="flex items-center justify-between border-gray-200 border-b px-4 py-4 dark:border-zinc-800">
-            <Logo />
+            <Link to="/" onClick={handleClose}>
+              <Logo />
+            </Link>
             <Dialog.Close
               render={(props) => (
                 <button

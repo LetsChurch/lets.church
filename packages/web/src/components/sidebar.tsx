@@ -7,9 +7,9 @@ import {
   IconFlag,
   IconHeartFilled,
   IconHistory,
+  IconInfoCircle,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
-  IconMenu2,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
@@ -123,37 +123,19 @@ export default function Sidebar({ className }: SidebarProps) {
           collapsed && !showAltMenu ? 'justify-center' : 'gap-[7px]',
         )}
       >
-        {collapsed && !showAltMenu ? null : (
+        {collapsed && !showAltMenu ? null : showAltMenu ? (
           <button
             type="button"
-            onClick={showAltMenu ? closeAltMenu : () => setShowAltMenu(true)}
+            onClick={closeAltMenu}
             className="flex size-8 cursor-pointer items-center justify-center rounded-lg transition-colors hover:bg-black/15"
           >
-            {showAltMenu ? (
-              <IconArrowLeft size={24} className="text-primary/80" />
-            ) : (
-              <IconMenu2 size={24} className="text-primary/80" />
-            )}
+            <IconArrowLeft size={24} className="text-primary/80" />
           </button>
-        )}
+        ) : null}
         {collapsed && !showAltMenu ? (
-          <LcTooltip content="More" side="right">
-            <div className="group relative cursor-pointer">
-              <div className="opacity-100 transition-opacity duration-200 group-hover:opacity-0">
-                <Logo collapsed />
-              </div>
-              <button
-                type="button"
-                onClick={openAltMenuFromCollapsed}
-                className={cn(
-                  'absolute inset-0 flex cursor-pointer items-center justify-center',
-                  'opacity-0 transition-opacity duration-200 group-hover:opacity-100',
-                )}
-              >
-                <IconMenu2 size={24} className="text-primary" />
-              </button>
-            </div>
-          </LcTooltip>
+          <Link to="/">
+            <Logo collapsed />
+          </Link>
         ) : (
           <Link to="/">
             <Logo />
@@ -498,7 +480,7 @@ export default function Sidebar({ className }: SidebarProps) {
 
       {/* Donate Card */}
       {collapsed || showAltMenu || donateCardDismissed ? null : (
-        <div className="animate-fade-in px-4">
+        <div className="animate-fade-in px-4 mb-4">
           <SidebarDonateCard onDismiss={handleDismissDonateCard} />
         </div>
       )}
@@ -526,7 +508,7 @@ export default function Sidebar({ className }: SidebarProps) {
       <LcTooltip.Provider>
         {/* Donate Button (Collapsed) */}
         {collapsed && !showAltMenu ? (
-          <div className="px-4">
+          <div className="px-4 pb-3">
             <LcTooltip content="Donate" side="right">
               <a
                 className="flex size-6 cursor-pointer items-center justify-center text-brand transition-all hover:scale-110 hover:animate-pulse hover:text-indigo-400"
@@ -540,19 +522,51 @@ export default function Sidebar({ className }: SidebarProps) {
           </div>
         ) : null}
 
-        {/* Theme Switcher */}
-        {showAltMenu ? null : (
-          <>
-            <div className="px-4 pb-3">
-              <hr className="h-px border-gray-100 dark:border-zinc-900" />
-            </div>
-            <ThemeSwitcher collapsed={collapsed && !showAltMenu} />
-          </>
-        )}
+        {/* About Menu Button (Collapsed) */}
+        {collapsed && !showAltMenu ? (
+          <div className="px-4 pb-3">
+            <LcTooltip content="About Let's Church" side="right">
+              <button
+                type="button"
+                onClick={openAltMenuFromCollapsed}
+                className="flex size-6 items-center justify-center transition-colors hover:text-primary/80"
+              >
+                <IconInfoCircle
+                  size={16}
+                  className="text-gray-600 dark:text-gray-400"
+                />
+              </button>
+            </LcTooltip>
+          </div>
+        ) : null}
 
-        {/* Collapse Button */}
+        {/* About Link, Theme Switcher, and Collapse Button */}
         {showAltMenu ? null : (
-          <div className="p-4">
+          <div className="space-y-3 px-4 pb-4">
+            {collapsed ? null : (
+              <button
+                type="button"
+                onClick={() => setShowAltMenu(true)}
+                className="flex w-full items-center gap-2.5 transition-colors hover:text-primary/80"
+              >
+                <div className="flex size-6 items-center justify-center">
+                  <IconInfoCircle
+                    size={16}
+                    className="text-gray-600 dark:text-gray-400"
+                  />
+                </div>
+                <span className="font-normal text-gray-600 text-xs dark:text-gray-400">
+                  About Let's Church
+                </span>
+              </button>
+            )}
+            {collapsed ? (
+              <div className="flex size-6 items-center justify-center">
+                <ThemeSwitcher collapsed={collapsed && !showAltMenu} />
+              </div>
+            ) : (
+              <ThemeSwitcher collapsed={collapsed && !showAltMenu} />
+            )}
             {collapsed ? (
               <LcTooltip content="Expand Sidebar" side="right">
                 <button

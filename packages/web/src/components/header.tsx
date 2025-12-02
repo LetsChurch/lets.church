@@ -1,6 +1,7 @@
 import { useStore } from '@nanostores/react';
 import { IconMenu2 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
 import { type PropsWithChildren, useState } from 'react';
 import { Avatar } from '@/components/avatar';
 import { LcMenu, MenuItemRouterLink } from '@/components/lc-menu';
@@ -66,7 +67,9 @@ export default function Header({
           >
             <IconMenu2 />
           </button>
-          <Logo />
+          <Link to="/">
+            <Logo />
+          </Link>
         </div>
 
         {/* Search Bar */}
