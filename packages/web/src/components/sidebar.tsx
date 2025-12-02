@@ -162,6 +162,12 @@ export default function Sidebar({ className }: SidebarProps) {
                 >
                   The Dorean Principle
                 </Link>
+                <Link
+                  to="/about/add-content"
+                  className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
+                >
+                  How to Add Content
+                </Link>
                 {/* <Link */}
                 {/*   to="/about/roadmap" */}
                 {/*   className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10" */}
@@ -480,7 +486,7 @@ export default function Sidebar({ className }: SidebarProps) {
 
       {/* Donate Card */}
       {collapsed || showAltMenu || donateCardDismissed ? null : (
-        <div className="animate-fade-in px-4 mb-4">
+        <div className="mb-4 animate-fade-in px-4">
           <SidebarDonateCard onDismiss={handleDismissDonateCard} />
         </div>
       )}

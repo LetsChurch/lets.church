@@ -249,13 +249,14 @@ function CreateChannelPage() {
                   {(field) => (
                     <Stack gap="xs">
                       <field.TextInputField
-                        label="Channel Slug (required)"
-                        placeholder="channel-slug"
+                        label="Channel Address (required)"
+                        placeholder="first-baptist"
                         required
                       />
                       <Text size="xs" c="dimmed">
-                        This will be used in your channel URL. Only letters,
-                        numbers, underscores, and hyphens are allowed.
+                        This creates your channel's web address. You can use
+                        letters, numbers, dashes (-), and underscores (_). For
+                        example: "first-baptist" or "pastor-john"
                       </Text>
                     </Stack>
                   )}

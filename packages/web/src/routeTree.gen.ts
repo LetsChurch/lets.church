@@ -63,6 +63,7 @@ import { Route as MainAboutTermsRouteImport } from './routes/_main/about/terms'
 import { Route as MainAboutPrivacyRouteImport } from './routes/_main/about/privacy'
 import { Route as MainAboutDoreanRouteImport } from './routes/_main/about/dorean'
 import { Route as MainAboutDmcaRouteImport } from './routes/_main/about/dmca'
+import { Route as MainAboutAddContentRouteImport } from './routes/_main/about/add-content'
 import { Route as DashboardOrganizationsOrgIdMembersRouteImport } from './routes/dashboard_/organizations_.$orgId_.members'
 import { Route as DashboardOrganizationsOrgIdEditRouteImport } from './routes/dashboard_/organizations_.$orgId_.edit'
 import { Route as DashboardOrganizationsOrgIdAssociationsRouteImport } from './routes/dashboard_/organizations_.$orgId_.associations'
@@ -359,6 +360,11 @@ const MainAboutDmcaRoute = MainAboutDmcaRouteImport.update({
   path: '/dmca',
   getParentRoute: () => MainAboutRoute,
 } as any)
+const MainAboutAddContentRoute = MainAboutAddContentRouteImport.update({
+  id: '/add-content',
+  path: '/add-content',
+  getParentRoute: () => MainAboutRoute,
+} as any)
 const DashboardOrganizationsOrgIdMembersRoute =
   DashboardOrganizationsOrgIdMembersRouteImport.update({
     id: '/organizations_/$orgId_/members',
@@ -462,6 +468,7 @@ export interface FileRoutesByFullPath {
   '/trpc/$': typeof TrpcSplatRoute
   '/': typeof MainIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/about/add-content': typeof MainAboutAddContentRoute
   '/about/dmca': typeof MainAboutDmcaRoute
   '/about/dorean': typeof MainAboutDoreanRoute
   '/about/privacy': typeof MainAboutPrivacyRoute
@@ -528,6 +535,7 @@ export interface FileRoutesByTo {
   '/trpc/$': typeof TrpcSplatRoute
   '/': typeof MainIndexRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/about/add-content': typeof MainAboutAddContentRoute
   '/about/dmca': typeof MainAboutDmcaRoute
   '/about/dorean': typeof MainAboutDoreanRoute
   '/about/privacy': typeof MainAboutPrivacyRoute
@@ -598,6 +606,7 @@ export interface FileRoutesById {
   '/trpc/$': typeof TrpcSplatRoute
   '/_main/': typeof MainIndexRoute
   '/dashboard_/': typeof DashboardIndexRoute
+  '/_main/about/add-content': typeof MainAboutAddContentRoute
   '/_main/about/dmca': typeof MainAboutDmcaRoute
   '/_main/about/dorean': typeof MainAboutDoreanRoute
   '/_main/about/privacy': typeof MainAboutPrivacyRoute
@@ -668,6 +677,7 @@ export interface FileRouteTypes {
     | '/trpc/$'
     | '/'
     | '/dashboard/'
+    | '/about/add-content'
     | '/about/dmca'
     | '/about/dorean'
     | '/about/privacy'
@@ -734,6 +744,7 @@ export interface FileRouteTypes {
     | '/trpc/$'
     | '/'
     | '/dashboard'
+    | '/about/add-content'
     | '/about/dmca'
     | '/about/dorean'
     | '/about/privacy'
@@ -803,6 +814,7 @@ export interface FileRouteTypes {
     | '/trpc/$'
     | '/_main/'
     | '/dashboard_/'
+    | '/_main/about/add-content'
     | '/_main/about/dmca'
     | '/_main/about/dorean'
     | '/_main/about/privacy'
@@ -1240,6 +1252,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAboutDmcaRouteImport
       parentRoute: typeof MainAboutRoute
     }
+    '/_main/about/add-content': {
+      id: '/_main/about/add-content'
+      path: '/add-content'
+      fullPath: '/about/add-content'
+      preLoaderRoute: typeof MainAboutAddContentRouteImport
+      parentRoute: typeof MainAboutRoute
+    }
     '/dashboard_/organizations_/$orgId_/members': {
       id: '/dashboard_/organizations_/$orgId_/members'
       path: '/organizations/$orgId/members'
@@ -1335,6 +1354,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface MainAboutRouteChildren {
+  MainAboutAddContentRoute: typeof MainAboutAddContentRoute
   MainAboutDmcaRoute: typeof MainAboutDmcaRoute
   MainAboutDoreanRoute: typeof MainAboutDoreanRoute
   MainAboutPrivacyRoute: typeof MainAboutPrivacyRoute
@@ -1343,6 +1363,7 @@ interface MainAboutRouteChildren {
 }
 
 const MainAboutRouteChildren: MainAboutRouteChildren = {
+  MainAboutAddContentRoute: MainAboutAddContentRoute,
   MainAboutDmcaRoute: MainAboutDmcaRoute,
   MainAboutDoreanRoute: MainAboutDoreanRoute,
   MainAboutPrivacyRoute: MainAboutPrivacyRoute,

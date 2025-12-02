@@ -93,6 +93,13 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
               >
                 The Dorean Principle
               </Link>
+              <Link
+                to="/about/add-content"
+                onClick={handleClose}
+                className="block font-semibold text-lg text-primary hover:text-indigo-400"
+              >
+                How to Add Content
+              </Link>
             </div>
 
             {/* Theme Switcher */}
