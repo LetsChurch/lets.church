@@ -22,8 +22,8 @@ export function AvatarCarousel({ items }: AvatarCarouselProps) {
   );
 
   return (
-    <div className="overflow-hidden" ref={emblaRef}>
-      <div className="flex gap-4">
+    <div className="sm:-mx-16 overflow-hidden sm:px-16" ref={emblaRef}>
+      <div className="flex gap-4 px-4 sm:px-0">
         {items.map((item) => (
           <Link
             key={item.id}

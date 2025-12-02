@@ -83,7 +83,7 @@ function ChannelListItem({
           type="button"
           onClick={() => onFollow?.(channel.id)}
           disabled={isFollowing}
-          className="flex h-7 items-center justify-center rounded-full border border-white/10 bg-brand px-2.5 py-1.5 font-semibold text-primary text-xs disabled:opacity-50"
+          className="flex h-7 items-center justify-center rounded-full border border-white/10 bg-brand px-2.5 py-1.5 font-semibold text-white text-xs disabled:opacity-50"
         >
           {isFollowing ? 'Following' : 'Follow'}
         </button>
@@ -91,7 +91,7 @@ function ChannelListItem({
         <button
           type="button"
           onClick={onSignedOutFollow}
-          className="flex h-8 items-center rounded-full border-fancy-pants bg-brand px-3 font-bold text-primary text-sm"
+          className="flex h-8 items-center rounded-full border-fancy-pants bg-brand px-3 font-bold text-sm text-white"
         >
           Follow
         </button>
@@ -230,16 +230,21 @@ function RouteComponent() {
       <MainLayout>
         <div className="space-y-8">
           {!isLoggedIn ? (
-            <EmptyState
-              emptyTitle="Create an account to follow channels"
-              emptyBody="Follow your favorite channels to get a customized feed and to ensure you don't miss new content!"
-              emptyCta="Create Account"
-            />
+            <div className="px-4 sm:px-0">
+              <EmptyState
+                emptyTitle="Create an account to follow channels"
+                emptyBody="Follow your favorite channels to get a customized feed and to ensure you don't miss new content!"
+                emptyCta="Create Account"
+              />
+            </div>
           ) : null}
 
           {hasFollowedChannels ? (
-            <div className="my-6 overflow-hidden border-zinc-800 border-b pb-4">
-              <AvatarCarousel items={followedChannels} />
+            <div className="my-6">
+              <div className="overflow-hidden pb-4">
+                <AvatarCarousel items={followedChannels} />
+              </div>
+              <div className="border-zinc-800 border-b px-4 sm:px-0" />
             </div>
           ) : null}
 
@@ -257,14 +262,16 @@ function RouteComponent() {
               ))}
             </MediaGrid>
           ) : isLoggedIn && !hasFollowedChannels ? (
-            <EmptyState
-              emptyTitle="You're not following any channels yet"
-              emptyBody="Follow your favorite channels to get a customized feed and to ensure you don't miss new content!"
-            />
+            <div className="px-4 sm:px-0">
+              <EmptyState
+                emptyTitle="You're not following any channels yet"
+                emptyBody="Follow your favorite channels to get a customized feed and to ensure you don't miss new content!"
+              />
+            </div>
           ) : null}
 
           {!hasFollowedChannels && initialSuggestedChannels.length > 0 ? (
-            <div>
+            <div className="px-4 sm:px-0">
               <h2 className="mb-4 font-bold text-lg text-primary">
                 {isLoggedIn ? 'Suggested Channels' : 'Popular Channels'}
               </h2>
@@ -310,7 +317,7 @@ function RouteComponent() {
               </button>
               <Link
                 to="/auth/register"
-                className="flex flex-1 items-center justify-center rounded-lg bg-brand px-4 py-2 font-semibold text-primary text-sm"
+                className="flex flex-1 items-center justify-center rounded-lg bg-brand px-4 py-2 font-semibold text-sm text-white"
                 onClick={() => setSignInModalOpen(false)}
               >
                 Create Account

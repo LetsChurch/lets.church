@@ -6,6 +6,7 @@ import WheelGestures from 'embla-carousel-wheel-gestures';
 import { useCallback, useEffect, useState } from 'react';
 import { $headerBackgroundImage } from '@/stores/header';
 import { cn } from '@/util/cn';
+import { Avatar } from './avatar';
 import { CarouselNavigationButtons } from './carousel-navigation-buttons';
 import { CarouselPagination } from './carousel-pagination';
 
@@ -75,15 +76,12 @@ function CarouselItem({
             </Link>
           </h3>
           <div className="flex items-center justify-center gap-1.5">
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt={author}
-                className="h-4 w-4 shrink-0 rounded-full object-cover"
-              />
-            ) : (
-              <div className="h-4 w-4 shrink-0 rounded-full bg-brand" />
-            )}
+            <Avatar
+              src={avatarUrl}
+              alt={author}
+              fallbackText={author.charAt(0).toUpperCase()}
+              className="h-4 w-4 shrink-0"
+            />
             <span className="text-secondary text-sm">{author}</span>
           </div>
         </div>

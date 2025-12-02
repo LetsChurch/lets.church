@@ -87,7 +87,7 @@ function RouteComponent() {
 
   return (
     <MainLayout>
-      <div className="mb-6">
+      <div className="mb-6 px-4 sm:px-0">
         <h1 className="mb-4 font-bold text-2xl text-primary">Library</h1>
         <LibraryTabs activeTab="saved" />
       </div>
@@ -118,23 +118,25 @@ function RouteComponent() {
           ) : null}
         </>
       ) : (
-        <EmptyState
-          emptyTitle={
-            !isLoggedIn
-              ? 'Sign in to access your library'
-              : "You haven't saved any content yet"
-          }
-          emptyBody="Save videos to watch later, catalog your favorite content, track your watch history—and then easily search it all!"
-          {...(!isLoggedIn
-            ? {
-                emptyCta: 'Sign In',
-                emptyCtaHref: '/auth/login',
-              }
-            : {
-                emptyCta: 'Browse Content',
-                emptyCtaHref: '/',
-              })}
-        />
+        <div className="px-4 sm:px-0">
+          <EmptyState
+            emptyTitle={
+              !isLoggedIn
+                ? 'Sign in to access your library'
+                : "You haven't saved any content yet"
+            }
+            emptyBody="Save videos to watch later, catalog your favorite content, track your watch history—and then easily search it all!"
+            {...(!isLoggedIn
+              ? {
+                  emptyCta: 'Sign In',
+                  emptyCtaHref: '/auth/login',
+                }
+              : {
+                  emptyCta: 'Browse Content',
+                  emptyCtaHref: '/',
+                })}
+          />
+        </div>
       )}
     </MainLayout>
   );
