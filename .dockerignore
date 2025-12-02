@@ -8,7 +8,7 @@ packages/web/dist
 packages/db/src/generated
 
 # Dependencies (installed during build stage)
-packages/*/node_modules
+**/node_modules
 .pnpm-store
 
 # Local data
