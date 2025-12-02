@@ -593,7 +593,12 @@ function ChannelUploadPage() {
 
                 <form.AppField name="publishedAt">
                   {(field) => (
-                    <field.DateTimePickerField label="Published Date" />
+                    <field.DatePickerField
+                      label="Published Date"
+                      valueFormat="MM/DD/YYYY"
+                      firstDayOfWeek={0}
+                      weekendDays={[0, 6]}
+                    />
                   )}
                 </form.AppField>
               </Stack>

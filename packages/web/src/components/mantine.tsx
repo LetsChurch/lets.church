@@ -9,7 +9,7 @@ import {
   Textarea,
   TextInput,
 } from '@mantine/core';
-import { DateTimePicker } from '@mantine/dates';
+import { DatePickerInput, DateTimePicker } from '@mantine/dates';
 import '@mantine/dates/styles.css';
 import '@mantine/dropzone/styles.css';
 import { Turnstile } from '@marsidev/react-turnstile';
@@ -236,6 +236,47 @@ function DateTimePickerField(
   );
 }
 
+function DatePickerField(props: {
+  label?: string;
+  description?: string;
+  valueFormat?: string;
+  firstDayOfWeek?: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  weekendDays?: (0 | 1 | 2 | 3 | 4 | 5 | 6)[];
+}) {
+  const field = useFieldContext<Date>();
+
+  // Convert Date to string format expected by Mantine DatePickerInput (YYYY-MM-DD)
+  const dateToString = (date: Date | null): string | null => {
+    if (!date) return null;
+    const d = date instanceof Date ? date : new Date(date);
+    return d.toISOString().split('T')[0];
+  };
+
+  // Convert string from Mantine DatePickerInput back to Date
+  const stringToDate = (value: string | null): Date => {
+    return value ? new Date(value) : new Date();
+  };
+
+  return (
+    <DatePickerInput
+      {...props}
+      name={field.name}
+      value={dateToString(field.state.value)}
+      onBlur={field.handleBlur}
+      onChange={(value) => {
+        field.handleChange(stringToDate(value));
+      }}
+      error={
+        field.state.meta.errors?.[0]
+          ? typeof field.state.meta.errors[0] === 'string'
+            ? field.state.meta.errors[0]
+            : field.state.meta.errors[0]?.message
+          : undefined
+      }
+    />
+  );
+}
+
 function TurnstileField(
   props: Omit<ComponentProps<typeof Turnstile>, 'onSuccess'>,
 ) {
@@ -265,6 +306,7 @@ export const { useAppForm: useAppMantineForm } = createFormHook({
     MultiSelectField,
     RadioGroupField,
     DateTimePickerField,
+    DatePickerField,
     TurnstileField,
   },
   formComponents: {
