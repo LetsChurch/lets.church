@@ -152,7 +152,18 @@ function RouteComponent() {
           <form.AppField name="agreeToTheology">
             {(field) => (
               <field.CheckboxField
-                label="I agree to the Let's Church Statement of Theology"
+                label={
+                  <>
+                    I agree to the Let's Church{' '}
+                    <Link
+                      to="/about/theology"
+                      style={{ textDecoration: 'underline' }}
+                      target="_blank"
+                    >
+                      Statement of Theology
+                    </Link>
+                  </>
+                }
                 required
               />
             )}
@@ -161,7 +172,26 @@ function RouteComponent() {
           <form.AppField name="agreeToTerms">
             {(field) => (
               <field.CheckboxField
-                label="I agree to the Terms and Conditions and Privacy Policy"
+                label={
+                  <>
+                    I agree to the{' '}
+                    <Link
+                      to="/about/terms"
+                      style={{ textDecoration: 'underline' }}
+                      target="_blank"
+                    >
+                      Terms and Conditions
+                    </Link>{' '}
+                    and{' '}
+                    <Link
+                      to="/about/privacy"
+                      style={{ textDecoration: 'underline' }}
+                      target="_blank"
+                    >
+                      Privacy Policy
+                    </Link>
+                  </>
+                }
                 required
               />
             )}

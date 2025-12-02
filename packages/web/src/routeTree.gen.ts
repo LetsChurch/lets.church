@@ -59,6 +59,7 @@ import { Route as ChannelSlugRssDotxmlRouteImport } from './routes/channel.$slug
 import { Route as ChannelSlugPodcastDotxmlRouteImport } from './routes/channel.$slug.podcast[.]xml'
 import { Route as MainMediaMediaIdRouteImport } from './routes/_main/media/$mediaId'
 import { Route as MainChannelSlugRouteImport } from './routes/_main/channel.$slug'
+import { Route as MainAboutTheologyRouteImport } from './routes/_main/about/theology'
 import { Route as MainAboutTermsRouteImport } from './routes/_main/about/terms'
 import { Route as MainAboutPrivacyRouteImport } from './routes/_main/about/privacy'
 import { Route as MainAboutDoreanRouteImport } from './routes/_main/about/dorean'
@@ -340,6 +341,11 @@ const MainChannelSlugRoute = MainChannelSlugRouteImport.update({
   path: '/channel/$slug',
   getParentRoute: () => MainRoute,
 } as any)
+const MainAboutTheologyRoute = MainAboutTheologyRouteImport.update({
+  id: '/theology',
+  path: '/theology',
+  getParentRoute: () => MainAboutRoute,
+} as any)
 const MainAboutTermsRoute = MainAboutTermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -473,6 +479,7 @@ export interface FileRoutesByFullPath {
   '/about/dorean': typeof MainAboutDoreanRoute
   '/about/privacy': typeof MainAboutPrivacyRoute
   '/about/terms': typeof MainAboutTermsRoute
+  '/about/theology': typeof MainAboutTheologyRoute
   '/channel/$slug': typeof MainChannelSlugRoute
   '/media/$mediaId': typeof MainMediaMediaIdRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
@@ -540,6 +547,7 @@ export interface FileRoutesByTo {
   '/about/dorean': typeof MainAboutDoreanRoute
   '/about/privacy': typeof MainAboutPrivacyRoute
   '/about/terms': typeof MainAboutTermsRoute
+  '/about/theology': typeof MainAboutTheologyRoute
   '/channel/$slug': typeof MainChannelSlugRoute
   '/media/$mediaId': typeof MainMediaMediaIdRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
@@ -611,6 +619,7 @@ export interface FileRoutesById {
   '/_main/about/dorean': typeof MainAboutDoreanRoute
   '/_main/about/privacy': typeof MainAboutPrivacyRoute
   '/_main/about/terms': typeof MainAboutTermsRoute
+  '/_main/about/theology': typeof MainAboutTheologyRoute
   '/_main/channel/$slug': typeof MainChannelSlugRoute
   '/_main/media/$mediaId': typeof MainMediaMediaIdRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
@@ -682,6 +691,7 @@ export interface FileRouteTypes {
     | '/about/dorean'
     | '/about/privacy'
     | '/about/terms'
+    | '/about/theology'
     | '/channel/$slug'
     | '/media/$mediaId'
     | '/channel/$slug/podcast.xml'
@@ -749,6 +759,7 @@ export interface FileRouteTypes {
     | '/about/dorean'
     | '/about/privacy'
     | '/about/terms'
+    | '/about/theology'
     | '/channel/$slug'
     | '/media/$mediaId'
     | '/channel/$slug/podcast.xml'
@@ -819,6 +830,7 @@ export interface FileRouteTypes {
     | '/_main/about/dorean'
     | '/_main/about/privacy'
     | '/_main/about/terms'
+    | '/_main/about/theology'
     | '/_main/channel/$slug'
     | '/_main/media/$mediaId'
     | '/channel/$slug/podcast.xml'
@@ -1224,6 +1236,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainChannelSlugRouteImport
       parentRoute: typeof MainRoute
     }
+    '/_main/about/theology': {
+      id: '/_main/about/theology'
+      path: '/theology'
+      fullPath: '/about/theology'
+      preLoaderRoute: typeof MainAboutTheologyRouteImport
+      parentRoute: typeof MainAboutRoute
+    }
     '/_main/about/terms': {
       id: '/_main/about/terms'
       path: '/terms'
@@ -1359,6 +1378,7 @@ interface MainAboutRouteChildren {
   MainAboutDoreanRoute: typeof MainAboutDoreanRoute
   MainAboutPrivacyRoute: typeof MainAboutPrivacyRoute
   MainAboutTermsRoute: typeof MainAboutTermsRoute
+  MainAboutTheologyRoute: typeof MainAboutTheologyRoute
   MainAboutIndexRoute: typeof MainAboutIndexRoute
 }
 
@@ -1368,6 +1388,7 @@ const MainAboutRouteChildren: MainAboutRouteChildren = {
   MainAboutDoreanRoute: MainAboutDoreanRoute,
   MainAboutPrivacyRoute: MainAboutPrivacyRoute,
   MainAboutTermsRoute: MainAboutTermsRoute,
+  MainAboutTheologyRoute: MainAboutTheologyRoute,
   MainAboutIndexRoute: MainAboutIndexRoute,
 }
 

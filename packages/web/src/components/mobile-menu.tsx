@@ -110,6 +110,13 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
             {/* Legal Links */}
             <div className="space-y-3 border-gray-200 border-t py-6 dark:border-zinc-800">
               <Link
+                to="/about/theology"
+                onClick={handleClose}
+                className="block font-medium text-primary text-sm hover:text-primary"
+              >
+                Statement of Theology
+              </Link>
+              <Link
                 to="/about/terms"
                 onClick={handleClose}
                 className="block font-medium text-primary text-sm hover:text-primary"
