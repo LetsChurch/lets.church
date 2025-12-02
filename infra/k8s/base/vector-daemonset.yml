@@ -101,7 +101,7 @@ spec:
       serviceAccountName: vector
       containers:
         - name: vector
-          image: timberio/vector:0.41.1-alpine
+          image: timberio/vector:0.51.0-alpine
           env:
             - name: AXIOM_DATASET
               valueFrom:
