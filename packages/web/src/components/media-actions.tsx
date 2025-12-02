@@ -232,7 +232,7 @@ export function MediaActions({
     <LcTooltip.Provider>
       <div className="-mx-4 sm:-mx-4 flex min-w-0 items-center gap-2">
         {/* Scrollable area with shadows */}
-        <div className="relative min-w-0">
+        <div className="relative isolate min-w-0">
           {/* Left fade shadow */}
           <div
             className={cn(
