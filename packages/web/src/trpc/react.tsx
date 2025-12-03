@@ -52,7 +52,7 @@ export const trpcClient = createTRPCClient<AppRouter>({
       transformer: superjson,
       url: getUrl(),
       headers: async () => {
-        const headers = await getIncomingHeaders();
+        const headers = getIncomingHeaders();
         // On server-side, explicitly ensure cookie header is forwarded
         // This is critical for authentication during SSR
         return headers;
