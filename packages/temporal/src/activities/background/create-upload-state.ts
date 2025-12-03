@@ -10,7 +10,7 @@ export type CreateUploadStateParams = {
   s3Key: string;
   clientId: S3ClientId;
   uploadType: UploadPostProcessValue;
-  sizeBytes?: bigint | number | string;
+  sizeBytes?: string;
   uploadRecordId?: string;
   appUserId?: string;
   channelId?: string;
