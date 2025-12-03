@@ -9,7 +9,11 @@ const moduleLogger = logger.child({
 });
 
 const clientEnv = z
-  .object({ TURNSTILE_SITE_KEY: z.string() })
+  .object({
+    TURNSTILE_SITE_KEY: z.string(),
+    MAPBOX_MAP_TOKEN: z.string(),
+    MAPBOX_SEARCHBOX_TOKEN: z.string(),
+  })
   .parse(process.env);
 
 export const commonProcedures = {
