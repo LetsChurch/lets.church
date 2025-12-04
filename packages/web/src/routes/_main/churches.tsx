@@ -156,10 +156,10 @@ function RouteComponent() {
   }, []);
 
   // Calculate padding to offset the map center
-  // Pane is max-w-sm (24rem = 384px) + 24px padding on each side = 432px total
+  // Pane is max-w-sm (24rem = 384px) + 24px padding on each side + 24px spacing = 456px total
   // Sidebar collapsed: 56px (w-14), expanded: 200px (w-50)
   const sidebarWidth = sidebarCollapsed ? 56 : 200;
-  const paneWidth = 432;
+  const paneWidth = 456;
   const mapPadding = {
     left: paneWidth + sidebarWidth,
     top: 0,
