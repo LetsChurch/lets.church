@@ -134,11 +134,29 @@ function ChurchesPage() {
                         </ActionIcon>
                       </Menu.Target>
                       <Menu.Dropdown>
-                        <Menu.Item leftSection={<IconEye size={14} />}>
+                        <Menu.Item
+                          leftSection={<IconEye size={14} />}
+                          renderRoot={(rootProps) => (
+                            <Link
+                              {...rootProps}
+                              to="/dashboard/churches/$churchId"
+                              params={{ churchId: church.id }}
+                            />
+                          )}
+                        >
                           View Details
                         </Menu.Item>
                         {isAdmin && (
-                          <Menu.Item leftSection={<IconSettings size={14} />}>
+                          <Menu.Item
+                            leftSection={<IconSettings size={14} />}
+                            renderRoot={(rootProps) => (
+                              <Link
+                                {...rootProps}
+                                to="/dashboard/churches/$churchId/edit"
+                                params={{ churchId: church.id }}
+                              />
+                            )}
+                          >
                             Manage
                           </Menu.Item>
                         )}

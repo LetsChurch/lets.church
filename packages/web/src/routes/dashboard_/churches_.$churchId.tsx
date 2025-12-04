@@ -7,6 +7,7 @@ import {
   Stack,
   Text,
   Title,
+  Tooltip,
 } from '@mantine/core';
 import { IconShield, IconUsers, IconVideo } from '@tabler/icons-react';
 import { useSuspenseQuery } from '@tanstack/react-query';
@@ -69,9 +70,18 @@ function ChurchDetailsPage() {
           <div>
             <Group gap="sm" mb="xs">
               <Title order={1}>{church.name}</Title>
-              <Badge color={isAdmin ? 'blue' : 'green'} size="sm">
-                {isAdmin ? 'Admin' : 'User'}
-              </Badge>
+              <Tooltip
+                label={
+                  isAdmin
+                    ? 'You can edit this church profile and manage settings'
+                    : 'You have access to view this church profile'
+                }
+                withArrow
+              >
+                <Badge color={isAdmin ? 'blue' : 'green'} size="sm">
+                  {isAdmin ? 'Admin' : 'User'}
+                </Badge>
+              </Tooltip>
             </Group>
             <Group gap="md" mb="sm">
               <Text c="dimmed">@{church.slug}</Text>

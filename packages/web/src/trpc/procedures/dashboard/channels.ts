@@ -288,6 +288,7 @@ export const channelRouter = router({
       select: {
         id: true,
         name: true,
+        approvedAt: true,
         memberships: {
           select: {
             isAdmin: true,

@@ -7,6 +7,7 @@ import {
   Stack,
   Text,
   Title,
+  Tooltip,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { IconCheck, IconNetwork, IconUsers, IconX } from '@tabler/icons-react';
@@ -166,12 +167,44 @@ function OrganizationDetailsPage() {
           <div>
             <Group gap="sm" mb="xs">
               <Title order={1}>{organization.name}</Title>
-              <Badge color="blue" variant="light" size="sm">
-                {organization.type}
-              </Badge>
-              <Badge color={isAdmin ? 'blue' : 'green'} size="sm">
-                {isAdmin ? 'Admin' : 'User'}
-              </Badge>
+              <Tooltip
+                label={
+                  isApproved
+                    ? 'This organization has been approved and is visible to the public'
+                    : 'This organization is pending approval and not yet visible to the public'
+                }
+                withArrow
+              >
+                <Badge color={isApproved ? 'green' : 'yellow'} size="sm">
+                  {isApproved ? 'Approved' : 'Pending'}
+                </Badge>
+              </Tooltip>
+              <Tooltip
+                label={
+                  organization.type === 'MINISTRY'
+                    ? 'A ministry or denominational organization'
+                    : organization.type === 'CHURCH'
+                      ? 'A local church or congregation'
+                      : 'An educational or other religious organization'
+                }
+                withArrow
+              >
+                <Badge color="blue" variant="light" size="sm">
+                  {organization.type}
+                </Badge>
+              </Tooltip>
+              <Tooltip
+                label={
+                  isAdmin
+                    ? 'You can edit this organization and manage settings'
+                    : 'You have access to view this organization'
+                }
+                withArrow
+              >
+                <Badge color={isAdmin ? 'blue' : 'green'} size="sm">
+                  {isAdmin ? 'Admin' : 'User'}
+                </Badge>
+              </Tooltip>
             </Group>
             <Group gap="md" mb="sm">
               <Text c="dimmed">@{organization.slug}</Text>

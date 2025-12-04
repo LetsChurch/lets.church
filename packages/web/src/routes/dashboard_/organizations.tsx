@@ -116,11 +116,29 @@ function OrganizationsPage() {
                         </ActionIcon>
                       </Menu.Target>
                       <Menu.Dropdown>
-                        <Menu.Item leftSection={<IconEye size={14} />}>
+                        <Menu.Item
+                          leftSection={<IconEye size={14} />}
+                          renderRoot={(rootProps) => (
+                            <Link
+                              {...rootProps}
+                              to="/dashboard/organizations/$orgId"
+                              params={{ orgId: organization.id }}
+                            />
+                          )}
+                        >
                           View Details
                         </Menu.Item>
                         {isAdmin && (
-                          <Menu.Item leftSection={<IconSettings size={14} />}>
+                          <Menu.Item
+                            leftSection={<IconSettings size={14} />}
+                            renderRoot={(rootProps) => (
+                              <Link
+                                {...rootProps}
+                                to="/dashboard/organizations/$orgId/edit"
+                                params={{ orgId: organization.id }}
+                              />
+                            )}
+                          >
                             Manage
                           </Menu.Item>
                         )}

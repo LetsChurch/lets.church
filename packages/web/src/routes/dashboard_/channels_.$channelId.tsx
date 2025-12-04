@@ -7,6 +7,7 @@ import {
   Stack,
   Text,
   Title,
+  Tooltip,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import {
@@ -163,15 +164,47 @@ function ChannelDetailsPage() {
           <div>
             <Group gap="sm" mb="xs">
               <Title order={1}>{channel.name}</Title>
-              <Badge
-                color={channel.visibility === 'PUBLIC' ? 'green' : 'orange'}
-                size="sm"
+              <Tooltip
+                label={
+                  isApproved
+                    ? 'This channel has been approved and is visible to the public'
+                    : 'This channel is pending approval and not yet visible to the public'
+                }
+                withArrow
               >
-                {channel.visibility}
-              </Badge>
-              <Badge color={isChannelAdmin ? 'blue' : 'green'} size="sm">
-                {isChannelAdmin ? 'Admin' : 'Member'}
-              </Badge>
+                <Badge color={isApproved ? 'green' : 'yellow'} size="sm">
+                  {isApproved ? 'Approved' : 'Pending'}
+                </Badge>
+              </Tooltip>
+              <Tooltip
+                label={
+                  channel.visibility === 'PUBLIC'
+                    ? 'Anyone can view this channel and its content'
+                    : channel.visibility === 'UNLISTED'
+                      ? 'Only people with the link can view this channel'
+                      : 'Only channel members can view this content'
+                }
+                withArrow
+              >
+                <Badge
+                  color={channel.visibility === 'PUBLIC' ? 'green' : 'orange'}
+                  size="sm"
+                >
+                  {channel.visibility}
+                </Badge>
+              </Tooltip>
+              <Tooltip
+                label={
+                  isChannelAdmin
+                    ? 'You can edit this channel and manage settings'
+                    : 'You have access to view and upload content to this channel'
+                }
+                withArrow
+              >
+                <Badge color={isChannelAdmin ? 'blue' : 'green'} size="sm">
+                  {isChannelAdmin ? 'Admin' : 'Member'}
+                </Badge>
+              </Tooltip>
             </Group>
             <Group gap="md" mb="sm">
               <Text c="dimmed">@{channel.slug}</Text>

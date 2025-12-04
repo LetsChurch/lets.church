@@ -107,9 +107,20 @@ function ChannelsPage() {
                         </ActionIcon>
                       </Menu.Target>
                       <Menu.Dropdown>
-                        <Menu.Item leftSection={<IconEdit size={14} />}>
-                          Edit
-                        </Menu.Item>
+                        {isAdmin && (
+                          <Menu.Item
+                            leftSection={<IconEdit size={14} />}
+                            renderRoot={(rootProps) => (
+                              <Link
+                                {...rootProps}
+                                to="/dashboard/channels/$channelId/edit"
+                                params={{ channelId: channel.id }}
+                              />
+                            )}
+                          >
+                            Edit
+                          </Menu.Item>
+                        )}
                         {isAdmin && (
                           <Menu.Item
                             leftSection={<IconTrash size={14} />}

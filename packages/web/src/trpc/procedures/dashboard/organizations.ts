@@ -196,6 +196,7 @@ export const organizationRouter = router({
         name: true,
         type: true,
         description: true,
+        approvedAt: true,
         memberships: {
           select: {
             isAdmin: true,
