@@ -43,7 +43,7 @@ type OrganizationMembershipWithUser = {
     id: string;
     username: string;
     fullName: string | null;
-    avatarPath: string | null;
+    avatarUrl: string | null;
   };
 };
 
@@ -198,11 +198,7 @@ function OrganizationMembersPage() {
                 <Table.Td>
                   <Group gap="sm">
                     <Avatar
-                      src={
-                        membership.appUser.avatarPath
-                          ? `/api/media/${membership.appUser.avatarPath}`
-                          : null
-                      }
+                      src={membership.appUser.avatarUrl}
                       alt={
                         membership.appUser.fullName ||
                         membership.appUser.username
@@ -321,9 +317,7 @@ function OrganizationMembersPage() {
                     onClick={() => setSelectedUserId(user.id)}
                   >
                     <Avatar
-                      src={
-                        user.avatarPath ? `/api/media/${user.avatarPath}` : null
-                      }
+                      src={user.avatarUrl}
                       alt={user.fullName || user.username}
                       size="sm"
                     >

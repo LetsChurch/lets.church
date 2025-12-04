@@ -12,6 +12,7 @@ import {
   IncomingIdSchema,
   OutgoingIdSchema,
 } from '@/schemas/common';
+import { appAvatarSm, appAvatarXs } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
@@ -399,7 +400,7 @@ export const searchProcedures = {
       const channelsWithAvatars = channels.map((channel) => {
         const avatarUrl = channel.avatarPath
           ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
-              resize: { width: 64, height: 64 },
+              resize: appAvatarSm,
             })
           : null;
 
@@ -503,7 +504,7 @@ export const searchProcedures = {
               ? getPublicImageUrl(
                   publicS3.getS3ProtocolUri(channel.avatarPath),
                   {
-                    resize: { width: 32, height: 32 },
+                    resize: appAvatarXs,
                   },
                 )
               : null;
@@ -616,7 +617,7 @@ export const searchProcedures = {
               ? getPublicImageUrl(
                   publicS3.getS3ProtocolUri(channel.avatarPath),
                   {
-                    resize: { width: 32, height: 32 },
+                    resize: appAvatarXs,
                   },
                 )
               : null;

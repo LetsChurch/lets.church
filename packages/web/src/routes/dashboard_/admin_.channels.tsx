@@ -258,11 +258,7 @@ function ChannelApprovalsPage() {
                         <Group gap="sm">
                           <Avatar
                             size="sm"
-                            src={
-                              channel.avatarPath
-                                ? `/api/media/${channel.avatarPath}`
-                                : null
-                            }
+                            src={channel.avatarUrl}
                             alt={channel.name}
                           >
                             {channel.name.charAt(0).toUpperCase()}

@@ -41,6 +41,7 @@ import {
   handleMultipartMediaUpload,
   importMedia,
 } from '@/temporal';
+import { mantineAvatarSm2x, mantineAvatarXl2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { ingestS3, PART_SIZE, publicS3 } from '@/util/s3';
 import { getPublicImageUrl, getPublicMediaUrl } from '@/util/url';
@@ -414,7 +415,19 @@ export const channelRouter = router({
       },
     });
 
-    return { ...channel, userMembership: ctx.membership, totalViews };
+    const { avatarPath, ...channelWithoutPath } = channel;
+    const avatarUrl = avatarPath
+      ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+          resize: mantineAvatarXl2x,
+        })
+      : null;
+
+    return {
+      ...channelWithoutPath,
+      avatarUrl,
+      userMembership: ctx.membership,
+      totalViews,
+    };
   }),
 
   getChannelForEdit: channelAdminProcedure.query(async ({ ctx, input }) => {
@@ -531,7 +544,28 @@ export const channelRouter = router({
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
 
-    return { ...channel, userMembership: ctx.membership };
+    const membershipsWithAvatarUrl = channel.memberships.map((membership) => {
+      const { avatarPath, ...userWithoutPath } = membership.appUser;
+      const avatarUrl = avatarPath
+        ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+            resize: mantineAvatarSm2x,
+          })
+        : null;
+
+      return {
+        ...membership,
+        appUser: {
+          ...userWithoutPath,
+          avatarUrl,
+        },
+      };
+    });
+
+    return {
+      ...channel,
+      memberships: membershipsWithAvatarUrl,
+      userMembership: ctx.membership,
+    };
   }),
 
   searchUsers: channelAdminProcedure
@@ -583,7 +617,19 @@ export const channelRouter = router({
         'User search completed',
       );
 
-      return users;
+      return users.map((user) => {
+        const { avatarPath, ...userWithoutPath } = user;
+        const avatarUrl = avatarPath
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+              resize: mantineAvatarSm2x,
+            })
+          : null;
+
+        return {
+          ...userWithoutPath,
+          avatarUrl,
+        };
+      });
     }),
 
   addChannelMember: channelAdminProcedure

@@ -252,11 +252,7 @@ function AssociationsPage() {
                     <Group gap="sm">
                       <Avatar
                         size="sm"
-                        src={
-                          association.downstreamOrganization.avatarPath
-                            ? `/api/media/${association.downstreamOrganization.avatarPath}`
-                            : null
-                        }
+                        src={association.downstreamOrganization.avatarUrl}
                         alt={association.downstreamOrganization.name}
                       >
                         {association.downstreamOrganization.name

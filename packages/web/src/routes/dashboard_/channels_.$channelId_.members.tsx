@@ -44,7 +44,7 @@ type MembershipWithUser = {
     id: string;
     username: string;
     fullName: string | null;
-    avatarPath: string | null;
+    avatarUrl: string | null;
   };
 };
 
@@ -262,12 +262,7 @@ function ChannelMembersPage() {
                       setSearchQuery(user.username);
                     }}
                   >
-                    <Avatar
-                      size="sm"
-                      src={
-                        user.avatarPath ? `/api/media/${user.avatarPath}` : null
-                      }
-                    >
+                    <Avatar size="sm" src={user.avatarUrl}>
                       {user.username.charAt(0).toUpperCase()}
                     </Avatar>
                     <div>
@@ -371,14 +366,7 @@ function ChannelMembersPage() {
               <Table.Tr key={`${membership.channelId}-${membership.appUserId}`}>
                 <Table.Td>
                   <Group gap="sm">
-                    <Avatar
-                      size="sm"
-                      src={
-                        membership.appUser.avatarPath
-                          ? `/api/media/${membership.appUser.avatarPath}`
-                          : null
-                      }
-                    >
+                    <Avatar size="sm" src={membership.appUser.avatarUrl}>
                       {membership.appUser.username.charAt(0).toUpperCase()}
                     </Avatar>
                     <div>

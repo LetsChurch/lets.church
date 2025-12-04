@@ -60,11 +60,7 @@ function ChurchDetailsPage() {
     <Stack gap="lg">
       <Group justify="space-between" align="flex-start">
         <Group align="flex-start">
-          <Avatar
-            size="xl"
-            src={church.avatarPath ? `/api/media/${church.avatarPath}` : null}
-            alt={church.name}
-          >
+          <Avatar size="xl" src={church.avatarUrl} alt={church.name}>
             {church.name.charAt(0).toUpperCase()}
           </Avatar>
           <div>

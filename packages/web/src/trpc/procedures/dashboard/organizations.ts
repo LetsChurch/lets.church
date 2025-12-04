@@ -12,7 +12,10 @@ import {
   upstreamAssociationActionSchema,
   userSearchOrganizationSchema,
 } from '@/schemas/dashboard';
+import { mantineAvatarSm2x, mantineAvatarXl2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
+import { publicS3 } from '@/util/s3';
+import { getPublicImageUrl } from '@/util/url';
 import { authProcedure, router } from '../../trpc';
 
 const moduleLogger = logger.child({
@@ -299,8 +302,38 @@ export const organizationRouter = router({
           },
         });
 
+      const { avatarPath, ...organizationWithoutPath } = organization;
+
+      const avatarUrl = avatarPath
+        ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+            resize: mantineAvatarXl2x,
+          })
+        : null;
+
+      const membershipsWithAvatarUrl = organization.memberships.map(
+        (membership) => {
+          const { avatarPath: userAvatarPath, ...userWithoutPath } =
+            membership.appUser;
+          const userAvatarUrl = userAvatarPath
+            ? getPublicImageUrl(publicS3.getS3ProtocolUri(userAvatarPath), {
+                resize: mantineAvatarSm2x,
+              })
+            : null;
+
+          return {
+            ...membership,
+            appUser: {
+              ...userWithoutPath,
+              avatarUrl: userAvatarUrl,
+            },
+          };
+        },
+      );
+
       return {
-        ...organization,
+        ...organizationWithoutPath,
+        avatarUrl,
+        memberships: membershipsWithAvatarUrl,
         userMembership: ctx.membership,
         unapprovedAssociationsCount,
       };
@@ -345,7 +378,30 @@ export const organizationRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND' });
       }
 
-      return { ...organization, userMembership: ctx.membership };
+      const membershipsWithAvatarUrl = organization.memberships.map(
+        (membership) => {
+          const { avatarPath, ...userWithoutPath } = membership.appUser;
+          const avatarUrl = avatarPath
+            ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+                resize: mantineAvatarSm2x,
+              })
+            : null;
+
+          return {
+            ...membership,
+            appUser: {
+              ...userWithoutPath,
+              avatarUrl,
+            },
+          };
+        },
+      );
+
+      return {
+        ...organization,
+        memberships: membershipsWithAvatarUrl,
+        userMembership: ctx.membership,
+      };
     },
   ),
 
@@ -398,7 +454,19 @@ export const organizationRouter = router({
         'User search completed',
       );
 
-      return users;
+      return users.map((user) => {
+        const { avatarPath, ...userWithoutPath } = user;
+        const avatarUrl = avatarPath
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+              resize: mantineAvatarSm2x,
+            })
+          : null;
+
+        return {
+          ...userWithoutPath,
+          avatarUrl,
+        };
+      });
     }),
 
   addOrganizationMember: organizationAdminProcedure
@@ -850,7 +918,23 @@ export const organizationRouter = router({
           },
         });
 
-      return pendingApprovals;
+      return pendingApprovals.map((approval) => {
+        const { avatarPath, ...orgWithoutPath } =
+          approval.downstreamOrganization;
+        const avatarUrl = avatarPath
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+              resize: mantineAvatarSm2x,
+            })
+          : null;
+
+        return {
+          ...approval,
+          downstreamOrganization: {
+            ...orgWithoutPath,
+            avatarUrl,
+          },
+        };
+      });
     },
   ),
 
@@ -985,7 +1069,23 @@ export const organizationRouter = router({
           },
         });
 
-      return upstreamAssociations;
+      return upstreamAssociations.map((association) => {
+        const { avatarPath, ...orgWithoutPath } =
+          association.downstreamOrganization;
+        const avatarUrl = avatarPath
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+              resize: mantineAvatarSm2x,
+            })
+          : null;
+
+        return {
+          ...association,
+          downstreamOrganization: {
+            ...orgWithoutPath,
+            avatarUrl,
+          },
+        };
+      });
     },
   ),
 

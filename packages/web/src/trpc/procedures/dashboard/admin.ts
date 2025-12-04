@@ -30,6 +30,7 @@ import {
   startCleanupStaleUploadStates,
   startMigrateViewRanges,
 } from '@/temporal';
+import { mantineAvatarSm2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { publicS3 } from '@/util/s3';
 import {
@@ -158,7 +159,7 @@ export const adminRouter = router({
   getPendingChannelApprovals: adminProcedure.query(async () => {
     moduleLogger.info('Fetching pending channel approvals');
 
-    return prisma.channel.findMany({
+    const channels = await prisma.channel.findMany({
       where: {
         approvedAt: null,
       },
@@ -198,6 +199,20 @@ export const adminRouter = router({
       orderBy: {
         createdAt: 'asc',
       },
+    });
+
+    return channels.map((channel) => {
+      const { avatarPath, ...channelWithoutPath } = channel;
+      const avatarUrl = avatarPath
+        ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+            resize: mantineAvatarSm2x,
+          })
+        : null;
+
+      return {
+        ...channelWithoutPath,
+        avatarUrl,
+      };
     });
   }),
 
@@ -296,8 +311,22 @@ export const adminRouter = router({
           prisma.channel.count({ where: { approvedAt: { not: null } } }),
         ]);
 
+      const channelsWithAvatarUrl = channels.map((channel) => {
+        const { avatarPath, ...channelWithoutPath } = channel;
+        const avatarUrl = avatarPath
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+              resize: mantineAvatarSm2x,
+            })
+          : null;
+
+        return {
+          ...channelWithoutPath,
+          avatarUrl,
+        };
+      });
+
       return {
-        channels,
+        channels: channelsWithAvatarUrl,
         totalCount,
         pendingCount,
         approvedCount,
@@ -307,7 +336,7 @@ export const adminRouter = router({
   getPendingOrganizationApprovals: adminProcedure.query(async () => {
     moduleLogger.info('Fetching pending organization approvals');
 
-    return prisma.organization.findMany({
+    const organizations = await prisma.organization.findMany({
       where: {
         approvedAt: null,
       },
@@ -347,6 +376,20 @@ export const adminRouter = router({
       orderBy: {
         createdAt: 'asc',
       },
+    });
+
+    return organizations.map((org) => {
+      const { avatarPath, ...orgWithoutPath } = org;
+      const avatarUrl = avatarPath
+        ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+            resize: mantineAvatarSm2x,
+          })
+        : null;
+
+      return {
+        ...orgWithoutPath,
+        avatarUrl,
+      };
     });
   }),
 
@@ -1248,11 +1291,22 @@ export const adminRouter = router({
           )
         : null;
 
+      const { avatarPath, ...channelWithoutPath } = uploadRecord.channel;
+      const channelAvatarUrl = avatarPath
+        ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+            resize: mantineAvatarSm2x,
+          })
+        : null;
+
       return {
         ...rest,
         uploadRecord: {
           ...uploadRecord,
           thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
+          channel: {
+            ...channelWithoutPath,
+            avatarUrl: channelAvatarUrl,
+          },
         },
       };
     });

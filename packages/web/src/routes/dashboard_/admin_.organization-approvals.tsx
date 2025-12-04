@@ -154,11 +154,7 @@ function OrganizationApprovalsPage() {
                     <Group gap="sm">
                       <Avatar
                         size="sm"
-                        src={
-                          organization.avatarPath
-                            ? `/api/media/${organization.avatarPath}`
-                            : null
-                        }
+                        src={organization.avatarUrl}
                         alt={organization.name}
                       >
                         {organization.name.charAt(0).toUpperCase()}

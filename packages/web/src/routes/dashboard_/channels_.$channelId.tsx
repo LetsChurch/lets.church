@@ -154,11 +154,7 @@ function ChannelDetailsPage() {
     <Stack gap="lg">
       <Group justify="space-between" align="flex-start">
         <Group align="flex-start">
-          <Avatar
-            size="xl"
-            src={channel.avatarPath ? `/api/media/${channel.avatarPath}` : null}
-            alt={channel.name}
-          >
+          <Avatar size="xl" src={channel.avatarUrl} alt={channel.name}>
             {channel.name.charAt(0).toUpperCase()}
           </Avatar>
           <div>

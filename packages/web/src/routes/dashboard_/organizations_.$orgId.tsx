@@ -155,11 +155,7 @@ function OrganizationDetailsPage() {
         <Group align="flex-start">
           <Avatar
             size="xl"
-            src={
-              organization.avatarPath
-                ? `/api/media/${organization.avatarPath}`
-                : null
-            }
+            src={organization.avatarUrl}
             alt={organization.name}
           >
             {organization.name.charAt(0).toUpperCase()}

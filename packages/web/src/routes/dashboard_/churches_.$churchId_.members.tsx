@@ -43,7 +43,7 @@ type OrganizationMembershipWithUser = {
     id: string;
     username: string;
     fullName: string | null;
-    avatarPath: string | null;
+    avatarUrl: string | null;
   };
 };
 
@@ -257,12 +257,7 @@ function ChurchMembersPage() {
                       setSearchQuery(user.username);
                     }}
                   >
-                    <Avatar
-                      size="sm"
-                      src={
-                        user.avatarPath ? `/api/media/${user.avatarPath}` : null
-                      }
-                    >
+                    <Avatar size="sm" src={user.avatarUrl}>
                       {user.username.charAt(0).toUpperCase()}
                     </Avatar>
                     <div>
@@ -369,14 +364,7 @@ function ChurchMembersPage() {
                 >
                   <Table.Td>
                     <Group gap="sm">
-                      <Avatar
-                        size="sm"
-                        src={
-                          membership.appUser.avatarPath
-                            ? `/api/media/${membership.appUser.avatarPath}`
-                            : null
-                        }
-                      >
+                      <Avatar size="sm" src={membership.appUser.avatarUrl}>
                         {membership.appUser.username.charAt(0).toUpperCase()}
                       </Avatar>
                       <div>

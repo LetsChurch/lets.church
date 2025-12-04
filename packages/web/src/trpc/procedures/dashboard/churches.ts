@@ -24,6 +24,7 @@ import {
   completeMultipartMediaUpload,
   handleMultipartMediaUpload,
 } from '@/temporal';
+import { mantineAvatarSm2x, mantineAvatarXl2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { ingestS3, PART_SIZE, publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
@@ -329,8 +330,35 @@ export const churchRouter = router({
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
 
+    const { avatarPath, ...churchWithoutPath } = church;
+    const avatarUrl = avatarPath
+      ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+          resize: mantineAvatarXl2x,
+        })
+      : null;
+
+    const membershipsWithAvatarUrl = church.memberships.map((membership) => {
+      const { avatarPath: userAvatarPath, ...userWithoutPath } =
+        membership.appUser;
+      const userAvatarUrl = userAvatarPath
+        ? getPublicImageUrl(publicS3.getS3ProtocolUri(userAvatarPath), {
+            resize: mantineAvatarSm2x,
+          })
+        : null;
+
+      return {
+        ...membership,
+        appUser: {
+          ...userWithoutPath,
+          avatarUrl: userAvatarUrl,
+        },
+      };
+    });
+
     return {
-      ...church,
+      ...churchWithoutPath,
+      avatarUrl,
+      memberships: membershipsWithAvatarUrl,
       userMembership: ctx.membership,
     };
   }),
@@ -372,7 +400,28 @@ export const churchRouter = router({
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
 
-    return { ...church, userMembership: ctx.membership };
+    const membershipsWithAvatarUrl = church.memberships.map((membership) => {
+      const { avatarPath, ...userWithoutPath } = membership.appUser;
+      const avatarUrl = avatarPath
+        ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+            resize: mantineAvatarSm2x,
+          })
+        : null;
+
+      return {
+        ...membership,
+        appUser: {
+          ...userWithoutPath,
+          avatarUrl,
+        },
+      };
+    });
+
+    return {
+      ...church,
+      memberships: membershipsWithAvatarUrl,
+      userMembership: ctx.membership,
+    };
   }),
 
   searchUsers: churchAdminProcedure
@@ -424,7 +473,19 @@ export const churchRouter = router({
         'User search completed',
       );
 
-      return users;
+      return users.map((user) => {
+        const { avatarPath, ...userWithoutPath } = user;
+        const avatarUrl = avatarPath
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+              resize: mantineAvatarSm2x,
+            })
+          : null;
+
+        return {
+          ...userWithoutPath,
+          avatarUrl,
+        };
+      });
     }),
 
   addChurchMember: churchAdminProcedure

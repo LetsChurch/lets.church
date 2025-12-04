@@ -5,6 +5,7 @@ import {
   IncomingIdSchema,
   OutgoingIdSchema,
 } from '@/schemas/common';
+import { appAvatarXs } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
@@ -167,7 +168,7 @@ export const libraryProcedures = {
 
         const channelAvatarUrl = channel.avatarPath
           ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
-              resize: { width: 32, height: 32 },
+              resize: appAvatarXs,
             })
           : null;
 
