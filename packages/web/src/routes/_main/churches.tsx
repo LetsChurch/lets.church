@@ -171,33 +171,41 @@ function RouteComponent() {
     <div className="relative size-full">
       <ClientOnly
         fallback={
-          <div className="w-full">
-            <h2>Loading Map</h2>
+          <div className="size-full mx-auto mt-16 max-w-2xl text-center">
+            <h1 className="text-4xl font-bold text-primary tracking-tight sm:text-6xl">
+              Loading
+            </h1>
+            <p className="mt-6 text-lg leading-8 text-primary">
+              "It is the glory of God to conceal a matter and the glory of kings
+              to search it out."
+              <br />- Proverbs 25:2 (BSB)
+            </p>
           </div>
         }
       >
         <ChurchMap padding={mapPadding} />
-      </ClientOnly>
+        {/* Desktop floating pane */}
+        <div className="pointer-events-none absolute inset-0 hidden p-6 sm:block">
+          <div className="pointer-events-auto h-full max-w-sm rounded-2xl border-fancy-pants bg-white/80 p-6 backdrop-blur-lg dark:bg-zinc-900/80">
+            <h1 className="mb-4 font-bold text-2xl text-primary">
+              Find Churches
+            </h1>
+            <p className="text-secondary">
+              Explore churches and ministries in your area.
+            </p>
+          </div>
+        </div>
 
-      {/* Desktop floating pane */}
-      <div className="pointer-events-none absolute inset-0 hidden p-6 sm:block">
-        <div className="pointer-events-auto h-full max-w-sm rounded-2xl border-fancy-pants bg-white/80 p-6 backdrop-blur-lg dark:bg-zinc-900/80">
+        {/* Mobile bottom sheet */}
+        <MobileBottomSheet>
           <h1 className="mb-4 font-bold text-2xl text-primary">
             Find Churches
           </h1>
           <p className="text-secondary">
             Explore churches and ministries in your area.
           </p>
-        </div>
-      </div>
-
-      {/* Mobile bottom sheet */}
-      <MobileBottomSheet>
-        <h1 className="mb-4 font-bold text-2xl text-primary">Find Churches</h1>
-        <p className="text-secondary">
-          Explore churches and ministries in your area.
-        </p>
-      </MobileBottomSheet>
+        </MobileBottomSheet>
+      </ClientOnly>
     </div>
   );
 }
