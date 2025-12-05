@@ -1,10 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useQuery } from '@tanstack/react-query';
-import mapboxgl from 'mapbox-gl';
-import { useTRPC } from '@/trpc/react';
-import { getInitialTheme, THEME_CHANGE_EVENT } from '@/stores/theme';
 import { invariant } from 'es-toolkit';
+import mapboxgl from 'mapbox-gl';
+import type { ParsedFilters } from '@/routes/_main/churches';
+import { getInitialTheme, THEME_CHANGE_EVENT } from '@/stores/theme';
+import { useTRPC } from '@/trpc/react';
+
+const unclusteredColor = '#6366f1';
+const clusterSmallColor = '#818cf8';
+const clusterMediumColor = '#a5b4fc';
+const clusterLargeColor = '#c7d2fe';
+const _hoverColor = '#d946ef';
+
+const unclusteredRadius = 7;
+const _unclusteredHoverRadius = 10;
 
 type ChurchMapProps = {
   padding?: {
@@ -13,15 +23,29 @@ type ChurchMapProps = {
     left?: number;
     right?: number;
   };
+  filters?: ParsedFilters;
 };
 
-export function ChurchMap({ padding }: ChurchMapProps) {
+export function ChurchMap({ padding, filters }: ChurchMapProps) {
   const ref = useRef(null);
-  const map = useRef<mapboxgl.Map | null>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
   const trpc = useTRPC();
   const [theme, setTheme] = useState(getInitialTheme());
 
   const { data: env } = useQuery(trpc.common.getClientEnv.queryOptions());
+
+  // Fetch church data based on filters
+  const { data: churchData } = useQuery({
+    ...trpc.church.searchChurches.queryOptions({
+      lon: filters?.center[0] ?? -97.9222112121185,
+      lat: filters?.center[1] ?? 39.3812661305678,
+      range: filters?.range ?? '25000 mi',
+      organizationId: filters?.organization ?? null,
+      tags: filters?.tags ?? null,
+      limit: 1000,
+    }),
+    enabled: !!filters,
+  });
 
   // Listen for theme changes
   useEffect(() => {
@@ -39,7 +63,7 @@ export function ChurchMap({ padding }: ChurchMapProps) {
     if (env?.MAPBOX_MAP_TOKEN && ref.current) {
       mapboxgl.accessToken = env.MAPBOX_MAP_TOKEN;
 
-      map.current = new mapboxgl.Map({
+      mapRef.current = new mapboxgl.Map({
         container: ref.current,
         center: [-98.5795, 39.8283], // Geographic center of contiguous USA
         zoom: 3.5,
@@ -49,9 +73,9 @@ export function ChurchMap({ padding }: ChurchMapProps) {
             : undefined,
       });
 
-      map.current.on('load', () => {
-        const m = map.current;
-        invariant(m, 'Failed to get map reference');
+      mapRef.current.on('load', () => {
+        const map = mapRef.current;
+        invariant(map, 'Failed to get map reference');
 
         const fogConfig =
           theme === 'dark'
@@ -72,25 +96,152 @@ export function ChurchMap({ padding }: ChurchMapProps) {
                 'star-intensity': 0.15,
               };
 
-        m.setFog(fogConfig);
-        m.setLayoutProperty('poi-label', 'visibility', 'none'); // Hide the layer
+        map.setFog(fogConfig);
+        map.setLayoutProperty('poi-label', 'visibility', 'none'); // Hide the layer
 
         if (padding) {
-          m.setPadding(padding);
+          map.setPadding(padding);
         }
+
+        map.addSource('churches', {
+          type: 'geojson',
+          cluster: true,
+          clusterMaxZoom: 14,
+          clusterRadius: 50, // defaults to 50
+        });
+        const source = map.getSource('churches');
+        // setSource(m.getSource('churches')!);
+
+        map.addLayer({
+          id: 'clusters',
+          type: 'circle',
+          source: 'churches',
+          filter: ['has', 'point_count'],
+          paint: {
+            'circle-color': [
+              'step',
+              ['get', 'point_count'],
+              // count < 100
+              clusterSmallColor,
+              100,
+              // 100 <= count < 750
+              clusterMediumColor,
+              750,
+              // count >= 750
+              clusterLargeColor,
+            ],
+            'circle-radius': [
+              'step',
+              ['get', 'point_count'],
+              // count < 100
+              20,
+              100,
+              // 100 <= count < 750
+              30,
+              750,
+              // count >= 750
+              40,
+            ],
+          },
+        });
+
+        map.addLayer({
+          id: 'cluster-count',
+          type: 'symbol',
+          source: 'churches',
+          filter: ['has', 'point_count'],
+          layout: {
+            'text-field': ['get', 'point_count_abbreviated'],
+            'text-font': ['DIN Offc Pro Bold', 'Arial Unicode MS Bold'],
+            'text-size': 12,
+          },
+          paint: {
+            'text-color': '#fff',
+          },
+        });
+
+        map.addLayer({
+          id: 'unclustered-point',
+          type: 'circle',
+          source: 'churches',
+          filter: ['!', ['has', 'point_count']],
+          paint: {
+            'circle-color': unclusteredColor,
+            'circle-radius': unclusteredRadius,
+            'circle-stroke-width': 1,
+            'circle-stroke-color': '#fff',
+          },
+        });
+
+        // inspect a cluster on click
+        map.on('click', 'clusters', (e) => {
+          const features = map.queryRenderedFeatures(e.point, {
+            layers: ['clusters'],
+          });
+          const clusterId = features[0]?.properties?.cluster_id;
+
+          if (source?.type === 'geojson') {
+            source.getClusterExpansionZoom(clusterId, (err, zoom) => {
+              if (err) return;
+              const geometry = features[0]?.geometry;
+
+              if (geometry?.type === 'Point') {
+                map.easeTo({
+                  center: geometry.coordinates as [number, number],
+                  zoom: zoom ?? 1,
+                });
+              }
+            });
+          }
+        });
+
+        map.on('click', 'unclustered-point', (e) => {
+          const geometry = e.features?.[0]?.geometry;
+
+          if (geometry?.type !== 'Point') {
+            return;
+          }
+
+          const coordinates = geometry.coordinates.slice();
+
+          // Ensure that if the map is zoomed out such that
+          // multiple copies of the feature are visible, the
+          // popup appears over the copy being pointed to.
+          while (Math.abs(e.lngLat.lng - (coordinates?.[0] ?? 0)) > 180) {
+            coordinates[0] =
+              (coordinates[0] ?? 0) + e.lngLat.lng > (coordinates[0] ?? 0)
+                ? 360
+                : -360;
+          }
+
+          invariant(mapRef, 'Map should be defined');
+
+          new mapboxgl.Popup()
+            .setLngLat(coordinates as [number, number])
+            .setHTML(e.features?.[0]?.properties?.title)
+            .addTo(map);
+        });
+
+        map.on('mouseenter', 'clusters', () => {
+          map.getCanvas().style.cursor = 'pointer';
+        });
+
+        map.on('mouseleave', 'clusters', () => {
+          map.getCanvas().style.cursor = '';
+        });
       });
 
-      return () => map.current?.remove();
+      return () => mapRef.current?.remove();
     }
   }, [env, padding, theme]);
 
   // Update padding when it changes and resize map
   useEffect(() => {
-    if (map.current && padding) {
+    if (mapRef.current && padding) {
       // Use a small delay to allow the DOM to update before resizing
       const timeoutId = setTimeout(() => {
-        map.current?.resize();
-        map.current?.setPadding(padding);
+        mapRef.current?.resize();
+        mapRef.current?.setPadding(padding);
       }, 300);
 
       return () => clearTimeout(timeoutId);
@@ -99,15 +250,72 @@ export function ChurchMap({ padding }: ChurchMapProps) {
 
   // Listen for window resize events to resize the map
   useEffect(() => {
-    if (!map.current) return;
+    if (!mapRef.current) return;
 
     const handleResize = () => {
-      map.current?.resize();
+      mapRef.current?.resize();
     };
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Update map data when church data changes
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !churchData) return;
+
+    const source = map.getSource('churches');
+    if (!source || source.type !== 'geojson') return;
+
+    // Transform church data to GeoJSON format
+    const featureCollection: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: churchData.items.map((church) => {
+        const address = church.addresses[0];
+        return {
+          type: 'Feature',
+          properties: {
+            id: church.id,
+            title: church.name,
+          },
+          geometry: {
+            type: 'Point',
+            coordinates: [address?.longitude ?? 0, address?.latitude ?? 0],
+          },
+        };
+      }),
+    };
+
+    // Update the source data
+    source.setData(featureCollection);
+
+    // Fit bounds to show all churches if there are results
+    if (churchData.items.length > 0 && filters) {
+      const bounds = new mapboxgl.LngLatBounds();
+      bounds.extend(filters.center);
+
+      churchData.items.forEach((church) => {
+        const address = church.addresses[0];
+        if (address?.longitude && address?.latitude) {
+          bounds.extend([address.longitude, address.latitude]);
+        }
+      });
+
+      map.fitBounds(bounds, {
+        padding: 150,
+        duration: 2000,
+        maxZoom: 9,
+      });
+    } else if (churchData.items.length === 0 && filters) {
+      // If no results, center on the search location
+      map.easeTo({
+        center: filters.center,
+        zoom: 4,
+        duration: 1000,
+      });
+    }
+  }, [churchData, filters]);
 
   return <div ref={ref} className="size-full" />;
 }

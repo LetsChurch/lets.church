@@ -1,18 +1,82 @@
 import { ClientOnly, createFileRoute } from '@tanstack/react-router';
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { z } from 'zod';
+import { ChurchCombobox } from '@/components/church-combobox';
 import { ChurchMap } from '@/components/church-map';
 import {
   getInitialSidebarCollapsed,
   SIDEBAR_CHANGE_EVENT,
 } from '@/stores/sidebar';
 
+// Default coordinates for USA center
+const MURICA: [number, number] = [-97.9222112121185, 39.3812661305678];
+const DEFAULT_RANGE = '25000 mi';
+const DEFAULT_NEARBY_RANGE = '100 mi';
+
+// Search params schema for TanStack Router
+const churchesSearchSchema = z.object({
+  center: z.string().optional(),
+  range: z.string().optional(),
+  organization: z.string().optional(),
+  tag: z.string().optional(),
+});
+
 export const Route = createFileRoute('/_main/churches')({
+  validateSearch: (search) => churchesSearchSchema.parse(search),
   component: RouteComponent,
 });
 
 const BOTTOM_TAB_BAR_HEIGHT = 64; // Height of bottom tab bar in pixels
 const COLLAPSED_HEIGHT = 80; // Height when drawer is collapsed
 const EXPANDED_HEIGHT_PERCENT = 75; // Percentage of screen height when expanded
+
+// Hook to parse location from search params
+function useParsedLocation() {
+  const search = Route.useSearch();
+
+  return {
+    range:
+      search.range ?? (search.center ? DEFAULT_NEARBY_RANGE : DEFAULT_RANGE),
+    center:
+      (search.center
+        ?.split(',')
+        .map((v) => parseFloat(v))
+        .slice(0, 2) as [number, number] | undefined) ?? MURICA,
+  };
+}
+
+// Hook to parse organization from search params
+function useParsedOrganization() {
+  const search = Route.useSearch();
+
+  return {
+    organization: search.organization ?? null,
+  };
+}
+
+// Hook to parse tags from search params
+function useParsedTags() {
+  const search = Route.useSearch();
+
+  return {
+    tags: search.tag?.split(',').filter(Boolean) ?? [],
+  };
+}
+
+// Combined hook that returns all parsed filters
+export function useParsedFilters() {
+  const location = useParsedLocation();
+  const organization = useParsedOrganization();
+  const tags = useParsedTags();
+
+  return {
+    ...location,
+    ...organization,
+    ...tags,
+  };
+}
+
+export type ParsedFilters = ReturnType<typeof useParsedFilters>;
 
 type MobileBottomSheetProps = {
   children: ReactNode;
@@ -143,6 +207,7 @@ function RouteComponent() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     getInitialSidebarCollapsed(),
   );
+  const filters = useParsedFilters();
 
   useEffect(() => {
     const handleSidebarChange = (event: Event) => {
@@ -160,22 +225,27 @@ function RouteComponent() {
   // Sidebar collapsed: 56px (w-14), expanded: 200px (w-50)
   const sidebarWidth = sidebarCollapsed ? 56 : 200;
   const paneWidth = 456;
-  const mapPadding = {
-    left: paneWidth + sidebarWidth,
-    top: 0,
-    right: 0,
-    bottom: 0,
-  };
+  const mapPadding = useMemo(
+    () => ({
+      left: paneWidth + sidebarWidth,
+      top: 0,
+      right: 0,
+      bottom: 0,
+    }),
+    [sidebarWidth],
+  );
+
+  const pane = <Pane />;
 
   return (
     <div className="relative size-full">
       <ClientOnly
         fallback={
-          <div className="size-full mx-auto mt-16 max-w-2xl text-center">
-            <h1 className="text-4xl font-bold text-primary tracking-tight sm:text-6xl">
+          <div className="mx-auto mt-16 size-full max-w-2xl text-center">
+            <h1 className="font-bold text-4xl text-primary tracking-tight sm:text-6xl">
               Loading
             </h1>
-            <p className="mt-6 text-lg leading-8 text-primary">
+            <p className="mt-6 text-lg text-primary leading-8">
               "It is the glory of God to conceal a matter and the glory of kings
               to search it out."
               <br />- Proverbs 25:2 (BSB)
@@ -183,29 +253,28 @@ function RouteComponent() {
           </div>
         }
       >
-        <ChurchMap padding={mapPadding} />
+        <ChurchMap padding={mapPadding} filters={filters} />
         {/* Desktop floating pane */}
         <div className="pointer-events-none absolute inset-0 hidden p-6 sm:block">
           <div className="pointer-events-auto h-full max-w-sm rounded-2xl border-fancy-pants bg-white/80 p-6 backdrop-blur-lg dark:bg-zinc-900/80">
-            <h1 className="mb-4 font-bold text-2xl text-primary">
-              Find Churches
-            </h1>
-            <p className="text-secondary">
-              Explore churches and ministries in your area.
-            </p>
+            {pane}
           </div>
         </div>
 
         {/* Mobile bottom sheet */}
-        <MobileBottomSheet>
-          <h1 className="mb-4 font-bold text-2xl text-primary">
-            Find Churches
-          </h1>
-          <p className="text-secondary">
-            Explore churches and ministries in your area.
-          </p>
-        </MobileBottomSheet>
+        <MobileBottomSheet>{pane}</MobileBottomSheet>
       </ClientOnly>
     </div>
+  );
+}
+
+function Pane() {
+  return (
+    <>
+      <ChurchCombobox />
+      <p className="text-secondary">
+        Explore churches and ministries in your area.
+      </p>
+    </>
   );
 }
