@@ -8,7 +8,7 @@ import {
   IncomingIdSchema,
   OutgoingIdSchema,
 } from '@/schemas/common';
-import { appAvatarXs } from '@/util/avatar-sizes';
+import { appAvatarXs2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { getClientIpAddress } from '@/util/request-ip';
 import { publicS3 } from '@/util/s3';
@@ -142,7 +142,7 @@ export const mediaProcedures = {
 
       const channelAvatarUrl = channel.avatarPath
         ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
-            resize: appAvatarXs,
+            resize: appAvatarXs2x,
           })
         : null;
 

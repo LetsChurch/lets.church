@@ -1,7 +1,7 @@
 import { prisma } from '@letschurch/db';
 import { z } from 'zod';
 import { getThumbnailResize, OutgoingIdSchema } from '@/schemas/common';
-import { appAvatarMd, appAvatarXs } from '@/util/avatar-sizes';
+import { appAvatarMd2x, appAvatarXs2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
@@ -107,7 +107,7 @@ export const channelProcedures = {
 
       const avatarUrl = channel.avatarPath
         ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
-            resize: appAvatarMd,
+            resize: appAvatarMd2x,
           })
         : null;
 
@@ -224,7 +224,7 @@ export const channelProcedures = {
 
         const channelAvatarUrl = channel.avatarPath
           ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
-              resize: appAvatarXs,
+              resize: appAvatarXs2x,
             })
           : null;
 

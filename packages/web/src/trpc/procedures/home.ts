@@ -5,7 +5,7 @@ import {
   IncomingIdSchema,
   OutgoingIdSchema,
 } from '@/schemas/common';
-import { appAvatarSm, appAvatarXs } from '@/util/avatar-sizes';
+import { appAvatarSm2x, appAvatarXs2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
@@ -66,7 +66,7 @@ export const homeProcedures = {
     const channelsWithAvatars = subscriptions.map(({ channel }) => {
       const avatarUrl = channel.avatarPath
         ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
-            resize: appAvatarSm,
+            resize: appAvatarSm2x,
           })
         : null;
 
@@ -151,7 +151,7 @@ export const homeProcedures = {
 
         const channelAvatarUrl = channel.avatarPath
           ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
-              resize: appAvatarXs,
+              resize: appAvatarXs2x,
             })
           : null;
 
@@ -246,7 +246,7 @@ export const homeProcedures = {
 
         const channelAvatarUrl = channel.avatarPath
           ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
-              resize: appAvatarXs,
+              resize: appAvatarXs2x,
             })
           : null;
 
@@ -509,7 +509,7 @@ export const homeProcedures = {
 
           const channelAvatarUrl = channel.avatarPath
             ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
-                resize: { width: 32, height: 32 },
+                resize: appAvatarXs2x,
               })
             : null;
 
@@ -615,7 +615,7 @@ export const homeProcedures = {
         ? getPublicImageUrl(
             publicS3.getS3ProtocolUri(uploadRecord.channel.avatarPath),
             {
-              resize: appAvatarSm,
+              resize: appAvatarSm2x,
             },
           )
         : null;
