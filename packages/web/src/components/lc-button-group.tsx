@@ -1,6 +1,6 @@
+import { Tooltip } from '@base-ui-components/react/tooltip';
 import { type ComponentPropsWithoutRef, Fragment } from 'react';
 import { cn } from '@/util/cn';
-import { LcTooltip } from './lc-tooltip';
 
 type LcButtonGroupProps = {
   className?: string;
@@ -12,37 +12,54 @@ export default function LcButtonGroup({
   buttons,
 }: LcButtonGroupProps) {
   return (
-    <div
-      className={cn(
-        'isolate inline-flex overflow-clip rounded-full border-fancy-pants bg-gray-950/10 pt-px font-semibold text-primary/80 text-sm dark:bg-white/15',
-        className,
-      )}
-    >
-      {buttons.map(({ tooltip, ...btn }, i) => {
-        const content = (
-          <button
-            {...btn}
-            className={cn(
-              'inline-flex items-center gap-0.5 px-3 py-1.5 pt-1.25',
-              i > 0 && '-ml-px border-gray-950/5 border-l dark:border-white/10',
-              btn.className,
-            )}
-          />
-        );
+    <Tooltip.Provider>
+      <div
+        className={cn(
+          'isolate inline-flex overflow-clip rounded-full border-fancy-pants bg-gray-950/10 pt-px font-semibold text-primary/80 text-sm dark:bg-white/15',
+          className,
+        )}
+      >
+        {buttons.map(({ tooltip, ...btn }, i) => {
+          const content = (
+            <button
+              {...btn}
+              className={cn(
+                'inline-flex items-center gap-0.5 px-3 py-1.5 pt-1.25',
+                i > 0 &&
+                  '-ml-px border-gray-950/5 border-l dark:border-white/10',
+                btn.className,
+              )}
+            />
+          );
 
-        return (
-          <Fragment
-            // biome-ignore lint/suspicious/noArrayIndexKey: Fixed groups
-            key={i}
-          >
-            {tooltip ? (
-              <LcTooltip content={tooltip}>{content}</LcTooltip>
-            ) : (
-              content
-            )}
-          </Fragment>
-        );
-      })}
-    </div>
+          return (
+            <Fragment
+              // biome-ignore lint/suspicious/noArrayIndexKey: Fixed groups
+              key={i}
+            >
+              {tooltip ? (
+                <Tooltip.Root>
+                  <Tooltip.Trigger render={content} />
+                  <Tooltip.Portal>
+                    <Tooltip.Positioner
+                      side="top"
+                      sideOffset={8}
+                      className="z-50"
+                    >
+                      <Tooltip.Popup className="rounded-lg border-fancy-pants bg-white px-2 py-1.5 font-semibold text-xs shadow-lg dark:bg-zinc-900 dark:text-primary">
+                        {tooltip}
+                        <Tooltip.Arrow className="data-[side=bottom]:-top-1 data-[side=left]:-right-1 data-[side=top]:-bottom-1 data-[side=right]:-left-1" />
+                      </Tooltip.Popup>
+                    </Tooltip.Positioner>
+                  </Tooltip.Portal>
+                </Tooltip.Root>
+              ) : (
+                content
+              )}
+            </Fragment>
+          );
+        })}
+      </div>
+    </Tooltip.Provider>
   );
 }

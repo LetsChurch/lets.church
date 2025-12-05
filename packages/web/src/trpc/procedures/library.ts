@@ -290,7 +290,7 @@ export const libraryProcedures = {
 
           const channelAvatarUrl = channel.avatarPath
             ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
-                resize: { width: 32, height: 32 },
+                resize: appAvatarXs2x,
               })
             : null;
 

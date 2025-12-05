@@ -4,6 +4,7 @@ import {
   IconBadgeCc,
   IconBadgeHd,
   IconBookmark,
+  IconBookmarkFilled,
   IconBrandFacebook,
   IconBrandX,
   IconCode,
@@ -11,9 +12,12 @@ import {
   IconDeviceTvOld,
   IconDots,
   IconFlag,
+  IconFlagFilled,
   IconShare2,
   IconThumbDown,
+  IconThumbDownFilled,
   IconThumbUp,
+  IconThumbUpFilled,
   IconVolume,
 } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
@@ -265,7 +269,11 @@ export function MediaActions({
                   tooltip: 'Like',
                   children: (
                     <>
-                      <IconThumbUp size={16} />
+                      {ratingData.userRating === 'LIKE' ? (
+                        <IconThumbUpFilled size={16} />
+                      ) : (
+                        <IconThumbUp size={16} />
+                      )}
                       {ratingData.likes}
                     </>
                   ),
@@ -278,7 +286,15 @@ export function MediaActions({
                       'bg-gray-950/15 dark:bg-white/10',
                   ),
                   tooltip: 'Dislike',
-                  children: <IconThumbDown size={16} />,
+                  children:
+                    ratingData.userRating === 'DISLIKE' ? (
+                      <IconThumbDownFilled
+                        size={16}
+                        className="-top-px relative"
+                      />
+                    ) : (
+                      <IconThumbDown size={16} />
+                    ),
                 },
               ]}
             />
@@ -301,7 +317,11 @@ export function MediaActions({
               )}
               onClick={onSaveToggle}
             >
-              <IconBookmark size={16} />
+              {isSaved ? (
+                <IconBookmarkFilled size={16} />
+              ) : (
+                <IconBookmark size={16} />
+              )}
               {isSaved ? 'Saved' : 'Save'}
             </LcButton>
 
@@ -313,7 +333,11 @@ export function MediaActions({
               )}
               onClick={onFollowToggle}
             >
-              <IconFlag size={16} />
+              {channelData.isFollowing ? (
+                <IconFlagFilled size={16} />
+              ) : (
+                <IconFlag size={16} />
+              )}
               {channelData.isFollowing ? 'Following' : 'Follow'}
             </LcButton>
           </div>

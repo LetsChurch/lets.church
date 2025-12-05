@@ -2,18 +2,16 @@ import { prisma, type TransactionClient } from '@letschurch/db';
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
 import { invariant } from 'es-toolkit';
-import { z } from 'zod';
 import { passwordChangeSchema, profileUpdateSchema } from '@/schemas/account';
 import {
-  AvatarSize,
   finalizeMultipartUploadSchema,
-  getAvatarResize,
   multipartUploadSchema,
 } from '@/schemas/common';
 import {
   completeMultipartMediaUpload,
   handleMultipartMediaUpload,
 } from '@/temporal';
+import { mantineAvatarLg2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { ingestS3, PART_SIZE, publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
@@ -28,52 +26,43 @@ type ProfileUpdateResponse = { error: false } | { error: string };
 type PasswordChangeResponse = { error: false } | { error: string };
 
 export const accountProcedures = {
-  getProfile: authProcedure
-    .input(
-      z
-        .looseObject({
-          avatarSize: AvatarSize,
-        })
-        .optional(),
-    )
-    .query(async ({ ctx, input }) => {
-      const user = await prisma.appUser.findUnique({
-        where: { id: ctx.session.appUserId },
-        select: {
-          id: true,
-          username: true,
-          fullName: true,
-          emails: {
-            select: {
-              email: true,
-            },
+  getProfile: authProcedure.query(async ({ ctx }) => {
+    const user = await prisma.appUser.findUnique({
+      where: { id: ctx.session.appUserId },
+      select: {
+        id: true,
+        username: true,
+        fullName: true,
+        emails: {
+          select: {
+            email: true,
           },
-          avatarPath: true,
         },
-      });
+        avatarPath: true,
+      },
+    });
 
-      if (!user) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
-      }
+    if (!user) {
+      throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
+    }
 
-      const primaryEmail = user.emails[0]?.email || '';
-      const avatarPath = user.avatarPath;
+    const primaryEmail = user.emails[0]?.email || '';
+    const avatarPath = user.avatarPath;
 
-      const avatarUrl = avatarPath
-        ? getPublicImageUrl(
-            publicS3.getS3ProtocolUri(avatarPath),
-            getAvatarResize(input?.avatarSize),
-          )
-        : null;
+    const avatarUrl = avatarPath
+      ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+          resize: mantineAvatarLg2x,
+        })
+      : null;
 
-      return {
-        id: user.id,
-        username: user.username,
-        fullName: user.fullName || '',
-        email: primaryEmail,
-        avatarUrl,
-      };
-    }),
+    return {
+      id: user.id,
+      username: user.username,
+      fullName: user.fullName || '',
+      email: primaryEmail,
+      avatarUrl,
+    };
+  }),
 
   updateProfile: authProcedure
     .input(profileUpdateSchema)

@@ -437,8 +437,19 @@ export function Player({
                   </div>
                 </div>
 
-                <div
+                <button
+                  type="button"
                   className="pointer-events-auto relative flex grow items-center justify-center gap-6 group-[[mediaisfullscreen]]:gap-10"
+                  onClick={(e) => {
+                    // Only toggle play/pause if clicking the background, not a button
+                    if (e.target === e.currentTarget && videoRef.current) {
+                      if (videoRef.current.paused) {
+                        videoRef.current.play();
+                      } else {
+                        videoRef.current.pause();
+                      }
+                    }
+                  }}
                   onPointerMove={() => {
                     // Trigger activity detection on MediaController
                     controllerRef.current?.dispatchEvent(
@@ -472,7 +483,7 @@ export function Player({
                         : '[--media-icon-color:var(--color-primary)]',
                     )}
                   />
-                </div>
+                </button>
 
                 <div
                   className={cn(

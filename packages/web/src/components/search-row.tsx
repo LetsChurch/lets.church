@@ -92,9 +92,12 @@ export function SearchRow({
             {channelName}
           </p>
           {timestamp ? (
-            <p className="whitespace-nowrap text-muted text-xs md:text-sm">
-              &middot; {timestamp}
-            </p>
+            <>
+              <div className="size-[3px] shrink-0 rounded-[2px] bg-zinc-400 opacity-50" />
+              <p className="whitespace-nowrap text-muted text-xs md:text-sm">
+                {timestamp}
+              </p>
+            </>
           ) : null}
         </div>
         {children}

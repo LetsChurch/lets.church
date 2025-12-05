@@ -326,7 +326,7 @@ export const homeProcedures = {
       const channelsWithAvatars = channels.map((channel) => {
         const avatarUrl = channel.avatarPath
           ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
-              resize: { width: 64, height: 64 },
+              resize: appAvatarXs2x,
             })
           : null;
 

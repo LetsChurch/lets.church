@@ -13,15 +13,9 @@ export const finalizeMultipartUploadSchema = z.object({
   s3PartETags: z.array(z.string()),
 });
 
-export const AvatarSize = z.enum(['standard']).optional().default('standard');
+export const ThumbnailSize = z.enum(['featured', 'card', 'table', 'poster']);
 
 type Resize = { resize: { width: number; height?: number } };
-
-export function getAvatarResize(_size?: z.infer<typeof AvatarSize>): Resize {
-  return { resize: { width: 120, height: 120 } };
-}
-
-export const ThumbnailSize = z.enum(['featured', 'card', 'table', 'poster']);
 
 export function getThumbnailResize(
   size: z.infer<typeof ThumbnailSize>,

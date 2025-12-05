@@ -8,7 +8,6 @@ import { stripIndent } from 'proper-tags';
 import { z } from 'zod';
 import {
   finalizeMultipartUploadSchema,
-  getAvatarResize,
   getThumbnailResize,
   multipartUploadSchema,
 } from '@/schemas/common';
@@ -41,7 +40,11 @@ import {
   handleMultipartMediaUpload,
   importMedia,
 } from '@/temporal';
-import { mantineAvatarSm2x, mantineAvatarXl2x } from '@/util/avatar-sizes';
+import {
+  mantineAvatarLg2x,
+  mantineAvatarSm2x,
+  mantineAvatarXl2x,
+} from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { ingestS3, PART_SIZE, publicS3 } from '@/util/s3';
 import { getPublicImageUrl, getPublicMediaUrl } from '@/util/url';
@@ -467,10 +470,9 @@ export const channelRouter = router({
     const { avatarPath, ...restChannel } = channel;
 
     const avatarUrl = avatarPath
-      ? getPublicImageUrl(
-          publicS3.getS3ProtocolUri(avatarPath),
-          getAvatarResize(input?.avatarSize),
-        )
+      ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+          resize: mantineAvatarLg2x,
+        })
       : null;
 
     return { ...restChannel, avatarUrl };

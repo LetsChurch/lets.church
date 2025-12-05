@@ -5,7 +5,7 @@ import {
   UploadVisibility,
 } from '@letschurch/db/types';
 import { z } from 'zod';
-import { AvatarSize, IncomingIdSchema } from '../common';
+import { IncomingIdSchema } from '../common';
 
 // Common field schemas
 export const channelIdSchema = IncomingIdSchema;
@@ -81,7 +81,6 @@ export const removeMemberSchema = z.object({
 // Query input schemas
 export const channelQuerySchema = z.object({
   channelId: channelIdSchema,
-  avatarSize: AvatarSize,
 });
 
 export const uploadQuerySchema = z.object({

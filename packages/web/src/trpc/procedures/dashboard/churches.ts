@@ -3,7 +3,6 @@ import { TRPCError } from '@trpc/server';
 import { invariant } from 'es-toolkit';
 import {
   finalizeMultipartUploadSchema,
-  getAvatarResize,
   multipartUploadSchema,
 } from '@/schemas/common';
 import {
@@ -24,7 +23,11 @@ import {
   completeMultipartMediaUpload,
   handleMultipartMediaUpload,
 } from '@/temporal';
-import { mantineAvatarSm2x, mantineAvatarXl2x } from '@/util/avatar-sizes';
+import {
+  mantineAvatarLg2x,
+  mantineAvatarSm2x,
+  mantineAvatarXl2x,
+} from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { ingestS3, PART_SIZE, publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
@@ -1017,10 +1020,9 @@ export const churchRouter = router({
 
     const { avatarPath, ...restChurch } = church;
     const avatarUrl = avatarPath
-      ? getPublicImageUrl(
-          publicS3.getS3ProtocolUri(avatarPath),
-          getAvatarResize(input?.avatarSize),
-        )
+      ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+          resize: mantineAvatarLg2x,
+        })
       : null;
 
     // Transform tags to a flat array of strings and associated organizations

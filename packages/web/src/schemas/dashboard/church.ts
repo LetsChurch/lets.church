@@ -1,11 +1,10 @@
 import { z } from 'zod';
-import { AvatarSize, IncomingIdSchema } from '../common';
+import { IncomingIdSchema } from '../common';
 
 export const churchIdSchema = IncomingIdSchema;
 
 export const churchQuerySchema = z.object({
   churchId: churchIdSchema,
-  avatarSize: AvatarSize,
 });
 
 export const churchMemberPermissionsSchema = z.object({
