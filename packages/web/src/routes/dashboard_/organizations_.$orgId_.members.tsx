@@ -51,12 +51,37 @@ export const Route = createFileRoute(
   '/dashboard_/organizations_/$orgId_/members',
 )({
   component: OrganizationMembersPage,
-  beforeLoad: async ({ context }) => {
+  beforeLoad: async ({ context, params }) => {
     const hasSession = await context.queryClient.fetchQuery(
       context.trpc.common.hasValidSession.queryOptions(),
     );
     if (!hasSession) {
       throw redirect({ to: '/auth/login' });
+    }
+
+    // Check if user has access to this organization (either member or site admin)
+    const currentUser = await context.queryClient.fetchQuery(
+      context.trpc.common.getCurrentUser.queryOptions(),
+    );
+
+    // Site admins can access any organization
+    if (currentUser.role === 'ADMIN') {
+      return { isSiteAdmin: true };
+    }
+
+    // Check if user is a member of this organization
+    try {
+      await context.queryClient.ensureQueryData(
+        context.trpc.dashboard.organizations.getOrganizationMembers.queryOptions(
+          {
+            orgId: params.orgId,
+          },
+        ),
+      );
+      return { isSiteAdmin: false };
+    } catch (_error) {
+      // If user is not a member and not an admin, redirect
+      throw redirect({ to: '/dashboard' });
     }
   },
   loader: async ({ context: { queryClient, trpc }, params }) => {
@@ -79,6 +104,7 @@ function OrganizationMembersPage() {
   const { orgId } = Route.useParams();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+  const { isSiteAdmin } = Route.useRouteContext() as { isSiteAdmin: boolean };
 
   const { data: organization } = useSuspenseQuery(
     trpc.dashboard.organizations.getOrganizationMembers.queryOptions({
@@ -89,7 +115,7 @@ function OrganizationMembersPage() {
   const [debouncedSearchQuery] = useDebounce(searchQuery, 200);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  const isAdmin = organization.userMembership?.isAdmin ?? false;
+  const isAdmin = organization.userMembership?.isAdmin ?? isSiteAdmin;
 
   const [
     addMemberModalOpened,

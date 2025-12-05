@@ -32,7 +32,17 @@ export const Route = createFileRoute(
       throw redirect({ to: '/auth/login' });
     }
 
-    // Check if user has access to this organization
+    // Check if user has access to this organization (either member or site admin)
+    const currentUser = await context.queryClient.fetchQuery(
+      context.trpc.common.getCurrentUser.queryOptions(),
+    );
+
+    // Site admins can access any organization
+    if (currentUser.role === 'ADMIN') {
+      return { isSiteAdmin: true };
+    }
+
+    // Check if user is a member of this organization
     try {
       await context.queryClient.ensureQueryData(
         context.trpc.dashboard.organizations.getOrganizationDetails.queryOptions(
@@ -41,7 +51,9 @@ export const Route = createFileRoute(
           },
         ),
       );
+      return { isSiteAdmin: false };
     } catch (_error) {
+      // If user is not a member and not an admin, redirect
       throw redirect({ to: '/dashboard' });
     }
   },
@@ -72,6 +84,7 @@ function AssociationsPage() {
   const { orgId } = Route.useParams();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+  const { isSiteAdmin } = Route.useRouteContext() as { isSiteAdmin: boolean };
 
   const { data: organization } = useSuspenseQuery(
     trpc.dashboard.organizations.getOrganizationDetails.queryOptions({
@@ -86,7 +99,7 @@ function AssociationsPage() {
   );
 
   const { userMembership } = organization;
-  const isAdmin = userMembership?.isAdmin ?? false;
+  const isAdmin = userMembership?.isAdmin ?? isSiteAdmin;
 
   const approveAssociationMutation = useMutation(
     trpc.dashboard.organizations.approveUpstreamAssociation.mutationOptions({

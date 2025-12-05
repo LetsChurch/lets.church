@@ -25,6 +25,7 @@ const moduleLogger = logger.child({
 const organizationProcedure = authProcedure
   .input(organizationQuerySchema)
   .use(async ({ ctx, input, next }) => {
+    const isSiteAdmin = ctx.session.appUser.role === 'ADMIN';
     const membership = await prisma.organizationMembership.findFirst({
       where: {
         appUserId: ctx.session.appUserId,
@@ -32,7 +33,7 @@ const organizationProcedure = authProcedure
       },
     });
 
-    if (!membership) {
+    if (!membership && !isSiteAdmin) {
       moduleLogger.warn(
         {
           appUserId: ctx.session.appUserId,
@@ -48,7 +49,10 @@ const organizationProcedure = authProcedure
 
 const organizationAdminProcedure = organizationProcedure.use(
   async ({ ctx, next }) => {
-    if (!ctx.membership.isAdmin) {
+    const isSiteAdmin = ctx.session.appUser.role === 'ADMIN';
+    const isOrganizationAdmin = ctx.membership?.isAdmin ?? false;
+
+    if (!isOrganizationAdmin && !isSiteAdmin) {
       moduleLogger.warn(
         {
           appUserId: ctx.session.appUserId,
