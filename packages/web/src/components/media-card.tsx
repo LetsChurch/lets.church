@@ -90,7 +90,7 @@ export function MediaCard({
             {timestamp ? (
               <>
                 <div className="size-[3px] shrink-0 rounded-[2px] bg-zinc-400 opacity-50" />
-                <p className="whitespace-nowrap font-time text-secondary text-xs">
+                <p className="whitespace-nowrap text-secondary text-xs">
                   {timestamp}
                 </p>
               </>
