@@ -496,7 +496,7 @@ export function Player({
                     <MediaTimeDisplay
                       className={cn(
                         'bg-transparent text-xs group-[[mediaisfullscreen]]:text-base',
-                        '[--media-text-color:var(--color-primary)]',
+                        '[--media-text-color:white]',
                         '[--media-font:var(--font-time)]',
                       )}
                       showDuration={false}
@@ -504,7 +504,7 @@ export function Player({
                     <MediaDurationDisplay
                       className={cn(
                         'bg-transparent text-xs group-[[mediaisfullscreen]]:text-base',
-                        '[--media-text-color:var(--color-primary)]',
+                        '[--media-text-color:white]',
                         '[--media-font:var(--font-time)]',
                       )}
                     />
