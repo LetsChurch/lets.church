@@ -7,6 +7,19 @@ import type { ParsedFilters } from '@/routes/_main/churches';
 import { getInitialTheme, THEME_CHANGE_EVENT } from '@/stores/theme';
 import { useTRPC } from '@/trpc/react';
 
+type ChurchSearchResult = {
+  items: Array<{
+    id: string;
+    name: string;
+    addresses: Array<{
+      latitude: number | null;
+      longitude: number | null;
+      locality: string | null;
+      region: string | null;
+    }>;
+  }>;
+};
+
 const unclusteredColor = '#6366f1';
 const clusterSmallColor = '#818cf8';
 const clusterMediumColor = '#a5b4fc';
@@ -23,29 +36,17 @@ type ChurchMapProps = {
     left?: number;
     right?: number;
   };
-  filters?: ParsedFilters;
+  filters: ParsedFilters;
+  churchData?: ChurchSearchResult;
 };
 
-export function ChurchMap({ padding, filters }: ChurchMapProps) {
+export function ChurchMap({ padding, filters, churchData }: ChurchMapProps) {
   const ref = useRef(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const trpc = useTRPC();
   const [theme, setTheme] = useState(getInitialTheme());
 
   const { data: env } = useQuery(trpc.common.getClientEnv.queryOptions());
-
-  // Fetch church data based on filters
-  const { data: churchData } = useQuery({
-    ...trpc.church.searchChurches.queryOptions({
-      lon: filters?.center[0] ?? -97.9222112121185,
-      lat: filters?.center[1] ?? 39.3812661305678,
-      range: filters?.range ?? '25000 mi',
-      organizationId: filters?.organization ?? null,
-      tags: filters?.tags ?? null,
-      limit: 1000,
-    }),
-    enabled: !!filters,
-  });
 
   // Listen for theme changes
   useEffect(() => {
@@ -105,6 +106,10 @@ export function ChurchMap({ padding, filters }: ChurchMapProps) {
 
         map.addSource('churches', {
           type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: [],
+          },
           cluster: true,
           clusterMaxZoom: 14,
           clusterRadius: 50, // defaults to 50
@@ -189,6 +194,7 @@ export function ChurchMap({ padding, filters }: ChurchMapProps) {
                 map.easeTo({
                   center: geometry.coordinates as [number, number],
                   zoom: zoom ?? 1,
+                  padding,
                 });
               }
             });
@@ -265,57 +271,67 @@ export function ChurchMap({ padding, filters }: ChurchMapProps) {
     const map = mapRef.current;
     if (!map || !churchData) return;
 
-    const source = map.getSource('churches');
-    if (!source || source.type !== 'geojson') return;
+    // Wait for map to be loaded before updating source
+    const updateSource = () => {
+      const source = map.getSource('churches');
+      if (!source || source.type !== 'geojson') return;
 
-    // Transform church data to GeoJSON format
-    const featureCollection: GeoJSON.FeatureCollection = {
-      type: 'FeatureCollection',
-      features: churchData.items.map((church) => {
-        const address = church.addresses[0];
-        return {
-          type: 'Feature',
-          properties: {
-            id: church.id,
-            title: church.name,
-          },
-          geometry: {
-            type: 'Point',
-            coordinates: [address?.longitude ?? 0, address?.latitude ?? 0],
-          },
-        };
-      }),
+      // Transform church data to GeoJSON format
+      const featureCollection: GeoJSON.FeatureCollection = {
+        type: 'FeatureCollection',
+        features: churchData.items.map((church) => {
+          const address = church.addresses[0];
+          return {
+            type: 'Feature',
+            properties: {
+              id: church.id,
+              title: church.name,
+            },
+            geometry: {
+              type: 'Point',
+              coordinates: [address?.longitude ?? 0, address?.latitude ?? 0],
+            },
+          };
+        }),
+      };
+
+      // Update the source data
+      source.setData(featureCollection);
+
+      // Fit bounds to show all churches if there are results
+      if (churchData.items.length > 0) {
+        const bounds = new mapboxgl.LngLatBounds();
+        bounds.extend(filters.center);
+
+        churchData.items.forEach((church) => {
+          const address = church.addresses[0];
+          if (address?.longitude && address?.latitude) {
+            bounds.extend([address.longitude, address.latitude]);
+          }
+        });
+
+        map.fitBounds(bounds, {
+          padding: padding ?? { top: 150, bottom: 150, left: 150, right: 150 },
+          duration: 2000,
+          maxZoom: 9,
+        });
+      } else if (churchData.items.length === 0) {
+        // If no results, center on the search location
+        map.easeTo({
+          center: filters.center,
+          zoom: 4,
+          duration: 1000,
+          padding,
+        });
+      }
     };
 
-    // Update the source data
-    source.setData(featureCollection);
-
-    // Fit bounds to show all churches if there are results
-    if (churchData.items.length > 0 && filters) {
-      const bounds = new mapboxgl.LngLatBounds();
-      bounds.extend(filters.center);
-
-      churchData.items.forEach((church) => {
-        const address = church.addresses[0];
-        if (address?.longitude && address?.latitude) {
-          bounds.extend([address.longitude, address.latitude]);
-        }
-      });
-
-      map.fitBounds(bounds, {
-        padding: 150,
-        duration: 2000,
-        maxZoom: 9,
-      });
-    } else if (churchData.items.length === 0 && filters) {
-      // If no results, center on the search location
-      map.easeTo({
-        center: filters.center,
-        zoom: 4,
-        duration: 1000,
-      });
+    if (map.loaded()) {
+      updateSource();
+    } else {
+      map.once('load', updateSource);
     }
-  }, [churchData, filters]);
+  }, [churchData, filters, padding]);
 
   return <div ref={ref} className="size-full" />;
 }

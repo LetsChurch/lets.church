@@ -1,17 +1,21 @@
+import { useQuery } from '@tanstack/react-query';
 import { ClientOnly, createFileRoute } from '@tanstack/react-router';
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { z } from 'zod';
 import { ChurchCombobox } from '@/components/church-combobox';
 import { ChurchMap } from '@/components/church-map';
 import {
+  DEFAULT_NEARBY_RANGE,
+  DEFAULT_RANGE,
+  MURICA,
+} from '@/constants/churches';
+import {
   getInitialSidebarCollapsed,
   SIDEBAR_CHANGE_EVENT,
 } from '@/stores/sidebar';
+import { useTRPC } from '@/trpc/react';
 
-// Default coordinates for USA center
-const MURICA: [number, number] = [-97.9222112121185, 39.3812661305678];
-const DEFAULT_RANGE = '25000 mi';
-const DEFAULT_NEARBY_RANGE = '100 mi';
+const BOTTOM_TAB_BAR_HEIGHT = 64; // Height of bottom tab bar in pixels
 
 // Search params schema for TanStack Router
 const churchesSearchSchema = z.object({
@@ -25,10 +29,6 @@ export const Route = createFileRoute('/_main/churches')({
   validateSearch: (search) => churchesSearchSchema.parse(search),
   component: RouteComponent,
 });
-
-const BOTTOM_TAB_BAR_HEIGHT = 64; // Height of bottom tab bar in pixels
-const COLLAPSED_HEIGHT = 80; // Height when drawer is collapsed
-const EXPANDED_HEIGHT_PERCENT = 75; // Percentage of screen height when expanded
 
 // Hook to parse location from search params
 function useParsedLocation() {
@@ -78,136 +78,27 @@ export function useParsedFilters() {
 
 export type ParsedFilters = ReturnType<typeof useParsedFilters>;
 
-type MobileBottomSheetProps = {
-  children: ReactNode;
-};
-
-function MobileBottomSheet({ children }: MobileBottomSheetProps) {
-  const [drawerHeight, setDrawerHeight] = useState(COLLAPSED_HEIGHT);
-  const [isDragging, setIsDragging] = useState(false);
-  const startY = useRef(0);
-  const startHeight = useRef(0);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setIsDragging(true);
-    startY.current = e.touches[0].clientY;
-    startHeight.current = drawerHeight;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return;
-
-    const currentY = e.touches[0].clientY;
-    const deltaY = startY.current - currentY; // Positive when dragging up
-    const newHeight = Math.max(
-      COLLAPSED_HEIGHT,
-      Math.min(
-        window.innerHeight * (EXPANDED_HEIGHT_PERCENT / 100),
-        startHeight.current + deltaY,
-      ),
-    );
-    setDrawerHeight(newHeight);
-  };
-
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-    // Snap to collapsed or expanded based on current height
-    const expandedHeight = window.innerHeight * (EXPANDED_HEIGHT_PERCENT / 100);
-    const threshold = (expandedHeight + COLLAPSED_HEIGHT) / 2;
-
-    if (drawerHeight > threshold) {
-      setDrawerHeight(expandedHeight);
-    } else {
-      setDrawerHeight(COLLAPSED_HEIGHT);
-    }
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    startY.current = e.clientY;
-    startHeight.current = drawerHeight;
-  };
-
-  useEffect(() => {
-    if (!isDragging) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const currentY = e.clientY;
-      const deltaY = startY.current - currentY;
-      const newHeight = Math.max(
-        COLLAPSED_HEIGHT,
-        Math.min(
-          window.innerHeight * (EXPANDED_HEIGHT_PERCENT / 100),
-          startHeight.current + deltaY,
-        ),
-      );
-      setDrawerHeight(newHeight);
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      const expandedHeight =
-        window.innerHeight * (EXPANDED_HEIGHT_PERCENT / 100);
-      const threshold = (expandedHeight + COLLAPSED_HEIGHT) / 2;
-
-      if (drawerHeight > threshold) {
-        setDrawerHeight(expandedHeight);
-      } else {
-        setDrawerHeight(COLLAPSED_HEIGHT);
-      }
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, drawerHeight]);
-
-  return (
-    <div
-      className="fixed right-0 left-0 z-20 flex flex-col rounded-t-2xl border-fancy-pants bg-white/95 shadow-2xl backdrop-blur-lg transition-all sm:hidden dark:bg-zinc-900/95"
-      style={{
-        bottom: `${BOTTOM_TAB_BAR_HEIGHT}px`,
-        height: `${drawerHeight}px`,
-        transition: isDragging ? 'none' : 'height 0.3s ease-out',
-      }}
-    >
-      {/* Drag handle */}
-      <button
-        type="button"
-        aria-label="Drag to expand or collapse drawer"
-        className="flex cursor-grab items-center justify-center py-3 active:cursor-grabbing"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onMouseDown={handleMouseDown}
-        onClick={() => {
-          const expandedHeight =
-            window.innerHeight * (EXPANDED_HEIGHT_PERCENT / 100);
-          setDrawerHeight(
-            drawerHeight === COLLAPSED_HEIGHT
-              ? expandedHeight
-              : COLLAPSED_HEIGHT,
-          );
-        }}
-      >
-        <div className="h-1 w-12 rounded-full bg-zinc-300 dark:bg-zinc-700" />
-      </button>
-
-      {/* Drawer content */}
-      <div className="flex-1 overflow-y-auto px-6 pb-6">{children}</div>
-    </div>
-  );
-}
-
 function RouteComponent() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     getInitialSidebarCollapsed(),
   );
+  const [windowWidth, setWindowWidth] = useState(
+    typeof window !== 'undefined' ? window.innerWidth : 0,
+  );
   const filters = useParsedFilters();
+  const trpc = useTRPC();
+
+  // Fetch church data based on filters
+  const { data: churchData } = useQuery(
+    trpc.church.searchChurches.queryOptions({
+      lon: filters.center[0],
+      lat: filters.center[1],
+      range: filters.range,
+      organizationId: filters.organization ?? null,
+      tags: filters.tags.length > 0 ? filters.tags : null,
+      limit: 1000,
+    }),
+  );
 
   useEffect(() => {
     const handleSidebarChange = (event: Event) => {
@@ -220,22 +111,49 @@ function RouteComponent() {
       window.removeEventListener(SIDEBAR_CHANGE_EVENT, handleSidebarChange);
   }, []);
 
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Calculate padding to offset the map center
-  // Pane is max-w-sm (24rem = 384px) + 24px padding on each side + 24px spacing = 456px total
+  // Desktop: Pane is max-w-sm (24rem = 384px) + 24px padding on each side + 24px spacing = 456px total
   // Sidebar collapsed: 56px (w-14), expanded: 200px (w-50)
+  // Mobile: Pane is 50vh at bottom, need to offset bottom
   const sidebarWidth = sidebarCollapsed ? 56 : 200;
   const paneWidth = 456;
-  const mapPadding = useMemo(
-    () => ({
+  const mapPadding = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return { left: 0, top: 0, right: 0, bottom: 0 };
+    }
+
+    // Check if mobile (sm breakpoint is 640px)
+    const isMobile = windowWidth < 640;
+
+    if (isMobile) {
+      // 50vh for the pane height on mobile + bottom tab bar height
+      return {
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: window.innerHeight * 0.5 + BOTTOM_TAB_BAR_HEIGHT,
+      };
+    }
+
+    // Desktop padding
+    return {
       left: paneWidth + sidebarWidth,
       top: 0,
       right: 0,
       bottom: 0,
-    }),
-    [sidebarWidth],
-  );
+    };
+  }, [sidebarWidth, windowWidth]);
 
-  const pane = <Pane />;
+  const pane = <Pane churchData={churchData} />;
 
   return (
     <div className="relative size-full">
@@ -253,28 +171,90 @@ function RouteComponent() {
           </div>
         }
       >
-        <ChurchMap padding={mapPadding} filters={filters} />
-        {/* Desktop floating pane */}
-        <div className="pointer-events-none absolute inset-0 hidden p-6 sm:block">
-          <div className="pointer-events-auto h-full max-w-sm rounded-2xl border-fancy-pants bg-white/80 p-6 backdrop-blur-lg dark:bg-zinc-900/80">
+        <ChurchMap
+          padding={mapPadding}
+          filters={filters}
+          churchData={churchData}
+        />
+        {/* Floating pane - desktop left side, mobile bottom */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 sm:inset-0 sm:p-6">
+          <div className="pointer-events-auto h-[50vh] w-full overflow-hidden rounded-t-2xl border-fancy-pants bg-white/80 backdrop-blur-lg sm:h-full sm:max-w-sm sm:rounded-2xl dark:bg-zinc-900/80">
             {pane}
           </div>
         </div>
-
-        {/* Mobile bottom sheet */}
-        <MobileBottomSheet>{pane}</MobileBottomSheet>
       </ClientOnly>
     </div>
   );
 }
 
-function Pane() {
+type PaneProps = {
+  churchData?: {
+    items: Array<{
+      id: string;
+      name: string;
+      addresses: Array<{
+        latitude: number | null;
+        longitude: number | null;
+        locality: string | null;
+        region: string | null;
+      }>;
+    }>;
+  };
+};
+
+function Pane({ churchData }: PaneProps) {
   return (
-    <>
-      <ChurchCombobox />
-      <p className="text-secondary">
-        Explore churches and ministries in your area.
-      </p>
-    </>
+    <div className="flex h-full flex-col overflow-y-auto">
+      <div className="sticky top-0 z-10 bg-linear-to-b from-75% from-white p-6 dark:from-zinc-900">
+        <ChurchCombobox />
+      </div>
+
+      <div className="px-6 pb-6">
+        {churchData ? (
+          churchData.items.length > 0 ? (
+            <div className="space-y-3">
+              {churchData.items.map((church) => {
+                const address = church.addresses[0];
+                const locationParts = [
+                  address?.locality,
+                  address?.region,
+                ].filter(Boolean);
+                const location = locationParts.join(', ');
+
+                return (
+                  <button
+                    key={church.id}
+                    type="button"
+                    className="w-full rounded-lg border border-zinc-200 bg-white p-4 text-left transition-all hover:border-indigo-400 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-white"
+                  >
+                    <h3 className="font-semibold text-primary">
+                      {church.name}
+                    </h3>
+                    {location ? (
+                      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                        {location}
+                      </p>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <p className="font-medium text-zinc-700 dark:text-zinc-300">
+                No churches found
+              </p>
+              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                Try adjusting your search filters or location
+              </p>
+            </div>
+          )
+        ) : (
+          <div className="flex items-center justify-center py-12">
+            <p className="text-zinc-500 dark:text-zinc-400">Loading...</p>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
