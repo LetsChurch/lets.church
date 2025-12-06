@@ -40,6 +40,7 @@ import {
   handleMultipartMediaUpload,
   importMedia,
 } from '@/temporal';
+import { canChannel, createChannelAuthContext } from '@/util/authorization';
 import {
   mantineAvatarLg2x,
   mantineAvatarSm2x,
@@ -64,12 +65,13 @@ const { ADMIN_EMAIL, WEB_URL } = z
 const channelProcedure = authProcedure
   .input(channelQuerySchema)
   .use(async ({ ctx, input, next }) => {
-    const isSiteAdmin = ctx.session.appUser.role === 'ADMIN';
     const membership = await prisma.channelMembership.findFirst({
       where: { appUserId: ctx.session.appUserId, channelId: input.channelId },
     });
 
-    if (!membership && !isSiteAdmin) {
+    const authContext = createChannelAuthContext(ctx.session, membership);
+
+    if (!canChannel.view(authContext)) {
       moduleLogger.warn('No membership found for channel procedure');
 
       throw new TRPCError({ code: 'UNAUTHORIZED' });
@@ -79,10 +81,9 @@ const channelProcedure = authProcedure
   });
 
 const channelAdminProcedure = channelProcedure.use(async ({ ctx, next }) => {
-  const isSiteAdmin = ctx.session.appUser.role === 'ADMIN';
-  const isChannelAdmin = ctx.membership?.isAdmin ?? false;
+  const authContext = createChannelAuthContext(ctx.session, ctx.membership);
 
-  if (!isChannelAdmin && !isSiteAdmin) {
+  if (!canChannel.administer(authContext)) {
     moduleLogger.warn(
       {
         appUserId: ctx.session.appUserId,
@@ -97,11 +98,9 @@ const channelAdminProcedure = channelProcedure.use(async ({ ctx, next }) => {
 });
 
 const channelUploadProcedure = channelProcedure.use(async ({ ctx, next }) => {
-  const isSiteAdmin = ctx.session.appUser.role === 'ADMIN';
-  const canUpload =
-    ctx.membership?.isAdmin || ctx.membership?.canUpload || false;
+  const authContext = createChannelAuthContext(ctx.session, ctx.membership);
 
-  if (!canUpload && !isSiteAdmin) {
+  if (!canChannel.upload(authContext)) {
     moduleLogger.warn(
       {
         appUserId: ctx.session.appUserId,
@@ -116,10 +115,9 @@ const channelUploadProcedure = channelProcedure.use(async ({ ctx, next }) => {
 });
 
 const channelEditProcedure = channelProcedure.use(async ({ ctx, next }) => {
-  const isSiteAdmin = ctx.session.appUser.role === 'ADMIN';
-  const canEdit = ctx.membership?.isAdmin || ctx.membership?.canEdit || false;
+  const authContext = createChannelAuthContext(ctx.session, ctx.membership);
 
-  if (!canEdit && !isSiteAdmin) {
+  if (!canChannel.edit(authContext)) {
     moduleLogger.warn(
       {
         appUserId: ctx.session.appUserId,

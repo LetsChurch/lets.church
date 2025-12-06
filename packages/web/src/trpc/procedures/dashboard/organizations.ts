@@ -12,6 +12,7 @@ import {
   upstreamAssociationActionSchema,
   userSearchOrganizationSchema,
 } from '@/schemas/dashboard';
+import { canOrg, createOrgAuthContext } from '@/util/authorization';
 import { mantineAvatarSm2x, mantineAvatarXl2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { publicS3 } from '@/util/s3';
@@ -25,7 +26,6 @@ const moduleLogger = logger.child({
 const organizationProcedure = authProcedure
   .input(organizationQuerySchema)
   .use(async ({ ctx, input, next }) => {
-    const isSiteAdmin = ctx.session.appUser.role === 'ADMIN';
     const membership = await prisma.organizationMembership.findFirst({
       where: {
         appUserId: ctx.session.appUserId,
@@ -33,7 +33,9 @@ const organizationProcedure = authProcedure
       },
     });
 
-    if (!membership && !isSiteAdmin) {
+    const authContext = createOrgAuthContext(ctx.session, membership);
+
+    if (!canOrg.view(authContext)) {
       moduleLogger.warn(
         {
           appUserId: ctx.session.appUserId,
@@ -49,10 +51,9 @@ const organizationProcedure = authProcedure
 
 const organizationAdminProcedure = organizationProcedure.use(
   async ({ ctx, next }) => {
-    const isSiteAdmin = ctx.session.appUser.role === 'ADMIN';
-    const isOrganizationAdmin = ctx.membership?.isAdmin ?? false;
+    const authContext = createOrgAuthContext(ctx.session, ctx.membership);
 
-    if (!isOrganizationAdmin && !isSiteAdmin) {
+    if (!canOrg.administer(authContext)) {
       moduleLogger.warn(
         {
           appUserId: ctx.session.appUserId,
