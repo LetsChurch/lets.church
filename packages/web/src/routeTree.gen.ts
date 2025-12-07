@@ -16,6 +16,7 @@ import { Route as DashboardIndexRouteImport } from './routes/dashboard_/index'
 import { Route as MainIndexRouteImport } from './routes/_main/index'
 import { Route as TrpcSplatRouteImport } from './routes/trpc.$'
 import { Route as MediaRssDotxmlRouteImport } from './routes/media.rss[.]xml'
+import { Route as EmbedChurchesRouteImport } from './routes/embed.churches'
 import { Route as DashboardOrganizationsRouteImport } from './routes/dashboard_/organizations'
 import { Route as DashboardChurchesRouteImport } from './routes/dashboard_/churches'
 import { Route as DashboardChannelsRouteImport } from './routes/dashboard_/channels'
@@ -31,6 +32,7 @@ import { Route as MainSearchRouteImport } from './routes/_main/search'
 import { Route as MainLibraryRouteImport } from './routes/_main/library'
 import { Route as MainHistoryRouteImport } from './routes/_main/history'
 import { Route as MainFollowingRouteImport } from './routes/_main/following'
+import { Route as MainChurchesRouteImport } from './routes/_main/churches'
 import { Route as MainAboutRouteImport } from './routes/_main.about'
 import { Route as MainSlugRouteImport } from './routes/_main/$slug'
 import { Route as MainAboutIndexRouteImport } from './routes/_main/about/index'
@@ -58,6 +60,7 @@ import { Route as DashboardAccountNewsletterRouteImport } from './routes/dashboa
 import { Route as ChannelSlugRssDotxmlRouteImport } from './routes/channel.$slug.rss[.]xml'
 import { Route as ChannelSlugPodcastDotxmlRouteImport } from './routes/channel.$slug.podcast[.]xml'
 import { Route as MainMediaMediaIdRouteImport } from './routes/_main/media/$mediaId'
+import { Route as MainChurchesSlugRouteImport } from './routes/_main/churches_.$slug'
 import { Route as MainChannelSlugRouteImport } from './routes/_main/channel.$slug'
 import { Route as MainAboutTheologyRouteImport } from './routes/_main/about/theology'
 import { Route as MainAboutTermsRouteImport } from './routes/_main/about/terms'
@@ -111,6 +114,11 @@ const TrpcSplatRoute = TrpcSplatRouteImport.update({
 const MediaRssDotxmlRoute = MediaRssDotxmlRouteImport.update({
   id: '/media/rss.xml',
   path: '/media/rss.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmbedChurchesRoute = EmbedChurchesRouteImport.update({
+  id: '/embed/churches',
+  path: '/embed/churches',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardOrganizationsRoute = DashboardOrganizationsRouteImport.update({
@@ -186,6 +194,11 @@ const MainHistoryRoute = MainHistoryRouteImport.update({
 const MainFollowingRoute = MainFollowingRouteImport.update({
   id: '/following',
   path: '/following',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainChurchesRoute = MainChurchesRouteImport.update({
+  id: '/churches',
+  path: '/churches',
   getParentRoute: () => MainRoute,
 } as any)
 const MainAboutRoute = MainAboutRouteImport.update({
@@ -336,6 +349,11 @@ const MainMediaMediaIdRoute = MainMediaMediaIdRouteImport.update({
   path: '/media/$mediaId',
   getParentRoute: () => MainRoute,
 } as any)
+const MainChurchesSlugRoute = MainChurchesSlugRouteImport.update({
+  id: '/churches_/$slug',
+  path: '/churches/$slug',
+  getParentRoute: () => MainRoute,
+} as any)
 const MainChannelSlugRoute = MainChannelSlugRouteImport.update({
   id: '/channel/$slug',
   path: '/channel/$slug',
@@ -455,6 +473,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteWithChildren
   '/$slug': typeof MainSlugRoute
   '/about': typeof MainAboutRouteWithChildren
+  '/churches': typeof MainChurchesRoute
   '/following': typeof MainFollowingRoute
   '/history': typeof MainHistoryRoute
   '/library': typeof MainLibraryRoute
@@ -470,6 +489,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/channels': typeof DashboardChannelsRoute
   '/dashboard/churches': typeof DashboardChurchesRoute
   '/dashboard/organizations': typeof DashboardOrganizationsRoute
+  '/embed/churches': typeof EmbedChurchesRoute
   '/media/rss.xml': typeof MediaRssDotxmlRoute
   '/trpc/$': typeof TrpcSplatRoute
   '/': typeof MainIndexRoute
@@ -481,6 +501,7 @@ export interface FileRoutesByFullPath {
   '/about/terms': typeof MainAboutTermsRoute
   '/about/theology': typeof MainAboutTheologyRoute
   '/channel/$slug': typeof MainChannelSlugRoute
+  '/churches/$slug': typeof MainChurchesSlugRoute
   '/media/$mediaId': typeof MainMediaMediaIdRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
@@ -523,6 +544,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
   '/$slug': typeof MainSlugRoute
+  '/churches': typeof MainChurchesRoute
   '/following': typeof MainFollowingRoute
   '/history': typeof MainHistoryRoute
   '/library': typeof MainLibraryRoute
@@ -538,6 +560,7 @@ export interface FileRoutesByTo {
   '/dashboard/channels': typeof DashboardChannelsRoute
   '/dashboard/churches': typeof DashboardChurchesRoute
   '/dashboard/organizations': typeof DashboardOrganizationsRoute
+  '/embed/churches': typeof EmbedChurchesRoute
   '/media/rss.xml': typeof MediaRssDotxmlRoute
   '/trpc/$': typeof TrpcSplatRoute
   '/': typeof MainIndexRoute
@@ -549,6 +572,7 @@ export interface FileRoutesByTo {
   '/about/terms': typeof MainAboutTermsRoute
   '/about/theology': typeof MainAboutTheologyRoute
   '/channel/$slug': typeof MainChannelSlugRoute
+  '/churches/$slug': typeof MainChurchesSlugRoute
   '/media/$mediaId': typeof MainMediaMediaIdRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
@@ -595,6 +619,7 @@ export interface FileRoutesById {
   '/dashboard_': typeof DashboardRouteWithChildren
   '/_main/$slug': typeof MainSlugRoute
   '/_main/about': typeof MainAboutRouteWithChildren
+  '/_main/churches': typeof MainChurchesRoute
   '/_main/following': typeof MainFollowingRoute
   '/_main/history': typeof MainHistoryRoute
   '/_main/library': typeof MainLibraryRoute
@@ -610,6 +635,7 @@ export interface FileRoutesById {
   '/dashboard_/channels': typeof DashboardChannelsRoute
   '/dashboard_/churches': typeof DashboardChurchesRoute
   '/dashboard_/organizations': typeof DashboardOrganizationsRoute
+  '/embed/churches': typeof EmbedChurchesRoute
   '/media/rss.xml': typeof MediaRssDotxmlRoute
   '/trpc/$': typeof TrpcSplatRoute
   '/_main/': typeof MainIndexRoute
@@ -621,6 +647,7 @@ export interface FileRoutesById {
   '/_main/about/terms': typeof MainAboutTermsRoute
   '/_main/about/theology': typeof MainAboutTheologyRoute
   '/_main/channel/$slug': typeof MainChannelSlugRoute
+  '/_main/churches_/$slug': typeof MainChurchesSlugRoute
   '/_main/media/$mediaId': typeof MainMediaMediaIdRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
@@ -667,6 +694,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/$slug'
     | '/about'
+    | '/churches'
     | '/following'
     | '/history'
     | '/library'
@@ -682,6 +710,7 @@ export interface FileRouteTypes {
     | '/dashboard/channels'
     | '/dashboard/churches'
     | '/dashboard/organizations'
+    | '/embed/churches'
     | '/media/rss.xml'
     | '/trpc/$'
     | '/'
@@ -693,6 +722,7 @@ export interface FileRouteTypes {
     | '/about/terms'
     | '/about/theology'
     | '/channel/$slug'
+    | '/churches/$slug'
     | '/media/$mediaId'
     | '/channel/$slug/podcast.xml'
     | '/channel/$slug/rss.xml'
@@ -735,6 +765,7 @@ export interface FileRouteTypes {
   to:
     | '/auth'
     | '/$slug'
+    | '/churches'
     | '/following'
     | '/history'
     | '/library'
@@ -750,6 +781,7 @@ export interface FileRouteTypes {
     | '/dashboard/channels'
     | '/dashboard/churches'
     | '/dashboard/organizations'
+    | '/embed/churches'
     | '/media/rss.xml'
     | '/trpc/$'
     | '/'
@@ -761,6 +793,7 @@ export interface FileRouteTypes {
     | '/about/terms'
     | '/about/theology'
     | '/channel/$slug'
+    | '/churches/$slug'
     | '/media/$mediaId'
     | '/channel/$slug/podcast.xml'
     | '/channel/$slug/rss.xml'
@@ -806,6 +839,7 @@ export interface FileRouteTypes {
     | '/dashboard_'
     | '/_main/$slug'
     | '/_main/about'
+    | '/_main/churches'
     | '/_main/following'
     | '/_main/history'
     | '/_main/library'
@@ -821,6 +855,7 @@ export interface FileRouteTypes {
     | '/dashboard_/channels'
     | '/dashboard_/churches'
     | '/dashboard_/organizations'
+    | '/embed/churches'
     | '/media/rss.xml'
     | '/trpc/$'
     | '/_main/'
@@ -832,6 +867,7 @@ export interface FileRouteTypes {
     | '/_main/about/terms'
     | '/_main/about/theology'
     | '/_main/channel/$slug'
+    | '/_main/churches_/$slug'
     | '/_main/media/$mediaId'
     | '/channel/$slug/podcast.xml'
     | '/channel/$slug/rss.xml'
@@ -876,6 +912,7 @@ export interface RootRouteChildren {
   MainRoute: typeof MainRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   DashboardRoute: typeof DashboardRouteWithChildren
+  EmbedChurchesRoute: typeof EmbedChurchesRoute
   MediaRssDotxmlRoute: typeof MediaRssDotxmlRoute
   TrpcSplatRoute: typeof TrpcSplatRoute
   ChannelSlugPodcastDotxmlRoute: typeof ChannelSlugPodcastDotxmlRoute
@@ -933,6 +970,13 @@ declare module '@tanstack/react-router' {
       path: '/media/rss.xml'
       fullPath: '/media/rss.xml'
       preLoaderRoute: typeof MediaRssDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/embed/churches': {
+      id: '/embed/churches'
+      path: '/embed/churches'
+      fullPath: '/embed/churches'
+      preLoaderRoute: typeof EmbedChurchesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard_/organizations': {
@@ -1038,6 +1082,13 @@ declare module '@tanstack/react-router' {
       path: '/following'
       fullPath: '/following'
       preLoaderRoute: typeof MainFollowingRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/churches': {
+      id: '/_main/churches'
+      path: '/churches'
+      fullPath: '/churches'
+      preLoaderRoute: typeof MainChurchesRouteImport
       parentRoute: typeof MainRoute
     }
     '/_main/about': {
@@ -1229,6 +1280,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainMediaMediaIdRouteImport
       parentRoute: typeof MainRoute
     }
+    '/_main/churches_/$slug': {
+      id: '/_main/churches_/$slug'
+      path: '/churches/$slug'
+      fullPath: '/churches/$slug'
+      preLoaderRoute: typeof MainChurchesSlugRouteImport
+      parentRoute: typeof MainRoute
+    }
     '/_main/channel/$slug': {
       id: '/_main/channel/$slug'
       path: '/channel/$slug'
@@ -1399,24 +1457,28 @@ const MainAboutRouteWithChildren = MainAboutRoute._addFileChildren(
 interface MainRouteChildren {
   MainSlugRoute: typeof MainSlugRoute
   MainAboutRoute: typeof MainAboutRouteWithChildren
+  MainChurchesRoute: typeof MainChurchesRoute
   MainFollowingRoute: typeof MainFollowingRoute
   MainHistoryRoute: typeof MainHistoryRoute
   MainLibraryRoute: typeof MainLibraryRoute
   MainSearchRoute: typeof MainSearchRoute
   MainIndexRoute: typeof MainIndexRoute
   MainChannelSlugRoute: typeof MainChannelSlugRoute
+  MainChurchesSlugRoute: typeof MainChurchesSlugRoute
   MainMediaMediaIdRoute: typeof MainMediaMediaIdRoute
 }
 
 const MainRouteChildren: MainRouteChildren = {
   MainSlugRoute: MainSlugRoute,
   MainAboutRoute: MainAboutRouteWithChildren,
+  MainChurchesRoute: MainChurchesRoute,
   MainFollowingRoute: MainFollowingRoute,
   MainHistoryRoute: MainHistoryRoute,
   MainLibraryRoute: MainLibraryRoute,
   MainSearchRoute: MainSearchRoute,
   MainIndexRoute: MainIndexRoute,
   MainChannelSlugRoute: MainChannelSlugRoute,
+  MainChurchesSlugRoute: MainChurchesSlugRoute,
   MainMediaMediaIdRoute: MainMediaMediaIdRoute,
 }
 
@@ -1542,6 +1604,7 @@ const rootRouteChildren: RootRouteChildren = {
   MainRoute: MainRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   DashboardRoute: DashboardRouteWithChildren,
+  EmbedChurchesRoute: EmbedChurchesRoute,
   MediaRssDotxmlRoute: MediaRssDotxmlRoute,
   TrpcSplatRoute: TrpcSplatRoute,
   ChannelSlugPodcastDotxmlRoute: ChannelSlugPodcastDotxmlRoute,

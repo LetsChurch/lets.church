@@ -53,6 +53,7 @@
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;
+    z-index: 10;
   }
 
   &:where([data-theme="dark"], [data-theme="dark"] *)::after {

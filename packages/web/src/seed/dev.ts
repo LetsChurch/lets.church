@@ -119,6 +119,8 @@ const { id: lcId, channelAssociations: lcAssociations } =
       id: '00000000-0000-4000-8000-000000000000',
       name: "Let's Church",
       slug: 'letschurch',
+      approvedAt: new Date(),
+      approvedById: adminUser.id,
       memberships: {
         create: {
           appUser: {
@@ -173,6 +175,8 @@ const { id: flId, channelAssociations: flAssociations } =
       name: 'FirstLove Publications',
       slug: 'firstlove',
       avatarPath: 'first-love-publications/avatar.png',
+      approvedAt: new Date(),
+      approvedById: adminUser.id,
       memberships: {
         create: {
           appUser: {
@@ -235,6 +239,8 @@ const { id: org01id, channelAssociations: org01Associations } =
     data: {
       name: 'Organization 1',
       slug: 'org1',
+      approvedAt: new Date(),
+      approvedById: adminUser.id,
       memberships: {
         create: {
           appUser: {
@@ -285,6 +291,8 @@ const { id: org03Id, channelAssociations: org03Associations } =
     data: {
       name: 'Organization 3',
       slug: 'org3',
+      approvedAt: new Date(),
+      approvedById: adminUser.id,
       memberships: {
         create: {
           appUser: {
@@ -340,6 +348,8 @@ const org04 = await prisma.organization.create({
     slug: 'baptist-la',
     description: 'We are a church that is baptist, but not too baptist.',
     type: 'CHURCH',
+    approvedAt: new Date(),
+    approvedById: adminUser.id,
     tags: {
       createMany: {
         data: [
@@ -411,6 +421,8 @@ const org05 = await prisma.organization.create({
     slug: 'desert-debaters',
     description: 'We are a church that is all about debating in the desert.',
     type: 'CHURCH',
+    approvedAt: new Date(),
+    approvedById: adminUser.id,
     tags: {
       createMany: {
         data: [
@@ -485,6 +497,8 @@ const org06 = await prisma.organization.create({
     slug: 'moss-cows',
     description: 'We are a church that is all about moss and all about cows.',
     type: 'CHURCH',
+    approvedAt: new Date(),
+    approvedById: adminUser.id,
     tags: {
       createMany: {
         data: [
@@ -560,6 +574,8 @@ const org07 = await prisma.organization.create({
     description:
       'We are a church that is all about large structures made of gopher wood.',
     type: 'CHURCH',
+    approvedAt: new Date(),
+    approvedById: adminUser.id,
     tags: {
       createMany: {
         data: [
@@ -629,6 +645,8 @@ const org08 = await prisma.organization.create({
     description:
       'We are a church that is all about bananas and all about the Bible.',
     type: 'CHURCH',
+    approvedAt: new Date(),
+    approvedById: adminUser.id,
     tags: {
       createMany: {
         data: [
@@ -697,6 +715,8 @@ const org09 = await prisma.organization.create({
     slug: 'cotton',
     description: 'We are a church that is all about baumwollfinger.',
     type: 'CHURCH',
+    approvedAt: new Date(),
+    approvedById: adminUser.id,
     tags: {
       createMany: {
         data: [
@@ -772,6 +792,8 @@ const org10 = await prisma.organization.create({
       'We are a church that is all about harbors and #superiortheology.',
     slug: 'harbor',
     type: 'CHURCH',
+    approvedAt: new Date(),
+    approvedById: adminUser.id,
     tags: {
       createMany: {
         data: [
@@ -847,6 +869,8 @@ const org11 = await prisma.organization.create({
     description:
       'We are a church that is all about ships that change direction.',
     type: 'CHURCH',
+    approvedAt: new Date(),
+    approvedById: adminUser.id,
     tags: {
       createMany: {
         data: [
@@ -922,6 +946,8 @@ const org12 = await prisma.organization.create({
       'We are a church where you will learn about the pitfalls of the prosperity gospel, which is not a gospel.',
     slug: 'ppp',
     type: 'CHURCH',
+    approvedAt: new Date(),
+    approvedById: adminUser.id,
     tags: {
       createMany: {
         data: [
@@ -993,6 +1019,8 @@ const org13 = await prisma.organization.create({
     slug: 'screwtape',
     description: 'We like C.S. Lewis.',
     type: 'CHURCH',
+    approvedAt: new Date(),
+    approvedById: adminUser.id,
     tags: {
       createMany: {
         data: [
@@ -1067,6 +1095,8 @@ const org14 = await prisma.organization.create({
     slug: 'solas',
     description: 'We are a church that is all about the five solas.',
     type: 'CHURCH',
+    approvedAt: new Date(),
+    approvedById: adminUser.id,
     tags: {
       createMany: {
         data: [
@@ -1139,6 +1169,8 @@ const org15 = await prisma.organization.create({
     description:
       'We are a church that is all about the sovereignty of God and the joy of the saints.',
     type: 'CHURCH',
+    approvedAt: new Date(),
+    approvedById: adminUser.id,
     tags: {
       createMany: {
         data: [
@@ -1208,6 +1240,8 @@ const org16 = await prisma.organization.create({
     description:
       'We are a church that is all about clapping back at the world.',
     type: 'CHURCH',
+    approvedAt: new Date(),
+    approvedById: adminUser.id,
     tags: {
       createMany: {
         data: [
@@ -1270,6 +1304,161 @@ const org16 = await prisma.organization.create({
 
 await indexDocument('organization', org16.id);
 
+// Test churches for empty state conditions on profile page
+
+// Church with official channel (already covered by existing churches above)
+
+// Church without channels but WITH email contact
+const org17 = await prisma.organization.create({
+  data: {
+    name: 'Grace Fellowship (Email Only)',
+    slug: 'grace-fellowship-email',
+    description:
+      'A friendly church community. Contact us to request we upload our sermons!',
+    type: 'CHURCH',
+    approvedAt: new Date(),
+    approvedById: adminUser.id,
+    tags: {
+      createMany: {
+        data: [
+          {
+            tagSlug: reformedTagSlug,
+          },
+        ],
+      },
+    },
+    primaryEmail: 'contact@gracefellowship.example',
+    primaryPhoneNumber: null,
+    websiteUrl: null,
+    addresses: {
+      create: {
+        type: 'MEETING',
+        query: 'Portland, Oregon, United States',
+        country: 'United States',
+        locality: 'Portland',
+        region: 'Oregon',
+        postalCode: null,
+        streetAddress: null,
+        longitude: -122.676483,
+        latitude: 45.523064,
+      },
+    },
+    memberships: {
+      create: {
+        appUser: {
+          connect: {
+            id: adminUser.id,
+          },
+        },
+        isAdmin: true,
+      },
+    },
+  },
+});
+
+await indexDocument('organization', org17.id);
+
+// Church without channels but WITH phone and website (no email)
+const org18 = await prisma.organization.create({
+  data: {
+    name: 'Community Bible Church (Phone/Web)',
+    slug: 'community-bible-phone-web',
+    description: 'Serving our community with biblical teaching.',
+    type: 'CHURCH',
+    approvedAt: new Date(),
+    approvedById: adminUser.id,
+    tags: {
+      createMany: {
+        data: [
+          {
+            tagSlug: baptistTagSlug,
+          },
+        ],
+      },
+    },
+    primaryEmail: null,
+    primaryPhoneNumber:
+      parsePhoneNumber(faker.phone.number(), 'US')?.number ?? null,
+    websiteUrl: faker.internet.url(),
+    addresses: {
+      create: {
+        type: 'MEETING',
+        query: 'Austin, Texas, United States',
+        country: 'United States',
+        locality: 'Austin',
+        region: 'Texas',
+        postalCode: null,
+        streetAddress: null,
+        longitude: -97.743061,
+        latitude: 30.267153,
+      },
+    },
+    memberships: {
+      create: {
+        appUser: {
+          connect: {
+            id: adminUser.id,
+          },
+        },
+        isAdmin: true,
+      },
+    },
+  },
+});
+
+await indexDocument('organization', org18.id);
+
+// Church without channels and WITHOUT any contact info
+// Note: This shouldn't happen in production, but we test it anyway
+const org19 = await prisma.organization.create({
+  data: {
+    name: 'Silent Church (No Contact)',
+    slug: 'silent-church-no-contact',
+    description:
+      'A church with no contact information. This should not show the Official Channels section.',
+    type: 'CHURCH',
+    approvedAt: new Date(),
+    approvedById: adminUser.id,
+    tags: {
+      createMany: {
+        data: [
+          {
+            tagSlug: independentTagSlug,
+          },
+        ],
+      },
+    },
+    primaryEmail: null,
+    primaryPhoneNumber: null,
+    websiteUrl: null,
+    addresses: {
+      create: {
+        type: 'MEETING',
+        query: 'Denver, Colorado, United States',
+        country: 'United States',
+        locality: 'Denver',
+        region: 'Colorado',
+        postalCode: null,
+        streetAddress: null,
+        longitude: -104.990251,
+        latitude: 39.739236,
+      },
+    },
+    memberships: {
+      create: {
+        appUser: {
+          connect: {
+            id: adminUser.id,
+          },
+        },
+        isAdmin: true,
+      },
+    },
+  },
+});
+
+await indexDocument('organization', org19.id);
+
 const sellingJesusChannel = await prisma.channel.create({
   data: {
     name: 'Selling Jesus',
@@ -1323,6 +1512,8 @@ for (let i = 0; i < 25; i += 1) {
       slug: slugify(name),
       description: faker.lorem.paragraph(),
       type: 'CHURCH',
+      approvedAt: new Date(),
+      approvedById: adminUser.id,
       tags: {
         createMany: {
           data: denomination.map((tagSlug) => ({ tagSlug })),

@@ -1,5 +1,6 @@
 import {
   IconBookmark,
+  IconBuildingChurch,
   IconCompass,
   IconFlag,
   IconSearch,
@@ -16,6 +17,11 @@ const navigation = [
     name: 'Following',
     icon: <IconFlag />,
     href: '/following',
+  },
+  {
+    name: 'Churches',
+    icon: <IconBuildingChurch />,
+    href: '/churches',
   },
   {
     name: 'Search',

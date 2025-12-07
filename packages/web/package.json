@@ -78,6 +78,7 @@
     "jose": "^6.1.1",
     "js-cookie": "^3.0.5",
     "libphonenumber-js": "^1.12.26",
+    "mapbox-gl": "^3.16.0",
     "media-chrome": "^4.15.1",
     "nanostores": "^1.0.1",
     "p-filter": "^4.1.0",

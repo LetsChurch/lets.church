@@ -2,6 +2,7 @@ import {
   IconArrowLeft,
   IconBookmark,
   IconBookmarks,
+  IconBuildingChurch,
   IconChevronDown,
   IconCompass,
   IconFlag,
@@ -391,8 +392,44 @@ export default function Sidebar({ className }: SidebarProps) {
                 <hr className="mx-4 h-px border-gray-100 dark:border-zinc-900" />
               </div>
 
-              {/* Library */}
+              {/* Churches and Library */}
               <div className="py-2">
+                {collapsed ? (
+                  <LcTooltip
+                    content="Churches"
+                    side="right"
+                    render={
+                      <Link
+                        to="/churches"
+                        className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
+                        activeProps={{
+                          className: 'text-primary',
+                        }}
+                        inactiveProps={{
+                          className: 'text-primary/70',
+                        }}
+                      />
+                    }
+                  >
+                    <IconBuildingChurch size={24} />
+                    <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                  </LcTooltip>
+                ) : (
+                  <Link
+                    to="/churches"
+                    className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
+                    activeProps={{
+                      className: 'text-primary',
+                    }}
+                    inactiveProps={{
+                      className: 'text-primary/70',
+                    }}
+                  >
+                    <IconBuildingChurch size={24} />
+                    <span className="pb-0.5">Churches</span>
+                    <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                  </Link>
+                )}
                 {collapsed ? (
                   <LcTooltip
                     content="Library"

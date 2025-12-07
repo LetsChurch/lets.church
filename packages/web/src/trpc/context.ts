@@ -1,13 +1,13 @@
 import type { FetchCreateContextFnOptions } from '@trpc/server/adapters/fetch';
+import { getSession } from '@/util/auth';
 import {
+  type ChannelAuthContext,
   canChannel,
   canOrg,
-  type ChannelAuthContext,
   createChannelAuthContext,
   createOrgAuthContext,
   type OrganizationAuthContext,
 } from '@/util/authorization';
-import { getSession } from '@/util/auth';
 
 export async function createContext({
   req,
@@ -30,9 +30,7 @@ export async function createContext({
        * if (!canViewOrg) throw new TRPCError({ code: 'UNAUTHORIZED' });
        * ```
        */
-      org: (
-        membership?: OrganizationAuthContext['membership'],
-      ) => {
+      org: (membership?: OrganizationAuthContext['membership']) => {
         const authContext = createOrgAuthContext(session, membership);
         return {
           view: () => canOrg.view(authContext),
@@ -49,9 +47,7 @@ export async function createContext({
        * if (!canUploadToChannel) throw new TRPCError({ code: 'FORBIDDEN' });
        * ```
        */
-      channel: (
-        membership?: ChannelAuthContext['membership'],
-      ) => {
+      channel: (membership?: ChannelAuthContext['membership']) => {
         const authContext = createChannelAuthContext(session, membership);
         return {
           view: () => canChannel.view(authContext),
