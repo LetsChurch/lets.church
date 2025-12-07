@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { ClientOnly, createFileRoute } from '@tanstack/react-router';
+import { ClientOnly, createFileRoute, Link } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
 import { z } from 'zod';
 import { ChurchCombobox } from '@/components/church-combobox';
@@ -192,6 +192,7 @@ type PaneProps = {
     items: Array<{
       id: string;
       name: string;
+      slug: string;
       addresses: Array<{
         latitude: number | null;
         longitude: number | null;
@@ -222,10 +223,11 @@ function Pane({ churchData }: PaneProps) {
                 const location = locationParts.join(', ');
 
                 return (
-                  <button
+                  <Link
                     key={church.id}
-                    type="button"
-                    className="w-full rounded-lg border border-zinc-200 bg-white p-4 text-left transition-all hover:border-indigo-400 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-white"
+                    to="/churches/$slug"
+                    params={{ slug: church.slug }}
+                    className="block w-full rounded-lg border border-zinc-200 bg-white p-4 text-left transition-all hover:border-indigo-400 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-white"
                   >
                     <h3 className="font-semibold text-primary">
                       {church.name}
@@ -235,7 +237,7 @@ function Pane({ churchData }: PaneProps) {
                         {location}
                       </p>
                     ) : null}
-                  </button>
+                  </Link>
                 );
               })}
             </div>

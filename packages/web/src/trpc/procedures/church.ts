@@ -7,6 +7,7 @@ import {
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import logger from '@/util/logger';
+import { formatPhoneNumber } from '@/util/phone';
 import { publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
 import { publicProcedure } from '../trpc';
@@ -93,6 +94,11 @@ export const churchProcedures = {
           slug: true,
           type: true,
           name: true,
+          description: true,
+          avatarPath: true,
+          primaryEmail: true,
+          primaryPhoneNumber: true,
+          websiteUrl: true,
           addresses: {
             where: {
               type: 'MEETING',
@@ -106,6 +112,18 @@ export const churchProcedures = {
               postalCode: true,
               latitude: true,
               longitude: true,
+            },
+          },
+          tags: {
+            select: {
+              tag: {
+                select: {
+                  category: true,
+                  color: true,
+                  label: true,
+                  slug: true,
+                },
+              },
             },
           },
         },
@@ -124,6 +142,12 @@ export const churchProcedures = {
         .map((org) => ({
           ...org,
           id: OutgoingIdSchema.parse(org.id),
+          avatarUrl: org.avatarPath
+            ? getPublicImageUrl(publicS3.getS3ProtocolUri(org.avatarPath), {
+                resize: { width: 80, height: 80 },
+              })
+            : null,
+          tags: org.tags.map((t) => t.tag),
         }));
 
       moduleLogger.info(
@@ -396,9 +420,9 @@ export const churchProcedures = {
         };
       });
 
-      // Format phone URI
-      const primaryPhoneUri = organization.primaryPhoneNumber
-        ? `tel:${organization.primaryPhoneNumber.replace(/[^0-9+]/g, '')}`
+      // Format phone number
+      const formattedPhone = organization.primaryPhoneNumber
+        ? formatPhoneNumber(organization.primaryPhoneNumber, 'US')
         : null;
 
       moduleLogger.info('Organization fetched successfully by slug');
@@ -410,10 +434,10 @@ export const churchProcedures = {
         description: organization.description,
         avatarUrl,
         coverUrl,
-        primaryPhoneNumber: organization.primaryPhoneNumber,
+        primaryPhoneNumber: formattedPhone?.formatted ?? null,
         primaryEmail: organization.primaryEmail,
         websiteUrl: organization.websiteUrl,
-        primaryPhoneUri,
+        primaryPhoneUri: formattedPhone?.uri ?? null,
         tags: organization.tags.map((t) => t.tag),
         addresses: organization.addresses,
         officialChannels,

@@ -5,6 +5,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useId, useMemo, useRef, useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { array, looseObject, string } from 'zod';
+import { Tag } from '@/components/tag';
 import { useParsedFilters } from '@/routes/_main/churches';
 import { useTRPC } from '@/trpc/react';
 
@@ -28,6 +29,28 @@ type MenuItem = {
   subtitle?: string;
 };
 type MenuGroup = { value: string; items: Array<MenuItem> };
+
+// Get the background color class for a tag color
+function getTagColorClass(color: string): string {
+  switch (color) {
+    case 'BLUE':
+      return 'bg-blue-500';
+    case 'GREEN':
+      return 'bg-green-500';
+    case 'RED':
+      return 'bg-red-500';
+    case 'INDIGO':
+      return 'bg-indigo-500';
+    case 'PINK':
+      return 'bg-pink-500';
+    case 'PURPLE':
+      return 'bg-purple-500';
+    case 'GRAY':
+      return 'bg-gray-500';
+    default:
+      return 'bg-gray-500';
+  }
+}
 
 export function ChurchCombobox() {
   const id = useId();
@@ -326,21 +349,52 @@ export function ChurchCombobox() {
           <Combobox.Value>
             {(value: Array<MenuItem>) => (
               <>
-                {value.map((item) => (
-                  <Combobox.Chip
-                    key={item.id}
-                    className="flex cursor-default items-center gap-1 rounded-full border-fancy-pants bg-white py-1 pr-1 pl-3 text-primary text-sm outline-none transition-colors focus-within:bg-white/10 dark:bg-zinc-900 dark:focus-within:bg-white/10 [@media(hover:hover)]:data-highlighted:bg-white/10 dark:[@media(hover:hover)]:data-highlighted:bg-white/10"
-                    aria-label={item.label}
-                  >
-                    {item.label}
-                    <Combobox.ChipRemove
-                      className="inline-flex items-center justify-center rounded-full border-none bg-transparent p-1 text-inherit opacity-50 transition-opacity hover:opacity-100"
-                      aria-label="Remove"
+                {value.map((item) =>
+                  item.color ? (
+                    <Combobox.Chip
+                      key={item.id}
+                      className="flex cursor-default items-center gap-1 outline-none"
+                      aria-label={item.label}
                     >
-                      <IconX size={16} />
-                    </Combobox.ChipRemove>
-                  </Combobox.Chip>
-                ))}
+                      <Tag
+                        size="md"
+                        color={
+                          item.color as
+                            | 'BLUE'
+                            | 'GREEN'
+                            | 'RED'
+                            | 'INDIGO'
+                            | 'PINK'
+                            | 'PURPLE'
+                            | 'GRAY'
+                        }
+                        className="pr-1"
+                      >
+                        {item.label}
+                        <Combobox.ChipRemove
+                          className="ml-1 inline-flex items-center justify-center rounded-full border-none bg-transparent p-0.5 text-inherit opacity-50 transition-opacity hover:opacity-100"
+                          aria-label="Remove"
+                        >
+                          <IconX size={14} />
+                        </Combobox.ChipRemove>
+                      </Tag>
+                    </Combobox.Chip>
+                  ) : (
+                    <Combobox.Chip
+                      key={item.id}
+                      className="flex cursor-default items-center gap-1 rounded-full border-fancy-pants bg-white py-1 pr-1 pl-3 text-primary text-sm outline-none transition-colors focus-within:bg-white/10 dark:bg-zinc-900 dark:focus-within:bg-white/10 [@media(hover:hover)]:data-highlighted:bg-white/10 dark:[@media(hover:hover)]:data-highlighted:bg-white/10"
+                      aria-label={item.label}
+                    >
+                      {item.label}
+                      <Combobox.ChipRemove
+                        className="inline-flex items-center justify-center rounded-full border-none bg-transparent p-1 text-inherit opacity-50 transition-opacity hover:opacity-100"
+                        aria-label="Remove"
+                      >
+                        <IconX size={16} />
+                      </Combobox.ChipRemove>
+                    </Combobox.Chip>
+                  ),
+                )}
                 <Combobox.Input
                   id={id}
                   placeholder={value.length > 0 ? '' : 'Search churches...'}
@@ -376,12 +430,17 @@ export function ChurchCombobox() {
                       <Combobox.Item
                         key={item.id}
                         value={item}
-                        className="grid cursor-pointer select-none grid-cols-[0.75rem_1fr] items-start gap-2 px-4 py-2.5 text-primary/80 text-sm outline-none transition-colors hover:bg-white/10 hover:text-primary data-highlighted:bg-white/10 data-highlighted:text-primary"
+                        className="grid cursor-pointer select-none grid-cols-[0.75rem_0.5rem_1fr] items-start gap-2 py-2.5 text-primary/80 text-sm outline-none transition-colors hover:bg-white/10 hover:text-primary data-highlighted:bg-white/10 data-highlighted:text-primary"
                       >
                         <Combobox.ItemIndicator className="col-start-1 mt-1">
                           <IconCheck className="size-3" />
                         </Combobox.ItemIndicator>
-                        <div className="col-start-2 flex flex-col gap-1">
+                        <div className="col-start-2 mt-1.5 flex items-center justify-center">
+                          <div
+                            className={`size-2 rounded-full ${item.color ? getTagColorClass(item.color) : 'bg-gray-400 dark:bg-gray-600'}`}
+                          />
+                        </div>
+                        <div className="col-start-3 flex flex-col gap-1">
                           <div className="font-medium">{item.label}</div>
                           {item.subtitle ? (
                             <div className="text-primary/60 text-xs">

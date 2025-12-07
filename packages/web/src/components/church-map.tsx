@@ -7,15 +7,30 @@ import type { ParsedFilters } from '@/routes/_main/churches';
 import { getInitialTheme, THEME_CHANGE_EVENT } from '@/stores/theme';
 import { useTRPC } from '@/trpc/react';
 
-type ChurchSearchResult = {
+type ChurchDatum = {
   items: Array<{
     id: string;
     name: string;
+    slug: string;
+    description: string | null;
+    avatarUrl: string | null;
+    primaryEmail: string | null;
+    primaryPhoneNumber: string | null;
+    websiteUrl: string | null;
     addresses: Array<{
       latitude: number | null;
       longitude: number | null;
       locality: string | null;
       region: string | null;
+      streetAddress: string | null;
+      postalCode: string | null;
+      country: string | null;
+    }>;
+    tags: Array<{
+      category: string;
+      color: string;
+      label: string;
+      slug: string;
     }>;
   }>;
 };
@@ -24,10 +39,124 @@ const unclusteredColor = '#6366f1';
 const clusterSmallColor = '#818cf8';
 const clusterMediumColor = '#a5b4fc';
 const clusterLargeColor = '#c7d2fe';
-const _hoverColor = '#d946ef';
 
 const unclusteredRadius = 7;
-const _unclusteredHoverRadius = 10;
+
+function getTagColorClass(color: string): string {
+  switch (color) {
+    case 'BLUE':
+      return 'bg-blue-500/10 text-blue-700 dark:text-blue-300';
+    case 'GREEN':
+      return 'bg-green-500/10 text-green-700 dark:text-green-300';
+    case 'RED':
+      return 'bg-red-500/10 text-red-700 dark:text-red-300';
+    case 'INDIGO':
+      return 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300';
+    case 'PINK':
+      return 'bg-pink-500/10 text-pink-700 dark:text-pink-300';
+    case 'PURPLE':
+      return 'bg-purple-500/10 text-purple-700 dark:text-purple-300';
+    case 'GRAY':
+      return 'bg-gray-500/10 text-gray-700 dark:text-gray-300';
+    default:
+      return 'bg-gray-500/10 text-gray-700 dark:text-gray-300';
+  }
+}
+
+function escapeHtml(text: string): string {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function buildPopupHTML(properties: {
+  title?: string;
+  slug?: string;
+  description?: string;
+  avatarUrl?: string;
+  address?: string;
+  primaryEmail?: string;
+  primaryPhoneNumber?: string;
+  websiteUrl?: string;
+  tags?: string;
+}): string {
+  const {
+    title,
+    slug,
+    description,
+    avatarUrl,
+    address,
+    primaryEmail,
+    primaryPhoneNumber,
+    websiteUrl,
+    tags,
+  } = properties;
+
+  if (!title || !slug) return '';
+
+  let parsedTags: Array<{ label: string; color: string }> = [];
+  if (tags) {
+    try {
+      parsedTags = JSON.parse(tags);
+    } catch {
+      // ignore parse errors
+    }
+  }
+
+  const initials = title
+    .split(' ')
+    .map((word) => word[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  const truncatedDescription =
+    description && description.length > 120
+      ? `${description.slice(0, 120)}...`
+      : description;
+
+  return `
+    <div class="min-w-[280px] max-w-[320px] p-4 bg-white dark:bg-zinc-900 rounded-xl border-fancy-pants">
+      <a href="/churches/${slug}" class="block hover:opacity-90 transition-opacity">
+        <div class="flex items-center gap-3 mb-3">
+          ${
+            avatarUrl
+              ? `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(title)}" class="w-12 h-12 rounded-full object-cover" />`
+              : `<div class="w-12 h-12 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm">${escapeHtml(initials)}</div>`
+          }
+          <h3 class="font-bold text-lg text-gray-900 dark:text-white leading-tight flex-1">${escapeHtml(title)}</h3>
+        </div>
+      </a>
+
+      ${truncatedDescription ? `<p class="text-sm text-gray-600 dark:text-gray-300 mb-3 leading-relaxed">${escapeHtml(truncatedDescription)}</p>` : ''}
+
+      ${
+        parsedTags.length > 0
+          ? `<div class="flex flex-wrap gap-1 mb-3">${parsedTags
+              .slice(0, 3)
+              .map(
+                (tag) =>
+                  `<span class="px-2 py-0.5 rounded-full text-xs font-semibold ${getTagColorClass(tag.color)}">${escapeHtml(tag.label)}</span>`,
+              )
+              .join('')}</div>`
+          : ''
+      }
+
+      ${address ? `<p class="text-sm text-gray-600 dark:text-gray-300 mb-2">${escapeHtml(address)}</p>` : ''}
+
+      <div class="space-y-1.5 mb-3">
+        ${primaryEmail ? `<a href="mailto:${escapeHtml(primaryEmail)}" class="block text-sm text-indigo-600 hover:underline dark:text-white">${escapeHtml(primaryEmail)}</a>` : ''}
+        ${primaryPhoneNumber ? `<a href="tel:${escapeHtml(primaryPhoneNumber)}" class="block text-sm text-indigo-600 hover:underline dark:text-white">${escapeHtml(primaryPhoneNumber)}</a>` : ''}
+        ${websiteUrl ? `<a href="${escapeHtml(websiteUrl)}" target="_blank" rel="noopener noreferrer" class="block text-sm text-indigo-600 hover:underline dark:text-white">${escapeHtml(websiteUrl.replace(/^https?:\/\//, ''))}</a>` : ''}
+      </div>
+
+      <a href="/churches/${slug}" class="block w-full text-center bg-indigo-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors text-sm">
+        See Church
+      </a>
+    </div>
+  `;
+}
 
 type ChurchMapProps = {
   padding?: {
@@ -37,16 +166,47 @@ type ChurchMapProps = {
     right?: number;
   };
   filters: ParsedFilters;
-  churchData?: ChurchSearchResult;
+  churchData?: ChurchDatum;
 };
 
 export function ChurchMap({ padding, filters, churchData }: ChurchMapProps) {
   const ref = useRef(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const popupRef = useRef<mapboxgl.Popup | null>(null);
   const trpc = useTRPC();
   const [theme, setTheme] = useState(getInitialTheme());
 
   const { data: env } = useQuery(trpc.common.getClientEnv.queryOptions());
+
+  // Inject custom popup styles
+  useEffect(() => {
+    const styleId = 'church-map-popup-styles';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = `
+        .church-map-popup .mapboxgl-popup-content {
+          padding: 0;
+          border-radius: 0.75rem;
+          overflow: visible;
+        }
+
+        .church-map-popup .mapboxgl-popup-close-button {
+          display: none;
+        }
+
+        .church-map-popup .mapboxgl-popup-tip {
+          display: none;
+        }
+
+        :root[data-theme="dark"] .church-map-popup .mapboxgl-popup-content {
+          background-color: #18181b !important;
+          color: #fafafa !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
 
   // Listen for theme changes
   useEffect(() => {
@@ -58,6 +218,19 @@ export function ChurchMap({ padding, filters, churchData }: ChurchMapProps) {
     window.addEventListener(THEME_CHANGE_EVENT, handleThemeChange);
     return () =>
       window.removeEventListener(THEME_CHANGE_EVENT, handleThemeChange);
+  }, []);
+
+  // Listen for escape key to close popup
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && popupRef.current) {
+        popupRef.current.remove();
+        popupRef.current = null;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   useEffect(() => {
@@ -220,12 +393,34 @@ export function ChurchMap({ padding, filters, churchData }: ChurchMapProps) {
                 : -360;
           }
 
-          invariant(mapRef, 'Map should be defined');
+          const properties = e.features?.[0]?.properties;
 
-          new mapboxgl.Popup()
-            .setLngLat(coordinates as [number, number])
-            .setHTML(e.features?.[0]?.properties?.title)
-            .addTo(map);
+          if (properties) {
+            const popupHTML = buildPopupHTML(properties);
+            if (popupHTML) {
+              // Close existing popup if any
+              if (popupRef.current) {
+                popupRef.current.remove();
+              }
+
+              // Create and store new popup
+              popupRef.current = new mapboxgl.Popup({
+                maxWidth: '360px',
+                className: 'church-map-popup',
+                closeOnClick: true,
+                anchor: 'bottom',
+                offset: 15,
+              })
+                .setLngLat(coordinates as [number, number])
+                .setHTML(popupHTML)
+                .addTo(map);
+
+              // Clear ref when popup is closed
+              popupRef.current.on('close', () => {
+                popupRef.current = null;
+              });
+            }
+          }
         });
 
         map.on('mouseenter', 'clusters', () => {
@@ -233,6 +428,14 @@ export function ChurchMap({ padding, filters, churchData }: ChurchMapProps) {
         });
 
         map.on('mouseleave', 'clusters', () => {
+          map.getCanvas().style.cursor = '';
+        });
+
+        map.on('mouseenter', 'unclustered-point', () => {
+          map.getCanvas().style.cursor = 'pointer';
+        });
+
+        map.on('mouseleave', 'unclustered-point', () => {
           map.getCanvas().style.cursor = '';
         });
       });
@@ -281,11 +484,26 @@ export function ChurchMap({ padding, filters, churchData }: ChurchMapProps) {
         type: 'FeatureCollection',
         features: churchData.items.map((church) => {
           const address = church.addresses[0];
+          const addressLine = [
+            address?.streetAddress,
+            [address?.locality, address?.region].filter(Boolean).join(', '),
+          ]
+            .filter(Boolean)
+            .join(', ');
+
           return {
             type: 'Feature',
             properties: {
               id: church.id,
               title: church.name,
+              slug: church.slug,
+              description: church.description,
+              avatarUrl: church.avatarUrl,
+              address: addressLine,
+              primaryEmail: church.primaryEmail,
+              primaryPhoneNumber: church.primaryPhoneNumber,
+              websiteUrl: church.websiteUrl,
+              tags: JSON.stringify(church.tags),
             },
             geometry: {
               type: 'Point',

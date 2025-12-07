@@ -59,6 +59,7 @@ import { Route as DashboardAccountNewsletterRouteImport } from './routes/dashboa
 import { Route as ChannelSlugRssDotxmlRouteImport } from './routes/channel.$slug.rss[.]xml'
 import { Route as ChannelSlugPodcastDotxmlRouteImport } from './routes/channel.$slug.podcast[.]xml'
 import { Route as MainMediaMediaIdRouteImport } from './routes/_main/media/$mediaId'
+import { Route as MainChurchesSlugRouteImport } from './routes/_main/churches_.$slug'
 import { Route as MainChannelSlugRouteImport } from './routes/_main/channel.$slug'
 import { Route as MainAboutTheologyRouteImport } from './routes/_main/about/theology'
 import { Route as MainAboutTermsRouteImport } from './routes/_main/about/terms'
@@ -342,6 +343,11 @@ const MainMediaMediaIdRoute = MainMediaMediaIdRouteImport.update({
   path: '/media/$mediaId',
   getParentRoute: () => MainRoute,
 } as any)
+const MainChurchesSlugRoute = MainChurchesSlugRouteImport.update({
+  id: '/churches_/$slug',
+  path: '/churches/$slug',
+  getParentRoute: () => MainRoute,
+} as any)
 const MainChannelSlugRoute = MainChannelSlugRouteImport.update({
   id: '/channel/$slug',
   path: '/channel/$slug',
@@ -488,6 +494,7 @@ export interface FileRoutesByFullPath {
   '/about/terms': typeof MainAboutTermsRoute
   '/about/theology': typeof MainAboutTheologyRoute
   '/channel/$slug': typeof MainChannelSlugRoute
+  '/churches/$slug': typeof MainChurchesSlugRoute
   '/media/$mediaId': typeof MainMediaMediaIdRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
@@ -557,6 +564,7 @@ export interface FileRoutesByTo {
   '/about/terms': typeof MainAboutTermsRoute
   '/about/theology': typeof MainAboutTheologyRoute
   '/channel/$slug': typeof MainChannelSlugRoute
+  '/churches/$slug': typeof MainChurchesSlugRoute
   '/media/$mediaId': typeof MainMediaMediaIdRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
@@ -630,6 +638,7 @@ export interface FileRoutesById {
   '/_main/about/terms': typeof MainAboutTermsRoute
   '/_main/about/theology': typeof MainAboutTheologyRoute
   '/_main/channel/$slug': typeof MainChannelSlugRoute
+  '/_main/churches_/$slug': typeof MainChurchesSlugRoute
   '/_main/media/$mediaId': typeof MainMediaMediaIdRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
@@ -703,6 +712,7 @@ export interface FileRouteTypes {
     | '/about/terms'
     | '/about/theology'
     | '/channel/$slug'
+    | '/churches/$slug'
     | '/media/$mediaId'
     | '/channel/$slug/podcast.xml'
     | '/channel/$slug/rss.xml'
@@ -772,6 +782,7 @@ export interface FileRouteTypes {
     | '/about/terms'
     | '/about/theology'
     | '/channel/$slug'
+    | '/churches/$slug'
     | '/media/$mediaId'
     | '/channel/$slug/podcast.xml'
     | '/channel/$slug/rss.xml'
@@ -844,6 +855,7 @@ export interface FileRouteTypes {
     | '/_main/about/terms'
     | '/_main/about/theology'
     | '/_main/channel/$slug'
+    | '/_main/churches_/$slug'
     | '/_main/media/$mediaId'
     | '/channel/$slug/podcast.xml'
     | '/channel/$slug/rss.xml'
@@ -1248,6 +1260,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainMediaMediaIdRouteImport
       parentRoute: typeof MainRoute
     }
+    '/_main/churches_/$slug': {
+      id: '/_main/churches_/$slug'
+      path: '/churches/$slug'
+      fullPath: '/churches/$slug'
+      preLoaderRoute: typeof MainChurchesSlugRouteImport
+      parentRoute: typeof MainRoute
+    }
     '/_main/channel/$slug': {
       id: '/_main/channel/$slug'
       path: '/channel/$slug'
@@ -1425,6 +1444,7 @@ interface MainRouteChildren {
   MainSearchRoute: typeof MainSearchRoute
   MainIndexRoute: typeof MainIndexRoute
   MainChannelSlugRoute: typeof MainChannelSlugRoute
+  MainChurchesSlugRoute: typeof MainChurchesSlugRoute
   MainMediaMediaIdRoute: typeof MainMediaMediaIdRoute
 }
 
@@ -1438,6 +1458,7 @@ const MainRouteChildren: MainRouteChildren = {
   MainSearchRoute: MainSearchRoute,
   MainIndexRoute: MainIndexRoute,
   MainChannelSlugRoute: MainChannelSlugRoute,
+  MainChurchesSlugRoute: MainChurchesSlugRoute,
   MainMediaMediaIdRoute: MainMediaMediaIdRoute,
 }
 
