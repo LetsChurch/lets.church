@@ -21,6 +21,7 @@ const churchSearchSchema = z.object({
   lat: z.number(),
   range: z.string().default('50mi'),
   organizationId: IncomingIdSchema.optional().nullable(),
+  organizationSlug: z.string().optional().nullable(),
   tags: z.array(z.string()).optional().nullable(),
   limit: z.number().min(1).max(1000).default(1000),
 });
@@ -42,11 +43,26 @@ export const churchProcedures = {
   searchChurches: publicProcedure
     .input(churchSearchSchema)
     .query(async ({ input }) => {
-      const { lon, lat, range, organizationId, tags, limit } = input;
+      const { lon, lat, range, organizationId, organizationSlug, tags, limit } =
+        input;
+
+      // Resolve organization slug to ID if provided
+      let resolvedOrganizationId = organizationId;
+      if (organizationSlug && !organizationId) {
+        const org = await prisma.organization.findUnique({
+          where: { slug: organizationSlug },
+          select: { id: true },
+        });
+        if (org) {
+          resolvedOrganizationId = org.id;
+        }
+      }
 
       moduleLogger.info(
         {
-          ...(organizationId ? { organizationId } : {}),
+          ...(resolvedOrganizationId
+            ? { organizationId: resolvedOrganizationId }
+            : {}),
           context: {
             lat,
             lon,
@@ -62,7 +78,7 @@ export const churchProcedures = {
       const searches = msearchOrganizations('', 0, limit, {
         orgType: 'CHURCH',
         geo: { range, lat, lon },
-        organization: organizationId ?? null,
+        organization: resolvedOrganizationId ?? null,
         tags: tags ?? null,
       });
 
@@ -202,6 +218,7 @@ export const churchProcedures = {
       const organizations = await prisma.organization.findMany({
         select: {
           id: true,
+          slug: true,
           name: true,
         },
         where: {

@@ -1,12 +1,11 @@
 import { Combobox } from '@base-ui-components/react/combobox';
 import { IconCheck, IconX } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from '@tanstack/react-router';
 import { useId, useMemo, useRef, useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { array, looseObject, string } from 'zod';
 import { Tag } from '@/components/tag';
-import { useParsedFilters } from '@/routes/_main/churches';
+import type { ParsedFilters } from '@/routes/_main/churches';
 import { useTRPC } from '@/trpc/react';
 
 const suggestionSchema = looseObject({
@@ -25,6 +24,7 @@ const locationSuggestSchema = looseObject({
 type MenuItem = {
   id: string;
   label: string;
+  type: 'location' | 'tag' | 'organization';
   color?: string;
   subtitle?: string;
 };
@@ -52,11 +52,23 @@ function getTagColorClass(color: string): string {
   }
 }
 
-export function ChurchCombobox() {
+export type ChurchComboboxProps = {
+  filters: ParsedFilters;
+  onNavigate: (options: {
+    center?: string;
+    organization?: string;
+    tag?: string;
+  }) => void;
+  hideOrganization?: boolean;
+};
+
+export function ChurchCombobox({
+  filters,
+  onNavigate,
+  hideOrganization = false,
+}: ChurchComboboxProps) {
   const id = useId();
   const sessionToken = useMemo(() => window.crypto.randomUUID(), []);
-  const navigate = useNavigate({ from: '/churches' });
-  const filters = useParsedFilters();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -114,12 +126,29 @@ export function ChurchCombobox() {
   const { data: tags } = useQuery(
     trpc.church.getOrganizationTags.queryOptions(),
   );
+
+  // Fetch the selected organization if it exists (for displaying the chip)
+  const { data: selectedOrganization } = useQuery({
+    ...trpc.church.getOrganizationBySlug.queryOptions({
+      slug: filters.organizationSlug ?? '',
+    }),
+    enabled: !!filters.organizationSlug,
+    select: (data) => {
+      if (!data || !filters.organizationSlug) return null;
+      return {
+        id: data.id,
+        slug: filters.organizationSlug,
+        name: data.name,
+      };
+    },
+  });
+
   const { data: organizations, isFetching: isOrganizationsFetching } = useQuery(
     {
       ...trpc.church.searchMinistries.queryOptions({
         query: debouncedSearchValue,
       }),
-      enabled: debouncedSearchValue.trim().length > 0,
+      enabled: debouncedSearchValue.trim().length > 0 && !hideOrganization,
     },
   );
 
@@ -155,17 +184,22 @@ export function ChurchCombobox() {
       values.push({
         id: `${lng},${lat}`, // Use coordinates as ID for matching
         label: locationLabel ?? 'Selected Location', // Use ephemeral label if available
+        type: 'location',
         subtitle: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
       });
     }
 
     // Add organization if present
-    if (filters.organization && organizations) {
-      const org = organizations.find((o) => o.id === filters.organization);
+    if (filters.organizationSlug) {
+      // Try to find in search results first, otherwise use selectedOrganization
+      const org =
+        organizations?.find((o) => o.slug === filters.organizationSlug) ??
+        selectedOrganization;
       if (org) {
         values.push({
-          id: org.id,
+          id: org.slug,
           label: org.name,
+          type: 'organization',
         });
       }
     }
@@ -178,6 +212,7 @@ export function ChurchCombobox() {
           values.push({
             id: tag.slug,
             label: tag.label,
+            type: 'tag',
             color: tag.color,
           });
         }
@@ -187,9 +222,10 @@ export function ChurchCombobox() {
     return values;
   }, [
     filters.center,
-    filters.organization,
+    filters.organizationSlug,
     filters.tags,
     organizations,
+    selectedOrganization,
     tags,
     locationLabel,
   ]);
@@ -205,12 +241,15 @@ export function ChurchCombobox() {
       locations?.map((loc) => ({
         id: loc.mapboxId,
         label: loc.name,
+        type: 'location' as const,
         subtitle: loc.location,
       })) ?? [];
 
     // Find any selected location that might not be in current search results
     // Check if the selected item has a subtitle (indicates it's a location)
-    const selectedLocation = selectedValues.find((item) => item.subtitle);
+    const selectedLocation = selectedValues.find(
+      (item) => item.type === 'location',
+    );
 
     // Add selected location if it exists and it's not already in the search results
     if (
@@ -231,20 +270,27 @@ export function ChurchCombobox() {
           group.tags?.map((tag) => ({
             id: tag.slug,
             label: tag.label,
+            type: 'tag' as const,
             color: tag.color,
           })) ?? [],
       })),
-      {
-        value: 'Organizations',
-        items:
-          organizations?.map((org) => ({
-            id: org.id,
-            label: org.name,
-          })) ?? [],
-      },
+      // Only show organizations if not hidden
+      ...(!hideOrganization
+        ? [
+            {
+              value: 'Organizations',
+              items:
+                organizations?.map((org) => ({
+                  id: org.slug,
+                  label: org.name,
+                  type: 'organization' as const,
+                })) ?? [],
+            },
+          ]
+        : []),
     ];
     return items;
-  }, [locations, tagGroups, organizations, selectedValues]);
+  }, [locations, tagGroups, organizations, selectedValues, hideOrganization]);
 
   function getEmptyMessage() {
     if (trimmedSearchValue === '') {
@@ -254,17 +300,31 @@ export function ChurchCombobox() {
     return 'Try a different search term.';
   }
 
+  // Custom filter function to filter tags by search value
+  const filterItems = (item: MenuItem, searchValue: string) => {
+    const search = searchValue.toLowerCase().trim();
+    if (!search) return true;
+
+    // Don't filter locations or organizations - they come from API search
+    if (item.type === 'location' || item.type === 'organization') return true;
+
+    // Filter tags by label
+    return item.label.toLowerCase().includes(search);
+  };
+
   return (
     <Combobox.Root<MenuItem, MenuItem, true>
       items={menuItems}
       value={selectedValues}
       multiple
-      filter={null}
+      filter={filterItems}
       onValueChange={async (nextSelectedValues: MenuItem[]) => {
         // Find all locations in both arrays
-        const newLocations = nextSelectedValues.filter((item) => item.subtitle);
+        const newLocations = nextSelectedValues.filter(
+          (item) => item.type === 'location',
+        );
         const oldLocations = selectedValuesRef.current.filter(
-          (item) => item.subtitle,
+          (item) => item.type === 'location',
         );
 
         // If we have more than one location, keep only the most recently added one
@@ -273,21 +333,17 @@ export function ChurchCombobox() {
           // Remove all old locations, keeping only the new one
           finalValues = nextSelectedValues.filter(
             (item) =>
-              !item.subtitle || !oldLocations.some((old) => old.id === item.id),
+              item.type !== 'location' ||
+              !oldLocations.some((old) => old.id === item.id),
           );
         }
 
         selectedValuesRef.current = finalValues;
 
         // Extract query params from selected values
-        const location = finalValues.find((item) => item.subtitle);
-        const org = finalValues.find(
-          (item) =>
-            !item.subtitle &&
-            !item.color &&
-            organizations?.some((o) => o.id === item.id),
-        );
-        const selectedTags = finalValues.filter((item) => item.color);
+        const location = finalValues.find((item) => item.type === 'location');
+        const org = finalValues.find((item) => item.type === 'organization');
+        const selectedTags = finalValues.filter((item) => item.type === 'tag');
 
         // If a new location was selected, retrieve its coordinates and save label
         let centerParam: string | undefined;
@@ -311,17 +367,13 @@ export function ChurchCombobox() {
         }
 
         // Update query params (replace to avoid flash)
-        navigate({
-          to: '/churches',
-          search: {
-            center: centerParam,
-            organization: org?.id,
-            tag:
-              selectedTags.length > 0
-                ? selectedTags.map((t) => t.id).join(',')
-                : undefined,
-          },
-          replace: true,
+        onNavigate({
+          center: centerParam,
+          organization: org?.id,
+          tag:
+            selectedTags.length > 0
+              ? selectedTags.map((t) => t.id).join(',')
+              : undefined,
         });
 
         setSearchValue('');
@@ -347,61 +399,74 @@ export function ChurchCombobox() {
           ref={containerRef}
         >
           <Combobox.Value>
-            {(value: Array<MenuItem>) => (
-              <>
-                {value.map((item) =>
-                  item.color ? (
-                    <Combobox.Chip
-                      key={item.id}
-                      className="flex cursor-default items-center gap-1 outline-none"
-                      aria-label={item.label}
-                    >
-                      <Tag
-                        size="md"
-                        color={
-                          item.color as
-                            | 'BLUE'
-                            | 'GREEN'
-                            | 'RED'
-                            | 'INDIGO'
-                            | 'PINK'
-                            | 'PURPLE'
-                            | 'GRAY'
-                        }
-                        className="pr-1"
+            {(value: Array<MenuItem>) => {
+              // Filter out organizations if they should be hidden
+              const visibleValues = value.filter((item) => {
+                // Skip organization chips if hideOrganization is true
+                if (hideOrganization && item.type === 'organization') {
+                  return false;
+                }
+                return true;
+              });
+
+              return (
+                <>
+                  {visibleValues.map((item) =>
+                    item.type === 'tag' ? (
+                      <Combobox.Chip
+                        key={item.id}
+                        className="flex cursor-default items-center gap-1 outline-none"
+                        aria-label={item.label}
+                      >
+                        <Tag
+                          size="md"
+                          color={
+                            item.color as
+                              | 'BLUE'
+                              | 'GREEN'
+                              | 'RED'
+                              | 'INDIGO'
+                              | 'PINK'
+                              | 'PURPLE'
+                              | 'GRAY'
+                          }
+                          className="pr-1"
+                        >
+                          {item.label}
+                          <Combobox.ChipRemove
+                            className="ml-1 inline-flex items-center justify-center rounded-full border-none bg-transparent p-0.5 text-inherit opacity-50 transition-opacity hover:opacity-100"
+                            aria-label="Remove"
+                          >
+                            <IconX size={14} />
+                          </Combobox.ChipRemove>
+                        </Tag>
+                      </Combobox.Chip>
+                    ) : (
+                      <Combobox.Chip
+                        key={item.id}
+                        className="flex cursor-default items-center gap-1 rounded-full border-fancy-pants bg-white py-1 pr-1 pl-3 text-primary text-sm outline-none transition-colors focus-within:bg-white/10 dark:bg-zinc-900 dark:focus-within:bg-white/10 [@media(hover:hover)]:data-highlighted:bg-white/10 dark:[@media(hover:hover)]:data-highlighted:bg-white/10"
+                        aria-label={item.label}
                       >
                         {item.label}
                         <Combobox.ChipRemove
-                          className="ml-1 inline-flex items-center justify-center rounded-full border-none bg-transparent p-0.5 text-inherit opacity-50 transition-opacity hover:opacity-100"
+                          className="inline-flex items-center justify-center rounded-full border-none bg-transparent p-1 text-inherit opacity-50 transition-opacity hover:opacity-100"
                           aria-label="Remove"
                         >
-                          <IconX size={14} />
+                          <IconX size={16} />
                         </Combobox.ChipRemove>
-                      </Tag>
-                    </Combobox.Chip>
-                  ) : (
-                    <Combobox.Chip
-                      key={item.id}
-                      className="flex cursor-default items-center gap-1 rounded-full border-fancy-pants bg-white py-1 pr-1 pl-3 text-primary text-sm outline-none transition-colors focus-within:bg-white/10 dark:bg-zinc-900 dark:focus-within:bg-white/10 [@media(hover:hover)]:data-highlighted:bg-white/10 dark:[@media(hover:hover)]:data-highlighted:bg-white/10"
-                      aria-label={item.label}
-                    >
-                      {item.label}
-                      <Combobox.ChipRemove
-                        className="inline-flex items-center justify-center rounded-full border-none bg-transparent p-1 text-inherit opacity-50 transition-opacity hover:opacity-100"
-                        aria-label="Remove"
-                      >
-                        <IconX size={16} />
-                      </Combobox.ChipRemove>
-                    </Combobox.Chip>
-                  ),
-                )}
-                <Combobox.Input
-                  id={id}
-                  placeholder={value.length > 0 ? '' : 'Search churches...'}
-                  className="h-8 flex-1 appearance-none border-0 bg-transparent px-1 pb-0.5 font-medium text-primary text-sm leading-none placeholder-gray-950/30 outline-none dark:placeholder-white/30"
-                />
-              </>
-            )}
+                      </Combobox.Chip>
+                    ),
+                  )}
+                  <Combobox.Input
+                    id={id}
+                    placeholder={
+                      visibleValues.length > 0 ? '' : 'Search churches...'
+                    }
+                    className="h-8 flex-1 appearance-none border-0 bg-transparent px-1 pb-0.5 font-medium text-primary text-sm leading-none placeholder-gray-950/30 outline-none dark:placeholder-white/30"
+                  />
+                </>
+              );
+            }}
           </Combobox.Value>
         </Combobox.Chips>
       </div>

@@ -167,14 +167,20 @@ type ChurchMapProps = {
   };
   filters: ParsedFilters;
   churchData?: ChurchDatum;
+  isEmbed?: boolean;
 };
 
-export function ChurchMap({ padding, filters, churchData }: ChurchMapProps) {
+export function ChurchMap({
+  padding,
+  filters,
+  churchData,
+  isEmbed = false,
+}: ChurchMapProps) {
   const ref = useRef(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
   const trpc = useTRPC();
-  const [theme, setTheme] = useState(getInitialTheme());
+  const [theme, setTheme] = useState(isEmbed ? 'light' : getInitialTheme());
 
   const { data: env } = useQuery(trpc.common.getClientEnv.queryOptions());
 
@@ -208,8 +214,10 @@ export function ChurchMap({ padding, filters, churchData }: ChurchMapProps) {
     }
   }, []);
 
-  // Listen for theme changes
+  // Listen for theme changes (skip for embed routes - they're always light)
   useEffect(() => {
+    if (isEmbed) return;
+
     const handleThemeChange = (event: Event) => {
       const customEvent = event as CustomEvent<{ theme: 'light' | 'dark' }>;
       setTheme(customEvent.detail.theme);
@@ -218,7 +226,7 @@ export function ChurchMap({ padding, filters, churchData }: ChurchMapProps) {
     window.addEventListener(THEME_CHANGE_EVENT, handleThemeChange);
     return () =>
       window.removeEventListener(THEME_CHANGE_EVENT, handleThemeChange);
-  }, []);
+  }, [isEmbed]);
 
   // Listen for escape key to close popup
   useEffect(() => {
@@ -271,7 +279,11 @@ export function ChurchMap({ padding, filters, churchData }: ChurchMapProps) {
               };
 
         map.setFog(fogConfig);
-        map.setLayoutProperty('poi-label', 'visibility', 'none'); // Hide the layer
+
+        // Hide poi-label layer if it exists in the style
+        if (map.getLayer('poi-label')) {
+          map.setLayoutProperty('poi-label', 'visibility', 'none');
+        }
 
         if (padding) {
           map.setPadding(padding);

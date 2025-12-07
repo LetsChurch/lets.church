@@ -13,9 +13,10 @@ const churchesSearchSchema = z.object({
   range: z.string().optional(),
   organization: z.string().optional(),
   tag: z.string().optional(),
+  hidden: z.string().optional(),
 });
 
-export const Route = createFileRoute('/_main/churches')({
+export const Route = createFileRoute('/embed/churches')({
   validateSearch: (search) => churchesSearchSchema.parse(search),
   component: RouteComponent,
 });
@@ -54,7 +55,7 @@ function useParsedTags() {
 }
 
 // Combined hook that returns all parsed filters
-export function useParsedFilters() {
+function useParsedFilters() {
   const location = useParsedLocation();
   const organization = useParsedOrganization();
   const tags = useParsedTags();
@@ -66,11 +67,12 @@ export function useParsedFilters() {
   };
 }
 
-export type ParsedFilters = ReturnType<typeof useParsedFilters>;
-
 function RouteComponent() {
+  const search = Route.useSearch();
   const filters = useParsedFilters();
-  const navigate = useNavigate({ from: '/churches' });
+  const navigate = useNavigate({ from: '/embed/churches' });
+
+  const hideOrganization = search.hidden === 'organization';
 
   const handleNavigate = (params: {
     center?: string;
@@ -78,11 +80,19 @@ function RouteComponent() {
     tag?: string;
   }) => {
     navigate({
-      to: '/churches',
-      search: params,
+      to: '/embed/churches',
+      search: { ...params, hidden: search.hidden },
       replace: true,
     });
   };
 
-  return <ChurchesView filters={filters} onNavigate={handleNavigate} />;
+  return (
+    <ChurchesView
+      filters={filters}
+      onNavigate={handleNavigate}
+      openLinksInNewTab
+      isEmbed
+      hideOrganization={hideOrganization}
+    />
+  );
 }
