@@ -21,6 +21,7 @@ import {
 } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { useCallback, useState } from 'react';
+import { AddressFields } from '@/components/address-fields';
 import { useAppMantineForm } from '@/components/mantine';
 import { showFailure, showSuccess } from '@/routes/-mantine';
 import { OrganizationAutocomplete } from '@/routes/dashboard_/-components/organization-autocomplete';
@@ -137,9 +138,33 @@ function CreateChurchPage() {
       primaryPhoneNumber: '',
       tags: [] as string[],
       associatedOrganizations: [] as string[],
+      addresses: [] as Array<{
+        type: 'MAILING' | 'MEETING' | 'OFFICE' | 'OTHER';
+        name: string | null;
+        streetAddress: string | null;
+        locality: string | null;
+        region: string | null;
+        postalCode: string | null;
+        country: string | null;
+        postOfficeBoxNumber: string | null;
+      }>,
     },
     onSubmit: async ({ value }) => {
-      const church = await createMutation.mutateAsync(value);
+      // Transform addresses to convert null to undefined for Zod schema compatibility
+      const transformedValue = {
+        ...value,
+        addresses: value.addresses.map((address) => ({
+          type: address.type,
+          name: address.name ?? undefined,
+          streetAddress: address.streetAddress ?? undefined,
+          locality: address.locality ?? undefined,
+          region: address.region ?? undefined,
+          postalCode: address.postalCode ?? undefined,
+          country: address.country ?? undefined,
+          postOfficeBoxNumber: address.postOfficeBoxNumber ?? undefined,
+        })),
+      };
+      const church = await createMutation.mutateAsync(transformedValue);
 
       if (newAvatarFile && church.id) {
         const mpu =
@@ -213,31 +238,7 @@ function CreateChurchPage() {
                   )}
                 </form.AppField>
 
-                <form.AppField name="tags" mode="array">
-                  {(field) => (
-                    <field.MultiSelectField
-                      label="Tags"
-                      placeholder="Search and select tags"
-                      data={getGroupedTags()}
-                      searchable
-                      description="Select tags for Denomination, Doctrine, Eschatology, Confession, Worship, Church Government, and Other Distinctives"
-                    />
-                  )}
-                </form.AppField>
-
-                <form.AppField name="associatedOrganizations" mode="array">
-                  {(field) => (
-                    <OrganizationAutocomplete
-                      label="Associated Organizations"
-                      placeholder="Search organizations to add..."
-                      excludeChurchTypes={true}
-                      description="Search and add organizations that this church is associated with"
-                      value={field.state.value || []}
-                      onChange={field.handleChange}
-                      error={field.state.meta.errors?.[0]}
-                    />
-                  )}
-                </form.AppField>
+                <AddressFields form={form} />
               </Stack>
             </form>
           </Stack>
@@ -370,6 +371,32 @@ function CreateChurchPage() {
                     label="Primary Phone Number"
                     placeholder="+1 (555) 123-4567"
                     type="tel"
+                  />
+                )}
+              </form.AppField>
+
+              <form.AppField name="tags" mode="array">
+                {(field) => (
+                  <field.MultiSelectField
+                    label="Tags"
+                    placeholder="Search and select tags"
+                    data={getGroupedTags()}
+                    searchable
+                    description="Select tags for Denomination, Doctrine, Eschatology, Confession, Worship, Church Government, and Other Distinctives"
+                  />
+                )}
+              </form.AppField>
+
+              <form.AppField name="associatedOrganizations" mode="array">
+                {(field) => (
+                  <OrganizationAutocomplete
+                    label="Associated Organizations"
+                    placeholder="Search organizations to add..."
+                    excludeChurchTypes={true}
+                    description="Search and add organizations that this church is associated with"
+                    value={field.state.value || []}
+                    onChange={field.handleChange}
+                    error={field.state.meta.errors?.[0]}
                   />
                 )}
               </form.AppField>

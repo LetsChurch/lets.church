@@ -173,6 +173,24 @@ export const churchRouter = router({
                     },
                   }
                 : undefined,
+            addresses:
+              input.addresses && input.addresses.length > 0
+                ? {
+                    createMany: {
+                      data: input.addresses.map((address) => ({
+                        type: address.type,
+                        name: address.name || null,
+                        streetAddress: address.streetAddress || null,
+                        locality: address.locality || null,
+                        region: address.region || null,
+                        postalCode: address.postalCode || null,
+                        country: address.country || null,
+                        postOfficeBoxNumber:
+                          address.postOfficeBoxNumber || null,
+                      })),
+                    },
+                  }
+                : undefined,
           },
           select: {
             id: true,
@@ -1028,6 +1046,18 @@ export const churchRouter = router({
             upstreamApproved: true,
           },
         },
+        addresses: {
+          select: {
+            type: true,
+            name: true,
+            streetAddress: true,
+            locality: true,
+            region: true,
+            postalCode: true,
+            country: true,
+            postOfficeBoxNumber: true,
+          },
+        },
       },
       where: {
         id: input.churchId,
@@ -1083,59 +1113,88 @@ export const churchRouter = router({
       );
 
       try {
-        // Handle tag updates if provided
-        if (input.tags !== undefined) {
-          // First, delete all existing tags
-          await prisma.organizationTagInstance.deleteMany({
-            where: {
-              organizationId: input.churchId,
-            },
-          });
-
-          // Then, create new tag instances if tags are provided
-          if (input.tags.length > 0) {
-            await prisma.organizationTagInstance.createMany({
-              data: input.tags.map((tagSlug) => ({
+        await prisma.$transaction(async (tx) => {
+          // Handle tag updates if provided
+          if (input.tags !== undefined) {
+            // First, delete all existing tags
+            await tx.organizationTagInstance.deleteMany({
+              where: {
                 organizationId: input.churchId,
-                tagSlug,
-              })),
+              },
             });
-          }
-        }
 
-        // Handle organization associations if provided
-        if (input.associatedOrganizations !== undefined) {
-          // First, delete all existing upstream associations (church is downstream)
-          await prisma.organizationOrganizationAssociation.deleteMany({
+            // Then, create new tag instances if tags are provided
+            if (input.tags.length > 0) {
+              await tx.organizationTagInstance.createMany({
+                data: input.tags.map((tagSlug) => ({
+                  organizationId: input.churchId,
+                  tagSlug,
+                })),
+              });
+            }
+          }
+
+          // Handle organization associations if provided
+          if (input.associatedOrganizations !== undefined) {
+            // First, delete all existing upstream associations (church is downstream)
+            await tx.organizationOrganizationAssociation.deleteMany({
+              where: {
+                downstreamOrganizationId: input.churchId,
+              },
+            });
+
+            // Then, create new associations if provided
+            if (input.associatedOrganizations.length > 0) {
+              await tx.organizationOrganizationAssociation.createMany({
+                data: input.associatedOrganizations.map((upstreamOrgId) => ({
+                  upstreamOrganizationId: upstreamOrgId,
+                  downstreamOrganizationId: input.churchId,
+                  downstreamApproved: true, // Church automatically approves being downstream
+                  upstreamApproved: false, // Upstream organization needs to approve
+                })),
+              });
+            }
+          }
+
+          // Handle addresses if provided
+          if (input.addresses !== undefined) {
+            // First, delete all existing addresses
+            await tx.organizationAddress.deleteMany({
+              where: {
+                organizationId: input.churchId,
+              },
+            });
+
+            // Then, create new addresses if provided
+            if (input.addresses.length > 0) {
+              await tx.organizationAddress.createMany({
+                data: input.addresses.map((address) => ({
+                  organizationId: input.churchId,
+                  type: address.type,
+                  name: address.name || null,
+                  streetAddress: address.streetAddress || null,
+                  locality: address.locality || null,
+                  region: address.region || null,
+                  postalCode: address.postalCode || null,
+                  country: address.country || null,
+                  postOfficeBoxNumber: address.postOfficeBoxNumber || null,
+                })),
+              });
+            }
+          }
+
+          await tx.organization.update({
             where: {
-              downstreamOrganizationId: input.churchId,
+              id: input.churchId,
+            },
+            data: {
+              name: input.name,
+              description: input.description || null,
+              websiteUrl: input.websiteUrl || null,
+              primaryEmail: input.primaryEmail || null,
+              primaryPhoneNumber: input.primaryPhoneNumber || null,
             },
           });
-
-          // Then, create new associations if provided
-          if (input.associatedOrganizations.length > 0) {
-            await prisma.organizationOrganizationAssociation.createMany({
-              data: input.associatedOrganizations.map((upstreamOrgId) => ({
-                upstreamOrganizationId: upstreamOrgId,
-                downstreamOrganizationId: input.churchId,
-                downstreamApproved: true, // Church automatically approves being downstream
-                upstreamApproved: false, // Upstream organization needs to approve
-              })),
-            });
-          }
-        }
-
-        await prisma.organization.update({
-          where: {
-            id: input.churchId,
-          },
-          data: {
-            name: input.name,
-            description: input.description || null,
-            websiteUrl: input.websiteUrl || null,
-            primaryEmail: input.primaryEmail || null,
-            primaryPhoneNumber: input.primaryPhoneNumber || null,
-          },
         });
 
         moduleLogger.info(

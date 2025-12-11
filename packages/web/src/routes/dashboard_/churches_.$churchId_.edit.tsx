@@ -22,6 +22,7 @@ import {
 } from '@tanstack/react-query';
 import { createFileRoute, redirect, useRouter } from '@tanstack/react-router';
 import { useCallback, useEffect, useState } from 'react';
+import { AddressFields } from '@/components/address-fields';
 import { useAppMantineForm } from '@/components/mantine';
 import { showFailure, showSuccess } from '@/routes/-mantine';
 import { OrganizationAutocomplete } from '@/routes/dashboard_/-components/organization-autocomplete';
@@ -194,13 +195,14 @@ function ChurchEditPage() {
 
   const form = useAppMantineForm({
     defaultValues: {
-      name: '',
-      description: '',
-      websiteUrl: '',
-      primaryEmail: '',
-      primaryPhoneNumber: '',
-      tags: [] as string[],
-      associatedOrganizations: [] as string[],
+      name: church.name || '',
+      description: church.description || '',
+      websiteUrl: church.websiteUrl || '',
+      primaryEmail: church.primaryEmail || '',
+      primaryPhoneNumber: church.primaryPhoneNumber || '',
+      tags: church.tags || [],
+      associatedOrganizations: church.associatedOrganizations || [],
+      addresses: church.addresses || [],
     },
     onSubmit: async ({ value }) => {
       if (newAvatarFile) {
@@ -230,17 +232,27 @@ function ChurchEditPage() {
         setIsProcessingAvatar(true);
       }
 
-      updateChurchMutation.mutate({
+      // Transform addresses to convert null to undefined for Zod schema compatibility
+      const transformedValue = {
         ...value,
+        addresses: value.addresses.map((address) => ({
+          type: address.type,
+          name: address.name ?? undefined,
+          streetAddress: address.streetAddress ?? undefined,
+          locality: address.locality ?? undefined,
+          region: address.region ?? undefined,
+          postalCode: address.postalCode ?? undefined,
+          country: address.country ?? undefined,
+          postOfficeBoxNumber: address.postOfficeBoxNumber ?? undefined,
+        })),
+      };
+
+      updateChurchMutation.mutate({
+        ...transformedValue,
         churchId,
       });
     },
   });
-
-  // Add safety check to ensure data is loaded
-  if (!church || !church.name) {
-    return <LoadingOverlay visible />;
-  }
 
   const getGroupedTags = () => {
     const groups: { [key: string]: string } = {
@@ -273,19 +285,6 @@ function ChurchEditPage() {
       items,
     }));
   };
-
-  // Update form values when data loads
-  if (church) {
-    form.reset({
-      name: church.name || '',
-      description: church.description || '',
-      websiteUrl: church.websiteUrl || '',
-      primaryEmail: church.primaryEmail || '',
-      primaryPhoneNumber: church.primaryPhoneNumber || '',
-      tags: church.tags || [],
-      associatedOrganizations: church.associatedOrganizations || [],
-    });
-  }
 
   return (
     <Container size="xl" py="md" pos="relative">
@@ -324,31 +323,7 @@ function ChurchEditPage() {
                   )}
                 </form.AppField>
 
-                <form.AppField name="tags" mode="array">
-                  {(field) => (
-                    <field.MultiSelectField
-                      label="Tags"
-                      placeholder="Search and select tags"
-                      data={getGroupedTags()}
-                      searchable
-                      description="Select tags for Denomination, Doctrine, Eschatology, Confession, Worship, Church Government, and Other Distinctives"
-                    />
-                  )}
-                </form.AppField>
-
-                <form.AppField name="associatedOrganizations" mode="array">
-                  {(field) => (
-                    <OrganizationAutocomplete
-                      label="Associated Organizations"
-                      placeholder="Search organizations to add..."
-                      excludeChurchTypes={true}
-                      description="Search and add organizations that this church is associated with"
-                      value={field.state.value || []}
-                      onChange={field.handleChange}
-                      error={field.state.meta.errors?.[0]}
-                    />
-                  )}
-                </form.AppField>
+                <AddressFields form={form} />
               </Stack>
             </form>
           </Stack>
@@ -586,6 +561,32 @@ function ChurchEditPage() {
                     label="Primary Phone Number"
                     placeholder="+1 (555) 123-4567"
                     type="tel"
+                  />
+                )}
+              </form.AppField>
+
+              <form.AppField name="tags" mode="array">
+                {(field) => (
+                  <field.MultiSelectField
+                    label="Tags"
+                    placeholder="Search and select tags"
+                    data={getGroupedTags()}
+                    searchable
+                    description="Select tags for Denomination, Doctrine, Eschatology, Confession, Worship, Church Government, and Other Distinctives"
+                  />
+                )}
+              </form.AppField>
+
+              <form.AppField name="associatedOrganizations" mode="array">
+                {(field) => (
+                  <OrganizationAutocomplete
+                    label="Associated Organizations"
+                    placeholder="Search organizations to add..."
+                    excludeChurchTypes={true}
+                    description="Search and add organizations that this church is associated with"
+                    value={field.state.value || []}
+                    onChange={field.handleChange}
+                    error={field.state.meta.errors?.[0]}
                   />
                 )}
               </form.AppField>

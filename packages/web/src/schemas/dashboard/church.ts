@@ -81,6 +81,19 @@ export const removeLeaderSchema = z.object({
   leaderId: IncomingIdSchema,
 });
 
+const addressTypeSchema = z.enum(['MAILING', 'MEETING', 'OFFICE', 'OTHER']);
+
+const addressSchema = z.object({
+  type: addressTypeSchema,
+  name: z.string().optional(),
+  streetAddress: z.string().optional(),
+  locality: z.string().optional(),
+  region: z.string().optional(),
+  postalCode: z.string().optional(),
+  country: z.string().optional(),
+  postOfficeBoxNumber: z.string().optional(),
+});
+
 export const createChurchSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   slug: z.string().optional(),
@@ -102,6 +115,7 @@ export const createChurchSchema = z.object({
   primaryPhoneNumber: z.string().optional(),
   tags: z.array(z.string()).optional(),
   associatedOrganizations: z.array(IncomingIdSchema).optional(),
+  addresses: z.array(addressSchema).optional(),
 });
 
 export const updateChurchSchema = z.object({
@@ -125,4 +139,5 @@ export const updateChurchSchema = z.object({
   primaryPhoneNumber: z.string().optional(),
   tags: z.array(z.string()).optional(),
   associatedOrganizations: z.array(IncomingIdSchema).optional(),
+  addresses: z.array(addressSchema).optional(),
 });
