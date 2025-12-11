@@ -37,7 +37,7 @@ const importWorker = await Worker.create({
   connection: await NativeConnection.connect({ address: TEMPORAL_ADDRESS }),
   activities: importActivities,
   taskQueue: IMPORT_QUEUE,
-  shutdownGraceTime: TEMPORAL_SHUTDOWN_GRACE_TIME,
+  shutdownGraceTime: TEMPORAL_SHUTDOWN_GRACE_TIME as `${number}`, // TODO: fix this
   maxConcurrentWorkflowTaskExecutions: Math.max(
     2,
     parseInt(MAX_CONCURRENT_WORKFLOW_TASK_EXECUTIONS, 10),

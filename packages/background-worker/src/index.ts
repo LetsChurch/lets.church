@@ -51,7 +51,7 @@ const backgroundWorker = await Worker.create({
   workflowsPath,
   activities,
   taskQueue: BACKGROUND_QUEUE,
-  shutdownGraceTime: TEMPORAL_SHUTDOWN_GRACE_TIME,
+  shutdownGraceTime: TEMPORAL_SHUTDOWN_GRACE_TIME as `${number}`, // TODO: fix this
 });
 
 const glacierWorker = await Worker.create({
@@ -59,7 +59,7 @@ const glacierWorker = await Worker.create({
   connection,
   activities: { backupToGlacier: activities.backupToGlacier },
   taskQueue: GLACIER_QUEUE,
-  shutdownGraceTime: TEMPORAL_SHUTDOWN_GRACE_TIME,
+  shutdownGraceTime: TEMPORAL_SHUTDOWN_GRACE_TIME as `${number}`, // TODO: fix this
   maxConcurrentActivityTaskExecutions: 2,
 });
 
