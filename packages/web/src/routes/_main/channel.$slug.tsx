@@ -194,7 +194,7 @@ function RouteComponent() {
           ) : (
             <Link
               to="/auth/register"
-              className="flex h-9 w-fit items-center justify-center rounded-full border-fancy-pants bg-brand px-4 font-semibold text-primary text-sm transition-opacity hover:opacity-90"
+              className="flex h-9 w-fit items-center justify-center rounded-full border-fancy-pants bg-brand px-4 font-semibold text-white text-sm transition-opacity hover:opacity-90"
             >
               Follow
             </Link>
