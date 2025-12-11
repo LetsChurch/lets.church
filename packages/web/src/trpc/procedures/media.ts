@@ -1,7 +1,12 @@
 import { prisma, UploadViewSource } from '@letschurch/db';
 import { xxh64 } from '@node-rs/xxhash';
 import { getRequest } from '@tanstack/react-start/server';
+import rehypeStringify from 'rehype-stringify';
+import remarkBreaks from 'remark-breaks';
+import remarkParse from 'remark-parse';
+import remarkRehype from 'remark-rehype';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
+import { unified } from 'unified';
 import { z } from 'zod';
 import {
   getThumbnailResize,
@@ -19,6 +24,12 @@ import { authProcedure, publicProcedure } from '../trpc';
 const moduleLogger = logger.child({
   module: 'trpc/procedures/media',
 });
+
+const md = unified()
+  .use(remarkParse)
+  .use(remarkBreaks)
+  .use(remarkRehype)
+  .use(rehypeStringify);
 
 const TWO64 = 1n << 64n;
 const TWO63 = 1n << 63n;
@@ -285,8 +296,14 @@ export const mediaProcedures = {
         );
       }
 
+      // Compile markdown description to HTML if present
+      const descriptionHtml = mediaRest.description
+        ? String(await md.process(mediaRest.description))
+        : null;
+
       return {
         ...mediaRest,
+        descriptionHtml,
         id: OutgoingIdSchema.parse(mediaRest.id),
         thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
         fullSizeThumbnailUrl:

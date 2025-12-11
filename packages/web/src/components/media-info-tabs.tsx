@@ -2,7 +2,7 @@ import { Tabs } from '@base-ui-components/react/tabs';
 import { LcTooltip } from '@/components/lc-tooltip';
 
 type MediaInfoTabsProps = {
-  description: string | null;
+  descriptionHtml: string | null;
   viewCount: number;
   publishedAt: Date | null;
   createdAt: Date;
@@ -14,7 +14,7 @@ type MediaInfoTabsProps = {
 };
 
 export function MediaInfoTabs({
-  description,
+  descriptionHtml,
   viewCount,
   publishedAt,
   createdAt,
@@ -32,7 +32,7 @@ export function MediaInfoTabs({
       {/* Tabs */}
       <Tabs.List className="relative top-0 flex gap-4 border-zinc-200 border-b px-5 dark:border-zinc-800">
         <Tabs.Tab value="details" className="relative pt-1.5 pb-2">
-          <span className="font-medium text-primary/70 text-sm data-[selected]:text-primary data-[selected]:opacity-100">
+          <span className="font-medium text-primary/70 text-sm data-selected:text-primary data-selected:opacity-100">
             Details
           </span>
         </Tabs.Tab>
@@ -46,7 +46,7 @@ export function MediaInfoTabs({
             />
           }
         >
-          <span className="font-medium text-primary/30 text-sm data-[selected]:text-primary data-[selected]:opacity-100">
+          <span className="font-medium text-primary/30 text-sm data-selected:text-primary data-selected:opacity-100">
             Summary
           </span>
         </LcTooltip>
@@ -85,9 +85,17 @@ export function MediaInfoTabs({
 
       {/* Details Content */}
       <Tabs.Panel value="details" className="relative text-left">
-        <p className="p-5 text-primary text-sm leading-[1.4]">
-          {description ? description : 'No description available'}
-        </p>
+        {descriptionHtml ? (
+          <div
+            className="prose px-5 text-sm"
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: HTML is compiled from markdown on server using micromark
+            dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+          />
+        ) : (
+          <p className="p-5 text-primary text-sm leading-[1.4]">
+            No description available
+          </p>
+        )}
         <div className="mx-5 border-zinc-200 border-t pt-[18px] pb-5 dark:border-zinc-800">
           <div className="flex gap-3">
             <span className="font-medium text-primary/70 text-xs">
