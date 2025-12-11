@@ -115,14 +115,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 COPY --from=oxipng /usr/local/bin/oxipng /usr/local/bin/oxipng
 USER nodeapp
 
-FROM prod AS db-migrate
-WORKDIR /usr/src/app/packages/db
-CMD ["pnpm", "run", "prisma:migrate:deploy"]
-
-FROM prod AS elasticsearch-migrate
-WORKDIR /usr/src/app/packages/elasticsearch
-CMD ["pnpm", "run", "push-mappings"]
-
 FROM prod AS web
 WORKDIR /usr/src/app/packages/web
 CMD ["pnpm", "run", "start"]

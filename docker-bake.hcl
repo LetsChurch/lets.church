@@ -16,8 +16,6 @@ variable "PLATFORMS" {
 
 group "default" {
   targets = [
-    "db-migrate",
-    "elasticsearch-migrate",
     "web",
     "background-worker",
     "probe-worker",
@@ -62,20 +60,6 @@ target "prod-with-media-tools" {
   target = "prod-with-media-tools"
   platforms = PLATFORMS
   project-id = "letschurch-base"
-}
-
-target "db-migrate" {
-  target = "db-migrate"
-  tags = ["${REGISTRY}/db-migrate:${TAG}"]
-  platforms = PLATFORMS
-  project-id = "letschurch-db-migrate"
-}
-
-target "elasticsearch-migrate" {
-  target = "elasticsearch-migrate"
-  tags = ["${REGISTRY}/elasticsearch-migrate:${TAG}"]
-  platforms = PLATFORMS
-  project-id = "letschurch-elasticsearch-migrate"
 }
 
 target "web" {

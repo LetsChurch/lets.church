@@ -5,7 +5,8 @@ services:
   # Migration Services
   db-migrate:
     build:
-      target: db-migrate
+      target: web
+    command: sh -c 'cd /usr/src/app/packages/db && pnpm run prisma:migrate:deploy'
     restart: "no"
     environment:
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
@@ -15,7 +16,8 @@ services:
 
   elasticsearch-migrate:
     build:
-      target: elasticsearch-migrate
+      target: web
+    command: sh -c 'cd /usr/src/app/packages/elasticsearch && pnpm run push-mappings'
     restart: "no"
     environment:
       ELASTICSEARCH_URL: http://elasticsearch:9200

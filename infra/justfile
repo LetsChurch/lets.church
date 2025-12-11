@@ -27,8 +27,6 @@ deploy-check-vars:
 deploy-set-images env hash:
   #!/usr/bin/env bash
   cd k8s/{{env}}
-  kustomize edit set image registry.gitlab.com/letschurch/lets.church/db-migrate:{{hash}}
-  kustomize edit set image registry.gitlab.com/letschurch/lets.church/elasticsearch-migrate:{{hash}}
   kustomize edit set image registry.gitlab.com/letschurch/lets.church/web:{{hash}}
   kustomize edit set image registry.gitlab.com/letschurch/lets.church/background-worker:{{hash}}
   kustomize edit set image registry.gitlab.com/letschurch/lets.church/import-worker:{{hash}}
