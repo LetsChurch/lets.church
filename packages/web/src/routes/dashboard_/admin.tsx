@@ -105,16 +105,18 @@ function AdminPage() {
           radius="md"
           withBorder
           component={Link}
-          to="/dashboard/admin/organization-approvals"
+          to="/dashboard/admin/organizations"
         >
           <Group justify="space-between" mb="xs">
-            <Text fw={500}>Organization Approvals</Text>
-            <Badge color="orange" size="sm">
-              {pendingApprovals.organizations.length}
-            </Badge>
+            <Text fw={500}>Organizations</Text>
+            {pendingApprovals.organizations.length > 0 ? (
+              <Badge color="orange" size="sm">
+                {pendingApprovals.organizations.length} pending
+              </Badge>
+            ) : null}
           </Group>
           <Text size="sm" c="dimmed">
-            Review and approve pending organizations
+            Manage churches, ministries, and geocoding
           </Text>
         </Card>
         <Card

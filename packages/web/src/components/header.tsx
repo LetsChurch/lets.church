@@ -30,6 +30,10 @@ export default function Header({
     ...trpc.account.getProfile.queryOptions(),
     enabled: hasSessionQuery.data === true,
   });
+  const currentUserQuery = useQuery({
+    ...trpc.common.getCurrentUser.queryOptions(),
+    enabled: hasSessionQuery.data === true,
+  });
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const backgroundImageUrl = useStore($headerBackgroundImage);
@@ -117,6 +121,11 @@ export default function Header({
                     <MenuItemRouterLink to="/dashboard">
                       Dashboard
                     </MenuItemRouterLink>
+                    {currentUserQuery.data?.role === 'ADMIN' ? (
+                      <MenuItemRouterLink to="/dashboard/admin">
+                        Admin
+                      </MenuItemRouterLink>
+                    ) : null}
                     <LcMenu.Separator />
                     <LcMenu.Item
                       render={(props) => (

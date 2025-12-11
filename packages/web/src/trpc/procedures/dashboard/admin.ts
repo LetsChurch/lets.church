@@ -1,9 +1,10 @@
-import { prisma } from '@letschurch/db';
+import { Prisma, prisma } from '@letschurch/db';
 import { parseS3Env } from '@letschurch/s3';
 import { sendVerificationEmail } from '@letschurch/temporal/activities/background';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
 import {
   deleteChannelWorkflow,
+  geocodeOrganizationWorkflow,
   processMediaWorkflow,
 } from '@letschurch/temporal/workflows/background';
 import { TRPCError } from '@trpc/server';
@@ -494,6 +495,256 @@ export const adminRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to approve organization',
+        });
+      }
+    }),
+
+  getAllOrganizations: adminProcedure
+    .input(
+      z
+        .object({
+          filter: z
+            .enum(['all', 'pending', 'approved', 'churches', 'ministries'])
+            .optional(),
+          search: z.string().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ input }) => {
+      moduleLogger.info(
+        {
+          context: {
+            filter: input?.filter,
+            search: input?.search,
+          },
+        },
+        'Fetching all organizations',
+      );
+
+      const where: {
+        approvedAt?: { not: null } | null;
+        type?: 'CHURCH' | 'MINISTRY';
+        OR?: Array<
+          | { name: { contains: string; mode: 'insensitive' } }
+          | { slug: { contains: string; mode: 'insensitive' } }
+        >;
+      } = {};
+
+      if (input?.filter === 'pending') {
+        where.approvedAt = null;
+      } else if (input?.filter === 'approved') {
+        where.approvedAt = { not: null };
+      } else if (input?.filter === 'churches') {
+        where.type = 'CHURCH';
+      } else if (input?.filter === 'ministries') {
+        where.type = 'MINISTRY';
+      }
+
+      if (input?.search) {
+        where.OR = [
+          { name: { contains: input.search, mode: 'insensitive' } },
+          { slug: { contains: input.search, mode: 'insensitive' } },
+        ];
+      }
+
+      const [
+        organizations,
+        totalCount,
+        pendingCount,
+        approvedCount,
+        churchCount,
+        ministryCount,
+      ] = await Promise.all([
+        prisma.organization.findMany({
+          where,
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            type: true,
+            createdAt: true,
+            approvedAt: true,
+            avatarPath: true,
+            primaryEmail: true,
+            primaryPhoneNumber: true,
+            websiteUrl: true,
+            memberships: {
+              select: {
+                appUser: {
+                  select: {
+                    id: true,
+                    fullName: true,
+                    emails: {
+                      select: {
+                        email: true,
+                        verifiedAt: true,
+                      },
+                      where: {
+                        verifiedAt: { not: null },
+                      },
+                      take: 1,
+                    },
+                  },
+                },
+              },
+              where: {
+                isAdmin: true,
+              },
+              take: 1,
+            },
+            addresses: {
+              select: {
+                id: true,
+                type: true,
+                name: true,
+                query: true,
+                latitude: true,
+                longitude: true,
+                streetAddress: true,
+                locality: true,
+                region: true,
+                postalCode: true,
+                country: true,
+              },
+            },
+            _count: {
+              select: {
+                channelAssociations: true,
+                memberships: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        }),
+        prisma.organization.count({ where }),
+        prisma.organization.count({ where: { approvedAt: null } }),
+        prisma.organization.count({ where: { approvedAt: { not: null } } }),
+        prisma.organization.count({ where: { type: 'CHURCH' } }),
+        prisma.organization.count({ where: { type: 'MINISTRY' } }),
+      ]);
+
+      const organizationsWithAvatarUrl = organizations.map((org) => {
+        const { avatarPath, ...orgWithoutPath } = org;
+        const avatarUrl = avatarPath
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+              resize: mantineAvatarSm2x,
+            })
+          : null;
+
+        return {
+          ...orgWithoutPath,
+          avatarUrl,
+        };
+      });
+
+      return {
+        organizations: organizationsWithAvatarUrl,
+        totalCount,
+        pendingCount,
+        approvedCount,
+        churchCount,
+        ministryCount,
+      };
+    }),
+
+  retryGeocoding: adminProcedure
+    .input(z.object({ organizationId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info(
+        {
+          organizationId: input.organizationId,
+          appUserId: ctx.session.appUserId,
+        },
+        'Retrying geocoding for organization',
+      );
+
+      try {
+        const organization = await prisma.organization.findUnique({
+          where: { id: input.organizationId },
+          select: {
+            id: true,
+            addresses: {
+              select: {
+                id: true,
+                latitude: true,
+                longitude: true,
+              },
+            },
+          },
+        });
+
+        if (!organization) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Organization not found',
+          });
+        }
+
+        if (organization.addresses.length === 0) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Organization has no addresses to geocode',
+          });
+        }
+
+        // Reset geocoding data for addresses that need retry
+        await prisma.organizationAddress.updateMany({
+          where: {
+            organizationId: input.organizationId,
+          },
+          data: {
+            latitude: null,
+            longitude: null,
+            geocodingJson: Prisma.JsonNull,
+          },
+        });
+
+        const temporalClient = await client;
+        const workflowHandle = await temporalClient.workflow.start(
+          geocodeOrganizationWorkflow,
+          {
+            taskQueue: BACKGROUND_QUEUE,
+            workflowId: `geocodeOrganization:${input.organizationId}:${Date.now()}`,
+            args: [input.organizationId],
+            retry: { maximumAttempts: 5 },
+          },
+        );
+
+        moduleLogger.info(
+          {
+            organizationId: input.organizationId,
+            appUserId: ctx.session.appUserId,
+            workflowId: workflowHandle.workflowId,
+          },
+          'Geocoding workflow started',
+        );
+
+        return {
+          success: true,
+          workflowId: workflowHandle.workflowId,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error(
+          {
+            organizationId: input.organizationId,
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to start geocoding workflow',
+        );
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to start geocoding',
         });
       }
     }),

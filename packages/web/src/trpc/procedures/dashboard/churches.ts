@@ -40,6 +40,34 @@ const moduleLogger = logger.child({
 const churchProcedure = authProcedure
   .input(churchQuerySchema)
   .use(async ({ ctx, input, next }) => {
+    // Site admins have full access to all churches
+    if (ctx.session.appUser.role === 'ADMIN') {
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            churchId: input.churchId,
+          },
+        },
+        'Site admin accessing church',
+      );
+
+      // Create a virtual admin membership for site admins
+      return next({
+        ctx: {
+          ...ctx,
+          membership: {
+            appUserId: ctx.session.appUserId,
+            organizationId: input.churchId,
+            isAdmin: true,
+            canEdit: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        },
+      });
+    }
+
     const membership = await prisma.organizationMembership.findFirst({
       where: {
         appUserId: ctx.session.appUserId,

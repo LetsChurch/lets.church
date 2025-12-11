@@ -48,8 +48,8 @@ import { Route as DashboardAdminUsersRouteImport } from './routes/dashboard_/adm
 import { Route as DashboardAdminUploadBackupsRouteImport } from './routes/dashboard_/admin_.upload-backups'
 import { Route as DashboardAdminSearchesRouteImport } from './routes/dashboard_/admin_/searches'
 import { Route as DashboardAdminProcessingUploadsRouteImport } from './routes/dashboard_/admin_.processing-uploads'
+import { Route as DashboardAdminOrganizationsRouteImport } from './routes/dashboard_/admin_.organizations'
 import { Route as DashboardAdminOrganizationTagsRouteImport } from './routes/dashboard_/admin_.organization-tags'
-import { Route as DashboardAdminOrganizationApprovalsRouteImport } from './routes/dashboard_/admin_.organization-approvals'
 import { Route as DashboardAdminNewsletterListsRouteImport } from './routes/dashboard_/admin_.newsletter-lists'
 import { Route as DashboardAdminImportSourcesRouteImport } from './routes/dashboard_/admin_.import-sources'
 import { Route as DashboardAdminFeaturedRouteImport } from './routes/dashboard_/admin_/featured'
@@ -283,16 +283,16 @@ const DashboardAdminProcessingUploadsRoute =
     path: '/admin/processing-uploads',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardAdminOrganizationsRoute =
+  DashboardAdminOrganizationsRouteImport.update({
+    id: '/admin_/organizations',
+    path: '/admin/organizations',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardAdminOrganizationTagsRoute =
   DashboardAdminOrganizationTagsRouteImport.update({
     id: '/admin_/organization-tags',
     path: '/admin/organization-tags',
-    getParentRoute: () => DashboardRoute,
-  } as any)
-const DashboardAdminOrganizationApprovalsRoute =
-  DashboardAdminOrganizationApprovalsRouteImport.update({
-    id: '/admin_/organization-approvals',
-    path: '/admin/organization-approvals',
     getParentRoute: () => DashboardRoute,
   } as any)
 const DashboardAdminNewsletterListsRoute =
@@ -520,8 +520,8 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard/admin/import-sources': typeof DashboardAdminImportSourcesRoute
   '/dashboard/admin/newsletter-lists': typeof DashboardAdminNewsletterListsRoute
-  '/dashboard/admin/organization-approvals': typeof DashboardAdminOrganizationApprovalsRoute
   '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
+  '/dashboard/admin/organizations': typeof DashboardAdminOrganizationsRoute
   '/dashboard/admin/processing-uploads': typeof DashboardAdminProcessingUploadsRoute
   '/dashboard/admin/searches': typeof DashboardAdminSearchesRoute
   '/dashboard/admin/upload-backups': typeof DashboardAdminUploadBackupsRoute
@@ -592,8 +592,8 @@ export interface FileRoutesByTo {
   '/dashboard/admin/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard/admin/import-sources': typeof DashboardAdminImportSourcesRoute
   '/dashboard/admin/newsletter-lists': typeof DashboardAdminNewsletterListsRoute
-  '/dashboard/admin/organization-approvals': typeof DashboardAdminOrganizationApprovalsRoute
   '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
+  '/dashboard/admin/organizations': typeof DashboardAdminOrganizationsRoute
   '/dashboard/admin/processing-uploads': typeof DashboardAdminProcessingUploadsRoute
   '/dashboard/admin/searches': typeof DashboardAdminSearchesRoute
   '/dashboard/admin/upload-backups': typeof DashboardAdminUploadBackupsRoute
@@ -668,8 +668,8 @@ export interface FileRoutesById {
   '/dashboard_/admin_/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard_/admin_/import-sources': typeof DashboardAdminImportSourcesRoute
   '/dashboard_/admin_/newsletter-lists': typeof DashboardAdminNewsletterListsRoute
-  '/dashboard_/admin_/organization-approvals': typeof DashboardAdminOrganizationApprovalsRoute
   '/dashboard_/admin_/organization-tags': typeof DashboardAdminOrganizationTagsRoute
+  '/dashboard_/admin_/organizations': typeof DashboardAdminOrganizationsRoute
   '/dashboard_/admin_/processing-uploads': typeof DashboardAdminProcessingUploadsRoute
   '/dashboard_/admin_/searches': typeof DashboardAdminSearchesRoute
   '/dashboard_/admin_/upload-backups': typeof DashboardAdminUploadBackupsRoute
@@ -744,8 +744,8 @@ export interface FileRouteTypes {
     | '/dashboard/admin/featured'
     | '/dashboard/admin/import-sources'
     | '/dashboard/admin/newsletter-lists'
-    | '/dashboard/admin/organization-approvals'
     | '/dashboard/admin/organization-tags'
+    | '/dashboard/admin/organizations'
     | '/dashboard/admin/processing-uploads'
     | '/dashboard/admin/searches'
     | '/dashboard/admin/upload-backups'
@@ -816,8 +816,8 @@ export interface FileRouteTypes {
     | '/dashboard/admin/featured'
     | '/dashboard/admin/import-sources'
     | '/dashboard/admin/newsletter-lists'
-    | '/dashboard/admin/organization-approvals'
     | '/dashboard/admin/organization-tags'
+    | '/dashboard/admin/organizations'
     | '/dashboard/admin/processing-uploads'
     | '/dashboard/admin/searches'
     | '/dashboard/admin/upload-backups'
@@ -891,8 +891,8 @@ export interface FileRouteTypes {
     | '/dashboard_/admin_/featured'
     | '/dashboard_/admin_/import-sources'
     | '/dashboard_/admin_/newsletter-lists'
-    | '/dashboard_/admin_/organization-approvals'
     | '/dashboard_/admin_/organization-tags'
+    | '/dashboard_/admin_/organizations'
     | '/dashboard_/admin_/processing-uploads'
     | '/dashboard_/admin_/searches'
     | '/dashboard_/admin_/upload-backups'
@@ -1209,18 +1209,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAdminProcessingUploadsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard_/admin_/organizations': {
+      id: '/dashboard_/admin_/organizations'
+      path: '/admin/organizations'
+      fullPath: '/dashboard/admin/organizations'
+      preLoaderRoute: typeof DashboardAdminOrganizationsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard_/admin_/organization-tags': {
       id: '/dashboard_/admin_/organization-tags'
       path: '/admin/organization-tags'
       fullPath: '/dashboard/admin/organization-tags'
       preLoaderRoute: typeof DashboardAdminOrganizationTagsRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/dashboard_/admin_/organization-approvals': {
-      id: '/dashboard_/admin_/organization-approvals'
-      path: '/admin/organization-approvals'
-      fullPath: '/dashboard/admin/organization-approvals'
-      preLoaderRoute: typeof DashboardAdminOrganizationApprovalsRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard_/admin_/newsletter-lists': {
@@ -1539,8 +1539,8 @@ interface DashboardRouteChildren {
   DashboardAdminFeaturedRoute: typeof DashboardAdminFeaturedRoute
   DashboardAdminImportSourcesRoute: typeof DashboardAdminImportSourcesRoute
   DashboardAdminNewsletterListsRoute: typeof DashboardAdminNewsletterListsRoute
-  DashboardAdminOrganizationApprovalsRoute: typeof DashboardAdminOrganizationApprovalsRoute
   DashboardAdminOrganizationTagsRoute: typeof DashboardAdminOrganizationTagsRoute
+  DashboardAdminOrganizationsRoute: typeof DashboardAdminOrganizationsRoute
   DashboardAdminProcessingUploadsRoute: typeof DashboardAdminProcessingUploadsRoute
   DashboardAdminSearchesRoute: typeof DashboardAdminSearchesRoute
   DashboardAdminUploadBackupsRoute: typeof DashboardAdminUploadBackupsRoute
@@ -1581,9 +1581,8 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAdminFeaturedRoute: DashboardAdminFeaturedRoute,
   DashboardAdminImportSourcesRoute: DashboardAdminImportSourcesRoute,
   DashboardAdminNewsletterListsRoute: DashboardAdminNewsletterListsRoute,
-  DashboardAdminOrganizationApprovalsRoute:
-    DashboardAdminOrganizationApprovalsRoute,
   DashboardAdminOrganizationTagsRoute: DashboardAdminOrganizationTagsRoute,
+  DashboardAdminOrganizationsRoute: DashboardAdminOrganizationsRoute,
   DashboardAdminProcessingUploadsRoute: DashboardAdminProcessingUploadsRoute,
   DashboardAdminSearchesRoute: DashboardAdminSearchesRoute,
   DashboardAdminUploadBackupsRoute: DashboardAdminUploadBackupsRoute,
