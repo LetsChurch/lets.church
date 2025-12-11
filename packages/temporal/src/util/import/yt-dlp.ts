@@ -6,6 +6,8 @@ import * as z from 'zod';
 import { downloadUrl } from './download';
 
 const baseYtDlpArgs = [
+  '--extractor-args',
+  'generic:impersonate=chrome',
   '--sleep-requests',
   '2',
   '--sleep-interval',
@@ -14,11 +16,9 @@ const baseYtDlpArgs = [
   '60',
 ];
 
-const stdoutThumbnailSchema = z
-  .object({
-    thumbnail: z.string().url(),
-  })
-  .passthrough();
+const stdoutThumbnailSchema = z.looseObject({
+  thumbnail: z.url(),
+});
 
 export async function ytdlp(
   input: string | URL,

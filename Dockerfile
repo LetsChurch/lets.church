@@ -1,3 +1,5 @@
+FROM videah/oxipng:7.0.0 AS oxipng
+
 FROM debian:bullseye-slim AS build-audiowaveform
 RUN apt-get update && apt-get install -y git wget cmake build-essential libmad0-dev libid3tag0-dev libsndfile1-dev libgd-dev libboost-filesystem-dev libboost-program-options-dev libboost-regex-dev
 RUN mkdir -p /home/build
@@ -59,11 +61,22 @@ RUN pnpm run -r build
 FROM build AS dev
 USER root
 COPY --from=build-audiowaveform /home/build/audiowaveform/build/audiowaveform /usr/bin/
-COPY --from=jauderho/yt-dlp:2025.03.31 /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
-COPY --from=videah/oxipng:7.0.0 /usr/local/bin/oxipng /usr/local/bin/oxipng
-RUN apt-get update && apt-get install -y --no-install-recommends python3 imagemagick jpegoptim ffmpeg && \
+COPY --from=oxipng /usr/local/bin/oxipng /usr/local/bin/oxipng
+RUN apt-get update && apt-get install -y --no-install-recommends python3 imagemagick jpegoptim ffmpeg procps curl && \
+  ARCH=$(uname -m) && \
+  if [ "$ARCH" = "x86_64" ]; then \
+    curl -L https://github.com/yt-dlp/yt-dlp/releases/download/2025.12.08/yt-dlp_linux -o /usr/local/bin/yt-dlp; \
+  elif [ "$ARCH" = "aarch64" ]; then \
+    curl -L https://github.com/yt-dlp/yt-dlp/releases/download/2025.12.08/yt-dlp_linux_aarch64 -o /usr/local/bin/yt-dlp; \
+  else \
+    echo "Unsupported architecture: $ARCH"; exit 1; \
+  fi && \
+  chmod +x /usr/local/bin/yt-dlp && \
   rm -rf /var/lib/apt/lists/*
+# Install Playwright system dependencies as root, then browsers as nodeapp
+RUN pnpm --filter @letschurch/temporal exec playwright install-deps chromium
 USER nodeapp
+RUN pnpm --filter @letschurch/temporal exec playwright install chromium
 
 FROM base AS prod
 COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml ./
@@ -80,7 +93,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   --mount=type=cache,target=/var/lib/apt,sharing=locked \
   apt-get update && apt-get install -y --no-install-recommends imagemagick jpegoptim && \
   rm -rf /var/lib/apt/lists/*
-COPY --from=videah/oxipng:7.0.0 /usr/local/bin/oxipng /usr/local/bin/oxipng
+COPY --from=oxipng /usr/local/bin/oxipng /usr/local/bin/oxipng
 USER nodeapp
 
 # Base stage for workers with ffmpeg
@@ -99,7 +112,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   --mount=type=cache,target=/var/lib/apt,sharing=locked \
   apt-get update && apt-get install -y --no-install-recommends imagemagick jpegoptim ffmpeg && \
   rm -rf /var/lib/apt/lists/*
-COPY --from=videah/oxipng:7.0.0 /usr/local/bin/oxipng /usr/local/bin/oxipng
+COPY --from=oxipng /usr/local/bin/oxipng /usr/local/bin/oxipng
 USER nodeapp
 
 FROM prod AS db-migrate
@@ -130,14 +143,21 @@ FROM prod-with-ffmpeg AS import-worker
 USER root
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   --mount=type=cache,target=/var/lib/apt,sharing=locked \
-  apt-get update && apt-get install -y --no-install-recommends python3 && \
+  apt-get update && apt-get install -y --no-install-recommends python3 procps curl && \
+  ARCH=$(uname -m) && \
+  if [ "$ARCH" = "x86_64" ]; then \
+    curl -L https://github.com/yt-dlp/yt-dlp/releases/download/2025.12.08/yt-dlp_linux -o /usr/local/bin/yt-dlp; \
+  elif [ "$ARCH" = "aarch64" ]; then \
+    curl -L https://github.com/yt-dlp/yt-dlp/releases/download/2025.12.08/yt-dlp_linux_aarch64 -o /usr/local/bin/yt-dlp; \
+  else \
+    echo "Unsupported architecture: $ARCH"; exit 1; \
+  fi && \
+  chmod +x /usr/local/bin/yt-dlp && \
   rm -rf /var/lib/apt/lists/*
-COPY --from=jauderho/yt-dlp:2025.03.31 /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
-RUN /usr/local/bin/yt-dlp --update --update-to nightly
-# Playwright needs to be installed after copying node_modules
-RUN --mount=type=cache,target=/root/.cache/ms-playwright \
-  pnpm --filter @letschurch/import-worker exec playwright install --with-deps firefox
+# Install Playwright system dependencies as root, then browsers as nodeapp
+RUN pnpm --filter @letschurch/import-worker exec playwright install-deps chromium
 USER nodeapp
+RUN pnpm --filter @letschurch/import-worker exec playwright install chromium
 CMD ["pnpm", "--filter", "@letschurch/import-worker", "run", "start"]
 
 FROM nvidia/cuda:12.6.2-cudnn-runtime-ubuntu22.04 AS transcribe-worker
@@ -159,7 +179,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   apt-get install -y --no-install-recommends ca-certificates curl gnupg python3 python3-pip git ffmpeg && \
   mkdir -p /opt/whisper/models && \
   if [ ! -f /tmp/whisper-models/${WHISPER_MODEL}.tar.gz ]; then \
-    curl -o /tmp/whisper-models/${WHISPER_MODEL}.tar.gz https://data.letschurch.cloud/whisper-ctranslate2/models/${WHISPER_MODEL}.tar.gz; \
+  curl -o /tmp/whisper-models/${WHISPER_MODEL}.tar.gz https://data.letschurch.cloud/whisper-ctranslate2/models/${WHISPER_MODEL}.tar.gz; \
   fi && \
   tar -xzf /tmp/whisper-models/${WHISPER_MODEL}.tar.gz -C /opt/whisper/models && \
   rm -rf /var/lib/apt/lists/* && \

@@ -156,6 +156,21 @@ function AdminPage() {
           radius="md"
           withBorder
           component={Link}
+          to="/dashboard/admin/import-sources"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Import Sources</Text>
+          </Group>
+          <Text size="sm" c="dimmed">
+            Manage automated media import sources
+          </Text>
+        </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
           to="/dashboard/admin/processing-uploads"
         >
           <Group justify="space-between" mb="xs">

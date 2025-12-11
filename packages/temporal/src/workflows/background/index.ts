@@ -52,6 +52,7 @@ export { recordDownloadSizeWorkflow } from './record-download-size';
 export { remakeThumbnailsWorkflow } from './remake-thumbnails';
 export { resetPasswordWorkflow } from './reset-password';
 export { restitchTranscriptWorkflow } from './restitch-transcript';
+export { scrapeAndImportWorkflow } from './scrape-and-import';
 export { sendEmailWorkflow } from './send-email';
 export { updateCommentScoresWorkflow } from './update-comment-scores';
 export { updateDailySaltWorkflow } from './update-daily-salt';

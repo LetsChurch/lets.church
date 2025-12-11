@@ -77,11 +77,11 @@ jobs:
 
       - name: Install Playwright with dependencies
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm --filter @letschurch/web exec playwright install --with-deps
+        run: pnpm --filter @letschurch/web exec playwright install --with-deps chromium
 
       - name: Install Playwright system dependencies only
         if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: pnpm --filter @letschurch/web exec playwright install-deps
+        run: pnpm --filter @letschurch/web exec playwright install-deps chromium
 
       - name: Run tests
         run: pnpm -r run test

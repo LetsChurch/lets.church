@@ -2,9 +2,16 @@ import { prisma } from '@letschurch/db';
 import { z } from 'zod';
 import logger from '../../util/logger';
 
-const { MAPBOX_GEOCODING_TOKEN } = z
-  .object({ MAPBOX_GEOCODING_TOKEN: z.string() })
-  .parse(process.env);
+export function validateGeocodeConfig() {
+  z.object({ MAPBOX_GEOCODING_TOKEN: z.string() }).parse(process.env);
+}
+
+function getMapboxToken(): string {
+  const { MAPBOX_GEOCODING_TOKEN } = z
+    .object({ MAPBOX_GEOCODING_TOKEN: z.string() })
+    .parse(process.env);
+  return MAPBOX_GEOCODING_TOKEN;
+}
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/index-document',
@@ -103,7 +110,7 @@ export default async function geocodeOrganization(organizationId: string) {
       ),
     );
     const res = await fetch(
-      `https://api.mapbox.com/search/geocode/v6/forward?q=${q}&permanent=true&access_token=${MAPBOX_GEOCODING_TOKEN}`,
+      `https://api.mapbox.com/search/geocode/v6/forward?q=${q}&permanent=true&access_token=${getMapboxToken()}`,
     );
     const json = await res.json();
     activityLogger.info({ context: { meta: JSON.stringify({ json }) } });

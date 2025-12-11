@@ -1,5 +1,10 @@
 import path from 'node:path';
 import * as activities from '@letschurch/temporal/activities/background';
+import {
+  validateGeocodeConfig,
+  validateSendEmailConfig,
+  validateSendVerificationEmailConfig,
+} from '@letschurch/temporal/activities/background';
 import { BACKGROUND_QUEUE, GLACIER_QUEUE } from '@letschurch/temporal/queues';
 import { waitOnTemporal } from '@letschurch/temporal/util/temporal';
 import * as Sentry from '@sentry/node';
@@ -22,6 +27,11 @@ if (process.env.NODE_ENV !== 'development') {
     environment: process.env.NODE_ENV ?? 'default',
   });
 }
+
+// Validate activity configurations on startup
+validateSendEmailConfig();
+validateSendVerificationEmailConfig();
+validateGeocodeConfig();
 
 await waitOnTemporal();
 

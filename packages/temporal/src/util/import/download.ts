@@ -1,5 +1,5 @@
 import { createWriteStream } from 'node:fs';
-import { join } from 'node:path';
+import { extname, join } from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { Logger } from '@letschurch/util';
@@ -20,8 +20,13 @@ export async function downloadUrl(
     throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
   }
 
+  // Extract file extension from URL path
+  const urlPath = url.pathname;
+  const ext = extname(urlPath);
+  const filename = ext ? `${nanoid()}${ext}` : nanoid();
+
   // Write fetch result to file
-  const dest = join(dir, nanoid());
+  const dest = join(dir, filename);
   const stream = createWriteStream(dest);
 
   const heartbeatTransform = new Transform({

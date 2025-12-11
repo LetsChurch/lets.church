@@ -1,7 +1,7 @@
 import { prisma } from '@letschurch/db';
 import { Context } from '@temporalio/activity';
 import logger from '../../util/logger';
-import { publicS3 } from '../../util/s3';
+import { backupS3, publicS3 } from '../../util/s3';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/delete-channel',
@@ -135,7 +135,6 @@ export async function deleteChannelFiles(channelId: string): Promise<number> {
       // Delete from backup if backed up
       if (uploadState.backupKey && uploadState.backupStatus === 'BACKED_UP') {
         try {
-          const { backupS3 } = await import('../../util/s3');
           await backupS3.deleteFile(uploadState.backupKey);
           activityLogger.info(`Deleted backup: ${uploadState.backupKey}`);
           deletedCount += 1;

@@ -8,12 +8,19 @@ import logger from '../../util/logger';
 import { uuidTranslator } from '../../util/uuid';
 import { sendEmailWorkflow } from '../../workflows/background/send-email';
 
-const { WEB_URL } = z.object({ WEB_URL: z.string() }).parse(process.env);
-
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/send-verification-email',
   temporalActivity: 'sendVerificationEmail',
 });
+
+export function validateSendVerificationEmailConfig() {
+  z.object({ WEB_URL: z.string() }).parse(process.env);
+}
+
+function getWebUrl(): string {
+  const { WEB_URL } = z.object({ WEB_URL: z.string() }).parse(process.env);
+  return WEB_URL;
+}
 
 export default async function sendVerificationEmailActivity(
   userId: string,
@@ -27,7 +34,7 @@ export default async function sendVerificationEmailActivity(
     where: { email },
   });
 
-  const verifyUrl = `${WEB_URL}/auth/verify?${new URLSearchParams({
+  const verifyUrl = `${getWebUrl()}/auth/verify?${new URLSearchParams({
     userId: uuidTranslator.fromUUID(userId),
     emailId: uuidTranslator.fromUUID(emailObj.id),
     emailKey: uuidTranslator.fromUUID(emailObj.key),

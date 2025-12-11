@@ -6,7 +6,7 @@
     "dev": "vite dev",
     "dev:background-worker": "NODE_ENV=development tsx watch src/temporal/workers/background-worker.ts",
     "dev:transcribe-worker": "NODE_ENV=development tsx watch src/temporal/workers/transcribe-worker.ts",
-    "build": "vite build",
+    "build": "NODE_OPTIONS='--max-old-space-size=8192' vite build",
     "test": "vitest",
     "start": "node .output/server/index.mjs",
     "start:background-worker": "NODE_ENV=production tsx src/temporal/workers/background-worker.ts",

@@ -58,6 +58,8 @@ model AppUser {
   approvedOrganizations    Organization[]
   searches                 SearchLogEntry[]
   uploadStates             UploadState[]
+  createdImportSources     ChannelImportSource[]     @relation("createdImportSources")
+  updatedImportSources     ChannelImportSource[]     @relation("updatedImportSources")
 
   @@map("app_user")
 }
@@ -308,6 +310,7 @@ model Channel {
   defaultThumbnailPath     String?                          @map("default_thumbnail_path") @db.VarChar(255)
   defaultThumbnailBlurhash String?                          @map("default_thumbnail_blurhash") @db.VarChar(255)
   uploadStates             UploadState[]
+  importSources            ChannelImportSource[]
 
   @@map("channel")
 }
@@ -463,6 +466,7 @@ model UploadRecord {
   savedByUsers              SavedMedia[]
   featuredUpload            FeaturedUpload?
   uploadStates              UploadState[]
+  importHistory             ImportHistory[]
 
   @@index([createdAt, id])
   @@index(score)
@@ -691,4 +695,95 @@ model NewsletterMailingList {
   updatedAt               DateTime            @updatedAt @map("updated_at")
 
   @@map("newsletter_mailing_list")
+}
+
+// Channel Import Sources
+
+enum ChannelImportSourceWorkflowStatus {
+  NOT_STARTED
+  RUNNING
+  PAUSED
+  FAILED
+
+  @@map("channel_import_source_workflow_status")
+}
+
+enum ChannelImportRunStatus {
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  PARTIAL
+
+  @@map("channel_import_run_status")
+}
+
+model ChannelImportSource {
+  id                     String                            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  channel                Channel                           @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channelId              String                            @map("channel_id") @db.Uuid
+  url                    String
+  enabled                Boolean                           @default(true)
+  cronSchedule           String                            @default("0 1 * * *") @map("cron_schedule")
+  timezone               String                            @default("America/New_York")
+  lastImportedAt         DateTime?                         @map("last_imported_at")
+  lastSuccessfulImportAt DateTime?                         @map("last_successful_import_at")
+  lastErrorAt            DateTime?                         @map("last_error_at")
+  lastErrorMessage       String?                           @map("last_error_message")
+  earliestImportDate     DateTime?                         @map("earliest_import_date")
+  lastImportedUploadDate DateTime?                         @map("last_imported_upload_date")
+  deduplicationEnabled   Boolean                           @default(false) @map("deduplication_enabled")
+  deduplicationFields    Json?                             @map("deduplication_fields")
+  workflowId             String?                           @map("workflow_id") @db.VarChar(255)
+  workflowStatus         ChannelImportSourceWorkflowStatus @default(NOT_STARTED) @map("workflow_status")
+  createdAt              DateTime                          @default(now()) @map("created_at")
+  createdBy              AppUser                           @relation("createdImportSources", fields: [createdById], references: [id])
+  createdById            String                            @map("created_by_id") @db.Uuid
+  updatedAt              DateTime                          @updatedAt @map("updated_at")
+  updatedBy              AppUser?                          @relation("updatedImportSources", fields: [updatedById], references: [id])
+  updatedById            String?                           @map("updated_by_id") @db.Uuid
+  importRuns             ChannelImportRun[]
+  importHistory          ImportHistory[]
+
+  @@index([channelId])
+  @@index([enabled])
+  @@index([workflowStatus])
+  @@map("channel_import_source")
+}
+
+model ChannelImportRun {
+  id             String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  importSource   ChannelImportSource    @relation(fields: [importSourceId], references: [id], onDelete: Cascade)
+  importSourceId String                 @map("import_source_id") @db.Uuid
+  startedAt      DateTime               @default(now()) @map("started_at")
+  completedAt    DateTime?              @map("completed_at")
+  status         ChannelImportRunStatus
+  itemsFound     Int                    @default(0) @map("items_found")
+  itemsImported  Int                    @default(0) @map("items_imported")
+  itemsSkipped   Int                    @default(0) @map("items_skipped")
+  itemsFailed    Int                    @default(0) @map("items_failed")
+  errorMessage   String?                @map("error_message")
+  errorDetails   Json?                  @map("error_details")
+
+  @@index([importSourceId, startedAt])
+  @@index([status])
+  @@map("channel_import_run")
+}
+
+model ImportHistory {
+  id             String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  importSource   ChannelImportSource @relation(fields: [importSourceId], references: [id], onDelete: Cascade)
+  importSourceId String              @map("import_source_id") @db.Uuid
+  uploadRecord   UploadRecord?       @relation(fields: [uploadRecordId], references: [id], onDelete: SetNull)
+  uploadRecordId String?             @map("upload_record_id") @db.Uuid
+  title          String
+  description    String?
+  url            String?
+  publishedAt    DateTime            @map("published_at")
+  source         String?
+  createdAt      DateTime            @default(now()) @map("created_at")
+
+  @@index([importSourceId, publishedAt])
+  @@index([importSourceId, title])
+  @@index([importSourceId, url])
+  @@map("import_history")
 }

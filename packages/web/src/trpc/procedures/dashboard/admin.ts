@@ -1,7 +1,11 @@
 import { prisma } from '@letschurch/db';
 import { parseS3Env } from '@letschurch/s3';
+import { sendVerificationEmail } from '@letschurch/temporal/activities/background';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
-import { deleteChannelWorkflow } from '@letschurch/temporal/workflows/background';
+import {
+  deleteChannelWorkflow,
+  processMediaWorkflow,
+} from '@letschurch/temporal/workflows/background';
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
 import { z } from 'zod';
@@ -32,6 +36,7 @@ import {
 } from '@/temporal';
 import { mantineAvatarSm2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
+import { generateResetPasswordEmail } from '@/util/reset-password-email';
 import { publicS3 } from '@/util/s3';
 import {
   filterUploadsWithActiveWorkflows,
@@ -1004,9 +1009,6 @@ export const adminRouter = router({
           });
         }
 
-        const { generateResetPasswordEmail } = await import(
-          '@/util/reset-password-email'
-        );
         const { text, html } = generateResetPasswordEmail(
           user.id,
           user.username,
@@ -1097,10 +1099,6 @@ export const adminRouter = router({
             message: 'Email is already verified',
           });
         }
-
-        const { sendVerificationEmail } = await import(
-          '@letschurch/temporal/activities/background'
-        );
 
         await sendVerificationEmail(user.id, user.username, emailRecord.email);
 
@@ -2732,14 +2730,6 @@ export const adminRouter = router({
           }
         }
 
-        // Import the workflow from temporal package
-        const { processMediaWorkflow } = await import(
-          '@letschurch/temporal/workflows/background'
-        );
-        const { BACKGROUND_QUEUE } = await import(
-          '@letschurch/temporal/queues'
-        );
-
         // Determine what needs to be processed
         let scope: 'transcode' | 'transcribe' | 'everything' = 'everything';
         if (upload.transcodingFinishedAt && !upload.transcribingFinishedAt) {
@@ -2863,12 +2853,6 @@ export const adminRouter = router({
         },
         'Filtered uploads for bulk retry',
       );
-
-      // Import the workflow from temporal package
-      const { processMediaWorkflow } = await import(
-        '@letschurch/temporal/workflows/background'
-      );
-      const { BACKGROUND_QUEUE } = await import('@letschurch/temporal/queues');
 
       const temporalClient = await client;
       let retriedCount = 0;

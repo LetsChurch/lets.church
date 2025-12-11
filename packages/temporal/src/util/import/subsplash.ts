@@ -1,16 +1,16 @@
 import { invariant, noop } from 'es-toolkit';
 import { pEvent } from 'p-event';
-import { firefox, type Request } from 'playwright';
+import { chromium, type Request } from 'playwright';
 import type { Logger } from '../logger';
 import type { DownloadResult } from '.';
 import { downloadUrl } from './download';
 import { ytdlp } from './yt-dlp';
 
-async function launchFirefox() {
-  const browser = await firefox.launch();
+async function launchChromium() {
+  const browser = await chromium.launch();
   const context = await browser.newContext({
     userAgent:
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:134.0) Gecko/20100101 Firefox/134.0',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
   });
 
   return { browser, context };
@@ -20,8 +20,8 @@ async function extractSubsplashMedia(
   url: URL,
   log: Logger,
 ): Promise<string | null> {
-  log.info('Launching Firefox to extract m3u8');
-  const { browser, context } = await launchFirefox();
+  log.info('Launching Chromium to extract m3u8');
+  const { browser, context } = await launchChromium();
   const page = await context.newPage();
 
   log.info(`Navigating to ${url}`);
@@ -55,8 +55,8 @@ async function downloadSubsplashThumbnail(
   dir: string,
   log: Logger,
 ): Promise<string | null> {
-  log.info('Launching Firefox to download thumbnail');
-  const { browser, context } = await launchFirefox();
+  log.info('Launching Chromium to download thumbnail');
+  const { browser, context } = await launchChromium();
   try {
     const page = await context.newPage();
 

@@ -1,4 +1,5 @@
 import type { Prisma, UploadVariant } from '@letschurch/db';
+import { prisma } from '@letschurch/db';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
 import {
   type BackfillUploadStateSizesWorkflowParams,
@@ -32,6 +33,7 @@ import {
   completeResetPasswordSignal,
   resetPasswordWorkflow,
 } from '@letschurch/temporal/workflows/background/reset-password';
+import { scrapeAndImportWorkflow } from '@letschurch/temporal/workflows/background/scrape-and-import';
 import { xxh32 } from '@node-rs/xxhash';
 import { Client, Connection, type WorkflowOptions } from '@temporalio/client';
 import PLazy from 'p-lazy';
@@ -523,4 +525,165 @@ export async function getBackfillUploadStateSizesProgress() {
 export async function cancelBackfillUploadStateSizes() {
   const handle = (await client).workflow.getHandle(BACKFILL_SIZES_WORKFLOW_ID);
   await handle.cancel();
+}
+
+// Import Source Scheduler Workflows
+
+/**
+ * Start a Temporal Schedule for an import source.
+ * One schedule per import source.
+ */
+export async function startImportSourceScheduler(importSourceId: string) {
+  // Fetch import source details
+  const importSource = await prisma.channelImportSource.findUnique({
+    where: { id: importSourceId },
+    select: {
+      url: true,
+      cronSchedule: true,
+      timezone: true,
+      channel: { select: { slug: true, name: true } },
+    },
+  });
+
+  if (!importSource) {
+    throw new Error(`Import source ${importSourceId} not found`);
+  }
+
+  const scheduleId = `import:${importSource.channel.slug}:${importSourceId}`;
+
+  // Create a Temporal Schedule
+  const schedule = await (await client).schedule.create({
+    scheduleId,
+    spec: {
+      cronExpressions: [
+        `CRON_TZ=${importSource.timezone} ${importSource.cronSchedule}`,
+      ],
+    },
+    action: {
+      type: 'startWorkflow',
+      workflowType: scrapeAndImportWorkflow,
+      args: [importSourceId],
+      taskQueue: BACKGROUND_QUEUE,
+      workflowId: `scrapeAndImport:${importSource.channel.slug}:${importSourceId}:scheduled`,
+    },
+    memo: {
+      channelName: importSource.channel.name,
+      channelSlug: importSource.channel.slug,
+      sourceUrl: importSource.url,
+      description: `Import schedule for ${importSource.channel.name} from ${new URL(importSource.url).hostname}`,
+    },
+  });
+
+  // Update database status to RUNNING
+  await prisma.channelImportSource.update({
+    where: { id: importSourceId },
+    data: {
+      workflowStatus: 'RUNNING',
+      workflowId: scheduleId,
+    },
+  });
+
+  return schedule;
+}
+
+/**
+ * Pause an import source schedule and update database status.
+ */
+export async function cancelImportSourceScheduler(importSourceId: string) {
+  // Fetch channel slug to construct schedule ID
+  const importSource = await prisma.channelImportSource.findUnique({
+    where: { id: importSourceId },
+    select: { channel: { select: { slug: true } } },
+  });
+
+  if (!importSource) {
+    throw new Error(`Import source ${importSourceId} not found`);
+  }
+
+  const scheduleId = `import:${importSource.channel.slug}:${importSourceId}`;
+
+  // Pause the schedule
+  const handle = (await client).schedule.getHandle(scheduleId);
+  await handle.pause();
+
+  await prisma.channelImportSource.update({
+    where: { id: importSourceId },
+    data: { workflowStatus: 'PAUSED', workflowId: null },
+  });
+}
+
+/**
+ * Delete an import source schedule completely.
+ */
+export async function deleteImportSourceScheduler(importSourceId: string) {
+  // Fetch channel slug to construct schedule ID
+  const importSource = await prisma.channelImportSource.findUnique({
+    where: { id: importSourceId },
+    select: { channel: { select: { slug: true } } },
+  });
+
+  if (!importSource) {
+    throw new Error(`Import source ${importSourceId} not found`);
+  }
+
+  const scheduleId = `import:${importSource.channel.slug}:${importSourceId}`;
+
+  // Delete the schedule
+  const handle = (await client).schedule.getHandle(scheduleId);
+  await handle.delete();
+}
+
+/**
+ * Trigger a manual scrape and import for an import source.
+ * This is a one-time operation, separate from the scheduled workflow.
+ */
+export async function triggerManualImport(importSourceId: string) {
+  // Fetch channel slug for friendly workflow ID
+  const importSource = await prisma.channelImportSource.findUnique({
+    where: { id: importSourceId },
+    select: { channel: { select: { slug: true } } },
+  });
+
+  if (!importSource) {
+    throw new Error(`Import source ${importSourceId} not found`);
+  }
+
+  return (await client).workflow.start(scrapeAndImportWorkflow, {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    workflowId: `scrapeAndImport:${importSource.channel.slug}:${importSourceId}:manual:${Date.now()}`,
+    args: [importSourceId],
+  });
+}
+
+/**
+ * Trigger a historical import for an import source using provided data.
+ * This imports historical media items without scraping.
+ */
+export async function triggerHistoricalImport(
+  importSourceId: string,
+  importHistory: Array<{
+    publishedAt: string;
+    source?: string;
+    title: string;
+    description?: string;
+    url?: string | null;
+  }>,
+) {
+  // Fetch channel slug for friendly workflow ID
+  const importSource = await prisma.channelImportSource.findUnique({
+    where: { id: importSourceId },
+    select: { channel: { select: { slug: true } } },
+  });
+
+  if (!importSource) {
+    throw new Error(`Import source ${importSourceId} not found`);
+  }
+
+  return (await client).workflow.start(scrapeAndImportWorkflow, {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    workflowId: `scrapeAndImport:${importSource.channel.slug}:${importSourceId}:historical:${Date.now()}`,
+    args: [importSourceId, importHistory],
+  });
 }

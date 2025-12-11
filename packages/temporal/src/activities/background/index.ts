@@ -1,3 +1,20 @@
+// Import source activities (for background worker with DB access)
+// Note: scrapeImportSource is NOT exported here - it runs on import worker
+export { checkDuplicate } from '../import-source/check-duplicate';
+export {
+  type CreateImportHistoryParams,
+  createImportHistory,
+} from '../import-source/create-import-history';
+export { createImportRun } from '../import-source/create-import-run';
+export { getImportSource } from '../import-source/get-import-source';
+export {
+  type HistoricalImportItem,
+  processImportHistory,
+} from '../import-source/process-import-history';
+export { sendImportErrorNotification } from '../import-source/send-import-error-notification';
+export { updateImportRun } from '../import-source/update-import-run';
+export { updateImportSourceTimestamps } from '../import-source/update-import-source-timestamps';
+export { updateImportSourceWorkflowStatus } from '../import-source/update-import-source-workflow-status';
 export { default as abortMultipartUpload } from './abort-multipart-upload';
 export {
   type BackfillOriginalImageBatchResult,
@@ -43,7 +60,10 @@ export {
 export { default as deleteOldThumbnails } from './delete-old-thumbnails';
 export * from './delete-upload-record';
 export { default as finalizeUploadRecord } from './finalize-upload-record';
-export { default as geocodeOrganization } from './geocode-organization';
+export {
+  default as geocodeOrganization,
+  validateGeocodeConfig,
+} from './geocode-organization';
 export { default as getFinalizedUploadKey } from './get-finalized-upload-key';
 export { default as getProbe } from './get-probe';
 export { default as indexDocument } from './index-document';
@@ -55,8 +75,14 @@ export {
 export { default as processImage } from './process-image';
 export { default as recordDownloadSize } from './record-download-size';
 export { default as restitchTranscript } from './restitch-transcript';
-export { default as sendEmail } from './send-email';
-export { default as sendVerificationEmail } from './send-verification-email';
+export {
+  default as sendEmail,
+  validateSendEmailConfig,
+} from './send-email';
+export {
+  default as sendVerificationEmail,
+  validateSendVerificationEmailConfig,
+} from './send-verification-email';
 export { default as setChannelAvatar } from './set-channel-avatar';
 export { default as setChannelDefaultThumbnail } from './set-channel-default-thumbnail';
 export { default as setOrganizationAvatar } from './set-organization-avatar';

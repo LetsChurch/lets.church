@@ -2,12 +2,6 @@ import { createTransport, type SendMailOptions } from 'nodemailer';
 import { z } from 'zod';
 import logger from '../../util/logger';
 
-const { SMTP_URL } = z.object({ SMTP_URL: z.string() }).parse(process.env);
-
-const transport = createTransport(SMTP_URL, {
-  opportunisticTLS: true,
-});
-
 export type EmailArgs = SendMailOptions;
 
 const moduleLogger = logger.child({
@@ -15,9 +9,25 @@ const moduleLogger = logger.child({
   temporalActivity: 'importMedia',
 });
 
+let transport: ReturnType<typeof createTransport> | null = null;
+
+export function validateSendEmailConfig() {
+  z.object({ SMTP_URL: z.string() }).parse(process.env);
+}
+
+function getTransport() {
+  if (!transport) {
+    const { SMTP_URL } = z.object({ SMTP_URL: z.string() }).parse(process.env);
+    transport = createTransport(SMTP_URL, {
+      opportunisticTLS: true,
+    });
+  }
+  return transport;
+}
+
 export default async function sendEmailActivity(args: EmailArgs) {
   moduleLogger.info(`Sending email from ${args.from} to ${args.to}`);
-  const res = await transport.sendMail(args);
+  const res = await getTransport().sendMail(args);
   moduleLogger.info('Done!');
   return res;
 }

@@ -12,6 +12,7 @@ import { login } from '@/util/auth';
 import { createSessionJwt } from '@/util/jwt';
 import logger from '@/util/logger';
 import { getClientIpAddress } from '@/util/request-ip';
+import { generateResetPasswordEmail } from '@/util/reset-password-email';
 import { validateTurnstile } from '@/util/turnstile';
 import testPassword from '@/util/zxcvbn';
 import { anonProcedure } from '../trpc';
@@ -232,9 +233,6 @@ export const authProcedures = {
             const emailRecord = user.emails[0];
 
             if (emailRecord) {
-              const { generateResetPasswordEmail } = await import(
-                '@/util/reset-password-email'
-              );
               const { text, html } = generateResetPasswordEmail(
                 user.id,
                 user.username,

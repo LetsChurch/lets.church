@@ -5,6 +5,7 @@ import {
   Group,
   SimpleGrid,
   Stack,
+  Table,
   Text,
   Title,
   Tooltip,
@@ -86,6 +87,12 @@ function ChannelDetailsPage() {
 
   const { data: channel } = useSuspenseQuery(
     trpc.dashboard.channels.getChannelDetails.queryOptions({
+      channelId: params.channelId,
+    }),
+  );
+
+  const { data: importStats } = useSuspenseQuery(
+    trpc.dashboard.importSources.getStats.queryOptions({
       channelId: params.channelId,
     }),
   );
@@ -297,6 +304,70 @@ function ChannelDetailsPage() {
           value={channel._count.subscribers}
         />
       </SimpleGrid>
+
+      {importStats.length > 0 && (
+        <Stack gap="md">
+          <Title order={3}>Import Sources</Title>
+          <Table>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Source URL</Table.Th>
+                <Table.Th>Last Import</Table.Th>
+                <Table.Th>Earliest Date</Table.Th>
+                <Table.Th>Status</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {importStats.map((stat) => (
+                <Table.Tr key={stat.id}>
+                  <Table.Td>
+                    <Text
+                      size="sm"
+                      style={{
+                        maxWidth: '400px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {stat.url}
+                    </Text>
+                  </Table.Td>
+                  <Table.Td>
+                    {stat.lastImportedAt
+                      ? formatDate(stat.lastImportedAt)
+                      : 'Never'}
+                  </Table.Td>
+                  <Table.Td>
+                    {stat.earliestImportDate
+                      ? formatDate(stat.earliestImportDate)
+                      : 'N/A'}
+                  </Table.Td>
+                  <Table.Td>
+                    <Badge
+                      color={
+                        stat.workflowStatus === 'RUNNING' && stat.enabled
+                          ? 'green'
+                          : !stat.enabled || stat.workflowStatus === 'PAUSED'
+                            ? 'gray'
+                            : stat.workflowStatus === 'FAILED'
+                              ? 'red'
+                              : 'yellow'
+                      }
+                    >
+                      {!stat.enabled
+                        ? 'Paused'
+                        : stat.workflowStatus === 'RUNNING'
+                          ? 'Running'
+                          : stat.workflowStatus}
+                    </Badge>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Stack>
+      )}
     </Stack>
   );
 }
