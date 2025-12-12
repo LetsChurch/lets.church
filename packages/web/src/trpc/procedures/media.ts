@@ -32,7 +32,10 @@ const md = unified()
   .use(remarkParse)
   .use(remarkBreaks)
   .use(remarkRehype)
-  .use(rehypeExternalLinks, { rel: ['nofollow'], target: '_blank' })
+  .use(rehypeExternalLinks, {
+    rel: ['nofollow', 'noopener', 'noreferrer'],
+    target: '_blank',
+  })
   .use(rehypeStringify);
 
 const TWO64 = 1n << 64n;
