@@ -24,6 +24,7 @@ import { useStore } from '@nanostores/react';
 import {
   IconCheck,
   IconCopy,
+  IconEye,
   IconEyeOff,
   IconPhoto,
   IconStar,
@@ -37,7 +38,12 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
+import {
+  createFileRoute,
+  Link,
+  redirect,
+  useNavigate,
+} from '@tanstack/react-router';
 import HlsVideo from 'hls-video-element/react';
 import { useCallback, useEffect, useState } from 'react';
 import { useAppMantineForm } from '@/components/mantine';
@@ -643,6 +649,17 @@ function ChannelUploadPage() {
                 )}
               </form.Subscribe>
             </Group>
+
+            {/* View Media Page Button */}
+            <Button
+              component={Link}
+              to={`/media/${uploadId}`}
+              variant="light"
+              leftSection={<IconEye size={16} />}
+              fullWidth
+            >
+              View Media Page
+            </Button>
 
             {/* Featured Toggle - Only for site admins */}
             {isSiteAdmin ? (

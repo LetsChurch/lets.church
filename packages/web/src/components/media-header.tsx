@@ -44,6 +44,8 @@ type MediaHeaderProps = {
   };
   hasVideo?: boolean;
   hasAudio?: boolean;
+  uploadId?: string;
+  canEditUpload?: boolean;
 };
 
 export function MediaHeader({
@@ -59,6 +61,8 @@ export function MediaHeader({
   mediaDimensions,
   hasVideo,
   hasAudio,
+  uploadId,
+  canEditUpload,
 }: MediaHeaderProps) {
   return (
     <div className="mt-8 flex flex-col gap-3">
@@ -83,6 +87,8 @@ export function MediaHeader({
         mediaDimensions={mediaDimensions}
         hasVideo={hasVideo}
         hasAudio={hasAudio}
+        uploadId={uploadId}
+        canEditUpload={canEditUpload}
         channelLink={
           <Link
             to="/channel/$slug"

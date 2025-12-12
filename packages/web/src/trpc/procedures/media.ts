@@ -15,6 +15,7 @@ import {
   IncomingIdSchema,
   OutgoingIdSchema,
 } from '@/schemas/common';
+import { canChannel, createChannelAuthContext } from '@/util/authorization';
 import { appAvatarXs2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { getClientIpAddress } from '@/util/request-ip';
@@ -239,6 +240,26 @@ export const mediaProcedures = {
         isSaved = !!savedMedia;
       }
 
+      // Check if current user can edit this media
+      let canEdit = false;
+      if (ctx.session) {
+        const membership = await prisma.channelMembership.findUnique({
+          where: {
+            channelId_appUserId: {
+              channelId: channel.id,
+              appUserId: ctx.session.appUserId,
+            },
+          },
+          select: {
+            isAdmin: true,
+            canEdit: true,
+          },
+        });
+
+        const authContext = createChannelAuthContext(ctx.session, membership);
+        canEdit = canChannel.edit(authContext);
+      }
+
       // Generate download URLs based on available variants
       type MediaDownloadKind =
         | 'VIDEO_4K'
@@ -325,6 +346,7 @@ export const mediaProcedures = {
         downloadsEnabled,
         downloadUrls,
         isSaved,
+        canEdit,
         channel: {
           id: OutgoingIdSchema.parse(channel.id),
           name: channel.name,

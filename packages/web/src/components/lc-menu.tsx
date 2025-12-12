@@ -44,7 +44,7 @@ export function LcMenuPopup({
 }: LcMenuPopupProps) {
   return (
     <Menu.Popup
-      className={`min-w-[200px] rounded-lg border-fancy-pants bg-white p-1 shadow-xl transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:bg-zinc-900 ${className}`}
+      className={`min-w-[200px] rounded-lg border-fancy-pants bg-white p-1 shadow-xl transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0 dark:bg-zinc-900 ${className}`}
       {...props}
     >
       {children}
@@ -83,6 +83,10 @@ export const LcMenu = {
   Separator: LcMenuSeparator,
 };
 
+// Shared styling for all menu item variants
+const menuItemClassName =
+  'flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-primary text-sm outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100 data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-zinc-800 dark:focus:bg-zinc-800 dark:hover:bg-zinc-800';
+
 // Helper component for menu items with consistent styling
 type MenuItemButtonProps = {
   onClick?: () => void;
@@ -104,7 +108,7 @@ export function MenuItemButton({
           {...props}
           type="button"
           onClick={onClick}
-          className={`flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-primary text-sm outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100 data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-zinc-800 dark:focus:bg-zinc-800 dark:hover:bg-zinc-800 ${className}`}
+          className={`${menuItemClassName} ${className}`}
         >
           {icon ? icon : null}
           {children}
@@ -136,7 +140,7 @@ export function MenuItemLink({
           {...props}
           href={href}
           download={download}
-          className={`flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-primary text-sm outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100 data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-zinc-800 dark:focus:bg-zinc-800 dark:hover:bg-zinc-800 ${className}`}
+          className={`${menuItemClassName} ${className}`}
         >
           {icon ? icon : null}
           {children}
@@ -146,26 +150,25 @@ export function MenuItemLink({
   );
 }
 
-type MenuItemRouterLinkProps = {
-  to: LinkProps['to'];
+type MenuItemRouterLinkProps = Omit<LinkProps, 'className' | 'children'> & {
   children: ReactNode;
   icon?: ReactNode;
   className?: string;
 };
 
 export function MenuItemRouterLink({
-  to,
   children,
   icon,
   className = '',
+  ...linkProps
 }: MenuItemRouterLinkProps) {
   return (
     <LcMenuItem
       render={(props) => (
         <Link
           {...props}
-          to={to}
-          className={`flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-primary text-sm outline-none transition-colors hover:bg-gray-100 focus:bg-gray-100 data-[highlighted]:bg-gray-100 dark:data-[highlighted]:bg-zinc-800 dark:focus:bg-zinc-800 dark:hover:bg-zinc-800 ${className}`}
+          {...linkProps}
+          className={`${menuItemClassName} ${className}`}
         >
           {icon ? icon : null}
           {children}

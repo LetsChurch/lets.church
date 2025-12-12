@@ -684,6 +684,8 @@ function RouteComponent() {
               }
               hasVideo={!!media.mediaSource}
               hasAudio={!!media.audioSource}
+              uploadId={params.mediaId}
+              canEditUpload={media.canEdit}
             />
 
             <MediaInfoTabs

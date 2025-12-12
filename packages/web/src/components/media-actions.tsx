@@ -11,6 +11,7 @@ import {
   IconCopy,
   IconDeviceTvOld,
   IconDots,
+  IconEdit,
   IconFlag,
   IconFlagFilled,
   IconShare2,
@@ -24,7 +25,12 @@ import type { ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import LcButton from '@/components/lc-button';
 import LcButtonGroup from '@/components/lc-button-group';
-import { LcMenu, MenuItemButton, MenuItemLink } from '@/components/lc-menu';
+import {
+  LcMenu,
+  MenuItemButton,
+  MenuItemLink,
+  MenuItemRouterLink,
+} from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { LcTooltip } from '@/components/lc-tooltip';
 import { useAbortController } from '@/hooks/use-abort-controller';
@@ -69,6 +75,8 @@ type MediaActionsProps = {
   hasVideo?: boolean;
   hasAudio?: boolean;
   channelLink?: ReactNode;
+  uploadId?: string;
+  canEditUpload?: boolean;
 };
 
 const windowConfig = Object.entries({
@@ -120,6 +128,8 @@ export function MediaActions({
   hasVideo = true,
   hasAudio = false,
   channelLink,
+  uploadId,
+  canEditUpload = false,
 }: MediaActionsProps) {
   const abortController = useAbortController();
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -364,6 +374,17 @@ export function MediaActions({
             <LcMenu.Portal>
               <LcMenu.Positioner sideOffset={8} align="start">
                 <LcMenu.Popup>
+                  {/* Edit Upload */}
+                  {canEditUpload && uploadId ? (
+                    <MenuItemRouterLink
+                      to="/dashboard/channels/$channelId/uploads/$uploadId"
+                      params={{ channelId: channelData.id, uploadId }}
+                      icon={<IconEdit size={16} />}
+                    >
+                      Edit Upload
+                    </MenuItemRouterLink>
+                  ) : null}
+
                   {/* Embed */}
                   {hasVideo ? (
                     <MenuItemButton
