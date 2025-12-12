@@ -13,7 +13,7 @@
   },
   "license": "UNLICENSE",
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.224.0",
+    "@aws-sdk/client-s3": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

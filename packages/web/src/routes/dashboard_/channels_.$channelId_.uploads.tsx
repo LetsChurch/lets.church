@@ -26,6 +26,7 @@ import { notifications } from '@mantine/notifications';
 import { useStore } from '@nanostores/react';
 import {
   IconChevronDown,
+  IconDotsVertical,
   IconDownload,
   IconEdit,
   IconEye,
@@ -294,6 +295,22 @@ function ChannelUploadsPage() {
     }),
   );
 
+  const downloadOriginalMutation = useMutation(
+    trpc.dashboard.channels.getOriginalDownloadUrl.mutationOptions({
+      onSuccess: ({ url }) => {
+        window.open(url, '_blank');
+      },
+      onError: (error) => {
+        showFailure({
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Failed to get download URL',
+        });
+      },
+    }),
+  );
+
   const getVisibilityIcon = (visibility: string) => {
     switch (visibility) {
       case 'PUBLIC':
@@ -343,6 +360,7 @@ function ChannelUploadsPage() {
     setCurrentFile(file);
     createUploadMutation.mutate({
       channelId: channel.id,
+      originalFileName: file.name,
     });
   };
 
@@ -969,92 +987,97 @@ function ChannelUploadsPage() {
                     </Text>
                   </Table.Td>
                   <Table.Td onClick={(e) => e.stopPropagation()}>
-                    <Group gap="xs">
-                      {isSiteAdmin ? (
-                        <Tooltip
-                          label={
-                            upload.isFeatured
-                              ? 'Remove from featured'
-                              : 'Add to featured'
-                          }
-                        >
-                          <ActionIcon
-                            variant="subtle"
-                            color={upload.isFeatured ? 'yellow' : 'gray'}
-                            size="sm"
-                            onClick={() => {
+                    <Menu position="bottom-end">
+                      <Menu.Target>
+                        <ActionIcon variant="subtle" color="gray" size="sm">
+                          <IconDotsVertical size={16} />
+                        </ActionIcon>
+                      </Menu.Target>
+                      <Menu.Dropdown>
+                        {(() => {
+                          const canEditUpload =
+                            (isAdmin || canEdit) && !isDeleted;
+                          return canEditUpload ? (
+                            <Menu.Item
+                              leftSection={<IconEdit size={16} />}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate({
+                                  to: `/dashboard/channels/${data.channel.id}/uploads/${upload.id}`,
+                                });
+                              }}
+                            >
+                              Edit
+                            </Menu.Item>
+                          ) : null;
+                        })()}
+
+                        {(() => {
+                          const canDownloadUpload =
+                            isAdmin ||
+                            (channel.userMembership?.canDownload ?? false);
+                          return canDownloadUpload &&
+                            upload.finalizedUploadKey ? (
+                            <Menu.Item
+                              leftSection={<IconDownload size={16} />}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                downloadOriginalMutation.mutate({
+                                  channelId: channel.id,
+                                  uploadId: upload.id,
+                                });
+                              }}
+                            >
+                              Download Original
+                            </Menu.Item>
+                          ) : null;
+                        })()}
+
+                        {isSiteAdmin ? (
+                          <Menu.Item
+                            leftSection={
+                              upload.isFeatured ? (
+                                <IconStarFilled size={16} />
+                              ) : (
+                                <IconStar size={16} />
+                              )
+                            }
+                            onClick={(e) => {
+                              e.stopPropagation();
                               toggleFeaturedMutation.mutate({
                                 uploadId: upload.id,
                               });
                             }}
-                            loading={toggleFeaturedMutation.isPending}
                           >
-                            {upload.isFeatured ? (
-                              <IconStarFilled size={16} />
-                            ) : (
-                              <IconStar size={16} />
-                            )}
-                          </ActionIcon>
-                        </Tooltip>
-                      ) : null}
-                      {(() => {
-                        const canEditUpload =
-                          (isAdmin || canEdit) && !isDeleted;
-                        const tooltipText = isDeleted
-                          ? 'Upload is being deleted'
-                          : canEditUpload
-                            ? 'Edit this upload'
-                            : 'Only admins and editors can edit uploads';
+                            {upload.isFeatured
+                              ? 'Remove from Featured'
+                              : 'Add to Featured'}
+                          </Menu.Item>
+                        ) : null}
 
-                        return (
-                          <Tooltip label={tooltipText}>
-                            <ActionIcon
-                              variant="subtle"
-                              size="sm"
-                              disabled={!canEditUpload}
-                              onClick={() => {
-                                if (canEditUpload) {
-                                  navigate({
-                                    to: `/dashboard/channels/${data.channel.id}/uploads/${upload.id}`,
-                                  });
-                                }
-                              }}
-                            >
-                              <IconEdit size={16} />
-                            </ActionIcon>
-                          </Tooltip>
-                        );
-                      })()}
-                      {(() => {
-                        const canDeleteUpload = canDelete && !isDeleted;
-                        const tooltipText = isDeleted
-                          ? 'Upload is being deleted'
-                          : canDelete
-                            ? 'Delete this upload'
-                            : 'Only channel admins and site admins can delete uploads';
-
-                        return (
-                          <Tooltip label={tooltipText}>
-                            <ActionIcon
-                              variant="subtle"
-                              color="red"
-                              size="sm"
-                              disabled={!canDeleteUpload}
-                              onClick={() => {
-                                if (canDeleteUpload) {
+                        {(() => {
+                          const canDeleteUpload = canDelete && !isDeleted;
+                          return canDeleteUpload ? (
+                            <>
+                              <Menu.Divider />
+                              <Menu.Item
+                                color="red"
+                                leftSection={<IconTrash size={16} />}
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setUploadToDelete({
                                     id: upload.id,
                                     title: upload.title || 'Untitled Upload',
                                   });
-                                }
-                              }}
-                            >
-                              <IconTrash size={16} />
-                            </ActionIcon>
-                          </Tooltip>
-                        );
-                      })()}
-                    </Group>
+                                }}
+                              >
+                                Delete
+                              </Menu.Item>
+                            </>
+                          ) : null;
+                        })()}
+                      </Menu.Dropdown>
+                    </Menu>
                   </Table.Td>
                 </Table.Tr>
               );

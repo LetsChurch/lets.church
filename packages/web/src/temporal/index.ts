@@ -28,6 +28,11 @@ import {
   updateUploadRecordWorkflow,
   uploadDoneSignal,
 } from '@letschurch/temporal/workflows/background';
+import {
+  type BackfillFilenamesWorkflowParams,
+  backfillFilenamesWorkflow,
+  getBackfillFilenamesProgressQuery,
+} from '@letschurch/temporal/workflows/background/backfill-original-filenames';
 import { recordDownloadSizeWorkflow } from '@letschurch/temporal/workflows/background/record-download-size';
 import {
   completeResetPasswordSignal,
@@ -524,6 +529,53 @@ export async function getBackfillUploadStateSizesProgress() {
 
 export async function cancelBackfillUploadStateSizes() {
   const handle = (await client).workflow.getHandle(BACKFILL_SIZES_WORKFLOW_ID);
+  await handle.cancel();
+}
+
+const BACKFILL_FILENAMES_WORKFLOW_ID = 'backfillOriginalFilenames';
+
+export async function startBackfillFilenames(
+  params: BackfillFilenamesWorkflowParams,
+) {
+  return (await client).workflow.start(backfillFilenamesWorkflow, {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    workflowId: BACKFILL_FILENAMES_WORKFLOW_ID,
+    args: [params],
+  });
+}
+
+export async function getBackfillFilenamesProgress() {
+  try {
+    const handle = (await client).workflow.getHandle(
+      BACKFILL_FILENAMES_WORKFLOW_ID,
+    );
+    const description = await handle.describe();
+
+    if (description.status.name === 'RUNNING') {
+      const progress = await handle.query(getBackfillFilenamesProgressQuery);
+      return { status: 'running' as const, ...progress };
+    }
+
+    if (description.status.name === 'COMPLETED') {
+      return { status: 'completed' as const };
+    }
+
+    if (description.status.name === 'CANCELLED') {
+      return { status: 'cancelled' as const };
+    }
+
+    return { status: 'failed' as const };
+  } catch {
+    // Workflow doesn't exist
+    return null;
+  }
+}
+
+export async function cancelBackfillFilenames() {
+  const handle = (await client).workflow.getHandle(
+    BACKFILL_FILENAMES_WORKFLOW_ID,
+  );
   await handle.cancel();
 }
 

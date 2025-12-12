@@ -55,6 +55,7 @@ import { Route as DashboardAdminImportSourcesRouteImport } from './routes/dashbo
 import { Route as DashboardAdminFeaturedRouteImport } from './routes/dashboard_/admin_/featured'
 import { Route as DashboardAdminFailedUploadsRouteImport } from './routes/dashboard_/admin_.failed-uploads'
 import { Route as DashboardAdminChannelsRouteImport } from './routes/dashboard_/admin_.channels'
+import { Route as DashboardAdminBackfillFilenamesRouteImport } from './routes/dashboard_/admin_.backfill-filenames'
 import { Route as DashboardAccountSecurityRouteImport } from './routes/dashboard_/account_.security'
 import { Route as DashboardAccountProfileRouteImport } from './routes/dashboard_/account_.profile'
 import { Route as DashboardAccountNewsletterRouteImport } from './routes/dashboard_/account_.newsletter'
@@ -323,6 +324,12 @@ const DashboardAdminChannelsRoute = DashboardAdminChannelsRouteImport.update({
   path: '/admin/channels',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardAdminBackfillFilenamesRoute =
+  DashboardAdminBackfillFilenamesRouteImport.update({
+    id: '/admin_/backfill-filenames',
+    path: '/admin/backfill-filenames',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardAccountSecurityRoute =
   DashboardAccountSecurityRouteImport.update({
     id: '/account_/security',
@@ -515,6 +522,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/account/newsletter': typeof DashboardAccountNewsletterRoute
   '/dashboard/account/profile': typeof DashboardAccountProfileRoute
   '/dashboard/account/security': typeof DashboardAccountSecurityRoute
+  '/dashboard/admin/backfill-filenames': typeof DashboardAdminBackfillFilenamesRoute
   '/dashboard/admin/channels': typeof DashboardAdminChannelsRoute
   '/dashboard/admin/failed-uploads': typeof DashboardAdminFailedUploadsRoute
   '/dashboard/admin/featured': typeof DashboardAdminFeaturedRoute
@@ -587,6 +595,7 @@ export interface FileRoutesByTo {
   '/dashboard/account/newsletter': typeof DashboardAccountNewsletterRoute
   '/dashboard/account/profile': typeof DashboardAccountProfileRoute
   '/dashboard/account/security': typeof DashboardAccountSecurityRoute
+  '/dashboard/admin/backfill-filenames': typeof DashboardAdminBackfillFilenamesRoute
   '/dashboard/admin/channels': typeof DashboardAdminChannelsRoute
   '/dashboard/admin/failed-uploads': typeof DashboardAdminFailedUploadsRoute
   '/dashboard/admin/featured': typeof DashboardAdminFeaturedRoute
@@ -663,6 +672,7 @@ export interface FileRoutesById {
   '/dashboard_/account_/newsletter': typeof DashboardAccountNewsletterRoute
   '/dashboard_/account_/profile': typeof DashboardAccountProfileRoute
   '/dashboard_/account_/security': typeof DashboardAccountSecurityRoute
+  '/dashboard_/admin_/backfill-filenames': typeof DashboardAdminBackfillFilenamesRoute
   '/dashboard_/admin_/channels': typeof DashboardAdminChannelsRoute
   '/dashboard_/admin_/failed-uploads': typeof DashboardAdminFailedUploadsRoute
   '/dashboard_/admin_/featured': typeof DashboardAdminFeaturedRoute
@@ -739,6 +749,7 @@ export interface FileRouteTypes {
     | '/dashboard/account/newsletter'
     | '/dashboard/account/profile'
     | '/dashboard/account/security'
+    | '/dashboard/admin/backfill-filenames'
     | '/dashboard/admin/channels'
     | '/dashboard/admin/failed-uploads'
     | '/dashboard/admin/featured'
@@ -811,6 +822,7 @@ export interface FileRouteTypes {
     | '/dashboard/account/newsletter'
     | '/dashboard/account/profile'
     | '/dashboard/account/security'
+    | '/dashboard/admin/backfill-filenames'
     | '/dashboard/admin/channels'
     | '/dashboard/admin/failed-uploads'
     | '/dashboard/admin/featured'
@@ -886,6 +898,7 @@ export interface FileRouteTypes {
     | '/dashboard_/account_/newsletter'
     | '/dashboard_/account_/profile'
     | '/dashboard_/account_/security'
+    | '/dashboard_/admin_/backfill-filenames'
     | '/dashboard_/admin_/channels'
     | '/dashboard_/admin_/failed-uploads'
     | '/dashboard_/admin_/featured'
@@ -1258,6 +1271,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAdminChannelsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard_/admin_/backfill-filenames': {
+      id: '/dashboard_/admin_/backfill-filenames'
+      path: '/admin/backfill-filenames'
+      fullPath: '/dashboard/admin/backfill-filenames'
+      preLoaderRoute: typeof DashboardAdminBackfillFilenamesRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard_/account_/security': {
       id: '/dashboard_/account_/security'
       path: '/account/security'
@@ -1534,6 +1554,7 @@ interface DashboardRouteChildren {
   DashboardAccountNewsletterRoute: typeof DashboardAccountNewsletterRoute
   DashboardAccountProfileRoute: typeof DashboardAccountProfileRoute
   DashboardAccountSecurityRoute: typeof DashboardAccountSecurityRoute
+  DashboardAdminBackfillFilenamesRoute: typeof DashboardAdminBackfillFilenamesRoute
   DashboardAdminChannelsRoute: typeof DashboardAdminChannelsRoute
   DashboardAdminFailedUploadsRoute: typeof DashboardAdminFailedUploadsRoute
   DashboardAdminFeaturedRoute: typeof DashboardAdminFeaturedRoute
@@ -1576,6 +1597,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAccountNewsletterRoute: DashboardAccountNewsletterRoute,
   DashboardAccountProfileRoute: DashboardAccountProfileRoute,
   DashboardAccountSecurityRoute: DashboardAccountSecurityRoute,
+  DashboardAdminBackfillFilenamesRoute: DashboardAdminBackfillFilenamesRoute,
   DashboardAdminChannelsRoute: DashboardAdminChannelsRoute,
   DashboardAdminFailedUploadsRoute: DashboardAdminFailedUploadsRoute,
   DashboardAdminFeaturedRoute: DashboardAdminFeaturedRoute,

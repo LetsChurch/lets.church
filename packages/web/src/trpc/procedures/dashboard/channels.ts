@@ -5,6 +5,7 @@ import { sendEmailWorkflow } from '@letschurch/temporal/workflows/background/sen
 import { TRPCError } from '@trpc/server';
 import { invariant } from 'es-toolkit';
 import { stripIndent } from 'proper-tags';
+import sanitizeFilename from 'sanitize-filename';
 import { z } from 'zod';
 import {
   finalizeMultipartUploadSchema,
@@ -643,6 +644,7 @@ export const channelRouter = router({
             isAdmin: input.isAdmin,
             canEdit: input.canEdit,
             canUpload: input.canUpload,
+            canDownload: input.canDownload,
             addedBy: ctx.session.appUserId,
           },
         },
@@ -657,6 +659,7 @@ export const channelRouter = router({
             isAdmin: input.isAdmin,
             canEdit: input.canEdit,
             canUpload: input.canUpload,
+            canDownload: input.canDownload,
           },
         });
 
@@ -806,6 +809,7 @@ export const channelRouter = router({
               isAdmin: true,
               canEdit: true,
               canUpload: true,
+              canDownload: true,
               appUser: {
                 select: {
                   id: true,
@@ -837,6 +841,7 @@ export const channelRouter = router({
             visibility: true,
             createdAt: true,
             lengthSeconds: true,
+            finalizedUploadKey: true,
             defaultThumbnailPath: true,
             overrideThumbnailPath: true,
             featuredUpload: {
@@ -953,6 +958,7 @@ export const channelRouter = router({
         data: {
           license: UploadLicense.STANDARD,
           visibility: 'PRIVATE',
+          originalFileName: input.originalFileName,
           channel: {
             connect: {
               id: input.channelId,
@@ -1254,6 +1260,85 @@ export const channelRouter = router({
         return true;
       },
     ),
+
+  getOriginalDownloadUrl: channelProcedure
+    .input(
+      z.object({
+        uploadId: z.uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Fetch upload only if user has channel membership
+      const upload = await prisma.uploadRecord.findFirst({
+        where: {
+          id: input.uploadId,
+          channel: {
+            memberships: {
+              some: {
+                appUserId: ctx.session.appUserId,
+              },
+            },
+          },
+        },
+        select: {
+          id: true,
+          finalizedUploadKey: true,
+          originalFileName: true,
+          title: true,
+          channel: {
+            select: {
+              id: true,
+              memberships: {
+                where: { appUserId: ctx.session.appUserId },
+                select: {
+                  isAdmin: true,
+                  canDownload: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!upload) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Upload not found',
+        });
+      }
+
+      if (!upload.finalizedUploadKey) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Upload not finalized yet',
+        });
+      }
+
+      // Check permission
+      const membership = upload.channel.memberships[0];
+      const authContext = createChannelAuthContext(ctx.session, membership);
+
+      // TODO: get rid of this check in favor of the db check above?
+      if (!canChannel.download(authContext)) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You do not have permission to download original files',
+        });
+      }
+
+      // Generate filename
+      const filename =
+        upload.originalFileName ||
+        `${sanitizeFilename(upload.title || 'media')}.bin`;
+
+      // Generate signed URL using ingest bucket
+      const url = await ingestS3.getSignedGetObject(upload.finalizedUploadKey, {
+        responseContentDisposition: `attachment; filename="${sanitizeFilename(filename)}"`,
+        expiresIn: 3600, // 1 hour
+      });
+
+      return { url };
+    }),
 
   // Playlist procedures
   getChannelPlaylists: channelProcedure.query(async ({ ctx, input }) => {

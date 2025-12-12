@@ -17,6 +17,11 @@ export { updateImportSourceTimestamps } from '../import-source/update-import-sou
 export { updateImportSourceWorkflowStatus } from '../import-source/update-import-source-workflow-status';
 export { default as abortMultipartUpload } from './abort-multipart-upload';
 export {
+  type BackfillFilenamesBatchResult,
+  backfillFilenamesBatch,
+  getBackfillFilenamesCount,
+} from './backfill-original-filenames';
+export {
   type BackfillOriginalImageBatchResult,
   backfillOriginalImageUploadStatesBatch,
 } from './backfill-original-image-upload-states';

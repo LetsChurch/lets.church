@@ -17,18 +17,21 @@ import {
   reorderFeaturedUploadsSchema,
 } from '@/schemas/dashboard/admin';
 import {
+  cancelBackfillFilenames,
   cancelBackfillUploadStateSizes,
   cancelBackfillUploadStates,
   cancelBulkBackupToGlacier,
   cancelCleanupStaleUploadStates,
   cancelMigrateViewRanges,
   client,
+  getBackfillFilenamesProgress,
   getBackfillUploadStateSizesProgress,
   getBackfillUploadStatesProgress,
   getBulkBackupToGlacierProgress,
   getCleanupStaleUploadStatesProgress,
   getMigrateViewRangesProgress,
   resetPassword,
+  startBackfillFilenames,
   startBackfillUploadStateSizes,
   startBackfillUploadStates,
   startBulkBackupToGlacier,
@@ -2241,6 +2244,7 @@ export const adminRouter = router({
           appUserId: ctx.session.appUserId,
           context: {
             error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
           },
         },
         'Failed to cancel backfill upload states',
@@ -2480,6 +2484,135 @@ export const adminRouter = router({
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to cancel backfill sizes',
+      });
+    }
+  }),
+
+  getBackfillFilenamesStatus: adminProcedure.query(async () => {
+    const [remainingCount, progress] = await Promise.all([
+      prisma.uploadRecord.count({
+        where: {
+          uploadFinalized: true,
+          finalizedUploadKey: { not: null },
+          originalFileName: null,
+        },
+      }),
+      getBackfillFilenamesProgress(),
+    ]);
+
+    return {
+      remainingCount,
+      workflowStatus: progress,
+    };
+  }),
+
+  startBackfillFilenames: adminProcedure
+    .input(
+      z.object({
+        batchSize: z.number().min(1).max(1000).default(50),
+        delayBetweenBatchesMs: z.number().min(0).max(10000).default(500),
+        maxRows: z.number().min(1).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            batchSize: input.batchSize,
+            delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+            maxRows: input.maxRows,
+          },
+        },
+        'Starting backfill original filenames',
+      );
+
+      try {
+        // Check if backfill is already running
+        const progress = await getBackfillFilenamesProgress();
+        if (progress?.status === 'running') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Backfill is already running',
+          });
+        }
+
+        await startBackfillFilenames({
+          batchSize: input.batchSize,
+          delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+          maxRows: input.maxRows,
+        });
+
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              batchSize: input.batchSize,
+              delayBetweenBatchesMs: input.delayBetweenBatchesMs,
+              maxRows: input.maxRows,
+            },
+          },
+          'Backfill original filenames started successfully',
+        );
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined,
+            },
+          },
+          'Failed to start backfill original filenames',
+        );
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to start backfill filenames',
+        });
+      }
+    }),
+
+  cancelBackfillFilenames: adminProcedure.mutation(async ({ ctx }) => {
+    moduleLogger.info(
+      {
+        appUserId: ctx.session.appUserId,
+      },
+      'Cancelling backfill original filenames',
+    );
+
+    try {
+      await cancelBackfillFilenames();
+
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+        },
+        'Backfill original filenames cancelled successfully',
+      );
+
+      return { success: true };
+    } catch (error) {
+      moduleLogger.error(
+        {
+          appUserId: ctx.session.appUserId,
+          context: {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+          },
+        },
+        'Failed to cancel backfill original filenames',
+      );
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to cancel backfill filenames',
       });
     }
   }),

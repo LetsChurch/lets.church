@@ -25,6 +25,7 @@ type ChannelMembership = {
   isAdmin?: boolean;
   canEdit?: boolean;
   canUpload?: boolean;
+  canDownload?: boolean;
 };
 
 /**
@@ -179,6 +180,17 @@ export const canChannel = {
   upload: createChannelPolicy(
     (ctx) =>
       ctx.membership?.isAdmin === true || ctx.membership?.canUpload === true,
+  ),
+
+  /**
+   * Check if user can download original files from a channel
+   * - Site admins can download from any channel
+   * - Channel admins can download
+   * - Users with canDownload permission can download
+   */
+  download: createChannelPolicy(
+    (ctx) =>
+      ctx.membership?.isAdmin === true || ctx.membership?.canDownload === true,
   ),
 };
 

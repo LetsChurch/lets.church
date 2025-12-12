@@ -2,6 +2,8 @@ packages:
   - "./packages/*"
 
 catalog:
+  "@aws-sdk/client-s3": 3.948.0
+  "@aws-sdk/s3-request-presigner": 3.948.0
   "@biomejs/biome": "2.3.4"
   "@sentry/node": "^10.25.0"
   "@temporalio/activity": "^1.13.2"

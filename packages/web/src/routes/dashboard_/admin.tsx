@@ -40,6 +40,9 @@ export const Route = createFileRoute('/dashboard_/admin')({
       queryClient.ensureQueryData(
         trpc.dashboard.admin.getUploadBackupStats.queryOptions(),
       ),
+      queryClient.ensureQueryData(
+        trpc.dashboard.admin.getBackfillFilenamesStatus.queryOptions(),
+      ),
     ]);
     return {
       backNavigation: {
@@ -63,6 +66,10 @@ function AdminPage() {
 
   const { data: backupStats } = useSuspenseQuery(
     trpc.dashboard.admin.getUploadBackupStats.queryOptions(),
+  );
+
+  const { data: backfillStatus } = useSuspenseQuery(
+    trpc.dashboard.admin.getBackfillFilenamesStatus.queryOptions(),
   );
 
   // Lazy-load counts that require workflow status checks
@@ -288,6 +295,30 @@ function AdminPage() {
           <Text size="sm" c="dimmed">
             Manage S3 backups for uploaded media
           </Text>
+        </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
+          to="/dashboard/admin/backfill-filenames"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Backfill Filenames</Text>
+            {backfillStatus?.workflowStatus?.status === 'running' ? (
+              <Badge color="blue">Running</Badge>
+            ) : null}
+          </Group>
+          <Text size="sm" c="dimmed">
+            Detect file extensions for existing uploads
+          </Text>
+          {backfillStatus && backfillStatus.remainingCount > 0 ? (
+            <Text size="xs" c="dimmed" mt="xs">
+              {backfillStatus.remainingCount.toLocaleString()} uploads to
+              process
+            </Text>
+          ) : null}
         </Card>
         <Card
           shadow="xs"

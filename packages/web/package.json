@@ -96,6 +96,7 @@
     "remark-breaks": "^4.0.0",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.2",
+    "sanitize-filename": "^1.6.3",
     "short-uuid": "^5.2.0",
     "subtitle": "^4.2.2-alpha.0",
     "superjson": "^2.2.5",

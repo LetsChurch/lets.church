@@ -316,15 +316,16 @@ model Channel {
 }
 
 model ChannelMembership {
-  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  channelId String   @map("channel_id") @db.Uuid
-  appUser   AppUser  @relation(fields: [appUserId], references: [id], onDelete: Cascade)
-  appUserId String   @map("app_user_id") @db.Uuid
-  isAdmin   Boolean  @default(false) @map("is_admin")
-  canEdit   Boolean  @default(false) @map("can_edit")
-  canUpload Boolean  @default(false) @map("can_upload")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  channel     Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channelId   String   @map("channel_id") @db.Uuid
+  appUser     AppUser  @relation(fields: [appUserId], references: [id], onDelete: Cascade)
+  appUserId   String   @map("app_user_id") @db.Uuid
+  isAdmin     Boolean  @default(false) @map("is_admin")
+  canEdit     Boolean  @default(false) @map("can_edit")
+  canUpload   Boolean  @default(false) @map("can_upload")
+  canDownload Boolean  @default(false) @map("can_download")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@id([channelId, appUserId])
   @@map("channel_membership")
@@ -436,6 +437,7 @@ model UploadRecord {
   uploadFinalizedBy         AppUser?                   @relation("finalizedUploads", fields: [uploadFinalizedById], references: [id])
   uploadFinalizedById       String?                    @map("upload_finalized_by_id") @db.Uuid
   finalizedUploadKey        String?                    @map("finalized_upload_key")
+  originalFileName          String?                    @map("original_file_name")
   probe                     Json?
   defaultThumbnailPath      String?                    @map("default_thumbnail_path")
   defaultThumbnailBlurhash  String?                    @map("default_thumbnail_blurhash")

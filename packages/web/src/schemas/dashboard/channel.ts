@@ -4,6 +4,7 @@ import {
   UploadListType,
   UploadVisibility,
 } from '@letschurch/db/types';
+import sanitizeFilename from 'sanitize-filename';
 import { z } from 'zod';
 import { IncomingIdSchema } from '../common';
 
@@ -64,6 +65,7 @@ export const memberPermissionsSchema = z.object({
   isAdmin: z.boolean().default(false),
   canEdit: z.boolean().default(false),
   canUpload: z.boolean().default(true),
+  canDownload: z.boolean().default(false),
 });
 
 export const addMemberSchema = z
@@ -103,6 +105,10 @@ export const userSearchSchema = z.object({
 
 export const createUploadSchema = z.object({
   channelId: channelIdSchema,
+  originalFileName: z
+    .string()
+    .optional()
+    .transform((val) => (val ? sanitizeFilename(val) : val)),
 });
 
 export const deleteUploadSchema = z.object({
