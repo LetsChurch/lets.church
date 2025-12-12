@@ -1,5 +1,3 @@
-import '@mantine/core/styles.css';
-import '@mantine/notifications/styles.css';
 import {
   createTheme,
   type MantineColorScheme,

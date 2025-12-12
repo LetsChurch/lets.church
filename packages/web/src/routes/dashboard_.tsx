@@ -7,7 +7,9 @@ import {
   NavLink,
   UnstyledButton,
 } from '@mantine/core';
+import mantineCoreStyles from '@mantine/core/styles.css?url';
 import { useDisclosure } from '@mantine/hooks';
+import mantineNotificationStyles from '@mantine/notifications/styles.css?url';
 import { IconHelp } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -33,6 +35,12 @@ export const Route = createFileRoute('/dashboard_')({
       throw redirect({ to: '/auth/login' });
     }
   },
+  head: () => ({
+    links: [
+      { rel: 'stylesheet', href: mantineCoreStyles },
+      { rel: 'stylesheet', href: mantineNotificationStyles },
+    ],
+  }),
   component: DashboardLayout,
 });
 
