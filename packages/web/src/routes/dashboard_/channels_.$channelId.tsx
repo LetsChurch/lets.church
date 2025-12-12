@@ -222,7 +222,7 @@ function ChannelDetailsPage() {
             )}
           </div>
         </Group>
-        <Group>
+        <Stack>
           {isSiteAdmin &&
             (!isApproved ? (
               <Button
@@ -258,7 +258,7 @@ function ChannelDetailsPage() {
               )}
             />
           )}
-        </Group>
+        </Stack>
       </Group>
 
       <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">

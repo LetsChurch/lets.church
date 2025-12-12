@@ -1,8 +1,10 @@
 import { prisma, UploadViewSource } from '@letschurch/db';
 import { xxh64 } from '@node-rs/xxhash';
 import { getRequest } from '@tanstack/react-start/server';
+import rehypeExternalLinks from 'rehype-external-links';
 import rehypeStringify from 'rehype-stringify';
 import remarkBreaks from 'remark-breaks';
+import remarkLinkify from 'remark-linkify';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
@@ -26,9 +28,11 @@ const moduleLogger = logger.child({
 });
 
 const md = unified()
+  .use(remarkLinkify)
   .use(remarkParse)
   .use(remarkBreaks)
   .use(remarkRehype)
+  .use(rehypeExternalLinks, { rel: ['nofollow'], target: '_blank' })
   .use(rehypeStringify);
 
 const TWO64 = 1n << 64n;
