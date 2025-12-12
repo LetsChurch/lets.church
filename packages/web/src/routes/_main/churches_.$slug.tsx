@@ -150,7 +150,7 @@ function ChurchProfileComponent() {
       <div className="isolate mx-auto max-w-5xl px-6 pb-24">
         {/* Profile Header */}
         <div className="-mt-16 sm:-mt-20 mb-12">
-          <div className="flex items-center overflow-hidden rounded-full bg-white shadow-lg dark:bg-zinc-900 border-fancy-pants ">
+          <div className="flex items-center overflow-hidden rounded-full border-fancy-pants bg-white shadow-lg dark:bg-zinc-900">
             <Avatar
               src={church.avatarUrl}
               alt={church.name}
