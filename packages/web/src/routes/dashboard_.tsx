@@ -7,9 +7,7 @@ import {
   NavLink,
   UnstyledButton,
 } from '@mantine/core';
-import mantineCoreStyles from '@mantine/core/styles.css?url';
 import { useDisclosure } from '@mantine/hooks';
-import mantineNotificationStyles from '@mantine/notifications/styles.css?url';
 import { IconHelp } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -21,7 +19,7 @@ import {
 } from '@tanstack/react-router';
 import { useTRPC } from '@/trpc/react';
 import { BackButton } from '@/util/back-navigation';
-import { MantineWrapper } from './-mantine';
+import { MantineWrapper, mantineStyles } from './-mantine';
 import { HelpModal } from './dashboard_/-components/help-modal';
 import { DashboardSearchBar } from './dashboard_/-components/search-bar';
 import styles from './dashboard_/-styles.module.css';
@@ -36,10 +34,7 @@ export const Route = createFileRoute('/dashboard_')({
     }
   },
   head: () => ({
-    links: [
-      { rel: 'stylesheet', href: mantineCoreStyles },
-      { rel: 'stylesheet', href: mantineNotificationStyles },
-    ],
+    links: mantineStyles,
   }),
   component: DashboardLayout,
 });

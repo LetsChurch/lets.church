@@ -4,12 +4,14 @@ import {
   type MantineColorsTuple,
   MantineProvider,
 } from '@mantine/core';
+import mantineCoreStyles from '@mantine/core/styles.css?url';
 import { ModalsProvider } from '@mantine/modals';
 import {
   type NotificationData,
   Notifications,
   notifications,
 } from '@mantine/notifications';
+import mantineNotificationStyles from '@mantine/notifications/styles.css?url';
 import Cookies from 'js-cookie';
 import type { PropsWithChildren } from 'react';
 import {
@@ -17,6 +19,11 @@ import {
   THEME_CHANGE_EVENT,
   THEME_COOKIE_NAME,
 } from '@/stores/theme';
+
+export const mantineStyles = [
+  { rel: 'stylesheet', href: mantineCoreStyles },
+  { rel: 'stylesheet', href: mantineNotificationStyles },
+];
 
 const lc: MantineColorsTuple = [
   'oklch(93% 0.034 272.788)',
