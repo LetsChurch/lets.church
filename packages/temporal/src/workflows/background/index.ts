@@ -1,4 +1,9 @@
 export {
+  type BackfillFilenamesWorkflowParams,
+  backfillFilenamesWorkflow,
+  getBackfillFilenamesProgressQuery,
+} from './backfill-original-filenames';
+export {
   type BackfillOriginalImageUploadStatesWorkflowParams,
   backfillOriginalImageUploadStatesWorkflow,
   getBackfillOriginalImagesProgressQuery,
