@@ -443,6 +443,7 @@ export const channelRouter = router({
         description: true,
         visibility: true,
         avatarPath: true,
+        defaultThumbnailPath: true,
       },
       where: {
         id: input.channelId,
@@ -466,7 +467,7 @@ export const channelRouter = router({
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
 
-    const { avatarPath, ...restChannel } = channel;
+    const { avatarPath, defaultThumbnailPath, ...restChannel } = channel;
 
     const avatarUrl = avatarPath
       ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
@@ -474,7 +475,13 @@ export const channelRouter = router({
         })
       : null;
 
-    return { ...restChannel, avatarUrl };
+    const defaultThumbnailUrl = defaultThumbnailPath
+      ? getPublicImageUrl(publicS3.getS3ProtocolUri(defaultThumbnailPath), {
+          resize: { width: 640, height: 360 },
+        })
+      : null;
+
+    return { ...restChannel, avatarUrl, defaultThumbnailUrl };
   }),
 
   updateChannel: channelAdminProcedure
@@ -1210,7 +1217,12 @@ export const channelRouter = router({
     .input(
       multipartUploadSchema.and(
         z.object({
-          postProcess: z.enum(['media', 'thumbnail', 'channelAvatar']),
+          postProcess: z.enum([
+            'media',
+            'thumbnail',
+            'channelAvatar',
+            'channelDefaultThumbnail',
+          ]),
         }),
       ),
     )

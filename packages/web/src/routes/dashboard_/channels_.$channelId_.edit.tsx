@@ -67,20 +67,39 @@ function ChannelEditPage() {
   );
 
   const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
   const [isProcessingAvatar, setIsProcessingAvatar] = useState(false);
   const [avatarUrlBeforeUpload, setAvatarUrlBeforeUpload] = useState<
     string | null
   >(null);
 
+  const [newThumbnailFile, setNewThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(
+    null,
+  );
+  const [isProcessingThumbnail, setIsProcessingThumbnail] = useState(false);
+  const [thumbnailUrlBeforeUpload, setThumbnailUrlBeforeUpload] = useState<
+    string | null
+  >(null);
+
   const resetDroppedAvatar = useCallback(() => {
-    setPreviewUrl((previewUrl) => {
+    setAvatarPreviewUrl((previewUrl) => {
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
       }
       return null;
     });
     setNewAvatarFile(null);
+  }, []);
+
+  const resetDroppedThumbnail = useCallback(() => {
+    setThumbnailPreviewUrl((previewUrl) => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      return null;
+    });
+    setNewThumbnailFile(null);
   }, []);
 
   // Poll for avatar changes when processing
@@ -154,12 +173,85 @@ function ChannelEditPage() {
     resetDroppedAvatar,
   ]);
 
+  // Poll for thumbnail changes when processing
+  useEffect(() => {
+    if (!isProcessingThumbnail) {
+      return;
+    }
+
+    const pollInterval = setInterval(async () => {
+      try {
+        await queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getChannelForEdit.queryKey({
+            channelId,
+          }),
+        });
+        const updatedChannel = await queryClient.fetchQuery(
+          trpc.dashboard.channels.getChannelForEdit.queryOptions({
+            channelId,
+          }),
+        );
+
+        // Check if thumbnail URL has changed from what it was before upload
+        if (updatedChannel.defaultThumbnailUrl !== thumbnailUrlBeforeUpload) {
+          if (updatedChannel.defaultThumbnailUrl) {
+            // Preload the new thumbnail image before marking as complete
+            try {
+              await preloadImage(updatedChannel.defaultThumbnailUrl);
+              setIsProcessingThumbnail(false);
+              setThumbnailUrlBeforeUpload(null);
+              resetDroppedThumbnail();
+              showSuccess({
+                title: 'Thumbnail Updated',
+                message:
+                  'Your channel default thumbnail has been processed successfully!',
+              });
+            } catch (error) {
+              console.error('Error preloading thumbnail image:', error);
+              // Still mark as complete even if preload fails
+              setIsProcessingThumbnail(false);
+              setThumbnailUrlBeforeUpload(null);
+              resetDroppedThumbnail();
+              showFailure({
+                title: 'Thumbnail Updated',
+                message: 'Please refresh the page.',
+              });
+            }
+          } else {
+            // No thumbnail URL, thumbnail was removed
+            setIsProcessingThumbnail(false);
+            setThumbnailUrlBeforeUpload(null);
+            resetDroppedThumbnail();
+            showSuccess({
+              title: 'Thumbnail Removed',
+              message:
+                'Your channel default thumbnail has been removed successfully!',
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error polling for thumbnail changes:', error);
+      }
+    }, 1000);
+
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [
+    isProcessingThumbnail,
+    thumbnailUrlBeforeUpload,
+    queryClient,
+    trpc,
+    channelId,
+    resetDroppedThumbnail,
+  ]);
+
   const updateMutation = useMutation(
     trpc.dashboard.channels.updateChannel.mutationOptions({
       onSuccess: async () => {
-        // Only show success message if not processing avatar
-        // (avatar processing success will be shown by the polling effect)
-        if (!isProcessingAvatar) {
+        // Only show success message if not processing avatar or thumbnail
+        // (processing success will be shown by the polling effects)
+        if (!isProcessingAvatar && !isProcessingThumbnail) {
           showSuccess({
             message: 'Channel updated successfully!',
           });
@@ -217,6 +309,34 @@ function ChannelEditPage() {
         });
 
         setIsProcessingAvatar(true);
+      }
+
+      if (newThumbnailFile) {
+        setThumbnailUrlBeforeUpload(channel.defaultThumbnailUrl);
+
+        const mpu =
+          await trpcClient.dashboard.channels.createMultipartUpload.mutate({
+            channelId,
+            targetId: channelId,
+            uploadMimeType: newThumbnailFile.type,
+            bytes: newThumbnailFile.size,
+            postProcess: 'channelDefaultThumbnail',
+          });
+
+        const uploadPromise = doMultipartUpload(
+          newThumbnailFile,
+          mpu.urls,
+          mpu.partSize,
+        );
+
+        await trpcClient.dashboard.channels.finalizeMultipartUpload.mutate({
+          channelId,
+          s3UploadKey: mpu.s3UploadKey,
+          s3UploadId: mpu.s3UploadId,
+          s3PartETags: await uploadPromise,
+        });
+
+        setIsProcessingThumbnail(true);
       }
 
       updateMutation.mutate({ channelId, ...value });
@@ -307,10 +427,11 @@ function ChannelEditPage() {
                       variant="outline"
                       size="sm"
                       flex={1}
-                      disabled={!isDirty && !newAvatarFile}
+                      disabled={!isDirty && !newAvatarFile && !newThumbnailFile}
                       onClick={() => {
                         form.reset();
                         resetDroppedAvatar();
+                        resetDroppedThumbnail();
                       }}
                     >
                       Undo changes
@@ -318,7 +439,7 @@ function ChannelEditPage() {
                     <Button
                       size="sm"
                       flex={1}
-                      disabled={!isDirty && !newAvatarFile}
+                      disabled={!isDirty && !newAvatarFile && !newThumbnailFile}
                       loading={isSubmitting}
                       onClick={() => form.handleSubmit()}
                     >
@@ -341,15 +462,14 @@ function ChannelEditPage() {
                     onDrop={(files) => {
                       const file = files[0];
                       if (file) {
-                        if (previewUrl) {
-                          URL.revokeObjectURL(previewUrl);
+                        if (avatarPreviewUrl) {
+                          URL.revokeObjectURL(avatarPreviewUrl);
                         }
                         const url = URL.createObjectURL(file);
-                        setPreviewUrl(url);
+                        setAvatarPreviewUrl(url);
                         setNewAvatarFile(file);
                       }
                     }}
-                    maxSize={5 * 1024 ** 2}
                     accept={['image/*']}
                     w={120}
                     h={120}
@@ -385,9 +505,9 @@ function ChannelEditPage() {
                     }}
                   >
                     <Box pos="relative" w="100%" h="100%">
-                      {channel.avatarUrl || previewUrl ? (
+                      {channel.avatarUrl || avatarPreviewUrl ? (
                         <Image
-                          src={previewUrl || channel.avatarUrl}
+                          src={avatarPreviewUrl || channel.avatarUrl}
                           alt="Channel avatar"
                           w="100%"
                           h="100%"
@@ -481,7 +601,7 @@ function ChannelEditPage() {
                     </ActionIcon>
                   )}
 
-                  {previewUrl && !isProcessingAvatar && (
+                  {avatarPreviewUrl && !isProcessingAvatar && (
                     <Text
                       size="xs"
                       c="dimmed"
@@ -494,6 +614,181 @@ function ChannelEditPage() {
                 </Box>
               </Tooltip>
             </Group>
+
+            {/* Default Thumbnail Section */}
+            <Stack gap="xs">
+              <Text fw={500} size="sm">
+                Default Thumbnail
+              </Text>
+              <Text size="xs" c="dimmed">
+                This thumbnail will be used for uploads in this channel that
+                don't have their own thumbnail.
+              </Text>
+              <Tooltip
+                label="Click or drop image to change default thumbnail"
+                withArrow
+                position="bottom"
+              >
+                <Box pos="relative" w={320} h={180}>
+                  <Dropzone
+                    onDrop={(files) => {
+                      const file = files[0];
+                      if (file) {
+                        if (thumbnailPreviewUrl) {
+                          URL.revokeObjectURL(thumbnailPreviewUrl);
+                        }
+                        const url = URL.createObjectURL(file);
+                        setThumbnailPreviewUrl(url);
+                        setNewThumbnailFile(file);
+                      }
+                    }}
+                    maxSize={5 * 1024 ** 2}
+                    accept={['image/*']}
+                    w={320}
+                    h={180}
+                    disabled={isProcessingThumbnail}
+                    style={{
+                      borderRadius: 4,
+                      padding: 0,
+                      border: 'none',
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                    }}
+                    styles={{
+                      inner: {
+                        height: '100%',
+                        minHeight: '180px',
+                      },
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isProcessingThumbnail) {
+                        const overlay = e.currentTarget.querySelector(
+                          '.dropzone-overlay',
+                        ) as HTMLElement;
+                        if (overlay) overlay.style.opacity = '1';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isProcessingThumbnail) {
+                        const overlay = e.currentTarget.querySelector(
+                          '.dropzone-overlay',
+                        ) as HTMLElement;
+                        if (overlay) overlay.style.opacity = '0';
+                      }
+                    }}
+                  >
+                    <Box pos="relative" w="100%" h="100%">
+                      {channel.defaultThumbnailUrl || thumbnailPreviewUrl ? (
+                        <Image
+                          src={
+                            thumbnailPreviewUrl || channel.defaultThumbnailUrl
+                          }
+                          alt="Channel default thumbnail"
+                          w="100%"
+                          h="100%"
+                          style={{ objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <Box
+                          w="100%"
+                          h="100%"
+                          bg="gray.1"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <IconPhoto
+                            size={32}
+                            stroke={1.5}
+                            color="var(--mantine-color-gray-5)"
+                          />
+                        </Box>
+                      )}
+
+                      <Box
+                        pos="absolute"
+                        top={0}
+                        left={0}
+                        right={0}
+                        bottom={0}
+                        bg="rgba(0, 0, 0, 0.5)"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          opacity: isProcessingThumbnail ? 1 : 0,
+                          transition: 'opacity 0.2s ease',
+                          pointerEvents: 'none',
+                        }}
+                        className="dropzone-overlay"
+                      >
+                        {isProcessingThumbnail ? (
+                          <Box
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '100%',
+                              height: '100%',
+                            }}
+                          >
+                            <Loader size="md" color="white" />
+                          </Box>
+                        ) : (
+                          <>
+                            <Dropzone.Accept>
+                              <IconUpload
+                                size={32}
+                                stroke={1.5}
+                                color="white"
+                              />
+                            </Dropzone.Accept>
+                            <Dropzone.Reject>
+                              <IconX size={32} stroke={1.5} color="white" />
+                            </Dropzone.Reject>
+                            <Dropzone.Idle>
+                              <IconUpload
+                                size={32}
+                                stroke={1.5}
+                                color="white"
+                              />
+                            </Dropzone.Idle>
+                          </>
+                        )}
+                      </Box>
+                    </Box>
+                  </Dropzone>
+
+                  {newThumbnailFile && (
+                    <ActionIcon
+                      pos="absolute"
+                      top={4}
+                      right={4}
+                      size="sm"
+                      variant="filled"
+                      color="dark"
+                      onClick={resetDroppedThumbnail}
+                      style={{ zIndex: 10 }}
+                    >
+                      <IconX size={14} />
+                    </ActionIcon>
+                  )}
+
+                  {thumbnailPreviewUrl && !isProcessingThumbnail && (
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                      mt={4}
+                      style={{ textAlign: 'center' }}
+                    >
+                      New thumbnail
+                    </Text>
+                  )}
+                </Box>
+              </Tooltip>
+            </Stack>
 
             {/* Visibility Settings */}
             <Stack gap="md">

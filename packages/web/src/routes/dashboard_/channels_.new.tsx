@@ -51,21 +51,41 @@ function CreateChannelPage() {
   const navigate = useNavigate();
 
   const [newAvatarFile, setNewAvatarFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
   const [isProcessingAvatar, setIsProcessingAvatar] = useState(false);
   const [avatarUrlBeforeUpload, setAvatarUrlBeforeUpload] = useState<
     string | null
   >(null);
+
+  const [newThumbnailFile, setNewThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(
+    null,
+  );
+  const [isProcessingThumbnail, setIsProcessingThumbnail] = useState(false);
+  const [thumbnailUrlBeforeUpload, setThumbnailUrlBeforeUpload] = useState<
+    string | null
+  >(null);
+
   const [createdChannelId, setCreatedChannelId] = useState<string | null>(null);
 
   const resetDroppedAvatar = useCallback(() => {
-    setPreviewUrl((previewUrl) => {
+    setAvatarPreviewUrl((previewUrl) => {
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
       }
       return null;
     });
     setNewAvatarFile(null);
+  }, []);
+
+  const resetDroppedThumbnail = useCallback(() => {
+    setThumbnailPreviewUrl((previewUrl) => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      return null;
+    });
+    setNewThumbnailFile(null);
   }, []);
 
   // Poll for avatar changes when processing
@@ -95,12 +115,6 @@ function CreateChannelPage() {
                 title: 'Avatar Updated',
                 message: 'Your channel avatar has been processed successfully!',
               });
-
-              // Navigate to the channel page
-              navigate({
-                to: '/dashboard/channels/$channelId',
-                params: { channelId: createdChannelId },
-              });
             } catch (error) {
               console.error('Error preloading avatar image:', error);
               // Still mark as complete even if preload fails
@@ -111,12 +125,6 @@ function CreateChannelPage() {
                 title: 'Avatar Updated',
                 message: 'Please refresh the page.',
               });
-
-              // Navigate to the channel page even if preload failed
-              navigate({
-                to: '/dashboard/channels/$channelId',
-                params: { channelId: createdChannelId },
-              });
             }
           } else {
             // No avatar URL, avatar was removed
@@ -126,12 +134,6 @@ function CreateChannelPage() {
             showSuccess({
               title: 'Avatar Removed',
               message: 'Your channel avatar has been removed successfully!',
-            });
-
-            // Navigate to the channel page
-            navigate({
-              to: '/dashboard/channels/$channelId',
-              params: { channelId: createdChannelId },
             });
           }
         }
@@ -149,8 +151,75 @@ function CreateChannelPage() {
     avatarUrlBeforeUpload,
     queryClient,
     trpc,
-    resetDroppedAvatar, // Navigate to the channel page
-    navigate,
+    resetDroppedAvatar,
+  ]);
+
+  // Poll for thumbnail changes when processing
+  useEffect(() => {
+    if (!isProcessingThumbnail || !createdChannelId) {
+      return;
+    }
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const updatedChannel = await queryClient.fetchQuery(
+          trpc.dashboard.channels.getChannelForEdit.queryOptions({
+            channelId: createdChannelId,
+          }),
+        );
+
+        // Check if thumbnail URL has changed from what it was before upload
+        if (updatedChannel.defaultThumbnailUrl !== thumbnailUrlBeforeUpload) {
+          if (updatedChannel.defaultThumbnailUrl) {
+            // Preload the new thumbnail image before marking as complete
+            try {
+              await preloadImage(updatedChannel.defaultThumbnailUrl);
+              setIsProcessingThumbnail(false);
+              setThumbnailUrlBeforeUpload(null);
+              resetDroppedThumbnail();
+              showSuccess({
+                title: 'Thumbnail Updated',
+                message:
+                  'Your channel default thumbnail has been processed successfully!',
+              });
+            } catch (error) {
+              console.error('Error preloading thumbnail image:', error);
+              // Still mark as complete even if preload fails
+              setIsProcessingThumbnail(false);
+              setThumbnailUrlBeforeUpload(null);
+              resetDroppedThumbnail();
+              showFailure({
+                title: 'Thumbnail Updated',
+                message: 'Please refresh the page.',
+              });
+            }
+          } else {
+            // No thumbnail URL, thumbnail was removed
+            setIsProcessingThumbnail(false);
+            setThumbnailUrlBeforeUpload(null);
+            resetDroppedThumbnail();
+            showSuccess({
+              title: 'Thumbnail Removed',
+              message:
+                'Your channel default thumbnail has been removed successfully!',
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error polling for thumbnail changes:', error);
+      }
+    }, 1000);
+
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [
+    isProcessingThumbnail,
+    createdChannelId,
+    thumbnailUrlBeforeUpload,
+    queryClient,
+    trpc,
+    resetDroppedThumbnail,
   ]);
 
   const createMutation = useMutation(
@@ -171,6 +240,28 @@ function CreateChannelPage() {
       },
     }),
   );
+
+  // Navigate to channel page when all processing is complete
+  useEffect(() => {
+    if (
+      createdChannelId &&
+      !isProcessingAvatar &&
+      !isProcessingThumbnail &&
+      // Only navigate if we're not currently creating the channel
+      !createMutation.isPending
+    ) {
+      navigate({
+        to: '/dashboard/channels/$channelId',
+        params: { channelId: createdChannelId },
+      });
+    }
+  }, [
+    createdChannelId,
+    isProcessingAvatar,
+    isProcessingThumbnail,
+    createMutation.isPending,
+    navigate,
+  ]);
 
   const form = useAppMantineForm({
     defaultValues: {
@@ -209,13 +300,38 @@ function CreateChannelPage() {
         });
 
         setIsProcessingAvatar(true);
-      } else {
-        // No avatar to process, navigate immediately
-        navigate({
-          to: '/dashboard/channels/$channelId',
-          params: { channelId: channel.id },
-        });
       }
+
+      if (newThumbnailFile && channel.id) {
+        setThumbnailUrlBeforeUpload(null);
+
+        const mpu =
+          await trpcClient.dashboard.channels.createMultipartUpload.mutate({
+            channelId: channel.id,
+            targetId: channel.id,
+            uploadMimeType: newThumbnailFile.type,
+            postProcess: 'channelDefaultThumbnail',
+            bytes: newThumbnailFile.size,
+          });
+
+        const uploadPromise = doMultipartUpload(
+          newThumbnailFile,
+          mpu.urls,
+          mpu.partSize,
+        );
+
+        await trpcClient.dashboard.channels.finalizeMultipartUpload.mutate({
+          channelId: channel.id,
+          s3UploadKey: mpu.s3UploadKey,
+          s3UploadId: mpu.s3UploadId,
+          s3PartETags: await uploadPromise,
+        });
+
+        setIsProcessingThumbnail(true);
+      }
+
+      // Navigation will be handled by the useEffect that watches
+      // isProcessingAvatar and isProcessingThumbnail
     },
   });
 
@@ -316,15 +432,14 @@ function CreateChannelPage() {
                     onDrop={(files) => {
                       const file = files[0];
                       if (file) {
-                        if (previewUrl) {
-                          URL.revokeObjectURL(previewUrl);
+                        if (avatarPreviewUrl) {
+                          URL.revokeObjectURL(avatarPreviewUrl);
                         }
                         const url = URL.createObjectURL(file);
-                        setPreviewUrl(url);
+                        setAvatarPreviewUrl(url);
                         setNewAvatarFile(file);
                       }
                     }}
-                    maxSize={5 * 1024 ** 2}
                     accept={['image/*']}
                     w={120}
                     h={120}
@@ -360,9 +475,9 @@ function CreateChannelPage() {
                     }}
                   >
                     <Box pos="relative" w="100%" h="100%">
-                      {previewUrl ? (
+                      {avatarPreviewUrl ? (
                         <Image
-                          src={previewUrl}
+                          src={avatarPreviewUrl}
                           alt="Channel avatar"
                           w="100%"
                           h="100%"
@@ -456,7 +571,7 @@ function CreateChannelPage() {
                     </ActionIcon>
                   )}
 
-                  {previewUrl && !isProcessingAvatar && (
+                  {avatarPreviewUrl && !isProcessingAvatar && (
                     <Text
                       size="xs"
                       c="dimmed"
@@ -469,6 +584,179 @@ function CreateChannelPage() {
                 </Box>
               </Tooltip>
             </Group>
+
+            {/* Default Thumbnail Section */}
+            <Stack gap="xs">
+              <Text fw={500} size="sm">
+                Default Thumbnail
+              </Text>
+              <Text size="xs" c="dimmed">
+                This thumbnail will be used for uploads in this channel that
+                don't have their own thumbnail.
+              </Text>
+              <Tooltip
+                label="Click or drop image to add default thumbnail"
+                withArrow
+                position="bottom"
+              >
+                <Box pos="relative" w={320} h={180}>
+                  <Dropzone
+                    onDrop={(files) => {
+                      const file = files[0];
+                      if (file) {
+                        if (thumbnailPreviewUrl) {
+                          URL.revokeObjectURL(thumbnailPreviewUrl);
+                        }
+                        const url = URL.createObjectURL(file);
+                        setThumbnailPreviewUrl(url);
+                        setNewThumbnailFile(file);
+                      }
+                    }}
+                    maxSize={5 * 1024 ** 2}
+                    accept={['image/*']}
+                    w={320}
+                    h={180}
+                    disabled={isProcessingThumbnail}
+                    style={{
+                      borderRadius: 4,
+                      padding: 0,
+                      border: 'none',
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                    }}
+                    styles={{
+                      inner: {
+                        height: '100%',
+                        minHeight: '180px',
+                      },
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isProcessingThumbnail) {
+                        const overlay = e.currentTarget.querySelector(
+                          '.dropzone-overlay',
+                        ) as HTMLElement;
+                        if (overlay) overlay.style.opacity = '1';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isProcessingThumbnail) {
+                        const overlay = e.currentTarget.querySelector(
+                          '.dropzone-overlay',
+                        ) as HTMLElement;
+                        if (overlay) overlay.style.opacity = '0';
+                      }
+                    }}
+                  >
+                    <Box pos="relative" w="100%" h="100%">
+                      {thumbnailPreviewUrl ? (
+                        <Image
+                          src={thumbnailPreviewUrl}
+                          alt="Channel default thumbnail"
+                          w="100%"
+                          h="100%"
+                          style={{ objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <Box
+                          w="100%"
+                          h="100%"
+                          bg="gray.1"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <IconPhoto
+                            size={32}
+                            stroke={1.5}
+                            color="var(--mantine-color-gray-5)"
+                          />
+                        </Box>
+                      )}
+
+                      <Box
+                        pos="absolute"
+                        top={0}
+                        left={0}
+                        right={0}
+                        bottom={0}
+                        bg="rgba(0, 0, 0, 0.5)"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          opacity: isProcessingThumbnail ? 1 : 0,
+                          transition: 'opacity 0.2s ease',
+                          pointerEvents: 'none',
+                        }}
+                        className="dropzone-overlay"
+                      >
+                        {isProcessingThumbnail ? (
+                          <Box
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '100%',
+                              height: '100%',
+                            }}
+                          >
+                            <Loader size="md" color="white" />
+                          </Box>
+                        ) : (
+                          <>
+                            <Dropzone.Accept>
+                              <IconUpload
+                                size={32}
+                                stroke={1.5}
+                                color="white"
+                              />
+                            </Dropzone.Accept>
+                            <Dropzone.Reject>
+                              <IconX size={32} stroke={1.5} color="white" />
+                            </Dropzone.Reject>
+                            <Dropzone.Idle>
+                              <IconUpload
+                                size={32}
+                                stroke={1.5}
+                                color="white"
+                              />
+                            </Dropzone.Idle>
+                          </>
+                        )}
+                      </Box>
+                    </Box>
+                  </Dropzone>
+
+                  {newThumbnailFile && (
+                    <ActionIcon
+                      pos="absolute"
+                      top={4}
+                      right={4}
+                      size="sm"
+                      variant="filled"
+                      color="dark"
+                      onClick={resetDroppedThumbnail}
+                      style={{ zIndex: 10 }}
+                    >
+                      <IconX size={14} />
+                    </ActionIcon>
+                  )}
+
+                  {thumbnailPreviewUrl && !isProcessingThumbnail && (
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                      mt={4}
+                      style={{ textAlign: 'center' }}
+                    >
+                      New thumbnail
+                    </Text>
+                  )}
+                </Box>
+              </Tooltip>
+            </Stack>
 
             {/* Visibility Settings */}
             <Stack gap="md">
