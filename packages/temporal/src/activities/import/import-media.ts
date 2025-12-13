@@ -4,6 +4,7 @@ import { Context } from '@temporalio/activity';
 import mime from 'mime';
 import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
+import sanitizeFilename from 'sanitize-filename';
 import { v4 as uuid } from 'uuid';
 import { createUploadRecord, updateUploadRecord } from '../../client';
 import { downloadFromUrl } from '../../util/import';
@@ -76,9 +77,17 @@ export default async function importMedia(
       });
     }
 
+    // Create originalFileName from sanitized title + file extension
+    const extension = extname(mediaPath).slice(1); // Remove leading dot
+    const sanitizedTitle = sanitizeFilename(data.title || 'media');
+    const originalFileName = extension
+      ? `${sanitizedTitle}.${extension}`
+      : sanitizedTitle;
+
     await updateUploadRecord(uploadRecordId, {
       finalizedUploadKey: mediaUploadKey,
       uploadFinalizedAt: new Date(),
+      originalFileName,
     });
   } catch (e) {
     activityLogger.error(
