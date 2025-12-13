@@ -897,6 +897,12 @@ export const channelRouter = router({
         prisma.uploadRecord.count({
           where: {
             channelId: input.channelId,
+            ...(input.search && {
+              title: {
+                contains: input.search,
+                mode: 'insensitive',
+              },
+            }),
             OR: [
               { visibility: 'PUBLIC' },
               { visibility: 'UNLISTED' },

@@ -70,6 +70,7 @@ export const Route = createFileRoute(
   validateSearch: z.object({
     page: z.number().min(1).default(1),
     limit: z.number().min(1).max(100).default(20),
+    search: z.string().optional(),
   }),
   loaderDeps: ({ search }) => ({ search }),
   loader: async ({
@@ -82,6 +83,7 @@ export const Route = createFileRoute(
         channelId: params.channelId,
         page: search.page,
         limit: search.limit,
+        search: search.search,
       }),
     );
     return {
@@ -106,6 +108,7 @@ function ChannelUploadsPage() {
       channelId: params.channelId,
       page: search.page,
       limit: search.limit,
+      search: search.search,
     }),
   );
 
@@ -248,6 +251,7 @@ function ChannelUploadsPage() {
             channelId: params.channelId,
             page: search.page,
             limit: search.limit,
+            search: search.search,
           }),
         );
       },
@@ -277,6 +281,7 @@ function ChannelUploadsPage() {
             channelId: params.channelId,
             page: search.page,
             limit: search.limit,
+            search: search.search,
           }),
         );
 
@@ -433,6 +438,22 @@ function ChannelUploadsPage() {
           )}
         </Group>
       </Group>
+
+      <TextInput
+        placeholder="Search uploads by title..."
+        value={search.search ?? ''}
+        onChange={(e) => {
+          navigate({
+            to: '.',
+            search: {
+              page: 1,
+              limit: search.limit,
+              search: e.currentTarget.value || undefined,
+            },
+          });
+        }}
+        style={{ maxWidth: 400 }}
+      />
 
       {selection.length > 0 ? (
         <Box
@@ -1095,7 +1116,7 @@ function ChannelUploadsPage() {
             onChange={(page) => {
               navigate({
                 to: '.',
-                search: { page, limit: search.limit },
+                search: { page, limit: search.limit, search: search.search },
               });
             }}
             size="sm"

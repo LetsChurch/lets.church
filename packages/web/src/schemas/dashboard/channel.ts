@@ -178,7 +178,7 @@ export const reorderPlaylistSchema = z.object({
 
 export const importMediaSchema = z.object({
   channelId: channelIdSchema,
-  url: z.string().url('Please enter a valid URL'),
+  url: z.url('Please enter a valid URL'),
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   license: z.enum(UploadLicense).default('STANDARD' as UploadLicense),
