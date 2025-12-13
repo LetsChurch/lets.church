@@ -72,11 +72,6 @@ export {
 export { default as getFinalizedUploadKey } from './get-finalized-upload-key';
 export { default as getProbe } from './get-probe';
 export { default as indexDocument } from './index-document';
-export {
-  getMigrationCount,
-  getMigrationStats,
-  migrateViewRangesBatch,
-} from './migrate-view-ranges';
 export { default as processImage } from './process-image';
 export { default as recordDownloadSize } from './record-download-size';
 export { default as restitchTranscript } from './restitch-transcript';

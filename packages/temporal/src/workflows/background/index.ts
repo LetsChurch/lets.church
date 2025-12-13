@@ -45,11 +45,6 @@ export {
 } from './handle-multipart-media-upload';
 export { importMediaWorkflow } from './import-media';
 export { indexDocumentWorkflow } from './index-document';
-export {
-  getMigrationProgressQuery,
-  type MigrateViewRangesWorkflowParams,
-  migrateViewRangesWorkflow,
-} from './migrate-view-ranges';
 export { postUserRegistrationWorkflow } from './post-user-registration';
 export { processImageWorkflow } from './process-image';
 export { processMediaWorkflow } from './process-media';

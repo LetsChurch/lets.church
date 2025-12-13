@@ -43,7 +43,6 @@ import { Route as DashboardChurchesNewRouteImport } from './routes/dashboard_/ch
 import { Route as DashboardChurchesChurchIdRouteImport } from './routes/dashboard_/churches_.$churchId'
 import { Route as DashboardChannelsNewRouteImport } from './routes/dashboard_/channels_.new'
 import { Route as DashboardChannelsChannelIdRouteImport } from './routes/dashboard_/channels_.$channelId'
-import { Route as DashboardAdminViewRangesMigrationRouteImport } from './routes/dashboard_/admin_.view-ranges-migration'
 import { Route as DashboardAdminUsersRouteImport } from './routes/dashboard_/admin_.users'
 import { Route as DashboardAdminUploadBackupsRouteImport } from './routes/dashboard_/admin_.upload-backups'
 import { Route as DashboardAdminSearchesRouteImport } from './routes/dashboard_/admin_/searches'
@@ -254,12 +253,6 @@ const DashboardChannelsChannelIdRoute =
   DashboardChannelsChannelIdRouteImport.update({
     id: '/channels_/$channelId',
     path: '/channels/$channelId',
-    getParentRoute: () => DashboardRoute,
-  } as any)
-const DashboardAdminViewRangesMigrationRoute =
-  DashboardAdminViewRangesMigrationRouteImport.update({
-    id: '/admin_/view-ranges-migration',
-    path: '/admin/view-ranges-migration',
     getParentRoute: () => DashboardRoute,
   } as any)
 const DashboardAdminUsersRoute = DashboardAdminUsersRouteImport.update({
@@ -534,7 +527,6 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/searches': typeof DashboardAdminSearchesRoute
   '/dashboard/admin/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
-  '/dashboard/admin/view-ranges-migration': typeof DashboardAdminViewRangesMigrationRoute
   '/dashboard/channels/$channelId': typeof DashboardChannelsChannelIdRoute
   '/dashboard/channels/new': typeof DashboardChannelsNewRoute
   '/dashboard/churches/$churchId': typeof DashboardChurchesChurchIdRoute
@@ -607,7 +599,6 @@ export interface FileRoutesByTo {
   '/dashboard/admin/searches': typeof DashboardAdminSearchesRoute
   '/dashboard/admin/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
-  '/dashboard/admin/view-ranges-migration': typeof DashboardAdminViewRangesMigrationRoute
   '/dashboard/channels/$channelId': typeof DashboardChannelsChannelIdRoute
   '/dashboard/channels/new': typeof DashboardChannelsNewRoute
   '/dashboard/churches/$churchId': typeof DashboardChurchesChurchIdRoute
@@ -684,7 +675,6 @@ export interface FileRoutesById {
   '/dashboard_/admin_/searches': typeof DashboardAdminSearchesRoute
   '/dashboard_/admin_/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard_/admin_/users': typeof DashboardAdminUsersRoute
-  '/dashboard_/admin_/view-ranges-migration': typeof DashboardAdminViewRangesMigrationRoute
   '/dashboard_/channels_/$channelId': typeof DashboardChannelsChannelIdRoute
   '/dashboard_/channels_/new': typeof DashboardChannelsNewRoute
   '/dashboard_/churches_/$churchId': typeof DashboardChurchesChurchIdRoute
@@ -761,7 +751,6 @@ export interface FileRouteTypes {
     | '/dashboard/admin/searches'
     | '/dashboard/admin/upload-backups'
     | '/dashboard/admin/users'
-    | '/dashboard/admin/view-ranges-migration'
     | '/dashboard/channels/$channelId'
     | '/dashboard/channels/new'
     | '/dashboard/churches/$churchId'
@@ -834,7 +823,6 @@ export interface FileRouteTypes {
     | '/dashboard/admin/searches'
     | '/dashboard/admin/upload-backups'
     | '/dashboard/admin/users'
-    | '/dashboard/admin/view-ranges-migration'
     | '/dashboard/channels/$channelId'
     | '/dashboard/channels/new'
     | '/dashboard/churches/$churchId'
@@ -910,7 +898,6 @@ export interface FileRouteTypes {
     | '/dashboard_/admin_/searches'
     | '/dashboard_/admin_/upload-backups'
     | '/dashboard_/admin_/users'
-    | '/dashboard_/admin_/view-ranges-migration'
     | '/dashboard_/channels_/$channelId'
     | '/dashboard_/channels_/new'
     | '/dashboard_/churches_/$churchId'
@@ -1185,13 +1172,6 @@ declare module '@tanstack/react-router' {
       path: '/channels/$channelId'
       fullPath: '/dashboard/channels/$channelId'
       preLoaderRoute: typeof DashboardChannelsChannelIdRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/dashboard_/admin_/view-ranges-migration': {
-      id: '/dashboard_/admin_/view-ranges-migration'
-      path: '/admin/view-ranges-migration'
-      fullPath: '/dashboard/admin/view-ranges-migration'
-      preLoaderRoute: typeof DashboardAdminViewRangesMigrationRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard_/admin_/users': {
@@ -1566,7 +1546,6 @@ interface DashboardRouteChildren {
   DashboardAdminSearchesRoute: typeof DashboardAdminSearchesRoute
   DashboardAdminUploadBackupsRoute: typeof DashboardAdminUploadBackupsRoute
   DashboardAdminUsersRoute: typeof DashboardAdminUsersRoute
-  DashboardAdminViewRangesMigrationRoute: typeof DashboardAdminViewRangesMigrationRoute
   DashboardChannelsChannelIdRoute: typeof DashboardChannelsChannelIdRoute
   DashboardChannelsNewRoute: typeof DashboardChannelsNewRoute
   DashboardChurchesChurchIdRoute: typeof DashboardChurchesChurchIdRoute
@@ -1609,8 +1588,6 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAdminSearchesRoute: DashboardAdminSearchesRoute,
   DashboardAdminUploadBackupsRoute: DashboardAdminUploadBackupsRoute,
   DashboardAdminUsersRoute: DashboardAdminUsersRoute,
-  DashboardAdminViewRangesMigrationRoute:
-    DashboardAdminViewRangesMigrationRoute,
   DashboardChannelsChannelIdRoute: DashboardChannelsChannelIdRoute,
   DashboardChannelsNewRoute: DashboardChannelsNewRoute,
   DashboardChurchesChurchIdRoute: DashboardChurchesChurchIdRoute,

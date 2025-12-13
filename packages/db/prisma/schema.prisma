@@ -51,7 +51,6 @@ model AppUser {
   uploadUserRatings        UploadUserRating[]
   uploadUserCommentRatings UploadUserCommentRating[]
   uploadViews              UploadView[]
-  uploadViewRanges         UploadViewRanges[]
   uploadLists              UploadList[]
   savedMedia               SavedMedia[]
   approvedChannels         Channel[]
@@ -463,7 +462,6 @@ model UploadRecord {
   downloadsEnabled          Boolean                    @default(true) @map("downloads_enabled")
   downloadSizes             UploadRecordDownloadSize[]
   uploadViews               UploadView[]
-  uploadViewRanges          UploadViewRanges[]
   uploadListEntries         UploadListEntry[]
   savedByUsers              SavedMedia[]
   featuredUpload            FeaturedUpload?
@@ -576,22 +574,6 @@ model UploadViewSecond {
   @@id([uploadRecordId, viewHash, second])
   @@index([uploadRecordId, second])
   @@map("upload_view_second")
-}
-
-model UploadViewRanges {
-  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  upload         UploadRecord @relation(fields: [uploadRecordId], references: [id], onDelete: Cascade)
-  uploadRecordId String       @map("upload_record_id") @db.Uuid
-  viewHash       BigInt       @map("viewer_hash")
-  user           AppUser?     @relation(fields: [appUserId], references: [id])
-  appUserId      String?      @map("app_user_id") @db.Uuid
-  viewTimestamp  DateTime     @default(now()) @map("view_timestamp")
-  ranges         Json         @default("[]")
-  totalTime      Float        @map("total_time") // TODO: normalize by ensuring total time doesn't go before midnight, better plan: return and re-use id via jwt
-
-  @@index([uploadRecordId, viewHash])
-  @@index(viewTimestamp)
-  @@map("upload_view_ranges")
 }
 
 enum UploadListType {

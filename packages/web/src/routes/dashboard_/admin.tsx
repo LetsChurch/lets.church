@@ -35,9 +35,6 @@ export const Route = createFileRoute('/dashboard_/admin')({
         trpc.dashboard.admin.getPendingApprovals.queryOptions(),
       ),
       queryClient.ensureQueryData(
-        trpc.dashboard.admin.getViewRangesMigrationStatus.queryOptions(),
-      ),
-      queryClient.ensureQueryData(
         trpc.dashboard.admin.getUploadBackupStats.queryOptions(),
       ),
       queryClient.ensureQueryData(
@@ -58,10 +55,6 @@ function AdminPage() {
 
   const { data: pendingApprovals } = useSuspenseQuery(
     trpc.dashboard.admin.getPendingApprovals.queryOptions(),
-  );
-
-  const { data: migrationStatus } = useSuspenseQuery(
-    trpc.dashboard.admin.getViewRangesMigrationStatus.queryOptions(),
   );
 
   const { data: backupStats } = useSuspenseQuery(
@@ -234,37 +227,6 @@ function AdminPage() {
           </Group>
           <Text size="sm" c="dimmed">
             Manage featured uploads on homepage carousel
-          </Text>
-        </Card>
-        <Card
-          shadow="xs"
-          padding="lg"
-          radius="md"
-          withBorder
-          component={Link}
-          to="/dashboard/admin/view-ranges-migration"
-        >
-          <Group justify="space-between" mb="xs">
-            <Text fw={500}>View Ranges Migration</Text>
-            <Badge
-              color={
-                migrationStatus.workflowStatus?.status === 'running'
-                  ? 'blue'
-                  : migrationStatus.remainingCount === 0
-                    ? 'green'
-                    : 'orange'
-              }
-              size="sm"
-            >
-              {migrationStatus.workflowStatus?.status === 'running'
-                ? 'Running'
-                : migrationStatus.remainingCount === 0
-                  ? 'Done'
-                  : migrationStatus.remainingCount.toLocaleString()}
-            </Badge>
-          </Group>
-          <Text size="sm" c="dimmed">
-            Migrate UploadViewRanges to UploadViewSecond
           </Text>
         </Card>
         <Card
