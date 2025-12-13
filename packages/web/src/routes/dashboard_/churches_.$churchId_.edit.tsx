@@ -387,7 +387,6 @@ function ChurchEditPage() {
                         setNewAvatarFile(file);
                       }
                     }}
-                    maxSize={5 * 1024 ** 2}
                     accept={['image/*']}
                     w={120}
                     h={120}

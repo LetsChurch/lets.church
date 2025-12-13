@@ -612,7 +612,6 @@ function CreateChannelPage() {
                         setNewThumbnailFile(file);
                       }
                     }}
-                    maxSize={5 * 1024 ** 2}
                     accept={['image/*']}
                     w={320}
                     h={180}
