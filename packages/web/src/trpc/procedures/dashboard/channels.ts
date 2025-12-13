@@ -443,6 +443,7 @@ export const channelRouter = router({
         description: true,
         visibility: true,
         avatarPath: true,
+        coverPath: true,
         defaultThumbnailPath: true,
       },
       where: {
@@ -467,11 +468,18 @@ export const channelRouter = router({
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
 
-    const { avatarPath, defaultThumbnailPath, ...restChannel } = channel;
+    const { avatarPath, coverPath, defaultThumbnailPath, ...restChannel } =
+      channel;
 
     const avatarUrl = avatarPath
       ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
           resize: mantineAvatarLg2x,
+        })
+      : null;
+
+    const coverUrl = coverPath
+      ? getPublicImageUrl(publicS3.getS3ProtocolUri(coverPath), {
+          resize: { width: 1920, height: 1080 },
         })
       : null;
 
@@ -481,7 +489,7 @@ export const channelRouter = router({
         })
       : null;
 
-    return { ...restChannel, avatarUrl, defaultThumbnailUrl };
+    return { ...restChannel, avatarUrl, coverUrl, defaultThumbnailUrl };
   }),
 
   updateChannel: channelAdminProcedure
@@ -1228,6 +1236,7 @@ export const channelRouter = router({
             'thumbnail',
             'channelAvatar',
             'channelDefaultThumbnail',
+            'channelCover',
           ]),
         }),
       ),

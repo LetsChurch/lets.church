@@ -21,6 +21,14 @@ const channelMediaQuerySchema = z.object({
   cursor: z.string().nullable().optional(), // ISO date string
 });
 
+const channelPlaylistsQuerySchema = z.object({
+  slug: z.string(),
+});
+
+const channelChurchesQuerySchema = z.object({
+  slug: z.string(),
+});
+
 export const channelProcedures = {
   getChannelBySlug: publicProcedure
     .input(channelQuerySchema)
@@ -40,6 +48,7 @@ export const channelProcedures = {
           slug: true,
           description: true,
           avatarPath: true,
+          coverPath: true,
           defaultThumbnailPath: true,
           visibility: true,
           approvedAt: true,
@@ -111,6 +120,12 @@ export const channelProcedures = {
           })
         : null;
 
+      const coverUrl = channel.coverPath
+        ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.coverPath), {
+            resize: { width: 1920, height: 1080 },
+          })
+        : null;
+
       // Use channel default thumbnail, or fallback to first upload thumbnail
       const fallbackThumbnailPath =
         channel.uploadRecords[0]?.overrideThumbnailPath ??
@@ -136,6 +151,7 @@ export const channelProcedures = {
         slug: channel.slug,
         description: channel.description,
         avatarUrl,
+        coverUrl,
         defaultThumbnailUrl,
         subscriberCount: channel._count.subscribers,
         isFollowing,
@@ -251,5 +267,136 @@ export const channelProcedures = {
         items: uploadsWithThumbnails,
         nextCursor,
       };
+    }),
+
+  getChannelPlaylists: publicProcedure
+    .input(channelPlaylistsQuerySchema)
+    .query(async ({ input }) => {
+      const { slug } = input;
+
+      moduleLogger.info({ context: { slug } }, 'Fetching channel playlists');
+
+      const playlists = await prisma.uploadList.findMany({
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: {
+            select: {
+              uploads: true,
+            },
+          },
+          uploads: {
+            select: {
+              upload: {
+                select: {
+                  defaultThumbnailPath: true,
+                  overrideThumbnailPath: true,
+                },
+              },
+            },
+            orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
+            take: 1,
+          },
+        },
+        where: {
+          channel: {
+            slug,
+            visibility: 'PUBLIC',
+            approvedAt: { not: null },
+            deletedAt: null,
+          },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      return playlists.map((playlist) => {
+        const firstUpload = playlist.uploads[0];
+        const thumbnailPath =
+          firstUpload?.upload.overrideThumbnailPath ??
+          firstUpload?.upload.defaultThumbnailPath;
+
+        const thumbnailUrl = thumbnailPath
+          ? getPublicImageUrl(
+              publicS3.getS3ProtocolUri(thumbnailPath),
+              getThumbnailResize('card'),
+            )
+          : null;
+
+        return {
+          id: OutgoingIdSchema.parse(playlist.id),
+          title: playlist.title,
+          type: playlist.type,
+          createdAt: playlist.createdAt,
+          updatedAt: playlist.updatedAt,
+          uploadCount: playlist._count.uploads,
+          thumbnailUrl,
+        };
+      });
+    }),
+
+  getChannelChurches: publicProcedure
+    .input(channelChurchesQuerySchema)
+    .query(async ({ input }) => {
+      const { slug } = input;
+
+      moduleLogger.info({ context: { slug } }, 'Fetching channel churches');
+
+      const associations = await prisma.organizationChannelAssociation.findMany(
+        {
+          select: {
+            organization: {
+              select: {
+                id: true,
+                type: true,
+                name: true,
+                slug: true,
+                avatarPath: true,
+                description: true,
+              },
+            },
+            officialChannel: true,
+          },
+          where: {
+            channel: {
+              slug,
+              visibility: 'PUBLIC',
+              approvedAt: { not: null },
+              deletedAt: null,
+            },
+            organization: {
+              type: 'CHURCH',
+              approvedAt: { not: null },
+            },
+          },
+          orderBy: [
+            { officialChannel: 'desc' }, // Official first
+            { organization: { name: 'asc' } },
+          ],
+        },
+      );
+
+      return associations.map((assoc) => {
+        const avatarUrl = assoc.organization.avatarPath
+          ? getPublicImageUrl(
+              publicS3.getS3ProtocolUri(assoc.organization.avatarPath),
+              { resize: appAvatarMd2x },
+            )
+          : null;
+
+        return {
+          id: OutgoingIdSchema.parse(assoc.organization.id),
+          type: assoc.organization.type,
+          name: assoc.organization.name,
+          slug: assoc.organization.slug,
+          avatarUrl,
+          description: assoc.organization.description,
+          isOfficial: assoc.officialChannel,
+        };
+      });
     }),
 };

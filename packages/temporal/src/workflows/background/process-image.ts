@@ -7,7 +7,9 @@ const {
   setUploadThumbnail,
   setChannelAvatar,
   setChannelDefaultThumbnail,
+  setChannelCover,
   setOrganizationAvatar,
+  setOrganizationCover,
   setProfileAvatar,
   processImage,
 } = proxyActivities<typeof processUploadActivities>({
@@ -34,9 +36,13 @@ export async function processImageWorkflow(
     await setProfileAvatar(targetId, path, blurhash);
   } else if (postProcess === 'channelAvatar') {
     await setChannelAvatar(targetId, path, blurhash);
-  } else if (postProcess === 'organizationAvatar') {
-    await setOrganizationAvatar(targetId, path, blurhash);
   } else if (postProcess === 'channelDefaultThumbnail') {
     await setChannelDefaultThumbnail(targetId, path, blurhash);
+  } else if (postProcess === 'channelCover') {
+    await setChannelCover(targetId, path, blurhash);
+  } else if (postProcess === 'organizationAvatar') {
+    await setOrganizationAvatar(targetId, path, blurhash);
+  } else if (postProcess === 'organizationCover') {
+    await setOrganizationCover(targetId, path, blurhash);
   }
 }

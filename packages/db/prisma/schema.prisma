@@ -293,6 +293,8 @@ model Channel {
   visibility               ChannelVisibility                @default(PUBLIC)
   avatarPath               String?                          @map("avatar_path") @db.VarChar(255)
   avatarBlurhash           String?                          @map("avatar_blurhash") @db.VarChar(255)
+  coverPath                String?                          @map("cover_path") @db.VarChar(255)
+  coverBlurhash            String?                          @map("cover_blurhash") @db.VarChar(255)
   slug                     String                           @unique @db.Citext
   description              String?
   memberships              ChannelMembership[]
@@ -374,7 +376,9 @@ enum UploadStateType {
   THUMBNAIL
   PROFILE_AVATAR
   CHANNEL_AVATAR
+  CHANNEL_COVER
   ORGANIZATION_AVATAR
+  ORGANIZATION_COVER
   CHANNEL_DEFAULT_THUMBNAIL
 
   @@map("upload_state_type")

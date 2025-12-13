@@ -1,4 +1,10 @@
 import {
+  IconBuildingChurch,
+  IconChevronRight,
+  IconList,
+  IconPlaylist,
+} from '@tabler/icons-react';
+import {
   useInfiniteQuery,
   useQueryClient,
   useSuspenseQuery,
@@ -8,7 +14,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useRef, useState } from 'react';
 import { Avatar } from '@/components/avatar';
 import { EmptyState } from '@/components/empty-state';
-import MainLayout from '@/components/main-layout';
+import Header from '@/components/header';
 import { MediaCard } from '@/components/media-card';
 import { MediaGrid } from '@/components/media-grid';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
@@ -33,11 +39,63 @@ export const Route = createFileRoute('/_main/channel/$slug')({
       }),
     );
 
-    await Promise.all([channelPromise, mediaPromise]);
+    // Prefetch playlists
+    const playlistsPromise = context.queryClient.prefetchQuery(
+      context.trpc.channel.getChannelPlaylists.queryOptions({ slug }),
+    );
+
+    // Prefetch churches
+    const churchesPromise = context.queryClient.prefetchQuery(
+      context.trpc.channel.getChannelChurches.queryOptions({ slug }),
+    );
+
+    await Promise.all([
+      channelPromise,
+      mediaPromise,
+      playlistsPromise,
+      churchesPromise,
+    ]);
 
     return {};
   },
 });
+
+// Generate a consistent color based on a string hash
+function getColorFromString(str: string): {
+  from: string;
+  via: string;
+  to: string;
+} {
+  // Simple hash function
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  // Define color palettes (hue ranges for pleasant gradients)
+  const palettes = [
+    // Indigo/Purple
+    { from: 'from-indigo-600', via: 'via-purple-600', to: 'to-indigo-700' },
+    // Blue/Cyan
+    { from: 'from-blue-600', via: 'via-cyan-600', to: 'to-blue-700' },
+    // Teal/Green
+    { from: 'from-teal-600', via: 'via-green-600', to: 'to-teal-700' },
+    // Purple/Pink
+    { from: 'from-purple-600', via: 'via-pink-600', to: 'to-purple-700' },
+    // Rose/Orange
+    { from: 'from-rose-600', via: 'via-orange-600', to: 'to-rose-700' },
+    // Violet/Fuchsia
+    { from: 'from-violet-600', via: 'via-fuchsia-600', to: 'to-violet-700' },
+    // Emerald/Lime
+    { from: 'from-emerald-600', via: 'via-lime-600', to: 'to-emerald-700' },
+    // Sky/Blue
+    { from: 'from-sky-600', via: 'via-blue-600', to: 'to-sky-700' },
+  ];
+
+  // Use hash to select a palette
+  const index = Math.abs(hash) % palettes.length;
+  return palettes[index];
+}
 
 function RouteComponent() {
   const { slug } = Route.useParams();
@@ -48,6 +106,14 @@ function RouteComponent() {
 
   const { data: channel } = useSuspenseQuery(
     trpc.channel.getChannelBySlug.queryOptions({ slug }),
+  );
+
+  const { data: playlists } = useSuspenseQuery(
+    trpc.channel.getChannelPlaylists.queryOptions({ slug }),
+  );
+
+  const { data: churches } = useSuspenseQuery(
+    trpc.channel.getChannelChurches.queryOptions({ slug }),
   );
 
   const {
@@ -147,107 +213,309 @@ function RouteComponent() {
 
   const hasMedia = mediaItems.length > 0;
 
+  const initials = channel.name
+    .split(' ')
+    .map((word) => word[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
+  const headerColors = getColorFromString(channel.name);
+  const darkHeaderColors = {
+    from: headerColors.from.replace('-600', '-900'),
+    via: headerColors.via.replace('-600', '-900'),
+    to: headerColors.to.replace('-700', '-950'),
+  };
+
+  const hasSidebarContent =
+    (churches && churches.length > 0) || (playlists && playlists.length > 0);
+
   return (
-    <MainLayout
-      channelSlug={channel.slug}
-      searchPlaceholder={`Search in ${channel.name}...`}
-      containerClassName="px-16 pb-8"
-    >
-      {/* Channel Header */}
-      <div className="mb-8 flex items-start gap-6">
-        <Avatar
-          src={channel.avatarUrl || undefined}
-          alt={channel.name}
-          fallbackText={channel.name.charAt(0).toUpperCase()}
-          className="size-24 border-fancy-pants"
-          fallbackClassName="bg-brand font-bold text-3xl"
-        />
+    <div className="min-h-screen bg-linear-to-br from-zinc-50 via-white to-indigo-50/30 dark:from-zinc-950 dark:via-zinc-900 dark:to-indigo-950/20">
+      {/* Cover Image or Gradient Header */}
+      <div className="relative">
+        {channel.coverUrl ? (
+          <div className="h-80 overflow-hidden">
+            <img
+              src={channel.coverUrl}
+              alt=""
+              className="size-full object-cover"
+            />
+          </div>
+        ) : (
+          <div
+            className={`h-48 overflow-hidden bg-linear-to-br ${headerColors.from} ${headerColors.via} ${headerColors.to} dark:${darkHeaderColors.from} dark:${darkHeaderColors.via} dark:${darkHeaderColors.to}`}
+          >
+            <div className="absolute inset-0 bg-linear-to-b from-transparent to-black/10 dark:to-black/20" />
+            <div className="absolute inset-0 opacity-20">
+              <svg
+                className="size-full"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+              >
+                <defs>
+                  <pattern
+                    id="grid"
+                    width="32"
+                    height="32"
+                    patternUnits="userSpaceOnUse"
+                  >
+                    <path
+                      d="M 32 0 L 0 0 0 32"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="0.5"
+                    />
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+              </svg>
+            </div>
+          </div>
+        )}
 
-        <div className="flex-1">
-          <h1 className="mb-2 font-bold text-3xl text-primary">
-            {channel.name}
-          </h1>
-          <p className="mb-3 text-sm text-zinc-400">
-            {channel.subscriberCount.toLocaleString()}{' '}
-            {channel.subscriberCount === 1 ? 'follower' : 'followers'}
-          </p>
-
-          {channel.description ? (
-            <p className="mb-4 text-primary/80 text-sm leading-relaxed">
-              {channel.description}
-            </p>
-          ) : null}
-
-          {isLoggedIn ? (
-            <button
-              type="button"
-              onClick={handleFollowToggle}
-              disabled={isTogglingFollow}
-              className={
-                isFollowing
-                  ? 'flex h-9 items-center justify-center rounded-full border border-white/10 bg-white/15 px-4 font-semibold text-primary/80 text-sm backdrop-blur-sm transition-colors hover:bg-white/20 disabled:opacity-50'
-                  : 'flex h-9 items-center justify-center rounded-full border-fancy-pants bg-brand px-4 font-semibold text-primary text-sm transition-opacity hover:opacity-90 disabled:opacity-50'
-              }
-            >
-              {isFollowing ? 'Following' : 'Follow'}
-            </button>
-          ) : (
-            <Link
-              to="/auth/register"
-              className="flex h-9 w-fit items-center justify-center rounded-full border-fancy-pants bg-brand px-4 font-semibold text-sm text-white transition-opacity hover:opacity-90"
-            >
-              Follow
-            </Link>
-          )}
+        {/* Header overlay with gradient */}
+        <div className="absolute inset-x-0 top-0">
+          <div className="absolute inset-0 bg-linear-to-b from-black/50 via-black/30 to-transparent" />
+          <div className="relative">
+            <Header
+              channelSlug={channel.slug}
+              searchPlaceholder={`Search in ${channel.name}...`}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Media Grid */}
-      {hasMedia ? (
-        <>
-          <MediaGrid>
-            {mediaItems.map((upload) => (
-              <MediaCard
-                key={upload.id}
-                mediaId={upload.id}
-                title={upload.title}
-                thumbnailUrl={upload.thumbnailUrl}
-                channelName={upload.channel.name}
-                channelAvatarUrl={upload.channel.avatarUrl}
-                duration={
-                  upload.lengthSeconds
-                    ? formatTime(upload.lengthSeconds * 1000)
-                    : undefined
-                }
-                timestamp={
-                  upload.publishedAt
-                    ? formatDistanceToNow(new Date(upload.publishedAt), {
-                        addSuffix: true,
-                      })
-                    : undefined
-                }
+      <div className="isolate mx-auto max-w-5xl px-6 pb-24">
+        {/* Profile Header */}
+        <div className="-mt-16 sm:-mt-20 mb-12">
+          <div className="flex items-center overflow-hidden rounded-full border-fancy-pants bg-white shadow-lg dark:bg-zinc-900">
+            <Avatar
+              src={channel.avatarUrl || undefined}
+              alt={channel.name}
+              fallbackText={initials}
+              className="size-32 shrink-0 sm:size-40"
+              fallbackClassName="text-3xl sm:text-4xl"
+            />
+            <div className="flex flex-1 flex-wrap items-center justify-between gap-4 px-6 py-4 sm:px-8 sm:py-6">
+              <div className="min-w-0 flex-1">
+                <h1 className="font-bold text-3xl text-zinc-900 tracking-tight sm:text-4xl dark:text-white">
+                  {channel.name}
+                </h1>
+                <p className="mt-1 text-sm text-zinc-400">
+                  {channel.subscriberCount.toLocaleString()}{' '}
+                  {channel.subscriberCount === 1 ? 'follower' : 'followers'}
+                </p>
+              </div>
+
+              {isLoggedIn ? (
+                <button
+                  type="button"
+                  onClick={handleFollowToggle}
+                  disabled={isTogglingFollow}
+                  className={
+                    isFollowing
+                      ? 'flex h-9 items-center justify-center rounded-full border border-white/10 bg-white/15 px-4 font-semibold text-primary/80 text-sm backdrop-blur-sm transition-colors hover:bg-white/20 disabled:opacity-50'
+                      : 'flex h-9 items-center justify-center rounded-full border-fancy-pants bg-brand px-4 font-semibold text-primary text-sm transition-opacity hover:opacity-90 disabled:opacity-50'
+                  }
+                >
+                  {isFollowing ? 'Following' : 'Follow'}
+                </button>
+              ) : (
+                <Link
+                  to="/auth/register"
+                  className="flex h-9 w-fit items-center justify-center rounded-full border-fancy-pants bg-brand px-4 font-semibold text-sm text-white transition-opacity hover:opacity-90"
+                >
+                  Follow
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div
+          className={
+            hasSidebarContent ? 'grid gap-8 lg:grid-cols-3' : 'space-y-8'
+          }
+        >
+          {/* Main Content */}
+          <div
+            className={
+              hasSidebarContent ? 'space-y-8 lg:col-span-2' : 'space-y-8'
+            }
+          >
+            {/* Description */}
+            {channel.description ? (
+              <section className="rounded-2xl border-fancy-pants bg-zinc-100 p-5 dark:bg-zinc-900">
+                <h2 className="mb-4 font-medium text-primary text-sm">About</h2>
+                <p className="whitespace-pre-wrap text-lg text-secondary leading-relaxed">
+                  {channel.description}
+                </p>
+              </section>
+            ) : null}
+
+            {/* All Content */}
+            {hasMedia ? (
+              <>
+                <MediaGrid>
+                  {mediaItems.map((upload) => (
+                    <MediaCard
+                      key={upload.id}
+                      mediaId={upload.id}
+                      title={upload.title}
+                      thumbnailUrl={upload.thumbnailUrl}
+                      channelName={upload.channel.name}
+                      channelAvatarUrl={upload.channel.avatarUrl}
+                      duration={
+                        upload.lengthSeconds
+                          ? formatTime(upload.lengthSeconds * 1000)
+                          : undefined
+                      }
+                      timestamp={
+                        upload.publishedAt
+                          ? formatDistanceToNow(new Date(upload.publishedAt), {
+                              addSuffix: true,
+                            })
+                          : undefined
+                      }
+                    />
+                  ))}
+                </MediaGrid>
+
+                {/* Infinite scroll trigger */}
+                <div ref={loadMoreRef} className="h-20" />
+
+                {/* Loading indicator */}
+                {isFetchingNextPage ? (
+                  <div className="flex justify-center py-8">
+                    <div className="text-sm text-zinc-400">Loading more...</div>
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <EmptyState
+                emptyTitle="No content yet"
+                emptyBody="This channel hasn't uploaded any content yet. Check back later!"
+                emptyCta="Browse Content"
+                emptyCtaHref="/"
               />
-            ))}
-          </MediaGrid>
+            )}
+          </div>
 
-          {/* Infinite scroll trigger */}
-          <div ref={loadMoreRef} className="h-20" />
+          {/* Sidebar */}
+          {hasSidebarContent ? (
+            <div className="space-y-6 lg:col-span-1">
+              {/* Associated Churches */}
+              {churches && churches.length > 0 ? (
+                <section className="rounded-2xl border-fancy-pants bg-zinc-100 p-5 dark:bg-zinc-900">
+                  <h2 className="mb-4 flex items-center gap-2 font-medium text-primary text-sm">
+                    <IconBuildingChurch size={16} strokeWidth={2} />
+                    {churches.length === 1 ? 'Church' : 'Churches'}
+                  </h2>
+                  <div className="space-y-3">
+                    {churches.map((church) => {
+                      const churchInitials = church.name
+                        .split(' ')
+                        .map((word) => word[0])
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .join('')
+                        .toUpperCase();
 
-          {/* Loading indicator */}
-          {isFetchingNextPage ? (
-            <div className="flex justify-center py-8">
-              <div className="text-sm text-zinc-400">Loading more...</div>
+                      return (
+                        <Link
+                          key={church.id}
+                          to="/churches/$slug"
+                          params={{ slug: church.slug }}
+                          className="group flex items-start gap-3 rounded-xl bg-zinc-50/50 p-3 transition-all hover:shadow-md dark:bg-zinc-800/50"
+                        >
+                          <Avatar
+                            src={church.avatarUrl || undefined}
+                            alt={church.name}
+                            fallbackText={churchInitials}
+                            className="size-12 shrink-0"
+                            fallbackClassName="text-sm"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <h3 className="truncate font-semibold text-primary">
+                              {church.name}
+                            </h3>
+                            <p className="text-secondary text-xs">
+                              {church.isOfficial ? 'Official' : 'Endorsed'}
+                            </p>
+                          </div>
+                          <IconChevronRight
+                            className="mt-1 shrink-0 text-muted"
+                            size={16}
+                          />
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </section>
+              ) : null}
+
+              {/* Playlists */}
+              {playlists && playlists.length > 0 ? (
+                <section className="rounded-2xl border-fancy-pants bg-zinc-100 p-5 dark:bg-zinc-900">
+                  <h2 className="mb-4 flex items-center gap-2 font-medium text-primary text-sm">
+                    <IconList size={16} strokeWidth={2} />
+                    Playlists
+                  </h2>
+                  <div className="space-y-3">
+                    {playlists.map((playlist) => (
+                      <Link
+                        key={playlist.id}
+                        to="/playlist/$playlistId"
+                        params={{ playlistId: playlist.id }}
+                        className="group flex gap-3 rounded-xl bg-zinc-50/50 p-3 transition-all hover:shadow-md dark:bg-zinc-800/50"
+                      >
+                        {playlist.thumbnailUrl ? (
+                          <div className="relative aspect-video w-20 shrink-0 overflow-hidden rounded-lg">
+                            <img
+                              src={playlist.thumbnailUrl}
+                              alt=""
+                              className="size-full object-cover"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                              <IconPlaylist
+                                size={20}
+                                className="text-white"
+                                strokeWidth={2}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex aspect-video w-20 shrink-0 items-center justify-center rounded-lg bg-zinc-200 dark:bg-zinc-700">
+                            <IconPlaylist
+                              size={20}
+                              className="text-zinc-400 dark:text-zinc-500"
+                              strokeWidth={2}
+                            />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <h3 className="truncate font-semibold text-primary text-sm">
+                            {playlist.title}
+                          </h3>
+                          <p className="text-secondary text-xs">
+                            {playlist.uploadCount}{' '}
+                            {playlist.uploadCount === 1 ? 'video' : 'videos'}
+                          </p>
+                          <p className="text-muted text-xs">
+                            {playlist.type === 'SERIES' ? 'Series' : 'Playlist'}
+                          </p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
             </div>
           ) : null}
-        </>
-      ) : (
-        <EmptyState
-          emptyTitle="No content yet"
-          emptyBody="This channel hasn't uploaded any content yet. Check back later!"
-          emptyCta="Browse Content"
-          emptyCtaHref="/"
-        />
-      )}
-    </MainLayout>
+        </div>
+      </div>
+    </div>
   );
 }

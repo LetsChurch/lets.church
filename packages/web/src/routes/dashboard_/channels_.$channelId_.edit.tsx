@@ -82,6 +82,13 @@ function ChannelEditPage() {
     string | null
   >(null);
 
+  const [newCoverFile, setNewCoverFile] = useState<File | null>(null);
+  const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
+  const [isProcessingCover, setIsProcessingCover] = useState(false);
+  const [coverUrlBeforeUpload, setCoverUrlBeforeUpload] = useState<
+    string | null
+  >(null);
+
   const resetDroppedAvatar = useCallback(() => {
     setAvatarPreviewUrl((previewUrl) => {
       if (previewUrl) {
@@ -100,6 +107,16 @@ function ChannelEditPage() {
       return null;
     });
     setNewThumbnailFile(null);
+  }, []);
+
+  const resetDroppedCover = useCallback(() => {
+    setCoverPreviewUrl((previewUrl) => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      return null;
+    });
+    setNewCoverFile(null);
   }, []);
 
   // Poll for avatar changes when processing
@@ -246,12 +263,87 @@ function ChannelEditPage() {
     resetDroppedThumbnail,
   ]);
 
+  // Poll for cover changes when processing
+  useEffect(() => {
+    if (!isProcessingCover) {
+      return;
+    }
+
+    const pollInterval = setInterval(async () => {
+      try {
+        await queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getChannelForEdit.queryKey({
+            channelId,
+          }),
+        });
+        const updatedChannel = await queryClient.fetchQuery(
+          trpc.dashboard.channels.getChannelForEdit.queryOptions({
+            channelId,
+          }),
+        );
+
+        // Check if cover URL has changed from what it was before upload
+        if (updatedChannel.coverUrl !== coverUrlBeforeUpload) {
+          if (updatedChannel.coverUrl) {
+            // Preload the new cover image before marking as complete
+            try {
+              await preloadImage(updatedChannel.coverUrl);
+              setIsProcessingCover(false);
+              setCoverUrlBeforeUpload(null);
+              resetDroppedCover();
+              showSuccess({
+                title: 'Cover Updated',
+                message: 'Your channel cover has been processed successfully!',
+              });
+            } catch (error) {
+              console.error('Error preloading cover image:', error);
+              // Still mark as complete even if preload fails
+              setIsProcessingCover(false);
+              setCoverUrlBeforeUpload(null);
+              resetDroppedCover();
+              showFailure({
+                title: 'Cover Updated',
+                message: 'Please refresh the page.',
+              });
+            }
+          } else {
+            // No cover URL, cover was removed
+            setIsProcessingCover(false);
+            setCoverUrlBeforeUpload(null);
+            resetDroppedCover();
+            showSuccess({
+              title: 'Cover Removed',
+              message: 'Your channel cover has been removed successfully!',
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error polling for cover changes:', error);
+      }
+    }, 1000);
+
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [
+    isProcessingCover,
+    coverUrlBeforeUpload,
+    queryClient,
+    trpc,
+    channelId,
+    resetDroppedCover,
+  ]);
+
   const updateMutation = useMutation(
     trpc.dashboard.channels.updateChannel.mutationOptions({
       onSuccess: async () => {
-        // Only show success message if not processing avatar or thumbnail
+        // Only show success message if not processing avatar, thumbnail, or cover
         // (processing success will be shown by the polling effects)
-        if (!isProcessingAvatar && !isProcessingThumbnail) {
+        if (
+          !isProcessingAvatar &&
+          !isProcessingThumbnail &&
+          !isProcessingCover
+        ) {
           showSuccess({
             message: 'Channel updated successfully!',
           });
@@ -339,6 +431,34 @@ function ChannelEditPage() {
         setIsProcessingThumbnail(true);
       }
 
+      if (newCoverFile) {
+        setCoverUrlBeforeUpload(channel.coverUrl);
+
+        const mpu =
+          await trpcClient.dashboard.channels.createMultipartUpload.mutate({
+            channelId,
+            targetId: channelId,
+            uploadMimeType: newCoverFile.type,
+            bytes: newCoverFile.size,
+            postProcess: 'channelCover',
+          });
+
+        const uploadPromise = doMultipartUpload(
+          newCoverFile,
+          mpu.urls,
+          mpu.partSize,
+        );
+
+        await trpcClient.dashboard.channels.finalizeMultipartUpload.mutate({
+          channelId,
+          s3UploadKey: mpu.s3UploadKey,
+          s3UploadId: mpu.s3UploadId,
+          s3PartETags: await uploadPromise,
+        });
+
+        setIsProcessingCover(true);
+      }
+
       updateMutation.mutate({ channelId, ...value });
     },
   });
@@ -406,6 +526,178 @@ function ChannelEditPage() {
                     />
                   )}
                 </form.AppField>
+
+                {/* Cover Section */}
+                <Stack gap="xs">
+                  <Text fw={500} size="sm">
+                    Cover Image
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    This cover image will be displayed at the top of your
+                    channel page. Recommended size: 1920x1080.
+                  </Text>
+                  <Tooltip
+                    label="Click or drop image to change cover"
+                    withArrow
+                    position="bottom"
+                  >
+                    <Box pos="relative" w={640} h={360}>
+                      <Dropzone
+                        onDrop={(files) => {
+                          const file = files[0];
+                          if (file) {
+                            if (coverPreviewUrl) {
+                              URL.revokeObjectURL(coverPreviewUrl);
+                            }
+                            const url = URL.createObjectURL(file);
+                            setCoverPreviewUrl(url);
+                            setNewCoverFile(file);
+                          }
+                        }}
+                        accept={['image/*']}
+                        w={640}
+                        h={360}
+                        disabled={isProcessingCover}
+                        style={{
+                          borderRadius: 4,
+                          padding: 0,
+                          border: 'none',
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                        }}
+                        styles={{
+                          inner: {
+                            height: '100%',
+                            minHeight: '360px',
+                          },
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isProcessingCover) {
+                            const overlay = e.currentTarget.querySelector(
+                              '.dropzone-overlay',
+                            ) as HTMLElement;
+                            if (overlay) overlay.style.opacity = '1';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isProcessingCover) {
+                            const overlay = e.currentTarget.querySelector(
+                              '.dropzone-overlay',
+                            ) as HTMLElement;
+                            if (overlay) overlay.style.opacity = '0';
+                          }
+                        }}
+                      >
+                        <Box pos="relative" w="100%" h="100%">
+                          {channel.coverUrl || coverPreviewUrl ? (
+                            <Image
+                              src={coverPreviewUrl || channel.coverUrl}
+                              alt="Channel cover"
+                              w="100%"
+                              h="100%"
+                              style={{ objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <Box
+                              w="100%"
+                              h="100%"
+                              bg="gray.1"
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <IconPhoto
+                                size={32}
+                                stroke={1.5}
+                                color="var(--mantine-color-gray-5)"
+                              />
+                            </Box>
+                          )}
+
+                          <Box
+                            pos="absolute"
+                            top={0}
+                            left={0}
+                            right={0}
+                            bottom={0}
+                            bg="rgba(0, 0, 0, 0.5)"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              opacity: isProcessingCover ? 1 : 0,
+                              transition: 'opacity 0.2s ease',
+                              pointerEvents: 'none',
+                            }}
+                            className="dropzone-overlay"
+                          >
+                            {isProcessingCover ? (
+                              <Box
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: '100%',
+                                  height: '100%',
+                                }}
+                              >
+                                <Loader size="md" color="white" />
+                              </Box>
+                            ) : (
+                              <>
+                                <Dropzone.Accept>
+                                  <IconUpload
+                                    size={32}
+                                    stroke={1.5}
+                                    color="white"
+                                  />
+                                </Dropzone.Accept>
+                                <Dropzone.Reject>
+                                  <IconX size={32} stroke={1.5} color="white" />
+                                </Dropzone.Reject>
+                                <Dropzone.Idle>
+                                  <IconUpload
+                                    size={32}
+                                    stroke={1.5}
+                                    color="white"
+                                  />
+                                </Dropzone.Idle>
+                              </>
+                            )}
+                          </Box>
+                        </Box>
+                      </Dropzone>
+
+                      {newCoverFile && (
+                        <ActionIcon
+                          pos="absolute"
+                          top={4}
+                          right={4}
+                          size="sm"
+                          variant="filled"
+                          color="dark"
+                          onClick={resetDroppedCover}
+                          style={{ zIndex: 10 }}
+                        >
+                          <IconX size={14} />
+                        </ActionIcon>
+                      )}
+
+                      {coverPreviewUrl && !isProcessingCover && (
+                        <Text
+                          size="xs"
+                          c="dimmed"
+                          mt={4}
+                          style={{ textAlign: 'center' }}
+                        >
+                          New cover
+                        </Text>
+                      )}
+                    </Box>
+                  </Tooltip>
+                </Stack>
               </Stack>
             </form>
           </Stack>
@@ -427,11 +719,17 @@ function ChannelEditPage() {
                       variant="outline"
                       size="sm"
                       flex={1}
-                      disabled={!isDirty && !newAvatarFile && !newThumbnailFile}
+                      disabled={
+                        !isDirty &&
+                        !newAvatarFile &&
+                        !newThumbnailFile &&
+                        !newCoverFile
+                      }
                       onClick={() => {
                         form.reset();
                         resetDroppedAvatar();
                         resetDroppedThumbnail();
+                        resetDroppedCover();
                       }}
                     >
                       Undo changes
@@ -439,7 +737,12 @@ function ChannelEditPage() {
                     <Button
                       size="sm"
                       flex={1}
-                      disabled={!isDirty && !newAvatarFile && !newThumbnailFile}
+                      disabled={
+                        !isDirty &&
+                        !newAvatarFile &&
+                        !newThumbnailFile &&
+                        !newCoverFile
+                      }
                       loading={isSubmitting}
                       onClick={() => form.handleSubmit()}
                     >

@@ -5,6 +5,8 @@ export const uploadPostProcessValues = [
   'channelAvatar',
   'organizationAvatar',
   'channelDefaultThumbnail',
+  'channelCover',
+  'organizationCover',
 ] as const;
 
 export type UploadPostProcessValue = (typeof uploadPostProcessValues)[number];

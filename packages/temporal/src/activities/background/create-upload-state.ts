@@ -33,8 +33,12 @@ function mapUploadTypeToStateType(
       return 'PROFILE_AVATAR';
     case 'channelAvatar':
       return 'CHANNEL_AVATAR';
+    case 'channelCover':
+      return 'CHANNEL_COVER';
     case 'organizationAvatar':
       return 'ORGANIZATION_AVATAR';
+    case 'organizationCover':
+      return 'ORGANIZATION_COVER';
     case 'channelDefaultThumbnail':
       return 'CHANNEL_DEFAULT_THUMBNAIL';
     default:
