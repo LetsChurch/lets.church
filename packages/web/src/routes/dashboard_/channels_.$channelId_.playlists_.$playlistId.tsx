@@ -22,6 +22,7 @@ import { notifications } from '@mantine/notifications';
 import {
   IconEdit,
   IconGripVertical,
+  IconLink,
   IconPlus,
   IconTrash,
 } from '@tabler/icons-react';
@@ -35,6 +36,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { useAppMantineForm } from '@/components/mantine';
+import { idTranslator } from '@/schemas/common';
 import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
 
@@ -325,6 +327,26 @@ function PlaylistDetailsPage() {
     }, 0);
   };
 
+  const handleCopyPlaylistLink = async () => {
+    const shortId = idTranslator.fromUUID(playlist.id);
+    const playlistUrl = `${window.location.origin}/playlist/${shortId}`;
+
+    try {
+      await navigator.clipboard.writeText(playlistUrl);
+      notifications.show({
+        title: 'Success',
+        message: 'Playlist link copied to clipboard',
+        color: 'green',
+      });
+    } catch (_error) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to copy link to clipboard',
+        color: 'red',
+      });
+    }
+  };
+
   return (
     <Stack gap="lg">
       <Group justify="space-between">
@@ -341,6 +363,13 @@ function PlaylistDetailsPage() {
           </Text>
         </Stack>
         <Group>
+          <Button
+            variant="light"
+            leftSection={<IconLink size={16} />}
+            onClick={handleCopyPlaylistLink}
+          >
+            Copy Link
+          </Button>
           <Button
             variant="light"
             leftSection={<IconEdit size={16} />}

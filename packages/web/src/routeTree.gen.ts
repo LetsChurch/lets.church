@@ -60,6 +60,7 @@ import { Route as DashboardAccountProfileRouteImport } from './routes/dashboard_
 import { Route as DashboardAccountNewsletterRouteImport } from './routes/dashboard_/account_.newsletter'
 import { Route as ChannelSlugRssDotxmlRouteImport } from './routes/channel.$slug.rss[.]xml'
 import { Route as ChannelSlugPodcastDotxmlRouteImport } from './routes/channel.$slug.podcast[.]xml'
+import { Route as MainPlaylistPlaylistIdRouteImport } from './routes/_main/playlist.$playlistId'
 import { Route as MainMediaMediaIdRouteImport } from './routes/_main/media/$mediaId'
 import { Route as MainChurchesSlugRouteImport } from './routes/_main/churches_.$slug'
 import { Route as MainChannelSlugRouteImport } from './routes/_main/channel.$slug'
@@ -351,6 +352,11 @@ const ChannelSlugPodcastDotxmlRoute =
     path: '/channel/$slug/podcast.xml',
     getParentRoute: () => rootRouteImport,
   } as any)
+const MainPlaylistPlaylistIdRoute = MainPlaylistPlaylistIdRouteImport.update({
+  id: '/playlist/$playlistId',
+  path: '/playlist/$playlistId',
+  getParentRoute: () => MainRoute,
+} as any)
 const MainMediaMediaIdRoute = MainMediaMediaIdRouteImport.update({
   id: '/media/$mediaId',
   path: '/media/$mediaId',
@@ -510,6 +516,7 @@ export interface FileRoutesByFullPath {
   '/channel/$slug': typeof MainChannelSlugRoute
   '/churches/$slug': typeof MainChurchesSlugRoute
   '/media/$mediaId': typeof MainMediaMediaIdRoute
+  '/playlist/$playlistId': typeof MainPlaylistPlaylistIdRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
   '/dashboard/account/newsletter': typeof DashboardAccountNewsletterRoute
@@ -582,6 +589,7 @@ export interface FileRoutesByTo {
   '/channel/$slug': typeof MainChannelSlugRoute
   '/churches/$slug': typeof MainChurchesSlugRoute
   '/media/$mediaId': typeof MainMediaMediaIdRoute
+  '/playlist/$playlistId': typeof MainPlaylistPlaylistIdRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
   '/dashboard/account/newsletter': typeof DashboardAccountNewsletterRoute
@@ -658,6 +666,7 @@ export interface FileRoutesById {
   '/_main/channel/$slug': typeof MainChannelSlugRoute
   '/_main/churches_/$slug': typeof MainChurchesSlugRoute
   '/_main/media/$mediaId': typeof MainMediaMediaIdRoute
+  '/_main/playlist/$playlistId': typeof MainPlaylistPlaylistIdRoute
   '/channel/$slug/podcast.xml': typeof ChannelSlugPodcastDotxmlRoute
   '/channel/$slug/rss.xml': typeof ChannelSlugRssDotxmlRoute
   '/dashboard_/account_/newsletter': typeof DashboardAccountNewsletterRoute
@@ -734,6 +743,7 @@ export interface FileRouteTypes {
     | '/channel/$slug'
     | '/churches/$slug'
     | '/media/$mediaId'
+    | '/playlist/$playlistId'
     | '/channel/$slug/podcast.xml'
     | '/channel/$slug/rss.xml'
     | '/dashboard/account/newsletter'
@@ -806,6 +816,7 @@ export interface FileRouteTypes {
     | '/channel/$slug'
     | '/churches/$slug'
     | '/media/$mediaId'
+    | '/playlist/$playlistId'
     | '/channel/$slug/podcast.xml'
     | '/channel/$slug/rss.xml'
     | '/dashboard/account/newsletter'
@@ -881,6 +892,7 @@ export interface FileRouteTypes {
     | '/_main/channel/$slug'
     | '/_main/churches_/$slug'
     | '/_main/media/$mediaId'
+    | '/_main/playlist/$playlistId'
     | '/channel/$slug/podcast.xml'
     | '/channel/$slug/rss.xml'
     | '/dashboard_/account_/newsletter'
@@ -1293,6 +1305,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChannelSlugPodcastDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_main/playlist/$playlistId': {
+      id: '/_main/playlist/$playlistId'
+      path: '/playlist/$playlistId'
+      fullPath: '/playlist/$playlistId'
+      preLoaderRoute: typeof MainPlaylistPlaylistIdRouteImport
+      parentRoute: typeof MainRoute
+    }
     '/_main/media/$mediaId': {
       id: '/_main/media/$mediaId'
       path: '/media/$mediaId'
@@ -1486,6 +1505,7 @@ interface MainRouteChildren {
   MainChannelSlugRoute: typeof MainChannelSlugRoute
   MainChurchesSlugRoute: typeof MainChurchesSlugRoute
   MainMediaMediaIdRoute: typeof MainMediaMediaIdRoute
+  MainPlaylistPlaylistIdRoute: typeof MainPlaylistPlaylistIdRoute
 }
 
 const MainRouteChildren: MainRouteChildren = {
@@ -1500,6 +1520,7 @@ const MainRouteChildren: MainRouteChildren = {
   MainChannelSlugRoute: MainChannelSlugRoute,
   MainChurchesSlugRoute: MainChurchesSlugRoute,
   MainMediaMediaIdRoute: MainMediaMediaIdRoute,
+  MainPlaylistPlaylistIdRoute: MainPlaylistPlaylistIdRoute,
 }
 
 const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren)

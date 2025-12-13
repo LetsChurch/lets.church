@@ -40,7 +40,7 @@ export function getThumbnailResize(
 }
 
 const UuidSchema = z.uuid();
-const idTranslator = short(short.constants.flickrBase58);
+export const idTranslator = short(short.constants.flickrBase58);
 
 export const IncomingIdSchema = z.string().transform((val, ctx) => {
   if (UuidSchema.safeParse(val).success) {

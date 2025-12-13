@@ -8,6 +8,7 @@ import { homeProcedures } from './procedures/home';
 import { libraryProcedures } from './procedures/library';
 import { mediaProcedures } from './procedures/media';
 import { newsletterProcedures } from './procedures/newsletter';
+import { playlistProcedures } from './procedures/playlist';
 import { searchProcedures } from './procedures/search';
 import { router } from './trpc';
 
@@ -22,6 +23,7 @@ export const appRouter = router({
   library: libraryProcedures,
   media: mediaProcedures,
   newsletter: newsletterProcedures,
+  playlist: playlistProcedures,
   search: searchProcedures,
 });
 
