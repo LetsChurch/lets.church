@@ -461,4 +461,121 @@ export const churchProcedures = {
         endorsedChannels,
       };
     }),
+
+  getOrganizationMedia: publicProcedure
+    .input(
+      z.object({
+        slug: z.string(),
+        limit: z.number().min(1).max(20).default(10),
+      }),
+    )
+    .query(async ({ input }) => {
+      const { slug, limit } = input;
+
+      moduleLogger.info(
+        { context: { slug, limit } },
+        'Fetching organization media',
+      );
+
+      // Get the organization and its official channels
+      const organization = await prisma.organization.findUnique({
+        where: { slug },
+        select: {
+          id: true,
+          channelAssociations: {
+            where: {
+              officialChannel: true,
+            },
+            select: {
+              channel: {
+                select: {
+                  id: true,
+                  slug: true,
+                  name: true,
+                  avatarPath: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!organization || organization.channelAssociations.length === 0) {
+        return [];
+      }
+
+      // Get channel IDs
+      const channelIds = organization.channelAssociations.map(
+        (assoc) => assoc.channel.id,
+      );
+
+      // Fetch recent uploads from all official channels
+      const uploads = await prisma.uploadRecord.findMany({
+        select: {
+          id: true,
+          title: true,
+          lengthSeconds: true,
+          publishedAt: true,
+          defaultThumbnailPath: true,
+          overrideThumbnailPath: true,
+          channel: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              avatarPath: true,
+            },
+          },
+        },
+        where: {
+          channelId: { in: channelIds },
+          transcodingFinishedAt: { not: null },
+          transcribingFinishedAt: { not: null },
+          visibility: 'PUBLIC',
+          channel: {
+            visibility: 'PUBLIC',
+            approvedAt: { not: null },
+            deletedAt: null,
+          },
+        },
+        orderBy: {
+          publishedAt: 'desc',
+        },
+        take: limit,
+      });
+
+      // Transform uploads to include thumbnail URLs
+      return uploads.map((upload) => {
+        const thumbnailPath =
+          upload.overrideThumbnailPath ?? upload.defaultThumbnailPath;
+        const thumbnailUrl = thumbnailPath
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(thumbnailPath), {
+              resize: { width: 480, height: 270 },
+            })
+          : null;
+
+        const channelAvatarUrl = upload.channel.avatarPath
+          ? getPublicImageUrl(
+              publicS3.getS3ProtocolUri(upload.channel.avatarPath),
+              {
+                resize: { width: 32, height: 32 },
+              },
+            )
+          : null;
+
+        return {
+          id: OutgoingIdSchema.parse(upload.id),
+          title: upload.title,
+          thumbnailUrl,
+          lengthSeconds: upload.lengthSeconds,
+          publishedAt: upload.publishedAt,
+          channel: {
+            id: OutgoingIdSchema.parse(upload.channel.id),
+            name: upload.channel.name,
+            slug: upload.channel.slug,
+            avatarUrl: channelAvatarUrl,
+          },
+        };
+      });
+    }),
 };

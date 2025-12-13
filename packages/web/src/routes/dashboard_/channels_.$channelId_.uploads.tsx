@@ -109,12 +109,13 @@ function ChannelUploadsPage() {
     }),
   );
 
+  const { data: currentUser } = useSuspenseQuery(
+    trpc.common.getCurrentUser.queryOptions(),
+  );
+
   const { channel, uploads, pagination } = data;
   const isChannelAdmin = channel.userMembership?.isAdmin ?? false;
-  const userMembership = channel.memberships?.find(
-    (m) => m.appUser.id === channel.userMembership?.appUserId,
-  );
-  const isSiteAdmin = userMembership?.appUser?.role === 'ADMIN';
+  const isSiteAdmin = currentUser.role === 'ADMIN';
   const isAdmin = isChannelAdmin || isSiteAdmin;
   const canEdit = isAdmin || (channel.userMembership?.canEdit ?? false);
   const canUpload = isAdmin || (channel.userMembership?.canUpload ?? false);

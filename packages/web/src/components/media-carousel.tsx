@@ -21,7 +21,7 @@ type MediaCarouselProps = {
   }>;
   showPagination?: boolean;
   tailerCard?: ReactNode;
-  fadeMargin?: string;
+  edgeMargin?: string;
   fadeSize?: number;
   buttonPositioning?: 'inside' | 'outside';
   className?: string;
@@ -31,7 +31,7 @@ export function MediaCarousel({
   items,
   showPagination = false,
   tailerCard: viewMoreCard,
-  fadeMargin = 'sm:-mx-16 sm:px-16',
+  edgeMargin: fadeMargin = 'sm:-mx-16 sm:px-16',
   fadeSize = 64,
   buttonPositioning = 'outside',
   className,

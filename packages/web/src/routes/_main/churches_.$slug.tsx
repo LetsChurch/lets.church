@@ -1,16 +1,19 @@
 import {
   IconBuilding,
   IconBuildingChurch,
+  IconChevronRight,
   IconMail,
   IconMapPin,
   IconPhone,
   IconWorld,
 } from '@tabler/icons-react';
-import { useSuspenseQuery } from '@tanstack/react-query';
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { Avatar } from '@/components/avatar';
+import { MediaCarousel } from '@/components/media-carousel';
 import { Tag } from '@/components/tag';
 import { useTRPC } from '@/trpc/react';
+import { formatTime } from '@/util/format';
 
 export const Route = createFileRoute('/_main/churches_/$slug')({
   component: ChurchProfileComponent,
@@ -59,6 +62,10 @@ function ChurchProfileComponent() {
 
   const { data: church } = useSuspenseQuery(
     trpc.church.getOrganizationBySlug.queryOptions({ slug }),
+  );
+
+  const { data: churchMedia } = useQuery(
+    trpc.church.getOrganizationMedia.queryOptions({ slug, limit: 10 }),
   );
 
   if (!church) {
@@ -293,6 +300,45 @@ function ChurchProfileComponent() {
                     )}
                   </div>
                 )}
+
+                {churchMedia && churchMedia.length > 0 ? (
+                  <div className="mt-6">
+                    <h3 className="mb-4 font-medium text-primary text-sm">
+                      Recent Uploads
+                    </h3>
+                    <MediaCarousel
+                      items={churchMedia.map((media) => ({
+                        id: media.id,
+                        title: media.title,
+                        thumbnailUrl: media.thumbnailUrl,
+                        channelName: media.channel.name,
+                        channelAvatarUrl: media.channel.avatarUrl,
+                        duration: media.lengthSeconds
+                          ? formatTime(media.lengthSeconds * 1000)
+                          : undefined,
+                      }))}
+                      edgeMargin="-mx-5 px-5"
+                      fadeSize={0}
+                      buttonPositioning="inside"
+                      tailerCard={
+                        church.officialChannels.length > 0 ? (
+                          <Link
+                            to="/channel/$slug"
+                            params={{ slug: church.officialChannels[0].slug }}
+                            className="flex aspect-video items-center justify-center rounded-lg border-fancy-pants bg-white transition-colors hover:bg-zinc-50 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                          >
+                            <div className="flex items-center gap-2 text-center">
+                              <span className="font-medium text-primary text-sm">
+                                Browse all content
+                              </span>
+                              <IconChevronRight className="size-4 text-muted" />
+                            </div>
+                          </Link>
+                        ) : undefined
+                      }
+                    />
+                  </div>
+                ) : null}
               </section>
             ) : null}
 
