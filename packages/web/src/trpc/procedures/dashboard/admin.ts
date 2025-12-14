@@ -43,6 +43,7 @@ import {
   filterUploadsWithActiveWorkflows,
   filterUploadsWithoutActiveWorkflows,
 } from '@/util/temporal-workflow';
+import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { getPublicImageUrl } from '@/util/url';
 import { authProcedure, router } from '../../trpc';
 import { newsletterListsRouter } from '../newsletter-lists';
@@ -1519,26 +1520,12 @@ export const adminRouter = router({
     });
 
     return featuredUploads.map(({ uploadRecord, ...rest }) => {
-      const thumbnailPath =
-        uploadRecord.overrideThumbnailPath ?? uploadRecord.defaultThumbnailPath;
-
-      const thumbnailUrl = thumbnailPath
-        ? getPublicImageUrl(publicS3.getS3ProtocolUri(thumbnailPath), {
-            resize: { width: 120, height: 68 },
-          })
-        : null;
-
-      const channelDefaultThumbnailUrl = uploadRecord.channel
-        .defaultThumbnailPath
-        ? getPublicImageUrl(
-            publicS3.getS3ProtocolUri(
-              uploadRecord.channel.defaultThumbnailPath,
-            ),
-            {
-              resize: { width: 120, height: 68 },
-            },
-          )
-        : null;
+      const thumbnailUrl = resolveThumbnailUrl({
+        overrideThumbnailPath: uploadRecord.overrideThumbnailPath,
+        defaultThumbnailPath: uploadRecord.defaultThumbnailPath,
+        channelDefaultThumbnailPath: uploadRecord.channel.defaultThumbnailPath,
+        size: 'table',
+      });
 
       const { avatarPath, ...channelWithoutPath } = uploadRecord.channel;
       const channelAvatarUrl = avatarPath
@@ -1551,7 +1538,7 @@ export const adminRouter = router({
         ...rest,
         uploadRecord: {
           ...uploadRecord,
-          thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
+          thumbnailUrl,
           channel: {
             ...channelWithoutPath,
             avatarUrl: channelAvatarUrl,

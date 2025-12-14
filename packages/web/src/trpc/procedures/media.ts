@@ -10,16 +10,13 @@ import remarkRehype from 'remark-rehype';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
 import { unified } from 'unified';
 import { z } from 'zod';
-import {
-  getThumbnailResize,
-  IncomingIdSchema,
-  OutgoingIdSchema,
-} from '@/schemas/common';
+import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { canChannel, createChannelAuthContext } from '@/util/authorization';
 import { appAvatarXs2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { getClientIpAddress } from '@/util/request-ip';
 import { publicS3 } from '@/util/s3';
+import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { getPublicImageUrl, getPublicMediaUrl } from '@/util/url';
 import { ffprobeSchema } from '@/util/zod';
 import { authProcedure, publicProcedure } from '../trpc';
@@ -137,46 +134,31 @@ export const mediaProcedures = {
         ...mediaRest
       } = media;
 
-      const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
-      const thumbnailUrl = thumbnailPath
-        ? getPublicImageUrl(
-            publicS3.getS3ProtocolUri(thumbnailPath),
-            getThumbnailResize('card'),
-          )
-        : null;
+      const thumbnailUrl = resolveThumbnailUrl({
+        overrideThumbnailPath,
+        defaultThumbnailPath,
+        channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+        size: 'card',
+      });
 
-      const fullSizeThumbnailUrl = thumbnailPath
-        ? getPublicImageUrl(
-            publicS3.getS3ProtocolUri(thumbnailPath),
-            getThumbnailResize('featured'),
-          )
-        : null;
+      const fullSizeThumbnailUrl = resolveThumbnailUrl({
+        overrideThumbnailPath,
+        defaultThumbnailPath,
+        channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+        size: 'featured',
+      });
 
-      const posterThumbnailUrl = thumbnailPath
-        ? getPublicImageUrl(
-            publicS3.getS3ProtocolUri(thumbnailPath),
-            getThumbnailResize('poster'),
-          )
-        : null;
+      const posterThumbnailUrl = resolveThumbnailUrl({
+        overrideThumbnailPath,
+        defaultThumbnailPath,
+        channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+        size: 'poster',
+      });
 
       const channelAvatarUrl = channel.avatarPath
         ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
             resize: appAvatarXs2x,
           })
-        : null;
-
-      const channelDefaultThumbnailUrl = channel.defaultThumbnailPath
-        ? getPublicImageUrl(
-            publicS3.getS3ProtocolUri(channel.defaultThumbnailPath),
-            getThumbnailResize('card'),
-          )
-        : null;
-
-      const channelDefaultPosterUrl = channel.defaultThumbnailPath
-        ? getPublicImageUrl(
-            publicS3.getS3ProtocolUri(channel.defaultThumbnailPath),
-            getThumbnailResize('poster'),
-          )
         : null;
 
       // Generate media source URLs based on available variants
@@ -333,10 +315,9 @@ export const mediaProcedures = {
         ...mediaRest,
         descriptionHtml,
         id: OutgoingIdSchema.parse(mediaRest.id),
-        thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
-        fullSizeThumbnailUrl:
-          fullSizeThumbnailUrl || channelDefaultThumbnailUrl,
-        posterThumbnailUrl: posterThumbnailUrl || channelDefaultPosterUrl,
+        thumbnailUrl,
+        fullSizeThumbnailUrl,
+        posterThumbnailUrl,
         mediaSource,
         audioSource,
         peaksJsonUrl,

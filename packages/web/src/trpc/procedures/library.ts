@@ -1,13 +1,10 @@
 import { prisma } from '@letschurch/db';
 import { z } from 'zod';
-import {
-  getThumbnailResize,
-  IncomingIdSchema,
-  OutgoingIdSchema,
-} from '@/schemas/common';
+import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarXs2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { publicS3 } from '@/util/s3';
+import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { getPublicImageUrl } from '@/util/url';
 import { authProcedure } from '../trpc';
 
@@ -158,13 +155,13 @@ export const libraryProcedures = {
           channel,
           ...uploadRest
         } = uploadRecord;
-        const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
-        const thumbnailUrl = thumbnailPath
-          ? getPublicImageUrl(
-              publicS3.getS3ProtocolUri(thumbnailPath),
-              getThumbnailResize('card'),
-            )
-          : null;
+
+        const thumbnailUrl = resolveThumbnailUrl({
+          overrideThumbnailPath,
+          defaultThumbnailPath,
+          channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+          size: 'card',
+        });
 
         const channelAvatarUrl = channel.avatarPath
           ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
@@ -172,17 +169,10 @@ export const libraryProcedures = {
             })
           : null;
 
-        const channelDefaultThumbnailUrl = channel.defaultThumbnailPath
-          ? getPublicImageUrl(
-              publicS3.getS3ProtocolUri(channel.defaultThumbnailPath),
-              getThumbnailResize('card'),
-            )
-          : null;
-
         return {
           ...uploadRest,
           id: OutgoingIdSchema.parse(uploadRest.id),
-          thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
+          thumbnailUrl,
           channel: {
             ...channel,
             id: OutgoingIdSchema.parse(channel.id),
@@ -280,25 +270,18 @@ export const libraryProcedures = {
             channel,
             ...uploadRest
           } = upload;
-          const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
-          const thumbnailUrl = thumbnailPath
-            ? getPublicImageUrl(
-                publicS3.getS3ProtocolUri(thumbnailPath),
-                getThumbnailResize('card'),
-              )
-            : null;
+
+          const thumbnailUrl = resolveThumbnailUrl({
+            overrideThumbnailPath,
+            defaultThumbnailPath,
+            channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+            size: 'card',
+          });
 
           const channelAvatarUrl = channel.avatarPath
             ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
                 resize: appAvatarXs2x,
               })
-            : null;
-
-          const channelDefaultThumbnailUrl = channel.defaultThumbnailPath
-            ? getPublicImageUrl(
-                publicS3.getS3ProtocolUri(channel.defaultThumbnailPath),
-                getThumbnailResize('card'),
-              )
             : null;
 
           const lastSecond = UploadViewSecond[0]?.second;
@@ -310,7 +293,7 @@ export const libraryProcedures = {
           return {
             ...uploadRest,
             id: OutgoingIdSchema.parse(uploadRest.id),
-            thumbnailUrl: thumbnailUrl || channelDefaultThumbnailUrl,
+            thumbnailUrl,
             progress,
             channel: {
               ...channel,

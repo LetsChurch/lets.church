@@ -1,10 +1,8 @@
 import { prisma } from '@letschurch/db';
 import { createFileRoute } from '@tanstack/react-router';
 import { Feed } from 'feed';
-import { getThumbnailResize } from '@/schemas/common';
 import logger from '@/util/logger';
-import { publicS3 } from '@/util/s3';
-import { getPublicImageUrl } from '@/util/url';
+import { resolveThumbnailUrl } from '@/util/thumbnails';
 
 const moduleLogger = logger.child({
   module: 'routes/media/rss.xml',
@@ -69,21 +67,12 @@ export const Route = createFileRoute('/media/rss.xml')({
 
           // Add items to feed
           for (const upload of uploads) {
-            const thumbnailPath =
-              upload.overrideThumbnailPath ?? upload.defaultThumbnailPath;
-            const thumbnailUrl = thumbnailPath
-              ? getPublicImageUrl(
-                  publicS3.getS3ProtocolUri(thumbnailPath),
-                  getThumbnailResize('card'),
-                )
-              : upload.channel.defaultThumbnailPath
-                ? getPublicImageUrl(
-                    publicS3.getS3ProtocolUri(
-                      upload.channel.defaultThumbnailPath,
-                    ),
-                    getThumbnailResize('card'),
-                  )
-                : null;
+            const thumbnailUrl = resolveThumbnailUrl({
+              overrideThumbnailPath: upload.overrideThumbnailPath,
+              defaultThumbnailPath: upload.defaultThumbnailPath,
+              channelDefaultThumbnailPath: upload.channel.defaultThumbnailPath,
+              size: 'card',
+            });
 
             const uploadUrl = `${siteUrl}/media/${upload.id}`;
             const channelUrl = `${siteUrl}/channel/${upload.channel.slug}`;

@@ -1,9 +1,9 @@
 import { prisma } from '@letschurch/db';
 import { createFileRoute } from '@tanstack/react-router';
 import { Podcast } from 'podcast';
-import { getThumbnailResize } from '@/schemas/common';
 import logger from '@/util/logger';
 import { publicS3 } from '@/util/s3';
+import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { getPublicImageUrl, getPublicMediaUrl } from '@/util/url';
 
 const moduleLogger = logger.child({
@@ -150,19 +150,12 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
 
           // Add items to feed
           for (const upload of uploads) {
-            const thumbnailPath =
-              upload.overrideThumbnailPath ?? upload.defaultThumbnailPath;
-            const thumbnailUrl = thumbnailPath
-              ? getPublicImageUrl(
-                  publicS3.getS3ProtocolUri(thumbnailPath),
-                  getThumbnailResize('card'),
-                )
-              : channel.defaultThumbnailPath
-                ? getPublicImageUrl(
-                    publicS3.getS3ProtocolUri(channel.defaultThumbnailPath),
-                    getThumbnailResize('card'),
-                  )
-                : null;
+            const thumbnailUrl = resolveThumbnailUrl({
+              overrideThumbnailPath: upload.overrideThumbnailPath,
+              defaultThumbnailPath: upload.defaultThumbnailPath,
+              channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+              size: 'card',
+            });
 
             const uploadUrl = `${siteUrl}/media/${upload.id}`;
             const audioDownloadUrl = getPublicMediaUrl(

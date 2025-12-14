@@ -21,7 +21,7 @@ export function getThumbnailResize(
   size: z.infer<typeof ThumbnailSize>,
 ): Resize {
   if (size === 'featured') {
-    return { resize: { width: 1280 } };
+    return { resize: { width: 1280, height: 720 } };
   }
 
   if (size === 'poster') {

@@ -9,6 +9,7 @@ import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import logger from '@/util/logger';
 import { formatPhoneNumber } from '@/util/phone';
 import { publicS3 } from '@/util/s3';
+import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { getPublicImageUrl } from '@/util/url';
 import { publicProcedure } from '../trpc';
 
@@ -524,6 +525,7 @@ export const churchProcedures = {
               name: true,
               slug: true,
               avatarPath: true,
+              defaultThumbnailPath: true,
             },
           },
         },
@@ -546,13 +548,12 @@ export const churchProcedures = {
 
       // Transform uploads to include thumbnail URLs
       return uploads.map((upload) => {
-        const thumbnailPath =
-          upload.overrideThumbnailPath ?? upload.defaultThumbnailPath;
-        const thumbnailUrl = thumbnailPath
-          ? getPublicImageUrl(publicS3.getS3ProtocolUri(thumbnailPath), {
-              resize: { width: 480, height: 270 },
-            })
-          : null;
+        const thumbnailUrl = resolveThumbnailUrl({
+          overrideThumbnailPath: upload.overrideThumbnailPath,
+          defaultThumbnailPath: upload.defaultThumbnailPath,
+          channelDefaultThumbnailPath: upload.channel.defaultThumbnailPath,
+          size: 'card',
+        });
 
         const channelAvatarUrl = upload.channel.avatarPath
           ? getPublicImageUrl(
