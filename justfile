@@ -114,11 +114,15 @@ s3-prune-multipart-uploads:
 
 seed-db:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run seed'
+
 seed-s3-ingest:
-  rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-ingest lcdevs3:letschurch-dev-ingest
+  rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-ingest lcdevs3:${S3_INGEST_BUCKET}
 seed-s3-public:
-  rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-public lcdevs3:letschurch-dev-public
-seed-s3: seed-s3-ingest seed-s3-public
+  rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-public lcdevs3:${S3_PUBLIC_BUCKET}
+seed-s3-backup:
+  rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-backup lcdevs3backup:${S3_BACKUP_BUCKET}
+seed-s3: seed-s3-ingest seed-s3-public seed-s3-backup
+
 seed: seed-s3 seed-db
 
 reset:
