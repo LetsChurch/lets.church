@@ -6,11 +6,11 @@ import {
   msearchTranscripts,
   msearchUploads,
 } from '@letschurch/elasticsearch';
+import { publicS3 } from '@letschurch/s3/public';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarSm2x, appAvatarXs2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
-import { publicS3 } from '@/util/s3';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { getPublicImageUrl } from '@/util/url';
 import { authProcedure, publicProcedure } from '../trpc';

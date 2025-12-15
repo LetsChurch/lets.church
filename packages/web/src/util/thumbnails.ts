@@ -1,6 +1,6 @@
+import { publicS3 } from '@letschurch/s3/public';
 import type { z } from 'zod';
 import { getThumbnailResize, type ThumbnailSize } from '@/schemas/common';
-import { publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
 
 /**

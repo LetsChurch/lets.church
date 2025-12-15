@@ -4,11 +4,11 @@ import {
   MSearchResponseSchema,
   msearchOrganizations,
 } from '@letschurch/elasticsearch';
+import { publicS3 } from '@letschurch/s3/public';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import logger from '@/util/logger';
 import { formatPhoneNumber } from '@/util/phone';
-import { publicS3 } from '@/util/s3';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { getPublicImageUrl } from '@/util/url';
 import { publicProcedure } from '../trpc';

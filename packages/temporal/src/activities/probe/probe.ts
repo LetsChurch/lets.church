@@ -1,11 +1,11 @@
 import { join } from 'node:path';
+import { ingestS3 } from '@letschurch/s3/ingest';
 import { Context } from '@temporalio/activity';
 import { invariant } from 'es-toolkit';
 import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
 import { runFfprobe } from '../../util/ffmpeg';
 import logger from '../../util/logger';
-import { ingestS3 } from '../../util/s3';
 import { updateUploadRecord } from '../../util/temporal';
 import { ffprobeSchema } from '../../util/zod';
 

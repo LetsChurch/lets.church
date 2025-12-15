@@ -1,7 +1,8 @@
 import { prisma } from '@letschurch/db';
+import { backupS3 } from '@letschurch/s3/backup';
+import { publicS3 } from '@letschurch/s3/public';
 import { Context } from '@temporalio/activity';
 import logger from '../../util/logger';
-import { backupS3, publicS3 } from '../../util/s3';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/delete-channel',

@@ -1,9 +1,9 @@
 import { AddressType, prisma } from '@letschurch/db';
 import { client, escapeDocument } from '@letschurch/elasticsearch';
+import { publicS3 } from '@letschurch/s3/public';
 import { invariant } from 'es-toolkit';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
 import logger from '../../util/logger';
-import { publicS3 } from '../../util/s3';
 import { stitchToHtml, whisperJsonSchema } from '../../util/whisper';
 import { transcriptSegmentSchema } from '../../util/zod';
 

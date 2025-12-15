@@ -12,7 +12,6 @@ resources:
   - web-deployment.yml
   # Workers
   - background-worker-deployment.yml
-  - background-low-priority-worker-deployment.yml
   - import-worker-deployment.yml
   - transcode-worker-deployment.yml
 configMapGenerator:
@@ -44,9 +43,6 @@ configMapGenerator:
   - name: kibana-config
     literals:
       - ELASTICSEARCH_HOSTS="http://elasticsearch:9200"
-  - name: background-low-priority-worker-config
-    literals:
-      - LC_QUEUE="background-low-priority"
   - name: background-worker-config
     literals:
       - TEMPORAL_SHUTDOWN_GRACE_TIME=1m

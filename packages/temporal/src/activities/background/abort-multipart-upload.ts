@@ -1,10 +1,8 @@
-import { getS3Client, type S3ClientId } from '../../util/s3';
+import { ingestS3 } from '@letschurch/s3/ingest';
 
 export default async function abortMultipartUploadAction(
-  clientId: S3ClientId,
   uploadId: string,
   uploadKey: string,
 ) {
-  const client = getS3Client(clientId);
-  await client.abortMultipartUpload(uploadId, uploadKey);
+  await ingestS3.abortMultipartUpload(uploadId, uploadKey);
 }

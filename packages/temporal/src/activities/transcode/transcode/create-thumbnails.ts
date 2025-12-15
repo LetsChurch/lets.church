@@ -1,5 +1,7 @@
 import { stat } from 'node:fs/promises';
 import { basename, join } from 'node:path';
+import { ingestS3 } from '@letschurch/s3/ingest';
+import { publicS3 } from '@letschurch/s3/public';
 import { Context } from '@temporalio/activity';
 import { chunk, compact, maxBy } from 'es-toolkit';
 import fastGlob from 'fast-glob';
@@ -11,7 +13,6 @@ import { updateUploadRecord } from '../../../client';
 import { runFfmpegThumbnails } from '../../../util/ffmpeg';
 import { concatThumbs, imageToBlurhash } from '../../../util/images';
 import logger from '../../../util/logger';
-import { ingestS3, publicS3 } from '../../../util/s3';
 import type { Probe } from '../../../util/zod';
 
 const moduleLogger = logger.child({

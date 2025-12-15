@@ -1,8 +1,8 @@
 import { prisma } from '@letschurch/db';
+import { publicS3 } from '@letschurch/s3/public';
 import { createFileRoute } from '@tanstack/react-router';
 import { Podcast } from 'podcast';
 import logger from '@/util/logger';
-import { publicS3 } from '@/util/s3';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { getPublicImageUrl, getPublicMediaUrl } from '@/util/url';
 

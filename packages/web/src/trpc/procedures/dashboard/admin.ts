@@ -1,10 +1,11 @@
 import { Prisma, prisma } from '@letschurch/db';
-import { parseS3Env } from '@letschurch/s3';
-import { sendVerificationEmail } from '@letschurch/temporal/activities/background';
+import { ingestConfig } from '@letschurch/s3/ingest';
+import { publicS3 } from '@letschurch/s3/public';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
 import {
   deleteChannelWorkflow,
   geocodeOrganizationWorkflow,
+  postUserRegistrationWorkflow,
   processMediaWorkflow,
 } from '@letschurch/temporal/workflows/background';
 import { TRPCError } from '@trpc/server';
@@ -38,7 +39,6 @@ import {
 import { mantineAvatarSm2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { generateResetPasswordEmail } from '@/util/reset-password-email';
-import { publicS3 } from '@/util/s3';
 import {
   filterUploadsWithActiveWorkflows,
   filterUploadsWithoutActiveWorkflows,
@@ -1352,7 +1352,18 @@ export const adminRouter = router({
           });
         }
 
-        await sendVerificationEmail(user.id, user.username, emailRecord.email);
+        await (await client).workflow.start(postUserRegistrationWorkflow, {
+          args: [
+            {
+              userId: user.id,
+              username: user.username,
+              email: emailRecord.email,
+              subscribeToNewsletter: false,
+            },
+          ],
+          workflowId: `resend-verification:${user.id}:${Date.now()}`,
+          taskQueue: BACKGROUND_QUEUE,
+        });
 
         moduleLogger.info(
           {
@@ -2033,12 +2044,10 @@ export const adminRouter = router({
           });
         }
 
-        const s3Env = parseS3Env();
-
         await startBackfillUploadStates({
           batchSize: input.batchSize,
           delayBetweenBatchesMs: input.delayBetweenBatchesMs,
-          ingestBucket: s3Env.S3_INGEST_BUCKET,
+          ingestBucket: ingestConfig.bucket,
           maxRows: input.maxRows,
         });
 
@@ -2261,16 +2270,14 @@ export const adminRouter = router({
           });
         }
 
-        const s3Env = parseS3Env();
-
         await startBackfillUploadStateSizes({
           batchSize: input.batchSize,
           delayBetweenBatchesMs: input.delayBetweenBatchesMs,
-          ingestBucket: s3Env.S3_INGEST_BUCKET,
-          ingestEndpoint: s3Env.S3_INGEST_ENDPOINT,
-          ingestRegion: s3Env.S3_INGEST_REGION,
-          ingestAccessKeyId: s3Env.S3_INGEST_ACCESS_KEY_ID,
-          ingestSecretAccessKey: s3Env.S3_INGEST_SECRET_ACCESS_KEY,
+          ingestBucket: ingestConfig.bucket,
+          ingestEndpoint: ingestConfig.endpoint,
+          ingestRegion: ingestConfig.region,
+          ingestAccessKeyId: ingestConfig.accessKeyId,
+          ingestSecretAccessKey: ingestConfig.secretAccessKey,
           maxRows: input.maxRows,
         });
 

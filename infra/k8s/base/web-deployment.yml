@@ -57,7 +57,9 @@ spec:
             - secretRef:
                 name: mapbox-secret
             - secretRef:
-                name: s3-secret
+                name: s3-ingest-secret
+            - secretRef:
+                name: s3-public-secret
             - secretRef:
                 name: sentry-secret
             - secretRef:

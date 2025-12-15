@@ -6,9 +6,21 @@ init:
 
 play-docker:
   ansible-playbook ./playbooks/install-docker.yml -K
-play-import-worker:
-  ansible-playbook ./playbooks/import-worker.yml -K
-play-probe-worker:
-  ansible-playbook ./playbooks/probe-worker.yml -K
+play-import-worker hash="":
+  #!/usr/bin/env bash
+  if [ -n "{{ hash }}" ]; then
+    ansible-playbook ./playbooks/import-worker.yml -K -e "lc_hash={{ hash }}"
+  else
+    ansible-playbook ./playbooks/import-worker.yml -K
+  fi
+play-probe-worker hash="":
+  #!/usr/bin/env bash
+  if [ -n "{{ hash }}" ]; then
+    ansible-playbook ./playbooks/probe-worker.yml -K -e "lc_hash={{ hash }}"
+  else
+    ansible-playbook ./playbooks/probe-worker.yml -K
+  fi
 
 play: play-docker play-import-worker
+
+play-workers hash="": (play-import-worker hash) (play-probe-worker hash)

@@ -3,9 +3,11 @@ import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { prisma } from '@letschurch/db';
+import { backupS3 } from '@letschurch/s3/backup';
+import { ingestS3 } from '@letschurch/s3/ingest';
+import { publicS3 } from '@letschurch/s3/public';
 import { heartbeat } from '@temporalio/activity';
 import logger from '../../util/logger';
-import { backupS3, ingestS3, publicS3 } from '../../util/s3';
 
 const WORK_DIR = process.env.BACKUP_WORKING_DIRECTORY ?? '/data/backup';
 

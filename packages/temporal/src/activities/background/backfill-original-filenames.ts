@@ -1,8 +1,8 @@
 import { prisma } from '@letschurch/db';
+import { ingestS3 } from '@letschurch/s3/ingest';
 import { makeChunkedTokenizerFromS3 } from '@tokenizer/s3';
 import { fileTypeFromTokenizer } from 'file-type';
 import sanitizeFilename from 'sanitize-filename';
-import { ingestS3 } from '../../util/s3';
 
 export async function getBackfillFilenamesCount(): Promise<number> {
   return prisma.uploadRecord.count({

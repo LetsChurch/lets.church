@@ -1,7 +1,7 @@
 import { prisma } from '@letschurch/db';
 import type { UploadStateType } from '@letschurch/db/generated/prisma/client';
+import { ingestS3 } from '@letschurch/s3/ingest';
 import logger from '../../util/logger';
-import { ingestS3 } from '../../util/s3';
 
 export type BackfillOriginalImageBatchResult = {
   created: number;

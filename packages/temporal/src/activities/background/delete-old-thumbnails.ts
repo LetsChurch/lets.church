@@ -1,9 +1,9 @@
+import { publicS3 } from '@letschurch/s3/public';
 import { Context } from '@temporalio/activity';
 import { throttle } from 'es-toolkit';
 import all from 'it-all';
 import filter from 'it-filter';
 import logger from '../../util/logger';
-import { publicS3 } from '../../util/s3';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/delete-old-thumbnails',

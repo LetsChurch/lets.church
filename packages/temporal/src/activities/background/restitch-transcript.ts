@@ -1,8 +1,8 @@
+import { publicS3 } from '@letschurch/s3/public';
 import { Context } from '@temporalio/activity';
 import { invariant } from 'es-toolkit';
 import { updateUploadRecord } from '../../client';
 import logger from '../../util/logger';
-import { publicS3 } from '../../util/s3';
 import {
   stitchTranscript,
   whisperJsonSchema,

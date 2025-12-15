@@ -39,7 +39,7 @@ export type HandleMultipartMediaUploadParams = {
 
 export async function handleMultipartMediaUploadWorkflow(
   targetId: string,
-  clientId: S3ClientId,
+  _clientId: S3ClientId,
   s3UploadId: string,
   s3UploadKey: string,
   postProcess: UploadPostProcessValue,
@@ -60,7 +60,6 @@ export async function handleMultipartMediaUploadWorkflow(
     }
 
     const sizeBytesStr = await completeMultipartUpload(
-      clientId,
       s3UploadId,
       s3UploadKey,
       eTags,
@@ -70,7 +69,6 @@ export async function handleMultipartMediaUploadWorkflow(
     // Pass size as string since Temporal cannot serialize bigint
     const uploadStateId = await createUploadState({
       s3Key: s3UploadKey,
-      clientId,
       uploadType: postProcess,
       sizeBytes: sizeBytesStr,
       uploadRecordId:
@@ -118,6 +116,6 @@ export async function handleMultipartMediaUploadWorkflow(
       });
     }
   } else {
-    await abortMultipartUpload(clientId, s3UploadId, s3UploadKey);
+    await abortMultipartUpload(s3UploadId, s3UploadKey);
   }
 }

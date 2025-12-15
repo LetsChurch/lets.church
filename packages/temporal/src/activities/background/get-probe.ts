@@ -1,5 +1,5 @@
+import { ingestS3 } from '@letschurch/s3/ingest';
 import { invariant } from 'es-toolkit';
-import { ingestS3 } from '../../util/s3';
 import { ffprobeSchema } from '../../util/zod';
 
 export default async function getProbe(uploadRecordId: string) {

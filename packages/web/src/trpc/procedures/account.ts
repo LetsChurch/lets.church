@@ -1,4 +1,7 @@
 import { prisma, type TransactionClient } from '@letschurch/db';
+import { PART_SIZE } from '@letschurch/s3';
+import { ingestS3 } from '@letschurch/s3/ingest';
+import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
 import { invariant } from 'es-toolkit';
@@ -13,7 +16,6 @@ import {
 } from '@/temporal';
 import { mantineAvatarLg2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
-import { ingestS3, PART_SIZE, publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
 import testPassword from '@/util/zxcvbn';
 import { authProcedure } from '../trpc';

@@ -1,4 +1,5 @@
 import { prisma, UploadViewSource } from '@letschurch/db';
+import { publicS3 } from '@letschurch/s3/public';
 import { xxh64 } from '@node-rs/xxhash';
 import { getRequest } from '@tanstack/react-start/server';
 import rehypeExternalLinks from 'rehype-external-links';
@@ -15,7 +16,6 @@ import { canChannel, createChannelAuthContext } from '@/util/authorization';
 import { appAvatarXs2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { getClientIpAddress } from '@/util/request-ip';
-import { publicS3 } from '@/util/s3';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { getPublicImageUrl, getPublicMediaUrl } from '@/util/url';
 import { ffprobeSchema } from '@/util/zod';

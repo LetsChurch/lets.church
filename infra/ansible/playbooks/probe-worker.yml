@@ -3,6 +3,8 @@
   hosts: probe-workers
   become: true
   vars_files:
+    - ../variables/common.crypt.yml
+    - ../variables/s3-ingest.crypt.yml
     - ../variables/probe-worker.crypt.yml
   tasks:
     - name: Get the latest commit hash
@@ -41,9 +43,4 @@
           S3_INGEST_BUCKET: "{{S3_INGEST_BUCKET}}"
           S3_INGEST_ACCESS_KEY_ID: "{{S3_INGEST_ACCESS_KEY_ID}}"
           S3_INGEST_SECRET_ACCESS_KEY: "{{S3_INGEST_SECRET_ACCESS_KEY}}"
-          S3_PUBLIC_REGION: "{{S3_PUBLIC_REGION}}"
-          S3_PUBLIC_ENDPOINT: "{{S3_PUBLIC_ENDPOINT}}"
-          S3_PUBLIC_BUCKET: "{{S3_PUBLIC_BUCKET}}"
-          S3_PUBLIC_ACCESS_KEY_ID: "{{S3_PUBLIC_ACCESS_KEY_ID}}"
-          S3_PUBLIC_SECRET_ACCESS_KEY: "{{S3_PUBLIC_SECRET_ACCESS_KEY}}"
           SENTRY_DSN: "{{SENTRY_DSN}}"

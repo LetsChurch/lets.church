@@ -3,17 +3,21 @@ volumes:
   pg-data:
   pnpm-store:
 
-x-s3-env: &s3-env
+x-s3-ingest-env: &s3-ingest-env
   S3_INGEST_REGION: ${S3_INGEST_REGION}
   S3_INGEST_ENDPOINT: ${S3_INGEST_ENDPOINT}
   S3_INGEST_BUCKET: ${S3_INGEST_BUCKET}
   S3_INGEST_ACCESS_KEY_ID: ${S3_INGEST_ACCESS_KEY_ID}
   S3_INGEST_SECRET_ACCESS_KEY: ${S3_INGEST_SECRET_ACCESS_KEY}
+
+x-s3-public-env: &s3-public-env
   S3_PUBLIC_REGION: ${S3_PUBLIC_REGION}
   S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT}
   S3_PUBLIC_BUCKET: ${S3_PUBLIC_BUCKET}
   S3_PUBLIC_ACCESS_KEY_ID: ${S3_PUBLIC_ACCESS_KEY_ID}
   S3_PUBLIC_SECRET_ACCESS_KEY: ${S3_PUBLIC_SECRET_ACCESS_KEY}
+
+x-s3-backup-env: &s3-backup-env
   S3_BACKUP_REGION: ${S3_BACKUP_REGION}
   S3_BACKUP_ENDPOINT: ${S3_BACKUP_ENDPOINT}
   S3_BACKUP_BUCKET: ${S3_BACKUP_BUCKET}
@@ -52,7 +56,7 @@ services:
       TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
       WEB_URL: ${HOST_WEB_URL}
       ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
-      <<: *s3-env
+      <<: [*s3-ingest-env, *s3-public-env]
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
@@ -83,7 +87,7 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1m
       WEB_URL: ${HOST_WEB_URL}
-      <<: *s3-env
+      <<: [*s3-ingest-env, *s3-public-env, *s3-backup-env]
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
@@ -111,7 +115,7 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 5
-      <<: *s3-env
+      <<: *s3-ingest-env
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
@@ -139,7 +143,7 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 1
-      <<: *s3-env
+      <<: [*s3-ingest-env, *s3-public-env]
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
@@ -168,7 +172,7 @@ services:
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 1
       WHISPER_MODEL: tiny.en
-      <<: *s3-env
+      <<: [*s3-ingest-env, *s3-public-env]
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
@@ -197,7 +201,7 @@ services:
       IDENTITY: dev
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1m
-      <<: *s3-env
+      <<: *s3-ingest-env
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml

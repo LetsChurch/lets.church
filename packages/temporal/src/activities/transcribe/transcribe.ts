@@ -1,5 +1,7 @@
 import { stat } from 'node:fs/promises';
 import { extname, join } from 'node:path';
+import { ingestS3 } from '@letschurch/s3/ingest';
+import { publicS3 } from '@letschurch/s3/public';
 import { Context } from '@temporalio/activity';
 import { invariant } from 'es-toolkit';
 import mime from 'mime';
@@ -7,7 +9,6 @@ import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
 import { updateUploadRecord } from '../../client';
 import logger from '../../util/logger';
-import { ingestS3, publicS3 } from '../../util/s3';
 import {
   readWhisperJsonFile,
   runWhisper,

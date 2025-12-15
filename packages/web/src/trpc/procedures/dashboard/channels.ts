@@ -1,4 +1,7 @@
 import { prisma, UploadLicense } from '@letschurch/db';
+import { PART_SIZE } from '@letschurch/s3';
+import { ingestS3 } from '@letschurch/s3/ingest';
+import { publicS3 } from '@letschurch/s3/public';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
 import { emailHtml } from '@letschurch/temporal/util/email';
 import { sendEmailWorkflow } from '@letschurch/temporal/workflows/background/send-email';
@@ -48,7 +51,6 @@ import {
   mantineAvatarXl2x,
 } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
-import { ingestS3, PART_SIZE, publicS3 } from '@/util/s3';
 import { getPublicImageUrl, getPublicMediaUrl } from '@/util/url';
 import { authProcedure, router } from '../../trpc';
 

@@ -35,4 +35,4 @@ spec:
             - secretRef:
                 name: axiom-pino-secret
             - secretRef:
-                name: s3-secret
+                name: s3-ingest-secret

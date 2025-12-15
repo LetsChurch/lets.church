@@ -1,5 +1,6 @@
 import type { Prisma, UploadVariant } from '@letschurch/db';
 import { prisma } from '@letschurch/db';
+import type { S3ClientId } from '@letschurch/s3';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
 import {
   type BackfillUploadStateSizesWorkflowParams,
@@ -42,7 +43,6 @@ import PLazy from 'p-lazy';
 import waitOn from 'wait-on';
 import { z } from 'zod';
 import logger from '../util/logger';
-import type { S3ClientId } from '../util/s3';
 import type { UploadPostProcessValue } from '../util/types';
 
 export { indexDocument } from '@letschurch/temporal/client';

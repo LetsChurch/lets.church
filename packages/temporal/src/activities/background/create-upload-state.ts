@@ -3,12 +3,11 @@ import type {
   BackupStatus,
   UploadStateType,
 } from '@letschurch/db/generated/prisma/client';
-import { getS3Client, type S3ClientId } from '../../util/s3';
+import { ingestS3 } from '@letschurch/s3/ingest';
 import type { UploadPostProcessValue } from '../../util/types';
 
 export type CreateUploadStateParams = {
   s3Key: string;
-  clientId: S3ClientId;
   uploadType: UploadPostProcessValue;
   sizeBytes?: string;
   uploadRecordId?: string;
@@ -53,8 +52,7 @@ export async function createUploadState(
   params: CreateUploadStateParams,
 ): Promise<string> {
   const uploadStateType = mapUploadTypeToStateType(params.uploadType);
-  const s3Client = getS3Client(params.clientId);
-  const s3Bucket = s3Client.getBucket();
+  const s3Bucket = ingestS3.getBucket();
 
   const uploadState = await prisma.uploadState.create({
     data: {

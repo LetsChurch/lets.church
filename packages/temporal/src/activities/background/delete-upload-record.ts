@@ -1,8 +1,9 @@
 import { prisma } from '@letschurch/db';
 import { client as esClient } from '@letschurch/elasticsearch';
+import { ingestS3 } from '@letschurch/s3/ingest';
+import { publicS3 } from '@letschurch/s3/public';
 import { Context } from '@temporalio/activity';
 import logger from '../../util/logger';
-import { ingestS3, publicS3 } from '../../util/s3';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/delete-upload-record',

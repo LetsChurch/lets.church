@@ -24,7 +24,6 @@ import pRetry from 'p-retry';
 import sanitizeFilename from 'sanitize-filename';
 import type { MergeExclusive } from 'type-fest';
 import { v4 as uuid } from 'uuid';
-import { z } from 'zod';
 
 export const PART_SIZE = 10_000_000;
 
@@ -477,47 +476,6 @@ export class LcS3Client {
   }
 }
 
-export type CreateS3ClientsOptions = {
-  ingest: S3Config;
-  public: S3Config;
-  backup: S3Config;
-  logger?: Logger;
-};
-
-export function createS3Clients({
-  ingest,
-  public: pub,
-  backup,
-  logger,
-}: CreateS3ClientsOptions) {
-  const ingestS3 = new LcS3Client({
-    ...ingest,
-    logger: logger?.child({ module: 's3/ingest' }),
-  });
-  const publicS3 = new LcS3Client({
-    ...pub,
-    logger: logger?.child({ module: 's3/public' }),
-  });
-  const backupS3 = new LcS3Client({
-    ...backup,
-    logger: logger?.child({ module: 's3/backup' }),
-    storageClass: 'DEEP_ARCHIVE',
-  });
-
-  return { ingestS3, publicS3, backupS3 };
-}
-
-export function getS3Client(
-  clientId: S3ClientId,
-  ingestS3: LcS3Client,
-  publicS3: LcS3Client,
-  backupS3: LcS3Client,
-): LcS3Client {
-  if (clientId === 'INGEST') return ingestS3;
-  if (clientId === 'PUBLIC') return publicS3;
-  return backupS3;
-}
-
 export async function getPublicUrlWithFilename(
   publicS3: LcS3Client,
   key: string,
@@ -537,53 +495,4 @@ export async function createPresignedPartUploadUrls(
   size: number,
 ) {
   return client.createPresignedPartUploadUrls(uploadId, uploadKey, size);
-}
-
-export function parseS3Env() {
-  return z
-    .object({
-      S3_INGEST_BUCKET: z.string(),
-      S3_INGEST_REGION: z.string(),
-      S3_INGEST_ENDPOINT: z.string(),
-      S3_INGEST_ACCESS_KEY_ID: z.string(),
-      S3_INGEST_SECRET_ACCESS_KEY: z.string(),
-      S3_PUBLIC_BUCKET: z.string(),
-      S3_PUBLIC_REGION: z.string(),
-      S3_PUBLIC_ENDPOINT: z.string(),
-      S3_PUBLIC_ACCESS_KEY_ID: z.string(),
-      S3_PUBLIC_SECRET_ACCESS_KEY: z.string(),
-      S3_BACKUP_BUCKET: z.string(),
-      S3_BACKUP_REGION: z.string(),
-      S3_BACKUP_ENDPOINT: z.string(),
-      S3_BACKUP_ACCESS_KEY_ID: z.string(),
-      S3_BACKUP_SECRET_ACCESS_KEY: z.string(),
-    })
-    .parse(process.env);
-}
-
-export function getS3ConfigFromEnv() {
-  const env = parseS3Env();
-  return {
-    ingest: {
-      bucket: env.S3_INGEST_BUCKET,
-      region: env.S3_INGEST_REGION,
-      endpoint: env.S3_INGEST_ENDPOINT,
-      accessKeyId: env.S3_INGEST_ACCESS_KEY_ID,
-      secretAccessKey: env.S3_INGEST_SECRET_ACCESS_KEY,
-    },
-    public: {
-      bucket: env.S3_PUBLIC_BUCKET,
-      region: env.S3_PUBLIC_REGION,
-      endpoint: env.S3_PUBLIC_ENDPOINT,
-      accessKeyId: env.S3_PUBLIC_ACCESS_KEY_ID,
-      secretAccessKey: env.S3_PUBLIC_SECRET_ACCESS_KEY,
-    },
-    backup: {
-      bucket: env.S3_BACKUP_BUCKET,
-      region: env.S3_BACKUP_REGION,
-      endpoint: env.S3_BACKUP_ENDPOINT,
-      accessKeyId: env.S3_BACKUP_ACCESS_KEY_ID,
-      secretAccessKey: env.S3_BACKUP_SECRET_ACCESS_KEY,
-    },
-  };
 }

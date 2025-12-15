@@ -1,5 +1,5 @@
 import { prisma } from '@letschurch/db';
-import { publicS3 } from '../../util/s3';
+import { publicS3 } from '@letschurch/s3/public';
 
 export default async function setChannelDefaultThumbnail(
   channelid: string,

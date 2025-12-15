@@ -1,4 +1,5 @@
 import { OrganizationType, prisma } from '@letschurch/db';
+import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
 import {
   addOrganizationMemberSchema,
@@ -15,7 +16,6 @@ import {
 import { canOrg, createOrgAuthContext } from '@/util/authorization';
 import { mantineAvatarSm2x, mantineAvatarXl2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
-import { publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
 import { authProcedure, router } from '../../trpc';
 

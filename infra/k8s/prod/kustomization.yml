@@ -44,9 +44,15 @@ secretGenerator:
   - name: listmonk-secret
     envs:
       - listmonk.crypt.env
-  - name: s3-secret
+  - name: s3-ingest-secret
     envs:
-      - s3.crypt.env
+      - s3-ingest.crypt.env
+  - name: s3-public-secret
+    envs:
+      - s3-public.crypt.env
+  - name: s3-backup-secret
+    envs:
+      - s3-backup.crypt.env
   - name: smtp-secret
     envs:
       - smtp.crypt.env

@@ -1,4 +1,7 @@
 import { OrganizationType, prisma } from '@letschurch/db';
+import { PART_SIZE } from '@letschurch/s3';
+import { ingestS3 } from '@letschurch/s3/ingest';
+import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
 import { invariant } from 'es-toolkit';
 import {
@@ -29,7 +32,6 @@ import {
   mantineAvatarXl2x,
 } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
-import { ingestS3, PART_SIZE, publicS3 } from '@/util/s3';
 import { getPublicImageUrl } from '@/util/url';
 import { authProcedure, router } from '../../trpc';
 
