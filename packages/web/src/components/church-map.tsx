@@ -332,6 +332,9 @@ export function ChurchMap({
               // count >= 750
               40,
             ],
+            // Controls the intensity of light emitted from the circles (0+, default 0)
+            // Higher values make circles glow brighter, primarily useful in dark mode
+            'circle-emissive-strength': 1,
           },
         });
 
@@ -360,6 +363,9 @@ export function ChurchMap({
             'circle-radius': unclusteredRadius,
             'circle-stroke-width': 1,
             'circle-stroke-color': '#fff',
+            // Controls the intensity of light emitted from the circles (0+, default 0)
+            // Higher values make circles glow brighter, primarily useful in dark mode
+            'circle-emissive-strength': 1,
           },
         });
 
