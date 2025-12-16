@@ -1,5 +1,12 @@
 import { Dialog } from '@base-ui-components/react/dialog';
-import { IconX } from '@tabler/icons-react';
+import {
+  IconBookmark,
+  IconBuildingChurch,
+  IconCompass,
+  IconFlag,
+  IconSearch,
+  IconX,
+} from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import { cn } from '@/util/cn';
 import Logo from './logo';
@@ -77,7 +84,52 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
             />
           </div>
 
-          <div className="border-gray-200 border-t px-4 dark:border-zinc-800">
+          <div className="h-[stretch] overflow-y-auto border-gray-200 border-t px-4 dark:border-zinc-800">
+            {/* Main Navigation */}
+            <div className="space-y-3 border-gray-200 border-b py-6 dark:border-zinc-800">
+              <Link
+                to="/search"
+                onClick={handleClose}
+                className="flex items-center gap-3 font-semibold text-lg text-primary hover:text-indigo-400"
+              >
+                <IconSearch className="size-6" />
+                <span>Search</span>
+              </Link>
+              <Link
+                to="/"
+                onClick={handleClose}
+                className="flex items-center gap-3 font-semibold text-lg text-primary hover:text-indigo-400"
+              >
+                <IconCompass className="size-6" />
+                <span>Explore</span>
+              </Link>
+              <Link
+                to="/following"
+                onClick={handleClose}
+                className="flex items-center gap-3 font-semibold text-lg text-primary hover:text-indigo-400"
+              >
+                <IconFlag className="size-6" />
+                <span>Following</span>
+              </Link>
+              <Link
+                to="/churches"
+                onClick={handleClose}
+                className="flex items-center gap-3 font-semibold text-lg text-primary hover:text-indigo-400"
+              >
+                <IconBuildingChurch className="size-6" />
+                <span>Churches</span>
+              </Link>
+              <Link
+                to="/library"
+                onClick={handleClose}
+                className="flex items-center gap-3 font-semibold text-lg text-primary hover:text-indigo-400"
+              >
+                <IconBookmark className="size-6" />
+                <span>Library</span>
+              </Link>
+            </div>
+
+            {/* About Section */}
             <div className="space-y-3 py-6">
               <Link
                 to="/about"

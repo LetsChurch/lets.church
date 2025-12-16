@@ -52,7 +52,7 @@ export const Route = createFileRoute('/_main/search')({
   component: RouteComponent,
   validateSearch: z.object({
     q: z.string().optional(),
-    focus: z.enum(['media', 'transcripts']).catch('media'),
+    focus: z.enum(['media', 'transcripts']).optional().default('media'),
     channelSlugs: z.array(z.string()).optional(),
     sort: z.enum(['relevance', 'date-asc', 'date-desc']).optional(),
     dateRange: z
