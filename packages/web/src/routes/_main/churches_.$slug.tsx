@@ -156,17 +156,17 @@ function ChurchProfileComponent() {
 
       <div className="isolate mx-auto max-w-5xl px-6 pb-24">
         {/* Profile Header */}
-        <div className="-mt-16 sm:-mt-20 mb-12">
+        <div className="-mt-12 sm:-mt-16 mb-8 sm:mb-12">
           <div className="flex items-center overflow-hidden rounded-full border-fancy-pants bg-white shadow-lg dark:bg-zinc-900">
             <Avatar
               src={church.avatarUrl}
               alt={church.name}
               fallbackText={initials}
-              className="size-32 shrink-0 sm:size-40"
-              fallbackClassName="text-3xl sm:text-4xl"
+              className="size-20 shrink-0 sm:size-32 lg:size-40"
+              fallbackClassName="text-xl sm:text-3xl lg:text-4xl"
             />
-            <div className="flex-1 px-6 py-4 sm:px-8 sm:py-6">
-              <h1 className="font-bold text-3xl text-zinc-900 tracking-tight sm:text-4xl dark:text-white">
+            <div className="flex-1 px-4 py-3 sm:px-6 sm:py-4 lg:px-8 lg:py-6">
+              <h1 className="font-bold text-xl text-zinc-900 tracking-tight sm:text-3xl lg:text-4xl dark:text-white">
                 {church.name}
               </h1>
             </div>

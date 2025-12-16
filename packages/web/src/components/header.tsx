@@ -16,6 +16,8 @@ type HeaderProps = PropsWithChildren<{
   defaultSearchValue?: string;
   searchPlaceholder?: string;
   channelSlug?: string;
+  showBlurredBackground?: boolean;
+  searchVariant?: 'default' | 'light';
 }>;
 
 export default function Header({
@@ -23,6 +25,8 @@ export default function Header({
   defaultSearchValue,
   searchPlaceholder,
   channelSlug,
+  showBlurredBackground = true,
+  searchVariant = 'default',
 }: HeaderProps) {
   const trpc = useTRPC();
   const hasSessionQuery = useQuery(trpc.common.hasValidSession.queryOptions());
@@ -38,7 +42,7 @@ export default function Header({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const backgroundImageUrl = useStore($headerBackgroundImage);
 
-  const hasBackground = Boolean(backgroundImageUrl);
+  const hasBackground = showBlurredBackground && Boolean(backgroundImageUrl);
 
   return (
     <div className="relative">
@@ -82,6 +86,7 @@ export default function Header({
             defaultValue={defaultSearchValue}
             placeholder={searchPlaceholder}
             channelSlug={channelSlug}
+            variant={searchVariant}
           />
         </div>
 
