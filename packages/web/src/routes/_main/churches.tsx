@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { z } from 'zod';
 import { ChurchesView } from '@/components/churches-view';
+import Header from '@/components/header';
 import {
   DEFAULT_NEARBY_RANGE,
   DEFAULT_RANGE,
@@ -84,5 +85,10 @@ function RouteComponent() {
     });
   };
 
-  return <ChurchesView filters={filters} onNavigate={handleNavigate} />;
+  return (
+    <>
+      <Header mode="fab" />
+      <ChurchesView filters={filters} onNavigate={handleNavigate} />
+    </>
+  );
 }

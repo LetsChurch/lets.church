@@ -18,6 +18,7 @@ type HeaderProps = PropsWithChildren<{
   channelSlug?: string;
   showBlurredBackground?: boolean;
   searchVariant?: 'default' | 'light';
+  mode?: 'full' | 'fab';
 }>;
 
 export default function Header({
@@ -27,6 +28,7 @@ export default function Header({
   channelSlug,
   showBlurredBackground = true,
   searchVariant = 'default',
+  mode = 'full',
 }: HeaderProps) {
   const trpc = useTRPC();
   const hasSessionQuery = useQuery(trpc.common.hasValidSession.queryOptions());
@@ -44,6 +46,28 @@ export default function Header({
 
   const hasBackground = showBlurredBackground && Boolean(backgroundImageUrl);
 
+  // FAB mode - just render the floating button and mobile menu
+  if (mode === 'fab') {
+    return (
+      <>
+        {/* Floating Menu Button - Mobile Only */}
+        <button
+          type="button"
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="fixed top-4 left-4 z-40 flex size-10 items-center justify-center rounded-lg border-fancy-pants bg-white/90 text-primary shadow-lg backdrop-blur-sm transition-colors hover:bg-white sm:hidden dark:bg-zinc-900/90 dark:hover:bg-zinc-900"
+        >
+          <IconMenu2 />
+        </button>
+
+        <MobileMenu
+          open={isMobileMenuOpen}
+          onOpenChange={setIsMobileMenuOpen}
+        />
+      </>
+    );
+  }
+
+  // Full mode - render the complete header
   return (
     <div className="relative">
       {/* Background with gradient overlay - only show when there are children */}
