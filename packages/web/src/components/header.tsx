@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/react';
-import { IconMenu2 } from '@tabler/icons-react';
+import { IconMenu2, IconSearch, IconX } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { type PropsWithChildren, useState } from 'react';
@@ -42,9 +42,11 @@ export default function Header({
   });
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const backgroundImageUrl = useStore($headerBackgroundImage);
 
   const hasBackground = showBlurredBackground && Boolean(backgroundImageUrl);
+  const hasSearch = Boolean(searchPlaceholder || channelSlug);
 
   // FAB mode - just render the floating button and mobile menu
   if (mode === 'fab') {
@@ -90,8 +92,37 @@ export default function Header({
 
       {/* Top Navigation Bar */}
       <div className="relative flex h-(--header-height) items-center justify-between p-4">
-        {/* Mobile Logo and Menu Button (visible when sidebar is hidden) */}
-        <div className="flex items-center gap-3 sm:hidden">
+        {/* Mobile Search Overlay - only visible on mobile when open */}
+        <div
+          className={
+            isMobileSearchOpen
+              ? 'flex w-full items-center gap-2 sm:hidden'
+              : 'hidden'
+          }
+        >
+          <div className="flex-1">
+            <SearchBar
+              defaultValue={defaultSearchValue}
+              placeholder={searchPlaceholder}
+              channelSlug={channelSlug}
+              variant={searchVariant}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsMobileSearchOpen(false)}
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg border-fancy-pants bg-white/15 text-primary transition-colors hover:bg-white/25"
+          >
+            <IconX />
+          </button>
+        </div>
+
+        {/* Mobile Logo and Menu Button - hidden when mobile search is open, hidden on desktop */}
+        <div
+          className={
+            isMobileSearchOpen ? 'hidden' : 'flex items-center gap-3 sm:hidden'
+          }
+        >
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
@@ -104,7 +135,7 @@ export default function Header({
           </Link>
         </div>
 
-        {/* Search Bar */}
+        {/* Desktop Search Bar - always visible on desktop */}
         <div className="hidden w-80 sm:block">
           <SearchBar
             defaultValue={defaultSearchValue}
@@ -114,8 +145,24 @@ export default function Header({
           />
         </div>
 
-        {/* Login Button or User Avatar */}
-        <div className="flex items-center gap-2">
+        {/* Right side: Mobile Search Button + Login/Avatar */}
+        <div
+          className={
+            isMobileSearchOpen
+              ? 'hidden sm:flex sm:items-center sm:gap-2'
+              : 'flex items-center gap-2'
+          }
+        >
+          {/* Mobile Search Button (only shown when search is available) */}
+          {hasSearch ? (
+            <button
+              type="button"
+              onClick={() => setIsMobileSearchOpen(true)}
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg border-fancy-pants bg-white/15 text-primary transition-colors hover:bg-white/25 sm:hidden"
+            >
+              <IconSearch />
+            </button>
+          ) : null}
           {hasSessionQuery.data && profileQuery.data ? (
             <LcMenu.Root>
               <LcMenu.Trigger
