@@ -1,6 +1,6 @@
 import { Alert, Paper, Stack, Text } from '@mantine/core';
 import { IconInfoCircle } from '@tabler/icons-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import {
   createFileRoute,
   Link,
@@ -32,7 +32,6 @@ function LoginRoute() {
   const [error, setError] = useState<string | false>(false);
 
   const router = useRouter();
-  const queryClient = useQueryClient();
   const trpc = useTRPC();
 
   const loginMutation = useMutation(
@@ -44,11 +43,7 @@ function LoginRoute() {
         }
 
         await router.invalidate();
-        await queryClient.invalidateQueries();
         await router.navigate({ to: '/' });
-      },
-      onError: () => {
-        setError('Error logging in, please try again!');
       },
     }),
   );

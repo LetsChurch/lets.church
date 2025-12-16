@@ -1,6 +1,6 @@
 import { Alert, Paper, Stack, Text } from '@mantine/core';
 import { IconInfoCircle } from '@tabler/icons-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import {
   createFileRoute,
   Link,
@@ -32,7 +32,6 @@ function RouteComponent() {
   const [error, setError] = useState<string | false>(false);
 
   const router = useRouter();
-  const queryClient = useQueryClient();
   const trpc = useTRPC();
 
   const registerMutation = useMutation(
@@ -44,10 +43,18 @@ function RouteComponent() {
         }
 
         await router.invalidate();
-        await queryClient.invalidateQueries();
         await router.navigate({ to: '/' });
       },
-      onError: () => {
+      onError: (error) => {
+        // Ignore cancelled/aborted errors - they happen when navigating away during registration
+        const errorCause = (error as { cause?: Error }).cause;
+        if (
+          errorCause instanceof Error &&
+          (errorCause.name === 'AbortError' ||
+            errorCause.name === 'CancelledError')
+        ) {
+          return;
+        }
         setError('Error registering a new account, please try again!');
       },
     }),
