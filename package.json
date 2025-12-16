@@ -9,7 +9,8 @@
     "fix": "biome check --write",
     "fix!": "biome check --write --unsafe",
     "s3:prune-multipart-uploads": "bun ./scripts/s3-prune-multipart-uploads.ts",
-    "knip": "knip"
+    "knip": "knip",
+    "ncu": "ncu -iw --format group"
   },
   "license": "UNLICENSE",
   "dependencies": {
@@ -20,6 +21,7 @@
     "@biomejs/biome": "catalog:",
     "@types/node": "catalog:",
     "knip": "^5.69.1",
+    "npm-check-updates": "^19.2.0",
     "typescript": "catalog:"
   }
 }

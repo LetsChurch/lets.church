@@ -141,6 +141,9 @@ check:
 knip:
   pnpm knip
 
+ncu:
+  pnpm ncu
+
 fix:
   pnpm -r run fix
 
