@@ -91,6 +91,7 @@ function DashboardLayout() {
             </Group>
 
             <Box
+              visibleFrom="sm"
               style={{
                 flex: 1,
                 display: 'flex',
