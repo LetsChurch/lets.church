@@ -98,7 +98,6 @@ export function MediaHeader({
             <Avatar
               src={channel.avatarUrl}
               alt={channel.name}
-              fallbackText={channel.name.charAt(0).toUpperCase()}
               className="size-7 border-fancy-pants"
               fallbackClassName="bg-brand font-bold text-xs"
             />

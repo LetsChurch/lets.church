@@ -308,9 +308,6 @@ export default function Sidebar({ className }: SidebarProps) {
                                 <Avatar
                                   src={channel.avatarUrl || undefined}
                                   alt={channel.name}
-                                  fallbackText={channel.name
-                                    .charAt(0)
-                                    .toUpperCase()}
                                   className="size-5 border-fancy-pants"
                                   fallbackClassName="text-[10px]"
                                 />
@@ -366,9 +363,6 @@ export default function Sidebar({ className }: SidebarProps) {
                               <Avatar
                                 src={channel.avatarUrl || undefined}
                                 alt={channel.name}
-                                fallbackText={channel.name
-                                  .charAt(0)
-                                  .toUpperCase()}
                                 className="size-5 border-fancy-pants"
                                 fallbackClassName="text-[10px]"
                               />

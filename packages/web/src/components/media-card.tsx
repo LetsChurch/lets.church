@@ -69,7 +69,6 @@ export function MediaCard({
         <Avatar
           src={channelAvatarUrl || undefined}
           alt={channelName || 'Channel'}
-          fallbackText={(channelName || 'Channel').charAt(0).toUpperCase()}
           className="size-8 flex-shrink-0 bg-white"
           fallbackClassName="bg-gray-200 text-gray-600"
         />

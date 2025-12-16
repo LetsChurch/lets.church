@@ -76,12 +76,7 @@ function CarouselItem({
             </Link>
           </h3>
           <div className="flex items-center justify-center gap-1.5">
-            <Avatar
-              src={avatarUrl}
-              alt={author}
-              fallbackText={author.charAt(0).toUpperCase()}
-              className="h-4 w-4 shrink-0"
-            />
+            <Avatar src={avatarUrl} alt={author} className="h-4 w-4 shrink-0" />
             <span className="text-secondary text-sm">{author}</span>
           </div>
         </div>

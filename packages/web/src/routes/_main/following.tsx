@@ -51,7 +51,6 @@ function ChannelListItem({
         <Avatar
           src={channel.avatarUrl || undefined}
           alt={channel.name}
-          fallbackText={channel.name.charAt(0).toUpperCase()}
           className="size-10 border-fancy-pants"
           fallbackClassName={cn(
             'bg-zinc-900 font-bold',

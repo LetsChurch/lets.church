@@ -21,12 +21,6 @@ export function ChannelCard({
       ? '1 subscriber'
       : `${subscriberCount.toLocaleString()} subscribers`;
 
-  const initials = name
-    .split(' ')
-    .map((word) => word[0])
-    .join('')
-    .toUpperCase();
-
   return (
     <div className="group relative rounded-lg border-fancy-pants bg-white p-6 transition-all hover:shadow-lg dark:bg-zinc-900">
       <Link
@@ -40,7 +34,6 @@ export function ChannelCard({
         <Avatar
           src={avatarUrl ?? undefined}
           alt={name}
-          fallbackText={initials}
           className="size-20 shrink-0"
           fallbackClassName="bg-gradient-to-br from-brand/80 to-brand text-2xl font-semibold"
         />

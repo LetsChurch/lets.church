@@ -168,7 +168,6 @@ export function Comment({
       <Avatar
         src={avatarUrl}
         alt={comment.author.username}
-        fallbackText={comment.author.username.charAt(0).toUpperCase()}
         className="size-8 shrink-0"
         fallbackClassName="text-xs"
       />

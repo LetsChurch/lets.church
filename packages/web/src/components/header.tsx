@@ -197,11 +197,6 @@ export default function Header({
                       alt={
                         profileQuery.data.fullName || profileQuery.data.username
                       }
-                      fallbackText={(
-                        profileQuery.data.fullName || profileQuery.data.username
-                      )
-                        .charAt(0)
-                        .toUpperCase()}
                       className="size-full cursor-pointer"
                       fallbackClassName="bg-gray-200 text-gray-600 text-xs"
                     />

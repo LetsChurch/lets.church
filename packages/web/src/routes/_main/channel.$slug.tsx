@@ -213,14 +213,6 @@ function RouteComponent() {
 
   const hasMedia = mediaItems.length > 0;
 
-  const initials = channel.name
-    .split(' ')
-    .map((word) => word[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-
   const headerColors = getColorFromString(channel.name);
   const darkHeaderColors = {
     from: headerColors.from.replace('-600', '-900'),
@@ -296,7 +288,6 @@ function RouteComponent() {
             <Avatar
               src={channel.avatarUrl || undefined}
               alt={channel.name}
-              fallbackText={initials}
               className="size-20 shrink-0 sm:size-32 lg:size-40"
               fallbackClassName="text-xl sm:text-3xl lg:text-4xl"
             />
@@ -417,14 +408,6 @@ function RouteComponent() {
                   </h2>
                   <div className="space-y-3">
                     {churches.map((church) => {
-                      const churchInitials = church.name
-                        .split(' ')
-                        .map((word) => word[0])
-                        .filter(Boolean)
-                        .slice(0, 2)
-                        .join('')
-                        .toUpperCase();
-
                       return (
                         <Link
                           key={church.id}
@@ -435,7 +418,6 @@ function RouteComponent() {
                           <Avatar
                             src={church.avatarUrl || undefined}
                             alt={church.name}
-                            fallbackText={churchInitials}
                             className="size-12 shrink-0"
                             fallbackClassName="text-sm"
                           />

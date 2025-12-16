@@ -116,7 +116,6 @@ function RouteComponent() {
             <Avatar
               src={playlist.author.avatarUrl || undefined}
               alt={playlist.author.username}
-              fallbackText={playlist.author.username.charAt(0).toUpperCase()}
               className="size-8 border-fancy-pants"
               fallbackClassName="bg-brand font-bold text-xs"
             />

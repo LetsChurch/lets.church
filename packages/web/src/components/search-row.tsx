@@ -84,7 +84,6 @@ export function SearchRow({
           <Avatar
             src={channelImageUrl || undefined}
             alt={channelName}
-            fallbackText={channelName.charAt(0).toUpperCase()}
             className="size-4 shrink-0 md:size-5 lg:size-6"
             fallbackClassName="bg-gray-200 text-gray-600 text-[8px] md:text-[10px] lg:text-xs"
           />

@@ -56,7 +56,6 @@ export function MediaCompactCard({
           <Avatar
             src={channelImageUrl || undefined}
             alt={channelName}
-            fallbackText={channelName.charAt(0).toUpperCase()}
             className="size-4 shrink-0"
             fallbackClassName="bg-gray-200 text-gray-600 text-[8px]"
           />

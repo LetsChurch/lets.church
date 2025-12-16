@@ -34,7 +34,6 @@ export function AvatarCarousel({ items }: AvatarCarouselProps) {
             <Avatar
               src={item.avatarUrl || undefined}
               alt={item.name}
-              fallbackText={item.name.charAt(0).toUpperCase()}
               className="size-[72px] border-fancy-pants"
               fallbackClassName="bg-brand font-bold text-xl"
             />

@@ -96,14 +96,6 @@ function ChurchProfileComponent() {
   const hasContactInfo =
     church.primaryEmail || church.primaryPhoneNumber || church.websiteUrl;
 
-  const initials = church.name
-    .split(' ')
-    .map((word) => word[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-
   const headerColors = getColorFromString(church.name);
   const darkHeaderColors = {
     from: headerColors.from.replace('-600', '-900'),
@@ -165,7 +157,6 @@ function ChurchProfileComponent() {
               <Avatar
                 src={church.avatarUrl}
                 alt={church.name}
-                fallbackText={initials}
                 className="size-20 shrink-0 sm:size-32 lg:size-40"
                 fallbackClassName="text-xl sm:text-3xl lg:text-4xl"
               />
@@ -230,14 +221,6 @@ function ChurchProfileComponent() {
                   {church.officialChannels.length > 0 ? (
                     <div className="grid gap-4 sm:grid-cols-2">
                       {church.officialChannels.map((channel) => {
-                        const channelInitials = channel.name
-                          .split(' ')
-                          .map((word) => word[0])
-                          .filter(Boolean)
-                          .slice(0, 2)
-                          .join('')
-                          .toUpperCase();
-
                         return (
                           <Link
                             key={channel.slug}
@@ -248,7 +231,6 @@ function ChurchProfileComponent() {
                             <Avatar
                               src={channel.avatarUrl}
                               alt={channel.name}
-                              fallbackText={channelInitials}
                               className="size-14 shrink-0"
                               fallbackClassName="text-sm"
                             />
@@ -356,14 +338,6 @@ function ChurchProfileComponent() {
                   </h2>
                   <div className="grid gap-4 sm:grid-cols-2">
                     {church.endorsedChannels.map((channel) => {
-                      const channelInitials = channel.name
-                        .split(' ')
-                        .map((word) => word[0])
-                        .filter(Boolean)
-                        .slice(0, 2)
-                        .join('')
-                        .toUpperCase();
-
                       return (
                         <Link
                           key={channel.slug}
@@ -374,7 +348,6 @@ function ChurchProfileComponent() {
                           <Avatar
                             src={channel.avatarUrl}
                             alt={channel.name}
-                            fallbackText={channelInitials}
                             className="size-14 shrink-0"
                             fallbackClassName="text-sm"
                           />
