@@ -169,6 +169,12 @@ export default function Sidebar({ className }: SidebarProps) {
                 >
                   How to Add Content
                 </Link>
+                <Link
+                  to="/about/add-church"
+                  className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10"
+                >
+                  How to Add Your Church
+                </Link>
                 {/* <Link */}
                 {/*   to="/about/roadmap" */}
                 {/*   className="rounded-lg px-2 py-1.5 font-medium text-primary text-sm transition-colors hover:bg-white/10" */}

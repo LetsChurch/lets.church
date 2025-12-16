@@ -70,6 +70,7 @@ import { Route as MainAboutPrivacyRouteImport } from './routes/_main/about/priva
 import { Route as MainAboutDoreanRouteImport } from './routes/_main/about/dorean'
 import { Route as MainAboutDmcaRouteImport } from './routes/_main/about/dmca'
 import { Route as MainAboutAddContentRouteImport } from './routes/_main/about/add-content'
+import { Route as MainAboutAddChurchRouteImport } from './routes/_main/about/add-church'
 import { Route as DashboardOrganizationsOrgIdMembersRouteImport } from './routes/dashboard_/organizations_.$orgId_.members'
 import { Route as DashboardOrganizationsOrgIdEditRouteImport } from './routes/dashboard_/organizations_.$orgId_.edit'
 import { Route as DashboardOrganizationsOrgIdAssociationsRouteImport } from './routes/dashboard_/organizations_.$orgId_.associations'
@@ -402,6 +403,11 @@ const MainAboutAddContentRoute = MainAboutAddContentRouteImport.update({
   path: '/add-content',
   getParentRoute: () => MainAboutRoute,
 } as any)
+const MainAboutAddChurchRoute = MainAboutAddChurchRouteImport.update({
+  id: '/add-church',
+  path: '/add-church',
+  getParentRoute: () => MainAboutRoute,
+} as any)
 const DashboardOrganizationsOrgIdMembersRoute =
   DashboardOrganizationsOrgIdMembersRouteImport.update({
     id: '/organizations_/$orgId_/members',
@@ -507,6 +513,7 @@ export interface FileRoutesByFullPath {
   '/trpc/$': typeof TrpcSplatRoute
   '/': typeof MainIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/about/add-church': typeof MainAboutAddChurchRoute
   '/about/add-content': typeof MainAboutAddContentRoute
   '/about/dmca': typeof MainAboutDmcaRoute
   '/about/dorean': typeof MainAboutDoreanRoute
@@ -580,6 +587,7 @@ export interface FileRoutesByTo {
   '/trpc/$': typeof TrpcSplatRoute
   '/': typeof MainIndexRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/about/add-church': typeof MainAboutAddChurchRoute
   '/about/add-content': typeof MainAboutAddContentRoute
   '/about/dmca': typeof MainAboutDmcaRoute
   '/about/dorean': typeof MainAboutDoreanRoute
@@ -657,6 +665,7 @@ export interface FileRoutesById {
   '/trpc/$': typeof TrpcSplatRoute
   '/_main/': typeof MainIndexRoute
   '/dashboard_/': typeof DashboardIndexRoute
+  '/_main/about/add-church': typeof MainAboutAddChurchRoute
   '/_main/about/add-content': typeof MainAboutAddContentRoute
   '/_main/about/dmca': typeof MainAboutDmcaRoute
   '/_main/about/dorean': typeof MainAboutDoreanRoute
@@ -734,6 +743,7 @@ export interface FileRouteTypes {
     | '/trpc/$'
     | '/'
     | '/dashboard/'
+    | '/about/add-church'
     | '/about/add-content'
     | '/about/dmca'
     | '/about/dorean'
@@ -807,6 +817,7 @@ export interface FileRouteTypes {
     | '/trpc/$'
     | '/'
     | '/dashboard'
+    | '/about/add-church'
     | '/about/add-content'
     | '/about/dmca'
     | '/about/dorean'
@@ -883,6 +894,7 @@ export interface FileRouteTypes {
     | '/trpc/$'
     | '/_main/'
     | '/dashboard_/'
+    | '/_main/about/add-church'
     | '/_main/about/add-content'
     | '/_main/about/dmca'
     | '/_main/about/dorean'
@@ -1375,6 +1387,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainAboutAddContentRouteImport
       parentRoute: typeof MainAboutRoute
     }
+    '/_main/about/add-church': {
+      id: '/_main/about/add-church'
+      path: '/add-church'
+      fullPath: '/about/add-church'
+      preLoaderRoute: typeof MainAboutAddChurchRouteImport
+      parentRoute: typeof MainAboutRoute
+    }
     '/dashboard_/organizations_/$orgId_/members': {
       id: '/dashboard_/organizations_/$orgId_/members'
       path: '/organizations/$orgId/members'
@@ -1470,6 +1489,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface MainAboutRouteChildren {
+  MainAboutAddChurchRoute: typeof MainAboutAddChurchRoute
   MainAboutAddContentRoute: typeof MainAboutAddContentRoute
   MainAboutDmcaRoute: typeof MainAboutDmcaRoute
   MainAboutDoreanRoute: typeof MainAboutDoreanRoute
@@ -1480,6 +1500,7 @@ interface MainAboutRouteChildren {
 }
 
 const MainAboutRouteChildren: MainAboutRouteChildren = {
+  MainAboutAddChurchRoute: MainAboutAddChurchRoute,
   MainAboutAddContentRoute: MainAboutAddContentRoute,
   MainAboutDmcaRoute: MainAboutDmcaRoute,
   MainAboutDoreanRoute: MainAboutDoreanRoute,

@@ -152,6 +152,13 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
               >
                 How to Add Content
               </Link>
+              <Link
+                to="/about/add-church"
+                onClick={handleClose}
+                className="block font-semibold text-lg text-primary hover:text-indigo-400"
+              >
+                How to Add Your Church
+              </Link>
             </div>
 
             {/* Theme Switcher */}
