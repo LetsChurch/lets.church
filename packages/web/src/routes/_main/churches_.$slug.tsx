@@ -113,7 +113,7 @@ function ChurchProfileComponent() {
 
   return (
     <>
-      <Header mode="fab" />
+      <Header mode="fab" variant="light" />
 
       <div className="min-h-screen bg-linear-to-br from-zinc-50 via-white to-indigo-50/30 dark:from-zinc-950 dark:via-zinc-900 dark:to-indigo-950/20">
         {/* Cover Image or Gradient Header */}

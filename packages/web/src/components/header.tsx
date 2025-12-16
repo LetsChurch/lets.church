@@ -7,7 +7,7 @@ import { Avatar } from '@/components/avatar';
 import { LcMenu, MenuItemRouterLink } from '@/components/lc-menu';
 import { $headerBackgroundImage } from '@/stores/header';
 import { useTRPC } from '@/trpc/react';
-import LcLink from './lc-link';
+import { cn } from '@/util/cn';
 import Logo from './logo';
 import MobileMenu from './mobile-menu';
 import SearchBar from './search-bar';
@@ -17,7 +17,7 @@ type HeaderProps = PropsWithChildren<{
   searchPlaceholder?: string;
   channelSlug?: string;
   showBlurredBackground?: boolean;
-  searchVariant?: 'default' | 'light';
+  variant?: 'default' | 'light';
   mode?: 'full' | 'fab';
 }>;
 
@@ -27,7 +27,7 @@ export default function Header({
   searchPlaceholder,
   channelSlug,
   showBlurredBackground = true,
-  searchVariant = 'default',
+  variant = 'default',
   mode = 'full',
 }: HeaderProps) {
   const trpc = useTRPC();
@@ -56,7 +56,12 @@ export default function Header({
         <button
           type="button"
           onClick={() => setIsMobileMenuOpen(true)}
-          className="fixed top-4 left-4 z-40 flex size-10 items-center justify-center rounded-lg border-fancy-pants bg-white/90 text-primary shadow-lg backdrop-blur-sm transition-colors hover:bg-white sm:hidden dark:bg-zinc-900/90 dark:hover:bg-zinc-900"
+          className={cn(
+            'fixed top-4 left-4 z-40 flex size-10 items-center justify-center rounded-lg shadow-lg backdrop-blur-sm transition-colors sm:hidden',
+            variant === 'light'
+              ? 'border border-white/20 bg-white/10 text-white hover:bg-white/20'
+              : 'border-fancy-pants bg-white/90 text-primary hover:bg-white dark:bg-zinc-900/90 dark:hover:bg-zinc-900',
+          )}
         >
           <IconMenu2 />
         </button>
@@ -105,13 +110,18 @@ export default function Header({
               defaultValue={defaultSearchValue}
               placeholder={searchPlaceholder}
               channelSlug={channelSlug}
-              variant={searchVariant}
+              variant={variant}
             />
           </div>
           <button
             type="button"
             onClick={() => setIsMobileSearchOpen(false)}
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg border-fancy-pants bg-white/15 text-primary transition-colors hover:bg-white/25"
+            className={cn(
+              'flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors',
+              variant === 'light'
+                ? 'border border-white/20 bg-white/10 text-white hover:bg-white/20'
+                : 'border-fancy-pants bg-white/15 text-primary hover:bg-white/25',
+            )}
           >
             <IconX />
           </button>
@@ -126,12 +136,17 @@ export default function Header({
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
-            className="flex size-8 items-center justify-center rounded-lg border-fancy-pants bg-white/15 text-primary transition-colors hover:bg-white/25"
+            className={cn(
+              'flex size-8 items-center justify-center rounded-lg transition-colors',
+              variant === 'light'
+                ? 'border border-white/20 bg-white/10 text-white hover:bg-white/20'
+                : 'border-fancy-pants bg-white/15 text-primary hover:bg-white/25',
+            )}
           >
             <IconMenu2 />
           </button>
           <Link to="/">
-            <Logo />
+            <Logo variant={variant} />
           </Link>
         </div>
 
@@ -141,7 +156,7 @@ export default function Header({
             defaultValue={defaultSearchValue}
             placeholder={searchPlaceholder}
             channelSlug={channelSlug}
-            variant={searchVariant}
+            variant={variant}
           />
         </div>
 
@@ -158,7 +173,12 @@ export default function Header({
             <button
               type="button"
               onClick={() => setIsMobileSearchOpen(true)}
-              className="flex size-8 shrink-0 items-center justify-center rounded-lg border-fancy-pants bg-white/15 text-primary transition-colors hover:bg-white/25 sm:hidden"
+              className={cn(
+                'flex size-8 shrink-0 items-center justify-center rounded-lg transition-colors sm:hidden',
+                variant === 'light'
+                  ? 'border border-white/20 bg-white/10 text-white hover:bg-white/20'
+                  : 'border-fancy-pants bg-white/15 text-primary hover:bg-white/25',
+              )}
             >
               <IconSearch />
             </button>
@@ -227,7 +247,17 @@ export default function Header({
               </LcMenu.Portal>
             </LcMenu.Root>
           ) : (
-            <LcLink to="/auth/login">Login</LcLink>
+            <Link
+              to="/auth/login"
+              className={cn(
+                'flex h-8 items-center gap-1 rounded-3xl border px-3 font-semibold text-sm transition-all duration-200 active:scale-[0.97] sm:h-10',
+                variant === 'light'
+                  ? 'border-white/20 bg-white/10 text-white hover:border-white/30 hover:bg-white/20'
+                  : 'border-gray-950/10 bg-gray-950/5 text-primary focus-within:border-white/0 focus-within:shadow-[0_0_0_2px_--theme(--color-white/0.2),0_0_20px_--theme(--color-white/0.3)] hover:border-white/20 dark:border-white/10 dark:bg-white/5',
+              )}
+            >
+              Login
+            </Link>
           )}
         </div>
       </div>

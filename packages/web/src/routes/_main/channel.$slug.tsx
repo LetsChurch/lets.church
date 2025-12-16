@@ -283,7 +283,7 @@ function RouteComponent() {
               channelSlug={channel.slug}
               searchPlaceholder={`Search in ${channel.name}...`}
               showBlurredBackground={false}
-              searchVariant="light"
+              variant="light"
             />
           </div>
         </div>
