@@ -58,6 +58,7 @@ export const Route = createFileRoute('/_main/search')({
     dateRange: z
       .enum(['all-time', 'today', 'this-week', 'this-month', 'this-year'])
       .optional(),
+    skipLogging: z.boolean().optional(),
   }),
   loaderDeps: ({ search }) => ({
     q: search.q,
@@ -65,6 +66,7 @@ export const Route = createFileRoute('/_main/search')({
     channelSlugs: search.channelSlugs,
     sort: search.sort,
     dateRange: search.dateRange,
+    skipLogging: search.skipLogging,
   }),
   loader: async ({ context, deps }) => {
     if (deps.q) {
@@ -77,6 +79,7 @@ export const Route = createFileRoute('/_main/search')({
           limit: 20,
           sort: deps.sort,
           dateRange: deps.dateRange,
+          skipLogging: deps.skipLogging,
         }),
       );
     } else {
@@ -116,7 +119,8 @@ const _trendingSearches = [
 const emptyArray: ReadonlyArray<unknown> = [];
 
 function SearchResults({ q }: { q: string }) {
-  const { focus, channelSlugs, sort, dateRange } = Route.useSearch();
+  const { focus, channelSlugs, sort, dateRange, skipLogging } =
+    Route.useSearch();
   const { hasActiveFilters } = useSearchFilters();
   const trpc = useTRPC();
   const navigate = useNavigate({ from: Route.fullPath });
@@ -135,6 +139,7 @@ function SearchResults({ q }: { q: string }) {
       limit: 20,
       sort,
       dateRange,
+      skipLogging,
     }),
     getNextPageParam: (lastPage) => {
       if (

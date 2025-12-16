@@ -104,6 +104,7 @@ function SearchLogsPage() {
                           focus:
                             (params.focus as 'media' | 'transcripts') ??
                             'media',
+                          skipLogging: true,
                         }}
                         style={{ textDecoration: 'none', color: 'inherit' }}
                       >

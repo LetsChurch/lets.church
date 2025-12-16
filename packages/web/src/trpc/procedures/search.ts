@@ -71,6 +71,7 @@ const searchQuerySchema = z.object({
   dateRange: z
     .enum(['all-time', 'today', 'this-week', 'this-month', 'this-year'])
     .optional(),
+  skipLogging: z.boolean().optional().default(false),
 });
 
 export const searchProcedures = {
@@ -86,6 +87,7 @@ export const searchProcedures = {
         cursor,
         sort,
         dateRange,
+        skipLogging,
       } = input;
 
       // Convert channel slugs to IDs if provided
@@ -237,8 +239,13 @@ export const searchProcedures = {
       // Log the search with result counts
       // Using idempotent logging with deterministic IDs to prevent duplicates
       try {
+        // Determine if we should skip logging
+        const isAdmin = ctx.session?.appUser?.role === 'ADMIN';
+        const shouldSkipLogging = skipLogging && isAdmin;
+
         // Only log if query is not empty or whitespace AND this is the initial search (not pagination)
-        if (q.trim().length > 0 && cursor === 0) {
+        // AND we're not skipping logging (admin viewing search logs)
+        if (q.trim().length > 0 && cursor === 0 && !shouldSkipLogging) {
           // Generate deterministic ID for idempotent logging
           const logId = generateSearchLogId(
             q,
@@ -287,6 +294,16 @@ export const searchProcedures = {
               },
             },
             'Search query logged to database',
+          );
+        } else if (shouldSkipLogging) {
+          moduleLogger.debug(
+            {
+              context: {
+                userId: ctx.session?.appUserId,
+                query: q,
+              },
+            },
+            'Skipping search logging for admin user',
           );
         }
       } catch (error) {
