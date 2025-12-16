@@ -157,7 +157,7 @@ export default function Header({
       </div>
 
       {/* Children content (like carousel, for instance) */}
-      {children}
+      <div className="isolate">{children}</div>
 
       <MobileMenu open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen} />
     </div>
