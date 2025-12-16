@@ -7,6 +7,7 @@ import {
   msearchUploads,
 } from '@letschurch/elasticsearch';
 import { publicS3 } from '@letschurch/s3/public';
+import { v5 as uuidv5 } from 'uuid';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarSm2x, appAvatarXs2x } from '@/util/avatar-sizes';
@@ -18,6 +19,46 @@ import { authProcedure, publicProcedure } from '../trpc';
 const moduleLogger = logger.child({
   module: 'trpc/procedures/search',
 });
+
+// Namespace UUID for search logs (generated once using uuidv4)
+const SEARCH_LOG_NAMESPACE = 'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d';
+
+/**
+ * Generate a deterministic ID for a search query based on its parameters
+ * and a time bucket (5 minutes). This makes search logging idempotent
+ * by preventing duplicate entries for the same search within the time window.
+ */
+function generateSearchLogId(
+  query: string,
+  params: {
+    focus: string;
+    channelIds?: string[] | null;
+    sort?: string;
+    dateRange?: string;
+  },
+  appUserId: string | undefined,
+  timeBucketMinutes: number = 5,
+): string {
+  // Round timestamp to time bucket (e.g., 5 minute intervals)
+  const now = new Date();
+  const bucketMs = timeBucketMinutes * 60 * 1000;
+  const bucketedTimestamp = Math.floor(now.getTime() / bucketMs) * bucketMs;
+
+  // Create a stable string representation using delimited fields
+  // This guarantees consistent ordering regardless of JSON.stringify behavior
+  const searchKey = [
+    query.trim().toLowerCase(),
+    params.focus,
+    (params.channelIds ?? []).sort().join(','),
+    params.sort ?? '',
+    params.dateRange ?? '',
+    appUserId ?? '',
+    bucketedTimestamp.toString(),
+  ].join('|');
+
+  // Generate a deterministic UUID v5 from the stable string
+  return uuidv5(searchKey, SEARCH_LOG_NAMESPACE);
+}
 
 const searchQuerySchema = z.object({
   q: z.string().min(1),
@@ -194,112 +235,26 @@ export const searchProcedures = {
       moduleLogger.info('Search result counts');
 
       // Log the search with result counts
-      // Check referer to detect focus switches (tab changes on same search page)
+      // Using idempotent logging with deterministic IDs to prevent duplicates
       try {
-        const referer = ctx.req.headers.get('referer');
-        let shouldSkipLogging = false;
-
-        moduleLogger.info(
-          {
-            context: {
-              referer,
-              currentQuery: q,
-              currentFocus: focus,
-            },
-          },
-          'Referer check',
-        );
-
-        // Parse referer URL to check if it's from the same search with different focus
-        if (referer) {
-          try {
-            const refererUrl = new URL(referer);
-            const refererParams = new URLSearchParams(refererUrl.search);
-            const refererQuery = refererParams.get('q');
-            const refererFocus = refererParams.get('focus') || 'media';
-            const refererChannelSlugs = refererParams.getAll('channelSlugs');
-            const refererSort = refererParams.get('sort');
-            const refererDateRange = refererParams.get('dateRange');
-
-            // Check if coming from same search with different focus
-            const isFromSearchPage = refererUrl.pathname === '/search';
-            const isSameQuery = refererQuery === q;
-            const isDifferentFocus = refererFocus !== focus;
-
-            // Compare filters (only if they exist in the referer)
-            const hasSameChannelSlugs =
-              refererChannelSlugs.length === 0 ||
-              JSON.stringify(refererChannelSlugs.sort()) ===
-                JSON.stringify((channelSlugs ?? []).sort());
-            const hasSameSort = !refererSort || refererSort === sort;
-            const hasSameDateRange =
-              !refererDateRange || refererDateRange === dateRange;
-
-            moduleLogger.info(
-              {
-                context: {
-                  refererUrl: refererUrl.toString(),
-                  refererPathname: refererUrl.pathname,
-                  refererQuery,
-                  refererFocus,
-                  refererChannelSlugs,
-                  refererSort,
-                  refererDateRange,
-                  isFromSearchPage,
-                  isSameQuery,
-                  isDifferentFocus,
-                  hasSameChannelSlugs,
-                  hasSameSort,
-                  hasSameDateRange,
-                },
-              },
-              'Referer parsed',
-            );
-
-            if (
-              isFromSearchPage &&
-              isSameQuery &&
-              isDifferentFocus &&
-              hasSameChannelSlugs &&
-              hasSameSort &&
-              hasSameDateRange
-            ) {
-              shouldSkipLogging = true;
-
-              moduleLogger.info(
-                {
-                  appUserId: ctx.session?.appUserId,
-                  context: {
-                    query: q,
-                    referer,
-                    previousFocus: refererFocus,
-                    newFocus: focus,
-                  },
-                },
-                'Skipping duplicate search (focus switch detected via referer)',
-              );
-            }
-          } catch (urlError) {
-            // Invalid referer URL, ignore
-            moduleLogger.warn(
-              {
-                context: {
-                  referer,
-                  error:
-                    urlError instanceof Error
-                      ? urlError.message
-                      : String(urlError),
-                },
-              },
-              'Failed to parse referer URL',
-            );
-          }
-        }
-
         // Only log if query is not empty or whitespace AND this is the initial search (not pagination)
-        if (!shouldSkipLogging && q.trim().length > 0 && cursor === 0) {
-          const logEntry = await prisma.searchLogEntry.create({
-            data: {
+        if (q.trim().length > 0 && cursor === 0) {
+          // Generate deterministic ID for idempotent logging
+          const logId = generateSearchLogId(
+            q,
+            {
+              focus,
+              channelIds: channelIds ?? undefined,
+              sort,
+              dateRange,
+            },
+            ctx.session?.appUserId,
+          );
+
+          const logEntry = await prisma.searchLogEntry.upsert({
+            where: { id: logId },
+            create: {
+              id: logId,
               query: q,
               params: {
                 focus,
@@ -314,6 +269,11 @@ export const searchProcedures = {
               transcriptCount,
               channelCount: 0, // Will be updated after we fetch channels
             },
+            update: {
+              // Update counts in case results changed (ES index updated, etc.)
+              mediaCount,
+              transcriptCount,
+            },
           });
 
           searchLogEntryId = logEntry.id;
@@ -323,6 +283,7 @@ export const searchProcedures = {
               context: {
                 userId: ctx.session?.appUserId,
                 searchLogId: searchLogEntryId,
+                isNewEntry: logEntry.createdAt.getTime() > Date.now() - 1000,
               },
             },
             'Search query logged to database',

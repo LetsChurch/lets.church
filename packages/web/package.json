@@ -108,6 +108,7 @@
     "type-fest": "catalog:",
     "unified": "^11.0.5",
     "use-debounce": "^10.0.6",
+    "uuid": "catalog:",
     "wait-on": "catalog:",
     "xss": "catalog:",
     "zod": "catalog:"
