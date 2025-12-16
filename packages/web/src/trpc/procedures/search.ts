@@ -184,7 +184,7 @@ export const searchProcedures = {
         'ElasticSearch multisearch completed',
       );
 
-      const [uploadsResponse, transcriptsResponse, _channelsResponse] =
+      const [uploadsResponse, transcriptsResponse, channelsResponse] =
         parsed.responses;
 
       // Extract counts
@@ -340,15 +340,13 @@ export const searchProcedures = {
         // Don't fail the search if logging fails
       }
 
-      // Extract channel aggregations from the focused response
-      const channelAggs =
-        (focus === 'media'
-          ? uploadsResponse?.aggregations?.channelIds?.buckets
-          : transcriptsResponse?.aggregations?.channelIds?.buckets) ?? [];
+      // Extract channel IDs from channel search results
+      const channelIdsFromSearch = channelsResponse?.hits.hits
+        .filter((hit) => hit._index === 'lc_channels')
+        .map((hit) => hit._id);
 
-      // Get channel data for carousel and filters
-      const channelIdsFromAggs = channelAggs.map((bucket) => bucket.key);
-      const channels = await prisma.channel.findMany({
+      // Get channel data for carousel from channel search results
+      const dbChannels = await prisma.channel.findMany({
         select: {
           id: true,
           name: true,
@@ -356,21 +354,42 @@ export const searchProcedures = {
           avatarPath: true,
         },
         where: {
-          id: { in: channelIdsFromAggs },
+          id: { in: channelIdsFromSearch },
           visibility: 'PUBLIC',
           approvedAt: { not: null },
           deletedAt: null,
         },
       });
 
+      const dbChannelsMap = new Map(dbChannels.map((c) => [c.id, c]));
+
+      const channelsWithAvatars = channelIdsFromSearch
+        .map((id) => dbChannelsMap.get(id))
+        .filter((channel): channel is NonNullable<typeof channel> =>
+          Boolean(channel),
+        )
+        .map((channel) => {
+          const avatarUrl = channel.avatarPath
+            ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
+                resize: appAvatarSm2x,
+              })
+            : null;
+
+          return {
+            ...channel,
+            id: OutgoingIdSchema.parse(channel.id),
+            avatarUrl,
+          };
+        });
+
       moduleLogger.info(
         {
           context: {
-            aggregatedChannels: channelIdsFromAggs.length,
-            channelsFound: channels.length,
+            channelSearchResults: channelIdsFromSearch.length,
+            channelsFound: channelsWithAvatars.length,
           },
         },
-        'Fetched channel aggregation data',
+        'Fetched channel search data',
       );
 
       // Update the search log entry with channel count (only if we logged this search)
@@ -379,7 +398,7 @@ export const searchProcedures = {
           await prisma.searchLogEntry.update({
             where: { id: searchLogEntryId },
             data: {
-              channelCount: channels.length,
+              channelCount: channelsWithAvatars.length,
             },
           });
         } catch (error) {
@@ -393,20 +412,6 @@ export const searchProcedures = {
           );
         }
       }
-
-      const channelsWithAvatars = channels.map((channel) => {
-        const avatarUrl = channel.avatarPath
-          ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
-              resize: appAvatarSm2x,
-            })
-          : null;
-
-        return {
-          ...channel,
-          id: OutgoingIdSchema.parse(channel.id),
-          avatarUrl,
-        };
-      });
 
       // Process results based on focus
       let items: Array<unknown> = [];
