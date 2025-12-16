@@ -32,8 +32,8 @@ export function ChurchesView({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     isEmbed ? false : getInitialSidebarCollapsed(),
   );
-  const [windowWidth, setWindowWidth] = useState(
-    typeof window !== 'undefined' ? window.innerWidth : 0,
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 640 : false,
   );
   const trpc = useTRPC();
 
@@ -64,12 +64,19 @@ export function ChurchesView({
   }, [isEmbed]);
 
   useEffect(() => {
-    const handleResize = () => {
-      setWindowWidth(window.innerWidth);
+    // Use matchMedia to only update when crossing the mobile breakpoint
+    const mediaQuery = window.matchMedia('(max-width: 639px)');
+
+    const handleMediaChange = (e: MediaQueryListEvent | MediaQueryList) => {
+      setIsMobile(e.matches);
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    // Set initial value
+    handleMediaChange(mediaQuery);
+
+    // Listen for changes (only fires when crossing the breakpoint)
+    mediaQuery.addEventListener('change', handleMediaChange);
+    return () => mediaQuery.removeEventListener('change', handleMediaChange);
   }, []);
 
   // Calculate padding to offset the map center
@@ -83,9 +90,6 @@ export function ChurchesView({
     if (typeof window === 'undefined') {
       return { left: 0, top: 0, right: 0, bottom: 0 };
     }
-
-    // Check if mobile (sm breakpoint is 640px)
-    const isMobile = windowWidth < 640;
 
     if (isMobile) {
       // 50vh for the pane height on mobile + bottom tab bar height (no tab bar in embed)
@@ -105,7 +109,7 @@ export function ChurchesView({
       right: 0,
       bottom: 0,
     };
-  }, [sidebarWidth, windowWidth, isEmbed]);
+  }, [sidebarWidth, isMobile, isEmbed]);
 
   const pane = (
     <Pane
