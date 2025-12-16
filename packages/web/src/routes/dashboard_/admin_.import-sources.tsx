@@ -61,7 +61,7 @@ export const Route = createFileRoute('/dashboard_/admin_/import-sources')({
         trpc.dashboard.importSources.listAll.queryOptions(),
       ),
       queryClient.ensureQueryData(
-        trpc.dashboard.channels.getChannels.queryOptions(),
+        trpc.dashboard.admin.getAllChannels.queryOptions(),
       ),
     ]);
     return {
@@ -107,9 +107,10 @@ function ImportSourcesPage() {
     trpc.dashboard.importSources.listAll.queryOptions(),
   );
 
-  const { data: channels } = useSuspenseQuery(
-    trpc.dashboard.channels.getChannels.queryOptions(),
+  const { data } = useSuspenseQuery(
+    trpc.dashboard.admin.getAllChannels.queryOptions(),
   );
+  const channels = data.channels;
 
   const deleteMutation = useMutation(
     trpc.dashboard.importSources.delete.mutationOptions({
