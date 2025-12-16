@@ -19,7 +19,7 @@ export function EmptyState({
   const color = variant === 'standard' ? '#6366F1' : '#EF4444';
 
   return (
-    <div className="flex h-[240px] flex-col items-center justify-center rounded-2xl border border-gray-950/15 border-dashed px-4 text-center dark:border-white/15">
+    <div className="flex h-60 flex-col items-center justify-center rounded-2xl border border-gray-950/15 border-dashed px-4 text-center dark:border-white/15">
       <div className="mb-4">
         <svg
           width="78"

@@ -146,18 +146,22 @@ function ContentSection({
   emptyTitle,
   emptyBody,
   emptyCta,
+  emptyCtaHref,
   loggedOutEmptyTitle,
   loggedOutEmptyBody,
   loggedOutEmptyCta,
+  loggedOutEmptyCtaHref,
   isLoggedIn,
 }: {
   title: string;
   emptyTitle?: string;
   emptyBody?: string;
   emptyCta?: string;
+  emptyCtaHref?: LinkProps['to'];
   loggedOutEmptyTitle?: string;
   loggedOutEmptyBody?: string;
   loggedOutEmptyCta?: string;
+  loggedOutEmptyCtaHref?: LinkProps['to'];
   isLoggedIn?: boolean;
   uploads: Array<{
     id: string;
@@ -216,6 +220,9 @@ function ContentSection({
           emptyTitle={isLoggedIn === false ? loggedOutEmptyTitle : emptyTitle}
           emptyBody={isLoggedIn === false ? loggedOutEmptyBody : emptyBody}
           emptyCta={isLoggedIn === false ? loggedOutEmptyCta : emptyCta}
+          emptyCtaHref={
+            isLoggedIn === false ? loggedOutEmptyCtaHref : emptyCtaHref
+          }
         />
       )}
     </div>
@@ -546,6 +553,7 @@ function Home() {
         loggedOutEmptyTitle="Create an account to follow channels"
         loggedOutEmptyBody="Follow your favorite channels to get a customized feed and to ensure you don't miss new content!"
         loggedOutEmptyCta="Create Account"
+        loggedOutEmptyCtaHref="/auth/register"
         isLoggedIn={isLoggedIn}
       />
 
