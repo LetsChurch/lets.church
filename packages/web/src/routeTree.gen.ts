@@ -33,6 +33,7 @@ import { Route as MainLibraryRouteImport } from './routes/_main/library'
 import { Route as MainHistoryRouteImport } from './routes/_main/history'
 import { Route as MainFollowingRouteImport } from './routes/_main/following'
 import { Route as MainChurchesRouteImport } from './routes/_main/churches'
+import { Route as MainChannelsRouteImport } from './routes/_main/channels'
 import { Route as MainAboutRouteImport } from './routes/_main.about'
 import { Route as MainSlugRouteImport } from './routes/_main/$slug'
 import { Route as MainAboutIndexRouteImport } from './routes/_main/about/index'
@@ -202,6 +203,11 @@ const MainFollowingRoute = MainFollowingRouteImport.update({
 const MainChurchesRoute = MainChurchesRouteImport.update({
   id: '/churches',
   path: '/churches',
+  getParentRoute: () => MainRoute,
+} as any)
+const MainChannelsRoute = MainChannelsRouteImport.update({
+  id: '/channels',
+  path: '/channels',
   getParentRoute: () => MainRoute,
 } as any)
 const MainAboutRoute = MainAboutRouteImport.update({
@@ -492,6 +498,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteWithChildren
   '/$slug': typeof MainSlugRoute
   '/about': typeof MainAboutRouteWithChildren
+  '/channels': typeof MainChannelsRoute
   '/churches': typeof MainChurchesRoute
   '/following': typeof MainFollowingRoute
   '/history': typeof MainHistoryRoute
@@ -566,6 +573,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
   '/$slug': typeof MainSlugRoute
+  '/channels': typeof MainChannelsRoute
   '/churches': typeof MainChurchesRoute
   '/following': typeof MainFollowingRoute
   '/history': typeof MainHistoryRoute
@@ -644,6 +652,7 @@ export interface FileRoutesById {
   '/dashboard_': typeof DashboardRouteWithChildren
   '/_main/$slug': typeof MainSlugRoute
   '/_main/about': typeof MainAboutRouteWithChildren
+  '/_main/channels': typeof MainChannelsRoute
   '/_main/churches': typeof MainChurchesRoute
   '/_main/following': typeof MainFollowingRoute
   '/_main/history': typeof MainHistoryRoute
@@ -722,6 +731,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/$slug'
     | '/about'
+    | '/channels'
     | '/churches'
     | '/following'
     | '/history'
@@ -796,6 +806,7 @@ export interface FileRouteTypes {
   to:
     | '/auth'
     | '/$slug'
+    | '/channels'
     | '/churches'
     | '/following'
     | '/history'
@@ -873,6 +884,7 @@ export interface FileRouteTypes {
     | '/dashboard_'
     | '/_main/$slug'
     | '/_main/about'
+    | '/_main/channels'
     | '/_main/churches'
     | '/_main/following'
     | '/_main/history'
@@ -1126,6 +1138,13 @@ declare module '@tanstack/react-router' {
       path: '/churches'
       fullPath: '/churches'
       preLoaderRoute: typeof MainChurchesRouteImport
+      parentRoute: typeof MainRoute
+    }
+    '/_main/channels': {
+      id: '/_main/channels'
+      path: '/channels'
+      fullPath: '/channels'
+      preLoaderRoute: typeof MainChannelsRouteImport
       parentRoute: typeof MainRoute
     }
     '/_main/about': {
@@ -1517,6 +1536,7 @@ const MainAboutRouteWithChildren = MainAboutRoute._addFileChildren(
 interface MainRouteChildren {
   MainSlugRoute: typeof MainSlugRoute
   MainAboutRoute: typeof MainAboutRouteWithChildren
+  MainChannelsRoute: typeof MainChannelsRoute
   MainChurchesRoute: typeof MainChurchesRoute
   MainFollowingRoute: typeof MainFollowingRoute
   MainHistoryRoute: typeof MainHistoryRoute
@@ -1532,6 +1552,7 @@ interface MainRouteChildren {
 const MainRouteChildren: MainRouteChildren = {
   MainSlugRoute: MainSlugRoute,
   MainAboutRoute: MainAboutRouteWithChildren,
+  MainChannelsRoute: MainChannelsRoute,
   MainChurchesRoute: MainChurchesRoute,
   MainFollowingRoute: MainFollowingRoute,
   MainHistoryRoute: MainHistoryRoute,

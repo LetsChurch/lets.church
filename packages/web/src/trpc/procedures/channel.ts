@@ -30,6 +30,13 @@ const channelChurchesQuerySchema = z.object({
   slug: z.string(),
 });
 
+const listPublicChannelsQuerySchema = z.object({
+  search: z.string().optional(),
+  sortBy: z.enum(['name', 'subscribers', 'newest']).default('subscribers'),
+  limit: z.number().min(1).max(50).default(20),
+  cursor: z.number().nullable().optional(), // Offset for pagination
+});
+
 export const channelProcedures = {
   getChannelBySlug: publicProcedure
     .input(channelQuerySchema)
@@ -394,5 +401,84 @@ export const channelProcedures = {
           isOfficial: assoc.officialChannel,
         };
       });
+    }),
+
+  listPublicChannels: publicProcedure
+    .input(listPublicChannelsQuerySchema)
+    .query(async ({ input }) => {
+      const { search, sortBy, limit, cursor } = input;
+
+      moduleLogger.info(
+        { context: { search, sortBy, limit, cursor } },
+        'Listing public channels',
+      );
+
+      const orderBy =
+        sortBy === 'name'
+          ? [{ name: 'asc' as const }, { id: 'asc' as const }]
+          : sortBy === 'subscribers'
+            ? [
+                { subscribers: { _count: 'desc' as const } },
+                { id: 'asc' as const },
+              ]
+            : [{ createdAt: 'desc' as const }, { id: 'asc' as const }];
+
+      const offset = cursor ?? 0;
+
+      const channels = await prisma.channel.findMany({
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          description: true,
+          avatarPath: true,
+          createdAt: true,
+          _count: {
+            select: {
+              subscribers: true,
+            },
+          },
+        },
+        where: {
+          visibility: 'PUBLIC',
+          approvedAt: { not: null },
+          deletedAt: null,
+          ...(search
+            ? {
+                name: {
+                  contains: search,
+                  mode: 'insensitive' as const,
+                },
+              }
+            : {}),
+        },
+        orderBy,
+        skip: offset,
+        take: limit + 1,
+      });
+
+      const hasMore = channels.length > limit;
+      const items = hasMore ? channels.slice(0, limit) : channels;
+      const nextCursor = hasMore ? offset + limit : null;
+
+      return {
+        items: items.map((channel) => {
+          const avatarUrl = channel.avatarPath
+            ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
+                resize: appAvatarMd2x,
+              })
+            : null;
+
+          return {
+            id: OutgoingIdSchema.parse(channel.id),
+            name: channel.name,
+            slug: channel.slug,
+            description: channel.description,
+            avatarUrl,
+            subscriberCount: channel._count.subscribers,
+          };
+        }),
+        nextCursor,
+      };
     }),
 };

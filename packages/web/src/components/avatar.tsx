@@ -17,12 +17,14 @@ export function Avatar({
   fallbackClassName,
 }: AvatarProps) {
   return (
-    <BaseAvatar.Root className={cn('overflow-hidden rounded-full', className)}>
+    <BaseAvatar.Root
+      className={cn('inline-block overflow-hidden rounded-full', className)}
+    >
       {src ? (
         <BaseAvatar.Image
           src={src}
           alt={alt}
-          className="size-full object-cover"
+          className="block size-full object-cover"
         />
       ) : null}
       <BaseAvatar.Fallback

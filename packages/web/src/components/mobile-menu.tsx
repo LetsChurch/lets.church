@@ -5,6 +5,7 @@ import {
   IconCompass,
   IconFlag,
   IconSearch,
+  IconUsers,
   IconX,
 } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
@@ -118,6 +119,15 @@ export default function MobileMenu({ open, onOpenChange }: MobileMenuProps) {
               >
                 <IconBuildingChurch className="size-6" />
                 <span>Churches</span>
+              </Link>
+              <Link
+                to="/channels"
+                search={{ sort: 'subscribers' }}
+                onClick={handleClose}
+                className="flex items-center gap-3 font-semibold text-lg text-primary hover:text-indigo-400"
+              >
+                <IconUsers className="size-6" />
+                <span>Channels</span>
               </Link>
               <Link
                 to="/library"

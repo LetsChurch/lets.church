@@ -11,6 +11,7 @@ import {
   IconInfoCircle,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
+  IconUsers,
 } from '@tabler/icons-react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
@@ -398,7 +399,7 @@ export default function Sidebar({ className }: SidebarProps) {
                 <hr className="mx-4 h-px border-gray-100 dark:border-zinc-900" />
               </div>
 
-              {/* Churches and Library */}
+              {/* Churches, Channels, and Library */}
               <div className="py-2">
                 {collapsed ? (
                   <LcTooltip
@@ -433,6 +434,44 @@ export default function Sidebar({ className }: SidebarProps) {
                   >
                     <IconBuildingChurch size={24} />
                     <span className="pb-0.5">Churches</span>
+                    <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                  </Link>
+                )}
+                {collapsed ? (
+                  <LcTooltip
+                    content="Channels"
+                    side="right"
+                    render={
+                      <Link
+                        to="/channels"
+                        search={{ sort: 'subscribers' }}
+                        className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
+                        activeProps={{
+                          className: 'text-primary',
+                        }}
+                        inactiveProps={{
+                          className: 'text-primary/70',
+                        }}
+                      />
+                    }
+                  >
+                    <IconUsers size={24} />
+                    <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
+                  </LcTooltip>
+                ) : (
+                  <Link
+                    to="/channels"
+                    search={{ sort: 'subscribers' }}
+                    className="group relative flex items-center gap-2.5 px-4 py-2 font-medium text-sm transition-colors hover:bg-white/5"
+                    activeProps={{
+                      className: 'text-primary',
+                    }}
+                    inactiveProps={{
+                      className: 'text-primary/70',
+                    }}
+                  >
+                    <IconUsers size={24} />
+                    <span className="pb-0.5">Channels</span>
                     <div className="glow-md absolute top-0 right-0 h-full w-0.5 bg-brand opacity-0 group-[.active]:opacity-100" />
                   </Link>
                 )}
