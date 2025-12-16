@@ -168,6 +168,7 @@ type ChurchMapProps = {
   filters: ParsedFilters;
   churchData?: ChurchDatum;
   isEmbed?: boolean;
+  debug?: boolean;
 };
 
 export function ChurchMap({
@@ -175,12 +176,17 @@ export function ChurchMap({
   filters,
   churchData,
   isEmbed = false,
+  debug = false,
 }: ChurchMapProps) {
   const ref = useRef(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const popupRef = useRef<mapboxgl.Popup | null>(null);
   const trpc = useTRPC();
   const [theme, setTheme] = useState(isEmbed ? 'light' : getInitialTheme());
+  const [vanishingPoint, setVanishingPoint] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   const { data: env } = useQuery(trpc.common.getClientEnv.queryOptions());
 
@@ -487,6 +493,32 @@ export function ChurchMap({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Calculate vanishing point for debug visualization
+  useEffect(() => {
+    if (!debug || !ref.current) return;
+
+    const updateVanishingPoint = () => {
+      const container = ref.current as HTMLElement | null;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      const padLeft = padding?.left ?? 0;
+      const padRight = padding?.right ?? 0;
+      const padTop = padding?.top ?? 0;
+      const padBottom = padding?.bottom ?? 0;
+
+      // Vanishing point is the center of the viewport after accounting for padding
+      const x = (rect.width - padLeft - padRight) / 2 + padLeft;
+      const y = (rect.height - padTop - padBottom) / 2 + padTop;
+
+      setVanishingPoint({ x, y });
+    };
+
+    updateVanishingPoint();
+    window.addEventListener('resize', updateVanishingPoint);
+    return () => window.removeEventListener('resize', updateVanishingPoint);
+  }, [debug, padding]);
+
   // Update map data when church data changes
   useEffect(() => {
     const map = mapRef.current;
@@ -569,5 +601,41 @@ export function ChurchMap({
     }
   }, [churchData, filters, padding]);
 
-  return <div ref={ref} className="size-full" />;
+  return (
+    <div className="relative size-full">
+      <div ref={ref} className="size-full" />
+      {debug && vanishingPoint ? (
+        <>
+          {/* Vertical line */}
+          <div
+            className="pointer-events-none absolute top-0 bottom-0 w-px bg-red-500"
+            style={{ left: `${vanishingPoint.x}px` }}
+          />
+          {/* Horizontal line */}
+          <div
+            className="pointer-events-none absolute right-0 left-0 h-px bg-red-500"
+            style={{ top: `${vanishingPoint.y}px` }}
+          />
+          {/* Center circle */}
+          <div
+            className="-translate-x-1/2 -translate-y-1/2 pointer-events-none absolute size-4 rounded-full border-2 border-red-500 bg-red-500/20"
+            style={{
+              left: `${vanishingPoint.x}px`,
+              top: `${vanishingPoint.y}px`,
+            }}
+          />
+          {/* Label */}
+          <div
+            className="-translate-y-full pointer-events-none absolute bg-red-500 px-2 py-1 font-mono text-white text-xs"
+            style={{
+              left: `${vanishingPoint.x + 10}px`,
+              top: `${vanishingPoint.y - 10}px`,
+            }}
+          >
+            Vanishing Point
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
 }

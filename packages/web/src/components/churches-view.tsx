@@ -29,7 +29,7 @@ export function ChurchesView({
   isEmbed = false,
   hideOrganization = false,
 }: ChurchesViewProps) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+  const [_sidebarCollapsed, setSidebarCollapsed] = useState(
     isEmbed ? false : getInitialSidebarCollapsed(),
   );
   const [isMobile, setIsMobile] = useState(
@@ -81,10 +81,7 @@ export function ChurchesView({
 
   // Calculate padding to offset the map center
   // Desktop: Pane is max-w-sm (24rem = 384px) + 24px padding on each side + 24px spacing = 456px total
-  // Sidebar collapsed: 56px (w-14), expanded: 200px (w-50)
   // Mobile: Pane is 50vh at bottom, need to offset bottom
-  // Embed: No sidebar, so sidebarWidth is 0
-  const sidebarWidth = isEmbed ? 0 : sidebarCollapsed ? 56 : 200;
   const paneWidth = 456;
   const mapPadding = useMemo(() => {
     if (typeof window === 'undefined') {
@@ -102,14 +99,14 @@ export function ChurchesView({
       };
     }
 
-    // Desktop padding
+    // Desktop padding - only account for the floating pane, not the sidebar
     return {
-      left: paneWidth + sidebarWidth,
+      left: paneWidth,
       top: 0,
       right: 0,
       bottom: 0,
     };
-  }, [sidebarWidth, isMobile, isEmbed]);
+  }, [isMobile, isEmbed]);
 
   const pane = (
     <Pane
@@ -145,6 +142,7 @@ export function ChurchesView({
           filters={filters}
           churchData={churchData}
           isEmbed={isEmbed}
+          // debug={true} // Enable to show red crosshairs at the map's vanishing point (center after padding)
         />
         {/* Floating pane - desktop left side, mobile bottom */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 sm:inset-0 sm:p-6">
