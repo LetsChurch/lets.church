@@ -60,7 +60,7 @@ function LoginRoute() {
       turnstile: '',
     },
     validators: {
-      onChange: loginSchema,
+      onSubmit: loginSchema,
     },
     onSubmit: async ({ value }) => {
       loginMutation.mutate(value);

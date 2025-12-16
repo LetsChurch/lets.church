@@ -65,7 +65,7 @@ function RouteComponent() {
       turnstile: '',
     },
     validators: {
-      onChange: registerSchema,
+      onSubmit: registerSchema,
     },
     onSubmit: async ({ value }) => {
       registerMutation.mutate(value);
