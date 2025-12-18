@@ -193,26 +193,45 @@ function ChurchProfileComponent() {
 
                 {church.tags.length > 0 ? (
                   <div className={church.description ? 'mt-6' : ''}>
-                    <div className="flex flex-wrap gap-1.5">
-                      {church.tags.map((tag) => (
-                        <Tag
-                          key={tag.slug}
-                          size="sm"
-                          color={
-                            tag.color as
-                              | 'BLUE'
-                              | 'GREEN'
-                              | 'RED'
-                              | 'INDIGO'
-                              | 'PINK'
-                              | 'PURPLE'
-                              | 'GRAY'
+                    {Object.entries(
+                      church.tags.reduce(
+                        (acc, tag) => {
+                          const category = tag.category;
+                          if (!acc[category]) {
+                            acc[category] = [];
                           }
-                        >
-                          {tag.label}
-                        </Tag>
-                      ))}
-                    </div>
+                          acc[category].push(tag);
+                          return acc;
+                        },
+                        {} as Record<string, typeof church.tags>,
+                      ),
+                    ).map(([category, tags]) => (
+                      <div key={category} className="mb-4 last:mb-0">
+                        <h3 className="mb-2 font-medium text-muted text-xs uppercase tracking-wider">
+                          {category.toLowerCase().replace('_', ' ')}
+                        </h3>
+                        <div className="flex flex-wrap gap-1.5">
+                          {tags.map((tag) => (
+                            <Tag
+                              key={tag.slug}
+                              size="sm"
+                              color={
+                                tag.color as
+                                  | 'BLUE'
+                                  | 'GREEN'
+                                  | 'RED'
+                                  | 'INDIGO'
+                                  | 'PINK'
+                                  | 'PURPLE'
+                                  | 'GRAY'
+                              }
+                            >
+                              {tag.label}
+                            </Tag>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : null}
               </section>
