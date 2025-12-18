@@ -448,51 +448,94 @@ function RouteComponent() {
                     Playlists
                   </h2>
                   <div className="space-y-3">
-                    {playlists.map((playlist) => (
-                      <Link
-                        key={playlist.id}
-                        to="/playlist/$playlistId"
-                        params={{ playlistId: playlist.id }}
-                        className="group flex gap-3 rounded-xl bg-zinc-50/50 p-3 transition-all hover:shadow-md dark:bg-zinc-800/50"
-                      >
-                        {playlist.thumbnailUrl ? (
-                          <div className="relative aspect-video w-20 shrink-0 overflow-hidden rounded-lg">
-                            <img
-                              src={playlist.thumbnailUrl}
-                              alt=""
-                              className="size-full object-cover"
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                    {playlists.map((playlist) => {
+                      const isSeries = playlist.type === 'SERIES';
+                      const LinkComponent = isSeries ? (
+                        <Link
+                          key={playlist.id}
+                          to="/series/$seriesId"
+                          params={{ seriesId: playlist.id }}
+                          className="group flex gap-3 rounded-xl bg-zinc-50/50 p-3 transition-all hover:shadow-md dark:bg-zinc-800/50"
+                        >
+                          {playlist.thumbnailUrl ? (
+                            <div className="relative aspect-video w-20 shrink-0 overflow-hidden rounded-lg">
+                              <img
+                                src={playlist.thumbnailUrl}
+                                alt=""
+                                className="size-full object-cover"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                <IconPlaylist
+                                  size={20}
+                                  className="text-white"
+                                  strokeWidth={2}
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex aspect-video w-20 shrink-0 items-center justify-center rounded-lg bg-zinc-200 dark:bg-zinc-700">
                               <IconPlaylist
                                 size={20}
-                                className="text-white"
+                                className="text-zinc-400 dark:text-zinc-500"
                                 strokeWidth={2}
                               />
                             </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <h3 className="truncate font-semibold text-primary text-sm">
+                              {playlist.title}
+                            </h3>
+                            <p className="text-secondary text-xs">
+                              {playlist.uploadCount} media
+                            </p>
+                            <p className="text-muted text-xs">Series</p>
                           </div>
-                        ) : (
-                          <div className="flex aspect-video w-20 shrink-0 items-center justify-center rounded-lg bg-zinc-200 dark:bg-zinc-700">
-                            <IconPlaylist
-                              size={20}
-                              className="text-zinc-400 dark:text-zinc-500"
-                              strokeWidth={2}
-                            />
+                        </Link>
+                      ) : (
+                        <Link
+                          key={playlist.id}
+                          to="/playlist/$playlistId"
+                          params={{ playlistId: playlist.id }}
+                          className="group flex gap-3 rounded-xl bg-zinc-50/50 p-3 transition-all hover:shadow-md dark:bg-zinc-800/50"
+                        >
+                          {playlist.thumbnailUrl ? (
+                            <div className="relative aspect-video w-20 shrink-0 overflow-hidden rounded-lg">
+                              <img
+                                src={playlist.thumbnailUrl}
+                                alt=""
+                                className="size-full object-cover"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                <IconPlaylist
+                                  size={20}
+                                  className="text-white"
+                                  strokeWidth={2}
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex aspect-video w-20 shrink-0 items-center justify-center rounded-lg bg-zinc-200 dark:bg-zinc-700">
+                              <IconPlaylist
+                                size={20}
+                                className="text-zinc-400 dark:text-zinc-500"
+                                strokeWidth={2}
+                              />
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <h3 className="truncate font-semibold text-primary text-sm">
+                              {playlist.title}
+                            </h3>
+                            <p className="text-secondary text-xs">
+                              {playlist.uploadCount}{' '}
+                              {playlist.uploadCount === 1 ? 'video' : 'videos'}
+                            </p>
+                            <p className="text-muted text-xs">Playlist</p>
                           </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <h3 className="truncate font-semibold text-primary text-sm">
-                            {playlist.title}
-                          </h3>
-                          <p className="text-secondary text-xs">
-                            {playlist.uploadCount}{' '}
-                            {playlist.uploadCount === 1 ? 'video' : 'videos'}
-                          </p>
-                          <p className="text-muted text-xs">
-                            {playlist.type === 'SERIES' ? 'Series' : 'Playlist'}
-                          </p>
-                        </div>
-                      </Link>
-                    ))}
+                        </Link>
+                      );
+                      return LinkComponent;
+                    })}
                   </div>
                 </section>
               ) : null}

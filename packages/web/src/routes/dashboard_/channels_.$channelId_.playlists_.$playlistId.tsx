@@ -329,13 +329,16 @@ function PlaylistDetailsPage() {
 
   const handleCopyPlaylistLink = async () => {
     const shortId = idTranslator.fromUUID(playlist.id);
-    const playlistUrl = `${window.location.origin}/playlist/${shortId}`;
+    const isSeries = playlist.type === 'SERIES';
+    const path = isSeries ? 'series' : 'playlist';
+    const url = `${window.location.origin}/${path}/${shortId}`;
+    const typeLabel = isSeries ? 'Series' : 'Playlist';
 
     try {
-      await navigator.clipboard.writeText(playlistUrl);
+      await navigator.clipboard.writeText(url);
       notifications.show({
         title: 'Success',
-        message: 'Playlist link copied to clipboard',
+        message: `${typeLabel} link copied to clipboard`,
         color: 'green',
       });
     } catch (_error) {

@@ -10,6 +10,7 @@ import { mediaProcedures } from './procedures/media';
 import { newsletterProcedures } from './procedures/newsletter';
 import { playlistProcedures } from './procedures/playlist';
 import { searchProcedures } from './procedures/search';
+import { seriesProcedures } from './procedures/series';
 import { router } from './trpc';
 
 export const appRouter = router({
@@ -25,6 +26,7 @@ export const appRouter = router({
   newsletter: newsletterProcedures,
   playlist: playlistProcedures,
   search: searchProcedures,
+  series: seriesProcedures,
 });
 
 export type AppRouter = typeof appRouter;
