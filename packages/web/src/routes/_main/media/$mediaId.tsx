@@ -657,7 +657,7 @@ function RouteComponent() {
               videoHeight={layout.videoHeight}
               peaksJsonUrl={media.peaksJsonUrl}
               lengthSeconds={media.lengthSeconds}
-              videoClassName={layout.showSidebar ? null : 'sticky top-0'}
+              videoClassName={layout.showSidebar ? null : 'sticky top-0 z-10'}
               initialTimestamp={initialTimestamp}
             />
 
