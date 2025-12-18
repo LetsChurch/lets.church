@@ -197,7 +197,7 @@ export const searchProcedures = {
           publishedAt,
           orderBy,
         }),
-        ...msearchChannels(q, 0, 10), // Always get top 10 channels
+        ...msearchChannels(q, 0, 10), // Channel search results for carousel
       ];
 
       // Perform the multisearch
@@ -318,12 +318,35 @@ export const searchProcedures = {
         // Don't fail the search if logging fails
       }
 
-      // Extract channel IDs from channel search results
+      // Extract channel IDs from channel search results (for carousel)
       const channelIdsFromSearch = channelsResponse?.hits.hits
         .filter((hit) => hit._index === 'lc_channels')
         .map((hit) => hit._id);
 
-      // Get channel data for carousel from channel search results
+      // Extract channel IDs from aggregations (facets) for filters
+      const activeResponse =
+        focus === 'transcripts' ? transcriptsResponse : uploadsResponse;
+      const channelBuckets =
+        activeResponse?.aggregations?.channelIds?.buckets ?? [];
+      const facetedChannelIds = channelBuckets.map((bucket) => bucket.key);
+
+      moduleLogger.info(
+        {
+          context: {
+            channelSearchResults: channelIdsFromSearch.length,
+            facetedChannels: facetedChannelIds.length,
+            focus,
+          },
+        },
+        'Extracted channel search results and facets',
+      );
+
+      // Combine both sets of channel IDs to fetch in one query
+      const allChannelIds = Array.from(
+        new Set([...channelIdsFromSearch, ...facetedChannelIds]),
+      );
+
+      // Get channel data from database
       const dbChannels = await prisma.channel.findMany({
         select: {
           id: true,
@@ -332,7 +355,7 @@ export const searchProcedures = {
           avatarPath: true,
         },
         where: {
-          id: { in: channelIdsFromSearch },
+          id: { in: allChannelIds },
           visibility: 'PUBLIC',
           approvedAt: { not: null },
           deletedAt: null,
@@ -341,7 +364,28 @@ export const searchProcedures = {
 
       const dbChannelsMap = new Map(dbChannels.map((c) => [c.id, c]));
 
+      // Process channel search results for carousel
       const channelsWithAvatars = channelIdsFromSearch
+        .map((id) => dbChannelsMap.get(id))
+        .filter((channel): channel is NonNullable<typeof channel> =>
+          Boolean(channel),
+        )
+        .map((channel) => {
+          const avatarUrl = channel.avatarPath
+            ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
+                resize: appAvatarSm2x,
+              })
+            : null;
+
+          return {
+            ...channel,
+            id: OutgoingIdSchema.parse(channel.id),
+            avatarUrl,
+          };
+        });
+
+      // Process faceted channels for filters
+      const facetedChannelsWithAvatars = facetedChannelIds
         .map((id) => dbChannelsMap.get(id))
         .filter((channel): channel is NonNullable<typeof channel> =>
           Boolean(channel),
@@ -628,6 +672,7 @@ export const searchProcedures = {
             itemsReturned: items.length,
             hasMore: nextCursor !== null,
             channelsReturned: channelsWithAvatars.length,
+            facetedChannelsReturned: facetedChannelsWithAvatars.length,
           },
         },
         'Search completed successfully',
@@ -638,6 +683,7 @@ export const searchProcedures = {
         mediaCount,
         transcriptCount,
         channels: channelsWithAvatars,
+        facetedChannels: facetedChannelsWithAvatars,
         nextCursor,
       };
     }),

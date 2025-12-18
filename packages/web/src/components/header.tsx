@@ -12,6 +12,13 @@ import Logo from './logo';
 import MobileMenu from './mobile-menu';
 import SearchBar from './search-bar';
 
+type Channel = {
+  id: string;
+  name: string;
+  slug: string;
+  avatarUrl?: string | null;
+};
+
 type HeaderProps = PropsWithChildren<{
   defaultSearchValue?: string;
   searchPlaceholder?: string;
@@ -19,6 +26,7 @@ type HeaderProps = PropsWithChildren<{
   showBlurredBackground?: boolean;
   variant?: 'default' | 'light';
   mode?: 'full' | 'fab';
+  availableChannels?: Channel[];
 }>;
 
 export default function Header({
@@ -28,6 +36,7 @@ export default function Header({
   channelSlug,
   showBlurredBackground = true,
   variant = 'default',
+  availableChannels = [],
   mode = 'full',
 }: HeaderProps) {
   const trpc = useTRPC();
@@ -111,6 +120,7 @@ export default function Header({
               placeholder={searchPlaceholder}
               channelSlug={channelSlug}
               variant={variant}
+              availableChannels={availableChannels}
             />
           </div>
           <button
@@ -157,6 +167,7 @@ export default function Header({
             placeholder={searchPlaceholder}
             channelSlug={channelSlug}
             variant={variant}
+            availableChannels={availableChannels}
           />
         </div>
 

@@ -17,12 +17,20 @@ import { useSearchFilters } from '@/hooks/use-search-filters';
 import { cn } from '@/util/cn';
 import { SearchSettingsModal } from './search-settings-modal';
 
+type Channel = {
+  id: string;
+  name: string;
+  slug: string;
+  avatarUrl?: string | null;
+};
+
 type SearchProps = {
   placeholder?: string;
   className?: string;
   defaultValue?: string;
   channelSlug?: string;
   variant?: 'default' | 'light';
+  availableChannels?: Channel[];
 };
 
 export default function SearchBar({
@@ -32,6 +40,7 @@ export default function SearchBar({
   defaultValue,
   channelSlug,
   variant = 'default',
+  availableChannels = [],
 }: SearchProps) {
   const navigate = useNavigate({ from: '/search' });
   const location = useLocation();
@@ -258,6 +267,7 @@ export default function SearchBar({
         onDateRangeChange={setDateRange}
         channelSlugs={filters.channelSlugs}
         onChannelSlugsChange={setChannelSlugs}
+        availableChannels={availableChannels}
         onClearFilters={() => {
           setIsSettingsOpen(false);
           clearFilters();

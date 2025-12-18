@@ -6,11 +6,8 @@ import {
   IconChevronRight,
   // IconFlag,
 } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
-import { useSearch } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
-import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 import { MobileDrawer } from './mobile-drawer';
 
@@ -32,6 +29,7 @@ type SearchSettingsModalProps = {
   ) => void;
   channelSlugs?: string[];
   onChannelSlugsChange: (channelSlugs: string[] | undefined) => void;
+  availableChannels?: Channel[];
   onClearFilters: () => void;
 };
 
@@ -441,40 +439,11 @@ export function SearchSettingsModal({
   onDateRangeChange,
   channelSlugs = [],
   onChannelSlugsChange,
+  availableChannels = [],
   onClearFilters,
 }: SearchSettingsModalProps) {
   const [currentPage, setCurrentPage] = useState<SearchSettingsPage>('main');
   const [isMobile, setIsMobile] = useState(false);
-  const trpc = useTRPC();
-  const searchParams = useSearch({ strict: false }) as {
-    q?: string;
-    focus?: 'media' | 'transcripts';
-    channelSlugs?: string[];
-    sort?: 'relevance' | 'date-asc' | 'date-desc';
-    dateRange?: 'all-time' | 'today' | 'this-week' | 'this-month' | 'this-year';
-  };
-
-  // Get available channels from search results (only when modal is open and we have a query)
-  const { data: searchData } = useQuery({
-    ...trpc.search.performSearch.queryOptions({
-      q: searchParams.q ?? '',
-      focus: searchParams.focus ?? 'media',
-      channelSlugs: searchParams.channelSlugs,
-      limit: 20,
-      sort: searchParams.sort,
-      dateRange: searchParams.dateRange,
-    }),
-    enabled: open && Boolean(searchParams.q),
-  });
-
-  const availableChannels =
-    searchData?.channels ??
-    ([] as Array<{
-      id: string;
-      name: string;
-      slug: string;
-      avatarUrl?: string | null;
-    }>);
 
   // Detect screen size
   useEffect(() => {

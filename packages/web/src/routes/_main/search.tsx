@@ -92,15 +92,45 @@ export const Route = createFileRoute('/_main/search')({
 });
 
 function RouteComponent() {
-  const { q } = Route.useSearch();
+  const { q, focus, channelSlugs, sort, dateRange, skipLogging } =
+    Route.useSearch();
+  const trpc = useTRPC();
+
+  // Get faceted channels for filter options
+  const { data: searchData } = useInfiniteQuery({
+    ...trpc.search.performSearch.infiniteQueryOptions({
+      q: q ?? '',
+      focus,
+      channelSlugs,
+      limit: 20,
+      sort,
+      dateRange,
+      skipLogging,
+    }),
+    enabled: Boolean(q),
+    getNextPageParam: (lastPage) => {
+      if (
+        lastPage &&
+        typeof lastPage === 'object' &&
+        'nextCursor' in lastPage
+      ) {
+        return lastPage.nextCursor;
+      }
+      return null;
+    },
+    initialPageParam: 0,
+  });
+
+  const facetedChannels = searchData?.pages[0]?.facetedChannels ?? [];
 
   return (
     <MainLayout
       defaultSearchValue={q}
       containerClassName="mx-auto max-w-7xl px-4 py-4"
+      availableChannels={facetedChannels}
       headerChildren={
         <div className="mb-6 px-4 sm:hidden">
-          <SearchBar defaultValue={q} />
+          <SearchBar defaultValue={q} availableChannels={facetedChannels} />
         </div>
       }
     >

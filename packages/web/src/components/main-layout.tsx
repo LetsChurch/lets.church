@@ -1,6 +1,13 @@
 import type { ReactNode } from 'react';
 import Header from './header';
 
+type Channel = {
+  id: string;
+  name: string;
+  slug: string;
+  avatarUrl?: string | null;
+};
+
 type MainLayoutProps = {
   children: ReactNode;
   headerChildren?: ReactNode;
@@ -8,6 +15,7 @@ type MainLayoutProps = {
   searchPlaceholder?: string;
   channelSlug?: string;
   containerClassName?: string;
+  availableChannels?: Channel[];
 };
 
 export default function MainLayout({
@@ -17,6 +25,7 @@ export default function MainLayout({
   searchPlaceholder,
   channelSlug,
   containerClassName = 'pb-8 sm:px-16',
+  availableChannels = [],
 }: MainLayoutProps) {
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950">
@@ -24,6 +33,7 @@ export default function MainLayout({
         defaultSearchValue={defaultSearchValue}
         searchPlaceholder={searchPlaceholder}
         channelSlug={channelSlug}
+        availableChannels={availableChannels}
       >
         {headerChildren}
       </Header>
