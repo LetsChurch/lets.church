@@ -3,7 +3,7 @@ import { PART_SIZE } from '@letschurch/s3';
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
-import { invariant } from 'es-toolkit';
+import { invariant, isEqual, pick } from 'es-toolkit';
 import {
   finalizeMultipartUploadSchema,
   multipartUploadSchema,
@@ -24,6 +24,7 @@ import {
 } from '@/schemas/dashboard';
 import {
   completeMultipartMediaUpload,
+  geocodeOrganization,
   handleMultipartMediaUpload,
 } from '@/temporal';
 import {
@@ -223,6 +224,20 @@ export const churchRouter = router({
           },
           'Church created successfully',
         );
+
+        // Trigger geocoding if addresses were provided
+        if (input.addresses && input.addresses.length > 0) {
+          await geocodeOrganization(church.id);
+          moduleLogger.info(
+            {
+              appUserId: ctx.session.appUserId,
+              context: {
+                churchId: church.id,
+              },
+            },
+            'Geocoding workflow triggered for new church addresses',
+          );
+        }
 
         return church;
       } catch (error) {
@@ -1115,6 +1130,8 @@ export const churchRouter = router({
       );
 
       try {
+        let hasNewAddresses = false;
+
         await prisma.$transaction(async (tx) => {
           // Handle tag updates if provided
           if (input.tags !== undefined) {
@@ -1160,27 +1177,76 @@ export const churchRouter = router({
 
           // Handle addresses if provided
           if (input.addresses !== undefined) {
-            // First, delete all existing addresses
-            await tx.organizationAddress.deleteMany({
+            // Fetch existing addresses with their geocoding data
+            const existingAddresses = await tx.organizationAddress.findMany({
               where: {
                 organizationId: input.churchId,
               },
             });
 
-            // Then, create new addresses if provided
-            if (input.addresses.length > 0) {
-              await tx.organizationAddress.createMany({
-                data: input.addresses.map((address) => ({
-                  organizationId: input.churchId,
-                  type: address.type,
-                  name: address.name || null,
-                  streetAddress: address.streetAddress || null,
-                  locality: address.locality || null,
-                  region: address.region || null,
-                  postalCode: address.postalCode || null,
-                  country: address.country || null,
-                  postOfficeBoxNumber: address.postOfficeBoxNumber || null,
-                })),
+            // Helper to check if two addresses are the same (comparing only user-editable fields)
+            const addressesMatch = (
+              a: Record<string, unknown>,
+              b: Record<string, unknown>,
+            ): boolean => {
+              const editableFields = [
+                'type',
+                'name',
+                'streetAddress',
+                'locality',
+                'region',
+                'postalCode',
+                'country',
+                'postOfficeBoxNumber',
+              ] as const;
+              return isEqual(pick(a, editableFields), pick(b, editableFields));
+            };
+
+            // Track which existing addresses we're keeping
+            const existingAddressIdsToKeep = new Set<string>();
+
+            // Process each input address
+            for (const inputAddress of input.addresses) {
+              // Check if this address already exists
+              const matchingExisting = existingAddresses.find(
+                (existing) =>
+                  !existingAddressIdsToKeep.has(existing.id) &&
+                  addressesMatch(inputAddress, existing),
+              );
+
+              if (matchingExisting) {
+                // Address unchanged, keep it with its geocoding data
+                existingAddressIdsToKeep.add(matchingExisting.id);
+              } else {
+                // New or changed address, create it
+                await tx.organizationAddress.create({
+                  data: {
+                    organizationId: input.churchId,
+                    type: inputAddress.type,
+                    name: inputAddress.name || null,
+                    streetAddress: inputAddress.streetAddress || null,
+                    locality: inputAddress.locality || null,
+                    region: inputAddress.region || null,
+                    postalCode: inputAddress.postalCode || null,
+                    country: inputAddress.country || null,
+                    postOfficeBoxNumber:
+                      inputAddress.postOfficeBoxNumber || null,
+                  },
+                });
+                hasNewAddresses = true;
+              }
+            }
+
+            // Delete addresses that are no longer in the input
+            const addressIdsToDelete = existingAddresses
+              .filter((existing) => !existingAddressIdsToKeep.has(existing.id))
+              .map((addr) => addr.id);
+
+            if (addressIdsToDelete.length > 0) {
+              await tx.organizationAddress.deleteMany({
+                where: {
+                  id: { in: addressIdsToDelete },
+                },
               });
             }
           }
@@ -1208,6 +1274,20 @@ export const churchRouter = router({
           },
           'Church updated successfully',
         );
+
+        // Trigger geocoding only if new addresses were created
+        if (hasNewAddresses) {
+          await geocodeOrganization(input.churchId);
+          moduleLogger.info(
+            {
+              appUserId: ctx.session.appUserId,
+              context: {
+                churchId: input.churchId,
+              },
+            },
+            'Geocoding workflow triggered for new church addresses',
+          );
+        }
 
         return { error: false };
       } catch (e) {
