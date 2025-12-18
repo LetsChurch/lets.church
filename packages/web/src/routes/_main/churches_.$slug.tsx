@@ -205,33 +205,41 @@ function ChurchProfileComponent() {
                         },
                         {} as Record<string, typeof church.tags>,
                       ),
-                    ).map(([category, tags]) => (
-                      <div key={category} className="mb-4 last:mb-0">
-                        <h3 className="mb-2 font-medium text-muted text-xs uppercase tracking-wider">
-                          {category.toLowerCase().replace('_', ' ')}
-                        </h3>
-                        <div className="flex flex-wrap gap-1.5">
-                          {tags.map((tag) => (
-                            <Tag
-                              key={tag.slug}
-                              size="sm"
-                              color={
-                                tag.color as
-                                  | 'BLUE'
-                                  | 'GREEN'
-                                  | 'RED'
-                                  | 'INDIGO'
-                                  | 'PINK'
-                                  | 'PURPLE'
-                                  | 'GRAY'
-                              }
-                            >
-                              {tag.label}
-                            </Tag>
-                          ))}
+                    )
+                      .sort(([categoryA], [categoryB]) => {
+                        // Always put "OTHER" last
+                        if (categoryA === 'OTHER') return 1;
+                        if (categoryB === 'OTHER') return -1;
+                        // Otherwise sort alphabetically
+                        return categoryA.localeCompare(categoryB);
+                      })
+                      .map(([category, tags]) => (
+                        <div key={category} className="mb-4 last:mb-0">
+                          <h3 className="mb-2 font-medium text-muted text-xs uppercase tracking-wider">
+                            {category.toLowerCase().replace('_', ' ')}
+                          </h3>
+                          <div className="flex flex-wrap gap-1.5">
+                            {tags.map((tag) => (
+                              <Tag
+                                key={tag.slug}
+                                size="sm"
+                                color={
+                                  tag.color as
+                                    | 'BLUE'
+                                    | 'GREEN'
+                                    | 'RED'
+                                    | 'INDIGO'
+                                    | 'PINK'
+                                    | 'PURPLE'
+                                    | 'GRAY'
+                                }
+                              >
+                                {tag.label}
+                              </Tag>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 ) : null}
               </section>
