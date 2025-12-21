@@ -476,6 +476,28 @@ export class LcS3Client {
   }
 }
 
+/**
+ * Generate a signed S3 URL that forces download with a specific filename.
+ *
+ * This function creates a presigned URL with the Content-Disposition header set to
+ * force the browser to download the file instead of displaying it. The filename is
+ * automatically sanitized using `sanitize-filename` to ensure it's safe for use
+ * across different operating systems.
+ *
+ * @param publicS3 - The S3 client instance
+ * @param key - The S3 object key (path) to generate the URL for
+ * @param filename - The desired filename for the download (will be sanitized automatically)
+ * @returns A promise that resolves to a presigned URL with Content-Disposition header
+ *
+ * @example
+ * ```ts
+ * const url = await getPublicUrlWithFilename(
+ *   publicS3,
+ *   'media/123/video.mp4',
+ *   'My Video 1080p.mp4' // Automatically sanitized
+ * );
+ * ```
+ */
 export async function getPublicUrlWithFilename(
   publicS3: LcS3Client,
   key: string,

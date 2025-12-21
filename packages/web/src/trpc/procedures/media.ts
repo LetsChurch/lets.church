@@ -1,4 +1,5 @@
 import { prisma, UploadViewSource } from '@letschurch/db';
+import { getPublicUrlWithFilename } from '@letschurch/s3';
 import { publicS3 } from '@letschurch/s3/public';
 import { xxh64 } from '@node-rs/xxhash';
 import { getRequest } from '@tanstack/react-start/server';
@@ -259,7 +260,11 @@ export const mediaProcedures = {
       }> = [];
 
       if (downloadsEnabled) {
+        const baseFilename = mediaRest.title ?? `media_${media.id}`;
+
         // Add video/audio downloads based on variants
+        const downloadPromises: Array<Promise<void>> = [];
+
         for (const variant of variants) {
           if (
             variant.endsWith('_DOWNLOAD') &&
@@ -268,42 +273,71 @@ export const mediaProcedures = {
             const ext = variant.startsWith('VIDEO') ? 'mp4' : 'm4a';
             let kind: MediaDownloadKind = 'AUDIO';
             let label = 'Audio';
+            let quality = '';
 
             if (variant === 'VIDEO_4K_DOWNLOAD') {
               kind = 'VIDEO_4K';
               label = '4k Video';
+              quality = '4k';
             } else if (variant === 'VIDEO_1080P_DOWNLOAD') {
               kind = 'VIDEO_1080P';
               label = '1080p Video';
+              quality = '1080p';
             } else if (variant === 'VIDEO_720P_DOWNLOAD') {
               kind = 'VIDEO_720P';
               label = '720p Video';
+              quality = '720p';
             } else if (variant === 'VIDEO_480P_DOWNLOAD') {
               kind = 'VIDEO_480P';
               label = '480p Video';
+              quality = '480p';
             }
 
-            downloadUrls.push({
-              kind,
-              label,
-              url: getPublicMediaUrl(`${media.id}/${variant}.${ext}`),
-            });
+            const filename = quality
+              ? `${baseFilename} ${quality}.${ext}`
+              : `${baseFilename}.${ext}`;
+            const key = `${media.id}/${variant}.${ext}`;
+
+            downloadPromises.push(
+              getPublicUrlWithFilename(publicS3, key, filename).then((url) => {
+                downloadUrls.push({
+                  kind,
+                  label,
+                  url,
+                });
+              }),
+            );
           }
         }
 
         // Add transcript downloads
-        downloadUrls.push(
-          {
-            kind: 'TRANSCRIPT_VTT',
-            label: 'Transcript (vtt)',
-            url: getPublicMediaUrl(`${media.id}/transcript.vtt`),
-          },
-          {
-            kind: 'TRANSCRIPT_TXT',
-            label: 'Transcript (txt)',
-            url: getPublicMediaUrl(`${media.id}/transcript.original.txt`),
-          },
+        downloadPromises.push(
+          getPublicUrlWithFilename(
+            publicS3,
+            `${media.id}/transcript.vtt`,
+            `${baseFilename} transcript.vtt`,
+          ).then((url) => {
+            downloadUrls.push({
+              kind: 'TRANSCRIPT_VTT',
+              label: 'Transcript (vtt)',
+              url,
+            });
+          }),
+          getPublicUrlWithFilename(
+            publicS3,
+            `${media.id}/transcript.original.txt`,
+            `${baseFilename} transcript.txt`,
+          ).then((url) => {
+            downloadUrls.push({
+              kind: 'TRANSCRIPT_TXT',
+              label: 'Transcript (txt)',
+              url,
+            });
+          }),
         );
+
+        // Wait for all signed URLs to be generated
+        await Promise.all(downloadPromises);
       }
 
       // Compile markdown description to HTML if present
