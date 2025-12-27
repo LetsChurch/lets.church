@@ -172,9 +172,9 @@ const { id: flId, channelAssociations: flAssociations } =
       channelAssociations: { include: { channel: { select: { id: true } } } },
     },
     data: {
-      name: 'FirstLove Publications',
-      slug: 'firstlove',
-      avatarPath: 'first-love-publications/avatar.png',
+      name: 'The Dorean Principle',
+      slug: 'dorean',
+      avatarPath: 'dorean-principle/avatar.png',
       approvedAt: new Date(),
       approvedById: adminUser.id,
       memberships: {
@@ -192,9 +192,9 @@ const { id: flId, channelAssociations: flAssociations } =
           officialChannel: true,
           channel: {
             create: {
-              name: 'FirstLove Publications',
-              slug: 'firstlove',
-              avatarPath: 'first-love-publications/avatar.png',
+              name: 'The Dorean Principle',
+              slug: 'dorean',
+              avatarPath: 'dorean-principle/avatar.png',
               approvedAt: new Date(),
               approvedById: adminUser.id,
               memberships: {
@@ -1571,16 +1571,16 @@ await indexDocument('organization', lcId);
 
 // logger.info('Seeding The Dorean Principle');
 
-const firstLoveChannelId = (
+const doreanPrincipleChannelId = (
   await prisma.channel.findUniqueOrThrow({
     select: { id: true },
-    where: { slug: 'firstlove' },
+    where: { slug: 'dorean' },
   })
 ).id;
 
 const baseUploadRecord = {
   appUserId: adminUser.id,
-  channelId: firstLoveChannelId,
+  channelId: doreanPrincipleChannelId,
   uploadFinalized: true,
   uploadFinalizedById: adminUser.id,
   license: 'CC0' as const,
@@ -1834,7 +1834,7 @@ const playlist = await prisma.uploadList.create({
     },
     channel: {
       connect: {
-        id: firstLoveChannelId,
+        id: doreanPrincipleChannelId,
       },
     },
   },
