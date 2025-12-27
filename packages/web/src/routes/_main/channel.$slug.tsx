@@ -14,9 +14,11 @@ import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useRef, useState } from 'react';
 import { Avatar } from '@/components/avatar';
 import { EmptyState } from '@/components/empty-state';
+import { FollowButton } from '@/components/follow-button';
 import Header from '@/components/header';
 import { MediaCard } from '@/components/media-card';
 import { MediaGrid } from '@/components/media-grid';
+import { getPillButtonClasses } from '@/components/pill-button';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { useSetBackgroundImage } from '@/stores/header';
 import { trpcClient, useTRPC } from '@/trpc/react';
@@ -303,22 +305,15 @@ function RouteComponent() {
               </div>
 
               {isLoggedIn ? (
-                <button
-                  type="button"
+                <FollowButton
                   onClick={handleFollowToggle}
                   disabled={isTogglingFollow}
-                  className={
-                    isFollowing
-                      ? 'flex h-9 items-center justify-center rounded-full border border-white/10 bg-white/15 px-4 font-semibold text-primary/80 text-sm backdrop-blur-sm transition-colors hover:bg-white/20 disabled:opacity-50'
-                      : 'flex h-9 items-center justify-center rounded-full border-fancy-pants bg-brand px-4 font-semibold text-primary text-sm transition-opacity hover:opacity-90 disabled:opacity-50'
-                  }
-                >
-                  {isFollowing ? 'Following' : 'Follow'}
-                </button>
+                  isFollowing={isFollowing}
+                />
               ) : (
                 <Link
                   to="/auth/register"
-                  className="flex h-9 w-fit items-center justify-center rounded-full border-fancy-pants bg-brand px-4 font-semibold text-sm text-white transition-opacity hover:opacity-90"
+                  className={getPillButtonClasses({ size: 'lg' })}
                 >
                   Follow
                 </Link>

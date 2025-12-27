@@ -38,7 +38,6 @@ export const Route = createFileRoute('/media/rss.xml')({
               title: true,
               description: true,
               publishedAt: true,
-              createdAt: true,
               defaultThumbnailPath: true,
               overrideThumbnailPath: true,
               channel: {
@@ -98,7 +97,7 @@ export const Route = createFileRoute('/media/rss.xml')({
                   link: channelUrl,
                 },
               ],
-              date: upload.publishedAt ?? upload.createdAt,
+              date: upload.publishedAt,
               ...(thumbnailUrl && { image: thumbnailUrl }),
             });
           }

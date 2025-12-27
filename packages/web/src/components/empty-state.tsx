@@ -1,5 +1,6 @@
 import { IconFlag } from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
+import { getPillButtonClasses } from './pill-button';
 
 export type Props = {
   emptyTitle?: string;
@@ -123,7 +124,10 @@ export function EmptyState({
           {emptyCta ? (
             <Link
               to={emptyCtaHref}
-              className="mt-4 flex h-8 items-center rounded-full border-fancy-pants bg-brand px-3 font-bold text-sm text-white"
+              className={getPillButtonClasses({
+                size: 'md',
+                className: 'mt-4',
+              })}
             >
               {emptyCta}
             </Link>

@@ -8,6 +8,7 @@ import { useRef, useState } from 'react';
 import { Avatar } from '@/components/avatar';
 import { AvatarCarousel } from '@/components/avatar-carousel';
 import { EmptyState } from '@/components/empty-state';
+import { FollowButton } from '@/components/follow-button';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import MainLayout from '@/components/main-layout';
 import { MediaCard } from '@/components/media-card';
@@ -69,31 +70,25 @@ function ChannelListItem({
         </div>
       </div>
       {isFollowed ? (
-        <button
-          type="button"
+        <FollowButton
           onClick={() => onUnfollow?.(channel.id)}
           disabled={isUnfollowing}
-          className="flex h-7 items-center justify-center rounded-full border border-white/10 bg-white/15 px-2.5 py-1.5 font-semibold text-primary/80 text-xs backdrop-blur-sm disabled:opacity-50"
-        >
-          Following
-        </button>
+          isFollowing={true}
+          size="sm"
+        />
       ) : isLoggedIn ? (
-        <button
-          type="button"
+        <FollowButton
           onClick={() => onFollow?.(channel.id)}
           disabled={isFollowing}
-          className="flex h-7 items-center justify-center rounded-full border border-white/10 bg-brand px-2.5 py-1.5 font-semibold text-white text-xs disabled:opacity-50"
-        >
-          {isFollowing ? 'Following' : 'Follow'}
-        </button>
+          isFollowing={false}
+          size="sm"
+        />
       ) : (
-        <button
-          type="button"
+        <FollowButton
           onClick={onSignedOutFollow}
-          className="flex h-8 items-center rounded-full border-fancy-pants bg-brand px-3 font-bold text-sm text-white"
-        >
-          Follow
-        </button>
+          isFollowing={false}
+          size="sm"
+        />
       )}
     </div>
   );

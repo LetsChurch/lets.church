@@ -1818,6 +1818,51 @@ for (const { id } of uploadRecordData) {
   await indexDocument('upload', id);
 }
 
+// Create a playlist for The Dorean Principle
+const playlist = await prisma.uploadList.create({
+  select: {
+    id: true,
+  },
+  data: {
+    id: '00000000-0000-4000-8000-000000000001',
+    title: 'The Dorean Principle - Complete Audiobook',
+    type: UploadListType.PLAYLIST,
+    author: {
+      connect: {
+        id: adminUser.id,
+      },
+    },
+    channel: {
+      connect: {
+        id: firstLoveChannelId,
+      },
+    },
+  },
+});
+
+// Add all the same uploads to the playlist
+let playlistRank = 0;
+
+for (const { id } of uploadRecordData) {
+  await prisma.uploadListEntry.create({
+    data: {
+      rank: playlistRank,
+      upload: {
+        connect: {
+          id,
+        },
+      },
+      uploadList: {
+        connect: {
+          id: playlist.id,
+        },
+      },
+    },
+  });
+
+  playlistRank += 1;
+}
+
 // logger.info('Seeding Selling Jesus');
 
 const doreanPrincipleUploadId = '00000000-0000-4000-8000-100000000000';

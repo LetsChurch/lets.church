@@ -115,7 +115,6 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
               title: true,
               description: true,
               publishedAt: true,
-              createdAt: true,
               defaultThumbnailPath: true,
               overrideThumbnailPath: true,
               variants: true,
@@ -180,7 +179,7 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
               title: upload.title ?? 'Untitled',
               url: uploadUrl,
               description: upload.description ?? upload.title ?? 'Untitled',
-              date: upload.publishedAt ?? upload.createdAt,
+              date: upload.publishedAt,
               content,
               enclosure: {
                 url: audioDownloadUrl,
