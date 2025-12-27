@@ -74,7 +74,41 @@ const searchQuerySchema = z.object({
   skipLogging: z.boolean().optional().default(false),
 });
 
+const uploadThumbnailSchema = z.object({
+  uploadId: IncomingIdSchema,
+});
+
 export const searchProcedures = {
+  getUploadThumbnail: publicProcedure
+    .input(uploadThumbnailSchema)
+    .query(async ({ input }) => {
+      const { uploadId } = input;
+
+      const upload = await prisma.uploadRecord.findUnique({
+        where: { id: uploadId },
+        select: {
+          overrideThumbnailPath: true,
+          defaultThumbnailPath: true,
+          channel: {
+            select: {
+              defaultThumbnailPath: true,
+            },
+          },
+        },
+      });
+
+      if (!upload) {
+        return null;
+      }
+
+      return resolveThumbnailUrl({
+        overrideThumbnailPath: upload.overrideThumbnailPath,
+        defaultThumbnailPath: upload.defaultThumbnailPath,
+        channelDefaultThumbnailPath: upload.channel.defaultThumbnailPath,
+        size: 'featured',
+      });
+    }),
+
   performSearch: publicProcedure
     .input(searchQuerySchema)
     .query(async ({ input, ctx }) => {

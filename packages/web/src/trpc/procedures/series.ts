@@ -152,6 +152,56 @@ export const seriesProcedures = {
       };
     }),
 
+  getPublicSeriesFirstThumbnail: publicProcedure
+    .input(seriesQuerySchema)
+    .query(async ({ input }) => {
+      const { seriesId } = input;
+
+      moduleLogger.info(
+        { context: { seriesId } },
+        'Fetching first series thumbnail',
+      );
+
+      // Get first media item thumbnail for SEO
+      const firstMedia = await prisma.uploadListEntry.findFirst({
+        where: {
+          uploadListId: seriesId,
+          upload: {
+            visibility: 'PUBLIC',
+            transcodingFinishedAt: { not: null },
+            transcribingFinishedAt: { not: null },
+            deletedAt: null,
+          },
+        },
+        select: {
+          upload: {
+            select: {
+              overrideThumbnailPath: true,
+              defaultThumbnailPath: true,
+              channel: {
+                select: {
+                  defaultThumbnailPath: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
+      });
+
+      if (!firstMedia) {
+        return null;
+      }
+
+      return resolveThumbnailUrl({
+        overrideThumbnailPath: firstMedia.upload.overrideThumbnailPath,
+        defaultThumbnailPath: firstMedia.upload.defaultThumbnailPath,
+        channelDefaultThumbnailPath:
+          firstMedia.upload.channel.defaultThumbnailPath,
+        size: 'featured',
+      });
+    }),
+
   getPublicSeriesMedia: publicProcedure
     .input(seriesMediaQuerySchema)
     .query(async ({ input }) => {

@@ -157,6 +157,56 @@ export const playlistProcedures = {
       };
     }),
 
+  getPublicPlaylistFirstThumbnail: publicProcedure
+    .input(playlistQuerySchema)
+    .query(async ({ input }) => {
+      const { playlistId } = input;
+
+      moduleLogger.info(
+        { context: { playlistId } },
+        'Fetching first playlist thumbnail',
+      );
+
+      // Get first media item thumbnail for SEO
+      const firstMedia = await prisma.uploadListEntry.findFirst({
+        where: {
+          uploadListId: playlistId,
+          upload: {
+            visibility: 'PUBLIC',
+            transcodingFinishedAt: { not: null },
+            transcribingFinishedAt: { not: null },
+            deletedAt: null,
+          },
+        },
+        select: {
+          upload: {
+            select: {
+              overrideThumbnailPath: true,
+              defaultThumbnailPath: true,
+              channel: {
+                select: {
+                  defaultThumbnailPath: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
+      });
+
+      if (!firstMedia) {
+        return null;
+      }
+
+      return resolveThumbnailUrl({
+        overrideThumbnailPath: firstMedia.upload.overrideThumbnailPath,
+        defaultThumbnailPath: firstMedia.upload.defaultThumbnailPath,
+        channelDefaultThumbnailPath:
+          firstMedia.upload.channel.defaultThumbnailPath,
+        size: 'featured',
+      });
+    }),
+
   getPublicPlaylistMedia: publicProcedure
     .input(playlistMediaQuerySchema)
     .query(async ({ input }) => {

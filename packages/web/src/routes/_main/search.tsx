@@ -70,8 +70,8 @@ export const Route = createFileRoute('/_main/search')({
   }),
   loader: async ({ context, deps }) => {
     if (deps.q) {
-      // Prefetch search results (slug-to-ID conversion happens in the procedure)
-      await context.queryClient.prefetchInfiniteQuery(
+      // Fetch search results (slug-to-ID conversion happens in the procedure)
+      const searchData = await context.queryClient.fetchInfiniteQuery(
         context.trpc.search.performSearch.infiniteQueryOptions({
           q: deps.q,
           focus: deps.focus as 'media' | 'transcripts',
@@ -82,12 +82,135 @@ export const Route = createFileRoute('/_main/search')({
           skipLogging: deps.skipLogging,
         }),
       );
-    } else {
-      // Prefetch trending uploads for empty search
-      await context.queryClient.ensureQueryData(
-        context.trpc.home.getTrendingUploads.queryOptions({ limit: 8 }),
-      );
+
+      // Get first search result ID and fetch thumbnail
+      const firstItem = searchData?.pages?.[0]?.items?.[0] as
+        | SearchResultItem
+        | undefined;
+      let firstResultThumbnailUrl = null;
+
+      if (firstItem?.id) {
+        firstResultThumbnailUrl = await context.queryClient.fetchQuery(
+          context.trpc.search.getUploadThumbnail.queryOptions({
+            uploadId: firstItem.id,
+          }),
+        );
+      }
+
+      return {
+        query: deps.q,
+        firstResultThumbnailUrl,
+      };
     }
+
+    // Prefetch trending uploads for empty search
+    await context.queryClient.ensureQueryData(
+      context.trpc.home.getTrendingUploads.queryOptions({ limit: 8 }),
+    );
+
+    return {
+      query: undefined,
+      firstResultThumbnailUrl: null,
+    };
+  },
+  head: ({ loaderData }) => {
+    const query = loaderData?.query;
+
+    const title = query
+      ? `Search: ${query} - Let's Church`
+      : "Search - Let's Church";
+    const description = query
+      ? `Search results for "${query}" on Let's Church. Discover sermons, Bible studies, and Christian content.`
+      : "Search Let's Church for sermons, Bible studies, worship services, and Christian content from churches around the world.";
+
+    const url =
+      typeof window !== 'undefined'
+        ? window.location.href
+        : query
+          ? `https://lets.church/search?q=${encodeURIComponent(query)}`
+          : 'https://lets.church/search';
+
+    const fallbackImageUrl =
+      loaderData?.firstResultThumbnailUrl || 'https://lets.church/og-image.png';
+
+    return {
+      meta: [
+        // Basic meta tags
+        {
+          title,
+        },
+        {
+          name: 'description',
+          content: description,
+        },
+        // OpenGraph tags
+        {
+          property: 'og:url',
+          content: url,
+        },
+        {
+          property: 'og:type',
+          content: 'website',
+        },
+        {
+          property: 'og:title',
+          content: title,
+        },
+        {
+          property: 'og:description',
+          content: description,
+        },
+        {
+          property: 'og:image',
+          content: fallbackImageUrl,
+        },
+        {
+          property: 'og:image:width',
+          content: '1280',
+        },
+        {
+          property: 'og:image:height',
+          content: '720',
+        },
+        {
+          property: 'og:site_name',
+          content: "Let's Church",
+        },
+        // Twitter Card tags
+        {
+          name: 'twitter:card',
+          content: 'summary_large_image',
+        },
+        {
+          property: 'twitter:domain',
+          content: 'lets.church',
+        },
+        {
+          property: 'twitter:url',
+          content: url,
+        },
+        {
+          name: 'twitter:title',
+          content: title,
+        },
+        {
+          name: 'twitter:description',
+          content: description,
+        },
+        {
+          name: 'twitter:image',
+          content: fallbackImageUrl,
+        },
+      ],
+      links: [
+        {
+          rel: 'canonical',
+          href: query
+            ? `https://lets.church/search?q=${encodeURIComponent(query)}`
+            : 'https://lets.church/search',
+        },
+      ],
+    };
   },
 });
 

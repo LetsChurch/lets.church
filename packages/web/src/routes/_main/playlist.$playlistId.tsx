@@ -16,21 +16,127 @@ export const Route = createFileRoute('/_main/playlist/$playlistId')({
   loader: async ({ context, params }) => {
     const { playlistId } = params;
 
-    const playlistPromise = context.queryClient.ensureQueryData(
-      context.trpc.playlist.getPublicPlaylist.queryOptions({ playlistId }),
-    );
+    const [playlist, firstMediaThumbnailUrl] = await Promise.all([
+      context.queryClient.ensureQueryData(
+        context.trpc.playlist.getPublicPlaylist.queryOptions({ playlistId }),
+      ),
+      context.queryClient.fetchQuery(
+        context.trpc.playlist.getPublicPlaylistFirstThumbnail.queryOptions({
+          playlistId,
+        }),
+      ),
+      context.queryClient.prefetchInfiniteQuery(
+        context.trpc.playlist.getPublicPlaylistMedia.infiniteQueryOptions({
+          playlistId,
+          limit: 20,
+        }),
+      ),
+    ]);
 
-    // Fetch first page of media
-    const mediaPromise = context.queryClient.prefetchInfiniteQuery(
-      context.trpc.playlist.getPublicPlaylistMedia.infiniteQueryOptions({
-        playlistId,
-        limit: 20,
-      }),
-    );
+    return {
+      playlist,
+      firstMediaThumbnailUrl,
+    };
+  },
+  head: ({ loaderData }) => {
+    const playlist = loaderData?.playlist;
 
-    await Promise.all([playlistPromise, mediaPromise]);
+    if (!playlist) {
+      return {};
+    }
 
-    return {};
+    const title = `${playlist.title} - Let's Church`;
+    const description = `A playlist by ${playlist.author.username} on ${playlist.channel.name} with ${playlist.uploadCount} ${playlist.uploadCount === 1 ? 'upload' : 'uploads'}. Watch on Let's Church.`;
+    const url =
+      typeof window !== 'undefined'
+        ? window.location.href
+        : `https://lets.church/playlist/${playlist.id}`;
+
+    const fallbackImageUrl =
+      loaderData?.firstMediaThumbnailUrl || 'https://lets.church/og-image.png';
+
+    return {
+      meta: [
+        // Basic meta tags
+        {
+          title,
+        },
+        {
+          name: 'description',
+          content: description,
+        },
+        // OpenGraph tags
+        {
+          property: 'og:url',
+          content: url,
+        },
+        {
+          property: 'og:type',
+          content: 'website',
+        },
+        {
+          property: 'og:title',
+          content: title,
+        },
+        {
+          property: 'og:description',
+          content: description,
+        },
+        {
+          property: 'og:image',
+          content: fallbackImageUrl,
+        },
+        {
+          property: 'og:image:width',
+          content: '1280',
+        },
+        {
+          property: 'og:image:height',
+          content: '720',
+        },
+        {
+          property: 'og:site_name',
+          content: "Let's Church",
+        },
+        // Twitter Card tags
+        {
+          name: 'twitter:card',
+          content: 'summary_large_image',
+        },
+        {
+          property: 'twitter:domain',
+          content: 'lets.church',
+        },
+        {
+          property: 'twitter:url',
+          content: url,
+        },
+        {
+          name: 'twitter:title',
+          content: title,
+        },
+        {
+          name: 'twitter:description',
+          content: description,
+        },
+        {
+          name: 'twitter:image',
+          content: fallbackImageUrl,
+        },
+      ],
+      links: [
+        {
+          rel: 'canonical',
+          href: `https://lets.church/playlist/${playlist.id}`,
+        },
+        {
+          rel: 'alternate',
+          type: 'application/rss+xml',
+          title: `${playlist.title} - RSS Feed`,
+          href: `https://lets.church/playlist/${playlist.id}/rss.xml`,
+        },
+      ],
+    };
   },
 });
 
