@@ -37,6 +37,8 @@ import { Route as MainChannelsRouteImport } from './routes/_main/channels'
 import { Route as MainAboutRouteImport } from './routes/_main.about'
 import { Route as MainSlugRouteImport } from './routes/_main/$slug'
 import { Route as MainAboutIndexRouteImport } from './routes/_main/about/index'
+import { Route as SeriesSeriesIdRssDotxmlRouteImport } from './routes/series.$seriesId.rss[.]xml'
+import { Route as PlaylistPlaylistIdRssDotxmlRouteImport } from './routes/playlist.$playlistId.rss[.]xml'
 import { Route as EmbedMediaMediaIdRouteImport } from './routes/embed.media.$mediaId'
 import { Route as EmbedChannelSlugRouteImport } from './routes/embed.channel.$slug'
 import { Route as DashboardOrganizationsOrgIdRouteImport } from './routes/dashboard_/organizations_.$orgId'
@@ -226,6 +228,17 @@ const MainAboutIndexRoute = MainAboutIndexRouteImport.update({
   path: '/',
   getParentRoute: () => MainAboutRoute,
 } as any)
+const SeriesSeriesIdRssDotxmlRoute = SeriesSeriesIdRssDotxmlRouteImport.update({
+  id: '/series/$seriesId/rss.xml',
+  path: '/series/$seriesId/rss.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlaylistPlaylistIdRssDotxmlRoute =
+  PlaylistPlaylistIdRssDotxmlRouteImport.update({
+    id: '/playlist/$playlistId/rss.xml',
+    path: '/playlist/$playlistId/rss.xml',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const EmbedMediaMediaIdRoute = EmbedMediaMediaIdRouteImport.update({
   id: '/embed/media/$mediaId',
   path: '/embed/media/$mediaId',
@@ -562,6 +575,8 @@ export interface FileRoutesByFullPath {
   '/dashboard/organizations/$orgId': typeof DashboardOrganizationsOrgIdRoute
   '/embed/channel/$slug': typeof EmbedChannelSlugRoute
   '/embed/media/$mediaId': typeof EmbedMediaMediaIdRoute
+  '/playlist/$playlistId/rss.xml': typeof PlaylistPlaylistIdRssDotxmlRoute
+  '/series/$seriesId/rss.xml': typeof SeriesSeriesIdRssDotxmlRoute
   '/about/': typeof MainAboutIndexRoute
   '/dashboard/channels/$channelId/edit': typeof DashboardChannelsChannelIdEditRoute
   '/dashboard/channels/$channelId/members': typeof DashboardChannelsChannelIdMembersRoute
@@ -638,6 +653,8 @@ export interface FileRoutesByTo {
   '/dashboard/organizations/$orgId': typeof DashboardOrganizationsOrgIdRoute
   '/embed/channel/$slug': typeof EmbedChannelSlugRoute
   '/embed/media/$mediaId': typeof EmbedMediaMediaIdRoute
+  '/playlist/$playlistId/rss.xml': typeof PlaylistPlaylistIdRssDotxmlRoute
+  '/series/$seriesId/rss.xml': typeof SeriesSeriesIdRssDotxmlRoute
   '/about': typeof MainAboutIndexRoute
   '/dashboard/channels/$channelId/edit': typeof DashboardChannelsChannelIdEditRoute
   '/dashboard/channels/$channelId/members': typeof DashboardChannelsChannelIdMembersRoute
@@ -718,6 +735,8 @@ export interface FileRoutesById {
   '/dashboard_/organizations_/$orgId': typeof DashboardOrganizationsOrgIdRoute
   '/embed/channel/$slug': typeof EmbedChannelSlugRoute
   '/embed/media/$mediaId': typeof EmbedMediaMediaIdRoute
+  '/playlist/$playlistId/rss.xml': typeof PlaylistPlaylistIdRssDotxmlRoute
+  '/series/$seriesId/rss.xml': typeof SeriesSeriesIdRssDotxmlRoute
   '/_main/about/': typeof MainAboutIndexRoute
   '/dashboard_/channels_/$channelId_/edit': typeof DashboardChannelsChannelIdEditRoute
   '/dashboard_/channels_/$channelId_/members': typeof DashboardChannelsChannelIdMembersRoute
@@ -798,6 +817,8 @@ export interface FileRouteTypes {
     | '/dashboard/organizations/$orgId'
     | '/embed/channel/$slug'
     | '/embed/media/$mediaId'
+    | '/playlist/$playlistId/rss.xml'
+    | '/series/$seriesId/rss.xml'
     | '/about/'
     | '/dashboard/channels/$channelId/edit'
     | '/dashboard/channels/$channelId/members'
@@ -874,6 +895,8 @@ export interface FileRouteTypes {
     | '/dashboard/organizations/$orgId'
     | '/embed/channel/$slug'
     | '/embed/media/$mediaId'
+    | '/playlist/$playlistId/rss.xml'
+    | '/series/$seriesId/rss.xml'
     | '/about'
     | '/dashboard/channels/$channelId/edit'
     | '/dashboard/channels/$channelId/members'
@@ -953,6 +976,8 @@ export interface FileRouteTypes {
     | '/dashboard_/organizations_/$orgId'
     | '/embed/channel/$slug'
     | '/embed/media/$mediaId'
+    | '/playlist/$playlistId/rss.xml'
+    | '/series/$seriesId/rss.xml'
     | '/_main/about/'
     | '/dashboard_/channels_/$channelId_/edit'
     | '/dashboard_/channels_/$channelId_/members'
@@ -980,6 +1005,8 @@ export interface RootRouteChildren {
   ChannelSlugRssDotxmlRoute: typeof ChannelSlugRssDotxmlRoute
   EmbedChannelSlugRoute: typeof EmbedChannelSlugRoute
   EmbedMediaMediaIdRoute: typeof EmbedMediaMediaIdRoute
+  PlaylistPlaylistIdRssDotxmlRoute: typeof PlaylistPlaylistIdRssDotxmlRoute
+  SeriesSeriesIdRssDotxmlRoute: typeof SeriesSeriesIdRssDotxmlRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1179,6 +1206,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/about/'
       preLoaderRoute: typeof MainAboutIndexRouteImport
       parentRoute: typeof MainAboutRoute
+    }
+    '/series/$seriesId/rss.xml': {
+      id: '/series/$seriesId/rss.xml'
+      path: '/series/$seriesId/rss.xml'
+      fullPath: '/series/$seriesId/rss.xml'
+      preLoaderRoute: typeof SeriesSeriesIdRssDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/playlist/$playlistId/rss.xml': {
+      id: '/playlist/$playlistId/rss.xml'
+      path: '/playlist/$playlistId/rss.xml'
+      fullPath: '/playlist/$playlistId/rss.xml'
+      preLoaderRoute: typeof PlaylistPlaylistIdRssDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/embed/media/$mediaId': {
       id: '/embed/media/$mediaId'
@@ -1715,6 +1756,8 @@ const rootRouteChildren: RootRouteChildren = {
   ChannelSlugRssDotxmlRoute: ChannelSlugRssDotxmlRoute,
   EmbedChannelSlugRoute: EmbedChannelSlugRoute,
   EmbedMediaMediaIdRoute: EmbedMediaMediaIdRoute,
+  PlaylistPlaylistIdRssDotxmlRoute: PlaylistPlaylistIdRssDotxmlRoute,
+  SeriesSeriesIdRssDotxmlRoute: SeriesSeriesIdRssDotxmlRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
