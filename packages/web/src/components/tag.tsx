@@ -1,59 +1,40 @@
+import { cva, type VariantProps } from 'class-variance-authority';
 import type { ReactNode } from 'react';
+import { cn } from '@/util/cn';
 
-type TagSize = 'sm' | 'md';
+const tagVariants = cva(
+  'inline-flex items-center rounded-full border-fancy-pants font-semibold text-primary/80 uppercase tracking-wide',
+  {
+    variants: {
+      size: {
+        sm: 'px-2 py-0.5 text-[10px]',
+        md: 'px-3 py-1 text-xs',
+      },
+      color: {
+        BLUE: 'bg-blue-500/10',
+        GREEN: 'bg-green-500/10',
+        RED: 'bg-red-500/10',
+        INDIGO: 'bg-indigo-500/10',
+        PINK: 'bg-pink-500/10',
+        PURPLE: 'bg-purple-500/10',
+        GRAY: 'bg-gray-500/10',
+      },
+    },
+    defaultVariants: {
+      size: 'md',
+      color: 'GRAY',
+    },
+  },
+);
 
-type TagColor =
-  | 'BLUE'
-  | 'GREEN'
-  | 'RED'
-  | 'INDIGO'
-  | 'PINK'
-  | 'PURPLE'
-  | 'GRAY';
-
-export type TagProps = {
+export type TagProps = VariantProps<typeof tagVariants> & {
   children: ReactNode;
-  size?: TagSize;
-  color?: TagColor;
   className?: string;
 };
 
-function getTagColorClass(color: TagColor): string {
-  switch (color) {
-    case 'BLUE':
-      return 'bg-blue-500/10';
-    case 'GREEN':
-      return 'bg-green-500/10';
-    case 'RED':
-      return 'bg-red-500/10';
-    case 'INDIGO':
-      return 'bg-indigo-500/10';
-    case 'PINK':
-      return 'bg-pink-500/10';
-    case 'PURPLE':
-      return 'bg-purple-500/10';
-    case 'GRAY':
-      return 'bg-gray-500/10';
-    default:
-      return 'bg-gray-500/10';
-  }
-}
-
-export function Tag({
-  children,
-  size = 'md',
-  color = 'GRAY',
-  className = '',
-}: TagProps) {
-  const sizeClasses = {
-    sm: 'px-2 py-0.5 text-[10px]',
-    md: 'px-3 py-1 text-xs',
-  };
-
+export function Tag({ children, size, color, className }: TagProps) {
   return (
-    <span
-      className={`inline-flex items-center rounded-full border-fancy-pants font-semibold text-primary/80 uppercase tracking-wide ${getTagColorClass(color)} ${sizeClasses[size]} ${className}`}
-    >
+    <span className={cn(tagVariants({ size, color }), className)}>
       {children}
     </span>
   );

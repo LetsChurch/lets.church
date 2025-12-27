@@ -5,6 +5,7 @@ import {
   IconX,
 } from '@tabler/icons-react';
 import { useLocation, useNavigate } from '@tanstack/react-router';
+import { cva, type VariantProps } from 'class-variance-authority';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
@@ -16,6 +17,88 @@ import {
 import { useSearchFilters } from '@/hooks/use-search-filters';
 import { cn } from '@/util/cn';
 import { SearchSettingsModal } from './search-settings-modal';
+
+// Form container variants
+const searchBarFormVariants = cva(
+  'flex h-10 items-center gap-1 rounded-3xl border px-3 backdrop-blur-md transition-all duration-200',
+  {
+    variants: {
+      variant: {
+        default: [
+          'border-gray-950/15 bg-gray-950/10 shadow-sm dark:border-white/15 dark:bg-white/10',
+          'hover:border-gray-950/25 hover:bg-gray-950/15 dark:hover:border-white/25 dark:hover:bg-white/15',
+          'focus-within:border-white/0 focus-within:bg-gray-950/20 focus-within:shadow-[0_0_0_2px_--theme(--color-white/0.2),0_0_20px_--theme(--color-white/0.3)] dark:focus-within:bg-white/20',
+        ],
+        light: [
+          'border-white/20 bg-white/15 shadow-sm',
+          'hover:border-white/30 hover:bg-white/20',
+          'focus-within:border-white/0 focus-within:bg-white/25 focus-within:shadow-[0_0_0_2px_--theme(--color-white/0.3),0_0_20px_--theme(--color-white/0.4)]',
+        ],
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+    },
+  },
+);
+
+// Input variants
+const searchBarInputVariants = cva(
+  'w-full appearance-none font-medium text-sm leading-none outline-none',
+  {
+    variants: {
+      variant: {
+        default:
+          'text-primary placeholder-gray-950/30 dark:placeholder-white/30',
+        light: 'text-white placeholder-white/50',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+    },
+  },
+);
+
+// Button variants (with isActive for filter button)
+const searchBarButtonVariants = cva(
+  'flex size-8 items-center justify-center rounded-full transition-colors hover:bg-white/10',
+  {
+    variants: {
+      variant: {
+        default: 'text-primary hover:text-primary',
+        light: 'text-white hover:text-white',
+      },
+      isActive: {
+        true: 'text-brand hover:text-brand opacity-100',
+        false: 'opacity-50',
+      },
+    },
+    compoundVariants: [
+      {
+        variant: ['default', 'light'],
+        isActive: true,
+        className: 'text-brand hover:text-brand opacity-100',
+      },
+    ],
+    defaultVariants: {
+      variant: 'default',
+      isActive: false,
+    },
+  },
+);
+
+// Icon variants
+const searchBarIconVariants = cva('', {
+  variants: {
+    variant: {
+      default: 'text-primary',
+      light: 'text-white',
+    },
+  },
+  defaultVariants: {
+    variant: 'default',
+  },
+});
 
 type Channel = {
   id: string;
@@ -29,9 +112,8 @@ type SearchProps = {
   className?: string;
   defaultValue?: string;
   channelSlug?: string;
-  variant?: 'default' | 'light';
   availableChannels?: Channel[];
-};
+} & VariantProps<typeof searchBarFormVariants>;
 
 export default function SearchBar({
   // placeholder = 'Search or ask anything...', // TODO
@@ -39,7 +121,7 @@ export default function SearchBar({
   className,
   defaultValue,
   channelSlug,
-  variant = 'default',
+  variant,
   availableChannels = [],
 }: SearchProps) {
   const navigate = useNavigate({ from: '/search' });
@@ -129,44 +211,20 @@ export default function SearchBar({
     <Autocomplete.Root defaultValue={defaultValue} items={searchQueries}>
       <form
         onSubmit={handleSubmit}
-        className={cn(
-          'flex h-10 items-center gap-1 rounded-3xl border px-3 backdrop-blur-md transition-all duration-200',
-          variant === 'light'
-            ? [
-                'border-white/20 bg-white/15 shadow-sm',
-                'hover:border-white/30 hover:bg-white/20',
-                'focus-within:border-white/0 focus-within:bg-white/25 focus-within:shadow-[0_0_0_2px_--theme(--color-white/0.3),0_0_20px_--theme(--color-white/0.4)]',
-              ]
-            : [
-                'border-gray-950/15 bg-gray-950/10 shadow-sm dark:border-white/15 dark:bg-white/10',
-                'hover:border-gray-950/25 hover:bg-gray-950/15 dark:hover:border-white/25 dark:hover:bg-white/15',
-                'focus-within:border-white/0 focus-within:bg-gray-950/20 focus-within:shadow-[0_0_0_2px_--theme(--color-white/0.2),0_0_20px_--theme(--color-white/0.3)] dark:focus-within:bg-white/20',
-              ],
-          className,
-        )}
+        className={cn(searchBarFormVariants({ variant }), className)}
       >
         <div className="min-w-0 flex-1 px-1 pb-0.5">
           <Autocomplete.Input
             name="q"
             type="search"
             placeholder={placeholder}
-            className={cn(
-              'w-full appearance-none font-medium text-sm leading-none outline-none',
-              variant === 'light'
-                ? 'text-white placeholder-white/50'
-                : 'text-primary placeholder-gray-950/30 dark:placeholder-white/30',
-            )}
+            className={searchBarInputVariants({ variant })}
           />
         </div>
         <div className="flex shrink-0 items-center gap-0">
           <Autocomplete.Clear
             onClick={handleClear}
-            className={cn(
-              'flex size-8 items-center justify-center rounded-full opacity-50 transition-colors hover:bg-white/10',
-              variant === 'light'
-                ? 'text-white hover:text-white'
-                : 'text-primary hover:text-primary',
-            )}
+            className={searchBarButtonVariants({ variant, isActive: false })}
             aria-label="Clear search"
           >
             <IconX size={24} />
@@ -177,14 +235,10 @@ export default function SearchBar({
                 <button
                   type="button"
                   onClick={() => setIsSettingsOpen(true)}
-                  className={cn(
-                    'flex size-8 items-center justify-center rounded-full transition-colors hover:bg-white/10',
-                    hasActiveFilters
-                      ? 'text-brand hover:text-brand'
-                      : variant === 'light'
-                        ? 'text-white opacity-50 hover:text-white'
-                        : 'text-primary opacity-50 hover:text-primary',
-                  )}
+                  className={searchBarButtonVariants({
+                    variant,
+                    isActive: hasActiveFilters,
+                  })}
                   aria-label="Filters"
                 >
                   <IconAdjustmentsHorizontal size={24} />
@@ -203,7 +257,7 @@ export default function SearchBar({
                     size={24}
                     className={cn(
                       'opacity-50',
-                      variant === 'light' ? 'text-white' : 'text-primary',
+                      searchBarIconVariants({ variant }),
                     )}
                   />
                 </button>

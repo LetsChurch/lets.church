@@ -40,7 +40,7 @@ export function SearchRow({
               className="size-full object-cover"
             />
           ) : (
-            <div className="relative flex size-full items-center justify-center bg-gradient-to-b from-brand/20 via-33% via-transparent to-transparent">
+            <div className="relative flex size-full items-center justify-center bg-linear-to-b from-brand/20 via-33% via-transparent to-transparent">
               <IconHeadphones
                 size={64}
                 className="text-zinc-400 dark:text-zinc-600"
@@ -92,7 +92,7 @@ export function SearchRow({
           </p>
           {timestamp ? (
             <>
-              <div className="size-[3px] shrink-0 rounded-[2px] bg-zinc-400 opacity-50" />
+              <div className="size-[3px] shrink-0 rounded-xs bg-zinc-400 opacity-50" />
               <p className="whitespace-nowrap text-muted text-xs md:text-sm">
                 {timestamp}
               </p>

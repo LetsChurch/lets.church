@@ -29,7 +29,7 @@ export function AvatarCarousel({ items }: AvatarCarouselProps) {
             key={item.id}
             to="/channel/$slug"
             params={{ slug: item.slug }}
-            className="flex w-[72px] flex-shrink-0 flex-col items-center gap-1.5"
+            className="flex w-[72px] shrink-0 flex-col items-center gap-1.5"
           >
             <Avatar
               src={item.avatarUrl || undefined}

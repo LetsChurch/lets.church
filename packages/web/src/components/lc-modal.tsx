@@ -1,6 +1,8 @@
 import { Dialog } from '@base-ui-components/react/dialog';
 import { IconX } from '@tabler/icons-react';
+import { cva, type VariantProps } from 'class-variance-authority';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import { cn } from '@/util/cn';
 
 type LcModalRootProps = ComponentPropsWithoutRef<typeof Dialog.Root>;
 
@@ -20,39 +22,58 @@ export function LcModalPortal({ children, ...props }: LcModalPortalProps) {
   return <Dialog.Portal {...props}>{children}</Dialog.Portal>;
 }
 
-type LcModalBackdropProps = ComponentPropsWithoutRef<typeof Dialog.Backdrop>;
+type LcModalBackdropProps = Omit<
+  ComponentPropsWithoutRef<typeof Dialog.Backdrop>,
+  'className'
+> & {
+  className?: string;
+};
 
-export function LcModalBackdrop({
-  className = '',
-  ...props
-}: LcModalBackdropProps) {
+export function LcModalBackdrop({ className, ...props }: LcModalBackdropProps) {
   return (
     <Dialog.Backdrop
-      className={`fixed inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ease-in-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 ${className}`}
+      className={cn(
+        'fixed inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ease-in-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0',
+        className,
+      )}
       {...props}
     />
   );
 }
 
-type LcModalPopupProps = ComponentPropsWithoutRef<typeof Dialog.Popup> & {
-  size?: 'sm' | 'md' | 'lg';
-};
+const modalPopupVariants = cva(
+  '-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-50 w-full rounded-lg border-fancy-pants bg-white p-6 shadow-xl transition-all duration-300 data-[ending-style]:scale-95 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:bg-zinc-900',
+  {
+    variants: {
+      size: {
+        sm: 'max-w-sm',
+        md: 'max-w-md',
+        lg: 'max-w-lg',
+      },
+    },
+    defaultVariants: {
+      size: 'sm',
+    },
+  },
+);
+
+type LcModalPopupProps = Omit<
+  ComponentPropsWithoutRef<typeof Dialog.Popup>,
+  'className'
+> &
+  VariantProps<typeof modalPopupVariants> & {
+    className?: string;
+  };
 
 export function LcModalPopup({
   children,
-  className = '',
-  size = 'sm',
+  className,
+  size,
   ...props
 }: LcModalPopupProps) {
-  const sizeClasses = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-  };
-
   return (
     <Dialog.Popup
-      className={`-translate-x-1/2 -translate-y-1/2 fixed top-1/2 left-1/2 z-50 w-full ${sizeClasses[size]} rounded-lg border-fancy-pants bg-white p-6 shadow-xl transition-all duration-300 data-[ending-style]:scale-95 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 dark:bg-zinc-900 ${className}`}
+      className={cn(modalPopupVariants({ size }), className)}
       {...props}
     >
       {children}

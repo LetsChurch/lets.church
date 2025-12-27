@@ -116,7 +116,6 @@ export function MediaCarousel({
                   duration={item.duration}
                   timestamp={item.timestamp}
                   progress={item.progress}
-                  size="small"
                 />
               </div>
             ))}

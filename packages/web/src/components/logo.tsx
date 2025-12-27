@@ -1,20 +1,28 @@
+import { cva, type VariantProps } from 'class-variance-authority';
 import { useId } from 'react';
 
-type Props = {
+const logoVariants = cva('', {
+  variants: {
+    variant: {
+      default: 'text-primary',
+      light: 'text-white',
+    },
+  },
+  defaultVariants: {
+    variant: 'default',
+  },
+});
+
+type Props = VariantProps<typeof logoVariants> & {
   collapsed?: boolean;
-  variant?: 'default' | 'light';
 };
 
-export default function Logo({
-  collapsed = false,
-  variant = 'default',
-}: Props) {
+export default function Logo({ collapsed = false, variant }: Props) {
   const clipId = useId();
-  const colorClass = variant === 'light' ? 'text-white' : 'text-primary';
 
   if (collapsed) {
     return (
-      <svg width="18" height="16" className={colorClass}>
+      <svg width="18" height="16" className={logoVariants({ variant })}>
         <title>Let's Church</title>
         <g clipPath={`url(#${clipId})`}>
           <path
@@ -41,7 +49,12 @@ export default function Logo({
   }
 
   return (
-    <svg width="107" height="16" role="img" className={colorClass}>
+    <svg
+      width="107"
+      height="16"
+      role="img"
+      className={logoVariants({ variant })}
+    >
       <title>Let's Church</title>
       <g fill="currentColor" clipPath={`url(#${clipId})`}>
         <path d="M83.025 4.545v2.147h-1.241c-2.23 0-3.171 1.233-3.171 3.746v3.197h2.343v1.873h-6.64v-1.873h2.136V6.6h-2.183V4.728h3.884V7.15h.045c.805-2.033 2.344-2.604 3.356-2.604h1.47Zm5.308-.137c1.884 0 2.964.96 3.056 1.05v-.73h1.93v4.065h-1.93c-.23-1.439-1.195-2.444-2.872-2.444-1.93 0-3.217 1.485-3.217 3.655 0 2.283 1.333 3.882 3.309 3.882.919 0 2.436-.343 3.263-2.124l1.77.822c-.942 2.124-2.735 3.244-5.102 3.244-3.86 0-5.538-3.197-5.538-5.801 0-3.107 2.366-5.619 5.33-5.619ZM98.076.001v5.96c1.609-1.301 2.735-1.553 3.609-1.553 1.93 0 2.987 1.119 2.987 3.175v6.052h1.862v1.873h-4.022V8.062c0-1.142-.437-1.758-1.333-1.758-.805 0-1.907.525-3.103 1.416v5.915h1.862v1.873h-5.997v-1.873h1.976V1.873h-1.954V0h4.114Z" />

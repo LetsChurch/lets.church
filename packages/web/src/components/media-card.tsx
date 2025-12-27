@@ -11,7 +11,6 @@ export type Props = {
   duration?: string;
   timestamp?: string;
   progress?: number;
-  size?: 'default' | 'small';
 };
 
 export function MediaCard({
@@ -23,10 +22,7 @@ export function MediaCard({
   duration,
   timestamp,
   progress,
-  size = 'default',
 }: Props) {
-  const _isSmall = size === 'small';
-
   return (
     <div className="group relative space-y-3">
       <div className="relative aspect-video">
@@ -38,7 +34,7 @@ export function MediaCard({
               className="size-full object-cover transition-transform duration-300 ease-out-expo will-change-transform group-hover:scale-[1.01]"
             />
           ) : (
-            <div className="relative flex size-full items-center justify-center bg-gradient-to-b from-brand/20 via-33% via-transparent to-transparent">
+            <div className="relative flex size-full items-center justify-center bg-linear-to-b from-brand/20 via-33% via-transparent to-transparent">
               <IconHeadphones
                 size={64}
                 className="text-zinc-400 dark:text-zinc-600"
@@ -47,7 +43,7 @@ export function MediaCard({
           )}
         </div>
         {progress ? (
-          <div className="absolute inset-0 bg-gradient-to-t from-gray-950/70 to-50% to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-t from-gray-950/70 to-50% to-transparent" />
         ) : null}
         <div className="absolute right-3 bottom-3 left-3 flex flex-col items-end gap-1">
           {duration ? (
@@ -69,7 +65,7 @@ export function MediaCard({
         <Avatar
           src={channelAvatarUrl || undefined}
           alt={channelName || 'Channel'}
-          className="size-8 flex-shrink-0 bg-white"
+          className="size-8 shrink-0 bg-white"
           fallbackClassName="bg-gray-200 text-gray-600"
         />
         <div className="min-w-0 flex-1 space-y-1">
@@ -88,7 +84,7 @@ export function MediaCard({
             </p>
             {timestamp ? (
               <>
-                <div className="size-[3px] shrink-0 rounded-[2px] bg-zinc-400 opacity-50" />
+                <div className="size-[3px] shrink-0 rounded-xs bg-zinc-400 opacity-50" />
                 <p className="whitespace-nowrap text-secondary text-xs">
                   {timestamp}
                 </p>

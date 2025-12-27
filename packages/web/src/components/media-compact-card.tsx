@@ -32,7 +32,7 @@ export function MediaCompactCard({
           ) : null}
         </div>
         {progress ? (
-          <div className="absolute inset-0 bg-gradient-to-t from-gray-950/70 to-50% to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-t from-gray-950/70 to-50% to-transparent" />
         ) : null}
         <div className="absolute right-1.5 bottom-1.5 left-1.5 flex flex-col items-end gap-1">
           {duration ? (
