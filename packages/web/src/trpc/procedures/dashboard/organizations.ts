@@ -13,7 +13,6 @@ import {
   upstreamAssociationActionSchema,
   userSearchOrganizationSchema,
 } from '@/schemas/dashboard';
-import { canOrg, createOrgAuthContext } from '@/util/authorization';
 import { mantineAvatarSm2x, mantineAvatarXl2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { getPublicImageUrl } from '@/util/url';
@@ -26,16 +25,17 @@ const moduleLogger = logger.child({
 const organizationProcedure = authProcedure
   .input(organizationQuerySchema)
   .use(async ({ ctx, input, next }) => {
-    const membership = await prisma.organizationMembership.findFirst({
-      where: {
-        appUserId: ctx.session.appUserId,
-        organizationId: input.orgId,
-      },
-    });
+    // Skip membership query for site admins
+    const membership = ctx.isSiteAdmin
+      ? null
+      : await prisma.organizationMembership.findFirst({
+          where: {
+            appUserId: ctx.session.appUserId,
+            organizationId: input.orgId,
+          },
+        });
 
-    const authContext = createOrgAuthContext(ctx.session, membership);
-
-    if (!canOrg.view(authContext)) {
+    if (!ctx.isSiteAdmin && !membership) {
       moduleLogger.warn(
         {
           appUserId: ctx.session.appUserId,
@@ -46,14 +46,23 @@ const organizationProcedure = authProcedure
       throw new TRPCError({ code: 'UNAUTHORIZED' });
     }
 
-    return next({ ctx: { ...ctx, membership } });
+    // Compute permissions (site admins and org admins have all permissions)
+    const canAdmin = ctx.isSiteAdmin || !!membership?.isAdmin;
+    const canEdit = canAdmin || !!membership?.canEdit;
+
+    return next({
+      ctx: {
+        ...ctx,
+        membership,
+        canAdmin,
+        canEdit,
+      },
+    });
   });
 
 const organizationAdminProcedure = organizationProcedure.use(
   async ({ ctx, next }) => {
-    const authContext = createOrgAuthContext(ctx.session, ctx.membership);
-
-    if (!canOrg.administer(authContext)) {
+    if (!ctx.canAdmin) {
       moduleLogger.warn(
         {
           appUserId: ctx.session.appUserId,

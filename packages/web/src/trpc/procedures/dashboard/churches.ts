@@ -44,7 +44,7 @@ const churchProcedure = authProcedure
   .input(churchQuerySchema)
   .use(async ({ ctx, input, next }) => {
     // Site admins have full access to all churches
-    if (ctx.session.appUser.role === 'ADMIN') {
+    if (ctx.isSiteAdmin) {
       moduleLogger.info(
         {
           appUserId: ctx.session.appUserId,

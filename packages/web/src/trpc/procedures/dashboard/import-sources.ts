@@ -15,11 +15,6 @@ import {
   triggerHistoricalImport,
   triggerManualImport,
 } from '@/temporal';
-import {
-  can,
-  canChannel,
-  createChannelAuthContext,
-} from '@/util/authorization';
 import logger from '@/util/logger';
 import { authProcedure, router } from '../../trpc';
 
@@ -29,7 +24,7 @@ const moduleLogger = logger.child({
 
 // Admin-only procedure for managing import sources
 const adminProcedure = authProcedure.use(async ({ ctx, next }) => {
-  if (!can.isSiteAdmin({ user: ctx.session.appUser })) {
+  if (!ctx.isSiteAdmin) {
     moduleLogger.warn(
       { appUserId: ctx.session.appUserId },
       'User is not site admin',
@@ -43,13 +38,17 @@ const adminProcedure = authProcedure.use(async ({ ctx, next }) => {
 const channelMemberProcedure = authProcedure
   .input(z.object({ channelId: z.string().uuid() }))
   .use(async ({ ctx, input, next }) => {
-    const membership = await prisma.channelMembership.findFirst({
-      where: { appUserId: ctx.session.appUserId, channelId: input.channelId },
-    });
+    // Skip membership query for site admins
+    const membership = ctx.isSiteAdmin
+      ? null
+      : await prisma.channelMembership.findFirst({
+          where: {
+            appUserId: ctx.session.appUserId,
+            channelId: input.channelId,
+          },
+        });
 
-    const authContext = createChannelAuthContext(ctx.session, membership);
-
-    if (!canChannel.view(authContext)) {
+    if (!ctx.isSiteAdmin && !membership) {
       moduleLogger.warn(
         { appUserId: ctx.session.appUserId, channelId: input.channelId },
         'User cannot view channel',

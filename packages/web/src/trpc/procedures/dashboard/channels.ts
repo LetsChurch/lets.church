@@ -44,7 +44,6 @@ import {
   handleMultipartMediaUpload,
   importMedia,
 } from '@/temporal';
-import { canChannel, createChannelAuthContext } from '@/util/authorization';
 import {
   mantineAvatarLg2x,
   mantineAvatarSm2x,
@@ -68,25 +67,42 @@ const { ADMIN_EMAIL, WEB_URL } = z
 const channelProcedure = authProcedure
   .input(channelQuerySchema)
   .use(async ({ ctx, input, next }) => {
-    const membership = await prisma.channelMembership.findFirst({
-      where: { appUserId: ctx.session.appUserId, channelId: input.channelId },
-    });
+    // Skip membership query for site admins
+    const membership = ctx.isSiteAdmin
+      ? null
+      : await prisma.channelMembership.findFirst({
+          where: {
+            appUserId: ctx.session.appUserId,
+            channelId: input.channelId,
+          },
+        });
 
-    const authContext = createChannelAuthContext(ctx.session, membership);
-
-    if (!canChannel.view(authContext)) {
+    if (!ctx.isSiteAdmin && !membership) {
       moduleLogger.warn('No membership found for channel procedure');
 
       throw new TRPCError({ code: 'UNAUTHORIZED' });
     }
 
-    return next({ ctx: { ...ctx, membership } });
+    // Compute permissions (site admins and channel admins have all permissions)
+    const canAdmin = ctx.isSiteAdmin || !!membership?.isAdmin;
+    const canEdit = canAdmin || !!membership?.canEdit;
+    const canUpload = canAdmin || !!membership?.canUpload;
+    const canDownload = canAdmin || !!membership?.canDownload;
+
+    return next({
+      ctx: {
+        ...ctx,
+        membership,
+        canAdmin,
+        canEdit,
+        canUpload,
+        canDownload,
+      },
+    });
   });
 
 const channelAdminProcedure = channelProcedure.use(async ({ ctx, next }) => {
-  const authContext = createChannelAuthContext(ctx.session, ctx.membership);
-
-  if (!canChannel.administer(authContext)) {
+  if (!ctx.canAdmin) {
     moduleLogger.warn(
       {
         appUserId: ctx.session.appUserId,
@@ -101,9 +117,7 @@ const channelAdminProcedure = channelProcedure.use(async ({ ctx, next }) => {
 });
 
 const channelUploadProcedure = channelProcedure.use(async ({ ctx, next }) => {
-  const authContext = createChannelAuthContext(ctx.session, ctx.membership);
-
-  if (!canChannel.upload(authContext)) {
+  if (!ctx.canUpload) {
     moduleLogger.warn(
       {
         appUserId: ctx.session.appUserId,
@@ -118,9 +132,7 @@ const channelUploadProcedure = channelProcedure.use(async ({ ctx, next }) => {
 });
 
 const channelEditProcedure = channelProcedure.use(async ({ ctx, next }) => {
-  const authContext = createChannelAuthContext(ctx.session, ctx.membership);
-
-  if (!canChannel.edit(authContext)) {
+  if (!ctx.canEdit) {
     moduleLogger.warn(
       {
         appUserId: ctx.session.appUserId,
@@ -316,7 +328,7 @@ export const channelRouter = router({
   }),
 
   getChannelDetails: channelProcedure.query(async ({ ctx, input }) => {
-    const isSiteAdmin = ctx.session.appUser.role === 'ADMIN';
+    const isSiteAdmin = ctx.isSiteAdmin;
 
     const channel = await prisma.channel.findFirst({
       select: {
@@ -435,7 +447,7 @@ export const channelRouter = router({
   }),
 
   getChannelForEdit: channelAdminProcedure.query(async ({ ctx, input }) => {
-    const isSiteAdmin = ctx.session.appUser.role === 'ADMIN';
+    const isSiteAdmin = ctx.isSiteAdmin;
 
     const channel = await prisma.channel.findFirst({
       select: {
@@ -1344,11 +1356,7 @@ export const channelRouter = router({
       }
 
       // Check permission
-      const membership = upload.channel.memberships[0];
-      const authContext = createChannelAuthContext(ctx.session, membership);
-
-      // TODO: get rid of this check in favor of the db check above?
-      if (!canChannel.download(authContext)) {
+      if (!ctx.canDownload) {
         throw new TRPCError({
           code: 'FORBIDDEN',
           message: 'You do not have permission to download original files',
