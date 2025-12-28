@@ -18,6 +18,22 @@ export const Route = createFileRoute('/_main/library')({
       }),
     );
   },
+  head: () => ({
+    meta: [
+      {
+        title: "Library - Let's Church",
+      },
+      {
+        name: 'description',
+        content:
+          "Your saved media library on Let's Church. Access sermons and videos you've bookmarked for later.",
+      },
+      {
+        name: 'robots',
+        content: 'noindex, nofollow',
+      },
+    ],
+  }),
 });
 
 function RouteComponent() {

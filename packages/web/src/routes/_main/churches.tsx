@@ -19,6 +19,92 @@ const churchesSearchSchema = z.object({
 export const Route = createFileRoute('/_main/churches')({
   validateSearch: (search) => churchesSearchSchema.parse(search),
   component: RouteComponent,
+  head: () => {
+    const title = "Find Churches - Let's Church";
+    const description =
+      "Discover churches near you on Let's Church. Browse by location, denomination, and tags to find a church community that fits your needs.";
+    const url =
+      typeof window !== 'undefined'
+        ? window.location.href
+        : 'https://lets.church/churches';
+
+    return {
+      meta: [
+        // Basic meta tags
+        {
+          title,
+        },
+        {
+          name: 'description',
+          content: description,
+        },
+        // OpenGraph tags
+        {
+          property: 'og:url',
+          content: url,
+        },
+        {
+          property: 'og:type',
+          content: 'website',
+        },
+        {
+          property: 'og:title',
+          content: title,
+        },
+        {
+          property: 'og:description',
+          content: description,
+        },
+        {
+          property: 'og:image',
+          content: 'https://lets.church/og-image.png',
+        },
+        {
+          property: 'og:image:width',
+          content: '1280',
+        },
+        {
+          property: 'og:image:height',
+          content: '720',
+        },
+        {
+          property: 'og:site_name',
+          content: "Let's Church",
+        },
+        // Twitter Card tags
+        {
+          name: 'twitter:card',
+          content: 'summary_large_image',
+        },
+        {
+          property: 'twitter:domain',
+          content: 'lets.church',
+        },
+        {
+          property: 'twitter:url',
+          content: url,
+        },
+        {
+          name: 'twitter:title',
+          content: title,
+        },
+        {
+          name: 'twitter:description',
+          content: description,
+        },
+        {
+          name: 'twitter:image',
+          content: 'https://lets.church/og-image.png',
+        },
+      ],
+      links: [
+        {
+          rel: 'canonical',
+          href: 'https://lets.church/churches',
+        },
+      ],
+    };
+  },
 });
 
 // Hook to parse location from search params

@@ -18,6 +18,122 @@ import { formatTime } from '@/util/format';
 
 export const Route = createFileRoute('/_main/churches_/$slug')({
   component: ChurchProfileComponent,
+  loader: async ({ context, params }) => {
+    const { slug } = params;
+
+    const church = await context.queryClient.ensureQueryData(
+      context.trpc.church.getOrganizationBySlug.queryOptions({ slug }),
+    );
+
+    await context.queryClient.prefetchQuery(
+      context.trpc.church.getOrganizationMedia.queryOptions({
+        slug,
+        limit: 10,
+      }),
+    );
+
+    return {
+      church,
+      slug,
+    };
+  },
+  head: ({ loaderData }) => {
+    const church = loaderData?.church;
+    const slug = loaderData?.slug;
+
+    if (!church || !slug) {
+      return {};
+    }
+
+    const title = `${church.name} - Let's Church`;
+    const description = church.description
+      ? `${church.description.slice(0, 160)}${church.description.length > 160 ? '...' : ''}`
+      : `Find ${church.name} on Let's Church. Watch sermons and content from this church.`;
+    const url =
+      typeof window !== 'undefined'
+        ? window.location.href
+        : `https://lets.church/churches/${slug}`;
+
+    const imageUrl =
+      church.coverUrl || church.avatarUrl || 'https://lets.church/og-image.png';
+
+    return {
+      meta: [
+        // Basic meta tags
+        {
+          title,
+        },
+        {
+          name: 'description',
+          content: description,
+        },
+        // OpenGraph tags
+        {
+          property: 'og:url',
+          content: url,
+        },
+        {
+          property: 'og:type',
+          content: 'website',
+        },
+        {
+          property: 'og:title',
+          content: title,
+        },
+        {
+          property: 'og:description',
+          content: description,
+        },
+        {
+          property: 'og:image',
+          content: imageUrl,
+        },
+        {
+          property: 'og:image:width',
+          content: '1280',
+        },
+        {
+          property: 'og:image:height',
+          content: '720',
+        },
+        {
+          property: 'og:site_name',
+          content: "Let's Church",
+        },
+        // Twitter Card tags
+        {
+          name: 'twitter:card',
+          content: 'summary_large_image',
+        },
+        {
+          property: 'twitter:domain',
+          content: 'lets.church',
+        },
+        {
+          property: 'twitter:url',
+          content: url,
+        },
+        {
+          name: 'twitter:title',
+          content: title,
+        },
+        {
+          name: 'twitter:description',
+          content: description,
+        },
+        {
+          name: 'twitter:image',
+          content: imageUrl,
+        },
+      ],
+      links: [
+        {
+          rel: 'canonical',
+          href: `https://lets.church/churches/${slug}`,
+        },
+      ],
+    };
+  },
 });
 
 // Generate a consistent color based on a string hash

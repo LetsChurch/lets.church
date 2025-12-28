@@ -116,6 +116,22 @@ export const Route = createFileRoute('/_main/following')({
 
     return {};
   },
+  head: () => ({
+    meta: [
+      {
+        title: "Following - Let's Church",
+      },
+      {
+        name: 'description',
+        content:
+          "Your personalized feed from channels you follow on Let's Church. Discover new content from your favorite creators.",
+      },
+      {
+        name: 'robots',
+        content: 'noindex, nofollow',
+      },
+    ],
+  }),
 });
 
 function RouteComponent() {

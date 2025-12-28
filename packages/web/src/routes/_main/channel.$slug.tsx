@@ -29,7 +29,7 @@ export const Route = createFileRoute('/_main/channel/$slug')({
   loader: async ({ context, params }) => {
     const { slug } = params;
 
-    const channelPromise = context.queryClient.ensureQueryData(
+    const channel = await context.queryClient.ensureQueryData(
       context.trpc.channel.getChannelBySlug.queryOptions({ slug }),
     );
 
@@ -51,14 +51,109 @@ export const Route = createFileRoute('/_main/channel/$slug')({
       context.trpc.channel.getChannelChurches.queryOptions({ slug }),
     );
 
-    await Promise.all([
-      channelPromise,
-      mediaPromise,
-      playlistsPromise,
-      churchesPromise,
-    ]);
+    await Promise.all([mediaPromise, playlistsPromise, churchesPromise]);
 
-    return {};
+    return {
+      channel,
+    };
+  },
+  head: ({ loaderData }) => {
+    const channel = loaderData?.channel;
+
+    if (!channel) {
+      return {};
+    }
+
+    const title = `${channel.name} - Let's Church`;
+    const description = channel.description
+      ? `${channel.description.slice(0, 160)}${channel.description.length > 160 ? '...' : ''}`
+      : `Watch sermons and content from ${channel.name} on Let's Church. ${channel.subscriberCount} ${channel.subscriberCount === 1 ? 'follower' : 'followers'}.`;
+    const url =
+      typeof window !== 'undefined'
+        ? window.location.href
+        : `https://lets.church/channel/${channel.slug}`;
+
+    const imageUrl =
+      channel.defaultThumbnailUrl ||
+      channel.avatarUrl ||
+      'https://lets.church/og-image.png';
+
+    return {
+      meta: [
+        // Basic meta tags
+        {
+          title,
+        },
+        {
+          name: 'description',
+          content: description,
+        },
+        // OpenGraph tags
+        {
+          property: 'og:url',
+          content: url,
+        },
+        {
+          property: 'og:type',
+          content: 'website',
+        },
+        {
+          property: 'og:title',
+          content: title,
+        },
+        {
+          property: 'og:description',
+          content: description,
+        },
+        {
+          property: 'og:image',
+          content: imageUrl,
+        },
+        {
+          property: 'og:image:width',
+          content: '1280',
+        },
+        {
+          property: 'og:image:height',
+          content: '720',
+        },
+        {
+          property: 'og:site_name',
+          content: "Let's Church",
+        },
+        // Twitter Card tags
+        {
+          name: 'twitter:card',
+          content: 'summary_large_image',
+        },
+        {
+          property: 'twitter:domain',
+          content: 'lets.church',
+        },
+        {
+          property: 'twitter:url',
+          content: url,
+        },
+        {
+          name: 'twitter:title',
+          content: title,
+        },
+        {
+          name: 'twitter:description',
+          content: description,
+        },
+        {
+          name: 'twitter:image',
+          content: imageUrl,
+        },
+      ],
+      links: [
+        {
+          rel: 'canonical',
+          href: `https://lets.church/channel/${channel.slug}`,
+        },
+      ],
+    };
   },
 });
 

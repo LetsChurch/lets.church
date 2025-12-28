@@ -2,6 +2,24 @@ import { createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/_main/about/terms')({
   component: RouteComponent,
+  head: () => ({
+    meta: [
+      {
+        title: "Terms and Conditions - Let's Church",
+      },
+      {
+        name: 'description',
+        content:
+          "Terms and conditions for using Let's Church. Read our user agreement and service terms.",
+      },
+    ],
+    links: [
+      {
+        rel: 'canonical',
+        href: 'https://lets.church/about/terms',
+      },
+    ],
+  }),
 });
 
 function RouteComponent() {

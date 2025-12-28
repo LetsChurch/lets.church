@@ -2,6 +2,24 @@ import { createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/_main/about/add-content')({
   component: RouteComponent,
+  head: () => ({
+    meta: [
+      {
+        title: "Add Content - Let's Church",
+      },
+      {
+        name: 'description',
+        content:
+          "Share your sermons, teachings, podcasts, and more on Let's Church. Completely free, with no ads, and fully searchable transcripts.",
+      },
+    ],
+    links: [
+      {
+        rel: 'canonical',
+        href: 'https://lets.church/about/add-content',
+      },
+    ],
+  }),
 });
 
 function RouteComponent() {

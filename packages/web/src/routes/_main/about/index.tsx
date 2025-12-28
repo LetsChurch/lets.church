@@ -2,6 +2,89 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/_main/about/')({
   component: RouteComponent,
+  head: () => {
+    const title = "About Let's Church - Free Christian Media Platform";
+    const description =
+      "Let's Church is a 501(c)(3) non-profit ministry providing free, ad-free media hosting for churches. Learn about our mission to make Scripture, sermons, and Christian media accessible to all.";
+    const url =
+      typeof window !== 'undefined'
+        ? window.location.href
+        : 'https://lets.church/about';
+
+    return {
+      meta: [
+        {
+          title,
+        },
+        {
+          name: 'description',
+          content: description,
+        },
+        {
+          property: 'og:url',
+          content: url,
+        },
+        {
+          property: 'og:type',
+          content: 'website',
+        },
+        {
+          property: 'og:title',
+          content: title,
+        },
+        {
+          property: 'og:description',
+          content: description,
+        },
+        {
+          property: 'og:image',
+          content: 'https://lets.church/og-image.png',
+        },
+        {
+          property: 'og:image:width',
+          content: '1280',
+        },
+        {
+          property: 'og:image:height',
+          content: '720',
+        },
+        {
+          property: 'og:site_name',
+          content: "Let's Church",
+        },
+        {
+          name: 'twitter:card',
+          content: 'summary_large_image',
+        },
+        {
+          property: 'twitter:domain',
+          content: 'lets.church',
+        },
+        {
+          property: 'twitter:url',
+          content: url,
+        },
+        {
+          name: 'twitter:title',
+          content: title,
+        },
+        {
+          name: 'twitter:description',
+          content: description,
+        },
+        {
+          name: 'twitter:image',
+          content: 'https://lets.church/og-image.png',
+        },
+      ],
+      links: [
+        {
+          rel: 'canonical',
+          href: 'https://lets.church/about',
+        },
+      ],
+    };
+  },
 });
 
 function RouteComponent() {

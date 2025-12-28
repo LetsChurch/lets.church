@@ -32,6 +32,105 @@ export const Route = createFileRoute('/_main/channels')({
         limit: 20,
       }),
     );
+
+    return {
+      searchQuery: deps.search,
+    };
+  },
+  head: ({ loaderData }) => {
+    const searchQuery = loaderData?.searchQuery;
+
+    const title = searchQuery
+      ? `Search Channels: ${searchQuery} - Let's Church`
+      : "Browse Channels - Let's Church";
+    const description = searchQuery
+      ? `Search results for "${searchQuery}" in channels on Let's Church. Discover churches and creators sharing sermons, teachings, and more.`
+      : "Discover churches and creators sharing sermons, teachings, and Christian content on Let's Church. Browse channels by name or popularity.";
+    const url =
+      typeof window !== 'undefined'
+        ? window.location.href
+        : searchQuery
+          ? `https://lets.church/channels?search=${encodeURIComponent(searchQuery)}`
+          : 'https://lets.church/channels';
+
+    return {
+      meta: [
+        // Basic meta tags
+        {
+          title,
+        },
+        {
+          name: 'description',
+          content: description,
+        },
+        // OpenGraph tags
+        {
+          property: 'og:url',
+          content: url,
+        },
+        {
+          property: 'og:type',
+          content: 'website',
+        },
+        {
+          property: 'og:title',
+          content: title,
+        },
+        {
+          property: 'og:description',
+          content: description,
+        },
+        {
+          property: 'og:image',
+          content: 'https://lets.church/og-image.png',
+        },
+        {
+          property: 'og:image:width',
+          content: '1280',
+        },
+        {
+          property: 'og:image:height',
+          content: '720',
+        },
+        {
+          property: 'og:site_name',
+          content: "Let's Church",
+        },
+        // Twitter Card tags
+        {
+          name: 'twitter:card',
+          content: 'summary_large_image',
+        },
+        {
+          property: 'twitter:domain',
+          content: 'lets.church',
+        },
+        {
+          property: 'twitter:url',
+          content: url,
+        },
+        {
+          name: 'twitter:title',
+          content: title,
+        },
+        {
+          name: 'twitter:description',
+          content: description,
+        },
+        {
+          name: 'twitter:image',
+          content: 'https://lets.church/og-image.png',
+        },
+      ],
+      links: [
+        {
+          rel: 'canonical',
+          href: searchQuery
+            ? `https://lets.church/channels?search=${encodeURIComponent(searchQuery)}`
+            : 'https://lets.church/channels',
+        },
+      ],
+    };
   },
   component: RouteComponent,
 });

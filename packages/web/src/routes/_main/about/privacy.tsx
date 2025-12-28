@@ -2,6 +2,24 @@ import { createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/_main/about/privacy')({
   component: RouteComponent,
+  head: () => ({
+    meta: [
+      {
+        title: "Privacy Policy - Let's Church",
+      },
+      {
+        name: 'description',
+        content:
+          "Let's Church privacy policy. Learn how we collect, use, and protect your personal information on our platform.",
+      },
+    ],
+    links: [
+      {
+        rel: 'canonical',
+        href: 'https://lets.church/about/privacy',
+      },
+    ],
+  }),
 });
 
 function RouteComponent() {

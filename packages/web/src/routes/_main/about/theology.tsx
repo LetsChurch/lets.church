@@ -2,6 +2,24 @@ import { createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/_main/about/theology')({
   component: RouteComponent,
+  head: () => ({
+    meta: [
+      {
+        title: "Statement of Theology - Let's Church",
+      },
+      {
+        name: 'description',
+        content:
+          "Let's Church statement of theology and faith. Learn about the historic creeds and confessions we affirm and our theological positions.",
+      },
+    ],
+    links: [
+      {
+        rel: 'canonical',
+        href: 'https://lets.church/about/theology',
+      },
+    ],
+  }),
 });
 
 type FootnoteProps = {

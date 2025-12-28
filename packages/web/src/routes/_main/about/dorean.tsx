@@ -2,6 +2,24 @@ import { createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/_main/about/dorean')({
   component: RouteComponent,
+  head: () => ({
+    meta: [
+      {
+        title: "The Dorean Principle - Should Ministry Be Free? - Let's Church",
+      },
+      {
+        name: 'description',
+        content:
+          'Explore the biblical principle that ministry should be freely given. Learn why Let\'s Church follows the "Dorean Principle" of providing free access to Christian content without charge.',
+      },
+    ],
+    links: [
+      {
+        rel: 'canonical',
+        href: 'https://lets.church/about/dorean',
+      },
+    ],
+  }),
 });
 
 function RouteComponent() {

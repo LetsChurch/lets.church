@@ -19,6 +19,22 @@ export const Route = createFileRoute('/_main/history')({
       }),
     );
   },
+  head: () => ({
+    meta: [
+      {
+        title: "Watch History - Let's Church",
+      },
+      {
+        name: 'description',
+        content:
+          "Your watch history on Let's Church. Review videos and sermons you've recently watched.",
+      },
+      {
+        name: 'robots',
+        content: 'noindex, nofollow',
+      },
+    ],
+  }),
 });
 
 function RouteComponent() {

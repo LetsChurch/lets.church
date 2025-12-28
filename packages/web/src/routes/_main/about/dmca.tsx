@@ -2,6 +2,24 @@ import { createFileRoute } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/_main/about/dmca')({
   component: RouteComponent,
+  head: () => ({
+    meta: [
+      {
+        title: "DMCA Policy - Let's Church",
+      },
+      {
+        name: 'description',
+        content:
+          "Digital Millennium Copyright Act policy for Let's Church. Learn how to report copyright infringement and our procedures for handling DMCA notices.",
+      },
+    ],
+    links: [
+      {
+        rel: 'canonical',
+        href: 'https://lets.church/about/dmca',
+      },
+    ],
+  }),
 });
 
 function RouteComponent() {
