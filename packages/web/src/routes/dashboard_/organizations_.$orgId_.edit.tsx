@@ -100,6 +100,16 @@ function OrganizationEditPage() {
       websiteUrl: organization.websiteUrl || '',
       primaryEmail: organization.primaryEmail || '',
       primaryPhoneNumber: organization.primaryPhoneNumber || '',
+      facebookUrl: organization.facebookUrl || '',
+      instagramUrl: organization.instagramUrl || '',
+      xUrl: organization.xUrl || '',
+      youtubeUrl: organization.youtubeUrl || '',
+      tiktokUrl: organization.tiktokUrl || '',
+      linkedinUrl: organization.linkedinUrl || '',
+      threadsUrl: organization.threadsUrl || '',
+      applePodcastsUrl: organization.applePodcastsUrl || '',
+      spotifyUrl: organization.spotifyUrl || '',
+      rssUrl: organization.rssUrl || '',
     },
     onSubmit: async ({ value }) => {
       updateOrganizationMutation.mutate(value);
@@ -175,6 +185,110 @@ function OrganizationEditPage() {
                   label="Primary Phone Number"
                   placeholder="(555) 123-4567"
                   type="tel"
+                />
+              )}
+            </form.AppField>
+
+            <Title order={3} mt="md">
+              Social Media Links
+            </Title>
+
+            <form.AppField name="facebookUrl">
+              {(field) => (
+                <field.TextInputField
+                  label="Facebook URL"
+                  placeholder="https://facebook.com/yourorg"
+                  type="url"
+                />
+              )}
+            </form.AppField>
+
+            <form.AppField name="instagramUrl">
+              {(field) => (
+                <field.TextInputField
+                  label="Instagram URL"
+                  placeholder="https://instagram.com/yourorg"
+                  type="url"
+                />
+              )}
+            </form.AppField>
+
+            <form.AppField name="xUrl">
+              {(field) => (
+                <field.TextInputField
+                  label="X (Twitter) URL"
+                  placeholder="https://x.com/yourorg"
+                  type="url"
+                />
+              )}
+            </form.AppField>
+
+            <form.AppField name="youtubeUrl">
+              {(field) => (
+                <field.TextInputField
+                  label="YouTube URL"
+                  placeholder="https://youtube.com/@yourorg"
+                  type="url"
+                />
+              )}
+            </form.AppField>
+
+            <form.AppField name="tiktokUrl">
+              {(field) => (
+                <field.TextInputField
+                  label="TikTok URL"
+                  placeholder="https://tiktok.com/@yourorg"
+                  type="url"
+                />
+              )}
+            </form.AppField>
+
+            <form.AppField name="linkedinUrl">
+              {(field) => (
+                <field.TextInputField
+                  label="LinkedIn URL"
+                  placeholder="https://linkedin.com/company/yourorg"
+                  type="url"
+                />
+              )}
+            </form.AppField>
+
+            <form.AppField name="threadsUrl">
+              {(field) => (
+                <field.TextInputField
+                  label="Threads URL"
+                  placeholder="https://threads.net/@yourorg"
+                  type="url"
+                />
+              )}
+            </form.AppField>
+
+            <form.AppField name="applePodcastsUrl">
+              {(field) => (
+                <field.TextInputField
+                  label="Apple Podcasts URL"
+                  placeholder="https://podcasts.apple.com/..."
+                  type="url"
+                />
+              )}
+            </form.AppField>
+
+            <form.AppField name="spotifyUrl">
+              {(field) => (
+                <field.TextInputField
+                  label="Spotify URL"
+                  placeholder="https://open.spotify.com/..."
+                  type="url"
+                />
+              )}
+            </form.AppField>
+
+            <form.AppField name="rssUrl">
+              {(field) => (
+                <field.TextInputField
+                  label="RSS Feed URL"
+                  placeholder="https://yourorg.com/feed.xml"
+                  type="url"
                 />
               )}
             </form.AppField>

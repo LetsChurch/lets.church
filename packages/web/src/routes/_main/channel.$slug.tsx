@@ -1,8 +1,19 @@
 import {
+  IconBrandApplePodcast,
+  IconBrandFacebook,
+  IconBrandInstagram,
+  IconBrandLinkedin,
+  IconBrandSpotify,
+  IconBrandThreads,
+  IconBrandTiktok,
+  IconBrandX,
+  IconBrandYoutube,
   IconBuildingChurch,
   IconChevronRight,
   IconList,
   IconPlaylist,
+  IconRss,
+  IconWorld,
 } from '@tabler/icons-react';
 import {
   useInfiniteQuery,
@@ -317,8 +328,23 @@ function RouteComponent() {
     to: headerColors.to.replace('-700', '-950'),
   };
 
+  const hasSocialLinks =
+    channel.websiteUrl ||
+    channel.facebookUrl ||
+    channel.instagramUrl ||
+    channel.xUrl ||
+    channel.youtubeUrl ||
+    channel.tiktokUrl ||
+    channel.linkedinUrl ||
+    channel.threadsUrl ||
+    channel.applePodcastsUrl ||
+    channel.spotifyUrl ||
+    channel.rssUrl;
+
   const hasSidebarContent =
-    (churches && churches.length > 0) || (playlists && playlists.length > 0);
+    (churches && churches.length > 0) ||
+    (playlists && playlists.length > 0) ||
+    hasSocialLinks;
 
   return (
     <div className="min-h-screen bg-linear-to-br from-zinc-50 via-white to-indigo-50/30 dark:from-zinc-950 dark:via-zinc-900 dark:to-indigo-950/20">
@@ -626,6 +652,187 @@ function RouteComponent() {
                       );
                       return LinkComponent;
                     })}
+                  </div>
+                </section>
+              ) : null}
+
+              {/* Social Media & Website */}
+              {hasSocialLinks ? (
+                <section className="rounded-2xl border-fancy-pants bg-zinc-100 p-5 dark:bg-zinc-900">
+                  <h2 className="mb-4 flex items-center gap-2 font-medium text-primary text-sm">
+                    <IconWorld size={16} strokeWidth={2} />
+                    Links
+                  </h2>
+                  <div className="space-y-3">
+                    {channel.websiteUrl ? (
+                      <a
+                        href={channel.websiteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group flex items-start gap-3 rounded-lg p-2 transition-colors hover:bg-white/5"
+                      >
+                        <IconWorld
+                          size={20}
+                          className="mt-0.5 shrink-0 text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                          strokeWidth={1.5}
+                        />
+                        <span className="break-all text-secondary text-sm group-hover:text-indigo-600 dark:group-hover:text-white">
+                          {channel.websiteUrl.replace(/^https?:\/\//, '')}
+                        </span>
+                      </a>
+                    ) : null}
+                    <div className="flex flex-wrap gap-2">
+                      {channel.facebookUrl ? (
+                        <a
+                          href={channel.facebookUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="Facebook"
+                        >
+                          <IconBrandFacebook
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                      {channel.instagramUrl ? (
+                        <a
+                          href={channel.instagramUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="Instagram"
+                        >
+                          <IconBrandInstagram
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                      {channel.xUrl ? (
+                        <a
+                          href={channel.xUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="X (Twitter)"
+                        >
+                          <IconBrandX
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                      {channel.youtubeUrl ? (
+                        <a
+                          href={channel.youtubeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="YouTube"
+                        >
+                          <IconBrandYoutube
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                      {channel.tiktokUrl ? (
+                        <a
+                          href={channel.tiktokUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="TikTok"
+                        >
+                          <IconBrandTiktok
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                      {channel.linkedinUrl ? (
+                        <a
+                          href={channel.linkedinUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="LinkedIn"
+                        >
+                          <IconBrandLinkedin
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                      {channel.threadsUrl ? (
+                        <a
+                          href={channel.threadsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="Threads"
+                        >
+                          <IconBrandThreads
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                      {channel.applePodcastsUrl ? (
+                        <a
+                          href={channel.applePodcastsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="Apple Podcasts"
+                        >
+                          <IconBrandApplePodcast
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                      {channel.spotifyUrl ? (
+                        <a
+                          href={channel.spotifyUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="Spotify"
+                        >
+                          <IconBrandSpotify
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                      {channel.rssUrl ? (
+                        <a
+                          href={channel.rssUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="RSS Feed"
+                        >
+                          <IconRss
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                    </div>
                   </div>
                 </section>
               ) : null}

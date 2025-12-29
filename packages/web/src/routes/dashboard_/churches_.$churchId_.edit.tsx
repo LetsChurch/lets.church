@@ -8,6 +8,7 @@ import {
   Image,
   Loader,
   LoadingOverlay,
+  SimpleGrid,
   Stack,
   Text,
   Title,
@@ -203,6 +204,16 @@ function ChurchEditPage() {
       tags: church.tags || [],
       associatedOrganizations: church.associatedOrganizations || [],
       addresses: church.addresses || [],
+      facebookUrl: church.facebookUrl || '',
+      instagramUrl: church.instagramUrl || '',
+      xUrl: church.xUrl || '',
+      youtubeUrl: church.youtubeUrl || '',
+      tiktokUrl: church.tiktokUrl || '',
+      linkedinUrl: church.linkedinUrl || '',
+      threadsUrl: church.threadsUrl || '',
+      applePodcastsUrl: church.applePodcastsUrl || '',
+      spotifyUrl: church.spotifyUrl || '',
+      rssUrl: church.rssUrl || '',
     },
     onSubmit: async ({ value }) => {
       if (newAvatarFile) {
@@ -324,6 +335,112 @@ function ChurchEditPage() {
                 </form.AppField>
 
                 <AddressFields form={form} />
+
+                <Title order={3} mt="lg">
+                  Social Media Links
+                </Title>
+
+                <SimpleGrid cols={2} spacing="md">
+                  <form.AppField name="facebookUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="Facebook URL"
+                        placeholder="https://facebook.com/yourchurch"
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+
+                  <form.AppField name="instagramUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="Instagram URL"
+                        placeholder="https://instagram.com/yourchurch"
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+
+                  <form.AppField name="xUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="X (Twitter) URL"
+                        placeholder="https://x.com/yourchurch"
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+
+                  <form.AppField name="youtubeUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="YouTube URL"
+                        placeholder="https://youtube.com/@yourchurch"
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+
+                  <form.AppField name="tiktokUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="TikTok URL"
+                        placeholder="https://tiktok.com/@yourchurch"
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+
+                  <form.AppField name="linkedinUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="LinkedIn URL"
+                        placeholder="https://linkedin.com/company/yourchurch"
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+
+                  <form.AppField name="threadsUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="Threads URL"
+                        placeholder="https://threads.net/@yourchurch"
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+
+                  <form.AppField name="applePodcastsUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="Apple Podcasts URL"
+                        placeholder="https://podcasts.apple.com/..."
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+
+                  <form.AppField name="spotifyUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="Spotify URL"
+                        placeholder="https://open.spotify.com/..."
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+
+                  <form.AppField name="rssUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="RSS Feed URL"
+                        placeholder="https://yourchurch.com/feed.xml"
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+                </SimpleGrid>
               </Stack>
             </form>
           </Stack>

@@ -170,6 +170,16 @@ model Organization {
   primaryEmail                                 String?                               @map("primary_email")
   primaryPhoneNumber                           String?                               @map("primary_phone_number")
   websiteUrl                                   String?                               @map("website_url")
+  facebookUrl                                  String?                               @map("facebook_url")
+  instagramUrl                                 String?                               @map("instagram_url")
+  xUrl                                         String?                               @map("x_url")
+  youtubeUrl                                   String?                               @map("youtube_url")
+  tiktokUrl                                    String?                               @map("tiktok_url")
+  linkedinUrl                                  String?                               @map("linkedin_url")
+  threadsUrl                                   String?                               @map("threads_url")
+  applePodcastsUrl                             String?                               @map("apple_podcasts_url")
+  spotifyUrl                                   String?                               @map("spotify_url")
+  rssUrl                                       String?                               @map("rss_url")
   addresses                                    OrganizationAddress[]
   leaders                                      OrganizationLeader[]
   description                                  String?
@@ -297,6 +307,17 @@ model Channel {
   coverBlurhash            String?                          @map("cover_blurhash") @db.VarChar(255)
   slug                     String                           @unique @db.Citext
   description              String?
+  websiteUrl               String?                          @map("website_url")
+  facebookUrl              String?                          @map("facebook_url")
+  instagramUrl             String?                          @map("instagram_url")
+  xUrl                     String?                          @map("x_url")
+  youtubeUrl               String?                          @map("youtube_url")
+  tiktokUrl                String?                          @map("tiktok_url")
+  linkedinUrl              String?                          @map("linkedin_url")
+  threadsUrl               String?                          @map("threads_url")
+  applePodcastsUrl         String?                          @map("apple_podcasts_url")
+  spotifyUrl               String?                          @map("spotify_url")
+  rssUrl                   String?                          @map("rss_url")
   memberships              ChannelMembership[]
   organizationAssociations OrganizationChannelAssociation[]
   approvedBy               AppUser?                         @relation(fields: [approvedById], references: [id], onDelete: SetNull)

@@ -36,6 +36,17 @@ export const channelFormSchema = z.object({
       ...ChannelVisibility[],
     ],
   ),
+  websiteUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  facebookUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  instagramUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  xUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  youtubeUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  tiktokUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  linkedinUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  threadsUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  applePodcastsUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  spotifyUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  rssUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
 });
 
 export const createChannelSchema = channelFormSchema;

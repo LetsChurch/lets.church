@@ -37,6 +37,16 @@ export const organizationFormSchema = z.object({
   primaryEmail: z.email('Invalid email').optional().or(z.literal('')),
   primaryPhoneNumber: z.string().optional().or(z.literal('')),
   tags: z.array(z.string()).optional(),
+  facebookUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  instagramUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  xUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  youtubeUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  tiktokUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  linkedinUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  threadsUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  applePodcastsUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  spotifyUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  rssUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
 });
 
 export const createOrganizationSchema = organizationFormSchema;

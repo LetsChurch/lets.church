@@ -1,10 +1,20 @@
 import {
+  IconBrandApplePodcast,
+  IconBrandFacebook,
+  IconBrandInstagram,
+  IconBrandLinkedin,
+  IconBrandSpotify,
+  IconBrandThreads,
+  IconBrandTiktok,
+  IconBrandX,
+  IconBrandYoutube,
   IconBuilding,
   IconBuildingChurch,
   IconChevronRight,
   IconMail,
   IconMapPin,
   IconPhone,
+  IconRss,
   IconWorld,
 } from '@tabler/icons-react';
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
@@ -211,6 +221,18 @@ function ChurchProfileComponent() {
 
   const hasContactInfo =
     church.primaryEmail || church.primaryPhoneNumber || church.websiteUrl;
+
+  const hasSocialLinks =
+    church.facebookUrl ||
+    church.instagramUrl ||
+    church.xUrl ||
+    church.youtubeUrl ||
+    church.tiktokUrl ||
+    church.linkedinUrl ||
+    church.threadsUrl ||
+    church.applePodcastsUrl ||
+    church.spotifyUrl ||
+    church.rssUrl;
 
   const headerColors = getColorFromString(church.name);
   const darkHeaderColors = {
@@ -519,7 +541,7 @@ function ChurchProfileComponent() {
           {/* Sidebar */}
           <div className="space-y-6 lg:col-span-1">
             {/* Contact Information */}
-            {hasContactInfo ? (
+            {hasContactInfo || hasSocialLinks ? (
               <section className="rounded-2xl border-fancy-pants bg-zinc-100 p-5 dark:bg-zinc-900">
                 <h2 className="mb-4 flex items-center gap-2 font-medium text-primary text-sm">
                   <IconBuilding size={16} strokeWidth={2} />
@@ -572,6 +594,160 @@ function ChurchProfileComponent() {
                         {church.websiteUrl.replace(/^https?:\/\//, '')}
                       </span>
                     </a>
+                  ) : null}
+                  {hasSocialLinks ? (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {church.facebookUrl ? (
+                        <a
+                          href={church.facebookUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="Facebook"
+                        >
+                          <IconBrandFacebook
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                      {church.instagramUrl ? (
+                        <a
+                          href={church.instagramUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="Instagram"
+                        >
+                          <IconBrandInstagram
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                      {church.xUrl ? (
+                        <a
+                          href={church.xUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="X (Twitter)"
+                        >
+                          <IconBrandX
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                      {church.youtubeUrl ? (
+                        <a
+                          href={church.youtubeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="YouTube"
+                        >
+                          <IconBrandYoutube
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                      {church.tiktokUrl ? (
+                        <a
+                          href={church.tiktokUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="TikTok"
+                        >
+                          <IconBrandTiktok
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                      {church.linkedinUrl ? (
+                        <a
+                          href={church.linkedinUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="LinkedIn"
+                        >
+                          <IconBrandLinkedin
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                      {church.threadsUrl ? (
+                        <a
+                          href={church.threadsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="Threads"
+                        >
+                          <IconBrandThreads
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                      {church.applePodcastsUrl ? (
+                        <a
+                          href={church.applePodcastsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="Apple Podcasts"
+                        >
+                          <IconBrandApplePodcast
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                      {church.spotifyUrl ? (
+                        <a
+                          href={church.spotifyUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="Spotify"
+                        >
+                          <IconBrandSpotify
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                      {church.rssUrl ? (
+                        <a
+                          href={church.rssUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                          title="RSS Feed"
+                        >
+                          <IconRss
+                            size={20}
+                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                        </a>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
               </section>

@@ -9,6 +9,7 @@ import {
   Loader,
   LoadingOverlay,
   Radio,
+  SimpleGrid,
   Stack,
   Text,
   Title,
@@ -373,6 +374,17 @@ function ChannelEditPage() {
       slug: channel.slug || '',
       description: channel.description || '',
       visibility: channel.visibility,
+      websiteUrl: channel.websiteUrl || '',
+      facebookUrl: channel.facebookUrl || '',
+      instagramUrl: channel.instagramUrl || '',
+      xUrl: channel.xUrl || '',
+      youtubeUrl: channel.youtubeUrl || '',
+      tiktokUrl: channel.tiktokUrl || '',
+      linkedinUrl: channel.linkedinUrl || '',
+      threadsUrl: channel.threadsUrl || '',
+      applePodcastsUrl: channel.applePodcastsUrl || '',
+      spotifyUrl: channel.spotifyUrl || '',
+      rssUrl: channel.rssUrl || '',
     },
     onSubmit: async ({ value }) => {
       if (newAvatarFile) {
@@ -470,6 +482,17 @@ function ChannelEditPage() {
       slug: channel.slug || '',
       description: channel.description || '',
       visibility: channel.visibility,
+      websiteUrl: channel.websiteUrl || '',
+      facebookUrl: channel.facebookUrl || '',
+      instagramUrl: channel.instagramUrl || '',
+      xUrl: channel.xUrl || '',
+      youtubeUrl: channel.youtubeUrl || '',
+      tiktokUrl: channel.tiktokUrl || '',
+      linkedinUrl: channel.linkedinUrl || '',
+      threadsUrl: channel.threadsUrl || '',
+      applePodcastsUrl: channel.applePodcastsUrl || '',
+      spotifyUrl: channel.spotifyUrl || '',
+      rssUrl: channel.rssUrl || '',
     });
   }
 
@@ -523,6 +546,16 @@ function ChannelEditPage() {
                       minRows={4}
                       maxRows={8}
                       autosize
+                    />
+                  )}
+                </form.AppField>
+
+                <form.AppField name="websiteUrl">
+                  {(field) => (
+                    <field.TextInputField
+                      label="Website URL"
+                      placeholder="https://example.com"
+                      type="url"
                     />
                   )}
                 </form.AppField>
@@ -698,6 +731,112 @@ function ChannelEditPage() {
                     </Box>
                   </Tooltip>
                 </Stack>
+
+                <Title order={3} mt="lg">
+                  Social Media Links
+                </Title>
+
+                <SimpleGrid cols={2} spacing="md">
+                  <form.AppField name="facebookUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="Facebook URL"
+                        placeholder="https://facebook.com/yourchannel"
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+
+                  <form.AppField name="instagramUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="Instagram URL"
+                        placeholder="https://instagram.com/yourchannel"
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+
+                  <form.AppField name="xUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="X (Twitter) URL"
+                        placeholder="https://x.com/yourchannel"
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+
+                  <form.AppField name="youtubeUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="YouTube URL"
+                        placeholder="https://youtube.com/@yourchannel"
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+
+                  <form.AppField name="tiktokUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="TikTok URL"
+                        placeholder="https://tiktok.com/@yourchannel"
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+
+                  <form.AppField name="linkedinUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="LinkedIn URL"
+                        placeholder="https://linkedin.com/company/yourchannel"
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+
+                  <form.AppField name="threadsUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="Threads URL"
+                        placeholder="https://threads.net/@yourchannel"
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+
+                  <form.AppField name="applePodcastsUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="Apple Podcasts URL"
+                        placeholder="https://podcasts.apple.com/..."
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+
+                  <form.AppField name="spotifyUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="Spotify URL"
+                        placeholder="https://open.spotify.com/..."
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+
+                  <form.AppField name="rssUrl">
+                    {(field) => (
+                      <field.TextInputField
+                        label="RSS Feed URL"
+                        placeholder="https://yourchannel.com/feed.xml"
+                        type="url"
+                      />
+                    )}
+                  </form.AppField>
+                </SimpleGrid>
               </Stack>
             </form>
           </Stack>

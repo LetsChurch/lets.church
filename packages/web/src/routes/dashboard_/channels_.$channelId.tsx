@@ -243,7 +243,7 @@ function ChannelDetailsPage() {
                 Unapprove Channel
               </Button>
             ))}
-          {isChannelAdmin && (
+          {(isChannelAdmin || isSiteAdmin) && (
             <Button
               variant="light"
               renderRoot={(rootProps) => (
