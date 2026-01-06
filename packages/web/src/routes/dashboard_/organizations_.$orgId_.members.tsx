@@ -104,7 +104,6 @@ function OrganizationMembersPage() {
   const { orgId } = Route.useParams();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const { isSiteAdmin } = Route.useRouteContext() as { isSiteAdmin: boolean };
 
   const { data: organization } = useSuspenseQuery(
     trpc.dashboard.organizations.getOrganizationMembers.queryOptions({
@@ -115,7 +114,7 @@ function OrganizationMembersPage() {
   const [debouncedSearchQuery] = useDebounce(searchQuery, 200);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  const isAdmin = organization.userMembership?.isAdmin ?? isSiteAdmin;
+  const isAdmin = organization.canAdmin ?? false;
 
   const [
     addMemberModalOpened,

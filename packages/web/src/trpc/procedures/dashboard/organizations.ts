@@ -415,6 +415,7 @@ export const organizationRouter = router({
         ...organization,
         memberships: membershipsWithAvatarUrl,
         userMembership: ctx.membership,
+        canAdmin: ctx.canAdmin,
       };
     },
   ),

@@ -90,7 +90,7 @@ function ChannelMembersPage() {
   const [debouncedSearchQuery] = useDebounce(searchQuery, 200);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  const isAdmin = channel.userMembership?.isAdmin ?? false;
+  const isAdmin = channel.canAdmin ?? false;
 
   const [
     addMemberModalOpened,

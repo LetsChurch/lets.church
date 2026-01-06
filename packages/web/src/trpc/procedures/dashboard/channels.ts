@@ -618,6 +618,7 @@ export const channelRouter = router({
       ...channel,
       memberships: membershipsWithAvatarUrl,
       userMembership: ctx.membership,
+      canAdmin: ctx.canAdmin,
     };
   }),
 
