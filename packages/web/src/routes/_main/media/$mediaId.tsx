@@ -61,7 +61,6 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
   },
   validateSearch: z.object({
     list: z.string().optional(),
-    type: z.enum(['playlist', 'series']).optional(),
   }),
   loader: async ({ context: { queryClient, trpc }, params }) => {
     const [media, viewData, transcript, rating, comments] = await Promise.all([
@@ -405,21 +404,22 @@ function RouteComponent() {
   );
 
   // Playlist context - fetch playlist items if we have a list param
-  const hasPlaylistContext = Boolean(searchParams.list && searchParams.type);
+  const hasPlaylistContext = Boolean(searchParams.list);
 
   const { data: playlistData } = useSuspenseQuery(
-    searchParams.list && searchParams.type === 'playlist'
-      ? trpc.playlist.getAllPlaylistItems.queryOptions({
-          playlistId: searchParams.list,
+    searchParams.list
+      ? trpc.list.getAllListItems.queryOptions({
+          listId: searchParams.list,
         })
-      : searchParams.list && searchParams.type === 'series'
-        ? trpc.series.getAllSeriesItems.queryOptions({
-            seriesId: searchParams.list,
-          })
-        : {
-            queryKey: [['no-playlist']],
-            queryFn: () => Promise.resolve({ title: '', items: [] }),
-          },
+      : {
+          queryKey: [['no-list']],
+          queryFn: () =>
+            Promise.resolve({
+              title: '',
+              type: 'PLAYLIST' as const,
+              items: [],
+            }),
+        },
   );
 
   // Find current and next items
@@ -440,7 +440,7 @@ function RouteComponent() {
     enabled: hasPlaylistContext,
     nextMediaId: nextItem?.id,
     nextMediaUrl: nextItem
-      ? `/media/${nextItem.id}?list=${searchParams.list}&type=${searchParams.type}`
+      ? `/media/${nextItem.id}?list=${searchParams.list}`
       : undefined,
   });
 
@@ -878,11 +878,13 @@ function RouteComponent() {
                 playlistContext={
                   hasPlaylistContext &&
                   searchParams.list &&
-                  searchParams.type &&
                   playlistItems.length > 0
                     ? {
                         listId: searchParams.list,
-                        listType: searchParams.type,
+                        listType:
+                          playlistData.type === 'SERIES'
+                            ? 'series'
+                            : 'playlist',
                         listTitle: playlistData?.title,
                         items: playlistItems,
                         currentMediaId: mediaIdShort,
@@ -908,10 +910,7 @@ function RouteComponent() {
       </MobileDrawer.Root>
 
       {/* Mobile Playlist Dialog */}
-      {hasPlaylistContext &&
-      searchParams.list &&
-      searchParams.type &&
-      playlistItems.length > 0 ? (
+      {hasPlaylistContext && searchParams.list && playlistItems.length > 0 ? (
         <MobileDrawer.Root
           open={playlistDialogOpen}
           onOpenChange={setPlaylistDialogOpen}
@@ -920,7 +919,9 @@ function RouteComponent() {
             <MobileDrawer.Content className="h-[85vh]">
               <MobilePlaylistDrawerContent
                 listId={searchParams.list}
-                listType={searchParams.type}
+                listType={
+                  playlistData.type === 'SERIES' ? 'series' : 'playlist'
+                }
                 listTitle={playlistData?.title}
                 items={playlistItems}
                 currentMediaId={mediaIdShort}

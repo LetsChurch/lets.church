@@ -6,6 +6,7 @@ import { commonProcedures } from './procedures/common';
 import { dashboardRouter } from './procedures/dashboard';
 import { homeProcedures } from './procedures/home';
 import { libraryProcedures } from './procedures/library';
+import { listProcedures } from './procedures/list';
 import { mediaProcedures } from './procedures/media';
 import { newsletterProcedures } from './procedures/newsletter';
 import { playlistProcedures } from './procedures/playlist';
@@ -22,6 +23,7 @@ export const appRouter = router({
   common: commonProcedures,
   home: homeProcedures,
   library: libraryProcedures,
+  list: listProcedures,
   media: mediaProcedures,
   newsletter: newsletterProcedures,
   playlist: playlistProcedures,

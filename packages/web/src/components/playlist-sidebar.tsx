@@ -76,7 +76,7 @@ export function PlaylistSidebar({
               key={item.id}
               to="/media/$mediaId"
               params={{ mediaId: item.id }}
-              search={{ list: listId, type: listType }}
+              search={{ list: listId }}
               data-current={isCurrent ? 'true' : 'false'}
             >
               <div

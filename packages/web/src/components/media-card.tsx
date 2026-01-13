@@ -12,7 +12,6 @@ export type Props = {
   timestamp?: string;
   progress?: number;
   playlistId?: string;
-  playlistType?: 'playlist' | 'series';
 };
 
 export function MediaCard({
@@ -25,7 +24,6 @@ export function MediaCard({
   timestamp,
   progress,
   playlistId,
-  playlistType,
 }: Props) {
   return (
     <div className="group relative space-y-3">
@@ -77,11 +75,7 @@ export function MediaCard({
             <Link
               to="/media/$mediaId"
               params={{ mediaId }}
-              search={
-                playlistId && playlistType
-                  ? { list: playlistId, type: playlistType }
-                  : undefined
-              }
+              search={playlistId ? { list: playlistId } : undefined}
               className="after:absolute after:inset-0"
             >
               {title ?? 'Untitled'}
