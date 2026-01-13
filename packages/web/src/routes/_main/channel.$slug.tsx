@@ -10,7 +10,6 @@ import {
   IconBrandYoutube,
   IconBuildingChurch,
   IconChevronRight,
-  IconList,
   IconPlaylist,
   IconRss,
   IconWorld,
@@ -24,6 +23,7 @@ import { createFileRoute, Link } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useRef, useState } from 'react';
 import { Avatar } from '@/components/avatar';
+import ChannelTabs from '@/components/channel-tabs';
 import { EmptyState } from '@/components/empty-state';
 import { FollowButton } from '@/components/follow-button';
 import Header from '@/components/header';
@@ -251,6 +251,11 @@ function RouteComponent() {
   const [isFollowing, setIsFollowing] = useState(channel.isFollowing);
   const [isTogglingFollow, setIsTogglingFollow] = useState(false);
 
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'videos' | 'playlists' | 'links'>(
+    'videos',
+  );
+
   useSetBackgroundImage(channel.defaultThumbnailUrl ?? undefined);
 
   // Infinite scroll observer
@@ -341,11 +346,6 @@ function RouteComponent() {
     channel.spotifyUrl ||
     channel.rssUrl;
 
-  const hasSidebarContent =
-    (churches && churches.length > 0) ||
-    (playlists && playlists.length > 0) ||
-    hasSocialLinks;
-
   return (
     <div className="min-h-screen bg-linear-to-br from-zinc-50 via-white to-indigo-50/30 dark:from-zinc-950 dark:via-zinc-900 dark:to-indigo-950/20">
       {/* Cover Image or Gradient Header */}
@@ -404,7 +404,7 @@ function RouteComponent() {
         </div>
       </div>
 
-      <div className="isolate mx-auto max-w-5xl px-6 pb-24">
+      <div className="isolate mx-auto max-w-7xl px-6 pb-24">
         {/* Profile Header */}
         <div className="-mt-12 sm:-mt-16 mb-8 sm:mb-12">
           <div className="flex items-center overflow-hidden rounded-full border-fancy-pants bg-white shadow-lg dark:bg-zinc-900">
@@ -443,29 +443,30 @@ function RouteComponent() {
           </div>
         </div>
 
-        <div
-          className={
-            hasSidebarContent ? 'grid gap-8 lg:grid-cols-3' : 'space-y-8'
-          }
-        >
-          {/* Main Content */}
-          <div
-            className={
-              hasSidebarContent ? 'space-y-8 lg:col-span-2' : 'space-y-8'
-            }
-          >
-            {/* Description */}
-            {channel.description ? (
-              <section className="rounded-2xl border-fancy-pants bg-zinc-100 p-5 dark:bg-zinc-900">
-                <h2 className="mb-4 font-medium text-primary text-sm">About</h2>
-                <p className="whitespace-pre-wrap text-lg text-secondary leading-relaxed">
-                  {channel.description}
-                </p>
-              </section>
-            ) : null}
+        {/* Description */}
+        {channel.description ? (
+          <div className="mb-8">
+            <p className="whitespace-pre-wrap text-lg text-secondary leading-relaxed">
+              {channel.description}
+            </p>
+          </div>
+        ) : null}
 
-            {/* All Content */}
-            {hasMedia ? (
+        {/* Tabs */}
+        <div className="mb-8">
+          <ChannelTabs
+            activeTab={activeTab}
+            videoCount={mediaItems.length}
+            playlistCount={playlists.length}
+            onTabChange={setActiveTab}
+          />
+        </div>
+
+        {/* Tab Content */}
+        <div className="space-y-8">
+          {/* Videos Tab */}
+          {activeTab === 'videos' ? (
+            hasMedia ? (
               <>
                 <MediaGrid>
                   {mediaItems.map((upload) => (
@@ -509,334 +510,311 @@ function RouteComponent() {
                 emptyCta="Browse Content"
                 emptyCtaHref="/"
               />
-            )}
-          </div>
+            )
+          ) : null}
 
-          {/* Sidebar */}
-          {hasSidebarContent ? (
-            <div className="space-y-6 lg:col-span-1">
-              {/* Associated Churches */}
-              {churches && churches.length > 0 ? (
-                <section className="rounded-2xl border-fancy-pants bg-zinc-100 p-5 dark:bg-zinc-900">
-                  <h2 className="mb-4 flex items-center gap-2 font-medium text-primary text-sm">
-                    <IconBuildingChurch size={16} strokeWidth={2} />
-                    {churches.length === 1 ? 'Church' : 'Churches'}
-                  </h2>
-                  <div className="space-y-3">
-                    {churches.map((church) => {
-                      return (
-                        <Link
-                          key={church.id}
-                          to="/churches/$slug"
-                          params={{ slug: church.slug }}
-                          className="group flex items-start gap-3 rounded-xl bg-zinc-50/50 p-3 transition-all hover:shadow-md dark:bg-zinc-800/50"
-                        >
-                          <Avatar
-                            src={church.avatarUrl || undefined}
-                            alt={church.name}
-                            className="size-12 shrink-0"
-                            fallbackClassName="text-sm"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <h3 className="truncate font-semibold text-primary">
-                              {church.name}
-                            </h3>
-                            <p className="text-secondary text-xs">
-                              {church.isOfficial ? 'Official' : 'Endorsed'}
-                            </p>
-                          </div>
-                          <IconChevronRight
-                            className="mt-1 shrink-0 text-muted"
-                            size={16}
-                          />
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </section>
-              ) : null}
+          {/* Playlists Tab */}
+          {activeTab === 'playlists' ? (
+            playlists && playlists.length > 0 ? (
+              <MediaGrid>
+                {playlists.map((playlist) => {
+                  const isSeries = playlist.type === 'SERIES';
+                  const to = isSeries
+                    ? '/series/$seriesId'
+                    : '/playlist/$playlistId';
+                  const params = isSeries
+                    ? { seriesId: playlist.id }
+                    : { playlistId: playlist.id };
 
-              {/* Playlists */}
-              {playlists && playlists.length > 0 ? (
-                <section className="rounded-2xl border-fancy-pants bg-zinc-100 p-5 dark:bg-zinc-900">
-                  <h2 className="mb-4 flex items-center gap-2 font-medium text-primary text-sm">
-                    <IconList size={16} strokeWidth={2} />
-                    Playlists
-                  </h2>
-                  <div className="space-y-3">
-                    {playlists.map((playlist) => {
-                      const isSeries = playlist.type === 'SERIES';
-                      const LinkComponent = isSeries ? (
-                        <Link
-                          key={playlist.id}
-                          to="/series/$seriesId"
-                          params={{ seriesId: playlist.id }}
-                          className="group flex gap-3 rounded-xl bg-zinc-50/50 p-3 transition-all hover:shadow-md dark:bg-zinc-800/50"
-                        >
-                          {playlist.thumbnailUrl ? (
-                            <div className="relative aspect-video w-20 shrink-0 overflow-hidden rounded-lg">
-                              <img
-                                src={playlist.thumbnailUrl}
-                                alt=""
-                                className="size-full object-cover"
-                              />
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                                <IconPlaylist
-                                  size={20}
-                                  className="text-white"
-                                  strokeWidth={2}
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex aspect-video w-20 shrink-0 items-center justify-center rounded-lg bg-zinc-200 dark:bg-zinc-700">
-                              <IconPlaylist
-                                size={20}
-                                className="text-zinc-400 dark:text-zinc-500"
-                                strokeWidth={2}
-                              />
-                            </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <h3 className="truncate font-semibold text-primary text-sm">
-                              {playlist.title}
-                            </h3>
-                            <p className="text-secondary text-xs">
-                              {playlist.uploadCount} media
-                            </p>
-                            <p className="text-muted text-xs">Series</p>
+                  return (
+                    <Link
+                      key={playlist.id}
+                      to={to}
+                      params={params}
+                      className="group flex flex-col rounded-2xl border-fancy-pants bg-zinc-100 p-4 transition-all hover:shadow-md dark:bg-zinc-900"
+                    >
+                      {playlist.thumbnailUrl ? (
+                        <div className="relative aspect-video w-full overflow-hidden rounded-lg">
+                          <img
+                            src={playlist.thumbnailUrl}
+                            alt=""
+                            className="size-full object-cover"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                            <IconPlaylist
+                              size={32}
+                              className="text-white"
+                              strokeWidth={2}
+                            />
                           </div>
-                        </Link>
+                        </div>
                       ) : (
-                        <Link
-                          key={playlist.id}
-                          to="/playlist/$playlistId"
-                          params={{ playlistId: playlist.id }}
-                          className="group flex gap-3 rounded-xl bg-zinc-50/50 p-3 transition-all hover:shadow-md dark:bg-zinc-800/50"
-                        >
-                          {playlist.thumbnailUrl ? (
-                            <div className="relative aspect-video w-20 shrink-0 overflow-hidden rounded-lg">
-                              <img
-                                src={playlist.thumbnailUrl}
-                                alt=""
-                                className="size-full object-cover"
-                              />
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                                <IconPlaylist
-                                  size={20}
-                                  className="text-white"
-                                  strokeWidth={2}
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex aspect-video w-20 shrink-0 items-center justify-center rounded-lg bg-zinc-200 dark:bg-zinc-700">
-                              <IconPlaylist
-                                size={20}
-                                className="text-zinc-400 dark:text-zinc-500"
-                                strokeWidth={2}
-                              />
-                            </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <h3 className="truncate font-semibold text-primary text-sm">
-                              {playlist.title}
-                            </h3>
-                            <p className="text-secondary text-xs">
-                              {playlist.uploadCount}{' '}
-                              {playlist.uploadCount === 1 ? 'video' : 'videos'}
-                            </p>
-                            <p className="text-muted text-xs">Playlist</p>
-                          </div>
-                        </Link>
-                      );
-                      return LinkComponent;
-                    })}
-                  </div>
-                </section>
-              ) : null}
+                        <div className="flex aspect-video w-full items-center justify-center rounded-lg bg-zinc-200 dark:bg-zinc-700">
+                          <IconPlaylist
+                            size={32}
+                            className="text-zinc-400 dark:text-zinc-500"
+                            strokeWidth={2}
+                          />
+                        </div>
+                      )}
+                      <div className="mt-3 min-w-0 flex-1">
+                        <h3 className="truncate font-semibold text-primary">
+                          {playlist.title}
+                        </h3>
+                        <p className="text-secondary text-sm">
+                          {playlist.uploadCount}{' '}
+                          {playlist.uploadCount === 1 ? 'video' : 'videos'}
+                        </p>
+                        <p className="text-muted text-xs">
+                          {isSeries ? 'Series' : 'Playlist'}
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </MediaGrid>
+            ) : (
+              <EmptyState
+                emptyTitle="No playlists yet"
+                emptyBody="This channel hasn't created any playlists yet."
+                emptyCta="Browse Content"
+                emptyCtaHref="/"
+              />
+            )
+          ) : null}
 
-              {/* Social Media & Website */}
-              {hasSocialLinks ? (
-                <section className="rounded-2xl border-fancy-pants bg-zinc-100 p-5 dark:bg-zinc-900">
-                  <h2 className="mb-4 flex items-center gap-2 font-medium text-primary text-sm">
-                    <IconWorld size={16} strokeWidth={2} />
-                    Links
-                  </h2>
-                  <div className="space-y-3">
-                    {channel.websiteUrl ? (
-                      <a
-                        href={channel.websiteUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group flex items-start gap-3 rounded-lg p-2 transition-colors hover:bg-white/5"
-                      >
-                        <IconWorld
-                          size={20}
-                          className="mt-0.5 shrink-0 text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
-                          strokeWidth={1.5}
-                        />
-                        <span className="break-all text-secondary text-sm group-hover:text-indigo-600 dark:group-hover:text-white">
-                          {channel.websiteUrl.replace(/^https?:\/\//, '')}
-                        </span>
-                      </a>
-                    ) : null}
-                    <div className="flex flex-wrap gap-2">
-                      {channel.facebookUrl ? (
-                        <a
-                          href={channel.facebookUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
-                          title="Facebook"
-                        >
-                          <IconBrandFacebook
-                            size={20}
-                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
-                            strokeWidth={1.5}
-                          />
-                        </a>
-                      ) : null}
-                      {channel.instagramUrl ? (
-                        <a
-                          href={channel.instagramUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
-                          title="Instagram"
-                        >
-                          <IconBrandInstagram
-                            size={20}
-                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
-                            strokeWidth={1.5}
-                          />
-                        </a>
-                      ) : null}
-                      {channel.xUrl ? (
-                        <a
-                          href={channel.xUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
-                          title="X (Twitter)"
-                        >
-                          <IconBrandX
-                            size={20}
-                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
-                            strokeWidth={1.5}
-                          />
-                        </a>
-                      ) : null}
-                      {channel.youtubeUrl ? (
-                        <a
-                          href={channel.youtubeUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
-                          title="YouTube"
-                        >
-                          <IconBrandYoutube
-                            size={20}
-                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
-                            strokeWidth={1.5}
-                          />
-                        </a>
-                      ) : null}
-                      {channel.tiktokUrl ? (
-                        <a
-                          href={channel.tiktokUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
-                          title="TikTok"
-                        >
-                          <IconBrandTiktok
-                            size={20}
-                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
-                            strokeWidth={1.5}
-                          />
-                        </a>
-                      ) : null}
-                      {channel.linkedinUrl ? (
-                        <a
-                          href={channel.linkedinUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
-                          title="LinkedIn"
-                        >
-                          <IconBrandLinkedin
-                            size={20}
-                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
-                            strokeWidth={1.5}
-                          />
-                        </a>
-                      ) : null}
-                      {channel.threadsUrl ? (
-                        <a
-                          href={channel.threadsUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
-                          title="Threads"
-                        >
-                          <IconBrandThreads
-                            size={20}
-                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
-                            strokeWidth={1.5}
-                          />
-                        </a>
-                      ) : null}
-                      {channel.applePodcastsUrl ? (
-                        <a
-                          href={channel.applePodcastsUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
-                          title="Apple Podcasts"
-                        >
-                          <IconBrandApplePodcast
-                            size={20}
-                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
-                            strokeWidth={1.5}
-                          />
-                        </a>
-                      ) : null}
-                      {channel.spotifyUrl ? (
-                        <a
-                          href={channel.spotifyUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
-                          title="Spotify"
-                        >
-                          <IconBrandSpotify
-                            size={20}
-                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
-                            strokeWidth={1.5}
-                          />
-                        </a>
-                      ) : null}
-                      {channel.rssUrl ? (
-                        <a
-                          href={channel.rssUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
-                          title="RSS Feed"
-                        >
-                          <IconRss
-                            size={20}
-                            className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
-                            strokeWidth={1.5}
-                          />
-                        </a>
-                      ) : null}
+          {/* Links Tab */}
+          {activeTab === 'links' ? (
+            churches.length > 0 || hasSocialLinks ? (
+              <div className="mx-auto max-w-4xl space-y-8">
+                {/* Associated Churches */}
+                {churches && churches.length > 0 ? (
+                  <section className="rounded-2xl border-fancy-pants bg-zinc-100 p-6 dark:bg-zinc-900">
+                    <h2 className="mb-4 flex items-center gap-2 font-semibold text-primary text-xl">
+                      <IconBuildingChurch size={20} strokeWidth={2} />
+                      {churches.length === 1 ? 'Church' : 'Churches'}
+                    </h2>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {churches.map((church) => {
+                        return (
+                          <Link
+                            key={church.id}
+                            to="/churches/$slug"
+                            params={{ slug: church.slug }}
+                            className="group flex items-start gap-3 rounded-xl bg-zinc-50/50 p-3 transition-all hover:shadow-md dark:bg-zinc-800/50"
+                          >
+                            <Avatar
+                              src={church.avatarUrl || undefined}
+                              alt={church.name}
+                              className="size-12 shrink-0"
+                              fallbackClassName="text-sm"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <h3 className="truncate font-semibold text-primary">
+                                {church.name}
+                              </h3>
+                              <p className="text-secondary text-xs">
+                                {church.isOfficial ? 'Official' : 'Endorsed'}
+                              </p>
+                            </div>
+                            <IconChevronRight
+                              className="mt-1 shrink-0 text-muted"
+                              size={16}
+                            />
+                          </Link>
+                        );
+                      })}
                     </div>
-                  </div>
-                </section>
-              ) : null}
-            </div>
+                  </section>
+                ) : null}
+
+                {/* Social Media & Website */}
+                {hasSocialLinks ? (
+                  <section className="rounded-2xl border-fancy-pants bg-zinc-100 p-6 dark:bg-zinc-900">
+                    <h2 className="mb-4 flex items-center gap-2 font-semibold text-primary text-xl">
+                      <IconWorld size={20} strokeWidth={2} />
+                      Links
+                    </h2>
+                    <div className="space-y-3">
+                      {channel.websiteUrl ? (
+                        <a
+                          href={channel.websiteUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex items-start gap-3 rounded-lg p-2 transition-colors hover:bg-white/5"
+                        >
+                          <IconWorld
+                            size={20}
+                            className="mt-0.5 shrink-0 text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                            strokeWidth={1.5}
+                          />
+                          <span className="break-all text-secondary text-sm group-hover:text-indigo-600 dark:group-hover:text-white">
+                            {channel.websiteUrl.replace(/^https?:\/\//, '')}
+                          </span>
+                        </a>
+                      ) : null}
+                      <div className="flex flex-wrap gap-2">
+                        {channel.facebookUrl ? (
+                          <a
+                            href={channel.facebookUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                            title="Facebook"
+                          >
+                            <IconBrandFacebook
+                              size={20}
+                              className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                              strokeWidth={1.5}
+                            />
+                          </a>
+                        ) : null}
+                        {channel.instagramUrl ? (
+                          <a
+                            href={channel.instagramUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                            title="Instagram"
+                          >
+                            <IconBrandInstagram
+                              size={20}
+                              className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                              strokeWidth={1.5}
+                            />
+                          </a>
+                        ) : null}
+                        {channel.xUrl ? (
+                          <a
+                            href={channel.xUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                            title="X (Twitter)"
+                          >
+                            <IconBrandX
+                              size={20}
+                              className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                              strokeWidth={1.5}
+                            />
+                          </a>
+                        ) : null}
+                        {channel.youtubeUrl ? (
+                          <a
+                            href={channel.youtubeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                            title="YouTube"
+                          >
+                            <IconBrandYoutube
+                              size={20}
+                              className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                              strokeWidth={1.5}
+                            />
+                          </a>
+                        ) : null}
+                        {channel.tiktokUrl ? (
+                          <a
+                            href={channel.tiktokUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                            title="TikTok"
+                          >
+                            <IconBrandTiktok
+                              size={20}
+                              className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                              strokeWidth={1.5}
+                            />
+                          </a>
+                        ) : null}
+                        {channel.linkedinUrl ? (
+                          <a
+                            href={channel.linkedinUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                            title="LinkedIn"
+                          >
+                            <IconBrandLinkedin
+                              size={20}
+                              className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                              strokeWidth={1.5}
+                            />
+                          </a>
+                        ) : null}
+                        {channel.threadsUrl ? (
+                          <a
+                            href={channel.threadsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                            title="Threads"
+                          >
+                            <IconBrandThreads
+                              size={20}
+                              className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                              strokeWidth={1.5}
+                            />
+                          </a>
+                        ) : null}
+                        {channel.applePodcastsUrl ? (
+                          <a
+                            href={channel.applePodcastsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                            title="Apple Podcasts"
+                          >
+                            <IconBrandApplePodcast
+                              size={20}
+                              className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                              strokeWidth={1.5}
+                            />
+                          </a>
+                        ) : null}
+                        {channel.spotifyUrl ? (
+                          <a
+                            href={channel.spotifyUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                            title="Spotify"
+                          >
+                            <IconBrandSpotify
+                              size={20}
+                              className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                              strokeWidth={1.5}
+                            />
+                          </a>
+                        ) : null}
+                        {channel.rssUrl ? (
+                          <a
+                            href={channel.rssUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group flex size-10 items-center justify-center rounded-lg bg-white/50 transition-all hover:bg-white/5 dark:bg-zinc-800/50"
+                            title="RSS Feed"
+                          >
+                            <IconRss
+                              size={20}
+                              className="text-secondary group-hover:text-indigo-600 dark:group-hover:text-white"
+                              strokeWidth={1.5}
+                            />
+                          </a>
+                        ) : null}
+                      </div>
+                    </div>
+                  </section>
+                ) : null}
+              </div>
+            ) : (
+              <EmptyState
+                emptyTitle="No links available"
+                emptyBody="This channel has no associated churches or social links."
+              />
+            )
           ) : null}
         </div>
       </div>
