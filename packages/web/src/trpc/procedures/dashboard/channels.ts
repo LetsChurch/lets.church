@@ -377,6 +377,7 @@ export const channelRouter = router({
             createdAt: true,
           },
           where: {
+            deletedAt: null,
             channel: {
               memberships: {
                 some: {
@@ -390,7 +391,11 @@ export const channelRouter = router({
         },
         _count: {
           select: {
-            uploadRecords: true,
+            uploadRecords: {
+              where: {
+                deletedAt: null,
+              },
+            },
             subscribers: true,
             memberships: true,
             uploadLists: true,

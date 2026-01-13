@@ -164,7 +164,7 @@ export function MediaSidebarTabs({
         ) : null}
 
         {activeTab === 'playlist' && playlistContext ? (
-          <div className="fade-bottom flex-1 overflow-hidden">
+          <div className="fade-bottom flex flex-1 flex-col overflow-hidden">
             <PlaylistSidebar
               key={`${playlistContext.listId}-${playlistContext.currentMediaId}`}
               listId={playlistContext.listId}
