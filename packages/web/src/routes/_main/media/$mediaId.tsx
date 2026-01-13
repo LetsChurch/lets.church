@@ -9,6 +9,8 @@ import {
 } from '@tanstack/react-query';
 import { createFileRoute, Link, useLocation } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
+import { z } from 'zod';
+import { AutoplayCountdown } from '@/components/autoplay-countdown';
 import { CommentsSection } from '@/components/comments-section';
 import LcButton from '@/components/lc-button';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
@@ -16,14 +18,15 @@ import MainLayout from '@/components/main-layout';
 // import { MediaCarousel } from '@/components/media-carousel';
 import { MediaHeader } from '@/components/media-header';
 import { MediaInfoTabs } from '@/components/media-info-tabs';
+import { MediaSidebarTabs } from '@/components/media-sidebar-tabs';
 import { MobileDrawer } from '@/components/mobile-drawer';
 import { Player } from '@/components/player';
 import { Transcript } from '@/components/transcript';
 import { TranscriptSearchResults } from '@/components/transcript-search-results';
-import { TranscriptSidebar } from '@/components/transcript-sidebar';
 import { WindowSplitter } from '@/components/window-splitter';
+import { useAutoplay } from '@/hooks/use-autoplay';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
-import { IncomingIdSchema } from '@/schemas/common';
+import { IncomingIdSchema, idTranslator } from '@/schemas/common';
 import { useSetBackgroundImage } from '@/stores/header';
 import {
   $isSearchActive,
@@ -50,6 +53,10 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
       mediaId: params.mediaId,
     }),
   },
+  validateSearch: z.object({
+    list: z.string().optional(),
+    type: z.enum(['playlist', 'series']).optional(),
+  }),
   loader: async ({ context: { queryClient, trpc }, params }) => {
     const [media, viewData, transcript, rating, comments] = await Promise.all([
       queryClient.ensureQueryData(
@@ -309,6 +316,7 @@ function MobileTranscriptDrawerContent({
 function RouteComponent() {
   const params = Route.useParams();
   const location = useLocation();
+  const searchParams = Route.useSearch();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const isLoggedIn = useIsLoggedIn();
@@ -328,6 +336,46 @@ function RouteComponent() {
   const [transcriptWidth, setTranscriptWidth] = useState(
     getInitialTranscriptWidth(),
   );
+
+  // Playlist context - fetch playlist items if we have a list param
+  const hasPlaylistContext = Boolean(searchParams.list && searchParams.type);
+
+  const { data: playlistData } = useSuspenseQuery(
+    searchParams.list && searchParams.type === 'playlist'
+      ? trpc.playlist.getAllPlaylistItems.queryOptions({
+          playlistId: searchParams.list,
+        })
+      : searchParams.list && searchParams.type === 'series'
+        ? trpc.series.getAllSeriesItems.queryOptions({
+            seriesId: searchParams.list,
+          })
+        : {
+            queryKey: [['no-playlist']],
+            queryFn: () => Promise.resolve({ title: '', items: [] }),
+          },
+  );
+
+  // Find current and next items
+  const playlistItems = playlistData?.items ?? [];
+  const mediaIdShort = hasPlaylistContext
+    ? idTranslator.fromUUID(params.mediaId)
+    : '';
+  const currentIndex = playlistItems.findIndex(
+    (item) => item.id === mediaIdShort,
+  );
+  const nextItem =
+    currentIndex >= 0 && currentIndex < playlistItems.length - 1
+      ? playlistItems[currentIndex + 1]
+      : undefined;
+
+  // Autoplay
+  const autoplay = useAutoplay({
+    enabled: hasPlaylistContext,
+    nextMediaId: nextItem?.id,
+    nextMediaUrl: nextItem
+      ? `/media/${nextItem.id}?list=${searchParams.list}&type=${searchParams.type}`
+      : undefined,
+  });
 
   // Parse timestamp from URL hash on mount
   useEffect(() => {
@@ -646,20 +694,31 @@ function RouteComponent() {
         >
           {/* TODO: remove mb-10 when related content is implemented */}
           <div className="mb-10 w-full">
-            <Player
-              key={params.mediaId}
-              uploadRecordId={params.mediaId}
-              viewHash={viewHash}
-              mediaSource={media.mediaSource}
-              audioSource={media.audioSource}
-              posterThumbnailUrl={media.posterThumbnailUrl}
-              videoWidth={layout.videoWidth}
-              videoHeight={layout.videoHeight}
-              peaksJsonUrl={media.peaksJsonUrl}
-              lengthSeconds={media.lengthSeconds}
-              videoClassName={layout.showSidebar ? null : 'sticky top-0 z-10'}
-              initialTimestamp={initialTimestamp}
-            />
+            <div className="relative">
+              <Player
+                key={params.mediaId}
+                uploadRecordId={params.mediaId}
+                viewHash={viewHash}
+                mediaSource={media.mediaSource}
+                audioSource={media.audioSource}
+                posterThumbnailUrl={media.posterThumbnailUrl}
+                videoWidth={layout.videoWidth}
+                videoHeight={layout.videoHeight}
+                peaksJsonUrl={media.peaksJsonUrl}
+                lengthSeconds={media.lengthSeconds}
+                videoClassName={layout.showSidebar ? null : 'sticky top-0 z-10'}
+                initialTimestamp={initialTimestamp}
+                onVideoEnded={autoplay.handleVideoEnded}
+              />
+              {hasPlaylistContext && nextItem ? (
+                <AutoplayCountdown
+                  isVisible={autoplay.showCountdown}
+                  countdown={autoplay.countdown}
+                  nextMediaTitle={nextItem.title ?? 'Untitled'}
+                  onCancel={autoplay.cancelAutoplay}
+                />
+              ) : null}
+            </div>
 
             <MediaHeader
               title={media.title}
@@ -745,7 +804,23 @@ function RouteComponent() {
               onWidthChange={handleTranscriptWidthChange}
             />
             <div style={{ width: `${transcriptWidth}px` }}>
-              <TranscriptSidebar transcript={transcript} />
+              <MediaSidebarTabs
+                transcript={transcript}
+                playlistContext={
+                  hasPlaylistContext &&
+                  searchParams.list &&
+                  searchParams.type &&
+                  playlistItems.length > 0
+                    ? {
+                        listId: searchParams.list,
+                        listType: searchParams.type,
+                        listTitle: playlistData?.title,
+                        items: playlistItems,
+                        currentMediaId: mediaIdShort,
+                      }
+                    : undefined
+                }
+              />
             </div>
           </>
         ) : null}

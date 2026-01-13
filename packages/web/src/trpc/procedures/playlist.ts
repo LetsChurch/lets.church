@@ -23,6 +23,143 @@ const playlistMediaQuerySchema = z.object({
 });
 
 export const playlistProcedures = {
+  getAllPlaylistItems: publicProcedure
+    .input(playlistQuerySchema)
+    .query(async ({ input }) => {
+      const { playlistId } = input;
+
+      moduleLogger.info(
+        { context: { playlistId } },
+        'Fetching all playlist items',
+      );
+
+      // First verify playlist exists and channel is public
+      const playlist = await prisma.uploadList.findUnique({
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          channel: {
+            select: {
+              visibility: true,
+              approvedAt: true,
+              deletedAt: true,
+            },
+          },
+        },
+        where: {
+          id: playlistId,
+        },
+      });
+
+      if (!playlist || playlist.type !== 'PLAYLIST') {
+        moduleLogger.warn({ context: { playlistId } }, 'Playlist not found');
+        throw new Error('Playlist not found');
+      }
+
+      if (!playlist.channel) {
+        moduleLogger.warn(
+          { context: { playlistId } },
+          'Playlist has no channel',
+        );
+        throw new Error('Playlist not found');
+      }
+
+      if (
+        playlist.channel.visibility !== 'PUBLIC' ||
+        !playlist.channel.approvedAt ||
+        playlist.channel.deletedAt
+      ) {
+        moduleLogger.warn(
+          {
+            context: {
+              playlistId,
+              channelVisibility: playlist.channel.visibility,
+              channelApproved: Boolean(playlist.channel.approvedAt),
+              channelDeleted: Boolean(playlist.channel.deletedAt),
+            },
+          },
+          'Channel not accessible',
+        );
+        throw new Error('Playlist not found');
+      }
+
+      // Fetch all playlist entries
+      const entries = await prisma.uploadListEntry.findMany({
+        select: {
+          upload: {
+            select: {
+              id: true,
+              title: true,
+              publishedAt: true,
+              lengthSeconds: true,
+              defaultThumbnailPath: true,
+              overrideThumbnailPath: true,
+              channel: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                  avatarPath: true,
+                  defaultThumbnailPath: true,
+                },
+              },
+            },
+          },
+        },
+        where: {
+          uploadListId: playlistId,
+          upload: {
+            visibility: 'PUBLIC',
+            transcodingFinishedAt: { not: null },
+            transcribingFinishedAt: { not: null },
+            deletedAt: null,
+          },
+        },
+        orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
+      });
+
+      const items = entries.map((entry) => {
+        const upload = entry.upload;
+        const {
+          defaultThumbnailPath,
+          overrideThumbnailPath,
+          channel,
+          ...uploadRest
+        } = upload;
+
+        const thumbnailUrl = resolveThumbnailUrl({
+          overrideThumbnailPath,
+          defaultThumbnailPath,
+          channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+          size: 'card',
+        });
+
+        const channelAvatarUrl = channel.avatarPath
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
+              resize: appAvatarXs2x,
+            })
+          : null;
+
+        return {
+          ...uploadRest,
+          id: OutgoingIdSchema.parse(uploadRest.id),
+          thumbnailUrl,
+          channel: {
+            id: OutgoingIdSchema.parse(channel.id),
+            name: channel.name,
+            slug: channel.slug,
+            avatarUrl: channelAvatarUrl,
+          },
+        };
+      });
+
+      return {
+        title: playlist.title,
+        items,
+      };
+    }),
+
   getPublicPlaylist: publicProcedure
     .input(playlistQuerySchema)
     .query(async ({ input }) => {

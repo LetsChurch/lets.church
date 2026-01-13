@@ -46,6 +46,7 @@ type Props = {
   videoClassName?: string | null;
   embed?: boolean;
   initialTimestamp?: number;
+  onVideoEnded?: () => void;
 };
 
 function serializeTimeRanges(
@@ -73,6 +74,7 @@ export function Player({
   videoClassName,
   embed = false,
   initialTimestamp,
+  onVideoEnded,
 }: Props) {
   const trpc = useTRPC();
   const videoRef = useRef<HlsVideoElement>(null);
@@ -236,6 +238,10 @@ export function Player({
       $currentTime.set(videoElement.currentTime);
     };
 
+    const handleEnded = () => {
+      onVideoEnded?.();
+    };
+
     const cleanSetPlayAt = $setPlayAt.listen((time) => {
       if (time !== null) {
         videoElement.currentTime = time;
@@ -243,6 +249,7 @@ export function Player({
     });
 
     videoElement.addEventListener('timeupdate', handleTimeUpdate);
+    videoElement.addEventListener('ended', handleEnded);
 
     async function reportTimeRanges() {
       if (!videoElement) {
@@ -272,6 +279,7 @@ export function Player({
     return () => {
       clearTimeout(reportTimerRef.current);
       videoElement.removeEventListener('timeupdate', handleTimeUpdate);
+      videoElement.removeEventListener('ended', handleEnded);
       cleanSetPlayAt();
       // Report one final time on unmount
       const ranges = serializeTimeRanges(videoElement.played);
@@ -285,7 +293,7 @@ export function Player({
         });
       }
     };
-  }, [uploadRecordId, viewHash, recordViewSeconds]);
+  }, [uploadRecordId, viewHash, recordViewSeconds, onVideoEnded]);
 
   return (
     <LcTooltip.Provider>

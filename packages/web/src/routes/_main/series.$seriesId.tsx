@@ -262,6 +262,8 @@ function RouteComponent() {
                       })
                     : undefined
                 }
+                playlistId={seriesId}
+                playlistType="series"
               />
             ))}
           </MediaGrid>

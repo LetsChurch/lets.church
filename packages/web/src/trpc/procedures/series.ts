@@ -23,6 +23,137 @@ const seriesMediaQuerySchema = z.object({
 });
 
 export const seriesProcedures = {
+  getAllSeriesItems: publicProcedure
+    .input(seriesQuerySchema)
+    .query(async ({ input }) => {
+      const { seriesId } = input;
+
+      moduleLogger.info({ context: { seriesId } }, 'Fetching all series items');
+
+      // First verify series exists and channel is public
+      const series = await prisma.uploadList.findUnique({
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          channel: {
+            select: {
+              visibility: true,
+              approvedAt: true,
+              deletedAt: true,
+            },
+          },
+        },
+        where: {
+          id: seriesId,
+        },
+      });
+
+      if (!series || series.type !== 'SERIES') {
+        moduleLogger.warn({ context: { seriesId } }, 'Series not found');
+        throw new Error('Series not found');
+      }
+
+      if (!series.channel) {
+        moduleLogger.warn({ context: { seriesId } }, 'Series has no channel');
+        throw new Error('Series not found');
+      }
+
+      if (
+        series.channel.visibility !== 'PUBLIC' ||
+        !series.channel.approvedAt ||
+        series.channel.deletedAt
+      ) {
+        moduleLogger.warn(
+          {
+            context: {
+              seriesId,
+              channelVisibility: series.channel.visibility,
+              channelApproved: Boolean(series.channel.approvedAt),
+              channelDeleted: Boolean(series.channel.deletedAt),
+            },
+          },
+          'Channel not accessible',
+        );
+        throw new Error('Series not found');
+      }
+
+      // Fetch all series entries
+      const entries = await prisma.uploadListEntry.findMany({
+        select: {
+          upload: {
+            select: {
+              id: true,
+              title: true,
+              publishedAt: true,
+              lengthSeconds: true,
+              defaultThumbnailPath: true,
+              overrideThumbnailPath: true,
+              channel: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                  avatarPath: true,
+                  defaultThumbnailPath: true,
+                },
+              },
+            },
+          },
+        },
+        where: {
+          uploadListId: seriesId,
+          upload: {
+            visibility: 'PUBLIC',
+            transcodingFinishedAt: { not: null },
+            transcribingFinishedAt: { not: null },
+            deletedAt: null,
+          },
+        },
+        orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
+      });
+
+      const items = entries.map((entry) => {
+        const upload = entry.upload;
+        const {
+          defaultThumbnailPath,
+          overrideThumbnailPath,
+          channel,
+          ...uploadRest
+        } = upload;
+
+        const thumbnailUrl = resolveThumbnailUrl({
+          overrideThumbnailPath,
+          defaultThumbnailPath,
+          channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+          size: 'card',
+        });
+
+        const channelAvatarUrl = channel.avatarPath
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
+              resize: appAvatarXs2x,
+            })
+          : null;
+
+        return {
+          ...uploadRest,
+          id: OutgoingIdSchema.parse(uploadRest.id),
+          thumbnailUrl,
+          channel: {
+            id: OutgoingIdSchema.parse(channel.id),
+            name: channel.name,
+            slug: channel.slug,
+            avatarUrl: channelAvatarUrl,
+          },
+        };
+      });
+
+      return {
+        title: series.title,
+        items,
+      };
+    }),
+
   getPublicSeries: publicProcedure
     .input(seriesQuerySchema)
     .query(async ({ input }) => {
