@@ -3292,5 +3292,103 @@ export const adminRouter = router({
       };
     }),
 
+  getDeletingUploadsCount: adminProcedure.query(async () => {
+    moduleLogger.info('Fetching deleting uploads count');
+
+    try {
+      const deletingCount = await prisma.uploadRecord.count({
+        where: {
+          deletedAt: { not: null },
+        },
+      });
+
+      return deletingCount;
+    } catch (error) {
+      moduleLogger.error(
+        {
+          context: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        },
+        'Failed to fetch deleting uploads count',
+      );
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch deleting uploads count',
+      });
+    }
+  }),
+
+  getDeletingUploads: adminProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+      }),
+    )
+    .query(async ({ input }) => {
+      moduleLogger.info('Fetching deleting uploads');
+
+      try {
+        const [deletingUploads, totalCount] = await Promise.all([
+          prisma.uploadRecord.findMany({
+            where: {
+              deletedAt: { not: null },
+            },
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              createdAt: true,
+              deletedAt: true,
+              uploadFinalizedAt: true,
+              channel: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                },
+              },
+              createdBy: {
+                select: {
+                  id: true,
+                  username: true,
+                  fullName: true,
+                },
+              },
+            },
+            orderBy: { deletedAt: 'desc' },
+            take: input.limit,
+            skip: input.offset,
+          }),
+          prisma.uploadRecord.count({
+            where: {
+              deletedAt: { not: null },
+            },
+          }),
+        ]);
+
+        return {
+          uploads: deletingUploads,
+          totalCount,
+        };
+      } catch (error) {
+        moduleLogger.error(
+          {
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to fetch deleting uploads',
+        );
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch deleting uploads',
+        });
+      }
+    }),
+
   newsletterLists: newsletterListsRouter,
 });

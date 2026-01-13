@@ -73,6 +73,10 @@ function AdminPage() {
     trpc.dashboard.admin.getFailedUploadsCount.queryOptions(),
   );
 
+  const { data: deletingUploadsCount, isLoading: isLoadingDeleting } = useQuery(
+    trpc.dashboard.admin.getDeletingUploadsCount.queryOptions(),
+  );
+
   return (
     <>
       <Title order={1} mb="lg">
@@ -212,6 +216,31 @@ function AdminPage() {
           </Group>
           <Text size="sm" c="dimmed">
             Retry uploads that failed to process
+          </Text>
+        </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
+          to="/dashboard/admin/deleting-uploads"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Deleting Uploads</Text>
+            {isLoadingDeleting ? (
+              <Loader size="xs" />
+            ) : (
+              <Badge
+                color={deletingUploadsCount === 0 ? 'green' : 'orange'}
+                size="sm"
+              >
+                {deletingUploadsCount === 0 ? 'None' : deletingUploadsCount}
+              </Badge>
+            )}
+          </Group>
+          <Text size="sm" c="dimmed">
+            Monitor uploads currently being deleted
           </Text>
         </Card>
         <Card
