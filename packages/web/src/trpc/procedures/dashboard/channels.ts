@@ -50,7 +50,12 @@ import {
   mantineAvatarXl2x,
 } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
-import { getPublicImageUrl, getPublicMediaUrl } from '@/util/url';
+import {
+  getPublicImageUrl,
+  getPublicMediaUrl,
+  ResizeType,
+} from '@/util/url';
+import { coverImageFull, thumbnailMedium } from '@/util/image-sizes';
 import { authProcedure, router } from '../../trpc';
 
 const moduleLogger = logger.child({
@@ -509,13 +514,13 @@ export const channelRouter = router({
 
     const coverUrl = coverPath
       ? getPublicImageUrl(publicS3.getS3ProtocolUri(coverPath), {
-          resize: { width: 1920, height: 1080 },
+          resize: coverImageFull,
         })
       : null;
 
     const defaultThumbnailUrl = defaultThumbnailPath
       ? getPublicImageUrl(publicS3.getS3ProtocolUri(defaultThumbnailPath), {
-          resize: { width: 640, height: 360 },
+          resize: thumbnailMedium,
         })
       : null;
 

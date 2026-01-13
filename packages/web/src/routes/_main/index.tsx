@@ -13,6 +13,7 @@ import { MediaCard } from '@/components/media-card';
 import { MediaCarousel } from '@/components/media-carousel';
 import { MediaCompactCard } from '@/components/media-compact-card';
 import { MediaGrid } from '@/components/media-grid';
+import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from '@/util/image-sizes';
 import { NewsletterCard } from '@/components/newsletter-card';
 import { SearchCard } from '@/components/search-card';
 // import { TrendingSearchPill } from '@/components/trending-search-pill';
@@ -94,11 +95,11 @@ export const Route = createFileRoute('/_main/')({
         },
         {
           property: 'og:image:width',
-          content: '1200',
+          content: OG_IMAGE_WIDTH.toString(),
         },
         {
           property: 'og:image:height',
-          content: '630',
+          content: OG_IMAGE_HEIGHT.toString(),
         },
         {
           property: 'og:site_name',

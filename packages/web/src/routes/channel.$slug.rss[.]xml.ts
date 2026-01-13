@@ -4,7 +4,8 @@ import { createFileRoute } from '@tanstack/react-router';
 import { Feed } from 'feed';
 import logger from '@/util/logger';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
-import { getPublicImageUrl } from '@/util/url';
+import { getPublicImageUrl, ResizeType } from '@/util/url';
+import { rssFeedIcon } from '@/util/image-sizes';
 
 const moduleLogger = logger.child({
   module: 'routes/channel/$slug/rss.xml',
@@ -78,12 +79,12 @@ export const Route = createFileRoute('/channel/$slug/rss.xml')({
           const channelImageUrl = channel.defaultThumbnailPath
             ? getPublicImageUrl(
                 publicS3.getS3ProtocolUri(channel.defaultThumbnailPath),
-                { resize: { width: 144, height: 144 } },
+                { resize: rssFeedIcon },
               )
             : channel.avatarPath
               ? getPublicImageUrl(
                   publicS3.getS3ProtocolUri(channel.avatarPath),
-                  { resize: { width: 144, height: 144 } },
+                  { resize: rssFeedIcon },
                 )
               : null;
 

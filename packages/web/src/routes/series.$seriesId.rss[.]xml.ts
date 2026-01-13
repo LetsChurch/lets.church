@@ -5,7 +5,8 @@ import { Feed } from 'feed';
 import { IncomingIdSchema } from '@/schemas/common';
 import logger from '@/util/logger';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
-import { getPublicImageUrl } from '@/util/url';
+import { getPublicImageUrl, ResizeType } from '@/util/url';
+import { rssFeedIcon } from '@/util/image-sizes';
 
 const moduleLogger = logger.child({
   module: 'routes/series/$seriesId/rss.xml',
@@ -114,7 +115,7 @@ export const Route = createFileRoute('/series/$seriesId/rss.xml')({
           const seriesImageUrl = series.channel.defaultThumbnailPath
             ? getPublicImageUrl(
                 publicS3.getS3ProtocolUri(series.channel.defaultThumbnailPath),
-                { resize: { width: 144, height: 144 } },
+                { resize: rssFeedIcon },
               )
             : null;
 

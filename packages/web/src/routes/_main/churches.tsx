@@ -7,6 +7,7 @@ import {
   DEFAULT_RANGE,
   MURICA,
 } from '@/constants/churches';
+import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from '@/util/image-sizes';
 
 // Search params schema for TanStack Router
 const churchesSearchSchema = z.object({
@@ -61,11 +62,11 @@ export const Route = createFileRoute('/_main/churches')({
         },
         {
           property: 'og:image:width',
-          content: '1280',
+          content: OG_IMAGE_WIDTH.toString(),
         },
         {
           property: 'og:image:height',
-          content: '720',
+          content: OG_IMAGE_HEIGHT.toString(),
         },
         {
           property: 'og:site_name',

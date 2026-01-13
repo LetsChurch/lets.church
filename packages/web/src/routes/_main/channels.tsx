@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/empty-state';
 import MainLayout from '@/components/main-layout';
 import { MediaGrid } from '@/components/media-grid';
 import { useTRPC } from '@/trpc/react';
+import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from '@/util/image-sizes';
 
 const channelsSearchSchema = z.object({
   search: z.string().optional(),
@@ -86,11 +87,11 @@ export const Route = createFileRoute('/_main/channels')({
         },
         {
           property: 'og:image:width',
-          content: '1280',
+          content: OG_IMAGE_WIDTH.toString(),
         },
         {
           property: 'og:image:height',
-          content: '720',
+          content: OG_IMAGE_HEIGHT.toString(),
         },
         {
           property: 'og:site_name',

@@ -4,7 +4,12 @@ import { createFileRoute } from '@tanstack/react-router';
 import { Podcast } from 'podcast';
 import logger from '@/util/logger';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
-import { getPublicImageUrl, getPublicMediaUrl } from '@/util/url';
+import {
+  getPublicImageUrl,
+  getPublicMediaUrl,
+  ResizeType,
+} from '@/util/url';
+import { podcastImage } from '@/util/image-sizes';
 
 const moduleLogger = logger.child({
   module: 'routes/channel/$slug/podcast.xml',
@@ -75,7 +80,7 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
           const channelImageUrl = channel.defaultThumbnailPath
             ? getPublicImageUrl(
                 publicS3.getS3ProtocolUri(channel.defaultThumbnailPath),
-                { resize: { width: 512, height: 288 } },
+                { resize: podcastImage },
               )
             : `${siteUrl}/favicon.svg`;
 

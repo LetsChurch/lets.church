@@ -10,7 +10,13 @@ import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import logger from '@/util/logger';
 import { formatPhoneNumber } from '@/util/phone';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
-import { getPublicImageUrl } from '@/util/url';
+import { getPublicImageUrl, ResizeType } from '@/util/url';
+import {
+  organizationAvatarLarge,
+  organizationAvatarMedium,
+  organizationAvatarSmall,
+  organizationAvatarTiny,
+} from '@/util/image-sizes';
 import { publicProcedure } from '../trpc';
 
 const moduleLogger = logger.child({
@@ -161,7 +167,7 @@ export const churchProcedures = {
           id: OutgoingIdSchema.parse(org.id),
           avatarUrl: org.avatarPath
             ? getPublicImageUrl(publicS3.getS3ProtocolUri(org.avatarPath), {
-                resize: { width: 80, height: 80 },
+                resize: organizationAvatarMedium,
               })
             : null,
           tags: org.tags.map((t) => t.tag),
@@ -405,7 +411,7 @@ export const churchProcedures = {
         ? getPublicImageUrl(
             publicS3.getS3ProtocolUri(organization.avatarPath),
             {
-              resize: { width: 200, height: 200 },
+              resize: organizationAvatarLarge,
             },
           )
         : null;
@@ -419,7 +425,7 @@ export const churchProcedures = {
           ? getPublicImageUrl(
               publicS3.getS3ProtocolUri(assoc.channel.avatarPath),
               {
-                resize: { width: 64, height: 64 },
+                resize: organizationAvatarSmall,
               },
             )
           : null;
@@ -436,7 +442,7 @@ export const churchProcedures = {
           ? getPublicImageUrl(
               publicS3.getS3ProtocolUri(assoc.channel.avatarPath),
               {
-                resize: { width: 64, height: 64 },
+                resize: organizationAvatarSmall,
               },
             )
           : null;
@@ -579,7 +585,7 @@ export const churchProcedures = {
           ? getPublicImageUrl(
               publicS3.getS3ProtocolUri(upload.channel.avatarPath),
               {
-                resize: { width: 32, height: 32 },
+                resize: organizationAvatarTiny,
               },
             )
           : null;

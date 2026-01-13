@@ -1,5 +1,10 @@
-import pb, { type ResizeOptions } from '@bitpatty/imgproxy-url-builder';
+import pb, {
+  ResizeType,
+  type ResizeOptions,
+} from '@bitpatty/imgproxy-url-builder';
 import { z } from 'zod';
+
+export { ResizeType };
 
 const { MEDIA_URL, IMGPROXY_URL, IMGPROXY_KEY, IMGPROXY_SALT } = z
   .object({

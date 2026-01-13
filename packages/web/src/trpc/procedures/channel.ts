@@ -5,7 +5,8 @@ import { OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarMd2x, appAvatarXs2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
-import { getPublicImageUrl } from '@/util/url';
+import { getPublicImageUrl, ResizeType } from '@/util/url';
+import { coverImageFull } from '@/util/image-sizes';
 import { publicProcedure } from '../trpc';
 
 const moduleLogger = logger.child({
@@ -141,7 +142,7 @@ export const channelProcedures = {
 
       const coverUrl = channel.coverPath
         ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.coverPath), {
-            resize: { width: 1920, height: 1080 },
+            resize: coverImageFull,
           })
         : null;
 
@@ -156,7 +157,7 @@ export const channelProcedures = {
               publicS3.getS3ProtocolUri(
                 channel.defaultThumbnailPath ?? fallbackThumbnailPath ?? '',
               ),
-              { resize: { width: 1920, height: 1080 } },
+              { resize: { type: ResizeType.FILL, width: 1920, height: 1080 } },
             )
           : null;
 

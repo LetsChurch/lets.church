@@ -34,6 +34,7 @@ import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { useSetBackgroundImage } from '@/stores/header';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { formatTime } from '@/util/format';
+import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from '@/util/image-sizes';
 
 export const Route = createFileRoute('/_main/channel/$slug')({
   component: RouteComponent,
@@ -122,11 +123,11 @@ export const Route = createFileRoute('/_main/channel/$slug')({
         },
         {
           property: 'og:image:width',
-          content: '1280',
+          content: OG_IMAGE_WIDTH.toString(),
         },
         {
           property: 'og:image:height',
-          content: '720',
+          content: OG_IMAGE_HEIGHT.toString(),
         },
         {
           property: 'og:site_name',

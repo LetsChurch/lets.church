@@ -1,5 +1,7 @@
 import short from 'short-uuid';
 import { z } from 'zod';
+import { thumbnailFeatured } from '@/util/image-sizes';
+import type { ResizeType } from '@/util/url';
 
 export const multipartUploadSchema = z.object({
   targetId: z.string(),
@@ -15,13 +17,15 @@ export const finalizeMultipartUploadSchema = z.object({
 
 export const ThumbnailSize = z.enum(['featured', 'card', 'table', 'poster']);
 
-type Resize = { resize: { width: number; height?: number } };
+type Resize = {
+  resize: { type?: typeof ResizeType[keyof typeof ResizeType]; width: number; height?: number };
+};
 
 export function getThumbnailResize(
   size: z.infer<typeof ThumbnailSize>,
 ): Resize {
   if (size === 'featured') {
-    return { resize: { width: 1280, height: 720 } };
+    return { resize: thumbnailFeatured };
   }
 
   if (size === 'poster') {
