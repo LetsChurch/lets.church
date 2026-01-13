@@ -1,7 +1,12 @@
 import { AlertDialog } from '@base-ui-components/react/alert-dialog';
 import { UploadViewSource } from '@letschurch/db/types';
 import { useStore } from '@nanostores/react';
-import { IconMessageCircle2, IconSearch, IconX } from '@tabler/icons-react';
+import {
+  IconListNumbers,
+  IconMessageCircle2,
+  IconSearch,
+  IconX,
+} from '@tabler/icons-react';
 import {
   useMutation,
   useQueryClient,
@@ -21,6 +26,7 @@ import { MediaInfoTabs } from '@/components/media-info-tabs';
 import { MediaSidebarTabs } from '@/components/media-sidebar-tabs';
 import { MobileDrawer } from '@/components/mobile-drawer';
 import { Player } from '@/components/player';
+import { PlaylistSidebar } from '@/components/playlist-sidebar';
 import { Transcript } from '@/components/transcript';
 import { TranscriptSearchResults } from '@/components/transcript-search-results';
 import { WindowSplitter } from '@/components/window-splitter';
@@ -313,6 +319,66 @@ function MobileTranscriptDrawerContent({
   );
 }
 
+type PlaylistItem = {
+  id: string;
+  title: string | null;
+  thumbnailUrl: string | null;
+  lengthSeconds: number | null;
+  publishedAt: Date | null;
+  channel: {
+    id: string;
+    name: string;
+    slug: string;
+    avatarUrl: string | null;
+  };
+};
+
+function MobilePlaylistDrawerContent({
+  listId,
+  listType,
+  listTitle,
+  items,
+  currentMediaId,
+}: {
+  listId: string;
+  listType: 'playlist' | 'series';
+  listTitle?: string;
+  items: PlaylistItem[];
+  currentMediaId: string;
+}) {
+  const currentIndex = items.findIndex((item) => item.id === currentMediaId);
+
+  return (
+    <>
+      <div className="flex h-10 items-center gap-2 border-zinc-200 border-b border-solid px-5 dark:border-zinc-800">
+        <div className="flex grow items-baseline gap-2 pb-0.5">
+          <MobileDrawer.Title className="font-bold text-base text-primary">
+            {listTitle ?? (listType === 'playlist' ? 'Playlist' : 'Series')}
+          </MobileDrawer.Title>
+          <span className="text-secondary text-xs">
+            {currentIndex >= 0 ? currentIndex + 1 : '?'} / {items.length}
+          </span>
+        </div>
+        <MobileDrawer.Close className="flex size-7 items-center justify-center rounded-lg hover:bg-white/10">
+          <IconListNumbers size={16} className="text-primary/80" />
+        </MobileDrawer.Close>
+      </div>
+
+      <div className="fade-bottom flex-1 overflow-hidden">
+        <div className="h-full overflow-y-auto">
+          <PlaylistSidebar
+            listId={listId}
+            listType={listType}
+            listTitle={listTitle}
+            items={items}
+            currentMediaId={currentMediaId}
+          />
+        </div>
+      </div>
+    </>
+  );
+}
+
 function RouteComponent() {
   const params = Route.useParams();
   const location = useLocation();
@@ -321,6 +387,7 @@ function RouteComponent() {
   const queryClient = useQueryClient();
   const isLoggedIn = useIsLoggedIn();
   const [transcriptDialogOpen, setTranscriptDialogOpen] = useState(false);
+  const [playlistDialogOpen, setPlaylistDialogOpen] = useState(false);
   const [commentsDialogOpen, setCommentsDialogOpen] = useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [loginDialogAction, setLoginDialogAction] = useState<
@@ -753,9 +820,11 @@ function RouteComponent() {
               publishedAt={media.publishedAt}
               createdAt={media.createdAt}
               showTranscriptTab={!layout.showSidebar}
+              showPlaylistTab={!layout.showSidebar && hasPlaylistContext}
               showCommentsTab={!layout.showSidebar}
               commentsEnabled={media.userCommentsEnabled}
               onTranscriptClick={() => setTranscriptDialogOpen(true)}
+              onPlaylistClick={() => setPlaylistDialogOpen(true)}
               onCommentsClick={() => setCommentsDialogOpen(true)}
             />
 
@@ -837,6 +906,29 @@ function RouteComponent() {
           </MobileDrawer.Content>
         </MobileDrawer.Portal>
       </MobileDrawer.Root>
+
+      {/* Mobile Playlist Dialog */}
+      {hasPlaylistContext &&
+      searchParams.list &&
+      searchParams.type &&
+      playlistItems.length > 0 ? (
+        <MobileDrawer.Root
+          open={playlistDialogOpen}
+          onOpenChange={setPlaylistDialogOpen}
+        >
+          <MobileDrawer.Portal>
+            <MobileDrawer.Content className="h-[85vh]">
+              <MobilePlaylistDrawerContent
+                listId={searchParams.list}
+                listType={searchParams.type}
+                listTitle={playlistData?.title}
+                items={playlistItems}
+                currentMediaId={mediaIdShort}
+              />
+            </MobileDrawer.Content>
+          </MobileDrawer.Portal>
+        </MobileDrawer.Root>
+      ) : null}
 
       {/* Mobile Comments Dialog */}
       <MobileDrawer.Root

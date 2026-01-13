@@ -7,9 +7,11 @@ type MediaInfoTabsProps = {
   publishedAt: Date | null;
   createdAt: Date;
   showTranscriptTab: boolean;
+  showPlaylistTab: boolean;
   showCommentsTab: boolean;
   commentsEnabled: boolean;
   onTranscriptClick: () => void;
+  onPlaylistClick: () => void;
   onCommentsClick: () => void;
 };
 
@@ -19,9 +21,11 @@ export function MediaInfoTabs({
   publishedAt,
   createdAt,
   showTranscriptTab,
+  showPlaylistTab,
   showCommentsTab,
   commentsEnabled,
   onTranscriptClick,
+  onPlaylistClick,
   onCommentsClick,
 }: MediaInfoTabsProps) {
   return (
@@ -58,6 +62,17 @@ export function MediaInfoTabs({
           >
             <span className="font-medium text-primary/70 text-sm hover:text-primary">
               Transcript
+            </span>
+          </button>
+        ) : null}
+        {showPlaylistTab ? (
+          <button
+            type="button"
+            onClick={onPlaylistClick}
+            className="relative pt-1.5 pb-2"
+          >
+            <span className="font-medium text-primary/70 text-sm hover:text-primary">
+              Playlist
             </span>
           </button>
         ) : null}
