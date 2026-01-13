@@ -1,23 +1,30 @@
 import { cn } from '@/util/cn';
 
 type ChannelTabsProps = {
-  activeTab?: 'videos' | 'playlists' | 'links';
+  activeTab?: 'videos' | 'playlists' | 'series' | 'links';
   videoCount?: number;
   playlistCount?: number;
+  seriesCount?: number;
   className?: string;
-  onTabChange?: (tab: 'videos' | 'playlists' | 'links') => void;
+  onTabChange?: (tab: 'videos' | 'playlists' | 'series' | 'links') => void;
 };
 
 export default function ChannelTabs({
   activeTab = 'videos',
   videoCount,
   playlistCount,
+  seriesCount,
   className,
   onTabChange,
 }: ChannelTabsProps) {
   const tabs = [
     { id: 'videos' as const, label: 'Videos', count: videoCount },
-    { id: 'playlists' as const, label: 'Playlists', count: playlistCount },
+    ...(playlistCount && playlistCount > 0
+      ? [{ id: 'playlists' as const, label: 'Playlists', count: playlistCount }]
+      : []),
+    ...(seriesCount && seriesCount > 0
+      ? [{ id: 'series' as const, label: 'Series', count: seriesCount }]
+      : []),
     { id: 'links' as const, label: 'Links', count: undefined },
   ];
 

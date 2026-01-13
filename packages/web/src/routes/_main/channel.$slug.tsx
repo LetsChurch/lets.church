@@ -216,9 +216,13 @@ function RouteComponent() {
     trpc.channel.getChannelBySlug.queryOptions({ slug }),
   );
 
-  const { data: playlists } = useSuspenseQuery(
+  const { data: allLists } = useSuspenseQuery(
     trpc.channel.getChannelPlaylists.queryOptions({ slug }),
   );
+
+  // Separate playlists and series
+  const playlists = allLists.filter((list) => list.type === 'PLAYLIST');
+  const series = allLists.filter((list) => list.type === 'SERIES');
 
   const { data: churches } = useSuspenseQuery(
     trpc.channel.getChannelChurches.queryOptions({ slug }),
@@ -252,9 +256,9 @@ function RouteComponent() {
   const [isTogglingFollow, setIsTogglingFollow] = useState(false);
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<'videos' | 'playlists' | 'links'>(
-    'videos',
-  );
+  const [activeTab, setActiveTab] = useState<
+    'videos' | 'playlists' | 'series' | 'links'
+  >('videos');
 
   useSetBackgroundImage(channel.defaultThumbnailUrl ?? undefined);
 
@@ -458,6 +462,7 @@ function RouteComponent() {
             activeTab={activeTab}
             videoCount={mediaItems.length}
             playlistCount={playlists.length}
+            seriesCount={series.length}
             onTabChange={setActiveTab}
           />
         </div>
@@ -518,19 +523,11 @@ function RouteComponent() {
             playlists && playlists.length > 0 ? (
               <MediaGrid>
                 {playlists.map((playlist) => {
-                  const isSeries = playlist.type === 'SERIES';
-                  const to = isSeries
-                    ? '/series/$seriesId'
-                    : '/playlist/$playlistId';
-                  const params = isSeries
-                    ? { seriesId: playlist.id }
-                    : { playlistId: playlist.id };
-
                   return (
                     <Link
                       key={playlist.id}
-                      to={to}
-                      params={params}
+                      to="/playlist/$playlistId"
+                      params={{ playlistId: playlist.id }}
                       className="group flex flex-col rounded-2xl border-fancy-pants bg-zinc-100 p-4 transition-all hover:shadow-md dark:bg-zinc-900"
                     >
                       {playlist.thumbnailUrl ? (
@@ -565,9 +562,6 @@ function RouteComponent() {
                           {playlist.uploadCount}{' '}
                           {playlist.uploadCount === 1 ? 'video' : 'videos'}
                         </p>
-                        <p className="text-muted text-xs">
-                          {isSeries ? 'Series' : 'Playlist'}
-                        </p>
                       </div>
                     </Link>
                   );
@@ -577,6 +571,65 @@ function RouteComponent() {
               <EmptyState
                 emptyTitle="No playlists yet"
                 emptyBody="This channel hasn't created any playlists yet."
+                emptyCta="Browse Content"
+                emptyCtaHref="/"
+              />
+            )
+          ) : null}
+
+          {/* Series Tab */}
+          {activeTab === 'series' ? (
+            series && series.length > 0 ? (
+              <MediaGrid>
+                {series.map((seriesItem) => {
+                  return (
+                    <Link
+                      key={seriesItem.id}
+                      to="/series/$seriesId"
+                      params={{ seriesId: seriesItem.id }}
+                      className="group flex flex-col rounded-2xl border-fancy-pants bg-zinc-100 p-4 transition-all hover:shadow-md dark:bg-zinc-900"
+                    >
+                      {seriesItem.thumbnailUrl ? (
+                        <div className="relative aspect-video w-full overflow-hidden rounded-lg">
+                          <img
+                            src={seriesItem.thumbnailUrl}
+                            alt=""
+                            className="size-full object-cover"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                            <IconPlaylist
+                              size={32}
+                              className="text-white"
+                              strokeWidth={2}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex aspect-video w-full items-center justify-center rounded-lg bg-zinc-200 dark:bg-zinc-700">
+                          <IconPlaylist
+                            size={32}
+                            className="text-zinc-400 dark:text-zinc-500"
+                            strokeWidth={2}
+                          />
+                        </div>
+                      )}
+                      <div className="mt-3 min-w-0 flex-1">
+                        <h3 className="truncate font-semibold text-primary">
+                          {seriesItem.title}
+                        </h3>
+                        <p className="text-secondary text-sm">
+                          {seriesItem.uploadCount}{' '}
+                          {seriesItem.uploadCount === 1 ? 'video' : 'videos'}
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </MediaGrid>
+            ) : (
+              <EmptyState
+                emptyTitle="No series yet"
+                emptyBody="This channel hasn't created any series yet."
                 emptyCta="Browse Content"
                 emptyCtaHref="/"
               />
