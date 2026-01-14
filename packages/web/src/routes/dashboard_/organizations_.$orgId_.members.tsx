@@ -3,31 +3,31 @@ import {
   Avatar,
   Badge,
   Button,
+  Divider,
   Group,
   Modal,
   Stack,
   Table,
   Text,
-  TextInput,
   Title,
   Tooltip,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
+  IconMail,
   IconPlus,
+  IconRefresh,
   IconTrash,
   IconUserCheck,
   IconUserShield,
+  IconX,
 } from '@tabler/icons-react';
 import {
   useMutation,
-  useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { useState } from 'react';
-import { useDebounce } from 'use-debounce';
 import { useAppMantineForm } from '@/components/mantine';
 import { showFailure, showSuccess } from '@/routes/-mantine';
 import { useTRPC } from '@/trpc/react';
@@ -44,6 +44,19 @@ type OrganizationMembershipWithUser = {
     username: string;
     fullName: string | null;
     avatarUrl: string | null;
+  };
+};
+
+type OrganizationInvitation = {
+  id: string;
+  email: string;
+  isAdmin: boolean;
+  canEdit: boolean;
+  createdAt: Date;
+  expiresAt: Date;
+  invitedBy: {
+    username: string;
+    fullName: string | null;
   };
 };
 
@@ -110,64 +123,47 @@ function OrganizationMembersPage() {
       orgId,
     }),
   );
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearchQuery] = useDebounce(searchQuery, 200);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  const { data: invitations = [] } = useSuspenseQuery(
+    trpc.dashboard.organizations.getOrganizationInvitations.queryOptions({
+      orgId,
+    }),
+  );
 
   const isAdmin = organization.canAdmin ?? false;
 
   const [
-    addMemberModalOpened,
-    { open: openAddMemberModal, close: closeAddMemberModal },
+    inviteMemberModalOpened,
+    { open: openInviteMemberModal, close: closeInviteMemberModal },
   ] = useDisclosure();
-
-  const handleCloseModal = () => {
-    closeAddMemberModal();
-    setSearchQuery('');
-    setSelectedUserId(null);
-    form.reset();
-  };
 
   const form = useAppMantineForm({
     defaultValues: {
+      email: '',
       role: 'member',
     },
     onSubmit: async ({ value }) => {
-      if (!selectedUserId) return;
-
-      const permissions = {
+      inviteMemberMutation.mutate({
+        orgId,
+        email: value.email,
         isAdmin: value.role === 'admin',
         canEdit: value.role === 'admin' || value.role === 'editor',
-      };
-
-      addMemberMutation.mutate({
-        orgId,
-        userId: selectedUserId,
-        ...permissions,
       });
     },
   });
 
-  const { data: searchResults = [] } = useQuery({
-    ...trpc.dashboard.organizations.searchUsers.queryOptions({
-      orgId,
-      query: debouncedSearchQuery,
-    }),
-    enabled: debouncedSearchQuery.length >= 2,
-    staleTime: 30000,
-  });
-
-  const addMemberMutation = useMutation(
-    trpc.dashboard.organizations.addOrganizationMember.mutationOptions({
+  const inviteMemberMutation = useMutation(
+    trpc.dashboard.organizations.inviteToOrganization.mutationOptions({
       onSuccess: () => {
-        showSuccess({ message: 'User added successfully' });
+        showSuccess({ message: 'Invitation sent successfully' });
         queryClient.invalidateQueries({
           queryKey: ['dashboard', 'organizations'],
         });
-        handleCloseModal();
+        closeInviteMemberModal();
+        form.reset();
       },
       onError: (error) => {
-        showFailure({ message: error.message || 'Failed to add user' });
+        showFailure({ message: error.message || 'Failed to send invitation' });
       },
     }),
   );
@@ -186,6 +182,38 @@ function OrganizationMembersPage() {
     }),
   );
 
+  const cancelInvitationMutation = useMutation(
+    trpc.dashboard.organizations.cancelInvitation.mutationOptions({
+      onSuccess: () => {
+        showSuccess({ message: 'Invitation cancelled' });
+        queryClient.invalidateQueries({
+          queryKey: ['dashboard', 'organizations'],
+        });
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to cancel invitation',
+        });
+      },
+    }),
+  );
+
+  const resendInvitationMutation = useMutation(
+    trpc.dashboard.organizations.resendInvitation.mutationOptions({
+      onSuccess: () => {
+        showSuccess({ message: 'Invitation resent' });
+        queryClient.invalidateQueries({
+          queryKey: ['dashboard', 'organizations'],
+        });
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to resend invitation',
+        });
+      },
+    }),
+  );
+
   const handleRemoveMember = (appUserId: string) => {
     removeMemberMutation.mutate({
       orgId,
@@ -193,20 +221,121 @@ function OrganizationMembersPage() {
     });
   };
 
+  const handleCancelInvitation = (invitationId: string) => {
+    cancelInvitationMutation.mutate({
+      orgId,
+      invitationId,
+    });
+  };
+
+  const handleResendInvitation = (invitationId: string) => {
+    resendInvitationMutation.mutate({
+      orgId,
+      invitationId,
+    });
+  };
+
   return (
     <>
       <Group justify="space-between" align="center" mb="lg">
-        <Title order={1}>Users</Title>
+        <Title order={1}>Members</Title>
         {isAdmin && (
           <Button
             leftSection={<IconPlus size={16} />}
-            onClick={openAddMemberModal}
+            onClick={openInviteMemberModal}
           >
-            Add User
+            Send Invitation
           </Button>
         )}
       </Group>
 
+      {/* Pending Invitations Section */}
+      {isAdmin && invitations.length > 0 && (
+        <>
+          <Title order={3} mb="md">
+            Pending Invitations
+          </Title>
+          <Table mb="xl">
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Email</Table.Th>
+                <Table.Th>Role</Table.Th>
+                <Table.Th>Invited By</Table.Th>
+                <Table.Th>Expires</Table.Th>
+                <Table.Th>Actions</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {invitations.map((invitation: OrganizationInvitation) => (
+                <Table.Tr key={invitation.id}>
+                  <Table.Td>
+                    <Group gap="xs">
+                      <IconMail size={16} />
+                      <Text size="sm">{invitation.email}</Text>
+                    </Group>
+                  </Table.Td>
+                  <Table.Td>
+                    <Badge
+                      color={
+                        invitation.isAdmin
+                          ? 'blue'
+                          : invitation.canEdit
+                            ? 'green'
+                            : 'gray'
+                      }
+                    >
+                      {invitation.isAdmin
+                        ? 'Admin'
+                        : invitation.canEdit
+                          ? 'Editor'
+                          : 'Member'}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="sm">
+                      {invitation.invitedBy.fullName ||
+                        invitation.invitedBy.username}
+                    </Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="sm">{formatDate(invitation.expiresAt)}</Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Group gap="xs">
+                      <Tooltip label="Resend Invitation">
+                        <ActionIcon
+                          color="blue"
+                          variant="subtle"
+                          onClick={() => handleResendInvitation(invitation.id)}
+                          loading={resendInvitationMutation.isPending}
+                        >
+                          <IconRefresh size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                      <Tooltip label="Cancel Invitation">
+                        <ActionIcon
+                          color="red"
+                          variant="subtle"
+                          onClick={() => handleCancelInvitation(invitation.id)}
+                          loading={cancelInvitationMutation.isPending}
+                        >
+                          <IconX size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+          <Divider my="xl" />
+        </>
+      )}
+
+      {/* Active Members Section */}
+      <Title order={3} mb="md">
+        Active Members
+      </Title>
       <Table>
         <Table.Thead>
           <Table.Tr>
@@ -269,7 +398,7 @@ function OrganizationMembersPage() {
                         color="gray"
                         leftSection={<IconUserCheck size={12} />}
                       >
-                        User
+                        Member
                       </Badge>
                     )}
                   </Group>
@@ -280,7 +409,7 @@ function OrganizationMembersPage() {
                 {isAdmin && (
                   <Table.Td>
                     <Group gap="xs">
-                      <Tooltip label="Remove User">
+                      <Tooltip label="Remove Member">
                         <ActionIcon
                           color="red"
                           variant="subtle"
@@ -302,9 +431,12 @@ function OrganizationMembersPage() {
       </Table>
 
       <Modal
-        opened={addMemberModalOpened}
-        onClose={handleCloseModal}
-        title="Add User"
+        opened={inviteMemberModalOpened}
+        onClose={() => {
+          closeInviteMemberModal();
+          form.reset();
+        }}
+        title="Send Invitation"
         size="md"
       >
         <form
@@ -315,77 +447,42 @@ function OrganizationMembersPage() {
           }}
         >
           <Stack>
-            <TextInput
-              label="Search Users"
-              placeholder="Enter username to search..."
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.currentTarget.value)}
-            />
+            <form.AppField name="email">
+              {(field) => (
+                <field.TextInputField
+                  label="Email Address"
+                  placeholder="user@example.com"
+                  type="email"
+                  required
+                />
+              )}
+            </form.AppField>
 
-            {searchResults.length > 0 && (
-              <Stack gap="xs">
-                <Text size="sm" fw={500}>
-                  Search Results:
-                </Text>
-                {searchResults.map((user) => (
-                  <Group
-                    key={user.id}
-                    p="xs"
-                    style={{
-                      border:
-                        selectedUserId === user.id
-                          ? '2px solid var(--mantine-color-blue-6)'
-                          : '1px solid var(--mantine-color-gray-3)',
-                      borderRadius: 'var(--mantine-radius-sm)',
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => setSelectedUserId(user.id)}
-                  >
-                    <Avatar
-                      src={user.avatarUrl}
-                      alt={user.fullName || user.username}
-                      size="sm"
-                    >
-                      {(user.fullName || user.username).charAt(0).toUpperCase()}
-                    </Avatar>
-                    <div>
-                      <Text fw={500} size="sm">
-                        {user.fullName || user.username}
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        @{user.username}
-                      </Text>
-                    </div>
-                  </Group>
-                ))}
-              </Stack>
-            )}
-
-            {selectedUserId && (
-              <form.AppField name="role">
-                {(field) => (
-                  <field.SelectField
-                    label="Role"
-                    data={[
-                      { value: 'member', label: 'User' },
-                      { value: 'editor', label: 'Editor' },
-                      { value: 'admin', label: 'Admin' },
-                    ]}
-                  />
-                )}
-              </form.AppField>
-            )}
+            <form.AppField name="role">
+              {(field) => (
+                <field.SelectField
+                  label="Role"
+                  data={[
+                    { value: 'member', label: 'Member' },
+                    { value: 'editor', label: 'Editor' },
+                    { value: 'admin', label: 'Admin' },
+                  ]}
+                />
+              )}
+            </form.AppField>
 
             <Group justify="flex-end" gap="sm">
-              <Button variant="outline" onClick={handleCloseModal}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  closeInviteMemberModal();
+                  form.reset();
+                }}
+              >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={!selectedUserId}
-                loading={addMemberMutation.isPending}
-              >
-                Add User
+              <Button type="submit" loading={inviteMemberMutation.isPending}>
+                Send Invitation
               </Button>
             </Group>
           </Stack>

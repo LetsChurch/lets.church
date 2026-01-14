@@ -16,8 +16,8 @@ import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarXs2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { getClientIpAddress } from '@/util/request-ip';
+import { getPublicImageUrl, getPublicMediaUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
-import { getPublicImageUrl, getPublicMediaUrl } from '@/util/url';
 import { ffprobeSchema } from '@/util/zod';
 import { authProcedure, publicProcedure } from '../trpc';
 

@@ -114,6 +114,31 @@ export const userSearchSchema = z.object({
   query: z.string().min(1),
 });
 
+export const inviteChannelMemberSchema = z
+  .object({
+    channelId: channelIdSchema,
+    email: z.preprocess(
+      (val) => (typeof val === 'string' ? val.toLowerCase().trim() : val),
+      z.string().email('Invalid email address'),
+    ),
+  })
+  .and(memberPermissionsSchema);
+
+export const respondToChannelInvitationSchema = z.object({
+  token: IncomingIdSchema,
+  accept: z.boolean(),
+});
+
+export const cancelChannelInvitationSchema = z.object({
+  channelId: channelIdSchema,
+  invitationId: IncomingIdSchema,
+});
+
+export const resendChannelInvitationSchema = z.object({
+  channelId: channelIdSchema,
+  invitationId: IncomingIdSchema,
+});
+
 export const createUploadSchema = z.object({
   channelId: channelIdSchema,
   originalFileName: z

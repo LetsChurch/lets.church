@@ -287,14 +287,16 @@ function ChannelDetailsPage() {
           value={channel._count.uploadLists}
         />
 
-        <StatCard
-          title="Members"
-          to="/dashboard/channels/$channelId/members"
-          color="green"
-          icon={<IconShield size={22} stroke={1.5} />}
-          tooltip="People who can manage and upload content to this channel"
-          value={channel._count.memberships}
-        />
+        {(isChannelAdmin || isSiteAdmin) && (
+          <StatCard
+            title="Members"
+            to="/dashboard/channels/$channelId/members"
+            color="green"
+            icon={<IconShield size={22} stroke={1.5} />}
+            tooltip="People who can manage and upload content to this channel"
+            value={channel._count.memberships}
+          />
+        )}
 
         <StatCard
           title="Subscribers"

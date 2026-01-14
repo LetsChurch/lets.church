@@ -1,12 +1,31 @@
 import { minify } from 'html-minifier';
 import mjml2html from 'mjml';
 import { stripIndent } from 'proper-tags';
+import xss from 'xss';
 
 const fontFamily = 'Inter, sans-serif';
 const color = '#111111';
 
+// Configure xss to escape all HTML (text-only output)
+const xssOptions = {
+  whiteList: {}, // No tags allowed
+  stripIgnoreTag: true,
+  stripIgnoreTagBody: ['script', 'style'],
+};
+
+/**
+ * Sanitizes user input for safe HTML insertion
+ */
+export function sanitizeForHtml(unsafe: string): string {
+  return xss(unsafe, xssOptions);
+}
+
 // biome-ignore lint/suspicious/noExplicitAny: mjml types are not well defined
 export function emailHtml(title: string, body: string, minifyOp = true): any {
+  // Sanitize inputs to prevent XSS
+  const safeTitle = sanitizeForHtml(title);
+  const safeBody = sanitizeForHtml(body);
+
   const res = mjml2html(
     {
       tagName: 'mjml',
@@ -19,7 +38,7 @@ export function emailHtml(title: string, body: string, minifyOp = true): any {
             {
               tagName: 'mj-title',
               attributes: {},
-              content: title,
+              content: safeTitle,
             },
             {
               tagName: 'mj-font',
@@ -31,7 +50,7 @@ export function emailHtml(title: string, body: string, minifyOp = true): any {
             {
               tagName: 'mj-preview',
               attributes: {},
-              content: body.split('\n\n').at(0) ?? '',
+              content: safeBody.split('\n\n').at(0) ?? '',
             },
             {
               tagName: 'mj-style',
@@ -83,8 +102,8 @@ export function emailHtml(title: string, body: string, minifyOp = true): any {
                         'line-height': '165%',
                       },
                       content: stripIndent`
-                        <h1>${title}</h1>
-                        ${body
+                        <h1>${safeTitle}</h1>
+                        ${safeBody
                           .trim()
                           .split('\n\n')
                           .map((content) => `<p>${content}</p>`)

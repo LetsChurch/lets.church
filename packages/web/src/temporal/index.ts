@@ -2,6 +2,12 @@ import type { Prisma, UploadVariant } from '@letschurch/db';
 import { prisma } from '@letschurch/db';
 import type { S3ClientId } from '@letschurch/s3';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
+
+export type InvitationEmailArgs = {
+  invitationId: string;
+  type: 'organization' | 'channel';
+};
+
 import {
   type BackfillUploadStateSizesWorkflowParams,
   type BackfillUploadStatesWorkflowParams,
@@ -21,7 +27,10 @@ import {
   handleMultipartMediaUploadWorkflow,
   importMediaWorkflow,
   postUserRegistrationWorkflow,
+  type SendVerificationEmailArgs,
   sendEmailWorkflow,
+  sendInvitationEmailWorkflow,
+  sendVerificationEmailWorkflow,
   updateUploadRecordSignal,
   updateUploadRecordWorkflow,
   uploadDoneSignal,
@@ -156,6 +165,26 @@ export async function sendEmail(
     taskQueue: BACKGROUND_QUEUE,
     args,
     workflowId: id,
+  });
+}
+
+export async function sendInvitationEmail(args: InvitationEmailArgs) {
+  const workflowId = `${args.type}-invitation:${args.invitationId}:${Date.now()}`;
+  return (await client).workflow.start(sendInvitationEmailWorkflow, {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    args: [args],
+    workflowId,
+  });
+}
+
+export async function sendVerificationEmail(args: SendVerificationEmailArgs) {
+  const workflowId = `verification-email:${args.userId}:${Date.now()}`;
+  return (await client).workflow.start(sendVerificationEmailWorkflow, {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    args: [args],
+    workflowId,
   });
 }
 

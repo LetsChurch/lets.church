@@ -80,6 +80,11 @@ export {
   validateSendEmailConfig,
 } from './send-email';
 export {
+  default as sendInvitationEmail,
+  type InvitationEmailArgs,
+  validateSendInvitationEmailConfig,
+} from './send-invitation-email';
+export {
   default as sendVerificationEmail,
   validateSendVerificationEmailConfig,
 } from './send-verification-email';

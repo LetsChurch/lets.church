@@ -1,7 +1,7 @@
 import { publicS3 } from '@letschurch/s3/public';
 import type { z } from 'zod';
 import { getThumbnailResize, type ThumbnailSize } from '@/schemas/common';
-import { getPublicImageUrl } from '@/util/url';
+import { getPublicImageUrl } from '@/util/server-env';
 
 /**
  * Resolves a thumbnail URL with fallback to channel default thumbnail.

@@ -3,7 +3,7 @@ import { PART_SIZE } from '@letschurch/s3';
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
-import { emailHtml } from '@letschurch/temporal/util/email';
+import { emailHtml, sanitizeForHtml } from '@letschurch/temporal/util/email';
 import { sendEmailWorkflow } from '@letschurch/temporal/workflows/background/send-email';
 import { TRPCError } from '@trpc/server';
 import { invariant } from 'es-toolkit';
@@ -16,9 +16,9 @@ import {
   multipartUploadSchema,
 } from '@/schemas/common';
 import {
-  addMemberSchema,
   addToPlaylistSchema,
   bulkSetVisibilitySchema,
+  cancelChannelInvitationSchema,
   channelQuerySchema,
   channelUploadsQuerySchema,
   createChannelSchema,
@@ -27,15 +27,16 @@ import {
   deletePlaylistSchema,
   deleteUploadSchema,
   importMediaSchema,
+  inviteChannelMemberSchema,
   playlistQuerySchema,
   removeFromPlaylistSchema,
   removeMemberSchema,
   reorderPlaylistSchema,
+  resendChannelInvitationSchema,
   updateChannelSchema,
   updatePlaylistSchema,
   updateUploadSchema,
   uploadQuerySchema,
-  userSearchSchema,
 } from '@/schemas/dashboard';
 import {
   client,
@@ -43,19 +44,16 @@ import {
   deleteUpload,
   handleMultipartMediaUpload,
   importMedia,
+  sendInvitationEmail,
 } from '@/temporal';
 import {
   mantineAvatarLg2x,
   mantineAvatarSm2x,
   mantineAvatarXl2x,
 } from '@/util/avatar-sizes';
-import logger from '@/util/logger';
-import {
-  getPublicImageUrl,
-  getPublicMediaUrl,
-  ResizeType,
-} from '@/util/url';
 import { coverImageFull, thumbnailMedium } from '@/util/image-sizes';
+import logger from '@/util/logger';
+import { getPublicImageUrl, getPublicMediaUrl } from '@/util/server-env';
 import { authProcedure, router } from '../../trpc';
 
 const moduleLogger = logger.child({
@@ -228,10 +226,10 @@ export const channelRouter = router({
             stripIndent`
               A new channel has been created and is pending approval.
 
-              <b>Channel Name:</b> ${channel.name}<br>
-              <b>Channel Slug:</b> ${channel.slug}<br>
-              <b>Creator:</b> ${user?.fullName || user?.username || 'Unknown'}<br>
-              ${user?.emails[0]?.email ? `<b>Creator Email:</b> ${user.emails[0].email}<br>` : ''}
+              <b>Channel Name:</b> ${sanitizeForHtml(channel.name)}<br>
+              <b>Channel Slug:</b> ${sanitizeForHtml(channel.slug)}<br>
+              <b>Creator:</b> ${sanitizeForHtml(user?.fullName || user?.username || 'Unknown')}<br>
+              ${user?.emails[0]?.email ? `<b>Creator Email:</b> ${sanitizeForHtml(user.emails[0].email)}<br>` : ''}
 
               Please <a href="${approvalUrl}">click here</a> to review and approve this channel.
 
@@ -632,126 +630,230 @@ export const channelRouter = router({
     };
   }),
 
-  searchUsers: channelAdminProcedure
-    .input(userSearchSchema)
-    .query(async ({ ctx, input }) => {
-      moduleLogger.info(
-        {
-          channelId: input.channelId,
-          appUserId: ctx.session.appUserId,
-          context: {
-            query: input.query,
-          },
-        },
-        'Searching users for channel',
-      );
-
-      const users = await prisma.appUser.findMany({
-        select: {
-          id: true,
-          username: true,
-          fullName: true,
-          avatarPath: true,
-        },
-        where: {
-          username: {
-            contains: input.query,
-            mode: 'insensitive',
-          },
-          NOT: {
-            channelMemberships: {
-              some: {
-                channelId: input.channelId,
-              },
-            },
-          },
-        },
-        take: 10,
-      });
-
-      moduleLogger.info(
-        {
-          channelId: input.channelId,
-          appUserId: ctx.session.appUserId,
-          context: {
-            query: input.query,
-            resultCount: users.length,
-          },
-        },
-        'User search completed',
-      );
-
-      return users.map((user) => {
-        const { avatarPath, ...userWithoutPath } = user;
-        const avatarUrl = avatarPath
-          ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-              resize: mantineAvatarSm2x,
-            })
-          : null;
-
-        return {
-          ...userWithoutPath,
-          avatarUrl,
-        };
-      });
-    }),
-
-  addChannelMember: channelAdminProcedure
-    .input(addMemberSchema)
+  inviteToChannel: channelAdminProcedure
+    .input(inviteChannelMemberSchema)
     .mutation(async ({ ctx, input }) => {
       moduleLogger.info(
         {
           channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
           context: {
-            newMemberUserId: input.userId,
             isAdmin: input.isAdmin,
             canEdit: input.canEdit,
             canUpload: input.canUpload,
             canDownload: input.canDownload,
-            addedBy: ctx.session.appUserId,
           },
         },
-        'Adding channel member',
+        'Inviting user to channel',
       );
 
-      try {
-        await prisma.channelMembership.create({
-          data: {
-            channelId: input.channelId,
-            appUserId: input.userId,
-            isAdmin: input.isAdmin,
-            canEdit: input.canEdit,
-            canUpload: input.canUpload,
-            canDownload: input.canDownload,
+      // Check if email already belongs to a member
+      const existingMember = await prisma.channelMembership.findFirst({
+        where: {
+          channelId: input.channelId,
+          appUser: {
+            emails: {
+              some: {
+                email: input.email,
+              },
+            },
           },
-        });
+        },
+      });
 
+      // If already a member, treat as no-op to prevent user enumeration
+      if (existingMember) {
         moduleLogger.info(
           {
             channelId: input.channelId,
-            context: {
-              newMemberUserId: input.userId,
-              addedBy: ctx.session.appUserId,
-            },
+            appUserId: ctx.session.appUserId,
           },
-          'Channel member added successfully',
+          'User is already a member of this channel, skipping invitation',
         );
+        return { success: true, message: 'Invitation sent successfully' };
+      }
 
-        return { success: true };
-      } catch (error) {
-        moduleLogger.error(
+      // Check for existing pending invitation
+      const existingInvitation = await prisma.channelInvitation.findUnique({
+        where: {
+          channelId_email: {
+            channelId: input.channelId,
+            email: input.email,
+          },
+        },
+      });
+
+      // If already invited and pending, treat as no-op to prevent user enumeration
+      if (
+        existingInvitation &&
+        existingInvitation.status === 'PENDING' &&
+        existingInvitation.expiresAt > new Date()
+      ) {
+        moduleLogger.info(
           {
             channelId: input.channelId,
-            context: {
-              newMemberUserId: input.userId,
-              addedBy: ctx.session.appUserId,
-              error: error instanceof Error ? error.message : String(error),
+            appUserId: ctx.session.appUserId,
+          },
+          'Pending invitation already exists for this email, skipping',
+        );
+        return { success: true, message: 'Invitation sent successfully' };
+      }
+
+      // Create or update invitation
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+      const invitation = await prisma.channelInvitation.upsert({
+        where: {
+          channelId_email: {
+            channelId: input.channelId,
+            email: input.email,
+          },
+        },
+        update: {
+          status: 'PENDING',
+          isAdmin: input.isAdmin,
+          canEdit: input.canEdit,
+          canUpload: input.canUpload,
+          canDownload: input.canDownload,
+          expiresAt,
+          respondedAt: null,
+          invitedById: ctx.session.appUserId,
+        },
+        create: {
+          channelId: input.channelId,
+          email: input.email,
+          isAdmin: input.isAdmin,
+          canEdit: input.canEdit,
+          canUpload: input.canUpload,
+          canDownload: input.canDownload,
+          invitedById: ctx.session.appUserId,
+          expiresAt,
+        },
+      });
+
+      // Send invitation email
+      await sendInvitationEmail({
+        invitationId: invitation.id,
+        type: 'channel',
+      });
+
+      moduleLogger.info(
+        {
+          channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
+          context: {
+            invitationId: invitation.id,
+          },
+        },
+        'Channel invitation created and email sent',
+      );
+
+      // Return identical success message for security (no user enumeration)
+      return { success: true, message: 'Invitation sent successfully' };
+    }),
+
+  getChannelInvitations: channelAdminProcedure
+    .input(channelQuerySchema)
+    .query(async ({ input }) => {
+      return prisma.channelInvitation.findMany({
+        where: {
+          channelId: input.channelId,
+          status: 'PENDING',
+          expiresAt: { gt: new Date() },
+        },
+        select: {
+          id: true,
+          email: true,
+          isAdmin: true,
+          canEdit: true,
+          canUpload: true,
+          canDownload: true,
+          createdAt: true,
+          expiresAt: true,
+          invitedBy: {
+            select: {
+              username: true,
+              fullName: true,
             },
           },
-          'Failed to add channel member',
-        );
-        throw error;
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }),
+
+  cancelChannelInvitation: channelAdminProcedure
+    .input(cancelChannelInvitationSchema)
+    .mutation(async ({ input }) => {
+      // Use updateMany to ensure the invitation belongs to the channel
+      const result = await prisma.channelInvitation.updateMany({
+        where: {
+          id: input.invitationId,
+          channelId: input.channelId,
+        },
+        data: { status: 'CANCELLED' },
+      });
+
+      if (result.count === 0) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Invitation not found',
+        });
       }
+
+      return { success: true };
+    }),
+
+  resendChannelInvitation: channelAdminProcedure
+    .input(resendChannelInvitationSchema)
+    .mutation(async ({ ctx, input }) => {
+      // First fetch and validate the invitation
+      const existingInvitation = await prisma.channelInvitation.findFirst({
+        where: {
+          id: input.invitationId,
+          channelId: input.channelId,
+        },
+      });
+
+      if (!existingInvitation) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Invitation not found',
+        });
+      }
+
+      if (existingInvitation.status !== 'PENDING') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Can only resend pending invitations',
+        });
+      }
+
+      // Update the expiration
+      const invitation = await prisma.channelInvitation.update({
+        where: { id: input.invitationId },
+        data: {
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      // Send invitation email
+      await sendInvitationEmail({
+        invitationId: invitation.id,
+        type: 'channel',
+      });
+
+      moduleLogger.info(
+        {
+          channelId: input.channelId,
+          appUserId: ctx.session.appUserId,
+          context: {
+            invitationId: invitation.id,
+          },
+        },
+        'Channel invitation resent',
+      );
+
+      return { success: true };
     }),
 
   removeChannelMember: channelAdminProcedure

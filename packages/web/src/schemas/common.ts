@@ -18,7 +18,11 @@ export const finalizeMultipartUploadSchema = z.object({
 export const ThumbnailSize = z.enum(['featured', 'card', 'table', 'poster']);
 
 type Resize = {
-  resize: { type?: typeof ResizeType[keyof typeof ResizeType]; width: number; height?: number };
+  resize: {
+    type?: (typeof ResizeType)[keyof typeof ResizeType];
+    width: number;
+    height?: number;
+  };
 };
 
 export function getThumbnailResize(

@@ -3,31 +3,31 @@ import {
   Avatar,
   Badge,
   Button,
+  Divider,
   Group,
   Modal,
   Stack,
   Table,
   Text,
-  TextInput,
   Title,
   Tooltip,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
+  IconMail,
   IconPlus,
+  IconRefresh,
   IconTrash,
   IconUserCheck,
   IconUserShield,
+  IconX,
 } from '@tabler/icons-react';
 import {
   useMutation,
-  useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { useState } from 'react';
-import { useDebounce } from 'use-debounce';
 import { useAppMantineForm } from '@/components/mantine';
 import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
@@ -45,6 +45,21 @@ type MembershipWithUser = {
     username: string;
     fullName: string | null;
     avatarUrl: string | null;
+  };
+};
+
+type ChannelInvitation = {
+  id: string;
+  email: string;
+  isAdmin: boolean;
+  canEdit: boolean;
+  canUpload: boolean;
+  canDownload: boolean;
+  createdAt: Date;
+  expiresAt: Date;
+  invitedBy: {
+    username: string;
+    fullName: string | null;
   };
 };
 
@@ -86,67 +101,60 @@ function ChannelMembersPage() {
       channelId,
     }),
   );
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearchQuery] = useDebounce(searchQuery, 200);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  const { data: invitations = [] } = useSuspenseQuery(
+    trpc.dashboard.channels.getChannelInvitations.queryOptions({
+      channelId,
+    }),
+  );
 
   const isAdmin = channel.canAdmin ?? false;
 
   const [
-    addMemberModalOpened,
-    { open: openAddMemberModal, close: closeAddMemberModal },
+    inviteMemberModalOpened,
+    { open: openInviteMemberModal, close: closeInviteMemberModal },
   ] = useDisclosure();
-
-  const handleCloseModal = () => {
-    closeAddMemberModal();
-    setSearchQuery('');
-    setSelectedUserId(null);
-    form.reset();
-  };
 
   const form = useAppMantineForm({
     defaultValues: {
+      email: '',
       role: 'uploader',
     },
     onSubmit: async ({ value }) => {
-      if (!selectedUserId) return;
-
       const permissions = {
         isAdmin: value.role === 'admin',
         canEdit: value.role === 'admin' || value.role === 'editor',
-        canUpload: true,
+        canUpload: value.role !== 'member',
+        canDownload: false,
       };
 
-      addMemberMutation.mutate({
+      inviteMemberMutation.mutate({
         channelId,
-        userId: selectedUserId,
+        email: value.email,
         ...permissions,
       });
     },
   });
 
-  const { data: searchResults = [] } = useQuery({
-    ...trpc.dashboard.channels.searchUsers.queryOptions({
-      channelId,
-      query: debouncedSearchQuery,
-    }),
-    enabled: debouncedSearchQuery.length >= 2,
-    staleTime: 30000,
-  });
-
-  const addMemberMutation = useMutation(
-    trpc.dashboard.channels.addChannelMember.mutationOptions({
+  const inviteMemberMutation = useMutation(
+    trpc.dashboard.channels.inviteToChannel.mutationOptions({
       onSuccess: () => {
-        showSuccess({ message: 'Member added successfully' });
+        showSuccess({ message: 'Invitation sent successfully' });
         queryClient.invalidateQueries({
           queryKey: trpc.dashboard.channels.getChannelMembers.queryKey({
             channelId,
           }),
         });
-        handleCloseModal();
+        queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getChannelInvitations.queryKey({
+            channelId,
+          }),
+        });
+        closeInviteMemberModal();
+        form.reset();
       },
       onError: (error) => {
-        showFailure({ message: error.message || 'Failed to add member' });
+        showFailure({ message: error.message || 'Failed to send invitation' });
       },
     }),
   );
@@ -167,10 +175,55 @@ function ChannelMembersPage() {
     }),
   );
 
+  const cancelInvitationMutation = useMutation(
+    trpc.dashboard.channels.cancelChannelInvitation.mutationOptions({
+      onSuccess: () => {
+        showSuccess({ message: 'Invitation cancelled' });
+        queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getChannelInvitations.queryKey({
+            channelId,
+          }),
+        });
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to cancel invitation',
+        });
+      },
+    }),
+  );
+
+  const resendInvitationMutation = useMutation(
+    trpc.dashboard.channels.resendChannelInvitation.mutationOptions({
+      onSuccess: () => {
+        showSuccess({ message: 'Invitation resent' });
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to resend invitation',
+        });
+      },
+    }),
+  );
+
   const handleRemoveMember = (appUserId: string) => {
     removeMemberMutation.mutate({
       channelId,
       appUserId,
+    });
+  };
+
+  const handleCancelInvitation = (invitationId: string) => {
+    cancelInvitationMutation.mutate({
+      channelId,
+      invitationId,
+    });
+  };
+
+  const handleResendInvitation = (invitationId: string) => {
+    resendInvitationMutation.mutate({
+      channelId,
+      invitationId,
     });
   };
 
@@ -182,10 +235,25 @@ function ChannelMembersPage() {
     return roles.length > 0 ? roles.join(', ') : 'Member';
   };
 
+  const getInvitationRoleLabel = (invitation: ChannelInvitation) => {
+    if (invitation.isAdmin) return 'Admin';
+    const roles = [];
+    if (invitation.canEdit) roles.push('Edit');
+    if (invitation.canUpload) roles.push('Upload');
+    return roles.length > 0 ? roles.join(', ') : 'Member';
+  };
+
   const getRoleBadgeColor = (membership: MembershipWithUser) => {
     if (membership.isAdmin) return 'blue';
     if (membership.canEdit) return 'green';
     if (membership.canUpload) return 'yellow';
+    return 'gray';
+  };
+
+  const getInvitationBadgeColor = (invitation: ChannelInvitation) => {
+    if (invitation.isAdmin) return 'blue';
+    if (invitation.canEdit) return 'green';
+    if (invitation.canUpload) return 'yellow';
     return 'gray';
   };
 
@@ -207,142 +275,99 @@ function ChannelMembersPage() {
         <Tooltip
           label={
             isAdmin
-              ? 'Add a new member to this channel'
-              : 'Only admins can add members'
+              ? 'Send invitation to new member'
+              : 'Only admins can send invitations'
           }
           disabled={isAdmin}
         >
           <Button
             leftSection={<IconPlus size={16} />}
-            onClick={openAddMemberModal}
+            onClick={openInviteMemberModal}
             disabled={!isAdmin}
           >
-            Add Member
+            Send Invitation
           </Button>
         </Tooltip>
       </Group>
 
-      <Modal
-        opened={addMemberModalOpened}
-        onClose={handleCloseModal}
-        title="Add Channel Member"
-        size="md"
-        centered
-      >
-        <Stack gap="md">
-          <div>
-            <TextInput
-              label="Search for user"
-              placeholder="Start typing a username..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.currentTarget.value);
-                setSelectedUserId(null);
-              }}
-              mb="xs"
-            />
+      {/* Pending Invitations Section */}
+      {isAdmin && invitations.length > 0 && (
+        <>
+          <Title order={3} mb="md">
+            Pending Invitations
+          </Title>
+          <Table verticalSpacing="md">
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Email</Table.Th>
+                <Table.Th>Role</Table.Th>
+                <Table.Th>Invited By</Table.Th>
+                <Table.Th>Expires</Table.Th>
+                <Table.Th>Actions</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {invitations.map((invitation: ChannelInvitation) => (
+                <Table.Tr key={invitation.id}>
+                  <Table.Td>
+                    <Group gap="xs">
+                      <IconMail size={16} />
+                      <Text size="sm">{invitation.email}</Text>
+                    </Group>
+                  </Table.Td>
+                  <Table.Td>
+                    <Badge
+                      color={getInvitationBadgeColor(invitation)}
+                      size="sm"
+                    >
+                      {getInvitationRoleLabel(invitation)}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="sm">
+                      {invitation.invitedBy.fullName ||
+                        invitation.invitedBy.username}
+                    </Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="sm">{formatDate(invitation.expiresAt)}</Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Group gap="xs">
+                      <Tooltip label="Resend Invitation">
+                        <ActionIcon
+                          color="blue"
+                          variant="subtle"
+                          onClick={() => handleResendInvitation(invitation.id)}
+                          loading={resendInvitationMutation.isPending}
+                        >
+                          <IconRefresh size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                      <Tooltip label="Cancel Invitation">
+                        <ActionIcon
+                          color="red"
+                          variant="subtle"
+                          onClick={() => handleCancelInvitation(invitation.id)}
+                          loading={cancelInvitationMutation.isPending}
+                        >
+                          <IconX size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+          <Divider my="xl" />
+        </>
+      )}
 
-            {debouncedSearchQuery.length >= 2 && searchResults.length > 0 && (
-              <Stack gap="xs" mah={200} style={{ overflowY: 'auto' }}>
-                {searchResults.map((user) => (
-                  <Group
-                    key={user.id}
-                    p="sm"
-                    bg={selectedUserId === user.id ? 'blue.1' : 'gray.0'}
-                    style={{
-                      borderRadius: 8,
-                      cursor: 'pointer',
-                      border:
-                        selectedUserId === user.id
-                          ? '1px solid var(--mantine-color-blue-6)'
-                          : '1px solid transparent',
-                    }}
-                    onClick={() => {
-                      setSelectedUserId(user.id);
-                      setSearchQuery(user.username);
-                    }}
-                  >
-                    <Avatar size="sm" src={user.avatarUrl}>
-                      {user.username.charAt(0).toUpperCase()}
-                    </Avatar>
-                    <div>
-                      <Text size="sm" fw={500}>
-                        {user.username}
-                      </Text>
-                      {user.fullName && (
-                        <Text size="xs" c="dimmed">
-                          {user.fullName}
-                        </Text>
-                      )}
-                    </div>
-                  </Group>
-                ))}
-              </Stack>
-            )}
-
-            {debouncedSearchQuery.length >= 2 && searchResults.length === 0 && (
-              <Text size="sm" c="dimmed" p="sm">
-                No users found matching "{debouncedSearchQuery}"
-              </Text>
-            )}
-          </div>
-
-          {selectedUserId && (
-            <>
-              <Text size="sm" fw={500}>
-                Permissions
-              </Text>
-
-              <form.AppField name="role">
-                {(field) => (
-                  <field.SelectField
-                    label="Role"
-                    data={[
-                      { value: 'admin', label: 'Admin - Full access' },
-                      {
-                        value: 'editor',
-                        label: 'Editor - Can edit and upload',
-                      },
-                      {
-                        value: 'uploader',
-                        label: 'Uploader - Can upload only',
-                      },
-                    ]}
-                  />
-                )}
-              </form.AppField>
-
-              <Text size="xs" c="dimmed" mt="xs">
-                <strong>Note:</strong> You can only add someone who already has
-                a Let's Church account. If they don't have an account yet, have
-                them join Let's Church first.
-              </Text>
-            </>
-          )}
-
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              form.handleSubmit();
-            }}
-          >
-            <Group justify="flex-end" mt="md">
-              <Button variant="outline" onClick={handleCloseModal}>
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={!selectedUserId}
-                loading={addMemberMutation.isPending}
-              >
-                Add Member
-              </Button>
-            </Group>
-          </form>
-        </Stack>
-      </Modal>
-
+      {/* Active Members Section */}
+      <Title order={3} mb="md">
+        Active Members
+      </Title>
       <Table verticalSpacing="md">
         <Table.Thead>
           <Table.Tr>
@@ -437,6 +462,76 @@ function ChannelMembersPage() {
           )}
         </Table.Tbody>
       </Table>
+
+      <Modal
+        opened={inviteMemberModalOpened}
+        onClose={() => {
+          closeInviteMemberModal();
+          form.reset();
+        }}
+        title="Send Invitation"
+        size="md"
+        centered
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
+          }}
+        >
+          <Stack gap="md">
+            <form.AppField name="email">
+              {(field) => (
+                <field.TextInputField
+                  label="Email Address"
+                  placeholder="user@example.com"
+                  type="email"
+                  required
+                />
+              )}
+            </form.AppField>
+
+            <form.AppField name="role">
+              {(field) => (
+                <field.SelectField
+                  label="Role"
+                  data={[
+                    { value: 'admin', label: 'Admin - Full access' },
+                    {
+                      value: 'editor',
+                      label: 'Editor - Can edit and upload',
+                    },
+                    {
+                      value: 'uploader',
+                      label: 'Uploader - Can upload only',
+                    },
+                    {
+                      value: 'member',
+                      label: 'Member - View only',
+                    },
+                  ]}
+                />
+              )}
+            </form.AppField>
+
+            <Group justify="flex-end" mt="md">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  closeInviteMemberModal();
+                  form.reset();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" loading={inviteMemberMutation.isPending}>
+                Send Invitation
+              </Button>
+            </Group>
+          </Stack>
+        </form>
+      </Modal>
     </Stack>
   );
 }

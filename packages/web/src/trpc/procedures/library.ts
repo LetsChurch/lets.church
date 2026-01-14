@@ -4,8 +4,8 @@ import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarXs2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
+import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
-import { getPublicImageUrl } from '@/util/url';
 import { authProcedure } from '../trpc';
 
 const moduleLogger = logger.child({

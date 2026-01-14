@@ -255,14 +255,16 @@ function OrganizationDetailsPage() {
       </Group>
 
       <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
-        <StatCard
-          title="Users"
-          to="/dashboard/organizations/$orgId/members"
-          color="blue"
-          icon={<IconUsers size={22} stroke={1.5} />}
-          tooltip="People who can view and edit this organization profile"
-          value={organization._count.memberships}
-        />
+        {isAdmin && (
+          <StatCard
+            title="Users"
+            to="/dashboard/organizations/$orgId/members"
+            color="blue"
+            icon={<IconUsers size={22} stroke={1.5} />}
+            tooltip="People who can view and edit this organization profile"
+            value={organization._count.memberships}
+          />
+        )}
         <StatCard
           title="Associations"
           to="/dashboard/organizations/$orgId/associations"

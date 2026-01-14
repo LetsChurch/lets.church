@@ -44,6 +44,8 @@ model AppUser {
   sessions                 AppSession[]
   channelMemberships       ChannelMembership[]
   organizationMemberships  OrganizationMembership[]
+  organizationInvitations  OrganizationInvitation[]  @relation("invitedOrganizations")
+  channelInvitations       ChannelInvitation[]       @relation("invitedChannels")
   createdUploads           UploadRecord[]            @relation("createdUploads")
   finalizedUploads         UploadRecord[]            @relation("finalizedUploads")
   channelSubscriptions     ChannelSubscription[]
@@ -112,6 +114,16 @@ enum OrganizationType {
   MINISTRY
 
   @@map("organization_type")
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  CANCELLED
+
+  @@map("invitation_status")
 }
 
 enum OrganizationTagCategory {
@@ -184,6 +196,7 @@ model Organization {
   leaders                                      OrganizationLeader[]
   description                                  String?
   memberships                                  OrganizationMembership[]
+  invitations                                  OrganizationInvitation[]
   channelAssociations                          OrganizationChannelAssociation[]
   upstreamOrganizationAssociations             OrganizationOrganizationAssociation[] @relation("downstreamOrganization")
   downstreamOrganizationAssociations           OrganizationOrganizationAssociation[] @relation("upstreamOrganization")
@@ -262,6 +275,27 @@ model OrganizationMembership {
   @@map("organization_membership")
 }
 
+model OrganizationInvitation {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String           @map("organization_id") @db.Uuid
+  email          String           @db.Citext
+  token          String           @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  status         InvitationStatus @default(PENDING)
+  isAdmin        Boolean          @default(false) @map("is_admin")
+  canEdit        Boolean          @default(false) @map("can_edit")
+  invitedBy      AppUser          @relation("invitedOrganizations", fields: [invitedById], references: [id], onDelete: Cascade)
+  invitedById    String           @map("invited_by_id") @db.Uuid
+  createdAt      DateTime         @default(now()) @map("created_at")
+  expiresAt      DateTime         @map("expires_at")
+  respondedAt    DateTime?        @map("responded_at")
+
+  @@unique([organizationId, email])
+  @@index([email])
+  @@index([status, expiresAt])
+  @@map("organization_invitation")
+}
+
 model OrganizationOrganizationAssociation {
   upstreamOrganization     Organization @relation("upstreamOrganization", fields: [upstreamOrganizationId], references: [id], onDelete: Cascade)
   upstreamOrganizationId   String       @map("upstream_organization_id") @db.Uuid
@@ -319,6 +353,7 @@ model Channel {
   spotifyUrl               String?                          @map("spotify_url")
   rssUrl                   String?                          @map("rss_url")
   memberships              ChannelMembership[]
+  invitations              ChannelInvitation[]
   organizationAssociations OrganizationChannelAssociation[]
   approvedBy               AppUser?                         @relation(fields: [approvedById], references: [id], onDelete: SetNull)
   approvedById             String?                          @map("approved_by_id") @db.Uuid
@@ -344,13 +379,36 @@ model ChannelMembership {
   appUserId   String   @map("app_user_id") @db.Uuid
   isAdmin     Boolean  @default(false) @map("is_admin")
   canEdit     Boolean  @default(false) @map("can_edit")
-  canUpload   Boolean  @default(false) @map("can_upload")
+  canUpload   Boolean  @default(true) @map("can_upload")
   canDownload Boolean  @default(false) @map("can_download")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@id([channelId, appUserId])
   @@map("channel_membership")
+}
+
+model ChannelInvitation {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  channel     Channel          @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  channelId   String           @map("channel_id") @db.Uuid
+  email       String           @db.Citext
+  token       String           @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  status      InvitationStatus @default(PENDING)
+  isAdmin     Boolean          @default(false) @map("is_admin")
+  canEdit     Boolean          @default(false) @map("can_edit")
+  canUpload   Boolean          @default(true) @map("can_upload")
+  canDownload Boolean          @default(false) @map("can_download")
+  invitedBy   AppUser          @relation("invitedChannels", fields: [invitedById], references: [id], onDelete: Cascade)
+  invitedById String           @map("invited_by_id") @db.Uuid
+  createdAt   DateTime         @default(now()) @map("created_at")
+  expiresAt   DateTime         @map("expires_at")
+  respondedAt DateTime?        @map("responded_at")
+
+  @@unique([channelId, email])
+  @@index([email])
+  @@index([status, expiresAt])
+  @@map("channel_invitation")
 }
 
 enum UploadLicense {

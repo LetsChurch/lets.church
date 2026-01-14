@@ -13,7 +13,6 @@ import { MediaCard } from '@/components/media-card';
 import { MediaCarousel } from '@/components/media-carousel';
 import { MediaCompactCard } from '@/components/media-compact-card';
 import { MediaGrid } from '@/components/media-grid';
-import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from '@/util/image-sizes';
 import { NewsletterCard } from '@/components/newsletter-card';
 import { SearchCard } from '@/components/search-card';
 // import { TrendingSearchPill } from '@/components/trending-search-pill';
@@ -21,6 +20,7 @@ import { ViewMoreCard } from '@/components/view-more-card';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { useTRPC } from '@/trpc/react';
 import { formatTime } from '@/util/format';
+import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from '@/util/image-sizes';
 
 export const Route = createFileRoute('/_main/')({
   component: Home,

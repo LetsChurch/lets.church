@@ -16,7 +16,7 @@ import {
 } from '@/temporal';
 import { mantineAvatarLg2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
-import { getPublicImageUrl } from '@/util/url';
+import { getPublicImageUrl } from '@/util/server-env';
 import testPassword from '@/util/zxcvbn';
 import { authProcedure } from '../trpc';
 

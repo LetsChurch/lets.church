@@ -3,7 +3,7 @@ import { stripIndent } from 'proper-tags';
 import { z } from 'zod';
 import { client } from '../../client';
 import { BACKGROUND_QUEUE } from '../../queues';
-import { emailHtml } from '../../util/email';
+import { emailHtml, sanitizeForHtml } from '../../util/email';
 import logger from '../../util/logger';
 import { uuidTranslator } from '../../util/uuid';
 import { sendEmailWorkflow } from '../../workflows/background/send-email';
@@ -41,14 +41,23 @@ export default async function sendVerificationEmailActivity(
   })}`;
 
   const subject = `Welcome to Let's Church! Please verify your email.`;
-  const text = `Welcome, ${username}! Please visit the following link to verify your email: ${verifyUrl}`;
+  const text = stripIndent`
+    Welcome to Let's Church, ${username}!
+
+    Please visit the following link to verify your email: ${verifyUrl}
+  `;
   const html = emailHtml(
     'Welcome!',
     stripIndent`
-        Welcome to Let's Church, <b>${username}</b>! Please click <a href="${verifyUrl}">here</a> to verify
-        your email.
+        <p>Welcome to Let's Church, <b>${sanitizeForHtml(username)}</b>!</p>
 
-        Alternatively, visit the following link to verify your email: ${verifyUrl}
+        <p>Please click the button below to verify your email address:</p>
+
+        <p>
+          <a href="${verifyUrl}" style="display: inline-block; padding: 10px 20px; background-color: #228be6; color: white; text-decoration: none; border-radius: 4px;">Verify Email</a>
+        </p>
+
+        <p style="color: #868e96; font-size: 14px;">Or copy and paste this link into your browser: ${verifyUrl}</p>
       `,
   ).html;
 

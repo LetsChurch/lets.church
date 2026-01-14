@@ -2,10 +2,10 @@ import { prisma } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { createFileRoute } from '@tanstack/react-router';
 import { Feed } from 'feed';
-import logger from '@/util/logger';
-import { resolveThumbnailUrl } from '@/util/thumbnails';
-import { getPublicImageUrl, ResizeType } from '@/util/url';
 import { rssFeedIcon } from '@/util/image-sizes';
+import logger from '@/util/logger';
+import { getPublicImageUrl } from '@/util/server-env';
+import { resolveThumbnailUrl } from '@/util/thumbnails';
 
 const moduleLogger = logger.child({
   module: 'routes/channel/$slug/rss.xml',

@@ -39,12 +39,12 @@ import {
 import { mantineAvatarSm2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { generateResetPasswordEmail } from '@/util/reset-password-email';
+import { getPublicImageUrl } from '@/util/server-env';
 import {
   filterUploadsWithActiveWorkflows,
   filterUploadsWithoutActiveWorkflows,
 } from '@/util/temporal-workflow';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
-import { getPublicImageUrl } from '@/util/url';
 import { authProcedure, router } from '../../trpc';
 import { newsletterListsRouter } from '../newsletter-lists';
 

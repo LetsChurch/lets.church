@@ -29,6 +29,31 @@ export const userSearchChurchSchema = z.object({
   query: z.string().min(1),
 });
 
+export const inviteChurchMemberSchema = z
+  .object({
+    churchId: churchIdSchema,
+    email: z.preprocess(
+      (val) => (typeof val === 'string' ? val.toLowerCase().trim() : val),
+      z.string().email('Invalid email address'),
+    ),
+  })
+  .and(churchMemberPermissionsSchema);
+
+export const respondToChurchInvitationSchema = z.object({
+  token: IncomingIdSchema,
+  accept: z.boolean(),
+});
+
+export const cancelChurchInvitationSchema = z.object({
+  churchId: churchIdSchema,
+  invitationId: IncomingIdSchema,
+});
+
+export const resendChurchInvitationSchema = z.object({
+  churchId: churchIdSchema,
+  invitationId: IncomingIdSchema,
+});
+
 export const channelSearchChurchSchema = z.object({
   churchId: churchIdSchema,
   query: z.string().min(1),

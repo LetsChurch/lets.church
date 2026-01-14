@@ -29,6 +29,35 @@ export const userSearchOrganizationSchema = z.object({
   query: z.string().min(1),
 });
 
+export const inviteOrganizationMemberSchema = z
+  .object({
+    orgId: organizationIdSchema,
+    email: z.preprocess(
+      (val) => (typeof val === 'string' ? val.toLowerCase().trim() : val),
+      z.string().email('Invalid email address'),
+    ),
+  })
+  .and(organizationMemberPermissionsSchema);
+
+export const respondToOrganizationInvitationSchema = z.object({
+  token: IncomingIdSchema,
+  accept: z.boolean(),
+});
+
+export const cancelOrganizationInvitationSchema = z.object({
+  orgId: organizationIdSchema,
+  invitationId: IncomingIdSchema,
+});
+
+export const resendOrganizationInvitationSchema = z.object({
+  orgId: organizationIdSchema,
+  invitationId: IncomingIdSchema,
+});
+
+export const getInvitationDetailsSchema = z.object({
+  token: IncomingIdSchema,
+});
+
 export const organizationFormSchema = z.object({
   name: z.string().min(1, 'Organization name is required'),
   slug: z.string().optional(),

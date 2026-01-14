@@ -7,16 +7,16 @@ import {
 import { publicS3 } from '@letschurch/s3/public';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
-import logger from '@/util/logger';
-import { formatPhoneNumber } from '@/util/phone';
-import { resolveThumbnailUrl } from '@/util/thumbnails';
-import { getPublicImageUrl, ResizeType } from '@/util/url';
 import {
   organizationAvatarLarge,
   organizationAvatarMedium,
   organizationAvatarSmall,
   organizationAvatarTiny,
 } from '@/util/image-sizes';
+import logger from '@/util/logger';
+import { formatPhoneNumber } from '@/util/phone';
+import { getPublicImageUrl } from '@/util/server-env';
+import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { publicProcedure } from '../trpc';
 
 const moduleLogger = logger.child({

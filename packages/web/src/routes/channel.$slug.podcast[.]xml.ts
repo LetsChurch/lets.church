@@ -2,14 +2,10 @@ import { prisma } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { createFileRoute } from '@tanstack/react-router';
 import { Podcast } from 'podcast';
-import logger from '@/util/logger';
-import { resolveThumbnailUrl } from '@/util/thumbnails';
-import {
-  getPublicImageUrl,
-  getPublicMediaUrl,
-  ResizeType,
-} from '@/util/url';
 import { podcastImage } from '@/util/image-sizes';
+import logger from '@/util/logger';
+import { getPublicImageUrl, getPublicMediaUrl } from '@/util/server-env';
+import { resolveThumbnailUrl } from '@/util/thumbnails';
 
 const moduleLogger = logger.child({
   module: 'routes/channel/$slug/podcast.xml',

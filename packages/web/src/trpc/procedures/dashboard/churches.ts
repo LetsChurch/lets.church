@@ -9,23 +9,25 @@ import {
   multipartUploadSchema,
 } from '@/schemas/common';
 import {
-  addChurchMemberSchema,
   addLeaderSchema,
+  cancelChurchInvitationSchema,
   channelSearchChurchSchema,
   churchQuerySchema,
   createChurchSchema,
+  inviteChurchMemberSchema,
   linkChannelSchema,
   removeChurchMemberSchema,
   removeLeaderSchema,
+  resendChurchInvitationSchema,
   unlinkChannelSchema,
   updateChurchSchema,
   updateLeaderSchema,
-  userSearchChurchSchema,
 } from '@/schemas/dashboard';
 import {
   completeMultipartMediaUpload,
   geocodeOrganization,
   handleMultipartMediaUpload,
+  sendInvitationEmail,
 } from '@/temporal';
 import {
   mantineAvatarLg2x,
@@ -33,7 +35,7 @@ import {
   mantineAvatarXl2x,
 } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
-import { getPublicImageUrl } from '@/util/url';
+import { getPublicImageUrl } from '@/util/server-env';
 import { authProcedure, router } from '../../trpc';
 
 const moduleLogger = logger.child({
@@ -490,41 +492,93 @@ export const churchRouter = router({
     };
   }),
 
-  searchUsers: churchAdminProcedure
-    .input(userSearchChurchSchema)
-    .query(async ({ ctx, input }) => {
+  inviteToChurch: churchAdminProcedure
+    .input(inviteChurchMemberSchema)
+    .mutation(async ({ ctx, input }) => {
       moduleLogger.info(
         {
           appUserId: ctx.session.appUserId,
           context: {
             churchId: input.churchId,
-            query: input.query,
+            isAdmin: input.isAdmin,
+            canEdit: input.canEdit,
           },
         },
-        'Searching users for church',
+        'Inviting user to church',
       );
 
-      const users = await prisma.appUser.findMany({
-        select: {
-          id: true,
-          username: true,
-          fullName: true,
-          avatarPath: true,
-        },
+      // Check if email already belongs to a member
+      const existingMember = await prisma.organizationMembership.findFirst({
         where: {
-          username: {
-            contains: input.query,
-            mode: 'insensitive',
-          },
-          NOT: {
-            organizationMemberships: {
+          organizationId: input.churchId,
+          appUser: {
+            emails: {
               some: {
-                organizationId: input.churchId,
+                email: input.email,
               },
             },
           },
         },
-        take: 10,
+      });
+
+      // Return success without revealing membership state to prevent user enumeration
+      if (existingMember) {
+        return { success: true, message: 'Invitation sent successfully' };
+      }
+
+      // Check for existing pending invitation
+      const existingInvitation = await prisma.organizationInvitation.findUnique(
+        {
+          where: {
+            organizationId_email: {
+              organizationId: input.churchId,
+              email: input.email,
+            },
+          },
+        },
+      );
+
+      // Return success without revealing invitation state to prevent user enumeration
+      if (
+        existingInvitation &&
+        existingInvitation.status === 'PENDING' &&
+        existingInvitation.expiresAt > new Date()
+      ) {
+        return { success: true, message: 'Invitation sent successfully' };
+      }
+
+      // Create or update invitation
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+      const invitation = await prisma.organizationInvitation.upsert({
+        where: {
+          organizationId_email: {
+            organizationId: input.churchId,
+            email: input.email,
+          },
+        },
+        update: {
+          status: 'PENDING',
+          isAdmin: input.isAdmin,
+          canEdit: input.canEdit,
+          expiresAt,
+          respondedAt: null,
+          invitedById: ctx.session.appUserId,
+        },
+        create: {
+          organizationId: input.churchId,
+          email: input.email,
+          isAdmin: input.isAdmin,
+          canEdit: input.canEdit,
+          invitedById: ctx.session.appUserId,
+          expiresAt,
+        },
+      });
+
+      // Send invitation email
+      await sendInvitationEmail({
+        invitationId: invitation.id,
+        type: 'organization',
       });
 
       moduleLogger.info(
@@ -532,80 +586,116 @@ export const churchRouter = router({
           appUserId: ctx.session.appUserId,
           context: {
             churchId: input.churchId,
-            query: input.query,
-            resultCount: users.length,
+            invitationId: invitation.id,
           },
         },
-        'User search completed',
+        'Church invitation created and email sent',
       );
 
-      return users.map((user) => {
-        const { avatarPath, ...userWithoutPath } = user;
-        const avatarUrl = avatarPath
-          ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-              resize: mantineAvatarSm2x,
-            })
-          : null;
+      // Return identical success message for security (no user enumeration)
+      return { success: true, message: 'Invitation sent successfully' };
+    }),
 
-        return {
-          ...userWithoutPath,
-          avatarUrl,
-        };
+  getChurchInvitations: churchAdminProcedure
+    .input(churchQuerySchema)
+    .query(async ({ input }) => {
+      return prisma.organizationInvitation.findMany({
+        where: {
+          organizationId: input.churchId,
+          status: 'PENDING',
+          expiresAt: { gt: new Date() },
+        },
+        select: {
+          id: true,
+          email: true,
+          isAdmin: true,
+          canEdit: true,
+          createdAt: true,
+          expiresAt: true,
+          invitedBy: {
+            select: {
+              username: true,
+              fullName: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
       });
     }),
 
-  addChurchMember: churchAdminProcedure
-    .input(addChurchMemberSchema)
+  cancelChurchInvitation: churchAdminProcedure
+    .input(cancelChurchInvitationSchema)
+    .mutation(async ({ input }) => {
+      // Use updateMany to ensure the invitation belongs to the church
+      const result = await prisma.organizationInvitation.updateMany({
+        where: {
+          id: input.invitationId,
+          organizationId: input.churchId,
+        },
+        data: { status: 'CANCELLED' },
+      });
+
+      if (result.count === 0) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Invitation not found',
+        });
+      }
+
+      return { success: true };
+    }),
+
+  resendChurchInvitation: churchAdminProcedure
+    .input(resendChurchInvitationSchema)
     .mutation(async ({ ctx, input }) => {
+      // First fetch and validate the invitation
+      const existingInvitation = await prisma.organizationInvitation.findFirst({
+        where: {
+          id: input.invitationId,
+          organizationId: input.churchId,
+        },
+      });
+
+      if (!existingInvitation) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Invitation not found',
+        });
+      }
+
+      if (existingInvitation.status !== 'PENDING') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Can only resend pending invitations',
+        });
+      }
+
+      // Update the expiration
+      const invitation = await prisma.organizationInvitation.update({
+        where: { id: input.invitationId },
+        data: {
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      // Send invitation email
+      await sendInvitationEmail({
+        invitationId: invitation.id,
+        type: 'organization',
+      });
+
       moduleLogger.info(
         {
+          appUserId: ctx.session.appUserId,
           context: {
             churchId: input.churchId,
-            newMemberUserId: input.userId,
-            isAdmin: input.isAdmin,
-            canEdit: input.canEdit,
-            addedBy: ctx.session.appUserId,
+            invitationId: invitation.id,
           },
         },
-        'Adding church member',
+        'Church invitation resent',
       );
 
-      try {
-        await prisma.organizationMembership.create({
-          data: {
-            organizationId: input.churchId,
-            appUserId: input.userId,
-            isAdmin: input.isAdmin,
-            canEdit: input.canEdit,
-          },
-        });
-
-        moduleLogger.info(
-          {
-            context: {
-              churchId: input.churchId,
-              newMemberUserId: input.userId,
-              addedBy: ctx.session.appUserId,
-            },
-          },
-          'Church member added successfully',
-        );
-
-        return { success: true };
-      } catch (error) {
-        moduleLogger.error(
-          {
-            context: {
-              churchId: input.churchId,
-              newMemberUserId: input.userId,
-              addedBy: ctx.session.appUserId,
-              error: error instanceof Error ? error.message : String(error),
-            },
-          },
-          'Failed to add church member',
-        );
-        throw error;
-      }
+      return { success: true };
     }),
 
   removeChurchMember: churchAdminProcedure

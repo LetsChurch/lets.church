@@ -16,8 +16,12 @@ import { Route as DashboardIndexRouteImport } from './routes/dashboard_/index'
 import { Route as MainIndexRouteImport } from './routes/_main/index'
 import { Route as TrpcSplatRouteImport } from './routes/trpc.$'
 import { Route as MediaRssDotxmlRouteImport } from './routes/media.rss[.]xml'
+import { Route as InvitationsInvalidRouteImport } from './routes/invitations_.invalid'
+import { Route as InvitationsExpiredRouteImport } from './routes/invitations_.expired'
+import { Route as InvitationsAcceptRouteImport } from './routes/invitations_.accept'
 import { Route as EmbedChurchesRouteImport } from './routes/embed.churches'
 import { Route as DashboardOrganizationsRouteImport } from './routes/dashboard_/organizations'
+import { Route as DashboardInvitationsRouteImport } from './routes/dashboard_/invitations'
 import { Route as DashboardChurchesRouteImport } from './routes/dashboard_/churches'
 import { Route as DashboardChannelsRouteImport } from './routes/dashboard_/channels'
 import { Route as DashboardAdminRouteImport } from './routes/dashboard_/admin'
@@ -42,6 +46,7 @@ import { Route as PlaylistPlaylistIdRssDotxmlRouteImport } from './routes/playli
 import { Route as EmbedMediaMediaIdRouteImport } from './routes/embed.media.$mediaId'
 import { Route as EmbedChannelSlugRouteImport } from './routes/embed.channel.$slug'
 import { Route as DashboardOrganizationsOrgIdRouteImport } from './routes/dashboard_/organizations_.$orgId'
+import { Route as DashboardInvitationsAcceptRouteImport } from './routes/dashboard_/invitations_/accept'
 import { Route as DashboardChurchesNewRouteImport } from './routes/dashboard_/churches_.new'
 import { Route as DashboardChurchesChurchIdRouteImport } from './routes/dashboard_/churches_.$churchId'
 import { Route as DashboardChannelsNewRouteImport } from './routes/dashboard_/channels_.new'
@@ -124,6 +129,21 @@ const MediaRssDotxmlRoute = MediaRssDotxmlRouteImport.update({
   path: '/media/rss.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InvitationsInvalidRoute = InvitationsInvalidRouteImport.update({
+  id: '/invitations_/invalid',
+  path: '/invitations/invalid',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvitationsExpiredRoute = InvitationsExpiredRouteImport.update({
+  id: '/invitations_/expired',
+  path: '/invitations/expired',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvitationsAcceptRoute = InvitationsAcceptRouteImport.update({
+  id: '/invitations_/accept',
+  path: '/invitations/accept',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EmbedChurchesRoute = EmbedChurchesRouteImport.update({
   id: '/embed/churches',
   path: '/embed/churches',
@@ -132,6 +152,11 @@ const EmbedChurchesRoute = EmbedChurchesRouteImport.update({
 const DashboardOrganizationsRoute = DashboardOrganizationsRouteImport.update({
   id: '/organizations',
   path: '/organizations',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardInvitationsRoute = DashboardInvitationsRouteImport.update({
+  id: '/invitations',
+  path: '/invitations',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardChurchesRoute = DashboardChurchesRouteImport.update({
@@ -254,6 +279,12 @@ const DashboardOrganizationsOrgIdRoute =
   DashboardOrganizationsOrgIdRouteImport.update({
     id: '/organizations_/$orgId',
     path: '/organizations/$orgId',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardInvitationsAcceptRoute =
+  DashboardInvitationsAcceptRouteImport.update({
+    id: '/invitations_/accept',
+    path: '/invitations/accept',
     getParentRoute: () => DashboardRoute,
   } as any)
 const DashboardChurchesNewRoute = DashboardChurchesNewRouteImport.update({
@@ -540,8 +571,12 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin': typeof DashboardAdminRoute
   '/dashboard/channels': typeof DashboardChannelsRoute
   '/dashboard/churches': typeof DashboardChurchesRoute
+  '/dashboard/invitations': typeof DashboardInvitationsRoute
   '/dashboard/organizations': typeof DashboardOrganizationsRoute
   '/embed/churches': typeof EmbedChurchesRoute
+  '/invitations/accept': typeof InvitationsAcceptRoute
+  '/invitations/expired': typeof InvitationsExpiredRoute
+  '/invitations/invalid': typeof InvitationsInvalidRoute
   '/media/rss.xml': typeof MediaRssDotxmlRoute
   '/trpc/$': typeof TrpcSplatRoute
   '/': typeof MainIndexRoute
@@ -580,6 +615,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/channels/new': typeof DashboardChannelsNewRoute
   '/dashboard/churches/$churchId': typeof DashboardChurchesChurchIdRoute
   '/dashboard/churches/new': typeof DashboardChurchesNewRoute
+  '/dashboard/invitations/accept': typeof DashboardInvitationsAcceptRoute
   '/dashboard/organizations/$orgId': typeof DashboardOrganizationsOrgIdRoute
   '/embed/channel/$slug': typeof EmbedChannelSlugRoute
   '/embed/media/$mediaId': typeof EmbedMediaMediaIdRoute
@@ -619,8 +655,12 @@ export interface FileRoutesByTo {
   '/dashboard/admin': typeof DashboardAdminRoute
   '/dashboard/channels': typeof DashboardChannelsRoute
   '/dashboard/churches': typeof DashboardChurchesRoute
+  '/dashboard/invitations': typeof DashboardInvitationsRoute
   '/dashboard/organizations': typeof DashboardOrganizationsRoute
   '/embed/churches': typeof EmbedChurchesRoute
+  '/invitations/accept': typeof InvitationsAcceptRoute
+  '/invitations/expired': typeof InvitationsExpiredRoute
+  '/invitations/invalid': typeof InvitationsInvalidRoute
   '/media/rss.xml': typeof MediaRssDotxmlRoute
   '/trpc/$': typeof TrpcSplatRoute
   '/': typeof MainIndexRoute
@@ -659,6 +699,7 @@ export interface FileRoutesByTo {
   '/dashboard/channels/new': typeof DashboardChannelsNewRoute
   '/dashboard/churches/$churchId': typeof DashboardChurchesChurchIdRoute
   '/dashboard/churches/new': typeof DashboardChurchesNewRoute
+  '/dashboard/invitations/accept': typeof DashboardInvitationsAcceptRoute
   '/dashboard/organizations/$orgId': typeof DashboardOrganizationsOrgIdRoute
   '/embed/channel/$slug': typeof EmbedChannelSlugRoute
   '/embed/media/$mediaId': typeof EmbedMediaMediaIdRoute
@@ -702,8 +743,12 @@ export interface FileRoutesById {
   '/dashboard_/admin': typeof DashboardAdminRoute
   '/dashboard_/channels': typeof DashboardChannelsRoute
   '/dashboard_/churches': typeof DashboardChurchesRoute
+  '/dashboard_/invitations': typeof DashboardInvitationsRoute
   '/dashboard_/organizations': typeof DashboardOrganizationsRoute
   '/embed/churches': typeof EmbedChurchesRoute
+  '/invitations_/accept': typeof InvitationsAcceptRoute
+  '/invitations_/expired': typeof InvitationsExpiredRoute
+  '/invitations_/invalid': typeof InvitationsInvalidRoute
   '/media/rss.xml': typeof MediaRssDotxmlRoute
   '/trpc/$': typeof TrpcSplatRoute
   '/_main/': typeof MainIndexRoute
@@ -742,6 +787,7 @@ export interface FileRoutesById {
   '/dashboard_/channels_/new': typeof DashboardChannelsNewRoute
   '/dashboard_/churches_/$churchId': typeof DashboardChurchesChurchIdRoute
   '/dashboard_/churches_/new': typeof DashboardChurchesNewRoute
+  '/dashboard_/invitations_/accept': typeof DashboardInvitationsAcceptRoute
   '/dashboard_/organizations_/$orgId': typeof DashboardOrganizationsOrgIdRoute
   '/embed/channel/$slug': typeof EmbedChannelSlugRoute
   '/embed/media/$mediaId': typeof EmbedMediaMediaIdRoute
@@ -785,8 +831,12 @@ export interface FileRouteTypes {
     | '/dashboard/admin'
     | '/dashboard/channels'
     | '/dashboard/churches'
+    | '/dashboard/invitations'
     | '/dashboard/organizations'
     | '/embed/churches'
+    | '/invitations/accept'
+    | '/invitations/expired'
+    | '/invitations/invalid'
     | '/media/rss.xml'
     | '/trpc/$'
     | '/'
@@ -825,6 +875,7 @@ export interface FileRouteTypes {
     | '/dashboard/channels/new'
     | '/dashboard/churches/$churchId'
     | '/dashboard/churches/new'
+    | '/dashboard/invitations/accept'
     | '/dashboard/organizations/$orgId'
     | '/embed/channel/$slug'
     | '/embed/media/$mediaId'
@@ -864,8 +915,12 @@ export interface FileRouteTypes {
     | '/dashboard/admin'
     | '/dashboard/channels'
     | '/dashboard/churches'
+    | '/dashboard/invitations'
     | '/dashboard/organizations'
     | '/embed/churches'
+    | '/invitations/accept'
+    | '/invitations/expired'
+    | '/invitations/invalid'
     | '/media/rss.xml'
     | '/trpc/$'
     | '/'
@@ -904,6 +959,7 @@ export interface FileRouteTypes {
     | '/dashboard/channels/new'
     | '/dashboard/churches/$churchId'
     | '/dashboard/churches/new'
+    | '/dashboard/invitations/accept'
     | '/dashboard/organizations/$orgId'
     | '/embed/channel/$slug'
     | '/embed/media/$mediaId'
@@ -946,8 +1002,12 @@ export interface FileRouteTypes {
     | '/dashboard_/admin'
     | '/dashboard_/channels'
     | '/dashboard_/churches'
+    | '/dashboard_/invitations'
     | '/dashboard_/organizations'
     | '/embed/churches'
+    | '/invitations_/accept'
+    | '/invitations_/expired'
+    | '/invitations_/invalid'
     | '/media/rss.xml'
     | '/trpc/$'
     | '/_main/'
@@ -986,6 +1046,7 @@ export interface FileRouteTypes {
     | '/dashboard_/channels_/new'
     | '/dashboard_/churches_/$churchId'
     | '/dashboard_/churches_/new'
+    | '/dashboard_/invitations_/accept'
     | '/dashboard_/organizations_/$orgId'
     | '/embed/channel/$slug'
     | '/embed/media/$mediaId'
@@ -1012,6 +1073,9 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   DashboardRoute: typeof DashboardRouteWithChildren
   EmbedChurchesRoute: typeof EmbedChurchesRoute
+  InvitationsAcceptRoute: typeof InvitationsAcceptRoute
+  InvitationsExpiredRoute: typeof InvitationsExpiredRoute
+  InvitationsInvalidRoute: typeof InvitationsInvalidRoute
   MediaRssDotxmlRoute: typeof MediaRssDotxmlRoute
   TrpcSplatRoute: typeof TrpcSplatRoute
   ChannelSlugPodcastDotxmlRoute: typeof ChannelSlugPodcastDotxmlRoute
@@ -1073,6 +1137,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MediaRssDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/invitations_/invalid': {
+      id: '/invitations_/invalid'
+      path: '/invitations/invalid'
+      fullPath: '/invitations/invalid'
+      preLoaderRoute: typeof InvitationsInvalidRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invitations_/expired': {
+      id: '/invitations_/expired'
+      path: '/invitations/expired'
+      fullPath: '/invitations/expired'
+      preLoaderRoute: typeof InvitationsExpiredRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invitations_/accept': {
+      id: '/invitations_/accept'
+      path: '/invitations/accept'
+      fullPath: '/invitations/accept'
+      preLoaderRoute: typeof InvitationsAcceptRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/embed/churches': {
       id: '/embed/churches'
       path: '/embed/churches'
@@ -1085,6 +1170,13 @@ declare module '@tanstack/react-router' {
       path: '/organizations'
       fullPath: '/dashboard/organizations'
       preLoaderRoute: typeof DashboardOrganizationsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard_/invitations': {
+      id: '/dashboard_/invitations'
+      path: '/invitations'
+      fullPath: '/dashboard/invitations'
+      preLoaderRoute: typeof DashboardInvitationsRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard_/churches': {
@@ -1253,6 +1345,13 @@ declare module '@tanstack/react-router' {
       path: '/organizations/$orgId'
       fullPath: '/dashboard/organizations/$orgId'
       preLoaderRoute: typeof DashboardOrganizationsOrgIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard_/invitations_/accept': {
+      id: '/dashboard_/invitations_/accept'
+      path: '/invitations/accept'
+      fullPath: '/dashboard/invitations/accept'
+      preLoaderRoute: typeof DashboardInvitationsAcceptRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard_/churches_/new': {
@@ -1674,6 +1773,7 @@ interface DashboardRouteChildren {
   DashboardAdminRoute: typeof DashboardAdminRoute
   DashboardChannelsRoute: typeof DashboardChannelsRoute
   DashboardChurchesRoute: typeof DashboardChurchesRoute
+  DashboardInvitationsRoute: typeof DashboardInvitationsRoute
   DashboardOrganizationsRoute: typeof DashboardOrganizationsRoute
   DashboardIndexRoute: typeof DashboardIndexRoute
   DashboardAccountNewsletterRoute: typeof DashboardAccountNewsletterRoute
@@ -1696,6 +1796,7 @@ interface DashboardRouteChildren {
   DashboardChannelsNewRoute: typeof DashboardChannelsNewRoute
   DashboardChurchesChurchIdRoute: typeof DashboardChurchesChurchIdRoute
   DashboardChurchesNewRoute: typeof DashboardChurchesNewRoute
+  DashboardInvitationsAcceptRoute: typeof DashboardInvitationsAcceptRoute
   DashboardOrganizationsOrgIdRoute: typeof DashboardOrganizationsOrgIdRoute
   DashboardChannelsChannelIdEditRoute: typeof DashboardChannelsChannelIdEditRoute
   DashboardChannelsChannelIdMembersRoute: typeof DashboardChannelsChannelIdMembersRoute
@@ -1717,6 +1818,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAdminRoute: DashboardAdminRoute,
   DashboardChannelsRoute: DashboardChannelsRoute,
   DashboardChurchesRoute: DashboardChurchesRoute,
+  DashboardInvitationsRoute: DashboardInvitationsRoute,
   DashboardOrganizationsRoute: DashboardOrganizationsRoute,
   DashboardIndexRoute: DashboardIndexRoute,
   DashboardAccountNewsletterRoute: DashboardAccountNewsletterRoute,
@@ -1739,6 +1841,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardChannelsNewRoute: DashboardChannelsNewRoute,
   DashboardChurchesChurchIdRoute: DashboardChurchesChurchIdRoute,
   DashboardChurchesNewRoute: DashboardChurchesNewRoute,
+  DashboardInvitationsAcceptRoute: DashboardInvitationsAcceptRoute,
   DashboardOrganizationsOrgIdRoute: DashboardOrganizationsOrgIdRoute,
   DashboardChannelsChannelIdEditRoute: DashboardChannelsChannelIdEditRoute,
   DashboardChannelsChannelIdMembersRoute:
@@ -1772,6 +1875,9 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   DashboardRoute: DashboardRouteWithChildren,
   EmbedChurchesRoute: EmbedChurchesRoute,
+  InvitationsAcceptRoute: InvitationsAcceptRoute,
+  InvitationsExpiredRoute: InvitationsExpiredRoute,
+  InvitationsInvalidRoute: InvitationsInvalidRoute,
   MediaRssDotxmlRoute: MediaRssDotxmlRoute,
   TrpcSplatRoute: TrpcSplatRoute,
   ChannelSlugPodcastDotxmlRoute: ChannelSlugPodcastDotxmlRoute,

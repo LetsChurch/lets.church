@@ -54,6 +54,11 @@ export { resetPasswordWorkflow } from './reset-password';
 export { restitchTranscriptWorkflow } from './restitch-transcript';
 export { scrapeAndImportWorkflow } from './scrape-and-import';
 export { sendEmailWorkflow } from './send-email';
+export { sendInvitationEmailWorkflow } from './send-invitation-email';
+export {
+  type SendVerificationEmailArgs,
+  sendVerificationEmailWorkflow,
+} from './send-verification-email';
 export { updateCommentScoresWorkflow } from './update-comment-scores';
 export { updateDailySaltWorkflow } from './update-daily-salt';
 export {

@@ -2,20 +2,22 @@ import { OrganizationType, prisma } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
 import {
-  addOrganizationMemberSchema,
+  cancelOrganizationInvitationSchema,
   getAllOrganizationsSchema,
   getOrganizationsByIdsSchema,
+  inviteOrganizationMemberSchema,
   organizationQuerySchema,
   organizationRelationshipSchema,
   removeOrganizationMemberSchema,
+  resendOrganizationInvitationSchema,
   searchOrganizationsSchema,
   updateOrganizationSchema,
   upstreamAssociationActionSchema,
-  userSearchOrganizationSchema,
 } from '@/schemas/dashboard';
+import { sendInvitationEmail } from '@/temporal';
 import { mantineAvatarSm2x, mantineAvatarXl2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
-import { getPublicImageUrl } from '@/util/url';
+import { getPublicImageUrl } from '@/util/server-env';
 import { authProcedure, router } from '../../trpc';
 
 const moduleLogger = logger.child({
@@ -420,122 +422,209 @@ export const organizationRouter = router({
     },
   ),
 
-  searchUsers: organizationAdminProcedure
-    .input(userSearchOrganizationSchema)
-    .query(async ({ ctx, input }) => {
-      moduleLogger.info(
-        {
-          organizationId: input.orgId,
-          appUserId: ctx.session.appUserId,
-          context: {
-            query: input.query,
-          },
-        },
-        'Searching users for organization',
-      );
-
-      const users = await prisma.appUser.findMany({
-        select: {
-          id: true,
-          username: true,
-          fullName: true,
-          avatarPath: true,
-        },
-        where: {
-          username: {
-            contains: input.query,
-            mode: 'insensitive',
-          },
-          NOT: {
-            organizationMemberships: {
-              some: {
-                organizationId: input.orgId,
-              },
-            },
-          },
-        },
-        take: 10,
-      });
-
-      moduleLogger.info(
-        {
-          organizationId: input.orgId,
-          appUserId: ctx.session.appUserId,
-          context: {
-            query: input.query,
-            resultCount: users.length,
-          },
-        },
-        'User search completed',
-      );
-
-      return users.map((user) => {
-        const { avatarPath, ...userWithoutPath } = user;
-        const avatarUrl = avatarPath
-          ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-              resize: mantineAvatarSm2x,
-            })
-          : null;
-
-        return {
-          ...userWithoutPath,
-          avatarUrl,
-        };
-      });
-    }),
-
-  addOrganizationMember: organizationAdminProcedure
-    .input(addOrganizationMemberSchema)
+  inviteToOrganization: organizationAdminProcedure
+    .input(inviteOrganizationMemberSchema)
     .mutation(async ({ ctx, input }) => {
       moduleLogger.info(
         {
           organizationId: input.orgId,
+          appUserId: ctx.session.appUserId,
           context: {
-            newMemberUserId: input.userId,
             isAdmin: input.isAdmin,
             canEdit: input.canEdit,
-            addedBy: ctx.session.appUserId,
           },
         },
-        'Adding organization member',
+        'Inviting user to organization',
       );
 
-      try {
-        await prisma.organizationMembership.create({
-          data: {
-            organizationId: input.orgId,
-            appUserId: input.userId,
-            isAdmin: input.isAdmin,
-            canEdit: input.canEdit,
-          },
-        });
-
-        moduleLogger.info(
-          {
-            organizationId: input.orgId,
-            context: {
-              newMemberUserId: input.userId,
-              addedBy: ctx.session.appUserId,
+      // Check if email already belongs to a member
+      const existingMember = await prisma.organizationMembership.findFirst({
+        where: {
+          organizationId: input.orgId,
+          appUser: {
+            emails: {
+              some: {
+                email: input.email,
+              },
             },
           },
-          'Organization member added successfully',
-        );
+        },
+      });
 
-        return { success: true };
-      } catch (error) {
-        moduleLogger.error(
-          {
-            organizationId: input.orgId,
-            context: {
-              newMemberUserId: input.userId,
-              addedBy: ctx.session.appUserId,
-              error: error instanceof Error ? error.message : String(error),
-            },
-          },
-          'Failed to add organization member',
-        );
-        throw error;
+      // Return success without revealing membership state to prevent user enumeration
+      if (existingMember) {
+        return { success: true, message: 'Invitation sent successfully' };
       }
+
+      // Check for existing pending invitation
+      const existingInvitation = await prisma.organizationInvitation.findUnique(
+        {
+          where: {
+            organizationId_email: {
+              organizationId: input.orgId,
+              email: input.email,
+            },
+          },
+        },
+      );
+
+      // Return success without revealing invitation state to prevent user enumeration
+      if (
+        existingInvitation &&
+        existingInvitation.status === 'PENDING' &&
+        existingInvitation.expiresAt > new Date()
+      ) {
+        return { success: true, message: 'Invitation sent successfully' };
+      }
+
+      // Create or update invitation
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+      const invitation = await prisma.organizationInvitation.upsert({
+        where: {
+          organizationId_email: {
+            organizationId: input.orgId,
+            email: input.email,
+          },
+        },
+        update: {
+          status: 'PENDING',
+          isAdmin: input.isAdmin,
+          canEdit: input.canEdit,
+          expiresAt,
+          respondedAt: null,
+        },
+        create: {
+          organizationId: input.orgId,
+          email: input.email,
+          isAdmin: input.isAdmin,
+          canEdit: input.canEdit,
+          invitedById: ctx.session.appUserId,
+          expiresAt,
+        },
+      });
+
+      // Send invitation email
+      await sendInvitationEmail({
+        invitationId: invitation.id,
+        type: 'organization',
+      });
+
+      moduleLogger.info(
+        {
+          organizationId: input.orgId,
+          appUserId: ctx.session.appUserId,
+          context: {
+            invitationId: invitation.id,
+          },
+        },
+        'Organization invitation created and email sent',
+      );
+
+      // Return identical success message for security (no user enumeration)
+      return { success: true, message: 'Invitation sent successfully' };
+    }),
+
+  getOrganizationInvitations: organizationAdminProcedure
+    .input(organizationQuerySchema)
+    .query(async ({ input }) => {
+      return prisma.organizationInvitation.findMany({
+        where: {
+          organizationId: input.orgId,
+          status: 'PENDING',
+          expiresAt: { gt: new Date() },
+        },
+        select: {
+          id: true,
+          email: true,
+          isAdmin: true,
+          canEdit: true,
+          createdAt: true,
+          expiresAt: true,
+          invitedBy: {
+            select: {
+              username: true,
+              fullName: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }),
+
+  cancelInvitation: organizationAdminProcedure
+    .input(cancelOrganizationInvitationSchema)
+    .mutation(async ({ input }) => {
+      // Use updateMany to ensure the invitation belongs to the organization
+      const result = await prisma.organizationInvitation.updateMany({
+        where: {
+          id: input.invitationId,
+          organizationId: input.orgId,
+        },
+        data: { status: 'CANCELLED' },
+      });
+
+      if (result.count === 0) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Invitation not found',
+        });
+      }
+
+      return { success: true };
+    }),
+
+  resendInvitation: organizationAdminProcedure
+    .input(resendOrganizationInvitationSchema)
+    .mutation(async ({ ctx, input }) => {
+      // First fetch and validate the invitation
+      const existingInvitation = await prisma.organizationInvitation.findFirst({
+        where: {
+          id: input.invitationId,
+          organizationId: input.orgId,
+        },
+      });
+
+      if (!existingInvitation) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Invitation not found',
+        });
+      }
+
+      if (existingInvitation.status !== 'PENDING') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Can only resend pending invitations',
+        });
+      }
+
+      // Update the expiration
+      const invitation = await prisma.organizationInvitation.update({
+        where: { id: input.invitationId },
+        data: {
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      // Send invitation email
+      await sendInvitationEmail({
+        invitationId: invitation.id,
+        type: 'organization',
+      });
+
+      moduleLogger.info(
+        {
+          organizationId: input.orgId,
+          appUserId: ctx.session.appUserId,
+          context: {
+            invitationId: invitation.id,
+          },
+        },
+        'Organization invitation resent',
+      );
+
+      return { success: true };
     }),
 
   removeOrganizationMember: organizationAdminProcedure

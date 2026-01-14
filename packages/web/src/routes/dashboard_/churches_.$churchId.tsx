@@ -112,14 +112,16 @@ function ChurchDetailsPage() {
       </Group>
 
       <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
-        <StatCard
-          title="Users"
-          to="/dashboard/churches/$churchId/members"
-          color="blue"
-          icon={<IconUsers size={22} stroke={1.5} />}
-          tooltip="People who can view and edit this church profile"
-          value={church._count.memberships}
-        />
+        {isAdmin && (
+          <StatCard
+            title="Users"
+            to="/dashboard/churches/$churchId/members"
+            color="blue"
+            icon={<IconUsers size={22} stroke={1.5} />}
+            tooltip="People who can view and edit this church profile"
+            value={church._count.memberships}
+          />
+        )}
 
         <StatCard
           title="Channels"

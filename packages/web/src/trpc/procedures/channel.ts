@@ -3,10 +3,11 @@ import { publicS3 } from '@letschurch/s3/public';
 import { z } from 'zod';
 import { OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarMd2x, appAvatarXs2x } from '@/util/avatar-sizes';
-import logger from '@/util/logger';
-import { resolveThumbnailUrl } from '@/util/thumbnails';
-import { getPublicImageUrl, ResizeType } from '@/util/url';
 import { coverImageFull } from '@/util/image-sizes';
+import logger from '@/util/logger';
+import { getPublicImageUrl } from '@/util/server-env';
+import { resolveThumbnailUrl } from '@/util/thumbnails';
+import { ResizeType } from '@/util/url';
 import { publicProcedure } from '../trpc';
 
 const moduleLogger = logger.child({

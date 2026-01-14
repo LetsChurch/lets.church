@@ -1,4 +1,4 @@
-import { emailHtml } from '@letschurch/temporal/util/email';
+import { emailHtml, sanitizeForHtml } from '@letschurch/temporal/util/email';
 import { stripIndent } from 'proper-tags';
 import { z } from 'zod';
 import { uuidTranslator } from './uuid';
@@ -30,7 +30,7 @@ export function generateResetPasswordEmail(
   const html = emailHtml(
     'Reset your password',
     stripIndent`
-      Hello <b>${username}</b>,
+      Hello <b>${sanitizeForHtml(username)}</b>,
 
       We received a request to reset your password for Let's Church. If you made this request, click <a href="${resetUrl}">here</a> to reset your password.
 

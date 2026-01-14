@@ -17,6 +17,8 @@ import {
   redirect,
   useLocation,
 } from '@tanstack/react-router';
+import EmailVerificationBanner from '@/components/email-verification-banner';
+import PendingInvitationsBanner from '@/components/pending-invitations-banner';
 import { useTRPC } from '@/trpc/react';
 import { BackButton } from '@/util/back-navigation';
 import { MantineWrapper, mantineStyles } from './-mantine';
@@ -197,6 +199,8 @@ function DashboardLayout() {
         <HelpModal opened={helpOpened} onClose={closeHelp} />
 
         <AppShell.Main>
+          <EmailVerificationBanner />
+          <PendingInvitationsBanner />
           <Box mb="md">
             <BackButton />
           </Box>

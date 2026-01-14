@@ -8,12 +8,18 @@ import {
   useRouter,
 } from '@tanstack/react-router';
 import { useState } from 'react';
+import { z } from 'zod';
 import { useAppMantineForm } from '@/components/mantine';
 import { registerSchema } from '@/schemas/auth';
 import { useTRPC } from '@/trpc/react';
 
+const searchSchema = z.object({
+  email: z.string().email().optional().catch(undefined),
+});
+
 export const Route = createFileRoute('/auth_/register')({
   component: RouteComponent,
+  validateSearch: searchSchema,
   beforeLoad: async ({ context }) => {
     const hasSession = await context.queryClient.fetchQuery(
       context.trpc.common.hasValidSession.queryOptions(),
@@ -29,6 +35,7 @@ export const Route = createFileRoute('/auth_/register')({
 
 function RouteComponent() {
   const { env } = Route.useLoaderData();
+  const search = Route.useSearch();
   const [error, setError] = useState<string | false>(false);
 
   const router = useRouter();
@@ -62,7 +69,7 @@ function RouteComponent() {
 
   const form = useAppMantineForm({
     defaultValues: {
-      email: '',
+      email: search.email || '',
       username: '',
       password: '',
       fullName: '',

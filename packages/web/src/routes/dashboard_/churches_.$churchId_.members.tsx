@@ -3,31 +3,32 @@ import {
   Avatar,
   Badge,
   Button,
+  Divider,
   Group,
   Modal,
   Stack,
   Table,
   Text,
-  TextInput,
   Title,
   Tooltip,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
+  IconMail,
   IconPlus,
+  IconRefresh,
   IconTrash,
   IconUserCheck,
   IconUserShield,
+  IconX,
 } from '@tabler/icons-react';
 import {
   useMutation,
-  useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
-import { useDebounce } from 'use-debounce';
 import { useAppMantineForm } from '@/components/mantine';
 import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
@@ -44,6 +45,19 @@ type OrganizationMembershipWithUser = {
     username: string;
     fullName: string | null;
     avatarUrl: string | null;
+  };
+};
+
+type ChurchInvitation = {
+  id: string;
+  email: string;
+  isAdmin: boolean;
+  canEdit: boolean;
+  createdAt: Date;
+  expiresAt: Date;
+  invitedBy: {
+    username: string;
+    fullName: string | null;
   };
 };
 
@@ -85,66 +99,58 @@ function ChurchMembersPage() {
       churchId,
     }),
   );
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearchQuery] = useDebounce(searchQuery, 200);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  const { data: invitations = [] } = useSuspenseQuery(
+    trpc.dashboard.churches.getChurchInvitations.queryOptions({
+      churchId,
+    }),
+  );
 
   const isAdmin = church.userMembership?.isAdmin ?? false;
 
-  const [
-    addMemberModalOpened,
-    { open: openAddMemberModal, close: closeAddMemberModal },
-  ] = useDisclosure();
+  const [pendingResendId, setPendingResendId] = useState<string | null>(null);
+  const [pendingCancelId, setPendingCancelId] = useState<string | null>(null);
+  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
 
-  const handleCloseModal = () => {
-    closeAddMemberModal();
-    setSearchQuery('');
-    setSelectedUserId(null);
-    form.reset();
-  };
+  const [
+    inviteMemberModalOpened,
+    { open: openInviteMemberModal, close: closeInviteMemberModal },
+  ] = useDisclosure();
 
   const form = useAppMantineForm({
     defaultValues: {
+      email: '',
       role: 'member',
     },
     onSubmit: async ({ value }) => {
-      if (!selectedUserId) return;
-
-      const permissions = {
+      inviteMemberMutation.mutate({
+        churchId,
+        email: value.email,
         isAdmin: value.role === 'admin',
         canEdit: value.role === 'admin' || value.role === 'editor',
-      };
-
-      addMemberMutation.mutate({
-        churchId,
-        userId: selectedUserId,
-        ...permissions,
       });
     },
   });
 
-  const { data: searchResults = [] } = useQuery({
-    ...trpc.dashboard.churches.searchUsers.queryOptions({
-      churchId,
-      query: debouncedSearchQuery,
-    }),
-    enabled: debouncedSearchQuery.length >= 2,
-    staleTime: 30000,
-  });
-
-  const addMemberMutation = useMutation(
-    trpc.dashboard.churches.addChurchMember.mutationOptions({
+  const inviteMemberMutation = useMutation(
+    trpc.dashboard.churches.inviteToChurch.mutationOptions({
       onSuccess: () => {
-        showSuccess({ message: 'User added successfully' });
+        showSuccess({ message: 'Invitation sent successfully' });
         queryClient.invalidateQueries({
           queryKey: trpc.dashboard.churches.getChurchMembers.queryKey({
             churchId,
           }),
         });
-        handleCloseModal();
+        queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.churches.getChurchInvitations.queryKey({
+            churchId,
+          }),
+        });
+        closeInviteMemberModal();
+        form.reset();
       },
       onError: (error) => {
-        showFailure({ message: error.message || 'Failed to add user' });
+        showFailure({ message: error.message || 'Failed to send invitation' });
       },
     }),
   );
@@ -162,20 +168,77 @@ function ChurchMembersPage() {
       onError: (error) => {
         showFailure({ message: error.message || 'Failed to remove user' });
       },
+      onSettled: () => {
+        setPendingRemoveId(null);
+      },
+    }),
+  );
+
+  const cancelInvitationMutation = useMutation(
+    trpc.dashboard.churches.cancelChurchInvitation.mutationOptions({
+      onSuccess: () => {
+        showSuccess({ message: 'Invitation cancelled' });
+        queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.churches.getChurchInvitations.queryKey({
+            churchId,
+          }),
+        });
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to cancel invitation',
+        });
+      },
+      onSettled: () => {
+        setPendingCancelId(null);
+      },
+    }),
+  );
+
+  const resendInvitationMutation = useMutation(
+    trpc.dashboard.churches.resendChurchInvitation.mutationOptions({
+      onSuccess: () => {
+        showSuccess({ message: 'Invitation resent' });
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to resend invitation',
+        });
+      },
+      onSettled: () => {
+        setPendingResendId(null);
+      },
     }),
   );
 
   const handleRemoveMember = (appUserId: string) => {
+    setPendingRemoveId(appUserId);
     removeMemberMutation.mutate({
       churchId,
       appUserId,
     });
   };
 
+  const handleCancelInvitation = (invitationId: string) => {
+    setPendingCancelId(invitationId);
+    cancelInvitationMutation.mutate({
+      churchId,
+      invitationId,
+    });
+  };
+
+  const handleResendInvitation = (invitationId: string) => {
+    setPendingResendId(invitationId);
+    resendInvitationMutation.mutate({
+      churchId,
+      invitationId,
+    });
+  };
+
   const getRoleLabel = (membership: OrganizationMembershipWithUser) => {
     if (membership.isAdmin) return 'Admin';
     if (membership.canEdit) return 'Editor';
-    return 'User';
+    return 'Member';
   };
 
   const getRoleBadgeColor = (membership: OrganizationMembershipWithUser) => {
@@ -193,155 +256,122 @@ function ChurchMembersPage() {
     <Stack gap="lg">
       <Group justify="space-between" align="flex-start">
         <div>
-          <Title order={1}>Users</Title>
+          <Title order={1}>Members</Title>
           <Text c="dimmed">
-            {church.name} • {church.memberships?.length || 0} total users
+            {church.name} • {church.memberships?.length || 0} total members
           </Text>
         </div>
 
         <Tooltip
           label={
             isAdmin
-              ? 'Add a new user to this church profile'
-              : 'Only admins can add users'
+              ? 'Send invitation to new member'
+              : 'Only admins can send invitations'
           }
           disabled={isAdmin}
         >
           <Button
             leftSection={<IconPlus size={16} />}
-            onClick={openAddMemberModal}
+            onClick={openInviteMemberModal}
             disabled={!isAdmin}
           >
-            Add User
+            Send Invitation
           </Button>
         </Tooltip>
       </Group>
 
-      <Modal
-        opened={addMemberModalOpened}
-        onClose={handleCloseModal}
-        title="Add Church User"
-        size="md"
-        centered
-      >
-        <Stack gap="md">
-          <div>
-            <TextInput
-              label="Search for user"
-              placeholder="Start typing a username..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.currentTarget.value);
-                setSelectedUserId(null);
-              }}
-              mb="xs"
-            />
+      {/* Pending Invitations Section */}
+      {isAdmin && invitations.length > 0 && (
+        <>
+          <Title order={3} mb="md">
+            Pending Invitations
+          </Title>
+          <Table verticalSpacing="md">
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Email</Table.Th>
+                <Table.Th>Role</Table.Th>
+                <Table.Th>Invited By</Table.Th>
+                <Table.Th>Expires</Table.Th>
+                <Table.Th>Actions</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {invitations.map((invitation: ChurchInvitation) => (
+                <Table.Tr key={invitation.id}>
+                  <Table.Td>
+                    <Group gap="xs">
+                      <IconMail size={16} />
+                      <Text size="sm">{invitation.email}</Text>
+                    </Group>
+                  </Table.Td>
+                  <Table.Td>
+                    <Badge
+                      color={
+                        invitation.isAdmin
+                          ? 'blue'
+                          : invitation.canEdit
+                            ? 'green'
+                            : 'gray'
+                      }
+                      size="sm"
+                    >
+                      {invitation.isAdmin
+                        ? 'Admin'
+                        : invitation.canEdit
+                          ? 'Editor'
+                          : 'Member'}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="sm">
+                      {invitation.invitedBy.fullName ||
+                        invitation.invitedBy.username}
+                    </Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="sm">{formatDate(invitation.expiresAt)}</Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Group gap="xs">
+                      <Tooltip label="Resend Invitation">
+                        <ActionIcon
+                          color="blue"
+                          variant="subtle"
+                          onClick={() => handleResendInvitation(invitation.id)}
+                          loading={pendingResendId === invitation.id}
+                        >
+                          <IconRefresh size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                      <Tooltip label="Cancel Invitation">
+                        <ActionIcon
+                          color="red"
+                          variant="subtle"
+                          onClick={() => handleCancelInvitation(invitation.id)}
+                          loading={pendingCancelId === invitation.id}
+                        >
+                          <IconX size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+          <Divider my="xl" />
+        </>
+      )}
 
-            {debouncedSearchQuery.length >= 2 && searchResults.length > 0 && (
-              <Stack gap="xs" mah={200} style={{ overflowY: 'auto' }}>
-                {searchResults.map((user) => (
-                  <Group
-                    key={user.id}
-                    p="sm"
-                    bg={selectedUserId === user.id ? 'blue.1' : 'gray.0'}
-                    style={{
-                      borderRadius: 8,
-                      cursor: 'pointer',
-                      border:
-                        selectedUserId === user.id
-                          ? '1px solid var(--mantine-color-blue-6)'
-                          : '1px solid transparent',
-                    }}
-                    onClick={() => {
-                      setSelectedUserId(user.id);
-                      setSearchQuery(user.username);
-                    }}
-                  >
-                    <Avatar size="sm" src={user.avatarUrl}>
-                      {user.username.charAt(0).toUpperCase()}
-                    </Avatar>
-                    <div>
-                      <Text size="sm" fw={500}>
-                        {user.username}
-                      </Text>
-                      {user.fullName && (
-                        <Text size="xs" c="dimmed">
-                          {user.fullName}
-                        </Text>
-                      )}
-                    </div>
-                  </Group>
-                ))}
-              </Stack>
-            )}
-
-            {debouncedSearchQuery.length >= 2 && searchResults.length === 0 && (
-              <Text size="sm" c="dimmed" p="sm">
-                No users found matching "{debouncedSearchQuery}"
-              </Text>
-            )}
-          </div>
-
-          {selectedUserId && (
-            <>
-              <Text size="sm" fw={500}>
-                Permissions
-              </Text>
-
-              <form.AppField name="role">
-                {(field) => (
-                  <field.SelectField
-                    label="Role"
-                    data={[
-                      { value: 'admin', label: 'Admin - Full access' },
-                      {
-                        value: 'editor',
-                        label: 'Editor - Can edit church content',
-                      },
-                      {
-                        value: 'member',
-                        label: 'User - Basic access',
-                      },
-                    ]}
-                  />
-                )}
-              </form.AppField>
-
-              <Text size="xs" c="dimmed" mt="xs">
-                <strong>Note:</strong> You can only add someone who already has
-                a Let's Church account. If they don't have an account yet, have
-                them join Let's Church first.
-              </Text>
-            </>
-          )}
-
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              form.handleSubmit();
-            }}
-          >
-            <Group justify="flex-end" mt="md">
-              <Button variant="outline" onClick={handleCloseModal}>
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={!selectedUserId}
-                loading={addMemberMutation.isPending}
-              >
-                Add User
-              </Button>
-            </Group>
-          </form>
-        </Stack>
-      </Modal>
-
+      {/* Active Members Section */}
+      <Title order={3} mb="md">
+        Active Members
+      </Title>
       <Table verticalSpacing="md">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>User</Table.Th>
+            <Table.Th>Member</Table.Th>
             <Table.Th>Role</Table.Th>
             <Table.Th>Joined</Table.Th>
             <Table.Th>Actions</Table.Th>
@@ -352,7 +382,7 @@ function ChurchMembersPage() {
             <Table.Tr>
               <Table.Td colSpan={4}>
                 <Text ta="center" c="dimmed" py="xl">
-                  No users found
+                  No members found
                 </Text>
               </Table.Td>
             </Table.Tr>
@@ -406,10 +436,10 @@ function ChurchMembersPage() {
                         church.userMembership?.appUserId;
                       const canRemove = isAdmin && !isSelf;
                       const tooltipText = !isAdmin
-                        ? 'Only admins can remove users'
+                        ? 'Only admins can remove members'
                         : isSelf
                           ? 'You cannot remove yourself'
-                          : 'Remove this user from the church profile';
+                          : 'Remove this member from the church';
 
                       return (
                         <Tooltip label={tooltipText}>
@@ -422,7 +452,7 @@ function ChurchMembersPage() {
                               canRemove &&
                               handleRemoveMember(membership.appUserId)
                             }
-                            loading={removeMemberMutation.isPending}
+                            loading={pendingRemoveId === membership.appUserId}
                           >
                             <IconTrash size={16} />
                           </ActionIcon>
@@ -436,6 +466,72 @@ function ChurchMembersPage() {
           )}
         </Table.Tbody>
       </Table>
+
+      <Modal
+        opened={inviteMemberModalOpened}
+        onClose={() => {
+          closeInviteMemberModal();
+          form.reset();
+        }}
+        title="Send Invitation"
+        size="md"
+        centered
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
+          }}
+        >
+          <Stack gap="md">
+            <form.AppField name="email">
+              {(field) => (
+                <field.TextInputField
+                  label="Email Address"
+                  placeholder="user@example.com"
+                  type="email"
+                  required
+                />
+              )}
+            </form.AppField>
+
+            <form.AppField name="role">
+              {(field) => (
+                <field.SelectField
+                  label="Role"
+                  data={[
+                    { value: 'admin', label: 'Admin - Full access' },
+                    {
+                      value: 'editor',
+                      label: 'Editor - Can edit church content',
+                    },
+                    {
+                      value: 'member',
+                      label: 'Member - Basic access',
+                    },
+                  ]}
+                />
+              )}
+            </form.AppField>
+
+            <Group justify="flex-end" mt="md">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  closeInviteMemberModal();
+                  form.reset();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" loading={inviteMemberMutation.isPending}>
+                Send Invitation
+              </Button>
+            </Group>
+          </Stack>
+        </form>
+      </Modal>
     </Stack>
   );
 }
