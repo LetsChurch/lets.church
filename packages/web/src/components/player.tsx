@@ -96,6 +96,8 @@ export function Player({
     visible: boolean;
   } | null>(null);
   const seekFeedbackTimeoutRef = useRef<number | undefined>(undefined);
+  // Track if we auto-switched to audio due to page being backgrounded
+  const autoSwitchedToAudioRef = useRef(false);
 
   const recordViewSecondsMutation = useMutation(
     trpc.media.recordViewSeconds.mutationOptions(),
@@ -166,6 +168,78 @@ export function Player({
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  // Auto-switch between video and audio based on page visibility (iOS background playback)
+  useEffect(() => {
+    // Only enable this feature if both video and audio sources are available
+    if (!hasVideo || !hasAudio) return;
+
+    const handleVisibilityChange = () => {
+      if (
+        document.hidden &&
+        mediaType === 'video' &&
+        videoRef.current &&
+        !videoRef.current.paused
+      ) {
+        // Page is being backgrounded while video is playing - switch to audio
+        setSavedPosition(videoRef.current.currentTime);
+        setSavedPlayState(true);
+        autoSwitchedToAudioRef.current = true;
+        setMediaType('audio');
+      } else if (
+        !document.hidden &&
+        mediaType === 'audio' &&
+        autoSwitchedToAudioRef.current
+      ) {
+        // Page is becoming visible and we previously auto-switched - switch back to video
+        if (videoRef.current) {
+          setSavedPosition(videoRef.current.currentTime);
+          setSavedPlayState(!videoRef.current.paused);
+        }
+        autoSwitchedToAudioRef.current = false;
+        setMediaType('video');
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () =>
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [hasVideo, hasAudio, mediaType]);
+
+  // Media Session API for lock screen controls
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+
+    navigator.mediaSession.setActionHandler('play', () => {
+      videoRef.current?.play();
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      videoRef.current?.pause();
+    });
+    navigator.mediaSession.setActionHandler('seekforward', () => {
+      if (videoRef.current) {
+        videoRef.current.currentTime = Math.min(
+          videoRef.current.duration || 0,
+          videoRef.current.currentTime + 15,
+        );
+      }
+    });
+    navigator.mediaSession.setActionHandler('seekbackward', () => {
+      if (videoRef.current) {
+        videoRef.current.currentTime = Math.max(
+          0,
+          videoRef.current.currentTime - 15,
+        );
+      }
+    });
+
+    return () => {
+      navigator.mediaSession.setActionHandler('play', null);
+      navigator.mediaSession.setActionHandler('pause', null);
+      navigator.mediaSession.setActionHandler('seekforward', null);
+      navigator.mediaSession.setActionHandler('seekbackward', null);
     };
   }, []);
 
@@ -388,6 +462,8 @@ export function Player({
                             // Save current position and play state
                             setSavedPosition(videoRef.current.currentTime);
                             setSavedPlayState(!videoRef.current.paused);
+                            // Clear auto-switch flag since user manually switched
+                            autoSwitchedToAudioRef.current = false;
                             setMediaType(value);
                           }
                         }}
