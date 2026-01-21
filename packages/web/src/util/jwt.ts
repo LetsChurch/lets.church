@@ -51,7 +51,10 @@ const sessionJwtSchema = z.object({
   sub: z.uuid(),
 });
 
+// 4 weeks in seconds
+export const SESSION_EXPIRATION_SECONDS = 60 * 60 * 24 * 7 * 4;
+
 export const { create: createSessionJwt, parse: parseSessionJwt } = jwtFactory(
   sessionJwtSchema,
-  '4w',
+  `${SESSION_EXPIRATION_SECONDS}s`,
 );

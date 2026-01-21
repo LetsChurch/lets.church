@@ -9,7 +9,7 @@ import {
   resetPassword,
 } from '@/temporal';
 import { login } from '@/util/auth';
-import { createSessionJwt } from '@/util/jwt';
+import { createSessionJwt, SESSION_EXPIRATION_SECONDS } from '@/util/jwt';
 import logger from '@/util/logger';
 import { getClientIpAddress } from '@/util/request-ip';
 import { generateResetPasswordEmail } from '@/util/reset-password-email';
@@ -51,6 +51,7 @@ export const authProcedures = {
 
           setCookie('lc-session', await createSessionJwt({ sub: session.id }), {
             sameSite: 'lax',
+            maxAge: SESSION_EXPIRATION_SECONDS,
           });
 
           moduleLogger.info(
