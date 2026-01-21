@@ -11,11 +11,13 @@ import {
   Loader,
   LoadingOverlay,
   Modal,
+  MultiSelect,
   Progress,
   Radio,
   Stack,
   Text,
   Textarea,
+  TextInput,
   Title,
   Tooltip,
 } from '@mantine/core';
@@ -35,6 +37,7 @@ import {
 } from '@tabler/icons-react';
 import {
   useMutation,
+  useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
@@ -45,7 +48,8 @@ import {
   useNavigate,
 } from '@tanstack/react-router';
 import HlsVideo from 'hls-video-element/react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useDebounce } from 'use-debounce';
 import { useAppMantineForm } from '@/components/mantine';
 import { uploadFormSchema } from '@/schemas/dashboard';
 import { trpcClient, useTRPC } from '@/trpc/react';
@@ -141,6 +145,34 @@ function ChannelUploadPage() {
   const [thumbnailUrlBeforeUpload, setThumbnailUrlBeforeUpload] = useState<
     string | null
   >(null);
+
+  // Series state variables
+  const [seriesSearchValue, setSeriesSearchValue] = useState('');
+  const [debouncedSeriesSearch] = useDebounce(seriesSearchValue, 200);
+  const [showCreateSeriesModal, setShowCreateSeriesModal] = useState(false);
+  const [newSeriesTitle, setNewSeriesTitle] = useState('');
+
+  // Track original series for comparison
+  const originalSeriesIds = useMemo(
+    () => new Set(upload.series?.map((s) => s.id) ?? []),
+    [upload.series],
+  );
+
+  // Series search query
+  const { data: seriesSearchResults } = useQuery({
+    ...trpc.dashboard.channels.searchChannelSeries.queryOptions({
+      channelId,
+      query: debouncedSeriesSearch,
+    }),
+    enabled: debouncedSeriesSearch.length >= 2,
+  });
+
+  // Get all series for the channel (for initial display)
+  const { data: allChannelSeries = [] } = useQuery({
+    ...trpc.dashboard.channels.getChannelPlaylists.queryOptions({
+      channelId,
+    }),
+  });
 
   const resetDroppedThumbnail = useCallback(() => {
     setPreviewUrl((previewUrl) => {
@@ -272,6 +304,37 @@ function ChannelUploadPage() {
     }),
   );
 
+  const createSeriesMutation = useMutation(
+    trpc.dashboard.channels.createPlaylist.mutationOptions({
+      onSuccess: async (data) => {
+        showSuccess({ message: 'Series created successfully' });
+        // Add newly created series to form
+        form.setFieldValue('seriesIds', (prev) => [...prev, data.playlist.id]);
+        setShowCreateSeriesModal(false);
+        setNewSeriesTitle('');
+        setSeriesSearchValue('');
+
+        // Invalidate queries to refresh data
+        await queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getUploadRecord.queryKey({
+            channelId,
+            uploadId,
+          }),
+        });
+        await queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getChannelPlaylists.queryKey({
+            channelId,
+          }),
+        });
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to create series',
+        });
+      },
+    }),
+  );
+
   const deleteUploadMutation = useMutation(
     trpc.dashboard.channels.deleteUploadRecord.mutationOptions({
       onSuccess: async ({ uploadId }) => {
@@ -318,46 +381,175 @@ function ChannelUploadPage() {
       visibility: upload.visibility,
       userCommentsEnabled: upload.userCommentsEnabled,
       downloadsEnabled: upload.downloadsEnabled,
+      seriesIds: upload.series?.map((s) => s.id) ?? [],
     },
     validators: {
       onChange: uploadFormSchema,
     },
     onSubmit: async ({ value }) => {
-      if (newThumbnailFile) {
-        setThumbnailUrlBeforeUpload(upload.thumbnailUrl);
+      try {
+        if (newThumbnailFile) {
+          setThumbnailUrlBeforeUpload(upload.thumbnailUrl);
 
-        const mpu =
-          await trpcClient.dashboard.channels.createMultipartUpload.mutate({
+          const mpu =
+            await trpcClient.dashboard.channels.createMultipartUpload.mutate({
+              channelId,
+              targetId: uploadId,
+              uploadMimeType: newThumbnailFile.type,
+              postProcess: 'thumbnail',
+              bytes: newThumbnailFile.size,
+            });
+
+          const uploadPromise = doMultipartUpload(
+            newThumbnailFile,
+            mpu.urls,
+            mpu.partSize,
+          );
+
+          await trpcClient.dashboard.channels.finalizeMultipartUpload.mutate({
             channelId,
-            targetId: uploadId,
-            uploadMimeType: newThumbnailFile.type,
-            postProcess: 'thumbnail',
-            bytes: newThumbnailFile.size,
+            s3UploadKey: mpu.s3UploadKey,
+            s3UploadId: mpu.s3UploadId,
+            s3PartETags: await uploadPromise,
           });
 
-        const uploadPromise = doMultipartUpload(
-          newThumbnailFile,
-          mpu.urls,
-          mpu.partSize,
-        );
+          setIsProcessingThumbnail(true);
+        }
 
-        await trpcClient.dashboard.channels.finalizeMultipartUpload.mutate({
+        // Update basic upload fields
+        await updateMutation.mutateAsync({
           channelId,
-          s3UploadKey: mpu.s3UploadKey,
-          s3UploadId: mpu.s3UploadId,
-          s3PartETags: await uploadPromise,
+          uploadId,
+          ...value,
         });
 
-        setIsProcessingThumbnail(true);
-      }
+        // Calculate series changes
+        const currentSeriesIds = new Set(value.seriesIds);
+        const seriesToAdd = [...currentSeriesIds].filter(
+          (id) => !originalSeriesIds.has(id),
+        );
+        const seriesToRemove = [...originalSeriesIds].filter(
+          (id) => !currentSeriesIds.has(id),
+        );
 
-      updateMutation.mutate({
-        channelId,
-        uploadId,
-        ...value,
-      });
+        // Handle series changes with parallel operations
+        if (seriesToAdd.length > 0 || seriesToRemove.length > 0) {
+          try {
+            // Run all add operations in parallel
+            const addResults = await Promise.allSettled(
+              seriesToAdd.map((seriesId) =>
+                trpcClient.dashboard.channels.addToPlaylist.mutate({
+                  channelId,
+                  playlistId: seriesId,
+                  uploadId,
+                }),
+              ),
+            );
+
+            // Run all remove operations in parallel
+            const removeResults = await Promise.allSettled(
+              seriesToRemove.map((seriesId) =>
+                trpcClient.dashboard.channels.removeFromPlaylist.mutate({
+                  channelId,
+                  playlistId: seriesId,
+                  uploadId,
+                }),
+              ),
+            );
+
+            // Aggregate errors and provide granular feedback
+            const addFailures = addResults.filter(
+              (r) => r.status === 'rejected',
+            );
+            const removeFailures = removeResults.filter(
+              (r) => r.status === 'rejected',
+            );
+
+            if (addFailures.length > 0 || removeFailures.length > 0) {
+              const errorParts = [];
+              if (addFailures.length > 0) {
+                errorParts.push(
+                  `Failed to add to ${addFailures.length} of ${seriesToAdd.length} series`,
+                );
+              }
+              if (removeFailures.length > 0) {
+                errorParts.push(
+                  `Failed to remove from ${removeFailures.length} of ${seriesToRemove.length} series`,
+                );
+              }
+              showFailure({
+                message: errorParts.join('; '),
+              });
+            }
+          } finally {
+            // Always invalidate queries to reflect actual state
+            await queryClient.invalidateQueries({
+              queryKey: trpc.dashboard.channels.getUploadRecord.queryKey({
+                channelId,
+                uploadId,
+              }),
+            });
+          }
+        }
+      } catch (error) {
+        showFailure({
+          message:
+            error instanceof Error ? error.message : 'Failed to update upload',
+        });
+      }
     },
   });
+
+  // Build MultiSelect data combining all series
+  const seriesSelectData = useMemo(() => {
+    // Filter allChannelSeries to only SERIES type
+    const channelSeriesOnly = allChannelSeries.filter(
+      (s) => s.type === 'SERIES',
+    );
+
+    // Create a map of all series
+    const seriesMap = new Map(
+      channelSeriesOnly.map((s) => [s.id, { id: s.id, title: s.title }]),
+    );
+
+    // Add search results to the map (they might have upload counts)
+    seriesSearchResults?.forEach((s) => {
+      seriesMap.set(s.id, { id: s.id, title: s.title });
+    });
+
+    // Add currently selected series from upload
+    upload.series?.forEach((s) => {
+      if (!seriesMap.has(s.id)) {
+        seriesMap.set(s.id, { id: s.id, title: s.title });
+      }
+    });
+
+    const options = Array.from(seriesMap.values()).map((s) => ({
+      value: s.id,
+      label: s.title,
+    }));
+
+    // Add "Create new series" option if there's a search term and no exact match
+    if (debouncedSeriesSearch.trim().length >= 2) {
+      const hasExactMatch = options.some(
+        (opt) =>
+          opt.label.toLowerCase() === debouncedSeriesSearch.toLowerCase(),
+      );
+      if (!hasExactMatch) {
+        options.unshift({
+          value: '__CREATE__',
+          label: `+ Create new series: "${debouncedSeriesSearch}"`,
+        });
+      }
+    }
+
+    return options;
+  }, [
+    allChannelSeries,
+    seriesSearchResults,
+    upload.series,
+    debouncedSeriesSearch,
+  ]);
 
   return (
     <Container size="xl" py="md" pos="relative">
@@ -606,6 +798,48 @@ function ChannelUploadPage() {
                     />
                   )}
                 </form.AppField>
+
+                {/* Series Selection */}
+                <form.AppField name="seriesIds" mode="array">
+                  {(field) => (
+                    <MultiSelect
+                      label="Series"
+                      placeholder="Search and select series..."
+                      description="Add this upload to one or more series in your channel"
+                      data={seriesSelectData}
+                      value={field.state.value || []}
+                      onChange={(value) => {
+                        // Check if user selected the "Create new series" option
+                        if (value.includes('__CREATE__')) {
+                          // Remove __CREATE__ from the value and open modal
+                          const filteredValue = value.filter(
+                            (v) => v !== '__CREATE__',
+                          );
+                          field.handleChange(filteredValue);
+                          setNewSeriesTitle(debouncedSeriesSearch);
+                          setSeriesSearchValue(''); // Clear search to close dropdown
+                          setShowCreateSeriesModal(true);
+                        } else {
+                          field.handleChange(value);
+                        }
+                      }}
+                      searchable
+                      clearable
+                      disabled={isProcessing}
+                      searchValue={seriesSearchValue}
+                      onSearchChange={setSeriesSearchValue}
+                      nothingFoundMessage={
+                        debouncedSeriesSearch.length < 2
+                          ? 'Type to search series...'
+                          : 'No series found'
+                      }
+                      comboboxProps={{
+                        position: 'bottom',
+                        middlewares: { flip: false, shift: false },
+                      }}
+                    />
+                  )}
+                </form.AppField>
               </Stack>
             </form>
           </Stack>
@@ -631,6 +865,7 @@ function ChannelUploadPage() {
                       onClick={() => {
                         form.reset();
                         resetDroppedThumbnail();
+                        setSeriesSearchValue('');
                       }}
                     >
                       Undo changes
@@ -1004,6 +1239,58 @@ function ChannelUploadPage() {
               loading={deleteUploadMutation.isPending}
             >
               Delete Upload
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Create Series Modal */}
+      <Modal
+        opened={showCreateSeriesModal}
+        onClose={() => {
+          setShowCreateSeriesModal(false);
+          setNewSeriesTitle('');
+          setSeriesSearchValue('');
+        }}
+        title="Create New Series"
+        centered
+      >
+        <Stack gap="md">
+          <TextInput
+            label="Series Title"
+            value={newSeriesTitle}
+            onChange={(e) => setNewSeriesTitle(e.currentTarget.value)}
+            placeholder="Enter series title"
+            autoFocus
+            required
+          />
+          <Text size="sm" c="dimmed">
+            The upload will be added to this series when you click Save.
+          </Text>
+          <Group justify="flex-end" gap="sm">
+            <Button
+              variant="default"
+              onClick={() => {
+                setShowCreateSeriesModal(false);
+                setNewSeriesTitle('');
+                setSeriesSearchValue('');
+              }}
+              disabled={createSeriesMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                createSeriesMutation.mutate({
+                  channelId,
+                  title: newSeriesTitle.trim(),
+                  type: 'SERIES',
+                });
+              }}
+              loading={createSeriesMutation.isPending}
+              disabled={newSeriesTitle.trim().length === 0}
+            >
+              Create Series
             </Button>
           </Group>
         </Stack>

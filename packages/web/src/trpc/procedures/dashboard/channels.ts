@@ -1256,6 +1256,23 @@ export const channelRouter = router({
               },
             },
           },
+          uploadListEntries: {
+            select: {
+              uploadList: {
+                select: {
+                  id: true,
+                  title: true,
+                  type: true,
+                },
+              },
+            },
+            where: {
+              uploadList: {
+                type: 'SERIES',
+                channelId: input.channelId,
+              },
+            },
+          },
         },
         where: {
           id: input.uploadId,
@@ -1281,6 +1298,7 @@ export const channelRouter = router({
         overrideThumbnailPath,
         featuredUpload,
         variants,
+        uploadListEntries,
         ...uploadRest
       } = upload;
       const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
@@ -1308,6 +1326,7 @@ export const channelRouter = router({
           isFeatured: !!featuredUpload,
           mediaSource,
           audioSource,
+          series: uploadListEntries.map((e) => e.uploadList),
         },
         channel: {
           ...upload.channel,
@@ -1544,6 +1563,34 @@ export const channelRouter = router({
 
     return playlists;
   }),
+
+  searchChannelSeries: channelProcedure
+    .input(
+      z.object({
+        channelId: z.string(),
+        query: z.string().min(1),
+      }),
+    )
+    .query(async ({ input }) => {
+      const series = await prisma.uploadList.findMany({
+        where: {
+          channelId: input.channelId,
+          type: 'SERIES',
+          title: {
+            contains: input.query,
+            mode: 'insensitive',
+          },
+        },
+        select: {
+          id: true,
+          title: true,
+          _count: { select: { uploads: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      });
+      return series;
+    }),
 
   getPlaylistDetails: channelProcedure
     .input(playlistQuerySchema)
@@ -1811,6 +1858,17 @@ export const channelRouter = router({
           });
         }
 
+        // SECURITY: Verify the playlist belongs to the channel the user has permission for
+        if (playlist.channelId !== input.channelId) {
+          moduleLogger.warn(
+            'Playlist does not belong to the requested channel',
+          );
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Playlist does not belong to this channel',
+          });
+        }
+
         // Verify the upload belongs to the same channel
         const upload = await prisma.uploadRecord.findFirst({
           where: {
@@ -1917,6 +1975,39 @@ export const channelRouter = router({
       );
 
       try {
+        // SECURITY: Verify the playlist belongs to the channel the user has permission for
+        const playlist = await prisma.uploadList.findUnique({
+          where: { id: input.playlistId },
+          select: { channelId: true },
+        });
+
+        if (!playlist) {
+          moduleLogger.warn(
+            {
+              uploadId: input.uploadId,
+              context: {
+                playlistId: input.playlistId,
+                removedBy: ctx.session.appUserId,
+              },
+            },
+            'Playlist not found for remove from playlist',
+          );
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Playlist not found',
+          });
+        }
+
+        if (playlist.channelId !== input.channelId) {
+          moduleLogger.warn(
+            'Playlist does not belong to the requested channel',
+          );
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Playlist does not belong to this channel',
+          });
+        }
+
         const deletedEntry = await prisma.uploadListEntry.deleteMany({
           where: {
             uploadListId: input.playlistId,

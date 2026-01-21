@@ -64,6 +64,7 @@ export const uploadFormSchema = z.object({
   visibility: z.enum(UploadVisibility),
   userCommentsEnabled: z.boolean(),
   downloadsEnabled: z.boolean(),
+  seriesIds: z.array(z.string()),
 });
 
 export const updateUploadSchema = uploadFormSchema.extend({
@@ -210,6 +211,11 @@ export const reorderPlaylistSchema = z.object({
   channelId: channelIdSchema,
   playlistId: playlistIdSchema,
   uploadIds: z.array(uploadIdSchema).min(1),
+});
+
+export const searchChannelSeriesSchema = z.object({
+  channelId: channelIdSchema,
+  query: z.string().min(1, 'Search query is required'),
 });
 
 export const importMediaSchema = z.object({
