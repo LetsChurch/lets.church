@@ -78,6 +78,7 @@ export const mediaProcedures = {
           probe: true,
           userCommentsEnabled: true,
           downloadsEnabled: true,
+          license: true,
           channel: {
             select: {
               id: true,

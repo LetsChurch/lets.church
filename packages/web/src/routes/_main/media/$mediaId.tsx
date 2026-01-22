@@ -819,6 +819,7 @@ function RouteComponent() {
               viewCount={media._count.uploadViews}
               publishedAt={media.publishedAt}
               createdAt={media.createdAt}
+              license={media.license}
               showTranscriptTab={!layout.showSidebar}
               showPlaylistTab={!layout.showSidebar && hasPlaylistContext}
               showCommentsTab={!layout.showSidebar}

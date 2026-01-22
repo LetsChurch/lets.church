@@ -1,11 +1,14 @@
 import { Tabs } from '@base-ui-components/react/tabs';
+import type { UploadLicense } from '@letschurch/db/types';
 import { LcTooltip } from '@/components/lc-tooltip';
+import { getLicenseInfo } from '@/util/license';
 
 type MediaInfoTabsProps = {
   descriptionHtml: string | null;
   viewCount: number;
   publishedAt: Date | null;
   createdAt: Date;
+  license: UploadLicense;
   showTranscriptTab: boolean;
   showPlaylistTab: boolean;
   showCommentsTab: boolean;
@@ -20,6 +23,7 @@ export function MediaInfoTabs({
   viewCount,
   publishedAt,
   createdAt,
+  license,
   showTranscriptTab,
   showPlaylistTab,
   showCommentsTab,
@@ -28,6 +32,7 @@ export function MediaInfoTabs({
   onPlaylistClick,
   onCommentsClick,
 }: MediaInfoTabsProps) {
+  const licenseInfo = getLicenseInfo(license);
   return (
     <Tabs.Root
       defaultValue="details"
@@ -112,7 +117,7 @@ export function MediaInfoTabs({
           </p>
         )}
         <div className="mx-5 border-zinc-200 border-t pt-[18px] pb-5 dark:border-zinc-800">
-          <div className="flex gap-3">
+          <div className="flex items-center gap-3">
             <span className="font-medium text-primary/70 text-xs">
               {viewCount.toLocaleString()} views
             </span>
@@ -123,6 +128,29 @@ export function MediaInfoTabs({
                 day: 'numeric',
               })}
             </span>
+            <LcTooltip
+              content={
+                <div className="max-w-xs">
+                  <div className="mb-1 font-semibold">{licenseInfo.name}</div>
+                  <div className="text-xs">{licenseInfo.description}</div>
+                  {licenseInfo.url ? (
+                    <a
+                      href={licenseInfo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-block text-blue-400 text-xs hover:underline"
+                    >
+                      Learn more
+                    </a>
+                  ) : null}
+                </div>
+              }
+              render={
+                <span className="cursor-help font-medium text-primary/70 text-xs" />
+              }
+            >
+              {licenseInfo.name}
+            </LcTooltip>
           </div>
         </div>
       </Tabs.Panel>
