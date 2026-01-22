@@ -408,20 +408,41 @@ function OrganizationMembersPage() {
                 </Table.Td>
                 {isAdmin && (
                   <Table.Td>
-                    <Group gap="xs">
-                      <Tooltip label="Remove Member">
-                        <ActionIcon
-                          color="red"
-                          variant="subtle"
-                          onClick={() =>
-                            handleRemoveMember(membership.appUserId)
-                          }
-                          loading={removeMemberMutation.isPending}
-                        >
-                          <IconTrash size={16} />
-                        </ActionIcon>
-                      </Tooltip>
-                    </Group>
+                    {(() => {
+                      const isSelf =
+                        membership.appUser.id ===
+                        organization.userMembership?.appUserId;
+                      const adminCount =
+                        organization.memberships.filter((m) => m.isAdmin)
+                          .length || 0;
+                      const isLastAdmin =
+                        isSelf && membership.isAdmin && adminCount === 1;
+                      const canRemove = !isLastAdmin;
+                      const tooltipText = isLastAdmin
+                        ? 'Cannot remove the last admin'
+                        : isSelf
+                          ? 'Remove yourself from the organization'
+                          : 'Remove this member from the organization';
+
+                      return (
+                        <Tooltip label={tooltipText}>
+                          <span style={{ display: 'inline-block' }}>
+                            <ActionIcon
+                              color="red"
+                              variant="subtle"
+                              disabled={!canRemove}
+                              onClick={() =>
+                                canRemove &&
+                                handleRemoveMember(membership.appUserId)
+                              }
+                              loading={removeMemberMutation.isPending}
+                            >
+                              <IconTrash size={16} />
+                            </ActionIcon>
+                          </span>
+                        </Tooltip>
+                      );
+                    })()}
                   </Table.Td>
                 )}
               </Table.Tr>

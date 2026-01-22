@@ -713,66 +713,72 @@ export const churchRouter = router({
       );
 
       try {
-        // Don't allow removing the last admin
-        const adminCount = await prisma.organizationMembership.count({
-          where: {
-            organizationId: input.churchId,
-            isAdmin: true,
-          },
-        });
+        let wasAdmin = false;
+        await prisma.$transaction(async (tx) => {
+          // Don't allow removing the last admin
+          const adminCount = await tx.organizationMembership.count({
+            where: {
+              organizationId: input.churchId,
+              isAdmin: true,
+            },
+          });
 
-        const membershipToDelete =
-          await prisma.organizationMembership.findUnique({
+          const membershipToDelete = await tx.organizationMembership.findUnique(
+            {
+              where: {
+                organizationId_appUserId: {
+                  organizationId: input.churchId,
+                  appUserId: input.appUserId,
+                },
+              },
+              select: { isAdmin: true, appUserId: true },
+            },
+          );
+
+          if (!membershipToDelete) {
+            moduleLogger.warn(
+              {
+                context: {
+                  churchId: input.churchId,
+                  memberToRemove: input.appUserId,
+                  removedBy: ctx.session.appUserId,
+                },
+              },
+              'Membership not found',
+            );
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'Membership not found',
+            });
+          }
+
+          wasAdmin = membershipToDelete.isAdmin;
+
+          if (membershipToDelete.isAdmin && adminCount <= 1) {
+            moduleLogger.warn(
+              {
+                context: {
+                  churchId: input.churchId,
+                  memberToRemove: input.appUserId,
+                  removedBy: ctx.session.appUserId,
+                },
+              },
+              'Cannot remove last admin from church',
+            );
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Cannot remove the last admin from the church',
+            });
+          }
+
+          await tx.organizationMembership.delete({
             where: {
               organizationId_appUserId: {
                 organizationId: input.churchId,
                 appUserId: input.appUserId,
               },
             },
-            select: { isAdmin: true, appUserId: true },
           });
-
-        if (membershipToDelete?.isAdmin && adminCount <= 1) {
-          moduleLogger.warn(
-            {
-              context: {
-                churchId: input.churchId,
-                memberToRemove: input.appUserId,
-                removedBy: ctx.session.appUserId,
-              },
-            },
-            'Cannot remove last admin from church',
-          );
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Cannot remove the last admin from the church',
-          });
-        }
-
-        // Don't allow removing yourself
-        if (membershipToDelete?.appUserId === ctx.session.appUser.id) {
-          moduleLogger.warn(
-            {
-              appUserId: ctx.session.appUserId,
-              context: {
-                churchId: input.churchId,
-              },
-            },
-            'User attempted to remove themselves from church',
-          );
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'You cannot remove yourself from the church',
-          });
-        }
-
-        await prisma.organizationMembership.delete({
-          where: {
-            organizationId_appUserId: {
-              organizationId: input.churchId,
-              appUserId: input.appUserId,
-            },
-          },
         });
 
         moduleLogger.info(
@@ -781,7 +787,7 @@ export const churchRouter = router({
               churchId: input.churchId,
               memberRemoved: input.appUserId,
               removedBy: ctx.session.appUserId,
-              wasAdmin: membershipToDelete?.isAdmin,
+              wasAdmin,
             },
           },
           'Church member removed successfully',

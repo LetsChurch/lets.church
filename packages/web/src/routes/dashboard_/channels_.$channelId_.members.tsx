@@ -431,28 +431,36 @@ function ChannelMembersPage() {
                     const isSelf =
                       membership.appUser.id ===
                       channel.userMembership?.appUserId;
-                    const canRemove = isAdmin && !isSelf;
+                    const adminCount =
+                      channel.memberships?.filter((m) => m.isAdmin).length || 0;
+                    const isLastAdmin =
+                      isSelf && membership.isAdmin && adminCount === 1;
+                    const canRemove = isAdmin && !isLastAdmin;
                     const tooltipText = !isAdmin
                       ? 'Only admins can remove members'
-                      : isSelf
-                        ? 'You cannot remove yourself'
-                        : 'Remove this member from the channel';
+                      : isLastAdmin
+                        ? 'Cannot remove the last admin'
+                        : isSelf
+                          ? 'Remove yourself from the channel'
+                          : 'Remove this member from the channel';
 
                     return (
                       <Tooltip label={tooltipText}>
-                        <ActionIcon
-                          variant="subtle"
-                          color="red"
-                          size="sm"
-                          disabled={!canRemove}
-                          onClick={() =>
-                            canRemove &&
-                            handleRemoveMember(membership.appUserId)
-                          }
-                          loading={removeMemberMutation.isPending}
-                        >
-                          <IconTrash size={16} />
-                        </ActionIcon>
+                        <span style={{ display: 'inline-block' }}>
+                          <ActionIcon
+                            variant="subtle"
+                            color="red"
+                            size="sm"
+                            disabled={!canRemove}
+                            onClick={() =>
+                              canRemove &&
+                              handleRemoveMember(membership.appUserId)
+                            }
+                            loading={removeMemberMutation.isPending}
+                          >
+                            <IconTrash size={16} />
+                          </ActionIcon>
+                        </span>
                       </Tooltip>
                     );
                   })()}

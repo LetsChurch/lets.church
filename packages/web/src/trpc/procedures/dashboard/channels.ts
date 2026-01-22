@@ -871,63 +871,70 @@ export const channelRouter = router({
       );
 
       try {
-        // Don't allow removing the last admin
-        const adminCount = await prisma.channelMembership.count({
-          where: {
-            channelId: input.channelId,
-            isAdmin: true,
-          },
-        });
-
-        const membershipToDelete = await prisma.channelMembership.findUnique({
-          where: {
-            channelId_appUserId: {
+        let wasAdmin = false;
+        await prisma.$transaction(async (tx) => {
+          // Don't allow removing the last admin
+          const adminCount = await tx.channelMembership.count({
+            where: {
               channelId: input.channelId,
-              appUserId: input.appUserId,
+              isAdmin: true,
             },
-          },
-          select: { isAdmin: true, appUserId: true },
-        });
+          });
 
-        if (membershipToDelete?.isAdmin && adminCount <= 1) {
-          moduleLogger.warn(
-            {
-              channelId: input.channelId,
-              context: {
-                memberToRemove: input.appUserId,
-                removedBy: ctx.session.appUserId,
+          const membershipToDelete = await tx.channelMembership.findUnique({
+            where: {
+              channelId_appUserId: {
+                channelId: input.channelId,
+                appUserId: input.appUserId,
               },
             },
-            'Cannot remove last admin from channel',
-          );
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Cannot remove the last admin from the channel',
+            select: { isAdmin: true, appUserId: true },
           });
-        }
 
-        // Don't allow removing yourself
-        if (membershipToDelete?.appUserId === ctx.session.appUser.id) {
-          moduleLogger.warn(
-            {
-              channelId: input.channelId,
-              appUserId: ctx.session.appUserId,
+          if (!membershipToDelete) {
+            moduleLogger.warn(
+              {
+                channelId: input.channelId,
+                context: {
+                  memberToRemove: input.appUserId,
+                  removedBy: ctx.session.appUserId,
+                },
+              },
+              'Membership not found',
+            );
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'Membership not found',
+            });
+          }
+
+          wasAdmin = membershipToDelete.isAdmin;
+
+          if (membershipToDelete.isAdmin && adminCount <= 1) {
+            moduleLogger.warn(
+              {
+                channelId: input.channelId,
+                context: {
+                  memberToRemove: input.appUserId,
+                  removedBy: ctx.session.appUserId,
+                },
+              },
+              'Cannot remove last admin from channel',
+            );
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Cannot remove the last admin from the channel',
+            });
+          }
+
+          await tx.channelMembership.delete({
+            where: {
+              channelId_appUserId: {
+                channelId: input.channelId,
+                appUserId: input.appUserId,
+              },
             },
-            'User attempted to remove themselves from channel',
-          );
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'You cannot remove yourself from the channel',
           });
-        }
-
-        await prisma.channelMembership.delete({
-          where: {
-            channelId_appUserId: {
-              channelId: input.channelId,
-              appUserId: input.appUserId,
-            },
-          },
         });
 
         moduleLogger.info(
@@ -936,7 +943,7 @@ export const channelRouter = router({
             context: {
               memberRemoved: input.appUserId,
               removedBy: ctx.session.appUserId,
-              wasAdmin: membershipToDelete?.isAdmin,
+              wasAdmin,
             },
           },
           'Channel member removed successfully',

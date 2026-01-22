@@ -642,64 +642,72 @@ export const organizationRouter = router({
       );
 
       try {
-        // Don't allow removing the last admin
-        const adminCount = await prisma.organizationMembership.count({
-          where: {
-            organizationId: input.orgId,
-            isAdmin: true,
-          },
-        });
+        let wasAdmin = false;
+        await prisma.$transaction(async (tx) => {
+          // Don't allow removing the last admin
+          const adminCount = await tx.organizationMembership.count({
+            where: {
+              organizationId: input.orgId,
+              isAdmin: true,
+            },
+          });
 
-        const membershipToDelete =
-          await prisma.organizationMembership.findUnique({
+          const membershipToDelete = await tx.organizationMembership.findUnique(
+            {
+              where: {
+                organizationId_appUserId: {
+                  organizationId: input.orgId,
+                  appUserId: input.appUserId,
+                },
+              },
+              select: { isAdmin: true, appUserId: true },
+            },
+          );
+
+          if (!membershipToDelete) {
+            moduleLogger.warn(
+              {
+                organizationId: input.orgId,
+                context: {
+                  memberToRemove: input.appUserId,
+                  removedBy: ctx.session.appUserId,
+                },
+              },
+              'Membership not found',
+            );
+            throw new TRPCError({
+              code: 'NOT_FOUND',
+              message: 'Membership not found',
+            });
+          }
+
+          wasAdmin = membershipToDelete.isAdmin;
+
+          if (membershipToDelete.isAdmin && adminCount <= 1) {
+            moduleLogger.warn(
+              {
+                organizationId: input.orgId,
+                context: {
+                  memberToRemove: input.appUserId,
+                  removedBy: ctx.session.appUserId,
+                },
+              },
+              'Cannot remove last admin from organization',
+            );
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Cannot remove the last admin from the organization',
+            });
+          }
+
+          await tx.organizationMembership.delete({
             where: {
               organizationId_appUserId: {
                 organizationId: input.orgId,
                 appUserId: input.appUserId,
               },
             },
-            select: { isAdmin: true, appUserId: true },
           });
-
-        if (membershipToDelete?.isAdmin && adminCount <= 1) {
-          moduleLogger.warn(
-            {
-              organizationId: input.orgId,
-              context: {
-                memberToRemove: input.appUserId,
-                removedBy: ctx.session.appUserId,
-              },
-            },
-            'Cannot remove last admin from organization',
-          );
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Cannot remove the last admin from the organization',
-          });
-        }
-
-        // Don't allow removing yourself
-        if (membershipToDelete?.appUserId === ctx.session.appUser.id) {
-          moduleLogger.warn(
-            {
-              organizationId: input.orgId,
-              appUserId: ctx.session.appUserId,
-            },
-            'User attempted to remove themselves from organization',
-          );
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'You cannot remove yourself from the organization',
-          });
-        }
-
-        await prisma.organizationMembership.delete({
-          where: {
-            organizationId_appUserId: {
-              organizationId: input.orgId,
-              appUserId: input.appUserId,
-            },
-          },
         });
 
         moduleLogger.info(
@@ -708,7 +716,7 @@ export const organizationRouter = router({
             context: {
               memberRemoved: input.appUserId,
               removedBy: ctx.session.appUserId,
-              wasAdmin: membershipToDelete?.isAdmin,
+              wasAdmin,
             },
           },
           'Organization member removed successfully',
