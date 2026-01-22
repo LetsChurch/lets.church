@@ -209,29 +209,33 @@ export const importSourcesRouter = router({
   delete: adminProcedure
     .input(z.object({ id: importSourceIdSchema }))
     .mutation(async ({ input }) => {
-      const source = await prisma.channelImportSource.findUnique({
-        where: { id: input.id },
+      const source = await prisma.$transaction(async (tx) => {
+        const source = await tx.channelImportSource.findUnique({
+          where: { id: input.id },
+        });
+
+        if (!source) {
+          throw new TRPCError({ code: 'NOT_FOUND' });
+        }
+
+        await tx.channelImportSource.delete({
+          where: { id: input.id },
+        });
+
+        return source;
       });
 
-      if (!source) {
-        throw new TRPCError({ code: 'NOT_FOUND' });
-      }
+      moduleLogger.info('Deleted import source from database');
 
-      // Delete schedule if it exists
+      // Delete schedule if it exists - after DB transaction completes
       if (source.workflowId) {
         try {
           await deleteImportSourceScheduler(source.id);
-          moduleLogger.info('Deleted import source scheduler before deletion');
+          moduleLogger.info('Deleted import source scheduler');
         } catch (_error) {
-          moduleLogger.error('Failed to delete schedule before deletion');
+          moduleLogger.error('Failed to delete import source scheduler');
         }
       }
-
-      await prisma.channelImportSource.delete({
-        where: { id: input.id },
-      });
-
-      moduleLogger.info('Deleted import source');
 
       return { success: true };
     }),

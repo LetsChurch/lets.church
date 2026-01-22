@@ -1797,6 +1797,27 @@ export const channelRouter = router({
       );
 
       try {
+        const playlist = await prisma.uploadList.findUnique({
+          where: { id: input.playlistId },
+          select: { id: true },
+        });
+
+        if (!playlist) {
+          moduleLogger.warn(
+            {
+              context: {
+                playlistId: input.playlistId,
+                deletedBy: ctx.session.appUserId,
+              },
+            },
+            'Playlist not found',
+          );
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Playlist not found',
+          });
+        }
+
         await prisma.uploadList.delete({
           where: { id: input.playlistId },
         });

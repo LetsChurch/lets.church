@@ -933,6 +933,34 @@ export const churchRouter = router({
       );
 
       try {
+        const association =
+          await prisma.organizationChannelAssociation.findUnique({
+            where: {
+              organizationId_channelId: {
+                organizationId: input.churchId,
+                channelId: input.channelId,
+              },
+            },
+            select: { organizationId: true },
+          });
+
+        if (!association) {
+          moduleLogger.warn(
+            {
+              channelId: input.channelId,
+              context: {
+                churchId: input.churchId,
+                unlinkedBy: ctx.session.appUserId,
+              },
+            },
+            'Channel association not found',
+          );
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Channel association not found',
+          });
+        }
+
         await prisma.organizationChannelAssociation.delete({
           where: {
             organizationId_channelId: {
@@ -1099,6 +1127,29 @@ export const churchRouter = router({
       );
 
       try {
+        const leader = await prisma.organizationLeader.findUnique({
+          where: {
+            id: input.leaderId,
+          },
+          select: { id: true },
+        });
+
+        if (!leader) {
+          moduleLogger.warn(
+            {
+              context: {
+                leaderId: input.leaderId,
+                removedBy: ctx.session.appUserId,
+              },
+            },
+            'Church leader not found',
+          );
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Leader not found',
+          });
+        }
+
         await prisma.organizationLeader.delete({
           where: {
             id: input.leaderId,

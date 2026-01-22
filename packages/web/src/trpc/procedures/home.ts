@@ -1,5 +1,6 @@
 import { prisma } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
+import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarSm2x, appAvatarXs2x } from '@/util/avatar-sizes';
@@ -371,6 +372,27 @@ export const homeProcedures = {
       );
 
       try {
+        const subscription = await prisma.channelSubscription.findUnique({
+          where: {
+            appUserId_channelId: {
+              appUserId: ctx.session.appUserId,
+              channelId: input.channelId,
+            },
+          },
+          select: { appUserId: true },
+        });
+
+        if (!subscription) {
+          moduleLogger.warn(
+            { appUserId: ctx.session.appUserId, channelId: input.channelId },
+            'Subscription not found',
+          );
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Subscription not found',
+          });
+        }
+
         await prisma.channelSubscription.delete({
           where: {
             appUserId_channelId: {

@@ -1130,6 +1130,30 @@ export const organizationRouter = router({
       );
 
       try {
+        const association =
+          await prisma.organizationOrganizationAssociation.findUnique({
+            where: {
+              upstreamOrganizationId_downstreamOrganizationId: {
+                upstreamOrganizationId: input.orgId,
+                downstreamOrganizationId: input.downstreamOrganizationId,
+              },
+            },
+            select: { upstreamOrganizationId: true },
+          });
+
+        if (!association) {
+          moduleLogger.warn(
+            {
+              appUserId: ctx.session.appUserId,
+            },
+            'Downstream relationship not found',
+          );
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Relationship not found',
+          });
+        }
+
         await prisma.organizationOrganizationAssociation.delete({
           where: {
             upstreamOrganizationId_downstreamOrganizationId: {
@@ -1330,6 +1354,30 @@ export const organizationRouter = router({
       );
 
       try {
+        const association =
+          await prisma.organizationOrganizationAssociation.findUnique({
+            where: {
+              upstreamOrganizationId_downstreamOrganizationId: {
+                upstreamOrganizationId: input.orgId,
+                downstreamOrganizationId: input.downstreamOrganizationId,
+              },
+            },
+            select: { upstreamOrganizationId: true },
+          });
+
+        if (!association) {
+          moduleLogger.warn(
+            {
+              appUserId: ctx.session.appUserId,
+            },
+            'Upstream association not found',
+          );
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Association not found',
+          });
+        }
+
         await prisma.organizationOrganizationAssociation.delete({
           where: {
             upstreamOrganizationId_downstreamOrganizationId: {
