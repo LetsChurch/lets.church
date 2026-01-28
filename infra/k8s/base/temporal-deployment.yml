@@ -62,6 +62,9 @@ spec:
           volumeMounts:
             - name: temporal-dynamic-config
               mountPath: /etc/temporal/config/dynamicconfig
+            - name: postgres-ca-cert
+              mountPath: /etc/temporal/certs
+              readOnly: true
       volumes:
         - name: temporal-dynamic-config
           configMap:
@@ -69,6 +72,12 @@ spec:
             items:
               - key: yaml
                 path: production-sql.yml
+        - name: postgres-ca-cert
+          secret:
+            secretName: pg-cluster-cert
+            items:
+              - key: ca.crt
+                path: ca.crt
 ---
 apiVersion: v1
 kind: Service

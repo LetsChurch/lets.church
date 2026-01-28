@@ -27,9 +27,12 @@ configMapGenerator:
     literals:
       - SKIP_DB_CREATE="true"
       - DB=postgres12_pgx # Database vendor
-      - SQL_TLS="true"
-      - SQL_TLS_ENABLED="true" # https://github.com/temporalio/temporal/issues/2621
-      - SQL_TLS_DISABLE_HOST_VERIFICATION="true"
+      - POSTGRES_TLS_ENABLED="true" # Auto-setup schema setup
+      - POSTGRES_TLS_DISABLE_HOST_VERIFICATION="true"
+      - POSTGRES_TLS_CA_FILE="/etc/temporal/certs/ca.crt"
+      - SQL_TLS_ENABLED="true" # Server runtime
+      - SQL_HOST_VERIFICATION="false"
+      - SQL_CA="/etc/temporal/certs/ca.crt" # CA cert for pgx driver
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/production-sql.yml
       - ENABLE_ES="true"
       - ES_SEEDS=elasticsearch # ElasticSearch host
