@@ -891,6 +891,7 @@ function ChannelUploadPage() {
               variant="light"
               leftSection={<IconEye size={16} />}
               fullWidth
+              disabled={isProcessing}
             >
               View Media Page
             </Button>
@@ -911,6 +912,7 @@ function ChannelUploadPage() {
                   toggleFeaturedMutation.mutate({ uploadId });
                 }}
                 loading={toggleFeaturedMutation.isPending}
+                disabled={isProcessing}
                 fullWidth
               >
                 {upload.isFeatured ? 'Remove from Featured' : 'Add to Featured'}
