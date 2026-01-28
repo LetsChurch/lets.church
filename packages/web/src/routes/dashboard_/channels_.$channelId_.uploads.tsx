@@ -21,7 +21,7 @@ import {
 } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { Dropzone } from '@mantine/dropzone';
-import { useDisclosure, useSelection } from '@mantine/hooks';
+import { useDebouncedValue, useDisclosure, useSelection } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { useStore } from '@nanostores/react';
 import {
@@ -45,7 +45,7 @@ import {
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { invariant } from 'es-toolkit';
 import { map } from 'nanostores';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { z } from 'zod';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { formatDate, formatTime } from '@/util/format';
@@ -132,6 +132,29 @@ function ChannelUploadsPage() {
 
   const uploadIds = uploads.map((upload) => upload.id);
   const [selection, handlers] = useSelection({ data: uploadIds });
+
+  // Debounced search
+  const [searchValue, setSearchValue] = useState(search.search ?? '');
+  const [debouncedSearch] = useDebouncedValue(searchValue, 300);
+
+  // Update local state when URL search param changes (e.g., browser back/forward)
+  useEffect(() => {
+    setSearchValue(search.search ?? '');
+  }, [search.search]);
+
+  // Navigate when debounced search value changes
+  useEffect(() => {
+    if (debouncedSearch !== (search.search ?? '')) {
+      navigate({
+        to: '.',
+        search: {
+          page: 1,
+          limit: search.limit,
+          search: debouncedSearch || undefined,
+        },
+      });
+    }
+  }, [debouncedSearch, search.limit, navigate, search.search]);
 
   const createUploadMutation = useMutation(
     trpc.dashboard.channels.createUploadRecord.mutationOptions({
@@ -441,16 +464,9 @@ function ChannelUploadsPage() {
 
       <TextInput
         placeholder="Search uploads by title..."
-        value={search.search ?? ''}
+        value={searchValue}
         onChange={(e) => {
-          navigate({
-            to: '.',
-            search: {
-              page: 1,
-              limit: search.limit,
-              search: e.currentTarget.value || undefined,
-            },
-          });
+          setSearchValue(e.currentTarget.value);
         }}
         style={{ maxWidth: 400 }}
       />
