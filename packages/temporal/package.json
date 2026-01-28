@@ -16,7 +16,8 @@
     "./client": "./src/client/index.ts",
     "./signals": "./src/signals.ts",
     "./util/temporal": "./src/util/temporal.ts",
-    "./util/email": "./src/util/email.ts"
+    "./util/email": "./src/util/email.ts",
+    "./workflow-ids": "./src/workflow-ids.ts"
   },
   "scripts": {
     "check": "pnpm run /^check:/",

@@ -29,6 +29,7 @@ import {
   getBackfillUploadStatesProgress,
   getBulkBackupToGlacierProgress,
   getCleanupStaleUploadStatesProgress,
+  makeProcessMediaWorkflowId,
   resetPassword,
   startBackfillFilenames,
   startBackfillUploadStateSizes,
@@ -2960,7 +2961,9 @@ export const adminRouter = router({
 
         // Check if workflow is already running
         const temporalClient = await client;
-        const workflowId = `processMedia:${upload.finalizedUploadKey}`;
+        const workflowId = makeProcessMediaWorkflowId(
+          upload.finalizedUploadKey,
+        );
 
         try {
           const handle = temporalClient.workflow.getHandle(workflowId);
@@ -3169,7 +3172,17 @@ export const adminRouter = router({
             'Bulk retry: Reset upload record timestamps',
           );
 
-          const workflowId = `processMedia:${upload.finalizedUploadKey}`;
+          if (!upload.finalizedUploadKey) {
+            moduleLogger.warn(
+              { uploadId: upload.id },
+              'Upload missing finalizedUploadKey, skipping',
+            );
+            continue;
+          }
+
+          const workflowId = makeProcessMediaWorkflowId(
+            upload.finalizedUploadKey,
+          );
           await temporalClient.workflow.start(processMediaWorkflow, {
             taskQueue: BACKGROUND_QUEUE,
             workflowId,

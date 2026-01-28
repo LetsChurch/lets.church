@@ -7,6 +7,12 @@ import type { DocumentKind } from '../activities/background/index-document';
 import { emptySignal } from '../signals';
 import logger from '../util/logger';
 import {
+  makeCreateUploadRecordWorkflowId,
+  makeIndexDocumentWorkflowId,
+  makeRecordDownloadSizeWorkflowId,
+  makeUpdateUploadRecordWorkflowId,
+} from '../workflow-ids';
+import {
   createUploadRecordWorkflow,
   indexDocumentWorkflow,
   recordDownloadSizeWorkflow,
@@ -48,9 +54,11 @@ export async function createUploadRecord(
   const res = await (await client).workflow.start(createUploadRecordWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
-    workflowId: `createUploadRecord:${
-      importId ? `${importId}` : `${data.publishedAt}:${data.title}`
-    }`,
+    workflowId: makeCreateUploadRecordWorkflowId(
+      importId,
+      data.publishedAt as Date,
+      data.title as string,
+    ),
     args: [data],
   });
 
@@ -63,7 +71,7 @@ export async function updateUploadRecord(
 ) {
   return (await client).workflow.signalWithStart(updateUploadRecordWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
-    workflowId: `updateUploadRecord:${uploadRecordId}`,
+    workflowId: makeUpdateUploadRecordWorkflowId(uploadRecordId),
     args: [uploadRecordId],
     signal: updateUploadRecordSignal,
     signalArgs: [data],
@@ -80,7 +88,7 @@ export async function recordDownloadSize(
 ) {
   return (await client).workflow.start(recordDownloadSizeWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
-    workflowId: `recordDownloadSize:${uploadRecordId}:${variant}`,
+    workflowId: makeRecordDownloadSizeWorkflowId(uploadRecordId, variant),
     args: [uploadRecordId, variant, bytes],
     retry: {
       maximumAttempts: 5,
@@ -95,7 +103,7 @@ export async function indexDocument(
 ) {
   return (await client).workflow.signalWithStart(indexDocumentWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
-    workflowId: `${kind}:${uploadId}`,
+    workflowId: makeIndexDocumentWorkflowId(kind, uploadId),
     args: [kind, uploadId, uploadKey],
     signal: emptySignal,
     signalArgs: [],

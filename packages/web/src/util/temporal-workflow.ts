@@ -1,5 +1,5 @@
 import pFilter from 'p-filter';
-import { client } from '@/temporal';
+import { client, makeProcessMediaWorkflowId } from '@/temporal';
 
 type UploadWithKey = {
   finalizedUploadKey: string | null;
@@ -13,7 +13,7 @@ async function isWorkflowRunning(
   temporalClient: Awaited<typeof client>,
 ): Promise<boolean> {
   try {
-    const workflowId = `processMedia:${uploadKey}`;
+    const workflowId = makeProcessMediaWorkflowId(uploadKey);
     const handle = temporalClient.workflow.getHandle(workflowId);
     const description = await handle.describe();
     return description.status.name === 'RUNNING';

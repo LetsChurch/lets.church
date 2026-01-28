@@ -1,0 +1,133 @@
+import { xxh32 } from '@node-rs/xxhash';
+import type { DocumentKind } from './activities/background/index-document';
+
+/**
+ * Centralized workflow ID generators for consistent naming across the application.
+ * These functions ensure all workflow IDs follow the same format, making them
+ * easier to find, debug, and manage.
+ */
+
+// Upload and Media Processing
+export function makeMultipartMediaUploadWorkflowId(
+  uploadRecordId: string,
+  key: string,
+) {
+  return `handleMultipartMediaUpload:${xxh32(uploadRecordId)}:${key}`;
+}
+
+export function makeProcessMediaWorkflowId(uploadKey: string) {
+  return `processMedia:${uploadKey}`;
+}
+
+export function makeProcessImageWorkflowId(uploadKey: string) {
+  return `processImage:${uploadKey}`;
+}
+
+export function makeBackupToGlacierWorkflowId(uploadKey: string) {
+  return `backupToGlacier:${uploadKey}`;
+}
+
+export function makeDeleteUploadWorkflowId(uploadRecordId: string) {
+  return `deleteUpload:${uploadRecordId}:${Date.now()}`;
+}
+
+export function makeCreateUploadRecordWorkflowId(
+  importId: string | undefined,
+  publishedAt: Date,
+  title: string,
+) {
+  return `createUploadRecord:${importId ? `${importId}` : `${publishedAt}:${title}`}`;
+}
+
+export function makeUpdateUploadRecordWorkflowId(uploadRecordId: string) {
+  return `updateUploadRecord:${uploadRecordId}`;
+}
+
+export function makeRecordDownloadSizeWorkflowId(
+  uploadRecordId: string,
+  variant?: string,
+) {
+  return variant
+    ? `recordDownloadSize:${uploadRecordId}:${variant}`
+    : `recordDownloadSize:${uploadRecordId}`;
+}
+
+export function makeUploadWorkflowId(s3UploadKey: string) {
+  return `upload:${s3UploadKey}`;
+}
+
+// Transcript workflows
+export function makeTranscriptWorkflowId(s3UploadKey: string) {
+  return `transcript:${s3UploadKey}`;
+}
+
+export function makeTranscriptHtmlWorkflowId(s3UploadKey: string) {
+  return `transcriptHtml:${s3UploadKey}`;
+}
+
+export function makeRestitchTranscriptWorkflowId(targetId: string) {
+  return `transcript:restitch:${targetId}`;
+}
+
+// Document indexing
+export function makeIndexDocumentWorkflowId(
+  kind: DocumentKind,
+  uploadId: string,
+) {
+  return `${kind}:${uploadId}`;
+}
+
+// Email workflows
+export function makeInvitationEmailWorkflowId(
+  type: 'organization' | 'channel',
+  invitationId: string,
+) {
+  return `${type}-invitation:${invitationId}:${Date.now()}`;
+}
+
+export function makeVerificationEmailWorkflowId(userId: string) {
+  return `verification-email:${userId}:${Date.now()}`;
+}
+
+export function makeSignupEmailWorkflowId(email: string) {
+  return `signup-email:${email}:${Date.now()}`;
+}
+
+// User workflows
+export function makeResetPasswordWorkflowId(id: string) {
+  return `resetPassword:${id}`;
+}
+
+export function makePostUserRegistrationWorkflowId(userId: string) {
+  return `postUserRegistration:${userId}`;
+}
+
+// Organization workflows
+export function makeGeocodeOrganizationWorkflowId(id: string) {
+  return `geocodeOrganization:${id}:${Date.now()}`;
+}
+
+export function makeOrganizationWorkflowId(organizationId: string) {
+  return `organization:${organizationId}`;
+}
+
+// Import workflows
+export function makeImportMediaWorkflowId(url: string) {
+  return `importMedia:${xxh32(url)}:${Date.now()}`;
+}
+
+export function makeImportMediaWithHashWorkflowId(
+  importSourceId: string,
+  urlHash: string,
+) {
+  return `importMedia:${importSourceId}:${urlHash}:${Date.now()}`;
+}
+
+export function makeScrapeAndImportWorkflowId(
+  channelSlug: string,
+  importSourceId: string,
+  type: 'scheduled' | 'manual' | 'historical',
+) {
+  const suffix = type === 'scheduled' ? type : `${type}:${Date.now()}`;
+  return `scrapeAndImport:${channelSlug}:${importSourceId}:${suffix}`;
+}

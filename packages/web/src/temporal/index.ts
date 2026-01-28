@@ -2,6 +2,21 @@ import type { Prisma, UploadVariant } from '@letschurch/db';
 import { prisma } from '@letschurch/db';
 import type { S3ClientId } from '@letschurch/s3';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
+import {
+  makeBackupToGlacierWorkflowId,
+  makeCreateUploadRecordWorkflowId,
+  makeDeleteUploadWorkflowId,
+  makeGeocodeOrganizationWorkflowId,
+  makeImportMediaWorkflowId,
+  makeInvitationEmailWorkflowId,
+  makePostUserRegistrationWorkflowId,
+  makeProcessMediaWorkflowId,
+  makeRecordDownloadSizeWorkflowId,
+  makeResetPasswordWorkflowId,
+  makeScrapeAndImportWorkflowId,
+  makeUpdateUploadRecordWorkflowId,
+  makeVerificationEmailWorkflowId,
+} from '@letschurch/temporal/workflow-ids';
 
 export type InvitationEmailArgs = {
   invitationId: string;
@@ -76,6 +91,24 @@ const retryOps: Pick<WorkflowOptions, 'retry'> = {
   retry: { maximumAttempts: 5 },
 };
 
+// Re-export workflow ID helpers from shared package
+export {
+  makeBackupToGlacierWorkflowId,
+  makeCreateUploadRecordWorkflowId,
+  makeDeleteUploadWorkflowId,
+  makeGeocodeOrganizationWorkflowId,
+  makeImportMediaWorkflowId,
+  makeInvitationEmailWorkflowId,
+  makePostUserRegistrationWorkflowId,
+  makeProcessMediaWorkflowId,
+  makeRecordDownloadSizeWorkflowId,
+  makeResetPasswordWorkflowId,
+  makeScrapeAndImportWorkflowId,
+  makeUpdateUploadRecordWorkflowId,
+  makeVerificationEmailWorkflowId,
+};
+
+// Web-specific workflow ID helper
 function makeMultipartMediaUploadWorkflowId(
   uploadRecordId: string,
   key: string,
@@ -116,9 +149,11 @@ export async function createUploadRecord(
   const res = await (await client).workflow.start(createUploadRecordWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
-    workflowId: `createUploadRecord:${
-      importId ? `${importId}` : `${data.publishedAt}:${data.title}`
-    }`,
+    workflowId: makeCreateUploadRecordWorkflowId(
+      importId,
+      data.publishedAt as Date,
+      data.title as string,
+    ),
     args: [data],
   });
 
@@ -131,7 +166,7 @@ export async function updateUploadRecord(
 ) {
   return (await client).workflow.signalWithStart(updateUploadRecordWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
-    workflowId: `updateUploadRecord:${uploadRecordId}`,
+    workflowId: makeUpdateUploadRecordWorkflowId(uploadRecordId),
     args: [uploadRecordId],
     signal: updateUploadRecordSignal,
     signalArgs: [data],
@@ -148,7 +183,7 @@ export async function recordDownloadSize(
 ) {
   return (await client).workflow.start(recordDownloadSizeWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
-    workflowId: `recordDownloadSize:${uploadRecordId}`,
+    workflowId: makeRecordDownloadSizeWorkflowId(uploadRecordId),
     args: [uploadRecordId, variant, bytes],
     retry: {
       maximumAttempts: 8,
@@ -169,22 +204,20 @@ export async function sendEmail(
 }
 
 export async function sendInvitationEmail(args: InvitationEmailArgs) {
-  const workflowId = `${args.type}-invitation:${args.invitationId}:${Date.now()}`;
   return (await client).workflow.start(sendInvitationEmailWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     args: [args],
-    workflowId,
+    workflowId: makeInvitationEmailWorkflowId(args.type, args.invitationId),
   });
 }
 
 export async function sendVerificationEmail(args: SendVerificationEmailArgs) {
-  const workflowId = `verification-email:${args.userId}:${Date.now()}`;
   return (await client).workflow.start(sendVerificationEmailWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     args: [args],
-    workflowId,
+    workflowId: makeVerificationEmailWorkflowId(args.userId),
   });
 }
 
@@ -196,13 +229,13 @@ export async function resetPassword(
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     args,
-    workflowId: `resetPassword:${id}`,
+    workflowId: makeResetPasswordWorkflowId(id),
   });
 }
 
 export async function completeResetPassword(id: string, hash: string) {
   return (await client).workflow
-    .getHandle(`resetPassword:${id}`)
+    .getHandle(makeResetPasswordWorkflowId(id))
     .signal(completeResetPasswordSignal, hash);
 }
 
@@ -211,7 +244,7 @@ export async function geocodeOrganization(id: string) {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     args: [id],
-    workflowId: `geocodeOrganization:${id}:${Date.now()}`,
+    workflowId: makeGeocodeOrganizationWorkflowId(id),
   });
 }
 
@@ -223,16 +256,60 @@ export async function postUserRegistration(
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     args,
-    workflowId: `postUserRegistration:${userId}`,
+    workflowId: makePostUserRegistrationWorkflowId(userId),
   });
 }
 
+export async function cancelUploadProcessing(uploadRecordId: string) {
+  // Fetch the upload record to get the finalized upload key
+  const upload = await prisma.uploadRecord.findUnique({
+    where: { id: uploadRecordId },
+    select: { finalizedUploadKey: true },
+  });
+
+  if (!upload?.finalizedUploadKey) {
+    moduleLogger.info(
+      { uploadRecordId },
+      'No finalized upload key found, skipping workflow cancellation',
+    );
+    return;
+  }
+
+  const workflowIds = [
+    makeProcessMediaWorkflowId(upload.finalizedUploadKey),
+    makeBackupToGlacierWorkflowId(upload.finalizedUploadKey),
+  ];
+
+  // Try to cancel each workflow, ignoring errors if they don't exist or are already completed
+  for (const workflowId of workflowIds) {
+    try {
+      const handle = (await client).workflow.getHandle(workflowId);
+      await handle.cancel();
+      moduleLogger.info({ workflowId }, 'Cancelled workflow');
+    } catch (error) {
+      // Workflow might not exist or already be completed, which is fine
+      moduleLogger.debug(
+        {
+          workflowId,
+          context: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        },
+        'Failed to cancel workflow (may not exist or already completed)',
+      );
+    }
+  }
+}
+
 export async function deleteUpload(uploadRecordId: string) {
+  // Cancel any active processing workflows before starting delete
+  await cancelUploadProcessing(uploadRecordId);
+
   return (await client).workflow.start(deleteUploadWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     args: [uploadRecordId],
-    workflowId: `deleteUpload:${uploadRecordId}:${Date.now()}`,
+    workflowId: makeDeleteUploadWorkflowId(uploadRecordId),
   });
 }
 
@@ -244,7 +321,7 @@ export async function importMedia(
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     args,
-    workflowId: `importMedia:${xxh32(url)}:${Date.now()}`,
+    workflowId: makeImportMediaWorkflowId(url),
   });
 }
 
@@ -589,7 +666,11 @@ export async function startImportSourceScheduler(importSourceId: string) {
       workflowType: scrapeAndImportWorkflow,
       args: [importSourceId],
       taskQueue: BACKGROUND_QUEUE,
-      workflowId: `scrapeAndImport:${importSource.channel.slug}:${importSourceId}:scheduled`,
+      workflowId: makeScrapeAndImportWorkflowId(
+        importSource.channel.slug,
+        importSourceId,
+        'scheduled',
+      ),
     },
     memo: {
       channelName: importSource.channel.name,
@@ -676,7 +757,11 @@ export async function triggerManualImport(importSourceId: string) {
   return (await client).workflow.start(scrapeAndImportWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
-    workflowId: `scrapeAndImport:${importSource.channel.slug}:${importSourceId}:manual:${Date.now()}`,
+    workflowId: makeScrapeAndImportWorkflowId(
+      importSource.channel.slug,
+      importSourceId,
+      'manual',
+    ),
     args: [importSourceId],
   });
 }
@@ -708,7 +793,11 @@ export async function triggerHistoricalImport(
   return (await client).workflow.start(scrapeAndImportWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
-    workflowId: `scrapeAndImport:${importSource.channel.slug}:${importSourceId}:historical:${Date.now()}`,
+    workflowId: makeScrapeAndImportWorkflowId(
+      importSource.channel.slug,
+      importSourceId,
+      'historical',
+    ),
     args: [importSourceId, importHistory],
   });
 }
