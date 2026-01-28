@@ -254,11 +254,11 @@ services:
       - 127.0.0.1:${HOST_IMGPROXY_PORT}:8080
 
   temporal:
-    image: temporalio/auto-setup:1.22.4.0
+    image: temporalio/auto-setup:1.29.2
     environment:
       # See auto-setup.sh: https://github.com/temporalio/docker-builds/blob/a442b94edbe10bb49e2f0fc00c3154cdf0590be5/docker/auto-setup.sh
       SKIP_DB_CREATE: true # Database is already created via init script
-      DB: postgresql # Database vendor
+      DB: postgres12_pgx # Database vendor
       DB_PORT: 5432 # Database port
       POSTGRES_SEEDS: postgres # Database server
       POSTGRES_USER: temporal # Database user
@@ -278,7 +278,7 @@ services:
       - elasticsearch
 
   temporal-admin-tools:
-    image: temporalio/admin-tools:1.22.4.0
+    image: temporalio/admin-tools:1.29.1-tctl-1.18.4-cli-1.5.0
     environment:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_CLI_ADDRESS: temporal:7233
@@ -288,7 +288,7 @@ services:
       - temporal
 
   temporal-ui:
-    image: temporalio/ui:2.22.2
+    image: temporalio/ui:2.44.1
     environment:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_CORS_ORIGINS: http://localhost:3000

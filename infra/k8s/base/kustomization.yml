@@ -26,7 +26,7 @@ configMapGenerator:
   - name: temporal-server-config
     literals:
       - SKIP_DB_CREATE="true"
-      - DB=postgresql # Database vendor
+      - DB=postgres12_pgx # Database vendor
       - SQL_TLS="true"
       - SQL_TLS_ENABLED="true" # https://github.com/temporalio/temporal/issues/2621
       - SQL_TLS_DISABLE_HOST_VERIFICATION="true"
