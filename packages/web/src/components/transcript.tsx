@@ -11,9 +11,13 @@ type TranscriptLine = {
 
 type Props = {
   transcript: Array<TranscriptLine>;
+  isTranscriptProcessing?: boolean;
 };
 
-export function Transcript({ transcript }: Props) {
+export function Transcript({
+  transcript,
+  isTranscriptProcessing = false,
+}: Props) {
   const currentTime = useStore($currentTime);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -51,6 +55,39 @@ export function Transcript({ transcript }: Props) {
   const handleClick = (start: number) => {
     $setPlayAt.set(start / 1000);
   };
+
+  // Show processing state if transcript is still being generated
+  if (isTranscriptProcessing || transcript.length === 0) {
+    return (
+      <div className="flex size-full items-center justify-center p-5">
+        <div className="flex max-w-sm flex-col items-center gap-4 text-center">
+          {isTranscriptProcessing ? (
+            <>
+              <div className="size-10 animate-spin rounded-full border-4 border-zinc-200 border-t-brand dark:border-zinc-800 dark:border-t-brand" />
+              <div className="flex flex-col gap-2">
+                <p className="font-medium text-primary text-sm">
+                  Transcript Processing
+                </p>
+                <p className="text-secondary text-xs">
+                  The transcript for this media is currently being generated.
+                  Check back soon.
+                </p>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <p className="font-medium text-primary text-sm">
+                No Transcript Available
+              </p>
+              <p className="text-secondary text-xs">
+                A transcript has not been generated for this media.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div ref={containerRef} className="size-full overflow-auto p-5">

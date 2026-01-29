@@ -109,7 +109,6 @@ export const listProcedures = {
           upload: {
             visibility: 'PUBLIC',
             transcodingFinishedAt: { not: null },
-            transcribingFinishedAt: { not: null },
             deletedAt: null,
           },
         },

@@ -86,7 +86,6 @@ export const channelProcedures = {
             },
             where: {
               transcodingFinishedAt: { not: null },
-              transcribingFinishedAt: { not: null },
               visibility: 'PUBLIC',
             },
             orderBy: {
@@ -227,7 +226,6 @@ export const channelProcedures = {
         },
         where: {
           transcodingFinishedAt: { not: null },
-          transcribingFinishedAt: { not: null },
           visibility: 'PUBLIC',
           channel: {
             slug,

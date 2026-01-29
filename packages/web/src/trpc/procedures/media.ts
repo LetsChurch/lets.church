@@ -79,6 +79,7 @@ export const mediaProcedures = {
           userCommentsEnabled: true,
           downloadsEnabled: true,
           license: true,
+          transcribingFinishedAt: true,
           channel: {
             select: {
               id: true,
@@ -132,6 +133,7 @@ export const mediaProcedures = {
         channel,
         variants,
         downloadsEnabled,
+        transcribingFinishedAt,
         ...mediaRest
       } = media;
 
@@ -365,6 +367,7 @@ export const mediaProcedures = {
         downloadUrls,
         isSaved,
         canEdit,
+        transcribingFinishedAt,
         channel: {
           id: OutgoingIdSchema.parse(channel.id),
           name: channel.name,

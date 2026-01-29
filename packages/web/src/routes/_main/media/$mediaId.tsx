@@ -236,8 +236,10 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
 
 function MobileTranscriptDrawerContent({
   transcript,
+  isTranscriptProcessing,
 }: {
   transcript: Array<{ start: number; text: string }>;
+  isTranscriptProcessing: boolean;
 }) {
   const isSearchActive = useStore($isSearchActive);
   const searchQuery = useStore($searchQuery);
@@ -311,7 +313,10 @@ function MobileTranscriptDrawerContent({
         {isSearchActive && hasQuery ? (
           <TranscriptSearchResults />
         ) : (
-          <Transcript transcript={transcript} />
+          <Transcript
+            transcript={transcript}
+            isTranscriptProcessing={isTranscriptProcessing}
+          />
         )}
       </div>
     </>
@@ -395,7 +400,6 @@ function RouteComponent() {
   const [unfollowConfirmOpen, setUnfollowConfirmOpen] = useState(false);
   const loaderData = Route.useLoaderData();
   const viewHash = loaderData?.viewHash ?? '';
-  const transcript = loaderData?.transcript ?? [];
   const [initialTimestamp, setInitialTimestamp] = useState<number | undefined>(
     undefined,
   );
@@ -459,11 +463,25 @@ function RouteComponent() {
     }
   }, [location.hash]);
 
-  const { data: media } = useSuspenseQuery(
-    trpc.media.getMediaById.queryOptions({
+  const { data: media } = useSuspenseQuery({
+    ...trpc.media.getMediaById.queryOptions({
       mediaId: params.mediaId,
     }),
-  );
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      // Poll every 60 seconds if transcript is still processing
+      return data && !data.transcribingFinishedAt ? 60000 : false;
+    },
+  });
+
+  // Poll for transcript updates when transcription is in progress
+  const { data: transcriptData } = useSuspenseQuery({
+    ...trpc.media.getTranscript.queryOptions({
+      mediaId: params.mediaId,
+    }),
+    refetchInterval: media && !media.transcribingFinishedAt ? 60000 : false,
+  });
+  const transcript = transcriptData ?? [];
 
   const { data: ratingData } = useSuspenseQuery(
     trpc.media.getMediaRating.queryOptions({
@@ -876,6 +894,7 @@ function RouteComponent() {
             <div style={{ width: `${transcriptWidth}px` }}>
               <MediaSidebarTabs
                 transcript={transcript}
+                isTranscriptProcessing={!media.transcribingFinishedAt}
                 playlistContext={
                   hasPlaylistContext &&
                   searchParams.list &&
@@ -905,7 +924,10 @@ function RouteComponent() {
       >
         <MobileDrawer.Portal>
           <MobileDrawer.Content className="h-[85vh]">
-            <MobileTranscriptDrawerContent transcript={transcript} />
+            <MobileTranscriptDrawerContent
+              transcript={transcript}
+              isTranscriptProcessing={!media.transcribingFinishedAt}
+            />
           </MobileDrawer.Content>
         </MobileDrawer.Portal>
       </MobileDrawer.Root>

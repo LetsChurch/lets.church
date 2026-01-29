@@ -112,7 +112,6 @@ export const playlistProcedures = {
           upload: {
             visibility: 'PUBLIC',
             transcodingFinishedAt: { not: null },
-            transcribingFinishedAt: { not: null },
             deletedAt: null,
           },
         },
@@ -311,7 +310,6 @@ export const playlistProcedures = {
           upload: {
             visibility: 'PUBLIC',
             transcodingFinishedAt: { not: null },
-            transcribingFinishedAt: { not: null },
             deletedAt: null,
           },
         },
@@ -435,7 +433,6 @@ export const playlistProcedures = {
           upload: {
             visibility: 'PUBLIC',
             transcodingFinishedAt: { not: null },
-            transcribingFinishedAt: { not: null },
             deletedAt: null,
           },
           ...(cursor

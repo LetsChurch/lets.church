@@ -106,7 +106,6 @@ export const seriesProcedures = {
           upload: {
             visibility: 'PUBLIC',
             transcodingFinishedAt: { not: null },
-            transcribingFinishedAt: { not: null },
             deletedAt: null,
           },
         },
@@ -300,7 +299,6 @@ export const seriesProcedures = {
           upload: {
             visibility: 'PUBLIC',
             transcodingFinishedAt: { not: null },
-            transcribingFinishedAt: { not: null },
             deletedAt: null,
           },
         },
@@ -421,7 +419,6 @@ export const seriesProcedures = {
           upload: {
             visibility: 'PUBLIC',
             transcodingFinishedAt: { not: null },
-            transcribingFinishedAt: { not: null },
             deletedAt: null,
           },
           ...(cursor

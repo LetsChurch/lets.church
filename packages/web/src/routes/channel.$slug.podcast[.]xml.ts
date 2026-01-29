@@ -130,7 +130,6 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
             },
             where: {
               transcodingFinishedAt: { not: null },
-              transcribingFinishedAt: { not: null },
               visibility: 'PUBLIC',
               variants: {
                 has: 'AUDIO_DOWNLOAD',

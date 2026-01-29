@@ -33,6 +33,7 @@ type PlaylistItem = {
 
 type MediaSidebarTabsProps = {
   transcript: Array<{ start: number; text: string }>;
+  isTranscriptProcessing: boolean;
   playlistContext?: {
     listId: string;
     listType: 'playlist' | 'series';
@@ -44,6 +45,7 @@ type MediaSidebarTabsProps = {
 
 export function MediaSidebarTabs({
   transcript,
+  isTranscriptProcessing,
   playlistContext,
 }: MediaSidebarTabsProps) {
   const hasPlaylist = Boolean(playlistContext);
@@ -157,7 +159,10 @@ export function MediaSidebarTabs({
               {isSearchActive && hasQuery ? (
                 <TranscriptSearchResults />
               ) : (
-                <Transcript transcript={transcript} />
+                <Transcript
+                  transcript={transcript}
+                  isTranscriptProcessing={isTranscriptProcessing}
+                />
               )}
             </div>
           </>

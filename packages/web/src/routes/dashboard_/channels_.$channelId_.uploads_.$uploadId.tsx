@@ -123,7 +123,7 @@ function ChannelUploadPage() {
   // Current processing status
   const isTranscoding = !upload.transcodingFinishedAt;
   const isTranscribing = !upload.transcribingFinishedAt;
-  const isProcessing = isUploading || isTranscoding || isTranscribing;
+  const isProcessing = isUploading || isTranscoding;
 
   // Check if user is site admin
   // userMembership comes from the channel and contains the current user's membership
@@ -933,95 +933,81 @@ function ChannelUploadPage() {
             ) : null}
 
             {/* Player or Progress Bars */}
-            {isProcessing ? (
-              <Stack gap="md">
-                {/* Upload Progress */}
-                {isUploading ? (
-                  <Box>
-                    <Text size="sm" fw={500} mb="xs">
-                      Uploading file...
-                    </Text>
-                    <Progress
-                      value={uploadProgress * 100}
-                      size="lg"
-                      animated
-                      striped
-                    />
-                    <Text size="xs" c="dimmed" mt="xs">
-                      {Math.round(uploadProgress * 100)}% uploaded
-                    </Text>
-                  </Box>
-                ) : null}
+            <Stack gap="md">
+              {/* Show upload/transcoding progress if still processing */}
+              {isProcessing ? (
+                <>
+                  {/* Upload Progress */}
+                  {isUploading ? (
+                    <Box>
+                      <Text size="sm" fw={500} mb="xs">
+                        Uploading file...
+                      </Text>
+                      <Progress
+                        value={uploadProgress * 100}
+                        size="lg"
+                        animated
+                        striped
+                      />
+                      <Text size="xs" c="dimmed" mt="xs">
+                        {Math.round(uploadProgress * 100)}% uploaded
+                      </Text>
+                    </Box>
+                  ) : null}
 
-                {/* Transcoding Progress - show when not uploading */}
-                {!isUploading ? (
-                  <Box>
-                    <Text size="sm" fw={500} mb="xs">
-                      {isTranscoding
-                        ? 'Transcoding video...'
-                        : 'Transcoding complete'}
-                    </Text>
-                    <Progress
-                      value={
-                        isTranscoding ? upload.transcodingProgress * 100 : 100
-                      }
-                      size="lg"
-                      animated={isTranscoding}
-                      striped={isTranscoding}
-                      color={isTranscoding ? undefined : 'green'}
-                    />
-                    <Text size="xs" c="dimmed" mt="xs">
-                      {isTranscoding
-                        ? `${Math.round(upload.transcodingProgress * 100)}% complete`
-                        : 'Video transcoding finished'}
-                    </Text>
-                  </Box>
-                ) : null}
+                  {/* Transcoding Progress - show when not uploading */}
+                  {!isUploading && isTranscoding ? (
+                    <Box>
+                      <Text size="sm" fw={500} mb="xs">
+                        Transcoding video...
+                      </Text>
+                      <Progress
+                        value={upload.transcodingProgress * 100}
+                        size="lg"
+                        animated
+                        striped
+                      />
+                      <Text size="xs" c="dimmed" mt="xs">
+                        {Math.round(upload.transcodingProgress * 100)}% complete
+                      </Text>
+                    </Box>
+                  ) : null}
+                </>
+              ) : upload.mediaSource || upload.audioSource ? (
+                <HlsVideo
+                  src={upload.mediaSource || upload.audioSource || ''}
+                  className={styles.fullWidth}
+                  playsInline
+                  controls
+                />
+              ) : (
+                <Box
+                  bg="gray.1"
+                  p="md"
+                  style={{
+                    borderRadius: '4px',
+                    textAlign: 'center',
+                  }}
+                >
+                  <Text size="sm" c="dimmed">
+                    No media available for playback
+                  </Text>
+                </Box>
+              )}
 
-                {/* Transcribing Progress - show when not uploading */}
-                {!isUploading ? (
-                  <Box>
-                    <Text size="sm" fw={500} mb="xs">
-                      {isTranscribing
-                        ? 'Transcribing audio...'
-                        : 'Transcription complete'}
-                    </Text>
-                    <Progress
-                      value={100}
-                      size="lg"
-                      animated={isTranscribing}
-                      striped={isTranscribing}
-                      color={isTranscribing ? undefined : 'green'}
-                    />
-                    <Text size="xs" c="dimmed" mt="xs">
-                      {isTranscribing
-                        ? 'Processing audio transcript'
-                        : 'Audio transcription finished'}
-                    </Text>
-                  </Box>
-                ) : null}
-              </Stack>
-            ) : upload.mediaSource || upload.audioSource ? (
-              <HlsVideo
-                src={upload.mediaSource || upload.audioSource || ''}
-                className={styles.fullWidth}
-                playsInline
-                controls
-              />
-            ) : (
-              <Box
-                bg="gray.1"
-                p="md"
-                style={{
-                  borderRadius: '4px',
-                  textAlign: 'center',
-                }}
-              >
-                <Text size="sm" c="dimmed">
-                  No media available for playback
-                </Text>
-              </Box>
-            )}
+              {/* Transcribing Progress - always show if transcribing (even alongside player) */}
+              {isTranscribing ? (
+                <Box>
+                  <Text size="sm" fw={500} mb="xs">
+                    Transcribing audio...
+                  </Text>
+                  <Progress value={100} size="lg" animated striped />
+                  <Text size="xs" c="dimmed" mt="xs">
+                    Processing audio transcript
+                  </Text>
+                </Box>
+              ) : null}
+            </Stack>
 
             {/* Visibility Settings */}
             <Stack gap="md">

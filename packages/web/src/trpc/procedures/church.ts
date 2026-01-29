@@ -558,7 +558,6 @@ export const churchProcedures = {
         where: {
           channelId: { in: channelIds },
           transcodingFinishedAt: { not: null },
-          transcribingFinishedAt: { not: null },
           visibility: 'PUBLIC',
           channel: {
             visibility: 'PUBLIC',

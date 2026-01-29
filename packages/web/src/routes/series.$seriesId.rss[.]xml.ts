@@ -154,7 +154,6 @@ export const Route = createFileRoute('/series/$seriesId/rss.xml')({
               upload: {
                 visibility: 'PUBLIC',
                 transcodingFinishedAt: { not: null },
-                transcribingFinishedAt: { not: null },
                 deletedAt: null,
               },
             },

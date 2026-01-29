@@ -118,7 +118,6 @@ export const Route = createFileRoute('/channel/$slug/rss.xml')({
             },
             where: {
               transcodingFinishedAt: { not: null },
-              transcribingFinishedAt: { not: null },
               visibility: 'PUBLIC',
               channel: {
                 slug,

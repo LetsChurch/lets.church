@@ -156,7 +156,6 @@ export const Route = createFileRoute('/playlist/$playlistId/rss.xml')({
               upload: {
                 visibility: 'PUBLIC',
                 transcodingFinishedAt: { not: null },
-                transcribingFinishedAt: { not: null },
                 deletedAt: null,
               },
             },

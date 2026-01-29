@@ -113,7 +113,6 @@ export const homeProcedures = {
         },
         where: {
           transcodingFinishedAt: { not: null },
-          transcribingFinishedAt: { not: null },
           visibility: 'PUBLIC',
           channel: {
             visibility: 'PUBLIC',
@@ -205,7 +204,6 @@ export const homeProcedures = {
         },
         where: {
           transcodingFinishedAt: { not: null },
-          transcribingFinishedAt: { not: null },
           visibility: 'PUBLIC',
           channel: {
             visibility: 'PUBLIC',
@@ -570,7 +568,6 @@ export const homeProcedures = {
         uploadRecord: {
           visibility: 'PUBLIC',
           transcodingFinishedAt: { not: null },
-          transcribingFinishedAt: { not: null },
           channel: {
             visibility: 'PUBLIC',
             approvedAt: { not: null },
