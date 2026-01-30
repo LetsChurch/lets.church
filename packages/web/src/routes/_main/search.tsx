@@ -485,7 +485,7 @@ function Result({
                 e.stopPropagation();
                 setShowAllSegments((show) => !show);
               }}
-              className="relative z-10 w-full px-1 py-0.5 text-center text-muted text-xs opacity-0 transition-all hover:text-primary group-hover:opacity-100"
+              className="relative z-10 w-full px-1 py-0.5 text-center text-muted text-xs transition-colors hover:text-primary"
             >
               {showAllSegments
                 ? 'Show less'
