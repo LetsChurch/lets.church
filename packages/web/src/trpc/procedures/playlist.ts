@@ -57,31 +57,25 @@ export const playlistProcedures = {
         throw new Error('Playlist not found');
       }
 
-      if (!playlist.channel) {
-        moduleLogger.warn(
-          { context: { playlistId } },
-          'Playlist has no channel',
-        );
-        throw new Error('Playlist not found');
-      }
-
-      if (
-        playlist.channel.visibility !== 'PUBLIC' ||
-        !playlist.channel.approvedAt ||
-        playlist.channel.deletedAt
-      ) {
-        moduleLogger.warn(
-          {
-            context: {
-              playlistId,
-              channelVisibility: playlist.channel.visibility,
-              channelApproved: Boolean(playlist.channel.approvedAt),
-              channelDeleted: Boolean(playlist.channel.deletedAt),
+      if (playlist.channel) {
+        if (
+          playlist.channel.visibility !== 'PUBLIC' ||
+          !playlist.channel.approvedAt ||
+          playlist.channel.deletedAt
+        ) {
+          moduleLogger.warn(
+            {
+              context: {
+                playlistId,
+                channelVisibility: playlist.channel.visibility,
+                channelApproved: Boolean(playlist.channel.approvedAt),
+                channelDeleted: Boolean(playlist.channel.deletedAt),
+              },
             },
-          },
-          'Channel not accessible',
-        );
-        throw new Error('Playlist not found');
+            'Channel not accessible',
+          );
+          throw new Error('Playlist not found');
+        }
       }
 
       // Fetch all playlist entries
@@ -228,31 +222,25 @@ export const playlistProcedures = {
       }
 
       // Check if channel exists and is public/approved
-      if (!playlist.channel) {
-        moduleLogger.warn(
-          { context: { playlistId } },
-          'Playlist has no channel',
-        );
-        throw new Error('Playlist not found');
-      }
-
-      if (
-        playlist.channel.visibility !== 'PUBLIC' ||
-        !playlist.channel.approvedAt ||
-        playlist.channel.deletedAt
-      ) {
-        moduleLogger.warn(
-          {
-            context: {
-              playlistId,
-              channelVisibility: playlist.channel.visibility,
-              channelApproved: Boolean(playlist.channel.approvedAt),
-              channelDeleted: Boolean(playlist.channel.deletedAt),
+      if (playlist.channel) {
+        if (
+          playlist.channel.visibility !== 'PUBLIC' ||
+          !playlist.channel.approvedAt ||
+          playlist.channel.deletedAt
+        ) {
+          moduleLogger.warn(
+            {
+              context: {
+                playlistId,
+                channelVisibility: playlist.channel.visibility,
+                channelApproved: Boolean(playlist.channel.approvedAt),
+                channelDeleted: Boolean(playlist.channel.deletedAt),
+              },
             },
-          },
-          'Channel not accessible',
-        );
-        throw new Error('Playlist not found');
+            'Channel not accessible',
+          );
+          throw new Error('Playlist not found');
+        }
       }
 
       const authorAvatarUrl = playlist.author.avatarPath
@@ -264,7 +252,7 @@ export const playlistProcedures = {
           )
         : null;
 
-      const channelAvatarUrl = playlist.channel.avatarPath
+      const channelAvatarUrl = playlist.channel?.avatarPath
         ? getPublicImageUrl(
             publicS3.getS3ProtocolUri(playlist.channel.avatarPath),
             {
@@ -283,12 +271,14 @@ export const playlistProcedures = {
           username: playlist.author.username,
           avatarUrl: authorAvatarUrl,
         },
-        channel: {
-          id: OutgoingIdSchema.parse(playlist.channel.id),
-          name: playlist.channel.name,
-          slug: playlist.channel.slug,
-          avatarUrl: channelAvatarUrl,
-        },
+        channel: playlist.channel
+          ? {
+              id: OutgoingIdSchema.parse(playlist.channel.id),
+              name: playlist.channel.name,
+              slug: playlist.channel.slug,
+              avatarUrl: channelAvatarUrl,
+            }
+          : null,
         uploadCount: playlist._count.uploads,
       };
     }),
@@ -375,31 +365,25 @@ export const playlistProcedures = {
         throw new Error('Playlist not found');
       }
 
-      if (!playlist.channel) {
-        moduleLogger.warn(
-          { context: { playlistId } },
-          'Playlist has no channel',
-        );
-        throw new Error('Playlist not found');
-      }
-
-      if (
-        playlist.channel.visibility !== 'PUBLIC' ||
-        !playlist.channel.approvedAt ||
-        playlist.channel.deletedAt
-      ) {
-        moduleLogger.warn(
-          {
-            context: {
-              playlistId,
-              channelVisibility: playlist.channel.visibility,
-              channelApproved: Boolean(playlist.channel.approvedAt),
-              channelDeleted: Boolean(playlist.channel.deletedAt),
+      if (playlist.channel) {
+        if (
+          playlist.channel.visibility !== 'PUBLIC' ||
+          !playlist.channel.approvedAt ||
+          playlist.channel.deletedAt
+        ) {
+          moduleLogger.warn(
+            {
+              context: {
+                playlistId,
+                channelVisibility: playlist.channel.visibility,
+                channelApproved: Boolean(playlist.channel.approvedAt),
+                channelDeleted: Boolean(playlist.channel.deletedAt),
+              },
             },
-          },
-          'Channel not accessible',
-        );
-        throw new Error('Playlist not found');
+            'Channel not accessible',
+          );
+          throw new Error('Playlist not found');
+        }
       }
 
       // Fetch playlist entries with uploads

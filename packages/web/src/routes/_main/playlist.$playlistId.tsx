@@ -46,7 +46,10 @@ export const Route = createFileRoute('/_main/playlist/$playlistId')({
     }
 
     const title = `${playlist.title} - Let's Church`;
-    const description = `A playlist by ${playlist.author.username} on ${playlist.channel.name} with ${playlist.uploadCount} ${playlist.uploadCount === 1 ? 'upload' : 'uploads'}. Watch on Let's Church.`;
+    const creator = playlist.channel
+      ? playlist.channel.name
+      : playlist.author.username;
+    const description = `A playlist by ${creator} with ${playlist.uploadCount} ${playlist.uploadCount === 1 ? 'upload' : 'uploads'}. Watch on Let's Church.`;
     const url =
       typeof window !== 'undefined'
         ? window.location.href
@@ -218,19 +221,31 @@ function RouteComponent() {
         </h1>
 
         <div className="flex flex-wrap items-center gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <Avatar
-              src={playlist.author.avatarUrl || undefined}
-              alt={playlist.author.username}
-              className="size-8 border-fancy-pants"
-              fallbackClassName="bg-brand font-bold text-xs"
-            />
-            <span className="text-primary">{playlist.author.username}</span>
-          </div>
-
-          <LcLink to="/channel/$slug" params={{ slug: playlist.channel.slug }}>
-            {playlist.channel.name}
-          </LcLink>
+          {playlist.channel ? (
+            <LcLink
+              to="/channel/$slug"
+              params={{ slug: playlist.channel.slug }}
+              className="flex items-center gap-2"
+            >
+              <Avatar
+                src={playlist.channel.avatarUrl || undefined}
+                alt={playlist.channel.name}
+                className="size-8 border-fancy-pants"
+                fallbackClassName="bg-brand font-bold text-xs"
+              />
+              <span className="text-primary">{playlist.channel.name}</span>
+            </LcLink>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Avatar
+                src={playlist.author.avatarUrl || undefined}
+                alt={playlist.author.username}
+                className="size-8 border-fancy-pants"
+                fallbackClassName="bg-brand font-bold text-xs"
+              />
+              <span className="text-primary">{playlist.author.username}</span>
+            </div>
+          )}
 
           <span className="text-zinc-400">
             {playlist.uploadCount}{' '}
