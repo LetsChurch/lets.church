@@ -54,28 +54,25 @@ export const seriesProcedures = {
         throw new Error('Series not found');
       }
 
-      if (!series.channel) {
-        moduleLogger.warn({ context: { seriesId } }, 'Series has no channel');
-        throw new Error('Series not found');
-      }
-
-      if (
-        series.channel.visibility !== 'PUBLIC' ||
-        !series.channel.approvedAt ||
-        series.channel.deletedAt
-      ) {
-        moduleLogger.warn(
-          {
-            context: {
-              seriesId,
-              channelVisibility: series.channel.visibility,
-              channelApproved: Boolean(series.channel.approvedAt),
-              channelDeleted: Boolean(series.channel.deletedAt),
+      if (series.channel) {
+        if (
+          series.channel.visibility !== 'PUBLIC' ||
+          !series.channel.approvedAt ||
+          series.channel.deletedAt
+        ) {
+          moduleLogger.warn(
+            {
+              context: {
+                seriesId,
+                channelVisibility: series.channel.visibility,
+                channelApproved: Boolean(series.channel.approvedAt),
+                channelDeleted: Boolean(series.channel.deletedAt),
+              },
             },
-          },
-          'Channel not accessible',
-        );
-        throw new Error('Series not found');
+            'Channel not accessible',
+          );
+          throw new Error('Series not found');
+        }
       }
 
       // Fetch all series entries
@@ -219,28 +216,25 @@ export const seriesProcedures = {
       }
 
       // Check if channel exists and is public/approved
-      if (!series.channel) {
-        moduleLogger.warn({ context: { seriesId } }, 'Series has no channel');
-        throw new Error('Series not found');
-      }
-
-      if (
-        series.channel.visibility !== 'PUBLIC' ||
-        !series.channel.approvedAt ||
-        series.channel.deletedAt
-      ) {
-        moduleLogger.warn(
-          {
-            context: {
-              seriesId,
-              channelVisibility: series.channel.visibility,
-              channelApproved: Boolean(series.channel.approvedAt),
-              channelDeleted: Boolean(series.channel.deletedAt),
+      if (series.channel) {
+        if (
+          series.channel.visibility !== 'PUBLIC' ||
+          !series.channel.approvedAt ||
+          series.channel.deletedAt
+        ) {
+          moduleLogger.warn(
+            {
+              context: {
+                seriesId,
+                channelVisibility: series.channel.visibility,
+                channelApproved: Boolean(series.channel.approvedAt),
+                channelDeleted: Boolean(series.channel.deletedAt),
+              },
             },
-          },
-          'Channel not accessible',
-        );
-        throw new Error('Series not found');
+            'Channel not accessible',
+          );
+          throw new Error('Series not found');
+        }
       }
 
       const authorAvatarUrl = series.author.avatarPath
@@ -252,7 +246,7 @@ export const seriesProcedures = {
           )
         : null;
 
-      const channelAvatarUrl = series.channel.avatarPath
+      const channelAvatarUrl = series.channel?.avatarPath
         ? getPublicImageUrl(
             publicS3.getS3ProtocolUri(series.channel.avatarPath),
             {
@@ -272,12 +266,14 @@ export const seriesProcedures = {
           username: series.author.username,
           avatarUrl: authorAvatarUrl,
         },
-        channel: {
-          id: OutgoingIdSchema.parse(series.channel.id),
-          name: series.channel.name,
-          slug: series.channel.slug,
-          avatarUrl: channelAvatarUrl,
-        },
+        channel: series.channel
+          ? {
+              id: OutgoingIdSchema.parse(series.channel.id),
+              name: series.channel.name,
+              slug: series.channel.slug,
+              avatarUrl: channelAvatarUrl,
+            }
+          : null,
         mediaCount: series._count.uploads,
       };
     }),
@@ -364,28 +360,25 @@ export const seriesProcedures = {
         throw new Error('Series not found');
       }
 
-      if (!series.channel) {
-        moduleLogger.warn({ context: { seriesId } }, 'Series has no channel');
-        throw new Error('Series not found');
-      }
-
-      if (
-        series.channel.visibility !== 'PUBLIC' ||
-        !series.channel.approvedAt ||
-        series.channel.deletedAt
-      ) {
-        moduleLogger.warn(
-          {
-            context: {
-              seriesId,
-              channelVisibility: series.channel.visibility,
-              channelApproved: Boolean(series.channel.approvedAt),
-              channelDeleted: Boolean(series.channel.deletedAt),
+      if (series.channel) {
+        if (
+          series.channel.visibility !== 'PUBLIC' ||
+          !series.channel.approvedAt ||
+          series.channel.deletedAt
+        ) {
+          moduleLogger.warn(
+            {
+              context: {
+                seriesId,
+                channelVisibility: series.channel.visibility,
+                channelApproved: Boolean(series.channel.approvedAt),
+                channelDeleted: Boolean(series.channel.deletedAt),
+              },
             },
-          },
-          'Channel not accessible',
-        );
-        throw new Error('Series not found');
+            'Channel not accessible',
+          );
+          throw new Error('Series not found');
+        }
       }
 
       // Fetch series entries with uploads

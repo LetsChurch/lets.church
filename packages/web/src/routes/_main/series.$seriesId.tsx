@@ -46,7 +46,10 @@ export const Route = createFileRoute('/_main/series/$seriesId')({
     }
 
     const title = `${series.title} - Let's Church`;
-    const description = `A series by ${series.author.username} on ${series.channel.name} with ${series.mediaCount} ${series.mediaCount === 1 ? 'media' : 'media'}. Watch on Let's Church.`;
+    const creator = series.channel
+      ? series.channel.name
+      : series.author.username;
+    const description = `A series by ${creator} with ${series.mediaCount} ${series.mediaCount === 1 ? 'media' : 'media'}. Watch on Let's Church.`;
     const url =
       typeof window !== 'undefined'
         ? window.location.href
@@ -216,19 +219,31 @@ function RouteComponent() {
         <h1 className="mb-4 font-bold text-3xl text-primary">{series.title}</h1>
 
         <div className="flex flex-wrap items-center gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <Avatar
-              src={series.author.avatarUrl || undefined}
-              alt={series.author.username}
-              className="size-8 border-fancy-pants"
-              fallbackClassName="bg-brand font-bold text-xs"
-            />
-            <span className="text-primary">{series.author.username}</span>
-          </div>
-
-          <LcLink to="/channel/$slug" params={{ slug: series.channel.slug }}>
-            {series.channel.name}
-          </LcLink>
+          {series.channel ? (
+            <LcLink
+              to="/channel/$slug"
+              params={{ slug: series.channel.slug }}
+              className="flex items-center gap-2"
+            >
+              <Avatar
+                src={series.channel.avatarUrl || undefined}
+                alt={series.channel.name}
+                className="size-8 border-fancy-pants"
+                fallbackClassName="bg-brand font-bold text-xs"
+              />
+              <span className="text-primary">{series.channel.name}</span>
+            </LcLink>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Avatar
+                src={series.author.avatarUrl || undefined}
+                alt={series.author.username}
+                className="size-8 border-fancy-pants"
+                fallbackClassName="bg-brand font-bold text-xs"
+              />
+              <span className="text-primary">{series.author.username}</span>
+            </div>
+          )}
 
           <span className="text-zinc-400">{series.mediaCount} media</span>
 
