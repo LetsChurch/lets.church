@@ -8,6 +8,7 @@ import {
   IconBookmarkFilled,
   IconBrandFacebook,
   IconBrandX,
+  IconCheck,
   IconCode,
   IconDeviceTvOld,
   IconDots,
@@ -503,7 +504,7 @@ export function MediaActions({
                     onClick={handleNativeShare}
                     className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
                   >
-                    <div className="flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-purple-600 to-blue-600">
+                    <div className="flex size-12 items-center justify-center rounded-full bg-linear-to-br from-purple-600 to-blue-600">
                       <IconShare2 size={24} className="text-primary" />
                     </div>
                     <span className="text-primary text-xs">Share</span>
@@ -551,6 +552,97 @@ export function MediaActions({
                 </button>
               </div>
 
+              {/* Embed Options */}
+              {(hasVideo || hasAudio) && (
+                <div className="flex items-center justify-center gap-6">
+                  {hasVideo ? (
+                    <button
+                      type="button"
+                      onClick={() => handleCopyEmbed('video')}
+                      className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
+                    >
+                      <div className="relative">
+                        <div
+                          className={cn(
+                            'flex size-12 items-center justify-center rounded-full transition-colors',
+                            copySuccess === 'embed-video'
+                              ? 'bg-green-600'
+                              : 'bg-gradient-to-br from-orange-500 to-pink-600',
+                          )}
+                        >
+                          <IconCode size={24} className="text-primary" />
+                        </div>
+                        {copySuccess === 'embed-video' ? (
+                          <div className="-right-1 -top-1 absolute flex size-5 items-center justify-center rounded-full bg-green-600 ring-2 ring-white dark:ring-zinc-900">
+                            <IconCheck size={14} className="text-white" />
+                          </div>
+                        ) : null}
+                      </div>
+                      <span className="relative text-primary text-xs">
+                        <span
+                          className={cn(
+                            'transition-opacity',
+                            copySuccess === 'embed-video'
+                              ? 'opacity-0'
+                              : 'opacity-100',
+                          )}
+                        >
+                          Video Embed
+                        </span>
+                        {copySuccess === 'embed-video' ? (
+                          <span className="absolute inset-0 flex items-center justify-center">
+                            Copied!
+                          </span>
+                        ) : null}
+                      </span>
+                    </button>
+                  ) : null}
+
+                  {hasAudio ? (
+                    <button
+                      type="button"
+                      onClick={() => handleCopyEmbed('audio')}
+                      className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
+                    >
+                      <div className="relative">
+                        <div
+                          className={cn(
+                            'flex size-12 items-center justify-center rounded-full transition-colors',
+                            copySuccess === 'embed-audio'
+                              ? 'bg-green-600'
+                              : 'bg-gradient-to-br from-green-500 to-teal-600',
+                          )}
+                        >
+                          <IconCode size={24} className="text-primary" />
+                        </div>
+                        {copySuccess === 'embed-audio' ? (
+                          <div className="-right-1 -top-1 absolute flex size-5 items-center justify-center rounded-full bg-green-600 ring-2 ring-white dark:ring-zinc-900">
+                            <IconCheck size={14} className="text-white" />
+                          </div>
+                        ) : null}
+                      </div>
+                      <span className="relative text-primary text-xs">
+                        <span
+                          className={cn(
+                            'transition-opacity',
+                            copySuccess === 'embed-audio'
+                              ? 'opacity-0'
+                              : 'opacity-100',
+                          )}
+                        >
+                          Audio Embed
+                        </span>
+                        {copySuccess === 'embed-audio' ? (
+                          <span className="absolute inset-0 flex items-center justify-center">
+                            Copied!
+                          </span>
+                        ) : null}
+                      </span>
+                    </button>
+                  ) : null}
+                </div>
+              )}
+
               {/* URL Display and Copy */}
               <div className="flex items-center gap-2 rounded-lg border border-zinc-300 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
                 <input
@@ -559,18 +651,37 @@ export function MediaActions({
                   value={getShareUrl(shareData.url)}
                   className="min-w-0 flex-1 truncate bg-transparent font-mono text-primary text-sm outline-none"
                 />
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  className={cn(
-                    'shrink-0 rounded-md px-4 py-2 font-medium text-sm transition-colors',
-                    copySuccess === 'link'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-blue-600 text-white hover:bg-blue-700',
-                  )}
-                >
-                  {copySuccess === 'link' ? 'Copied!' : 'Copy'}
-                </button>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className={cn(
+                      'relative shrink-0 rounded-md px-4 py-2 font-medium text-sm transition-colors',
+                      copySuccess === 'link'
+                        ? 'bg-green-600 text-white'
+                        : 'bg-blue-600 text-white hover:bg-blue-700',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'transition-opacity',
+                        copySuccess === 'link' ? 'opacity-0' : 'opacity-100',
+                      )}
+                    >
+                      Copy
+                    </span>
+                    {copySuccess === 'link' ? (
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        Copied!
+                      </span>
+                    ) : null}
+                  </button>
+                  {copySuccess === 'link' ? (
+                    <div className="-right-1 -top-1 absolute flex size-5 items-center justify-center rounded-full bg-green-600 ring-2 ring-white dark:ring-zinc-900">
+                      <IconCheck size={14} className="text-white" />
+                    </div>
+                  ) : null}
+                </div>
               </div>
 
               {/* Timestamp Checkbox */}
