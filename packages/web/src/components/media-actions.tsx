@@ -1,3 +1,4 @@
+import { useStore } from '@nanostores/react';
 import {
   IconArticle,
   IconBadge4k,
@@ -8,7 +9,6 @@ import {
   IconBrandFacebook,
   IconBrandX,
   IconCode,
-  IconCopy,
   IconDeviceTvOld,
   IconDots,
   IconEdit,
@@ -34,6 +34,7 @@ import {
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { LcTooltip } from '@/components/lc-tooltip';
 import { useAbortController } from '@/hooks/use-abort-controller';
+import { $currentTime } from '@/stores/player';
 import { abortableSetTimeout } from '@/util/abortable-timeout';
 import { cn } from '@/util/cn';
 
@@ -132,11 +133,53 @@ export function MediaActions({
   canEditUpload = false,
 }: MediaActionsProps) {
   const abortController = useAbortController();
+  const currentTime = useStore($currentTime);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [frozenTime, setFrozenTime] = useState<number>(0);
+  const [includeTimestamp, setIncludeTimestamp] = useState(true);
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showLeftFade, setShowLeftFade] = useState(false);
   const [showRightFade, setShowRightFade] = useState(false);
+
+  // Format time as MM:SS or H:MM:SS
+  const formatTime = useCallback((seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  }, []);
+
+  // Helper function to add timestamp to URL (uses frozen time from when modal opened)
+  const getUrlWithTimestamp = useCallback(
+    (url: string) => {
+      if (!frozenTime || frozenTime < 1) {
+        return url;
+      }
+
+      // Parse the URL to handle existing hash
+      const urlObj = new URL(url);
+      // Round to nearest second
+      const timestamp = Math.floor(frozenTime);
+      // Set the hash with timestamp
+      urlObj.hash = `t=${timestamp}`;
+
+      return urlObj.toString();
+    },
+    [frozenTime],
+  );
+
+  // Get the share URL based on checkbox state
+  const getShareUrl = useCallback(
+    (url: string) => {
+      return includeTimestamp ? getUrlWithTimestamp(url) : url;
+    },
+    [includeTimestamp, getUrlWithTimestamp],
+  );
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current) return;
@@ -161,40 +204,47 @@ export function MediaActions({
   }, [handleScroll]);
 
   const handleShare = async () => {
-    // Check if native share is available
-    if (navigator.canShare?.(shareData)) {
-      try {
-        await navigator.share(shareData);
-        return;
-      } catch (error) {
-        if ((error as Error).name === 'AbortError') {
-          // User cancelled
-          return;
-        }
-
-        console.error('Error sharing:', error);
-      }
-    }
-
-    // Fallback to modal
+    // Freeze the current time when modal opens
+    setFrozenTime(currentTime);
+    // Reset copy success state
+    setCopySuccess(null);
+    // Always show modal
     setShareModalOpen(true);
   };
 
+  const handleNativeShare = async () => {
+    const shareUrl = getShareUrl(shareData.url);
+    const shareDataToShare = {
+      ...shareData,
+      url: shareUrl,
+    };
+
+    try {
+      await navigator.share(shareDataToShare);
+      // Keep modal open after sharing
+    } catch (error) {
+      if ((error as Error).name === 'AbortError') {
+        // User cancelled, keep modal open
+        return;
+      }
+
+      console.error('Error sharing:', error);
+    }
+  };
+
   const openShareWindow = (url: string) => {
-    setShareModalOpen(false);
+    // Keep modal open after opening share window
     window.open(url, '', windowConfig);
   };
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(
-        `${shareData.title} ${shareData.url}`,
-      );
+      const shareUrl = getShareUrl(shareData.url);
+      await navigator.clipboard.writeText(shareUrl);
       setCopySuccess('link');
       abortableSetTimeout(
         () => {
           setCopySuccess(null);
-          setShareModalOpen(false);
         },
         1500,
         abortController.signal,
@@ -206,15 +256,23 @@ export function MediaActions({
 
   const handleCopyEmbed = async (type: 'video' | 'audio') => {
     try {
+      // Get URL based on checkbox state
+      const shareUrl = getShareUrl(shareData.url);
+
       // Extract the mediaId from the URL
-      const mediaId = shareData.url.split('/media/')[1]?.split('?')[0];
-      const baseEmbedUrl = shareData.url.replace(
+      const mediaId = shareUrl
+        .split('/media/')[1]
+        ?.split('?')[0]
+        ?.split('#')[0];
+      const baseEmbedUrl = shareUrl.replace(
         `/media/${mediaId}`,
         `/embed/media/${mediaId}`,
       );
 
-      // Add type query parameter
-      const embedUrl = `${baseEmbedUrl}?type=${type}`;
+      // Parse URL to handle query params and hash properly
+      const embedUrlObj = new URL(baseEmbedUrl);
+      embedUrlObj.searchParams.set('type', type);
+      const embedUrl = embedUrlObj.toString();
 
       let embedCode: string;
 
@@ -434,64 +492,101 @@ export function MediaActions({
           <LcModal.Popup>
             <ModalHeader title="Share" />
 
-            <div className="flex items-center justify-center gap-6 py-6">
-              <button
-                type="button"
-                onClick={() =>
-                  openShareWindow(
-                    `https://www.facebook.com/sharer/sharer.php?${new URLSearchParams(
-                      {
-                        u: shareData.url,
-                        quote: shareData.title,
-                      },
-                    )}`,
-                  )
-                }
-                className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
-              >
-                <div className="flex size-12 items-center justify-center rounded-full bg-blue-600">
-                  <IconBrandFacebook size={24} className="text-primary" />
-                </div>
-                <span className="text-primary text-xs">Facebook</span>
-              </button>
+            <div className="flex flex-col gap-4 p-6">
+              {/* Social Share Buttons */}
+              <div className="flex items-center justify-center gap-6">
+                {/* Native Share - only show if available */}
+                {typeof navigator !== 'undefined' &&
+                navigator.canShare?.(shareData) ? (
+                  <button
+                    type="button"
+                    onClick={handleNativeShare}
+                    className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
+                  >
+                    <div className="flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-purple-600 to-blue-600">
+                      <IconShare2 size={24} className="text-primary" />
+                    </div>
+                    <span className="text-primary text-xs">Share</span>
+                  </button>
+                ) : null}
 
-              <button
-                type="button"
-                onClick={() =>
-                  openShareWindow(
-                    `https://twitter.com/share?${new URLSearchParams({
-                      url: shareData.url,
-                      text: shareData.title,
-                    })}`,
-                  )
-                }
-                className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
-              >
-                <div className="flex size-12 items-center justify-center rounded-full bg-black">
-                  <IconBrandX size={24} className="text-primary" />
-                </div>
-                <span className="text-primary text-xs">X</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const shareUrl = getShareUrl(shareData.url);
+                    openShareWindow(
+                      `https://www.facebook.com/sharer/sharer.php?${new URLSearchParams(
+                        {
+                          u: shareUrl,
+                          quote: shareData.title,
+                        },
+                      )}`,
+                    );
+                  }}
+                  className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
+                >
+                  <div className="flex size-12 items-center justify-center rounded-full bg-blue-600">
+                    <IconBrandFacebook size={24} className="text-primary" />
+                  </div>
+                  <span className="text-primary text-xs">Facebook</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={handleCopy}
-                className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
-              >
-                <div
+                <button
+                  type="button"
+                  onClick={() => {
+                    const shareUrl = getShareUrl(shareData.url);
+                    openShareWindow(
+                      `https://twitter.com/share?${new URLSearchParams({
+                        url: shareUrl,
+                        text: shareData.title,
+                      })}`,
+                    );
+                  }}
+                  className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
+                >
+                  <div className="flex size-12 items-center justify-center rounded-full bg-black">
+                    <IconBrandX size={24} className="text-primary" />
+                  </div>
+                  <span className="text-primary text-xs">X</span>
+                </button>
+              </div>
+
+              {/* URL Display and Copy */}
+              <div className="flex items-center gap-2 rounded-lg border border-zinc-300 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
+                <input
+                  type="text"
+                  readOnly
+                  value={getShareUrl(shareData.url)}
+                  className="min-w-0 flex-1 truncate bg-transparent font-mono text-primary text-sm outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleCopy}
                   className={cn(
-                    'flex size-12 items-center justify-center rounded-full',
+                    'shrink-0 rounded-md px-4 py-2 font-medium text-sm transition-colors',
                     copySuccess === 'link'
-                      ? 'bg-green-600'
-                      : 'bg-gray-200 dark:bg-zinc-700',
+                      ? 'bg-green-600 text-white'
+                      : 'bg-blue-600 text-white hover:bg-blue-700',
                   )}
                 >
-                  <IconCopy size={24} className="text-primary" />
-                </div>
-                <span className="text-primary text-xs">
                   {copySuccess === 'link' ? 'Copied!' : 'Copy'}
-                </span>
-              </button>
+                </button>
+              </div>
+
+              {/* Timestamp Checkbox */}
+              {frozenTime >= 1 ? (
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={includeTimestamp}
+                    onChange={(e) => setIncludeTimestamp(e.target.checked)}
+                    className="size-4 cursor-pointer accent-blue-600"
+                  />
+                  <span className="text-primary text-sm">
+                    Start at {formatTime(frozenTime)}
+                  </span>
+                </label>
+              ) : null}
             </div>
           </LcModal.Popup>
         </LcModal.Portal>
