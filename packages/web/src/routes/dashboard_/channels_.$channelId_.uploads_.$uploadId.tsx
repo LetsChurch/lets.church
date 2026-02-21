@@ -51,6 +51,7 @@ import HlsVideo from 'hls-video-element/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import { useAppMantineForm } from '@/components/mantine';
+import { idTranslator } from '@/schemas/common';
 import { uploadFormSchema } from '@/schemas/dashboard';
 import { trpcClient, useTRPC } from '@/trpc/react';
 import { doMultipartUpload } from '@/util/multipart-upload';
@@ -887,7 +888,7 @@ function ChannelUploadPage() {
             {/* View Media Page Button */}
             <Button
               component={Link}
-              to={`/media/${uploadId}`}
+              to={`/media/${idTranslator.fromUUID(uploadId)}`}
               variant="light"
               leftSection={<IconEye size={16} />}
               fullWidth
@@ -1148,7 +1149,7 @@ function ChannelUploadPage() {
                   Embed Code
                 </Text>
                 <CopyButton
-                  value={`<iframe src="${typeof window !== 'undefined' ? window.location.origin : 'https://lets.church'}/embed/media/${uploadId}" width="1920" height="1080" frameborder="0" allowfullscreen allow="fullscreen; picture-in-picture"></iframe>`}
+                  value={`<iframe src="${typeof window !== 'undefined' ? window.location.origin : 'https://lets.church'}/embed/media/${idTranslator.fromUUID(uploadId)}" width="1920" height="1080" frameborder="0" allowfullscreen allow="fullscreen; picture-in-picture"></iframe>`}
                 >
                   {({ copied, copy }) => (
                     <Tooltip label={copied ? 'Copied!' : 'Copy embed code'}>
@@ -1173,7 +1174,7 @@ function ChannelUploadPage() {
               </Group>
               <Textarea
                 readOnly
-                value={`<iframe src="${typeof window !== 'undefined' ? window.location.origin : 'https://lets.church'}/embed/media/${uploadId}" width="1920" height="1080" frameborder="0" allowfullscreen allow="fullscreen; picture-in-picture"></iframe>`}
+                value={`<iframe src="${typeof window !== 'undefined' ? window.location.origin : 'https://lets.church'}/embed/media/${idTranslator.fromUUID(uploadId)}" width="1920" height="1080" frameborder="0" allowfullscreen allow="fullscreen; picture-in-picture"></iframe>`}
                 autosize
                 minRows={3}
                 maxRows={5}

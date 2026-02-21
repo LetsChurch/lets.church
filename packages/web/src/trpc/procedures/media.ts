@@ -111,8 +111,8 @@ export const mediaProcedures = {
         throw new Error('Media not found');
       }
 
-      // Check if channel is approved and public
-      if (media.channel.visibility !== 'PUBLIC' || !media.channel.approvedAt) {
+      // Check if channel is approved and not private
+      if (media.channel.visibility === 'PRIVATE' || !media.channel.approvedAt) {
         moduleLogger.warn(
           {
             uploadId: input.mediaId,
@@ -122,7 +122,7 @@ export const mediaProcedures = {
               channelApproved: Boolean(media.channel.approvedAt),
             },
           },
-          'Access denied to media from unapproved/non-public channel',
+          'Access denied to media from unapproved/private channel',
         );
         throw new Error('Media not found');
       }
