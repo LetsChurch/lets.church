@@ -25,6 +25,16 @@ configMapGenerator:
 generatorOptions:
   disableNameSuffixHash: true
 
+patches:
+  - patch: |-
+      - op: add
+        path: /spec/syncConfig
+        value:
+          resyncInterval: 60s
+          instantUpdates: false
+    target:
+      kind: InfisicalSecret
+
 replacements:
   - source:
       kind: ConfigMap

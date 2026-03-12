@@ -1,0 +1,43 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: maintenance
+  labels:
+    app: maintenance
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: maintenance
+  template:
+    metadata:
+      labels:
+        app: maintenance
+    spec:
+      containers:
+        - name: maintenance
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: maintenance-page
+              mountPath: /usr/share/nginx/html
+              readOnly: true
+      volumes:
+        - name: maintenance-page
+          configMap:
+            name: maintenance-page
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: maintenance
+spec:
+  selector:
+    app: maintenance
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

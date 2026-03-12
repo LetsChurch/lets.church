@@ -38,3 +38,9 @@ deploy env: deploy-check-vars
 
 delete-k8s env: deploy-check-vars
   kustomize build k8s/{{env}} | kubectl delete -f -
+
+maintenance-enable:
+  kubectl apply -k k8s/maintenance
+
+maintenance-disable:
+  kubectl apply -k k8s/prod
