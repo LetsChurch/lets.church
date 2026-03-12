@@ -4,17 +4,8 @@ namespace: letschurch-prod
 resources:
   - ../base
   - postgres.yml
-  - elasticsearch-pvc.crypt.yml
   - tunnel.yml
-patches:
-  - path: postgres-storage.crypt.yml
-    target:
-      kind: PostgresCluster
-      name: pg
-  - path: postgres-backup.crypt.yml
-    target:
-      kind: PostgresCluster
-      name: pg
+  - infisical-secrets.yml
 configMapGenerator:
   - name: web-config
     behavior: merge
@@ -22,54 +13,70 @@ configMapGenerator:
       - IMGPROXY_URL="https://images.letschurch.cloud"
       - LISTMONK_INTERNAL_URL="http://listmonk"
       - MEDIA_URL="https://letschurch-media.b-cdn.net"
-secretGenerator:
-  # Observability
-  - name: axiom-pino-secret
-    envs:
-      - axiom-pino.crypt.env
-  - name: vector-secret
-    envs:
-      - vector.crypt.env
-  - name: sentry-secret
-    envs:
-      - sentry.crypt.env
-
-  # Infrastructure
-  - name: cloudflare-secret
-    envs:
-      - cloudflare.crypt.env
-  - name: imgproxy-secret
-    envs:
-      - imgproxy.crypt.env
-  - name: listmonk-secret
-    envs:
-      - listmonk.crypt.env
-  - name: s3-ingest-secret
-    envs:
-      - s3-ingest.crypt.env
-  - name: s3-public-secret
-    envs:
-      - s3-public.crypt.env
-  - name: s3-backup-secret
-    envs:
-      - s3-backup.crypt.env
-  - name: smtp-secret
-    envs:
-      - smtp.crypt.env
-  - name: pgo-backup-creds
-    files:
-      - pgo-backup-creds.crypt.conf
-
-  # Application
-  - name: jwt-secret
-    envs:
-      - jwt.crypt.env
-  - name: mapbox-secret
-    envs:
-      - mapbox.crypt.env
-  - name: web-app-secret
-    envs:
-      - web-app.crypt.env
+  - name: infisical-config
+    literals:
+      - projectSlug=letschurch-k8s-sq-fp
+      - envSlug=prod
+      - hostAPI=https://app.infisical.com/api
+      - credentialsSecretName=infisical-universal-auth
+      - credentialsSecretNamespace=letschurch-prod
+      - managedSecretNamespace=letschurch-prod
 
 generatorOptions:
   disableNameSuffixHash: true
+
+replacements:
+  - source:
+      kind: ConfigMap
+      name: infisical-config
+      fieldPath: data.projectSlug
+    targets:
+      - select:
+          kind: InfisicalSecret
+        fieldPaths:
+          - spec.authentication.universalAuth.secretsScope.projectSlug
+  - source:
+      kind: ConfigMap
+      name: infisical-config
+      fieldPath: data.envSlug
+    targets:
+      - select:
+          kind: InfisicalSecret
+        fieldPaths:
+          - spec.authentication.universalAuth.secretsScope.envSlug
+  - source:
+      kind: ConfigMap
+      name: infisical-config
+      fieldPath: data.hostAPI
+    targets:
+      - select:
+          kind: InfisicalSecret
+        fieldPaths:
+          - spec.hostAPI
+  - source:
+      kind: ConfigMap
+      name: infisical-config
+      fieldPath: data.credentialsSecretName
+    targets:
+      - select:
+          kind: InfisicalSecret
+        fieldPaths:
+          - spec.authentication.universalAuth.credentialsRef.secretName
+  - source:
+      kind: ConfigMap
+      name: infisical-config
+      fieldPath: data.credentialsSecretNamespace
+    targets:
+      - select:
+          kind: InfisicalSecret
+        fieldPaths:
+          - spec.authentication.universalAuth.credentialsRef.secretNamespace
+  - source:
+      kind: ConfigMap
+      name: infisical-config
+      fieldPath: data.managedSecretNamespace
+    targets:
+      - select:
+          kind: InfisicalSecret
+        fieldPaths:
+          - spec.managedKubeSecretReferences.0.secretNamespace
