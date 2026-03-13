@@ -12,12 +12,11 @@ in
 
 pkgs.mkShell {
   packages = with pkgs; [
-    ansible
+    uv
     bun
     docker-compose
     fd
     git-lfs
-    gitleaks
     go
     gum
     just
@@ -30,7 +29,10 @@ pkgs.mkShell {
     rclone
     sampler
     templ
-    transcrypt
     unixtools.xxd
   ];
+  shellHook = ''
+    (cd infra/ansible && uv sync --quiet)
+    source infra/ansible/.venv/bin/activate
+  '';
 }

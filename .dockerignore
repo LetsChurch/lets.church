@@ -13,6 +13,3 @@ packages/db/src/generated
 
 # Local data
 seed-data
-
-# Tooling
-gitleaks-findings.json

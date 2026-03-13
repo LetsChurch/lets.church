@@ -11,7 +11,7 @@ The Ansible setup manages:
   - **Import Worker**: Handles media file imports and processing
   - **Probe Worker**: Analyzes media files to extract metadata
 
-Workers are deployed as Docker containers pulled from GitLab Container Registry and configured with encrypted environment variables.
+Workers are deployed as Docker containers pulled from GitLab Container Registry. Secrets are managed via [Infisical](https://infisical.com).
 
 ## Directory Structure
 
@@ -19,18 +19,15 @@ Workers are deployed as Docker containers pulled from GitLab Container Registry 
 .
 ├── collections/              # Installed Ansible collections
 │   └── ansible_collections/
-│       └── community.docker/ # Docker management modules
+│       ├── community.docker/ # Docker management modules
+│       └── infisical.vault/  # Infisical secret management
 ├── playbooks/               # Ansible playbooks
 │   ├── install-docker.yml   # Install Docker on hosts
 │   ├── import-worker.yml    # Deploy import worker
 │   └── probe-worker.yml     # Deploy probe worker
-├── variables/               # Encrypted variable files
-│   ├── common.crypt.yml          # Shared variables (Temporal, logging, monitoring)
-│   ├── s3-ingest.crypt.yml       # S3 ingest bucket configuration
-│   ├── s3-public.crypt.yml       # S3 public bucket configuration
-│   ├── s3-backup.crypt.yml       # S3 backup bucket configuration
-│   ├── import-worker.crypt.yml   # Import worker specific settings
-│   └── probe-worker.crypt.yml    # Probe worker specific settings
+├── variables/               # Non-sensitive variable files
+│   ├── import-worker.yml    # Import worker specific settings
+│   └── probe-worker.yml     # Probe worker specific settings
 ├── hosts.yml                # Inventory file defining hosts
 ├── requirements.yml         # Ansible dependencies
 ├── justfile                 # Just commands for common tasks
@@ -47,6 +44,7 @@ This installs required Ansible roles and collections defined in `requirements.ym
 
 - `geerlingguy.docker` role (v7.3.0)
 - `community.docker` collection (v3.12.1)
+- `infisical.vault` collection (v1.2.1)
 
 ## Playbooks
 
@@ -73,9 +71,9 @@ Deploys and starts the respective worker containers.
 
 **What they do:**
 
+- Fetches secrets from Infisical at runtime
 - Pulls the latest worker image from GitLab Container Registry
 - Creates/recreates the worker container with proper configuration
-- Sets environment variables from encrypted vault files
 - Configures restart policy to `unless-stopped`
 - Sets hostname to the inventory hostname for worker identification
 
@@ -91,8 +89,8 @@ just play-import-worker abc12345
 just play-probe-worker abc12345
 
 # Or directly:
-ansible-playbook ./playbooks/import-worker.yml -K
-ansible-playbook ./playbooks/probe-worker.yml -K -e "lc_hash=abc12345"
+INFISICAL_CLIENT_ID=<id> INFISICAL_CLIENT_SECRET=<secret> ansible-playbook ./playbooks/import-worker.yml -K
+INFISICAL_CLIENT_ID=<id> INFISICAL_CLIENT_SECRET=<secret> ansible-playbook ./playbooks/probe-worker.yml -K -e "lc_hash=abc12345"
 ```
 
 **Hash behavior:**
@@ -130,108 +128,27 @@ just play
 
 ## Environment Variables
 
-Worker configuration is stored in modular encrypted vault files for security and maintainability.
+### Infisical Credentials (required at runtime)
 
-### Variables File Structure
+| Variable | Description |
+|----------|-------------|
+| `INFISICAL_CLIENT_ID` | Universal auth client ID |
+| `INFISICAL_CLIENT_SECRET` | Universal auth client secret |
 
-Variables are split into separate files based on functionality:
+### Infisical Secret Paths (project: `b9c770a9-e3d7-4926-a2e0-2a1f43414f96`, environment: `prod`)
 
-#### Shared Variables (`common.crypt.yml`)
+| Path | Contents |
+|------|----------|
+| `/ansible/common` | `AXIOM_DATASET`, `AXIOM_TOKEN`, `SENTRY_DSN`, `TEMPORAL_ADDRESS`, `TEMPORAL_SHUTDOWN_GRACE_TIME` |
+| `/ansible/s3/ingest` | `S3_INGEST_REGION`, `S3_INGEST_ENDPOINT`, `S3_INGEST_BUCKET`, `S3_INGEST_ACCESS_KEY_ID`, `S3_INGEST_SECRET_ACCESS_KEY` |
 
-Contains configuration shared across all workers:
+### Worker-Specific Variables (`variables/`)
 
-- `TEMPORAL_ADDRESS`: Temporal server address
-- `TEMPORAL_SHUTDOWN_GRACE_TIME`: Graceful shutdown timeout
-- `AXIOM_DATASET`: Axiom dataset for logging
-- `AXIOM_TOKEN`: Axiom API token
-- `SENTRY_DSN`: Sentry DSN for error tracking
+Non-sensitive settings committed directly:
 
-#### S3 Configuration Files
-
-Each S3 bucket has its own variables file, allowing workers to access only what they need:
-
-**`s3-ingest.crypt.yml`** (Ingest bucket for user uploads):
-
-- `S3_INGEST_REGION`
-- `S3_INGEST_ENDPOINT`
-- `S3_INGEST_BUCKET`
-- `S3_INGEST_ACCESS_KEY_ID`
-- `S3_INGEST_SECRET_ACCESS_KEY`
-
-**`s3-public.crypt.yml`** (Public bucket for processed media):
-
-- `S3_PUBLIC_REGION`
-- `S3_PUBLIC_ENDPOINT`
-- `S3_PUBLIC_BUCKET`
-- `S3_PUBLIC_ACCESS_KEY_ID`
-- `S3_PUBLIC_SECRET_ACCESS_KEY`
-
-**`s3-backup.crypt.yml`** (Backup bucket for Glacier archives):
-
-- `S3_BACKUP_REGION`
-- `S3_BACKUP_ENDPOINT`
-- `S3_BACKUP_BUCKET`
-- `S3_BACKUP_ACCESS_KEY_ID`
-- `S3_BACKUP_SECRET_ACCESS_KEY`
-
-#### Worker-Specific Variables
-
-Each worker has its own file for worker-specific configuration:
-
-**`import-worker.crypt.yml`**:
-
+**`import-worker.yml`** / **`probe-worker.yml`**:
 - `MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS`
 - `MAX_CONCURRENT_WORKFLOW_TASK_EXECUTIONS`
-
-**`probe-worker.crypt.yml`**:
-
-- `MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS`
-- `MAX_CONCURRENT_WORKFLOW_TASK_EXECUTIONS`
-
-### S3 Access Matrix
-
-Workers only load the S3 configuration they need:
-
-| Worker | Ingest | Public | Backup |
-|--------|--------|--------|--------|
-| **import-worker** | ✓ | - | - |
-| **probe-worker** | ✓ | - | - |
-| **transcode-worker** | ✓ | ✓ | - |
-| **transcribe-worker** | ✓ | ✓ | - |
-| **background-worker** | ✓ | ✓ | ✓ |
-
-### Playbook Variable Inclusion
-
-Each playbook includes only the variables files it needs:
-
-**Import Worker** (`import-worker.yml`):
-
-```yaml
-vars_files:
-  - ../variables/common.crypt.yml
-  - ../variables/s3-ingest.crypt.yml
-  - ../variables/import-worker.crypt.yml
-```
-
-**Probe Worker** (`probe-worker.yml`):
-
-```yaml
-vars_files:
-  - ../variables/common.crypt.yml
-  - ../variables/s3-ingest.crypt.yml
-  - ../variables/probe-worker.crypt.yml
-```
-
-**Background Worker** (hypothetical, needs all buckets):
-
-```yaml
-vars_files:
-  - ../variables/common.crypt.yml
-  - ../variables/s3-ingest.crypt.yml
-  - ../variables/s3-public.crypt.yml
-  - ../variables/s3-backup.crypt.yml
-  - ../variables/background-worker.crypt.yml
-```
 
 ### Automatic Variables
 
@@ -252,7 +169,7 @@ just init
 just play-docker
 
 # 3. Deploy workers
-just play-workers
+INFISICAL_CLIENT_ID=<id> INFISICAL_CLIENT_SECRET=<secret> just play-workers
 ```
 
 ### Deploy New Version
@@ -262,14 +179,13 @@ just play-workers
 git log --oneline
 
 # Deploy specific version to all workers
-just play-workers abc12345
+INFISICAL_CLIENT_ID=<id> INFISICAL_CLIENT_SECRET=<secret> just play-workers abc12345
 ```
 
 ### Deploy Latest Version
 
 ```bash
-# Deploys based on current git commit
-just play-workers
+INFISICAL_CLIENT_ID=<id> INFISICAL_CLIENT_SECRET=<secret> just play-workers
 ```
 
 ### Check Worker Status
@@ -281,27 +197,4 @@ ssh dorean
 docker ps | grep lc-
 docker logs lc-import-worker
 docker logs lc-probe-worker
-```
-
-### Update Worker Configuration
-
-```bash
-# Update shared configuration (affects all workers)
-ansible-vault edit variables/common.crypt.yml
-
-# Update S3 ingest bucket settings (affects import, probe, transcode, transcribe, background workers)
-ansible-vault edit variables/s3-ingest.crypt.yml
-
-# Update S3 public bucket settings (affects transcode, transcribe, background workers)
-ansible-vault edit variables/s3-public.crypt.yml
-
-# Update S3 backup bucket settings (affects background worker only)
-ansible-vault edit variables/s3-backup.crypt.yml
-
-# Update worker-specific settings
-ansible-vault edit variables/import-worker.crypt.yml
-
-# Redeploy affected workers to apply changes
-just play-import-worker
-just play-probe-worker
 ```

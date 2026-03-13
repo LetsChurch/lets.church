@@ -1,7 +1,6 @@
 .envrc.local
 .direnv
 
-gitleaks-findings.json
 node_modules
 
 *.log

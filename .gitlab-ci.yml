@@ -99,14 +99,6 @@ deploy-k8s:
   before_script:
     - apt-get update && apt-get install -y bsdmainutils curl git git-lfs gnupg just openssl
 
-    # Install transcrypt
-    - git clone https://github.com/elasticdog/transcrypt.git /tmp/transcrypt
-    - git --git-dir=/tmp/transcrypt/.git --work-tree=/tmp/transcrypt reset --hard fb66f78cd69906915627a7c41ba02428dd88e19d
-    - ln -s /tmp/transcrypt/transcrypt /usr/local/bin/transcrypt
-
-    # Decrypt transcrypt files
-    - transcrypt -F -y -c $TRANSCRYPT_CIPHER -p "$TRANSCRYPT_PASSWORD"
-
     # Install kubectl
     - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
     - chmod +x kubectl

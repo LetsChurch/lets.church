@@ -1,0 +1,10 @@
+[project]
+name = "letschurch-ansible"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "ansible",
+  "boto3",
+  "botocore",
+  "infisicalsdk",
+]

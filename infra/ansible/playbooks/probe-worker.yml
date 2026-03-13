@@ -3,9 +3,33 @@
   hosts: probe-workers
   become: true
   vars_files:
-    - ../variables/common.crypt.yml
-    - ../variables/s3-ingest.crypt.yml
-    - ../variables/probe-worker.crypt.yml
+    - ../variables/probe-worker.yml
+  pre_tasks:
+    - name: Login to Infisical
+      infisical.vault.login:
+        url: https://app.infisical.com
+        auth_method: universal_auth
+        universal_auth_client_id: "{{ lookup('env', 'INFISICAL_CLIENT_ID') }}"
+        universal_auth_client_secret: "{{ lookup('env', 'INFISICAL_CLIENT_SECRET') }}"
+      register: infisical_login
+    - name: Fetch common secrets
+      infisical.vault.read_secrets:
+        login_data: "{{ infisical_login.login_data }}"
+        project_id: b9c770a9-e3d7-4926-a2e0-2a1f43414f96
+        env_slug: prod
+        path: /ansible/common
+        as_dict: true
+      register: common_secrets
+    - name: Fetch S3 ingest secrets
+      infisical.vault.read_secrets:
+        login_data: "{{ infisical_login.login_data }}"
+        project_id: b9c770a9-e3d7-4926-a2e0-2a1f43414f96
+        env_slug: prod
+        path: /ansible/s3/ingest
+        as_dict: true
+      register: s3_ingest_secrets
+    - name: Set secrets as variables
+      set_fact: "{{ common_secrets.secrets | combine(s3_ingest_secrets.secrets) }}"
   tasks:
     - name: Get the latest commit hash
       shell: git rev-parse HEAD | head -c 8
