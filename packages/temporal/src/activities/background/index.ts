@@ -84,6 +84,7 @@ export {
   type InvitationEmailArgs,
   validateSendInvitationEmailConfig,
 } from './send-invitation-email';
+export { sendUploadErrorNotification } from './send-upload-error-notification';
 export {
   default as sendVerificationEmail,
   validateSendVerificationEmailConfig,

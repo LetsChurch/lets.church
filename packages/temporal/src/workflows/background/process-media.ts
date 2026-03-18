@@ -1,4 +1,8 @@
-import { executeChild, proxyActivities } from '@temporalio/workflow';
+import {
+  executeChild,
+  proxyActivities,
+  workflowInfo,
+} from '@temporalio/workflow';
 import { invariant } from 'es-toolkit';
 import type * as backgroundActivities from '../../activities/background';
 import type * as probeActivities from '../../activities/probe';
@@ -43,62 +47,82 @@ const { getFinalizedUploadKey } = proxyActivities<typeof backgroundActivities>({
   retry: { maximumAttempts: 5 },
 });
 
+const { sendUploadErrorNotification } = proxyActivities<
+  typeof backgroundActivities
+>({
+  startToCloseTimeout: '1 minute',
+  taskQueue: BACKGROUND_QUEUE,
+  retry: { maximumAttempts: 3 },
+});
+
 export async function processMediaWorkflow(
   targetId: string,
   scope: 'transcode' | 'transcribe' | 'everything' = 'everything',
 ) {
-  const s3UploadKey = await getFinalizedUploadKey(targetId);
+  try {
+    const s3UploadKey = await getFinalizedUploadKey(targetId);
 
-  const probeRes = await probe(targetId, s3UploadKey);
-  invariant(probeRes !== null, 'Probe is null!');
+    const probeRes = await probe(targetId, s3UploadKey);
+    invariant(probeRes !== null, 'Probe is null!');
 
-  const transcribePromise =
-    scope === 'everything' || scope === 'transcribe'
-      ? transcribe(targetId, s3UploadKey)
-      : null;
+    const transcribePromise =
+      scope === 'everything' || scope === 'transcribe'
+        ? transcribe(targetId, s3UploadKey)
+        : null;
 
-  // Work
-  await Promise.all([
-    transcribePromise,
-    scope === 'everything' || scope === 'transcode'
-      ? transcode(targetId, s3UploadKey, probeRes)
-      : null,
-    ...((scope === 'everything' || scope === 'transcode') &&
-    probeIsVideoFile(probeRes)
-      ? [createThumbnails(targetId, s3UploadKey, probeRes)]
-      : []),
-  ]);
+    // Work
+    await Promise.all([
+      transcribePromise,
+      scope === 'everything' || scope === 'transcode'
+        ? transcode(targetId, s3UploadKey, probeRes)
+        : null,
+      ...((scope === 'everything' || scope === 'transcode') &&
+      probeIsVideoFile(probeRes)
+        ? [createThumbnails(targetId, s3UploadKey, probeRes)]
+        : []),
+    ]);
 
-  // Index
+    // Index
 
-  if (transcribePromise) {
-    const res = await transcribePromise;
+    if (transcribePromise) {
+      const res = await transcribePromise;
+
+      await executeChild(indexDocumentWorkflow, {
+        workflowId: `transcript:${s3UploadKey}`,
+        args: ['transcript', targetId, res.transcriptKey],
+        taskQueue: BACKGROUND_QUEUE,
+        retry: {
+          maximumAttempts: 2,
+        },
+      });
+
+      await executeChild(indexDocumentWorkflow, {
+        workflowId: `transcriptHtml:${s3UploadKey}`,
+        args: ['transcriptHtml', targetId, res.transcriptJsonKey],
+        taskQueue: BACKGROUND_QUEUE,
+        retry: {
+          maximumAttempts: 2,
+        },
+      });
+    }
 
     await executeChild(indexDocumentWorkflow, {
-      workflowId: `transcript:${s3UploadKey}`,
-      args: ['transcript', targetId, res.transcriptKey],
+      workflowId: `upload:${s3UploadKey}`,
+      args: ['upload', targetId],
       taskQueue: BACKGROUND_QUEUE,
       retry: {
         maximumAttempts: 2,
       },
     });
-
-    await executeChild(indexDocumentWorkflow, {
-      workflowId: `transcriptHtml:${s3UploadKey}`,
-      args: ['transcriptHtml', targetId, res.transcriptJsonKey],
-      taskQueue: BACKGROUND_QUEUE,
-      retry: {
-        maximumAttempts: 2,
-      },
-    });
+  } catch (err) {
+    const { attempt, retryPolicy } = workflowInfo();
+    const maxAttempts = retryPolicy?.maximumAttempts ?? 1;
+    if (attempt >= maxAttempts) {
+      await sendUploadErrorNotification(
+        targetId,
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+    throw err;
   }
-
-  await executeChild(indexDocumentWorkflow, {
-    workflowId: `upload:${s3UploadKey}`,
-    args: ['upload', targetId],
-    taskQueue: BACKGROUND_QUEUE,
-    retry: {
-      maximumAttempts: 2,
-    },
-  });
 }
