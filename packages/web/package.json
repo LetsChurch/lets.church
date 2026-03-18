@@ -86,7 +86,6 @@
     "p-lazy": "^5.0.0",
     "p-progress": "^1.0.0",
     "p-retry": "catalog:",
-    "plausible-tracker": "^0.3.9",
     "podcast": "^2.0.1",
     "posthog-js": "^1.292.0",
     "pretty-ms": "^9.3.0",

@@ -6,30 +6,9 @@ settings:
 
 catalogs:
   default:
-    '@aws-sdk/client-s3':
-      specifier: 3.948.0
-      version: 3.948.0
-    '@aws-sdk/s3-request-presigner':
-      specifier: 3.948.0
-      version: 3.948.0
     '@biomejs/biome':
       specifier: 2.3.4
       version: 2.3.4
-    '@sentry/node':
-      specifier: ^10.25.0
-      version: 10.25.0
-    '@temporalio/activity':
-      specifier: ^1.13.2
-      version: 1.13.2
-    '@temporalio/client':
-      specifier: ^1.13.2
-      version: 1.13.2
-    '@temporalio/worker':
-      specifier: ^1.13.2
-      version: 1.13.2
-    '@temporalio/workflow':
-      specifier: ^1.13.2
-      version: 1.13.2
     '@types/node':
       specifier: ^24.10.0
       version: 24.10.0
@@ -39,15 +18,9 @@ catalogs:
     es-toolkit:
       specifier: ^1.41.0
       version: 1.41.0
-    p-map:
-      specifier: ^7.0.3
-      version: 7.0.3
     p-retry:
       specifier: ^7.1.0
       version: 7.1.0
-    pino:
-      specifier: ^10.1.0
-      version: 10.1.0
     tsx:
       specifier: ^4.20.6
       version: 4.20.6
@@ -751,9 +724,6 @@ importers:
       p-retry:
         specifier: 'catalog:'
         version: 7.1.0
-      plausible-tracker:
-        specifier: ^0.3.9
-        version: 0.3.9
       podcast:
         specifier: ^2.0.1
         version: 2.0.1
@@ -6896,11 +6866,6 @@ packages:
   pkg-types@2.3.0:
     resolution: {integrity: sha512-SIqCzDRg0s9npO5XQ3tNZioRY1uK06lA41ynBC1YmFTmnY6FjUjVt6s4LoADmwoig1qqD0oK8h1p/8mlMx8Oig==}
 
-  plausible-tracker@0.3.9:
-    resolution: {integrity: sha512-hMhneYm3GCPyQon88SZrVJx+LlqhM1kZFQbuAgXPoh/Az2YvO1B6bitT9qlhpiTdJlsT5lsr3gPmzoVjb5CDXA==}
-    engines: {node: '>=10'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-
   playwright-core@1.56.1:
     resolution: {integrity: sha512-hutraynyn31F+Bifme+Ps9Vq59hKuUCz7H1kDOcBs+2oGguKkWTU50bBWrtz34OUWmIwpBTWDxaRPXrIXkgvmQ==}
     engines: {node: '>=18'}
@@ -12909,26 +12874,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vitest/browser@3.2.4(playwright@1.56.1)(vite@7.1.12(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(sugarss@5.0.1(postcss@8.5.6))(terser@5.43.1)(tsx@4.20.6))(vitest@3.2.4)':
-    dependencies:
-      '@testing-library/dom': 10.4.1
-      '@testing-library/user-event': 14.6.1(@testing-library/dom@10.4.1)
-      '@vitest/mocker': 3.2.4(vite@7.1.12(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(sugarss@5.0.1(postcss@8.5.6))(terser@5.43.1)(tsx@4.20.6))
-      '@vitest/utils': 3.2.4
-      magic-string: 0.30.21
-      sirv: 3.0.2
-      tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.0)(@vitest/browser@3.2.4)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)(sugarss@5.0.1(postcss@8.5.6))(terser@5.43.1)(tsx@4.20.6)
-      ws: 8.18.3
-    optionalDependencies:
-      playwright: 1.56.1
-    transitivePeerDependencies:
-      - bufferutil
-      - msw
-      - utf-8-validate
-      - vite
-    optional: true
-
   '@vitest/browser@3.2.4(playwright@1.56.1)(vite@7.2.2(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(sugarss@5.0.1(postcss@8.5.6))(terser@5.43.1)(tsx@4.20.6))(vitest@3.2.4)':
     dependencies:
       '@testing-library/dom': 10.4.1
@@ -16173,8 +16118,6 @@ snapshots:
       exsolve: 1.0.7
       pathe: 2.0.3
 
-  plausible-tracker@0.3.9: {}
-
   playwright-core@1.56.1: {}
 
   playwright@1.56.1:
@@ -17638,7 +17581,7 @@ snapshots:
     optionalDependencies:
       '@types/debug': 4.1.12
       '@types/node': 24.10.0
-      '@vitest/browser': 3.2.4(playwright@1.56.1)(vite@7.1.12(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(sugarss@5.0.1(postcss@8.5.6))(terser@5.43.1)(tsx@4.20.6))(vitest@3.2.4)
+      '@vitest/browser': 3.2.4(playwright@1.56.1)(vite@7.2.2(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(sugarss@5.0.1(postcss@8.5.6))(terser@5.43.1)(tsx@4.20.6))(vitest@3.2.4)
       jsdom: 26.1.0
     transitivePeerDependencies:
       - jiti
