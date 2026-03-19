@@ -478,6 +478,10 @@ export const channelRouter = router({
         avatarPath: true,
         coverPath: true,
         defaultThumbnailPath: true,
+        defaultUploadVisibility: true,
+        defaultUploadLicense: true,
+        defaultUploadCommentsEnabled: true,
+        defaultUploadDownloadsEnabled: true,
       },
       where: {
         id: input.channelId,
@@ -554,6 +558,12 @@ export const channelRouter = router({
           applePodcastsUrl: input.applePodcastsUrl || null,
           spotifyUrl: input.spotifyUrl || null,
           rssUrl: input.rssUrl || null,
+          defaultUploadVisibility: input.defaultUploadVisibility ?? null,
+          defaultUploadLicense: input.defaultUploadLicense ?? null,
+          defaultUploadCommentsEnabled:
+            input.defaultUploadCommentsEnabled ?? null,
+          defaultUploadDownloadsEnabled:
+            input.defaultUploadDownloadsEnabled ?? null,
         },
         select: {
           id: true,
@@ -976,6 +986,10 @@ export const channelRouter = router({
           id: true,
           name: true,
           slug: true,
+          defaultUploadVisibility: true,
+          defaultUploadLicense: true,
+          defaultUploadCommentsEnabled: true,
+          defaultUploadDownloadsEnabled: true,
           memberships: {
             select: {
               isAdmin: true,
@@ -1132,10 +1146,22 @@ export const channelRouter = router({
   createUploadRecord: channelUploadProcedure
     .input(createUploadSchema)
     .mutation(async ({ ctx, input }) => {
+      const channel = await prisma.channel.findUniqueOrThrow({
+        where: { id: input.channelId },
+        select: {
+          defaultUploadVisibility: true,
+          defaultUploadLicense: true,
+          defaultUploadCommentsEnabled: true,
+          defaultUploadDownloadsEnabled: true,
+        },
+      });
+
       const { id } = await prisma.uploadRecord.create({
         data: {
-          license: UploadLicense.STANDARD,
-          visibility: 'PRIVATE',
+          license: channel.defaultUploadLicense ?? UploadLicense.STANDARD,
+          visibility: channel.defaultUploadVisibility ?? 'PRIVATE',
+          userCommentsEnabled: channel.defaultUploadCommentsEnabled ?? true,
+          downloadsEnabled: channel.defaultUploadDownloadsEnabled ?? true,
           originalFileName: input.originalFileName,
           channel: {
             connect: {

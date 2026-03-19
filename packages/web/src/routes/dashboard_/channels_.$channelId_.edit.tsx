@@ -2,6 +2,7 @@ import {
   ActionIcon,
   Box,
   Button,
+  Checkbox,
   Container,
   Grid,
   Group,
@@ -9,6 +10,7 @@ import {
   Loader,
   LoadingOverlay,
   Radio,
+  Select,
   SimpleGrid,
   Stack,
   Text,
@@ -368,6 +370,23 @@ function ChannelEditPage() {
     }),
   );
 
+  const licenseOptions = [
+    { value: 'STANDARD', label: 'Standard Copyright' },
+    { value: 'PUBLIC_DOMAIN', label: 'Public Domain' },
+    {
+      group: 'Creative Commons',
+      items: [
+        { value: 'CC_BY', label: 'CC BY' },
+        { value: 'CC_BY_SA', label: 'CC BY-SA' },
+        { value: 'CC_BY_NC', label: 'CC BY-NC' },
+        { value: 'CC_BY_NC_SA', label: 'CC BY-NC-SA' },
+        { value: 'CC_BY_ND', label: 'CC BY-ND' },
+        { value: 'CC_BY_NC_ND', label: 'CC BY-NC-ND' },
+        { value: 'CC0', label: 'CC0' },
+      ],
+    },
+  ];
+
   const form = useAppMantineForm({
     defaultValues: {
       name: channel.name || '',
@@ -385,6 +404,12 @@ function ChannelEditPage() {
       applePodcastsUrl: channel.applePodcastsUrl || '',
       spotifyUrl: channel.spotifyUrl || '',
       rssUrl: channel.rssUrl || '',
+      defaultUploadVisibility: channel.defaultUploadVisibility ?? 'PRIVATE',
+      defaultUploadLicense: channel.defaultUploadLicense ?? 'STANDARD',
+      defaultUploadCommentsEnabled:
+        channel.defaultUploadCommentsEnabled ?? true,
+      defaultUploadDownloadsEnabled:
+        channel.defaultUploadDownloadsEnabled ?? true,
     },
     onSubmit: async ({ value }) => {
       if (newAvatarFile) {
@@ -493,6 +518,12 @@ function ChannelEditPage() {
       applePodcastsUrl: channel.applePodcastsUrl || '',
       spotifyUrl: channel.spotifyUrl || '',
       rssUrl: channel.rssUrl || '',
+      defaultUploadVisibility: channel.defaultUploadVisibility ?? 'PRIVATE',
+      defaultUploadLicense: channel.defaultUploadLicense ?? 'STANDARD',
+      defaultUploadCommentsEnabled:
+        channel.defaultUploadCommentsEnabled ?? true,
+      defaultUploadDownloadsEnabled:
+        channel.defaultUploadDownloadsEnabled ?? true,
     });
   }
 
@@ -837,6 +868,65 @@ function ChannelEditPage() {
                     )}
                   </form.AppField>
                 </SimpleGrid>
+
+                {/* Default Upload Settings */}
+                <Title order={3} mt="lg">
+                  Default Upload Settings
+                </Title>
+
+                <form.AppField name="defaultUploadVisibility">
+                  {(field) => (
+                    <Select
+                      label="Default Visibility"
+                      data={[
+                        { value: 'PUBLIC', label: 'Public' },
+                        { value: 'PRIVATE', label: 'Private' },
+                        { value: 'UNLISTED', label: 'Unlisted' },
+                      ]}
+                      value={field.state.value ?? null}
+                      onChange={(val) =>
+                        field.handleChange(val as typeof field.state.value)
+                      }
+                    />
+                  )}
+                </form.AppField>
+
+                <form.AppField name="defaultUploadLicense">
+                  {(field) => (
+                    <Select
+                      label="Default License"
+                      data={licenseOptions}
+                      value={field.state.value ?? null}
+                      onChange={(val) =>
+                        field.handleChange(val as typeof field.state.value)
+                      }
+                    />
+                  )}
+                </form.AppField>
+
+                <form.AppField name="defaultUploadCommentsEnabled">
+                  {(field) => (
+                    <Checkbox
+                      label="Enable comments on new uploads"
+                      checked={field.state.value ?? true}
+                      onChange={(e) =>
+                        field.handleChange(e.currentTarget.checked)
+                      }
+                    />
+                  )}
+                </form.AppField>
+
+                <form.AppField name="defaultUploadDownloadsEnabled">
+                  {(field) => (
+                    <Checkbox
+                      label="Enable downloads on new uploads"
+                      checked={field.state.value ?? true}
+                      onChange={(e) =>
+                        field.handleChange(e.currentTarget.checked)
+                      }
+                    />
+                  )}
+                </form.AppField>
               </Stack>
             </form>
           </Stack>

@@ -30,23 +30,22 @@ export const channelFormSchema = z.object({
       'Slug can only contain letters, numbers, underscores, and hyphens',
     ),
   description: z.string(),
-  visibility: z.enum(
-    Object.values(ChannelVisibility) as [
-      ChannelVisibility,
-      ...ChannelVisibility[],
-    ],
-  ),
-  websiteUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  facebookUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  instagramUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  xUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  youtubeUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  tiktokUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  linkedinUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  threadsUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  applePodcastsUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  spotifyUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
-  rssUrl: z.string().url('Invalid URL').optional().or(z.literal('')),
+  visibility: z.enum(ChannelVisibility),
+  websiteUrl: z.url('Invalid URL').optional().or(z.literal('')),
+  facebookUrl: z.url('Invalid URL').optional().or(z.literal('')),
+  instagramUrl: z.url('Invalid URL').optional().or(z.literal('')),
+  xUrl: z.url('Invalid URL').optional().or(z.literal('')),
+  youtubeUrl: z.url('Invalid URL').optional().or(z.literal('')),
+  tiktokUrl: z.url('Invalid URL').optional().or(z.literal('')),
+  linkedinUrl: z.url('Invalid URL').optional().or(z.literal('')),
+  threadsUrl: z.url('Invalid URL').optional().or(z.literal('')),
+  applePodcastsUrl: z.url('Invalid URL').optional().or(z.literal('')),
+  spotifyUrl: z.url('Invalid URL').optional().or(z.literal('')),
+  rssUrl: z.url('Invalid URL').optional().or(z.literal('')),
+  defaultUploadVisibility: z.enum(UploadVisibility).nullable().optional(),
+  defaultUploadLicense: z.enum(UploadLicense).nullable().optional(),
+  defaultUploadCommentsEnabled: z.boolean().nullable().optional(),
+  defaultUploadDownloadsEnabled: z.boolean().nullable().optional(),
 });
 
 export const createChannelSchema = channelFormSchema;
@@ -120,7 +119,7 @@ export const inviteChannelMemberSchema = z
     channelId: channelIdSchema,
     email: z.preprocess(
       (val) => (typeof val === 'string' ? val.toLowerCase().trim() : val),
-      z.string().email('Invalid email address'),
+      z.email('Invalid email address'),
     ),
   })
   .and(memberPermissionsSchema);
@@ -158,22 +157,13 @@ export const bulkSetVisibilitySchema = z.object({
   uploadIds: z
     .array(uploadIdSchema)
     .min(1, 'At least one upload must be selected'),
-  visibility: z.enum(
-    Object.values(UploadVisibility) as [
-      UploadVisibility,
-      ...UploadVisibility[],
-    ],
-  ),
+  visibility: z.enum(UploadVisibility),
 });
 
 // Playlist schemas
 export const playlistFormSchema = z.object({
   title: z.string().min(1, 'Playlist title is required'),
-  type: z
-    .enum(
-      Object.values(UploadListType) as [UploadListType, ...UploadListType[]],
-    )
-    .default('PLAYLIST' as UploadListType),
+  type: z.enum(UploadListType).default('PLAYLIST' as UploadListType),
 });
 
 export const createPlaylistSchema = playlistFormSchema.extend({

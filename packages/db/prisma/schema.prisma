@@ -332,42 +332,46 @@ enum ChannelVisibility {
 }
 
 model Channel {
-  id                       String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                     String
-  visibility               ChannelVisibility                @default(PUBLIC)
-  avatarPath               String?                          @map("avatar_path") @db.VarChar(255)
-  avatarBlurhash           String?                          @map("avatar_blurhash") @db.VarChar(255)
-  coverPath                String?                          @map("cover_path") @db.VarChar(255)
-  coverBlurhash            String?                          @map("cover_blurhash") @db.VarChar(255)
-  slug                     String                           @unique @db.Citext
-  description              String?
-  websiteUrl               String?                          @map("website_url")
-  facebookUrl              String?                          @map("facebook_url")
-  instagramUrl             String?                          @map("instagram_url")
-  xUrl                     String?                          @map("x_url")
-  youtubeUrl               String?                          @map("youtube_url")
-  tiktokUrl                String?                          @map("tiktok_url")
-  linkedinUrl              String?                          @map("linkedin_url")
-  threadsUrl               String?                          @map("threads_url")
-  applePodcastsUrl         String?                          @map("apple_podcasts_url")
-  spotifyUrl               String?                          @map("spotify_url")
-  rssUrl                   String?                          @map("rss_url")
-  memberships              ChannelMembership[]
-  invitations              ChannelInvitation[]
-  organizationAssociations OrganizationChannelAssociation[]
-  approvedBy               AppUser?                         @relation(fields: [approvedById], references: [id], onDelete: SetNull)
-  approvedById             String?                          @map("approved_by_id") @db.Uuid
-  approvedAt               DateTime?                        @map("approved_at")
-  createdAt                DateTime                         @default(now()) @map("created_at")
-  updatedAt                DateTime                         @updatedAt @map("updated_at")
-  deletedAt                DateTime?                        @map("deleted_at")
-  uploadRecords            UploadRecord[]
-  uploadLists              UploadList[]
-  subscribers              ChannelSubscription[]
-  defaultThumbnailPath     String?                          @map("default_thumbnail_path") @db.VarChar(255)
-  defaultThumbnailBlurhash String?                          @map("default_thumbnail_blurhash") @db.VarChar(255)
-  uploadStates             UploadState[]
-  importSources            ChannelImportSource[]
+  id                            String                           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                          String
+  visibility                    ChannelVisibility                @default(PUBLIC)
+  avatarPath                    String?                          @map("avatar_path") @db.VarChar(255)
+  avatarBlurhash                String?                          @map("avatar_blurhash") @db.VarChar(255)
+  coverPath                     String?                          @map("cover_path") @db.VarChar(255)
+  coverBlurhash                 String?                          @map("cover_blurhash") @db.VarChar(255)
+  slug                          String                           @unique @db.Citext
+  description                   String?
+  websiteUrl                    String?                          @map("website_url")
+  facebookUrl                   String?                          @map("facebook_url")
+  instagramUrl                  String?                          @map("instagram_url")
+  xUrl                          String?                          @map("x_url")
+  youtubeUrl                    String?                          @map("youtube_url")
+  tiktokUrl                     String?                          @map("tiktok_url")
+  linkedinUrl                   String?                          @map("linkedin_url")
+  threadsUrl                    String?                          @map("threads_url")
+  applePodcastsUrl              String?                          @map("apple_podcasts_url")
+  spotifyUrl                    String?                          @map("spotify_url")
+  rssUrl                        String?                          @map("rss_url")
+  memberships                   ChannelMembership[]
+  invitations                   ChannelInvitation[]
+  organizationAssociations      OrganizationChannelAssociation[]
+  approvedBy                    AppUser?                         @relation(fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedById                  String?                          @map("approved_by_id") @db.Uuid
+  approvedAt                    DateTime?                        @map("approved_at")
+  createdAt                     DateTime                         @default(now()) @map("created_at")
+  updatedAt                     DateTime                         @updatedAt @map("updated_at")
+  deletedAt                     DateTime?                        @map("deleted_at")
+  uploadRecords                 UploadRecord[]
+  uploadLists                   UploadList[]
+  subscribers                   ChannelSubscription[]
+  defaultThumbnailPath          String?                          @map("default_thumbnail_path") @db.VarChar(255)
+  defaultThumbnailBlurhash      String?                          @map("default_thumbnail_blurhash") @db.VarChar(255)
+  uploadStates                  UploadState[]
+  importSources                 ChannelImportSource[]
+  defaultUploadVisibility       UploadVisibility?                @map("default_upload_visibility")
+  defaultUploadLicense          UploadLicense?                   @map("default_upload_license")
+  defaultUploadCommentsEnabled  Boolean?                         @map("default_upload_comments_enabled")
+  defaultUploadDownloadsEnabled Boolean?                         @map("default_upload_downloads_enabled")
 
   @@map("channel")
 }

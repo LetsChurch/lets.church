@@ -378,10 +378,10 @@ function ChannelUploadsPage() {
     url: '',
     title: '',
     description: '',
-    license: 'STANDARD' as UploadLicense,
-    visibility: 'PUBLIC' as UploadVisibility,
+    license: channel.defaultUploadLicense ?? 'STANDARD',
+    visibility: channel.defaultUploadVisibility ?? 'PUBLIC',
     publishedAt: new Date(),
-    userCommentsEnabled: true,
+    userCommentsEnabled: channel.defaultUploadCommentsEnabled ?? true,
     trimSilence: false,
   });
 
@@ -406,10 +406,10 @@ function ChannelUploadsPage() {
           url: '',
           title: '',
           description: '',
-          license: 'STANDARD',
-          visibility: 'PUBLIC',
+          license: channel.defaultUploadLicense ?? 'STANDARD',
+          visibility: channel.defaultUploadVisibility ?? 'PUBLIC',
           publishedAt: new Date(),
-          userCommentsEnabled: true,
+          userCommentsEnabled: channel.defaultUploadCommentsEnabled ?? true,
           trimSilence: false,
         });
       },
