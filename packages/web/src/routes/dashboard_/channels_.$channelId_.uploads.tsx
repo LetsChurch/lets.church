@@ -71,19 +71,24 @@ export const Route = createFileRoute(
     page: z.number().min(1).default(1),
     limit: z.number().min(1).max(100).default(20),
     search: z.string().optional(),
+    upload: z.boolean().optional(),
   }),
-  loaderDeps: ({ search }) => ({ search }),
+  loaderDeps: ({ search }) => ({
+    page: search.page,
+    limit: search.limit,
+    search: search.search,
+  }),
   loader: async ({
     context: { queryClient, trpc },
     params,
-    deps: { search },
+    deps: { page, limit, search },
   }) => {
     const data = await queryClient.ensureQueryData(
       trpc.dashboard.channels.getChannelUploads.queryOptions({
         channelId: params.channelId,
-        page: search.page,
-        limit: search.limit,
-        search: search.search,
+        page,
+        limit,
+        search,
       }),
     );
     return {
@@ -373,6 +378,30 @@ function ChannelUploadsPage() {
     importModalOpened,
     { open: openImportModal, close: closeImportModal },
   ] = useDisclosure();
+
+  // Auto-open upload modal when navigating here with ?upload=true
+  useEffect(() => {
+    if (search.upload && canUpload) {
+      openUploadModal();
+      navigate({
+        to: '.',
+        search: {
+          page: search.page,
+          limit: search.limit,
+          search: search.search,
+        },
+        replace: true,
+      });
+    }
+  }, [
+    search.upload,
+    canUpload,
+    openUploadModal,
+    navigate,
+    search.page,
+    search.limit,
+    search.search,
+  ]);
 
   const [importFormData, setImportFormData] = useState({
     url: '',

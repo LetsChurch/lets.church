@@ -4,7 +4,12 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { type PropsWithChildren, useState } from 'react';
 import { Avatar } from '@/components/avatar';
-import { LcMenu, MenuItemRouterLink } from '@/components/lc-menu';
+import {
+  LcMenu,
+  MenuItemButton,
+  MenuItemRouterLink,
+} from '@/components/lc-menu';
+import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { $headerBackgroundImage } from '@/stores/header';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
@@ -50,8 +55,18 @@ export default function Header({
     enabled: hasSessionQuery.data === true,
   });
 
+  const channelsQuery = useQuery({
+    ...trpc.dashboard.channels.getChannels.queryOptions(),
+    enabled: hasSessionQuery.data === true,
+  });
+
+  const uploadableChannels = (channelsQuery.data ?? []).filter(
+    (c) => c.memberships[0]?.isAdmin || c.memberships[0]?.canUpload,
+  );
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [channelPickerOpen, setChannelPickerOpen] = useState(false);
   const backgroundImageUrl = useStore($headerBackgroundImage);
 
   const hasBackground = showBlurredBackground && Boolean(backgroundImageUrl);
@@ -228,6 +243,21 @@ export default function Header({
                         Admin
                       </MenuItemRouterLink>
                     ) : null}
+                    {uploadableChannels.length === 1 ? (
+                      <MenuItemRouterLink
+                        to="/dashboard/channels/$channelId/uploads"
+                        params={{ channelId: uploadableChannels[0].id }}
+                        search={{ upload: true, page: 1, limit: 20 }}
+                      >
+                        Upload
+                      </MenuItemRouterLink>
+                    ) : uploadableChannels.length > 1 ? (
+                      <MenuItemButton
+                        onClick={() => setChannelPickerOpen(true)}
+                      >
+                        Upload
+                      </MenuItemButton>
+                    ) : null}
                     <LcMenu.Separator />
                     <LcMenu.Item
                       render={(props) => (
@@ -272,6 +302,34 @@ export default function Header({
       <div className="isolate">{children}</div>
 
       <MobileMenu open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen} />
+
+      {uploadableChannels.length > 1 ? (
+        <LcModal.Root
+          open={channelPickerOpen}
+          onOpenChange={setChannelPickerOpen}
+        >
+          <LcModal.Portal>
+            <LcModal.Backdrop />
+            <LcModal.Popup size="sm">
+              <ModalHeader title="Select a Channel to Upload To" />
+              <div className="flex flex-col gap-1">
+                {uploadableChannels.map((channel) => (
+                  <Link
+                    key={channel.id}
+                    to="/dashboard/channels/$channelId/uploads"
+                    params={{ channelId: channel.id }}
+                    search={{ upload: true, page: 1, limit: 20 }}
+                    onClick={() => setChannelPickerOpen(false)}
+                    className="rounded-md px-3 py-2 text-primary text-sm transition-colors hover:bg-gray-100 dark:hover:bg-zinc-800"
+                  >
+                    {channel.name}
+                  </Link>
+                ))}
+              </div>
+            </LcModal.Popup>
+          </LcModal.Portal>
+        </LcModal.Root>
+      ) : null}
     </div>
   );
 }
