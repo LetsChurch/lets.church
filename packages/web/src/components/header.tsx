@@ -310,9 +310,12 @@ export default function Header({
         >
           <LcModal.Portal>
             <LcModal.Backdrop />
-            <LcModal.Popup size="sm">
+            <LcModal.Popup
+              size="sm"
+              className="flex max-h-[min(32rem,80dvh)] flex-col"
+            >
               <ModalHeader title="Select a Channel to Upload To" />
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1 overflow-y-auto">
                 {uploadableChannels.map((channel) => (
                   <Link
                     key={channel.id}
