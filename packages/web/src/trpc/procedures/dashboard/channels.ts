@@ -327,6 +327,7 @@ export const channelRouter = router({
           },
         },
       },
+      orderBy: { name: 'asc' },
     });
   }),
 
