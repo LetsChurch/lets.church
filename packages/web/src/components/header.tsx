@@ -1,6 +1,6 @@
 import { useStore } from '@nanostores/react';
 import { IconMenu2, IconSearch, IconX } from '@tabler/icons-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { type PropsWithChildren, useState } from 'react';
 import { Avatar } from '@/components/avatar';
@@ -45,7 +45,9 @@ export default function Header({
   mode = 'full',
 }: HeaderProps) {
   const trpc = useTRPC();
-  const hasSessionQuery = useQuery(trpc.common.hasValidSession.queryOptions());
+  const hasSessionQuery = useSuspenseQuery(
+    trpc.common.hasValidSession.queryOptions(),
+  );
   const profileQuery = useQuery({
     ...trpc.account.getProfile.queryOptions(),
     enabled: hasSessionQuery.data === true,
@@ -209,7 +211,7 @@ export default function Header({
               <IconSearch />
             </button>
           ) : null}
-          {hasSessionQuery.data && profileQuery.data ? (
+          {hasSessionQuery.data ? (
             <LcMenu.Root>
               <LcMenu.Trigger
                 render={(props) => (
@@ -219,9 +221,11 @@ export default function Header({
                     className="size-8 shrink-0 overflow-hidden rounded-full bg-white"
                   >
                     <Avatar
-                      src={profileQuery.data.avatarUrl || undefined}
+                      src={profileQuery.data?.avatarUrl || undefined}
                       alt={
-                        profileQuery.data.fullName || profileQuery.data.username
+                        profileQuery.data?.fullName ||
+                        profileQuery.data?.username ||
+                        ''
                       }
                       className="size-full cursor-pointer"
                       fallbackClassName="bg-gray-200 text-gray-600 text-xs"

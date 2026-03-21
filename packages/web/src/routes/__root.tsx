@@ -5,6 +5,7 @@ import {
   Scripts,
   useMatches,
 } from '@tanstack/react-router';
+import { createServerFn } from '@tanstack/react-start';
 import posthog from 'posthog-js';
 import { type ReactNode, useEffect } from 'react';
 import '@fontsource-variable/inter';
@@ -19,11 +20,20 @@ const brand = '#6366f1';
 const brandColorLight = '#BFBFFF';
 const brandColorDark = '#2B2B6E';
 
+const $getHasValidSession = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const { getSession } = await import('@/util/auth');
+    const session = await getSession();
+    return Boolean(session);
+  },
+);
+
 export const Route = createRootRouteWithContext<AppContextType>()({
   loader: async ({ context: { queryClient, trpc } }) => {
-    const isLoggedIn = await queryClient.fetchQuery(
-      trpc.common.hasValidSession.queryOptions(),
-    );
+    const isLoggedIn = await queryClient.fetchQuery({
+      ...trpc.common.hasValidSession.queryOptions(),
+      queryFn: () => $getHasValidSession(),
+    });
 
     return {
       isLoggedIn,
@@ -148,6 +158,14 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
     <html lang="en" data-theme={theme} data-mantine-color-scheme={theme}>
       <head>
         <HeadContent />
+        {!isEmbedRoute ? (
+          <script
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: intentional blocking script to set theme before first paint
+            dangerouslySetInnerHTML={{
+              __html: `(function(){try{var m=document.cookie.match(/lc-theme=([^;]+)/);var t=m?m[1]:(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mantine-color-scheme',t);}}catch(e){}})();`,
+            }}
+          />
+        ) : null}
       </head>
       <body>
         {children}
