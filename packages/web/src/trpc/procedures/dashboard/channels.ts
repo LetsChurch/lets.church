@@ -54,6 +54,7 @@ import {
 import { coverImageFull, thumbnailMedium } from '@/util/image-sizes';
 import logger from '@/util/logger';
 import { getPublicImageUrl, getPublicMediaUrl } from '@/util/server-env';
+import { uuidTranslator } from '@/util/uuid';
 import { authProcedure, router } from '../../trpc';
 
 const moduleLogger = logger.child({
@@ -766,30 +767,38 @@ export const channelRouter = router({
   getChannelInvitations: channelAdminProcedure
     .input(channelQuerySchema)
     .query(async ({ input }) => {
-      return prisma.channelInvitation.findMany({
-        where: {
-          channelId: input.channelId,
-          status: 'PENDING',
-          expiresAt: { gt: new Date() },
-        },
-        select: {
-          id: true,
-          email: true,
-          isAdmin: true,
-          canEdit: true,
-          canUpload: true,
-          canDownload: true,
-          createdAt: true,
-          expiresAt: true,
-          invitedBy: {
-            select: {
-              username: true,
-              fullName: true,
+      return prisma.channelInvitation
+        .findMany({
+          where: {
+            channelId: input.channelId,
+            status: 'PENDING',
+            expiresAt: { gt: new Date() },
+          },
+          select: {
+            id: true,
+            email: true,
+            isAdmin: true,
+            canEdit: true,
+            canUpload: true,
+            canDownload: true,
+            createdAt: true,
+            expiresAt: true,
+            token: true,
+            invitedBy: {
+              select: {
+                username: true,
+                fullName: true,
+              },
             },
           },
-        },
-        orderBy: { createdAt: 'desc' },
-      });
+          orderBy: { createdAt: 'desc' },
+        })
+        .then((invitations) =>
+          invitations.map(({ token, ...inv }) => ({
+            ...inv,
+            token: uuidTranslator.fromUUID(token),
+          })),
+        );
     }),
 
   cancelChannelInvitation: channelAdminProcedure

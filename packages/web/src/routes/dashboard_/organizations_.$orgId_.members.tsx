@@ -3,6 +3,7 @@ import {
   Avatar,
   Badge,
   Button,
+  CopyButton,
   Divider,
   Group,
   Modal,
@@ -14,6 +15,8 @@ import {
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
+  IconCheck,
+  IconLink,
   IconMail,
   IconPlus,
   IconRefresh,
@@ -54,6 +57,7 @@ type OrganizationInvitation = {
   canEdit: boolean;
   createdAt: Date;
   expiresAt: Date;
+  token: string;
   invitedBy: {
     username: string;
     fullName: string | null;
@@ -302,6 +306,27 @@ function OrganizationMembersPage() {
                   </Table.Td>
                   <Table.Td>
                     <Group gap="xs">
+                      <CopyButton
+                        value={`${typeof window !== 'undefined' ? window.location.origin : 'https://lets.church'}/dashboard/invitations/accept?token=${invitation.token}`}
+                      >
+                        {({ copied, copy }) => (
+                          <Tooltip
+                            label={copied ? 'Copied!' : 'Copy Invite Link'}
+                          >
+                            <ActionIcon
+                              color={copied ? 'green' : 'blue'}
+                              variant="subtle"
+                              onClick={copy}
+                            >
+                              {copied ? (
+                                <IconCheck size={16} />
+                              ) : (
+                                <IconLink size={16} />
+                              )}
+                            </ActionIcon>
+                          </Tooltip>
+                        )}
+                      </CopyButton>
                       <Tooltip label="Resend Invitation">
                         <ActionIcon
                           color="blue"

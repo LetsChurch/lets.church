@@ -18,6 +18,7 @@ import { sendInvitationEmail } from '@/temporal';
 import { mantineAvatarSm2x, mantineAvatarXl2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { getPublicImageUrl } from '@/util/server-env';
+import { uuidTranslator } from '@/util/uuid';
 import { authProcedure, router } from '../../trpc';
 
 const moduleLogger = logger.child({
@@ -528,28 +529,36 @@ export const organizationRouter = router({
   getOrganizationInvitations: organizationAdminProcedure
     .input(organizationQuerySchema)
     .query(async ({ input }) => {
-      return prisma.organizationInvitation.findMany({
-        where: {
-          organizationId: input.orgId,
-          status: 'PENDING',
-          expiresAt: { gt: new Date() },
-        },
-        select: {
-          id: true,
-          email: true,
-          isAdmin: true,
-          canEdit: true,
-          createdAt: true,
-          expiresAt: true,
-          invitedBy: {
-            select: {
-              username: true,
-              fullName: true,
+      return prisma.organizationInvitation
+        .findMany({
+          where: {
+            organizationId: input.orgId,
+            status: 'PENDING',
+            expiresAt: { gt: new Date() },
+          },
+          select: {
+            id: true,
+            email: true,
+            isAdmin: true,
+            canEdit: true,
+            createdAt: true,
+            expiresAt: true,
+            token: true,
+            invitedBy: {
+              select: {
+                username: true,
+                fullName: true,
+              },
             },
           },
-        },
-        orderBy: { createdAt: 'desc' },
-      });
+          orderBy: { createdAt: 'desc' },
+        })
+        .then((invitations) =>
+          invitations.map(({ token, ...inv }) => ({
+            ...inv,
+            token: uuidTranslator.fromUUID(token),
+          })),
+        );
     }),
 
   cancelInvitation: organizationAdminProcedure
