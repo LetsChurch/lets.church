@@ -44,6 +44,7 @@ import {
   deleteUpload,
   handleMultipartMediaUpload,
   importMedia,
+  makeProcessMediaWorkflowId,
   sendInvitationEmail,
 } from '@/temporal';
 import {
@@ -1272,6 +1273,8 @@ export const channelRouter = router({
           downloadsEnabled: true,
           defaultThumbnailPath: true,
           overrideThumbnailPath: true,
+          uploadFinalized: true,
+          finalizedUploadKey: true,
           transcodingFinishedAt: true,
           transcribingFinishedAt: true,
           transcodingProgress: true,
@@ -1362,6 +1365,27 @@ export const channelRouter = router({
         ? getPublicMediaUrl(`${upload.id}/AUDIO.m3u8`)
         : null;
 
+      // For site admins, check if there's an active workflow for failed uploads
+      let hasActiveWorkflow = false;
+      if (
+        ctx.isSiteAdmin &&
+        upload.uploadFinalized &&
+        upload.finalizedUploadKey &&
+        (!upload.transcodingFinishedAt || !upload.transcribingFinishedAt)
+      ) {
+        try {
+          const temporalClient = await client;
+          const workflowId = makeProcessMediaWorkflowId(
+            upload.finalizedUploadKey,
+          );
+          const handle = temporalClient.workflow.getHandle(workflowId);
+          const description = await handle.describe();
+          hasActiveWorkflow = description.status.name === 'RUNNING';
+        } catch {
+          // Workflow doesn't exist
+        }
+      }
+
       return {
         upload: {
           ...uploadRest,
@@ -1370,6 +1394,7 @@ export const channelRouter = router({
           mediaSource,
           audioSource,
           series: uploadListEntries.map((e) => e.uploadList),
+          hasActiveWorkflow,
         },
         channel: {
           ...upload.channel,

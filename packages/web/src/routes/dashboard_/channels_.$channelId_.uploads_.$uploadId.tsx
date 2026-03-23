@@ -29,6 +29,7 @@ import {
   IconEye,
   IconEyeOff,
   IconPhoto,
+  IconRefresh,
   IconStar,
   IconStarFilled,
   IconTrash,
@@ -138,6 +139,12 @@ function ChannelUploadPage() {
   const isChannelAdmin = channel.userMembership?.isAdmin ?? false;
   const isAdmin = isChannelAdmin || isSiteAdmin;
   const canDelete = isAdmin; // Only channel admins and site admins can delete
+
+  const isFailedUpload =
+    upload.uploadFinalized &&
+    upload.finalizedUploadKey &&
+    (!upload.transcodingFinishedAt || !upload.transcribingFinishedAt) &&
+    !upload.hasActiveWorkflow;
 
   const [newThumbnailFile, setNewThumbnailFile] = useState<File | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -300,6 +307,27 @@ function ChannelUploadPage() {
       onError: (error) => {
         showFailure({
           message: error.message || 'Failed to toggle featured status',
+        });
+      },
+    }),
+  );
+
+  const retryUploadMutation = useMutation(
+    trpc.dashboard.admin.retryUploadProcessing.mutationOptions({
+      onSuccess: async () => {
+        showSuccess({
+          message: 'Upload processing restarted successfully!',
+        });
+        await queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getUploadRecord.queryKey({
+            channelId,
+            uploadId,
+          }),
+        });
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to retry upload processing',
         });
       },
     }),
@@ -917,6 +945,22 @@ function ChannelUploadPage() {
                 fullWidth
               >
                 {upload.isFeatured ? 'Remove from Featured' : 'Add to Featured'}
+              </Button>
+            ) : null}
+
+            {/* Retry Button - Only for site admins on failed uploads without active workflows */}
+            {isSiteAdmin && isFailedUpload ? (
+              <Button
+                variant="light"
+                color="orange"
+                leftSection={<IconRefresh size={16} />}
+                onClick={() => {
+                  retryUploadMutation.mutate({ uploadRecordId: uploadId });
+                }}
+                loading={retryUploadMutation.isPending}
+                fullWidth
+              >
+                Retry Processing
               </Button>
             ) : null}
 
