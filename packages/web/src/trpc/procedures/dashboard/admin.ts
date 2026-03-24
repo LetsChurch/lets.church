@@ -1016,7 +1016,6 @@ export const adminRouter = router({
             email: true,
             verifiedAt: true,
           },
-          take: 1,
         },
       },
       orderBy: {
@@ -1325,7 +1324,6 @@ export const adminRouter = router({
             username: true,
             emails: {
               select: { email: true, verifiedAt: true },
-              take: 1,
             },
           },
         });
@@ -1337,34 +1335,32 @@ export const adminRouter = router({
           });
         }
 
-        const emailRecord = user.emails[0];
+        const unverifiedEmails = user.emails.filter((e) => !e.verifiedAt);
 
-        if (!emailRecord) {
+        if (unverifiedEmails.length === 0) {
           throw new TRPCError({
             code: 'BAD_REQUEST',
-            message: 'User has no email address',
+            message: 'User has no unverified email addresses',
           });
         }
 
-        if (emailRecord.verifiedAt) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Email is already verified',
-          });
-        }
-
-        await (await client).workflow.start(postUserRegistrationWorkflow, {
-          args: [
-            {
-              userId: user.id,
-              username: user.username,
-              email: emailRecord.email,
-              subscribeToNewsletter: false,
-            },
-          ],
-          workflowId: `resend-verification:${user.id}:${Date.now()}`,
-          taskQueue: BACKGROUND_QUEUE,
-        });
+        const temporalClient = await client;
+        await Promise.all(
+          unverifiedEmails.map((emailRecord) =>
+            temporalClient.workflow.start(postUserRegistrationWorkflow, {
+              args: [
+                {
+                  userId: user.id,
+                  username: user.username,
+                  email: emailRecord.email,
+                  subscribeToNewsletter: false,
+                },
+              ],
+              workflowId: `resend-verification:${user.id}:${emailRecord.email}:${Date.now()}`,
+              taskQueue: BACKGROUND_QUEUE,
+            }),
+          ),
+        );
 
         moduleLogger.info(
           {

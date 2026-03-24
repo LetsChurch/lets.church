@@ -243,7 +243,10 @@ function UsersPage() {
         </Table.Thead>
         <Table.Tbody>
           {users.map((user) => {
-            const email = user.emails[0];
+            const verifiedEmail = user.emails.find((e) => e.verifiedAt);
+            const hasUnverified = user.emails.some((e) => !e.verifiedAt);
+            const displayEmail = verifiedEmail ?? user.emails[0];
+
             return (
               <Table.Tr key={user.id}>
                 <Table.Td>
@@ -255,9 +258,9 @@ function UsersPage() {
                 <Table.Td>
                   <Group gap="xs">
                     <Text size="sm" c="dimmed">
-                      {email?.email || 'No email'}
+                      {displayEmail?.email || 'No email'}
                     </Text>
-                    {email && !email.verifiedAt ? (
+                    {hasUnverified ? (
                       <Badge size="xs" color="yellow">
                         Unverified
                       </Badge>
@@ -294,7 +297,7 @@ function UsersPage() {
                       >
                         Reset Password
                       </Menu.Item>
-                      {email && !email.verifiedAt ? (
+                      {hasUnverified ? (
                         <Menu.Item
                           leftSection={<IconMail size={14} />}
                           onClick={() => handleResendVerificationEmail(user.id)}
