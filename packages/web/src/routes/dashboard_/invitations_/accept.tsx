@@ -8,9 +8,10 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { IconInfoCircle } from '@tabler/icons-react';
+import { IconAlertCircle, IconInfoCircle } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
+import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { IncomingIdSchema } from '@/schemas/common';
 import { useTRPC } from '@/trpc/react';
@@ -38,6 +39,24 @@ function AcceptInvitationRoute() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [verificationError, setVerificationError] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  const resendMutation = useMutation(
+    trpc.common.resendVerificationEmail.mutationOptions({
+      onSuccess: () => {
+        setResendSuccess(true);
+        timeoutRef.current = setTimeout(() => setResendSuccess(false), 5000);
+      },
+    }),
+  );
 
   const { data: invitation, isLoading } = useQuery(
     trpc.common.getInvitationDetails.queryOptions({ token }),
@@ -64,9 +83,15 @@ function AcceptInvitationRoute() {
         }
       },
       onError: (error) => {
-        showFailure({
-          message: error.message || 'Failed to process invitation',
-        });
+        if (
+          error.message === 'You must verify the invited email address first'
+        ) {
+          setVerificationError(true);
+        } else {
+          showFailure({
+            message: error.message || 'Failed to process invitation',
+          });
+        }
       },
     }),
   );
@@ -92,9 +117,15 @@ function AcceptInvitationRoute() {
         }
       },
       onError: (error) => {
-        showFailure({
-          message: error.message || 'Failed to process invitation',
-        });
+        if (
+          error.message === 'You must verify the invited email address first'
+        ) {
+          setVerificationError(true);
+        } else {
+          showFailure({
+            message: error.message || 'Failed to process invitation',
+          });
+        }
       },
     }),
   );
@@ -217,6 +248,30 @@ function AcceptInvitationRoute() {
             {invitation.type === 'organization' ? 'organization' : 'channel'}.
             Would you like to accept?
           </Text>
+
+          {verificationError && (
+            <Alert
+              icon={<IconAlertCircle size={16} />}
+              title="Email Verification Required"
+              color="red"
+            >
+              <Stack gap="xs">
+                <Text size="sm">
+                  You must verify the invited email address first.
+                </Text>
+                <Button
+                  size="xs"
+                  variant="light"
+                  color="red"
+                  onClick={() => resendMutation.mutate()}
+                  loading={resendMutation.isPending}
+                  disabled={resendSuccess}
+                >
+                  {resendSuccess ? 'Email Sent' : 'Resend Verification Email'}
+                </Button>
+              </Stack>
+            </Alert>
+          )}
 
           <Group gap="sm" mt="md">
             <Button

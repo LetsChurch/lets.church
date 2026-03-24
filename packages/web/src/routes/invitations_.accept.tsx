@@ -17,7 +17,7 @@ import {
   redirect,
   useRouter,
 } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { useTRPC } from '@/trpc/react';
 
@@ -90,6 +90,26 @@ function RouteComponent() {
   const router = useRouter();
   const trpc = useTRPC();
   const [error, setError] = useState<string | null>(null);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  const resendMutation = useMutation(
+    trpc.common.resendVerificationEmail.mutationOptions({
+      onSuccess: () => {
+        setResendSuccess(true);
+        timeoutRef.current = setTimeout(() => setResendSuccess(false), 5000);
+      },
+    }),
+  );
+
+  const isVerificationError =
+    error === 'You must verify the invited email address first';
 
   const acceptMutation = useMutation(
     trpc.common.acceptOrganizationInvitation.mutationOptions({
@@ -233,7 +253,21 @@ function RouteComponent() {
               title="Error"
               color="red"
             >
-              {error}
+              <Stack gap="xs">
+                <Text size="sm">{error}</Text>
+                {isVerificationError && (
+                  <Button
+                    size="xs"
+                    variant="light"
+                    color="red"
+                    onClick={() => resendMutation.mutate()}
+                    loading={resendMutation.isPending}
+                    disabled={resendSuccess}
+                  >
+                    {resendSuccess ? 'Email Sent' : 'Resend Verification Email'}
+                  </Button>
+                )}
+              </Stack>
             </Alert>
           ) : null}
 
