@@ -18,6 +18,9 @@
     "enabled": true,
     "rules": {
       "recommended": true,
+      "correctness": {
+        "noUndeclaredDependencies": "error"
+      },
       "style": {
         "useImportType": "error",
         "useExportType": "error",
