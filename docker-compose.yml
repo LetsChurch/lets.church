@@ -61,12 +61,18 @@ services:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
       - ./packages/util:/usr/src/app/packages/util
+      - /usr/src/app/packages/util/node_modules
       - ./packages/s3:/usr/src/app/packages/s3
+      - /usr/src/app/packages/s3/node_modules
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
+      - /usr/src/app/packages/db/node_modules
       - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - /usr/src/app/packages/elasticsearch/node_modules
       - ./packages/temporal:/usr/src/app/packages/temporal
+      - /usr/src/app/packages/temporal/node_modules
       - ./packages/web:/usr/src/app/packages/web
+      - /usr/src/app/packages/web/node_modules
 
   background-worker:
     build:
@@ -92,12 +98,18 @@ services:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
       - ./packages/util:/usr/src/app/packages/util
+      - /usr/src/app/packages/util/node_modules
       - ./packages/s3:/usr/src/app/packages/s3
+      - /usr/src/app/packages/s3/node_modules
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
+      - /usr/src/app/packages/db/node_modules
       - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - /usr/src/app/packages/elasticsearch/node_modules
       - ./packages/temporal:/usr/src/app/packages/temporal
+      - /usr/src/app/packages/temporal/node_modules
       - ./packages/background-worker:/usr/src/app/packages/background-worker
+      - /usr/src/app/packages/background-worker/node_modules
     depends_on:
       - temporal
 
@@ -120,12 +132,18 @@ services:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
       - ./packages/util:/usr/src/app/packages/util
+      - /usr/src/app/packages/util/node_modules
       - ./packages/s3:/usr/src/app/packages/s3
+      - /usr/src/app/packages/s3/node_modules
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
+      - /usr/src/app/packages/db/node_modules
       - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - /usr/src/app/packages/elasticsearch/node_modules
       - ./packages/temporal:/usr/src/app/packages/temporal
+      - /usr/src/app/packages/temporal/node_modules
       - ./packages/probe-worker:/usr/src/app/packages/probe-worker
+      - /usr/src/app/packages/probe-worker/node_modules
     depends_on:
       - temporal
 
@@ -148,12 +166,18 @@ services:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
       - ./packages/util:/usr/src/app/packages/util
+      - /usr/src/app/packages/util/node_modules
       - ./packages/s3:/usr/src/app/packages/s3
+      - /usr/src/app/packages/s3/node_modules
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
+      - /usr/src/app/packages/db/node_modules
       - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - /usr/src/app/packages/elasticsearch/node_modules
       - ./packages/temporal:/usr/src/app/packages/temporal
+      - /usr/src/app/packages/temporal/node_modules
       - ./packages/transcode-worker:/usr/src/app/packages/transcode-worker
+      - /usr/src/app/packages/transcode-worker/node_modules
     depends_on:
       - temporal
 
@@ -177,12 +201,18 @@ services:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
       - ./packages/util:/usr/src/app/packages/util
+      - /usr/src/app/packages/util/node_modules
       - ./packages/s3:/usr/src/app/packages/s3
+      - /usr/src/app/packages/s3/node_modules
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
+      - /usr/src/app/packages/db/node_modules
       - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - /usr/src/app/packages/elasticsearch/node_modules
       - ./packages/temporal:/usr/src/app/packages/temporal
+      - /usr/src/app/packages/temporal/node_modules
       - ./packages/transcribe-worker:/usr/src/app/packages/transcribe-worker
+      - /usr/src/app/packages/transcribe-worker/node_modules
     depends_on:
       - temporal
 
@@ -206,12 +236,18 @@ services:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
       - ./packages/util:/usr/src/app/packages/util
+      - /usr/src/app/packages/util/node_modules
       - ./packages/s3:/usr/src/app/packages/s3
+      - /usr/src/app/packages/s3/node_modules
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
+      - /usr/src/app/packages/db/node_modules
       - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - /usr/src/app/packages/elasticsearch/node_modules
       - ./packages/temporal:/usr/src/app/packages/temporal
+      - /usr/src/app/packages/temporal/node_modules
       - ./packages/import-worker:/usr/src/app/packages/import-worker
+      - /usr/src/app/packages/import-worker/node_modules
     depends_on:
       - temporal
 
@@ -360,12 +396,18 @@ services:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
       - ./packages/util:/usr/src/app/packages/util
+      - /usr/src/app/packages/util/node_modules
       - ./packages/s3:/usr/src/app/packages/s3
+      - /usr/src/app/packages/s3/node_modules
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
+      - /usr/src/app/packages/db/node_modules
       - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
+      - /usr/src/app/packages/elasticsearch/node_modules
       - ./packages/temporal:/usr/src/app/packages/temporal
+      - /usr/src/app/packages/temporal/node_modules
       - ./packages/web:/usr/src/app/packages/web
+      - /usr/src/app/packages/web/node_modules
 
   kibana:
     image: kibana:9.1.5
