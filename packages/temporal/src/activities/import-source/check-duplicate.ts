@@ -1,4 +1,5 @@
-import { prisma } from '@letschurch/db';
+import { ChannelImportSource, db, ImportHistory } from '@letschurch/db';
+import { and, eq, or } from 'drizzle-orm';
 import logger from '../../util/logger';
 import type { ScrapedMediaItem } from './scrape-import-source';
 
@@ -13,9 +14,11 @@ export async function checkDuplicate(
   importSourceId: string,
   item: ScrapedMediaItem,
 ): Promise<boolean> {
-  const source = await prisma.channelImportSource.findUnique({
-    where: { id: importSourceId },
-  });
+  const source = await db
+    .select()
+    .from(ChannelImportSource)
+    .where(eq(ChannelImportSource.id, importSourceId))
+    .then((r) => r[0] ?? null);
 
   if (!source?.deduplicationEnabled || !source.deduplicationFields) {
     return false;
@@ -24,41 +27,43 @@ export async function checkDuplicate(
   const fields = source.deduplicationFields as string[];
 
   // Build OR conditions for import history - match if ANY field matches
-  const historyOrConditions: Array<{
-    importSourceId: string;
-    title?: string;
-    publishedAt?: Date;
-    url?: string;
-  }> = [];
+  const conditions = [];
 
   if (fields.includes('url') && item.url) {
-    historyOrConditions.push({
-      importSourceId,
-      url: item.url,
-    });
+    conditions.push(
+      and(
+        eq(ImportHistory.importSourceId, importSourceId),
+        eq(ImportHistory.url, item.url),
+      ),
+    );
   }
 
   if (fields.includes('title') && item.title) {
-    historyOrConditions.push({
-      importSourceId,
-      title: item.title,
-    });
+    conditions.push(
+      and(
+        eq(ImportHistory.importSourceId, importSourceId),
+        eq(ImportHistory.title, item.title),
+      ),
+    );
   }
 
   if (fields.includes('publishedAt') && item.publishedAt) {
-    historyOrConditions.push({
-      importSourceId,
-      publishedAt: item.publishedAt,
-    });
+    conditions.push(
+      and(
+        eq(ImportHistory.importSourceId, importSourceId),
+        eq(ImportHistory.publishedAt, item.publishedAt),
+      ),
+    );
   }
 
   // Check import history
-  if (historyOrConditions.length > 0) {
-    const existingHistory = await prisma.importHistory.findFirst({
-      where: {
-        OR: historyOrConditions,
-      },
-    });
+  if (conditions.length > 0) {
+    const existingHistory = await db
+      .select()
+      .from(ImportHistory)
+      .where(or(...conditions))
+      .limit(1)
+      .then((r) => r[0] ?? null);
 
     if (existingHistory) {
       moduleLogger.info('Duplicate found in import history, skipping import', {

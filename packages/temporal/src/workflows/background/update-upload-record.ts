@@ -1,4 +1,3 @@
-import type { Prisma } from '@letschurch/db';
 import {
   condition,
   defineSignal,
@@ -6,6 +5,7 @@ import {
   setHandler,
 } from '@temporalio/workflow';
 import type * as activities from '../../activities/background';
+import type { UploadRecordUpdateData } from '../../client';
 import { BACKGROUND_QUEUE } from '../../queues';
 
 const { updateUploadRecord: updateUploadRecordActivity, indexDocument } =
@@ -16,10 +16,10 @@ const { updateUploadRecord: updateUploadRecordActivity, indexDocument } =
   });
 
 export const updateUploadRecordSignal =
-  defineSignal<[Prisma.UploadRecordUpdateArgs['data']]>('updateRecord');
+  defineSignal<[UploadRecordUpdateData]>('updateRecord');
 
 export async function updateUploadRecordWorkflow(uploadRecordId: string) {
-  const queue: Array<Prisma.UploadRecordUpdateArgs['data']> = [];
+  const queue: Array<UploadRecordUpdateData> = [];
 
   setHandler(
     updateUploadRecordSignal,
@@ -27,7 +27,7 @@ export async function updateUploadRecordWorkflow(uploadRecordId: string) {
   );
 
   while (await condition(() => queue.length > 0, '15 seconds')) {
-    let data: Prisma.UploadRecordUpdateArgs['data'] | undefined;
+    let data: UploadRecordUpdateData | undefined;
     while (queue.length > 0) {
       data = queue.shift();
       if (data) {

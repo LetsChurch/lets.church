@@ -8,37 +8,34 @@
   "exports": {
     ".": "./src/index.ts",
     "./types": "./src/types.ts",
-    "./generated/prisma/client": "./src/generated/prisma/client.ts"
+    "./schema": "./src/schema.ts"
   },
   "scripts": {
-    "build": "prisma generate",
+    "build": "drizzle-kit generate",
     "check": "pnpm run /^check:/",
     "check:biome": "biome check",
-    "check:ts": "prisma generate && tsc --noEmit",
-    "fix": "biome check --write && prisma format",
-    "fix!": "biome check --write --unsafe && prisma format",
-    "prisma:studio": "prisma studio",
-    "prisma:migrate:dev": "prisma migrate dev",
-    "prisma:migrate:test": "prisma db push --accept-data-loss",
-    "prisma:migrate:deploy": "prisma migrate deploy",
-    "prisma:migrate:status": "prisma migrate status",
-    "prisma:migrate:reset": "prisma migrate reset",
-    "prisma:db:push": "prisma db push",
-    "prisma:db:push:force": "prisma db push --accept-data-loss",
-    "prisma:db:truncate": "tsx prisma/truncate.ts",
-    "prisma:generate": "prisma generate"
+    "check:ts": "tsc --noEmit",
+    "fix": "biome check --write",
+    "fix!": "biome check --write --unsafe",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/migrate.ts",
+    "db:studio": "drizzle-kit studio",
+    "db:truncate": "tsx prisma/truncate.ts",
+    "db:mark-baseline": "tsx drizzle/mark-baseline-applied.ts"
   },
   "dependencies": {
     "@letschurch/util": "workspace:*",
-    "@prisma/client": "6.19.0",
+    "drizzle-orm": "^0.45.1",
     "es-toolkit": "catalog:",
-    "prisma": "^6.19.0",
+    "pg": "^8.13.0",
     "tsx": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
     "@types/node": "catalog:",
+    "@types/pg": "^8.11.0",
+    "drizzle-kit": "^0.31.0",
     "typescript": "catalog:",
     "uuid": "catalog:"
   }

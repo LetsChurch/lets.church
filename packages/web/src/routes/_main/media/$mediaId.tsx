@@ -834,7 +834,7 @@ function RouteComponent() {
 
             <MediaInfoTabs
               descriptionHtml={media.descriptionHtml}
-              viewCount={media._count.uploadViews}
+              viewCount={media.viewCount}
               publishedAt={media.publishedAt}
               createdAt={media.createdAt}
               license={media.license}

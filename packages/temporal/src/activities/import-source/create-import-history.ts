@@ -1,4 +1,4 @@
-import { prisma } from '@letschurch/db';
+import { db, ImportHistory } from '@letschurch/db';
 import logger from '../../util/logger';
 
 const moduleLogger = logger.child({
@@ -20,15 +20,13 @@ export type CreateImportHistoryParams = {
 export async function createImportHistory(
   params: CreateImportHistoryParams,
 ): Promise<void> {
-  await prisma.importHistory.create({
-    data: {
-      importSourceId: params.importSourceId,
-      uploadRecordId: params.uploadRecordId,
-      title: params.title,
-      description: params.description || null,
-      url: params.url,
-      publishedAt: params.publishedAt,
-    },
+  await db.insert(ImportHistory).values({
+    importSourceId: params.importSourceId,
+    uploadRecordId: params.uploadRecordId,
+    title: params.title,
+    description: params.description || null,
+    url: params.url,
+    publishedAt: params.publishedAt,
   });
 
   moduleLogger.info('Created import history record', {

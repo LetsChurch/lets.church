@@ -1,4 +1,14 @@
-import { prisma } from '@letschurch/db';
+import {
+  AppUser,
+  AppUserEmail,
+  Channel,
+  ChannelInvitation,
+  db,
+  Organization,
+  OrganizationInvitation,
+} from '@letschurch/db';
+import { eq } from 'drizzle-orm';
+import { invariant } from 'es-toolkit';
 import { stripIndent } from 'proper-tags';
 import { z } from 'zod';
 import { client } from '../../client';
@@ -37,28 +47,39 @@ export default async function sendInvitationEmailActivity(
   );
 
   if (type === 'organization') {
-    const invitation = await prisma.organizationInvitation.findUniqueOrThrow({
-      where: { id: invitationId },
-      include: {
-        organization: {
-          select: {
-            name: true,
-            type: true,
-          },
-        },
-        invitedBy: {
-          select: {
-            username: true,
-            fullName: true,
-          },
-        },
-      },
-    });
+    const invitation = await db
+      .select()
+      .from(OrganizationInvitation)
+      .where(eq(OrganizationInvitation.id, invitationId))
+      .then((r) => r[0]);
 
-    const inviterName =
-      invitation.invitedBy.fullName || invitation.invitedBy.username;
+    invariant(invitation, `Organization invitation ${invitationId} not found`);
+
+    const organization = await db
+      .select({ name: Organization.name, type: Organization.type })
+      .from(Organization)
+      .where(eq(Organization.id, invitation.organizationId))
+      .then((r) => r[0]);
+
+    invariant(
+      organization,
+      `Organization not found for invitation ${invitationId}`,
+    );
+
+    const invitedBy = await db
+      .select({ username: AppUser.username, fullName: AppUser.fullName })
+      .from(AppUser)
+      .where(eq(AppUser.id, invitation.invitedById))
+      .then((r) => r[0]);
+
+    invariant(
+      invitedBy,
+      `InvitedBy user not found for invitation ${invitationId}`,
+    );
+
+    const inviterName = invitedBy.fullName || invitedBy.username;
     const orgTypeName =
-      invitation.organization.type === 'CHURCH' ? 'church' : 'organization';
+      organization.type === 'CHURCH' ? 'church' : 'organization';
     const roleName = invitation.isAdmin
       ? 'Admin'
       : invitation.canEdit
@@ -66,15 +87,24 @@ export default async function sendInvitationEmailActivity(
         : 'Member';
 
     // Check if user exists with this email
-    const existingUser = await prisma.appUser.findFirst({
-      where: { emails: { some: { email: invitation.email } } },
-      select: { id: true, username: true },
-    });
+    const existingUserEmail = await db
+      .select({ id: AppUserEmail.appUserId })
+      .from(AppUserEmail)
+      .where(eq(AppUserEmail.email, invitation.email))
+      .then((r) => r[0] ?? null);
+
+    const existingUser = existingUserEmail
+      ? await db
+          .select({ id: AppUser.id, username: AppUser.username })
+          .from(AppUser)
+          .where(eq(AppUser.id, existingUserEmail.id))
+          .then((r) => r[0] ?? null)
+      : null;
 
     const acceptUrl = `${getWebUrl()}/dashboard/invitations/accept?token=${uuidTranslator.fromUUID(invitation.token)}`;
     const declineUrl = `${getWebUrl()}/dashboard/invitations/accept?token=${uuidTranslator.fromUUID(invitation.token)}`;
 
-    const subject = `You've been invited to ${invitation.organization.name} on Let's Church`;
+    const subject = `You've been invited to ${organization.name} on Let's Church`;
 
     let text: string;
     let htmlBody: string;
@@ -82,7 +112,7 @@ export default async function sendInvitationEmailActivity(
     if (existingUser) {
       // Email for existing user
       text = stripIndent`
-        ${inviterName} has invited you to join ${invitation.organization.name} as a ${roleName}.
+        ${inviterName} has invited you to join ${organization.name} as a ${roleName}.
 
         To accept this invitation, visit: ${acceptUrl}
 
@@ -92,7 +122,7 @@ export default async function sendInvitationEmailActivity(
       `;
 
       htmlBody = stripIndent`
-        <p><b>${sanitizeForHtml(inviterName)}</b> has invited you to join <b>${sanitizeForHtml(invitation.organization.name)}</b> as a <b>${sanitizeForHtml(roleName)}</b>.</p>
+        <p><b>${sanitizeForHtml(inviterName)}</b> has invited you to join <b>${sanitizeForHtml(organization.name)}</b> as a <b>${sanitizeForHtml(roleName)}</b>.</p>
 
         <p>
           <a href="${acceptUrl}" style="display: inline-block; padding: 10px 20px; background-color: #228be6; color: white; text-decoration: none; border-radius: 4px; margin-right: 10px;">Accept Invitation</a>
@@ -106,7 +136,7 @@ export default async function sendInvitationEmailActivity(
       const registerUrl = `${getWebUrl()}/auth/register?email=${encodeURIComponent(invitation.email)}`;
 
       text = stripIndent`
-        ${inviterName} has invited you to join ${invitation.organization.name} as a ${roleName} on Let's Church.
+        ${inviterName} has invited you to join ${organization.name} as a ${roleName} on Let's Church.
 
         You'll need to create a Let's Church account with this email address first.
 
@@ -118,7 +148,7 @@ export default async function sendInvitationEmailActivity(
       `;
 
       htmlBody = stripIndent`
-        <p><b>${sanitizeForHtml(inviterName)}</b> has invited you to join <b>${sanitizeForHtml(invitation.organization.name)}</b> as a <b>${sanitizeForHtml(roleName)}</b> on Let's Church.</p>
+        <p><b>${sanitizeForHtml(inviterName)}</b> has invited you to join <b>${sanitizeForHtml(organization.name)}</b> as a <b>${sanitizeForHtml(roleName)}</b> on Let's Church.</p>
 
         <p>You'll need to create a Let's Church account with this email address first.</p>
 
@@ -132,10 +162,7 @@ export default async function sendInvitationEmailActivity(
       `;
     }
 
-    const html = emailHtml(
-      `Invitation to ${invitation.organization.name}`,
-      htmlBody,
-    ).html;
+    const html = emailHtml(`Invitation to ${organization.name}`, htmlBody).html;
 
     await (await client).workflow.start(sendEmailWorkflow, {
       args: [
@@ -153,29 +180,37 @@ export default async function sendInvitationEmailActivity(
     });
 
     moduleLogger.info(
-      `Started invitation email workflow for ${invitation.email} to ${orgTypeName} ${invitation.organization.name}`,
+      `Started invitation email workflow for ${invitation.email} to ${orgTypeName} ${organization.name}`,
     );
   } else if (type === 'channel') {
-    const invitation = await prisma.channelInvitation.findUniqueOrThrow({
-      where: { id: invitationId },
-      include: {
-        channel: {
-          select: {
-            name: true,
-            slug: true,
-          },
-        },
-        invitedBy: {
-          select: {
-            username: true,
-            fullName: true,
-          },
-        },
-      },
-    });
+    const invitation = await db
+      .select()
+      .from(ChannelInvitation)
+      .where(eq(ChannelInvitation.id, invitationId))
+      .then((r) => r[0]);
 
-    const inviterName =
-      invitation.invitedBy.fullName || invitation.invitedBy.username;
+    invariant(invitation, `Channel invitation ${invitationId} not found`);
+
+    const channel = await db
+      .select({ name: Channel.name, slug: Channel.slug })
+      .from(Channel)
+      .where(eq(Channel.id, invitation.channelId))
+      .then((r) => r[0]);
+
+    invariant(channel, `Channel not found for invitation ${invitationId}`);
+
+    const invitedBy = await db
+      .select({ username: AppUser.username, fullName: AppUser.fullName })
+      .from(AppUser)
+      .where(eq(AppUser.id, invitation.invitedById))
+      .then((r) => r[0]);
+
+    invariant(
+      invitedBy,
+      `InvitedBy user not found for invitation ${invitationId}`,
+    );
+
+    const inviterName = invitedBy.fullName || invitedBy.username;
     const roleName = invitation.isAdmin
       ? 'Admin'
       : invitation.canEdit
@@ -185,15 +220,24 @@ export default async function sendInvitationEmailActivity(
           : 'Member';
 
     // Check if user exists with this email
-    const existingUser = await prisma.appUser.findFirst({
-      where: { emails: { some: { email: invitation.email } } },
-      select: { id: true, username: true },
-    });
+    const existingUserEmail = await db
+      .select({ appUserId: AppUserEmail.appUserId })
+      .from(AppUserEmail)
+      .where(eq(AppUserEmail.email, invitation.email))
+      .then((r) => r[0] ?? null);
+
+    const existingUser = existingUserEmail
+      ? await db
+          .select({ id: AppUser.id, username: AppUser.username })
+          .from(AppUser)
+          .where(eq(AppUser.id, existingUserEmail.appUserId))
+          .then((r) => r[0] ?? null)
+      : null;
 
     const acceptUrl = `${getWebUrl()}/dashboard/invitations/accept?token=${uuidTranslator.fromUUID(invitation.token)}`;
     const declineUrl = `${getWebUrl()}/dashboard/invitations/accept?token=${uuidTranslator.fromUUID(invitation.token)}`;
 
-    const subject = `You've been invited to ${invitation.channel.name} on Let's Church`;
+    const subject = `You've been invited to ${channel.name} on Let's Church`;
 
     let text: string;
     let htmlBody: string;
@@ -201,7 +245,7 @@ export default async function sendInvitationEmailActivity(
     if (existingUser) {
       // Email for existing user
       text = stripIndent`
-        ${inviterName} has invited you to join the channel "${invitation.channel.name}" as a ${roleName}.
+        ${inviterName} has invited you to join the channel "${channel.name}" as a ${roleName}.
 
         To accept this invitation, visit: ${acceptUrl}
 
@@ -211,7 +255,7 @@ export default async function sendInvitationEmailActivity(
       `;
 
       htmlBody = stripIndent`
-        <p><b>${sanitizeForHtml(inviterName)}</b> has invited you to join the channel <b>${sanitizeForHtml(invitation.channel.name)}</b> as a <b>${sanitizeForHtml(roleName)}</b>.</p>
+        <p><b>${sanitizeForHtml(inviterName)}</b> has invited you to join the channel <b>${sanitizeForHtml(channel.name)}</b> as a <b>${sanitizeForHtml(roleName)}</b>.</p>
 
         <p>
           <a href="${acceptUrl}" style="display: inline-block; padding: 10px 20px; background-color: #228be6; color: white; text-decoration: none; border-radius: 4px; margin-right: 10px;">Accept Invitation</a>
@@ -225,7 +269,7 @@ export default async function sendInvitationEmailActivity(
       const registerUrl = `${getWebUrl()}/auth/register?email=${encodeURIComponent(invitation.email)}`;
 
       text = stripIndent`
-        ${inviterName} has invited you to join the channel "${invitation.channel.name}" as a ${roleName} on Let's Church.
+        ${inviterName} has invited you to join the channel "${channel.name}" as a ${roleName} on Let's Church.
 
         You'll need to create a Let's Church account with this email address first.
 
@@ -237,7 +281,7 @@ export default async function sendInvitationEmailActivity(
       `;
 
       htmlBody = stripIndent`
-        <p><b>${sanitizeForHtml(inviterName)}</b> has invited you to join the channel <b>${sanitizeForHtml(invitation.channel.name)}</b> as a <b>${sanitizeForHtml(roleName)}</b> on Let's Church.</p>
+        <p><b>${sanitizeForHtml(inviterName)}</b> has invited you to join the channel <b>${sanitizeForHtml(channel.name)}</b> as a <b>${sanitizeForHtml(roleName)}</b> on Let's Church.</p>
 
         <p>You'll need to create a Let's Church account with this email address first.</p>
 
@@ -251,10 +295,7 @@ export default async function sendInvitationEmailActivity(
       `;
     }
 
-    const html = emailHtml(
-      `Invitation to ${invitation.channel.name}`,
-      htmlBody,
-    ).html;
+    const html = emailHtml(`Invitation to ${channel.name}`, htmlBody).html;
 
     await (await client).workflow.start(sendEmailWorkflow, {
       args: [
@@ -272,7 +313,7 @@ export default async function sendInvitationEmailActivity(
     });
 
     moduleLogger.info(
-      `Started invitation email workflow for ${invitation.email} to channel ${invitation.channel.name}`,
+      `Started invitation email workflow for ${invitation.email} to channel ${channel.name}`,
     );
   }
 }

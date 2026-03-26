@@ -1,10 +1,15 @@
-import { prisma } from '@letschurch/db';
-import type {
-  BackupStatus,
-  UploadStateType,
-} from '@letschurch/db/generated/prisma/client';
+import {
+  type BackupStatus,
+  db,
+  UploadState,
+  type UploadStateType,
+} from '@letschurch/db';
 import { ingestS3 } from '@letschurch/s3/ingest';
+import { count, eq, sql } from 'drizzle-orm';
 import type { UploadPostProcessValue } from '../../util/types';
+
+type BackupStatusValue = (typeof BackupStatus.enumValues)[number];
+type UploadStateTypeValue = (typeof UploadStateType.enumValues)[number];
 
 export type CreateUploadStateParams = {
   s3Key: string;
@@ -14,7 +19,7 @@ export type CreateUploadStateParams = {
   appUserId?: string;
   channelId?: string;
   organizationId?: string;
-  backupStatus?: BackupStatus;
+  backupStatus?: BackupStatusValue;
 };
 
 /**
@@ -22,7 +27,7 @@ export type CreateUploadStateParams = {
  */
 function mapUploadTypeToStateType(
   uploadType: UploadPostProcessValue,
-): UploadStateType {
+): UploadStateTypeValue {
   switch (uploadType) {
     case 'media':
       return 'MEDIA';
@@ -54,8 +59,9 @@ export async function createUploadState(
   const uploadStateType = mapUploadTypeToStateType(params.uploadType);
   const s3Bucket = ingestS3.getBucket();
 
-  const uploadState = await prisma.uploadState.create({
-    data: {
+  const [uploadState] = await db
+    .insert(UploadState)
+    .values({
       s3Key: params.s3Key,
       s3Bucket,
       uploadType: uploadStateType,
@@ -65,9 +71,12 @@ export async function createUploadState(
       channelId: params.channelId,
       organizationId: params.organizationId,
       backupStatus: params.backupStatus ?? 'NOT_BACKED_UP',
-    },
-  });
+      updatedAt: new Date(),
+    })
+    .returning();
 
+  if (!uploadState)
+    throw new Error(`Failed to insert UploadState for key: ${params.s3Key}`);
   return uploadState.id;
 }
 
@@ -76,35 +85,40 @@ export async function createUploadState(
  */
 export async function updateUploadStateBackupStatus(
   uploadStateId: string,
-  backupStatus: BackupStatus,
+  backupStatus: BackupStatusValue,
   backupKey?: string,
 ): Promise<void> {
-  await prisma.uploadState.update({
-    where: { id: uploadStateId },
-    data: {
+  await db
+    .update(UploadState)
+    .set({
       backupStatus,
       backupKey,
-      backedUpAt: backupStatus === 'BACKED_UP' ? new Date() : undefined,
-    },
-  });
+      backedUpAt: backupStatus === 'BACKED_UP' ? new Date() : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(UploadState.id, uploadStateId));
 }
 
 /**
  * Get UploadState by ID.
  */
 export async function getUploadState(uploadStateId: string) {
-  return prisma.uploadState.findUnique({
-    where: { id: uploadStateId },
-  });
+  return db
+    .select()
+    .from(UploadState)
+    .where(eq(UploadState.id, uploadStateId))
+    .then((r) => r[0] ?? null);
 }
 
 /**
  * Get UploadState by S3 key.
  */
 export async function getUploadStateByKey(s3Key: string) {
-  return prisma.uploadState.findUnique({
-    where: { s3Key },
-  });
+  return db
+    .select()
+    .from(UploadState)
+    .where(eq(UploadState.s3Key, s3Key))
+    .then((r) => r[0] ?? null);
 }
 
 /**
@@ -114,19 +128,13 @@ export async function getUploadStatesToBackup(
   limit: number,
   offset: number = 0,
 ): Promise<Array<{ id: string }>> {
-  return prisma.uploadState.findMany({
-    where: {
-      backupStatus: 'NOT_BACKED_UP',
-    },
-    orderBy: {
-      createdAt: 'asc',
-    },
-    take: limit,
-    skip: offset,
-    select: {
-      id: true,
-    },
-  });
+  return db
+    .select({ id: UploadState.id })
+    .from(UploadState)
+    .where(eq(UploadState.backupStatus, 'NOT_BACKED_UP'))
+    .orderBy(UploadState.createdAt)
+    .limit(limit)
+    .offset(offset);
 }
 
 /**
@@ -139,7 +147,7 @@ export async function claimUploadStatesForBackup(
 ): Promise<Array<{ id: string }>> {
   // Use a raw query to atomically select and update in one operation
   // This prevents race conditions where multiple batches select the same uploads
-  const claimed = await prisma.$queryRaw<Array<{ id: string }>>`
+  const claimed = await db.execute<{ id: string }>(sql`
     UPDATE "upload_state"
     SET "backup_status" = 'BACKING_UP', "updated_at" = NOW()
     WHERE id IN (
@@ -150,27 +158,28 @@ export async function claimUploadStatesForBackup(
       FOR UPDATE SKIP LOCKED
     )
     RETURNING id
-  `;
+  `);
 
-  return claimed;
+  return claimed.rows;
 }
 
 /**
  * Count upload states by backup status.
  */
 export async function countUploadStatesByStatus() {
-  const results = await prisma.uploadState.groupBy({
-    by: ['backupStatus'],
-    _count: {
-      id: true,
-    },
-  });
+  const results = await db
+    .select({
+      backupStatus: UploadState.backupStatus,
+      count: count(UploadState.id),
+    })
+    .from(UploadState)
+    .groupBy(UploadState.backupStatus);
 
   return results.reduce(
     (acc, result) => {
-      acc[result.backupStatus] = result._count.id;
+      acc[result.backupStatus] = Number(result.count);
       return acc;
     },
-    {} as Record<BackupStatus, number>,
+    {} as Record<BackupStatusValue, number>,
   );
 }

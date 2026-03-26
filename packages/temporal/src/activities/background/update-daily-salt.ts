@@ -1,4 +1,5 @@
-import { prisma } from '@letschurch/db';
+import { db, TrackingSalt } from '@letschurch/db';
+import { desc, eq } from 'drizzle-orm';
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random#getting_a_random_integer_between_two_values_inclusive
 function getRandomIntInclusive(min: number, max: number) {
@@ -8,16 +9,18 @@ function getRandomIntInclusive(min: number, max: number) {
 }
 
 export default async function updateDailySalt() {
-  const old = await prisma.trackingSalt.findFirst({
-    select: { id: true },
-    orderBy: { id: 'desc' },
-  });
+  const old = await db
+    .select({ id: TrackingSalt.id })
+    .from(TrackingSalt)
+    .orderBy(desc(TrackingSalt.id))
+    .limit(1)
+    .then((r) => r[0] ?? null);
 
-  await prisma.trackingSalt.create({
-    data: { salt: getRandomIntInclusive(-2147483648, 2147483647) },
+  await db.insert(TrackingSalt).values({
+    salt: getRandomIntInclusive(-2147483648, 2147483647),
   });
 
   if (old) {
-    await prisma.trackingSalt.delete({ where: { id: old.id } });
+    await db.delete(TrackingSalt).where(eq(TrackingSalt.id, old.id));
   }
 }

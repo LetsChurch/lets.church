@@ -1,4 +1,5 @@
-import { prisma } from '@letschurch/db';
+import { db, OrganizationAddress } from '@letschurch/db';
+import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import logger from '../../util/logger';
 
@@ -96,9 +97,16 @@ export default async function geocodeOrganization(organizationId: string) {
     },
   });
 
-  const addresses = await prisma.organizationAddress.findMany({
-    where: { organizationId, latitude: null, longitude: null },
-  });
+  const addresses = await db
+    .select()
+    .from(OrganizationAddress)
+    .where(
+      and(
+        eq(OrganizationAddress.organizationId, organizationId),
+        isNull(OrganizationAddress.latitude),
+        isNull(OrganizationAddress.longitude),
+      ),
+    );
 
   let geocoded = 0;
 
@@ -119,14 +127,14 @@ export default async function geocodeOrganization(organizationId: string) {
     const [feature] = parsed.features;
 
     if (feature) {
-      await prisma.organizationAddress.update({
-        where: { id: address.id },
-        data: {
+      await db
+        .update(OrganizationAddress)
+        .set({
           geocodingJson: parsed,
           latitude: feature.geometry.coordinates[1] ?? null,
           longitude: feature.geometry.coordinates[0] ?? null,
-        },
-      });
+        })
+        .where(eq(OrganizationAddress.id, address.id));
 
       geocoded += 1;
     }

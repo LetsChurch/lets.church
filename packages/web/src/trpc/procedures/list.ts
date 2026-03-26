@@ -1,4 +1,4 @@
-import { prisma } from '@letschurch/db';
+import { db } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
@@ -25,21 +25,21 @@ export const listProcedures = {
       moduleLogger.info({ context: { listId } }, 'Fetching all list items');
 
       // First verify list exists and get its type
-      const list = await prisma.uploadList.findUnique({
-        select: {
+      const list = await db.query.UploadList.findFirst({
+        where: (t, { eq }) => eq(t.id, listId),
+        columns: {
           id: true,
           title: true,
           type: true,
+        },
+        with: {
           channel: {
-            select: {
+            columns: {
               visibility: true,
               approvedAt: true,
               deletedAt: true,
             },
           },
-        },
-        where: {
-          id: listId,
         },
       });
 
@@ -82,18 +82,25 @@ export const listProcedures = {
       }
 
       // Fetch all list entries
-      const entries = await prisma.uploadListEntry.findMany({
-        select: {
+      const entries = await db.query.UploadListEntry.findMany({
+        where: (t, { eq }) => eq(t.uploadListId, listId),
+        columns: {},
+        with: {
           upload: {
-            select: {
+            columns: {
               id: true,
               title: true,
               publishedAt: true,
               lengthSeconds: true,
               defaultThumbnailPath: true,
               overrideThumbnailPath: true,
+              visibility: true,
+              transcodingFinishedAt: true,
+              deletedAt: true,
+            },
+            with: {
               channel: {
-                select: {
+                columns: {
                   id: true,
                   name: true,
                   slug: true,
@@ -104,23 +111,26 @@ export const listProcedures = {
             },
           },
         },
-        where: {
-          uploadListId: listId,
-          upload: {
-            visibility: 'PUBLIC',
-            transcodingFinishedAt: { not: null },
-            deletedAt: null,
-          },
-        },
-        orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
+        orderBy: (t, { asc }) => [asc(t.rank), asc(t.createdAt)],
       });
 
-      const items = entries.map((entry) => {
+      // Filter to public, transcoded, non-deleted uploads
+      const filteredEntries = entries.filter(
+        (e) =>
+          e.upload.visibility === 'PUBLIC' &&
+          e.upload.transcodingFinishedAt !== null &&
+          e.upload.deletedAt === null,
+      );
+
+      const items = filteredEntries.map((entry) => {
         const upload = entry.upload;
         const {
           defaultThumbnailPath,
           overrideThumbnailPath,
           channel,
+          visibility: _visibility,
+          transcodingFinishedAt: _transcodingFinishedAt,
+          deletedAt: _deletedAt,
           ...uploadRest
         } = upload;
 

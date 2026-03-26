@@ -11,7 +11,7 @@ const { recordDownloadSize } = proxyActivities<typeof activities>({
 
 export async function recordDownloadSizeWorkflow(
   uploadRecordId: string,
-  variant: UploadVariant,
+  variant: (typeof UploadVariant.enumValues)[number],
   bytes: number,
 ) {
   await recordDownloadSize(uploadRecordId, variant, bytes);

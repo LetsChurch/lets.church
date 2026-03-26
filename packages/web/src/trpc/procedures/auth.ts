@@ -1,5 +1,6 @@
-import { prisma } from '@letschurch/db';
+import { AppUser, AppUserEmail, db } from '@letschurch/db';
 import { getRequest, setCookie } from '@tanstack/react-start/server';
+import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
 import { z } from 'zod';
 import { loginSchema, registerSchema } from '@/schemas/auth';
@@ -124,17 +125,25 @@ export const authProcedures = {
         const hash = await argon2.hash(value.password, {
           type: argon2.argon2id,
         });
-        const user = await prisma.appUser.create({
-          data: {
-            username: value.username,
-            fullName: value.fullName || null,
-            password: hash,
-            emails: {
-              create: {
-                email: value.email,
-              },
-            },
-          },
+
+        const user = await db.transaction(async (tx) => {
+          const [newUser] = await tx
+            .insert(AppUser)
+            .values({
+              username: value.username,
+              fullName: value.fullName || null,
+              password: hash,
+              updatedAt: new Date(),
+            })
+            .returning();
+          if (!newUser) {
+            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+          }
+          await tx.insert(AppUserEmail).values({
+            email: value.email,
+            appUserId: newUser.id,
+          });
+          return newUser;
         });
 
         await postUserRegistration(user.id, {
@@ -204,29 +213,38 @@ export const authProcedures = {
         }
 
         try {
-          // Look up user by email or username
-          const user = await prisma.appUser.findFirst({
-            where: {
-              OR: [
-                { username: input.identifier },
-                {
-                  emails: {
-                    some: {
-                      email: input.identifier,
-                    },
-                  },
-                },
-              ],
-            },
-            select: {
-              id: true,
-              username: true,
+          // Look up user by username
+          const userByUsername = await db.query.AppUser.findFirst({
+            where: (t, { eq }) => eq(t.username, input.identifier),
+            columns: { id: true, username: true },
+            with: {
               emails: {
-                select: { email: true, key: true },
-                take: 1,
+                columns: { email: true, key: true },
+                limit: 1,
               },
             },
           });
+
+          // Look up user by email
+          const userByEmail = userByUsername
+            ? null
+            : await db.query.AppUserEmail.findFirst({
+                where: (t, { eq }) => eq(t.email, input.identifier),
+                columns: { appUserId: true, email: true, key: true },
+              }).then(async (emailRecord) => {
+                if (!emailRecord) return null;
+                const u = await db.query.AppUser.findFirst({
+                  where: (t, { eq }) => eq(t.id, emailRecord.appUserId),
+                  columns: { id: true, username: true },
+                });
+                if (!u) return null;
+                return {
+                  ...u,
+                  emails: [{ email: emailRecord.email, key: emailRecord.key }],
+                };
+              });
+
+          const user = userByUsername ?? userByEmail;
 
           // Always return success to avoid leaking user existence
           // But only send email if user exists

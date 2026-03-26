@@ -2,11 +2,12 @@ import { createReadStream, createWriteStream } from 'node:fs';
 import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pipeline } from 'node:stream/promises';
-import { prisma } from '@letschurch/db';
+import { db, UploadState } from '@letschurch/db';
 import { backupS3 } from '@letschurch/s3/backup';
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { heartbeat } from '@temporalio/activity';
+import { eq } from 'drizzle-orm';
 import logger from '../../util/logger';
 
 const WORK_DIR = process.env.BACKUP_WORKING_DIRECTORY ?? '/data/backup';
@@ -25,9 +26,11 @@ export default async function backupToGlacier(
   uploadStateId: string,
 ): Promise<{ backupKey: string; sizeBytes: number }> {
   // Get the upload state to find the source
-  const uploadState = await prisma.uploadState.findUnique({
-    where: { id: uploadStateId },
-  });
+  const uploadState = await db
+    .select()
+    .from(UploadState)
+    .where(eq(UploadState.id, uploadStateId))
+    .then((r) => r[0] ?? null);
 
   if (!uploadState) {
     throw new Error(`UploadState not found: ${uploadStateId}`);
@@ -42,10 +45,10 @@ export default async function backupToGlacier(
   }
 
   // Update status to BACKING_UP
-  await prisma.uploadState.update({
-    where: { id: uploadStateId },
-    data: { backupStatus: 'BACKING_UP' },
-  });
+  await db
+    .update(UploadState)
+    .set({ backupStatus: 'BACKING_UP', updatedAt: new Date() })
+    .where(eq(UploadState.id, uploadStateId));
 
   heartbeat('Starting backup');
 
@@ -107,15 +110,16 @@ export default async function backupToGlacier(
     heartbeat('Backup complete, updating status');
 
     // Update status to BACKED_UP
-    await prisma.uploadState.update({
-      where: { id: uploadStateId },
-      data: {
+    await db
+      .update(UploadState)
+      .set({
         backupStatus: 'BACKED_UP',
         backupKey,
         sizeBytes: BigInt(sizeBytes),
         backedUpAt: new Date(),
-      },
-    });
+        updatedAt: new Date(),
+      })
+      .where(eq(UploadState.id, uploadStateId));
 
     logger.info(
       `Successfully backed up ${uploadState.s3Key} (${sizeBytes} bytes)`,
@@ -124,10 +128,10 @@ export default async function backupToGlacier(
     return { backupKey, sizeBytes };
   } catch (error) {
     // Update status to BACKUP_FAILED on error
-    await prisma.uploadState.update({
-      where: { id: uploadStateId },
-      data: { backupStatus: 'BACKUP_FAILED' },
-    });
+    await db
+      .update(UploadState)
+      .set({ backupStatus: 'BACKUP_FAILED', updatedAt: new Date() })
+      .where(eq(UploadState.id, uploadStateId));
 
     logger.error(
       { err: error instanceof Error ? error : new Error(String(error)) },
@@ -160,14 +164,15 @@ export async function retryBackup(
   uploadStateId: string,
 ): Promise<{ backupKey: string; sizeBytes: number }> {
   // Reset status to NOT_BACKED_UP first
-  await prisma.uploadState.update({
-    where: { id: uploadStateId },
-    data: {
+  await db
+    .update(UploadState)
+    .set({
       backupStatus: 'NOT_BACKED_UP',
       backupKey: null,
       backedUpAt: null,
-    },
-  });
+      updatedAt: new Date(),
+    })
+    .where(eq(UploadState.id, uploadStateId));
 
   return backupToGlacier(uploadStateId);
 }

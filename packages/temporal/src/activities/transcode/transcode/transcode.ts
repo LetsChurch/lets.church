@@ -204,7 +204,8 @@ export default async function transcode(
       activityLogger.info('Recording download size');
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error: TODO: type safety
-      const variant: UploadVariant = filename.split('.')[0];
+      const variant: (typeof UploadVariant.enumValues)[number] =
+        filename.split('.')[0];
       invariant(variant, 'variant should be defined');
       await recordDownloadSize(uploadRecordId, variant, byteSize);
     }

@@ -1,4 +1,4 @@
-import { prisma } from '@letschurch/db';
+import { db } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { createFileRoute } from '@tanstack/react-router';
 import { Feed } from 'feed';
@@ -24,8 +24,10 @@ export const Route = createFileRoute('/channel/$slug/rss.xml')({
           const siteUrl = process.env.PUBLIC_URL || 'https://lets.church';
 
           // Fetch channel
-          const channel = await prisma.channel.findUnique({
-            select: {
+          const channel = await db.query.Channel.findFirst({
+            where: (t, { eq, and, isNull }) =>
+              and(eq(t.slug, slug), isNull(t.deletedAt)),
+            columns: {
               id: true,
               name: true,
               slug: true,
@@ -35,10 +37,6 @@ export const Route = createFileRoute('/channel/$slug/rss.xml')({
               visibility: true,
               approvedAt: true,
               deletedAt: true,
-            },
-            where: {
-              slug,
-              deletedAt: null,
             },
           });
 
@@ -107,8 +105,14 @@ export const Route = createFileRoute('/channel/$slug/rss.xml')({
           });
 
           // Fetch latest 500 uploads from this channel ordered by publishedAt descending
-          const uploads = await prisma.uploadRecord.findMany({
-            select: {
+          const uploads = await db.query.UploadRecord.findMany({
+            where: (t, { isNotNull, eq, and }) =>
+              and(
+                isNotNull(t.transcodingFinishedAt),
+                eq(t.visibility, 'PUBLIC'),
+                eq(t.channelId, channel.id),
+              ),
+            columns: {
               id: true,
               title: true,
               description: true,
@@ -116,20 +120,8 @@ export const Route = createFileRoute('/channel/$slug/rss.xml')({
               defaultThumbnailPath: true,
               overrideThumbnailPath: true,
             },
-            where: {
-              transcodingFinishedAt: { not: null },
-              visibility: 'PUBLIC',
-              channel: {
-                slug,
-                visibility: 'PUBLIC',
-                approvedAt: { not: null },
-                deletedAt: null,
-              },
-            },
-            orderBy: {
-              publishedAt: 'desc',
-            },
-            take: 500,
+            orderBy: (t, { desc }) => desc(t.publishedAt),
+            limit: 500,
           });
 
           // Add items to feed

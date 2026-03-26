@@ -77,21 +77,17 @@ temporal *args:
   docker compose exec temporal-admin-tools temporal {{args}}
 
 db-push:
-  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run prisma:db:push'
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run db:migrate'
 
 db-reset:
-  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run prisma:migrate:reset'
   docker compose restart postgres
-
-prisma-generate:
-  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run prisma:migrate:dev'
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run db:migrate'
 
 es-push-mappings:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/elasticsearch run push-mappings'
 
 migrate-dev:
-  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run prisma:migrate:dev'
-  pnpm --filter @letschurch/db run prisma:generate
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run db:mark-baseline && pnpm --filter @letschurch/db run db:migrate'
 
 temporal-schedule: restart-workers
   just temporal workflow execute --task-queue background --type updateDailySaltWorkflow --workflow-id update-daily-salt
@@ -130,7 +126,7 @@ reset:
   just init seed
 
 truncate:
-  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run prisma:db:truncate'
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run db:truncate'
 
 check:
   pnpm -r run check

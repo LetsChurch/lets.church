@@ -1,5 +1,6 @@
-import { prisma } from '@letschurch/db';
+import { AppUserEmail, db } from '@letschurch/db';
 import { createFileRoute, redirect } from '@tanstack/react-router';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { uuidTranslator } from '@/util/uuid';
 
@@ -31,18 +32,19 @@ export const Route = createFileRoute('/auth_/verify')({
           const emailIdFull = uuidTranslator.toUUID(emailId);
           const emailKeyFull = uuidTranslator.toUUID(emailKey);
 
-          const result = await prisma.appUserEmail.updateMany({
-            data: {
-              verifiedAt: new Date(),
-            },
-            where: {
-              id: emailIdFull,
-              appUserId: userIdFull,
-              key: emailKeyFull,
-            },
-          });
+          const result = await db
+            .update(AppUserEmail)
+            .set({ verifiedAt: new Date() })
+            .where(
+              and(
+                eq(AppUserEmail.id, emailIdFull),
+                eq(AppUserEmail.appUserId, userIdFull),
+                eq(AppUserEmail.key, emailKeyFull),
+              ),
+            )
+            .returning();
 
-          if (result.count > 0) {
+          if (result.length > 0) {
             // Email verified successfully
           } else {
             // Verification failed

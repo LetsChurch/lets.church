@@ -1,19 +1,27 @@
-import type { ChannelImportSourceWorkflowStatus } from '@letschurch/db';
-import { prisma } from '@letschurch/db';
+import {
+  ChannelImportSource,
+  type ChannelImportSourceWorkflowStatus,
+  db,
+} from '@letschurch/db';
+import { eq } from 'drizzle-orm';
+
+type ChannelImportSourceWorkflowStatusValue =
+  (typeof ChannelImportSourceWorkflowStatus.enumValues)[number];
 
 /**
  * Update import source workflow status.
  */
 export async function updateImportSourceWorkflowStatus(
   importSourceId: string,
-  status: ChannelImportSourceWorkflowStatus,
+  status: ChannelImportSourceWorkflowStatusValue,
   workflowId?: string,
 ) {
-  await prisma.channelImportSource.update({
-    where: { id: importSourceId },
-    data: {
+  await db
+    .update(ChannelImportSource)
+    .set({
       workflowStatus: status,
       workflowId: workflowId || null,
-    },
-  });
+      updatedAt: new Date(),
+    })
+    .where(eq(ChannelImportSource.id, importSourceId));
 }

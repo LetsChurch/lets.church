@@ -1,4 +1,14 @@
-import { prisma, UploadLicense } from '@letschurch/db';
+import {
+  Channel,
+  ChannelInvitation,
+  ChannelMembership,
+  db,
+  UploadLicense,
+  UploadList,
+  UploadListEntry,
+  UploadRecord,
+  UploadView,
+} from '@letschurch/db';
 import { PART_SIZE } from '@letschurch/s3';
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
@@ -6,6 +16,7 @@ import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
 import { emailHtml, sanitizeForHtml } from '@letschurch/temporal/util/email';
 import { sendEmailWorkflow } from '@letschurch/temporal/workflows/background/send-email';
 import { TRPCError } from '@trpc/server';
+import { and, count, eq, ilike, inArray } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 import { stripIndent } from 'proper-tags';
 import sanitizeFilename from 'sanitize-filename';
@@ -75,11 +86,12 @@ const channelProcedure = authProcedure
     // Skip membership query for site admins
     const membership = ctx.isSiteAdmin
       ? null
-      : await prisma.channelMembership.findFirst({
-          where: {
-            appUserId: ctx.session.appUserId,
-            channelId: input.channelId,
-          },
+      : await db.query.ChannelMembership.findFirst({
+          where: (t, { and, eq }) =>
+            and(
+              eq(t.appUserId, ctx.session.appUserId),
+              eq(t.channelId, input.channelId),
+            ),
         });
 
     if (!ctx.isSiteAdmin && !membership) {
@@ -166,26 +178,37 @@ export const channelRouter = router({
       );
 
       try {
-        const channel = await prisma.channel.create({
-          data: {
-            name: input.name,
-            slug: input.slug,
-            description: input.description || null,
-            visibility: input.visibility,
-            memberships: {
-              create: {
-                appUserId: ctx.session.appUserId,
-                isAdmin: true,
-                canEdit: true,
-                canUpload: true,
-              },
-            },
-          },
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-          },
+        const channel = await db.transaction(async (tx) => {
+          const [newChannel] = await tx
+            .insert(Channel)
+            .values({
+              name: input.name,
+              slug: input.slug,
+              description: input.description || null,
+              visibility: input.visibility,
+              updatedAt: new Date(),
+            })
+            .returning({
+              id: Channel.id,
+              name: Channel.name,
+              slug: Channel.slug,
+            });
+
+          if (!newChannel) {
+            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+          }
+
+          await tx.insert(ChannelMembership).values({
+            channelId: newChannel.id,
+            appUserId: ctx.session.appUserId,
+            isAdmin: true,
+            canEdit: true,
+            canUpload: true,
+            canDownload: false,
+            updatedAt: new Date(),
+          });
+
+          return newChannel;
         });
 
         moduleLogger.info(
@@ -198,18 +221,22 @@ export const channelRouter = router({
 
         // Send admin notification email
         try {
-          const user = await prisma.appUser.findUnique({
-            where: { id: ctx.session.appUserId },
-            select: {
+          const user = await db.query.AppUser.findFirst({
+            where: (t, { eq }) => eq(t.id, ctx.session.appUserId),
+            columns: {
               username: true,
               fullName: true,
+            },
+            with: {
               emails: {
-                where: { verifiedAt: { not: null } },
-                select: { email: true },
-                take: 1,
+                columns: { email: true, verifiedAt: true },
+                where: (t, { isNotNull }) => isNotNull(t.verifiedAt),
+                limit: 1,
               },
             },
           });
+
+          const verifiedEmail = user?.emails[0] ?? null;
 
           const approvalUrl = `${WEB_URL}/dashboard/admin/channels?filter=pending`;
           const subject = `New Channel Approval Request: ${channel.name}`;
@@ -219,7 +246,7 @@ export const channelRouter = router({
             Channel Name: ${channel.name}
             Channel Slug: ${channel.slug}
             Creator: ${user?.fullName || user?.username || 'Unknown'}
-            ${user?.emails[0]?.email ? `Creator Email: ${user.emails[0].email}` : ''}
+            ${verifiedEmail?.email ? `Creator Email: ${verifiedEmail.email}` : ''}
 
             Please visit ${approvalUrl} to review and approve this channel.
           `;
@@ -231,7 +258,7 @@ export const channelRouter = router({
               <b>Channel Name:</b> ${sanitizeForHtml(channel.name)}<br>
               <b>Channel Slug:</b> ${sanitizeForHtml(channel.slug)}<br>
               <b>Creator:</b> ${sanitizeForHtml(user?.fullName || user?.username || 'Unknown')}<br>
-              ${user?.emails[0]?.email ? `<b>Creator Email:</b> ${sanitizeForHtml(user.emails[0].email)}<br>` : ''}
+              ${verifiedEmail?.email ? `<b>Creator Email:</b> ${sanitizeForHtml(verifiedEmail.email)}<br>` : ''}
 
               Please <a href="${approvalUrl}">click here</a> to review and approve this channel.
 
@@ -298,7 +325,7 @@ export const channelRouter = router({
       }
     }),
 
-  getChannels: authProcedure.query(({ ctx }) => {
+  getChannels: authProcedure.query(async ({ ctx }) => {
     moduleLogger.info(
       {
         appUserId: ctx.session.appUserId,
@@ -306,38 +333,46 @@ export const channelRouter = router({
       'Fetching channels for user',
     );
 
-    return prisma.channel.findMany({
-      select: {
+    // Get channels where user has a membership
+    const memberships = await db.query.ChannelMembership.findMany({
+      columns: {
+        channelId: true,
+        isAdmin: true,
+        canEdit: true,
+        canUpload: true,
+      },
+      where: (t, { eq }) => eq(t.appUserId, ctx.session.appUser.id),
+    });
+
+    if (memberships.length === 0) {
+      return [];
+    }
+
+    const channelIds = memberships.map((m) => m.channelId);
+
+    const channels = await db.query.Channel.findMany({
+      columns: {
         id: true,
         name: true,
         approvedAt: true,
-        memberships: {
-          select: {
-            isAdmin: true,
-            canEdit: true,
-            canUpload: true,
-          },
-          where: {
-            appUserId: ctx.session.appUser.id,
-          },
-        },
       },
-      where: {
-        memberships: {
-          some: {
-            appUserId: ctx.session.appUser.id,
-          },
-        },
-      },
-      orderBy: { name: 'asc' },
+      where: (t, { inArray }) => inArray(t.id, channelIds),
+      orderBy: (t, { asc }) => [asc(t.name)],
     });
+
+    return channels.map((channel) => ({
+      ...channel,
+      memberships: memberships
+        .filter((m) => m.channelId === channel.id)
+        .map(({ channelId: _, ...m }) => m),
+    }));
   }),
 
   getChannelDetails: channelProcedure.query(async ({ ctx, input }) => {
     const isSiteAdmin = ctx.isSiteAdmin;
 
-    const channel = await prisma.channel.findFirst({
-      select: {
+    const channel = await db.query.Channel.findFirst({
+      columns: {
         id: true,
         name: true,
         slug: true,
@@ -351,18 +386,24 @@ export const channelRouter = router({
         updatedAt: true,
         approvedAt: true,
         approvedById: true,
+      },
+      with: {
         memberships: {
-          select: {
+          columns: {
             isAdmin: true,
             canEdit: true,
             canUpload: true,
+          },
+          with: {
             appUser: {
-              select: {
+              columns: {
                 id: true,
                 username: true,
                 fullName: true,
+              },
+              with: {
                 emails: {
-                  select: {
+                  columns: {
                     email: true,
                     verifiedAt: true,
                   },
@@ -372,55 +413,22 @@ export const channelRouter = router({
           },
         },
         subscribers: {
-          select: {
+          columns: {
             appUserId: true,
           },
         },
         uploadRecords: {
-          select: {
+          columns: {
             id: true,
             title: true,
             createdAt: true,
+            deletedAt: true,
           },
-          where: {
-            deletedAt: null,
-            channel: {
-              memberships: {
-                some: {
-                  appUserId: ctx.session.appUser.id,
-                },
-              },
-            },
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 10,
-        },
-        _count: {
-          select: {
-            uploadRecords: {
-              where: {
-                deletedAt: null,
-              },
-            },
-            subscribers: true,
-            memberships: true,
-            uploadLists: true,
-          },
+          orderBy: (t, { desc }) => [desc(t.createdAt)],
+          limit: 10,
         },
       },
-      where: {
-        id: input.channelId,
-        // Only filter by membership for non-admin users
-        ...(isSiteAdmin
-          ? {}
-          : {
-              memberships: {
-                some: {
-                  appUserId: ctx.session.appUser.id,
-                },
-              },
-            }),
-      },
+      where: (t, { eq }) => eq(t.id, input.channelId),
     });
 
     if (!channel) {
@@ -434,13 +442,34 @@ export const channelRouter = router({
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
 
-    const totalViews = await prisma.uploadView.count({
-      where: {
-        upload: {
-          channelId: input.channelId,
-        },
-      },
-    });
+    // For non-admins, verify membership
+    if (!isSiteAdmin) {
+      const hasMembership = channel.memberships.some(
+        (m) => m.appUser.id === ctx.session.appUser.id,
+      );
+      if (!hasMembership) {
+        throw new TRPCError({ code: 'NOT_FOUND' });
+      }
+    }
+
+    // Count total views for this channel
+    const [viewCountResult] = await db
+      .select({ count: count() })
+      .from(UploadView)
+      .innerJoin(UploadRecord, eq(UploadView.uploadRecordId, UploadRecord.id))
+      .where(eq(UploadRecord.channelId, input.channelId));
+
+    const totalViews = viewCountResult?.count;
+
+    // Filter deleted uploads
+    const filteredUploadRecords = channel.uploadRecords.filter(
+      (u) => u.deletedAt === null,
+    );
+
+    // Counts
+    const uploadRecordCount = filteredUploadRecords.length;
+    const subscriberCount = channel.subscribers.length;
+    const membershipCount = channel.memberships.length;
 
     const { avatarPath, ...channelWithoutPath } = channel;
     const avatarUrl = avatarPath
@@ -451,6 +480,13 @@ export const channelRouter = router({
 
     return {
       ...channelWithoutPath,
+      uploadRecords: filteredUploadRecords,
+      _count: {
+        uploadRecords: uploadRecordCount,
+        subscribers: subscriberCount,
+        memberships: membershipCount,
+        uploadLists: 0, // Will be fetched separately if needed
+      },
       avatarUrl,
       userMembership: ctx.membership,
       totalViews,
@@ -460,8 +496,8 @@ export const channelRouter = router({
   getChannelForEdit: channelAdminProcedure.query(async ({ ctx, input }) => {
     const isSiteAdmin = ctx.isSiteAdmin;
 
-    const channel = await prisma.channel.findFirst({
-      select: {
+    const channel = await db.query.Channel.findFirst({
+      columns: {
         id: true,
         name: true,
         slug: true,
@@ -486,20 +522,15 @@ export const channelRouter = router({
         defaultUploadCommentsEnabled: true,
         defaultUploadDownloadsEnabled: true,
       },
-      where: {
-        id: input.channelId,
-        // Only filter by admin membership for non-site-admin users
-        ...(isSiteAdmin
-          ? {}
-          : {
-              memberships: {
-                some: {
-                  appUserId: ctx.session.appUser.id,
-                  isAdmin: true,
-                },
-              },
-            }),
+      with: {
+        memberships: {
+          columns: {
+            appUserId: true,
+            isAdmin: true,
+          },
+        },
       },
+      where: (t, { eq }) => eq(t.id, input.channelId),
     });
 
     if (!channel) {
@@ -508,8 +539,23 @@ export const channelRouter = router({
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
 
-    const { avatarPath, coverPath, defaultThumbnailPath, ...restChannel } =
-      channel;
+    // For non-site-admins, verify admin membership
+    if (!isSiteAdmin) {
+      const isAdmin = channel.memberships.some(
+        (m) => m.appUserId === ctx.session.appUser.id && m.isAdmin,
+      );
+      if (!isAdmin) {
+        throw new TRPCError({ code: 'NOT_FOUND' });
+      }
+    }
+
+    const {
+      avatarPath,
+      coverPath,
+      defaultThumbnailPath,
+      memberships: _,
+      ...restChannel
+    } = channel;
 
     const avatarUrl = avatarPath
       ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
@@ -534,18 +580,10 @@ export const channelRouter = router({
 
   updateChannel: channelAdminProcedure
     .input(updateChannelSchema)
-    .mutation(async ({ ctx, input }) => {
-      const updatedChannel = await prisma.channel.update({
-        where: {
-          id: input.channelId,
-          memberships: {
-            some: {
-              appUserId: ctx.session.appUser.id,
-              isAdmin: true,
-            },
-          },
-        },
-        data: {
+    .mutation(async ({ input }) => {
+      const [updatedChannel] = await db
+        .update(Channel)
+        .set({
           name: input.name,
           slug: input.slug,
           description: input.description,
@@ -567,36 +605,44 @@ export const channelRouter = router({
             input.defaultUploadCommentsEnabled ?? null,
           defaultUploadDownloadsEnabled:
             input.defaultUploadDownloadsEnabled ?? null,
-        },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          description: true,
-          visibility: true,
-          websiteUrl: true,
-        },
-      });
+          updatedAt: new Date(),
+        })
+        .where(eq(Channel.id, input.channelId))
+        .returning({
+          id: Channel.id,
+          name: Channel.name,
+          slug: Channel.slug,
+          description: Channel.description,
+          visibility: Channel.visibility,
+          websiteUrl: Channel.websiteUrl,
+        });
 
+      if (!updatedChannel) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      }
       return { success: true, channel: updatedChannel };
     }),
 
   getChannelMembers: channelProcedure.query(async ({ ctx, input }) => {
-    const channel = await prisma.channel.findFirst({
-      select: {
+    const channel = await db.query.Channel.findFirst({
+      columns: {
         id: true,
         name: true,
         slug: true,
+      },
+      with: {
         memberships: {
-          select: {
+          columns: {
             channelId: true,
             appUserId: true,
             isAdmin: true,
             canEdit: true,
             canUpload: true,
             createdAt: true,
+          },
+          with: {
             appUser: {
-              select: {
+              columns: {
                 id: true,
                 username: true,
                 fullName: true,
@@ -604,12 +650,9 @@ export const channelRouter = router({
               },
             },
           },
-          orderBy: [{ isAdmin: 'desc' }, { createdAt: 'asc' }],
         },
       },
-      where: {
-        id: input.channelId,
-      },
+      where: (t, { eq }) => eq(t.id, input.channelId),
     });
 
     if (!channel) {
@@ -618,7 +661,13 @@ export const channelRouter = router({
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
 
-    const membershipsWithAvatarUrl = channel.memberships.map((membership) => {
+    // Sort: admins first, then by createdAt
+    const sortedMemberships = [...channel.memberships].sort((a, b) => {
+      if (a.isAdmin !== b.isAdmin) return a.isAdmin ? -1 : 1;
+      return a.createdAt.getTime() - b.createdAt.getTime();
+    });
+
+    const membershipsWithAvatarUrl = sortedMemberships.map((membership) => {
       const { avatarPath, ...userWithoutPath } = membership.appUser;
       const avatarUrl = avatarPath
         ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
@@ -661,39 +710,39 @@ export const channelRouter = router({
       );
 
       // Check if email already belongs to a member
-      const existingMember = await prisma.channelMembership.findFirst({
-        where: {
-          channelId: input.channelId,
-          appUser: {
-            emails: {
-              some: {
-                email: input.email,
-              },
-            },
-          },
-        },
+      // Find user by email first, then check if they're a member
+      const emailRecord = await db.query.AppUserEmail.findFirst({
+        columns: { appUserId: true },
+        where: (t, { eq }) => eq(t.email, input.email),
       });
 
-      // If already a member, treat as no-op to prevent user enumeration
-      if (existingMember) {
-        moduleLogger.info(
-          {
-            channelId: input.channelId,
-            appUserId: ctx.session.appUserId,
-          },
-          'User is already a member of this channel, skipping invitation',
-        );
-        return { success: true, message: 'Invitation sent successfully' };
+      if (emailRecord) {
+        const existingMember = await db.query.ChannelMembership.findFirst({
+          columns: { channelId: true },
+          where: (t, { and, eq }) =>
+            and(
+              eq(t.channelId, input.channelId),
+              eq(t.appUserId, emailRecord.appUserId),
+            ),
+        });
+
+        // If already a member, treat as no-op to prevent user enumeration
+        if (existingMember) {
+          moduleLogger.info(
+            {
+              channelId: input.channelId,
+              appUserId: ctx.session.appUserId,
+            },
+            'User is already a member of this channel, skipping invitation',
+          );
+          return { success: true, message: 'Invitation sent successfully' };
+        }
       }
 
       // Check for existing pending invitation
-      const existingInvitation = await prisma.channelInvitation.findUnique({
-        where: {
-          channelId_email: {
-            channelId: input.channelId,
-            email: input.email,
-          },
-        },
+      const existingInvitation = await db.query.ChannelInvitation.findFirst({
+        where: (t, { and, eq }) =>
+          and(eq(t.channelId, input.channelId), eq(t.email, input.email)),
       });
 
       // If already invited and pending, treat as no-op to prevent user enumeration
@@ -715,24 +764,9 @@ export const channelRouter = router({
       // Create or update invitation
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-      const invitation = await prisma.channelInvitation.upsert({
-        where: {
-          channelId_email: {
-            channelId: input.channelId,
-            email: input.email,
-          },
-        },
-        update: {
-          status: 'PENDING',
-          isAdmin: input.isAdmin,
-          canEdit: input.canEdit,
-          canUpload: input.canUpload,
-          canDownload: input.canDownload,
-          expiresAt,
-          respondedAt: null,
-          invitedById: ctx.session.appUserId,
-        },
-        create: {
+      const [invitation] = await db
+        .insert(ChannelInvitation)
+        .values({
           channelId: input.channelId,
           email: input.email,
           isAdmin: input.isAdmin,
@@ -741,8 +775,25 @@ export const channelRouter = router({
           canDownload: input.canDownload,
           invitedById: ctx.session.appUserId,
           expiresAt,
-        },
-      });
+        })
+        .onConflictDoUpdate({
+          target: [ChannelInvitation.channelId, ChannelInvitation.email],
+          set: {
+            status: 'PENDING',
+            isAdmin: input.isAdmin,
+            canEdit: input.canEdit,
+            canUpload: input.canUpload,
+            canDownload: input.canDownload,
+            expiresAt,
+            respondedAt: null,
+            invitedById: ctx.session.appUserId,
+          },
+        })
+        .returning();
+
+      if (!invitation) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      }
 
       // Send invitation email
       await sendInvitationEmail({
@@ -768,53 +819,58 @@ export const channelRouter = router({
   getChannelInvitations: channelAdminProcedure
     .input(channelQuerySchema)
     .query(async ({ input }) => {
-      return prisma.channelInvitation
-        .findMany({
-          where: {
-            channelId: input.channelId,
-            status: 'PENDING',
-            expiresAt: { gt: new Date() },
-          },
-          select: {
-            id: true,
-            email: true,
-            isAdmin: true,
-            canEdit: true,
-            canUpload: true,
-            canDownload: true,
-            createdAt: true,
-            expiresAt: true,
-            token: true,
-            invitedBy: {
-              select: {
-                username: true,
-                fullName: true,
-              },
+      const invitations = await db.query.ChannelInvitation.findMany({
+        columns: {
+          id: true,
+          email: true,
+          isAdmin: true,
+          canEdit: true,
+          canUpload: true,
+          canDownload: true,
+          createdAt: true,
+          expiresAt: true,
+          token: true,
+          status: true,
+        },
+        with: {
+          invitedBy: {
+            columns: {
+              username: true,
+              fullName: true,
             },
           },
-          orderBy: { createdAt: 'desc' },
-        })
-        .then((invitations) =>
-          invitations.map(({ token, ...inv }) => ({
-            ...inv,
-            token: uuidTranslator.fromUUID(token),
-          })),
-        );
+        },
+        where: (t, { and, eq, gt }) =>
+          and(
+            eq(t.channelId, input.channelId),
+            eq(t.status, 'PENDING'),
+            gt(t.expiresAt, new Date()),
+          ),
+        orderBy: (t, { desc }) => [desc(t.createdAt)],
+      });
+
+      return invitations.map(({ token, ...inv }) => ({
+        ...inv,
+        token: uuidTranslator.fromUUID(token),
+      }));
     }),
 
   cancelChannelInvitation: channelAdminProcedure
     .input(cancelChannelInvitationSchema)
     .mutation(async ({ input }) => {
-      // Use updateMany to ensure the invitation belongs to the channel
-      const result = await prisma.channelInvitation.updateMany({
-        where: {
-          id: input.invitationId,
-          channelId: input.channelId,
-        },
-        data: { status: 'CANCELLED' },
-      });
+      // Use update with both id and channelId to ensure the invitation belongs to the channel
+      const result = await db
+        .update(ChannelInvitation)
+        .set({ status: 'CANCELLED' })
+        .where(
+          and(
+            eq(ChannelInvitation.id, input.invitationId),
+            eq(ChannelInvitation.channelId, input.channelId),
+          ),
+        )
+        .returning({ id: ChannelInvitation.id });
 
-      if (result.count === 0) {
+      if (result.length === 0) {
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Invitation not found',
@@ -828,11 +884,9 @@ export const channelRouter = router({
     .input(resendChannelInvitationSchema)
     .mutation(async ({ ctx, input }) => {
       // First fetch and validate the invitation
-      const existingInvitation = await prisma.channelInvitation.findFirst({
-        where: {
-          id: input.invitationId,
-          channelId: input.channelId,
-        },
+      const existingInvitation = await db.query.ChannelInvitation.findFirst({
+        where: (t, { and, eq }) =>
+          and(eq(t.id, input.invitationId), eq(t.channelId, input.channelId)),
       });
 
       if (!existingInvitation) {
@@ -850,12 +904,17 @@ export const channelRouter = router({
       }
 
       // Update the expiration
-      const invitation = await prisma.channelInvitation.update({
-        where: { id: input.invitationId },
-        data: {
+      const [invitation] = await db
+        .update(ChannelInvitation)
+        .set({
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        },
-      });
+        })
+        .where(eq(ChannelInvitation.id, input.invitationId))
+        .returning();
+
+      if (!invitation) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      }
 
       // Send invitation email
       await sendInvitationEmail({
@@ -893,24 +952,30 @@ export const channelRouter = router({
 
       try {
         let wasAdmin = false;
-        await prisma.$transaction(async (tx) => {
+        await db.transaction(async (tx) => {
           // Don't allow removing the last admin
-          const adminCount = await tx.channelMembership.count({
-            where: {
-              channelId: input.channelId,
-              isAdmin: true,
-            },
-          });
+          const [adminCountResult] = await tx
+            .select({ count: count() })
+            .from(ChannelMembership)
+            .where(
+              and(
+                eq(ChannelMembership.channelId, input.channelId),
+                eq(ChannelMembership.isAdmin, true),
+              ),
+            );
 
-          const membershipToDelete = await tx.channelMembership.findUnique({
-            where: {
-              channelId_appUserId: {
-                channelId: input.channelId,
-                appUserId: input.appUserId,
-              },
+          const adminCount = adminCountResult?.count;
+
+          const membershipToDelete = await tx.query.ChannelMembership.findFirst(
+            {
+              columns: { isAdmin: true, appUserId: true },
+              where: (t, { and, eq }) =>
+                and(
+                  eq(t.channelId, input.channelId),
+                  eq(t.appUserId, input.appUserId),
+                ),
             },
-            select: { isAdmin: true, appUserId: true },
-          });
+          );
 
           if (!membershipToDelete) {
             moduleLogger.warn(
@@ -948,14 +1013,14 @@ export const channelRouter = router({
             });
           }
 
-          await tx.channelMembership.delete({
-            where: {
-              channelId_appUserId: {
-                channelId: input.channelId,
-                appUserId: input.appUserId,
-              },
-            },
-          });
+          await tx
+            .delete(ChannelMembership)
+            .where(
+              and(
+                eq(ChannelMembership.channelId, input.channelId),
+                eq(ChannelMembership.appUserId, input.appUserId),
+              ),
+            );
         });
 
         moduleLogger.info(
@@ -992,8 +1057,8 @@ export const channelRouter = router({
   getChannelUploads: channelProcedure
     .input(channelUploadsQuerySchema)
     .query(async ({ ctx, input }) => {
-      const channel = await prisma.channel.findFirst({
-        select: {
+      const channel = await db.query.Channel.findFirst({
+        columns: {
           id: true,
           name: true,
           slug: true,
@@ -1001,14 +1066,18 @@ export const channelRouter = router({
           defaultUploadLicense: true,
           defaultUploadCommentsEnabled: true,
           defaultUploadDownloadsEnabled: true,
+        },
+        with: {
           memberships: {
-            select: {
+            columns: {
               isAdmin: true,
               canEdit: true,
               canUpload: true,
               canDownload: true,
+            },
+            with: {
               appUser: {
-                select: {
+                columns: {
                   id: true,
                   role: true,
                 },
@@ -1016,9 +1085,7 @@ export const channelRouter = router({
             },
           },
         },
-        where: {
-          id: input.channelId,
-        },
+        where: (t, { eq }) => eq(t.id, input.channelId),
       });
 
       if (!channel) {
@@ -1029,9 +1096,9 @@ export const channelRouter = router({
 
       const offset = (input.page - 1) * input.limit;
 
-      const [uploads, totalCount] = await Promise.all([
-        prisma.uploadRecord.findMany({
-          select: {
+      const [uploads, totalCountResult] = await Promise.all([
+        db.query.UploadRecord.findMany({
+          columns: {
             id: true,
             title: true,
             description: true,
@@ -1041,80 +1108,49 @@ export const channelRouter = router({
             finalizedUploadKey: true,
             defaultThumbnailPath: true,
             overrideThumbnailPath: true,
+          },
+          with: {
             featuredUpload: {
-              select: {
+              columns: {
                 uploadRecordId: true,
               },
             },
-            _count: {
-              select: {
-                uploadViews: true,
-                userComments: true,
-              },
+            uploadViews: {
+              columns: { uploadRecordId: true },
+            },
+            userComments: {
+              columns: { id: true },
             },
           },
-          where: {
-            channelId: input.channelId,
-            ...(input.search && {
-              title: {
-                contains: input.search,
-                mode: 'insensitive',
-              },
-            }),
-            OR: [
-              { visibility: 'PUBLIC' },
-              { visibility: 'UNLISTED' },
-              {
-                AND: [
-                  { visibility: 'PRIVATE' },
-                  {
-                    channel: {
-                      memberships: {
-                        some: {
-                          appUserId: ctx.session.appUser.id,
-                        },
-                      },
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-          orderBy: { createdAt: 'desc' },
-          skip: offset,
-          take: input.limit,
+          where: (t, { and, or, eq, ilike }) =>
+            and(
+              eq(t.channelId, input.channelId),
+              ...(input.search ? [ilike(t.title, `%${input.search}%`)] : []),
+              or(
+                eq(t.visibility, 'PUBLIC'),
+                eq(t.visibility, 'UNLISTED'),
+                eq(t.visibility, 'PRIVATE'),
+              ),
+            ),
+          orderBy: (t, { desc }) => [desc(t.createdAt)],
+          offset,
+          limit: input.limit,
         }),
-        prisma.uploadRecord.count({
-          where: {
-            channelId: input.channelId,
-            ...(input.search && {
-              title: {
-                contains: input.search,
-                mode: 'insensitive',
-              },
-            }),
-            OR: [
-              { visibility: 'PUBLIC' },
-              { visibility: 'UNLISTED' },
-              {
-                AND: [
-                  { visibility: 'PRIVATE' },
-                  {
-                    channel: {
-                      memberships: {
-                        some: {
-                          appUserId: ctx.session.appUser.id,
-                        },
-                      },
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-        }),
+        db
+          .select({ count: count() })
+          .from(UploadRecord)
+          .where(
+            and(
+              eq(UploadRecord.channelId, input.channelId),
+              ...(input.search
+                ? [ilike(UploadRecord.title, `%${input.search}%`)]
+                : []),
+            ),
+          )
+          .then((r) => r[0]?.count),
       ]);
 
+      const totalCount = Number(totalCountResult ?? 0);
       const totalPages = Math.ceil(totalCount / input.limit);
 
       const uploadsWithThumbnails = uploads.map((upload) => {
@@ -1122,6 +1158,8 @@ export const channelRouter = router({
           defaultThumbnailPath,
           overrideThumbnailPath,
           featuredUpload,
+          uploadViews,
+          userComments,
           ...uploadRest
         } = upload;
         const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
@@ -1136,6 +1174,10 @@ export const channelRouter = router({
           ...uploadRest,
           thumbnailUrl,
           isFeatured: !!featuredUpload,
+          _count: {
+            uploadViews: uploadViews.length,
+            userComments: userComments.length,
+          },
         };
       });
 
@@ -1157,52 +1199,58 @@ export const channelRouter = router({
   createUploadRecord: channelUploadProcedure
     .input(createUploadSchema)
     .mutation(async ({ ctx, input }) => {
-      const channel = await prisma.channel.findUniqueOrThrow({
-        where: { id: input.channelId },
-        select: {
+      const channel = await db.query.Channel.findFirst({
+        columns: {
           defaultUploadVisibility: true,
           defaultUploadLicense: true,
           defaultUploadCommentsEnabled: true,
           defaultUploadDownloadsEnabled: true,
         },
+        where: (t, { eq }) => eq(t.id, input.channelId),
       });
 
-      const { id } = await prisma.uploadRecord.create({
-        data: {
-          license: channel.defaultUploadLicense ?? UploadLicense.STANDARD,
+      if (!channel) {
+        throw new TRPCError({ code: 'NOT_FOUND' });
+      }
+
+      const [record] = await db
+        .insert(UploadRecord)
+        .values({
+          license: channel.defaultUploadLicense ?? UploadLicense.enumValues[0],
           visibility: channel.defaultUploadVisibility ?? 'PRIVATE',
           userCommentsEnabled: channel.defaultUploadCommentsEnabled ?? true,
           downloadsEnabled: channel.defaultUploadDownloadsEnabled ?? true,
           originalFileName: input.originalFileName,
-          channel: {
-            connect: {
-              id: input.channelId,
-            },
-          },
-          createdBy: {
-            connect: {
-              id: ctx.session.appUser.id,
-            },
-          },
-        },
-      });
+          channelId: input.channelId,
+          appUserId: ctx.session.appUser.id,
+          uploadFinalized: false,
+          variants: [],
+          updatedAt: new Date(),
+          score: 0,
+          transcodingProgress: 0,
+        })
+        .returning({ id: UploadRecord.id });
 
-      return id;
+      if (!record) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to create upload record',
+        });
+      }
+      return record.id;
     }),
 
   deleteUploadRecord: channelAdminProcedure
     .input(deleteUploadSchema)
     .mutation(async ({ input }) => {
       // Verify the upload belongs to this channel
-      const upload = await prisma.uploadRecord.findFirst({
-        select: {
+      const upload = await db.query.UploadRecord.findFirst({
+        columns: {
           id: true,
           channelId: true,
         },
-        where: {
-          id: input.uploadId,
-          channelId: input.channelId,
-        },
+        where: (t, { and, eq }) =>
+          and(eq(t.id, input.uploadId), eq(t.channelId, input.channelId)),
       });
 
       if (!upload) {
@@ -1221,16 +1269,22 @@ export const channelRouter = router({
   bulkSetVisibility: channelEditProcedure
     .input(bulkSetVisibilitySchema)
     .mutation(async ({ input }) => {
+      if (input.uploadIds.length === 0) {
+        return {
+          success: true,
+          updatedCount: 0,
+          visibility: input.visibility,
+        };
+      }
+
       // Verify all uploads belong to this channel
-      const uploads = await prisma.uploadRecord.findMany({
-        select: {
+      const uploads = await db.query.UploadRecord.findMany({
+        columns: {
           id: true,
           channelId: true,
         },
-        where: {
-          id: { in: input.uploadIds },
-          channelId: input.channelId,
-        },
+        where: (t, { and, inArray, eq }) =>
+          and(inArray(t.id, input.uploadIds), eq(t.channelId, input.channelId)),
       });
 
       if (uploads.length !== input.uploadIds.length) {
@@ -1241,15 +1295,18 @@ export const channelRouter = router({
       }
 
       // Update visibility for all uploads
-      await prisma.uploadRecord.updateMany({
-        where: {
-          id: { in: input.uploadIds },
-          channelId: input.channelId,
-        },
-        data: {
+      await db
+        .update(UploadRecord)
+        .set({
           visibility: input.visibility,
-        },
-      });
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            inArray(UploadRecord.id, input.uploadIds),
+            eq(UploadRecord.channelId, input.channelId),
+          ),
+        );
 
       return {
         success: true,
@@ -1261,8 +1318,8 @@ export const channelRouter = router({
   getUploadRecord: channelEditProcedure
     .input(uploadQuerySchema)
     .query(async ({ ctx, input }) => {
-      const upload = await prisma.uploadRecord.findFirst({
-        select: {
+      const upload = await db.query.UploadRecord.findFirst({
+        columns: {
           id: true,
           title: true,
           description: true,
@@ -1279,21 +1336,28 @@ export const channelRouter = router({
           transcribingFinishedAt: true,
           transcodingProgress: true,
           variants: true,
+        },
+        with: {
           featuredUpload: {
-            select: {
+            columns: {
               uploadRecordId: true,
             },
           },
           channel: {
-            select: {
+            columns: {
               id: true,
               name: true,
+            },
+            with: {
               memberships: {
-                select: {
+                columns: {
                   isAdmin: true,
                   canEdit: true,
+                  appUserId: true,
+                },
+                with: {
                   appUser: {
-                    select: {
+                    columns: {
                       id: true,
                       role: true,
                     },
@@ -1303,27 +1367,21 @@ export const channelRouter = router({
             },
           },
           uploadListEntries: {
-            select: {
+            columns: {},
+            with: {
               uploadList: {
-                select: {
+                columns: {
                   id: true,
                   title: true,
                   type: true,
+                  channelId: true,
                 },
-              },
-            },
-            where: {
-              uploadList: {
-                type: 'SERIES',
-                channelId: input.channelId,
               },
             },
           },
         },
-        where: {
-          id: input.uploadId,
-          channelId: input.channelId,
-        },
+        where: (t, { and, eq }) =>
+          and(eq(t.id, input.uploadId), eq(t.channelId, input.channelId)),
       });
 
       if (!upload) {
@@ -1386,6 +1444,13 @@ export const channelRouter = router({
         }
       }
 
+      // Filter uploadListEntries to series belonging to this channel
+      const seriesEntries = uploadListEntries.filter(
+        (e) =>
+          e.uploadList.type === 'SERIES' &&
+          e.uploadList.channelId === input.channelId,
+      );
+
       return {
         upload: {
           ...uploadRest,
@@ -1393,7 +1458,11 @@ export const channelRouter = router({
           isFeatured: !!featuredUpload,
           mediaSource,
           audioSource,
-          series: uploadListEntries.map((e) => e.uploadList),
+          series: seriesEntries.map((e) => ({
+            id: e.uploadList.id,
+            title: e.uploadList.title,
+            type: e.uploadList.type,
+          })),
           hasActiveWorkflow,
         },
         channel: {
@@ -1406,29 +1475,10 @@ export const channelRouter = router({
   updateUploadRecord: channelEditProcedure
     .input(updateUploadSchema)
     .mutation(async ({ input }) => {
-      const upload = await prisma.uploadRecord.findFirst({
-        select: {
-          id: true,
-          channel: {
-            select: {
-              memberships: {
-                select: {
-                  isAdmin: true,
-                  canEdit: true,
-                  appUser: {
-                    select: {
-                      id: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-        where: {
-          id: input.uploadId,
-          channelId: input.channelId,
-        },
+      const upload = await db.query.UploadRecord.findFirst({
+        columns: { id: true },
+        where: (t, { and, eq }) =>
+          and(eq(t.id, input.uploadId), eq(t.channelId, input.channelId)),
       });
 
       if (!upload) {
@@ -1438,9 +1488,9 @@ export const channelRouter = router({
         });
       }
 
-      const updatedUpload = await prisma.uploadRecord.update({
-        where: { id: input.uploadId },
-        data: {
+      const [updatedUpload] = await db
+        .update(UploadRecord)
+        .set({
           title: input.title,
           description: input.description,
           license: input.license,
@@ -1448,19 +1498,23 @@ export const channelRouter = router({
           visibility: input.visibility,
           userCommentsEnabled: input.userCommentsEnabled,
           downloadsEnabled: input.downloadsEnabled,
-        },
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          license: true,
-          visibility: true,
-          publishedAt: true,
-          userCommentsEnabled: true,
-          downloadsEnabled: true,
-        },
-      });
+          updatedAt: new Date(),
+        })
+        .where(eq(UploadRecord.id, input.uploadId))
+        .returning({
+          id: UploadRecord.id,
+          title: UploadRecord.title,
+          description: UploadRecord.description,
+          license: UploadRecord.license,
+          visibility: UploadRecord.visibility,
+          publishedAt: UploadRecord.publishedAt,
+          userCommentsEnabled: UploadRecord.userCommentsEnabled,
+          downloadsEnabled: UploadRecord.downloadsEnabled,
+        });
 
+      if (!updatedUpload) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      }
       return { success: true, upload: updatedUpload };
     }),
 
@@ -1532,36 +1586,17 @@ export const channelRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Fetch upload only if user has channel membership
-      const upload = await prisma.uploadRecord.findFirst({
-        where: {
-          id: input.uploadId,
-          channel: {
-            memberships: {
-              some: {
-                appUserId: ctx.session.appUserId,
-              },
-            },
-          },
-        },
-        select: {
+      // Fetch upload, scoped to the channel to prevent cross-channel access
+      const upload = await db.query.UploadRecord.findFirst({
+        columns: {
           id: true,
           finalizedUploadKey: true,
           originalFileName: true,
           title: true,
-          channel: {
-            select: {
-              id: true,
-              memberships: {
-                where: { appUserId: ctx.session.appUserId },
-                select: {
-                  isAdmin: true,
-                  canDownload: true,
-                },
-              },
-            },
-          },
+          channelId: true,
         },
+        where: (t, { and, eq }) =>
+          and(eq(t.id, input.uploadId), eq(t.channelId, input.channelId)),
       });
 
       if (!upload) {
@@ -1610,26 +1645,31 @@ export const channelRouter = router({
       'Fetching channel playlists',
     );
 
-    const playlists = await prisma.uploadList.findMany({
-      select: {
+    const playlists = await db.query.UploadList.findMany({
+      columns: {
         id: true,
         title: true,
         type: true,
         createdAt: true,
         updatedAt: true,
-        _count: {
-          select: {
-            uploads: true,
-          },
+      },
+      with: {
+        uploads: {
+          columns: { uploadListId: true },
         },
       },
-      where: {
-        channelId: input.channelId,
-      },
-      orderBy: { createdAt: 'desc' },
+      where: (t, { eq }) => eq(t.channelId, input.channelId),
+      orderBy: (t, { desc }) => [desc(t.createdAt)],
     });
 
-    return playlists;
+    return playlists.map((playlist) => ({
+      id: playlist.id,
+      title: playlist.title,
+      type: playlist.type,
+      createdAt: playlist.createdAt,
+      updatedAt: playlist.updatedAt,
+      _count: { uploads: playlist.uploads.length },
+    }));
   }),
 
   searchChannelSeries: channelProcedure
@@ -1640,24 +1680,31 @@ export const channelRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      const series = await prisma.uploadList.findMany({
-        where: {
-          channelId: input.channelId,
-          type: 'SERIES',
-          title: {
-            contains: input.query,
-            mode: 'insensitive',
-          },
-        },
-        select: {
+      const series = await db.query.UploadList.findMany({
+        columns: {
           id: true,
           title: true,
-          _count: { select: { uploads: true } },
         },
-        orderBy: { createdAt: 'desc' },
-        take: 10,
+        with: {
+          uploads: {
+            columns: { uploadListId: true },
+          },
+        },
+        where: (t, { and, eq, ilike }) =>
+          and(
+            eq(t.channelId, input.channelId),
+            eq(t.type, 'SERIES'),
+            ilike(t.title, `%${input.query}%`),
+          ),
+        orderBy: (t, { desc }) => [desc(t.createdAt)],
+        limit: 10,
       });
-      return series;
+
+      return series.map((s) => ({
+        id: s.id,
+        title: s.title,
+        _count: { uploads: s.uploads.length },
+      }));
     }),
 
   getPlaylistDetails: channelProcedure
@@ -1674,17 +1721,22 @@ export const channelRouter = router({
         'Fetching playlist details',
       );
 
-      const playlist = await prisma.uploadList.findFirst({
-        select: {
+      const playlist = await db.query.UploadList.findFirst({
+        columns: {
           id: true,
           title: true,
           type: true,
           createdAt: true,
           updatedAt: true,
+        },
+        with: {
           uploads: {
-            select: {
+            columns: {
+              rank: true,
+            },
+            with: {
               upload: {
-                select: {
+                columns: {
                   id: true,
                   title: true,
                   description: true,
@@ -1695,15 +1747,12 @@ export const channelRouter = router({
                   overrideThumbnailPath: true,
                 },
               },
-              rank: true,
             },
-            orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
+            orderBy: (t, { asc }) => [asc(t.rank), asc(t.createdAt)],
           },
         },
-        where: {
-          id: input.playlistId,
-          channelId: input.channelId,
-        },
+        where: (t, { and, eq }) =>
+          and(eq(t.id, input.playlistId), eq(t.channelId, input.channelId)),
       });
 
       if (!playlist) {
@@ -1742,26 +1791,27 @@ export const channelRouter = router({
       );
 
       try {
-        const playlist = await prisma.uploadList.create({
-          data: {
+        const [playlist] = await db
+          .insert(UploadList)
+          .values({
             title: input.title,
             type: input.type,
             authorId: ctx.session.appUser.id,
             channelId: input.channelId,
-          },
-          select: {
-            id: true,
-            title: true,
-            type: true,
-            createdAt: true,
-          },
-        });
+            updatedAt: new Date(),
+          })
+          .returning({
+            id: UploadList.id,
+            title: UploadList.title,
+            type: UploadList.type,
+            createdAt: UploadList.createdAt,
+          });
 
         moduleLogger.info(
           {
             channelId: input.channelId,
             context: {
-              playlistId: playlist.id,
+              playlistId: playlist?.id,
               playlistTitle: input.title,
               createdBy: ctx.session.appUserId,
             },
@@ -1769,8 +1819,14 @@ export const channelRouter = router({
           'Playlist created successfully',
         );
 
+        if (!playlist) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+        }
         return { success: true, playlist };
       } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
         moduleLogger.error(
           {
             channelId: input.channelId,
@@ -1802,19 +1858,25 @@ export const channelRouter = router({
       );
 
       try {
-        const updatedPlaylist = await prisma.uploadList.update({
-          where: { id: input.playlistId },
-          data: {
+        const [updatedPlaylist] = await db
+          .update(UploadList)
+          .set({
             title: input.title,
             type: input.type,
-          },
-          select: {
-            id: true,
-            title: true,
-            type: true,
-            updatedAt: true,
-          },
-        });
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(UploadList.id, input.playlistId),
+              eq(UploadList.channelId, input.channelId),
+            ),
+          )
+          .returning({
+            id: UploadList.id,
+            title: UploadList.title,
+            type: UploadList.type,
+            updatedAt: UploadList.updatedAt,
+          });
 
         moduleLogger.info(
           {
@@ -1827,8 +1889,17 @@ export const channelRouter = router({
           'Playlist updated successfully',
         );
 
+        if (!updatedPlaylist) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Playlist not found or not owned by channel',
+          });
+        }
         return { success: true, playlist: updatedPlaylist };
       } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
         moduleLogger.error(
           {
             context: {
@@ -1858,9 +1929,9 @@ export const channelRouter = router({
       );
 
       try {
-        const playlist = await prisma.uploadList.findUnique({
-          where: { id: input.playlistId },
-          select: { id: true },
+        const playlist = await db.query.UploadList.findFirst({
+          columns: { id: true },
+          where: (t, { eq }) => eq(t.id, input.playlistId),
         });
 
         if (!playlist) {
@@ -1879,9 +1950,7 @@ export const channelRouter = router({
           });
         }
 
-        await prisma.uploadList.delete({
-          where: { id: input.playlistId },
-        });
+        await db.delete(UploadList).where(eq(UploadList.id, input.playlistId));
 
         moduleLogger.info(
           {
@@ -1925,12 +1994,13 @@ export const channelRouter = router({
 
       try {
         // Get the playlist to verify it exists and get its channelId
-        const playlist = await prisma.uploadList.findUnique({
-          where: { id: input.playlistId },
-          select: { id: true, channelId: true },
+        const playlist = await db.query.UploadList.findFirst({
+          columns: { id: true, channelId: true },
+          where: (t, { eq }) => eq(t.id, input.playlistId),
         });
 
-        if (!playlist?.channelId) {
+        const playlistChannelId = playlist?.channelId;
+        if (!playlistChannelId) {
           moduleLogger.warn(
             {
               uploadId: input.uploadId,
@@ -1948,7 +2018,7 @@ export const channelRouter = router({
         }
 
         // SECURITY: Verify the playlist belongs to the channel the user has permission for
-        if (playlist.channelId !== input.channelId) {
+        if (playlistChannelId !== input.channelId) {
           moduleLogger.warn(
             'Playlist does not belong to the requested channel',
           );
@@ -1959,19 +2029,17 @@ export const channelRouter = router({
         }
 
         // Verify the upload belongs to the same channel
-        const upload = await prisma.uploadRecord.findFirst({
-          where: {
-            id: input.uploadId,
-            channelId: playlist.channelId,
-          },
-          select: { id: true },
+        const upload = await db.query.UploadRecord.findFirst({
+          columns: { id: true },
+          where: (t, { and, eq }) =>
+            and(eq(t.id, input.uploadId), eq(t.channelId, playlistChannelId)),
         });
 
         if (!upload) {
           moduleLogger.warn(
             {
               uploadId: input.uploadId,
-              channelId: playlist.channelId,
+              channelId: playlistChannelId,
               context: {
                 playlistId: input.playlistId,
                 addedBy: ctx.session.appUserId,
@@ -1986,13 +2054,12 @@ export const channelRouter = router({
         }
 
         // Check if upload is already in playlist
-        const existingEntry = await prisma.uploadListEntry.findUnique({
-          where: {
-            uploadListId_uploadRecordId: {
-              uploadListId: input.playlistId,
-              uploadRecordId: input.uploadId,
-            },
-          },
+        const existingEntry = await db.query.UploadListEntry.findFirst({
+          where: (t, { and, eq }) =>
+            and(
+              eq(t.uploadListId, input.playlistId),
+              eq(t.uploadRecordId, input.uploadId),
+            ),
         });
 
         if (existingEntry) {
@@ -2012,11 +2079,9 @@ export const channelRouter = router({
           });
         }
 
-        await prisma.uploadListEntry.create({
-          data: {
-            uploadListId: input.playlistId,
-            uploadRecordId: input.uploadId,
-          },
+        await db.insert(UploadListEntry).values({
+          uploadListId: input.playlistId,
+          uploadRecordId: input.uploadId,
         });
 
         moduleLogger.info(
@@ -2065,9 +2130,9 @@ export const channelRouter = router({
 
       try {
         // SECURITY: Verify the playlist belongs to the channel the user has permission for
-        const playlist = await prisma.uploadList.findUnique({
-          where: { id: input.playlistId },
-          select: { channelId: true },
+        const playlist = await db.query.UploadList.findFirst({
+          columns: { channelId: true },
+          where: (t, { eq }) => eq(t.id, input.playlistId),
         });
 
         if (!playlist) {
@@ -2097,14 +2162,17 @@ export const channelRouter = router({
           });
         }
 
-        const deletedEntry = await prisma.uploadListEntry.deleteMany({
-          where: {
-            uploadListId: input.playlistId,
-            uploadRecordId: input.uploadId,
-          },
-        });
+        const deletedEntries = await db
+          .delete(UploadListEntry)
+          .where(
+            and(
+              eq(UploadListEntry.uploadListId, input.playlistId),
+              eq(UploadListEntry.uploadRecordId, input.uploadId),
+            ),
+          )
+          .returning({ uploadListId: UploadListEntry.uploadListId });
 
-        if (deletedEntry.count === 0) {
+        if (deletedEntries.length === 0) {
           moduleLogger.warn(
             {
               uploadId: input.uploadId,
@@ -2166,21 +2234,30 @@ export const channelRouter = router({
       );
 
       try {
-        await prisma.$transaction(
-          input.uploadIds.map((uploadId, index) =>
-            prisma.uploadListEntry.update({
-              where: {
-                uploadListId_uploadRecordId: {
-                  uploadListId: input.playlistId,
-                  uploadRecordId: uploadId,
-                },
-              },
-              data: {
-                rank: index,
-              },
-            }),
-          ),
-        );
+        const playlist = await db.query.UploadList.findFirst({
+          columns: { id: true, channelId: true },
+          where: (t, { eq }) => eq(t.id, input.playlistId),
+        });
+
+        if (!playlist || playlist.channelId !== input.channelId) {
+          throw new TRPCError({ code: 'FORBIDDEN' });
+        }
+
+        await db.transaction(async (tx) => {
+          for (let index = 0; index < input.uploadIds.length; index++) {
+            const uploadId = input.uploadIds[index];
+            if (!uploadId) continue;
+            await tx
+              .update(UploadListEntry)
+              .set({ rank: index })
+              .where(
+                and(
+                  eq(UploadListEntry.uploadListId, input.playlistId),
+                  eq(UploadListEntry.uploadRecordId, uploadId),
+                ),
+              );
+          }
+        });
 
         moduleLogger.info(
           {
@@ -2238,15 +2315,14 @@ export const channelRouter = router({
       );
 
       try {
-        await prisma.channel.update({
-          where: {
-            id: input.channelId,
-          },
-          data: {
+        await db
+          .update(Channel)
+          .set({
             approvedAt: new Date(),
             approvedById: ctx.session.appUserId,
-          },
-        });
+            updatedAt: new Date(),
+          })
+          .where(eq(Channel.id, input.channelId));
 
         moduleLogger.info(
           {
@@ -2304,15 +2380,14 @@ export const channelRouter = router({
       );
 
       try {
-        await prisma.channel.update({
-          where: {
-            id: input.channelId,
-          },
-          data: {
+        await db
+          .update(Channel)
+          .set({
             approvedAt: null,
             approvedById: null,
-          },
-        });
+            updatedAt: new Date(),
+          })
+          .where(eq(Channel.id, input.channelId));
 
         moduleLogger.info(
           {
@@ -2349,22 +2424,26 @@ export const channelRouter = router({
         const { channelId, url, ...workflowData } = input;
 
         // Get channel and user info for the workflow
-        const [channel, user] = await Promise.all([
-          prisma.channel.findUniqueOrThrow({
-            where: { id: channelId },
-            select: { slug: true },
+        const [channelRecord, userRecord] = await Promise.all([
+          db.query.Channel.findFirst({
+            columns: { slug: true },
+            where: (t, { eq }) => eq(t.id, channelId),
           }),
-          prisma.appUser.findUniqueOrThrow({
-            where: { id: ctx.session.appUserId },
-            select: { username: true },
+          db.query.AppUser.findFirst({
+            columns: { username: true },
+            where: (t, { eq }) => eq(t.id, ctx.session.appUserId),
           }),
         ]);
+
+        if (!channelRecord || !userRecord) {
+          throw new TRPCError({ code: 'NOT_FOUND' });
+        }
 
         // Start the import workflow
         await importMedia({
           url,
-          username: user.username,
-          channelSlug: channel.slug,
+          username: userRecord.username,
+          channelSlug: channelRecord.slug,
           taskQueue: BACKGROUND_QUEUE,
           ...workflowData,
         });

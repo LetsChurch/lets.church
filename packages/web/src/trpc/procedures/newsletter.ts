@@ -1,4 +1,4 @@
-import { prisma } from '@letschurch/db';
+import { db } from '@letschurch/db';
 import { getRequest } from '@tanstack/react-start/server';
 import { z } from 'zod';
 import logger from '@/util/logger';
@@ -82,12 +82,10 @@ export const newsletterProcedures = {
         try {
           // Get enabled public lists from database
           // Only public lists can be subscribed to via the subscription form endpoint
-          const enabledLists = await prisma.newsletterMailingList.findMany({
-            where: {
-              enabled: true,
-              type: 'PUBLIC',
-            },
-            select: { listmonkUuid: true },
+          const enabledLists = await db.query.NewsletterMailingList.findMany({
+            where: (t, { eq, and }) =>
+              and(eq(t.enabled, true), eq(t.type, 'public')),
+            columns: { listmonkUuid: true },
           });
 
           if (enabledLists.length === 0) {

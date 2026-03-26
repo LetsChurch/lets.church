@@ -1,4 +1,16 @@
-import { Prisma, prisma } from '@letschurch/db';
+import {
+  AppUser,
+  AppUserEmail,
+  Channel,
+  db,
+  FeaturedUpload,
+  Organization,
+  OrganizationAddress,
+  OrganizationTag,
+  SearchLogEntry,
+  UploadRecord,
+  UploadState,
+} from '@letschurch/db';
 import { ingestConfig } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
@@ -10,6 +22,18 @@ import {
 } from '@letschurch/temporal/workflows/background';
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
+import {
+  and,
+  count,
+  eq,
+  gt,
+  ilike,
+  isNotNull,
+  isNull,
+  or,
+  sql,
+  sum,
+} from 'drizzle-orm';
 import { z } from 'zod';
 import { IncomingIdSchema } from '@/schemas/common';
 import {
@@ -73,93 +97,100 @@ export const adminRouter = router({
   getPendingApprovals: adminProcedure.query(async () => {
     moduleLogger.info('Fetching pending approvals');
 
-    const [pendingChannels, pendingOrganizations, userCount] =
+    const [pendingChannels, pendingOrganizations, userCountRows] =
       await Promise.all([
-        prisma.channel.findMany({
-          where: {
-            approvedAt: null,
-          },
-          select: {
+        db.query.Channel.findMany({
+          where: (t, { isNull }) => isNull(t.approvedAt),
+          columns: {
             id: true,
             name: true,
             slug: true,
             description: true,
             createdAt: true,
+          },
+          with: {
             memberships: {
-              select: {
+              with: {
                 appUser: {
-                  select: {
-                    id: true,
-                    fullName: true,
+                  columns: { id: true, fullName: true },
+                  with: {
                     emails: {
-                      select: {
-                        email: true,
-                        verifiedAt: true,
-                      },
-                      where: {
-                        verifiedAt: { not: null },
-                      },
-                      take: 1,
+                      columns: { email: true, verifiedAt: true },
                     },
                   },
                 },
               },
-              where: {
-                isAdmin: true,
-              },
-              take: 1,
             },
           },
-          orderBy: {
-            createdAt: 'asc',
-          },
+          orderBy: (t, { asc }) => [asc(t.createdAt)],
         }),
-        prisma.organization.findMany({
-          where: {
-            approvedAt: null,
-          },
-          select: {
+        db.query.Organization.findMany({
+          where: (t, { isNull }) => isNull(t.approvedAt),
+          columns: {
             id: true,
             name: true,
             slug: true,
             description: true,
             type: true,
             createdAt: true,
+          },
+          with: {
             memberships: {
-              select: {
+              with: {
                 appUser: {
-                  select: {
-                    id: true,
-                    fullName: true,
+                  columns: { id: true, fullName: true },
+                  with: {
                     emails: {
-                      select: {
-                        email: true,
-                        verifiedAt: true,
-                      },
-                      where: {
-                        verifiedAt: { not: null },
-                      },
-                      take: 1,
+                      columns: { email: true, verifiedAt: true },
                     },
                   },
                 },
               },
-              where: {
-                isAdmin: true,
-              },
-              take: 1,
             },
           },
-          orderBy: {
-            createdAt: 'asc',
-          },
+          orderBy: (t, { asc }) => [asc(t.createdAt)],
         }),
-        prisma.appUser.count(),
+        db.select({ cnt: count() }).from(AppUser),
       ]);
 
+    const userCount = userCountRows[0]?.cnt ?? 0;
+
+    // Filter membership to admin only, take first, filter verified emails
+    const channels = pendingChannels.map((channel) => {
+      const adminMemberships = channel.memberships
+        .filter((m) => m.isAdmin)
+        .slice(0, 1)
+        .map((m) => ({
+          ...m,
+          appUser: {
+            ...m.appUser,
+            emails: m.appUser.emails
+              .filter((e) => e.verifiedAt !== null)
+              .slice(0, 1),
+          },
+        }));
+      return { ...channel, memberships: adminMemberships };
+    });
+
+    const organizations = pendingOrganizations.map((org) => {
+      const adminMemberships = org.memberships
+        .filter((m) => m.isAdmin)
+        .slice(0, 1)
+        .map((m) => ({
+          ...m,
+          appUser: {
+            ...m.appUser,
+            emails: m.appUser.emails
+              .filter((e) => e.verifiedAt !== null)
+              .slice(0, 1),
+          },
+        }));
+      return { ...org, memberships: adminMemberships };
+    });
+
     return {
-      channels: pendingChannels,
-      organizations: pendingOrganizations,
+      channels,
+      organizations,
       userCount,
     };
   }),
@@ -167,11 +198,9 @@ export const adminRouter = router({
   getPendingChannelApprovals: adminProcedure.query(async () => {
     moduleLogger.info('Fetching pending channel approvals');
 
-    const channels = await prisma.channel.findMany({
-      where: {
-        approvedAt: null,
-      },
-      select: {
+    const channels = await db.query.Channel.findMany({
+      where: (t, { isNull }) => isNull(t.approvedAt),
+      columns: {
         id: true,
         name: true,
         slug: true,
@@ -179,34 +208,22 @@ export const adminRouter = router({
         createdAt: true,
         avatarPath: true,
         visibility: true,
+      },
+      with: {
         memberships: {
-          select: {
+          with: {
             appUser: {
-              select: {
-                id: true,
-                fullName: true,
+              columns: { id: true, fullName: true },
+              with: {
                 emails: {
-                  select: {
-                    email: true,
-                    verifiedAt: true,
-                  },
-                  where: {
-                    verifiedAt: { not: null },
-                  },
-                  take: 1,
+                  columns: { email: true, verifiedAt: true },
                 },
               },
             },
           },
-          where: {
-            isAdmin: true,
-          },
-          take: 1,
         },
       },
-      orderBy: {
-        createdAt: 'asc',
-      },
+      orderBy: (t, { asc }) => [asc(t.createdAt)],
     });
 
     return channels.map((channel) => {
@@ -217,9 +234,23 @@ export const adminRouter = router({
           })
         : null;
 
+      const adminMemberships = channel.memberships
+        .filter((m) => m.isAdmin)
+        .slice(0, 1)
+        .map((m) => ({
+          ...m,
+          appUser: {
+            ...m.appUser,
+            emails: m.appUser.emails
+              .filter((e) => e.verifiedAt !== null)
+              .slice(0, 1),
+          },
+        }));
+
       return {
         ...channelWithoutPath,
         avatarUrl,
+        memberships: adminMemberships,
       };
     });
   }),
@@ -244,32 +275,34 @@ export const adminRouter = router({
         'Fetching all channels',
       );
 
-      const where: {
-        approvedAt?: { not: null } | null;
-        OR?: Array<
-          | { name: { contains: string; mode: 'insensitive' } }
-          | { slug: { contains: string; mode: 'insensitive' } }
-        >;
-      } = {};
+      // Build where conditions
+      const buildChannelWhere = (filter?: string, search?: string) => {
+        const conditions = [];
 
-      if (input?.filter === 'pending') {
-        where.approvedAt = null;
-      } else if (input?.filter === 'approved') {
-        where.approvedAt = { not: null };
-      }
+        if (filter === 'pending') {
+          conditions.push(isNull(Channel.approvedAt));
+        } else if (filter === 'approved') {
+          conditions.push(isNotNull(Channel.approvedAt));
+        }
 
-      if (input?.search) {
-        where.OR = [
-          { name: { contains: input.search, mode: 'insensitive' } },
-          { slug: { contains: input.search, mode: 'insensitive' } },
-        ];
-      }
+        if (search) {
+          conditions.push(
+            or(
+              ilike(Channel.name, `%${search}%`),
+              ilike(Channel.slug, `%${search}%`),
+            ),
+          );
+        }
 
-      const [channels, totalCount, pendingCount, approvedCount] =
+        return conditions.length > 0 ? and(...conditions) : undefined;
+      };
+
+      const whereCondition = buildChannelWhere(input?.filter, input?.search);
+
+      const [channels, totalCountRows, pendingCountRows, approvedCountRows] =
         await Promise.all([
-          prisma.channel.findMany({
-            where,
-            select: {
+          db.query.Channel.findMany({
+            columns: {
               id: true,
               name: true,
               slug: true,
@@ -279,57 +312,76 @@ export const adminRouter = router({
               deletedAt: true,
               avatarPath: true,
               visibility: true,
+            },
+            where: whereCondition ? () => whereCondition : undefined,
+            with: {
               memberships: {
-                select: {
+                with: {
                   appUser: {
-                    select: {
-                      id: true,
-                      fullName: true,
+                    columns: { id: true, fullName: true },
+                    with: {
                       emails: {
-                        select: {
-                          email: true,
-                          verifiedAt: true,
-                        },
-                        where: {
-                          verifiedAt: { not: null },
-                        },
-                        take: 1,
+                        columns: { email: true, verifiedAt: true },
                       },
                     },
                   },
                 },
-                where: {
-                  isAdmin: true,
-                },
-                take: 1,
               },
-              _count: {
-                select: {
-                  uploadRecords: true,
-                  subscribers: true,
-                },
-              },
+              uploadRecords: { columns: { id: true } },
+              subscribers: { columns: { appUserId: true } },
             },
-            orderBy: {
-              createdAt: 'desc',
-            },
+            orderBy: (t, { desc }) => [desc(t.createdAt)],
           }),
-          prisma.channel.count({ where }),
-          prisma.channel.count({ where: { approvedAt: null } }),
-          prisma.channel.count({ where: { approvedAt: { not: null } } }),
+          db.select({ cnt: count() }).from(Channel).where(whereCondition),
+          db
+            .select({ cnt: count() })
+            .from(Channel)
+            .where(isNull(Channel.approvedAt)),
+          db
+            .select({ cnt: count() })
+            .from(Channel)
+            .where(isNotNull(Channel.approvedAt)),
         ]);
 
+      const totalCount = totalCountRows[0]?.cnt ?? 0;
+      const pendingCount = pendingCountRows[0]?.cnt ?? 0;
+      const approvedCount = approvedCountRows[0]?.cnt ?? 0;
+
       const channelsWithAvatarUrl = channels.map((channel) => {
-        const { avatarPath, ...channelWithoutPath } = channel;
+        const {
+          avatarPath,
+          uploadRecords,
+          subscribers,
+          memberships,
+          ...channelWithoutPath
+        } = channel;
         const avatarUrl = avatarPath
           ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
               resize: mantineAvatarSm2x,
             })
           : null;
 
+        const adminMemberships = memberships
+          .filter((m) => m.isAdmin)
+          .slice(0, 1)
+          .map((m) => ({
+            ...m,
+            appUser: {
+              ...m.appUser,
+              emails: m.appUser.emails
+                .filter((e) => e.verifiedAt !== null)
+                .slice(0, 1),
+            },
+          }));
+
         return {
           ...channelWithoutPath,
           avatarUrl,
+          memberships: adminMemberships,
+          _count: {
+            uploadRecords: uploadRecords.length,
+            subscribers: subscribers.length,
+          },
         };
       });
 
@@ -344,11 +396,9 @@ export const adminRouter = router({
   getPendingOrganizationApprovals: adminProcedure.query(async () => {
     moduleLogger.info('Fetching pending organization approvals');
 
-    const organizations = await prisma.organization.findMany({
-      where: {
-        approvedAt: null,
-      },
-      select: {
+    const organizations = await db.query.Organization.findMany({
+      where: (t, { isNull }) => isNull(t.approvedAt),
+      columns: {
         id: true,
         name: true,
         slug: true,
@@ -356,34 +406,22 @@ export const adminRouter = router({
         type: true,
         createdAt: true,
         avatarPath: true,
+      },
+      with: {
         memberships: {
-          select: {
+          with: {
             appUser: {
-              select: {
-                id: true,
-                fullName: true,
+              columns: { id: true, fullName: true },
+              with: {
                 emails: {
-                  select: {
-                    email: true,
-                    verifiedAt: true,
-                  },
-                  where: {
-                    verifiedAt: { not: null },
-                  },
-                  take: 1,
+                  columns: { email: true, verifiedAt: true },
                 },
               },
             },
           },
-          where: {
-            isAdmin: true,
-          },
-          take: 1,
         },
       },
-      orderBy: {
-        createdAt: 'asc',
-      },
+      orderBy: (t, { asc }) => [asc(t.createdAt)],
     });
 
     return organizations.map((org) => {
@@ -394,9 +432,23 @@ export const adminRouter = router({
           })
         : null;
 
+      const adminMemberships = org.memberships
+        .filter((m) => m.isAdmin)
+        .slice(0, 1)
+        .map((m) => ({
+          ...m,
+          appUser: {
+            ...m.appUser,
+            emails: m.appUser.emails
+              .filter((e) => e.verifiedAt !== null)
+              .slice(0, 1),
+          },
+        }));
+
       return {
         ...orgWithoutPath,
         avatarUrl,
+        memberships: adminMemberships,
       };
     });
   }),
@@ -413,15 +465,14 @@ export const adminRouter = router({
       );
 
       try {
-        await prisma.channel.update({
-          where: {
-            id: input.channelId,
-          },
-          data: {
+        await db
+          .update(Channel)
+          .set({
             approvedAt: new Date(),
             approvedById: ctx.session.appUserId,
-          },
-        });
+            updatedAt: new Date(),
+          })
+          .where(eq(Channel.id, input.channelId));
 
         moduleLogger.info(
           {
@@ -463,15 +514,14 @@ export const adminRouter = router({
       );
 
       try {
-        await prisma.organization.update({
-          where: {
-            id: input.organizationId,
-          },
-          data: {
+        await db
+          .update(Organization)
+          .set({
             approvedAt: new Date(),
             approvedById: ctx.session.appUserId,
-          },
-        });
+            updatedAt: new Date(),
+          })
+          .where(eq(Organization.id, input.organizationId));
 
         moduleLogger.info(
           {
@@ -523,43 +573,43 @@ export const adminRouter = router({
         'Fetching all organizations',
       );
 
-      const where: {
-        approvedAt?: { not: null } | null;
-        type?: 'CHURCH' | 'MINISTRY';
-        OR?: Array<
-          | { name: { contains: string; mode: 'insensitive' } }
-          | { slug: { contains: string; mode: 'insensitive' } }
-        >;
-      } = {};
+      const buildOrgWhere = (filter?: string, search?: string) => {
+        const conditions = [];
 
-      if (input?.filter === 'pending') {
-        where.approvedAt = null;
-      } else if (input?.filter === 'approved') {
-        where.approvedAt = { not: null };
-      } else if (input?.filter === 'churches') {
-        where.type = 'CHURCH';
-      } else if (input?.filter === 'ministries') {
-        where.type = 'MINISTRY';
-      }
+        if (filter === 'pending') {
+          conditions.push(isNull(Organization.approvedAt));
+        } else if (filter === 'approved') {
+          conditions.push(isNotNull(Organization.approvedAt));
+        } else if (filter === 'churches') {
+          conditions.push(eq(Organization.type, 'CHURCH'));
+        } else if (filter === 'ministries') {
+          conditions.push(eq(Organization.type, 'MINISTRY'));
+        }
 
-      if (input?.search) {
-        where.OR = [
-          { name: { contains: input.search, mode: 'insensitive' } },
-          { slug: { contains: input.search, mode: 'insensitive' } },
-        ];
-      }
+        if (search) {
+          conditions.push(
+            or(
+              ilike(Organization.name, `%${search}%`),
+              ilike(Organization.slug, `%${search}%`),
+            ),
+          );
+        }
+
+        return conditions.length > 0 ? and(...conditions) : undefined;
+      };
+
+      const whereCondition = buildOrgWhere(input?.filter, input?.search);
 
       const [
         organizations,
-        totalCount,
-        pendingCount,
-        approvedCount,
-        churchCount,
-        ministryCount,
+        totalCountRows,
+        pendingCountRows,
+        approvedCountRows,
+        churchCountRows,
+        ministryCountRows,
       ] = await Promise.all([
-        prisma.organization.findMany({
-          where,
-          select: {
+        db.query.Organization.findMany({
+          columns: {
             id: true,
             name: true,
             slug: true,
@@ -571,32 +621,23 @@ export const adminRouter = router({
             primaryEmail: true,
             primaryPhoneNumber: true,
             websiteUrl: true,
+          },
+          where: whereCondition ? () => whereCondition : undefined,
+          with: {
             memberships: {
-              select: {
+              with: {
                 appUser: {
-                  select: {
-                    id: true,
-                    fullName: true,
+                  columns: { id: true, fullName: true },
+                  with: {
                     emails: {
-                      select: {
-                        email: true,
-                        verifiedAt: true,
-                      },
-                      where: {
-                        verifiedAt: { not: null },
-                      },
-                      take: 1,
+                      columns: { email: true, verifiedAt: true },
                     },
                   },
                 },
               },
-              where: {
-                isAdmin: true,
-              },
-              take: 1,
             },
             addresses: {
-              select: {
+              columns: {
                 id: true,
                 type: true,
                 name: true,
@@ -610,35 +651,69 @@ export const adminRouter = router({
                 country: true,
               },
             },
-            _count: {
-              select: {
-                channelAssociations: true,
-                memberships: true,
-              },
-            },
+            channelAssociations: { columns: { channelId: true } },
           },
-          orderBy: {
-            createdAt: 'desc',
-          },
+          orderBy: (t, { desc }) => [desc(t.createdAt)],
         }),
-        prisma.organization.count({ where }),
-        prisma.organization.count({ where: { approvedAt: null } }),
-        prisma.organization.count({ where: { approvedAt: { not: null } } }),
-        prisma.organization.count({ where: { type: 'CHURCH' } }),
-        prisma.organization.count({ where: { type: 'MINISTRY' } }),
+        db.select({ cnt: count() }).from(Organization).where(whereCondition),
+        db
+          .select({ cnt: count() })
+          .from(Organization)
+          .where(isNull(Organization.approvedAt)),
+        db
+          .select({ cnt: count() })
+          .from(Organization)
+          .where(isNotNull(Organization.approvedAt)),
+        db
+          .select({ cnt: count() })
+          .from(Organization)
+          .where(eq(Organization.type, 'CHURCH')),
+        db
+          .select({ cnt: count() })
+          .from(Organization)
+          .where(eq(Organization.type, 'MINISTRY')),
       ]);
 
+      const totalCount = totalCountRows[0]?.cnt ?? 0;
+      const pendingCount = pendingCountRows[0]?.cnt ?? 0;
+      const approvedCount = approvedCountRows[0]?.cnt ?? 0;
+      const churchCount = churchCountRows[0]?.cnt ?? 0;
+      const ministryCount = ministryCountRows[0]?.cnt ?? 0;
+
       const organizationsWithAvatarUrl = organizations.map((org) => {
-        const { avatarPath, ...orgWithoutPath } = org;
+        const {
+          avatarPath,
+          memberships,
+          channelAssociations,
+          ...orgWithoutPath
+        } = org;
         const avatarUrl = avatarPath
           ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
               resize: mantineAvatarSm2x,
             })
           : null;
 
+        const adminMemberships = memberships
+          .filter((m) => m.isAdmin)
+          .slice(0, 1)
+          .map((m) => ({
+            ...m,
+            appUser: {
+              ...m.appUser,
+              emails: m.appUser.emails
+                .filter((e) => e.verifiedAt !== null)
+                .slice(0, 1),
+            },
+          }));
+
         return {
           ...orgWithoutPath,
           avatarUrl,
+          memberships: adminMemberships,
+          _count: {
+            channelAssociations: channelAssociations.length,
+            memberships: memberships.length,
+          },
         };
       });
 
@@ -664,16 +739,12 @@ export const adminRouter = router({
       );
 
       try {
-        const organization = await prisma.organization.findUnique({
-          where: { id: input.organizationId },
-          select: {
-            id: true,
+        const organization = await db.query.Organization.findFirst({
+          where: (t, { eq }) => eq(t.id, input.organizationId),
+          columns: { id: true },
+          with: {
             addresses: {
-              select: {
-                id: true,
-                latitude: true,
-                longitude: true,
-              },
+              columns: { id: true, latitude: true, longitude: true },
             },
           },
         });
@@ -693,16 +764,14 @@ export const adminRouter = router({
         }
 
         // Reset geocoding data for addresses that need retry
-        await prisma.organizationAddress.updateMany({
-          where: {
-            organizationId: input.organizationId,
-          },
-          data: {
+        await db
+          .update(OrganizationAddress)
+          .set({
             latitude: null,
             longitude: null,
-            geocodingJson: Prisma.JsonNull,
-          },
-        });
+            geocodingJson: null,
+          })
+          .where(eq(OrganizationAddress.organizationId, input.organizationId));
 
         const temporalClient = await client;
         const workflowHandle = await temporalClient.workflow.start(
@@ -824,11 +893,9 @@ export const adminRouter = router({
       );
 
       try {
-        await prisma.organization.delete({
-          where: {
-            id: input.organizationId,
-          },
-        });
+        await db
+          .delete(Organization)
+          .where(eq(Organization.id, input.organizationId));
 
         moduleLogger.info(
           {
@@ -861,15 +928,15 @@ export const adminRouter = router({
   getOrganizationTags: adminProcedure.query(async () => {
     moduleLogger.info('Fetching organization tags');
 
-    return prisma.organizationTag.findMany({
-      select: {
+    return db.query.OrganizationTag.findMany({
+      columns: {
         slug: true,
         label: true,
         description: true,
         category: true,
         color: true,
       },
-      orderBy: [{ category: 'asc' }, { label: 'asc' }],
+      orderBy: (t, { asc }) => [asc(t.category), asc(t.label)],
     });
   }),
 
@@ -912,27 +979,39 @@ export const adminRouter = router({
       );
 
       try {
-        const tag = await prisma.organizationTag.upsert({
-          where: { slug: input.slug },
-          create: input,
-          update: {
+        const [tag] = await db
+          .insert(OrganizationTag)
+          .values({
+            slug: input.slug,
             label: input.label,
             description: input.description,
             category: input.category,
             color: input.color,
-          },
-        });
+          })
+          .onConflictDoUpdate({
+            target: OrganizationTag.slug,
+            set: {
+              label: input.label,
+              description: input.description,
+              category: input.category,
+              color: input.color,
+            },
+          })
+          .returning();
 
         moduleLogger.info(
           {
             appUserId: ctx.session.appUserId,
             context: {
-              tagSlug: tag.slug,
+              tagSlug: tag?.slug,
             },
           },
           'Organization tag upserted successfully',
         );
 
+        if (!tag) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+        }
         return tag;
       } catch (error) {
         moduleLogger.error(
@@ -967,9 +1046,9 @@ export const adminRouter = router({
       );
 
       try {
-        await prisma.organizationTag.delete({
-          where: { slug: input.slug },
-        });
+        await db
+          .delete(OrganizationTag)
+          .where(eq(OrganizationTag.slug, input.slug));
 
         moduleLogger.info(
           {
@@ -1004,30 +1083,28 @@ export const adminRouter = router({
   getUsers: adminProcedure.query(async () => {
     moduleLogger.info('Fetching users');
 
-    return prisma.appUser.findMany({
-      select: {
+    return db.query.AppUser.findMany({
+      columns: {
         id: true,
         username: true,
         fullName: true,
         role: true,
         createdAt: true,
+      },
+      with: {
         emails: {
-          select: {
-            email: true,
-            verifiedAt: true,
-          },
+          columns: { email: true, verifiedAt: true },
         },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: (t, { desc }) => [desc(t.createdAt)],
     });
   }),
 
   getUserCount: adminProcedure.query(async () => {
     moduleLogger.info('Fetching user count');
 
-    return prisma.appUser.count();
+    const rows = await db.select({ cnt: count() }).from(AppUser);
+    return rows[0]?.cnt ?? 0;
   }),
 
   createUser: adminProcedure
@@ -1056,36 +1133,42 @@ export const adminRouter = router({
       try {
         const hashedPassword = await argon2.hash(input.password);
 
-        const user = await prisma.appUser.create({
-          data: {
-            username: input.username,
-            password: hashedPassword,
-            fullName: input.fullName,
-            role: input.role,
-            emails: {
-              create: {
-                email: input.email,
-                verifiedAt: new Date(),
-              },
-            },
-          },
-          select: {
-            id: true,
-            username: true,
-            fullName: true,
-            role: true,
-            createdAt: true,
-            emails: {
-              select: {
-                email: true,
-                verifiedAt: true,
-              },
-              where: {
-                verifiedAt: { not: null },
-              },
-              take: 1,
-            },
-          },
+        const user = await db.transaction(async (tx) => {
+          const [newUser] = await tx
+            .insert(AppUser)
+            .values({
+              username: input.username,
+              password: hashedPassword,
+              fullName: input.fullName,
+              role: input.role,
+              updatedAt: new Date(),
+            })
+            .returning({
+              id: AppUser.id,
+              username: AppUser.username,
+              fullName: AppUser.fullName,
+              role: AppUser.role,
+              createdAt: AppUser.createdAt,
+            });
+
+          if (!newUser) {
+            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+          }
+
+          await tx.insert(AppUserEmail).values({
+            appUserId: newUser.id,
+            email: input.email,
+            verifiedAt: new Date(),
+          });
+
+          const emails = await tx.query.AppUserEmail.findMany({
+            where: (t, { and, eq, isNotNull }) =>
+              and(eq(t.appUserId, newUser.id), isNotNull(t.verifiedAt)),
+            columns: { email: true, verifiedAt: true },
+            limit: 1,
+          });
+
+          return { ...newUser, emails };
         });
 
         moduleLogger.info(
@@ -1147,44 +1230,52 @@ export const adminRouter = router({
           username?: string;
           fullName?: string | null;
           role?: 'USER' | 'ADMIN';
-        } = {};
+          updatedAt: Date;
+        } = { updatedAt: new Date() };
         if (input.username) updateData.username = input.username;
         if (input.fullName !== undefined) updateData.fullName = input.fullName;
         if (input.role) updateData.role = input.role;
 
-        const user = await prisma.appUser.update({
-          where: { id: input.appUserId },
-          data: updateData,
-          select: {
-            id: true,
-            username: true,
-            fullName: true,
-            role: true,
-            createdAt: true,
-            emails: {
-              select: {
-                email: true,
-                verifiedAt: true,
-              },
-              where: {
-                verifiedAt: { not: null },
-              },
-              take: 1,
-            },
-          },
-        });
+        const [updatedUser] = await db
+          .update(AppUser)
+          .set(updateData)
+          .where(eq(AppUser.id, input.appUserId))
+          .returning({
+            id: AppUser.id,
+            username: AppUser.username,
+            fullName: AppUser.fullName,
+            role: AppUser.role,
+            createdAt: AppUser.createdAt,
+          });
 
         if (input.email) {
-          await prisma.appUserEmail.updateMany({
-            where: {
-              appUserId: input.appUserId,
-              verifiedAt: { not: null },
-            },
-            data: {
-              email: input.email,
-            },
+          // Target a single row by primary key to avoid updating all verified emails
+          const targetEmail = await db.query.AppUserEmail.findFirst({
+            where: (t, { and, eq, isNotNull }) =>
+              and(eq(t.appUserId, input.appUserId), isNotNull(t.verifiedAt)),
+            columns: { id: true },
+            orderBy: (t, { desc }) => desc(t.verifiedAt),
           });
+          if (targetEmail) {
+            await db
+              .update(AppUserEmail)
+              .set({ email: input.email })
+              .where(eq(AppUserEmail.id, targetEmail.id));
+          }
         }
+
+        // Fetch verified emails (take 1)
+        const emails = await db.query.AppUserEmail.findMany({
+          where: (t, { and, eq, isNotNull }) =>
+            and(eq(t.appUserId, input.appUserId), isNotNull(t.verifiedAt)),
+          columns: { email: true, verifiedAt: true },
+          limit: 1,
+        });
+
+        if (!updatedUser) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+        }
+        const user = { ...updatedUser, emails };
 
         moduleLogger.info(
           {
@@ -1233,14 +1324,13 @@ export const adminRouter = router({
       );
 
       try {
-        const user = await prisma.appUser.findUnique({
-          where: { id: input.userId },
-          select: {
-            id: true,
-            username: true,
+        const user = await db.query.AppUser.findFirst({
+          where: (t, { eq }) => eq(t.id, input.userId),
+          columns: { id: true, username: true },
+          with: {
             emails: {
-              select: { email: true, key: true },
-              take: 1,
+              columns: { email: true, key: true },
+              limit: 1,
             },
           },
         });
@@ -1317,13 +1407,12 @@ export const adminRouter = router({
       );
 
       try {
-        const user = await prisma.appUser.findUnique({
-          where: { id: input.userId },
-          select: {
-            id: true,
-            username: true,
+        const user = await db.query.AppUser.findFirst({
+          where: (t, { eq }) => eq(t.id, input.userId),
+          columns: { id: true, username: true },
+          with: {
             emails: {
-              select: { email: true, verifiedAt: true },
+              columns: { email: true, verifiedAt: true },
             },
           },
         });
@@ -1399,16 +1488,10 @@ export const adminRouter = router({
 
     try {
       // Get uploads that are not fully processed
-      const allProcessingUploads = await prisma.uploadRecord.findMany({
-        select: {
-          finalizedUploadKey: true,
-        },
-        where: {
-          OR: [
-            { transcodingFinishedAt: null },
-            { transcribingFinishedAt: null },
-          ],
-        },
+      const allProcessingUploads = await db.query.UploadRecord.findMany({
+        columns: { finalizedUploadKey: true },
+        where: (t, { or, isNull }) =>
+          or(isNull(t.transcodingFinishedAt), isNull(t.transcribingFinishedAt)),
       });
 
       // Filter to only include uploads with active workflows
@@ -1438,8 +1521,8 @@ export const adminRouter = router({
 
     try {
       // Get uploads that are not fully processed
-      const allProcessingUploads = await prisma.uploadRecord.findMany({
-        select: {
+      const allProcessingUploads = await db.query.UploadRecord.findMany({
+        columns: {
           id: true,
           title: true,
           description: true,
@@ -1450,21 +1533,15 @@ export const adminRouter = router({
           transcribingFinishedAt: true,
           transcodingProgress: true,
           finalizedUploadKey: true,
+        },
+        where: (t, { or, isNull }) =>
+          or(isNull(t.transcodingFinishedAt), isNull(t.transcribingFinishedAt)),
+        with: {
           channel: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-            },
+            columns: { id: true, name: true, slug: true },
           },
         },
-        where: {
-          OR: [
-            { transcodingFinishedAt: null },
-            { transcribingFinishedAt: null },
-          ],
-        },
-        orderBy: { createdAt: 'desc' },
+        orderBy: (t, { desc }) => [desc(t.createdAt)],
       });
 
       // Filter to only include uploads with active workflows
@@ -1494,13 +1571,15 @@ export const adminRouter = router({
   getFeaturedUploads: adminProcedure.query(async () => {
     moduleLogger.info('Fetching featured uploads');
 
-    const featuredUploads = await prisma.featuredUpload.findMany({
-      select: {
+    const featuredUploads = await db.query.FeaturedUpload.findMany({
+      columns: {
         uploadRecordId: true,
         rank: true,
         createdAt: true,
+      },
+      with: {
         uploadRecord: {
-          select: {
+          columns: {
             id: true,
             title: true,
             description: true,
@@ -1509,8 +1588,10 @@ export const adminRouter = router({
             overrideThumbnailPath: true,
             defaultThumbnailBlurhash: true,
             overrideThumbnailBlurhash: true,
+          },
+          with: {
             channel: {
-              select: {
+              columns: {
                 id: true,
                 name: true,
                 slug: true,
@@ -1522,9 +1603,7 @@ export const adminRouter = router({
           },
         },
       },
-      orderBy: {
-        rank: 'asc',
-      },
+      orderBy: (t, { asc }) => [asc(t.rank)],
     });
 
     return featuredUploads.map(({ uploadRecord, ...rest }) => {
@@ -1569,9 +1648,9 @@ export const adminRouter = router({
 
       try {
         // Check if upload exists and is public
-        const upload = await prisma.uploadRecord.findUnique({
-          where: { id: input.uploadId },
-          select: {
+        const upload = await db.query.UploadRecord.findFirst({
+          where: (t, { eq }) => eq(t.id, input.uploadId),
+          columns: {
             id: true,
             visibility: true,
             transcodingFinishedAt: true,
@@ -1601,8 +1680,8 @@ export const adminRouter = router({
         }
 
         // Check if already featured
-        const existing = await prisma.featuredUpload.findUnique({
-          where: { uploadRecordId: input.uploadId },
+        const existing = await db.query.FeaturedUpload.findFirst({
+          where: (t, { eq }) => eq(t.uploadRecordId, input.uploadId),
         });
 
         if (existing) {
@@ -1612,19 +1691,22 @@ export const adminRouter = router({
           });
         }
 
-        // Get max rank
-        const maxRank = await prisma.featuredUpload.findFirst({
-          select: { rank: true },
-          orderBy: { rank: 'desc' },
-        });
-
-        const newRank = (maxRank?.rank ?? -1) + 1;
-
-        const featuredUpload = await prisma.featuredUpload.create({
-          data: {
-            uploadRecordId: input.uploadId,
-            rank: newRank,
-          },
+        // Get max rank and insert atomically to avoid rank collisions
+        const [featuredUpload, newRank] = await db.transaction(async (tx) => {
+          const maxRankRow = await tx.query.FeaturedUpload.findFirst({
+            columns: { rank: true },
+            orderBy: (t, { desc }) => [desc(t.rank)],
+          });
+          const rank = (maxRankRow?.rank ?? -1) + 1;
+          const [row] = await tx
+            .insert(FeaturedUpload)
+            .values({
+              uploadRecordId: input.uploadId,
+              rank,
+              updatedAt: new Date(),
+            })
+            .returning();
+          return [row, rank] as const;
         });
 
         moduleLogger.info(
@@ -1638,6 +1720,9 @@ export const adminRouter = router({
           'Featured upload added successfully',
         );
 
+        if (!featuredUpload) {
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+        }
         return featuredUpload;
       } catch (error) {
         if (error instanceof TRPCError) {
@@ -1675,9 +1760,9 @@ export const adminRouter = router({
 
       try {
         // Get the rank of the upload being removed
-        const featuredUpload = await prisma.featuredUpload.findUnique({
-          where: { uploadRecordId: input.uploadId },
-          select: { rank: true },
+        const featuredUpload = await db.query.FeaturedUpload.findFirst({
+          where: (t, { eq }) => eq(t.uploadRecordId, input.uploadId),
+          columns: { rank: true },
         });
 
         if (!featuredUpload) {
@@ -1687,19 +1772,16 @@ export const adminRouter = router({
           });
         }
 
-        // Delete the featured upload
-        await prisma.featuredUpload.delete({
-          where: { uploadRecordId: input.uploadId },
-        });
+        // Delete the featured upload and rebalance ranks atomically
+        await db.transaction(async (tx) => {
+          await tx
+            .delete(FeaturedUpload)
+            .where(eq(FeaturedUpload.uploadRecordId, input.uploadId));
 
-        // Rebalance ranks: decrement all ranks greater than the removed one
-        await prisma.featuredUpload.updateMany({
-          where: {
-            rank: { gt: featuredUpload.rank },
-          },
-          data: {
-            rank: { decrement: 1 },
-          },
+          await tx
+            .update(FeaturedUpload)
+            .set({ rank: sql`${FeaturedUpload.rank} - 1` })
+            .where(gt(FeaturedUpload.rank, featuredUpload.rank));
         });
 
         moduleLogger.info(
@@ -1749,8 +1831,8 @@ export const adminRouter = router({
 
       try {
         // Verify all uploads are currently featured
-        const existingFeatured = await prisma.featuredUpload.findMany({
-          select: { uploadRecordId: true },
+        const existingFeatured = await db.query.FeaturedUpload.findMany({
+          columns: { uploadRecordId: true },
         });
 
         const existingIds = new Set(
@@ -1777,10 +1859,10 @@ export const adminRouter = router({
         // Update ranks based on array order
         await Promise.all(
           input.uploadIds.map((uploadId, index) =>
-            prisma.featuredUpload.update({
-              where: { uploadRecordId: uploadId },
-              data: { rank: index },
-            }),
+            db
+              .update(FeaturedUpload)
+              .set({ rank: index, updatedAt: new Date() })
+              .where(eq(FeaturedUpload.uploadRecordId, uploadId)),
           ),
         );
 
@@ -1831,24 +1913,21 @@ export const adminRouter = router({
 
       try {
         // Check if upload is currently featured
-        const existing = await prisma.featuredUpload.findUnique({
-          where: { uploadRecordId: input.uploadId },
+        const existing = await db.query.FeaturedUpload.findFirst({
+          where: (t, { eq }) => eq(t.uploadRecordId, input.uploadId),
         });
 
         if (existing) {
-          // Remove from featured
-          await prisma.featuredUpload.delete({
-            where: { uploadRecordId: input.uploadId },
-          });
+          // Remove from featured and rebalance ranks atomically
+          await db.transaction(async (tx) => {
+            await tx
+              .delete(FeaturedUpload)
+              .where(eq(FeaturedUpload.uploadRecordId, input.uploadId));
 
-          // Rebalance ranks
-          await prisma.featuredUpload.updateMany({
-            where: {
-              rank: { gt: existing.rank },
-            },
-            data: {
-              rank: { decrement: 1 },
-            },
+            await tx
+              .update(FeaturedUpload)
+              .set({ rank: sql`${FeaturedUpload.rank} - 1` })
+              .where(gt(FeaturedUpload.rank, existing.rank));
           });
 
           moduleLogger.info(
@@ -1863,9 +1942,9 @@ export const adminRouter = router({
         }
 
         // Add to featured
-        const upload = await prisma.uploadRecord.findUnique({
-          where: { id: input.uploadId },
-          select: {
+        const upload = await db.query.UploadRecord.findFirst({
+          where: (t, { eq }) => eq(t.id, input.uploadId),
+          columns: {
             id: true,
             visibility: true,
             transcodingFinishedAt: true,
@@ -1894,19 +1973,19 @@ export const adminRouter = router({
           });
         }
 
-        // Get max rank
-        const maxRank = await prisma.featuredUpload.findFirst({
-          select: { rank: true },
-          orderBy: { rank: 'desc' },
-        });
-
-        const newRank = (maxRank?.rank ?? -1) + 1;
-
-        await prisma.featuredUpload.create({
-          data: {
+        // Get max rank and insert atomically to avoid rank collisions
+        const newRank = await db.transaction(async (tx) => {
+          const maxRankRow = await tx.query.FeaturedUpload.findFirst({
+            columns: { rank: true },
+            orderBy: (t, { desc }) => [desc(t.rank)],
+          });
+          const rank = (maxRankRow?.rank ?? -1) + 1;
+          await tx.insert(FeaturedUpload).values({
             uploadRecordId: input.uploadId,
-            rank: newRank,
-          },
+            rank,
+            updatedAt: new Date(),
+          });
+          return rank;
         });
 
         moduleLogger.info(
@@ -1949,29 +2028,30 @@ export const adminRouter = router({
     moduleLogger.info('Fetching upload backup stats');
 
     const [
-      statusCounts,
-      totalStorageResult,
-      nullSizeBytesCount,
+      statusCountRows,
+      totalStorageRows,
+      nullSizeBytesCountRows,
       backfillProgress,
       backfillSizesProgress,
       bulkBackupProgress,
       cleanupProgress,
     ] = await Promise.all([
-      prisma.uploadState.groupBy({
-        by: ['backupStatus'],
-        _count: { id: true },
-      }),
-      prisma.uploadState.aggregate({
-        _sum: { sizeBytes: true },
-      }),
-      prisma.uploadState.count({
-        where: { sizeBytes: null },
-      }),
+      db
+        .select({ backupStatus: UploadState.backupStatus, cnt: count() })
+        .from(UploadState)
+        .groupBy(UploadState.backupStatus),
+      db.select({ total: sum(UploadState.sizeBytes) }).from(UploadState),
+      db
+        .select({ cnt: count() })
+        .from(UploadState)
+        .where(isNull(UploadState.sizeBytes)),
       getBackfillUploadStatesProgress(),
       getBackfillUploadStateSizesProgress(),
       getBulkBackupToGlacierProgress(),
       getCleanupStaleUploadStatesProgress(),
     ]);
+
+    const nullSizeBytesCount = nullSizeBytesCountRows[0]?.cnt ?? 0;
 
     const stats = {
       notBackedUp: 0,
@@ -1979,24 +2059,24 @@ export const adminRouter = router({
       backedUp: 0,
       backupFailed: 0,
       total: 0,
-      totalStorageBytes: totalStorageResult._sum.sizeBytes?.toString() ?? '0',
+      totalStorageBytes: totalStorageRows[0]?.total?.toString() ?? '0',
       nullSizeBytesCount,
     };
 
-    for (const result of statusCounts) {
-      stats.total += result._count.id;
+    for (const result of statusCountRows) {
+      stats.total += result.cnt;
       switch (result.backupStatus) {
         case 'NOT_BACKED_UP':
-          stats.notBackedUp = result._count.id;
+          stats.notBackedUp = result.cnt;
           break;
         case 'BACKING_UP':
-          stats.backingUp = result._count.id;
+          stats.backingUp = result.cnt;
           break;
         case 'BACKED_UP':
-          stats.backedUp = result._count.id;
+          stats.backedUp = result.cnt;
           break;
         case 'BACKUP_FAILED':
-          stats.backupFailed = result._count.id;
+          stats.backupFailed = result.cnt;
           break;
       }
     }
@@ -2351,19 +2431,22 @@ export const adminRouter = router({
   }),
 
   getBackfillFilenamesStatus: adminProcedure.query(async () => {
-    const [remainingCount, progress] = await Promise.all([
-      prisma.uploadRecord.count({
-        where: {
-          uploadFinalized: true,
-          finalizedUploadKey: { not: null },
-          originalFileName: null,
-        },
-      }),
+    const [remainingCountRows, progress] = await Promise.all([
+      db
+        .select({ cnt: count() })
+        .from(UploadRecord)
+        .where(
+          and(
+            eq(UploadRecord.uploadFinalized, true),
+            isNotNull(UploadRecord.finalizedUploadKey),
+            isNull(UploadRecord.originalFileName),
+          ),
+        ),
       getBackfillFilenamesProgress(),
     ]);
 
     return {
-      remainingCount,
+      remainingCount: remainingCountRows[0]?.cnt ?? 0,
       workflowStatus: progress,
     };
   }),
@@ -2598,13 +2681,13 @@ export const adminRouter = router({
     .query(async ({ input }) => {
       moduleLogger.info('Fetching failed backups');
 
-      const [failedBackups, totalCount] = await Promise.all([
-        prisma.uploadState.findMany({
-          where: { backupStatus: 'BACKUP_FAILED' },
-          orderBy: { updatedAt: 'desc' },
-          take: input.limit,
-          skip: input.offset,
-          select: {
+      const [failedBackups, totalCountRows] = await Promise.all([
+        db.query.UploadState.findMany({
+          where: (t, { eq }) => eq(t.backupStatus, 'BACKUP_FAILED'),
+          orderBy: (t, { desc }) => [desc(t.updatedAt)],
+          limit: input.limit,
+          offset: input.offset,
+          columns: {
             id: true,
             s3Key: true,
             s3Bucket: true,
@@ -2612,22 +2695,22 @@ export const adminRouter = router({
             sizeBytes: true,
             createdAt: true,
             updatedAt: true,
+          },
+          with: {
             uploadRecord: {
-              select: {
-                id: true,
-                title: true,
-              },
+              columns: { id: true, title: true },
             },
           },
         }),
-        prisma.uploadState.count({
-          where: { backupStatus: 'BACKUP_FAILED' },
-        }),
+        db
+          .select({ cnt: count() })
+          .from(UploadState)
+          .where(eq(UploadState.backupStatus, 'BACKUP_FAILED')),
       ]);
 
       return {
         failedBackups,
-        totalCount,
+        totalCount: totalCountRows[0]?.cnt ?? 0,
       };
     }),
 
@@ -2648,8 +2731,8 @@ export const adminRouter = router({
       );
 
       try {
-        const uploadState = await prisma.uploadState.findUnique({
-          where: { id: input.uploadStateId },
+        const uploadState = await db.query.UploadState.findFirst({
+          where: (t, { eq }) => eq(t.id, input.uploadStateId),
         });
 
         if (!uploadState) {
@@ -2666,14 +2749,15 @@ export const adminRouter = router({
           });
         }
 
-        await prisma.uploadState.update({
-          where: { id: input.uploadStateId },
-          data: {
+        await db
+          .update(UploadState)
+          .set({
             backupStatus: 'NOT_BACKED_UP',
             backupKey: null,
             backedUpAt: null,
-          },
-        });
+            updatedAt: new Date(),
+          })
+          .where(eq(UploadState.id, input.uploadStateId));
 
         moduleLogger.info(
           {
@@ -2711,25 +2795,27 @@ export const adminRouter = router({
     moduleLogger.info('Retrying all failed backups');
 
     try {
-      const result = await prisma.uploadState.updateMany({
-        where: { backupStatus: 'BACKUP_FAILED' },
-        data: {
+      const result = await db
+        .update(UploadState)
+        .set({
           backupStatus: 'NOT_BACKED_UP',
           backupKey: null,
           backedUpAt: null,
-        },
-      });
+          updatedAt: new Date(),
+        })
+        .where(eq(UploadState.backupStatus, 'BACKUP_FAILED'))
+        .returning({ id: UploadState.id });
 
       moduleLogger.info(
         {
           context: {
-            count: result.count,
+            count: result.length,
           },
         },
         'Successfully reset all failed backups to NOT_BACKED_UP',
       );
 
-      return { success: true, count: result.count };
+      return { success: true, count: result.length };
     } catch (error) {
       moduleLogger.error(
         {
@@ -2752,28 +2838,27 @@ export const adminRouter = router({
 
     try {
       // Get uploads that have been finalized but not fully processed
-      const failedUploads = await prisma.uploadRecord.findMany({
-        where: {
-          uploadFinalized: true,
-          finalizedUploadKey: { not: null },
-          OR: [
-            {
-              transcodingStartedAt: null,
-              transcodingFinishedAt: null,
-            },
-            {
-              transcodingStartedAt: { not: null },
-              transcodingFinishedAt: null,
-            },
-            {
-              transcribingStartedAt: { not: null },
-              transcribingFinishedAt: null,
-            },
-          ],
-        },
-        select: {
-          finalizedUploadKey: true,
-        },
+      const failedUploads = await db.query.UploadRecord.findMany({
+        where: (t, { and, or, eq, isNull, isNotNull }) =>
+          and(
+            eq(t.uploadFinalized, true),
+            isNotNull(t.finalizedUploadKey),
+            or(
+              and(
+                isNull(t.transcodingStartedAt),
+                isNull(t.transcodingFinishedAt),
+              ),
+              and(
+                isNotNull(t.transcodingStartedAt),
+                isNull(t.transcodingFinishedAt),
+              ),
+              and(
+                isNotNull(t.transcribingStartedAt),
+                isNull(t.transcribingFinishedAt),
+              ),
+            ),
+          ),
+        columns: { finalizedUploadKey: true },
       });
 
       // Filter out uploads that are currently processing
@@ -2809,27 +2894,27 @@ export const adminRouter = router({
       moduleLogger.info('Fetching failed uploads');
 
       try {
-        // Get uploads that have been finalized but not fully processed
-        const failedUploads = await prisma.uploadRecord.findMany({
-          where: {
-            uploadFinalized: true,
-            finalizedUploadKey: { not: null },
-            OR: [
-              {
-                transcodingStartedAt: null,
-                transcodingFinishedAt: null,
-              },
-              {
-                transcodingStartedAt: { not: null },
-                transcodingFinishedAt: null,
-              },
-              {
-                transcribingStartedAt: { not: null },
-                transcribingFinishedAt: null,
-              },
-            ],
-          },
-          select: {
+        const failedUploads = await db.query.UploadRecord.findMany({
+          where: (t, { and, or, eq, isNull, isNotNull }) =>
+            and(
+              eq(t.uploadFinalized, true),
+              isNotNull(t.finalizedUploadKey),
+              or(
+                and(
+                  isNull(t.transcodingStartedAt),
+                  isNull(t.transcodingFinishedAt),
+                ),
+                and(
+                  isNotNull(t.transcodingStartedAt),
+                  isNull(t.transcodingFinishedAt),
+                ),
+                and(
+                  isNotNull(t.transcribingStartedAt),
+                  isNull(t.transcribingFinishedAt),
+                ),
+              ),
+            ),
+          columns: {
             id: true,
             title: true,
             description: true,
@@ -2840,46 +2925,45 @@ export const adminRouter = router({
             transcodingFinishedAt: true,
             transcribingStartedAt: true,
             transcribingFinishedAt: true,
+          },
+          with: {
             channel: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-              },
+              columns: { id: true, name: true, slug: true },
             },
             createdBy: {
-              select: {
-                id: true,
-                username: true,
-                fullName: true,
-              },
+              columns: { id: true, username: true, fullName: true },
             },
           },
-          orderBy: { uploadFinalizedAt: 'desc' },
-          take: input.limit,
-          skip: input.offset,
+          orderBy: (t, { desc }) => [desc(t.uploadFinalizedAt)],
+          limit: input.limit,
+          offset: input.offset,
         });
 
-        const totalCount = await prisma.uploadRecord.count({
-          where: {
-            uploadFinalized: true,
-            finalizedUploadKey: { not: null },
-            OR: [
-              {
-                transcodingStartedAt: null,
-                transcodingFinishedAt: null,
-              },
-              {
-                transcodingStartedAt: { not: null },
-                transcodingFinishedAt: null,
-              },
-              {
-                transcribingStartedAt: { not: null },
-                transcribingFinishedAt: null,
-              },
-            ],
-          },
-        });
+        const totalCountRows = await db
+          .select({ cnt: count() })
+          .from(UploadRecord)
+          .where(
+            and(
+              eq(UploadRecord.uploadFinalized, true),
+              isNotNull(UploadRecord.finalizedUploadKey),
+              or(
+                and(
+                  isNull(UploadRecord.transcodingStartedAt),
+                  isNull(UploadRecord.transcodingFinishedAt),
+                ),
+                and(
+                  isNotNull(UploadRecord.transcodingStartedAt),
+                  isNull(UploadRecord.transcodingFinishedAt),
+                ),
+                and(
+                  isNotNull(UploadRecord.transcribingStartedAt),
+                  isNull(UploadRecord.transcribingFinishedAt),
+                ),
+              ),
+            ),
+          );
+
+        const totalCount = totalCountRows[0]?.cnt ?? 0;
 
         // Filter out uploads that are currently processing
         const actuallyFailedUploads =
@@ -2922,9 +3006,9 @@ export const adminRouter = router({
       );
 
       try {
-        const upload = await prisma.uploadRecord.findUnique({
-          where: { id: input.uploadRecordId },
-          select: {
+        const upload = await db.query.UploadRecord.findFirst({
+          where: (t, { eq }) => eq(t.id, input.uploadRecordId),
+          columns: {
             id: true,
             uploadFinalized: true,
             finalizedUploadKey: true,
@@ -2989,15 +3073,16 @@ export const adminRouter = router({
           scope = 'transcode';
         }
 
-        await prisma.uploadRecord.update({
-          where: { id: input.uploadRecordId },
-          data: {
+        await db
+          .update(UploadRecord)
+          .set({
             transcodingStartedAt: null,
             transcodingFinishedAt: null,
             transcribingStartedAt: null,
             transcribingFinishedAt: null,
-          },
-        });
+            updatedAt: new Date(),
+          })
+          .where(eq(UploadRecord.id, input.uploadRecordId));
 
         // Start the workflow
         await temporalClient.workflow.start(processMediaWorkflow, {
@@ -3049,16 +3134,17 @@ export const adminRouter = router({
 
     try {
       // Get all processing uploads
-      const processingUploads = await prisma.uploadRecord.findMany({
-        where: {
-          uploadFinalized: true,
-          finalizedUploadKey: { not: null },
-          OR: [
-            { transcodingFinishedAt: null },
-            { transcribingFinishedAt: null },
-          ],
-        },
-        select: {
+      const processingUploads = await db.query.UploadRecord.findMany({
+        where: (t, { and, eq, isNotNull, or, isNull }) =>
+          and(
+            eq(t.uploadFinalized, true),
+            isNotNull(t.finalizedUploadKey),
+            or(
+              isNull(t.transcodingFinishedAt),
+              isNull(t.transcribingFinishedAt),
+            ),
+          ),
+        columns: {
           id: true,
           finalizedUploadKey: true,
           transcodingFinishedAt: true,
@@ -3151,15 +3237,16 @@ export const adminRouter = router({
             'Bulk retry: Determined scope',
           );
 
-          await prisma.uploadRecord.update({
-            where: { id: upload.id },
-            data: {
+          await db
+            .update(UploadRecord)
+            .set({
               transcodingStartedAt: null,
               transcodingFinishedAt: null,
               transcribingStartedAt: null,
               transcribingFinishedAt: null,
-            },
-          });
+              updatedAt: new Date(),
+            })
+            .where(eq(UploadRecord.id, upload.id));
 
           moduleLogger.info(
             {
@@ -3261,12 +3348,10 @@ export const adminRouter = router({
         'Fetching search logs',
       );
 
-      const [searchLogs, totalCount] = await Promise.all([
-        prisma.searchLogEntry.findMany({
-          where: {
-            userDeletedAt: null,
-          },
-          select: {
+      const [searchLogs, totalCountRows] = await Promise.all([
+        db.query.SearchLogEntry.findMany({
+          where: (t, { isNull }) => isNull(t.userDeletedAt),
+          columns: {
             id: true,
             query: true,
             params: true,
@@ -3274,30 +3359,25 @@ export const adminRouter = router({
             mediaCount: true,
             transcriptCount: true,
             channelCount: true,
+          },
+          with: {
             appUser: {
-              select: {
-                id: true,
-                username: true,
-                fullName: true,
-              },
+              columns: { id: true, username: true, fullName: true },
             },
           },
-          orderBy: {
-            createdAt: 'desc',
-          },
-          take: input.limit,
-          skip: input.offset,
+          orderBy: (t, { desc }) => [desc(t.createdAt)],
+          limit: input.limit,
+          offset: input.offset,
         }),
-        prisma.searchLogEntry.count({
-          where: {
-            userDeletedAt: null,
-          },
-        }),
+        db
+          .select({ cnt: count() })
+          .from(SearchLogEntry)
+          .where(isNull(SearchLogEntry.userDeletedAt)),
       ]);
 
       return {
         searchLogs,
-        totalCount,
+        totalCount: totalCountRows[0]?.cnt ?? 0,
       };
     }),
 
@@ -3305,13 +3385,12 @@ export const adminRouter = router({
     moduleLogger.info('Fetching deleting uploads count');
 
     try {
-      const deletingCount = await prisma.uploadRecord.count({
-        where: {
-          deletedAt: { not: null },
-        },
-      });
+      const rows = await db
+        .select({ cnt: count() })
+        .from(UploadRecord)
+        .where(isNotNull(UploadRecord.deletedAt));
 
-      return deletingCount;
+      return rows[0]?.cnt ?? 0;
     } catch (error) {
       moduleLogger.error(
         {
@@ -3340,47 +3419,38 @@ export const adminRouter = router({
       moduleLogger.info('Fetching deleting uploads');
 
       try {
-        const [deletingUploads, totalCount] = await Promise.all([
-          prisma.uploadRecord.findMany({
-            where: {
-              deletedAt: { not: null },
-            },
-            select: {
+        const [deletingUploads, totalCountRows] = await Promise.all([
+          db.query.UploadRecord.findMany({
+            where: (t, { isNotNull }) => isNotNull(t.deletedAt),
+            columns: {
               id: true,
               title: true,
               description: true,
               createdAt: true,
               deletedAt: true,
               uploadFinalizedAt: true,
+            },
+            with: {
               channel: {
-                select: {
-                  id: true,
-                  name: true,
-                  slug: true,
-                },
+                columns: { id: true, name: true, slug: true },
               },
               createdBy: {
-                select: {
-                  id: true,
-                  username: true,
-                  fullName: true,
-                },
+                columns: { id: true, username: true, fullName: true },
               },
             },
-            orderBy: { deletedAt: 'desc' },
-            take: input.limit,
-            skip: input.offset,
+            orderBy: (t, { desc }) => [desc(t.deletedAt)],
+            limit: input.limit,
+            offset: input.offset,
           }),
-          prisma.uploadRecord.count({
-            where: {
-              deletedAt: { not: null },
-            },
-          }),
+          db
+            .select({ cnt: count() })
+            .from(UploadRecord)
+            .where(isNotNull(UploadRecord.deletedAt)),
         ]);
 
         return {
           uploads: deletingUploads,
-          totalCount,
+          totalCount: totalCountRows[0]?.cnt ?? 0,
         };
       } catch (error) {
         moduleLogger.error(

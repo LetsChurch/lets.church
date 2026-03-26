@@ -1,21 +1,19 @@
-import { prisma } from '@letschurch/db';
+import { db, UploadRecord } from '@letschurch/db';
+import { eq } from 'drizzle-orm';
 
 export default async function finalizeUploadRecord(
   uploadRecordId: string,
   userId: string,
   uploadKey: string,
 ) {
-  await prisma.uploadRecord.update({
-    data: {
+  await db
+    .update(UploadRecord)
+    .set({
       uploadFinalized: true,
-      uploadFinalizedBy: {
-        connect: {
-          id: userId,
-        },
-      },
+      uploadFinalizedById: userId,
       uploadFinalizedAt: new Date(),
       finalizedUploadKey: uploadKey,
-    },
-    where: { id: uploadRecordId },
-  });
+      updatedAt: new Date(),
+    })
+    .where(eq(UploadRecord.id, uploadRecordId));
 }

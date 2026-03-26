@@ -43,8 +43,8 @@ export const Route = createFileRoute('/dashboard_/admin_/newsletter-lists')({
 type ConfiguredList = {
   listmonkUuid: string;
   name: string;
-  type: 'PUBLIC' | 'PRIVATE';
-  optin: 'SINGLE' | 'DOUBLE';
+  type: 'public' | 'private';
+  optin: 'single' | 'double';
   enabled: boolean;
   subscribeOnRegistration: boolean;
   createdAt: Date;

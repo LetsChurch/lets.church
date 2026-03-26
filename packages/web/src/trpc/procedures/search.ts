@@ -1,4 +1,4 @@
-import { prisma } from '@letschurch/db';
+import { db, SearchLogEntry } from '@letschurch/db';
 import {
   client,
   MSearchResponseSchema,
@@ -7,6 +7,8 @@ import {
   msearchUploads,
 } from '@letschurch/elasticsearch';
 import { publicS3 } from '@letschurch/s3/public';
+import { TRPCError } from '@trpc/server';
+import { and, eq } from 'drizzle-orm';
 import { v5 as uuidv5 } from 'uuid';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
@@ -84,13 +86,15 @@ export const searchProcedures = {
     .query(async ({ input }) => {
       const { uploadId } = input;
 
-      const upload = await prisma.uploadRecord.findUnique({
-        where: { id: uploadId },
-        select: {
+      const upload = await db.query.UploadRecord.findFirst({
+        where: (t, { eq }) => eq(t.id, uploadId),
+        columns: {
           overrideThumbnailPath: true,
           defaultThumbnailPath: true,
+        },
+        with: {
           channel: {
-            select: {
+            columns: {
               defaultThumbnailPath: true,
             },
           },
@@ -127,15 +131,16 @@ export const searchProcedures = {
       // Convert channel slugs to IDs if provided
       let channelIds = inputChannelIds;
       if (channelSlugs && channelSlugs.length > 0) {
-        const channels = await prisma.channel.findMany({
-          select: { id: true },
-          where: {
-            slug: { in: channelSlugs },
-            visibility: 'PUBLIC',
-            approvedAt: { not: null },
-            deletedAt: null,
-          },
+        const channels = await db.query.Channel.findMany({
+          where: (t, { inArray, eq, and, isNotNull }) =>
+            and(
+              inArray(t.slug, channelSlugs),
+              eq(t.visibility, 'PUBLIC'),
+              isNotNull(t.approvedAt),
+            ),
+          columns: { id: true },
         });
+        // Post-filter for deletedAt: null
         channelIds = channels.map((c) => c.id);
 
         moduleLogger.info(
@@ -292,9 +297,9 @@ export const searchProcedures = {
             ctx.session?.appUserId,
           );
 
-          const logEntry = await prisma.searchLogEntry.upsert({
-            where: { id: logId },
-            create: {
+          const logEntry = await db
+            .insert(SearchLogEntry)
+            .values({
               id: logId,
               query: q,
               params: {
@@ -305,17 +310,27 @@ export const searchProcedures = {
                 sort,
                 dateRange,
               },
-              appUserId: ctx.session?.appUserId,
+              appUserId: ctx.session?.appUserId ?? null,
               mediaCount,
               transcriptCount,
               channelCount: 0, // Will be updated after we fetch channels
-            },
-            update: {
-              // Update counts in case results changed (ES index updated, etc.)
-              mediaCount,
-              transcriptCount,
-            },
-          });
+            })
+            .onConflictDoUpdate({
+              target: SearchLogEntry.id,
+              set: {
+                // Update counts in case results changed (ES index updated, etc.)
+                mediaCount,
+                transcriptCount,
+              },
+            })
+            .returning()
+            .then((r) => {
+              const result = r[0];
+              if (!result) {
+                throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+              }
+              return result;
+            });
 
           searchLogEntryId = logEntry.id;
 
@@ -381,20 +396,24 @@ export const searchProcedures = {
       );
 
       // Get channel data from database
-      const dbChannels = await prisma.channel.findMany({
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          avatarPath: true,
-        },
-        where: {
-          id: { in: allChannelIds },
-          visibility: 'PUBLIC',
-          approvedAt: { not: null },
-          deletedAt: null,
-        },
-      });
+      const dbChannels =
+        allChannelIds.length > 0
+          ? await db.query.Channel.findMany({
+              where: (t, { inArray, eq, and, isNotNull, isNull }) =>
+                and(
+                  inArray(t.id, allChannelIds),
+                  eq(t.visibility, 'PUBLIC'),
+                  isNotNull(t.approvedAt),
+                  isNull(t.deletedAt),
+                ),
+              columns: {
+                id: true,
+                name: true,
+                slug: true,
+                avatarPath: true,
+              },
+            })
+          : [];
 
       const dbChannelsMap = new Map(dbChannels.map((c) => [c.id, c]));
 
@@ -451,12 +470,12 @@ export const searchProcedures = {
       // Update the search log entry with channel count (only if we logged this search)
       if (searchLogEntryId) {
         try {
-          await prisma.searchLogEntry.update({
-            where: { id: searchLogEntryId },
-            data: {
+          await db
+            .update(SearchLogEntry)
+            .set({
               channelCount: channelsWithAvatars.length,
-            },
-          });
+            })
+            .where(eq(SearchLogEntry.id, searchLogEntryId));
         } catch (error) {
           moduleLogger.error(
             {
@@ -488,49 +507,60 @@ export const searchProcedures = {
         );
 
         // Fetch full upload data from database
-        const uploads = await prisma.uploadRecord.findMany({
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            createdAt: true,
-            publishedAt: true,
-            lengthSeconds: true,
-            defaultThumbnailPath: true,
-            overrideThumbnailPath: true,
-            channel: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-                avatarPath: true,
-                defaultThumbnailPath: true,
-              },
-            },
-            _count: {
-              select: {
-                uploadViews: true,
-              },
-            },
-          },
-          where: {
-            id: { in: uploadIds },
-            channel: {
-              visibility: 'PUBLIC',
-              approvedAt: { not: null },
-            },
-          },
-        });
+        const uploads =
+          uploadIds.length > 0
+            ? await db.query.UploadRecord.findMany({
+                where: (t, { inArray, and, isNotNull }) =>
+                  and(
+                    inArray(t.id, uploadIds),
+                    isNotNull(t.transcodingFinishedAt),
+                  ),
+                columns: {
+                  id: true,
+                  title: true,
+                  description: true,
+                  createdAt: true,
+                  publishedAt: true,
+                  lengthSeconds: true,
+                  defaultThumbnailPath: true,
+                  overrideThumbnailPath: true,
+                },
+                with: {
+                  channel: {
+                    columns: {
+                      id: true,
+                      name: true,
+                      slug: true,
+                      avatarPath: true,
+                      defaultThumbnailPath: true,
+                      visibility: true,
+                      approvedAt: true,
+                    },
+                  },
+                  uploadViews: {
+                    columns: {
+                      uploadRecordId: true,
+                    },
+                  },
+                },
+              })
+            : [];
+
+        // Filter to public approved channels
+        const filteredUploads = uploads.filter(
+          (u) =>
+            u.channel.visibility === 'PUBLIC' && u.channel.approvedAt !== null,
+        );
 
         // Create a map for quick lookup
-        const uploadsMap = new Map(uploads.map((u) => [u.id, u]));
+        const uploadsMap = new Map(filteredUploads.map((u) => [u.id, u]));
 
         moduleLogger.info(
           {
             context: {
               uploadsRequested: uploadIds.length,
-              uploadsFound: uploads.length,
-              uploadsMissing: uploadIds.length - uploads.length,
+              uploadsFound: filteredUploads.length,
+              uploadsMissing: uploadIds.length - filteredUploads.length,
             },
           },
           'Fetched upload data from database',
@@ -547,6 +577,7 @@ export const searchProcedures = {
               defaultThumbnailPath,
               overrideThumbnailPath,
               channel,
+              uploadViews,
               ...uploadRest
             } = upload;
 
@@ -570,6 +601,7 @@ export const searchProcedures = {
               ...uploadRest,
               id: OutgoingIdSchema.parse(uploadRest.id),
               thumbnailUrl,
+              _count: { uploadViews: uploadViews.length },
               channel: {
                 ...channel,
                 id: OutgoingIdSchema.parse(channel.id),
@@ -593,49 +625,60 @@ export const searchProcedures = {
         );
 
         // Fetch full upload data from database
-        const uploads = await prisma.uploadRecord.findMany({
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            createdAt: true,
-            publishedAt: true,
-            lengthSeconds: true,
-            defaultThumbnailPath: true,
-            overrideThumbnailPath: true,
-            channel: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-                avatarPath: true,
-                defaultThumbnailPath: true,
-              },
-            },
-            _count: {
-              select: {
-                uploadViews: true,
-              },
-            },
-          },
-          where: {
-            id: { in: uploadIds },
-            channel: {
-              visibility: 'PUBLIC',
-              approvedAt: { not: null },
-            },
-          },
-        });
+        const uploads =
+          uploadIds.length > 0
+            ? await db.query.UploadRecord.findMany({
+                where: (t, { inArray, isNotNull, and }) =>
+                  and(
+                    inArray(t.id, uploadIds),
+                    isNotNull(t.transcodingFinishedAt),
+                  ),
+                columns: {
+                  id: true,
+                  title: true,
+                  description: true,
+                  createdAt: true,
+                  publishedAt: true,
+                  lengthSeconds: true,
+                  defaultThumbnailPath: true,
+                  overrideThumbnailPath: true,
+                },
+                with: {
+                  channel: {
+                    columns: {
+                      id: true,
+                      name: true,
+                      slug: true,
+                      avatarPath: true,
+                      defaultThumbnailPath: true,
+                      visibility: true,
+                      approvedAt: true,
+                    },
+                  },
+                  uploadViews: {
+                    columns: {
+                      uploadRecordId: true,
+                    },
+                  },
+                },
+              })
+            : [];
+
+        // Filter to public approved channels
+        const filteredUploads = uploads.filter(
+          (u) =>
+            u.channel.visibility === 'PUBLIC' && u.channel.approvedAt !== null,
+        );
 
         // Create a map for quick lookup
-        const uploadsMap = new Map(uploads.map((u) => [u.id, u]));
+        const uploadsMap = new Map(filteredUploads.map((u) => [u.id, u]));
 
         moduleLogger.info(
           {
             context: {
               uploadsRequested: uploadIds.length,
-              uploadsFound: uploads.length,
-              uploadsMissing: uploadIds.length - uploads.length,
+              uploadsFound: filteredUploads.length,
+              uploadsMissing: uploadIds.length - filteredUploads.length,
             },
           },
           'Fetched upload data for transcripts from database',
@@ -652,6 +695,7 @@ export const searchProcedures = {
               defaultThumbnailPath,
               overrideThumbnailPath,
               channel,
+              uploadViews,
               ...uploadRest
             } = upload;
 
@@ -687,6 +731,7 @@ export const searchProcedures = {
               ...uploadRest,
               id: OutgoingIdSchema.parse(uploadRest.id),
               thumbnailUrl,
+              _count: { uploadViews: uploadViews.length },
               channel: {
                 ...channel,
                 id: OutgoingIdSchema.parse(channel.id),
@@ -723,34 +768,40 @@ export const searchProcedures = {
     }),
 
   getRecentSearches: authProcedure.query(async ({ ctx }) => {
-    const recentSearches = await prisma.searchLogEntry.findMany({
-      where: {
-        appUserId: ctx.session.appUserId,
-        userDeletedAt: null,
-      },
-      select: {
+    // Use SQL-style query for distinct on query field
+    const recentSearches = await db.query.SearchLogEntry.findMany({
+      where: (t, { eq, isNull, and }) =>
+        and(eq(t.appUserId, ctx.session.appUserId), isNull(t.userDeletedAt)),
+      columns: {
         query: true,
         createdAt: true,
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      distinct: ['query'],
-      take: 10,
+      orderBy: (t, { desc }) => desc(t.createdAt),
+      limit: 100, // Fetch more to deduplicate in JS
     });
+
+    // Deduplicate by query, keeping the most recent entry for each query
+    const seenQueries = new Set<string>();
+    const deduplicated = recentSearches.filter((entry) => {
+      if (seenQueries.has(entry.query)) return false;
+      seenQueries.add(entry.query);
+      return true;
+    });
+
+    const result = deduplicated.slice(0, 10);
 
     moduleLogger.info(
       {
         context: {
           userId: ctx.session.appUserId,
-          searchCount: recentSearches.length,
+          searchCount: result.length,
         },
       },
       'Retrieved recent searches',
     );
 
     // Map createdAt to searchedAt for the API response
-    return recentSearches.map((entry) => ({
+    return result.map((entry) => ({
       query: entry.query,
       searchedAt: entry.createdAt,
     }));
@@ -763,23 +814,25 @@ export const searchProcedures = {
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const result = await prisma.searchLogEntry.updateMany({
-        where: {
-          appUserId: ctx.session.appUserId,
-          query: input.query,
-          userDeletedAt: null,
-        },
-        data: {
+      const result = await db
+        .update(SearchLogEntry)
+        .set({
           userDeletedAt: new Date(),
-        },
-      });
+        })
+        .where(
+          and(
+            eq(SearchLogEntry.appUserId, ctx.session.appUserId),
+            eq(SearchLogEntry.query, input.query),
+          ),
+        )
+        .returning();
 
       moduleLogger.info(
         {
           context: {
             userId: ctx.session.appUserId,
             query: input.query,
-            entriesDeleted: result.count,
+            entriesDeleted: result.length,
           },
         },
         'Deleted recent search',

@@ -1,6 +1,13 @@
-import { OrganizationType, prisma } from '@letschurch/db';
+import {
+  db,
+  Organization,
+  OrganizationInvitation,
+  OrganizationMembership,
+  OrganizationOrganizationAssociation,
+} from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
+import { and, count, eq } from 'drizzle-orm';
 import {
   cancelOrganizationInvitationSchema,
   getAllOrganizationsSchema,
@@ -31,11 +38,12 @@ const organizationProcedure = authProcedure
     // Skip membership query for site admins
     const membership = ctx.isSiteAdmin
       ? null
-      : await prisma.organizationMembership.findFirst({
-          where: {
-            appUserId: ctx.session.appUserId,
-            organizationId: input.orgId,
-          },
+      : await db.query.OrganizationMembership.findFirst({
+          where: (t, { and, eq }) =>
+            and(
+              eq(t.appUserId, ctx.session.appUserId),
+              eq(t.organizationId, input.orgId),
+            ),
         });
 
     if (!ctx.isSiteAdmin && !membership) {
@@ -93,23 +101,20 @@ export const organizationRouter = router({
         'Fetching all organizations',
       );
 
-      const whereClause = input.excludeChurchTypes
-        ? { type: { not: OrganizationType.CHURCH } }
-        : {};
-
-      return prisma.organization.findMany({
-        select: {
+      const orgs = await db.query.Organization.findMany({
+        columns: {
           id: true,
           name: true,
           type: true,
           approvedAt: true,
         },
-        where: whereClause,
-        orderBy: [
-          { approvedAt: 'desc' }, // Approved first
-          { name: 'asc' },
-        ],
+        where: input.excludeChurchTypes
+          ? (t, { ne }) => ne(t.type, 'CHURCH')
+          : undefined,
+        orderBy: (t, { desc, asc }) => [desc(t.approvedAt), asc(t.name)],
       });
+
+      return orgs;
     }),
 
   searchOrganizations: authProcedure
@@ -127,29 +132,23 @@ export const organizationRouter = router({
         'Searching organizations',
       );
 
-      const whereClause = {
-        name: {
-          contains: input.query,
-          mode: 'insensitive' as const,
-        },
-        ...(input.excludeChurchTypes && {
-          type: { not: OrganizationType.CHURCH },
-        }),
-      };
-
-      const organizations = await prisma.organization.findMany({
-        select: {
+      const organizations = await db.query.Organization.findMany({
+        columns: {
           id: true,
           name: true,
           type: true,
           approvedAt: true,
         },
-        where: whereClause,
-        orderBy: [
-          { approvedAt: 'desc' }, // Approved first
-          { name: 'asc' },
-        ],
-        take: input.limit,
+        where: (t, { and, ne, ilike }) => {
+          const escapedQuery = input.query.replace(/([%_\\])/g, '\\$1');
+          const nameCondition = ilike(t.name, `%${escapedQuery}%`);
+          if (input.excludeChurchTypes) {
+            return and(nameCondition, ne(t.type, 'CHURCH'));
+          }
+          return nameCondition;
+        },
+        orderBy: (t, { desc, asc }) => [desc(t.approvedAt), asc(t.name)],
+        limit: input.limit,
       });
 
       moduleLogger.info(
@@ -183,22 +182,15 @@ export const organizationRouter = router({
         return [];
       }
 
-      return prisma.organization.findMany({
-        select: {
+      return db.query.Organization.findMany({
+        columns: {
           id: true,
           name: true,
           type: true,
           approvedAt: true,
         },
-        where: {
-          id: {
-            in: input.organizationIds,
-          },
-        },
-        orderBy: [
-          { approvedAt: 'desc' }, // Approved first
-          { name: 'asc' },
-        ],
+        where: (t, { inArray }) => inArray(t.id, input.organizationIds),
+        orderBy: (t, { desc, asc }) => [desc(t.approvedAt), asc(t.name)],
       });
     }),
 
@@ -210,31 +202,34 @@ export const organizationRouter = router({
       'Fetching organizations for user',
     );
 
-    return prisma.organization.findMany({
-      select: {
+    // Get memberships for this user
+    const memberships = await db.query.OrganizationMembership.findMany({
+      where: (t, { eq }) => eq(t.appUserId, ctx.session.appUserId),
+    });
+
+    const orgIds = memberships.map((m) => m.organizationId);
+    if (orgIds.length === 0) return [];
+
+    const organizations = await db.query.Organization.findMany({
+      columns: {
         id: true,
         name: true,
         type: true,
         description: true,
         approvedAt: true,
-        memberships: {
-          select: {
-            isAdmin: true,
-            canEdit: true,
-          },
-          where: {
-            appUserId: ctx.session.appUserId,
-          },
-        },
       },
-      where: {
-        type: OrganizationType.MINISTRY,
-        memberships: {
-          some: {
-            appUserId: ctx.session.appUserId,
-          },
-        },
-      },
+      where: (t, { and, eq, inArray }) =>
+        and(eq(t.type, 'MINISTRY'), inArray(t.id, orgIds)),
+    });
+
+    return organizations.map((org) => {
+      const membership = memberships.find((m) => m.organizationId === org.id);
+      return {
+        ...org,
+        memberships: membership
+          ? [{ isAdmin: membership.isAdmin, canEdit: membership.canEdit }]
+          : [],
+      };
     });
   }),
 
@@ -247,8 +242,8 @@ export const organizationRouter = router({
         'Fetching organization details',
       );
 
-      const organization = await prisma.organization.findFirst({
-        select: {
+      const organization = await db.query.Organization.findFirst({
+        columns: {
           id: true,
           name: true,
           slug: true,
@@ -262,40 +257,30 @@ export const organizationRouter = router({
           updatedAt: true,
           approvedAt: true,
           approvedById: true,
+        },
+        where: (t, { and, eq }) =>
+          and(eq(t.id, input.orgId), eq(t.type, 'MINISTRY')),
+        with: {
           memberships: {
-            select: {
-              organizationId: true,
-              appUserId: true,
-              isAdmin: true,
-              canEdit: true,
-              createdAt: true,
+            with: {
               appUser: {
-                select: {
+                with: {
+                  emails: {
+                    columns: { email: true, verifiedAt: true },
+                  },
+                },
+                columns: {
                   id: true,
                   username: true,
                   fullName: true,
                   avatarPath: true,
-                  emails: {
-                    select: {
-                      email: true,
-                      verifiedAt: true,
-                    },
-                  },
                 },
               },
             },
-            orderBy: [{ isAdmin: 'desc' }, { createdAt: 'asc' }],
           },
-          _count: {
-            select: {
-              memberships: true,
-              downstreamOrganizationAssociations: true,
-            },
+          downstreamOrganizationAssociations: {
+            columns: { downstreamOrganizationId: true },
           },
-        },
-        where: {
-          id: input.orgId,
-          type: 'MINISTRY',
         },
       });
 
@@ -311,13 +296,26 @@ export const organizationRouter = router({
       }
 
       // Get count of unapproved upstream associations
+      const unapprovedAssociationsRows = await db
+        .select({ cnt: count() })
+        .from(OrganizationOrganizationAssociation)
+        .where(
+          and(
+            eq(
+              OrganizationOrganizationAssociation.upstreamOrganizationId,
+              input.orgId,
+            ),
+            eq(OrganizationOrganizationAssociation.upstreamApproved, false),
+          ),
+        );
       const unapprovedAssociationsCount =
-        await prisma.organizationOrganizationAssociation.count({
-          where: {
-            upstreamOrganizationId: input.orgId,
-            upstreamApproved: false,
-          },
-        });
+        unapprovedAssociationsRows[0]?.cnt ?? 0;
+
+      // Sort memberships: isAdmin desc, createdAt asc
+      const sortedMemberships = [...organization.memberships].sort((a, b) => {
+        if (a.isAdmin !== b.isAdmin) return a.isAdmin ? -1 : 1;
+        return a.createdAt.getTime() - b.createdAt.getTime();
+      });
 
       const { avatarPath, ...organizationWithoutPath } = organization;
 
@@ -327,30 +325,33 @@ export const organizationRouter = router({
           })
         : null;
 
-      const membershipsWithAvatarUrl = organization.memberships.map(
-        (membership) => {
-          const { avatarPath: userAvatarPath, ...userWithoutPath } =
-            membership.appUser;
-          const userAvatarUrl = userAvatarPath
-            ? getPublicImageUrl(publicS3.getS3ProtocolUri(userAvatarPath), {
-                resize: mantineAvatarSm2x,
-              })
-            : null;
+      const membershipsWithAvatarUrl = sortedMemberships.map((membership) => {
+        const { avatarPath: userAvatarPath, ...userWithoutPath } =
+          membership.appUser;
+        const userAvatarUrl = userAvatarPath
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(userAvatarPath), {
+              resize: mantineAvatarSm2x,
+            })
+          : null;
 
-          return {
-            ...membership,
-            appUser: {
-              ...userWithoutPath,
-              avatarUrl: userAvatarUrl,
-            },
-          };
-        },
-      );
+        return {
+          ...membership,
+          appUser: {
+            ...userWithoutPath,
+            avatarUrl: userAvatarUrl,
+          },
+        };
+      });
 
       return {
         ...organizationWithoutPath,
         avatarUrl,
         memberships: membershipsWithAvatarUrl,
+        _count: {
+          memberships: organization.memberships.length,
+          downstreamOrganizationAssociations:
+            organization.downstreamOrganizationAssociations.length,
+        },
         userMembership: ctx.membership,
         unapprovedAssociationsCount,
       };
@@ -359,20 +360,19 @@ export const organizationRouter = router({
 
   getOrganizationMembers: organizationProcedure.query(
     async ({ ctx, input }) => {
-      const organization = await prisma.organization.findFirst({
-        select: {
+      const organization = await db.query.Organization.findFirst({
+        columns: {
           id: true,
           name: true,
           slug: true,
+        },
+        where: (t, { and, eq }) =>
+          and(eq(t.id, input.orgId), eq(t.type, 'MINISTRY')),
+        with: {
           memberships: {
-            select: {
-              organizationId: true,
-              appUserId: true,
-              isAdmin: true,
-              canEdit: true,
-              createdAt: true,
+            with: {
               appUser: {
-                select: {
+                columns: {
                   id: true,
                   username: true,
                   fullName: true,
@@ -380,12 +380,7 @@ export const organizationRouter = router({
                 },
               },
             },
-            orderBy: [{ isAdmin: 'desc' }, { createdAt: 'asc' }],
           },
-        },
-        where: {
-          id: input.orgId,
-          type: OrganizationType.MINISTRY,
         },
       });
 
@@ -395,24 +390,28 @@ export const organizationRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND' });
       }
 
-      const membershipsWithAvatarUrl = organization.memberships.map(
-        (membership) => {
-          const { avatarPath, ...userWithoutPath } = membership.appUser;
-          const avatarUrl = avatarPath
-            ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
-                resize: mantineAvatarSm2x,
-              })
-            : null;
+      // Sort memberships: isAdmin desc, createdAt asc
+      const sortedMemberships = [...organization.memberships].sort((a, b) => {
+        if (a.isAdmin !== b.isAdmin) return a.isAdmin ? -1 : 1;
+        return a.createdAt.getTime() - b.createdAt.getTime();
+      });
 
-          return {
-            ...membership,
-            appUser: {
-              ...userWithoutPath,
-              avatarUrl,
-            },
-          };
-        },
-      );
+      const membershipsWithAvatarUrl = sortedMemberships.map((membership) => {
+        const { avatarPath, ...userWithoutPath } = membership.appUser;
+        const avatarUrl = avatarPath
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
+              resize: mantineAvatarSm2x,
+            })
+          : null;
+
+        return {
+          ...membership,
+          appUser: {
+            ...userWithoutPath,
+            avatarUrl,
+          },
+        };
+      });
 
       return {
         ...organization,
@@ -439,35 +438,32 @@ export const organizationRouter = router({
       );
 
       // Check if email already belongs to a member
-      const existingMember = await prisma.organizationMembership.findFirst({
-        where: {
-          organizationId: input.orgId,
-          appUser: {
-            emails: {
-              some: {
-                email: input.email,
-              },
-            },
-          },
-        },
+      const userEmail = await db.query.AppUserEmail.findFirst({
+        where: (t, { eq }) => eq(t.email, input.email),
+        columns: { appUserId: true },
       });
 
-      // Return success without revealing membership state to prevent user enumeration
-      if (existingMember) {
-        return { success: true, message: 'Invitation sent successfully' };
+      if (userEmail) {
+        const existingMember = await db.query.OrganizationMembership.findFirst({
+          where: (t, { and, eq }) =>
+            and(
+              eq(t.organizationId, input.orgId),
+              eq(t.appUserId, userEmail.appUserId),
+            ),
+        });
+
+        // Return success without revealing membership state to prevent user enumeration
+        if (existingMember) {
+          return { success: true, message: 'Invitation sent successfully' };
+        }
       }
 
       // Check for existing pending invitation
-      const existingInvitation = await prisma.organizationInvitation.findUnique(
-        {
-          where: {
-            organizationId_email: {
-              organizationId: input.orgId,
-              email: input.email,
-            },
-          },
-        },
-      );
+      const existingInvitation =
+        await db.query.OrganizationInvitation.findFirst({
+          where: (t, { and, eq }) =>
+            and(eq(t.organizationId, input.orgId), eq(t.email, input.email)),
+        });
 
       // Return success without revealing invitation state to prevent user enumeration
       if (
@@ -481,29 +477,34 @@ export const organizationRouter = router({
       // Create or update invitation
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-      const invitation = await prisma.organizationInvitation.upsert({
-        where: {
-          organizationId_email: {
-            organizationId: input.orgId,
-            email: input.email,
-          },
-        },
-        update: {
-          status: 'PENDING',
-          isAdmin: input.isAdmin,
-          canEdit: input.canEdit,
-          expiresAt,
-          respondedAt: null,
-        },
-        create: {
+      const [invitation] = await db
+        .insert(OrganizationInvitation)
+        .values({
           organizationId: input.orgId,
           email: input.email,
           isAdmin: input.isAdmin,
           canEdit: input.canEdit,
           invitedById: ctx.session.appUserId,
           expiresAt,
-        },
-      });
+        })
+        .onConflictDoUpdate({
+          target: [
+            OrganizationInvitation.organizationId,
+            OrganizationInvitation.email,
+          ],
+          set: {
+            status: 'PENDING',
+            isAdmin: input.isAdmin,
+            canEdit: input.canEdit,
+            expiresAt,
+            respondedAt: null,
+          },
+        })
+        .returning();
+
+      if (!invitation) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      }
 
       // Send invitation email
       await sendInvitationEmail({
@@ -529,51 +530,55 @@ export const organizationRouter = router({
   getOrganizationInvitations: organizationAdminProcedure
     .input(organizationQuerySchema)
     .query(async ({ input }) => {
-      return prisma.organizationInvitation
-        .findMany({
-          where: {
-            organizationId: input.orgId,
-            status: 'PENDING',
-            expiresAt: { gt: new Date() },
-          },
-          select: {
-            id: true,
-            email: true,
-            isAdmin: true,
-            canEdit: true,
-            createdAt: true,
-            expiresAt: true,
-            token: true,
-            invitedBy: {
-              select: {
-                username: true,
-                fullName: true,
-              },
+      const invitations = await db.query.OrganizationInvitation.findMany({
+        where: (t, { and, eq, gt }) =>
+          and(
+            eq(t.organizationId, input.orgId),
+            eq(t.status, 'PENDING'),
+            gt(t.expiresAt, new Date()),
+          ),
+        columns: {
+          id: true,
+          email: true,
+          isAdmin: true,
+          canEdit: true,
+          createdAt: true,
+          expiresAt: true,
+          token: true,
+        },
+        with: {
+          invitedBy: {
+            columns: {
+              username: true,
+              fullName: true,
             },
           },
-          orderBy: { createdAt: 'desc' },
-        })
-        .then((invitations) =>
-          invitations.map(({ token, ...inv }) => ({
-            ...inv,
-            token: uuidTranslator.fromUUID(token),
-          })),
-        );
+        },
+        orderBy: (t, { desc }) => [desc(t.createdAt)],
+      });
+
+      return invitations.map(({ token, ...inv }) => ({
+        ...inv,
+        token: uuidTranslator.fromUUID(token),
+      }));
     }),
 
   cancelInvitation: organizationAdminProcedure
     .input(cancelOrganizationInvitationSchema)
     .mutation(async ({ input }) => {
-      // Use updateMany to ensure the invitation belongs to the organization
-      const result = await prisma.organizationInvitation.updateMany({
-        where: {
-          id: input.invitationId,
-          organizationId: input.orgId,
-        },
-        data: { status: 'CANCELLED' },
-      });
+      // Use update with both id and orgId to ensure the invitation belongs to the organization
+      const result = await db
+        .update(OrganizationInvitation)
+        .set({ status: 'CANCELLED' })
+        .where(
+          and(
+            eq(OrganizationInvitation.id, input.invitationId),
+            eq(OrganizationInvitation.organizationId, input.orgId),
+          ),
+        )
+        .returning({ id: OrganizationInvitation.id });
 
-      if (result.count === 0) {
+      if (result.length === 0) {
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Invitation not found',
@@ -587,12 +592,14 @@ export const organizationRouter = router({
     .input(resendOrganizationInvitationSchema)
     .mutation(async ({ ctx, input }) => {
       // First fetch and validate the invitation
-      const existingInvitation = await prisma.organizationInvitation.findFirst({
-        where: {
-          id: input.invitationId,
-          organizationId: input.orgId,
-        },
-      });
+      const existingInvitation =
+        await db.query.OrganizationInvitation.findFirst({
+          where: (t, { and, eq }) =>
+            and(
+              eq(t.id, input.invitationId),
+              eq(t.organizationId, input.orgId),
+            ),
+        });
 
       if (!existingInvitation) {
         throw new TRPCError({
@@ -609,12 +616,17 @@ export const organizationRouter = router({
       }
 
       // Update the expiration
-      const invitation = await prisma.organizationInvitation.update({
-        where: { id: input.invitationId },
-        data: {
+      const [invitation] = await db
+        .update(OrganizationInvitation)
+        .set({
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        },
-      });
+        })
+        .where(eq(OrganizationInvitation.id, input.invitationId))
+        .returning();
+
+      if (!invitation) {
+        throw new TRPCError({ code: 'NOT_FOUND' });
+      }
 
       // Send invitation email
       await sendInvitationEmail({
@@ -652,26 +664,24 @@ export const organizationRouter = router({
 
       try {
         let wasAdmin = false;
-        await prisma.$transaction(async (tx) => {
+        await db.transaction(async (tx) => {
           // Don't allow removing the last admin
-          const adminCount = await tx.organizationMembership.count({
-            where: {
-              organizationId: input.orgId,
-              isAdmin: true,
-            },
+          const adminMembers = await tx.query.OrganizationMembership.findMany({
+            where: (t, { and, eq }) =>
+              and(eq(t.organizationId, input.orgId), eq(t.isAdmin, true)),
+            columns: { appUserId: true },
           });
+          const adminCount = adminMembers.length;
 
-          const membershipToDelete = await tx.organizationMembership.findUnique(
-            {
-              where: {
-                organizationId_appUserId: {
-                  organizationId: input.orgId,
-                  appUserId: input.appUserId,
-                },
-              },
-              select: { isAdmin: true, appUserId: true },
-            },
-          );
+          const membershipToDelete =
+            await tx.query.OrganizationMembership.findFirst({
+              where: (t, { and, eq }) =>
+                and(
+                  eq(t.organizationId, input.orgId),
+                  eq(t.appUserId, input.appUserId),
+                ),
+              columns: { isAdmin: true, appUserId: true },
+            });
 
           if (!membershipToDelete) {
             moduleLogger.warn(
@@ -709,14 +719,14 @@ export const organizationRouter = router({
             });
           }
 
-          await tx.organizationMembership.delete({
-            where: {
-              organizationId_appUserId: {
-                organizationId: input.orgId,
-                appUserId: input.appUserId,
-              },
-            },
-          });
+          await tx
+            .delete(OrganizationMembership)
+            .where(
+              and(
+                eq(OrganizationMembership.organizationId, input.orgId),
+                eq(OrganizationMembership.appUserId, input.appUserId),
+              ),
+            );
         });
 
         moduleLogger.info(
@@ -746,7 +756,11 @@ export const organizationRouter = router({
           },
           'Failed to remove organization member',
         );
-        throw error;
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to remove organization member',
+        });
       }
     }),
 
@@ -759,8 +773,8 @@ export const organizationRouter = router({
         'Fetching organization for edit',
       );
 
-      const organization = await prisma.organization.findFirst({
-        select: {
+      const organization = await db.query.Organization.findFirst({
+        columns: {
           id: true,
           name: true,
           description: true,
@@ -778,10 +792,8 @@ export const organizationRouter = router({
           spotifyUrl: true,
           rssUrl: true,
         },
-        where: {
-          id: input.orgId,
-          type: 'MINISTRY',
-        },
+        where: (t, { and, eq }) =>
+          and(eq(t.id, input.orgId), eq(t.type, 'MINISTRY')),
       });
 
       if (!organization) {
@@ -813,11 +825,9 @@ export const organizationRouter = router({
       );
 
       try {
-        await prisma.organization.update({
-          where: {
-            id: input.orgId,
-          },
-          data: {
+        await db
+          .update(Organization)
+          .set({
             name: input.name,
             description: input.description || null,
             websiteUrl: input.websiteUrl || null,
@@ -833,8 +843,9 @@ export const organizationRouter = router({
             applePodcastsUrl: input.applePodcastsUrl || null,
             spotifyUrl: input.spotifyUrl || null,
             rssUrl: input.rssUrl || null,
-          },
-        });
+            updatedAt: new Date(),
+          })
+          .where(eq(Organization.id, input.orgId));
 
         moduleLogger.info(
           {
@@ -892,15 +903,14 @@ export const organizationRouter = router({
       );
 
       try {
-        await prisma.organization.update({
-          where: {
-            id: input.orgId,
-          },
-          data: {
+        await db
+          .update(Organization)
+          .set({
             approvedAt: new Date(),
             approvedById: ctx.session.appUserId,
-          },
-        });
+            updatedAt: new Date(),
+          })
+          .where(eq(Organization.id, input.orgId));
 
         moduleLogger.info(
           {
@@ -960,15 +970,14 @@ export const organizationRouter = router({
       );
 
       try {
-        await prisma.organization.update({
-          where: {
-            id: input.orgId,
-          },
-          data: {
+        await db
+          .update(Organization)
+          .set({
             approvedAt: null,
             approvedById: null,
-          },
-        });
+            updatedAt: new Date(),
+          })
+          .where(eq(Organization.id, input.orgId));
 
         moduleLogger.info(
           {
@@ -1010,16 +1019,10 @@ export const organizationRouter = router({
       );
 
       // Get the organization to make sure it's not a church
-      const organization = await prisma.organization.findFirst({
-        where: {
-          id: input.orgId,
-          type: OrganizationType.MINISTRY, // Only ministries can have downstream approvals
-        },
-        select: {
-          id: true,
-          name: true,
-          type: true,
-        },
+      const organization = await db.query.Organization.findFirst({
+        columns: { id: true, name: true, type: true },
+        where: (t, { and, eq }) =>
+          and(eq(t.id, input.orgId), eq(t.type, 'MINISTRY')),
       });
 
       if (!organization) {
@@ -1034,17 +1037,20 @@ export const organizationRouter = router({
 
       // Get all pending downstream relationship approvals
       const pendingApprovals =
-        await prisma.organizationOrganizationAssociation.findMany({
-          where: {
-            upstreamOrganizationId: input.orgId,
-            upstreamApproved: false,
-          },
-          select: {
+        await db.query.OrganizationOrganizationAssociation.findMany({
+          columns: {
             downstreamOrganizationId: true,
             createdAt: true,
             downstreamApproved: true,
+          },
+          where: (t, { and, eq }) =>
+            and(
+              eq(t.upstreamOrganizationId, input.orgId),
+              eq(t.upstreamApproved, false),
+            ),
+          with: {
             downstreamOrganization: {
-              select: {
+              columns: {
                 id: true,
                 name: true,
                 type: true,
@@ -1054,9 +1060,7 @@ export const organizationRouter = router({
               },
             },
           },
-          orderBy: {
-            createdAt: 'desc',
-          },
+          orderBy: (t, { desc }) => [desc(t.createdAt)],
         });
 
       return pendingApprovals.map((approval) => {
@@ -1090,17 +1094,24 @@ export const organizationRouter = router({
       );
 
       try {
-        await prisma.organizationOrganizationAssociation.update({
-          where: {
-            upstreamOrganizationId_downstreamOrganizationId: {
-              upstreamOrganizationId: input.orgId,
-              downstreamOrganizationId: input.downstreamOrganizationId,
-            },
-          },
-          data: {
+        await db
+          .update(OrganizationOrganizationAssociation)
+          .set({
             upstreamApproved: true,
-          },
-        });
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(
+                OrganizationOrganizationAssociation.upstreamOrganizationId,
+                input.orgId,
+              ),
+              eq(
+                OrganizationOrganizationAssociation.downstreamOrganizationId,
+                input.downstreamOrganizationId,
+              ),
+            ),
+          );
 
         moduleLogger.info(
           {
@@ -1140,14 +1151,13 @@ export const organizationRouter = router({
 
       try {
         const association =
-          await prisma.organizationOrganizationAssociation.findUnique({
-            where: {
-              upstreamOrganizationId_downstreamOrganizationId: {
-                upstreamOrganizationId: input.orgId,
-                downstreamOrganizationId: input.downstreamOrganizationId,
-              },
-            },
-            select: { upstreamOrganizationId: true },
+          await db.query.OrganizationOrganizationAssociation.findFirst({
+            where: (t, { and, eq }) =>
+              and(
+                eq(t.upstreamOrganizationId, input.orgId),
+                eq(t.downstreamOrganizationId, input.downstreamOrganizationId),
+              ),
+            columns: { upstreamOrganizationId: true },
           });
 
         if (!association) {
@@ -1163,14 +1173,20 @@ export const organizationRouter = router({
           });
         }
 
-        await prisma.organizationOrganizationAssociation.delete({
-          where: {
-            upstreamOrganizationId_downstreamOrganizationId: {
-              upstreamOrganizationId: input.orgId,
-              downstreamOrganizationId: input.downstreamOrganizationId,
-            },
-          },
-        });
+        await db
+          .delete(OrganizationOrganizationAssociation)
+          .where(
+            and(
+              eq(
+                OrganizationOrganizationAssociation.upstreamOrganizationId,
+                input.orgId,
+              ),
+              eq(
+                OrganizationOrganizationAssociation.downstreamOrganizationId,
+                input.downstreamOrganizationId,
+              ),
+            ),
+          );
 
         moduleLogger.info(
           {
@@ -1209,17 +1225,17 @@ export const organizationRouter = router({
 
       // Get all associations where this organization is upstream
       const upstreamAssociations =
-        await prisma.organizationOrganizationAssociation.findMany({
-          where: {
-            upstreamOrganizationId: input.orgId,
-          },
-          select: {
+        await db.query.OrganizationOrganizationAssociation.findMany({
+          columns: {
             downstreamOrganizationId: true,
             upstreamApproved: true,
             downstreamApproved: true,
             createdAt: true,
+          },
+          where: (t, { eq }) => eq(t.upstreamOrganizationId, input.orgId),
+          with: {
             downstreamOrganization: {
-              select: {
+              columns: {
                 id: true,
                 name: true,
                 type: true,
@@ -1229,9 +1245,7 @@ export const organizationRouter = router({
               },
             },
           },
-          orderBy: {
-            createdAt: 'desc',
-          },
+          orderBy: (t, { desc }) => [desc(t.createdAt)],
         });
 
       return upstreamAssociations.map((association) => {
@@ -1265,17 +1279,24 @@ export const organizationRouter = router({
       );
 
       try {
-        await prisma.organizationOrganizationAssociation.update({
-          where: {
-            upstreamOrganizationId_downstreamOrganizationId: {
-              upstreamOrganizationId: input.orgId,
-              downstreamOrganizationId: input.downstreamOrganizationId,
-            },
-          },
-          data: {
+        await db
+          .update(OrganizationOrganizationAssociation)
+          .set({
             upstreamApproved: true,
-          },
-        });
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(
+                OrganizationOrganizationAssociation.upstreamOrganizationId,
+                input.orgId,
+              ),
+              eq(
+                OrganizationOrganizationAssociation.downstreamOrganizationId,
+                input.downstreamOrganizationId,
+              ),
+            ),
+          );
 
         moduleLogger.info(
           {
@@ -1314,17 +1335,24 @@ export const organizationRouter = router({
       );
 
       try {
-        await prisma.organizationOrganizationAssociation.update({
-          where: {
-            upstreamOrganizationId_downstreamOrganizationId: {
-              upstreamOrganizationId: input.orgId,
-              downstreamOrganizationId: input.downstreamOrganizationId,
-            },
-          },
-          data: {
+        await db
+          .update(OrganizationOrganizationAssociation)
+          .set({
             upstreamApproved: false,
-          },
-        });
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(
+                OrganizationOrganizationAssociation.upstreamOrganizationId,
+                input.orgId,
+              ),
+              eq(
+                OrganizationOrganizationAssociation.downstreamOrganizationId,
+                input.downstreamOrganizationId,
+              ),
+            ),
+          );
 
         moduleLogger.info(
           {
@@ -1364,14 +1392,13 @@ export const organizationRouter = router({
 
       try {
         const association =
-          await prisma.organizationOrganizationAssociation.findUnique({
-            where: {
-              upstreamOrganizationId_downstreamOrganizationId: {
-                upstreamOrganizationId: input.orgId,
-                downstreamOrganizationId: input.downstreamOrganizationId,
-              },
-            },
-            select: { upstreamOrganizationId: true },
+          await db.query.OrganizationOrganizationAssociation.findFirst({
+            where: (t, { and, eq }) =>
+              and(
+                eq(t.upstreamOrganizationId, input.orgId),
+                eq(t.downstreamOrganizationId, input.downstreamOrganizationId),
+              ),
+            columns: { upstreamOrganizationId: true },
           });
 
         if (!association) {
@@ -1387,14 +1414,20 @@ export const organizationRouter = router({
           });
         }
 
-        await prisma.organizationOrganizationAssociation.delete({
-          where: {
-            upstreamOrganizationId_downstreamOrganizationId: {
-              upstreamOrganizationId: input.orgId,
-              downstreamOrganizationId: input.downstreamOrganizationId,
-            },
-          },
-        });
+        await db
+          .delete(OrganizationOrganizationAssociation)
+          .where(
+            and(
+              eq(
+                OrganizationOrganizationAssociation.upstreamOrganizationId,
+                input.orgId,
+              ),
+              eq(
+                OrganizationOrganizationAssociation.downstreamOrganizationId,
+                input.downstreamOrganizationId,
+              ),
+            ),
+          );
 
         moduleLogger.info(
           {

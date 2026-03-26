@@ -1,7 +1,16 @@
-import { prisma } from '@letschurch/db';
+import {
+  Channel,
+  ChannelMembership,
+  ChannelSubscription,
+  db,
+  OrganizationChannelAssociation,
+  UploadRecord,
+  UploadState,
+} from '@letschurch/db';
 import { backupS3 } from '@letschurch/s3/backup';
 import { publicS3 } from '@letschurch/s3/public';
 import { Context } from '@temporalio/activity';
+import { and, eq, inArray } from 'drizzle-orm';
 import logger from '../../util/logger';
 
 const moduleLogger = logger.child({
@@ -16,13 +25,14 @@ export async function markChannelDeleted(channelId: string): Promise<boolean> {
   activityLogger.info(`Marking channel ${channelId} as deleted`);
 
   try {
-    await prisma.channel.update({
-      where: { id: channelId },
-      data: {
+    await db
+      .update(Channel)
+      .set({
         deletedAt: new Date(),
         visibility: 'PRIVATE',
-      },
-    });
+        updatedAt: new Date(),
+      })
+      .where(eq(Channel.id, channelId));
     activityLogger.info(`Channel ${channelId} marked as deleted`);
     return true;
   } catch (e) {
@@ -41,10 +51,10 @@ export async function getChannelUploadIds(
   activityLogger.info(`Getting upload IDs for channel ${channelId}`);
 
   try {
-    const uploads = await prisma.uploadRecord.findMany({
-      where: { channelId },
-      select: { id: true },
-    });
+    const uploads = await db
+      .select({ id: UploadRecord.id })
+      .from(UploadRecord)
+      .where(eq(UploadRecord.channelId, channelId));
     const uploadIds = uploads.map((upload) => upload.id);
     activityLogger.info(
       `Found ${uploadIds.length} uploads for channel ${channelId}`,
@@ -69,13 +79,14 @@ export async function deleteChannelFiles(channelId: string): Promise<number> {
 
   try {
     // Get the channel to find file paths
-    const channel = await prisma.channel.findUnique({
-      where: { id: channelId },
-      select: {
-        avatarPath: true,
-        defaultThumbnailPath: true,
-      },
-    });
+    const channel = await db
+      .select({
+        avatarPath: Channel.avatarPath,
+        defaultThumbnailPath: Channel.defaultThumbnailPath,
+      })
+      .from(Channel)
+      .where(eq(Channel.id, channelId))
+      .then((r) => r[0] ?? null);
 
     if (!channel) {
       activityLogger.warn(`Channel ${channelId} not found`);
@@ -114,14 +125,18 @@ export async function deleteChannelFiles(channelId: string): Promise<number> {
 
     // Find and delete UploadState records for channel files
     Context.current().heartbeat('Deleting channel UploadState records');
-    const uploadStates = await prisma.uploadState.findMany({
-      where: {
-        channelId,
-        uploadType: {
-          in: ['CHANNEL_AVATAR', 'CHANNEL_DEFAULT_THUMBNAIL'],
-        },
-      },
-    });
+    const uploadStates = await db
+      .select()
+      .from(UploadState)
+      .where(
+        and(
+          eq(UploadState.channelId, channelId),
+          inArray(UploadState.uploadType, [
+            'CHANNEL_AVATAR',
+            'CHANNEL_DEFAULT_THUMBNAIL',
+          ]),
+        ),
+      );
 
     activityLogger.info(
       `Found ${uploadStates.length} UploadState records for channel files`,
@@ -148,9 +163,7 @@ export async function deleteChannelFiles(channelId: string): Promise<number> {
 
       // Delete the UploadState record
       try {
-        await prisma.uploadState.delete({
-          where: { id: uploadState.id },
-        });
+        await db.delete(UploadState).where(eq(UploadState.id, uploadState.id));
         activityLogger.info(`Deleted UploadState record ${uploadState.id}`);
       } catch (error) {
         activityLogger.error(
@@ -180,26 +193,28 @@ export async function deleteChannelAssociations(
 
   try {
     // Delete memberships (cascade delete is configured in schema)
-    const membershipCount = await prisma.channelMembership.deleteMany({
-      where: { channelId },
-    });
-    activityLogger.info(`Deleted ${membershipCount.count} channel memberships`);
+    const memberships = await db
+      .delete(ChannelMembership)
+      .where(eq(ChannelMembership.channelId, channelId))
+      .returning();
+    activityLogger.info(`Deleted ${memberships.length} channel memberships`);
 
     // Delete subscriptions (cascade delete is configured in schema)
-    const subscriptionCount = await prisma.channelSubscription.deleteMany({
-      where: { channelId },
-    });
+    const subscriptions = await db
+      .delete(ChannelSubscription)
+      .where(eq(ChannelSubscription.channelId, channelId))
+      .returning();
     activityLogger.info(
-      `Deleted ${subscriptionCount.count} channel subscriptions`,
+      `Deleted ${subscriptions.length} channel subscriptions`,
     );
 
     // Delete organization associations (cascade delete is configured in schema)
-    const orgAssocCount =
-      await prisma.organizationChannelAssociation.deleteMany({
-        where: { channelId },
-      });
+    const orgAssocs = await db
+      .delete(OrganizationChannelAssociation)
+      .where(eq(OrganizationChannelAssociation.channelId, channelId))
+      .returning();
     activityLogger.info(
-      `Deleted ${orgAssocCount.count} organization channel associations`,
+      `Deleted ${orgAssocs.length} organization channel associations`,
     );
 
     // Note: UploadList records have nullable channelId, so they become orphaned
@@ -223,9 +238,7 @@ export async function deleteChannelDb(channelId: string): Promise<boolean> {
   activityLogger.info(`Deleting channel ${channelId} from database`);
 
   try {
-    await prisma.channel.delete({
-      where: { id: channelId },
-    });
+    await db.delete(Channel).where(eq(Channel.id, channelId));
     activityLogger.info(`Channel ${channelId} deleted from database`);
     return true;
   } catch (e) {

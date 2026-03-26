@@ -1,17 +1,18 @@
-import { prisma } from '@letschurch/db';
+import { db, UploadRecord } from '@letschurch/db';
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { makeChunkedTokenizerFromS3 } from '@tokenizer/s3';
+import { eq, sql } from 'drizzle-orm';
 import { fileTypeFromTokenizer } from 'file-type';
 import sanitizeFilename from 'sanitize-filename';
 
 export async function getBackfillFilenamesCount(): Promise<number> {
-  return prisma.uploadRecord.count({
-    where: {
-      uploadFinalized: true,
-      finalizedUploadKey: { not: null },
-      originalFileName: null,
-    },
-  });
+  const rawResult = await db.execute<{ count: string }>(sql`
+    SELECT COUNT(*) as count FROM "upload_record"
+    WHERE "upload_finalized" = true
+      AND "finalized_upload_key" IS NOT NULL
+      AND "original_file_name" IS NULL
+  `);
+  return Number(rawResult.rows[0]?.count ?? 0);
 }
 
 export type BackfillFilenamesBatchResult = {
@@ -23,30 +24,29 @@ export type BackfillFilenamesBatchResult = {
 export async function backfillFilenamesBatch(
   batchSize: number,
 ): Promise<BackfillFilenamesBatchResult> {
-  const records = await prisma.uploadRecord.findMany({
-    where: {
-      uploadFinalized: true,
-      finalizedUploadKey: { not: null },
-      originalFileName: null,
-    },
-    take: batchSize,
-    select: {
-      id: true,
-      finalizedUploadKey: true,
-      title: true,
-    },
-  });
+  const records = await db.execute<{
+    id: string;
+    finalized_upload_key: string | null;
+    title: string | null;
+  }>(sql`
+    SELECT id, finalized_upload_key, title
+    FROM "upload_record"
+    WHERE "upload_finalized" = true
+      AND "finalized_upload_key" IS NOT NULL
+      AND "original_file_name" IS NULL
+    LIMIT ${batchSize}
+  `);
 
-  if (records.length === 0) {
+  if (records.rows.length === 0) {
     return { processed: 0, updated: 0, remaining: 0 };
   }
 
   let updated = 0;
 
-  for (const record of records) {
+  for (const record of records.rows) {
     try {
       // Skip if somehow finalizedUploadKey is null
-      if (!record.finalizedUploadKey) {
+      if (!record.finalized_upload_key) {
         continue;
       }
 
@@ -55,7 +55,7 @@ export async function backfillFilenamesBatch(
 
       try {
         const headResponse = await ingestS3.headObject(
-          record.finalizedUploadKey,
+          record.finalized_upload_key,
         );
         const ContentType = headResponse?.ContentType;
 
@@ -91,7 +91,7 @@ export async function backfillFilenamesBatch(
             ingestS3.getS3Client(),
             {
               Bucket: ingestS3.getBucket(),
-              Key: record.finalizedUploadKey,
+              Key: record.finalized_upload_key,
             },
           );
 
@@ -108,10 +108,10 @@ export async function backfillFilenamesBatch(
         const title = sanitizeFilename(record.title || 'media');
         const filename = `${title}.${extension}`;
 
-        await prisma.uploadRecord.update({
-          where: { id: record.id },
-          data: { originalFileName: filename },
-        });
+        await db
+          .update(UploadRecord)
+          .set({ originalFileName: filename, updatedAt: new Date() })
+          .where(eq(UploadRecord.id, record.id));
         updated++;
       }
     } catch (error) {
@@ -121,5 +121,5 @@ export async function backfillFilenamesBatch(
   }
 
   const remaining = await getBackfillFilenamesCount();
-  return { processed: records.length, updated, remaining };
+  return { processed: records.rows.length, updated, remaining };
 }

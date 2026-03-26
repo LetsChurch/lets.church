@@ -1,6 +1,7 @@
-import { prisma } from '@letschurch/db';
+import { db, UploadRecordDownloadSize } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { createFileRoute } from '@tanstack/react-router';
+import { and, eq, inArray } from 'drizzle-orm';
 import { Podcast } from 'podcast';
 import { podcastImage } from '@/util/image-sizes';
 import logger from '@/util/logger';
@@ -24,8 +25,10 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
           const siteUrl = process.env.PUBLIC_URL || 'https://lets.church';
 
           // Fetch channel
-          const channel = await prisma.channel.findUnique({
-            select: {
+          const channel = await db.query.Channel.findFirst({
+            where: (t, { eq, and, isNull }) =>
+              and(eq(t.slug, slug), isNull(t.deletedAt)),
+            columns: {
               id: true,
               name: true,
               slug: true,
@@ -34,10 +37,6 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
               visibility: true,
               approvedAt: true,
               deletedAt: true,
-            },
-            where: {
-              slug,
-              deletedAt: null,
             },
           });
 
@@ -110,8 +109,14 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
           });
 
           // Fetch latest 500 uploads from this channel with audio downloads
-          const uploads = await prisma.uploadRecord.findMany({
-            select: {
+          const uploads = await db.query.UploadRecord.findMany({
+            where: (t, { isNotNull, eq, and }) =>
+              and(
+                isNotNull(t.transcodingFinishedAt),
+                eq(t.visibility, 'PUBLIC'),
+                eq(t.channelId, channel.id),
+              ),
+            columns: {
               id: true,
               title: true,
               description: true,
@@ -119,36 +124,43 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
               defaultThumbnailPath: true,
               overrideThumbnailPath: true,
               variants: true,
-              downloadSizes: {
-                where: {
-                  variant: 'AUDIO_DOWNLOAD',
-                },
-                select: {
-                  bytes: true,
-                },
-              },
             },
-            where: {
-              transcodingFinishedAt: { not: null },
-              visibility: 'PUBLIC',
-              variants: {
-                has: 'AUDIO_DOWNLOAD',
-              },
-              channel: {
-                slug,
-                visibility: 'PUBLIC',
-                approvedAt: { not: null },
-                deletedAt: null,
-              },
-            },
-            orderBy: {
-              publishedAt: 'desc',
-            },
-            take: 500,
+            orderBy: (t, { desc }) => desc(t.publishedAt),
+            limit: 500,
           });
 
+          // Filter to only those with AUDIO_DOWNLOAD variant
+          const audioUploads = uploads.filter((u) =>
+            u.variants.includes('AUDIO_DOWNLOAD'),
+          );
+
+          // Fetch download sizes for these uploads
+          const uploadIds = audioUploads.map((u) => u.id);
+          const downloadSizes =
+            uploadIds.length > 0
+              ? await db
+                  .select({
+                    uploadRecordId: UploadRecordDownloadSize.uploadRecordId,
+                    bytes: UploadRecordDownloadSize.bytes,
+                  })
+                  .from(UploadRecordDownloadSize)
+                  .where(
+                    and(
+                      inArray(
+                        UploadRecordDownloadSize.uploadRecordId,
+                        uploadIds,
+                      ),
+                      eq(UploadRecordDownloadSize.variant, 'AUDIO_DOWNLOAD'),
+                    ),
+                  )
+              : [];
+
+          const downloadSizeMap = new Map(
+            downloadSizes.map((d) => [d.uploadRecordId, d.bytes]),
+          );
+
           // Add items to feed
-          for (const upload of uploads) {
+          for (const upload of audioUploads) {
             const thumbnailUrl = resolveThumbnailUrl({
               overrideThumbnailPath: upload.overrideThumbnailPath,
               defaultThumbnailPath: upload.defaultThumbnailPath,
@@ -161,9 +173,8 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
               `${upload.id}/AUDIO_DOWNLOAD.m4a`,
             );
 
-            const downloadSize = upload.downloadSizes[0];
-            const sizeBytes = downloadSize
-              ? Number(downloadSize.bytes.valueOf())
+            const sizeBytes = downloadSizeMap.has(upload.id)
+              ? Number(downloadSizeMap.get(upload.id)?.valueOf())
               : 0;
 
             const content = [
@@ -195,7 +206,7 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
             {
               context: {
                 channelName: channel.name,
-                itemCount: uploads.length,
+                itemCount: audioUploads.length,
               },
             },
             'Channel podcast feed generated successfully',

@@ -1,5 +1,4 @@
-import { prisma } from '@letschurch/db';
-import { OrganizationTagCategory } from '@letschurch/db/generated/prisma/client';
+import { db, OrganizationTag, OrganizationTagSuggestion } from '@letschurch/db';
 
 export const nonDenomTagSlug = 'non-denominational';
 export const reformedTagSlug = 'reformed';
@@ -67,73 +66,78 @@ export const monthlyCommunionTagSlug = 'monthly-lords-supper';
 export const weeklyFellowshipMealTagSlug = 'weekly-fellowship-meal';
 export const monthlyFellowshipMealTagSlug = 'monthly-fellowship-meal';
 
-const tagsData: ReadonlyArray<
-  Parameters<typeof prisma.organizationTag.upsert>[0]['create'] & {
-    suggests?: Array<string>;
-  }
-> = [
+type TagData = {
+  category: (typeof OrganizationTag.$inferInsert)['category'];
+  color: (typeof OrganizationTag.$inferInsert)['color'];
+  slug: string;
+  label: string;
+  description?: string;
+  suggests?: Array<string>;
+};
+
+const tagsData: ReadonlyArray<TagData> = [
   // Denomination
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: nonDenomTagSlug,
     label: 'Non-Denominational',
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     slug: reformedTagSlug,
     label: 'Reformed',
     color: 'BLUE',
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: baptistTagSlug,
     label: 'Baptist',
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: independentTagSlug,
     label: 'Independent',
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: southernBaptistTagSlug,
     label: 'Southern Baptist',
     suggests: [baptistTagSlug],
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: independentBaptistTagSlug,
     label: 'Independent Baptist',
     suggests: [baptistTagSlug, independentTagSlug],
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: calvinisticBaptistTagSlug,
     label: 'Calvinistic Baptist',
     suggests: [baptistTagSlug, calvinisticTagSlug],
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: reformedBaptistTagSlug,
     label: 'Reformed Baptist',
     suggests: [reformedTagSlug, baptistTagSlug],
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: presbyterianTagSlug,
     label: 'Presbyterian',
     suggests: [reformedTagSlug],
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: presbyterianArpTagSlug,
     label: 'Presbyterian (ARP)',
@@ -141,7 +145,7 @@ const tagsData: ReadonlyArray<
     suggests: [reformedTagSlug, presbyterianTagSlug],
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: presbyterianEpcTagSlug,
     label: 'Presbyterian (EPC)',
@@ -149,7 +153,7 @@ const tagsData: ReadonlyArray<
     suggests: [reformedTagSlug, presbyterianTagSlug],
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: presbyterianPcaTagSlug,
     label: 'Presbyterian (PCA)',
@@ -157,7 +161,7 @@ const tagsData: ReadonlyArray<
     suggests: [reformedTagSlug, presbyterianTagSlug],
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: presbyterianRpcusTagSlug,
     label: 'Presbyterian (RPCUS)',
@@ -165,7 +169,7 @@ const tagsData: ReadonlyArray<
     suggests: [reformedTagSlug, presbyterianTagSlug],
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: presbyterianRpcnaTagSlug,
     label: 'Presbyterian (RPCNA)',
@@ -173,7 +177,7 @@ const tagsData: ReadonlyArray<
     suggests: [reformedTagSlug, presbyterianTagSlug],
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: presbyterianOpcTagSlug,
     label: 'Presbyterian (OPC)',
@@ -181,7 +185,7 @@ const tagsData: ReadonlyArray<
     suggests: [reformedTagSlug, presbyterianTagSlug],
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: presbyterianCrecTagSlug,
     label: 'Presbyterian (CREC)',
@@ -189,148 +193,148 @@ const tagsData: ReadonlyArray<
     suggests: [reformedTagSlug, presbyterianTagSlug],
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: lutheranTagSlug,
     label: 'Lutheran',
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: lutheranAalcTagSlug,
     label: 'Lutheran (AALC)',
     suggests: [lutheranTagSlug],
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: lutheranLcmsTagSlug,
     label: 'Lutheran (LCMS)',
     suggests: [lutheranTagSlug],
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: interdenominationalTagSlug,
     label: 'Interdenominational',
   },
   {
-    category: OrganizationTagCategory.DENOMINATION,
+    category: 'DENOMINATION',
     color: 'BLUE',
     slug: evangelicalFreeTagSlug,
     label: 'Evangelical Free',
   },
   // Doctrine
   {
-    category: OrganizationTagCategory.DOCTRINE,
+    category: 'DOCTRINE',
     color: 'GREEN',
     slug: reformedCredobaptistTagSlug,
-    label: 'Refomed Credobaptist',
+    label: 'Reformed Credobaptist',
     suggests: [reformedTagSlug, baptistTagSlug],
   },
   {
-    category: OrganizationTagCategory.DOCTRINE,
+    category: 'DOCTRINE',
     color: 'GREEN',
     slug: reformedPaedobaptistTagSlug,
-    label: 'Refomed Paedobaptist',
+    label: 'Reformed Paedobaptist',
     suggests: [reformedTagSlug],
   },
   {
-    category: OrganizationTagCategory.DOCTRINE,
+    category: 'DOCTRINE',
     color: 'GREEN',
     slug: fundamentalistTagSlug,
     label: 'Fundamentalist',
   },
   {
-    category: OrganizationTagCategory.DOCTRINE,
+    category: 'DOCTRINE',
     color: 'GREEN',
     slug: dispensationalTagSlug,
     label: 'Dispensational',
   },
   {
-    category: OrganizationTagCategory.DOCTRINE,
+    category: 'DOCTRINE',
     color: 'GREEN',
     slug: anabaptistTagSlug,
     label: 'Anabaptist',
-    suggests: ['baptist'],
+    suggests: [baptistTagSlug],
   },
   {
-    category: OrganizationTagCategory.DOCTRINE,
+    category: 'DOCTRINE',
     color: 'GREEN',
     slug: calvinisticTagSlug,
     label: 'Calvinistic',
   },
   // Eschatology
   {
-    category: OrganizationTagCategory.ESCHATOLOGY,
+    category: 'ESCHATOLOGY',
     color: 'RED',
     slug: amillennialTagSlug,
     label: 'Amillennial',
   },
   {
-    category: OrganizationTagCategory.ESCHATOLOGY,
+    category: 'ESCHATOLOGY',
     color: 'RED',
     slug: premillennialTagSlug,
     label: 'Premillennial',
   },
   {
-    category: OrganizationTagCategory.ESCHATOLOGY,
+    category: 'ESCHATOLOGY',
     color: 'RED',
     slug: postmillennialTagSlug,
     label: 'Postmillennial',
   },
   // Confession
   {
-    category: OrganizationTagCategory.CONFESSION,
+    category: 'CONFESSION',
     color: 'INDIGO',
     slug: firstLondonBaptistConfessionTagSlug,
     label: 'First London Baptist Confession (1644/1646)',
     suggests: [baptistTagSlug, reformedBaptistTagSlug, reformedTagSlug],
   },
   {
-    category: OrganizationTagCategory.CONFESSION,
+    category: 'CONFESSION',
     color: 'INDIGO',
     slug: secondLondonBaptistConfessionTagSlug,
     label: 'Second London Baptist Confession (1689)',
     suggests: [baptistTagSlug, reformedBaptistTagSlug, reformedTagSlug],
   },
   {
-    category: OrganizationTagCategory.CONFESSION,
+    category: 'CONFESSION',
     color: 'INDIGO',
     slug: augsburgConfessionTagSlug,
     label: 'Augsburg Confession (1530)',
     suggests: [lutheranTagSlug],
   },
   {
-    category: OrganizationTagCategory.CONFESSION,
+    category: 'CONFESSION',
     color: 'INDIGO',
     slug: scotsConfessionTagSlug,
     label: 'Scots Confession (1560)',
     suggests: [reformedTagSlug],
   },
   {
-    category: OrganizationTagCategory.CONFESSION,
+    category: 'CONFESSION',
     color: 'INDIGO',
     slug: belgicConfessionTagSlug,
     label: 'Belgic Confession (1561)',
     suggests: [reformedTagSlug],
   },
   {
-    category: OrganizationTagCategory.CONFESSION,
+    category: 'CONFESSION',
     color: 'INDIGO',
     slug: heidelbergCatechismTagSlug,
     label: 'Heidelberg Catechism (1563)',
     suggests: [reformedTagSlug],
   },
   {
-    category: OrganizationTagCategory.CONFESSION,
+    category: 'CONFESSION',
     color: 'INDIGO',
     slug: canonsOfDortTagSlug,
     label: 'Canons of Dort (1618-1619)',
     suggests: [reformedTagSlug],
   },
   {
-    category: OrganizationTagCategory.CONFESSION,
+    category: 'CONFESSION',
     color: 'INDIGO',
     slug: threeFormsOfUnityTagSlug,
     label: 'Three Forms of Unity',
@@ -342,126 +346,126 @@ const tagsData: ReadonlyArray<
     ],
   },
   {
-    category: OrganizationTagCategory.CONFESSION,
+    category: 'CONFESSION',
     color: 'INDIGO',
     slug: westminsterConfessionTagSlug,
     label: 'Westminster Confession (1646)',
     suggests: [reformedTagSlug],
   },
   {
-    category: OrganizationTagCategory.CONFESSION,
+    category: 'CONFESSION',
     color: 'INDIGO',
     slug: savoyDeclarationTagSlug,
     label: 'Savoy Declaration (1658)',
     suggests: [reformedTagSlug],
   },
   {
-    category: OrganizationTagCategory.CONFESSION,
+    category: 'CONFESSION',
     color: 'INDIGO',
     slug: philadelphiaConfessionTagSlug,
     label: 'Philadelphia Confession (1742)',
     suggests: [reformedTagSlug, reformedBaptistTagSlug, baptistTagSlug],
   },
   {
-    category: OrganizationTagCategory.CONFESSION,
+    category: 'CONFESSION',
     color: 'INDIGO',
     slug: newHampshireConfessionTagSlug,
     label: 'New Hampshire Baptist Confession (1833)',
     suggests: [baptistTagSlug],
   },
   {
-    category: OrganizationTagCategory.CONFESSION,
+    category: 'CONFESSION',
     color: 'INDIGO',
     slug: baptistFaithAndMessageTagSlug,
     label: 'Baptist Faith and Message (2000)',
     suggests: [baptistTagSlug, southernBaptistTagSlug],
   },
   {
-    category: OrganizationTagCategory.CONFESSION,
+    category: 'CONFESSION',
     color: 'INDIGO',
     slug: thirtyNineArticles,
     label: 'Thirty-Nine Articles (1563)',
   },
   // Worship
   {
-    category: OrganizationTagCategory.WORSHIP,
+    category: 'WORSHIP',
     color: 'PINK',
     slug: psalmsHymnsSpiritualSongsTagSlug,
     label: 'Psalms, Hymns, and Spiritual Songs',
   },
   {
-    category: OrganizationTagCategory.WORSHIP,
+    category: 'WORSHIP',
     color: 'PINK',
     slug: exclusivePsalmodyTagSlug,
     label: 'Exclusive Psalmody',
   },
   {
-    category: OrganizationTagCategory.WORSHIP,
+    category: 'WORSHIP',
     color: 'PINK',
     slug: psalmsAndHymnsTagSlug,
     label: 'Psalms and Hymns',
   },
   {
-    category: OrganizationTagCategory.WORSHIP,
+    category: 'WORSHIP',
     color: 'PINK',
     slug: contemporaryTagSlug,
     label: 'Contemporary',
   },
   // Government
   {
-    category: OrganizationTagCategory.GOVERNMENT,
+    category: 'GOVERNMENT',
     color: 'PURPLE',
     slug: eldersAndDeaconsTagSlug,
     label: 'Elders and Deacons',
   },
   {
-    category: OrganizationTagCategory.GOVERNMENT,
+    category: 'GOVERNMENT',
     color: 'PURPLE',
     slug: pastorsAndDeaconsTagSlug,
     label: 'Pastors and Deacons',
   },
   {
-    category: OrganizationTagCategory.GOVERNMENT,
+    category: 'GOVERNMENT',
     color: 'PURPLE',
     slug: pastorsEldersAndDeaconsTagSlug,
     label: 'Pastors, Elders, and Deacons',
   },
   {
-    category: OrganizationTagCategory.GOVERNMENT,
+    category: 'GOVERNMENT',
     color: 'PURPLE',
     slug: brotherhoodTagSlug,
     label: 'Brotherhood',
   },
   // Other
   {
-    category: OrganizationTagCategory.OTHER,
+    category: 'OTHER',
     color: 'GRAY',
     slug: familyIntegratedTagSlug,
     label: 'Family Integrated',
     description: 'Families Worship and Attend Together',
   },
   {
-    category: OrganizationTagCategory.OTHER,
+    category: 'OTHER',
     color: 'GRAY',
     slug: weeklyCommunionTagSlug,
     label: 'Weekly Communion',
     description: "The Lord's Supper is celebrated every week",
   },
   {
-    category: OrganizationTagCategory.OTHER,
+    category: 'OTHER',
     color: 'GRAY',
     slug: monthlyCommunionTagSlug,
     label: 'Monthly Communion',
     description: "The Lord's Supper is celebrated once a month",
   },
   {
-    category: OrganizationTagCategory.OTHER,
+    category: 'OTHER',
     color: 'GRAY',
     slug: weeklyFellowshipMealTagSlug,
     label: 'Weekly Fellowship Meal',
   },
   {
-    category: OrganizationTagCategory.OTHER,
+    category: 'OTHER',
     color: 'GRAY',
     slug: monthlyFellowshipMealTagSlug,
     label: 'Monthly Fellowship Meal',
@@ -469,29 +473,22 @@ const tagsData: ReadonlyArray<
 ];
 
 for (const { suggests: _suggests, ...tag } of tagsData) {
-  await prisma.organizationTag.upsert({
-    where: { slug: tag.slug },
-    create: tag,
-    update: tag,
+  await db.insert(OrganizationTag).values(tag).onConflictDoUpdate({
+    target: OrganizationTag.slug,
+    set: tag,
   });
 }
 
 for (const tag of tagsData) {
   if (tag.suggests) {
     for (const suggest of tag.suggests) {
-      await prisma.organizationTagSuggestion.upsert({
-        where: {
-          parentSlug_suggestedSlug: {
-            parentSlug: tag.slug,
-            suggestedSlug: suggest,
-          },
-        },
-        create: {
+      await db
+        .insert(OrganizationTagSuggestion)
+        .values({
           parentSlug: tag.slug,
           suggestedSlug: suggest,
-        },
-        update: {},
-      });
+        })
+        .onConflictDoNothing();
     }
   }
 }
