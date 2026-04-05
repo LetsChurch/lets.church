@@ -9,14 +9,14 @@
 import { join } from 'node:path';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { Pool } from 'pg';
 import { z } from 'zod';
+import { createPool } from './pool';
 
 const { DATABASE_URL } = z
   .object({ DATABASE_URL: z.string() })
   .parse(process.env);
 
-const pool = new Pool({ connectionString: DATABASE_URL });
+const pool = createPool(DATABASE_URL);
 const db = drizzle(pool);
 
 try {

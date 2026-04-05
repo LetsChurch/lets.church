@@ -1,7 +1,7 @@
 import { logger as baseLogger } from '@letschurch/util';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
 import { z } from 'zod';
+import { createPool } from './pool';
 import * as schema from './schema';
 
 export * from './schema';
@@ -14,7 +14,7 @@ const { DATABASE_URL } = z
   .object({ DATABASE_URL: z.string() })
   .parse(process.env);
 
-const pool = new Pool({ connectionString: DATABASE_URL });
+const pool = createPool(DATABASE_URL);
 
 pool.on('error', (err) => {
   logger.error({ err }, 'pg pool error');

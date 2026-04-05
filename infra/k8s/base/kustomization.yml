@@ -17,6 +17,7 @@ resources:
 configMapGenerator:
   - name: web-config
     literals:
+      - DATABASE_SSL="true"
       - ELASTICSEARCH_URL="http://elasticsearch:9200"
       - IMGPROXY_URL="http://IMGPROXY_URL"
       - LISTMONK_INTERNAL_URL="http://listmonk"

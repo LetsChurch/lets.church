@@ -13,8 +13,8 @@
 import { createHash } from 'crypto';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { Pool } from 'pg';
 import { z } from 'zod';
+import { createPool } from '../src/pool';
 
 const { DATABASE_URL } = z
   .object({ DATABASE_URL: z.string() })
@@ -23,7 +23,7 @@ const { DATABASE_URL } = z
 const sql = readFileSync(join(import.meta.dirname, '0000_baseline.sql'), 'utf8');
 const hash = createHash('sha256').update(sql).digest('hex');
 
-const pool = new Pool({ connectionString: DATABASE_URL });
+const pool = createPool(DATABASE_URL);
 
 try {
   // Only mark as applied if this is an existing Prisma-managed database.
