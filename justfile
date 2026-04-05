@@ -76,8 +76,17 @@ pnpmi:
 temporal *args:
   docker compose exec temporal-admin-tools temporal {{args}}
 
-db-push:
+db-generate name:
+  docker compose exec web sh -c 'cd /usr/src/app/packages/db && pnpm exec drizzle-kit generate --name {{name}}'
+
+db-migrate:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run db:migrate'
+
+# Alias kept for compatibility
+db-push: db-migrate
+
+db-studio:
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run db:studio'
 
 db-reset:
   docker compose restart postgres
@@ -86,6 +95,7 @@ db-reset:
 es-push-mappings:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/elasticsearch run push-mappings'
 
+# First-time Drizzle setup: marks the baseline as applied on an existing Prisma DB, then migrates
 migrate-dev:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run db:mark-baseline && pnpm --filter @letschurch/db run db:migrate'
 

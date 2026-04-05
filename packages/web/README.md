@@ -15,18 +15,35 @@ This is the primary user-facing application that handles:
 
 ### Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `DATABASE_URL` | PostgreSQL connection string | Yes |
-| `ELASTICSEARCH_NODE` | Elasticsearch node URL | Yes |
-| `TEMPORAL_ADDRESS` | Temporal server address | Yes |
-| `SENTRY_DSN` | Sentry error tracking DSN | Yes |
-| `JWT_SECRET` | Secret for JWT token signing | Yes |
-| `SMTP_*` | SMTP configuration for sending emails | Yes |
-| `MAPBOX_GEOCODING_TOKEN` | Mapbox API token for geocoding | Yes |
-| `IMGPROXY_*` | ImgProxy configuration for image optimization | Yes |
-| `LISTMONK_*` | Listmonk configuration for newsletters | Yes |
-| `CLOUDFLARE_*` | Cloudflare configuration | Yes |
+The following variables are parsed at **module load time** and must be present for the server to start:
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `ELASTICSEARCH_URL` | Elasticsearch node URL |
+| `TEMPORAL_ADDRESS` | Temporal server address |
+| `JWT_SECRET` | Secret for JWT token signing (hex) |
+| `MEDIA_URL` | Base URL for served media assets |
+| `IMGPROXY_URL` | imgproxy instance URL |
+| `IMGPROXY_KEY` | imgproxy signing key (hex) |
+| `IMGPROXY_SALT` | imgproxy signing salt (hex) |
+| `WEB_URL` | Public URL of this app (used in emails) |
+| `TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key |
+| `MAPBOX_MAP_TOKEN` | Mapbox token for map display |
+| `MAPBOX_SEARCHBOX_TOKEN` | Mapbox token for the search box |
+| `ZXCVBN_MINIMUM_SCORE` | Minimum password strength score (0–4) |
+
+The following are only required when specific features are exercised at runtime:
+
+| Variable | Description |
+|----------|-------------|
+| `ADMIN_EMAIL` | Recipient for admin notifications |
+| `SENTRY_WEB_SERVER_DSN` | Sentry DSN for server-side error tracking |
+| `SMTP_URL` | SMTP connection URL for transactional email |
+| `LISTMONK_INTERNAL_URL` | Listmonk newsletter service URL |
+| `LISTMONK_API_USER` | Listmonk API username |
+| `LISTMONK_API_TOKEN` | Listmonk API token |
 
 ### S3 Configuration
 
