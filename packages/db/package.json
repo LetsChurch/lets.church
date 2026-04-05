@@ -20,8 +20,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/migrate.ts",
     "db:studio": "drizzle-kit studio",
-    "db:truncate": "tsx prisma/truncate.ts",
-    "db:mark-baseline": "tsx drizzle/mark-baseline-applied.ts"
+    "db:truncate": "tsx prisma/truncate.ts"
   },
   "dependencies": {
     "@letschurch/util": "workspace:*",

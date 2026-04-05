@@ -19,7 +19,7 @@ spec:
       initContainers:
         - name: db-migrate
           image: registry.gitlab.com/letschurch/lets.church/background-worker:latest
-          command: ["sh", "-c", "cd /usr/src/app/packages/db && pnpm run db:mark-baseline && pnpm run db:migrate"]
+          command: ["sh", "-c", "cd /usr/src/app/packages/db && pnpm run db:migrate"]
           envFrom:
             - configMapRef:
                 name: web-config

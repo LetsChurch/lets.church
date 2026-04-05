@@ -95,10 +95,6 @@ db-reset:
 es-push-mappings:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/elasticsearch run push-mappings'
 
-# First-time Drizzle setup: marks the baseline as applied on an existing Prisma DB, then migrates
-migrate-dev:
-  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run db:mark-baseline && pnpm --filter @letschurch/db run db:migrate'
-
 temporal-schedule: restart-workers
   just temporal workflow execute --task-queue background --type updateDailySaltWorkflow --workflow-id update-daily-salt
   -just temporal schedule create --schedule-id update-daily-salt --cron @daily --overlap-policy Skip --task-queue background --type updateDailySaltWorkflow --workflow-id update-daily-salt
@@ -110,7 +106,7 @@ temporal-schedule-delete:
   just temporal schedule delete --schedule-id update-upload-scores
   just temporal schedule delete --schedule-id update-comment-scores
 
-init: migrate-dev es-push-mappings temporal-schedule
+init: db-migrate es-push-mappings temporal-schedule
 
 s3-prune-multipart-uploads:
   S3_BUCKET=${S3_INGEST_BUCKET} pnpm --filter @letschurch/web run s3:prune-multipart-uploads
