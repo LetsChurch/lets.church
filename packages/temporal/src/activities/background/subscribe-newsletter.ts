@@ -1,4 +1,5 @@
-import { prisma } from '@letschurch/db';
+import { db, NewsletterMailingList } from '@letschurch/db';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import logger from '../../util/logger';
 
@@ -18,14 +19,16 @@ export default async function subscribeNewsletterActivity(email: string) {
 
   // Get lists configured for auto-subscribe on registration
   // Only public lists can be subscribed to via the subscription form endpoint
-  const registrationLists = await prisma.newsletterMailingList.findMany({
-    where: {
-      enabled: true,
-      subscribeOnRegistration: true,
-      type: 'PUBLIC',
-    },
-    select: { listmonkUuid: true },
-  });
+  const registrationLists = await db
+    .select({ listmonkUuid: NewsletterMailingList.listmonkUuid })
+    .from(NewsletterMailingList)
+    .where(
+      and(
+        eq(NewsletterMailingList.enabled, true),
+        eq(NewsletterMailingList.subscribeOnRegistration, true),
+        eq(NewsletterMailingList.type, 'public'),
+      ),
+    );
 
   if (registrationLists.length === 0) {
     moduleLogger.warn('No lists configured for auto-subscribe on registration');

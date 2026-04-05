@@ -1,8 +1,9 @@
-import { prisma } from '@letschurch/db';
+import { db, UploadRecord } from '@letschurch/db';
 import { client as esClient } from '@letschurch/elasticsearch';
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { Context } from '@temporalio/activity';
+import { eq } from 'drizzle-orm';
 import logger from '../../util/logger';
 
 const moduleLogger = logger.child({
@@ -21,10 +22,10 @@ export async function markUploadPrivate(id: string) {
   activityLogger.info(`Marking upload record ${id} as private`);
 
   try {
-    await prisma.uploadRecord.update({
-      where: { id },
-      data: { visibility: 'PRIVATE' },
-    });
+    await db
+      .update(UploadRecord)
+      .set({ visibility: 'PRIVATE', updatedAt: new Date() })
+      .where(eq(UploadRecord.id, id));
   } catch (e) {
     activityLogger.error(`Error marking upload record ${id} as private: ${e}`);
     return false;
@@ -74,7 +75,7 @@ export async function deleteUploadRecordDb(id: string) {
   activityLogger.info(`Deleting upload record from database for ${id}`);
 
   try {
-    await prisma.uploadRecord.delete({ where: { id } });
+    await db.delete(UploadRecord).where(eq(UploadRecord.id, id));
   } catch (e) {
     activityLogger.info(`Error deleting from database: ${e}`);
     return false;

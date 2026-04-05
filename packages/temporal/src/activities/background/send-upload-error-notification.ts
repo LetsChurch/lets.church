@@ -1,4 +1,11 @@
-import { prisma } from '@letschurch/db';
+import {
+  AppUserEmail,
+  Channel,
+  ChannelMembership,
+  db,
+  UploadRecord,
+} from '@letschurch/db';
+import { and, eq, isNotNull } from 'drizzle-orm';
 import logger from '../../util/logger';
 import sendEmail from './send-email';
 
@@ -14,28 +21,16 @@ export async function sendUploadErrorNotification(
   uploadRecordId: string,
   error: string,
 ) {
-  const record = await prisma.uploadRecord.findUnique({
-    where: { id: uploadRecordId },
-    include: {
-      channel: {
-        include: {
-          memberships: {
-            where: { isAdmin: true },
-            include: {
-              appUser: {
-                include: {
-                  emails: {
-                    where: { verifiedAt: { not: null } },
-                    take: 1,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  });
+  const record = await db
+    .select({
+      id: UploadRecord.id,
+      title: UploadRecord.title,
+      originalFileName: UploadRecord.originalFileName,
+      channelId: UploadRecord.channelId,
+    })
+    .from(UploadRecord)
+    .where(eq(UploadRecord.id, uploadRecordId))
+    .then((r) => r[0] ?? null);
 
   if (!record) {
     moduleLogger.warn(
@@ -44,20 +39,60 @@ export async function sendUploadErrorNotification(
     return;
   }
 
+  const channel = await db
+    .select({ name: Channel.name })
+    .from(Channel)
+    .where(eq(Channel.id, record.channelId))
+    .then((r) => r[0]);
+
+  if (!channel) {
+    moduleLogger.warn('Channel not found, cannot send error notification');
+    return;
+  }
+
+  // Get admin memberships with their emails
+  const adminMemberships = await db
+    .select({
+      appUserId: ChannelMembership.appUserId,
+    })
+    .from(ChannelMembership)
+    .where(
+      and(
+        eq(ChannelMembership.channelId, record.channelId),
+        eq(ChannelMembership.isAdmin, true),
+      ),
+    );
+
   const title = record.title ?? record.originalFileName ?? uploadRecordId;
 
-  // Send to channel admins
-  const adminEmails = record.channel.memberships
-    .map((m) => m.appUser.emails[0]?.email)
-    .filter(Boolean);
+  // Collect admin emails
+  const adminEmails: string[] = [];
+  for (const membership of adminMemberships) {
+    const emailRow = await db
+      .select({ email: AppUserEmail.email })
+      .from(AppUserEmail)
+      .where(
+        and(
+          eq(AppUserEmail.appUserId, membership.appUserId),
+          isNotNull(AppUserEmail.verifiedAt),
+        ),
+      )
+      .limit(1)
+      .then((r) => r[0] ?? null);
 
+    if (emailRow) {
+      adminEmails.push(emailRow.email);
+    }
+  }
+
+  // Send to channel admins
   if (adminEmails.length > 0) {
     try {
       await sendEmail({
         from: 'hello@lets.church',
         to: adminEmails,
         subject: `Upload Failed to Process: ${title}`,
-        text: `An upload for your channel "${record.channel.name}" failed to process.\n\nTitle: ${title}\nUpload ID: ${uploadRecordId}\n\nError: ${error}\n\nPlease contact support if this problem persists.`,
+        text: `An upload for your channel "${channel.name}" failed to process.\n\nTitle: ${title}\nUpload ID: ${uploadRecordId}\n\nError: ${error}\n\nPlease contact support if this problem persists.`,
       });
 
       moduleLogger.info('Sent error notification to channel admins');
@@ -74,7 +109,7 @@ export async function sendUploadErrorNotification(
         from: 'hello@lets.church',
         to: [ADMIN_EMAIL],
         subject: `Upload Processing Failed: ${title}`,
-        text: `An upload has failed to process.\n\nTitle: ${title}\nChannel: ${record.channel.name}\nChannel ID: ${record.channelId}\nUpload ID: ${uploadRecordId}\n\nError: ${error}`,
+        text: `An upload has failed to process.\n\nTitle: ${title}\nChannel: ${channel.name}\nChannel ID: ${record.channelId}\nUpload ID: ${uploadRecordId}\n\nError: ${error}`,
       });
 
       moduleLogger.info('Sent error notification to site admin');

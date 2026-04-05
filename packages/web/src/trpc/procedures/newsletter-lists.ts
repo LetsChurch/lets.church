@@ -1,5 +1,6 @@
-import { prisma } from '@letschurch/db';
+import { db, NewsletterMailingList } from '@letschurch/db';
 import { TRPCError } from '@trpc/server';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import logger from '@/util/logger';
 import { authProcedure, router } from '../trpc';
@@ -121,10 +122,8 @@ export const newsletterListsRouter = router({
   getConfiguredLists: adminProcedure.query(async () => {
     moduleLogger.info('Fetching configured newsletter lists');
 
-    const lists = await prisma.newsletterMailingList.findMany({
-      orderBy: {
-        name: 'asc',
-      },
+    const lists = await db.query.NewsletterMailingList.findMany({
+      orderBy: (t, { asc }) => [asc(t.name)],
     });
 
     moduleLogger.info(
@@ -184,22 +183,34 @@ export const newsletterListsRouter = router({
       // Upsert each list into the database
       const syncedLists = await Promise.all(
         data.data.results.map((list) =>
-          prisma.newsletterMailingList.upsert({
-            where: { listmonkUuid: list.uuid },
-            create: {
+          db
+            .insert(NewsletterMailingList)
+            .values({
               listmonkUuid: list.uuid,
               name: list.name,
-              type: list.type === 'public' ? 'PUBLIC' : 'PRIVATE',
-              optin: list.optin === 'double' ? 'DOUBLE' : 'SINGLE',
+              type: list.type === 'public' ? 'public' : 'private',
+              optin: list.optin === 'double' ? 'double' : 'single',
               enabled: false, // Don't auto-enable new lists
               subscribeOnRegistration: false,
-            },
-            update: {
-              name: list.name, // Update name if it changed in Listmonk
-              type: list.type === 'public' ? 'PUBLIC' : 'PRIVATE',
-              optin: list.optin === 'double' ? 'DOUBLE' : 'SINGLE',
-            },
-          }),
+              updatedAt: new Date(),
+            })
+            .onConflictDoUpdate({
+              target: NewsletterMailingList.listmonkUuid,
+              set: {
+                name: list.name, // Update name if it changed in Listmonk
+                type: list.type === 'public' ? 'public' : 'private',
+                optin: list.optin === 'double' ? 'double' : 'single',
+                updatedAt: new Date(),
+              },
+            })
+            .returning()
+            .then((r) => {
+              const result = r[0];
+              if (!result) {
+                throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+              }
+              return result;
+            }),
         ),
       );
 
@@ -231,24 +242,26 @@ export const newsletterListsRouter = router({
         listmonkUuid: z.uuid(),
         enabled: z.boolean().optional(),
         subscribeOnRegistration: z.boolean().optional(),
-        type: z.enum(['PUBLIC', 'PRIVATE']).optional(),
-        optin: z.enum(['SINGLE', 'DOUBLE']).optional(),
+        type: z.enum(['public', 'private']).optional(),
+        optin: z.enum(['single', 'double']).optional(),
       }),
     )
     .mutation(async ({ input }) => {
       moduleLogger.info('Updating list configuration');
 
-      const updated = await prisma.newsletterMailingList.update({
-        where: { listmonkUuid: input.listmonkUuid },
-        data: {
+      const [updated] = await db
+        .update(NewsletterMailingList)
+        .set({
           ...(input.enabled !== undefined && { enabled: input.enabled }),
           ...(input.subscribeOnRegistration !== undefined && {
             subscribeOnRegistration: input.subscribeOnRegistration,
           }),
           ...(input.type !== undefined && { type: input.type }),
           ...(input.optin !== undefined && { optin: input.optin }),
-        },
-      });
+          updatedAt: new Date(),
+        })
+        .where(eq(NewsletterMailingList.listmonkUuid, input.listmonkUuid))
+        .returning();
 
       moduleLogger.info(
         {

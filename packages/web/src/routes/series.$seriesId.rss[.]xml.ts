@@ -1,6 +1,7 @@
-import { prisma } from '@letschurch/db';
+import { db, UploadListEntry, UploadRecord } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { createFileRoute } from '@tanstack/react-router';
+import { and, asc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { Feed } from 'feed';
 import { IncomingIdSchema } from '@/schemas/common';
 import { rssFeedIcon } from '@/util/image-sizes';
@@ -26,18 +27,19 @@ export const Route = createFileRoute('/series/$seriesId/rss.xml')({
           const parsedSeriesId = IncomingIdSchema.parse(seriesId);
 
           // Fetch series
-          const series = await prisma.uploadList.findUnique({
-            select: {
+          const series = await db.query.UploadList.findFirst({
+            where: (t, { eq }) => eq(t.id, parsedSeriesId),
+            columns: {
               id: true,
               title: true,
               type: true,
+            },
+            with: {
               author: {
-                select: {
-                  username: true,
-                },
+                columns: { username: true },
               },
               channel: {
-                select: {
+                columns: {
                   name: true,
                   slug: true,
                   defaultThumbnailPath: true,
@@ -46,9 +48,6 @@ export const Route = createFileRoute('/series/$seriesId/rss.xml')({
                   deletedAt: true,
                 },
               },
-            },
-            where: {
-              id: parsedSeriesId,
             },
           });
 
@@ -135,35 +134,32 @@ export const Route = createFileRoute('/series/$seriesId/rss.xml')({
             }),
           });
 
-          // Fetch series entries ordered by rank
-          const entries = await prisma.uploadListEntry.findMany({
-            select: {
-              upload: {
-                select: {
-                  id: true,
-                  title: true,
-                  description: true,
-                  publishedAt: true,
-                  defaultThumbnailPath: true,
-                  overrideThumbnailPath: true,
-                },
-              },
-            },
-            where: {
-              uploadListId: parsedSeriesId,
-              upload: {
-                visibility: 'PUBLIC',
-                transcodingFinishedAt: { not: null },
-                deletedAt: null,
-              },
-            },
-            orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
-            take: 500,
-          });
+          // Fetch series entries ordered by rank, filtering uploads at DB level
+          const uploads = await db
+            .select({
+              id: UploadRecord.id,
+              title: UploadRecord.title,
+              description: UploadRecord.description,
+              publishedAt: UploadRecord.publishedAt,
+              defaultThumbnailPath: UploadRecord.defaultThumbnailPath,
+              overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
+            })
+            .from(UploadListEntry)
+            .innerJoin(
+              UploadRecord,
+              and(
+                eq(UploadListEntry.uploadRecordId, UploadRecord.id),
+                eq(UploadRecord.visibility, 'PUBLIC'),
+                isNotNull(UploadRecord.transcodingFinishedAt),
+                isNull(UploadRecord.deletedAt),
+              ),
+            )
+            .where(eq(UploadListEntry.uploadListId, parsedSeriesId))
+            .orderBy(asc(UploadListEntry.rank), asc(UploadListEntry.createdAt))
+            .limit(500);
 
           // Add items to feed
-          for (const entry of entries) {
-            const upload = entry.upload;
+          for (const upload of uploads) {
             const thumbnailUrl = resolveThumbnailUrl({
               overrideThumbnailPath: upload.overrideThumbnailPath,
               defaultThumbnailPath: upload.defaultThumbnailPath,
@@ -203,7 +199,7 @@ export const Route = createFileRoute('/series/$seriesId/rss.xml')({
             {
               context: {
                 seriesTitle: series.title,
-                itemCount: entries.length,
+                itemCount: uploads.length,
               },
             },
             'Series RSS feed generated successfully',

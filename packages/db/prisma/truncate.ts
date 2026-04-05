@@ -1,18 +1,19 @@
-import logger from '@letschurch/util';
-import { prisma } from '../src';
+import { logger } from '@letschurch/util';
+import { sql } from 'drizzle-orm';
+import { db } from '../src';
 
 async function truncateDb() {
-  const tablenames = await prisma.$queryRaw<
-    Array<{ tablename: string }>
-  >`SELECT tablename FROM pg_tables WHERE schemaname='public'`;
+  const tablenames = await db.execute<{ tablename: string }>(
+    sql`SELECT tablename FROM pg_tables WHERE schemaname='public'`,
+  );
 
-  logger.warn(`Truncating ${tablenames.length} tables...`);
+  logger.warn(`Truncating ${tablenames.rows.length} tables...`);
 
-  for (const { tablename } of tablenames) {
-    if (tablename !== '_prisma_migrations') {
+  for (const { tablename } of tablenames.rows) {
+    if (tablename !== '_prisma_migrations' && tablename !== '__drizzle_migrations') {
       try {
-        await prisma.$executeRawUnsafe(
-          `TRUNCATE TABLE "public"."${tablename}" CASCADE;`,
+        await db.execute(
+          sql`TRUNCATE TABLE ${sql.identifier('public')}.${sql.identifier(tablename)} CASCADE`,
         );
       } catch (error) {
         logger.error(error);

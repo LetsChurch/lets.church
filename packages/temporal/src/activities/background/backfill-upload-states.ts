@@ -1,5 +1,5 @@
-import { prisma } from '@letschurch/db';
-import type { UploadStateType } from '@letschurch/db/generated/prisma/client';
+import { db, UploadState } from '@letschurch/db';
+import { eq, sql } from 'drizzle-orm';
 import logger from '../../util/logger';
 
 export type BackfillBatchResult = {
@@ -14,19 +14,24 @@ export type BackfillBatchResult = {
  */
 export async function getBackfillCount(): Promise<number> {
   // Count finalized upload records that don't have an UploadState
-  const mediaCount = await prisma.uploadRecord.count({
-    where: {
-      uploadFinalized: true,
-      finalizedUploadKey: { not: null },
-      uploadStates: {
-        none: {
-          uploadType: 'MEDIA',
-        },
-      },
-    },
-  });
+  const _subquery = db
+    .select({ id: UploadState.uploadRecordId })
+    .from(UploadState)
+    .where(eq(UploadState.uploadType, 'MEDIA'));
 
-  return mediaCount;
+  const result = await db.execute<{ count: string }>(sql`
+    SELECT COUNT(*) as count
+    FROM "upload_record"
+    WHERE "upload_finalized" = true
+      AND "finalized_upload_key" IS NOT NULL
+      AND "id" NOT IN (
+        SELECT "upload_record_id" FROM "upload_state"
+        WHERE "upload_type" = 'MEDIA'
+        AND "upload_record_id" IS NOT NULL
+      )
+  `);
+
+  return Number(result.rows[0]?.count ?? 0);
 }
 
 /**
@@ -36,42 +41,48 @@ async function backfillMediaBatch(
   batchSize: number,
   ingestBucket: string,
 ): Promise<number> {
-  const uploads = await prisma.uploadRecord.findMany({
-    where: {
-      uploadFinalized: true,
-      finalizedUploadKey: { not: null },
-      uploadStates: {
-        none: {
-          uploadType: 'MEDIA',
-        },
-      },
-    },
-    take: batchSize,
-    select: {
-      id: true,
-      finalizedUploadKey: true,
-      uploadSizeBytes: true,
-    },
-  });
+  const uploads = await db.execute<{
+    id: string;
+    finalized_upload_key: string | null;
+    upload_size_bytes: string | null;
+  }>(sql`
+    SELECT id, finalized_upload_key, upload_size_bytes
+    FROM "upload_record"
+    WHERE "upload_finalized" = true
+      AND "finalized_upload_key" IS NOT NULL
+      AND "id" NOT IN (
+        SELECT "upload_record_id" FROM "upload_state"
+        WHERE "upload_type" = 'MEDIA'
+        AND "upload_record_id" IS NOT NULL
+      )
+    LIMIT ${batchSize}
+  `);
 
-  if (uploads.length === 0) return 0;
+  if (uploads.rows.length === 0) return 0;
 
-  const uploadsWithKeys = uploads.filter(
-    (upload): upload is typeof upload & { finalizedUploadKey: string } =>
-      upload.finalizedUploadKey !== null,
+  const uploadsWithKeys = uploads.rows.filter(
+    (upload): upload is typeof upload & { finalized_upload_key: string } =>
+      upload.finalized_upload_key !== null,
   );
 
-  await prisma.uploadState.createMany({
-    data: uploadsWithKeys.map((upload) => ({
-      s3Key: upload.finalizedUploadKey,
-      s3Bucket: ingestBucket,
-      uploadType: 'MEDIA' as UploadStateType,
-      sizeBytes: upload.uploadSizeBytes,
-      uploadRecordId: upload.id,
-      backupStatus: 'NOT_BACKED_UP' as const,
-    })),
-    skipDuplicates: true,
-  });
+  if (uploadsWithKeys.length === 0) return 0;
+
+  await db
+    .insert(UploadState)
+    .values(
+      uploadsWithKeys.map((upload) => ({
+        s3Key: upload.finalized_upload_key,
+        s3Bucket: ingestBucket,
+        uploadType: 'MEDIA' as const,
+        sizeBytes: upload.upload_size_bytes
+          ? BigInt(upload.upload_size_bytes)
+          : undefined,
+        uploadRecordId: upload.id,
+        backupStatus: 'NOT_BACKED_UP' as const,
+        updatedAt: new Date(),
+      })),
+    )
+    .onConflictDoNothing();
 
   return uploadsWithKeys.length;
 }

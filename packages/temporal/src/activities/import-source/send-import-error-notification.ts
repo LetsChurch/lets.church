@@ -1,4 +1,11 @@
-import { prisma } from '@letschurch/db';
+import {
+  AppUserEmail,
+  Channel,
+  ChannelImportSource,
+  ChannelMembership,
+  db,
+} from '@letschurch/db';
+import { and, eq, isNotNull } from 'drizzle-orm';
 import logger from '../../util/logger';
 import sendEmail from '../background/send-email';
 
@@ -13,28 +20,15 @@ export async function sendImportErrorNotification(
   importSourceId: string,
   error: string,
 ) {
-  const source = await prisma.channelImportSource.findUnique({
-    where: { id: importSourceId },
-    include: {
-      channel: {
-        include: {
-          memberships: {
-            where: { isAdmin: true },
-            include: {
-              appUser: {
-                include: {
-                  emails: {
-                    where: { verifiedAt: { not: null } },
-                    take: 1,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  });
+  const source = await db
+    .select({
+      id: ChannelImportSource.id,
+      url: ChannelImportSource.url,
+      channelId: ChannelImportSource.channelId,
+    })
+    .from(ChannelImportSource)
+    .where(eq(ChannelImportSource.id, importSourceId))
+    .then((r) => r[0] ?? null);
 
   if (!source) {
     moduleLogger.warn(
@@ -43,17 +37,55 @@ export async function sendImportErrorNotification(
     return;
   }
 
-  // Send to channel admins
-  const adminEmails = source.channel.memberships
-    .map((m) => m.appUser.emails[0]?.email)
-    .filter(Boolean);
+  const channel = await db
+    .select({ name: Channel.name })
+    .from(Channel)
+    .where(eq(Channel.id, source.channelId))
+    .then((r) => r[0] ?? null);
 
+  if (!channel) {
+    moduleLogger.warn('Channel not found, cannot send error notification');
+    return;
+  }
+
+  // Get admin memberships
+  const adminMemberships = await db
+    .select({ appUserId: ChannelMembership.appUserId })
+    .from(ChannelMembership)
+    .where(
+      and(
+        eq(ChannelMembership.channelId, source.channelId),
+        eq(ChannelMembership.isAdmin, true),
+      ),
+    );
+
+  // Collect admin emails
+  const adminEmails: string[] = [];
+  for (const membership of adminMemberships) {
+    const emailRow = await db
+      .select({ email: AppUserEmail.email })
+      .from(AppUserEmail)
+      .where(
+        and(
+          eq(AppUserEmail.appUserId, membership.appUserId),
+          isNotNull(AppUserEmail.verifiedAt),
+        ),
+      )
+      .limit(1)
+      .then((r) => r[0] ?? null);
+
+    if (emailRow) {
+      adminEmails.push(emailRow.email);
+    }
+  }
+
+  // Send to channel admins
   if (adminEmails.length > 0) {
     try {
       await sendEmail({
         to: adminEmails,
-        subject: `Import Failed: ${source.channel.name}`,
-        text: `An import source for your channel "${source.channel.name}" has failed.\n\nSource URL: ${source.url}\n\nError: ${error}\n\nPlease check your channel's import sources in the admin dashboard.`,
+        subject: `Import Failed: ${channel.name}`,
+        text: `An import source for your channel "${channel.name}" has failed.\n\nSource URL: ${source.url}\n\nError: ${error}\n\nPlease check your channel's import sources in the admin dashboard.`,
       });
 
       moduleLogger.info('Sent error notification to channel admins');
@@ -68,8 +100,8 @@ export async function sendImportErrorNotification(
     try {
       await sendEmail({
         to: [ADMIN_EMAIL],
-        subject: `Import Source Error: ${source.channel.name}`,
-        text: `An import source has failed for channel "${source.channel.name}".\n\nSource URL: ${source.url}\nChannel ID: ${source.channelId}\nImport Source ID: ${importSourceId}\n\nError: ${error}`,
+        subject: `Import Source Error: ${channel.name}`,
+        text: `An import source has failed for channel "${channel.name}".\n\nSource URL: ${source.url}\nChannel ID: ${source.channelId}\nImport Source ID: ${importSourceId}\n\nError: ${error}`,
       });
 
       moduleLogger.info('Sent error notification to site admin');
@@ -79,11 +111,12 @@ export async function sendImportErrorNotification(
   }
 
   // Update import source with error info
-  await prisma.channelImportSource.update({
-    where: { id: importSourceId },
-    data: {
+  await db
+    .update(ChannelImportSource)
+    .set({
       lastErrorAt: new Date(),
       lastErrorMessage: error,
-    },
-  });
+      updatedAt: new Date(),
+    })
+    .where(eq(ChannelImportSource.id, importSourceId));
 }

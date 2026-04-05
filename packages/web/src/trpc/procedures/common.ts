@@ -1,5 +1,12 @@
-import { prisma } from '@letschurch/db';
+import {
+  ChannelInvitation,
+  ChannelMembership,
+  db,
+  OrganizationInvitation,
+  OrganizationMembership,
+} from '@letschurch/db';
 import { TRPCError } from '@trpc/server';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import {
@@ -68,9 +75,9 @@ export const commonProcedures = {
 
       if (idResult.success) {
         // Check if this is a valid upload ID
-        const upload = await prisma.uploadRecord.findUnique({
-          where: { id: idResult.data },
-          select: { id: true },
+        const upload = await db.query.UploadRecord.findFirst({
+          where: (t, { eq }) => eq(t.id, idResult.data),
+          columns: { id: true },
         });
 
         if (upload) {
@@ -91,9 +98,10 @@ export const commonProcedures = {
       }
 
       // Try to find a channel with this slug
-      const channel = await prisma.channel.findUnique({
-        where: { slug, deletedAt: null },
-        select: {
+      const channel = await db.query.Channel.findFirst({
+        where: (t, { eq, and, isNull }) =>
+          and(eq(t.slug, slug), isNull(t.deletedAt)),
+        columns: {
           slug: true,
           visibility: true,
           approvedAt: true,
@@ -147,17 +155,19 @@ export const commonProcedures = {
       moduleLogger.info({ context: { token } }, 'Getting invitation details');
 
       // Try organization invitation first
-      const orgInvitation = await prisma.organizationInvitation.findUnique({
-        where: { token },
-        select: {
+      const orgInvitation = await db.query.OrganizationInvitation.findFirst({
+        where: (t, { eq }) => eq(t.token, token),
+        columns: {
           id: true,
           email: true,
           status: true,
           expiresAt: true,
           isAdmin: true,
           canEdit: true,
+        },
+        with: {
           organization: {
-            select: {
+            columns: {
               id: true,
               name: true,
               type: true,
@@ -216,9 +226,9 @@ export const commonProcedures = {
       }
 
       // Try channel invitation
-      const channelInvitation = await prisma.channelInvitation.findUnique({
-        where: { token },
-        select: {
+      const channelInvitation = await db.query.ChannelInvitation.findFirst({
+        where: (t, { eq }) => eq(t.token, token),
+        columns: {
           id: true,
           email: true,
           status: true,
@@ -227,8 +237,10 @@ export const commonProcedures = {
           canEdit: true,
           canUpload: true,
           canDownload: true,
+        },
+        with: {
           channel: {
-            select: {
+            columns: {
               id: true,
               name: true,
               slug: true,
@@ -292,12 +304,10 @@ export const commonProcedures = {
 
   getPendingInvitations: authProcedure.query(async ({ ctx }) => {
     // Get all verified email addresses for the current user
-    const userEmails = await prisma.appUserEmail.findMany({
-      where: {
-        appUserId: ctx.session.appUserId,
-        verifiedAt: { not: null },
-      },
-      select: { email: true },
+    const userEmails = await db.query.AppUserEmail.findMany({
+      where: (t, { eq, and, isNotNull }) =>
+        and(eq(t.appUserId, ctx.session.appUserId), isNotNull(t.verifiedAt)),
+      columns: { email: true },
     });
 
     const emails = userEmails.map((e) => e.email);
@@ -307,46 +317,52 @@ export const commonProcedures = {
     }
 
     // Find all pending organization invitations
-    const orgInvitations = await prisma.organizationInvitation.findMany({
-      where: {
-        email: { in: emails },
-        status: 'PENDING',
-        expiresAt: { gt: new Date() },
-      },
-      select: {
+    const orgInvitations = await db.query.OrganizationInvitation.findMany({
+      where: (t, { inArray, eq, and, gt }) =>
+        and(
+          inArray(t.email, emails),
+          eq(t.status, 'PENDING'),
+          gt(t.expiresAt, new Date()),
+        ),
+      columns: {
         id: true,
         token: true,
         email: true,
         createdAt: true,
+      },
+      with: {
         organization: {
-          select: {
+          columns: {
             name: true,
             type: true,
           },
         },
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: (t, { asc }) => asc(t.createdAt),
     });
 
     // Find all pending channel invitations
-    const channelInvitations = await prisma.channelInvitation.findMany({
-      where: {
-        email: { in: emails },
-        status: 'PENDING',
-        expiresAt: { gt: new Date() },
-      },
-      select: {
+    const channelInvitations = await db.query.ChannelInvitation.findMany({
+      where: (t, { inArray, eq, and, gt }) =>
+        and(
+          inArray(t.email, emails),
+          eq(t.status, 'PENDING'),
+          gt(t.expiresAt, new Date()),
+        ),
+      columns: {
         id: true,
         token: true,
         email: true,
         createdAt: true,
+      },
+      with: {
         channel: {
-          select: {
+          columns: {
             name: true,
           },
         },
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: (t, { asc }) => asc(t.createdAt),
     });
 
     // Combine and return
@@ -368,15 +384,13 @@ export const commonProcedures = {
 
   getUnverifiedEmail: authProcedure.query(async ({ ctx }) => {
     // Get the user's primary email (first email)
-    const userEmail = await prisma.appUserEmail.findFirst({
-      where: {
-        appUserId: ctx.session.appUserId,
-      },
-      select: {
+    const userEmail = await db.query.AppUserEmail.findFirst({
+      where: (t, { eq }) => eq(t.appUserId, ctx.session.appUserId),
+      columns: {
         email: true,
         verifiedAt: true,
       },
-      orderBy: { id: 'asc' },
+      orderBy: (t, { asc }) => asc(t.id),
     });
 
     if (!userEmail) {
@@ -402,15 +416,13 @@ export const commonProcedures = {
     );
 
     // Get the user's primary unverified email
-    const userEmail = await prisma.appUserEmail.findFirst({
-      where: {
-        appUserId: ctx.session.appUserId,
-        verifiedAt: null,
-      },
-      select: {
+    const userEmail = await db.query.AppUserEmail.findFirst({
+      where: (t, { eq, and, isNull }) =>
+        and(eq(t.appUserId, ctx.session.appUserId), isNull(t.verifiedAt)),
+      columns: {
         email: true,
       },
-      orderBy: { id: 'asc' },
+      orderBy: (t, { asc }) => asc(t.id),
     });
 
     if (!userEmail) {
@@ -427,9 +439,9 @@ export const commonProcedures = {
     }
 
     // Get the user's username for the email
-    const user = await prisma.appUser.findUnique({
-      where: { id: ctx.session.appUserId },
-      select: { username: true },
+    const user = await db.query.AppUser.findFirst({
+      where: (t, { eq }) => eq(t.id, ctx.session.appUserId),
+      columns: { username: true },
     });
 
     if (!user) {
@@ -475,11 +487,11 @@ export const commonProcedures = {
         'Processing invitation response',
       );
 
-      const invitation = await prisma.organizationInvitation.findUnique({
-        where: { token },
-        include: {
+      const invitation = await db.query.OrganizationInvitation.findFirst({
+        where: (t, { eq }) => eq(t.token, token),
+        with: {
           organization: {
-            select: {
+            columns: {
               id: true,
               name: true,
             },
@@ -502,10 +514,10 @@ export const commonProcedures = {
       }
 
       if (invitation.expiresAt < new Date()) {
-        await prisma.organizationInvitation.update({
-          where: { id: invitation.id },
-          data: { status: 'EXPIRED' },
-        });
+        await db
+          .update(OrganizationInvitation)
+          .set({ status: 'EXPIRED' })
+          .where(eq(OrganizationInvitation.id, invitation.id));
 
         throw new TRPCError({
           code: 'BAD_REQUEST',
@@ -514,13 +526,13 @@ export const commonProcedures = {
       }
 
       if (!accept) {
-        await prisma.organizationInvitation.update({
-          where: { id: invitation.id },
-          data: {
+        await db
+          .update(OrganizationInvitation)
+          .set({
             status: 'DECLINED',
             respondedAt: new Date(),
-          },
-        });
+          })
+          .where(eq(OrganizationInvitation.id, invitation.id));
 
         moduleLogger.info(
           {
@@ -543,13 +555,16 @@ export const commonProcedures = {
         });
       }
 
+      const appUserId = ctx.session.appUserId;
+
       // Verify user's email matches invitation
-      const userEmail = await prisma.appUserEmail.findFirst({
-        where: {
-          appUserId: ctx.session.appUserId,
-          email: invitation.email,
-          verifiedAt: { not: null },
-        },
+      const userEmail = await db.query.AppUserEmail.findFirst({
+        where: (t, { eq, and, isNotNull }) =>
+          and(
+            eq(t.appUserId, appUserId),
+            eq(t.email, invitation.email),
+            isNotNull(t.verifiedAt),
+          ),
       });
 
       if (!userEmail) {
@@ -560,24 +575,23 @@ export const commonProcedures = {
       }
 
       // Check if user is already a member
-      const existingMember = await prisma.organizationMembership.findUnique({
-        where: {
-          organizationId_appUserId: {
-            organizationId: invitation.organization.id,
-            appUserId: ctx.session.appUserId,
-          },
-        },
+      const existingMember = await db.query.OrganizationMembership.findFirst({
+        where: (t, { eq, and }) =>
+          and(
+            eq(t.organizationId, invitation.organization.id),
+            eq(t.appUserId, appUserId),
+          ),
       });
 
       if (existingMember) {
         // User is already a member, just mark invitation as accepted
-        await prisma.organizationInvitation.update({
-          where: { id: invitation.id },
-          data: {
+        await db
+          .update(OrganizationInvitation)
+          .set({
             status: 'ACCEPTED',
             respondedAt: new Date(),
-          },
-        });
+          })
+          .where(eq(OrganizationInvitation.id, invitation.id));
 
         moduleLogger.info(
           {
@@ -598,23 +612,22 @@ export const commonProcedures = {
       }
 
       // Create membership and mark invitation accepted
-      await prisma.$transaction([
-        prisma.organizationMembership.create({
-          data: {
-            organizationId: invitation.organization.id,
-            appUserId: ctx.session.appUserId,
-            isAdmin: invitation.isAdmin,
-            canEdit: invitation.canEdit,
-          },
-        }),
-        prisma.organizationInvitation.update({
-          where: { id: invitation.id },
-          data: {
+      await db.transaction(async (tx) => {
+        await tx.insert(OrganizationMembership).values({
+          organizationId: invitation.organization.id,
+          appUserId,
+          isAdmin: invitation.isAdmin,
+          canEdit: invitation.canEdit,
+          updatedAt: new Date(),
+        });
+        await tx
+          .update(OrganizationInvitation)
+          .set({
             status: 'ACCEPTED',
             respondedAt: new Date(),
-          },
-        }),
-      ]);
+          })
+          .where(eq(OrganizationInvitation.id, invitation.id));
+      });
 
       moduleLogger.info(
         {
@@ -649,11 +662,11 @@ export const commonProcedures = {
         'Processing channel invitation response',
       );
 
-      const invitation = await prisma.channelInvitation.findUnique({
-        where: { token },
-        include: {
+      const invitation = await db.query.ChannelInvitation.findFirst({
+        where: (t, { eq }) => eq(t.token, token),
+        with: {
           channel: {
-            select: {
+            columns: {
               id: true,
               name: true,
             },
@@ -676,10 +689,10 @@ export const commonProcedures = {
       }
 
       if (invitation.expiresAt < new Date()) {
-        await prisma.channelInvitation.update({
-          where: { id: invitation.id },
-          data: { status: 'EXPIRED' },
-        });
+        await db
+          .update(ChannelInvitation)
+          .set({ status: 'EXPIRED' })
+          .where(eq(ChannelInvitation.id, invitation.id));
 
         throw new TRPCError({
           code: 'BAD_REQUEST',
@@ -688,13 +701,13 @@ export const commonProcedures = {
       }
 
       if (!accept) {
-        await prisma.channelInvitation.update({
-          where: { id: invitation.id },
-          data: {
+        await db
+          .update(ChannelInvitation)
+          .set({
             status: 'DECLINED',
             respondedAt: new Date(),
-          },
-        });
+          })
+          .where(eq(ChannelInvitation.id, invitation.id));
 
         moduleLogger.info(
           {
@@ -717,13 +730,16 @@ export const commonProcedures = {
         });
       }
 
+      const appUserId = ctx.session.appUserId;
+
       // Verify user's email matches invitation
-      const userEmail = await prisma.appUserEmail.findFirst({
-        where: {
-          appUserId: ctx.session.appUserId,
-          email: invitation.email,
-          verifiedAt: { not: null },
-        },
+      const userEmail = await db.query.AppUserEmail.findFirst({
+        where: (t, { eq, and, isNotNull }) =>
+          and(
+            eq(t.appUserId, appUserId),
+            eq(t.email, invitation.email),
+            isNotNull(t.verifiedAt),
+          ),
       });
 
       if (!userEmail) {
@@ -734,24 +750,23 @@ export const commonProcedures = {
       }
 
       // Check if user is already a member
-      const existingMember = await prisma.channelMembership.findUnique({
-        where: {
-          channelId_appUserId: {
-            channelId: invitation.channel.id,
-            appUserId: ctx.session.appUserId,
-          },
-        },
+      const existingMember = await db.query.ChannelMembership.findFirst({
+        where: (t, { eq, and }) =>
+          and(
+            eq(t.channelId, invitation.channel.id),
+            eq(t.appUserId, appUserId),
+          ),
       });
 
       if (existingMember) {
         // User is already a member, just mark invitation as accepted
-        await prisma.channelInvitation.update({
-          where: { id: invitation.id },
-          data: {
+        await db
+          .update(ChannelInvitation)
+          .set({
             status: 'ACCEPTED',
             respondedAt: new Date(),
-          },
-        });
+          })
+          .where(eq(ChannelInvitation.id, invitation.id));
 
         moduleLogger.info(
           {
@@ -772,25 +787,24 @@ export const commonProcedures = {
       }
 
       // Create membership and mark invitation accepted
-      await prisma.$transaction([
-        prisma.channelMembership.create({
-          data: {
-            channelId: invitation.channel.id,
-            appUserId: ctx.session.appUserId,
-            isAdmin: invitation.isAdmin,
-            canEdit: invitation.canEdit,
-            canUpload: invitation.canUpload,
-            canDownload: invitation.canDownload,
-          },
-        }),
-        prisma.channelInvitation.update({
-          where: { id: invitation.id },
-          data: {
+      await db.transaction(async (tx) => {
+        await tx.insert(ChannelMembership).values({
+          channelId: invitation.channel.id,
+          appUserId,
+          isAdmin: invitation.isAdmin,
+          canEdit: invitation.canEdit,
+          canUpload: invitation.canUpload,
+          canDownload: invitation.canDownload,
+          updatedAt: new Date(),
+        });
+        await tx
+          .update(ChannelInvitation)
+          .set({
             status: 'ACCEPTED',
             respondedAt: new Date(),
-          },
-        }),
-      ]);
+          })
+          .where(eq(ChannelInvitation.id, invitation.id));
+      });
 
       moduleLogger.info(
         {

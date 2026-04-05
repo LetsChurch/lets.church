@@ -1,6 +1,6 @@
-import type { Prisma } from '@letschurch/db';
 import { proxyActivities } from '@temporalio/workflow';
 import type * as activities from '../../activities/background';
+import type { UploadRecordCreateData } from '../../client';
 import { BACKGROUND_QUEUE } from '../../queues';
 
 const { createUploadRecord: createUploadRecordActivity, indexDocument } =
@@ -10,9 +10,7 @@ const { createUploadRecord: createUploadRecordActivity, indexDocument } =
     retry: { maximumAttempts: 5 },
   });
 
-export async function createUploadRecordWorkflow(
-  data: Prisma.UploadRecordCreateArgs['data'],
-) {
+export async function createUploadRecordWorkflow(data: UploadRecordCreateData) {
   const rec = await createUploadRecordActivity(data);
 
   indexDocument('upload', rec.id);

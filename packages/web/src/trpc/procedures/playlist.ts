@@ -1,4 +1,4 @@
-import { prisma } from '@letschurch/db';
+import { db } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
@@ -34,21 +34,21 @@ export const playlistProcedures = {
       );
 
       // First verify playlist exists and channel is public
-      const playlist = await prisma.uploadList.findUnique({
-        select: {
+      const playlist = await db.query.UploadList.findFirst({
+        where: (t, { eq }) => eq(t.id, playlistId),
+        columns: {
           id: true,
           title: true,
           type: true,
+        },
+        with: {
           channel: {
-            select: {
+            columns: {
               visibility: true,
               approvedAt: true,
               deletedAt: true,
             },
           },
-        },
-        where: {
-          id: playlistId,
         },
       });
 
@@ -79,18 +79,25 @@ export const playlistProcedures = {
       }
 
       // Fetch all playlist entries
-      const entries = await prisma.uploadListEntry.findMany({
-        select: {
+      const entries = await db.query.UploadListEntry.findMany({
+        where: (t, { eq }) => eq(t.uploadListId, playlistId),
+        columns: {},
+        with: {
           upload: {
-            select: {
+            columns: {
               id: true,
               title: true,
               publishedAt: true,
               lengthSeconds: true,
               defaultThumbnailPath: true,
               overrideThumbnailPath: true,
+              visibility: true,
+              transcodingFinishedAt: true,
+              deletedAt: true,
+            },
+            with: {
               channel: {
-                select: {
+                columns: {
                   id: true,
                   name: true,
                   slug: true,
@@ -101,23 +108,26 @@ export const playlistProcedures = {
             },
           },
         },
-        where: {
-          uploadListId: playlistId,
-          upload: {
-            visibility: 'PUBLIC',
-            transcodingFinishedAt: { not: null },
-            deletedAt: null,
-          },
-        },
-        orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
+        orderBy: (t, { asc }) => [asc(t.rank), asc(t.createdAt)],
       });
 
-      const items = entries.map((entry) => {
+      // Filter to public, transcoded, non-deleted uploads
+      const filteredEntries = entries.filter(
+        (e) =>
+          e.upload.visibility === 'PUBLIC' &&
+          e.upload.transcodingFinishedAt !== null &&
+          e.upload.deletedAt === null,
+      );
+
+      const items = filteredEntries.map((entry) => {
         const upload = entry.upload;
         const {
           defaultThumbnailPath,
           overrideThumbnailPath,
           channel,
+          visibility: _visibility,
+          transcodingFinishedAt: _transcodingFinishedAt,
+          deletedAt: _deletedAt,
           ...uploadRest
         } = upload;
 
@@ -163,22 +173,25 @@ export const playlistProcedures = {
         'Fetching public playlist',
       );
 
-      const playlist = await prisma.uploadList.findUnique({
-        select: {
+      const playlist = await db.query.UploadList.findFirst({
+        where: (t, { eq }) => eq(t.id, playlistId),
+        columns: {
           id: true,
           title: true,
           type: true,
           createdAt: true,
           updatedAt: true,
+        },
+        with: {
           author: {
-            select: {
+            columns: {
               id: true,
               username: true,
               avatarPath: true,
             },
           },
           channel: {
-            select: {
+            columns: {
               id: true,
               name: true,
               slug: true,
@@ -188,23 +201,19 @@ export const playlistProcedures = {
               deletedAt: true,
             },
           },
-          _count: {
-            select: {
-              uploads: {
-                where: {
-                  upload: {
-                    visibility: 'PUBLIC',
-                    transcodingFinishedAt: { not: null },
-                    transcribingFinishedAt: { not: null },
-                    deletedAt: null,
-                  },
+          uploads: {
+            columns: {},
+            with: {
+              upload: {
+                columns: {
+                  id: true,
+                  visibility: true,
+                  transcodingFinishedAt: true,
+                  deletedAt: true,
                 },
               },
             },
           },
-        },
-        where: {
-          id: playlistId,
         },
       });
 
@@ -243,6 +252,14 @@ export const playlistProcedures = {
         }
       }
 
+      // Count uploads with the same conditions as Prisma's _count
+      const uploadCount = playlist.uploads.filter(
+        (e) =>
+          e.upload.visibility === 'PUBLIC' &&
+          e.upload.transcodingFinishedAt !== null &&
+          e.upload.deletedAt === null,
+      ).length;
+
       const authorAvatarUrl = playlist.author.avatarPath
         ? getPublicImageUrl(
             publicS3.getS3ProtocolUri(playlist.author.avatarPath),
@@ -279,7 +296,7 @@ export const playlistProcedures = {
               avatarUrl: channelAvatarUrl,
             }
           : null,
-        uploadCount: playlist._count.uploads,
+        uploadCount,
       };
     }),
 
@@ -294,30 +311,37 @@ export const playlistProcedures = {
       );
 
       // Get first media item thumbnail for SEO
-      const firstMedia = await prisma.uploadListEntry.findFirst({
-        where: {
-          uploadListId: playlistId,
+      const entries = await db.query.UploadListEntry.findMany({
+        where: (t, { eq }) => eq(t.uploadListId, playlistId),
+        columns: {},
+        with: {
           upload: {
-            visibility: 'PUBLIC',
-            transcodingFinishedAt: { not: null },
-            deletedAt: null,
-          },
-        },
-        select: {
-          upload: {
-            select: {
+            columns: {
               overrideThumbnailPath: true,
               defaultThumbnailPath: true,
+              visibility: true,
+              transcodingFinishedAt: true,
+              deletedAt: true,
+            },
+            with: {
               channel: {
-                select: {
+                columns: {
                   defaultThumbnailPath: true,
                 },
               },
             },
           },
         },
-        orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
+        orderBy: (t, { asc }) => [asc(t.rank), asc(t.createdAt)],
       });
+
+      // Find first public, transcoded, non-deleted entry
+      const firstMedia = entries.find(
+        (e) =>
+          e.upload.visibility === 'PUBLIC' &&
+          e.upload.transcodingFinishedAt !== null &&
+          e.upload.deletedAt === null,
+      );
 
       if (!firstMedia) {
         return null;
@@ -343,20 +367,20 @@ export const playlistProcedures = {
       );
 
       // First verify playlist exists and channel is public
-      const playlist = await prisma.uploadList.findUnique({
-        select: {
+      const playlist = await db.query.UploadList.findFirst({
+        where: (t, { eq }) => eq(t.id, playlistId),
+        columns: {
           id: true,
           type: true,
+        },
+        with: {
           channel: {
-            select: {
+            columns: {
               visibility: true,
               approvedAt: true,
               deletedAt: true,
             },
           },
-        },
-        where: {
-          id: playlistId,
         },
       });
 
@@ -387,12 +411,19 @@ export const playlistProcedures = {
       }
 
       // Fetch playlist entries with uploads
-      const entries = await prisma.uploadListEntry.findMany({
-        select: {
+      const entries = await db.query.UploadListEntry.findMany({
+        where: (t, { eq, and, gt }) =>
+          and(
+            eq(t.uploadListId, playlistId),
+            ...(cursor ? [gt(t.createdAt, new Date(cursor))] : []),
+          ),
+        columns: {
           createdAt: true,
           rank: true,
+        },
+        with: {
           upload: {
-            select: {
+            columns: {
               id: true,
               title: true,
               description: true,
@@ -400,8 +431,13 @@ export const playlistProcedures = {
               lengthSeconds: true,
               defaultThumbnailPath: true,
               overrideThumbnailPath: true,
+              visibility: true,
+              transcodingFinishedAt: true,
+              deletedAt: true,
+            },
+            with: {
               channel: {
-                select: {
+                columns: {
                   id: true,
                   name: true,
                   slug: true,
@@ -412,27 +448,20 @@ export const playlistProcedures = {
             },
           },
         },
-        where: {
-          uploadListId: playlistId,
-          upload: {
-            visibility: 'PUBLIC',
-            transcodingFinishedAt: { not: null },
-            deletedAt: null,
-          },
-          ...(cursor
-            ? {
-                createdAt: {
-                  gt: new Date(cursor),
-                },
-              }
-            : {}),
-        },
-        orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
-        take: limit + 1, // Fetch one extra to determine if there are more
+        orderBy: (t, { asc }) => [asc(t.rank), asc(t.createdAt)],
+        limit: limit + 1, // Fetch one extra to determine if there are more
       });
 
-      const hasMore = entries.length > limit;
-      const items = hasMore ? entries.slice(0, limit) : entries;
+      // Filter to public, transcoded, non-deleted uploads
+      const filteredEntries = entries.filter(
+        (e) =>
+          e.upload.visibility === 'PUBLIC' &&
+          e.upload.transcodingFinishedAt !== null &&
+          e.upload.deletedAt === null,
+      );
+
+      const hasMore = filteredEntries.length > limit;
+      const items = hasMore ? filteredEntries.slice(0, limit) : filteredEntries;
       const nextCursor = hasMore
         ? (items[items.length - 1].createdAt.toISOString() ?? null)
         : null;
@@ -443,6 +472,9 @@ export const playlistProcedures = {
           defaultThumbnailPath,
           overrideThumbnailPath,
           channel,
+          visibility: _visibility,
+          transcodingFinishedAt: _transcodingFinishedAt,
+          deletedAt: _deletedAt,
           ...uploadRest
         } = upload;
 

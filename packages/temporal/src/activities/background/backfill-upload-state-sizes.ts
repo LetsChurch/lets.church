@@ -1,5 +1,6 @@
-import { prisma } from '@letschurch/db';
+import { db, UploadState } from '@letschurch/db';
 import { LcS3Client } from '@letschurch/s3';
+import { count, eq, isNull } from 'drizzle-orm';
 import logger from '../../util/logger';
 
 export type BackfillSizesBatchResult = {
@@ -12,11 +13,11 @@ export type BackfillSizesBatchResult = {
  * Get count of UploadState records that need file sizes populated.
  */
 export async function getBackfillSizesCount(): Promise<number> {
-  return prisma.uploadState.count({
-    where: {
-      sizeBytes: null,
-    },
-  });
+  const result = await db
+    .select({ count: count(UploadState.id) })
+    .from(UploadState)
+    .where(isNull(UploadState.sizeBytes));
+  return Number(result[0]?.count ?? 0);
 }
 
 /**
@@ -32,20 +33,16 @@ export async function backfillUploadStateSizesBatch(
   ingestSecretAccessKey: string,
 ): Promise<BackfillSizesBatchResult> {
   // Get UploadState records without sizeBytes
-  const uploadStates = await prisma.uploadState.findMany({
-    where: {
-      sizeBytes: null,
-    },
-    take: batchSize,
-    select: {
-      id: true,
-      s3Key: true,
-      s3Bucket: true,
-    },
-    orderBy: {
-      createdAt: 'asc',
-    },
-  });
+  const uploadStates = await db
+    .select({
+      id: UploadState.id,
+      s3Key: UploadState.s3Key,
+      s3Bucket: UploadState.s3Bucket,
+    })
+    .from(UploadState)
+    .where(isNull(UploadState.sizeBytes))
+    .orderBy(UploadState.createdAt)
+    .limit(batchSize);
 
   if (uploadStates.length === 0) {
     return { updated: 0, skipped: 0, remaining: 0 };
@@ -78,10 +75,10 @@ export async function backfillUploadStateSizesBatch(
       const head = await s3Client.headObject(uploadState.s3Key);
 
       if (head?.ContentLength) {
-        await prisma.uploadState.update({
-          where: { id: uploadState.id },
-          data: { sizeBytes: BigInt(head.ContentLength) },
-        });
+        await db
+          .update(UploadState)
+          .set({ sizeBytes: BigInt(head.ContentLength), updatedAt: new Date() })
+          .where(eq(UploadState.id, uploadState.id));
         updated++;
       } else {
         logger.warn(

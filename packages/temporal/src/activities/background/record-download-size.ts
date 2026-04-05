@@ -1,25 +1,28 @@
-import type { UploadVariant } from '@letschurch/db';
-import { prisma } from '@letschurch/db';
+import {
+  db,
+  UploadRecordDownloadSize,
+  type UploadVariant,
+} from '@letschurch/db';
 
 export default async function recordDownloadSize(
   uploadRecordId: string,
-  variant: UploadVariant,
+  variant: (typeof UploadVariant.enumValues)[number],
   bytes: number,
 ) {
-  await prisma.uploadRecordDownloadSize.upsert({
-    where: {
-      uploadRecordId_variant: {
-        uploadRecordId,
-        variant,
-      },
-    },
-    create: {
+  await db
+    .insert(UploadRecordDownloadSize)
+    .values({
       uploadRecordId,
       variant,
-      bytes,
-    },
-    update: {
-      bytes,
-    },
-  });
+      bytes: BigInt(bytes),
+    })
+    .onConflictDoUpdate({
+      target: [
+        UploadRecordDownloadSize.uploadRecordId,
+        UploadRecordDownloadSize.variant,
+      ],
+      set: {
+        bytes: BigInt(bytes),
+      },
+    });
 }

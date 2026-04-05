@@ -1,11 +1,17 @@
-import { prisma } from '@letschurch/db';
+import { db, UploadRecord } from '@letschurch/db';
+import { eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 
 export default async function getFinalizedUploadKey(uploadRecordId: string) {
-  const { finalizedUploadKey } = await prisma.uploadRecord.findUniqueOrThrow({
-    select: { finalizedUploadKey: true },
-    where: { id: uploadRecordId },
-  });
+  const row = await db
+    .select({ finalizedUploadKey: UploadRecord.finalizedUploadKey })
+    .from(UploadRecord)
+    .where(eq(UploadRecord.id, uploadRecordId))
+    .then((r) => r[0]);
+
+  invariant(row, `Upload record ${uploadRecordId} not found`);
+
+  const { finalizedUploadKey } = row;
 
   invariant(
     finalizedUploadKey,

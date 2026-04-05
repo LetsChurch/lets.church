@@ -8,7 +8,6 @@ import { nitroV2Plugin } from '@tanstack/nitro-v2-vite-plugin';
 import { tanstackStart } from '@tanstack/react-start/plugin/vite';
 import viteReact from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
-import { viteStaticCopy } from 'vite-plugin-static-copy';
 import tsConfigPaths from 'vite-tsconfig-paths';
 
 const dirname =
@@ -27,22 +26,12 @@ export default defineConfig((_config) => ({
     nitroV2Plugin({ preset: 'node-server' }),
     viteReact(),
     tailwindcss(),
-    viteStaticCopy({
-      targets: [
-        {
-          src: path.join(dirname, '../db/src/generated/prisma/*.node'),
-          dest: '.',
-        },
-      ],
-    }),
   ],
   ssr: {
     noExternal: ['@tanstack/react-start', '@tanstack/react-router'],
     external: [
-      '.prisma/client',
       '@letschurch/temporal',
       '@node-rs/xxhash',
-      '@prisma/client',
       '@temporalio/activity',
       '@temporalio/client',
       '@temporalio/workflow',

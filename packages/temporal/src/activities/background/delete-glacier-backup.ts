@@ -1,6 +1,7 @@
-import { prisma } from '@letschurch/db';
+import { db, UploadState } from '@letschurch/db';
 import { backupS3 } from '@letschurch/s3/backup';
 import { Context } from '@temporalio/activity';
+import { eq, sql } from 'drizzle-orm';
 import logger from '../../util/logger';
 
 const moduleLogger = logger.child({
@@ -23,11 +24,10 @@ export async function deleteUploadRecordGlacierBackups(
   activityLogger.info(`Deleting backups for upload record ${uploadRecordId}`);
 
   // Find all UploadState records for this upload
-  const uploadStates = await prisma.uploadState.findMany({
-    where: {
-      uploadRecordId,
-    },
-  });
+  const uploadStates = await db
+    .select()
+    .from(UploadState)
+    .where(eq(UploadState.uploadRecordId, uploadRecordId));
 
   if (uploadStates.length === 0) {
     activityLogger.info(`No UploadState records found for ${uploadRecordId}`);
@@ -55,9 +55,7 @@ export async function deleteUploadRecordGlacierBackups(
     }
 
     // Delete the UploadState record
-    await prisma.uploadState.delete({
-      where: { id: uploadState.id },
-    });
+    await db.delete(UploadState).where(eq(UploadState.id, uploadState.id));
     activityLogger.info(`Deleted UploadState record ${uploadState.id}`);
   }
 
@@ -85,18 +83,22 @@ export async function deleteGlacierBackupsByPrefix(
   // Delete from backup
   const deletedCount = await backupS3.deletePrefix(prefix);
 
+  // Escape LIKE special characters so prefix is treated literally.
+  const escapedPrefix = prefix
+    .replaceAll('\\', '\\\\')
+    .replaceAll('%', '\\%')
+    .replaceAll('_', '\\_');
+  const likePattern = `${escapedPrefix}%`;
+
   // Delete UploadState records that match the prefix
-  const deleteResult = await prisma.uploadState.deleteMany({
-    where: {
-      OR: [
-        { s3Key: { startsWith: prefix } },
-        { backupKey: { startsWith: prefix } },
-      ],
-    },
-  });
+  const _deleteResult = await db.execute(sql`
+    DELETE FROM "upload_state"
+    WHERE "s3_key" LIKE ${likePattern} ESCAPE '\'
+       OR "backup_key" LIKE ${likePattern} ESCAPE '\'
+  `);
 
   activityLogger.info(
-    `Deleted ${deletedCount} backup objects and ${deleteResult.count} UploadState records with prefix ${prefix}`,
+    `Deleted ${deletedCount} backup objects and ${_deleteResult.rowCount ?? 0} UploadState records with prefix ${prefix}`,
   );
 
   return deletedCount;
@@ -113,9 +115,11 @@ export async function deleteUploadStateAndBackup(
     context: { uploadStateId },
   });
 
-  const uploadState = await prisma.uploadState.findUnique({
-    where: { id: uploadStateId },
-  });
+  const uploadState = await db
+    .select()
+    .from(UploadState)
+    .where(eq(UploadState.id, uploadStateId))
+    .then((r) => r[0] ?? null);
 
   if (!uploadState) {
     activityLogger.warn(`UploadState ${uploadStateId} not found`);
@@ -137,9 +141,7 @@ export async function deleteUploadStateAndBackup(
   }
 
   // Delete the UploadState record
-  await prisma.uploadState.delete({
-    where: { id: uploadStateId },
-  });
+  await db.delete(UploadState).where(eq(UploadState.id, uploadStateId));
 
   activityLogger.info(`Deleted UploadState ${uploadStateId}`);
   return true;

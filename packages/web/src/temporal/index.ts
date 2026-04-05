@@ -1,6 +1,14 @@
-import type { Prisma, UploadVariant } from '@letschurch/db';
-import { prisma } from '@letschurch/db';
+import {
+  ChannelImportSource,
+  db,
+  UploadRecord,
+  type UploadVariant,
+} from '@letschurch/db';
 import type { S3ClientId } from '@letschurch/s3';
+import type {
+  UploadRecordCreateData,
+  UploadRecordUpdateData,
+} from '@letschurch/temporal/client';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
 import {
   makeBackupToGlacierWorkflowId,
@@ -17,6 +25,7 @@ import {
   makeUpdateUploadRecordWorkflowId,
   makeVerificationEmailWorkflowId,
 } from '@letschurch/temporal/workflow-ids';
+import { eq } from 'drizzle-orm';
 
 export type InvitationEmailArgs = {
   invitationId: string;
@@ -69,7 +78,11 @@ import { z } from 'zod';
 import logger from '../util/logger';
 import type { UploadPostProcessValue } from '../util/types';
 
-export { indexDocument } from '@letschurch/temporal/client';
+export {
+  indexDocument,
+  type UploadRecordCreateData,
+  type UploadRecordUpdateData,
+} from '@letschurch/temporal/client';
 
 const moduleLogger = logger.child({ module: 'temporal' });
 
@@ -143,7 +156,7 @@ export async function completeMultipartMediaUpload(
 }
 
 export async function createUploadRecord(
-  data: Prisma.UploadRecordCreateArgs['data'],
+  data: UploadRecordCreateData,
   importId?: string,
 ) {
   const res = await (await client).workflow.start(createUploadRecordWorkflow, {
@@ -162,7 +175,7 @@ export async function createUploadRecord(
 
 export async function updateUploadRecord(
   uploadRecordId: string,
-  data: Prisma.UploadRecordUpdateArgs['data'],
+  data: UploadRecordUpdateData,
 ) {
   return (await client).workflow.signalWithStart(updateUploadRecordWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
@@ -178,7 +191,7 @@ export async function updateUploadRecord(
 
 export async function recordDownloadSize(
   uploadRecordId: string,
-  variant: UploadVariant,
+  variant: (typeof UploadVariant)['enumValues'][number],
   bytes: number,
 ) {
   return (await client).workflow.start(recordDownloadSizeWorkflow, {
@@ -262,10 +275,11 @@ export async function postUserRegistration(
 
 export async function cancelUploadProcessing(uploadRecordId: string) {
   // Fetch the upload record to get the finalized upload key
-  const upload = await prisma.uploadRecord.findUnique({
-    where: { id: uploadRecordId },
-    select: { finalizedUploadKey: true },
-  });
+  const upload = await db
+    .select({ finalizedUploadKey: UploadRecord.finalizedUploadKey })
+    .from(UploadRecord)
+    .where(eq(UploadRecord.id, uploadRecordId))
+    .then((r) => r[0] ?? null);
 
   if (!upload?.finalizedUploadKey) {
     moduleLogger.info(
@@ -637,13 +651,17 @@ export async function cancelBackfillFilenames() {
  */
 export async function startImportSourceScheduler(importSourceId: string) {
   // Fetch import source details
-  const importSource = await prisma.channelImportSource.findUnique({
-    where: { id: importSourceId },
-    select: {
+  const importSource = await db.query.ChannelImportSource.findFirst({
+    where: (t, { eq }) => eq(t.id, importSourceId),
+    columns: {
       url: true,
       cronSchedule: true,
       timezone: true,
-      channel: { select: { slug: true, name: true } },
+    },
+    with: {
+      channel: {
+        columns: { slug: true, name: true },
+      },
     },
   });
 
@@ -681,13 +699,14 @@ export async function startImportSourceScheduler(importSourceId: string) {
   });
 
   // Update database status to RUNNING
-  await prisma.channelImportSource.update({
-    where: { id: importSourceId },
-    data: {
+  await db
+    .update(ChannelImportSource)
+    .set({
       workflowStatus: 'RUNNING',
       workflowId: scheduleId,
-    },
-  });
+      updatedAt: new Date(),
+    })
+    .where(eq(ChannelImportSource.id, importSourceId));
 
   return schedule;
 }
@@ -697,9 +716,14 @@ export async function startImportSourceScheduler(importSourceId: string) {
  */
 export async function cancelImportSourceScheduler(importSourceId: string) {
   // Fetch channel slug to construct schedule ID
-  const importSource = await prisma.channelImportSource.findUnique({
-    where: { id: importSourceId },
-    select: { channel: { select: { slug: true } } },
+  const importSource = await db.query.ChannelImportSource.findFirst({
+    where: (t, { eq }) => eq(t.id, importSourceId),
+    columns: {},
+    with: {
+      channel: {
+        columns: { slug: true },
+      },
+    },
   });
 
   if (!importSource) {
@@ -712,10 +736,10 @@ export async function cancelImportSourceScheduler(importSourceId: string) {
   const handle = (await client).schedule.getHandle(scheduleId);
   await handle.pause();
 
-  await prisma.channelImportSource.update({
-    where: { id: importSourceId },
-    data: { workflowStatus: 'PAUSED', workflowId: null },
-  });
+  await db
+    .update(ChannelImportSource)
+    .set({ workflowStatus: 'PAUSED', workflowId: null, updatedAt: new Date() })
+    .where(eq(ChannelImportSource.id, importSourceId));
 }
 
 /**
@@ -723,9 +747,14 @@ export async function cancelImportSourceScheduler(importSourceId: string) {
  */
 export async function deleteImportSourceScheduler(importSourceId: string) {
   // Fetch channel slug to construct schedule ID
-  const importSource = await prisma.channelImportSource.findUnique({
-    where: { id: importSourceId },
-    select: { channel: { select: { slug: true } } },
+  const importSource = await db.query.ChannelImportSource.findFirst({
+    where: (t, { eq }) => eq(t.id, importSourceId),
+    columns: {},
+    with: {
+      channel: {
+        columns: { slug: true },
+      },
+    },
   });
 
   if (!importSource) {
@@ -745,9 +774,14 @@ export async function deleteImportSourceScheduler(importSourceId: string) {
  */
 export async function triggerManualImport(importSourceId: string) {
   // Fetch channel slug for friendly workflow ID
-  const importSource = await prisma.channelImportSource.findUnique({
-    where: { id: importSourceId },
-    select: { channel: { select: { slug: true } } },
+  const importSource = await db.query.ChannelImportSource.findFirst({
+    where: (t, { eq }) => eq(t.id, importSourceId),
+    columns: {},
+    with: {
+      channel: {
+        columns: { slug: true },
+      },
+    },
   });
 
   if (!importSource) {
@@ -781,9 +815,14 @@ export async function triggerHistoricalImport(
   }>,
 ) {
   // Fetch channel slug for friendly workflow ID
-  const importSource = await prisma.channelImportSource.findUnique({
-    where: { id: importSourceId },
-    select: { channel: { select: { slug: true } } },
+  const importSource = await db.query.ChannelImportSource.findFirst({
+    where: (t, { eq }) => eq(t.id, importSourceId),
+    columns: {},
+    with: {
+      channel: {
+        columns: { slug: true },
+      },
+    },
   });
 
   if (!importSource) {

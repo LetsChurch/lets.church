@@ -4,6 +4,8 @@ import { execa } from 'execa';
 import logger from '../util/logger';
 import { type Probe, probeIsVideoFile } from './zod';
 
+type UploadVariantValue = (typeof UploadVariant.enumValues)[number];
+
 const moduleLogger = logger.child({ module: 'util/ffmpeg' });
 
 const HLS_TIME = 7;
@@ -27,14 +29,14 @@ const BASE_ARGS = [
 // 2. Remove the value in a migration afterward
 // 3. Remove shorts for the time being (the platform is more suited toward long-form content)
 type VideoVariant = Exclude<
-  UploadVariant,
+  UploadVariantValue,
   'AUDIO' | 'AUDIO_DOWNLOAD' | 'VIDEO_360P' | 'VIDEO_360P_DOWNLOAD'
 >;
 
 export type HwAccel = 'none' | `ama:${number}`;
 
-export function getVariants(probe: Probe): Array<UploadVariant> {
-  const res: Array<UploadVariant> = [];
+export function getVariants(probe: Probe): Array<UploadVariantValue> {
+  const res: Array<UploadVariantValue> = [];
 
   const hasVideo = probeIsVideoFile(probe);
 
@@ -106,23 +108,23 @@ function videoVariantToDimensions(variant: VideoVariant): [number, number] {
   }
 }
 
-function variantToPlaylistName(variant: UploadVariant) {
+function variantToPlaylistName(variant: UploadVariantValue) {
   return `${variant}.m3u8`;
 }
 
-function variantToDownloadName(variant: UploadVariant) {
+function variantToDownloadName(variant: UploadVariantValue) {
   return `${variant}.${variant.startsWith('VIDEO') ? 'mp4' : 'm4a'}`;
 }
 
 function variantIsVideo(
-  v: UploadVariant,
-): v is Exclude<UploadVariant, `AUDIO${string}`> {
+  v: UploadVariantValue,
+): v is Exclude<UploadVariantValue, `AUDIO${string}`> {
   return v.startsWith('VIDEO');
 }
 
 function variantIsAudio(
-  v: UploadVariant,
-): v is Extract<UploadVariant, `AUDIO${string}`> {
+  v: UploadVariantValue,
+): v is Extract<UploadVariantValue, `AUDIO${string}`> {
   return v.startsWith('AUDIO');
 }
 
@@ -145,7 +147,7 @@ function videoVariantToBufSize(variant: VideoVariant): string {
 
 // TODO: remove 360P, see above
 function variantToAudioBitRate(
-  variant: Exclude<UploadVariant, 'VIDEO_360P' | 'VIDEO_360P_DOWNLOAD'>,
+  variant: Exclude<UploadVariantValue, 'VIDEO_360P' | 'VIDEO_360P_DOWNLOAD'>,
 ): string {
   switch (variant) {
     case 'VIDEO_4K':
@@ -165,7 +167,7 @@ function variantToAudioBitRate(
 
 // TODO: remove 360P, see above
 function variantToOutputArgs(
-  variant: Exclude<UploadVariant, 'VIDEO_360P' | 'VIDEO_360P_DOWNLOAD'>,
+  variant: Exclude<UploadVariantValue, 'VIDEO_360P' | 'VIDEO_360P_DOWNLOAD'>,
 ) {
   const outputName = variant.endsWith('_DOWNLOAD')
     ? variantToDownloadName(variant)
@@ -198,7 +200,9 @@ function variantToOutputArgs(
   ];
 }
 
-export function variantsToMasterVideoPlaylist(variants: Array<UploadVariant>) {
+export function variantsToMasterVideoPlaylist(
+  variants: Array<UploadVariantValue>,
+) {
   return [
     '#EXTM3U',
     '#EXT-X-VERSION:3',
@@ -210,7 +214,7 @@ export function variantsToMasterVideoPlaylist(variants: Array<UploadVariant>) {
         (
           v,
         ): v is Exclude<
-          UploadVariant,
+          UploadVariantValue,
           'AUDIO' | `${string}_DOWNLOAD` | 'VIDEO_360P'
         > => v !== 'AUDIO' && !v.endsWith('_DOWNLOAD') && !v.includes('360P'),
       )
@@ -253,14 +257,16 @@ export function extraDecodeArgs(probe: Probe, hwAccel: HwAccel) {
 // TODO: portrait
 // TODO: pad videos: https://superuser.com/a/991412
 export function ffmpegSoftwareFilterComplex(
-  variants: Array<UploadVariant>,
+  variants: Array<UploadVariantValue>,
 ): Array<string> {
   // TODO: remove 360P, see above
   const videoVariants = variants.filter(
     (
       v,
-    ): v is Exclude<UploadVariant, `AUDIO${string}` | `VIDEO_360P${string}`> =>
-      v.startsWith('VIDEO') && !v.includes('360P'),
+    ): v is Exclude<
+      UploadVariantValue,
+      `AUDIO${string}` | `VIDEO_360P${string}`
+    > => v.startsWith('VIDEO') && !v.includes('360P'),
   );
 
   if (videoVariants.length === 0) {
@@ -296,15 +302,17 @@ export function ffmpegSoftwareFilterComplex(
 // TODO: portrait
 // TODO: pad https://superuser.com/a/991412
 export function ffmpegAmaFilterComplex(
-  variants: Array<UploadVariant>,
+  variants: Array<UploadVariantValue>,
   probe: Probe,
 ): Array<string> {
   // TODO: remove 360P, see above
   const videoVariants = variants.filter(
     (
       v,
-    ): v is Exclude<UploadVariant, `AUDIO${string}` | `VIDEO_360P${string}`> =>
-      v.startsWith('VIDEO') && !v.includes('360P'),
+    ): v is Exclude<
+      UploadVariantValue,
+      `AUDIO${string}` | `VIDEO_360P${string}`
+    > => v.startsWith('VIDEO') && !v.includes('360P'),
   );
 
   if (videoVariants.length === 0) {
@@ -348,13 +356,13 @@ export function ffmpegAmaFilterComplex(
 }
 
 function variantsToOutputMaps(
-  variants: Array<UploadVariant>,
+  variants: Array<UploadVariantValue>,
   hwAccel: HwAccel,
 ) {
   // TODO: remove 360P, see above
   return variants
     .filter(
-      (v): v is Exclude<UploadVariant, `VIDEO_360P${string}`> =>
+      (v): v is Exclude<UploadVariantValue, `VIDEO_360P${string}`> =>
         !v.includes('360P'),
     )
     .flatMap((v) =>
@@ -381,7 +389,7 @@ function variantsToOutputMaps(
 }
 
 export function ffmpegEncodingArgs(
-  variants: Array<UploadVariant>,
+  variants: Array<UploadVariantValue>,
   probe: Probe,
   hwAccel: HwAccel,
 ): Array<string> {
@@ -404,7 +412,7 @@ export function runFfmpegEncode({
   cwd: string;
   inputFilename: string;
   probe: Probe;
-  variants: Array<UploadVariant>;
+  variants: Array<UploadVariantValue>;
   hwAccel?: HwAccel;
   signal: AbortSignal;
 }) {

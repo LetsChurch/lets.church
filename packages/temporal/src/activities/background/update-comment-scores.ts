@@ -1,4 +1,5 @@
-import { prisma } from '@letschurch/db';
+import { db, UploadUserComment, UploadUserCommentRating } from '@letschurch/db';
+import { and, count, eq, isNotNull } from 'drizzle-orm';
 import pAll from 'p-all';
 import logger from '../../util/logger';
 
@@ -28,30 +29,43 @@ export default async function updateCommentScores() {
     temporalActivity: 'updateCommentScores',
   });
 
-  const comments = await prisma.uploadUserComment.findMany({
-    where: {
-      scoreStaleAt: {
-        not: null,
-      },
-    },
-    select: {
-      id: true,
-      score: true,
-    },
-  });
+  const comments = await db
+    .select({
+      id: UploadUserComment.id,
+      score: UploadUserComment.score,
+    })
+    .from(UploadUserComment)
+    .where(isNotNull(UploadUserComment.scoreStaleAt));
 
   activityLogger.info(`Updating scores for ${comments.length} comments...`);
 
   await pAll(
     comments.map(({ id, score: oldScore }) => async () => {
-      const [likes, dislikes] = await Promise.all([
-        prisma.uploadUserCommentRating.count({
-          where: { uploadUserCommentId: id, rating: 'LIKE' },
-        }),
-        prisma.uploadUserCommentRating.count({
-          where: { uploadUserCommentId: id, rating: 'DISLIKE' },
-        }),
+      const [likesResult, dislikesResult] = await Promise.all([
+        db
+          .select({ count: count(UploadUserCommentRating.uploadUserCommentId) })
+          .from(UploadUserCommentRating)
+          .where(
+            and(
+              eq(UploadUserCommentRating.uploadUserCommentId, id),
+              eq(UploadUserCommentRating.rating, 'LIKE'),
+            ),
+          )
+          .then((r) => Number(r[0]?.count ?? 0)),
+        db
+          .select({ count: count(UploadUserCommentRating.uploadUserCommentId) })
+          .from(UploadUserCommentRating)
+          .where(
+            and(
+              eq(UploadUserCommentRating.uploadUserCommentId, id),
+              eq(UploadUserCommentRating.rating, 'DISLIKE'),
+            ),
+          )
+          .then((r) => Number(r[0]?.count ?? 0)),
       ]);
+
+      const likes = likesResult;
+      const dislikes = dislikesResult;
 
       const score = confidence(likes, dislikes);
 
@@ -59,10 +73,10 @@ export default async function updateCommentScores() {
         `Comment ${id} has score ${score} (old score: ${oldScore}) (likes: ${likes}, dislikes: ${dislikes})`,
       );
 
-      await prisma.uploadUserComment.update({
-        where: { id },
-        data: { score, scoreStaleAt: null },
-      });
+      await db
+        .update(UploadUserComment)
+        .set({ score, scoreStaleAt: null, updatedAt: new Date() })
+        .where(eq(UploadUserComment.id, id));
     }),
     { concurrency: 100 },
   );

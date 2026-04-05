@@ -1,4 +1,4 @@
-import type { Prisma, UploadVariant } from '@letschurch/db';
+import type { UploadVariant } from '@letschurch/db';
 import { Client, Connection, type WorkflowOptions } from '@temporalio/client';
 import PLazy from 'p-lazy';
 import waitOn from 'wait-on';
@@ -47,8 +47,46 @@ const retryOps: Pick<WorkflowOptions, 'retry'> = {
   retry: { maximumAttempts: 5 },
 };
 
+export type UploadRecordCreateData = {
+  title?: string | null;
+  description?: string | null;
+  license?: string;
+  visibility?: string;
+  publishedAt?: Date | string;
+  userCommentsEnabled?: boolean;
+  uploadFinalized?: boolean;
+  uploadFinalizedById?: string;
+  appUserId?: string;
+  channelId?: string;
+  [key: string]: unknown;
+};
+
+export type UploadRecordUpdateData = {
+  title?: string | null;
+  description?: string | null;
+  license?: string;
+  visibility?: string;
+  publishedAt?: Date;
+  userCommentsEnabled?: boolean;
+  transcodingStartedAt?: Date | null;
+  transcodingFinishedAt?: Date | null;
+  transcodingProgress?: number;
+  transcribingStartedAt?: Date | null;
+  transcribingFinishedAt?: Date | null;
+  finalizedUploadKey?: string | null;
+  uploadFinalizedAt?: Date | null;
+  uploadFinalized?: boolean;
+  uploadFinalizedById?: string | null;
+  originalFileName?: string | null;
+  probe?: unknown;
+  variants?: string[];
+  score?: number;
+  scoreStaleAt?: Date | null;
+  [key: string]: unknown;
+};
+
 export async function createUploadRecord(
-  data: Prisma.UploadRecordCreateArgs['data'],
+  data: UploadRecordCreateData,
   importId?: string,
 ) {
   const res = await (await client).workflow.start(createUploadRecordWorkflow, {
@@ -67,7 +105,7 @@ export async function createUploadRecord(
 
 export async function updateUploadRecord(
   uploadRecordId: string,
-  data: Prisma.UploadRecordUpdateArgs['data'],
+  data: UploadRecordUpdateData,
 ) {
   return (await client).workflow.signalWithStart(updateUploadRecordWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
@@ -83,7 +121,7 @@ export async function updateUploadRecord(
 
 export async function recordDownloadSize(
   uploadRecordId: string,
-  variant: UploadVariant,
+  variant: (typeof UploadVariant.enumValues)[number],
   bytes: number,
 ) {
   return (await client).workflow.start(recordDownloadSizeWorkflow, {

@@ -30,6 +30,7 @@
     "@fontsource-variable/roboto-mono": "^5.2.8",
     "@hello-pangea/dnd": "^18.0.1",
     "@letschurch/db": "workspace:*",
+    "drizzle-orm": "^0.45.1",
     "@letschurch/elasticsearch": "workspace:*",
     "@letschurch/s3": "workspace:*",
     "@letschurch/temporal": "workspace:*",

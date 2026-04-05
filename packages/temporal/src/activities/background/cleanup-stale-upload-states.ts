@@ -1,4 +1,5 @@
-import { prisma } from '@letschurch/db';
+import { db, UploadState } from '@letschurch/db';
+import { and, count, eq, inArray, lt } from 'drizzle-orm';
 import logger from '../../util/logger';
 
 export type CleanupStaleUploadStatesResult = {
@@ -16,16 +17,17 @@ export async function getStaleUploadStatesCount(
   const thresholdDate = new Date();
   thresholdDate.setDate(thresholdDate.getDate() - olderThanDays);
 
-  const count = await prisma.uploadState.count({
-    where: {
-      backupStatus: 'NOT_BACKED_UP',
-      createdAt: {
-        lt: thresholdDate,
-      },
-    },
-  });
+  const result = await db
+    .select({ count: count(UploadState.id) })
+    .from(UploadState)
+    .where(
+      and(
+        eq(UploadState.backupStatus, 'NOT_BACKED_UP'),
+        lt(UploadState.createdAt, thresholdDate),
+      ),
+    );
 
-  return count;
+  return Number(result[0]?.count ?? 0);
 }
 
 /**
@@ -40,42 +42,42 @@ export async function cleanupStaleUploadStatesBatch(
   thresholdDate.setDate(thresholdDate.getDate() - olderThanDays);
 
   // Find stale upload states
-  const staleStates = await prisma.uploadState.findMany({
-    where: {
-      backupStatus: 'NOT_BACKED_UP',
-      createdAt: {
-        lt: thresholdDate,
-      },
-    },
-    take: batchSize,
-    select: {
-      id: true,
-      s3Key: true,
-      uploadType: true,
-    },
-  });
+  const staleStates = await db
+    .select({
+      id: UploadState.id,
+      s3Key: UploadState.s3Key,
+      uploadType: UploadState.uploadType,
+    })
+    .from(UploadState)
+    .where(
+      and(
+        eq(UploadState.backupStatus, 'NOT_BACKED_UP'),
+        lt(UploadState.createdAt, thresholdDate),
+      ),
+    )
+    .limit(batchSize);
 
   if (staleStates.length === 0) {
     return { deleted: 0, remaining: 0 };
   }
 
   // Delete the stale states
-  const deleteResult = await prisma.uploadState.deleteMany({
-    where: {
-      id: {
-        in: staleStates.map((s) => s.id),
-      },
-    },
-  });
+  await db.delete(UploadState).where(
+    inArray(
+      UploadState.id,
+      staleStates.map((s) => s.id),
+    ),
+  );
 
+  const deleted = staleStates.length;
   const remaining = await getStaleUploadStatesCount(olderThanDays);
 
   logger.info(
-    `Cleaned up ${deleteResult.count} stale upload states (older than ${olderThanDays} days), ${remaining} remaining`,
+    `Cleaned up ${deleted} stale upload states (older than ${olderThanDays} days), ${remaining} remaining`,
   );
 
   return {
-    deleted: deleteResult.count,
+    deleted,
     remaining,
   };
 }

@@ -30,7 +30,7 @@ export const channelFormSchema = z.object({
       'Slug can only contain letters, numbers, underscores, and hyphens',
     ),
   description: z.string(),
-  visibility: z.enum(ChannelVisibility),
+  visibility: z.nativeEnum(ChannelVisibility),
   websiteUrl: z.url('Invalid URL').optional().or(z.literal('')),
   facebookUrl: z.url('Invalid URL').optional().or(z.literal('')),
   instagramUrl: z.url('Invalid URL').optional().or(z.literal('')),
@@ -42,8 +42,8 @@ export const channelFormSchema = z.object({
   applePodcastsUrl: z.url('Invalid URL').optional().or(z.literal('')),
   spotifyUrl: z.url('Invalid URL').optional().or(z.literal('')),
   rssUrl: z.url('Invalid URL').optional().or(z.literal('')),
-  defaultUploadVisibility: z.enum(UploadVisibility).nullable().optional(),
-  defaultUploadLicense: z.enum(UploadLicense).nullable().optional(),
+  defaultUploadVisibility: z.nativeEnum(UploadVisibility).nullable().optional(),
+  defaultUploadLicense: z.nativeEnum(UploadLicense).nullable().optional(),
   defaultUploadCommentsEnabled: z.boolean().nullable().optional(),
   defaultUploadDownloadsEnabled: z.boolean().nullable().optional(),
 });
@@ -58,9 +58,9 @@ export const updateChannelSchema = channelFormSchema.extend({
 export const uploadFormSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string(),
-  license: z.enum(UploadLicense),
+  license: z.nativeEnum(UploadLicense),
   publishedAt: z.date(),
-  visibility: z.enum(UploadVisibility),
+  visibility: z.nativeEnum(UploadVisibility),
   userCommentsEnabled: z.boolean(),
   downloadsEnabled: z.boolean(),
   seriesIds: z.array(z.string()),
@@ -157,13 +157,13 @@ export const bulkSetVisibilitySchema = z.object({
   uploadIds: z
     .array(uploadIdSchema)
     .min(1, 'At least one upload must be selected'),
-  visibility: z.enum(UploadVisibility),
+  visibility: z.nativeEnum(UploadVisibility),
 });
 
 // Playlist schemas
 export const playlistFormSchema = z.object({
   title: z.string().min(1, 'Playlist title is required'),
-  type: z.enum(UploadListType).default('PLAYLIST' as UploadListType),
+  type: z.nativeEnum(UploadListType).default('PLAYLIST'),
 });
 
 export const createPlaylistSchema = playlistFormSchema.extend({
@@ -213,8 +213,8 @@ export const importMediaSchema = z.object({
   url: z.url('Please enter a valid URL'),
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
-  license: z.enum(UploadLicense).default('STANDARD' as UploadLicense),
-  visibility: z.enum(UploadVisibility).default('PUBLIC' as UploadVisibility),
+  license: z.nativeEnum(UploadLicense).default('STANDARD'),
+  visibility: z.nativeEnum(UploadVisibility).default('PUBLIC'),
   publishedAt: z.date(),
   userCommentsEnabled: z.boolean().default(true),
   trimSilence: z.boolean().default(false),

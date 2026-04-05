@@ -1,5 +1,6 @@
-import { prisma } from '@letschurch/db';
+import { ChannelImportSource, db } from '@letschurch/db';
 import { TRPCError } from '@trpc/server';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import {
   importRunsQuerySchema,
@@ -41,11 +42,12 @@ const channelMemberProcedure = authProcedure
     // Skip membership query for site admins
     const membership = ctx.isSiteAdmin
       ? null
-      : await prisma.channelMembership.findFirst({
-          where: {
-            appUserId: ctx.session.appUserId,
-            channelId: input.channelId,
-          },
+      : await db.query.ChannelMembership.findFirst({
+          where: (t, { and, eq }) =>
+            and(
+              eq(t.appUserId, ctx.session.appUserId),
+              eq(t.channelId, input.channelId),
+            ),
         });
 
     if (!ctx.isSiteAdmin && !membership) {
@@ -64,32 +66,41 @@ export const importSourcesRouter = router({
   listAll: adminProcedure
     .input(importSourceFilterSchema)
     .query(async ({ input }) => {
-      return prisma.channelImportSource.findMany({
-        where: input?.channelId ? { channelId: input.channelId } : undefined,
-        include: {
+      const channelIdFilter = input?.channelId;
+      const sources = await db.query.ChannelImportSource.findMany({
+        where: channelIdFilter
+          ? (t, { eq }) => eq(t.channelId, channelIdFilter)
+          : undefined,
+        with: {
           channel: {
-            select: { id: true, name: true, slug: true },
+            columns: { id: true, name: true, slug: true },
           },
-          _count: {
-            select: { importRuns: true },
+          importRuns: {
+            columns: { id: true },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: (t, { desc }) => [desc(t.createdAt)],
       });
+
+      return sources.map((source) => ({
+        ...source,
+        _count: { importRuns: source.importRuns.length },
+        importRuns: undefined,
+      }));
     }),
 
   // Admin: Get single import source by ID
   get: adminProcedure
     .input(z.object({ id: importSourceIdSchema }))
     .query(async ({ input }) => {
-      const source = await prisma.channelImportSource.findUnique({
-        where: { id: input.id },
-        include: {
+      const source = await db.query.ChannelImportSource.findFirst({
+        where: (t, { eq }) => eq(t.id, input.id),
+        with: {
           channel: {
-            select: { id: true, name: true, slug: true },
+            columns: { id: true, name: true, slug: true },
           },
           createdBy: {
-            select: { id: true, username: true },
+            columns: { id: true, username: true },
           },
         },
       });
@@ -107,20 +118,22 @@ export const importSourcesRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { importHistory, ...sourceData } = input;
 
-      const source = await prisma.channelImportSource.create({
-        data: {
+      const [source] = await db
+        .insert(ChannelImportSource)
+        .values({
           ...sourceData,
           createdById: ctx.session.appUserId,
           deduplicationFields: input.deduplicationFields || [],
-        },
-      });
+          updatedAt: new Date(),
+        })
+        .returning();
 
       moduleLogger.info('Created import source');
 
       // If import history provided, trigger historical import first
       if (importHistory && importHistory.length > 0) {
         try {
-          await triggerHistoricalImport(source.id, importHistory);
+          await triggerHistoricalImport(source?.id, importHistory);
           moduleLogger.info('Triggered historical import', {
             itemCount: importHistory.length,
           });
@@ -130,9 +143,9 @@ export const importSourcesRouter = router({
       }
 
       // Start workflow if enabled
-      if (source.enabled) {
+      if (source?.enabled) {
         try {
-          await startImportSourceScheduler(source.id);
+          await startImportSourceScheduler(source?.id);
           moduleLogger.info('Started import source scheduler workflow');
         } catch (_error) {
           moduleLogger.error(
@@ -141,6 +154,9 @@ export const importSourcesRouter = router({
         }
       }
 
+      if (!source) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      }
       return source;
     }),
 
@@ -148,8 +164,8 @@ export const importSourcesRouter = router({
   update: adminProcedure
     .input(updateImportSourceSchema)
     .mutation(async ({ ctx, input }) => {
-      const existing = await prisma.channelImportSource.findUnique({
-        where: { id: input.id },
+      const existing = await db.query.ChannelImportSource.findFirst({
+        where: (t, { eq }) => eq(t.id, input.id),
       });
 
       if (!existing) {
@@ -158,20 +174,22 @@ export const importSourcesRouter = router({
 
       const { importHistory, ...updateData } = input.data;
 
-      const updated = await prisma.channelImportSource.update({
-        where: { id: input.id },
-        data: {
+      const [updated] = await db
+        .update(ChannelImportSource)
+        .set({
           ...updateData,
           updatedById: ctx.session.appUserId,
-        },
-      });
+          updatedAt: new Date(),
+        })
+        .where(eq(ChannelImportSource.id, input.id))
+        .returning();
 
       moduleLogger.info('Updated import source');
 
       // If import history provided, trigger historical import
       if (importHistory && importHistory.length > 0) {
         try {
-          await triggerHistoricalImport(updated.id, importHistory);
+          await triggerHistoricalImport(updated?.id, importHistory);
           moduleLogger.info('Triggered historical import after update', {
             itemCount: importHistory.length,
           });
@@ -188,11 +206,11 @@ export const importSourcesRouter = router({
         input.data.enabled !== existing.enabled
       ) {
         try {
-          if (updated.enabled) {
-            await startImportSourceScheduler(updated.id);
+          if (updated?.enabled) {
+            await startImportSourceScheduler(updated?.id);
             moduleLogger.info('Started import source scheduler workflow');
           } else {
-            await cancelImportSourceScheduler(updated.id);
+            await cancelImportSourceScheduler(updated?.id);
             moduleLogger.info('Cancelled import source scheduler workflow');
           }
         } catch (_error) {
@@ -202,6 +220,9 @@ export const importSourcesRouter = router({
         }
       }
 
+      if (!updated) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      }
       return updated;
     }),
 
@@ -209,18 +230,18 @@ export const importSourcesRouter = router({
   delete: adminProcedure
     .input(z.object({ id: importSourceIdSchema }))
     .mutation(async ({ input }) => {
-      const source = await prisma.$transaction(async (tx) => {
-        const source = await tx.channelImportSource.findUnique({
-          where: { id: input.id },
+      const source = await db.transaction(async (tx) => {
+        const source = await tx.query.ChannelImportSource.findFirst({
+          where: (t, { eq }) => eq(t.id, input.id),
         });
 
         if (!source) {
           throw new TRPCError({ code: 'NOT_FOUND' });
         }
 
-        await tx.channelImportSource.delete({
-          where: { id: input.id },
-        });
+        await tx
+          .delete(ChannelImportSource)
+          .where(eq(ChannelImportSource.id, input.id));
 
         return source;
       });
@@ -244,10 +265,19 @@ export const importSourcesRouter = router({
   pause: adminProcedure
     .input(z.object({ id: importSourceIdSchema }))
     .mutation(async ({ input }) => {
-      const source = await prisma.channelImportSource.update({
-        where: { id: input.id },
-        data: { enabled: false, workflowStatus: 'PAUSED' },
-      });
+      const [source] = await db
+        .update(ChannelImportSource)
+        .set({
+          enabled: false,
+          workflowStatus: 'PAUSED',
+          updatedAt: new Date(),
+        })
+        .where(eq(ChannelImportSource.id, input.id))
+        .returning();
+
+      if (!source) {
+        throw new TRPCError({ code: 'NOT_FOUND' });
+      }
 
       try {
         await cancelImportSourceScheduler(source.id);
@@ -263,10 +293,15 @@ export const importSourcesRouter = router({
   resume: adminProcedure
     .input(z.object({ id: importSourceIdSchema }))
     .mutation(async ({ input }) => {
-      const source = await prisma.channelImportSource.update({
-        where: { id: input.id },
-        data: { enabled: true },
-      });
+      const [source] = await db
+        .update(ChannelImportSource)
+        .set({ enabled: true, updatedAt: new Date() })
+        .where(eq(ChannelImportSource.id, input.id))
+        .returning();
+
+      if (!source) {
+        throw new TRPCError({ code: 'NOT_FOUND' });
+      }
 
       try {
         await startImportSourceScheduler(source.id);
@@ -282,8 +317,8 @@ export const importSourcesRouter = router({
   triggerManual: adminProcedure
     .input(z.object({ id: importSourceIdSchema }))
     .mutation(async ({ input }) => {
-      const source = await prisma.channelImportSource.findUnique({
-        where: { id: input.id },
+      const source = await db.query.ChannelImportSource.findFirst({
+        where: (t, { eq }) => eq(t.id, input.id),
       });
 
       if (!source) {
@@ -306,9 +341,8 @@ export const importSourcesRouter = router({
 
   // Channel members: View import stats for their channel
   getStats: channelMemberProcedure.query(async ({ input }) => {
-    const sources = await prisma.channelImportSource.findMany({
-      where: { channelId: input.channelId },
-      select: {
+    const sources = await db.query.ChannelImportSource.findMany({
+      columns: {
         id: true,
         url: true,
         lastImportedAt: true,
@@ -316,24 +350,31 @@ export const importSourcesRouter = router({
         earliestImportDate: true,
         workflowStatus: true,
         enabled: true,
-        _count: {
-          select: { importRuns: true },
+      },
+      with: {
+        importRuns: {
+          columns: { id: true },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      where: (t, { eq }) => eq(t.channelId, input.channelId),
+      orderBy: (t, { desc }) => [desc(t.createdAt)],
     });
 
-    return sources;
+    return sources.map((source) => ({
+      ...source,
+      _count: { importRuns: source.importRuns.length },
+      importRuns: undefined,
+    }));
   }),
 
   // Admin: Get import run history
   getImportRuns: adminProcedure
     .input(importRunsQuerySchema)
     .query(async ({ input }) => {
-      return prisma.channelImportRun.findMany({
-        where: { importSourceId: input.importSourceId },
-        orderBy: { startedAt: 'desc' },
-        take: input.limit,
+      return db.query.ChannelImportRun.findMany({
+        where: (t, { eq }) => eq(t.importSourceId, input.importSourceId),
+        orderBy: (t, { desc }) => [desc(t.startedAt)],
+        limit: input.limit,
       });
     }),
 });

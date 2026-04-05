@@ -1,9 +1,10 @@
-import { prisma, type TransactionClient } from '@letschurch/db';
+import { AppUser, AppUserEmail, db } from '@letschurch/db';
 import { PART_SIZE } from '@letschurch/s3';
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
+import { eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 import { passwordChangeSchema, profileUpdateSchema } from '@/schemas/account';
 import {
@@ -29,18 +30,20 @@ type PasswordChangeResponse = { error: false } | { error: string };
 
 export const accountProcedures = {
   getProfile: authProcedure.query(async ({ ctx }) => {
-    const user = await prisma.appUser.findUnique({
-      where: { id: ctx.session.appUserId },
-      select: {
+    const user = await db.query.AppUser.findFirst({
+      where: (t, { eq }) => eq(t.id, ctx.session.appUserId),
+      columns: {
         id: true,
         username: true,
         fullName: true,
+        avatarPath: true,
+      },
+      with: {
         emails: {
-          select: {
+          columns: {
             email: true,
           },
         },
-        avatarPath: true,
       },
     });
 
@@ -80,11 +83,12 @@ export const accountProcedures = {
       );
 
       try {
-        const existingUser = await prisma.appUser.findFirst({
-          where: {
-            username: input.username,
-            id: { not: ctx.session.appUserId },
-          },
+        const existingUser = await db.query.AppUser.findFirst({
+          where: (t, { eq, ne, and }) =>
+            and(
+              eq(t.username, input.username),
+              ne(t.id, ctx.session.appUserId),
+            ),
         });
 
         if (existingUser) {
@@ -100,14 +104,14 @@ export const accountProcedures = {
           return { error: 'Username is already taken' };
         }
 
-        const existingEmail = await prisma.appUserEmail.findFirst({
-          where: {
-            email: input.email,
-            appUser: { id: { not: ctx.session.appUserId } },
-          },
+        const existingEmailRecord = await db.query.AppUserEmail.findFirst({
+          where: (t, { eq }) => eq(t.email, input.email),
         });
 
-        if (existingEmail) {
+        if (
+          existingEmailRecord &&
+          existingEmailRecord.appUserId !== ctx.session.appUserId
+        ) {
           moduleLogger.warn(
             {
               context: {
@@ -120,36 +124,30 @@ export const accountProcedures = {
           return { error: 'Email is already taken' };
         }
 
-        await prisma.$transaction(async (txRaw) => {
-          // Type assertion required due to TypeScript limitations with Omit and getter properties
-          // See: https://github.com/prisma/prisma/issues/20738
-          const tx = txRaw as TransactionClient;
-          await tx.appUser.update({
-            where: { id: ctx.session.appUserId },
-            data: {
+        await db.transaction(async (tx) => {
+          await tx
+            .update(AppUser)
+            .set({
               username: input.username,
               fullName: input.fullName,
-            },
-          });
+              updatedAt: new Date(),
+            })
+            .where(eq(AppUser.id, ctx.session.appUserId));
 
-          const currentEmail = await tx.appUserEmail.findFirst({
-            where: {
-              appUserId: ctx.session.appUserId,
-            },
+          const currentEmail = await tx.query.AppUserEmail.findFirst({
+            where: (t, { eq }) => eq(t.appUserId, ctx.session.appUserId),
           });
 
           if (currentEmail?.email !== input.email) {
             if (currentEmail) {
-              await tx.appUserEmail.delete({
-                where: { id: currentEmail.id },
-              });
+              await tx
+                .delete(AppUserEmail)
+                .where(eq(AppUserEmail.id, currentEmail.id));
             }
 
-            await tx.appUserEmail.create({
-              data: {
-                email: input.email,
-                appUserId: ctx.session.appUserId,
-              },
+            await tx.insert(AppUserEmail).values({
+              email: input.email,
+              appUserId: ctx.session.appUserId,
             });
           }
         });
@@ -208,9 +206,9 @@ export const accountProcedures = {
       }
 
       try {
-        const user = await prisma.appUser.findUnique({
-          where: { id: ctx.session.appUserId },
-          select: {
+        const user = await db.query.AppUser.findFirst({
+          where: (t, { eq }) => eq(t.id, ctx.session.appUserId),
+          columns: {
             id: true,
             password: true,
           },
@@ -247,10 +245,10 @@ export const accountProcedures = {
           type: argon2.argon2id,
         });
 
-        await prisma.appUser.update({
-          where: { id: ctx.session.appUserId },
-          data: { password: newHash },
-        });
+        await db
+          .update(AppUser)
+          .set({ password: newHash, updatedAt: new Date() })
+          .where(eq(AppUser.id, ctx.session.appUserId));
 
         moduleLogger.info(
           {

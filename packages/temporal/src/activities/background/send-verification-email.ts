@@ -1,4 +1,6 @@
-import { prisma } from '@letschurch/db';
+import { AppUserEmail, db } from '@letschurch/db';
+import { eq } from 'drizzle-orm';
+import { invariant } from 'es-toolkit';
 import { stripIndent } from 'proper-tags';
 import { z } from 'zod';
 import { client } from '../../client';
@@ -29,10 +31,13 @@ export default async function sendVerificationEmailActivity(
 ) {
   moduleLogger.info(`Sending verification email for user ${userId}`);
 
-  const emailObj = await prisma.appUserEmail.findUniqueOrThrow({
-    select: { id: true, key: true },
-    where: { email },
-  });
+  const emailObj = await db
+    .select({ id: AppUserEmail.id, key: AppUserEmail.key })
+    .from(AppUserEmail)
+    .where(eq(AppUserEmail.email, email))
+    .then((r) => r[0]);
+
+  invariant(emailObj, `Email ${email} not found`);
 
   const verifyUrl = `${getWebUrl()}/auth/verify?${new URLSearchParams({
     userId: uuidTranslator.fromUUID(userId),

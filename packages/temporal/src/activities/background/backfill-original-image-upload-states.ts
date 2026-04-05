@@ -1,12 +1,22 @@
-import { prisma } from '@letschurch/db';
-import type { UploadStateType } from '@letschurch/db/generated/prisma/client';
+import {
+  AppUser,
+  Channel,
+  db,
+  Organization,
+  UploadRecord,
+  UploadState,
+  type UploadStateType,
+} from '@letschurch/db';
 import { ingestS3 } from '@letschurch/s3/ingest';
+import { eq } from 'drizzle-orm';
 import logger from '../../util/logger';
 
 export type BackfillOriginalImageBatchResult = {
   created: number;
   remaining: number;
 };
+
+type UploadStateTypeValue = (typeof UploadStateType.enumValues)[number];
 
 /**
  * Scans the ingest bucket for .imagemagick.json probe files to find original
@@ -51,9 +61,11 @@ export async function backfillOriginalImageUploadStatesBatch(
     }
 
     // Check if UploadState already exists for this key
-    const existing = await prisma.uploadState.findUnique({
-      where: { s3Key: originalKey },
-    });
+    const existing = await db
+      .select()
+      .from(UploadState)
+      .where(eq(UploadState.s3Key, originalKey))
+      .then((r) => r[0] ?? null);
 
     if (existing) {
       continue; // Already have an UploadState for this
@@ -83,18 +95,17 @@ export async function backfillOriginalImageUploadStatesBatch(
     }
 
     // Create UploadState
-    await prisma.uploadState.create({
-      data: {
-        s3Key: originalKey,
-        s3Bucket: ingestBucket,
-        uploadType: uploadType.type,
-        sizeBytes,
-        uploadRecordId: uploadType.uploadRecordId,
-        appUserId: uploadType.appUserId,
-        channelId: uploadType.channelId,
-        organizationId: uploadType.organizationId,
-        backupStatus: 'NOT_BACKED_UP',
-      },
+    await db.insert(UploadState).values({
+      s3Key: originalKey,
+      s3Bucket: ingestBucket,
+      uploadType: uploadType.type,
+      sizeBytes,
+      uploadRecordId: uploadType.uploadRecordId,
+      appUserId: uploadType.appUserId,
+      channelId: uploadType.channelId,
+      organizationId: uploadType.organizationId,
+      backupStatus: 'NOT_BACKED_UP',
+      updatedAt: new Date(),
     });
 
     created++;
@@ -115,7 +126,7 @@ export async function backfillOriginalImageUploadStatesBatch(
 }
 
 type UploadTypeInfo = {
-  type: UploadStateType;
+  type: UploadStateTypeValue;
   uploadRecordId?: string;
   appUserId?: string;
   channelId?: string;
@@ -134,13 +145,17 @@ async function determineUploadType(
   // We need to check if any UploadRecord has a matching ID in the path
   const pathParts = s3Key.split('/');
   if (pathParts.length >= 2) {
-    const potentialUploadId = pathParts[0];
+    const potentialUploadId = pathParts[0] ?? '';
 
     // Check if this is an upload record ID
-    const uploadRecord = await prisma.uploadRecord.findUnique({
-      where: { id: potentialUploadId },
-      select: { id: true, overrideThumbnailPath: true },
-    });
+    const uploadRecord = await db
+      .select({
+        id: UploadRecord.id,
+        overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
+      })
+      .from(UploadRecord)
+      .where(eq(UploadRecord.id, potentialUploadId))
+      .then((r) => r[0] ?? null);
 
     if (uploadRecord) {
       return {
@@ -150,10 +165,11 @@ async function determineUploadType(
     }
 
     // Check if this matches a user avatar pattern
-    const user = await prisma.appUser.findUnique({
-      where: { id: potentialUploadId },
-      select: { id: true, avatarPath: true },
-    });
+    const user = await db
+      .select({ id: AppUser.id, avatarPath: AppUser.avatarPath })
+      .from(AppUser)
+      .where(eq(AppUser.id, potentialUploadId))
+      .then((r) => r[0] ?? null);
 
     if (user) {
       return {
@@ -163,10 +179,15 @@ async function determineUploadType(
     }
 
     // Check if this matches a channel avatar or default thumbnail
-    const channel = await prisma.channel.findUnique({
-      where: { id: potentialUploadId },
-      select: { id: true, avatarPath: true, defaultThumbnailPath: true },
-    });
+    const channel = await db
+      .select({
+        id: Channel.id,
+        avatarPath: Channel.avatarPath,
+        defaultThumbnailPath: Channel.defaultThumbnailPath,
+      })
+      .from(Channel)
+      .where(eq(Channel.id, potentialUploadId))
+      .then((r) => r[0] ?? null);
 
     if (channel) {
       // Determine if it's avatar or default thumbnail based on the optimized path
@@ -185,10 +206,11 @@ async function determineUploadType(
     }
 
     // Check if this matches an organization avatar
-    const org = await prisma.organization.findUnique({
-      where: { id: potentialUploadId },
-      select: { id: true, avatarPath: true },
-    });
+    const org = await db
+      .select({ id: Organization.id, avatarPath: Organization.avatarPath })
+      .from(Organization)
+      .where(eq(Organization.id, potentialUploadId))
+      .then((r) => r[0] ?? null);
 
     if (org) {
       return {

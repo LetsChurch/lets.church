@@ -1,5 +1,6 @@
-import { prisma } from '@letschurch/db';
+import { db, SavedMedia } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarXs2x } from '@/util/avatar-sizes';
@@ -31,36 +32,30 @@ export const libraryProcedures = {
       moduleLogger.info('Toggling saved media');
 
       // Check if user already saved this media
-      const existingSave = await prisma.savedMedia.findUnique({
-        where: {
-          appUserId_uploadRecordId: {
-            appUserId: userId,
-            uploadRecordId: mediaId,
-          },
-        },
+      const existingSave = await db.query.SavedMedia.findFirst({
+        where: (t, { and, eq }) =>
+          and(eq(t.appUserId, userId), eq(t.uploadRecordId, mediaId)),
       });
 
       if (existingSave) {
         // User is clicking save again - remove it (toggle off)
-        await prisma.savedMedia.delete({
-          where: {
-            appUserId_uploadRecordId: {
-              appUserId: userId,
-              uploadRecordId: mediaId,
-            },
-          },
-        });
+        await db
+          .delete(SavedMedia)
+          .where(
+            and(
+              eq(SavedMedia.appUserId, userId),
+              eq(SavedMedia.uploadRecordId, mediaId),
+            ),
+          );
 
         moduleLogger.info('Media unsaved');
 
         return { saved: false };
       } else {
         // User is saving for the first time
-        await prisma.savedMedia.create({
-          data: {
-            appUserId: userId,
-            uploadRecordId: mediaId,
-          },
+        await db.insert(SavedMedia).values({
+          appUserId: userId,
+          uploadRecordId: mediaId,
         });
 
         moduleLogger.info('Media saved');
@@ -72,13 +67,12 @@ export const libraryProcedures = {
   // isSaved: authProcedure
   //   .input(z.object({ mediaId: z.uuid() }))
   //   .query(async ({ input, ctx }) => {
-  //     const saved = await prisma.savedMedia.findUnique({
-  //       where: {
-  //         appUserId_uploadRecordId: {
-  //           appUserId: ctx.session.appUserId,
-  //           uploadRecordId: input.mediaId,
-  //         },
-  //       },
+  //     const saved = await db.query.SavedMedia.findFirst({
+  //       where: (t, { and, eq }) =>
+  //         and(
+  //           eq(t.appUserId, ctx.session.appUserId),
+  //           eq(t.uploadRecordId, input.mediaId),
+  //         ),
   //     });
   //
   //     return { saved: Boolean(saved) };
@@ -96,11 +90,13 @@ export const libraryProcedures = {
         'Fetching saved media',
       );
 
-      const savedMedia = await prisma.savedMedia.findMany({
-        select: {
+      const savedMedia = await db.query.SavedMedia.findMany({
+        columns: {
           createdAt: true,
+        },
+        with: {
           uploadRecord: {
-            select: {
+            columns: {
               id: true,
               title: true,
               description: true,
@@ -109,8 +105,10 @@ export const libraryProcedures = {
               lengthSeconds: true,
               defaultThumbnailPath: true,
               overrideThumbnailPath: true,
+            },
+            with: {
               channel: {
-                select: {
+                columns: {
                   id: true,
                   name: true,
                   slug: true,
@@ -118,28 +116,16 @@ export const libraryProcedures = {
                   defaultThumbnailPath: true,
                 },
               },
-              _count: {
-                select: {
-                  uploadViews: true,
-                },
-              },
             },
           },
         },
-        where: {
-          appUserId: ctx.session.appUserId,
-          ...(cursor
-            ? {
-                createdAt: {
-                  lt: new Date(cursor),
-                },
-              }
-            : {}),
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        take: limit + 1, // Fetch one extra to determine if there are more
+        where: (t, { and, eq, lt }) =>
+          and(
+            eq(t.appUserId, ctx.session.appUserId),
+            ...(cursor ? [lt(t.createdAt, new Date(cursor))] : []),
+          ),
+        orderBy: (t, { desc }) => [desc(t.createdAt)],
+        limit: limit + 1, // Fetch one extra to determine if there are more
       });
 
       const hasMore = savedMedia.length > limit;
@@ -199,67 +185,82 @@ export const libraryProcedures = {
         'Fetching watch history',
       );
 
-      const history = await prisma.uploadView.findMany({
-        select: {
-          createdAt: true,
-          uploadRecordId: true,
-          upload: {
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              createdAt: true,
-              publishedAt: true,
-              lengthSeconds: true,
-              defaultThumbnailPath: true,
-              overrideThumbnailPath: true,
-              channel: {
-                select: {
-                  id: true,
-                  name: true,
-                  slug: true,
-                  avatarPath: true,
-                  defaultThumbnailPath: true,
-                },
-              },
-              _count: {
-                select: {
-                  uploadViews: true,
-                },
-              },
-            },
-          },
-          UploadViewSecond: {
-            select: {
-              second: true,
-            },
-            orderBy: {
-              second: 'desc',
-            },
-            take: 1,
-          },
-        },
-        where: {
-          appUserId: ctx.session.appUserId,
-          ...(cursor
-            ? {
-                createdAt: {
-                  lt: new Date(cursor),
-                },
-              }
-            : {}),
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        take: limit + 1, // Fetch one extra to determine if there are more
-        distinct: ['uploadRecordId'], // Only show each video once (most recent view)
-      });
+      const BATCH_SIZE = 100;
 
-      const hasMore = history.length > limit;
-      const items = hasMore ? history.slice(0, limit) : history;
+      // Helper typed so dedupedHistory can infer its element type
+      const fetchBatch = (cur: string | null | undefined) =>
+        db.query.UploadView.findMany({
+          columns: {
+            createdAt: true,
+            uploadRecordId: true,
+          },
+          with: {
+            upload: {
+              columns: {
+                id: true,
+                title: true,
+                description: true,
+                createdAt: true,
+                publishedAt: true,
+                lengthSeconds: true,
+                defaultThumbnailPath: true,
+                overrideThumbnailPath: true,
+              },
+              with: {
+                channel: {
+                  columns: {
+                    id: true,
+                    name: true,
+                    slug: true,
+                    avatarPath: true,
+                    defaultThumbnailPath: true,
+                  },
+                },
+              },
+            },
+            UploadViewSecond: {
+              columns: {
+                second: true,
+              },
+              orderBy: (t, { desc }) => [desc(t.second)],
+              limit: 1,
+            },
+          },
+          where: (t, { and, eq, lt }) =>
+            and(
+              eq(t.appUserId, ctx.session.appUserId),
+              ...(cur ? [lt(t.createdAt, new Date(cur))] : []),
+            ),
+          orderBy: (t, { desc }) => [desc(t.createdAt)],
+          limit: BATCH_SIZE,
+        });
+
+      type HistoryItem = Awaited<ReturnType<typeof fetchBatch>>[number];
+
+      const seen = new Set<string>();
+      const dedupedHistory: HistoryItem[] = [];
+      let batchCursor = cursor;
+
+      // Iteratively fetch batches until we have limit+1 unique items or exhaust rows
+      outer: while (true) {
+        const batch = await fetchBatch(batchCursor);
+
+        for (const item of batch) {
+          if (!seen.has(item.uploadRecordId)) {
+            seen.add(item.uploadRecordId);
+            dedupedHistory.push(item);
+            if (dedupedHistory.length > limit) break outer;
+          }
+        }
+
+        if (batch.length < BATCH_SIZE) break;
+        batchCursor = batch[batch.length - 1]?.createdAt.toISOString();
+      }
+
+      const hasMore = dedupedHistory.length > limit;
+      const items = hasMore ? dedupedHistory.slice(0, limit) : dedupedHistory;
       const nextCursor = hasMore
-        ? items[items.length - 1].createdAt.toISOString()
+        ? items[items.length - 1]?.createdAt.toISOString()
         : null;
 
       const uploadsWithThumbnails = items.map(

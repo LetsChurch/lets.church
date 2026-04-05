@@ -1,4 +1,5 @@
-import { prisma } from '@letschurch/db';
+import { ChannelImportSource, db, ImportHistory } from '@letschurch/db';
+import { eq } from 'drizzle-orm';
 import logger from '../../util/logger';
 
 const moduleLogger = logger.child({
@@ -58,10 +59,9 @@ export async function processImportHistory(
   });
 
   // Bulk create import history records
-  await prisma.importHistory.createMany({
-    data: historyRecords,
-    skipDuplicates: true,
-  });
+  if (historyRecords.length > 0) {
+    await db.insert(ImportHistory).values(historyRecords).onConflictDoNothing();
+  }
 
   moduleLogger.info('Created import history records', {
     importSourceId,
@@ -72,6 +72,7 @@ export async function processImportHistory(
   const updates: {
     earliestImportDate?: Date;
     lastImportedUploadDate?: Date;
+    updatedAt?: Date;
   } = {};
 
   if (earliestDate) {
@@ -83,10 +84,10 @@ export async function processImportHistory(
   }
 
   if (Object.keys(updates).length > 0) {
-    await prisma.channelImportSource.update({
-      where: { id: importSourceId },
-      data: updates,
-    });
+    await db
+      .update(ChannelImportSource)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(ChannelImportSource.id, importSourceId));
 
     moduleLogger.info('Updated import source with backfill dates', {
       importSourceId,

@@ -1,8 +1,19 @@
-import { OrganizationType, prisma } from '@letschurch/db';
+import {
+  db,
+  Organization,
+  OrganizationAddress,
+  OrganizationChannelAssociation,
+  OrganizationInvitation,
+  OrganizationLeader,
+  OrganizationMembership,
+  OrganizationOrganizationAssociation,
+  OrganizationTagInstance,
+} from '@letschurch/db';
 import { PART_SIZE } from '@letschurch/s3';
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
+import { and, eq, inArray } from 'drizzle-orm';
 import { invariant, isEqual, pick } from 'es-toolkit';
 import {
   finalizeMultipartUploadSchema,
@@ -74,11 +85,12 @@ const churchProcedure = authProcedure
       });
     }
 
-    const membership = await prisma.organizationMembership.findFirst({
-      where: {
-        appUserId: ctx.session.appUserId,
-        organizationId: input.churchId,
-      },
+    const membership = await db.query.OrganizationMembership.findFirst({
+      where: (t, { and, eq }) =>
+        and(
+          eq(t.appUserId, ctx.session.appUserId),
+          eq(t.organizationId, input.churchId),
+        ),
     });
 
     if (!membership) {
@@ -119,14 +131,16 @@ export const churchRouter = router({
       'Fetching organization tags',
     );
 
-    return prisma.organizationTag.findMany({
-      select: {
+    const tags = await db.query.OrganizationTag.findMany({
+      columns: {
         slug: true,
         label: true,
         category: true,
       },
-      orderBy: [{ category: 'asc' }, { label: 'asc' }],
+      orderBy: (t, { asc }) => [asc(t.category), asc(t.label)],
     });
+
+    return tags;
   }),
 
   createChurch: authProcedure
@@ -153,54 +167,60 @@ export const churchRouter = router({
         // Get the tag slugs from the single tags array
         const allTagSlugs = input.tags || [];
 
-        const church = await prisma.organization.create({
-          data: {
-            name: input.name,
-            slug,
-            description: input.description || null,
-            type: OrganizationType.CHURCH,
-            websiteUrl: input.websiteUrl || null,
-            primaryEmail: input.primaryEmail || null,
-            primaryPhoneNumber: input.primaryPhoneNumber || null,
-            memberships: {
-              create: {
-                appUserId: ctx.session.appUserId,
-                isAdmin: true,
-                canEdit: true,
-              },
-            },
-            tags:
-              allTagSlugs.length > 0
-                ? {
-                    createMany: {
-                      data: allTagSlugs.map((tagSlug) => ({
-                        tagSlug,
-                      })),
-                    },
-                  }
-                : undefined,
-            addresses:
-              input.addresses && input.addresses.length > 0
-                ? {
-                    createMany: {
-                      data: input.addresses.map((address) => ({
-                        type: address.type,
-                        name: address.name || null,
-                        streetAddress: address.streetAddress || null,
-                        locality: address.locality || null,
-                        region: address.region || null,
-                        postalCode: address.postalCode || null,
-                        country: address.country || null,
-                        postOfficeBoxNumber:
-                          address.postOfficeBoxNumber || null,
-                      })),
-                    },
-                  }
-                : undefined,
-          },
-          select: {
-            id: true,
-          },
+        const church = await db.transaction(async (tx) => {
+          const [newChurch] = await tx
+            .insert(Organization)
+            .values({
+              name: input.name,
+              slug,
+              description: input.description || null,
+              type: 'CHURCH',
+              websiteUrl: input.websiteUrl || null,
+              primaryEmail: input.primaryEmail || null,
+              primaryPhoneNumber: input.primaryPhoneNumber || null,
+              automaticallyApproveOrganizationAssociations: false,
+              updatedAt: new Date(),
+            })
+            .returning({ id: Organization.id });
+
+          if (!newChurch) {
+            throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+          }
+
+          await tx.insert(OrganizationMembership).values({
+            organizationId: newChurch.id,
+            appUserId: ctx.session.appUserId,
+            isAdmin: true,
+            canEdit: true,
+            updatedAt: new Date(),
+          });
+
+          if (allTagSlugs.length > 0) {
+            await tx.insert(OrganizationTagInstance).values(
+              allTagSlugs.map((tagSlug) => ({
+                organizationId: newChurch.id,
+                tagSlug,
+              })),
+            );
+          }
+
+          if (input.addresses && input.addresses.length > 0) {
+            await tx.insert(OrganizationAddress).values(
+              input.addresses.map((address) => ({
+                organizationId: newChurch.id,
+                type: address.type,
+                name: address.name || null,
+                streetAddress: address.streetAddress || null,
+                locality: address.locality || null,
+                region: address.region || null,
+                postalCode: address.postalCode || null,
+                country: address.country || null,
+                postOfficeBoxNumber: address.postOfficeBoxNumber || null,
+              })),
+            );
+          }
+
+          return newChurch;
         });
 
         // Handle organization associations if provided
@@ -208,14 +228,15 @@ export const churchRouter = router({
           input.associatedOrganizations &&
           input.associatedOrganizations.length > 0
         ) {
-          await prisma.organizationOrganizationAssociation.createMany({
-            data: input.associatedOrganizations.map((upstreamOrgId) => ({
+          await db.insert(OrganizationOrganizationAssociation).values(
+            input.associatedOrganizations.map((upstreamOrgId) => ({
               upstreamOrganizationId: upstreamOrgId,
               downstreamOrganizationId: church.id,
               downstreamApproved: true, // Church automatically approves being downstream
               upstreamApproved: false, // Upstream organization needs to approve
+              updatedAt: new Date(),
             })),
-          });
+          );
         }
 
         moduleLogger.info(
@@ -269,30 +290,35 @@ export const churchRouter = router({
       'Fetching churches for user',
     );
 
-    return prisma.organization.findMany({
-      select: {
+    // Get memberships for this user
+    const memberships = await db.query.OrganizationMembership.findMany({
+      where: (t, { eq }) => eq(t.appUserId, ctx.session.appUserId),
+    });
+
+    const orgIds = memberships.map((m) => m.organizationId);
+    if (orgIds.length === 0) return [];
+
+    const churches = await db.query.Organization.findMany({
+      columns: {
         id: true,
         name: true,
         type: true,
         description: true,
-        memberships: {
-          select: {
-            isAdmin: true,
-            canEdit: true,
-          },
-          where: {
-            appUserId: ctx.session.appUserId,
-          },
-        },
       },
-      where: {
-        type: OrganizationType.CHURCH,
-        memberships: {
-          some: {
-            appUserId: ctx.session.appUserId,
-          },
-        },
-      },
+      where: (t, { and, eq, inArray }) =>
+        and(eq(t.type, 'CHURCH'), inArray(t.id, orgIds)),
+    });
+
+    return churches.map((church) => {
+      const membership = memberships.find(
+        (m) => m.organizationId === church.id,
+      );
+      return {
+        ...church,
+        memberships: membership
+          ? [{ isAdmin: membership.isAdmin, canEdit: membership.canEdit }]
+          : [],
+      };
     });
   }),
 
@@ -304,57 +330,44 @@ export const churchRouter = router({
       'Fetching church details',
     );
 
-    const church = await prisma.organization.findFirst({
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        description: true,
-        avatarPath: true,
-        primaryEmail: true,
-        primaryPhoneNumber: true,
-        websiteUrl: true,
-        createdAt: true,
-        updatedAt: true,
+    const church = await db.query.Organization.findFirst({
+      where: (t, { and, eq }) =>
+        and(eq(t.id, input.churchId), eq(t.type, 'CHURCH')),
+      with: {
         memberships: {
-          select: {
-            organizationId: true,
-            appUserId: true,
-            isAdmin: true,
-            canEdit: true,
-            createdAt: true,
+          with: {
             appUser: {
-              select: {
+              with: {
+                emails: {
+                  columns: { email: true, verifiedAt: true },
+                },
+              },
+              columns: {
                 id: true,
                 username: true,
                 fullName: true,
                 avatarPath: true,
-                emails: {
-                  select: {
-                    email: true,
-                    verifiedAt: true,
-                  },
-                },
               },
             },
           },
-          orderBy: [{ isAdmin: 'desc' }, { createdAt: 'asc' }],
         },
         channelAssociations: {
-          select: {
+          with: {
             channel: {
-              select: {
+              columns: {
                 id: true,
                 name: true,
                 visibility: true,
                 createdAt: true,
               },
             },
+          },
+          columns: {
             officialChannel: true,
           },
         },
         leaders: {
-          select: {
+          columns: {
             id: true,
             type: true,
             name: true,
@@ -363,7 +376,7 @@ export const churchRouter = router({
           },
         },
         addresses: {
-          select: {
+          columns: {
             id: true,
             type: true,
             name: true,
@@ -374,17 +387,6 @@ export const churchRouter = router({
             country: true,
           },
         },
-        _count: {
-          select: {
-            memberships: true,
-            channelAssociations: true,
-            leaders: true,
-          },
-        },
-      },
-      where: {
-        id: input.churchId,
-        type: 'CHURCH',
       },
     });
 
@@ -399,6 +401,12 @@ export const churchRouter = router({
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
 
+    // Sort memberships: isAdmin desc, createdAt asc
+    const sortedMemberships = [...church.memberships].sort((a, b) => {
+      if (a.isAdmin !== b.isAdmin) return a.isAdmin ? -1 : 1;
+      return a.createdAt.getTime() - b.createdAt.getTime();
+    });
+
     const { avatarPath, ...churchWithoutPath } = church;
     const avatarUrl = avatarPath
       ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
@@ -406,7 +414,7 @@ export const churchRouter = router({
         })
       : null;
 
-    const membershipsWithAvatarUrl = church.memberships.map((membership) => {
+    const membershipsWithAvatarUrl = sortedMemberships.map((membership) => {
       const { avatarPath: userAvatarPath, ...userWithoutPath } =
         membership.appUser;
       const userAvatarUrl = userAvatarPath
@@ -428,25 +436,29 @@ export const churchRouter = router({
       ...churchWithoutPath,
       avatarUrl,
       memberships: membershipsWithAvatarUrl,
+      _count: {
+        memberships: church.memberships.length,
+        channelAssociations: church.channelAssociations.length,
+        leaders: church.leaders.length,
+      },
       userMembership: ctx.membership,
     };
   }),
 
   getChurchMembers: churchProcedure.query(async ({ ctx, input }) => {
-    const church = await prisma.organization.findFirst({
-      select: {
+    const church = await db.query.Organization.findFirst({
+      columns: {
         id: true,
         name: true,
         slug: true,
+      },
+      where: (t, { and, eq }) =>
+        and(eq(t.id, input.churchId), eq(t.type, 'CHURCH')),
+      with: {
         memberships: {
-          select: {
-            organizationId: true,
-            appUserId: true,
-            isAdmin: true,
-            canEdit: true,
-            createdAt: true,
+          with: {
             appUser: {
-              select: {
+              columns: {
                 id: true,
                 username: true,
                 fullName: true,
@@ -454,12 +466,7 @@ export const churchRouter = router({
               },
             },
           },
-          orderBy: [{ isAdmin: 'desc' }, { createdAt: 'asc' }],
         },
-      },
-      where: {
-        id: input.churchId,
-        type: OrganizationType.CHURCH,
       },
     });
 
@@ -469,7 +476,13 @@ export const churchRouter = router({
       throw new TRPCError({ code: 'NOT_FOUND' });
     }
 
-    const membershipsWithAvatarUrl = church.memberships.map((membership) => {
+    // Sort memberships: isAdmin desc, createdAt asc
+    const sortedMemberships = [...church.memberships].sort((a, b) => {
+      if (a.isAdmin !== b.isAdmin) return a.isAdmin ? -1 : 1;
+      return a.createdAt.getTime() - b.createdAt.getTime();
+    });
+
+    const membershipsWithAvatarUrl = sortedMemberships.map((membership) => {
       const { avatarPath, ...userWithoutPath } = membership.appUser;
       const avatarUrl = avatarPath
         ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
@@ -509,35 +522,33 @@ export const churchRouter = router({
       );
 
       // Check if email already belongs to a member
-      const existingMember = await prisma.organizationMembership.findFirst({
-        where: {
-          organizationId: input.churchId,
-          appUser: {
-            emails: {
-              some: {
-                email: input.email,
-              },
-            },
-          },
-        },
+      // First find user with that email
+      const userEmail = await db.query.AppUserEmail.findFirst({
+        where: (t, { eq }) => eq(t.email, input.email),
+        columns: { appUserId: true },
       });
 
-      // Return success without revealing membership state to prevent user enumeration
-      if (existingMember) {
-        return { success: true, message: 'Invitation sent successfully' };
+      if (userEmail) {
+        const existingMember = await db.query.OrganizationMembership.findFirst({
+          where: (t, { and, eq }) =>
+            and(
+              eq(t.organizationId, input.churchId),
+              eq(t.appUserId, userEmail.appUserId),
+            ),
+        });
+
+        // Return success without revealing membership state to prevent user enumeration
+        if (existingMember) {
+          return { success: true, message: 'Invitation sent successfully' };
+        }
       }
 
       // Check for existing pending invitation
-      const existingInvitation = await prisma.organizationInvitation.findUnique(
-        {
-          where: {
-            organizationId_email: {
-              organizationId: input.churchId,
-              email: input.email,
-            },
-          },
-        },
-      );
+      const existingInvitation =
+        await db.query.OrganizationInvitation.findFirst({
+          where: (t, { and, eq }) =>
+            and(eq(t.organizationId, input.churchId), eq(t.email, input.email)),
+        });
 
       // Return success without revealing invitation state to prevent user enumeration
       if (
@@ -551,30 +562,35 @@ export const churchRouter = router({
       // Create or update invitation
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-      const invitation = await prisma.organizationInvitation.upsert({
-        where: {
-          organizationId_email: {
-            organizationId: input.churchId,
-            email: input.email,
-          },
-        },
-        update: {
-          status: 'PENDING',
-          isAdmin: input.isAdmin,
-          canEdit: input.canEdit,
-          expiresAt,
-          respondedAt: null,
-          invitedById: ctx.session.appUserId,
-        },
-        create: {
+      const [invitation] = await db
+        .insert(OrganizationInvitation)
+        .values({
           organizationId: input.churchId,
           email: input.email,
           isAdmin: input.isAdmin,
           canEdit: input.canEdit,
           invitedById: ctx.session.appUserId,
           expiresAt,
-        },
-      });
+        })
+        .onConflictDoUpdate({
+          target: [
+            OrganizationInvitation.organizationId,
+            OrganizationInvitation.email,
+          ],
+          set: {
+            status: 'PENDING',
+            isAdmin: input.isAdmin,
+            canEdit: input.canEdit,
+            expiresAt,
+            respondedAt: null,
+            invitedById: ctx.session.appUserId,
+          },
+        })
+        .returning();
+
+      if (!invitation) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      }
 
       // Send invitation email
       await sendInvitationEmail({
@@ -600,51 +616,55 @@ export const churchRouter = router({
   getChurchInvitations: churchAdminProcedure
     .input(churchQuerySchema)
     .query(async ({ input }) => {
-      return prisma.organizationInvitation
-        .findMany({
-          where: {
-            organizationId: input.churchId,
-            status: 'PENDING',
-            expiresAt: { gt: new Date() },
-          },
-          select: {
-            id: true,
-            email: true,
-            isAdmin: true,
-            canEdit: true,
-            createdAt: true,
-            expiresAt: true,
-            token: true,
-            invitedBy: {
-              select: {
-                username: true,
-                fullName: true,
-              },
+      const invitations = await db.query.OrganizationInvitation.findMany({
+        where: (t, { and, eq, gt }) =>
+          and(
+            eq(t.organizationId, input.churchId),
+            eq(t.status, 'PENDING'),
+            gt(t.expiresAt, new Date()),
+          ),
+        columns: {
+          id: true,
+          email: true,
+          isAdmin: true,
+          canEdit: true,
+          createdAt: true,
+          expiresAt: true,
+          token: true,
+        },
+        with: {
+          invitedBy: {
+            columns: {
+              username: true,
+              fullName: true,
             },
           },
-          orderBy: { createdAt: 'desc' },
-        })
-        .then((invitations) =>
-          invitations.map(({ token, ...inv }) => ({
-            ...inv,
-            token: uuidTranslator.fromUUID(token),
-          })),
-        );
+        },
+        orderBy: (t, { desc }) => [desc(t.createdAt)],
+      });
+
+      return invitations.map(({ token, ...inv }) => ({
+        ...inv,
+        token: uuidTranslator.fromUUID(token),
+      }));
     }),
 
   cancelChurchInvitation: churchAdminProcedure
     .input(cancelChurchInvitationSchema)
     .mutation(async ({ input }) => {
-      // Use updateMany to ensure the invitation belongs to the church
-      const result = await prisma.organizationInvitation.updateMany({
-        where: {
-          id: input.invitationId,
-          organizationId: input.churchId,
-        },
-        data: { status: 'CANCELLED' },
-      });
+      // Use update with both id and churchId to ensure the invitation belongs to the church
+      const result = await db
+        .update(OrganizationInvitation)
+        .set({ status: 'CANCELLED' })
+        .where(
+          and(
+            eq(OrganizationInvitation.id, input.invitationId),
+            eq(OrganizationInvitation.organizationId, input.churchId),
+          ),
+        )
+        .returning({ id: OrganizationInvitation.id });
 
-      if (result.count === 0) {
+      if (result.length === 0) {
         throw new TRPCError({
           code: 'NOT_FOUND',
           message: 'Invitation not found',
@@ -658,12 +678,14 @@ export const churchRouter = router({
     .input(resendChurchInvitationSchema)
     .mutation(async ({ ctx, input }) => {
       // First fetch and validate the invitation
-      const existingInvitation = await prisma.organizationInvitation.findFirst({
-        where: {
-          id: input.invitationId,
-          organizationId: input.churchId,
-        },
-      });
+      const existingInvitation =
+        await db.query.OrganizationInvitation.findFirst({
+          where: (t, { and, eq }) =>
+            and(
+              eq(t.id, input.invitationId),
+              eq(t.organizationId, input.churchId),
+            ),
+        });
 
       if (!existingInvitation) {
         throw new TRPCError({
@@ -680,12 +702,17 @@ export const churchRouter = router({
       }
 
       // Update the expiration
-      const invitation = await prisma.organizationInvitation.update({
-        where: { id: input.invitationId },
-        data: {
+      const [invitation] = await db
+        .update(OrganizationInvitation)
+        .set({
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        },
-      });
+        })
+        .where(eq(OrganizationInvitation.id, input.invitationId))
+        .returning();
+
+      if (!invitation) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      }
 
       // Send invitation email
       await sendInvitationEmail({
@@ -723,26 +750,24 @@ export const churchRouter = router({
 
       try {
         let wasAdmin = false;
-        await prisma.$transaction(async (tx) => {
+        await db.transaction(async (tx) => {
           // Don't allow removing the last admin
-          const adminCount = await tx.organizationMembership.count({
-            where: {
-              organizationId: input.churchId,
-              isAdmin: true,
-            },
+          const adminMembers = await tx.query.OrganizationMembership.findMany({
+            where: (t, { and, eq }) =>
+              and(eq(t.organizationId, input.churchId), eq(t.isAdmin, true)),
+            columns: { appUserId: true },
           });
+          const adminCount = adminMembers.length;
 
-          const membershipToDelete = await tx.organizationMembership.findUnique(
-            {
-              where: {
-                organizationId_appUserId: {
-                  organizationId: input.churchId,
-                  appUserId: input.appUserId,
-                },
-              },
-              select: { isAdmin: true, appUserId: true },
-            },
-          );
+          const membershipToDelete =
+            await tx.query.OrganizationMembership.findFirst({
+              where: (t, { and, eq }) =>
+                and(
+                  eq(t.organizationId, input.churchId),
+                  eq(t.appUserId, input.appUserId),
+                ),
+              columns: { isAdmin: true, appUserId: true },
+            });
 
           if (!membershipToDelete) {
             moduleLogger.warn(
@@ -780,14 +805,14 @@ export const churchRouter = router({
             });
           }
 
-          await tx.organizationMembership.delete({
-            where: {
-              organizationId_appUserId: {
-                organizationId: input.churchId,
-                appUserId: input.appUserId,
-              },
-            },
-          });
+          await tx
+            .delete(OrganizationMembership)
+            .where(
+              and(
+                eq(OrganizationMembership.organizationId, input.churchId),
+                eq(OrganizationMembership.appUserId, input.appUserId),
+              ),
+            );
         });
 
         moduleLogger.info(
@@ -835,29 +860,37 @@ export const churchRouter = router({
         'Searching channels for church',
       );
 
-      const channels = await prisma.channel.findMany({
-        select: {
+      // Get channel IDs already associated with this church
+      const existingAssociations =
+        await db.query.OrganizationChannelAssociation.findMany({
+          where: (t, { eq }) => eq(t.organizationId, input.churchId),
+          columns: { channelId: true },
+        });
+      const associatedChannelIds = existingAssociations.map((a) => a.channelId);
+
+      const channelsQuery = db.query.Channel.findMany({
+        columns: {
           id: true,
           name: true,
           slug: true,
           visibility: true,
           description: true,
         },
-        where: {
-          name: {
-            contains: input.query,
-            mode: 'insensitive',
-          },
-          NOT: {
-            organizationAssociations: {
-              some: {
-                organizationId: input.churchId,
-              },
-            },
-          },
+        where: (t, { and, notInArray, ilike }) => {
+          const escapedQuery = input.query
+            .replace(/\\/g, '\\\\')
+            .replace(/%/g, '\\%')
+            .replace(/_/g, '\\_');
+          const nameCondition = ilike(t.name, `%${escapedQuery}%`);
+          if (associatedChannelIds.length > 0) {
+            return and(nameCondition, notInArray(t.id, associatedChannelIds));
+          }
+          return nameCondition;
         },
-        take: 10,
+        limit: 10,
       });
+
+      const channels = await channelsQuery;
 
       moduleLogger.info(
         {
@@ -890,12 +923,11 @@ export const churchRouter = router({
       );
 
       try {
-        await prisma.organizationChannelAssociation.create({
-          data: {
-            organizationId: input.churchId,
-            channelId: input.channelId,
-            officialChannel: input.officialChannel,
-          },
+        await db.insert(OrganizationChannelAssociation).values({
+          organizationId: input.churchId,
+          channelId: input.channelId,
+          officialChannel: input.officialChannel,
+          updatedAt: new Date(),
         });
 
         moduleLogger.info(
@@ -943,14 +975,13 @@ export const churchRouter = router({
 
       try {
         const association =
-          await prisma.organizationChannelAssociation.findUnique({
-            where: {
-              organizationId_channelId: {
-                organizationId: input.churchId,
-                channelId: input.channelId,
-              },
-            },
-            select: { organizationId: true },
+          await db.query.OrganizationChannelAssociation.findFirst({
+            where: (t, { and, eq }) =>
+              and(
+                eq(t.organizationId, input.churchId),
+                eq(t.channelId, input.channelId),
+              ),
+            columns: { organizationId: true },
           });
 
         if (!association) {
@@ -970,14 +1001,14 @@ export const churchRouter = router({
           });
         }
 
-        await prisma.organizationChannelAssociation.delete({
-          where: {
-            organizationId_channelId: {
-              organizationId: input.churchId,
-              channelId: input.channelId,
-            },
-          },
-        });
+        await db
+          .delete(OrganizationChannelAssociation)
+          .where(
+            and(
+              eq(OrganizationChannelAssociation.organizationId, input.churchId),
+              eq(OrganizationChannelAssociation.channelId, input.channelId),
+            ),
+          );
 
         moduleLogger.info(
           {
@@ -1023,21 +1054,22 @@ export const churchRouter = router({
       );
 
       try {
-        const leader = await prisma.organizationLeader.create({
-          data: {
+        const [leader] = await db
+          .insert(OrganizationLeader)
+          .values({
             organizationId: input.churchId,
             type: input.type,
             name: input.name,
             email: input.email || null,
             phoneNumber: input.phoneNumber || null,
-          },
-        });
+          })
+          .returning();
 
         moduleLogger.info(
           {
             context: {
               churchId: input.churchId,
-              leaderId: leader.id,
+              leaderId: leader?.id,
               leaderType: input.type,
               leaderName: input.name,
               addedBy: ctx.session.appUserId,
@@ -1080,17 +1112,25 @@ export const churchRouter = router({
       );
 
       try {
-        await prisma.organizationLeader.update({
-          where: {
-            id: input.leaderId,
-          },
-          data: {
+        const [updatedLeader] = await db
+          .update(OrganizationLeader)
+          .set({
             type: input.type,
             name: input.name,
             email: input.email || null,
             phoneNumber: input.phoneNumber || null,
-          },
-        });
+          })
+          .where(
+            and(
+              eq(OrganizationLeader.id, input.leaderId),
+              eq(OrganizationLeader.organizationId, input.churchId),
+            ),
+          )
+          .returning({ id: OrganizationLeader.id });
+
+        if (!updatedLeader) {
+          throw new TRPCError({ code: 'NOT_FOUND' });
+        }
 
         moduleLogger.info(
           {
@@ -1136,11 +1176,9 @@ export const churchRouter = router({
       );
 
       try {
-        const leader = await prisma.organizationLeader.findUnique({
-          where: {
-            id: input.leaderId,
-          },
-          select: { id: true },
+        const leader = await db.query.OrganizationLeader.findFirst({
+          where: (t, { eq }) => eq(t.id, input.leaderId),
+          columns: { id: true },
         });
 
         if (!leader) {
@@ -1159,11 +1197,9 @@ export const churchRouter = router({
           });
         }
 
-        await prisma.organizationLeader.delete({
-          where: {
-            id: input.leaderId,
-          },
-        });
+        await db
+          .delete(OrganizationLeader)
+          .where(eq(OrganizationLeader.id, input.leaderId));
 
         moduleLogger.info(
           {
@@ -1199,8 +1235,8 @@ export const churchRouter = router({
       'Fetching church for edit',
     );
 
-    const church = await prisma.organization.findFirst({
-      select: {
+    const church = await db.query.Organization.findFirst({
+      columns: {
         id: true,
         name: true,
         description: true,
@@ -1208,29 +1244,6 @@ export const churchRouter = router({
         primaryEmail: true,
         primaryPhoneNumber: true,
         avatarPath: true,
-        tags: {
-          select: {
-            tagSlug: true,
-          },
-        },
-        upstreamOrganizationAssociations: {
-          select: {
-            upstreamOrganizationId: true,
-            upstreamApproved: true,
-          },
-        },
-        addresses: {
-          select: {
-            type: true,
-            name: true,
-            streetAddress: true,
-            locality: true,
-            region: true,
-            postalCode: true,
-            country: true,
-            postOfficeBoxNumber: true,
-          },
-        },
         facebookUrl: true,
         instagramUrl: true,
         xUrl: true,
@@ -1242,9 +1255,30 @@ export const churchRouter = router({
         spotifyUrl: true,
         rssUrl: true,
       },
-      where: {
-        id: input.churchId,
-        type: 'CHURCH',
+      where: (t, { and, eq }) =>
+        and(eq(t.id, input.churchId), eq(t.type, 'CHURCH')),
+      with: {
+        tags: {
+          columns: { tagSlug: true },
+        },
+        upstreamOrganizationAssociations: {
+          columns: {
+            upstreamOrganizationId: true,
+            upstreamApproved: true,
+          },
+        },
+        addresses: {
+          columns: {
+            type: true,
+            name: true,
+            streetAddress: true,
+            locality: true,
+            region: true,
+            postalCode: true,
+            country: true,
+            postOfficeBoxNumber: true,
+          },
+        },
       },
     });
 
@@ -1298,57 +1332,60 @@ export const churchRouter = router({
       try {
         let hasNewAddresses = false;
 
-        await prisma.$transaction(async (tx) => {
+        await db.transaction(async (tx) => {
           // Handle tag updates if provided
           if (input.tags !== undefined) {
             // First, delete all existing tags
-            await tx.organizationTagInstance.deleteMany({
-              where: {
-                organizationId: input.churchId,
-              },
-            });
+            await tx
+              .delete(OrganizationTagInstance)
+              .where(
+                eq(OrganizationTagInstance.organizationId, input.churchId),
+              );
 
             // Then, create new tag instances if tags are provided
             if (input.tags.length > 0) {
-              await tx.organizationTagInstance.createMany({
-                data: input.tags.map((tagSlug) => ({
+              await tx.insert(OrganizationTagInstance).values(
+                input.tags.map((tagSlug) => ({
                   organizationId: input.churchId,
                   tagSlug,
                 })),
-              });
+              );
             }
           }
 
           // Handle organization associations if provided
           if (input.associatedOrganizations !== undefined) {
             // First, delete all existing upstream associations (church is downstream)
-            await tx.organizationOrganizationAssociation.deleteMany({
-              where: {
-                downstreamOrganizationId: input.churchId,
-              },
-            });
+            await tx
+              .delete(OrganizationOrganizationAssociation)
+              .where(
+                eq(
+                  OrganizationOrganizationAssociation.downstreamOrganizationId,
+                  input.churchId,
+                ),
+              );
 
             // Then, create new associations if provided
             if (input.associatedOrganizations.length > 0) {
-              await tx.organizationOrganizationAssociation.createMany({
-                data: input.associatedOrganizations.map((upstreamOrgId) => ({
+              await tx.insert(OrganizationOrganizationAssociation).values(
+                input.associatedOrganizations.map((upstreamOrgId) => ({
                   upstreamOrganizationId: upstreamOrgId,
                   downstreamOrganizationId: input.churchId,
                   downstreamApproved: true, // Church automatically approves being downstream
                   upstreamApproved: false, // Upstream organization needs to approve
+                  updatedAt: new Date(),
                 })),
-              });
+              );
             }
           }
 
           // Handle addresses if provided
           if (input.addresses !== undefined) {
             // Fetch existing addresses with their geocoding data
-            const existingAddresses = await tx.organizationAddress.findMany({
-              where: {
-                organizationId: input.churchId,
-              },
-            });
+            const existingAddresses =
+              await tx.query.OrganizationAddress.findMany({
+                where: (t, { eq }) => eq(t.organizationId, input.churchId),
+              });
 
             // Helper to check if two addresses are the same (comparing only user-editable fields)
             const addressesMatch = (
@@ -1385,19 +1422,16 @@ export const churchRouter = router({
                 existingAddressIdsToKeep.add(matchingExisting.id);
               } else {
                 // New or changed address, create it
-                await tx.organizationAddress.create({
-                  data: {
-                    organizationId: input.churchId,
-                    type: inputAddress.type,
-                    name: inputAddress.name || null,
-                    streetAddress: inputAddress.streetAddress || null,
-                    locality: inputAddress.locality || null,
-                    region: inputAddress.region || null,
-                    postalCode: inputAddress.postalCode || null,
-                    country: inputAddress.country || null,
-                    postOfficeBoxNumber:
-                      inputAddress.postOfficeBoxNumber || null,
-                  },
+                await tx.insert(OrganizationAddress).values({
+                  organizationId: input.churchId,
+                  type: inputAddress.type,
+                  name: inputAddress.name || null,
+                  streetAddress: inputAddress.streetAddress || null,
+                  locality: inputAddress.locality || null,
+                  region: inputAddress.region || null,
+                  postalCode: inputAddress.postalCode || null,
+                  country: inputAddress.country || null,
+                  postOfficeBoxNumber: inputAddress.postOfficeBoxNumber || null,
                 });
                 hasNewAddresses = true;
               }
@@ -1409,19 +1443,15 @@ export const churchRouter = router({
               .map((addr) => addr.id);
 
             if (addressIdsToDelete.length > 0) {
-              await tx.organizationAddress.deleteMany({
-                where: {
-                  id: { in: addressIdsToDelete },
-                },
-              });
+              await tx
+                .delete(OrganizationAddress)
+                .where(inArray(OrganizationAddress.id, addressIdsToDelete));
             }
           }
 
-          await tx.organization.update({
-            where: {
-              id: input.churchId,
-            },
-            data: {
+          await tx
+            .update(Organization)
+            .set({
               name: input.name,
               description: input.description || null,
               websiteUrl: input.websiteUrl || null,
@@ -1437,8 +1467,9 @@ export const churchRouter = router({
               applePodcastsUrl: input.applePodcastsUrl || null,
               spotifyUrl: input.spotifyUrl || null,
               rssUrl: input.rssUrl || null,
-            },
-          });
+              updatedAt: new Date(),
+            })
+            .where(eq(Organization.id, input.churchId));
         });
 
         moduleLogger.info(

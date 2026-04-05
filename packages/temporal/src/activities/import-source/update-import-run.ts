@@ -1,14 +1,21 @@
-import type { ChannelImportRunStatus, Prisma } from '@letschurch/db';
-import { prisma } from '@letschurch/db';
+import {
+  ChannelImportRun,
+  type ChannelImportRunStatus,
+  db,
+} from '@letschurch/db';
+import { eq } from 'drizzle-orm';
+
+type ChannelImportRunStatusValue =
+  (typeof ChannelImportRunStatus.enumValues)[number];
 
 type UpdateImportRunData = {
-  status?: ChannelImportRunStatus;
+  status?: ChannelImportRunStatusValue;
   itemsFound?: number;
   itemsImported?: number;
   itemsSkipped?: number;
   itemsFailed?: number;
   errorMessage?: string;
-  errorDetails?: Prisma.InputJsonValue;
+  errorDetails?: unknown;
 };
 
 /**
@@ -18,12 +25,12 @@ export async function updateImportRun(
   runId: string,
   data: UpdateImportRunData,
 ) {
-  await prisma.channelImportRun.update({
-    where: { id: runId },
-    data: {
+  await db
+    .update(ChannelImportRun)
+    .set({
       ...data,
       completedAt:
         data.status && data.status !== 'IN_PROGRESS' ? new Date() : undefined,
-    },
-  });
+    })
+    .where(eq(ChannelImportRun.id, runId));
 }

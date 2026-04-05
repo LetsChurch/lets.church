@@ -76,22 +76,28 @@ pnpmi:
 temporal *args:
   docker compose exec temporal-admin-tools temporal {{args}}
 
-db-push:
-  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run prisma:db:push'
+db-generate name:
+  docker compose exec web sh -c 'cd /usr/src/app/packages/db && pnpm exec drizzle-kit generate --name {{name}}'
+
+db-migrate:
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run db:migrate'
+
+# Alias kept for compatibility
+db-push: db-migrate
+
+db-studio:
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run db:studio'
 
 db-reset:
-  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run prisma:migrate:reset'
   docker compose restart postgres
-
-prisma-generate:
-  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run prisma:migrate:dev'
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run db:migrate'
 
 es-push-mappings:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/elasticsearch run push-mappings'
 
+# First-time Drizzle setup: marks the baseline as applied on an existing Prisma DB, then migrates
 migrate-dev:
-  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run prisma:migrate:dev'
-  pnpm --filter @letschurch/db run prisma:generate
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run db:mark-baseline && pnpm --filter @letschurch/db run db:migrate'
 
 temporal-schedule: restart-workers
   just temporal workflow execute --task-queue background --type updateDailySaltWorkflow --workflow-id update-daily-salt
@@ -130,7 +136,7 @@ reset:
   just init seed
 
 truncate:
-  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run prisma:db:truncate'
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/db run db:truncate'
 
 check:
   pnpm -r run check

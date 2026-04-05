@@ -1,4 +1,4 @@
-import { prisma } from '@letschurch/db';
+import { db } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { createFileRoute } from '@tanstack/react-router';
 import { Feed } from 'feed';
@@ -26,18 +26,19 @@ export const Route = createFileRoute('/playlist/$playlistId/rss.xml')({
           const parsedPlaylistId = IncomingIdSchema.parse(playlistId);
 
           // Fetch playlist
-          const playlist = await prisma.uploadList.findUnique({
-            select: {
+          const playlist = await db.query.UploadList.findFirst({
+            where: (t, { eq }) => eq(t.id, parsedPlaylistId),
+            columns: {
               id: true,
               title: true,
               type: true,
+            },
+            with: {
               author: {
-                select: {
-                  username: true,
-                },
+                columns: { username: true },
               },
               channel: {
-                select: {
+                columns: {
                   name: true,
                   slug: true,
                   defaultThumbnailPath: true,
@@ -46,9 +47,6 @@ export const Route = createFileRoute('/playlist/$playlistId/rss.xml')({
                   deletedAt: true,
                 },
               },
-            },
-            where: {
-              id: parsedPlaylistId,
             },
           });
 
@@ -138,33 +136,38 @@ export const Route = createFileRoute('/playlist/$playlistId/rss.xml')({
           });
 
           // Fetch playlist entries ordered by rank
-          const entries = await prisma.uploadListEntry.findMany({
-            select: {
+          const entries = await db.query.UploadListEntry.findMany({
+            where: (t, { eq }) => eq(t.uploadListId, parsedPlaylistId),
+            columns: {},
+            with: {
               upload: {
-                select: {
+                columns: {
                   id: true,
                   title: true,
                   description: true,
                   publishedAt: true,
                   defaultThumbnailPath: true,
                   overrideThumbnailPath: true,
+                  visibility: true,
+                  transcodingFinishedAt: true,
+                  deletedAt: true,
                 },
               },
             },
-            where: {
-              uploadListId: parsedPlaylistId,
-              upload: {
-                visibility: 'PUBLIC',
-                transcodingFinishedAt: { not: null },
-                deletedAt: null,
-              },
-            },
-            orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
-            take: 500,
+            orderBy: (t, { asc }) => [asc(t.rank), asc(t.createdAt)],
+            limit: 500,
           });
 
+          // Filter to public, transcoded, non-deleted uploads
+          const filteredEntries = entries.filter(
+            (e) =>
+              e.upload.visibility === 'PUBLIC' &&
+              e.upload.transcodingFinishedAt !== null &&
+              e.upload.deletedAt === null,
+          );
+
           // Add items to feed
-          for (const entry of entries) {
+          for (const entry of filteredEntries) {
             const upload = entry.upload;
             const thumbnailUrl = resolveThumbnailUrl({
               overrideThumbnailPath: upload.overrideThumbnailPath,
@@ -206,7 +209,7 @@ export const Route = createFileRoute('/playlist/$playlistId/rss.xml')({
             {
               context: {
                 playlistTitle: playlist.title,
-                itemCount: entries.length,
+                itemCount: filteredEntries.length,
               },
             },
             'Playlist RSS feed generated successfully',

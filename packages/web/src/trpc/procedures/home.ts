@@ -1,6 +1,7 @@
-import { prisma } from '@letschurch/db';
+import { Channel, ChannelSubscription, db, UploadRecord } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
+import { and, count, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarSm2x, appAvatarXs2x } from '@/util/avatar-sizes';
@@ -41,10 +42,11 @@ export const homeProcedures = {
       'Fetching followed channels',
     );
 
-    const subscriptions = await prisma.channelSubscription.findMany({
-      select: {
+    const subscriptions = await db.query.ChannelSubscription.findMany({
+      columns: {},
+      with: {
         channel: {
-          select: {
+          columns: {
             id: true,
             name: true,
             slug: true,
@@ -53,27 +55,24 @@ export const homeProcedures = {
           },
         },
       },
-      where: {
-        appUserId: ctx.session.appUserId,
-        channel: {
-          deletedAt: null,
-        },
-      },
+      where: (t, { eq }) => eq(t.appUserId, ctx.session.appUserId),
     });
 
-    const channelsWithAvatars = subscriptions.map(({ channel }) => {
-      const avatarUrl = channel.avatarPath
-        ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
-            resize: appAvatarSm2x,
-          })
-        : null;
+    const channelsWithAvatars = subscriptions
+      .filter(({ channel }) => channel.deletedAt === null)
+      .map(({ channel }) => {
+        const avatarUrl = channel.avatarPath
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
+              resize: appAvatarSm2x,
+            })
+          : null;
 
-      return {
-        ...channel,
-        id: OutgoingIdSchema.parse(channel.id),
-        avatarUrl,
-      };
-    });
+        return {
+          ...channel,
+          id: OutgoingIdSchema.parse(channel.id),
+          avatarUrl,
+        };
+      });
 
     return channelsWithAvatars;
   }),
@@ -86,8 +85,20 @@ export const homeProcedures = {
         'Fetching subscription uploads',
       );
 
-      const uploads = await prisma.uploadRecord.findMany({
-        select: {
+      // First get followed channel IDs
+      const subscriptions = await db.query.ChannelSubscription.findMany({
+        columns: { channelId: true },
+        where: (t, { eq }) => eq(t.appUserId, ctx.session.appUserId),
+      });
+
+      const followedChannelIds = subscriptions.map((s) => s.channelId);
+
+      if (followedChannelIds.length === 0) {
+        return [];
+      }
+
+      const uploads = await db.query.UploadRecord.findMany({
+        columns: {
           id: true,
           title: true,
           description: true,
@@ -96,46 +107,53 @@ export const homeProcedures = {
           lengthSeconds: true,
           defaultThumbnailPath: true,
           overrideThumbnailPath: true,
+          transcodingFinishedAt: true,
+          visibility: true,
+          deletedAt: true,
+        },
+        with: {
           channel: {
-            select: {
+            columns: {
               id: true,
               name: true,
               slug: true,
               avatarPath: true,
               defaultThumbnailPath: true,
-            },
-          },
-          _count: {
-            select: {
-              uploadViews: true,
-            },
-          },
-        },
-        where: {
-          transcodingFinishedAt: { not: null },
-          visibility: 'PUBLIC',
-          channel: {
-            visibility: 'PUBLIC',
-            approvedAt: { not: null },
-            deletedAt: null,
-            subscribers: {
-              some: {
-                appUserId: ctx.session.appUserId,
-              },
+              visibility: true,
+              approvedAt: true,
+              deletedAt: true,
             },
           },
         },
-        orderBy: {
-          publishedAt: 'desc',
-        },
-        take: input.limit,
+        where: (t, { and, isNotNull, isNull, eq, inArray }) =>
+          and(
+            isNotNull(t.transcodingFinishedAt),
+            eq(t.visibility, 'PUBLIC'),
+            isNull(t.deletedAt),
+            inArray(t.channelId, followedChannelIds),
+          ),
+        orderBy: (t, { desc }) => [desc(t.publishedAt)],
+        limit: input.limit * 5,
       });
 
-      const uploadsWithThumbnails = uploads.map((upload) => {
+      // Filter uploads where channel is public, approved, and not deleted
+      const filteredUploads = uploads
+        .filter(
+          (u) =>
+            u.channel.visibility === 'PUBLIC' &&
+            u.channel.approvedAt !== null &&
+            u.channel.deletedAt === null,
+        )
+        .slice(0, input.limit);
+
+      const uploadsWithThumbnails = filteredUploads.map((upload) => {
         const {
           defaultThumbnailPath,
           overrideThumbnailPath,
           channel,
+          transcodingFinishedAt: _transcodingFinishedAt,
+          visibility: _visibility,
+          deletedAt: _deletedAt,
           ...uploadRest
         } = upload;
 
@@ -175,66 +193,63 @@ export const homeProcedures = {
         'Fetching trending uploads',
       );
 
-      const uploads = await prisma.uploadRecord.findMany({
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          createdAt: true,
-          publishedAt: true,
-          lengthSeconds: true,
-          score: true,
-          defaultThumbnailPath: true,
-          overrideThumbnailPath: true,
-          channel: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              avatarPath: true,
-              defaultThumbnailPath: true,
-              visibility: true,
-            },
-          },
-          _count: {
-            select: {
-              uploadViews: true,
-            },
-          },
-        },
-        where: {
-          transcodingFinishedAt: { not: null },
-          visibility: 'PUBLIC',
-          channel: {
-            visibility: 'PUBLIC',
-            approvedAt: { not: null },
-            deletedAt: null,
-          },
-        },
-        orderBy: {
-          score: 'desc',
-        },
-        skip: input.cursor ?? 0,
-        take: input.limit,
-      });
+      const rows = await db
+        .select({
+          id: UploadRecord.id,
+          title: UploadRecord.title,
+          description: UploadRecord.description,
+          createdAt: UploadRecord.createdAt,
+          publishedAt: UploadRecord.publishedAt,
+          lengthSeconds: UploadRecord.lengthSeconds,
+          score: UploadRecord.score,
+          defaultThumbnailPath: UploadRecord.defaultThumbnailPath,
+          overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
+          channelId: Channel.id,
+          channelName: Channel.name,
+          channelSlug: Channel.slug,
+          channelAvatarPath: Channel.avatarPath,
+          channelDefaultThumbnailPath: Channel.defaultThumbnailPath,
+        })
+        .from(UploadRecord)
+        .innerJoin(Channel, eq(UploadRecord.channelId, Channel.id))
+        .where(
+          and(
+            isNotNull(UploadRecord.transcodingFinishedAt),
+            eq(UploadRecord.visibility, 'PUBLIC'),
+            isNull(UploadRecord.deletedAt),
+            eq(Channel.visibility, 'PUBLIC'),
+            isNotNull(Channel.approvedAt),
+            isNull(Channel.deletedAt),
+          ),
+        )
+        .orderBy(desc(UploadRecord.score))
+        .offset(input.cursor ?? 0)
+        .limit(input.limit + 1);
 
-      const uploadsWithThumbnails = uploads.map((upload) => {
+      const hasMore = rows.length > input.limit;
+      const uploads = hasMore ? rows.slice(0, input.limit) : rows;
+
+      const uploadsWithThumbnails = uploads.map((row) => {
         const {
+          channelId,
+          channelName,
+          channelSlug,
+          channelAvatarPath,
+          channelDefaultThumbnailPath,
           defaultThumbnailPath,
           overrideThumbnailPath,
-          channel,
           ...uploadRest
-        } = upload;
+        } = row;
 
         const thumbnailUrl = resolveThumbnailUrl({
           overrideThumbnailPath,
           defaultThumbnailPath,
-          channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+          channelDefaultThumbnailPath,
           size: 'card',
         });
 
-        const channelAvatarUrl = channel.avatarPath
-          ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
+        const channelAvatarUrl = channelAvatarPath
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(channelAvatarPath), {
               resize: appAvatarXs2x,
             })
           : null;
@@ -244,17 +259,17 @@ export const homeProcedures = {
           id: OutgoingIdSchema.parse(uploadRest.id),
           thumbnailUrl,
           channel: {
-            ...channel,
-            id: OutgoingIdSchema.parse(channel.id),
+            id: OutgoingIdSchema.parse(channelId),
+            name: channelName,
+            slug: channelSlug,
             avatarUrl: channelAvatarUrl,
           },
         };
       });
 
-      const nextCursor =
-        uploads.length === input.limit
-          ? (input.cursor ?? 0) + input.limit
-          : undefined;
+      const nextCursor = hasMore
+        ? (input.cursor ?? 0) + input.limit
+        : undefined;
 
       return {
         items: uploadsWithThumbnails,
@@ -272,38 +287,59 @@ export const homeProcedures = {
         'Fetching suggested channels',
       );
 
-      const channels = await prisma.channel.findMany({
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          description: true,
-          avatarPath: true,
-          _count: {
-            select: {
-              subscribers: true,
-            },
-          },
-        },
-        where: {
-          visibility: 'PUBLIC',
-          approvedAt: { not: null },
-          deletedAt: null,
-          ...(appUserId && {
-            subscribers: {
-              none: {
-                appUserId,
-              },
-            },
-          }),
-        },
-        orderBy: {
-          subscribers: {
-            _count: 'desc',
-          },
-        },
-        take: input.limit,
-      });
+      // If user is authenticated, get their subscribed channel IDs first
+      let subscribedChannelIds: string[] = [];
+      if (appUserId) {
+        const subscriptions = await db.query.ChannelSubscription.findMany({
+          columns: { channelId: true },
+          where: (t, { eq }) => eq(t.appUserId, appUserId),
+        });
+        subscribedChannelIds = subscriptions.map((s) => s.channelId);
+      }
+
+      // Use SQL-style query to order by subscriber count
+      const subscriberCountSq = db
+        .select({
+          channelId: ChannelSubscription.channelId,
+          cnt: count().as('cnt'),
+        })
+        .from(ChannelSubscription)
+        .groupBy(ChannelSubscription.channelId)
+        .as('subscriber_counts');
+
+      const channelsQuery = db
+        .select({
+          id: Channel.id,
+          name: Channel.name,
+          slug: Channel.slug,
+          description: Channel.description,
+          avatarPath: Channel.avatarPath,
+          followerCount: sql<number>`coalesce(${subscriberCountSq.cnt}, 0)`,
+        })
+        .from(Channel)
+        .leftJoin(
+          subscriberCountSq,
+          eq(Channel.id, subscriberCountSq.channelId),
+        )
+        .where(
+          and(
+            eq(Channel.visibility, 'PUBLIC'),
+            isNotNull(Channel.approvedAt),
+            isNull(Channel.deletedAt),
+            ...(subscribedChannelIds.length > 0
+              ? [
+                  sql`${Channel.id} NOT IN (${sql.join(
+                    subscribedChannelIds.map((id) => sql`${id}`),
+                    sql`, `,
+                  )})`,
+                ]
+              : []),
+          ),
+        )
+        .orderBy(desc(sql`coalesce(${subscriberCountSq.cnt}, 0)`))
+        .limit(input.limit);
+
+      const channels = await channelsQuery;
 
       const channelsWithAvatars = channels.map((channel) => {
         const avatarUrl = channel.avatarPath
@@ -316,7 +352,6 @@ export const homeProcedures = {
           ...channel,
           id: OutgoingIdSchema.parse(channel.id),
           avatarUrl,
-          followerCount: channel._count.subscribers,
         };
       });
 
@@ -332,11 +367,9 @@ export const homeProcedures = {
       );
 
       try {
-        await prisma.channelSubscription.create({
-          data: {
-            appUserId: ctx.session.appUserId,
-            channelId: input.channelId,
-          },
+        await db.insert(ChannelSubscription).values({
+          appUserId: ctx.session.appUserId,
+          channelId: input.channelId,
         });
 
         moduleLogger.info(
@@ -370,14 +403,13 @@ export const homeProcedures = {
       );
 
       try {
-        const subscription = await prisma.channelSubscription.findUnique({
-          where: {
-            appUserId_channelId: {
-              appUserId: ctx.session.appUserId,
-              channelId: input.channelId,
-            },
-          },
-          select: { appUserId: true },
+        const subscription = await db.query.ChannelSubscription.findFirst({
+          columns: { appUserId: true },
+          where: (t, { and, eq }) =>
+            and(
+              eq(t.appUserId, ctx.session.appUserId),
+              eq(t.channelId, input.channelId),
+            ),
         });
 
         if (!subscription) {
@@ -391,14 +423,14 @@ export const homeProcedures = {
           });
         }
 
-        await prisma.channelSubscription.delete({
-          where: {
-            appUserId_channelId: {
-              appUserId: ctx.session.appUserId,
-              channelId: input.channelId,
-            },
-          },
-        });
+        await db
+          .delete(ChannelSubscription)
+          .where(
+            and(
+              eq(ChannelSubscription.appUserId, ctx.session.appUserId),
+              eq(ChannelSubscription.channelId, input.channelId),
+            ),
+          );
 
         moduleLogger.info(
           { appUserId: ctx.session.appUserId, channelId: input.channelId },
@@ -431,15 +463,14 @@ export const homeProcedures = {
       );
 
       // Get user's upload views with their most recent viewed seconds
-      const views = await prisma.uploadView.findMany({
-        where: {
-          appUserId: ctx.session.appUserId,
-        },
-        select: {
+      const views = await db.query.UploadView.findMany({
+        columns: {
           uploadRecordId: true,
           createdAt: true,
+        },
+        with: {
           upload: {
-            select: {
+            columns: {
               id: true,
               title: true,
               description: true,
@@ -448,8 +479,10 @@ export const homeProcedures = {
               lengthSeconds: true,
               defaultThumbnailPath: true,
               overrideThumbnailPath: true,
+            },
+            with: {
               channel: {
-                select: {
+                columns: {
                   id: true,
                   name: true,
                   slug: true,
@@ -457,32 +490,31 @@ export const homeProcedures = {
                   defaultThumbnailPath: true,
                 },
               },
-              _count: {
-                select: {
-                  uploadViews: true,
-                },
-              },
             },
           },
           UploadViewSecond: {
-            select: {
+            columns: {
               second: true,
             },
-            orderBy: {
-              second: 'desc',
-            },
-            take: 1,
+            orderBy: (t, { desc }) => [desc(t.second)],
+            limit: 1,
           },
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
-        distinct: ['uploadRecordId'], // Only show each video once (most recent view)
-        take: input.limit * 3, // Fetch more since we'll filter
+        where: (t, { eq }) => eq(t.appUserId, ctx.session.appUserId),
+        orderBy: (t, { desc }) => [desc(t.createdAt)],
+        limit: input.limit * 3, // Fetch more since we'll filter
+      });
+
+      // Deduplicate by uploadRecordId (only show each video once - most recent view)
+      const seen = new Set<string>();
+      const dedupedViews = views.filter((view) => {
+        if (seen.has(view.uploadRecordId)) return false;
+        seen.add(view.uploadRecordId);
+        return true;
       });
 
       // Calculate progress and filter to 1-95%
-      const uploadsWithProgress = views
+      const uploadsWithProgress = dedupedViews
         .map((view) => {
           const lastSecond = view.UploadViewSecond[0]?.second;
           if (lastSecond === undefined || !view.upload.lengthSeconds) {
@@ -539,10 +571,11 @@ export const homeProcedures = {
   getFeaturedUploads: publicProcedure.query(async () => {
     moduleLogger.info('Fetching featured uploads for homepage');
 
-    const featuredUploads = await prisma.featuredUpload.findMany({
-      select: {
+    const featuredUploads = await db.query.FeaturedUpload.findMany({
+      columns: {},
+      with: {
         uploadRecord: {
-          select: {
+          columns: {
             id: true,
             title: true,
             description: true,
@@ -551,36 +584,42 @@ export const homeProcedures = {
             overrideThumbnailPath: true,
             defaultThumbnailBlurhash: true,
             overrideThumbnailBlurhash: true,
+            visibility: true,
+            transcodingFinishedAt: true,
+            deletedAt: true,
+          },
+          with: {
             channel: {
-              select: {
+              columns: {
                 id: true,
                 name: true,
                 slug: true,
                 avatarPath: true,
                 avatarBlurhash: true,
                 defaultThumbnailPath: true,
+                visibility: true,
+                approvedAt: true,
+                deletedAt: true,
               },
             },
           },
         },
       },
-      where: {
-        uploadRecord: {
-          visibility: 'PUBLIC',
-          transcodingFinishedAt: { not: null },
-          channel: {
-            visibility: 'PUBLIC',
-            approvedAt: { not: null },
-            deletedAt: null,
-          },
-        },
-      },
-      orderBy: {
-        rank: 'asc',
-      },
+      orderBy: (t, { asc }) => [asc(t.rank)],
     });
 
-    const uploadsWithUrls = featuredUploads.map(({ uploadRecord }) => {
+    // Filter to only those where the upload and channel meet visibility conditions
+    const filteredUploads = featuredUploads.filter(
+      ({ uploadRecord }) =>
+        uploadRecord.visibility === 'PUBLIC' &&
+        uploadRecord.transcodingFinishedAt !== null &&
+        uploadRecord.deletedAt === null &&
+        uploadRecord.channel.visibility === 'PUBLIC' &&
+        uploadRecord.channel.approvedAt !== null &&
+        uploadRecord.channel.deletedAt === null,
+    );
+
+    const uploadsWithUrls = filteredUploads.map(({ uploadRecord }) => {
       const thumbnailBlurhash =
         uploadRecord.overrideThumbnailBlurhash ??
         uploadRecord.defaultThumbnailBlurhash;

@@ -1,5 +1,6 @@
-import { prisma } from '@letschurch/db';
+import { db, UploadListEntry, UploadRecord } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
+import { and, count, eq, isNotNull, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarMd2x, appAvatarXs2x } from '@/util/avatar-sizes';
@@ -31,21 +32,21 @@ export const seriesProcedures = {
       moduleLogger.info({ context: { seriesId } }, 'Fetching all series items');
 
       // First verify series exists and channel is public
-      const series = await prisma.uploadList.findUnique({
-        select: {
+      const series = await db.query.UploadList.findFirst({
+        where: (t, { eq }) => eq(t.id, seriesId),
+        columns: {
           id: true,
           title: true,
           type: true,
+        },
+        with: {
           channel: {
-            select: {
+            columns: {
               visibility: true,
               approvedAt: true,
               deletedAt: true,
             },
           },
-        },
-        where: {
-          id: seriesId,
         },
       });
 
@@ -76,18 +77,25 @@ export const seriesProcedures = {
       }
 
       // Fetch all series entries
-      const entries = await prisma.uploadListEntry.findMany({
-        select: {
+      const entries = await db.query.UploadListEntry.findMany({
+        where: (t, { eq }) => eq(t.uploadListId, seriesId),
+        columns: {},
+        with: {
           upload: {
-            select: {
+            columns: {
               id: true,
               title: true,
               publishedAt: true,
               lengthSeconds: true,
               defaultThumbnailPath: true,
               overrideThumbnailPath: true,
+              visibility: true,
+              transcodingFinishedAt: true,
+              deletedAt: true,
+            },
+            with: {
               channel: {
-                select: {
+                columns: {
                   id: true,
                   name: true,
                   slug: true,
@@ -98,23 +106,26 @@ export const seriesProcedures = {
             },
           },
         },
-        where: {
-          uploadListId: seriesId,
-          upload: {
-            visibility: 'PUBLIC',
-            transcodingFinishedAt: { not: null },
-            deletedAt: null,
-          },
-        },
-        orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
+        orderBy: (t, { asc }) => [asc(t.rank), asc(t.createdAt)],
       });
 
-      const items = entries.map((entry) => {
+      // Filter to public, transcoded, non-deleted uploads
+      const filteredEntries = entries.filter(
+        (e) =>
+          e.upload.visibility === 'PUBLIC' &&
+          e.upload.transcodingFinishedAt !== null &&
+          e.upload.deletedAt === null,
+      );
+
+      const items = filteredEntries.map((entry) => {
         const upload = entry.upload;
         const {
           defaultThumbnailPath,
           overrideThumbnailPath,
           channel,
+          visibility: _visibility,
+          transcodingFinishedAt: _transcodingFinishedAt,
+          deletedAt: _deletedAt,
           ...uploadRest
         } = upload;
 
@@ -157,22 +168,25 @@ export const seriesProcedures = {
 
       moduleLogger.info({ context: { seriesId } }, 'Fetching public series');
 
-      const series = await prisma.uploadList.findUnique({
-        select: {
+      const series = await db.query.UploadList.findFirst({
+        where: (t, { eq }) => eq(t.id, seriesId),
+        columns: {
           id: true,
           title: true,
           type: true,
           createdAt: true,
           updatedAt: true,
+        },
+        with: {
           author: {
-            select: {
+            columns: {
               id: true,
               username: true,
               avatarPath: true,
             },
           },
           channel: {
-            select: {
+            columns: {
               id: true,
               name: true,
               slug: true,
@@ -182,23 +196,6 @@ export const seriesProcedures = {
               deletedAt: true,
             },
           },
-          _count: {
-            select: {
-              uploads: {
-                where: {
-                  upload: {
-                    visibility: 'PUBLIC',
-                    transcodingFinishedAt: { not: null },
-                    transcribingFinishedAt: { not: null },
-                    deletedAt: null,
-                  },
-                },
-              },
-            },
-          },
-        },
-        where: {
-          id: seriesId,
         },
       });
 
@@ -237,6 +234,23 @@ export const seriesProcedures = {
         }
       }
 
+      const [mediaCountResult] = await db
+        .select({ count: count() })
+        .from(UploadListEntry)
+        .innerJoin(
+          UploadRecord,
+          eq(UploadListEntry.uploadRecordId, UploadRecord.id),
+        )
+        .where(
+          and(
+            eq(UploadListEntry.uploadListId, seriesId),
+            eq(UploadRecord.visibility, 'PUBLIC'),
+            isNotNull(UploadRecord.transcodingFinishedAt),
+            isNull(UploadRecord.deletedAt),
+          ),
+        );
+      const mediaCount = mediaCountResult?.count ?? 0;
+
       const authorAvatarUrl = series.author.avatarPath
         ? getPublicImageUrl(
             publicS3.getS3ProtocolUri(series.author.avatarPath),
@@ -274,7 +288,7 @@ export const seriesProcedures = {
               avatarUrl: channelAvatarUrl,
             }
           : null,
-        mediaCount: series._count.uploads,
+        mediaCount,
       };
     }),
 
@@ -289,30 +303,37 @@ export const seriesProcedures = {
       );
 
       // Get first media item thumbnail for SEO
-      const firstMedia = await prisma.uploadListEntry.findFirst({
-        where: {
-          uploadListId: seriesId,
+      const entries = await db.query.UploadListEntry.findMany({
+        where: (t, { eq }) => eq(t.uploadListId, seriesId),
+        columns: {},
+        with: {
           upload: {
-            visibility: 'PUBLIC',
-            transcodingFinishedAt: { not: null },
-            deletedAt: null,
-          },
-        },
-        select: {
-          upload: {
-            select: {
+            columns: {
               overrideThumbnailPath: true,
               defaultThumbnailPath: true,
+              visibility: true,
+              transcodingFinishedAt: true,
+              deletedAt: true,
+            },
+            with: {
               channel: {
-                select: {
+                columns: {
                   defaultThumbnailPath: true,
                 },
               },
             },
           },
         },
-        orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
+        orderBy: (t, { asc }) => [asc(t.rank), asc(t.createdAt)],
       });
+
+      // Find first public, transcoded, non-deleted entry
+      const firstMedia = entries.find(
+        (e) =>
+          e.upload.visibility === 'PUBLIC' &&
+          e.upload.transcodingFinishedAt !== null &&
+          e.upload.deletedAt === null,
+      );
 
       if (!firstMedia) {
         return null;
@@ -338,20 +359,20 @@ export const seriesProcedures = {
       );
 
       // First verify series exists and channel is public
-      const series = await prisma.uploadList.findUnique({
-        select: {
+      const series = await db.query.UploadList.findFirst({
+        where: (t, { eq }) => eq(t.id, seriesId),
+        columns: {
           id: true,
           type: true,
+        },
+        with: {
           channel: {
-            select: {
+            columns: {
               visibility: true,
               approvedAt: true,
               deletedAt: true,
             },
           },
-        },
-        where: {
-          id: seriesId,
         },
       });
 
@@ -382,12 +403,19 @@ export const seriesProcedures = {
       }
 
       // Fetch series entries with uploads
-      const entries = await prisma.uploadListEntry.findMany({
-        select: {
+      const entries = await db.query.UploadListEntry.findMany({
+        where: (t, { eq, and, gt }) =>
+          and(
+            eq(t.uploadListId, seriesId),
+            ...(cursor ? [gt(t.createdAt, new Date(cursor))] : []),
+          ),
+        columns: {
           createdAt: true,
           rank: true,
+        },
+        with: {
           upload: {
-            select: {
+            columns: {
               id: true,
               title: true,
               description: true,
@@ -395,8 +423,13 @@ export const seriesProcedures = {
               lengthSeconds: true,
               defaultThumbnailPath: true,
               overrideThumbnailPath: true,
+              visibility: true,
+              transcodingFinishedAt: true,
+              deletedAt: true,
+            },
+            with: {
               channel: {
-                select: {
+                columns: {
                   id: true,
                   name: true,
                   slug: true,
@@ -407,27 +440,20 @@ export const seriesProcedures = {
             },
           },
         },
-        where: {
-          uploadListId: seriesId,
-          upload: {
-            visibility: 'PUBLIC',
-            transcodingFinishedAt: { not: null },
-            deletedAt: null,
-          },
-          ...(cursor
-            ? {
-                createdAt: {
-                  gt: new Date(cursor),
-                },
-              }
-            : {}),
-        },
-        orderBy: [{ rank: 'asc' }, { createdAt: 'asc' }],
-        take: limit + 1, // Fetch one extra to determine if there are more
+        orderBy: (t, { asc }) => [asc(t.rank), asc(t.createdAt)],
+        limit: limit + 1, // Fetch one extra to determine if there are more
       });
 
-      const hasMore = entries.length > limit;
-      const items = hasMore ? entries.slice(0, limit) : entries;
+      // Filter to public, transcoded, non-deleted uploads
+      const filteredEntries = entries.filter(
+        (e) =>
+          e.upload.visibility === 'PUBLIC' &&
+          e.upload.transcodingFinishedAt !== null &&
+          e.upload.deletedAt === null,
+      );
+
+      const hasMore = filteredEntries.length > limit;
+      const items = hasMore ? filteredEntries.slice(0, limit) : filteredEntries;
       const nextCursor = hasMore
         ? (items[items.length - 1].createdAt.toISOString() ?? null)
         : null;
@@ -438,6 +464,9 @@ export const seriesProcedures = {
           defaultThumbnailPath,
           overrideThumbnailPath,
           channel,
+          visibility: _visibility,
+          transcodingFinishedAt: _transcodingFinishedAt,
+          deletedAt: _deletedAt,
           ...uploadRest
         } = upload;
 

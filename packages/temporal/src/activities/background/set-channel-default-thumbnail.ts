@@ -1,23 +1,32 @@
-import { prisma } from '@letschurch/db';
+import { Channel, db } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
+import { eq } from 'drizzle-orm';
+import { invariant } from 'es-toolkit';
 
 export default async function setChannelDefaultThumbnail(
   channelid: string,
   path: string,
   blurhash: string,
 ) {
-  const { defaultThumbnailPath: oldPath } =
-    await prisma.channel.findUniqueOrThrow({
-      where: { id: channelid },
-      select: { defaultThumbnailPath: true },
-    });
+  const row = await db
+    .select({ defaultThumbnailPath: Channel.defaultThumbnailPath })
+    .from(Channel)
+    .where(eq(Channel.id, channelid))
+    .then((r) => r[0]);
+
+  invariant(row, `Channel ${channelid} not found`);
+  const { defaultThumbnailPath: oldPath } = row;
 
   if (oldPath) {
     await publicS3.deleteFile(oldPath);
   }
 
-  await prisma.channel.update({
-    where: { id: channelid },
-    data: { defaultThumbnailPath: path, defaultThumbnailBlurhash: blurhash },
-  });
+  await db
+    .update(Channel)
+    .set({
+      defaultThumbnailPath: path,
+      defaultThumbnailBlurhash: blurhash,
+      updatedAt: new Date(),
+    })
+    .where(eq(Channel.id, channelid));
 }

@@ -1,10 +1,10 @@
-import type { Prisma } from '@letschurch/db';
 import {
   ParentClosePolicy,
   proxyActivities,
   startChild,
 } from '@temporalio/workflow';
 import type * as importSourceActivities from '../../activities/import-source';
+import type { UploadRecordCreateData } from '../../client';
 import { BACKGROUND_QUEUE, IMPORT_QUEUE } from '../../queues';
 import { processImageWorkflow } from './process-image';
 import { processMediaWorkflow } from './process-media';
@@ -12,7 +12,7 @@ import { processMediaWorkflow } from './process-media';
 const { importMedia } = proxyActivities<{
   importMedia: (
     url: string,
-    data: Prisma.UploadRecordCreateArgs['data'] & { trimSilence?: boolean },
+    data: UploadRecordCreateData & { trimSilence?: boolean },
   ) => Promise<{
     uploadRecordId: string;
     mediaUploadKey: string;
@@ -47,7 +47,7 @@ export async function importMediaWorkflow({
   importSourceId,
 }: Partial<
   Pick<
-    Prisma.UploadRecordCreateArgs['data'],
+    UploadRecordCreateData,
     | 'license'
     | 'visibility'
     | 'description'
@@ -71,12 +71,14 @@ export async function importMediaWorkflow({
         license,
         visibility,
         uploadFinalized: true,
-        uploadFinalizedBy: { connect: { username } },
-        createdBy: { connect: { username } },
-        channel: { connect: { slug: channelSlug } },
+        uploadFinalizedByUsername: username,
+        createdByUsername: username,
+        channelSlug,
         userCommentsEnabled,
         trimSilence,
-        ...(publishedAt ? { publishedAt: new Date(publishedAt) } : {}),
+        ...(publishedAt
+          ? { publishedAt: new Date(publishedAt as string | Date) }
+          : {}),
       });
 
     await startChild(processMediaWorkflow, {

@@ -1,5 +1,6 @@
-import { prisma } from '@letschurch/db';
+import { Channel, db, UploadRecord } from '@letschurch/db';
 import { createFileRoute } from '@tanstack/react-router';
+import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { Feed } from 'feed';
 import logger from '@/util/logger';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
@@ -31,37 +32,41 @@ export const Route = createFileRoute('/media/rss.xml')({
             },
           });
 
-          // Fetch latest 500 uploads ordered by publishedAt descending
-          const uploads = await prisma.uploadRecord.findMany({
-            select: {
-              id: true,
-              title: true,
-              description: true,
-              publishedAt: true,
-              defaultThumbnailPath: true,
-              overrideThumbnailPath: true,
+          // Fetch latest 500 uploads ordered by publishedAt descending,
+          // filtering channel conditions at the DB level via innerJoin.
+          const uploads = await db
+            .select({
+              id: UploadRecord.id,
+              title: UploadRecord.title,
+              description: UploadRecord.description,
+              publishedAt: UploadRecord.publishedAt,
+              defaultThumbnailPath: UploadRecord.defaultThumbnailPath,
+              overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
               channel: {
-                select: {
-                  id: true,
-                  name: true,
-                  slug: true,
-                  defaultThumbnailPath: true,
-                },
+                id: Channel.id,
+                name: Channel.name,
+                slug: Channel.slug,
+                defaultThumbnailPath: Channel.defaultThumbnailPath,
               },
-            },
-            where: {
-              transcodingFinishedAt: { not: null },
-              visibility: 'PUBLIC',
-              channel: {
-                visibility: 'PUBLIC',
-                approvedAt: { not: null },
-              },
-            },
-            orderBy: {
-              publishedAt: 'desc',
-            },
-            take: 500,
-          });
+            })
+            .from(UploadRecord)
+            .innerJoin(
+              Channel,
+              and(
+                eq(UploadRecord.channelId, Channel.id),
+                eq(Channel.visibility, 'PUBLIC'),
+                isNotNull(Channel.approvedAt),
+              ),
+            )
+            .where(
+              and(
+                isNotNull(UploadRecord.transcodingFinishedAt),
+                eq(UploadRecord.visibility, 'PUBLIC'),
+                isNull(UploadRecord.deletedAt),
+              ),
+            )
+            .orderBy(desc(UploadRecord.publishedAt))
+            .limit(500);
 
           // Add items to feed
           for (const upload of uploads) {

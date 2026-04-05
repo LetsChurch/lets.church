@@ -8,6 +8,11 @@ generator client {
   importFileExtension    = "ts"
 }
 
+generator drizzle {
+  provider = "drizzle-prisma-generator"
+  output   = "../src" // Where to put generated Drizle tables
+}
+
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")

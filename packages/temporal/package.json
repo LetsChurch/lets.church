@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@letschurch/db": "workspace:*",
+    "drizzle-orm": "^0.45.1",
     "@letschurch/elasticsearch": "workspace:*",
     "@letschurch/s3": "workspace:*",
     "@letschurch/util": "workspace:*",

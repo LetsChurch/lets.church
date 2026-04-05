@@ -1,10 +1,11 @@
-import { prisma } from '@letschurch/db';
+import { Channel, db, UploadRecord } from '@letschurch/db';
 import {
   client,
   MSearchResponseSchema,
   msearchOrganizations,
 } from '@letschurch/elasticsearch';
 import { publicS3 } from '@letschurch/s3/public';
+import { and, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import {
@@ -56,9 +57,9 @@ export const churchProcedures = {
       // Resolve organization slug to ID if provided
       let resolvedOrganizationId = organizationId;
       if (organizationSlug && !organizationId) {
-        const org = await prisma.organization.findUnique({
-          where: { slug: organizationSlug },
-          select: { id: true },
+        const org = await db.query.Organization.findFirst({
+          where: (t, { eq }) => eq(t.slug, organizationSlug),
+          columns: { id: true },
         });
         if (org) {
           resolvedOrganizationId = org.id;
@@ -111,50 +112,52 @@ export const churchProcedures = {
         .map((hit) => hit._id);
 
       // Fetch full organization data from database
-      const organizations = await prisma.organization.findMany({
-        select: {
-          id: true,
-          slug: true,
-          type: true,
-          name: true,
-          description: true,
-          avatarPath: true,
-          primaryEmail: true,
-          primaryPhoneNumber: true,
-          websiteUrl: true,
-          addresses: {
-            where: {
-              type: 'MEETING',
-            },
-            select: {
-              country: true,
-              locality: true,
-              region: true,
-              streetAddress: true,
-              postOfficeBoxNumber: true,
-              postalCode: true,
-              latitude: true,
-              longitude: true,
-            },
-          },
-          tags: {
-            select: {
-              tag: {
-                select: {
-                  category: true,
-                  color: true,
-                  label: true,
-                  slug: true,
+      const organizations =
+        organizationIds.length > 0
+          ? await db.query.Organization.findMany({
+              columns: {
+                id: true,
+                slug: true,
+                type: true,
+                name: true,
+                description: true,
+                avatarPath: true,
+                primaryEmail: true,
+                primaryPhoneNumber: true,
+                websiteUrl: true,
+              },
+              with: {
+                addresses: {
+                  columns: {
+                    country: true,
+                    locality: true,
+                    region: true,
+                    streetAddress: true,
+                    postOfficeBoxNumber: true,
+                    postalCode: true,
+                    latitude: true,
+                    longitude: true,
+                    type: true,
+                  },
+                },
+                tags: {
+                  columns: {},
+                  with: {
+                    tag: {
+                      columns: {
+                        category: true,
+                        color: true,
+                        label: true,
+                        slug: true,
+                      },
+                    },
+                  },
                 },
               },
-            },
-          },
-        },
-        where: {
-          id: { in: organizationIds },
-          type: 'CHURCH',
-        },
-      });
+              where: (t, { and, inArray, eq }) =>
+                and(inArray(t.id, organizationIds), eq(t.type, 'CHURCH')),
+            })
+          : [];
 
       // Create a map for quick lookup and preserve order
       const organizationsMap = new Map(organizations.map((o) => [o.id, o]));
@@ -170,6 +173,8 @@ export const churchProcedures = {
                 resize: organizationAvatarMedium,
               })
             : null,
+          // Filter to only MEETING addresses
+          addresses: org.addresses.filter((a) => a.type === 'MEETING'),
           tags: org.tags.map((t) => t.tag),
         }));
 
@@ -222,17 +227,18 @@ export const churchProcedures = {
         .map((hit) => hit._id);
 
       // Fetch basic organization data from database
-      const organizations = await prisma.organization.findMany({
-        select: {
-          id: true,
-          slug: true,
-          name: true,
-        },
-        where: {
-          id: { in: organizationIds },
-          type: 'MINISTRY',
-        },
-      });
+      const organizations =
+        organizationIds.length > 0
+          ? await db.query.Organization.findMany({
+              columns: {
+                id: true,
+                slug: true,
+                name: true,
+              },
+              where: (t, { and, inArray, eq }) =>
+                and(inArray(t.id, organizationIds), eq(t.type, 'MINISTRY')),
+            })
+          : [];
 
       // Create a map for quick lookup and preserve order
       const organizationsMap = new Map(organizations.map((o) => [o.id, o]));
@@ -263,14 +269,12 @@ export const churchProcedures = {
     .query(async ({ input }) => {
       moduleLogger.info('Fetching organization by ID');
 
-      const organization = await prisma.organization.findUnique({
-        select: {
+      const organization = await db.query.Organization.findFirst({
+        columns: {
           id: true,
           name: true,
         },
-        where: {
-          id: input.id,
-        },
+        where: (t, { eq }) => eq(t.id, input.id),
       });
 
       if (!organization) {
@@ -287,15 +291,15 @@ export const churchProcedures = {
   getOrganizationTags: publicProcedure.query(async () => {
     moduleLogger.info('Fetching organization tags');
 
-    const tags = await prisma.organizationTag.findMany({
-      select: {
+    const tags = await db.query.OrganizationTag.findMany({
+      columns: {
         category: true,
         slug: true,
         label: true,
         color: true,
       },
-      orderBy: [{ category: 'asc' }, { label: 'asc' }],
-      take: 1024,
+      orderBy: (t, { asc }) => [asc(t.category), asc(t.label)],
+      limit: 1024,
     });
 
     moduleLogger.info(
@@ -315,27 +319,14 @@ export const churchProcedures = {
     .query(async ({ input }) => {
       moduleLogger.info('Fetching organization by slug');
 
-      const organization = await prisma.organization.findUnique({
-        select: {
+      const organization = await db.query.Organization.findFirst({
+        columns: {
           id: true,
           name: true,
           type: true,
           description: true,
           avatarPath: true,
           coverPath: true,
-          tags: {
-            select: {
-              tag: {
-                select: {
-                  category: true,
-                  color: true,
-                  label: true,
-                  description: true,
-                  slug: true,
-                },
-              },
-            },
-          },
           primaryPhoneNumber: true,
           primaryEmail: true,
           websiteUrl: true,
@@ -349,8 +340,24 @@ export const churchProcedures = {
           applePodcastsUrl: true,
           spotifyUrl: true,
           rssUrl: true,
+        },
+        with: {
+          tags: {
+            columns: {},
+            with: {
+              tag: {
+                columns: {
+                  category: true,
+                  color: true,
+                  label: true,
+                  description: true,
+                  slug: true,
+                },
+              },
+            },
+          },
           addresses: {
-            select: {
+            columns: {
               type: true,
               name: true,
               streetAddress: true,
@@ -362,12 +369,12 @@ export const churchProcedures = {
             },
           },
           channelAssociations: {
-            where: {
+            columns: {
               officialChannel: true,
             },
-            select: {
+            with: {
               channel: {
-                select: {
+                columns: {
                   slug: true,
                   name: true,
                   avatarPath: true,
@@ -376,35 +383,13 @@ export const churchProcedures = {
             },
           },
         },
-        where: {
-          slug: input.slug,
-        },
+        where: (t, { eq }) => eq(t.slug, input.slug),
       });
 
       if (!organization) {
         moduleLogger.warn('Organization not found by slug');
         return null;
       }
-
-      // Get endorsed channels separately
-      const endorsedChannelAssociations =
-        await prisma.organizationChannelAssociation.findMany({
-          where: {
-            organization: {
-              slug: input.slug,
-            },
-            officialChannel: false,
-          },
-          select: {
-            channel: {
-              select: {
-                slug: true,
-                name: true,
-                avatarPath: true,
-              },
-            },
-          },
-        });
 
       // Process image URLs
       const avatarUrl = organization.avatarPath
@@ -420,39 +405,43 @@ export const churchProcedures = {
         ? getPublicImageUrl(publicS3.getS3ProtocolUri(organization.coverPath))
         : null;
 
-      const officialChannels = organization.channelAssociations.map((assoc) => {
-        const channelAvatarUrl = assoc.channel.avatarPath
-          ? getPublicImageUrl(
-              publicS3.getS3ProtocolUri(assoc.channel.avatarPath),
-              {
-                resize: organizationAvatarSmall,
-              },
-            )
-          : null;
+      const officialChannels = organization.channelAssociations
+        .filter((assoc) => assoc.officialChannel)
+        .map((assoc) => {
+          const channelAvatarUrl = assoc.channel.avatarPath
+            ? getPublicImageUrl(
+                publicS3.getS3ProtocolUri(assoc.channel.avatarPath),
+                {
+                  resize: organizationAvatarSmall,
+                },
+              )
+            : null;
 
-        return {
-          slug: assoc.channel.slug,
-          name: assoc.channel.name,
-          avatarUrl: channelAvatarUrl,
-        };
-      });
+          return {
+            slug: assoc.channel.slug,
+            name: assoc.channel.name,
+            avatarUrl: channelAvatarUrl,
+          };
+        });
 
-      const endorsedChannels = endorsedChannelAssociations.map((assoc) => {
-        const channelAvatarUrl = assoc.channel.avatarPath
-          ? getPublicImageUrl(
-              publicS3.getS3ProtocolUri(assoc.channel.avatarPath),
-              {
-                resize: organizationAvatarSmall,
-              },
-            )
-          : null;
+      const endorsedChannels = organization.channelAssociations
+        .filter((assoc) => !assoc.officialChannel)
+        .map((assoc) => {
+          const channelAvatarUrl = assoc.channel.avatarPath
+            ? getPublicImageUrl(
+                publicS3.getS3ProtocolUri(assoc.channel.avatarPath),
+                {
+                  resize: organizationAvatarSmall,
+                },
+              )
+            : null;
 
-        return {
-          slug: assoc.channel.slug,
-          name: assoc.channel.name,
-          avatarUrl: channelAvatarUrl,
-        };
-      });
+          return {
+            slug: assoc.channel.slug,
+            name: assoc.channel.name,
+            avatarUrl: channelAvatarUrl,
+          };
+        });
 
       // Format phone number
       const formattedPhone = organization.primaryPhoneNumber
@@ -505,17 +494,19 @@ export const churchProcedures = {
       );
 
       // Get the organization and its official channels
-      const organization = await prisma.organization.findUnique({
-        where: { slug },
-        select: {
+      const organization = await db.query.Organization.findFirst({
+        where: (t, { eq }) => eq(t.slug, slug),
+        columns: {
           id: true,
+        },
+        with: {
           channelAssociations: {
-            where: {
+            columns: {
               officialChannel: true,
             },
-            select: {
+            with: {
               channel: {
-                select: {
+                columns: {
                   id: true,
                   slug: true,
                   name: true,
@@ -527,49 +518,57 @@ export const churchProcedures = {
         },
       });
 
-      if (!organization || organization.channelAssociations.length === 0) {
+      const officialChannelAssociations =
+        organization?.channelAssociations.filter((a) => a.officialChannel) ??
+        [];
+
+      if (!organization || officialChannelAssociations.length === 0) {
         return [];
       }
 
       // Get channel IDs
-      const channelIds = organization.channelAssociations.map(
+      const channelIds = officialChannelAssociations.map(
         (assoc) => assoc.channel.id,
       );
 
-      // Fetch recent uploads from all official channels
-      const uploads = await prisma.uploadRecord.findMany({
-        select: {
-          id: true,
-          title: true,
-          lengthSeconds: true,
-          publishedAt: true,
-          defaultThumbnailPath: true,
-          overrideThumbnailPath: true,
+      // Fetch recent uploads from all official channels, filtering channel
+      // conditions at the DB level via innerJoin so the LIMIT is accurate.
+      const uploads = await db
+        .select({
+          id: UploadRecord.id,
+          title: UploadRecord.title,
+          lengthSeconds: UploadRecord.lengthSeconds,
+          publishedAt: UploadRecord.publishedAt,
+          defaultThumbnailPath: UploadRecord.defaultThumbnailPath,
+          overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
           channel: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              avatarPath: true,
-              defaultThumbnailPath: true,
-            },
+            id: Channel.id,
+            name: Channel.name,
+            slug: Channel.slug,
+            avatarPath: Channel.avatarPath,
+            defaultThumbnailPath: Channel.defaultThumbnailPath,
           },
-        },
-        where: {
-          channelId: { in: channelIds },
-          transcodingFinishedAt: { not: null },
-          visibility: 'PUBLIC',
-          channel: {
-            visibility: 'PUBLIC',
-            approvedAt: { not: null },
-            deletedAt: null,
-          },
-        },
-        orderBy: {
-          publishedAt: 'desc',
-        },
-        take: limit,
-      });
+        })
+        .from(UploadRecord)
+        .innerJoin(
+          Channel,
+          and(
+            eq(UploadRecord.channelId, Channel.id),
+            eq(Channel.visibility, 'PUBLIC'),
+            isNotNull(Channel.approvedAt),
+            isNull(Channel.deletedAt),
+          ),
+        )
+        .where(
+          and(
+            inArray(UploadRecord.channelId, channelIds),
+            isNotNull(UploadRecord.transcodingFinishedAt),
+            eq(UploadRecord.visibility, 'PUBLIC'),
+            isNull(UploadRecord.deletedAt),
+          ),
+        )
+        .orderBy(desc(UploadRecord.publishedAt))
+        .limit(limit);
 
       // Transform uploads to include thumbnail URLs
       return uploads.map((upload) => {
