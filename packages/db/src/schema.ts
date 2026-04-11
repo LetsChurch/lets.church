@@ -13,6 +13,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  uuid,
 } from 'drizzle-orm/pg-core';
 
 export const AppUserRole = pgEnum('app_user_role', ['USER', 'ADMIN']);
@@ -162,7 +163,7 @@ export const TrackingSalt = pgTable('tracking_salt', {
 });
 
 export const AppUser = pgTable('app_user', {
-  id: text('id').notNull().primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid('id').primaryKey().defaultRandom(),
   username: text('username').notNull().unique(),
   password: text('password').notNull(),
   fullName: text('full_name'),
@@ -177,10 +178,10 @@ export const AppUser = pgTable('app_user', {
 export const AppUserEmail = pgTable(
   'app_user_email',
   {
-    id: text('id').notNull().primaryKey().default(sql`gen_random_uuid()`),
-    appUserId: text('app_user_id').notNull(),
+    id: uuid('id').primaryKey().defaultRandom(),
+    appUserId: uuid('app_user_id').notNull(),
     email: text('email').notNull().unique(),
-    key: text('key').notNull().default(sql`gen_random_uuid()`),
+    key: uuid('key').notNull().defaultRandom(),
     verifiedAt: timestamp('verified_at', { precision: 3 }),
   },
   (AppUserEmail) => ({
@@ -197,8 +198,8 @@ export const AppUserEmail = pgTable(
 export const AppSession = pgTable(
   'app_session',
   {
-    id: text('id').notNull().primaryKey().default(sql`gen_random_uuid()`),
-    appUserId: text('app_user_id').notNull(),
+    id: uuid('id').primaryKey().defaultRandom(),
+    appUserId: uuid('app_user_id').notNull(),
     expiresAt: timestamp('expires_at', { precision: 3 })
       .notNull()
       .default(sql`(now() + '30 days'::interval)`),
@@ -220,8 +221,8 @@ export const AppSession = pgTable(
 export const ChannelSubscription = pgTable(
   'channel_subscription',
   {
-    appUserId: text('app_user_id').notNull(),
-    channelId: text('channel_id').notNull(),
+    appUserId: uuid('app_user_id').notNull(),
+    channelId: uuid('channel_id').notNull(),
   },
   (ChannelSubscription) => ({
     channel_subscription_appUser_fkey: foreignKey({
@@ -288,7 +289,7 @@ export const OrganizationTagSuggestion = pgTable(
 export const OrganizationTagInstance = pgTable(
   'organization_tag_instance',
   {
-    organizationId: text('organization_id').notNull(),
+    organizationId: uuid('organization_id').notNull(),
     tagSlug: text('tag_slug').notNull(),
   },
   (OrganizationTagInstance) => ({
@@ -319,7 +320,7 @@ export const OrganizationTagInstance = pgTable(
 export const Organization = pgTable(
   'organization',
   {
-    id: text('id').notNull().primaryKey().default(sql`gen_random_uuid()`),
+    id: uuid('id').primaryKey().defaultRandom(),
     type: OrganizationType('type').notNull().default('MINISTRY'),
     name: text('name').notNull(),
     slug: text('slug').notNull().unique(),
@@ -342,7 +343,7 @@ export const Organization = pgTable(
     automaticallyApproveOrganizationAssociations: boolean(
       'automatically_approve_organization_associations',
     ).notNull(),
-    approvedById: text('approved_by_id'),
+    approvedById: uuid('approved_by_id'),
     approvedAt: timestamp('approved_at', { precision: 3 }),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
@@ -361,8 +362,8 @@ export const Organization = pgTable(
 export const OrganizationAddress = pgTable(
   'organization_address',
   {
-    id: text('id').notNull().primaryKey().default(sql`gen_random_uuid()`),
-    organizationId: text('organization_id').notNull(),
+    id: uuid('id').primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id').notNull(),
     type: AddressType('type').notNull(),
     name: text('name'),
     query: text('query'),
@@ -390,8 +391,8 @@ export const OrganizationAddress = pgTable(
 export const OrganizationLeader = pgTable(
   'organization_leader',
   {
-    id: text('id').notNull().primaryKey().default(sql`gen_random_uuid()`),
-    organizationId: text('organization_id').notNull(),
+    id: uuid('id').primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id').notNull(),
     type: OrganizationLeaderType('type').notNull(),
     name: text('name'),
     email: text('email'),
@@ -411,8 +412,8 @@ export const OrganizationLeader = pgTable(
 export const OrganizationMembership = pgTable(
   'organization_membership',
   {
-    organizationId: text('organization_id').notNull(),
-    appUserId: text('app_user_id').notNull(),
+    organizationId: uuid('organization_id').notNull(),
+    appUserId: uuid('app_user_id').notNull(),
     isAdmin: boolean('is_admin').notNull(),
     canEdit: boolean('can_edit').notNull(),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
@@ -446,14 +447,14 @@ export const OrganizationMembership = pgTable(
 export const OrganizationInvitation = pgTable(
   'organization_invitation',
   {
-    id: text('id').notNull().primaryKey().default(sql`gen_random_uuid()`),
-    organizationId: text('organization_id').notNull(),
+    id: uuid('id').primaryKey().defaultRandom(),
+    organizationId: uuid('organization_id').notNull(),
     email: text('email').notNull(),
-    token: text('token').notNull().unique().default(sql`gen_random_uuid()`),
+    token: uuid('token').notNull().unique().defaultRandom(),
     status: InvitationStatus('status').notNull().default('PENDING'),
     isAdmin: boolean('is_admin').notNull(),
     canEdit: boolean('can_edit').notNull(),
-    invitedById: text('invited_by_id').notNull(),
+    invitedById: uuid('invited_by_id').notNull(),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     expiresAt: timestamp('expires_at', { precision: 3 }).notNull(),
     respondedAt: timestamp('responded_at', { precision: 3 }),
@@ -482,8 +483,8 @@ export const OrganizationInvitation = pgTable(
 export const OrganizationOrganizationAssociation = pgTable(
   'organization_organization_association',
   {
-    upstreamOrganizationId: text('upstream_organization_id').notNull(),
-    downstreamOrganizationId: text('downstream_organization_id').notNull(),
+    upstreamOrganizationId: uuid('upstream_organization_id').notNull(),
+    downstreamOrganizationId: uuid('downstream_organization_id').notNull(),
     upstreamApproved: boolean('upstream_approved').notNull(),
     downstreamApproved: boolean('downstream_approved').notNull(),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
@@ -520,8 +521,8 @@ export const OrganizationOrganizationAssociation = pgTable(
 export const OrganizationChannelAssociation = pgTable(
   'organization_channel_association',
   {
-    organizationId: text('organization_id').notNull(),
-    channelId: text('channel_id').notNull(),
+    organizationId: uuid('organization_id').notNull(),
+    channelId: uuid('channel_id').notNull(),
     officialChannel: boolean('official_channel').notNull(),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
@@ -554,7 +555,7 @@ export const OrganizationChannelAssociation = pgTable(
 export const Channel = pgTable(
   'channel',
   {
-    id: text('id').notNull().primaryKey().default(sql`gen_random_uuid()`),
+    id: uuid('id').primaryKey().defaultRandom(),
     name: text('name').notNull(),
     visibility: ChannelVisibility('visibility').notNull().default('PUBLIC'),
     avatarPath: text('avatar_path'),
@@ -574,7 +575,7 @@ export const Channel = pgTable(
     applePodcastsUrl: text('apple_podcasts_url'),
     spotifyUrl: text('spotify_url'),
     rssUrl: text('rss_url'),
-    approvedById: text('approved_by_id'),
+    approvedById: uuid('approved_by_id'),
     approvedAt: timestamp('approved_at', { precision: 3 }),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
@@ -600,8 +601,8 @@ export const Channel = pgTable(
 export const ChannelMembership = pgTable(
   'channel_membership',
   {
-    channelId: text('channel_id').notNull(),
-    appUserId: text('app_user_id').notNull(),
+    channelId: uuid('channel_id').notNull(),
+    appUserId: uuid('app_user_id').notNull(),
     isAdmin: boolean('is_admin').notNull(),
     canEdit: boolean('can_edit').notNull(),
     canUpload: boolean('can_upload').notNull().default(true),
@@ -634,16 +635,16 @@ export const ChannelMembership = pgTable(
 export const ChannelInvitation = pgTable(
   'channel_invitation',
   {
-    id: text('id').notNull().primaryKey().default(sql`gen_random_uuid()`),
-    channelId: text('channel_id').notNull(),
+    id: uuid('id').primaryKey().defaultRandom(),
+    channelId: uuid('channel_id').notNull(),
     email: text('email').notNull(),
-    token: text('token').notNull().unique().default(sql`gen_random_uuid()`),
+    token: uuid('token').notNull().unique().defaultRandom(),
     status: InvitationStatus('status').notNull().default('PENDING'),
     isAdmin: boolean('is_admin').notNull(),
     canEdit: boolean('can_edit').notNull(),
     canUpload: boolean('can_upload').notNull().default(true),
     canDownload: boolean('can_download').notNull(),
-    invitedById: text('invited_by_id').notNull(),
+    invitedById: uuid('invited_by_id').notNull(),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     expiresAt: timestamp('expires_at', { precision: 3 }).notNull(),
     respondedAt: timestamp('responded_at', { precision: 3 }),
@@ -672,15 +673,15 @@ export const ChannelInvitation = pgTable(
 export const UploadState = pgTable(
   'upload_state',
   {
-    id: text('id').notNull().primaryKey().default(sql`gen_random_uuid()`),
+    id: uuid('id').primaryKey().defaultRandom(),
     s3Key: text('s3_key').notNull().unique(),
     s3Bucket: text('s3_bucket').notNull(),
     uploadType: UploadStateType('upload_type').notNull(),
     sizeBytes: bigint('size_bytes', { mode: 'bigint' }),
-    uploadRecordId: text('upload_record_id'),
-    appUserId: text('app_user_id'),
-    channelId: text('channel_id'),
-    organizationId: text('organization_id'),
+    uploadRecordId: uuid('upload_record_id'),
+    appUserId: uuid('app_user_id'),
+    channelId: uuid('channel_id'),
+    organizationId: uuid('organization_id'),
     backupStatus: BackupStatus('backup_status')
       .notNull()
       .default('NOT_BACKED_UP'),
@@ -724,17 +725,17 @@ export const UploadState = pgTable(
 export const UploadRecord = pgTable(
   'upload_record',
   {
-    id: text('id').notNull().primaryKey().default(sql`gen_random_uuid()`),
+    id: uuid('id').primaryKey().defaultRandom(),
     title: text('title'),
     description: text('description'),
-    appUserId: text('app_user_id').notNull(),
+    appUserId: uuid('app_user_id').notNull(),
     license: UploadLicense('license').notNull(),
-    channelId: text('channel_id').notNull(),
+    channelId: uuid('channel_id').notNull(),
     visibility: UploadVisibility('visibility').notNull(),
     uploadSizeBytes: bigint('upload_size_bytes', { mode: 'bigint' }),
     uploadFinalized: boolean('upload_finalized').notNull(),
     uploadFinalizedAt: timestamp('upload_finalized_at', { precision: 3 }),
-    uploadFinalizedById: text('upload_finalized_by_id'),
+    uploadFinalizedById: uuid('upload_finalized_by_id'),
     finalizedUploadKey: text('finalized_upload_key'),
     originalFileName: text('original_file_name'),
     probe: jsonb('probe'),
@@ -797,7 +798,7 @@ export const UploadRecord = pgTable(
 export const UploadRecordDownloadSize = pgTable(
   'upload_record_download_size',
   {
-    uploadRecordId: text('upload_record_id').notNull(),
+    uploadRecordId: uuid('upload_record_id').notNull(),
     variant: UploadVariant('variant').notNull(),
     bytes: bigint('size_bytes', { mode: 'bigint' }).notNull(),
   },
@@ -821,8 +822,8 @@ export const UploadRecordDownloadSize = pgTable(
 export const UploadUserRating = pgTable(
   'upload_user_rating',
   {
-    appUserId: text('app_user_id').notNull(),
-    uploadRecordId: text('upload_id').notNull(),
+    appUserId: uuid('app_user_id').notNull(),
+    uploadRecordId: uuid('upload_id').notNull(),
     rating: Rating('rating').notNull(),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
   },
@@ -851,12 +852,12 @@ export const UploadUserRating = pgTable(
 export const UploadUserComment = pgTable(
   'upload_user_comment',
   {
-    id: text('id').notNull().primaryKey().default(sql`gen_random_uuid()`),
+    id: uuid('id').primaryKey().defaultRandom(),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
-    authorId: text('author_id').notNull(),
-    uploadRecordId: text('upload_id').notNull(),
-    replyingToId: text('replying_to_id'),
+    authorId: uuid('author_id').notNull(),
+    uploadRecordId: uuid('upload_id').notNull(),
+    replyingToId: uuid('replying_to_id'),
     text: text('text').notNull(),
     score: doublePrecision('score').notNull(),
     scoreStaleAt: timestamp('score_stale_at', { precision: 3 }).defaultNow(),
@@ -889,8 +890,8 @@ export const UploadUserComment = pgTable(
 export const UploadUserCommentRating = pgTable(
   'upload_user_comment_rating',
   {
-    appUserId: text('app_user_id').notNull(),
-    uploadUserCommentId: text('upload_user_comment_id').notNull(),
+    appUserId: uuid('app_user_id').notNull(),
+    uploadUserCommentId: uuid('upload_user_comment_id').notNull(),
     rating: Rating('rating').notNull(),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
   },
@@ -922,9 +923,9 @@ export const UploadUserCommentRating = pgTable(
 export const UploadView = pgTable(
   'upload_view',
   {
-    uploadRecordId: text('upload_record_id').notNull(),
+    uploadRecordId: uuid('upload_record_id').notNull(),
     viewHash: bigint('view_hash', { mode: 'bigint' }).notNull(),
-    appUserId: text('app_user_id'),
+    appUserId: uuid('app_user_id'),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     count: integer('count').notNull().default(1),
     source: UploadViewSource('source').default('WEBSITE'),
@@ -954,7 +955,7 @@ export const UploadView = pgTable(
 export const UploadViewSecond = pgTable(
   'upload_view_second',
   {
-    uploadRecordId: text('upload_record_id').notNull(),
+    uploadRecordId: uuid('upload_record_id').notNull(),
     viewHash: bigint('view_hash', { mode: 'bigint' }).notNull(),
     second: integer('second').notNull(),
   },
@@ -980,8 +981,8 @@ export const UploadViewSecond = pgTable(
 export const UploadListEntry = pgTable(
   'upload_list_entry',
   {
-    uploadListId: text('upload_list_id').notNull(),
-    uploadRecordId: text('upload_record_id').notNull(),
+    uploadListId: uuid('upload_list_id').notNull(),
+    uploadRecordId: uuid('upload_record_id').notNull(),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     rank: integer('rank'),
   },
@@ -1010,12 +1011,12 @@ export const UploadListEntry = pgTable(
 export const UploadList = pgTable(
   'upload_list',
   {
-    id: text('id').notNull().primaryKey().default(sql`gen_random_uuid()`),
+    id: uuid('id').primaryKey().defaultRandom(),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
     title: text('title').notNull(),
-    authorId: text('author_id').notNull(),
-    channelId: text('channel_id'),
+    authorId: uuid('author_id').notNull(),
+    channelId: uuid('channel_id'),
     type: UploadListType('type').notNull(),
   },
   (UploadList) => ({
@@ -1042,11 +1043,11 @@ export const UploadList = pgTable(
 export const SearchLogEntry = pgTable(
   'search_log_entry',
   {
-    id: text('id').notNull().primaryKey().default(sql`gen_random_uuid()`),
+    id: uuid('id').primaryKey().defaultRandom(),
     query: text('query').notNull(),
     params: jsonb('params').notNull().default('{}'),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
-    appUserId: text('app_user_id'),
+    appUserId: uuid('app_user_id'),
     userDeletedAt: timestamp('user_deleted_at', { precision: 3 }),
     mediaCount: integer('media_count').notNull(),
     transcriptCount: integer('transcript_count').notNull(),
@@ -1066,9 +1067,9 @@ export const SearchLogEntry = pgTable(
 export const SavedMedia = pgTable(
   'saved_media',
   {
-    id: text('id').notNull().primaryKey().default(sql`gen_random_uuid()`),
-    appUserId: text('app_user_id').notNull(),
-    uploadRecordId: text('upload_record_id').notNull(),
+    id: uuid('id').primaryKey().defaultRandom(),
+    appUserId: uuid('app_user_id').notNull(),
+    uploadRecordId: uuid('upload_record_id').notNull(),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
   },
   (SavedMedia) => ({
@@ -1095,7 +1096,7 @@ export const SavedMedia = pgTable(
 export const FeaturedUpload = pgTable(
   'featured_upload',
   {
-    uploadRecordId: text('upload_record_id').notNull().primaryKey(),
+    uploadRecordId: uuid('upload_record_id').notNull().primaryKey(),
     rank: integer('rank').notNull(),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
@@ -1116,7 +1117,7 @@ export const FeaturedUpload = pgTable(
 );
 
 export const NewsletterMailingList = pgTable('newsletter_mailing_list', {
-  listmonkUuid: text('listmonk_uuid').notNull().primaryKey(),
+  listmonkUuid: uuid('listmonk_uuid').notNull().primaryKey(),
   name: text('name').notNull(),
   type: NewsletterListType('type').notNull().default('public'),
   optin: NewsletterListOptin('optin').notNull().default('single'),
@@ -1129,8 +1130,8 @@ export const NewsletterMailingList = pgTable('newsletter_mailing_list', {
 export const ChannelImportSource = pgTable(
   'channel_import_source',
   {
-    id: text('id').notNull().primaryKey().default(sql`gen_random_uuid()`),
-    channelId: text('channel_id').notNull(),
+    id: uuid('id').primaryKey().defaultRandom(),
+    channelId: uuid('channel_id').notNull(),
     url: text('url').notNull(),
     enabled: boolean('enabled').notNull().default(true),
     cronSchedule: text('cron_schedule').notNull().default('0 1 * * *'),
@@ -1152,9 +1153,9 @@ export const ChannelImportSource = pgTable(
       .notNull()
       .default('NOT_STARTED'),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
-    createdById: text('created_by_id').notNull(),
+    createdById: uuid('created_by_id').notNull(),
     updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
-    updatedById: text('updated_by_id'),
+    updatedById: uuid('updated_by_id'),
   },
   (ChannelImportSource) => ({
     channel_import_source_channel_fkey: foreignKey({
@@ -1184,8 +1185,8 @@ export const ChannelImportSource = pgTable(
 export const ChannelImportRun = pgTable(
   'channel_import_run',
   {
-    id: text('id').notNull().primaryKey().default(sql`gen_random_uuid()`),
-    importSourceId: text('import_source_id').notNull(),
+    id: uuid('id').primaryKey().defaultRandom(),
+    importSourceId: uuid('import_source_id').notNull(),
     startedAt: timestamp('started_at', { precision: 3 }).notNull().defaultNow(),
     completedAt: timestamp('completed_at', { precision: 3 }),
     status: ChannelImportRunStatus('status').notNull(),
@@ -1210,9 +1211,9 @@ export const ChannelImportRun = pgTable(
 export const ImportHistory = pgTable(
   'import_history',
   {
-    id: text('id').notNull().primaryKey().default(sql`gen_random_uuid()`),
-    importSourceId: text('import_source_id').notNull(),
-    uploadRecordId: text('upload_record_id'),
+    id: uuid('id').primaryKey().defaultRandom(),
+    importSourceId: uuid('import_source_id').notNull(),
+    uploadRecordId: uuid('upload_record_id'),
     title: text('title').notNull(),
     description: text('description'),
     url: text('url'),

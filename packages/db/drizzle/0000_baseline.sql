@@ -19,8 +19,8 @@ CREATE TYPE "public"."upload_variant" AS ENUM('VIDEO_4K', 'VIDEO_4K_DOWNLOAD', '
 CREATE TYPE "public"."upload_view_source" AS ENUM('WEBSITE', 'EMBED');--> statement-breakpoint
 CREATE TYPE "public"."upload_visibility" AS ENUM('PUBLIC', 'PRIVATE', 'UNLISTED');--> statement-breakpoint
 CREATE TABLE "app_session" (
-	"id" text PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"app_user_id" text NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"app_user_id" uuid NOT NULL,
 	"expires_at" timestamp (3) DEFAULT (now() + '30 days'::interval) NOT NULL,
 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
 	"updated_at" timestamp (3) NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE "app_session" (
 );
 --> statement-breakpoint
 CREATE TABLE "app_user" (
-	"id" text PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"username" text NOT NULL,
 	"password" text NOT NULL,
 	"full_name" text,
@@ -42,16 +42,16 @@ CREATE TABLE "app_user" (
 );
 --> statement-breakpoint
 CREATE TABLE "app_user_email" (
-	"id" text PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"app_user_id" text NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"app_user_id" uuid NOT NULL,
 	"email" text NOT NULL,
-	"key" text DEFAULT gen_random_uuid() NOT NULL,
+	"key" uuid DEFAULT gen_random_uuid() NOT NULL,
 	"verified_at" timestamp (3),
 	CONSTRAINT "app_user_email_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
 CREATE TABLE "channel" (
-	"id" text PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
 	"visibility" "channel_visibility" DEFAULT 'PUBLIC' NOT NULL,
 	"avatar_path" text,
@@ -71,7 +71,7 @@ CREATE TABLE "channel" (
 	"apple_podcasts_url" text,
 	"spotify_url" text,
 	"rss_url" text,
-	"approved_by_id" text,
+	"approved_by_id" uuid,
 	"approved_at" timestamp (3),
 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
 	"updated_at" timestamp (3) NOT NULL,
@@ -86,8 +86,8 @@ CREATE TABLE "channel" (
 );
 --> statement-breakpoint
 CREATE TABLE "channel_import_run" (
-	"id" text PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"import_source_id" text NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"import_source_id" uuid NOT NULL,
 	"started_at" timestamp (3) DEFAULT now() NOT NULL,
 	"completed_at" timestamp (3),
 	"status" "channel_import_run_status" NOT NULL,
@@ -100,8 +100,8 @@ CREATE TABLE "channel_import_run" (
 );
 --> statement-breakpoint
 CREATE TABLE "channel_import_source" (
-	"id" text PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"channel_id" text NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"channel_id" uuid NOT NULL,
 	"url" text NOT NULL,
 	"enabled" boolean DEFAULT true NOT NULL,
 	"cron_schedule" text DEFAULT '0 1 * * *' NOT NULL,
@@ -117,22 +117,22 @@ CREATE TABLE "channel_import_source" (
 	"workflow_id" text,
 	"workflow_status" "channel_import_source_workflow_status" DEFAULT 'NOT_STARTED' NOT NULL,
 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
-	"created_by_id" text NOT NULL,
+	"created_by_id" uuid NOT NULL,
 	"updated_at" timestamp (3) NOT NULL,
-	"updated_by_id" text
+	"updated_by_id" uuid
 );
 --> statement-breakpoint
 CREATE TABLE "channel_invitation" (
-	"id" text PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"channel_id" text NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"channel_id" uuid NOT NULL,
 	"email" text NOT NULL,
-	"token" text DEFAULT gen_random_uuid() NOT NULL,
+	"token" uuid DEFAULT gen_random_uuid() NOT NULL,
 	"status" "invitation_status" DEFAULT 'PENDING' NOT NULL,
 	"is_admin" boolean NOT NULL,
 	"can_edit" boolean NOT NULL,
 	"can_upload" boolean DEFAULT true NOT NULL,
 	"can_download" boolean NOT NULL,
-	"invited_by_id" text NOT NULL,
+	"invited_by_id" uuid NOT NULL,
 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
 	"expires_at" timestamp (3) NOT NULL,
 	"responded_at" timestamp (3),
@@ -140,8 +140,8 @@ CREATE TABLE "channel_invitation" (
 );
 --> statement-breakpoint
 CREATE TABLE "channel_membership" (
-	"channel_id" text NOT NULL,
-	"app_user_id" text NOT NULL,
+	"channel_id" uuid NOT NULL,
+	"app_user_id" uuid NOT NULL,
 	"is_admin" boolean NOT NULL,
 	"can_edit" boolean NOT NULL,
 	"can_upload" boolean DEFAULT true NOT NULL,
@@ -152,13 +152,13 @@ CREATE TABLE "channel_membership" (
 );
 --> statement-breakpoint
 CREATE TABLE "channel_subscription" (
-	"app_user_id" text NOT NULL,
-	"channel_id" text NOT NULL,
+	"app_user_id" uuid NOT NULL,
+	"channel_id" uuid NOT NULL,
 	CONSTRAINT "ChannelSubscription_cpk" PRIMARY KEY("app_user_id","channel_id")
 );
 --> statement-breakpoint
 CREATE TABLE "featured_upload" (
-	"upload_record_id" text NOT NULL,
+	"upload_record_id" uuid NOT NULL,
 	"rank" integer NOT NULL,
 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
 	"updated_at" timestamp (3) NOT NULL,
@@ -166,9 +166,9 @@ CREATE TABLE "featured_upload" (
 );
 --> statement-breakpoint
 CREATE TABLE "import_history" (
-	"id" text PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"import_source_id" text NOT NULL,
-	"upload_record_id" text,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"import_source_id" uuid NOT NULL,
+	"upload_record_id" uuid,
 	"title" text NOT NULL,
 	"description" text,
 	"url" text,
@@ -178,7 +178,7 @@ CREATE TABLE "import_history" (
 );
 --> statement-breakpoint
 CREATE TABLE "newsletter_mailing_list" (
-	"listmonk_uuid" text PRIMARY KEY NOT NULL,
+	"listmonk_uuid" uuid PRIMARY KEY NOT NULL,
 	"name" text NOT NULL,
 	"type" "newsletter_list_type" DEFAULT 'public' NOT NULL,
 	"optin" "newsletter_list_optin" DEFAULT 'single' NOT NULL,
@@ -189,7 +189,7 @@ CREATE TABLE "newsletter_mailing_list" (
 );
 --> statement-breakpoint
 CREATE TABLE "organization" (
-	"id" text PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"type" "organization_type" DEFAULT 'MINISTRY' NOT NULL,
 	"name" text NOT NULL,
 	"slug" text NOT NULL,
@@ -210,7 +210,7 @@ CREATE TABLE "organization" (
 	"rss_url" text,
 	"description" text,
 	"automatically_approve_organization_associations" boolean NOT NULL,
-	"approved_by_id" text,
+	"approved_by_id" uuid,
 	"approved_at" timestamp (3),
 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
 	"updated_at" timestamp (3) NOT NULL,
@@ -218,8 +218,8 @@ CREATE TABLE "organization" (
 );
 --> statement-breakpoint
 CREATE TABLE "organization_address" (
-	"id" text PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"organization_id" text NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"organization_id" uuid NOT NULL,
 	"type" "address_type" NOT NULL,
 	"name" text,
 	"query" text,
@@ -235,8 +235,8 @@ CREATE TABLE "organization_address" (
 );
 --> statement-breakpoint
 CREATE TABLE "organization_channel_association" (
-	"organization_id" text NOT NULL,
-	"channel_id" text NOT NULL,
+	"organization_id" uuid NOT NULL,
+	"channel_id" uuid NOT NULL,
 	"official_channel" boolean NOT NULL,
 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
 	"updated_at" timestamp (3) NOT NULL,
@@ -244,14 +244,14 @@ CREATE TABLE "organization_channel_association" (
 );
 --> statement-breakpoint
 CREATE TABLE "organization_invitation" (
-	"id" text PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"organization_id" text NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"organization_id" uuid NOT NULL,
 	"email" text NOT NULL,
-	"token" text DEFAULT gen_random_uuid() NOT NULL,
+	"token" uuid DEFAULT gen_random_uuid() NOT NULL,
 	"status" "invitation_status" DEFAULT 'PENDING' NOT NULL,
 	"is_admin" boolean NOT NULL,
 	"can_edit" boolean NOT NULL,
-	"invited_by_id" text NOT NULL,
+	"invited_by_id" uuid NOT NULL,
 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
 	"expires_at" timestamp (3) NOT NULL,
 	"responded_at" timestamp (3),
@@ -259,8 +259,8 @@ CREATE TABLE "organization_invitation" (
 );
 --> statement-breakpoint
 CREATE TABLE "organization_leader" (
-	"id" text PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"organization_id" text NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"organization_id" uuid NOT NULL,
 	"type" "organization_leader_type" NOT NULL,
 	"name" text,
 	"email" text,
@@ -268,8 +268,8 @@ CREATE TABLE "organization_leader" (
 );
 --> statement-breakpoint
 CREATE TABLE "organization_membership" (
-	"organization_id" text NOT NULL,
-	"app_user_id" text NOT NULL,
+	"organization_id" uuid NOT NULL,
+	"app_user_id" uuid NOT NULL,
 	"is_admin" boolean NOT NULL,
 	"can_edit" boolean NOT NULL,
 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
@@ -278,8 +278,8 @@ CREATE TABLE "organization_membership" (
 );
 --> statement-breakpoint
 CREATE TABLE "organization_organization_association" (
-	"upstream_organization_id" text NOT NULL,
-	"downstream_organization_id" text NOT NULL,
+	"upstream_organization_id" uuid NOT NULL,
+	"downstream_organization_id" uuid NOT NULL,
 	"upstream_approved" boolean NOT NULL,
 	"downstream_approved" boolean NOT NULL,
 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
@@ -298,7 +298,7 @@ CREATE TABLE "organization_tag" (
 );
 --> statement-breakpoint
 CREATE TABLE "organization_tag_instance" (
-	"organization_id" text NOT NULL,
+	"organization_id" uuid NOT NULL,
 	"tag_slug" text NOT NULL,
 	CONSTRAINT "OrganizationTagInstance_cpk" PRIMARY KEY("organization_id","tag_slug")
 );
@@ -310,18 +310,18 @@ CREATE TABLE "organization_tag_suggestion" (
 );
 --> statement-breakpoint
 CREATE TABLE "saved_media" (
-	"id" text PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"app_user_id" text NOT NULL,
-	"upload_record_id" text NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"app_user_id" uuid NOT NULL,
+	"upload_record_id" uuid NOT NULL,
 	"created_at" timestamp (3) DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "search_log_entry" (
-	"id" text PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"query" text NOT NULL,
 	"params" jsonb DEFAULT '{}' NOT NULL,
 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
-	"app_user_id" text,
+	"app_user_id" uuid,
 	"user_deleted_at" timestamp (3),
 	"media_count" integer NOT NULL,
 	"transcript_count" integer NOT NULL,
@@ -335,35 +335,35 @@ CREATE TABLE "tracking_salt" (
 );
 --> statement-breakpoint
 CREATE TABLE "upload_list" (
-	"id" text PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
 	"updated_at" timestamp (3) NOT NULL,
 	"title" text NOT NULL,
-	"author_id" text NOT NULL,
-	"channel_id" text,
+	"author_id" uuid NOT NULL,
+	"channel_id" uuid,
 	"type" "upload_list_type" NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "upload_list_entry" (
-	"upload_list_id" text NOT NULL,
-	"upload_record_id" text NOT NULL,
+	"upload_list_id" uuid NOT NULL,
+	"upload_record_id" uuid NOT NULL,
 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
 	"rank" integer,
 	CONSTRAINT "UploadListEntry_cpk" PRIMARY KEY("upload_list_id","upload_record_id")
 );
 --> statement-breakpoint
 CREATE TABLE "upload_record" (
-	"id" text PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"title" text,
 	"description" text,
-	"app_user_id" text NOT NULL,
+	"app_user_id" uuid NOT NULL,
 	"license" "upload_license" NOT NULL,
-	"channel_id" text NOT NULL,
+	"channel_id" uuid NOT NULL,
 	"visibility" "upload_visibility" NOT NULL,
 	"upload_size_bytes" bigint,
 	"upload_finalized" boolean NOT NULL,
 	"upload_finalized_at" timestamp (3),
-	"upload_finalized_by_id" text,
+	"upload_finalized_by_id" uuid,
 	"finalized_upload_key" text,
 	"original_file_name" text,
 	"probe" jsonb,
@@ -390,21 +390,21 @@ CREATE TABLE "upload_record" (
 );
 --> statement-breakpoint
 CREATE TABLE "upload_record_download_size" (
-	"upload_record_id" text NOT NULL,
+	"upload_record_id" uuid NOT NULL,
 	"variant" "upload_variant" NOT NULL,
 	"size_bytes" bigint NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "upload_state" (
-	"id" text PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"s3_key" text NOT NULL,
 	"s3_bucket" text NOT NULL,
 	"upload_type" "upload_state_type" NOT NULL,
 	"size_bytes" bigint,
-	"upload_record_id" text,
-	"app_user_id" text,
-	"channel_id" text,
-	"organization_id" text,
+	"upload_record_id" uuid,
+	"app_user_id" uuid,
+	"channel_id" uuid,
+	"organization_id" uuid,
 	"backup_status" "backup_status" DEFAULT 'NOT_BACKED_UP' NOT NULL,
 	"backup_key" text,
 	"backed_up_at" timestamp (3),
@@ -414,37 +414,37 @@ CREATE TABLE "upload_state" (
 );
 --> statement-breakpoint
 CREATE TABLE "upload_user_comment" (
-	"id" text PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
 	"updated_at" timestamp (3) NOT NULL,
-	"author_id" text NOT NULL,
-	"upload_id" text NOT NULL,
-	"replying_to_id" text,
+	"author_id" uuid NOT NULL,
+	"upload_id" uuid NOT NULL,
+	"replying_to_id" uuid,
 	"text" text NOT NULL,
 	"score" double precision NOT NULL,
 	"score_stale_at" timestamp (3) DEFAULT now()
 );
 --> statement-breakpoint
 CREATE TABLE "upload_user_comment_rating" (
-	"app_user_id" text NOT NULL,
-	"upload_user_comment_id" text NOT NULL,
+	"app_user_id" uuid NOT NULL,
+	"upload_user_comment_id" uuid NOT NULL,
 	"rating" "rating" NOT NULL,
 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
 	CONSTRAINT "UploadUserCommentRating_cpk" PRIMARY KEY("app_user_id","upload_user_comment_id")
 );
 --> statement-breakpoint
 CREATE TABLE "upload_user_rating" (
-	"app_user_id" text NOT NULL,
-	"upload_id" text NOT NULL,
+	"app_user_id" uuid NOT NULL,
+	"upload_id" uuid NOT NULL,
 	"rating" "rating" NOT NULL,
 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
 	CONSTRAINT "UploadUserRating_cpk" PRIMARY KEY("app_user_id","upload_id")
 );
 --> statement-breakpoint
 CREATE TABLE "upload_view" (
-	"upload_record_id" text NOT NULL,
+	"upload_record_id" uuid NOT NULL,
 	"view_hash" bigint NOT NULL,
-	"app_user_id" text,
+	"app_user_id" uuid,
 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
 	"count" integer DEFAULT 1 NOT NULL,
 	"source" "upload_view_source" DEFAULT 'WEBSITE',
@@ -452,7 +452,7 @@ CREATE TABLE "upload_view" (
 );
 --> statement-breakpoint
 CREATE TABLE "upload_view_second" (
-	"upload_record_id" text NOT NULL,
+	"upload_record_id" uuid NOT NULL,
 	"view_hash" bigint NOT NULL,
 	"second" integer NOT NULL,
 	CONSTRAINT "UploadViewSecond_cpk" PRIMARY KEY("upload_record_id","view_hash","second")
