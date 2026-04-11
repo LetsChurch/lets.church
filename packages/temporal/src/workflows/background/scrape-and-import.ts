@@ -86,8 +86,10 @@ export async function scrapeAndImportWorkflow(
 
     // Process each item
     for (const item of items) {
+      let uploadRecordId: string | null = null;
+
+      // Media import: importMediaWorkflow sends its own error notification on failure.
       try {
-        // Check deduplication
         const isDuplicate = await checkDuplicate(importSourceId, item);
 
         if (isDuplicate) {
@@ -126,10 +128,16 @@ export async function scrapeAndImportWorkflow(
           parentClosePolicy: ParentClosePolicy.ABANDON,
           retry: { maximumAttempts: 3 },
         });
-        const uploadRecordId = await handle.result();
+        uploadRecordId = await handle.result();
+        imported++;
+      } catch (_error) {
+        failed++;
+        continue;
+      }
 
-        // Import succeeded - create import history record
-        // Only create after import workflow completes successfully
+      // History record: handled separately so a failure here doesn't get
+      // confused with a media import failure, and sends its own notification.
+      try {
         await createImportHistory({
           importSourceId,
           uploadRecordId,
@@ -138,16 +146,12 @@ export async function scrapeAndImportWorkflow(
           url: item.url,
           publishedAt: item.publishedAt || new Date(),
         });
-
-        imported++;
       } catch (error) {
-        failed++;
-        // Log individual item errors but continue processing other items
         const errorMessage =
           error instanceof Error ? error.message : String(error);
-        console.error(
-          `Failed to import item from ${importSourceId}:`,
-          errorMessage,
+        await sendImportErrorNotification(
+          importSourceId,
+          `Imported ${item.url} but failed to record import history (future runs may re-import this item): ${errorMessage}`,
         );
       }
     }
