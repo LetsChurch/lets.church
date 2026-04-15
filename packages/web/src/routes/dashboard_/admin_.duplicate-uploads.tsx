@@ -3,6 +3,7 @@ import {
   Badge,
   Box,
   Button,
+  Checkbox,
   Collapse,
   Group,
   Stack,
@@ -19,13 +20,17 @@ import {
   IconTrash,
 } from '@tabler/icons-react';
 import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute, redirect } from '@tanstack/react-router';
+import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
+import { z } from 'zod';
 import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
 import { showFailure, showSuccess } from '../-mantine';
 
 export const Route = createFileRoute('/dashboard_/admin_/duplicate-uploads')({
   component: RouteComponent,
+  validateSearch: z.object({
+    matchPublishedAt: z.boolean().default(true),
+  }),
   beforeLoad: async ({ context }) => {
     const hasSession = await context.queryClient.fetchQuery(
       context.trpc.common.hasValidSession.queryOptions(),
@@ -42,11 +47,13 @@ export const Route = createFileRoute('/dashboard_/admin_/duplicate-uploads')({
       throw redirect({ to: '/dashboard' });
     }
   },
-  loader: async ({ context: { queryClient, trpc } }) => {
+  loaderDeps: ({ search }) => ({ matchPublishedAt: search.matchPublishedAt }),
+  loader: async ({ context: { queryClient, trpc }, deps }) => {
     await queryClient.ensureQueryData(
       trpc.dashboard.admin.getDuplicateUploads.queryOptions({
         limit: 50,
         offset: 0,
+        matchPublishedAt: deps.matchPublishedAt,
       }),
     );
     return {
@@ -69,20 +76,23 @@ type DuplicateGroup = {
   channelName: string;
   channelSlug: string;
   title: string | null;
+  publishedAt: Date | null;
   uploads: Upload[];
 };
 
 function DuplicateGroupRow({
   group,
+  matchPublishedAt,
   onDelete,
   isDeleting,
 }: {
   group: DuplicateGroup;
+  matchPublishedAt: boolean;
   onDelete: (uploadId: string) => void;
   isDeleting: boolean;
 }) {
   const [opened, { toggle }] = useDisclosure(false);
-  const duplicateCount = group.uploads.length - 1; // all but the oldest are duplicates
+  const duplicateCount = group.uploads.length - 1;
 
   const confirmDelete = (uploadId: string, label: string) => {
     modals.openConfirmModal({
@@ -106,14 +116,16 @@ function DuplicateGroupRow({
         <Text size="sm">
           Delete the {duplicateCount} newer cop
           {duplicateCount === 1 ? 'y' : 'ies'} of{' '}
-          <strong>{group.title || 'Untitled'}</strong>, keeping only the oldest?
-          This cannot be undone.
+          <strong>{group.title || 'Untitled'}</strong>
+          {matchPublishedAt && group.publishedAt
+            ? ` (published ${formatDate(group.publishedAt, 'short')})`
+            : ''}
+          , keeping only the oldest? This cannot be undone.
         </Text>
       ),
       labels: { confirm: `Delete ${duplicateCount}`, cancel: 'Cancel' },
       confirmProps: { color: 'red' },
       onConfirm: () => {
-        // Delete all but the first (oldest) upload
         for (const upload of group.uploads.slice(1)) {
           onDelete(upload.id);
         }
@@ -143,6 +155,11 @@ function DuplicateGroupRow({
               </Text>
             )}
           </Text>
+          {matchPublishedAt && group.publishedAt ? (
+            <Text size="xs" c="dimmed">
+              Published {formatDate(group.publishedAt, 'short')}
+            </Text>
+          ) : null}
         </Table.Td>
         <Table.Td>
           <Text size="sm" fw={500}>
@@ -181,7 +198,7 @@ function DuplicateGroupRow({
                       <Table.Th>Upload ID</Table.Th>
                       <Table.Th>Created</Table.Th>
                       <Table.Th>Published</Table.Th>
-                      <Table.Th></Table.Th>
+                      <Table.Th />
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
@@ -243,11 +260,14 @@ function DuplicateGroupRow({
 
 function RouteComponent() {
   const trpc = useTRPC();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const { matchPublishedAt } = Route.useSearch();
 
   const { data, refetch } = useSuspenseQuery(
     trpc.dashboard.admin.getDuplicateUploads.queryOptions({
       limit: 50,
       offset: 0,
+      matchPublishedAt,
     }),
   );
 
@@ -282,12 +302,22 @@ function RouteComponent() {
               : ''}
           </Text>
         </div>
+        <Checkbox
+          label="Match published date"
+          description="Only flag as duplicates if title and published date both match"
+          checked={matchPublishedAt}
+          onChange={(e) =>
+            navigate({
+              search: { matchPublishedAt: e.currentTarget.checked },
+            })
+          }
+        />
       </Group>
 
       <Table verticalSpacing="sm">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th w={24}></Table.Th>
+            <Table.Th w={24} />
             <Table.Th>Title</Table.Th>
             <Table.Th>Channel</Table.Th>
             <Table.Th>Copies</Table.Th>
@@ -306,8 +336,9 @@ function RouteComponent() {
           ) : (
             data.groups.map((group) => (
               <DuplicateGroupRow
-                key={`${group.channelId}::${group.title ?? ''}`}
+                key={`${group.channelId}::${group.title ?? ''}::${group.publishedAt?.toString() ?? ''}`}
                 group={group}
+                matchPublishedAt={matchPublishedAt}
                 onDelete={handleDelete}
                 isDeleting={deleteMutation.isPending}
               />

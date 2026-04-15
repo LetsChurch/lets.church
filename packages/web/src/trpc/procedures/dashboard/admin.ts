@@ -3475,41 +3475,76 @@ export const adminRouter = router({
       z.object({
         limit: z.number().min(1).max(100).default(50),
         offset: z.number().min(0).default(0),
+        matchPublishedAt: z.boolean().default(true),
       }),
     )
     .query(async ({ input }) => {
-      moduleLogger.info('Fetching duplicate uploads');
+      moduleLogger.info('Fetching duplicate uploads', {
+        matchPublishedAt: input.matchPublishedAt,
+      });
 
-      // Find all upload records that share a (channelId, title) pair with another
-      // non-deleted record. Return them grouped so the UI can show all copies.
-      const rows = await db.execute(sql`
-        WITH dup_keys AS (
-          SELECT channel_id, title
-          FROM upload_record
-          WHERE deleted_at IS NULL
-          GROUP BY channel_id, title
-          HAVING COUNT(*) > 1
-          ORDER BY COUNT(*) DESC, title
-          LIMIT ${input.limit} OFFSET ${input.offset}
-        ),
-        dup_key_counts AS (
-          SELECT COUNT(*)::int AS total FROM dup_keys
-        )
-        SELECT
-          ur.id,
-          ur.title,
-          ur.created_at,
-          ur.published_at,
-          c.id   AS channel_id,
-          c.name AS channel_name,
-          c.slug AS channel_slug,
-          (SELECT total FROM dup_key_counts) AS group_count
-        FROM upload_record ur
-        JOIN channel c ON c.id = ur.channel_id
-        WHERE ur.deleted_at IS NULL
-          AND (ur.channel_id, ur.title) IN (SELECT channel_id, title FROM dup_keys)
-        ORDER BY ur.channel_id, ur.title, ur.created_at
-      `);
+      // When matchPublishedAt is true, group by (channelId, title, publishedAt)
+      // so that uploads with the same title but different air dates are not
+      // treated as duplicates (e.g. weekly sermons with a generic title).
+      const rows = input.matchPublishedAt
+        ? await db.execute(sql`
+            WITH dup_keys AS (
+              SELECT channel_id, title, published_at
+              FROM upload_record
+              WHERE deleted_at IS NULL
+              GROUP BY channel_id, title, published_at
+              HAVING COUNT(*) > 1
+              ORDER BY COUNT(*) DESC, title
+              LIMIT ${input.limit} OFFSET ${input.offset}
+            ),
+            dup_key_counts AS (
+              SELECT COUNT(*)::int AS total FROM dup_keys
+            )
+            SELECT
+              ur.id,
+              ur.title,
+              ur.created_at,
+              ur.published_at,
+              c.id   AS channel_id,
+              c.name AS channel_name,
+              c.slug AS channel_slug,
+              (SELECT total FROM dup_key_counts) AS group_count
+            FROM upload_record ur
+            JOIN channel c ON c.id = ur.channel_id
+            WHERE ur.deleted_at IS NULL
+              AND (ur.channel_id, ur.title, ur.published_at) IN (
+                SELECT channel_id, title, published_at FROM dup_keys
+              )
+            ORDER BY ur.channel_id, ur.title, ur.published_at, ur.created_at
+          `)
+        : await db.execute(sql`
+            WITH dup_keys AS (
+              SELECT channel_id, title
+              FROM upload_record
+              WHERE deleted_at IS NULL
+              GROUP BY channel_id, title
+              HAVING COUNT(*) > 1
+              ORDER BY COUNT(*) DESC, title
+              LIMIT ${input.limit} OFFSET ${input.offset}
+            ),
+            dup_key_counts AS (
+              SELECT COUNT(*)::int AS total FROM dup_keys
+            )
+            SELECT
+              ur.id,
+              ur.title,
+              ur.created_at,
+              ur.published_at,
+              c.id   AS channel_id,
+              c.name AS channel_name,
+              c.slug AS channel_slug,
+              (SELECT total FROM dup_key_counts) AS group_count
+            FROM upload_record ur
+            JOIN channel c ON c.id = ur.channel_id
+            WHERE ur.deleted_at IS NULL
+              AND (ur.channel_id, ur.title) IN (SELECT channel_id, title FROM dup_keys)
+            ORDER BY ur.channel_id, ur.title, ur.created_at
+          `);
 
       type Row = {
         id: string;
@@ -3525,7 +3560,6 @@ export const adminRouter = router({
       const typedRows = rows.rows as Row[];
       const groupCount = typedRows[0]?.group_count ?? 0;
 
-      // Group by (channelId, title)
       const groupMap = new Map<
         string,
         {
@@ -3533,6 +3567,7 @@ export const adminRouter = router({
           channelName: string;
           channelSlug: string;
           title: string | null;
+          publishedAt: Date | null;
           uploads: {
             id: string;
             createdAt: Date;
@@ -3542,13 +3577,16 @@ export const adminRouter = router({
       >();
 
       for (const row of typedRows) {
-        const key = `${row.channel_id}::${row.title ?? ''}`;
+        const key = input.matchPublishedAt
+          ? `${row.channel_id}::${row.title ?? ''}::${String(row.published_at ?? '')}`
+          : `${row.channel_id}::${row.title ?? ''}`;
         if (!groupMap.has(key)) {
           groupMap.set(key, {
             channelId: row.channel_id,
             channelName: row.channel_name,
             channelSlug: row.channel_slug,
             title: row.title,
+            publishedAt: row.published_at,
             uploads: [],
           });
         }
