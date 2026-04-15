@@ -9,7 +9,7 @@ export type ScrapedMediaItem = {
   url: string;
   title?: string;
   description?: string;
-  publishedAt?: Date;
+  publishedAt?: Date | string;
 };
 
 /**

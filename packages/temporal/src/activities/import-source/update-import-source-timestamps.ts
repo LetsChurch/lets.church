@@ -6,14 +6,16 @@ import { eq } from 'drizzle-orm';
  */
 export async function updateImportSourceTimestamps(
   importSourceId: string,
-  lastImportedUploadDate?: Date,
+  lastImportedUploadDate?: Date | string,
 ) {
   await db
     .update(ChannelImportSource)
     .set({
       lastImportedAt: new Date(),
       lastSuccessfulImportAt: new Date(),
-      ...(lastImportedUploadDate && { lastImportedUploadDate }),
+      ...(lastImportedUploadDate && {
+        lastImportedUploadDate: new Date(lastImportedUploadDate),
+      }),
       updatedAt: new Date(),
     })
     .where(eq(ChannelImportSource.id, importSourceId));

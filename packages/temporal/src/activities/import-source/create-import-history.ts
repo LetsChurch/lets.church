@@ -11,7 +11,7 @@ export type CreateImportHistoryParams = {
   title: string;
   description?: string;
   url: string;
-  publishedAt: Date;
+  publishedAt: Date | string;
 };
 
 /**
@@ -26,7 +26,7 @@ export async function createImportHistory(
     title: params.title,
     description: params.description || null,
     url: params.url,
-    publishedAt: params.publishedAt,
+    publishedAt: new Date(params.publishedAt),
   });
 
   moduleLogger.info('Created import history record', {

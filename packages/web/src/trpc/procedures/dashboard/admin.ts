@@ -48,6 +48,7 @@ import {
   cancelBulkBackupToGlacier,
   cancelCleanupStaleUploadStates,
   client,
+  deleteUpload,
   getBackfillFilenamesProgress,
   getBackfillUploadStateSizesProgress,
   getBackfillUploadStatesProgress,
@@ -3467,6 +3468,121 @@ export const adminRouter = router({
           message: 'Failed to fetch deleting uploads',
         });
       }
+    }),
+
+  getDuplicateUploads: adminProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+      }),
+    )
+    .query(async ({ input }) => {
+      moduleLogger.info('Fetching duplicate uploads');
+
+      // Find all upload records that share a (channelId, title) pair with another
+      // non-deleted record. Return them grouped so the UI can show all copies.
+      const rows = await db.execute(sql`
+        WITH dup_keys AS (
+          SELECT channel_id, title
+          FROM upload_record
+          WHERE deleted_at IS NULL
+          GROUP BY channel_id, title
+          HAVING COUNT(*) > 1
+          ORDER BY COUNT(*) DESC, title
+          LIMIT ${input.limit} OFFSET ${input.offset}
+        ),
+        dup_key_counts AS (
+          SELECT COUNT(*)::int AS total FROM dup_keys
+        )
+        SELECT
+          ur.id,
+          ur.title,
+          ur.created_at,
+          ur.published_at,
+          c.id   AS channel_id,
+          c.name AS channel_name,
+          c.slug AS channel_slug,
+          (SELECT total FROM dup_key_counts) AS group_count
+        FROM upload_record ur
+        JOIN channel c ON c.id = ur.channel_id
+        WHERE ur.deleted_at IS NULL
+          AND (ur.channel_id, ur.title) IN (SELECT channel_id, title FROM dup_keys)
+        ORDER BY ur.channel_id, ur.title, ur.created_at
+      `);
+
+      type Row = {
+        id: string;
+        title: string | null;
+        created_at: Date;
+        published_at: Date | null;
+        channel_id: string;
+        channel_name: string;
+        channel_slug: string;
+        group_count: number;
+      };
+
+      const typedRows = rows.rows as Row[];
+      const groupCount = typedRows[0]?.group_count ?? 0;
+
+      // Group by (channelId, title)
+      const groupMap = new Map<
+        string,
+        {
+          channelId: string;
+          channelName: string;
+          channelSlug: string;
+          title: string | null;
+          uploads: {
+            id: string;
+            createdAt: Date;
+            publishedAt: Date | null;
+          }[];
+        }
+      >();
+
+      for (const row of typedRows) {
+        const key = `${row.channel_id}::${row.title ?? ''}`;
+        if (!groupMap.has(key)) {
+          groupMap.set(key, {
+            channelId: row.channel_id,
+            channelName: row.channel_name,
+            channelSlug: row.channel_slug,
+            title: row.title,
+            uploads: [],
+          });
+        }
+        groupMap.get(key)?.uploads.push({
+          id: row.id,
+          createdAt: row.created_at,
+          publishedAt: row.published_at,
+        });
+      }
+
+      return {
+        groups: Array.from(groupMap.values()),
+        totalGroups: groupCount,
+      };
+    }),
+
+  deleteDuplicateUpload: adminProcedure
+    .input(z.object({ uploadId: z.string().uuid() }))
+    .mutation(async ({ input }) => {
+      const upload = await db.query.UploadRecord.findFirst({
+        columns: { id: true },
+        where: (t, { eq }) => eq(t.id, input.uploadId),
+      });
+
+      if (!upload) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Upload not found',
+        });
+      }
+
+      await deleteUpload(input.uploadId);
+
+      return { success: true };
     }),
 
   newsletterLists: newsletterListsRouter,

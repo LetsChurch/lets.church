@@ -51,7 +51,7 @@ export async function checkDuplicate(
     conditions.push(
       and(
         eq(ImportHistory.importSourceId, importSourceId),
-        eq(ImportHistory.publishedAt, item.publishedAt),
+        eq(ImportHistory.publishedAt, new Date(item.publishedAt)),
       ),
     );
   }

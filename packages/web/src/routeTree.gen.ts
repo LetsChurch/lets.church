@@ -61,6 +61,7 @@ import { Route as DashboardAdminNewsletterListsRouteImport } from './routes/dash
 import { Route as DashboardAdminImportSourcesRouteImport } from './routes/dashboard_/admin_.import-sources'
 import { Route as DashboardAdminFeaturedRouteImport } from './routes/dashboard_/admin_/featured'
 import { Route as DashboardAdminFailedUploadsRouteImport } from './routes/dashboard_/admin_.failed-uploads'
+import { Route as DashboardAdminDuplicateUploadsRouteImport } from './routes/dashboard_/admin_.duplicate-uploads'
 import { Route as DashboardAdminDeletingUploadsRouteImport } from './routes/dashboard_/admin_.deleting-uploads'
 import { Route as DashboardAdminChannelsRouteImport } from './routes/dashboard_/admin_.channels'
 import { Route as DashboardAdminBackfillFilenamesRouteImport } from './routes/dashboard_/admin_.backfill-filenames'
@@ -366,6 +367,12 @@ const DashboardAdminFailedUploadsRoute =
     path: '/admin/failed-uploads',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardAdminDuplicateUploadsRoute =
+  DashboardAdminDuplicateUploadsRouteImport.update({
+    id: '/admin_/duplicate-uploads',
+    path: '/admin/duplicate-uploads',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardAdminDeletingUploadsRoute =
   DashboardAdminDeletingUploadsRouteImport.update({
     id: '/admin_/deleting-uploads',
@@ -601,6 +608,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/backfill-filenames': typeof DashboardAdminBackfillFilenamesRoute
   '/dashboard/admin/channels': typeof DashboardAdminChannelsRoute
   '/dashboard/admin/deleting-uploads': typeof DashboardAdminDeletingUploadsRoute
+  '/dashboard/admin/duplicate-uploads': typeof DashboardAdminDuplicateUploadsRoute
   '/dashboard/admin/failed-uploads': typeof DashboardAdminFailedUploadsRoute
   '/dashboard/admin/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard/admin/import-sources': typeof DashboardAdminImportSourcesRoute
@@ -685,6 +693,7 @@ export interface FileRoutesByTo {
   '/dashboard/admin/backfill-filenames': typeof DashboardAdminBackfillFilenamesRoute
   '/dashboard/admin/channels': typeof DashboardAdminChannelsRoute
   '/dashboard/admin/deleting-uploads': typeof DashboardAdminDeletingUploadsRoute
+  '/dashboard/admin/duplicate-uploads': typeof DashboardAdminDuplicateUploadsRoute
   '/dashboard/admin/failed-uploads': typeof DashboardAdminFailedUploadsRoute
   '/dashboard/admin/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard/admin/import-sources': typeof DashboardAdminImportSourcesRoute
@@ -773,6 +782,7 @@ export interface FileRoutesById {
   '/dashboard_/admin_/backfill-filenames': typeof DashboardAdminBackfillFilenamesRoute
   '/dashboard_/admin_/channels': typeof DashboardAdminChannelsRoute
   '/dashboard_/admin_/deleting-uploads': typeof DashboardAdminDeletingUploadsRoute
+  '/dashboard_/admin_/duplicate-uploads': typeof DashboardAdminDuplicateUploadsRoute
   '/dashboard_/admin_/failed-uploads': typeof DashboardAdminFailedUploadsRoute
   '/dashboard_/admin_/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard_/admin_/import-sources': typeof DashboardAdminImportSourcesRoute
@@ -861,6 +871,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/backfill-filenames'
     | '/dashboard/admin/channels'
     | '/dashboard/admin/deleting-uploads'
+    | '/dashboard/admin/duplicate-uploads'
     | '/dashboard/admin/failed-uploads'
     | '/dashboard/admin/featured'
     | '/dashboard/admin/import-sources'
@@ -945,6 +956,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/backfill-filenames'
     | '/dashboard/admin/channels'
     | '/dashboard/admin/deleting-uploads'
+    | '/dashboard/admin/duplicate-uploads'
     | '/dashboard/admin/failed-uploads'
     | '/dashboard/admin/featured'
     | '/dashboard/admin/import-sources'
@@ -1032,6 +1044,7 @@ export interface FileRouteTypes {
     | '/dashboard_/admin_/backfill-filenames'
     | '/dashboard_/admin_/channels'
     | '/dashboard_/admin_/deleting-uploads'
+    | '/dashboard_/admin_/duplicate-uploads'
     | '/dashboard_/admin_/failed-uploads'
     | '/dashboard_/admin_/featured'
     | '/dashboard_/admin_/import-sources'
@@ -1452,6 +1465,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAdminFailedUploadsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard_/admin_/duplicate-uploads': {
+      id: '/dashboard_/admin_/duplicate-uploads'
+      path: '/admin/duplicate-uploads'
+      fullPath: '/dashboard/admin/duplicate-uploads'
+      preLoaderRoute: typeof DashboardAdminDuplicateUploadsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard_/admin_/deleting-uploads': {
       id: '/dashboard_/admin_/deleting-uploads'
       path: '/admin/deleting-uploads'
@@ -1782,6 +1802,7 @@ interface DashboardRouteChildren {
   DashboardAdminBackfillFilenamesRoute: typeof DashboardAdminBackfillFilenamesRoute
   DashboardAdminChannelsRoute: typeof DashboardAdminChannelsRoute
   DashboardAdminDeletingUploadsRoute: typeof DashboardAdminDeletingUploadsRoute
+  DashboardAdminDuplicateUploadsRoute: typeof DashboardAdminDuplicateUploadsRoute
   DashboardAdminFailedUploadsRoute: typeof DashboardAdminFailedUploadsRoute
   DashboardAdminFeaturedRoute: typeof DashboardAdminFeaturedRoute
   DashboardAdminImportSourcesRoute: typeof DashboardAdminImportSourcesRoute
@@ -1827,6 +1848,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAdminBackfillFilenamesRoute: DashboardAdminBackfillFilenamesRoute,
   DashboardAdminChannelsRoute: DashboardAdminChannelsRoute,
   DashboardAdminDeletingUploadsRoute: DashboardAdminDeletingUploadsRoute,
+  DashboardAdminDuplicateUploadsRoute: DashboardAdminDuplicateUploadsRoute,
   DashboardAdminFailedUploadsRoute: DashboardAdminFailedUploadsRoute,
   DashboardAdminFeaturedRoute: DashboardAdminFeaturedRoute,
   DashboardAdminImportSourcesRoute: DashboardAdminImportSourcesRoute,

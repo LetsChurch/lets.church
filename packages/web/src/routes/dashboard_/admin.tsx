@@ -199,6 +199,21 @@ function AdminPage() {
           radius="md"
           withBorder
           component={Link}
+          to="/dashboard/admin/duplicate-uploads"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Duplicate Uploads</Text>
+          </Group>
+          <Text size="sm" c="dimmed">
+            Find and delete duplicate imported uploads
+          </Text>
+        </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
           to="/dashboard/admin/failed-uploads"
         >
           <Group justify="space-between" mb="xs">

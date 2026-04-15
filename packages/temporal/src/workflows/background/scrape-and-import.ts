@@ -82,7 +82,7 @@ export async function scrapeAndImportWorkflow(
     let imported = 0;
     let skipped = 0;
     let failed = 0;
-    let latestUploadDate: Date | undefined;
+    let latestUploadDate: string | undefined;
 
     // Process each item
     for (const item of items) {
@@ -99,8 +99,9 @@ export async function scrapeAndImportWorkflow(
 
         // Track latest upload date
         if (item.publishedAt) {
-          if (!latestUploadDate || item.publishedAt > latestUploadDate) {
-            latestUploadDate = item.publishedAt;
+          const publishedAtStr = String(item.publishedAt);
+          if (!latestUploadDate || publishedAtStr > latestUploadDate) {
+            latestUploadDate = publishedAtStr;
           }
         }
 
