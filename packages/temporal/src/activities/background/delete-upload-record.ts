@@ -40,28 +40,14 @@ export async function deleteUploadRecordSearch(id: string) {
     context: { id },
   });
 
-  try {
-    activityLogger.info('Deleting from index lc_uploads_v2');
-    await esClient.delete({
-      index: 'lc_uploads_v2',
-      id,
-    });
+  for (const index of [
+    'lc_uploads_v2',
+    'lc_transcripts',
+    'lc_transcripts_v2',
+  ] as const) {
+    activityLogger.info(`Deleting from index ${index}`);
+    await esClient.delete({ index, id }, { ignore: [404] });
     activityLogger.info('Done!');
-    activityLogger.info('Deleting from index lc_transcripts');
-    await esClient.delete({
-      index: 'lc_transcripts',
-      id,
-    });
-    activityLogger.info('Done!');
-    activityLogger.info('Deleting from index lc_transcripts_v2');
-    await esClient.delete({
-      index: 'lc_transcripts_v2',
-      id,
-    });
-    activityLogger.info('Done!');
-  } catch (e) {
-    activityLogger.error(`Error deleting from ElasticSearch: ${e}`);
-    return false;
   }
 
   return true;
@@ -74,12 +60,7 @@ export async function deleteUploadRecordDb(id: string) {
   });
   activityLogger.info(`Deleting upload record from database for ${id}`);
 
-  try {
-    await db.delete(UploadRecord).where(eq(UploadRecord.id, id));
-  } catch (e) {
-    activityLogger.info(`Error deleting from database: ${e}`);
-    return false;
-  }
+  await db.delete(UploadRecord).where(eq(UploadRecord.id, id));
 
   return true;
 }
