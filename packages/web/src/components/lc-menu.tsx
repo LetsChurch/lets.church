@@ -124,6 +124,7 @@ type MenuItemLinkProps = {
   children: ReactNode;
   icon?: ReactNode;
   className?: string;
+  onClick?: React.MouseEventHandler<HTMLAnchorElement>;
 };
 
 export function MenuItemLink({
@@ -132,6 +133,7 @@ export function MenuItemLink({
   children,
   icon,
   className = '',
+  onClick,
 }: MenuItemLinkProps) {
   return (
     <LcMenuItem
@@ -140,6 +142,7 @@ export function MenuItemLink({
           {...props}
           href={href}
           download={download}
+          onClick={onClick}
           className={`${menuItemClassName} ${className}`}
         >
           {icon ? icon : null}

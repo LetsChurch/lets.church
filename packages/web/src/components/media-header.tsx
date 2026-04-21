@@ -46,6 +46,8 @@ type MediaHeaderProps = {
   hasAudio?: boolean;
   uploadId?: string;
   canEditUpload?: boolean;
+  publishedAt?: Date | string | null;
+  lengthSeconds?: number | null;
 };
 
 export function MediaHeader({
@@ -63,6 +65,8 @@ export function MediaHeader({
   hasAudio,
   uploadId,
   canEditUpload,
+  publishedAt,
+  lengthSeconds,
 }: MediaHeaderProps) {
   return (
     <div className="mt-8 flex flex-col gap-3">
@@ -79,6 +83,7 @@ export function MediaHeader({
         downloadData={downloadData}
         channelData={{
           id: channel.id,
+          name: channel.name,
           isFollowing: channel.isFollowing,
         }}
         onFollowToggle={onFollowToggle}
@@ -89,6 +94,9 @@ export function MediaHeader({
         hasAudio={hasAudio}
         uploadId={uploadId}
         canEditUpload={canEditUpload}
+        mediaTitle={title}
+        publishedAt={publishedAt}
+        lengthSeconds={lengthSeconds}
         channelLink={
           <Link
             to="/channel/$slug"

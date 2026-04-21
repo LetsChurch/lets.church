@@ -830,6 +830,8 @@ function RouteComponent() {
               hasAudio={!!media.audioSource}
               uploadId={params.mediaId}
               canEditUpload={media.canEdit}
+              publishedAt={media.publishedAt}
+              lengthSeconds={media.lengthSeconds}
             />
 
             <MediaInfoTabs

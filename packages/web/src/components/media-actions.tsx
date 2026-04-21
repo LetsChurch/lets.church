@@ -22,6 +22,7 @@ import {
   IconThumbUpFilled,
   IconVolume,
 } from '@tabler/icons-react';
+import posthog from 'posthog-js';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import LcButton from '@/components/lc-button';
@@ -65,6 +66,7 @@ type MediaActionsProps = {
   };
   channelData: {
     id: string;
+    name: string;
     isFollowing: boolean;
   };
   onFollowToggle: () => void;
@@ -79,6 +81,9 @@ type MediaActionsProps = {
   channelLink?: ReactNode;
   uploadId?: string;
   canEditUpload?: boolean;
+  mediaTitle?: string | null;
+  publishedAt?: Date | string | null;
+  lengthSeconds?: number | null;
 };
 
 const windowConfig = Object.entries({
@@ -132,10 +137,37 @@ export function MediaActions({
   channelLink,
   uploadId,
   canEditUpload = false,
+  mediaTitle,
+  publishedAt,
+  lengthSeconds,
 }: MediaActionsProps) {
   const abortController = useAbortController();
   const currentTime = useStore($currentTime);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+
+  const baseEventProps = useCallback(
+    () => ({
+      upload_id: uploadId,
+      media_title: mediaTitle ?? null,
+      channel_id: channelData.id,
+      channel_name: channelData.name,
+      published_at:
+        publishedAt instanceof Date
+          ? publishedAt.toISOString()
+          : (publishedAt ?? null),
+      length_seconds: lengthSeconds ?? null,
+      playback_position_seconds: Math.floor(currentTime),
+    }),
+    [
+      uploadId,
+      mediaTitle,
+      channelData.id,
+      channelData.name,
+      publishedAt,
+      lengthSeconds,
+      currentTime,
+    ],
+  );
   const [frozenTime, setFrozenTime] = useState<number>(0);
   const [includeTimestamp, setIncludeTimestamp] = useState(true);
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
@@ -222,7 +254,13 @@ export function MediaActions({
 
     try {
       await navigator.share(shareDataToShare);
-      // Keep modal open after sharing
+      posthog.capture('media_shared', {
+        ...baseEventProps(),
+        platform: 'native',
+        share_url: shareUrl,
+        includes_timestamp: includeTimestamp,
+        timestamp_seconds: includeTimestamp ? Math.floor(frozenTime) : null,
+      });
     } catch (error) {
       if ((error as Error).name === 'AbortError') {
         // User cancelled, keep modal open
@@ -233,9 +271,16 @@ export function MediaActions({
     }
   };
 
-  const openShareWindow = (url: string) => {
+  const openShareWindow = (url: string, platform: string) => {
     // Keep modal open after opening share window
     window.open(url, '', windowConfig);
+    posthog.capture('media_shared', {
+      ...baseEventProps(),
+      platform,
+      share_url: getShareUrl(shareData.url),
+      includes_timestamp: includeTimestamp,
+      timestamp_seconds: includeTimestamp ? Math.floor(frozenTime) : null,
+    });
   };
 
   const handleCopy = async () => {
@@ -243,6 +288,13 @@ export function MediaActions({
       const shareUrl = getShareUrl(shareData.url);
       await navigator.clipboard.writeText(shareUrl);
       setCopySuccess('link');
+      posthog.capture('media_shared', {
+        ...baseEventProps(),
+        platform: 'copy_link',
+        share_url: shareUrl,
+        includes_timestamp: includeTimestamp,
+        timestamp_seconds: includeTimestamp ? Math.floor(frozenTime) : null,
+      });
       abortableSetTimeout(
         () => {
           setCopySuccess(null);
@@ -289,6 +341,13 @@ export function MediaActions({
       }
       await navigator.clipboard.writeText(embedCode);
       setCopySuccess(`embed-${type}`);
+      posthog.capture('media_shared', {
+        ...baseEventProps(),
+        platform: `embed_${type}`,
+        share_url: embedUrl,
+        includes_timestamp: includeTimestamp,
+        timestamp_seconds: includeTimestamp ? Math.floor(frozenTime) : null,
+      });
       abortableSetTimeout(
         () => {
           setCopySuccess(null);
@@ -330,7 +389,14 @@ export function MediaActions({
               buttons={[
                 {
                   type: 'button',
-                  onClick: () => onRate('LIKE'),
+                  onClick: () => {
+                    const isRemoving = ratingData.userRating === 'LIKE';
+                    posthog.capture(
+                      isRemoving ? 'media_like_removed' : 'media_liked',
+                      baseEventProps(),
+                    );
+                    onRate('LIKE');
+                  },
                   className: cn(
                     ratingData.userRating === 'LIKE' &&
                       'bg-gray-950/15 dark:bg-white/10',
@@ -349,7 +415,14 @@ export function MediaActions({
                 },
                 {
                   type: 'button',
-                  onClick: () => onRate('DISLIKE'),
+                  onClick: () => {
+                    const isRemoving = ratingData.userRating === 'DISLIKE';
+                    posthog.capture(
+                      isRemoving ? 'media_dislike_removed' : 'media_disliked',
+                      baseEventProps(),
+                    );
+                    onRate('DISLIKE');
+                  },
                   className: cn(
                     ratingData.userRating === 'DISLIKE' &&
                       'bg-gray-950/15 dark:bg-white/10',
@@ -384,7 +457,13 @@ export function MediaActions({
                 'flex items-center gap-0.5',
                 isSaved && 'bg-gray-950/15 dark:bg-white/10',
               )}
-              onClick={onSaveToggle}
+              onClick={() => {
+                posthog.capture(
+                  isSaved ? 'media_unsaved' : 'media_saved',
+                  baseEventProps(),
+                );
+                onSaveToggle();
+              }}
             >
               {isSaved ? (
                 <IconBookmarkFilled size={16} />
@@ -400,7 +479,15 @@ export function MediaActions({
                 'flex items-center gap-0.5',
                 channelData.isFollowing && 'bg-gray-950/15 dark:bg-white/10',
               )}
-              onClick={onFollowToggle}
+              onClick={() => {
+                posthog.capture(
+                  channelData.isFollowing
+                    ? 'channel_unfollowed'
+                    : 'channel_followed',
+                  baseEventProps(),
+                );
+                onFollowToggle();
+              }}
             >
               {channelData.isFollowing ? (
                 <IconFlagFilled size={16} />
@@ -474,6 +561,13 @@ export function MediaActions({
                           href={download.url}
                           download
                           icon={getDownloadIcon(download.kind)}
+                          onClick={() => {
+                            posthog.capture('media_downloaded', {
+                              ...baseEventProps(),
+                              download_kind: download.kind,
+                              download_label: download.label,
+                            });
+                          }}
                         >
                           Download {download.label}
                         </MenuItemLink>
@@ -522,6 +616,7 @@ export function MediaActions({
                           quote: shareData.title,
                         },
                       )}`,
+                      'facebook',
                     );
                   }}
                   className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
@@ -541,6 +636,7 @@ export function MediaActions({
                         url: shareUrl,
                         text: shareData.title,
                       })}`,
+                      'x',
                     );
                   }}
                   className="flex flex-col items-center gap-2 transition-opacity hover:opacity-70"
