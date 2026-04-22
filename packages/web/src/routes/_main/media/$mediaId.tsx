@@ -754,6 +754,7 @@ function RouteComponent() {
     aspectWidth,
     aspectHeight,
     transcriptSidebarWidth: transcriptWidth,
+    isAudio: !media.mediaSource,
   });
 
   const handleTranscriptWidthChange = (width: number) => {

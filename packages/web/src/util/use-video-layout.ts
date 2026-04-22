@@ -14,6 +14,7 @@ type VideoLayoutParams = {
   chromeBelow?: number;
   transcriptSidebarWidth?: number;
   gap?: number;
+  isAudio?: boolean;
 };
 
 type VideoLayoutResult = {
@@ -36,6 +37,7 @@ export function useVideoLayout({
   chromeBelow = 120, // title, actions, tabs area
   transcriptSidebarWidth = 368, // 92rem = 92 * 0.25rem = 23rem = 368px
   gap = 16, // gap-4 = 1rem = 16px
+  isAudio = false,
 }: VideoLayoutParams = {}): VideoLayout {
   const [pageSidebarCollapsed, setPageSidebarCollapsed] = useState(
     getInitialSidebarCollapsed(),
@@ -61,6 +63,7 @@ export function useVideoLayout({
       transcriptSidebarWidth: dynamicTranscriptWidth,
       gap,
       pageSidebarCollapsed,
+      isAudio,
     });
   });
 
@@ -79,6 +82,7 @@ export function useVideoLayout({
           transcriptSidebarWidth: dynamicTranscriptWidth,
           gap,
           pageSidebarCollapsed,
+          isAudio,
         }),
       );
     };
@@ -112,6 +116,7 @@ export function useVideoLayout({
     dynamicTranscriptWidth,
     gap,
     pageSidebarCollapsed,
+    isAudio,
   ]);
 
   return { ...layout, setTranscriptWidth: setDynamicTranscriptWidth };
@@ -129,6 +134,7 @@ type CalculateLayoutParams = VideoLayoutParams & {
   transcriptSidebarWidth: number;
   gap: number;
   pageSidebarCollapsed: boolean;
+  isAudio: boolean;
 };
 
 function calculateLayout({
@@ -143,6 +149,7 @@ function calculateLayout({
   transcriptSidebarWidth,
   gap,
   pageSidebarCollapsed,
+  isAudio,
 }: CalculateLayoutParams): VideoLayoutResult {
   const aspect = aspectWidth / aspectHeight;
 
@@ -163,6 +170,16 @@ function calculateLayout({
     pageSidebarWidth -
     contentMargins -
     (showSidebar ? transcriptSidebarWidth + gap : 0);
+
+  // Audio always fills available width; aspect ratio and height constraints don't apply
+  if (isAudio) {
+    return {
+      videoWidth: Math.round(availableWidth),
+      videoHeight: 240,
+      containerWidth: Math.round(availableWidth),
+      showSidebar,
+    };
+  }
 
   // Calculate video dimensions based on available width
   let w = availableWidth;
