@@ -476,7 +476,7 @@ export function Player({
                       rel="noopener noreferrer"
                       className="flex items-start"
                     >
-                      <Logo />
+                      <Logo variant="light" />
                     </a>
                   ) : null}
                   <div className="flex items-start gap-2.5 group-[[mediaisfullscreen]]:gap-4">
