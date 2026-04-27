@@ -486,7 +486,7 @@ export function Player({
                         className={cn(
                           'size-7 rounded-lg bg-transparent p-1 group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5',
                           mediaType === 'video'
-                            ? 'border-fancy-pants backdrop-blur-lg'
+                            ? 'border-fancy-pants bg-black/30 backdrop-blur-lg'
                             : '[--media-icon-color:var(--color-primary)]',
                         )}
                       />
@@ -497,7 +497,7 @@ export function Player({
                         className={cn(
                           'size-7 rounded-lg bg-transparent p-1 group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5',
                           mediaType === 'video'
-                            ? 'border-fancy-pants backdrop-blur-lg'
+                            ? 'border-fancy-pants bg-black/30 backdrop-blur-lg'
                             : 'text-primary',
                         )}
                       />
@@ -507,13 +507,13 @@ export function Player({
                         <LcTooltip content="Picture in Picture" side="bottom">
                           <MediaPipButton
                             noTooltip
-                            className="size-7 rounded-lg border-fancy-pants bg-transparent p-1 backdrop-blur-lg group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5"
+                            className="size-7 rounded-lg border-fancy-pants bg-black/30 p-1 backdrop-blur-lg group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5"
                           />
                         </LcTooltip>
                         <LcTooltip content="Fullscreen" side="bottom">
                           <MediaFullscreenButton
                             noTooltip
-                            className="size-7 rounded-lg border-fancy-pants bg-transparent p-1 backdrop-blur-lg group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5"
+                            className="size-7 rounded-lg border-fancy-pants bg-black/30 p-1 backdrop-blur-lg group-[[mediaisfullscreen]]:size-10 group-[[mediaisfullscreen]]:p-1.5"
                           />
                         </LcTooltip>
                       </>
@@ -546,7 +546,7 @@ export function Player({
                     className={cn(
                       'size-8 rounded-lg bg-transparent group-[[mediaisfullscreen]]:size-12',
                       mediaType === 'video'
-                        ? 'border-fancy-pants backdrop-blur-lg'
+                        ? 'border-fancy-pants bg-black/30 backdrop-blur-lg'
                         : '[--media-icon-color:var(--color-primary)]',
                     )}
                   />
@@ -554,7 +554,7 @@ export function Player({
                     className={cn(
                       'size-12 rounded-lg bg-transparent group-[[mediaisfullscreen]]:size-18',
                       mediaType === 'video'
-                        ? 'border-fancy-pants backdrop-blur-lg'
+                        ? 'border-fancy-pants bg-black/30 backdrop-blur-lg'
                         : '[--media-icon-color:var(--color-primary)]',
                     )}
                   />
@@ -563,7 +563,7 @@ export function Player({
                     className={cn(
                       'size-8 rounded-lg bg-transparent group-[[mediaisfullscreen]]:size-12',
                       mediaType === 'video'
-                        ? 'border-fancy-pants backdrop-blur-lg'
+                        ? 'border-fancy-pants bg-black/30 backdrop-blur-lg'
                         : '[--media-icon-color:var(--color-primary)]',
                     )}
                   />
