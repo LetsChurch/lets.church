@@ -23,7 +23,7 @@ export function MediaSwitcher({
         onValueChange?.(newValue[0] as MediaType | null);
       }}
       className={cn(
-        'flex h-8 items-center gap-1 rounded-lg bg-white/10 p-1 backdrop-blur-lg',
+        'flex h-8 items-center gap-1 rounded-lg bg-black/30 p-1 backdrop-blur-lg',
         className,
       )}
     >
