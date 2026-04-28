@@ -132,7 +132,7 @@ export function CommentsSection({
             strokeWidth={1.5}
           />
           <p className="text-center text-primary/50 text-sm">
-            Comments are turned off for this video
+            Comments are turned off for this media
           </p>
         </div>
       )}
