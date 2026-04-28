@@ -471,7 +471,7 @@ export function Player({
                     </div>
                   ) : embed ? (
                     <a
-                      href="https://lets.church"
+                      href={`https://lets.church/media/${uploadRecordId}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-start"
