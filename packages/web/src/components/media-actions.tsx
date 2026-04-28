@@ -11,7 +11,7 @@ import {
   IconCheck,
   IconCode,
   IconDeviceTvOld,
-  IconDots,
+  IconDownload,
   IconEdit,
   IconFlag,
   IconFlagFilled,
@@ -22,17 +22,13 @@ import {
   IconThumbUpFilled,
   IconVolume,
 } from '@tabler/icons-react';
+import { Link } from '@tanstack/react-router';
 import posthog from 'posthog-js';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import LcButton from '@/components/lc-button';
 import LcButtonGroup from '@/components/lc-button-group';
-import {
-  LcMenu,
-  MenuItemButton,
-  MenuItemLink,
-  MenuItemRouterLink,
-} from '@/components/lc-menu';
+import { LcMenu, MenuItemLink } from '@/components/lc-menu';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import { LcTooltip } from '@/components/lc-tooltip';
 import { useAbortController } from '@/hooks/use-abort-controller';
@@ -448,6 +444,42 @@ export function MediaActions({
               </LcButton>
             </LcTooltip>
 
+            {/* Download */}
+            {downloadData?.enabled && downloadData.urls.length > 0 ? (
+              <LcMenu.Root>
+                <LcMenu.Trigger
+                  render={(props) => (
+                    <LcButton {...props} className="p-2">
+                      <IconDownload size={16} />
+                    </LcButton>
+                  )}
+                />
+                <LcMenu.Portal>
+                  <LcMenu.Positioner sideOffset={8} align="start">
+                    <LcMenu.Popup>
+                      {downloadData.urls.map((download) => (
+                        <MenuItemLink
+                          key={download.url}
+                          href={download.url}
+                          download
+                          icon={getDownloadIcon(download.kind)}
+                          onClick={() => {
+                            posthog.capture('media_downloaded', {
+                              ...baseEventProps(),
+                              download_kind: download.kind,
+                              download_label: download.label,
+                            });
+                          }}
+                        >
+                          Download {download.label}
+                        </MenuItemLink>
+                      ))}
+                    </LcMenu.Popup>
+                  </LcMenu.Positioner>
+                </LcMenu.Portal>
+              </LcMenu.Root>
+            ) : null}
+
             {/* Divider */}
             <div className="h-7 w-px shrink-0 bg-vertical-divider" />
 
@@ -507,77 +539,19 @@ export function MediaActions({
           />
         </div>
 
-        {/* More (Embed, Download) - always visible */}
-        <div className="shrink-0 pr-4">
-          <LcMenu.Root>
-            <LcMenu.Trigger
-              render={(props) => (
-                <LcButton {...props} className="p-2">
-                  <IconDots size={16} />
-                </LcButton>
-              )}
-            />
-            <LcMenu.Portal>
-              <LcMenu.Positioner sideOffset={8} align="start">
-                <LcMenu.Popup>
-                  {/* Edit Upload */}
-                  {canEditUpload && uploadId ? (
-                    <MenuItemRouterLink
-                      to="/dashboard/channels/$channelId/uploads/$uploadId"
-                      params={{ channelId: channelData.id, uploadId }}
-                      icon={<IconEdit size={16} />}
-                    >
-                      Edit Upload
-                    </MenuItemRouterLink>
-                  ) : null}
-
-                  {/* Embed */}
-                  {hasVideo ? (
-                    <MenuItemButton
-                      onClick={() => handleCopyEmbed('video')}
-                      icon={<IconCode size={16} />}
-                    >
-                      {copySuccess === 'embed-video'
-                        ? 'Copied!'
-                        : 'Copy Video Embed'}
-                    </MenuItemButton>
-                  ) : null}
-                  {hasAudio ? (
-                    <MenuItemButton
-                      onClick={() => handleCopyEmbed('audio')}
-                      icon={<IconCode size={16} />}
-                    >
-                      {copySuccess === 'embed-audio'
-                        ? 'Copied!'
-                        : 'Copy Audio Embed'}
-                    </MenuItemButton>
-                  ) : null}
-
-                  {/* Download */}
-                  {downloadData?.enabled && downloadData.urls.length > 0
-                    ? downloadData.urls.map((download) => (
-                        <MenuItemLink
-                          key={download.url}
-                          href={download.url}
-                          download
-                          icon={getDownloadIcon(download.kind)}
-                          onClick={() => {
-                            posthog.capture('media_downloaded', {
-                              ...baseEventProps(),
-                              download_kind: download.kind,
-                              download_label: download.label,
-                            });
-                          }}
-                        >
-                          Download {download.label}
-                        </MenuItemLink>
-                      ))
-                    : null}
-                </LcMenu.Popup>
-              </LcMenu.Positioner>
-            </LcMenu.Portal>
-          </LcMenu.Root>
-        </div>
+        {/* Edit Upload */}
+        {canEditUpload && uploadId ? (
+          <div className="shrink-0 pr-4">
+            <Link
+              to="/dashboard/channels/$channelId/uploads/$uploadId"
+              params={{ channelId: channelData.id, uploadId }}
+              className="inline-flex items-center gap-0.5 rounded-full border-fancy-pants bg-gray-950/10 px-3 py-1.5 font-semibold text-primary/80 text-sm active:scale-[0.97] dark:bg-white/15"
+            >
+              <IconEdit size={16} />
+              Edit
+            </Link>
+          </div>
+        ) : null}
       </div>
 
       {/* Share Modal */}
