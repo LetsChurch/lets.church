@@ -1931,7 +1931,8 @@ export const channelRouter = router({
       try {
         const playlist = await db.query.UploadList.findFirst({
           columns: { id: true },
-          where: (t, { eq }) => eq(t.id, input.playlistId),
+          where: (t, { and, eq }) =>
+            and(eq(t.id, input.playlistId), eq(t.channelId, input.channelId)),
         });
 
         if (!playlist) {
@@ -1950,7 +1951,12 @@ export const channelRouter = router({
           });
         }
 
-        await db.delete(UploadList).where(eq(UploadList.id, input.playlistId));
+        await db.delete(UploadList).where(
+          and(
+            eq(UploadList.id, input.playlistId),
+            eq(UploadList.channelId, input.channelId),
+          ),
+        );
 
         moduleLogger.info(
           {
