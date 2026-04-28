@@ -850,6 +850,9 @@ function RouteComponent() {
               lengthSeconds={media.lengthSeconds}
               showTranscriptTab={!layout.showSidebar}
               showPlaylistTab={!layout.showSidebar && hasPlaylistContext}
+              playlistTabLabel={
+                playlistData.type === 'SERIES' ? 'Series' : 'Playlist'
+              }
               showCommentsTab={!layout.showSidebar}
               commentsEnabled={media.userCommentsEnabled}
               onTranscriptClick={() => setTranscriptDialogOpen(true)}

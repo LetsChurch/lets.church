@@ -14,6 +14,7 @@ type MediaInfoTabsProps = {
   lengthSeconds: number | null;
   showTranscriptTab: boolean;
   showPlaylistTab: boolean;
+  playlistTabLabel?: string;
   showCommentsTab: boolean;
   commentsEnabled: boolean;
   onTranscriptClick: () => void;
@@ -30,6 +31,7 @@ export function MediaInfoTabs({
   lengthSeconds,
   showTranscriptTab,
   showPlaylistTab,
+  playlistTabLabel = 'Playlist',
   showCommentsTab,
   commentsEnabled,
   onTranscriptClick,
@@ -109,7 +111,7 @@ export function MediaInfoTabs({
             className="relative pt-1.5 pb-2"
           >
             <span className="font-medium text-primary/70 text-sm hover:text-primary">
-              Playlist
+              {playlistTabLabel}
             </span>
           </button>
         ) : null}
