@@ -173,6 +173,15 @@ function calculateLayout({
 
   // Audio always fills available width; aspect ratio and height constraints don't apply
   if (isAudio) {
+    // Mirror the video guard: collapse the sidebar if there isn't enough room
+    // for the player. Without this, the page sidebar and transcript sidebar
+    // both appear at exactly vw=640px, leaving only ~24px (or negative when the
+    // stored transcript width is large), causing a "maximum call stack size
+    // exceeded" crash on breakpoint crossings.
+    if (showSidebar && availableWidth < minVisibleHeight) {
+      showSidebar = false;
+      availableWidth = vw - pageSidebarWidth - contentMargins;
+    }
     return {
       videoWidth: Math.round(availableWidth),
       videoHeight: 240,
