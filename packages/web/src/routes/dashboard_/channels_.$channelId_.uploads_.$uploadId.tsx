@@ -881,7 +881,7 @@ function ChannelUploadPage() {
                 disabled={isProcessing}
                 fullWidth
               >
-                {upload.isFeatured ? 'Remove from Featured' : 'Add to Featured'}
+                Feature
               </Button>
             ) : null}
 

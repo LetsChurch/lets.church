@@ -1974,19 +1974,17 @@ export const adminRouter = router({
           });
         }
 
-        // Get max rank and insert atomically to avoid rank collisions
+        // Shift all existing ranks up and insert at rank 0 (top of list)
         const newRank = await db.transaction(async (tx) => {
-          const maxRankRow = await tx.query.FeaturedUpload.findFirst({
-            columns: { rank: true },
-            orderBy: (t, { desc }) => [desc(t.rank)],
-          });
-          const rank = (maxRankRow?.rank ?? -1) + 1;
+          await tx
+            .update(FeaturedUpload)
+            .set({ rank: sql`${FeaturedUpload.rank} + 1` });
           await tx.insert(FeaturedUpload).values({
             uploadRecordId: input.uploadId,
-            rank,
+            rank: 0,
             updatedAt: new Date(),
           });
-          return rank;
+          return 0;
         });
 
         moduleLogger.info(
