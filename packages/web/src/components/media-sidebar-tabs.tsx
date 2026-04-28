@@ -89,7 +89,9 @@ export function MediaSidebarTabs({
               }`}
             >
               <IconListNumbers size={16} />
-              <span>Playlist</span>
+              <span>
+                {playlistContext?.listType === 'series' ? 'Series' : 'Playlist'}
+              </span>
             </button>
             <button
               type="button"

@@ -1444,8 +1444,8 @@ export const channelRouter = router({
         }
       }
 
-      // Filter uploadListEntries to series belonging to this channel
-      const seriesEntries = uploadListEntries.filter(
+      // Filter uploadListEntries to the single series belonging to this channel
+      const seriesEntry = uploadListEntries.find(
         (e) =>
           e.uploadList.type === 'SERIES' &&
           e.uploadList.channelId === input.channelId,
@@ -1458,11 +1458,13 @@ export const channelRouter = router({
           isFeatured: !!featuredUpload,
           mediaSource,
           audioSource,
-          series: seriesEntries.map((e) => ({
-            id: e.uploadList.id,
-            title: e.uploadList.title,
-            type: e.uploadList.type,
-          })),
+          series: seriesEntry
+            ? {
+                id: seriesEntry.uploadList.id,
+                title: seriesEntry.uploadList.title,
+                type: seriesEntry.uploadList.type,
+              }
+            : null,
           hasActiveWorkflow,
         },
         channel: {
@@ -1951,12 +1953,14 @@ export const channelRouter = router({
           });
         }
 
-        await db.delete(UploadList).where(
-          and(
-            eq(UploadList.id, input.playlistId),
-            eq(UploadList.channelId, input.channelId),
-          ),
-        );
+        await db
+          .delete(UploadList)
+          .where(
+            and(
+              eq(UploadList.id, input.playlistId),
+              eq(UploadList.channelId, input.channelId),
+            ),
+          );
 
         moduleLogger.info(
           {
@@ -2001,7 +2005,7 @@ export const channelRouter = router({
       try {
         // Get the playlist to verify it exists and get its channelId
         const playlist = await db.query.UploadList.findFirst({
-          columns: { id: true, channelId: true },
+          columns: { id: true, channelId: true, type: true },
           where: (t, { eq }) => eq(t.id, input.playlistId),
         });
 
@@ -2057,6 +2061,28 @@ export const channelRouter = router({
             code: 'NOT_FOUND',
             message: 'Upload not found or does not belong to this channel',
           });
+        }
+
+        // If adding to a series, enforce one-series-per-upload
+        if (playlist.type === 'SERIES') {
+          const existingSeries = await db.query.UploadListEntry.findFirst({
+            columns: { uploadListId: true },
+            with: {
+              uploadList: { columns: { type: true } },
+            },
+            where: (t, { and, eq, ne }) =>
+              and(
+                eq(t.uploadRecordId, input.uploadId),
+                ne(t.uploadListId, input.playlistId),
+              ),
+          });
+
+          if (existingSeries?.uploadList.type === 'SERIES') {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Upload already belongs to a series',
+            });
+          }
         }
 
         // Check if upload is already in playlist

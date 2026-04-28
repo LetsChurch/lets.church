@@ -11,9 +11,9 @@ import {
   Loader,
   LoadingOverlay,
   Modal,
-  MultiSelect,
   Progress,
   Radio,
+  Select,
   Stack,
   Text,
   Textarea,
@@ -161,10 +161,7 @@ function ChannelUploadPage() {
   const [newSeriesTitle, setNewSeriesTitle] = useState('');
 
   // Track original series for comparison
-  const originalSeriesIds = useMemo(
-    () => new Set(upload.series?.map((s) => s.id) ?? []),
-    [upload.series],
-  );
+  const originalSeriesId = upload.series?.id ?? null;
 
   // Series search query
   const { data: seriesSearchResults } = useQuery({
@@ -337,8 +334,8 @@ function ChannelUploadPage() {
     trpc.dashboard.channels.createPlaylist.mutationOptions({
       onSuccess: async (data) => {
         showSuccess({ message: 'Series created successfully' });
-        // Add newly created series to form
-        form.setFieldValue('seriesIds', (prev) => [...prev, data.playlist.id]);
+        // Select the newly created series
+        form.setFieldValue('seriesId', data.playlist.id);
         setShowCreateSeriesModal(false);
         setNewSeriesTitle('');
         setSeriesSearchValue('');
@@ -410,7 +407,7 @@ function ChannelUploadPage() {
       visibility: upload.visibility,
       userCommentsEnabled: upload.userCommentsEnabled,
       downloadsEnabled: upload.downloadsEnabled,
-      seriesIds: upload.series?.map((s) => s.id) ?? [],
+      seriesId: upload.series?.id ?? null,
     },
     validators: {
       onChange: uploadFormSchema,
@@ -452,66 +449,25 @@ function ChannelUploadPage() {
           ...value,
         });
 
-        // Calculate series changes
-        const currentSeriesIds = new Set(value.seriesIds);
-        const seriesToAdd = [...currentSeriesIds].filter(
-          (id) => !originalSeriesIds.has(id),
-        );
-        const seriesToRemove = [...originalSeriesIds].filter(
-          (id) => !currentSeriesIds.has(id),
-        );
-
-        // Handle series changes with parallel operations
-        if (seriesToAdd.length > 0 || seriesToRemove.length > 0) {
+        // Handle series change
+        const newSeriesId = value.seriesId ?? null;
+        if (newSeriesId !== originalSeriesId) {
           try {
-            // Run all add operations in parallel
-            const addResults = await Promise.allSettled(
-              seriesToAdd.map((seriesId) =>
-                trpcClient.dashboard.channels.addToPlaylist.mutate({
-                  channelId,
-                  playlistId: seriesId,
-                  uploadId,
-                }),
-              ),
-            );
-
-            // Run all remove operations in parallel
-            const removeResults = await Promise.allSettled(
-              seriesToRemove.map((seriesId) =>
-                trpcClient.dashboard.channels.removeFromPlaylist.mutate({
-                  channelId,
-                  playlistId: seriesId,
-                  uploadId,
-                }),
-              ),
-            );
-
-            // Aggregate errors and provide granular feedback
-            const addFailures = addResults.filter(
-              (r) => r.status === 'rejected',
-            );
-            const removeFailures = removeResults.filter(
-              (r) => r.status === 'rejected',
-            );
-
-            if (addFailures.length > 0 || removeFailures.length > 0) {
-              const errorParts = [];
-              if (addFailures.length > 0) {
-                errorParts.push(
-                  `Failed to add to ${addFailures.length} of ${seriesToAdd.length} series`,
-                );
-              }
-              if (removeFailures.length > 0) {
-                errorParts.push(
-                  `Failed to remove from ${removeFailures.length} of ${seriesToRemove.length} series`,
-                );
-              }
-              showFailure({
-                message: errorParts.join('; '),
+            if (originalSeriesId) {
+              await trpcClient.dashboard.channels.removeFromPlaylist.mutate({
+                channelId,
+                playlistId: originalSeriesId,
+                uploadId,
+              });
+            }
+            if (newSeriesId) {
+              await trpcClient.dashboard.channels.addToPlaylist.mutate({
+                channelId,
+                playlistId: newSeriesId,
+                uploadId,
               });
             }
           } finally {
-            // Always invalidate queries to reflect actual state
             await queryClient.invalidateQueries({
               queryKey: trpc.dashboard.channels.getUploadRecord.queryKey({
                 channelId,
@@ -529,36 +485,23 @@ function ChannelUploadPage() {
     },
   });
 
-  // Build MultiSelect data combining all series
+  // Build Select data for single-series picker
   const seriesSelectData = useMemo(() => {
-    // Filter allChannelSeries to only SERIES type
-    const channelSeriesOnly = allChannelSeries.filter(
-      (s) => s.type === 'SERIES',
-    );
+    const seriesMap = new Map<string, { id: string; title: string }>();
 
-    // Create a map of all series
-    const seriesMap = new Map(
-      channelSeriesOnly.map((s) => [s.id, { id: s.id, title: s.title }]),
-    );
-
-    // Add search results to the map (they might have upload counts)
-    seriesSearchResults?.forEach((s) => {
-      seriesMap.set(s.id, { id: s.id, title: s.title });
-    });
-
-    // Add currently selected series from upload
-    upload.series?.forEach((s) => {
-      if (!seriesMap.has(s.id)) {
-        seriesMap.set(s.id, { id: s.id, title: s.title });
-      }
-    });
+    for (const s of allChannelSeries) {
+      if (s.type === 'SERIES') seriesMap.set(s.id, s);
+    }
+    for (const s of seriesSearchResults ?? []) seriesMap.set(s.id, s);
+    if (upload.series && !seriesMap.has(upload.series.id)) {
+      seriesMap.set(upload.series.id, upload.series);
+    }
 
     const options = Array.from(seriesMap.values()).map((s) => ({
       value: s.id,
       label: s.title,
     }));
 
-    // Add "Create new series" option if there's a search term and no exact match
     if (debouncedSeriesSearch.trim().length >= 2) {
       const hasExactMatch = options.some(
         (opt) =>
@@ -829,24 +772,18 @@ function ChannelUploadPage() {
                 </form.AppField>
 
                 {/* Series Selection */}
-                <form.AppField name="seriesIds" mode="array">
+                <form.AppField name="seriesId">
                   {(field) => (
-                    <MultiSelect
+                    <Select
                       label="Series"
-                      placeholder="Search and select series..."
-                      description="Add this upload to one or more series in your channel"
+                      placeholder="Search and select a series..."
+                      description="Add this upload to a series in your channel"
                       data={seriesSelectData}
-                      value={field.state.value || []}
+                      value={field.state.value ?? null}
                       onChange={(value) => {
-                        // Check if user selected the "Create new series" option
-                        if (value.includes('__CREATE__')) {
-                          // Remove __CREATE__ from the value and open modal
-                          const filteredValue = value.filter(
-                            (v) => v !== '__CREATE__',
-                          );
-                          field.handleChange(filteredValue);
+                        if (value === '__CREATE__') {
                           setNewSeriesTitle(debouncedSeriesSearch);
-                          setSeriesSearchValue(''); // Clear search to close dropdown
+                          setSeriesSearchValue('');
                           setShowCreateSeriesModal(true);
                         } else {
                           field.handleChange(value);

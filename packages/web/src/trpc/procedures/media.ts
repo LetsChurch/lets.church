@@ -1,5 +1,7 @@
 import {
   db,
+  UploadList,
+  UploadListEntry,
   UploadUserComment,
   UploadUserCommentRating,
   UploadUserRating,
@@ -355,6 +357,23 @@ export const mediaProcedures = {
         ? String(await md.process(mediaRest.description))
         : null;
 
+      // Look up the upload's series (if any)
+      const [seriesRow] = await db
+        .select({ id: UploadList.id, title: UploadList.title })
+        .from(UploadListEntry)
+        .innerJoin(UploadList, eq(UploadListEntry.uploadListId, UploadList.id))
+        .where(
+          and(
+            eq(UploadListEntry.uploadRecordId, input.mediaId),
+            eq(UploadList.type, 'SERIES'),
+          ),
+        )
+        .limit(1);
+
+      const series = seriesRow
+        ? { id: OutgoingIdSchema.parse(seriesRow.id), title: seriesRow.title }
+        : null;
+
       return {
         ...mediaRest,
         descriptionHtml,
@@ -374,6 +393,7 @@ export const mediaProcedures = {
         canEdit,
         viewCount,
         transcribingFinishedAt,
+        series,
         channel: {
           id: OutgoingIdSchema.parse(channel.id),
           name: channel.name,

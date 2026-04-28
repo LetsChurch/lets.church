@@ -15,6 +15,13 @@
       "when": 1776800000000,
       "tag": "0001_fix_upload_view_second_fk",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1745798400000,
+      "tag": "0002_enforce_single_series",
+      "breakpoints": true
     }
   ]
 }

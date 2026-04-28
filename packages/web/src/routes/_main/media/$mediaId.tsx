@@ -90,6 +90,12 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
       ),
     ]);
 
+    if (media.series?.id) {
+      await queryClient.prefetchQuery(
+        trpc.list.getAllListItems.queryOptions({ listId: media.series.id }),
+      );
+    }
+
     // Exclude the probe field from media to avoid serialization issues
     const { probe: _probe, ...mediaWithoutProbe } = media;
 
@@ -407,13 +413,24 @@ function RouteComponent() {
     getInitialTranscriptWidth(),
   );
 
-  // Playlist context - fetch playlist items if we have a list param
-  const hasPlaylistContext = Boolean(searchParams.list);
+  const { data: media } = useSuspenseQuery({
+    ...trpc.media.getMediaById.queryOptions({
+      mediaId: params.mediaId,
+    }),
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return data && !data.transcribingFinishedAt ? 60000 : false;
+    },
+  });
+
+  // Use explicit ?list= param if provided, otherwise fall back to the upload's series
+  const activeListId = searchParams.list ?? media.series?.id ?? undefined;
+  const hasPlaylistContext = Boolean(activeListId);
 
   const { data: playlistData } = useSuspenseQuery(
-    searchParams.list
+    activeListId
       ? trpc.list.getAllListItems.queryOptions({
-          listId: searchParams.list,
+          listId: activeListId,
         })
       : {
           queryKey: [['no-list']],
@@ -428,9 +445,7 @@ function RouteComponent() {
 
   // Find current and next items
   const playlistItems = playlistData?.items ?? [];
-  const mediaIdShort = hasPlaylistContext
-    ? idTranslator.fromUUID(params.mediaId)
-    : '';
+  const mediaIdShort = idTranslator.fromUUID(params.mediaId);
   const currentIndex = playlistItems.findIndex(
     (item) => item.id === mediaIdShort,
   );
@@ -444,7 +459,9 @@ function RouteComponent() {
     enabled: hasPlaylistContext,
     nextMediaId: nextItem?.id,
     nextMediaUrl: nextItem
-      ? `/media/${nextItem.id}?list=${searchParams.list}`
+      ? searchParams.list
+        ? `/media/${nextItem.id}?list=${searchParams.list}`
+        : `/media/${nextItem.id}`
       : undefined,
   });
 
@@ -462,17 +479,6 @@ function RouteComponent() {
       }
     }
   }, [location.hash]);
-
-  const { data: media } = useSuspenseQuery({
-    ...trpc.media.getMediaById.queryOptions({
-      mediaId: params.mediaId,
-    }),
-    refetchInterval: (query) => {
-      const data = query.state.data;
-      // Poll every 60 seconds if transcript is still processing
-      return data && !data.transcribingFinishedAt ? 60000 : false;
-    },
-  });
 
   // Poll for transcript updates when transcription is in progress
   const { data: transcriptData } = useSuspenseQuery({
@@ -899,11 +905,9 @@ function RouteComponent() {
                 transcript={transcript}
                 isTranscriptProcessing={!media.transcribingFinishedAt}
                 playlistContext={
-                  hasPlaylistContext &&
-                  searchParams.list &&
-                  playlistItems.length > 0
+                  hasPlaylistContext && activeListId && playlistItems.length > 0
                     ? {
-                        listId: searchParams.list,
+                        listId: activeListId,
                         listType:
                           playlistData.type === 'SERIES'
                             ? 'series'
@@ -936,7 +940,7 @@ function RouteComponent() {
       </MobileDrawer.Root>
 
       {/* Mobile Playlist Dialog */}
-      {hasPlaylistContext && searchParams.list && playlistItems.length > 0 ? (
+      {hasPlaylistContext && activeListId && playlistItems.length > 0 ? (
         <MobileDrawer.Root
           open={playlistDialogOpen}
           onOpenChange={setPlaylistDialogOpen}
@@ -944,7 +948,7 @@ function RouteComponent() {
           <MobileDrawer.Portal>
             <MobileDrawer.Content className="h-[85vh]">
               <MobilePlaylistDrawerContent
-                listId={searchParams.list}
+                listId={activeListId}
                 listType={
                   playlistData.type === 'SERIES' ? 'series' : 'playlist'
                 }

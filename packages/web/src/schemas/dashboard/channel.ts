@@ -63,7 +63,7 @@ export const uploadFormSchema = z.object({
   visibility: z.nativeEnum(UploadVisibility),
   userCommentsEnabled: z.boolean(),
   downloadsEnabled: z.boolean(),
-  seriesIds: z.array(z.string()),
+  seriesId: z.string().nullable(),
 });
 
 export const updateUploadSchema = uploadFormSchema.extend({

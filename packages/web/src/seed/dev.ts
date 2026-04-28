@@ -1277,6 +1277,7 @@ const [series] = await db
     title: 'The Dorean Principle',
     type: 'SERIES',
     authorId: adminUser.id,
+    channelId: doreanPrincipleChannelId,
     updatedAt: new Date(),
   })
   .returning({ id: UploadList.id });
@@ -1297,35 +1298,6 @@ for (const { id } of uploadRecordData) {
 
   await indexDocument('transcript', id, `${id}/transcript.vtt`);
   await indexDocument('upload', id);
-}
-
-// Create a playlist for The Dorean Principle
-const [playlist] = await db
-  .insert(UploadList)
-  .values({
-    id: '00000000-0000-4000-8000-000000000001',
-    title: 'The Dorean Principle - Complete Audiobook',
-    type: 'PLAYLIST',
-    authorId: adminUser.id,
-    channelId: doreanPrincipleChannelId,
-    updatedAt: new Date(),
-  })
-  .returning({ id: UploadList.id });
-
-// Add all the same uploads to the playlist
-let playlistRank = 0;
-
-for (const { id } of uploadRecordData) {
-  if (!id) {
-    throw new Error('Upload record id is missing');
-  }
-  await db.insert(UploadListEntry).values({
-    rank: playlistRank,
-    uploadRecordId: id,
-    uploadListId: playlist?.id,
-  });
-
-  playlistRank += 1;
 }
 
 const doreanPrincipleUploadId = '00000000-0000-4000-8000-100000000000';
