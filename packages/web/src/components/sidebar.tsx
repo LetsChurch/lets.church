@@ -2,6 +2,8 @@ import {
   IconArrowLeft,
   IconBookmark,
   IconBookmarks,
+  IconBrandGithub,
+  IconBrandGitlab,
   IconBuildingChurch,
   IconChevronDown,
   IconCompass,
@@ -207,6 +209,28 @@ export default function Sidebar({ className }: SidebarProps) {
                 >
                   DMCA
                 </Link>
+                <div className="mt-2.5 flex gap-1.5 px-2 py-1.5">
+                  <LcTooltip content="GitLab">
+                    <a
+                      href="https://gitlab.com/LetsChurch/lets.church"
+                      target="_blank"
+                      rel="noopener"
+                      className="text-primary/50 transition-colors hover:text-primary/80"
+                    >
+                      <IconBrandGitlab size={16} />
+                    </a>
+                  </LcTooltip>
+                  <LcTooltip content="GitHub">
+                    <a
+                      href="https://github.com/LetsChurch/lets.church"
+                      target="_blank"
+                      rel="noopener"
+                      className="text-primary/50 transition-colors hover:text-primary/80"
+                    >
+                      <IconBrandGithub size={16} />
+                    </a>
+                  </LcTooltip>
+                </div>
               </div>
             </>
           ) : (
