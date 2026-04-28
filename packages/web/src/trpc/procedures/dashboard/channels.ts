@@ -1173,7 +1173,7 @@ export const channelRouter = router({
         return {
           ...uploadRest,
           thumbnailUrl,
-          isFeatured: !!featuredUpload,
+          isFeatured: featuredUpload.length > 0,
           _count: {
             uploadViews: uploadViews.length,
             userComments: userComments.length,
@@ -1455,7 +1455,7 @@ export const channelRouter = router({
         upload: {
           ...uploadRest,
           thumbnailUrl,
-          isFeatured: !!featuredUpload,
+          isFeatured: featuredUpload.length > 0,
           mediaSource,
           audioSource,
           series: seriesEntry
