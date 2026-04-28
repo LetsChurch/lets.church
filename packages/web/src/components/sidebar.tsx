@@ -617,7 +617,7 @@ export default function Sidebar({ className }: SidebarProps) {
               <button
                 type="button"
                 onClick={openAltMenuFromCollapsed}
-                className="flex size-6 items-center justify-center transition-colors hover:text-primary/80"
+                className="flex size-6 cursor-pointer items-center justify-center transition-colors hover:text-primary/80"
               >
                 <IconInfoCircle
                   size={16}
@@ -635,7 +635,7 @@ export default function Sidebar({ className }: SidebarProps) {
               <button
                 type="button"
                 onClick={() => setShowAltMenu(true)}
-                className="flex w-full items-center gap-2.5 transition-colors hover:text-primary/80"
+                className="flex w-full cursor-pointer items-center gap-2.5 transition-colors hover:text-primary/80"
               >
                 <div className="flex size-6 items-center justify-center">
                   <IconInfoCircle
@@ -659,7 +659,7 @@ export default function Sidebar({ className }: SidebarProps) {
               <LcTooltip content="Expand Sidebar" side="right">
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2.5 transition-colors hover:text-primary/80"
+                  className="flex w-full cursor-pointer items-center gap-2.5 transition-colors hover:text-primary/80"
                   onClick={toggleCollapsed}
                 >
                   <div className="flex size-6 items-center justify-center">
@@ -674,7 +674,7 @@ export default function Sidebar({ className }: SidebarProps) {
               <button
                 type="button"
                 onClick={toggleCollapsed}
-                className="flex w-full items-center gap-2.5 transition-colors hover:text-primary/80"
+                className="flex w-full cursor-pointer items-center gap-2.5 transition-colors hover:text-primary/80"
               >
                 <div className="flex size-6 items-center justify-center">
                   <IconLayoutSidebarLeftCollapse

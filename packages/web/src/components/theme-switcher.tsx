@@ -40,7 +40,7 @@ export function ThemeSwitcher({ collapsed = false }: ThemeSwitcherProps) {
     <button
       type="button"
       onClick={handleToggle}
-      className="flex w-full items-center gap-2.5 transition-colors hover:text-primary/80"
+      className="flex w-full cursor-pointer items-center gap-2.5 transition-colors hover:text-primary/80"
     >
       <div className="flex size-6 items-center justify-center">
         <Icon size={16} className="text-primary/70" />
