@@ -13,6 +13,7 @@ import { cn } from '@/util/cn';
 
 export type CommentsSectionProps = {
   mediaId: string;
+  lengthSeconds?: number | null;
   onLoginRequired: () => void;
   /**
    * Whether to show the container styling (rounded borders, margin, etc.)
@@ -27,6 +28,7 @@ export type CommentsSectionProps = {
 
 export function CommentsSection({
   mediaId,
+  lengthSeconds,
   onLoginRequired,
   showContainer = true,
   commentsEnabled = true,
@@ -114,6 +116,7 @@ export function CommentsSection({
                     key={comment.id}
                     comment={comment}
                     mediaId={mediaId}
+                    lengthSeconds={lengthSeconds}
                     onLoginRequired={onLoginRequired}
                   />
                 ))}

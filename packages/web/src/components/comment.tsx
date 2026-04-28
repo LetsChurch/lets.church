@@ -1,12 +1,60 @@
 import { IconThumbDown, IconThumbUp } from '@tabler/icons-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { Avatar } from '@/components/avatar';
 import { CommentInput } from '@/components/comment-input';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
+import { $setPlayAt } from '@/stores/player';
 import { useTRPC } from '@/trpc/react';
 import { cn } from '@/util/cn';
 import LcButton from './lc-button';
+
+const TIMESTAMP_RE = /\b(\d{1,2}:\d{2}(?::\d{2})?)\b/g;
+
+function tsToSeconds(ts: string): number {
+  const parts = ts.split(':').map(Number);
+  return parts.length === 3
+    ? parts[0] * 3600 + parts[1] * 60 + parts[2]
+    : parts[0] * 60 + parts[1];
+}
+
+function renderWithTimestamps(
+  text: string,
+  lengthSeconds?: number | null,
+): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  let last = 0;
+
+  TIMESTAMP_RE.lastIndex = 0;
+  let m = TIMESTAMP_RE.exec(text);
+  while (m !== null) {
+    const seconds = tsToSeconds(m[0]);
+    if (lengthSeconds != null && seconds > lengthSeconds) continue;
+    if (m.index > last) nodes.push(text.slice(last, m.index));
+    const ts = m[0];
+    const s = seconds;
+    nodes.push(
+      <a
+        key={m.index}
+        href={`#t=${s}`}
+        onClick={(e) => {
+          e.preventDefault();
+          $setPlayAt.set(s);
+        }}
+        className="cursor-pointer text-brand underline decoration-dotted hover:text-brand dark:text-white dark:hover:text-white"
+      >
+        {ts}
+      </a>,
+    );
+    last = m.index + m[0].length;
+    m = TIMESTAMP_RE.exec(text);
+  }
+
+  if (nodes.length === 0) return [text];
+  if (last < text.length) nodes.push(text.slice(last));
+  return nodes;
+}
 
 type CommentProps = {
   comment: {
@@ -24,6 +72,7 @@ type CommentProps = {
     userRating: 'LIKE' | 'DISLIKE' | null;
   };
   mediaId: string;
+  lengthSeconds?: number | null;
   onLoginRequired: () => void;
   isReply?: boolean;
 };
@@ -31,6 +80,7 @@ type CommentProps = {
 export function Comment({
   comment,
   mediaId,
+  lengthSeconds,
   onLoginRequired,
   isReply = false,
 }: CommentProps) {
@@ -181,7 +231,7 @@ export function Comment({
         </div>
 
         <p className="wrap-break-word mb-2 whitespace-pre-wrap text-primary/90 text-sm leading-relaxed">
-          {comment.text}
+          {renderWithTimestamps(comment.text, lengthSeconds)}
         </p>
 
         <div className="flex items-center gap-3">
@@ -252,6 +302,7 @@ export function Comment({
                 key={reply.id}
                 comment={reply}
                 mediaId={mediaId}
+                lengthSeconds={lengthSeconds}
                 onLoginRequired={onLoginRequired}
                 isReply
               />

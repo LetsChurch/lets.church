@@ -167,6 +167,10 @@
     }
   }
 
+  & a[data-timestamp] {
+    @apply underline decoration-dotted text-brand dark:text-white hover:text-brand dark:hover:text-white;
+  }
+
   & strong {
     font-weight: 600;
     color: var(--color-primary);

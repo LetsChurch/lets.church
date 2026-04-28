@@ -847,6 +847,7 @@ function RouteComponent() {
               publishedAt={media.publishedAt}
               createdAt={media.createdAt}
               license={media.license}
+              lengthSeconds={media.lengthSeconds}
               showTranscriptTab={!layout.showSidebar}
               showPlaylistTab={!layout.showSidebar && hasPlaylistContext}
               showCommentsTab={!layout.showSidebar}
@@ -859,6 +860,7 @@ function RouteComponent() {
             {layout.showSidebar ? (
               <CommentsSection
                 mediaId={params.mediaId}
+                lengthSeconds={media.lengthSeconds}
                 onLoginRequired={() => {
                   setLoginDialogAction('comment');
                   setLoginDialogOpen(true);
@@ -983,6 +985,7 @@ function RouteComponent() {
               <div className="h-full overflow-y-auto">
                 <CommentsSection
                   mediaId={params.mediaId}
+                  lengthSeconds={media.lengthSeconds}
                   onLoginRequired={() => {
                     setLoginDialogAction('comment');
                     setLoginDialogOpen(true);

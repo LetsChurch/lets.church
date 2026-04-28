@@ -1,6 +1,8 @@
 import { Tabs } from '@base-ui-components/react/tabs';
 import type { UploadLicense } from '@letschurch/db/types';
+import { useEffect, useRef } from 'react';
 import { LcTooltip } from '@/components/lc-tooltip';
+import { $setPlayAt } from '@/stores/player';
 import { getLicenseInfo } from '@/util/license';
 
 type MediaInfoTabsProps = {
@@ -9,6 +11,7 @@ type MediaInfoTabsProps = {
   publishedAt: Date | null;
   createdAt: Date;
   license: UploadLicense;
+  lengthSeconds: number | null;
   showTranscriptTab: boolean;
   showPlaylistTab: boolean;
   showCommentsTab: boolean;
@@ -24,6 +27,7 @@ export function MediaInfoTabs({
   publishedAt,
   createdAt,
   license,
+  lengthSeconds,
   showTranscriptTab,
   showPlaylistTab,
   showCommentsTab,
@@ -33,6 +37,34 @@ export function MediaInfoTabs({
   onCommentsClick,
 }: MediaInfoTabsProps) {
   const licenseInfo = getLicenseInfo(license);
+  const descriptionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = descriptionRef.current;
+    if (!el) return;
+
+    const ac = new AbortController();
+
+    el.addEventListener(
+      'click',
+      (e: MouseEvent) => {
+        const target = (e.target as HTMLElement).closest('a[data-timestamp]');
+        if (!target) return;
+
+        const seconds = Number(target.getAttribute('data-timestamp'));
+        if (Number.isNaN(seconds)) return;
+
+        if (lengthSeconds != null && seconds > lengthSeconds) return;
+
+        e.preventDefault();
+        $setPlayAt.set(seconds);
+      },
+      ac,
+    );
+
+    return () => ac.abort();
+  }, [lengthSeconds]);
+
   return (
     <Tabs.Root
       defaultValue="details"
@@ -107,6 +139,7 @@ export function MediaInfoTabs({
       <Tabs.Panel value="details" className="relative text-left">
         {descriptionHtml ? (
           <div
+            ref={descriptionRef}
             className="prose px-5 text-sm"
             // biome-ignore lint/security/noDangerouslySetInnerHtml: HTML is compiled from markdown on server using micromark
             dangerouslySetInnerHTML={{ __html: descriptionHtml }}

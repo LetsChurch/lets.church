@@ -37,6 +37,76 @@ const moduleLogger = logger.child({
   module: 'trpc/procedures/media',
 });
 
+const TIMESTAMP_RE = /\b(\d{1,2}):(\d{2})(?::(\d{2}))?\b/g;
+
+function timestampToSeconds(ts: string): number {
+  const parts = ts.split(':').map(Number);
+  return parts.length === 3
+    ? parts[0] * 3600 + parts[1] * 60 + parts[2]
+    : parts[0] * 60 + parts[1];
+}
+
+type AnyNode = {
+  type: string;
+  value?: string;
+  tagName?: string;
+  children?: AnyNode[];
+  properties?: Record<string, string>;
+};
+
+function walkTimestamps(node: AnyNode): void {
+  if (!node.children) return;
+
+  // Skip text nodes inside anchor tags
+  if (node.tagName === 'a') return;
+
+  const replacements: Array<{ index: number; nodes: AnyNode[] }> = [];
+
+  for (let i = 0; i < node.children.length; i++) {
+    const child = node.children[i];
+    if (child.type === 'text' && child.value) {
+      const text = child.value;
+      const nodes: AnyNode[] = [];
+      let last = 0;
+
+      TIMESTAMP_RE.lastIndex = 0;
+      let m = TIMESTAMP_RE.exec(text);
+      while (m !== null) {
+        const seconds = timestampToSeconds(m[0]);
+        if (m.index > last)
+          nodes.push({ type: 'text', value: text.slice(last, m.index) });
+        nodes.push({
+          type: 'element',
+          tagName: 'a',
+          properties: {
+            href: `#t=${seconds}`,
+            'data-timestamp': String(seconds),
+          },
+          children: [{ type: 'text', value: m[0] }],
+        });
+        last = m.index + m[0].length;
+        m = TIMESTAMP_RE.exec(text);
+      }
+
+      if (nodes.length > 0) {
+        if (last < text.length)
+          nodes.push({ type: 'text', value: text.slice(last) });
+        replacements.push({ index: i, nodes });
+      }
+    } else {
+      walkTimestamps(child);
+    }
+  }
+
+  for (const { index, nodes } of replacements.reverse()) {
+    node.children.splice(index, 1, ...nodes);
+  }
+}
+
+function rehypeTimestamps() {
+  return (tree: AnyNode) => walkTimestamps(tree);
+}
+
 const md = unified()
   .use(remarkLinkify)
   .use(remarkParse)
@@ -46,6 +116,7 @@ const md = unified()
     rel: ['nofollow', 'noopener', 'noreferrer'],
     target: '_blank',
   })
+  .use(rehypeTimestamps)
   .use(rehypeStringify);
 
 const TWO64 = 1n << 64n;
