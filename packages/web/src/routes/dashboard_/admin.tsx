@@ -356,6 +356,21 @@ function AdminPage() {
             View search queries and analytics
           </Text>
         </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
+          to="/dashboard/admin/reindex"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Reindex</Text>
+          </Group>
+          <Text size="sm" c="dimmed">
+            Rebuild Elasticsearch indices from the database
+          </Text>
+        </Card>
       </SimpleGrid>
     </>
   );

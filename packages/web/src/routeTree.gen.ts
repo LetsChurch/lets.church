@@ -40,6 +40,7 @@ import { Route as MainChurchesRouteImport } from './routes/_main/churches'
 import { Route as MainChannelsRouteImport } from './routes/_main/channels'
 import { Route as MainAboutRouteImport } from './routes/_main.about'
 import { Route as MainSlugRouteImport } from './routes/_main/$slug'
+import { Route as DashboardAdminReindexRouteImport } from './routes/dashboard_/admin_.reindex'
 import { Route as MainAboutIndexRouteImport } from './routes/_main/about/index'
 import { Route as SeriesSeriesIdRssDotxmlRouteImport } from './routes/series.$seriesId.rss[.]xml'
 import { Route as PlaylistPlaylistIdRssDotxmlRouteImport } from './routes/playlist.$playlistId.rss[.]xml'
@@ -249,6 +250,11 @@ const MainSlugRoute = MainSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
   getParentRoute: () => MainRoute,
+} as any)
+const DashboardAdminReindexRoute = DashboardAdminReindexRouteImport.update({
+  id: '/admin_/reindex',
+  path: '/admin/reindex',
+  getParentRoute: () => DashboardRoute,
 } as any)
 const MainAboutIndexRoute = MainAboutIndexRouteImport.update({
   id: '/',
@@ -616,6 +622,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard/admin/organizations': typeof DashboardAdminOrganizationsRoute
   '/dashboard/admin/processing-uploads': typeof DashboardAdminProcessingUploadsRoute
+  '/dashboard/admin/reindex': typeof DashboardAdminReindexRoute
   '/dashboard/admin/searches': typeof DashboardAdminSearchesRoute
   '/dashboard/admin/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
@@ -701,6 +708,7 @@ export interface FileRoutesByTo {
   '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard/admin/organizations': typeof DashboardAdminOrganizationsRoute
   '/dashboard/admin/processing-uploads': typeof DashboardAdminProcessingUploadsRoute
+  '/dashboard/admin/reindex': typeof DashboardAdminReindexRoute
   '/dashboard/admin/searches': typeof DashboardAdminSearchesRoute
   '/dashboard/admin/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
@@ -790,6 +798,7 @@ export interface FileRoutesById {
   '/dashboard_/admin_/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard_/admin_/organizations': typeof DashboardAdminOrganizationsRoute
   '/dashboard_/admin_/processing-uploads': typeof DashboardAdminProcessingUploadsRoute
+  '/dashboard_/admin_/reindex': typeof DashboardAdminReindexRoute
   '/dashboard_/admin_/searches': typeof DashboardAdminSearchesRoute
   '/dashboard_/admin_/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard_/admin_/users': typeof DashboardAdminUsersRoute
@@ -879,6 +888,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/organization-tags'
     | '/dashboard/admin/organizations'
     | '/dashboard/admin/processing-uploads'
+    | '/dashboard/admin/reindex'
     | '/dashboard/admin/searches'
     | '/dashboard/admin/upload-backups'
     | '/dashboard/admin/users'
@@ -964,6 +974,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/organization-tags'
     | '/dashboard/admin/organizations'
     | '/dashboard/admin/processing-uploads'
+    | '/dashboard/admin/reindex'
     | '/dashboard/admin/searches'
     | '/dashboard/admin/upload-backups'
     | '/dashboard/admin/users'
@@ -1052,6 +1063,7 @@ export interface FileRouteTypes {
     | '/dashboard_/admin_/organization-tags'
     | '/dashboard_/admin_/organizations'
     | '/dashboard_/admin_/processing-uploads'
+    | '/dashboard_/admin_/reindex'
     | '/dashboard_/admin_/searches'
     | '/dashboard_/admin_/upload-backups'
     | '/dashboard_/admin_/users'
@@ -1317,6 +1329,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/$slug'
       preLoaderRoute: typeof MainSlugRouteImport
       parentRoute: typeof MainRoute
+    }
+    '/dashboard_/admin_/reindex': {
+      id: '/dashboard_/admin_/reindex'
+      path: '/admin/reindex'
+      fullPath: '/dashboard/admin/reindex'
+      preLoaderRoute: typeof DashboardAdminReindexRouteImport
+      parentRoute: typeof DashboardRoute
     }
     '/_main/about/': {
       id: '/_main/about/'
@@ -1810,6 +1829,7 @@ interface DashboardRouteChildren {
   DashboardAdminOrganizationTagsRoute: typeof DashboardAdminOrganizationTagsRoute
   DashboardAdminOrganizationsRoute: typeof DashboardAdminOrganizationsRoute
   DashboardAdminProcessingUploadsRoute: typeof DashboardAdminProcessingUploadsRoute
+  DashboardAdminReindexRoute: typeof DashboardAdminReindexRoute
   DashboardAdminSearchesRoute: typeof DashboardAdminSearchesRoute
   DashboardAdminUploadBackupsRoute: typeof DashboardAdminUploadBackupsRoute
   DashboardAdminUsersRoute: typeof DashboardAdminUsersRoute
@@ -1856,6 +1876,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAdminOrganizationTagsRoute: DashboardAdminOrganizationTagsRoute,
   DashboardAdminOrganizationsRoute: DashboardAdminOrganizationsRoute,
   DashboardAdminProcessingUploadsRoute: DashboardAdminProcessingUploadsRoute,
+  DashboardAdminReindexRoute: DashboardAdminReindexRoute,
   DashboardAdminSearchesRoute: DashboardAdminSearchesRoute,
   DashboardAdminUploadBackupsRoute: DashboardAdminUploadBackupsRoute,
   DashboardAdminUsersRoute: DashboardAdminUsersRoute,

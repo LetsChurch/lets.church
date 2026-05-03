@@ -48,9 +48,12 @@ import {
   getBackfillSizesProgressQuery,
   getBulkBackupProgressQuery,
   getCleanupProgressQuery,
+  getReindexProgressQuery,
   handleMultipartMediaUploadWorkflow,
   importMediaWorkflow,
   postUserRegistrationWorkflow,
+  type ReindexWorkflowParams,
+  reindexWorkflow,
   type SendVerificationEmailArgs,
   sendEmailWorkflow,
   sendInvitationEmailWorkflow,
@@ -59,6 +62,9 @@ import {
   updateUploadRecordWorkflow,
   uploadDoneSignal,
 } from '@letschurch/temporal/workflows/background';
+
+export type { ReindexKind } from '@letschurch/temporal/activities/background/reindex';
+
 import {
   type BackfillFilenamesWorkflowParams,
   backfillFilenamesWorkflow,
@@ -839,4 +845,60 @@ export async function triggerHistoricalImport(
     ),
     args: [importSourceId, importHistory],
   });
+}
+
+// Reindex Workflow
+
+function makeReindexWorkflowId(kind: ReindexWorkflowParams['kind']) {
+  return `reindex:${kind}`;
+}
+
+export async function startReindex(params: ReindexWorkflowParams) {
+  return (await client).workflow.start(reindexWorkflow, {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    workflowId: makeReindexWorkflowId(params.kind),
+    args: [params],
+  });
+}
+
+export async function getReindexProgress(kind: ReindexWorkflowParams['kind']) {
+  try {
+    const handle = (await client).workflow.getHandle(
+      makeReindexWorkflowId(kind),
+    );
+    const description = await handle.describe();
+
+    if (description.status.name === 'RUNNING') {
+      const progress = await handle.query(getReindexProgressQuery);
+      return { status: 'running' as const, ...progress };
+    }
+
+    if (description.status.name === 'COMPLETED') {
+      return {
+        status: 'completed' as const,
+        totalIndexed: 0,
+        offset: 0,
+        total: 0,
+      };
+    }
+
+    return {
+      status: description.status.name.toLowerCase() as
+        | 'failed'
+        | 'cancelled'
+        | 'terminated'
+        | 'timed_out',
+      totalIndexed: 0,
+      offset: 0,
+      total: 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function cancelReindex(kind: ReindexWorkflowParams['kind']) {
+  const handle = (await client).workflow.getHandle(makeReindexWorkflowId(kind));
+  await handle.cancel();
 }

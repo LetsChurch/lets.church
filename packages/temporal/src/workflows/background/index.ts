@@ -49,6 +49,11 @@ export { postUserRegistrationWorkflow } from './post-user-registration';
 export { processImageWorkflow } from './process-image';
 export { processMediaWorkflow } from './process-media';
 export { recordDownloadSizeWorkflow } from './record-download-size';
+export {
+  getReindexProgressQuery,
+  type ReindexWorkflowParams,
+  reindexWorkflow,
+} from './reindex';
 export { remakeThumbnailsWorkflow } from './remake-thumbnails';
 export { resetPasswordWorkflow } from './reset-password';
 export { restitchTranscriptWorkflow } from './restitch-transcript';

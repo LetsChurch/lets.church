@@ -74,6 +74,12 @@ export { default as getProbe } from './get-probe';
 export { default as indexDocument } from './index-document';
 export { default as processImage } from './process-image';
 export { default as recordDownloadSize } from './record-download-size';
+export {
+  getReindexCount,
+  type ReindexBatchResult,
+  type ReindexKind,
+  reindexBatch,
+} from './reindex';
 export { default as restitchTranscript } from './restitch-transcript';
 export {
   default as sendEmail,

@@ -47,6 +47,7 @@ import {
   cancelBackfillUploadStates,
   cancelBulkBackupToGlacier,
   cancelCleanupStaleUploadStates,
+  cancelReindex,
   client,
   deleteUpload,
   getBackfillFilenamesProgress,
@@ -54,13 +55,16 @@ import {
   getBackfillUploadStatesProgress,
   getBulkBackupToGlacierProgress,
   getCleanupStaleUploadStatesProgress,
+  getReindexProgress,
   makeProcessMediaWorkflowId,
+  type ReindexKind,
   resetPassword,
   startBackfillFilenames,
   startBackfillUploadStateSizes,
   startBackfillUploadStates,
   startBulkBackupToGlacier,
   startCleanupStaleUploadStates,
+  startReindex,
 } from '@/temporal';
 import { mantineAvatarSm2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
@@ -3622,4 +3626,97 @@ export const adminRouter = router({
     }),
 
   newsletterLists: newsletterListsRouter,
+
+  getReindexStatus: adminProcedure.query(async () => {
+    const kinds: ReindexKind[] = [
+      'upload',
+      'transcriptHtml',
+      'channel',
+      'organization',
+    ];
+    const statuses = await Promise.all(
+      kinds.map(async (kind) => ({
+        kind,
+        progress: await getReindexProgress(kind),
+      })),
+    );
+    return Object.fromEntries(
+      statuses.map(({ kind, progress }) => [kind, progress]),
+    ) as Record<ReindexKind, Awaited<ReturnType<typeof getReindexProgress>>>;
+  }),
+
+  startReindex: adminProcedure
+    .input(
+      z.object({
+        kind: z.enum(['upload', 'transcriptHtml', 'channel', 'organization']),
+        batchSize: z.number().min(1).max(500).default(50),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info(
+        { appUserId: ctx.session.appUserId, context: { kind: input.kind } },
+        'Starting reindex',
+      );
+
+      try {
+        const current = await getReindexProgress(input.kind);
+        if (current?.status === 'running') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Reindex for ${input.kind} is already running`,
+          });
+        }
+
+        await startReindex({ kind: input.kind, batchSize: input.batchSize });
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              kind: input.kind,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to start reindex',
+        );
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to start reindex',
+        });
+      }
+    }),
+
+  cancelReindex: adminProcedure
+    .input(
+      z.object({
+        kind: z.enum(['upload', 'transcriptHtml', 'channel', 'organization']),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info(
+        { appUserId: ctx.session.appUserId, context: { kind: input.kind } },
+        'Cancelling reindex',
+      );
+      try {
+        await cancelReindex(input.kind);
+        return { success: true };
+      } catch (error) {
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              kind: input.kind,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to cancel reindex',
+        );
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to cancel reindex',
+        });
+      }
+    }),
 });
