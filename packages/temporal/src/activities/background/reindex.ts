@@ -49,7 +49,7 @@ export async function reindexBatch(
   offset: number,
   batchSize: number,
 ): Promise<ReindexBatchResult> {
-  type Row = { id: string; s3Key?: string };
+  type Row = { id: string; s3Key?: string; vttKey?: string };
   let rows: Row[] = [];
 
   switch (kind) {
@@ -74,6 +74,7 @@ export async function reindexBatch(
       rows = r.map((x) => ({
         id: x.id,
         s3Key: `${x.id}/transcript.original.json`,
+        vttKey: `${x.id}/transcript.vtt`,
       }));
       break;
     }
@@ -100,9 +101,12 @@ export async function reindexBatch(
   }
 
   let indexed = 0;
-  for (const { id, s3Key } of rows) {
+  for (const { id, s3Key, vttKey } of rows) {
     try {
       await indexDocument(kind, id, s3Key);
+      if (vttKey) {
+        await indexDocument('transcript', id, vttKey);
+      }
       indexed++;
     } catch (err) {
       moduleLogger.error(
