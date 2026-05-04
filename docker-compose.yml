@@ -337,7 +337,7 @@ services:
   # Service Dependencies
   #
   postgres:
-    image: postgres:14.7-alpine
+    image: postgres:18.3-alpine3.23
     environment:
       POSTGRES_USER: ${PG_USER}
       POSTGRES_PASSWORD: ${PG_PASSWORD}
@@ -346,7 +346,7 @@ services:
       - 127.0.0.1:${HOST_PG_PORT}:5432
     volumes:
       - ./etc/postgres-init:/docker-entrypoint-initdb.d
-      - pg-data:/var/lib/postgresql/data
+      - pg-data:/var/lib/postgresql
     command:
       [
         "postgres",
