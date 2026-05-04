@@ -161,15 +161,3 @@ transcribe file:
 
 transcribe-dir dir:
   fd . {{dir}} | xargs -o -n1 just transcribe
-
-tf *params:
-  just infra/tf {{params}}
-
-deploy env:
-  just infra/deploy {{env}}
-
-dash:
-  sampler -c ./infra/sampler.yml
-
-pv-usage *flags='-h':
-  ./infra/pv-usage.sh {{flags}}
