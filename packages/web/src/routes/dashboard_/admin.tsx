@@ -82,7 +82,26 @@ function AdminPage() {
       <Title order={1} mb="lg">
         Admin
       </Title>
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
+
+      <Title order={2} size="h4" mb="sm">
+        Content
+      </Title>
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md" mb="xl">
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
+          to="/dashboard/admin/featured"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Featured Media</Text>
+          </Group>
+          <Text size="sm" c="dimmed">
+            Manage featured uploads on homepage carousel
+          </Text>
+        </Card>
         <Card
           shadow="xs"
           padding="lg"
@@ -138,6 +157,12 @@ function AdminPage() {
             Manage tags for categorizing organizations
           </Text>
         </Card>
+      </SimpleGrid>
+
+      <Title order={2} size="h4" mb="sm">
+        Users
+      </Title>
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md" mb="xl">
         <Card
           shadow="xs"
           padding="lg"
@@ -156,6 +181,27 @@ function AdminPage() {
             Manage user accounts and roles
           </Text>
         </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
+          to="/dashboard/admin/newsletter-lists"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Newsletter Lists</Text>
+          </Group>
+          <Text size="sm" c="dimmed">
+            Configure mailing list subscriptions
+          </Text>
+        </Card>
+      </SimpleGrid>
+
+      <Title order={2} size="h4" mb="sm">
+        Uploads
+      </Title>
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md" mb="xl">
         <Card
           shadow="xs"
           padding="lg"
@@ -264,21 +310,6 @@ function AdminPage() {
           radius="md"
           withBorder
           component={Link}
-          to="/dashboard/admin/featured"
-        >
-          <Group justify="space-between" mb="xs">
-            <Text fw={500}>Featured Media</Text>
-          </Group>
-          <Text size="sm" c="dimmed">
-            Manage featured uploads on homepage carousel
-          </Text>
-        </Card>
-        <Card
-          shadow="xs"
-          padding="lg"
-          radius="md"
-          withBorder
-          component={Link}
           to="/dashboard/admin/upload-backups"
         >
           <Group justify="space-between" mb="xs">
@@ -302,6 +333,12 @@ function AdminPage() {
             Manage S3 backups for uploaded media
           </Text>
         </Card>
+      </SimpleGrid>
+
+      <Title order={2} size="h4" mb="sm">
+        System
+      </Title>
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
         <Card
           shadow="xs"
           padding="lg"
@@ -325,21 +362,6 @@ function AdminPage() {
               process
             </Text>
           ) : null}
-        </Card>
-        <Card
-          shadow="xs"
-          padding="lg"
-          radius="md"
-          withBorder
-          component={Link}
-          to="/dashboard/admin/newsletter-lists"
-        >
-          <Group justify="space-between" mb="xs">
-            <Text fw={500}>Newsletter Lists</Text>
-          </Group>
-          <Text size="sm" c="dimmed">
-            Configure mailing list subscriptions
-          </Text>
         </Card>
         <Card
           shadow="xs"
