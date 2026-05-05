@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+export const msUnitSchema = z.templateLiteral([
+  z.number(),
+  z.enum(['ms', 's', 'm', 'h', 'd']),
+]);
+
 const streamUnionSchema = z
   .discriminatedUnion('codec_type', [
     z.looseObject({
