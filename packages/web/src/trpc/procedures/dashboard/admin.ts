@@ -3076,17 +3076,6 @@ export const adminRouter = router({
           scope = 'transcode';
         }
 
-        await db
-          .update(UploadRecord)
-          .set({
-            transcodingStartedAt: null,
-            transcodingFinishedAt: null,
-            transcribingStartedAt: null,
-            transcribingFinishedAt: null,
-            updatedAt: new Date(),
-          })
-          .where(eq(UploadRecord.id, input.uploadRecordId));
-
         // Start the workflow
         await temporalClient.workflow.start(processMediaWorkflow, {
           taskQueue: BACKGROUND_QUEUE,
