@@ -8,7 +8,6 @@ import { checkYtDlp } from './util/env-check';
 const {
   IDENTITY,
   MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS,
-  MAX_CONCURRENT_WORKFLOW_TASK_EXECUTIONS,
   SENTRY_DSN,
   TEMPORAL_ADDRESS,
   TEMPORAL_SHUTDOWN_GRACE_TIME,
@@ -16,7 +15,6 @@ const {
   .object({
     IDENTITY: z.string(),
     MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: z.string(),
-    MAX_CONCURRENT_WORKFLOW_TASK_EXECUTIONS: z.string(),
     SENTRY_DSN: z.string(),
     TEMPORAL_ADDRESS: z.string(),
     TEMPORAL_SHUTDOWN_GRACE_TIME: z.string(),
@@ -38,10 +36,6 @@ const importWorker = await Worker.create({
   activities: importActivities,
   taskQueue: IMPORT_QUEUE,
   shutdownGraceTime: TEMPORAL_SHUTDOWN_GRACE_TIME as `${number}`, // TODO: fix this
-  maxConcurrentWorkflowTaskExecutions: Math.max(
-    2,
-    parseInt(MAX_CONCURRENT_WORKFLOW_TASK_EXECUTIONS, 10),
-  ),
   maxConcurrentActivityTaskExecutions: parseInt(
     MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS,
     10,
