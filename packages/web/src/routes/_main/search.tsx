@@ -1,13 +1,19 @@
 import { IconX } from '@tabler/icons-react';
-import { useInfiniteQuery, useSuspenseQuery } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useQuery,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
-import { useEffect, useRef, useState } from 'react';
+import posthog from 'posthog-js';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { AvatarCarousel } from '@/components/avatar-carousel';
 import { EmptyState } from '@/components/empty-state';
 import { FilterBar } from '@/components/filter-bar';
 import MainLayout from '@/components/main-layout';
+import { MiniPlayer } from '@/components/mini-player';
 import SearchBar from '@/components/search-bar';
 import { SearchRow } from '@/components/search-row';
 import SearchTabs from '@/components/search-tabs';
@@ -278,6 +284,60 @@ function SearchResults({ q }: { q: string }) {
   const trpc = useTRPC();
   const navigate = useNavigate({ from: Route.fullPath });
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [activeHover, setActiveHover] = useState<{
+    item: SearchResultItem;
+    segmentIndex: number;
+  } | null>(null);
+  const [miniPlayerMousePos, setMiniPlayerMousePos] = useState({ x: 0, y: 0 });
+  const hoverTimerRef = useRef<number | undefined>(undefined);
+  const miniPlayerCurrentTimeRef = useRef<number>(0);
+
+  const { data: miniPlayerSources } = useQuery({
+    ...trpc.media.getMediaSources.queryOptions({
+      mediaId: activeHover?.item.id ?? '',
+    }),
+    enabled: activeHover !== null,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+
+  useEffect(
+    () => () => {
+      window.clearTimeout(hoverTimerRef.current);
+    },
+    [],
+  );
+
+  const handleSegmentMouseEnter = useCallback(
+    (item: SearchResultItem, segmentIndex: number, e: React.MouseEvent) => {
+      setMiniPlayerMousePos({ x: e.clientX, y: e.clientY });
+      window.clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = window.setTimeout(() => {
+        const segmentStartSeconds =
+          (item.segments?.[segmentIndex]?.start ?? 0) / 1000;
+        miniPlayerCurrentTimeRef.current = segmentStartSeconds;
+        setActiveHover({ item, segmentIndex });
+        posthog.capture('transcript_preview_opened', {
+          upload_id: item.id,
+          media_title: item.title,
+          channel_id: item.channel.id,
+          channel_name: item.channel.name,
+          published_at: item.publishedAt?.toISOString() ?? null,
+          length_seconds: item.lengthSeconds,
+          segment_start_seconds: segmentStartSeconds,
+        });
+      }, 500);
+    },
+    [],
+  );
+
+  const handleSegmentMouseLeave = useCallback(() => {
+    window.clearTimeout(hoverTimerRef.current);
+    setActiveHover(null);
+  }, []);
+
+  const handleSegmentMouseMove = useCallback((e: React.MouseEvent) => {
+    setMiniPlayerMousePos({ x: e.clientX, y: e.clientY });
+  }, []);
 
   const {
     data: searchData,
@@ -389,7 +449,20 @@ function SearchResults({ q }: { q: string }) {
       {items.length > 0 ? (
         <div className="space-y-4">
           {items.map((item) => {
-            return <Result key={item.id} item={item} focus={focus} />;
+            return (
+              <Result
+                key={item.id}
+                item={item}
+                focus={focus}
+                onSegmentMouseEnter={handleSegmentMouseEnter}
+                onSegmentMouseLeave={handleSegmentMouseLeave}
+                onSegmentMouseMove={handleSegmentMouseMove}
+                isActiveWithSources={
+                  activeHover?.item.id === item.id && miniPlayerSources != null
+                }
+                miniPlayerCurrentTimeRef={miniPlayerCurrentTimeRef}
+              />
+            );
           })}
         </div>
       ) : (
@@ -420,6 +493,22 @@ function SearchResults({ q }: { q: string }) {
       {/*     ))} */}
       {/*   </div> */}
       {/* </div> */}
+
+      {activeHover && miniPlayerSources ? (
+        <MiniPlayer
+          mediaSource={miniPlayerSources.mediaSource}
+          audioSource={miniPlayerSources.audioSource}
+          thumbnailUrl={activeHover.item.thumbnailUrl}
+          videoWidth={miniPlayerSources.videoWidth}
+          videoHeight={miniPlayerSources.videoHeight}
+          initialTimestamp={
+            (activeHover.item.segments?.[activeHover.segmentIndex]?.start ??
+              0) / 1000
+          }
+          mousePos={miniPlayerMousePos}
+          currentTimeRef={miniPlayerCurrentTimeRef}
+        />
+      ) : null}
     </div>
   );
 }
@@ -427,14 +516,59 @@ function SearchResults({ q }: { q: string }) {
 function Result({
   item,
   focus,
+  onSegmentMouseEnter,
+  onSegmentMouseLeave,
+  onSegmentMouseMove,
+  isActiveWithSources,
+  miniPlayerCurrentTimeRef,
 }: {
   item: SearchResultItem;
   focus: 'media' | 'transcripts' | undefined;
+  onSegmentMouseEnter: (
+    item: SearchResultItem,
+    segmentIndex: number,
+    e: React.MouseEvent,
+  ) => void;
+  onSegmentMouseLeave: () => void;
+  onSegmentMouseMove: (e: React.MouseEvent) => void;
+  isActiveWithSources: boolean;
+  miniPlayerCurrentTimeRef: React.MutableRefObject<number>;
 }) {
+  const navigate = useNavigate();
   const [showAllSegments, setShowAllSegments] = useState(false);
+
   const segments = item.segments ?? [];
   const hasMultipleSegments = segments.length > 1;
   const displayedSegments = showAllSegments ? segments : segments.slice(0, 1);
+
+  const handleSegmentClick = (
+    e: React.MouseEvent,
+    segment: TranscriptSegment,
+  ) => {
+    const segmentStartSeconds = segment.start / 1000;
+    const navigateToSeconds = isActiveWithSources
+      ? miniPlayerCurrentTimeRef.current
+      : segmentStartSeconds;
+    posthog.capture('transcript_result_clicked', {
+      upload_id: item.id,
+      media_title: item.title,
+      channel_id: item.channel.id,
+      channel_name: item.channel.name,
+      published_at: item.publishedAt?.toISOString() ?? null,
+      length_seconds: item.lengthSeconds,
+      segment_start_seconds: segmentStartSeconds,
+      navigate_to_seconds: navigateToSeconds,
+      used_mini_player: isActiveWithSources,
+    });
+    if (isActiveWithSources) {
+      e.preventDefault();
+      navigate({
+        to: '/media/$mediaId',
+        params: { mediaId: item.id },
+        hash: `t=${navigateToSeconds}`,
+      });
+    }
+  };
 
   return (
     <SearchRow
@@ -464,6 +598,10 @@ function Result({
               params={{ mediaId: item.id }}
               hash={`t=${segment.start / 1000}`}
               className="relative z-10 flex cursor-pointer flex-row gap-1.5 rounded-md bg-white/5 p-3 text-primary transition-colors hover:bg-white/10"
+              onMouseEnter={(e) => onSegmentMouseEnter(item, index, e)}
+              onMouseLeave={onSegmentMouseLeave}
+              onMouseMove={onSegmentMouseMove}
+              onClick={(e) => handleSegmentClick(e, segment)}
             >
               <div className="pt-1 font-mono text-[10px] leading-[1.4] tracking-[-0.2px]">
                 {formatTime(segment.start)}

@@ -476,6 +476,47 @@ export const mediaProcedures = {
       };
     }),
 
+  getMediaSources: publicProcedure
+    .input(z.object({ mediaId: IncomingIdSchema }))
+    .query(async ({ input }) => {
+      const media = await db.query.UploadRecord.findFirst({
+        columns: { id: true, variants: true, probe: true },
+        where: (t, { eq }) => eq(t.id, input.mediaId),
+      });
+
+      if (!media) return null;
+
+      const hasVideo = media.variants.some((v) => v.startsWith('VIDEO'));
+      const hasAudio = media.variants.includes('AUDIO');
+
+      if (!hasVideo && !hasAudio) return null;
+
+      const mediaSource = hasVideo
+        ? getPublicMediaUrl(`${media.id}/master.m3u8`)
+        : null;
+      const audioSource = hasAudio
+        ? getPublicMediaUrl(`${media.id}/AUDIO.m3u8`)
+        : null;
+
+      let videoWidth = 1280;
+      let videoHeight = 720;
+
+      if (media.probe) {
+        const parseResult = ffprobeSchema.safeParse(media.probe);
+        if (parseResult.success) {
+          const videoStream = parseResult.data.streams.find(
+            (s) => s.codec_type === 'video',
+          );
+          if (videoStream && videoStream.codec_type === 'video') {
+            videoWidth = videoStream.width;
+            videoHeight = videoStream.height;
+          }
+        }
+      }
+
+      return { mediaSource, audioSource, videoWidth, videoHeight };
+    }),
+
   createUploadView: publicProcedure
     .input(
       z.object({
