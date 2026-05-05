@@ -88,7 +88,7 @@
     "p-progress": "^1.0.0",
     "p-retry": "catalog:",
     "podcast": "^2.0.1",
-    "posthog-js": "^1.292.0",
+    "posthog-js": "^1.372.8",
     "pretty-ms": "^9.3.0",
     "proper-tags": "^2.0.2",
     "react": "^19.2.0",

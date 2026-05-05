@@ -117,7 +117,8 @@ function RootComponent() {
 
     // Initialize PostHog
     posthog.init('phc_nrdBwyxcJ3Tc0g1Gq1J5Gd2w1nmpx0IIK4HQBusIu6P', {
-      api_host: 'https://us.i.posthog.com',
+      defaults: '2026-01-30',
+      api_host: 'https://z.lets.church',
       persistence: 'memory',
       person_profiles: 'identified_only',
     });
