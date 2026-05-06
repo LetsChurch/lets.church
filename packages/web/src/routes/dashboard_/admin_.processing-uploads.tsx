@@ -242,7 +242,7 @@ function RouteComponent() {
                         />
                         <Text size="xs" c="dimmed" mt="xs">
                           {isTranscoding
-                            ? `${Math.round(upload.transcodingProgress * 100)}% complete`
+                            ? `${Math.min(Math.round(upload.transcodingProgress * 100), 99)}% complete`
                             : 'Video transcoding finished'}
                         </Text>
                       </Box>

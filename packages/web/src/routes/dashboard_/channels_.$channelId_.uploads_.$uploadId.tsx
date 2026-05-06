@@ -932,7 +932,8 @@ function ChannelUploadPage() {
                         striped
                       />
                       <Text size="xs" c="dimmed" mt="xs">
-                        {Math.round(uploadProgress * 100)}% uploaded
+                        {Math.min(Math.round(uploadProgress * 100), 99)}%
+                        uploaded
                       </Text>
                     </Box>
                   ) : null}
@@ -950,7 +951,11 @@ function ChannelUploadPage() {
                         striped
                       />
                       <Text size="xs" c="dimmed" mt="xs">
-                        {Math.round(upload.transcodingProgress * 100)}% complete
+                        {Math.min(
+                          Math.round(upload.transcodingProgress * 100),
+                          99,
+                        )}
+                        % complete
                       </Text>
                     </Box>
                   ) : null}
