@@ -18,7 +18,8 @@
     "./util/temporal": "./src/util/temporal.ts",
     "./util/zod": "./src/util/zod.ts",
     "./util/email": "./src/util/email.ts",
-    "./workflow-ids": "./src/workflow-ids.ts"
+    "./workflow-ids": "./src/workflow-ids.ts",
+    "./search-attributes": "./src/search-attributes.ts"
   },
   "scripts": {
     "check": "pnpm run /^check:/",

@@ -1,4 +1,6 @@
 import {
+  AppUser,
+  Channel,
   ChannelImportSource,
   db,
   UploadRecord,
@@ -65,6 +67,14 @@ import {
 
 export type { ReindexKind } from '@letschurch/temporal/activities/background/reindex';
 
+import {
+  CHANNEL_ID_KEY,
+  CHANNEL_SLUG_KEY,
+  IMPORT_SOURCE_ID_KEY,
+  UPLOAD_ID_KEY,
+  USER_ID_KEY,
+  USERNAME_KEY,
+} from '@letschurch/temporal/search-attributes';
 import {
   type BackfillFilenamesWorkflowParams,
   backfillFilenamesWorkflow,
@@ -142,11 +152,45 @@ export async function handleMultipartMediaUpload(
   s3UploadKey: string,
   postProcess: UploadPostProcessValue,
 ) {
+  const meta =
+    postProcess === 'media' || postProcess === 'thumbnail'
+      ? await db
+          .select({
+            channelId: UploadRecord.channelId,
+            channelSlug: Channel.slug,
+            userId: UploadRecord.appUserId,
+            username: AppUser.username,
+          })
+          .from(UploadRecord)
+          .innerJoin(Channel, eq(Channel.id, UploadRecord.channelId))
+          .innerJoin(AppUser, eq(AppUser.id, UploadRecord.appUserId))
+          .where(eq(UploadRecord.id, uploadRecordId))
+          .then((r) => r[0] ?? null)
+      : null;
+
   return (await client).workflow.start(handleMultipartMediaUploadWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     workflowId: makeMultipartMediaUploadWorkflowId(s3UploadId, s3UploadKey),
-    args: [uploadRecordId, clientId, s3UploadId, s3UploadKey, postProcess],
+    args: [
+      uploadRecordId,
+      clientId,
+      s3UploadId,
+      s3UploadKey,
+      postProcess,
+      meta,
+    ],
+    typedSearchAttributes: [
+      { key: UPLOAD_ID_KEY, value: uploadRecordId },
+      ...(meta
+        ? [
+            { key: CHANNEL_ID_KEY, value: meta.channelId },
+            { key: CHANNEL_SLUG_KEY, value: meta.channelSlug },
+            { key: USER_ID_KEY, value: meta.userId },
+            { key: USERNAME_KEY, value: meta.username },
+          ]
+        : []),
+    ],
   });
 }
 
@@ -189,6 +233,7 @@ export async function updateUploadRecord(
     args: [uploadRecordId],
     signal: updateUploadRecordSignal,
     signalArgs: [data],
+    typedSearchAttributes: [{ key: UPLOAD_ID_KEY, value: uploadRecordId }],
     retry: {
       maximumAttempts: 8,
     },
@@ -204,6 +249,7 @@ export async function recordDownloadSize(
     taskQueue: BACKGROUND_QUEUE,
     workflowId: makeRecordDownloadSizeWorkflowId(uploadRecordId),
     args: [uploadRecordId, variant, bytes],
+    typedSearchAttributes: [{ key: UPLOAD_ID_KEY, value: uploadRecordId }],
     retry: {
       maximumAttempts: 8,
     },
@@ -244,11 +290,13 @@ export async function resetPassword(
   id: string,
   ...args: Parameters<typeof resetPasswordWorkflow>
 ) {
+  const [userId] = args;
   return (await client).workflow.start(resetPasswordWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     args,
     workflowId: makeResetPasswordWorkflowId(id),
+    typedSearchAttributes: [{ key: USER_ID_KEY, value: userId }],
   });
 }
 
@@ -271,11 +319,16 @@ export async function postUserRegistration(
   userId: string,
   ...args: Parameters<typeof postUserRegistrationWorkflow>
 ) {
+  const { username } = args[0];
   return (await client).workflow.start(postUserRegistrationWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     args,
     workflowId: makePostUserRegistrationWorkflowId(userId),
+    typedSearchAttributes: [
+      { key: USER_ID_KEY, value: userId },
+      { key: USERNAME_KEY, value: username },
+    ],
   });
 }
 
@@ -325,23 +378,51 @@ export async function deleteUpload(uploadRecordId: string) {
   // Cancel any active processing workflows before starting delete
   await cancelUploadProcessing(uploadRecordId);
 
+  const meta = await db
+    .select({
+      channelId: UploadRecord.channelId,
+      channelSlug: Channel.slug,
+      userId: UploadRecord.appUserId,
+    })
+    .from(UploadRecord)
+    .innerJoin(Channel, eq(Channel.id, UploadRecord.channelId))
+    .where(eq(UploadRecord.id, uploadRecordId))
+    .then((r) => r[0] ?? null);
+
   return (await client).workflow.start(deleteUploadWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     args: [uploadRecordId],
     workflowId: makeDeleteUploadWorkflowId(uploadRecordId),
+    typedSearchAttributes: [
+      { key: UPLOAD_ID_KEY, value: uploadRecordId },
+      ...(meta
+        ? [
+            { key: CHANNEL_ID_KEY, value: meta.channelId },
+            { key: CHANNEL_SLUG_KEY, value: meta.channelSlug },
+            { key: USER_ID_KEY, value: meta.userId },
+          ]
+        : []),
+    ],
   });
 }
 
 export async function importMedia(
   ...args: Parameters<typeof importMediaWorkflow>
 ) {
-  const url = args[0].url;
+  const { url, username, channelSlug, importSourceId } = args[0];
   return (await client).workflow.start(importMediaWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     args,
     workflowId: makeImportMediaWorkflowId(url),
+    typedSearchAttributes: [
+      { key: USERNAME_KEY, value: username },
+      { key: CHANNEL_SLUG_KEY, value: channelSlug },
+      ...(importSourceId
+        ? [{ key: IMPORT_SOURCE_ID_KEY, value: importSourceId }]
+        : []),
+    ],
   });
 }
 
@@ -665,9 +746,8 @@ export async function startImportSourceScheduler(importSourceId: string) {
       timezone: true,
     },
     with: {
-      channel: {
-        columns: { slug: true, name: true },
-      },
+      channel: { columns: { id: true, slug: true, name: true } },
+      createdBy: { columns: { id: true, username: true } },
     },
   });
 
@@ -695,6 +775,17 @@ export async function startImportSourceScheduler(importSourceId: string) {
         importSourceId,
         'scheduled',
       ),
+      typedSearchAttributes: [
+        { key: IMPORT_SOURCE_ID_KEY, value: importSourceId },
+        { key: CHANNEL_ID_KEY, value: importSource.channel.id },
+        { key: CHANNEL_SLUG_KEY, value: importSource.channel.slug },
+        ...(importSource.createdBy
+          ? [
+              { key: USER_ID_KEY, value: importSource.createdBy.id },
+              { key: USERNAME_KEY, value: importSource.createdBy.username },
+            ]
+          : []),
+      ],
     },
     memo: {
       channelName: importSource.channel.name,
@@ -779,14 +870,13 @@ export async function deleteImportSourceScheduler(importSourceId: string) {
  * This is a one-time operation, separate from the scheduled workflow.
  */
 export async function triggerManualImport(importSourceId: string) {
-  // Fetch channel slug for friendly workflow ID
+  // Fetch channel info for friendly workflow ID and search attributes
   const importSource = await db.query.ChannelImportSource.findFirst({
     where: (t, { eq }) => eq(t.id, importSourceId),
     columns: {},
     with: {
-      channel: {
-        columns: { slug: true },
-      },
+      channel: { columns: { id: true, slug: true } },
+      createdBy: { columns: { id: true, username: true } },
     },
   });
 
@@ -803,6 +893,17 @@ export async function triggerManualImport(importSourceId: string) {
       'manual',
     ),
     args: [importSourceId],
+    typedSearchAttributes: [
+      { key: IMPORT_SOURCE_ID_KEY, value: importSourceId },
+      { key: CHANNEL_ID_KEY, value: importSource.channel.id },
+      { key: CHANNEL_SLUG_KEY, value: importSource.channel.slug },
+      ...(importSource.createdBy
+        ? [
+            { key: USER_ID_KEY, value: importSource.createdBy.id },
+            { key: USERNAME_KEY, value: importSource.createdBy.username },
+          ]
+        : []),
+    ],
   });
 }
 
@@ -820,14 +921,13 @@ export async function triggerHistoricalImport(
     url?: string | null;
   }>,
 ) {
-  // Fetch channel slug for friendly workflow ID
+  // Fetch channel info for friendly workflow ID and search attributes
   const importSource = await db.query.ChannelImportSource.findFirst({
     where: (t, { eq }) => eq(t.id, importSourceId),
     columns: {},
     with: {
-      channel: {
-        columns: { slug: true },
-      },
+      channel: { columns: { id: true, slug: true } },
+      createdBy: { columns: { id: true, username: true } },
     },
   });
 
@@ -844,6 +944,17 @@ export async function triggerHistoricalImport(
       'historical',
     ),
     args: [importSourceId, importHistory],
+    typedSearchAttributes: [
+      { key: IMPORT_SOURCE_ID_KEY, value: importSourceId },
+      { key: CHANNEL_ID_KEY, value: importSource.channel.id },
+      { key: CHANNEL_SLUG_KEY, value: importSource.channel.slug },
+      ...(importSource.createdBy
+        ? [
+            { key: USER_ID_KEY, value: importSource.createdBy.id },
+            { key: USERNAME_KEY, value: importSource.createdBy.username },
+          ]
+        : []),
+    ],
   });
 }
 

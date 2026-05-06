@@ -7,6 +7,7 @@ import {
 } from '@temporalio/workflow';
 import type * as activities from '../../activities/background';
 import { BACKGROUND_QUEUE } from '../../queues';
+import { CHANNEL_ID_KEY } from '../../search-attributes';
 import { deleteUploadWorkflow } from './delete-upload';
 
 // Activity proxies with different timeout configurations
@@ -87,6 +88,7 @@ export async function deleteChannelWorkflow(
         workflowId: `deleteUpload:${uploadId}:${Date.now()}`,
         taskQueue: BACKGROUND_QUEUE,
         parentClosePolicy: ParentClosePolicy.ABANDON,
+        typedSearchAttributes: [{ key: CHANNEL_ID_KEY, value: channelId }],
         retry: { maximumAttempts: 3 },
       });
       progressState.uploadsStarted += 1;

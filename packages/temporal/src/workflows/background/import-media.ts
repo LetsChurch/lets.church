@@ -6,6 +6,12 @@ import {
 import type * as importSourceActivities from '../../activities/import-source';
 import type { UploadRecordCreateData } from '../../client';
 import { BACKGROUND_QUEUE, IMPORT_QUEUE, PRIORITY_IMPORT } from '../../queues';
+import {
+  CHANNEL_SLUG_KEY,
+  IMPORT_SOURCE_ID_KEY,
+  UPLOAD_ID_KEY,
+  USERNAME_KEY,
+} from '../../search-attributes';
 import { processImageWorkflow } from './process-image';
 import { processMediaWorkflow } from './process-media';
 
@@ -87,6 +93,14 @@ export async function importMediaWorkflow({
       args: [uploadRecordId],
       priority: { priorityKey: PRIORITY_IMPORT },
       parentClosePolicy: ParentClosePolicy.ABANDON,
+      typedSearchAttributes: [
+        { key: UPLOAD_ID_KEY, value: uploadRecordId },
+        { key: USERNAME_KEY, value: username },
+        { key: CHANNEL_SLUG_KEY, value: channelSlug },
+        ...(importSourceId
+          ? [{ key: IMPORT_SOURCE_ID_KEY, value: importSourceId }]
+          : []),
+      ],
       retry: { maximumAttempts: 5 },
     });
 
@@ -97,6 +111,13 @@ export async function importMediaWorkflow({
         args: [uploadRecordId, thumbnailUploadKey, 'thumbnail'],
         priority: { priorityKey: PRIORITY_IMPORT },
         parentClosePolicy: ParentClosePolicy.ABANDON,
+        typedSearchAttributes: [
+          { key: UPLOAD_ID_KEY, value: uploadRecordId },
+          { key: CHANNEL_SLUG_KEY, value: channelSlug },
+          ...(importSourceId
+            ? [{ key: IMPORT_SOURCE_ID_KEY, value: importSourceId }]
+            : []),
+        ],
         retry: { maximumAttempts: 5 },
       });
     }

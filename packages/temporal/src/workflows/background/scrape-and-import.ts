@@ -5,6 +5,11 @@ import {
 } from '@temporalio/workflow';
 import type * as importSourceActivities from '../../activities/import-source';
 import { BACKGROUND_QUEUE, IMPORT_QUEUE } from '../../queues';
+import {
+  CHANNEL_SLUG_KEY,
+  IMPORT_SOURCE_ID_KEY,
+  USERNAME_KEY,
+} from '../../search-attributes';
 import { importMediaWorkflow } from './import-media';
 
 // Database activities run on BACKGROUND_QUEUE (background worker has DB access)
@@ -74,6 +79,7 @@ export async function scrapeAndImportWorkflow(
 
     // Normal scraping operation
     const source = await getImportSource(importSourceId);
+
     const items = await scrapeImportSource(
       source.url,
       source.lastImportedUploadDate,
@@ -125,6 +131,11 @@ export async function scrapeAndImportWorkflow(
               taskQueue: BACKGROUND_QUEUE,
               importSourceId,
             },
+          ],
+          typedSearchAttributes: [
+            { key: IMPORT_SOURCE_ID_KEY, value: importSourceId },
+            { key: CHANNEL_SLUG_KEY, value: source.channel.slug },
+            { key: USERNAME_KEY, value: source.createdBy.username },
           ],
           parentClosePolicy: ParentClosePolicy.ABANDON,
           retry: { maximumAttempts: 3 },

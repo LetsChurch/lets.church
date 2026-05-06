@@ -4,6 +4,7 @@ import PLazy from 'p-lazy';
 import waitOn from 'wait-on';
 import { z } from 'zod';
 import type { DocumentKind } from '../activities/background/index-document';
+import { UPLOAD_ID_KEY } from '../search-attributes';
 import { emptySignal } from '../signals';
 import logger from '../util/logger';
 import {
@@ -113,6 +114,7 @@ export async function updateUploadRecord(
     args: [uploadRecordId],
     signal: updateUploadRecordSignal,
     signalArgs: [data],
+    typedSearchAttributes: [{ key: UPLOAD_ID_KEY, value: uploadRecordId }],
     retry: {
       maximumAttempts: 8,
     },
@@ -128,6 +130,7 @@ export async function recordDownloadSize(
     taskQueue: BACKGROUND_QUEUE,
     workflowId: makeRecordDownloadSizeWorkflowId(uploadRecordId, variant),
     args: [uploadRecordId, variant, bytes],
+    typedSearchAttributes: [{ key: UPLOAD_ID_KEY, value: uploadRecordId }],
     retry: {
       maximumAttempts: 5,
     },
@@ -145,6 +148,7 @@ export async function indexDocument(
     args: [kind, uploadId, uploadKey],
     signal: emptySignal,
     signalArgs: [],
+    typedSearchAttributes: [{ key: UPLOAD_ID_KEY, value: uploadId }],
     retry: {
       maximumAttempts: 8,
     },

@@ -9,6 +9,13 @@ import {
 } from '@temporalio/workflow';
 import type * as activities from '../../activities/background';
 import { BACKGROUND_QUEUE, PRIORITY_USER_UPLOAD } from '../../queues';
+import {
+  CHANNEL_ID_KEY,
+  CHANNEL_SLUG_KEY,
+  UPLOAD_ID_KEY,
+  USER_ID_KEY,
+  USERNAME_KEY,
+} from '../../search-attributes';
 import type { UploadPostProcessValue } from '../../util/types';
 import { backupToGlacierWorkflow } from './backup-to-glacier';
 import { processImageWorkflow } from './process-image';
@@ -37,12 +44,20 @@ export type HandleMultipartMediaUploadParams = {
   postProcess: UploadPostProcessValue;
 };
 
+export type UploadMeta = {
+  channelId: string;
+  channelSlug: string;
+  userId: string;
+  username: string;
+};
+
 export async function handleMultipartMediaUploadWorkflow(
   targetId: string,
   _clientId: S3ClientId,
   s3UploadId: string,
   s3UploadKey: string,
   postProcess: UploadPostProcessValue,
+  uploadMeta?: UploadMeta | null,
 ) {
   let eTags: Array<string> | null = null;
   let finalizingUserId: string | null = null;
@@ -64,6 +79,21 @@ export async function handleMultipartMediaUploadWorkflow(
       s3UploadKey,
       eTags,
     );
+
+    const meta =
+      postProcess === 'media' || postProcess === 'thumbnail'
+        ? (uploadMeta ?? null)
+        : null;
+
+    const childSearchAttrs = meta
+      ? [
+          { key: UPLOAD_ID_KEY, value: targetId },
+          { key: CHANNEL_ID_KEY, value: meta.channelId },
+          { key: CHANNEL_SLUG_KEY, value: meta.channelSlug },
+          { key: USER_ID_KEY, value: finalizingUserId },
+          { key: USERNAME_KEY, value: meta.username },
+        ]
+      : undefined;
 
     // Create UploadState record and launch backup workflow
     // Pass size as string since Temporal cannot serialize bigint
@@ -101,6 +131,7 @@ export async function handleMultipartMediaUploadWorkflow(
         taskQueue: BACKGROUND_QUEUE,
         priority: { priorityKey: PRIORITY_USER_UPLOAD },
         parentClosePolicy: ParentClosePolicy.ABANDON,
+        typedSearchAttributes: childSearchAttrs,
         retry: {
           maximumAttempts: 5,
         },
@@ -112,6 +143,7 @@ export async function handleMultipartMediaUploadWorkflow(
         taskQueue: BACKGROUND_QUEUE,
         priority: { priorityKey: PRIORITY_USER_UPLOAD },
         parentClosePolicy: ParentClosePolicy.ABANDON,
+        typedSearchAttributes: childSearchAttrs,
         retry: {
           maximumAttempts: 5,
         },
