@@ -123,8 +123,8 @@ function ChannelUploadPage() {
   const { upload, channel } = data;
 
   // Current processing status
-  const isTranscoding = !upload.transcodingFinishedAt;
-  const isTranscribing = !upload.transcribingFinishedAt;
+  const isTranscoding = !isUploading && !upload.transcodingFinishedAt;
+  const isTranscribing = !isUploading && !upload.transcribingFinishedAt;
   const isProcessing = isUploading || isTranscoding;
 
   // Check if user is site admin
@@ -938,7 +938,7 @@ function ChannelUploadPage() {
                   ) : null}
 
                   {/* Transcoding Progress - show when not uploading */}
-                  {!isUploading && isTranscoding ? (
+                  {isTranscoding ? (
                     <Box>
                       <Text size="sm" fw={500} mb="xs">
                         Transcoding video...
@@ -977,7 +977,7 @@ function ChannelUploadPage() {
                 </Box>
               )}
 
-              {/* Transcribing Progress - always show if transcribing (even alongside player) */}
+              {/* Transcribing Progress - show when not uploading (even alongside player) */}
               {isTranscribing ? (
                 <Box>
                   <Text size="sm" fw={500} mb="xs">
