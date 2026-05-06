@@ -20,6 +20,7 @@ import {
 import { indexDocument } from '@letschurch/temporal/client';
 import slugify from '@sindresorhus/slugify';
 import argon2 from 'argon2';
+import { eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 import parsePhoneNumber from 'libphonenumber-js';
 import { stripIndent } from 'proper-tags';
@@ -52,6 +53,17 @@ import {
 } from './tags';
 
 faker.seed(1337);
+
+const [existingAdmin] = await db
+  .select()
+  .from(AppUser)
+  .where(eq(AppUser.username, 'admin'))
+  .limit(1);
+
+if (existingAdmin) {
+  console.log('Database already seeded, skipping.');
+  process.exit(0);
+}
 
 const password = await argon2.hash('password', { type: argon2.argon2id });
 
