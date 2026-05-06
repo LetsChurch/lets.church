@@ -288,18 +288,67 @@ services:
     ports:
       - 127.0.0.1:${HOST_IMGPROXY_PORT}:8080
 
-  temporal:
-    image: temporalio/auto-setup:1.29.2
+  temporal-schema-setup:
+    image: temporalio/admin-tools:1.31.0
     environment:
-      # See auto-setup.sh: https://github.com/temporalio/docker-builds/blob/a442b94edbe10bb49e2f0fc00c3154cdf0590be5/docker/auto-setup.sh
-      SKIP_DB_CREATE: true # Database is already created via init script
-      DB: postgres12_pgx # Database vendor
-      DB_PORT: 5432 # Database port
-      POSTGRES_SEEDS: postgres # Database server
-      POSTGRES_USER: temporal # Database user
-      POSTGRES_PWD: password # Database user password
-      DBNAME: temporal # Database on server
-      VISIBILITY_DBNAME: temporal_visibility
+      POSTGRES_SEEDS: postgres
+      DB_PORT: 5432
+      POSTGRES_USER: temporal
+      SQL_PASSWORD: password
+      DBNAME: temporal
+      ES_SEEDS: elasticsearch
+    command:
+      - sh
+      - -c
+      - |
+        retries=0; max_retries=30
+        until nc -z $${POSTGRES_SEEDS} $${DB_PORT}; do
+          retries=$$((retries + 1))
+          if [ "$$retries" -ge "$$max_retries" ]; then
+            echo "ERROR: PostgreSQL not reachable after $$((max_retries * 2))s"
+            exit 1
+          fi
+          echo 'Waiting for PostgreSQL...'; sleep 2
+        done
+        temporal-sql-tool \
+          --plugin postgres12_pgx \
+          --ep "$${POSTGRES_SEEDS}" \
+          -u "$${POSTGRES_USER}" \
+          -p "$${DB_PORT}" \
+          --db "$${DBNAME}" \
+          setup-schema -v 0.0 || true
+        temporal-sql-tool \
+          --plugin postgres12_pgx \
+          --ep "$${POSTGRES_SEEDS}" \
+          -u "$${POSTGRES_USER}" \
+          -p "$${DB_PORT}" \
+          --db "$${DBNAME}" \
+          update-schema \
+          -d /etc/temporal/schema/postgresql/v12/temporal/versioned
+        retries=0
+        until wget -qO- http://$${ES_SEEDS}:9200 >/dev/null 2>&1; do
+          retries=$$((retries + 1))
+          if [ "$$retries" -ge "$$max_retries" ]; then
+            echo "ERROR: Elasticsearch not reachable after $$((max_retries * 2))s"
+            exit 1
+          fi
+          echo 'Waiting for Elasticsearch...'; sleep 2
+        done
+        temporal-elasticsearch-tool --endpoint "http://$${ES_SEEDS}:9200" setup-schema --fail
+    depends_on:
+      - postgres
+      - elasticsearch
+
+  temporal:
+    image: temporalio/server:1.31.0
+    environment:
+      BIND_ON_IP: "0.0.0.0"
+      DB: postgres12_pgx
+      DB_PORT: 5432
+      POSTGRES_SEEDS: postgres
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: password
+      DBNAME: temporal
       DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yml
       ENABLE_ES: true
       ES_SEEDS: elasticsearch
@@ -309,14 +358,42 @@ services:
     volumes:
       - ./etc/temporal/dynamicconfig:/etc/temporal/config/dynamicconfig
     depends_on:
-      - postgres
-      - elasticsearch
+      temporal-schema-setup:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "7233"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
 
-  temporal-admin-tools:
-    image: temporalio/admin-tools:1.29.1-tctl-1.18.4-cli-1.5.0
+  temporal-namespace-setup:
+    image: temporalio/admin-tools:1.31.0
     environment:
       TEMPORAL_ADDRESS: temporal:7233
-      TEMPORAL_CLI_ADDRESS: temporal:7233
+    command:
+      - sh
+      - -c
+      - |
+        until temporal operator cluster health | grep -q SERVING; do echo 'Waiting for Temporal...'; sleep 2; done
+        temporal operator namespace create --retention 24h --namespace default 2>/dev/null || true
+        until temporal operator search-attribute list --namespace default >/dev/null 2>&1; do echo 'Waiting for namespace cache...'; sleep 1; done
+        temporal operator search-attribute create --namespace default \
+          --name CustomKeywordField --type Keyword \
+          --name CustomStringField --type Text \
+          --name CustomTextField --type Text \
+          --name CustomIntField --type Int \
+          --name CustomDatetimeField --type Datetime \
+          --name CustomDoubleField --type Double \
+          --name CustomBoolField --type Bool 2>/dev/null || true
+    depends_on:
+      temporal:
+        condition: service_healthy
+
+  temporal-admin-tools:
+    image: temporalio/admin-tools:1.31.0
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
     stdin_open: true
     tty: true
     depends_on:

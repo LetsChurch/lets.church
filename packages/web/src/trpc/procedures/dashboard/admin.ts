@@ -13,7 +13,7 @@ import {
 } from '@letschurch/db';
 import { ingestConfig } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
-import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
+import { BACKGROUND_QUEUE, PRIORITY_RETRY } from '@letschurch/temporal/queues';
 import {
   deleteChannelWorkflow,
   geocodeOrganizationWorkflow,
@@ -3081,6 +3081,7 @@ export const adminRouter = router({
           taskQueue: BACKGROUND_QUEUE,
           workflowId,
           args: [input.uploadRecordId, scope],
+          priority: { priorityKey: PRIORITY_RETRY },
           retry: { maximumAttempts: 5 },
         });
 
@@ -3262,6 +3263,7 @@ export const adminRouter = router({
             taskQueue: BACKGROUND_QUEUE,
             workflowId,
             args: [upload.id, scope],
+            priority: { priorityKey: PRIORITY_RETRY },
             retry: { maximumAttempts: 5 },
           });
 

@@ -8,7 +8,7 @@ import {
   startChild,
 } from '@temporalio/workflow';
 import type * as activities from '../../activities/background';
-import { BACKGROUND_QUEUE } from '../../queues';
+import { BACKGROUND_QUEUE, PRIORITY_USER_UPLOAD } from '../../queues';
 import type { UploadPostProcessValue } from '../../util/types';
 import { backupToGlacierWorkflow } from './backup-to-glacier';
 import { processImageWorkflow } from './process-image';
@@ -99,6 +99,7 @@ export async function handleMultipartMediaUploadWorkflow(
         args: [targetId],
         workflowId: `processMedia:${s3UploadKey}`,
         taskQueue: BACKGROUND_QUEUE,
+        priority: { priorityKey: PRIORITY_USER_UPLOAD },
         parentClosePolicy: ParentClosePolicy.ABANDON,
         retry: {
           maximumAttempts: 5,
@@ -109,6 +110,7 @@ export async function handleMultipartMediaUploadWorkflow(
         args: [targetId, s3UploadKey, postProcess],
         workflowId: `processImage:${s3UploadKey}`,
         taskQueue: BACKGROUND_QUEUE,
+        priority: { priorityKey: PRIORITY_USER_UPLOAD },
         parentClosePolicy: ParentClosePolicy.ABANDON,
         retry: {
           maximumAttempts: 5,

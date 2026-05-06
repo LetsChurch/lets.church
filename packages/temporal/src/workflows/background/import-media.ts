@@ -5,7 +5,7 @@ import {
 } from '@temporalio/workflow';
 import type * as importSourceActivities from '../../activities/import-source';
 import type { UploadRecordCreateData } from '../../client';
-import { BACKGROUND_QUEUE, IMPORT_QUEUE } from '../../queues';
+import { BACKGROUND_QUEUE, IMPORT_QUEUE, PRIORITY_IMPORT } from '../../queues';
 import { processImageWorkflow } from './process-image';
 import { processMediaWorkflow } from './process-media';
 
@@ -85,6 +85,7 @@ export async function importMediaWorkflow({
       taskQueue,
       workflowId: `processMedia:${mediaUploadKey}`,
       args: [uploadRecordId],
+      priority: { priorityKey: PRIORITY_IMPORT },
       parentClosePolicy: ParentClosePolicy.ABANDON,
       retry: { maximumAttempts: 5 },
     });
@@ -94,6 +95,7 @@ export async function importMediaWorkflow({
         taskQueue,
         workflowId: `processImage:${thumbnailUploadKey}`,
         args: [uploadRecordId, thumbnailUploadKey, 'thumbnail'],
+        priority: { priorityKey: PRIORITY_IMPORT },
         parentClosePolicy: ParentClosePolicy.ABANDON,
         retry: { maximumAttempts: 5 },
       });
