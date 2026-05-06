@@ -290,6 +290,9 @@ function SearchResults({ q }: { q: string }) {
   } | null>(null);
   const [miniPlayerMousePos, setMiniPlayerMousePos] = useState({ x: 0, y: 0 });
   const hoverTimerRef = useRef<number | undefined>(undefined);
+  const closeTimerRef = useRef<number | undefined>(undefined);
+  const activeHoverRef = useRef(activeHover);
+  activeHoverRef.current = activeHover;
   const miniPlayerCurrentTimeRef = useRef<number>(0);
 
   const { data: miniPlayerSources } = useQuery({
@@ -303,6 +306,7 @@ function SearchResults({ q }: { q: string }) {
   useEffect(
     () => () => {
       window.clearTimeout(hoverTimerRef.current);
+      window.clearTimeout(closeTimerRef.current);
     },
     [],
   );
@@ -310,29 +314,42 @@ function SearchResults({ q }: { q: string }) {
   const handleSegmentMouseEnter = useCallback(
     (item: SearchResultItem, segmentIndex: number, e: React.MouseEvent) => {
       setMiniPlayerMousePos({ x: e.clientX, y: e.clientY });
-      window.clearTimeout(hoverTimerRef.current);
-      hoverTimerRef.current = window.setTimeout(() => {
-        const segmentStartSeconds =
-          (item.segments?.[segmentIndex]?.start ?? 0) / 1000;
+      window.clearTimeout(closeTimerRef.current);
+
+      const segmentStartSeconds =
+        (item.segments?.[segmentIndex]?.start ?? 0) / 1000;
+
+      if (activeHoverRef.current?.item.id === item.id) {
+        // Same media — skip delay, scrub to new segment immediately
+        window.clearTimeout(hoverTimerRef.current);
         miniPlayerCurrentTimeRef.current = segmentStartSeconds;
         setActiveHover({ item, segmentIndex });
-        posthog.capture('transcript_preview_opened', {
-          upload_id: item.id,
-          media_title: item.title,
-          channel_id: item.channel.id,
-          channel_name: item.channel.name,
-          published_at: item.publishedAt?.toISOString() ?? null,
-          length_seconds: item.lengthSeconds,
-          segment_start_seconds: segmentStartSeconds,
-        });
-      }, 500);
+      } else {
+        // Different media — normal 500ms delay before opening
+        window.clearTimeout(hoverTimerRef.current);
+        hoverTimerRef.current = window.setTimeout(() => {
+          miniPlayerCurrentTimeRef.current = segmentStartSeconds;
+          setActiveHover({ item, segmentIndex });
+          posthog.capture('transcript_preview_opened', {
+            upload_id: item.id,
+            media_title: item.title,
+            channel_id: item.channel.id,
+            channel_name: item.channel.name,
+            published_at: item.publishedAt?.toISOString() ?? null,
+            length_seconds: item.lengthSeconds,
+            segment_start_seconds: segmentStartSeconds,
+          });
+        }, 500);
+      }
     },
     [],
   );
 
   const handleSegmentMouseLeave = useCallback(() => {
     window.clearTimeout(hoverTimerRef.current);
-    setActiveHover(null);
+    closeTimerRef.current = window.setTimeout(() => {
+      setActiveHover(null);
+    }, 100);
   }, []);
 
   const handleSegmentMouseMove = useCallback((e: React.MouseEvent) => {
