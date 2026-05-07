@@ -24,6 +24,9 @@ const targetMappings: Record<
   }
 > = {
   lc_channels: {
+    settings: {
+      number_of_replicas: 0,
+    },
     properties: {
       name: {
         type: 'search_as_you_type',
@@ -37,6 +40,9 @@ const targetMappings: Record<
     },
   },
   lc_organizations: {
+    settings: {
+      number_of_replicas: 0,
+    },
     properties: {
       name: {
         type: 'search_as_you_type',
@@ -62,6 +68,9 @@ const targetMappings: Record<
     },
   },
   lc_uploads_v2: {
+    settings: {
+      number_of_replicas: 0,
+    },
     properties: {
       channelId: {
         type: 'keyword',
@@ -93,6 +102,9 @@ const targetMappings: Record<
     },
   },
   lc_transcripts: {
+    settings: {
+      number_of_replicas: 0,
+    },
     properties: {
       channelId: {
         type: 'keyword',
@@ -168,6 +180,7 @@ const targetMappings: Record<
       },
     },
     settings: {
+      number_of_replicas: 0,
       analysis: {
         char_filter: {
           ignore_html_tags: {
