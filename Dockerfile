@@ -29,7 +29,7 @@ RUN groupadd -r nodeapp && useradd -r -g nodeapp -m nodeapp && \
 USER nodeapp
 
 FROM base AS package-json
-COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY --chown=nodeapp:nodeapp packages/util/package.json ./packages/util/
 COPY --chown=nodeapp:nodeapp packages/s3/package.json ./packages/s3/
 COPY --chown=nodeapp:nodeapp packages/db/package.json ./packages/db/
@@ -51,7 +51,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-l
 FROM base AS build
 COPY --chown=nodeapp:nodeapp --from=deps /usr/src/app/node_modules ./node_modules
 COPY --chown=nodeapp:nodeapp --from=deps /usr/src/app/packages/ ./packages/
-COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml tsconfig.json ./
+COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml tsconfig.json package.json ./
 COPY --chown=nodeapp:nodeapp packages/ ./packages/
 ENV NODE_ENV=production
 ENV VITE_SENTRY_DSN=https://d641f53f296e7abff3b6b269a4decfc4@o387306.ingest.sentry.io/4506108399190016
@@ -79,7 +79,7 @@ USER nodeapp
 RUN pnpm --filter @letschurch/temporal exec playwright install chromium
 
 FROM base AS prod
-COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml ./
+COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml package.json ./
 # Copy all node_modules
 COPY --chown=nodeapp:nodeapp --from=prod-deps /usr/src/app/node_modules ./node_modules
 COPY --chown=nodeapp:nodeapp --from=prod-deps /usr/src/app/packages/ ./packages/
@@ -183,7 +183,7 @@ WORKDIR /usr/src/app
 # Create user early to avoid expensive chown operations later
 RUN groupadd -r nodeapp && useradd -r -g nodeapp -m nodeapp && \
   chown -R nodeapp:nodeapp /usr/src/app /data
-COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml ./
+COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml package.json ./
 # Copy node_modules
 COPY --chown=nodeapp:nodeapp --from=prod-deps /usr/src/app/node_modules ./node_modules
 COPY --chown=nodeapp:nodeapp --from=prod-deps /usr/src/app/packages/ ./packages/

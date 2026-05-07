@@ -123,8 +123,13 @@ deploy-manifests:
     - kustomize edit set image registry.gitlab.com/letschurch/lets.church/transcode-worker:$CI_COMMIT_SHORT_SHA
     - kustomize edit set image registry.gitlab.com/letschurch/lets.church/transcribe-worker:$CI_COMMIT_SHORT_SHA
     - kustomize edit set image registry.gitlab.com/letschurch/lets.church/web:$CI_COMMIT_SHORT_SHA
+    - cd ../tnw
+    - kustomize edit set image registry.gitlab.com/letschurch/lets.church/import-worker:$CI_COMMIT_SHORT_SHA
+    - kustomize edit set image registry.gitlab.com/letschurch/lets.church/probe-worker:$CI_COMMIT_SHORT_SHA
+    - kustomize edit set image registry.gitlab.com/letschurch/lets.church/transcode-worker:$CI_COMMIT_SHORT_SHA
+    - cd ..
     - git config user.email "ci@lets.church"
     - git config user.name "GitLab CI"
-    - git add kustomization.yml
+    - git add prod/kustomization.yml tnw/kustomization.yml
     - 'git diff --cached --quiet || git commit -m "deploy: $CI_COMMIT_SHORT_SHA"'
     - git push origin main
