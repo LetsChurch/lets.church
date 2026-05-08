@@ -278,9 +278,6 @@ export const organizationRouter = router({
               },
             },
           },
-          downstreamOrganizationAssociations: {
-            columns: { downstreamOrganizationId: true },
-          },
         },
       });
 
@@ -295,21 +292,35 @@ export const organizationRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND' });
       }
 
-      // Get count of unapproved upstream associations
-      const unapprovedAssociationsRows = await db
-        .select({ cnt: count() })
-        .from(OrganizationOrganizationAssociation)
-        .where(
-          and(
-            eq(
-              OrganizationOrganizationAssociation.upstreamOrganizationId,
-              input.orgId,
+      const [unapprovedAssociationsRows, downstreamCountRows] =
+        await Promise.all([
+          db
+            .select({ cnt: count() })
+            .from(OrganizationOrganizationAssociation)
+            .where(
+              and(
+                eq(
+                  OrganizationOrganizationAssociation.upstreamOrganizationId,
+                  input.orgId,
+                ),
+                eq(OrganizationOrganizationAssociation.upstreamApproved, false),
+              ),
             ),
-            eq(OrganizationOrganizationAssociation.upstreamApproved, false),
-          ),
-        );
+          db
+            .select({ cnt: count() })
+            .from(OrganizationOrganizationAssociation)
+            .where(
+              eq(
+                OrganizationOrganizationAssociation.upstreamOrganizationId,
+                input.orgId,
+              ),
+            ),
+        ]);
       const unapprovedAssociationsCount =
         unapprovedAssociationsRows[0]?.cnt ?? 0;
+      const downstreamOrganizationAssociationsCount = Number(
+        downstreamCountRows[0]?.cnt ?? 0,
+      );
 
       // Sort memberships: isAdmin desc, createdAt asc
       const sortedMemberships = [...organization.memberships].sort((a, b) => {
@@ -350,7 +361,7 @@ export const organizationRouter = router({
         _count: {
           memberships: organization.memberships.length,
           downstreamOrganizationAssociations:
-            organization.downstreamOrganizationAssociations.length,
+            downstreamOrganizationAssociationsCount,
         },
         userMembership: ctx.membership,
         unapprovedAssociationsCount,

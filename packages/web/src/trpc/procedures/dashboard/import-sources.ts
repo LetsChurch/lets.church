@@ -1,6 +1,6 @@
-import { ChannelImportSource, db } from '@letschurch/db';
+import { ChannelImportRun, ChannelImportSource, db } from '@letschurch/db';
 import { TRPCError } from '@trpc/server';
-import { eq } from 'drizzle-orm';
+import { count, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import {
   importRunsQuerySchema,
@@ -75,17 +75,33 @@ export const importSourcesRouter = router({
           channel: {
             columns: { id: true, name: true, slug: true },
           },
-          importRuns: {
-            columns: { id: true },
-          },
         },
         orderBy: (t, { desc }) => [desc(t.createdAt)],
       });
 
+      const importRunCountRows =
+        sources.length > 0
+          ? await db
+              .select({
+                importSourceId: ChannelImportRun.importSourceId,
+                cnt: count(),
+              })
+              .from(ChannelImportRun)
+              .where(
+                inArray(
+                  ChannelImportRun.importSourceId,
+                  sources.map((s) => s.id),
+                ),
+              )
+              .groupBy(ChannelImportRun.importSourceId)
+          : [];
+      const importRunCountMap = new Map(
+        importRunCountRows.map((r) => [r.importSourceId, Number(r.cnt)]),
+      );
+
       return sources.map((source) => ({
         ...source,
-        _count: { importRuns: source.importRuns.length },
-        importRuns: undefined,
+        _count: { importRuns: importRunCountMap.get(source.id) ?? 0 },
       }));
     }),
 
@@ -351,19 +367,33 @@ export const importSourcesRouter = router({
         workflowStatus: true,
         enabled: true,
       },
-      with: {
-        importRuns: {
-          columns: { id: true },
-        },
-      },
       where: (t, { eq }) => eq(t.channelId, input.channelId),
       orderBy: (t, { desc }) => [desc(t.createdAt)],
     });
 
+    const importRunCountRows =
+      sources.length > 0
+        ? await db
+            .select({
+              importSourceId: ChannelImportRun.importSourceId,
+              cnt: count(),
+            })
+            .from(ChannelImportRun)
+            .where(
+              inArray(
+                ChannelImportRun.importSourceId,
+                sources.map((s) => s.id),
+              ),
+            )
+            .groupBy(ChannelImportRun.importSourceId)
+        : [];
+    const importRunCountMap = new Map(
+      importRunCountRows.map((r) => [r.importSourceId, Number(r.cnt)]),
+    );
+
     return sources.map((source) => ({
       ...source,
-      _count: { importRuns: source.importRuns.length },
-      importRuns: undefined,
+      _count: { importRuns: importRunCountMap.get(source.id) ?? 0 },
     }));
   }),
 

@@ -19,7 +19,17 @@ import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
 import { emailHtml, sanitizeForHtml } from '@letschurch/temporal/util/email';
 import { sendEmailWorkflow } from '@letschurch/temporal/workflows/background/send-email';
 import { TRPCError } from '@trpc/server';
-import { and, count, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  isNull,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 import { stripIndent } from 'proper-tags';
 import sanitizeFilename from 'sanitize-filename';
@@ -416,16 +426,6 @@ export const channelRouter = router({
             },
           },
         },
-        uploadRecords: {
-          columns: {
-            id: true,
-            title: true,
-            createdAt: true,
-            deletedAt: true,
-          },
-          orderBy: (t, { desc }) => [desc(t.createdAt)],
-          limit: 10,
-        },
       },
       where: (t, { eq }) => eq(t.id, input.channelId),
     });
@@ -451,28 +451,36 @@ export const channelRouter = router({
       }
     }
 
-    const [viewCountResult, subscriberCountResult] = await Promise.all([
-      db
-        .select({ count: count() })
-        .from(UploadView)
-        .innerJoin(UploadRecord, eq(UploadView.uploadRecordId, UploadRecord.id))
-        .where(eq(UploadRecord.channelId, input.channelId))
-        .then((r) => r[0]),
-      db
-        .select({ count: count() })
-        .from(ChannelSubscription)
-        .where(eq(ChannelSubscription.channelId, input.channelId))
-        .then((r) => r[0]),
-    ]);
+    const [viewCountResult, subscriberCountResult, uploadCountResult] =
+      await Promise.all([
+        db
+          .select({ count: count() })
+          .from(UploadView)
+          .innerJoin(
+            UploadRecord,
+            eq(UploadView.uploadRecordId, UploadRecord.id),
+          )
+          .where(eq(UploadRecord.channelId, input.channelId))
+          .then((r) => r[0]),
+        db
+          .select({ count: count() })
+          .from(ChannelSubscription)
+          .where(eq(ChannelSubscription.channelId, input.channelId))
+          .then((r) => r[0]),
+        db
+          .select({ count: count() })
+          .from(UploadRecord)
+          .where(
+            and(
+              eq(UploadRecord.channelId, input.channelId),
+              isNull(UploadRecord.deletedAt),
+            ),
+          )
+          .then((r) => r[0]),
+      ]);
 
-    const totalViews = viewCountResult?.count;
-
-    // Filter deleted uploads
-    const filteredUploadRecords = channel.uploadRecords.filter(
-      (u) => u.deletedAt === null,
-    );
-
-    const uploadRecordCount = filteredUploadRecords.length;
+    const totalViews = Number(viewCountResult?.count ?? 0);
+    const uploadRecordCount = Number(uploadCountResult?.count ?? 0);
     const subscriberCount = Number(subscriberCountResult?.count ?? 0);
     const membershipCount = channel.memberships.length;
 
@@ -485,7 +493,6 @@ export const channelRouter = router({
 
     return {
       ...channelWithoutPath,
-      uploadRecords: filteredUploadRecords,
       _count: {
         uploadRecords: uploadRecordCount,
         subscribers: subscriberCount,

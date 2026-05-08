@@ -7,6 +7,7 @@ import {
   FeaturedUpload,
   Organization,
   OrganizationAddress,
+  OrganizationChannelAssociation,
   OrganizationTag,
   SearchLogEntry,
   UploadRecord,
@@ -29,6 +30,7 @@ import {
   eq,
   gt,
   ilike,
+  inArray,
   isNotNull,
   isNull,
   or,
@@ -679,7 +681,6 @@ export const adminRouter = router({
                 country: true,
               },
             },
-            channelAssociations: { columns: { channelId: true } },
           },
           orderBy: (t, { desc }) => [desc(t.createdAt)],
         }),
@@ -708,13 +709,28 @@ export const adminRouter = router({
       const churchCount = churchCountRows[0]?.cnt ?? 0;
       const ministryCount = ministryCountRows[0]?.cnt ?? 0;
 
+      const channelAssocCountRows =
+        organizations.length > 0
+          ? await db
+              .select({
+                organizationId: OrganizationChannelAssociation.organizationId,
+                cnt: count(),
+              })
+              .from(OrganizationChannelAssociation)
+              .where(
+                inArray(
+                  OrganizationChannelAssociation.organizationId,
+                  organizations.map((o) => o.id),
+                ),
+              )
+              .groupBy(OrganizationChannelAssociation.organizationId)
+          : [];
+      const channelAssocCountMap = new Map(
+        channelAssocCountRows.map((r) => [r.organizationId, Number(r.cnt)]),
+      );
+
       const organizationsWithAvatarUrl = organizations.map((org) => {
-        const {
-          avatarPath,
-          memberships,
-          channelAssociations,
-          ...orgWithoutPath
-        } = org;
+        const { avatarPath, memberships, ...orgWithoutPath } = org;
         const avatarUrl = avatarPath
           ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
               resize: mantineAvatarSm2x,
@@ -739,7 +755,7 @@ export const adminRouter = router({
           avatarUrl,
           memberships: adminMemberships,
           _count: {
-            channelAssociations: channelAssociations.length,
+            channelAssociations: channelAssocCountMap.get(org.id) ?? 0,
             memberships: memberships.length,
           },
         };

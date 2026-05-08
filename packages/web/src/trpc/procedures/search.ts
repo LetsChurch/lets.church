@@ -1,4 +1,4 @@
-import { db, SearchLogEntry } from '@letschurch/db';
+import { db, SearchLogEntry, UploadView } from '@letschurch/db';
 import {
   client,
   MSearchResponseSchema,
@@ -8,7 +8,7 @@ import {
 } from '@letschurch/elasticsearch';
 import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
-import { and, eq } from 'drizzle-orm';
+import { and, count, eq, inArray } from 'drizzle-orm';
 import { v5 as uuidv5 } from 'uuid';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
@@ -507,44 +507,52 @@ export const searchProcedures = {
         );
 
         // Fetch full upload data from database
-        const uploads =
+        const [uploads, viewCountRows] =
           uploadIds.length > 0
-            ? await db.query.UploadRecord.findMany({
-                where: (t, { inArray, and, isNotNull }) =>
-                  and(
-                    inArray(t.id, uploadIds),
-                    isNotNull(t.transcodingFinishedAt),
-                  ),
-                columns: {
-                  id: true,
-                  title: true,
-                  description: true,
-                  createdAt: true,
-                  publishedAt: true,
-                  lengthSeconds: true,
-                  defaultThumbnailPath: true,
-                  overrideThumbnailPath: true,
-                },
-                with: {
-                  channel: {
-                    columns: {
-                      id: true,
-                      name: true,
-                      slug: true,
-                      avatarPath: true,
-                      defaultThumbnailPath: true,
-                      visibility: true,
-                      approvedAt: true,
+            ? await Promise.all([
+                db.query.UploadRecord.findMany({
+                  where: (t, { inArray, and, isNotNull }) =>
+                    and(
+                      inArray(t.id, uploadIds),
+                      isNotNull(t.transcodingFinishedAt),
+                    ),
+                  columns: {
+                    id: true,
+                    title: true,
+                    description: true,
+                    createdAt: true,
+                    publishedAt: true,
+                    lengthSeconds: true,
+                    defaultThumbnailPath: true,
+                    overrideThumbnailPath: true,
+                  },
+                  with: {
+                    channel: {
+                      columns: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        avatarPath: true,
+                        defaultThumbnailPath: true,
+                        visibility: true,
+                        approvedAt: true,
+                      },
                     },
                   },
-                  uploadViews: {
-                    columns: {
-                      uploadRecordId: true,
-                    },
-                  },
-                },
-              })
-            : [];
+                }),
+                db
+                  .select({
+                    uploadRecordId: UploadView.uploadRecordId,
+                    cnt: count(),
+                  })
+                  .from(UploadView)
+                  .where(inArray(UploadView.uploadRecordId, uploadIds))
+                  .groupBy(UploadView.uploadRecordId),
+              ])
+            : [[], [] as { uploadRecordId: string; cnt: number }[]];
+        const viewCountMap = new Map(
+          viewCountRows.map((r) => [r.uploadRecordId, Number(r.cnt)]),
+        );
 
         // Filter to public approved channels
         const filteredUploads = uploads.filter(
@@ -577,7 +585,6 @@ export const searchProcedures = {
               defaultThumbnailPath,
               overrideThumbnailPath,
               channel,
-              uploadViews,
               ...uploadRest
             } = upload;
 
@@ -601,7 +608,7 @@ export const searchProcedures = {
               ...uploadRest,
               id: OutgoingIdSchema.parse(uploadRest.id),
               thumbnailUrl,
-              _count: { uploadViews: uploadViews.length },
+              _count: { uploadViews: viewCountMap.get(upload.id) ?? 0 },
               channel: {
                 ...channel,
                 id: OutgoingIdSchema.parse(channel.id),
@@ -625,44 +632,52 @@ export const searchProcedures = {
         );
 
         // Fetch full upload data from database
-        const uploads =
+        const [uploads, viewCountRows] =
           uploadIds.length > 0
-            ? await db.query.UploadRecord.findMany({
-                where: (t, { inArray, isNotNull, and }) =>
-                  and(
-                    inArray(t.id, uploadIds),
-                    isNotNull(t.transcodingFinishedAt),
-                  ),
-                columns: {
-                  id: true,
-                  title: true,
-                  description: true,
-                  createdAt: true,
-                  publishedAt: true,
-                  lengthSeconds: true,
-                  defaultThumbnailPath: true,
-                  overrideThumbnailPath: true,
-                },
-                with: {
-                  channel: {
-                    columns: {
-                      id: true,
-                      name: true,
-                      slug: true,
-                      avatarPath: true,
-                      defaultThumbnailPath: true,
-                      visibility: true,
-                      approvedAt: true,
+            ? await Promise.all([
+                db.query.UploadRecord.findMany({
+                  where: (t, { inArray, isNotNull, and }) =>
+                    and(
+                      inArray(t.id, uploadIds),
+                      isNotNull(t.transcodingFinishedAt),
+                    ),
+                  columns: {
+                    id: true,
+                    title: true,
+                    description: true,
+                    createdAt: true,
+                    publishedAt: true,
+                    lengthSeconds: true,
+                    defaultThumbnailPath: true,
+                    overrideThumbnailPath: true,
+                  },
+                  with: {
+                    channel: {
+                      columns: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        avatarPath: true,
+                        defaultThumbnailPath: true,
+                        visibility: true,
+                        approvedAt: true,
+                      },
                     },
                   },
-                  uploadViews: {
-                    columns: {
-                      uploadRecordId: true,
-                    },
-                  },
-                },
-              })
-            : [];
+                }),
+                db
+                  .select({
+                    uploadRecordId: UploadView.uploadRecordId,
+                    cnt: count(),
+                  })
+                  .from(UploadView)
+                  .where(inArray(UploadView.uploadRecordId, uploadIds))
+                  .groupBy(UploadView.uploadRecordId),
+              ])
+            : [[], [] as { uploadRecordId: string; cnt: number }[]];
+        const viewCountMap = new Map(
+          viewCountRows.map((r) => [r.uploadRecordId, Number(r.cnt)]),
+        );
 
         // Filter to public approved channels
         const filteredUploads = uploads.filter(
@@ -695,7 +710,6 @@ export const searchProcedures = {
               defaultThumbnailPath,
               overrideThumbnailPath,
               channel,
-              uploadViews,
               ...uploadRest
             } = upload;
 
@@ -731,7 +745,7 @@ export const searchProcedures = {
               ...uploadRest,
               id: OutgoingIdSchema.parse(uploadRest.id),
               thumbnailUrl,
-              _count: { uploadViews: uploadViews.length },
+              _count: { uploadViews: viewCountMap.get(upload.id) ?? 0 },
               channel: {
                 ...channel,
                 id: OutgoingIdSchema.parse(channel.id),

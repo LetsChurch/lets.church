@@ -15,7 +15,7 @@ import { publicS3 } from '@letschurch/s3/public';
 import { xxh64 } from '@node-rs/xxhash';
 import { getRequest } from '@tanstack/react-start/server';
 import { TRPCError } from '@trpc/server';
-import { and, count, eq, sql } from 'drizzle-orm';
+import { and, count, eq, inArray, sql } from 'drizzle-orm';
 import rehypeExternalLinks from 'rehype-external-links';
 import rehypeStringify from 'rehype-stringify';
 import remarkBreaks from 'remark-breaks';
@@ -884,9 +884,6 @@ export const mediaProcedures = {
               avatarPath: true,
             },
           },
-          replies: {
-            columns: { id: true },
-          },
           userRatings: {
             columns: { rating: true, appUserId: true },
           },
@@ -899,11 +896,27 @@ export const mediaProcedures = {
         orderBy: (t, { desc }) => [desc(t.score)],
       });
 
+      const commentIds = comments.map((c) => c.id);
+      const replyCountRows =
+        commentIds.length > 0
+          ? await db
+              .select({
+                replyingToId: UploadUserComment.replyingToId,
+                cnt: count(),
+              })
+              .from(UploadUserComment)
+              .where(inArray(UploadUserComment.replyingToId, commentIds))
+              .groupBy(UploadUserComment.replyingToId)
+          : [];
+      const replyCountMap = new Map(
+        replyCountRows.map((r) => [r.replyingToId, Number(r.cnt)]),
+      );
+
       return comments.map((comment) => {
         const likeCount = comment.userRatings.filter(
           (r) => r.rating === 'LIKE',
         ).length;
-        const replyCount = comment.replies.length;
+        const replyCount = replyCountMap.get(comment.id) ?? 0;
         const userRating = ctx.session
           ? (comment.userRatings.find(
               (r) => r.appUserId === ctx.session?.appUserId,
