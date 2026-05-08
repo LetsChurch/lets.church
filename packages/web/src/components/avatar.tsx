@@ -1,6 +1,6 @@
 import { Avatar as BaseAvatar } from '@base-ui-components/react/avatar';
-import { words } from 'es-toolkit';
 import { cn } from '@/util/cn';
+import { getInitials } from '@/util/misc';
 
 type AvatarProps = {
   src: string | null | undefined;
@@ -8,14 +8,6 @@ type AvatarProps = {
   className?: string;
   fallbackClassName?: string;
 };
-
-function getInitials(text: string): string {
-  return words(text)
-    .slice(0, 3)
-    .map((word) => word[0])
-    .join('')
-    .toUpperCase();
-}
 
 export function Avatar({
   src,

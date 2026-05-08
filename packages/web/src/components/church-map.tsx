@@ -6,6 +6,7 @@ import mapboxgl from 'mapbox-gl';
 import type { ParsedFilters } from '@/routes/_main/churches';
 import { getInitialTheme, THEME_CHANGE_EVENT } from '@/stores/theme';
 import { useTRPC } from '@/trpc/react';
+import { getInitials } from '@/util/misc';
 
 type ChurchDatum = {
   items: Array<{
@@ -103,13 +104,7 @@ function buildPopupHTML(properties: {
     }
   }
 
-  const initials = title
-    .split(' ')
-    .map((word) => word[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
+  const initials = getInitials(title, 2);
 
   const truncatedDescription =
     description && description.length > 120

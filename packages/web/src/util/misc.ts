@@ -1,3 +1,13 @@
+import { words } from 'es-toolkit';
+
+export function getInitials(text: string, limit = 3): string {
+  return words(text.replace(/'\w+/g, ''))
+    .slice(0, limit)
+    .map((word) => word[0])
+    .join('')
+    .toUpperCase();
+}
+
 export function adjacentPairs<T>(arr: [T, ...T[]]): Array<[T, T] | [T]> {
   if (arr.length <= 2) {
     return [arr] as Array<[T, T]>;
