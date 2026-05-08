@@ -503,9 +503,3 @@ services:
     ports:
       - 127.0.0.1:${HOST_MAILPIT_SMTP_PORT}:1025 # smtp server
       - 127.0.0.1:${HOST_MAILPIT_WEB_PORT}:8025 # web ui
-  pgweb:
-    image: sosedoff/pgweb:0.14.2
-    environment:
-      PGWEB_DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch?sslmode=disable
-    ports:
-      - 127.0.0.1:${HOST_PGWEB_PORT}:8081
