@@ -1,5 +1,6 @@
-import { db } from '@letschurch/db';
+import { Channel, db, UploadListEntry, UploadRecord } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
+import { and, asc, count, eq, isNotNull, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarMd2x, appAvatarXs2x } from '@/util/avatar-sizes';
@@ -173,49 +174,54 @@ export const playlistProcedures = {
         'Fetching public playlist',
       );
 
-      const playlist = await db.query.UploadList.findFirst({
-        where: (t, { eq }) => eq(t.id, playlistId),
-        columns: {
-          id: true,
-          title: true,
-          type: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-        with: {
-          author: {
-            columns: {
-              id: true,
-              username: true,
-              avatarPath: true,
-            },
+      const [playlist, uploadCountResult] = await Promise.all([
+        db.query.UploadList.findFirst({
+          where: (t, { eq }) => eq(t.id, playlistId),
+          columns: {
+            id: true,
+            title: true,
+            type: true,
+            createdAt: true,
+            updatedAt: true,
           },
-          channel: {
-            columns: {
-              id: true,
-              name: true,
-              slug: true,
-              avatarPath: true,
-              visibility: true,
-              approvedAt: true,
-              deletedAt: true,
+          with: {
+            author: {
+              columns: {
+                id: true,
+                username: true,
+                avatarPath: true,
+              },
             },
-          },
-          uploads: {
-            columns: {},
-            with: {
-              upload: {
-                columns: {
-                  id: true,
-                  visibility: true,
-                  transcodingFinishedAt: true,
-                  deletedAt: true,
-                },
+            channel: {
+              columns: {
+                id: true,
+                name: true,
+                slug: true,
+                avatarPath: true,
+                visibility: true,
+                approvedAt: true,
+                deletedAt: true,
               },
             },
           },
-        },
-      });
+        }),
+        db
+          .select({ count: count() })
+          .from(UploadListEntry)
+          .innerJoin(
+            UploadRecord,
+            eq(UploadListEntry.uploadRecordId, UploadRecord.id),
+          )
+          .where(
+            and(
+              eq(UploadListEntry.uploadListId, playlistId),
+              eq(UploadRecord.visibility, 'PUBLIC'),
+              isNotNull(UploadRecord.transcodingFinishedAt),
+              isNull(UploadRecord.deletedAt),
+            ),
+          )
+          .then((r) => r[0]),
+      ]);
 
       if (!playlist) {
         moduleLogger.warn({ context: { playlistId } }, 'Playlist not found');
@@ -252,13 +258,7 @@ export const playlistProcedures = {
         }
       }
 
-      // Count uploads with the same conditions as Prisma's _count
-      const uploadCount = playlist.uploads.filter(
-        (e) =>
-          e.upload.visibility === 'PUBLIC' &&
-          e.upload.transcodingFinishedAt !== null &&
-          e.upload.deletedAt === null,
-      ).length;
+      const uploadCount = Number(uploadCountResult?.count ?? 0);
 
       const authorAvatarUrl = playlist.author.avatarPath
         ? getPublicImageUrl(
@@ -310,48 +310,39 @@ export const playlistProcedures = {
         'Fetching first playlist thumbnail',
       );
 
-      // Get first media item thumbnail for SEO
-      const entries = await db.query.UploadListEntry.findMany({
-        where: (t, { eq }) => eq(t.uploadListId, playlistId),
-        columns: {},
-        with: {
-          upload: {
-            columns: {
-              overrideThumbnailPath: true,
-              defaultThumbnailPath: true,
-              visibility: true,
-              transcodingFinishedAt: true,
-              deletedAt: true,
-            },
-            with: {
-              channel: {
-                columns: {
-                  defaultThumbnailPath: true,
-                },
-              },
-            },
-          },
-        },
-        orderBy: (t, { asc }) => [asc(t.rank), asc(t.createdAt)],
-      });
+      // Get first public, transcoded, non-deleted entry for SEO thumbnail
+      const firstEntry = await db
+        .select({
+          overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
+          defaultThumbnailPath: UploadRecord.defaultThumbnailPath,
+          channelDefaultThumbnailPath: Channel.defaultThumbnailPath,
+        })
+        .from(UploadListEntry)
+        .innerJoin(
+          UploadRecord,
+          eq(UploadListEntry.uploadRecordId, UploadRecord.id),
+        )
+        .leftJoin(Channel, eq(UploadRecord.channelId, Channel.id))
+        .where(
+          and(
+            eq(UploadListEntry.uploadListId, playlistId),
+            eq(UploadRecord.visibility, 'PUBLIC'),
+            isNotNull(UploadRecord.transcodingFinishedAt),
+            isNull(UploadRecord.deletedAt),
+          ),
+        )
+        .orderBy(asc(UploadListEntry.rank), asc(UploadListEntry.createdAt))
+        .limit(1)
+        .then((r) => r[0]);
 
-      // Find first public, transcoded, non-deleted entry
-      const firstMedia = entries.find(
-        (e) =>
-          e.upload.visibility === 'PUBLIC' &&
-          e.upload.transcodingFinishedAt !== null &&
-          e.upload.deletedAt === null,
-      );
-
-      if (!firstMedia) {
+      if (!firstEntry) {
         return null;
       }
 
       return resolveThumbnailUrl({
-        overrideThumbnailPath: firstMedia.upload.overrideThumbnailPath,
-        defaultThumbnailPath: firstMedia.upload.defaultThumbnailPath,
-        channelDefaultThumbnailPath:
-          firstMedia.upload.channel.defaultThumbnailPath,
+        overrideThumbnailPath: firstEntry.overrideThumbnailPath,
+        defaultThumbnailPath: firstEntry.defaultThumbnailPath,
+        channelDefaultThumbnailPath: firstEntry.channelDefaultThumbnailPath,
         size: 'featured',
       });
     }),

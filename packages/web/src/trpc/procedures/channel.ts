@@ -1,4 +1,11 @@
-import { Channel, ChannelSubscription, db } from '@letschurch/db';
+import {
+  Channel,
+  ChannelSubscription,
+  db,
+  UploadList,
+  UploadListEntry,
+  UploadRecord,
+} from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import {
   and,
@@ -16,6 +23,7 @@ import { OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarMd2x, appAvatarXs2x } from '@/util/avatar-sizes';
 import { coverImageFull } from '@/util/image-sizes';
 import logger from '@/util/logger';
+import { escapeLikePattern } from '@/util/misc';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { ResizeType } from '@/util/url';
@@ -62,55 +70,100 @@ export const channelProcedures = {
         'Fetching channel by slug',
       );
 
-      const channel = await db.query.Channel.findFirst({
-        columns: {
-          id: true,
-          name: true,
-          slug: true,
-          description: true,
-          avatarPath: true,
-          coverPath: true,
-          defaultThumbnailPath: true,
-          visibility: true,
-          approvedAt: true,
-          deletedAt: true,
-          websiteUrl: true,
-          facebookUrl: true,
-          instagramUrl: true,
-          xUrl: true,
-          youtubeUrl: true,
-          tiktokUrl: true,
-          linkedinUrl: true,
-          threadsUrl: true,
-          applePodcastsUrl: true,
-          spotifyUrl: true,
-          rssUrl: true,
-        },
-        with: {
-          uploadRecords: {
-            columns: {
-              defaultThumbnailPath: true,
-              overrideThumbnailPath: true,
-              transcodingFinishedAt: true,
-              visibility: true,
-            },
-            where: (t, { and, isNotNull, eq }) =>
-              and(
-                isNotNull(t.transcodingFinishedAt),
-                eq(t.visibility, 'PUBLIC'),
-              ),
-            orderBy: (t, { desc }) => [desc(t.publishedAt)],
-            limit: 1,
-          },
-          subscribers: {
-            columns: {
-              appUserId: true,
-            },
-          },
-        },
-        where: (t, { and, eq, isNull }) =>
-          and(eq(t.slug, slug), isNull(t.deletedAt)),
-      });
+      const uploadCountSq = db
+        .select({
+          channelId: UploadRecord.channelId,
+          cnt: count().as('upload_cnt'),
+        })
+        .from(UploadRecord)
+        .where(
+          and(
+            eq(UploadRecord.visibility, 'PUBLIC'),
+            isNotNull(UploadRecord.transcodingFinishedAt),
+            isNull(UploadRecord.deletedAt),
+          ),
+        )
+        .groupBy(UploadRecord.channelId)
+        .as('upload_counts');
+
+      const subscriberCountSq = db
+        .select({
+          channelId: ChannelSubscription.channelId,
+          cnt: count().as('subscriber_cnt'),
+        })
+        .from(ChannelSubscription)
+        .groupBy(ChannelSubscription.channelId)
+        .as('subscriber_counts');
+
+      const isFollowingSq = db
+        .select({ channelId: ChannelSubscription.channelId })
+        .from(ChannelSubscription)
+        .where(
+          appUserId ? eq(ChannelSubscription.appUserId, appUserId) : sql`false`,
+        )
+        .as('is_following');
+
+      const fallbackThumbnailSq = db
+        .selectDistinctOn([UploadRecord.channelId], {
+          channelId: UploadRecord.channelId,
+          thumbnailPath: sql<
+            string | null
+          >`coalesce(${UploadRecord.overrideThumbnailPath}, ${UploadRecord.defaultThumbnailPath})`.as(
+            'thumbnail_path',
+          ),
+        })
+        .from(UploadRecord)
+        .where(
+          and(
+            eq(UploadRecord.visibility, 'PUBLIC'),
+            isNotNull(UploadRecord.transcodingFinishedAt),
+            isNull(UploadRecord.deletedAt),
+          ),
+        )
+        .orderBy(UploadRecord.channelId, desc(UploadRecord.publishedAt))
+        .as('fallback_thumbnails');
+
+      const [channel] = await db
+        .select({
+          id: Channel.id,
+          name: Channel.name,
+          slug: Channel.slug,
+          description: Channel.description,
+          avatarPath: Channel.avatarPath,
+          coverPath: Channel.coverPath,
+          defaultThumbnailPath: Channel.defaultThumbnailPath,
+          visibility: Channel.visibility,
+          approvedAt: Channel.approvedAt,
+          deletedAt: Channel.deletedAt,
+          websiteUrl: Channel.websiteUrl,
+          facebookUrl: Channel.facebookUrl,
+          instagramUrl: Channel.instagramUrl,
+          xUrl: Channel.xUrl,
+          youtubeUrl: Channel.youtubeUrl,
+          tiktokUrl: Channel.tiktokUrl,
+          linkedinUrl: Channel.linkedinUrl,
+          threadsUrl: Channel.threadsUrl,
+          applePodcastsUrl: Channel.applePodcastsUrl,
+          spotifyUrl: Channel.spotifyUrl,
+          rssUrl: Channel.rssUrl,
+          fallbackThumbnailPath: fallbackThumbnailSq.thumbnailPath,
+          subscriberCount: sql<number>`coalesce(${subscriberCountSq.cnt}, 0)`,
+          isFollowing: sql<boolean>`${isFollowingSq.channelId} is not null`,
+          uploadCount: sql<number>`coalesce(${uploadCountSq.cnt}, 0)`,
+        })
+        .from(Channel)
+        .leftJoin(uploadCountSq, eq(Channel.id, uploadCountSq.channelId))
+        .leftJoin(
+          subscriberCountSq,
+          eq(Channel.id, subscriberCountSq.channelId),
+        )
+        .leftJoin(isFollowingSq, eq(Channel.id, isFollowingSq.channelId))
+        .leftJoin(
+          fallbackThumbnailSq,
+          eq(Channel.id, fallbackThumbnailSq.channelId),
+        )
+        .where(and(eq(Channel.slug, slug), isNull(Channel.deletedAt)))
+        .limit(1);
 
       if (!channel) {
         moduleLogger.warn({ context: { slug } }, 'Channel not found');
@@ -148,26 +201,19 @@ export const channelProcedures = {
           })
         : null;
 
-      // Use channel default thumbnail, or fallback to first upload thumbnail
-      const fallbackThumbnailPath =
-        channel.uploadRecords[0]?.overrideThumbnailPath ??
-        channel.uploadRecords[0]?.defaultThumbnailPath;
-
       const defaultThumbnailUrl =
-        channel.defaultThumbnailPath || fallbackThumbnailPath
+        channel.defaultThumbnailPath || channel.fallbackThumbnailPath
           ? getPublicImageUrl(
               publicS3.getS3ProtocolUri(
-                channel.defaultThumbnailPath ?? fallbackThumbnailPath ?? '',
+                channel.defaultThumbnailPath ??
+                  channel.fallbackThumbnailPath ??
+                  '',
               ),
               { resize: { type: ResizeType.FILL, width: 1920, height: 1080 } },
             )
           : null;
 
-      const isFollowing = appUserId
-        ? channel.subscribers.some((s) => s.appUserId === appUserId)
-        : false;
-
-      const subscriberCount = channel.subscribers.length;
+      const { subscriberCount, isFollowing, uploadCount } = channel;
 
       return {
         id: OutgoingIdSchema.parse(channel.id),
@@ -189,6 +235,7 @@ export const channelProcedures = {
         spotifyUrl: channel.spotifyUrl,
         rssUrl: channel.rssUrl,
         subscriberCount,
+        uploadCount,
         isFollowing,
       };
     }),
@@ -252,22 +299,40 @@ export const channelProcedures = {
             },
           },
         },
-        where: (t, { and, isNotNull, isNull, eq, lt }) =>
-          and(
+        where: (t, { and, or, isNotNull, isNull, eq, lt, gt }) => {
+          const base = and(
             isNotNull(t.transcodingFinishedAt),
             eq(t.visibility, 'PUBLIC'),
             isNull(t.deletedAt),
             eq(t.channelId, channelRecord.id),
-            ...(cursor ? [lt(t.publishedAt, new Date(cursor))] : []),
-          ),
-        orderBy: (t, { desc }) => [desc(t.publishedAt)],
+          );
+          if (!cursor) return base;
+          const pipeIdx = cursor.indexOf('|');
+          if (pipeIdx !== -1) {
+            const cursorDate = new Date(cursor.slice(0, pipeIdx));
+            const cursorId = cursor.slice(pipeIdx + 1);
+            return and(
+              base,
+              or(
+                lt(t.publishedAt, cursorDate),
+                and(eq(t.publishedAt, cursorDate), gt(t.id, cursorId)),
+              ),
+            );
+          }
+          return and(base, lt(t.publishedAt, new Date(cursor)));
+        },
+        orderBy: (t, { desc, asc }) => [desc(t.publishedAt), asc(t.id)],
         limit: limit + 1, // Fetch one extra to determine if there are more
       });
 
       const hasMore = uploads.length > limit;
       const items = hasMore ? uploads.slice(0, limit) : uploads;
       const nextCursor = hasMore
-        ? (items[items.length - 1].publishedAt?.toISOString() ?? null)
+        ? (() => {
+            const last = items[items.length - 1];
+            if (!last.publishedAt) return null;
+            return `${last.publishedAt.toISOString()}|${last.id}`;
+          })()
         : null;
 
       const uploadsWithThumbnails = items.map((upload) => {
@@ -340,58 +405,72 @@ export const channelProcedures = {
         return [];
       }
 
-      const playlists = await db.query.UploadList.findMany({
-        columns: {
-          id: true,
-          title: true,
-          type: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-        with: {
-          channel: {
-            columns: {
-              defaultThumbnailPath: true,
-            },
-          },
-          uploads: {
-            columns: {},
-            with: {
-              upload: {
-                columns: {
-                  defaultThumbnailPath: true,
-                  overrideThumbnailPath: true,
-                  id: true,
-                  visibility: true,
-                  deletedAt: true,
-                  transcodingFinishedAt: true,
-                },
-              },
-            },
-            orderBy: (t, { asc }) => [asc(t.rank), asc(t.createdAt)],
-          },
-        },
-        where: (t, { eq }) => eq(t.channelId, channelRecord.id),
-        orderBy: (t, { desc }) => [desc(t.createdAt)],
-      });
+      const visibleUploadWhere = and(
+        eq(UploadRecord.visibility, 'PUBLIC'),
+        isNotNull(UploadRecord.transcodingFinishedAt),
+        isNull(UploadRecord.deletedAt),
+      );
+
+      const uploadCountSq = db
+        .select({
+          uploadListId: UploadListEntry.uploadListId,
+          cnt: count().as('playlist_upload_cnt'),
+        })
+        .from(UploadListEntry)
+        .innerJoin(
+          UploadRecord,
+          eq(UploadListEntry.uploadRecordId, UploadRecord.id),
+        )
+        .where(visibleUploadWhere)
+        .groupBy(UploadListEntry.uploadListId)
+        .as('playlist_upload_counts');
+
+      const firstThumbnailSq = db
+        .selectDistinctOn([UploadListEntry.uploadListId], {
+          uploadListId: UploadListEntry.uploadListId,
+          overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
+          defaultThumbnailPath: UploadRecord.defaultThumbnailPath,
+        })
+        .from(UploadListEntry)
+        .innerJoin(
+          UploadRecord,
+          eq(UploadListEntry.uploadRecordId, UploadRecord.id),
+        )
+        .where(visibleUploadWhere)
+        .orderBy(
+          UploadListEntry.uploadListId,
+          asc(UploadListEntry.rank),
+          asc(UploadListEntry.createdAt),
+        )
+        .as('first_thumbnails');
+
+      const playlists = await db
+        .select({
+          id: UploadList.id,
+          title: UploadList.title,
+          type: UploadList.type,
+          createdAt: UploadList.createdAt,
+          updatedAt: UploadList.updatedAt,
+          uploadCount: sql<number>`coalesce(${uploadCountSq.cnt}, 0)`,
+          overrideThumbnailPath: firstThumbnailSq.overrideThumbnailPath,
+          defaultThumbnailPath: firstThumbnailSq.defaultThumbnailPath,
+        })
+        .from(UploadList)
+        .leftJoin(uploadCountSq, eq(UploadList.id, uploadCountSq.uploadListId))
+        .leftJoin(
+          firstThumbnailSq,
+          eq(UploadList.id, firstThumbnailSq.uploadListId),
+        )
+        .where(eq(UploadList.channelId, channelRecord.id))
+        .orderBy(desc(UploadList.createdAt));
 
       return playlists.map((playlist) => {
-        const visibleUploads = playlist.uploads.filter(
-          (u) =>
-            u.upload.visibility === 'PUBLIC' &&
-            u.upload.deletedAt === null &&
-            u.upload.transcodingFinishedAt !== null,
-        );
-        const firstUpload = visibleUploads[0];
-
         const thumbnailUrl = resolveThumbnailUrl({
-          overrideThumbnailPath: firstUpload?.upload.overrideThumbnailPath,
-          defaultThumbnailPath: firstUpload?.upload.defaultThumbnailPath,
-          channelDefaultThumbnailPath: playlist.channel?.defaultThumbnailPath,
+          overrideThumbnailPath: playlist.overrideThumbnailPath,
+          defaultThumbnailPath: playlist.defaultThumbnailPath,
+          channelDefaultThumbnailPath: channelRecord.defaultThumbnailPath,
           size: 'card',
         });
-
-        const uploadCount = visibleUploads.length;
 
         return {
           id: OutgoingIdSchema.parse(playlist.id),
@@ -399,7 +478,7 @@ export const channelProcedures = {
           type: playlist.type,
           createdAt: playlist.createdAt,
           updatedAt: playlist.updatedAt,
-          uploadCount,
+          uploadCount: playlist.uploadCount,
           thumbnailUrl,
         };
       });
@@ -500,104 +579,50 @@ export const channelProcedures = {
 
       const offset = cursor ?? 0;
 
-      if (sortBy === 'subscribers') {
-        // Use SQL-style query to order by subscriber count
-        const subscriberCountSq = db
-          .select({
-            channelId: ChannelSubscription.channelId,
-            cnt: count().as('cnt'),
-          })
-          .from(ChannelSubscription)
-          .groupBy(ChannelSubscription.channelId)
-          .as('subscriber_counts');
+      const subscriberCountSq = db
+        .select({
+          channelId: ChannelSubscription.channelId,
+          cnt: count().as('cnt'),
+        })
+        .from(ChannelSubscription)
+        .groupBy(ChannelSubscription.channelId)
+        .as('subscriber_counts');
 
-        const whereConditions = [
-          eq(Channel.visibility, 'PUBLIC'),
-          isNotNull(Channel.approvedAt),
-          isNull(Channel.deletedAt),
-          ...(search ? [ilike(Channel.name, `%${search}%`)] : []),
-        ];
+      const whereConditions = [
+        eq(Channel.visibility, 'PUBLIC'),
+        isNotNull(Channel.approvedAt),
+        isNull(Channel.deletedAt),
+        ...(search
+          ? [ilike(Channel.name, `%${escapeLikePattern(search)}%`)]
+          : []),
+      ];
 
-        const channels = await db
-          .select({
-            id: Channel.id,
-            name: Channel.name,
-            slug: Channel.slug,
-            description: Channel.description,
-            avatarPath: Channel.avatarPath,
-            createdAt: Channel.createdAt,
-            subscriberCount: sql<number>`coalesce(${subscriberCountSq.cnt}, 0)`,
-          })
-          .from(Channel)
-          .leftJoin(
-            subscriberCountSq,
-            eq(Channel.id, subscriberCountSq.channelId),
-          )
-          .where(and(...whereConditions))
-          .orderBy(
-            desc(sql`coalesce(${subscriberCountSq.cnt}, 0)`),
-            asc(Channel.id),
-          )
-          .limit(limit + 1)
-          .offset(offset);
+      const orderBy =
+        sortBy === 'subscribers'
+          ? [desc(sql`coalesce(${subscriberCountSq.cnt}, 0)`), asc(Channel.id)]
+          : sortBy === 'name'
+            ? [asc(Channel.name), asc(Channel.id)]
+            : [desc(Channel.createdAt), asc(Channel.id)];
 
-        const hasMore = channels.length > limit;
-        const items = hasMore ? channels.slice(0, limit) : channels;
-        const nextCursor = hasMore ? offset + limit : null;
-
-        return {
-          items: items.map((channel) => {
-            const avatarUrl = channel.avatarPath
-              ? getPublicImageUrl(
-                  publicS3.getS3ProtocolUri(channel.avatarPath),
-                  {
-                    resize: appAvatarMd2x,
-                  },
-                )
-              : null;
-
-            return {
-              id: OutgoingIdSchema.parse(channel.id),
-              name: channel.name,
-              slug: channel.slug,
-              description: channel.description,
-              avatarUrl,
-              subscriberCount: channel.subscriberCount,
-            };
-          }),
-          nextCursor,
-        };
-      }
-
-      // For 'name' and 'newest' sorting, use relational API
-      const channels = await db.query.Channel.findMany({
-        columns: {
-          id: true,
-          name: true,
-          slug: true,
-          description: true,
-          avatarPath: true,
-          createdAt: true,
-        },
-        with: {
-          subscribers: {
-            columns: { appUserId: true },
-          },
-        },
-        where: (t, { and, eq, isNotNull, isNull, ilike }) =>
-          and(
-            eq(t.visibility, 'PUBLIC'),
-            isNotNull(t.approvedAt),
-            isNull(t.deletedAt),
-            ...(search ? [ilike(t.name, `%${search}%`)] : []),
-          ),
-        orderBy:
-          sortBy === 'name'
-            ? (t, { asc }) => [asc(t.name), asc(t.id)]
-            : (t, { desc, asc }) => [desc(t.createdAt), asc(t.id)],
-        offset,
-        limit: limit + 1,
-      });
+      const channels = await db
+        .select({
+          id: Channel.id,
+          name: Channel.name,
+          slug: Channel.slug,
+          description: Channel.description,
+          avatarPath: Channel.avatarPath,
+          createdAt: Channel.createdAt,
+          subscriberCount: sql<number>`coalesce(${subscriberCountSq.cnt}, 0)`,
+        })
+        .from(Channel)
+        .leftJoin(
+          subscriberCountSq,
+          eq(Channel.id, subscriberCountSq.channelId),
+        )
+        .where(and(...whereConditions))
+        .orderBy(...orderBy)
+        .limit(limit + 1)
+        .offset(offset);
 
       const hasMore = channels.length > limit;
       const items = hasMore ? channels.slice(0, limit) : channels;
@@ -617,7 +642,7 @@ export const channelProcedures = {
             slug: channel.slug,
             description: channel.description,
             avatarUrl,
-            subscriberCount: channel.subscribers.length,
+            subscriberCount: channel.subscriberCount,
           };
         }),
         nextCursor,

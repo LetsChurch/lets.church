@@ -461,7 +461,7 @@ function RouteComponent() {
         <div className="mb-8">
           <ChannelTabs
             activeTab={activeTab}
-            videoCount={mediaItems.length}
+            videoCount={channel.uploadCount}
             playlistCount={playlists.length}
             seriesCount={series.length}
             onTabChange={setActiveTab}

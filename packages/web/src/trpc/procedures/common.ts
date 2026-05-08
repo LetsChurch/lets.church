@@ -316,54 +316,53 @@ export const commonProcedures = {
       return [];
     }
 
-    // Find all pending organization invitations
-    const orgInvitations = await db.query.OrganizationInvitation.findMany({
-      where: (t, { inArray, eq, and, gt }) =>
-        and(
-          inArray(t.email, emails),
-          eq(t.status, 'PENDING'),
-          gt(t.expiresAt, new Date()),
-        ),
-      columns: {
-        id: true,
-        token: true,
-        email: true,
-        createdAt: true,
-      },
-      with: {
-        organization: {
-          columns: {
-            name: true,
-            type: true,
+    const [orgInvitations, channelInvitations] = await Promise.all([
+      db.query.OrganizationInvitation.findMany({
+        where: (t, { inArray, eq, and, gt }) =>
+          and(
+            inArray(t.email, emails),
+            eq(t.status, 'PENDING'),
+            gt(t.expiresAt, new Date()),
+          ),
+        columns: {
+          id: true,
+          token: true,
+          email: true,
+          createdAt: true,
+        },
+        with: {
+          organization: {
+            columns: {
+              name: true,
+              type: true,
+            },
           },
         },
-      },
-      orderBy: (t, { asc }) => asc(t.createdAt),
-    });
-
-    // Find all pending channel invitations
-    const channelInvitations = await db.query.ChannelInvitation.findMany({
-      where: (t, { inArray, eq, and, gt }) =>
-        and(
-          inArray(t.email, emails),
-          eq(t.status, 'PENDING'),
-          gt(t.expiresAt, new Date()),
-        ),
-      columns: {
-        id: true,
-        token: true,
-        email: true,
-        createdAt: true,
-      },
-      with: {
-        channel: {
-          columns: {
-            name: true,
+        orderBy: (t, { asc }) => asc(t.createdAt),
+      }),
+      db.query.ChannelInvitation.findMany({
+        where: (t, { inArray, eq, and, gt }) =>
+          and(
+            inArray(t.email, emails),
+            eq(t.status, 'PENDING'),
+            gt(t.expiresAt, new Date()),
+          ),
+        columns: {
+          id: true,
+          token: true,
+          email: true,
+          createdAt: true,
+        },
+        with: {
+          channel: {
+            columns: {
+              name: true,
+            },
           },
         },
-      },
-      orderBy: (t, { asc }) => asc(t.createdAt),
-    });
+        orderBy: (t, { asc }) => asc(t.createdAt),
+      }),
+    ]);
 
     // Combine and return
     return [

@@ -2,6 +2,7 @@ import {
   AppUser,
   AppUserEmail,
   Channel,
+  ChannelSubscription,
   db,
   FeaturedUpload,
   Organization,
@@ -68,6 +69,7 @@ import {
 } from '@/temporal';
 import { mantineAvatarSm2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
+import { escapeLikePattern } from '@/util/misc';
 import { generateResetPasswordEmail } from '@/util/reset-password-email';
 import { getPublicImageUrl } from '@/util/server-env';
 import {
@@ -291,10 +293,11 @@ export const adminRouter = router({
         }
 
         if (search) {
+          const escapedSearch = escapeLikePattern(search);
           conditions.push(
             or(
-              ilike(Channel.name, `%${search}%`),
-              ilike(Channel.slug, `%${search}%`),
+              ilike(Channel.name, `%${escapedSearch}%`),
+              ilike(Channel.slug, `%${escapedSearch}%`),
             ),
           );
         }
@@ -304,62 +307,81 @@ export const adminRouter = router({
 
       const whereCondition = buildChannelWhere(input?.filter, input?.search);
 
-      const [channels, totalCountRows, pendingCountRows, approvedCountRows] =
-        await Promise.all([
-          db.query.Channel.findMany({
-            columns: {
-              id: true,
-              name: true,
-              slug: true,
-              description: true,
-              createdAt: true,
-              approvedAt: true,
-              deletedAt: true,
-              avatarPath: true,
-              visibility: true,
-            },
-            where: whereCondition ? () => whereCondition : undefined,
-            with: {
-              memberships: {
-                with: {
-                  appUser: {
-                    columns: { id: true, fullName: true },
-                    with: {
-                      emails: {
-                        columns: { email: true, verifiedAt: true },
-                      },
+      const [
+        channels,
+        totalCountRows,
+        pendingCountRows,
+        approvedCountRows,
+        uploadCountRows,
+        subscriberCountRows,
+      ] = await Promise.all([
+        db.query.Channel.findMany({
+          columns: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            createdAt: true,
+            approvedAt: true,
+            deletedAt: true,
+            avatarPath: true,
+            visibility: true,
+          },
+          where: whereCondition ? () => whereCondition : undefined,
+          with: {
+            memberships: {
+              with: {
+                appUser: {
+                  columns: { id: true, fullName: true },
+                  with: {
+                    emails: {
+                      columns: { email: true, verifiedAt: true },
                     },
                   },
                 },
               },
-              uploadRecords: { columns: { id: true } },
-              subscribers: { columns: { appUserId: true } },
             },
-            orderBy: (t, { desc }) => [desc(t.createdAt)],
-          }),
-          db.select({ cnt: count() }).from(Channel).where(whereCondition),
-          db
-            .select({ cnt: count() })
-            .from(Channel)
-            .where(isNull(Channel.approvedAt)),
-          db
-            .select({ cnt: count() })
-            .from(Channel)
-            .where(isNotNull(Channel.approvedAt)),
-        ]);
+          },
+          orderBy: (t, { desc }) => [desc(t.createdAt)],
+        }),
+        db.select({ cnt: count() }).from(Channel).where(whereCondition),
+        db
+          .select({ cnt: count() })
+          .from(Channel)
+          .where(isNull(Channel.approvedAt)),
+        db
+          .select({ cnt: count() })
+          .from(Channel)
+          .where(isNotNull(Channel.approvedAt)),
+        db
+          .select({
+            channelId: UploadRecord.channelId,
+            cnt: count().as('upload_cnt'),
+          })
+          .from(UploadRecord)
+          .groupBy(UploadRecord.channelId),
+        db
+          .select({
+            channelId: ChannelSubscription.channelId,
+            cnt: count().as('subscriber_cnt'),
+          })
+          .from(ChannelSubscription)
+          .groupBy(ChannelSubscription.channelId),
+      ]);
 
       const totalCount = totalCountRows[0]?.cnt ?? 0;
       const pendingCount = pendingCountRows[0]?.cnt ?? 0;
       const approvedCount = approvedCountRows[0]?.cnt ?? 0;
 
+      const uploadCountMap = new Map(
+        uploadCountRows.map((r) => [r.channelId, Number(r.cnt)]),
+      );
+      const subscriberCountMap = new Map(
+        subscriberCountRows.map((r) => [r.channelId, Number(r.cnt)]),
+      );
+
       const channelsWithAvatarUrl = channels.map((channel) => {
-        const {
-          avatarPath,
-          uploadRecords,
-          subscribers,
-          memberships,
-          ...channelWithoutPath
-        } = channel;
+        const { avatarPath, memberships, ...channelWithoutPath } = channel;
         const avatarUrl = avatarPath
           ? getPublicImageUrl(publicS3.getS3ProtocolUri(avatarPath), {
               resize: mantineAvatarSm2x,
@@ -384,8 +406,8 @@ export const adminRouter = router({
           avatarUrl,
           memberships: adminMemberships,
           _count: {
-            uploadRecords: uploadRecords.length,
-            subscribers: subscribers.length,
+            uploadRecords: uploadCountMap.get(channel.id) ?? 0,
+            subscribers: subscriberCountMap.get(channel.id) ?? 0,
           },
         };
       });
@@ -592,10 +614,11 @@ export const adminRouter = router({
         }
 
         if (search) {
+          const escapedSearch = escapeLikePattern(search);
           conditions.push(
             or(
-              ilike(Organization.name, `%${search}%`),
-              ilike(Organization.slug, `%${search}%`),
+              ilike(Organization.name, `%${escapedSearch}%`),
+              ilike(Organization.slug, `%${escapedSearch}%`),
             ),
           );
         }

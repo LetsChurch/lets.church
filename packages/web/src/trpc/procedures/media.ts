@@ -1,4 +1,5 @@
 import {
+  ChannelSubscription,
   db,
   UploadList,
   UploadListEntry,
@@ -175,11 +176,6 @@ export const mediaProcedures = {
               visibility: true,
               approvedAt: true,
             },
-            with: {
-              subscribers: {
-                columns: { appUserId: true },
-              },
-            },
           },
         },
         where: (t, { eq }) => eq(t.id, input.mediaId),
@@ -275,56 +271,63 @@ export const mediaProcedures = {
       const peaksJsonUrl = getPublicMediaUrl(`${media.id}/peaks.json`);
       const peaksDatUrl = getPublicMediaUrl(`${media.id}/peaks.dat`);
 
-      // Check if current user is following the channel
-      let isFollowing = false;
-      if (ctx.session?.appUserId) {
-        const sessionUserId = ctx.session.appUserId;
-        const subscription = await db.query.ChannelSubscription.findFirst({
-          columns: { appUserId: true },
-          where: (t, { and, eq }) =>
-            and(eq(t.appUserId, sessionUserId), eq(t.channelId, channel.id)),
-        });
-        isFollowing = !!subscription;
-      }
+      const sessionUserId = ctx.session?.appUserId ?? null;
 
-      // Check if current user has saved this media
-      let isSaved = false;
-      if (ctx.session?.appUserId) {
-        const sessionUserId = ctx.session.appUserId;
-        const savedMedia = await db.query.SavedMedia.findFirst({
-          columns: { id: true },
-          where: (t, { and, eq }) =>
-            and(eq(t.appUserId, sessionUserId), eq(t.uploadRecordId, media.id)),
-        });
-        isSaved = !!savedMedia;
-      }
+      const [
+        subscription,
+        savedMedia,
+        membership,
+        viewCountResult,
+        subscriberCountResult,
+      ] = await Promise.all([
+        sessionUserId
+          ? db.query.ChannelSubscription.findFirst({
+              columns: { appUserId: true },
+              where: (t, { and, eq }) =>
+                and(
+                  eq(t.appUserId, sessionUserId),
+                  eq(t.channelId, channel.id),
+                ),
+            })
+          : null,
+        sessionUserId
+          ? db.query.SavedMedia.findFirst({
+              columns: { id: true },
+              where: (t, { and, eq }) =>
+                and(
+                  eq(t.appUserId, sessionUserId),
+                  eq(t.uploadRecordId, media.id),
+                ),
+            })
+          : null,
+        sessionUserId && !ctx.isSiteAdmin
+          ? db.query.ChannelMembership.findFirst({
+              columns: { isAdmin: true, canEdit: true },
+              where: (t, { and, eq }) =>
+                and(
+                  eq(t.channelId, channel.id),
+                  eq(t.appUserId, sessionUserId),
+                ),
+            })
+          : null,
+        db
+          .select({ count: count() })
+          .from(UploadView)
+          .where(eq(UploadView.uploadRecordId, media.id))
+          .then((r) => r[0]),
+        db
+          .select({ count: count() })
+          .from(ChannelSubscription)
+          .where(eq(ChannelSubscription.channelId, channel.id))
+          .then((r) => r[0]),
+      ]);
 
-      // Check if current user can edit this media
-      let canEdit = false;
-      if (ctx.session) {
-        const sessionUserId = ctx.session.appUserId;
-        if (ctx.isSiteAdmin) {
-          canEdit = true;
-        } else {
-          const membership = await db.query.ChannelMembership.findFirst({
-            columns: {
-              isAdmin: true,
-              canEdit: true,
-            },
-            where: (t, { and, eq }) =>
-              and(eq(t.channelId, channel.id), eq(t.appUserId, sessionUserId)),
-          });
-
-          canEdit = !!(membership?.isAdmin || membership?.canEdit);
-        }
-      }
-
-      // Count upload views
-      const [viewCountResult] = await db
-        .select({ count: count() })
-        .from(UploadView)
-        .where(eq(UploadView.uploadRecordId, media.id));
+      const isFollowing = !!subscription;
+      const isSaved = !!savedMedia;
+      const canEdit =
+        ctx.isSiteAdmin || !!(membership?.isAdmin || membership?.canEdit);
       const viewCount = viewCountResult?.count ?? 0;
+      const subscriberCount = Number(subscriberCountResult?.count ?? 0);
 
       // Generate download URLs based on available variants
       type MediaDownloadKind =
@@ -470,7 +473,7 @@ export const mediaProcedures = {
           name: channel.name,
           slug: channel.slug,
           avatarUrl: channelAvatarUrl,
-          subscriberCount: channel.subscribers.length,
+          subscriberCount,
           isFollowing,
         },
       };

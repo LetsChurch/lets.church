@@ -1,5 +1,9 @@
 import { words } from 'es-toolkit';
 
+export function escapeLikePattern(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
+
 export function getInitials(text: string, limit = 3): string {
   return words(text.replace(/'\w+/g, ''))
     .slice(0, limit)

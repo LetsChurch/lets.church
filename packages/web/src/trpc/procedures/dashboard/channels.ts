@@ -2,11 +2,14 @@ import {
   Channel,
   ChannelInvitation,
   ChannelMembership,
+  ChannelSubscription,
   db,
+  FeaturedUpload,
   UploadLicense,
   UploadList,
   UploadListEntry,
   UploadRecord,
+  UploadUserComment,
   UploadView,
 } from '@letschurch/db';
 import { PART_SIZE } from '@letschurch/s3';
@@ -16,7 +19,7 @@ import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
 import { emailHtml, sanitizeForHtml } from '@letschurch/temporal/util/email';
 import { sendEmailWorkflow } from '@letschurch/temporal/workflows/background/send-email';
 import { TRPCError } from '@trpc/server';
-import { and, count, eq, ilike, inArray } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 import { stripIndent } from 'proper-tags';
 import sanitizeFilename from 'sanitize-filename';
@@ -65,6 +68,7 @@ import {
 } from '@/util/avatar-sizes';
 import { coverImageFull, thumbnailMedium } from '@/util/image-sizes';
 import logger from '@/util/logger';
+import { escapeLikePattern } from '@/util/misc';
 import { getPublicImageUrl, getPublicMediaUrl } from '@/util/server-env';
 import { uuidTranslator } from '@/util/uuid';
 import { authProcedure, router } from '../../trpc';
@@ -412,11 +416,6 @@ export const channelRouter = router({
             },
           },
         },
-        subscribers: {
-          columns: {
-            appUserId: true,
-          },
-        },
         uploadRecords: {
           columns: {
             id: true,
@@ -452,12 +451,19 @@ export const channelRouter = router({
       }
     }
 
-    // Count total views for this channel
-    const [viewCountResult] = await db
-      .select({ count: count() })
-      .from(UploadView)
-      .innerJoin(UploadRecord, eq(UploadView.uploadRecordId, UploadRecord.id))
-      .where(eq(UploadRecord.channelId, input.channelId));
+    const [viewCountResult, subscriberCountResult] = await Promise.all([
+      db
+        .select({ count: count() })
+        .from(UploadView)
+        .innerJoin(UploadRecord, eq(UploadView.uploadRecordId, UploadRecord.id))
+        .where(eq(UploadRecord.channelId, input.channelId))
+        .then((r) => r[0]),
+      db
+        .select({ count: count() })
+        .from(ChannelSubscription)
+        .where(eq(ChannelSubscription.channelId, input.channelId))
+        .then((r) => r[0]),
+    ]);
 
     const totalViews = viewCountResult?.count;
 
@@ -466,9 +472,8 @@ export const channelRouter = router({
       (u) => u.deletedAt === null,
     );
 
-    // Counts
     const uploadRecordCount = filteredUploadRecords.length;
-    const subscriberCount = channel.subscribers.length;
+    const subscriberCount = Number(subscriberCountResult?.count ?? 0);
     const membershipCount = channel.memberships.length;
 
     const { avatarPath, ...channelWithoutPath } = channel;
@@ -1095,47 +1100,73 @@ export const channelRouter = router({
       }
 
       const offset = (input.page - 1) * input.limit;
+      const escapedSearch = input.search
+        ? escapeLikePattern(input.search)
+        : undefined;
+
+      const viewCountSq = db
+        .select({
+          uploadRecordId: UploadView.uploadRecordId,
+          cnt: count().as('view_cnt'),
+        })
+        .from(UploadView)
+        .groupBy(UploadView.uploadRecordId)
+        .as('view_counts');
+
+      const commentCountSq = db
+        .select({
+          uploadRecordId: UploadUserComment.uploadRecordId,
+          cnt: count().as('comment_cnt'),
+        })
+        .from(UploadUserComment)
+        .groupBy(UploadUserComment.uploadRecordId)
+        .as('comment_counts');
+
+      const uploadsWhere = and(
+        eq(UploadRecord.channelId, input.channelId),
+        ...(input.search
+          ? [ilike(UploadRecord.title, `%${escapedSearch}%`)]
+          : []),
+        or(
+          eq(UploadRecord.visibility, 'PUBLIC'),
+          eq(UploadRecord.visibility, 'UNLISTED'),
+          eq(UploadRecord.visibility, 'PRIVATE'),
+        ),
+      );
 
       const [uploads, totalCountResult] = await Promise.all([
-        db.query.UploadRecord.findMany({
-          columns: {
-            id: true,
-            title: true,
-            description: true,
-            visibility: true,
-            createdAt: true,
-            lengthSeconds: true,
-            finalizedUploadKey: true,
-            defaultThumbnailPath: true,
-            overrideThumbnailPath: true,
-          },
-          with: {
-            featuredUpload: {
-              columns: {
-                uploadRecordId: true,
-              },
-            },
-            uploadViews: {
-              columns: { uploadRecordId: true },
-            },
-            userComments: {
-              columns: { id: true },
-            },
-          },
-          where: (t, { and, or, eq, ilike }) =>
-            and(
-              eq(t.channelId, input.channelId),
-              ...(input.search ? [ilike(t.title, `%${input.search}%`)] : []),
-              or(
-                eq(t.visibility, 'PUBLIC'),
-                eq(t.visibility, 'UNLISTED'),
-                eq(t.visibility, 'PRIVATE'),
-              ),
-            ),
-          orderBy: (t, { desc }) => [desc(t.createdAt)],
-          offset,
-          limit: input.limit,
-        }),
+        db
+          .select({
+            id: UploadRecord.id,
+            title: UploadRecord.title,
+            description: UploadRecord.description,
+            visibility: UploadRecord.visibility,
+            createdAt: UploadRecord.createdAt,
+            lengthSeconds: UploadRecord.lengthSeconds,
+            finalizedUploadKey: UploadRecord.finalizedUploadKey,
+            defaultThumbnailPath: UploadRecord.defaultThumbnailPath,
+            overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
+            isFeatured: sql<boolean>`${FeaturedUpload.uploadRecordId} is not null`,
+            viewCount: sql<number>`coalesce(${viewCountSq.cnt}, 0)`,
+            commentCount: sql<number>`coalesce(${commentCountSq.cnt}, 0)`,
+          })
+          .from(UploadRecord)
+          .leftJoin(
+            FeaturedUpload,
+            eq(UploadRecord.id, FeaturedUpload.uploadRecordId),
+          )
+          .leftJoin(
+            viewCountSq,
+            eq(UploadRecord.id, viewCountSq.uploadRecordId),
+          )
+          .leftJoin(
+            commentCountSq,
+            eq(UploadRecord.id, commentCountSq.uploadRecordId),
+          )
+          .where(uploadsWhere)
+          .orderBy(desc(UploadRecord.createdAt))
+          .offset(offset)
+          .limit(input.limit),
         db
           .select({ count: count() })
           .from(UploadRecord)
@@ -1143,7 +1174,7 @@ export const channelRouter = router({
             and(
               eq(UploadRecord.channelId, input.channelId),
               ...(input.search
-                ? [ilike(UploadRecord.title, `%${input.search}%`)]
+                ? [ilike(UploadRecord.title, `%${escapedSearch}%`)]
                 : []),
             ),
           )
@@ -1154,15 +1185,8 @@ export const channelRouter = router({
       const totalPages = Math.ceil(totalCount / input.limit);
 
       const uploadsWithThumbnails = uploads.map((upload) => {
-        const {
-          defaultThumbnailPath,
-          overrideThumbnailPath,
-          featuredUpload,
-          uploadViews,
-          userComments,
-          ...uploadRest
-        } = upload;
-        const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
+        const thumbnailPath =
+          upload.overrideThumbnailPath ?? upload.defaultThumbnailPath;
         const thumbnailUrl = thumbnailPath
           ? getPublicImageUrl(
               publicS3.getS3ProtocolUri(thumbnailPath),
@@ -1171,12 +1195,18 @@ export const channelRouter = router({
           : null;
 
         return {
-          ...uploadRest,
+          id: upload.id,
+          title: upload.title,
+          description: upload.description,
+          visibility: upload.visibility,
+          createdAt: upload.createdAt,
+          lengthSeconds: upload.lengthSeconds,
+          finalizedUploadKey: upload.finalizedUploadKey,
           thumbnailUrl,
-          isFeatured: featuredUpload.length > 0,
+          isFeatured: upload.isFeatured,
           _count: {
-            uploadViews: uploadViews.length,
-            userComments: userComments.length,
+            uploadViews: upload.viewCount,
+            userComments: upload.commentCount,
           },
         };
       });
@@ -1647,22 +1677,28 @@ export const channelRouter = router({
       'Fetching channel playlists',
     );
 
-    const playlists = await db.query.UploadList.findMany({
-      columns: {
-        id: true,
-        title: true,
-        type: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-      with: {
-        uploads: {
-          columns: { uploadListId: true },
-        },
-      },
-      where: (t, { eq }) => eq(t.channelId, input.channelId),
-      orderBy: (t, { desc }) => [desc(t.createdAt)],
-    });
+    const uploadCountSq = db
+      .select({
+        uploadListId: UploadListEntry.uploadListId,
+        cnt: count().as('playlist_upload_cnt'),
+      })
+      .from(UploadListEntry)
+      .groupBy(UploadListEntry.uploadListId)
+      .as('playlist_upload_counts');
+
+    const playlists = await db
+      .select({
+        id: UploadList.id,
+        title: UploadList.title,
+        type: UploadList.type,
+        createdAt: UploadList.createdAt,
+        updatedAt: UploadList.updatedAt,
+        uploadCount: sql<number>`coalesce(${uploadCountSq.cnt}, 0)`,
+      })
+      .from(UploadList)
+      .leftJoin(uploadCountSq, eq(UploadList.id, uploadCountSq.uploadListId))
+      .where(eq(UploadList.channelId, input.channelId))
+      .orderBy(desc(UploadList.createdAt));
 
     return playlists.map((playlist) => ({
       id: playlist.id,
@@ -1670,7 +1706,7 @@ export const channelRouter = router({
       type: playlist.type,
       createdAt: playlist.createdAt,
       updatedAt: playlist.updatedAt,
-      _count: { uploads: playlist.uploads.length },
+      _count: { uploads: playlist.uploadCount },
     }));
   }),
 
@@ -1682,30 +1718,37 @@ export const channelRouter = router({
       }),
     )
     .query(async ({ input }) => {
-      const series = await db.query.UploadList.findMany({
-        columns: {
-          id: true,
-          title: true,
-        },
-        with: {
-          uploads: {
-            columns: { uploadListId: true },
-          },
-        },
-        where: (t, { and, eq, ilike }) =>
+      const uploadCountSq = db
+        .select({
+          uploadListId: UploadListEntry.uploadListId,
+          cnt: count().as('series_upload_cnt'),
+        })
+        .from(UploadListEntry)
+        .groupBy(UploadListEntry.uploadListId)
+        .as('series_upload_counts');
+
+      const series = await db
+        .select({
+          id: UploadList.id,
+          title: UploadList.title,
+          uploadCount: sql<number>`coalesce(${uploadCountSq.cnt}, 0)`,
+        })
+        .from(UploadList)
+        .leftJoin(uploadCountSq, eq(UploadList.id, uploadCountSq.uploadListId))
+        .where(
           and(
-            eq(t.channelId, input.channelId),
-            eq(t.type, 'SERIES'),
-            ilike(t.title, `%${input.query}%`),
+            eq(UploadList.channelId, input.channelId),
+            eq(UploadList.type, 'SERIES'),
+            ilike(UploadList.title, `%${escapeLikePattern(input.query)}%`),
           ),
-        orderBy: (t, { desc }) => [desc(t.createdAt)],
-        limit: 10,
-      });
+        )
+        .orderBy(desc(UploadList.createdAt))
+        .limit(10);
 
       return series.map((s) => ({
         id: s.id,
         title: s.title,
-        _count: { uploads: s.uploads.length },
+        _count: { uploads: s.uploadCount },
       }));
     }),
 
