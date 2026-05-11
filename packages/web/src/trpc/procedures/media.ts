@@ -148,6 +148,8 @@ export const mediaProcedures = {
         'Fetching media by ID',
       );
 
+      const sessionUserId = ctx.session?.appUserId ?? null;
+
       const media = await db.query.UploadRecord.findFirst({
         columns: {
           id: true,
@@ -164,6 +166,7 @@ export const mediaProcedures = {
           downloadsEnabled: true,
           license: true,
           transcribingFinishedAt: true,
+          visibility: true,
         },
         with: {
           channel: {
@@ -199,6 +202,26 @@ export const mediaProcedures = {
           'Access denied to media from unapproved/private channel',
         );
         throw new Error('Media not found');
+      }
+
+      // Check if upload itself is private
+      if (media.visibility === 'PRIVATE') {
+        if (!sessionUserId) {
+          throw new Error('Media not found');
+        }
+        if (!ctx.isSiteAdmin) {
+          const membershipCheck = await db.query.ChannelMembership.findFirst({
+            columns: { appUserId: true },
+            where: (t, { and, eq }) =>
+              and(
+                eq(t.channelId, media.channel.id),
+                eq(t.appUserId, sessionUserId),
+              ),
+          });
+          if (!membershipCheck) {
+            throw new Error('Media not found');
+          }
+        }
       }
 
       const {
@@ -270,8 +293,6 @@ export const mediaProcedures = {
       // Generate peaks URLs
       const peaksJsonUrl = getPublicMediaUrl(`${media.id}/peaks.json`);
       const peaksDatUrl = getPublicMediaUrl(`${media.id}/peaks.dat`);
-
-      const sessionUserId = ctx.session?.appUserId ?? null;
 
       const [
         subscription,
