@@ -1,14 +1,41 @@
 import pb, { type ResizeOptions } from '@bitpatty/imgproxy-url-builder';
+import { SignJWT } from 'jose';
 import { z } from 'zod';
 
-const { MEDIA_URL, IMGPROXY_URL, IMGPROXY_KEY, IMGPROXY_SALT } = z
+const {
+  MEDIA_URL,
+  IMGPROXY_URL,
+  IMGPROXY_KEY,
+  IMGPROXY_SALT,
+  DOWNLOAD_URL,
+  JWT_SECRET,
+} = z
   .object({
     MEDIA_URL: z.string(),
     IMGPROXY_URL: z.string(),
     IMGPROXY_KEY: z.string(),
     IMGPROXY_SALT: z.string(),
+    DOWNLOAD_URL: z.string(),
+    JWT_SECRET: z.string(),
   })
   .parse(process.env);
+
+const jwtSecret = new TextEncoder().encode(JWT_SECRET);
+
+export async function makeDownloadServiceUrl(
+  uploadId: string,
+  variant: string,
+  filename: string,
+): Promise<string> {
+  const expiry = Math.floor(Date.now() / 1000) + 15 * 60;
+  const token = await new SignJWT({ uploadId, variant, filename })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setExpirationTime(expiry)
+    .sign(jwtSecret);
+  const url = new URL(`/${uploadId}/${variant}`, DOWNLOAD_URL);
+  url.searchParams.set('token', token);
+  return url.toString();
+}
 
 export function getPublicMediaUrl(key: string) {
   const url = new URL(MEDIA_URL);

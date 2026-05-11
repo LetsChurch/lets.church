@@ -26,7 +26,8 @@
     "check:biome": "biome check",
     "check:ts": "tsc --noEmit",
     "fix": "biome check --write",
-    "fix!": "biome check --write --unsafe"
+    "fix!": "biome check --write --unsafe",
+    "test": "vitest run"
   },
   "dependencies": {
     "@letschurch/db": "workspace:*",

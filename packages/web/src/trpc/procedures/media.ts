@@ -12,6 +12,7 @@ import {
 } from '@letschurch/db';
 import { getPublicUrlWithFilename } from '@letschurch/s3';
 import { publicS3 } from '@letschurch/s3/public';
+import { CURRENT_PIPELINE_VERSION } from '@letschurch/temporal/queues';
 import { xxh64 } from '@node-rs/xxhash';
 import { getRequest } from '@tanstack/react-start/server';
 import { TRPCError } from '@trpc/server';
@@ -29,7 +30,11 @@ import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarXs2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
 import { getClientIpAddress } from '@/util/request-ip';
-import { getPublicImageUrl, getPublicMediaUrl } from '@/util/server-env';
+import {
+  getPublicImageUrl,
+  getPublicMediaUrl,
+  makeDownloadServiceUrl,
+} from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { ffprobeSchema } from '@/util/zod';
 import { authProcedure, publicProcedure } from '../trpc';
@@ -161,6 +166,7 @@ export const mediaProcedures = {
           defaultThumbnailPath: true,
           overrideThumbnailPath: true,
           variants: true,
+          pipelineVersion: true,
           probe: true,
           userCommentsEnabled: true,
           downloadsEnabled: true,
@@ -229,6 +235,7 @@ export const mediaProcedures = {
         overrideThumbnailPath,
         channel,
         variants,
+        pipelineVersion,
         downloadsEnabled,
         transcribingFinishedAt,
         ...mediaRest
@@ -368,80 +375,148 @@ export const mediaProcedures = {
 
       if (downloadsEnabled) {
         const baseFilename = mediaRest.title ?? `media_${media.id}`;
+        const isLegacyPipeline = pipelineVersion < CURRENT_PIPELINE_VERSION;
 
-        // Add video/audio downloads based on variants
         const downloadPromises: Array<Promise<void>> = [];
 
-        for (const variant of variants) {
-          if (
-            variant.endsWith('_DOWNLOAD') &&
-            !variant.includes('360P') // TODO: remove 360P, see ffmpeg.ts
-          ) {
-            const ext = variant.startsWith('VIDEO') ? 'mp4' : 'm4a';
-            let kind: MediaDownloadKind = 'AUDIO';
-            let label = 'Audio';
-            let quality = '';
+        if (isLegacyPipeline) {
+          // Old format: serve presigned S3 URLs for pre-generated files
+          for (const variant of variants) {
+            if (
+              variant.endsWith('_DOWNLOAD') &&
+              !variant.includes('360P') // TODO: remove 360P, see ffmpeg.ts
+            ) {
+              const ext = variant.startsWith('VIDEO') ? 'mp4' : 'm4a';
+              let kind: MediaDownloadKind = 'AUDIO';
+              let label = 'Audio';
+              let quality = '';
 
-            if (variant === 'VIDEO_4K_DOWNLOAD') {
-              kind = 'VIDEO_4K';
-              label = '4k Video';
-              quality = '4k';
-            } else if (variant === 'VIDEO_1080P_DOWNLOAD') {
-              kind = 'VIDEO_1080P';
-              label = '1080p Video';
-              quality = '1080p';
-            } else if (variant === 'VIDEO_720P_DOWNLOAD') {
-              kind = 'VIDEO_720P';
-              label = '720p Video';
-              quality = '720p';
-            } else if (variant === 'VIDEO_480P_DOWNLOAD') {
-              kind = 'VIDEO_480P';
-              label = '480p Video';
-              quality = '480p';
+              if (variant === 'VIDEO_4K_DOWNLOAD') {
+                kind = 'VIDEO_4K';
+                label = '4k Video';
+                quality = '4k';
+              } else if (variant === 'VIDEO_1080P_DOWNLOAD') {
+                kind = 'VIDEO_1080P';
+                label = '1080p Video';
+                quality = '1080p';
+              } else if (variant === 'VIDEO_720P_DOWNLOAD') {
+                kind = 'VIDEO_720P';
+                label = '720p Video';
+                quality = '720p';
+              } else if (variant === 'VIDEO_480P_DOWNLOAD') {
+                kind = 'VIDEO_480P';
+                label = '480p Video';
+                quality = '480p';
+              }
+
+              const filename = quality
+                ? `${baseFilename} ${quality}.${ext}`
+                : `${baseFilename}.${ext}`;
+              const key = `${media.id}/${variant}.${ext}`;
+
+              downloadPromises.push(
+                getPublicUrlWithFilename(publicS3, key, filename).then(
+                  (url) => {
+                    downloadUrls.push({ kind, label, url });
+                  },
+                ),
+              );
             }
+          }
+        } else {
+          // New format: signed download service URLs
+          const videoEntries: Array<{
+            kind: MediaDownloadKind;
+            label: string;
+            variant: string;
+            ext: string;
+            quality: string;
+          }> = [
+            {
+              kind: 'VIDEO_4K',
+              label: '4k Video',
+              variant: 'VIDEO_4K',
+              ext: 'mp4',
+              quality: '4k',
+            },
+            {
+              kind: 'VIDEO_1080P',
+              label: '1080p Video',
+              variant: 'VIDEO_1080P',
+              ext: 'mp4',
+              quality: '1080p',
+            },
+            {
+              kind: 'VIDEO_720P',
+              label: '720p Video',
+              variant: 'VIDEO_720P',
+              ext: 'mp4',
+              quality: '720p',
+            },
+            {
+              kind: 'VIDEO_480P',
+              label: '480p Video',
+              variant: 'VIDEO_480P',
+              ext: 'mp4',
+              quality: '480p',
+            },
+            {
+              kind: 'AUDIO',
+              label: 'Audio',
+              variant: 'AUDIO',
+              ext: 'm4a',
+              quality: '',
+            },
+          ];
 
-            const filename = quality
-              ? `${baseFilename} ${quality}.${ext}`
-              : `${baseFilename}.${ext}`;
-            const key = `${media.id}/${variant}.${ext}`;
-
-            downloadPromises.push(
-              getPublicUrlWithFilename(publicS3, key, filename).then((url) => {
-                downloadUrls.push({
-                  kind,
-                  label,
-                  url,
-                });
-              }),
-            );
+          for (const entry of videoEntries) {
+            if (
+              !variants.includes(entry.variant as (typeof variants)[number])
+            ) {
+              continue;
+            }
+            const filename = entry.quality
+              ? `${baseFilename} ${entry.quality}.${entry.ext}`
+              : `${baseFilename}.${entry.ext}`;
+            downloadUrls.push({
+              kind: entry.kind,
+              label: entry.label,
+              url: await makeDownloadServiceUrl(
+                media.id,
+                entry.variant,
+                filename,
+              ),
+            });
           }
         }
 
-        // Add transcript downloads
-        downloadPromises.push(
-          getPublicUrlWithFilename(
-            publicS3,
-            `${media.id}/transcript.vtt`,
-            `${baseFilename} transcript.vtt`,
-          ).then((url) => {
-            downloadUrls.push({
-              kind: 'TRANSCRIPT_VTT',
-              label: 'Transcript (vtt)',
-              url,
-            });
-          }),
-          getPublicUrlWithFilename(
-            publicS3,
-            `${media.id}/transcript.original.txt`,
-            `${baseFilename} transcript.txt`,
-          ).then((url) => {
-            downloadUrls.push({
-              kind: 'TRANSCRIPT_TXT',
-              label: 'Transcript (txt)',
-              url,
-            });
-          }),
-        );
+        // Add transcript downloads only if transcription completed
+        if (transcribingFinishedAt) {
+          downloadPromises.push(
+            getPublicUrlWithFilename(
+              publicS3,
+              `${media.id}/transcript.vtt`,
+              `${baseFilename} transcript.vtt`,
+            ).then((url) => {
+              downloadUrls.push({
+                kind: 'TRANSCRIPT_VTT',
+                label: 'Transcript (vtt)',
+                url,
+              });
+            }),
+            getPublicUrlWithFilename(
+              publicS3,
+              `${media.id}/transcript.original.txt`,
+              `${baseFilename} transcript.txt`,
+            ).then((url) => {
+              downloadUrls.push({
+                kind: 'TRANSCRIPT_TXT',
+                label: 'Transcript (txt)',
+                url,
+              });
+            }),
+          );
+        }
 
         // Wait for all signed URLs to be generated
         await Promise.all(downloadPromises);

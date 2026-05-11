@@ -21,7 +21,8 @@ group "default" {
     "probe-worker",
     "transcode-worker",
     "import-worker",
-    "transcribe-worker"
+    "transcribe-worker",
+    "download-service"
   ]
 }
 
@@ -105,4 +106,11 @@ target "transcribe-worker" {
   args = {
     WHISPER_MODEL = "large-v2"
   }
+}
+
+target "download-service" {
+  target = "download-service"
+  tags = ["${REGISTRY}/download-service:${TAG}"]
+  platforms = PLATFORMS
+  project-id = "letschurch-download-service"
 }

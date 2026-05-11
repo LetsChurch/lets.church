@@ -10,6 +10,7 @@ import type * as transcodeActivities from '../../activities/transcode';
 import type * as transcribeActivities from '../../activities/transcribe';
 import {
   BACKGROUND_QUEUE,
+  PRIORITY_USER,
   PROBE_QUEUE,
   TRANSCODE_QUEUE,
   TRANSCRIBE_QUEUE,
@@ -70,7 +71,6 @@ export async function processMediaWorkflow(
         ? transcribe(targetId, s3UploadKey)
         : null;
 
-    // Work
     await Promise.all([
       transcribePromise,
       scope === 'everything' || scope === 'transcode'
@@ -82,8 +82,6 @@ export async function processMediaWorkflow(
         : []),
     ]);
 
-    // Index
-
     if (transcribePromise) {
       const res = await transcribePromise;
 
@@ -91,18 +89,16 @@ export async function processMediaWorkflow(
         workflowId: `transcript:${s3UploadKey}`,
         args: ['transcript', targetId, res.transcriptKey],
         taskQueue: BACKGROUND_QUEUE,
-        retry: {
-          maximumAttempts: 2,
-        },
+        priority: { priorityKey: PRIORITY_USER },
+        retry: { maximumAttempts: 2 },
       });
 
       await executeChild(indexDocumentWorkflow, {
         workflowId: `transcriptHtml:${s3UploadKey}`,
         args: ['transcriptHtml', targetId, res.transcriptJsonKey],
         taskQueue: BACKGROUND_QUEUE,
-        retry: {
-          maximumAttempts: 2,
-        },
+        priority: { priorityKey: PRIORITY_USER },
+        retry: { maximumAttempts: 2 },
       });
     }
 
@@ -110,9 +106,8 @@ export async function processMediaWorkflow(
       workflowId: `upload:${s3UploadKey}`,
       args: ['upload', targetId],
       taskQueue: BACKGROUND_QUEUE,
-      retry: {
-        maximumAttempts: 2,
-      },
+      priority: { priorityKey: PRIORITY_USER },
+      retry: { maximumAttempts: 2 },
     });
   } catch (err) {
     const { attempt, retryPolicy } = workflowInfo();

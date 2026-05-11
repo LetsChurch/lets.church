@@ -403,6 +403,49 @@ export class LcS3Client {
     return this.client.send(cmd);
   }
 
+  async deleteKeys(keys: string[], heartbeat = noop) {
+    if (keys.length === 0) return 0;
+
+    let totalDeleted = 0;
+    const batchErrors: Error[] = [];
+
+    for (let i = 0; i < keys.length; i += 1000) {
+      const batch = keys.slice(i, i + 1000);
+      try {
+        const res = await this.client.send(
+          new DeleteObjectsCommand({
+            Bucket: this.bucket,
+            Delete: { Objects: batch.map((Key) => ({ Key })) },
+          }),
+        );
+        totalDeleted += res.Deleted?.length ?? 0;
+        for (const e of res.Errors ?? []) {
+          const err = new Error(
+            `S3 delete failed for key ${e.Key}: ${e.Code} ${e.Message}`,
+          );
+          this.logger?.error({ err, context: { totalDeleted } });
+          batchErrors.push(err);
+        }
+      } catch (e) {
+        const err = e instanceof Error ? e : new Error(String(e));
+        this.logger?.error({ err, context: { batch, totalDeleted } });
+        batchErrors.push(err);
+      }
+      heartbeat();
+    }
+
+    this.logger?.info(`Deleted ${totalDeleted} objects from ${this.bucket}`);
+
+    if (batchErrors.length > 0) {
+      throw new AggregateError(
+        batchErrors,
+        `Failed to delete some objects from ${this.bucket}; ${totalDeleted} successfully deleted`,
+      );
+    }
+
+    return totalDeleted;
+  }
+
   async deletePrefix(prefix: string, heartbeat = noop) {
     let totalCount = 0;
     let currentCount = 0;

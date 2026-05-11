@@ -433,7 +433,7 @@ function SearchResults({ q }: { q: string }) {
 
   const handleTabChange = (newFocus: 'media' | 'transcripts') => {
     navigate({
-      search: (prev) => ({ ...prev, focus: newFocus }),
+      search: (prev: Record<string, unknown>) => ({ ...prev, focus: newFocus }),
     });
   };
 

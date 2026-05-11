@@ -71,6 +71,16 @@ export {
 } from './geocode-organization';
 export { default as getFinalizedUploadKey } from './get-finalized-upload-key';
 export { default as getProbe } from './get-probe';
+export {
+  getLegacyRemuxCount,
+  getRemuxBatch,
+  type RemuxBatch,
+} from './get-remux-batch';
+export {
+  getLegacyUploadCount,
+  getReprocessBatch,
+  type ReprocessBatch,
+} from './get-reprocess-batch';
 export { default as indexDocument } from './index-document';
 export { default as processImage } from './process-image';
 export { default as recordDownloadSize } from './record-download-size';

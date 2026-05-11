@@ -91,3 +91,9 @@ services:
     environment:
       NODE_ENV: production
       IDENTITY: ${IDENTITY:-preview}
+
+  download-service:
+    build:
+      target: download-service
+    command: null
+    volumes: !reset []

@@ -111,6 +111,36 @@ export function makeOrganizationWorkflowId(organizationId: string) {
   return `organization:${organizationId}`;
 }
 
+// Reprocessing workflows
+export type { ReprocessScope } from './reprocess-scope';
+
+import type { ReprocessScope } from './reprocess-scope';
+
+export function makeReprocessAllWorkflowId(scope: ReprocessScope): string {
+  if (scope.kind === 'channel')
+    return `reprocessAll:channel:${scope.channelId}`;
+  return `reprocessAll:${scope.kind}`;
+}
+
+export function makeReprocessUploadWorkflowId(uploadRecordId: string) {
+  return `reprocessUpload:${uploadRecordId}`;
+}
+
+export type { RemuxScope } from './remux-scope';
+
+import type { RemuxScope } from './remux-scope';
+
+export function makeRemuxUploadWorkflowId(uploadRecordId: string) {
+  return `remuxUpload:${uploadRecordId}`;
+}
+
+export function makeRemuxAllWorkflowId(
+  scope: RemuxScope = { kind: 'legacy' },
+): string {
+  if (scope.kind === 'channel') return `remuxAll:channel:${scope.channelId}`;
+  return `remuxAll:${scope.kind}`;
+}
+
 // Import workflows
 export function makeImportMediaWorkflowId(url: string) {
   return `importMedia:${xxh32(url)}:${Date.now()}`;

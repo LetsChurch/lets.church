@@ -1,6 +1,6 @@
 import { executeChild, proxyActivities } from '@temporalio/workflow';
 import type * as activities from '../../activities/background';
-import { BACKGROUND_QUEUE } from '../../queues';
+import { BACKGROUND_QUEUE, PRIORITY_USER } from '../../queues';
 import { indexDocumentWorkflow } from './index-document';
 
 const { geocodeOrganization: geocodeOrganizationActivity } = proxyActivities<
@@ -19,6 +19,7 @@ export async function geocodeOrganizationWorkflow(organizationId: string) {
       workflowId: `organization:${organizationId}`,
       args: ['organization', organizationId],
       taskQueue: BACKGROUND_QUEUE,
+      priority: { priorityKey: PRIORITY_USER },
       retry: {
         maximumAttempts: 2,
       },

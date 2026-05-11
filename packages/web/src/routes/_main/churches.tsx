@@ -118,7 +118,7 @@ function useParsedLocation() {
     center:
       (search.center
         ?.split(',')
-        .map((v) => parseFloat(v))
+        .map((v: string) => parseFloat(v))
         .slice(0, 2) as [number, number] | undefined) ?? MURICA,
   };
 }

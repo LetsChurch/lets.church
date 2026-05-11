@@ -1,16 +1,15 @@
 import { stat, unlink } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { setTimeout } from 'node:timers/promises';
-import type { UploadVariant } from '@letschurch/db';
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { Context } from '@temporalio/activity';
-import { invariant, throttle } from 'es-toolkit';
+import { throttle } from 'es-toolkit';
 import fastGlob from 'fast-glob';
-import mime from 'mime';
 import { mkdirp } from 'mkdirp';
 import { rimraf } from 'rimraf';
-import { recordDownloadSize, updateUploadRecord } from '../../../client';
+import { updateUploadRecord } from '../../../client';
+import { CURRENT_PIPELINE_VERSION } from '../../../queues';
 import { runAudiowaveform } from '../../../util/audiowaveform';
 import {
   getVariants,
@@ -37,8 +36,16 @@ const formatter = new Intl.ListFormat('en', {
   type: 'conjunction',
 });
 
-async function uploadSegments(id: string, dir: string, log: typeof logger) {
-  const segmentFiles = await fastGlob(join(dir, '*.ts'));
+async function uploadSegments(
+  id: string,
+  dir: string,
+  log: typeof logger,
+  excludeInit = false,
+) {
+  const patterns = excludeInit
+    ? [join(dir, '*.m4s')]
+    : [join(dir, '*_init.mp4'), join(dir, '*.m4s')];
+  const segmentFiles = await fastGlob(patterns);
   const signal = Context.current().cancellationSignal;
 
   for (const path of segmentFiles) {
@@ -47,7 +54,7 @@ async function uploadSegments(id: string, dir: string, log: typeof logger) {
 
     await publicS3.retryablePutFile({
       key: `${id}/${basename(path)}`,
-      contentType: 'video/mp2ts',
+      contentType: 'video/mp4',
       contentLength: (await stat(path)).size,
       path,
       signal,
@@ -90,6 +97,25 @@ export default async function transcode(
   const stderr: Array<string> = [];
 
   try {
+    activityLogger.info(`Cleaning up old media files for ${uploadRecordId}`);
+    const keysToDelete: string[] = [];
+    for await (const key of publicS3.listKeys(`${uploadRecordId}/`)) {
+      const filename = key.slice(uploadRecordId.length + 1);
+      if (
+        !filename.startsWith('transcript.') &&
+        !/\.(jpg|jpeg|png|webp)$/i.test(filename)
+      ) {
+        keysToDelete.push(key);
+      }
+    }
+    if (keysToDelete.length > 0) {
+      activityLogger.info(`Deleting ${keysToDelete.length} old media files`);
+      await publicS3.deleteKeys(keysToDelete, () =>
+        Context.current().heartbeat('deleteOldMedia'),
+      );
+    }
+    activityLogger.info('Old media files cleaned up');
+
     activityLogger.info(`Making work directory: ${workingDir}`);
 
     await mkdirp(workingDir);
@@ -152,7 +178,7 @@ export default async function transcode(
 
     while (encodeProc.exitCode === null) {
       Context.current().heartbeat('waiting for ffmpeg');
-      await uploadSegments(uploadRecordId, workingDir, activityLogger);
+      await uploadSegments(uploadRecordId, workingDir, activityLogger, true);
       await setTimeout(1000);
     }
 
@@ -168,47 +194,6 @@ export default async function transcode(
 
     activityLogger.info('Marking transcoding progress as done');
     await updateUploadRecord(uploadRecordId, { transcodingProgress: 1 });
-
-    activityLogger.info('Finding downloadable files');
-
-    const downloadableFiles = await fastGlob(join(workingDir, '*.{mp4,m4a}'));
-
-    activityLogger.info(
-      `Found downloadable files:\n - ${downloadableFiles.join('\n -')}`,
-    );
-
-    // Upload downloadable files
-    activityLogger.info(
-      `Uploading ${downloadableFiles.length} downloadable files`,
-    );
-
-    for (const path of downloadableFiles) {
-      const filename = basename(path);
-      const contentType = mime.getType(filename);
-      invariant(contentType !== null, 'Mime type should not be null');
-      Context.current().heartbeat(`Uploading downloadable file`);
-      activityLogger.info(`Uploading downloadable file: ${filename}`);
-      const byteSize = (await stat(path)).size;
-      await publicS3.putFileMultipart({
-        key: `${uploadRecordId}/${filename}`,
-        contentType,
-        path,
-        onProgress: (progress: number) =>
-          Context.current().heartbeat(
-            `upload ${Math.round(progress * 1000) / 10}%`,
-          ),
-        signal,
-      });
-      Context.current().heartbeat(`Uploaded downloadable file: ${filename}`);
-      activityLogger.info(`Uploaded downloadable file: ${filename}`);
-      activityLogger.info('Recording download size');
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error: TODO: type safety
-      const variant: (typeof UploadVariant.enumValues)[number] =
-        filename.split('.')[0];
-      invariant(variant, 'variant should be defined');
-      await recordDownloadSize(uploadRecordId, variant, byteSize);
-    }
 
     activityLogger.info('Finding playlist files');
 
@@ -318,6 +303,7 @@ export default async function transcode(
     activityLogger.info('Queueing final update for upload record');
     await updateUploadRecord(uploadRecordId, {
       variants,
+      pipelineVersion: CURRENT_PIPELINE_VERSION,
       transcodingFinishedAt: new Date(),
     });
   } catch (e) {
@@ -334,10 +320,21 @@ export default async function transcode(
         { err: e instanceof Error ? e : new Error(String(e)) },
         'Failed to transcode',
       );
-    await updateUploadRecord(uploadRecordId, {
-      transcodingStartedAt: null,
-      transcodingFinishedAt: null,
-    });
+    try {
+      await updateUploadRecord(uploadRecordId, {
+        transcodingStartedAt: null,
+        transcodingFinishedAt: null,
+        transcodingProgress: 0,
+      });
+    } catch (resetErr) {
+      activityLogger.error(
+        {
+          err:
+            resetErr instanceof Error ? resetErr : new Error(String(resetErr)),
+        },
+        'Failed to reset upload record after transcode failure',
+      );
+    }
     throw e;
   } finally {
     activityLogger.info(`Removing work directory: ${workingDir}`);

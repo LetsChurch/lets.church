@@ -46,7 +46,7 @@ services:
       ELASTICSEARCH_URL: http://elasticsearch:9200
       IMGPROXY_KEY: ${IMGPROXY_KEY}
       IMGPROXY_SALT: ${IMGPROXY_SALT}
-      IMGPROXY_URL: ${IMGPROXY_URL}
+      IMGPROXY_URL: ${HOST_IMGPROXY_URL}
       JWT_SECRET: ${JWT_SECRET}
       LISTMONK_INTERNAL_URL: http://listmonk:9000
       LISTMONK_API_USER: ${LISTMONK_API_USER}
@@ -54,6 +54,7 @@ services:
       MAPBOX_MAP_TOKEN: ${MAPBOX_MAP_TOKEN}
       MAPBOX_SEARCHBOX_TOKEN: ${MAPBOX_SEARCHBOX_TOKEN}
       MEDIA_URL: ${MEDIA_URL}
+      DOWNLOAD_URL: ${HOST_DOWNLOAD_URL}
       TEMPORAL_ADDRESS: temporal:7233
       TURNSTILE_SITE_KEY: 1x00000000000000000000AA
       TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
@@ -183,6 +184,17 @@ services:
       - /usr/src/app/packages/transcode-worker/node_modules
     depends_on:
       - temporal
+
+  download-service:
+    build:
+      context: .
+      target: download-service
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:${HOST_DOWNLOAD_PORT:-4900}:8080
+    environment:
+      MEDIA_URL: ${MEDIA_URL}
+      JWT_SECRET: ${JWT_SECRET}
 
   transcribe-worker:
     build:

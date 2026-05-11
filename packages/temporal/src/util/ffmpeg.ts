@@ -9,28 +9,31 @@ type UploadVariantValue = (typeof UploadVariant.enumValues)[number];
 const moduleLogger = logger.child({ module: 'util/ffmpeg' });
 
 const HLS_TIME = 7;
-const BASE_AUDIO_ARGS = ['-c:a', 'aac', '-ar', '48000'];
 
-const BASE_ARGS = [
-  '-g',
-  '48',
-  '-keyint_min',
-  '48',
+const BASE_HLS_ARGS = [
   '-hls_time',
   `${HLS_TIME}`,
   '-hls_playlist_type',
   'vod',
   '-hls_flags',
   'temp_file',
+  '-hls_segment_type',
+  'fmp4',
 ];
 
 // TODO: remove 360P in future job:
 // 1. Delete from database and from object storage
 // 2. Remove the value in a migration afterward
-// 3. Remove shorts for the time being (the platform is more suited toward long-form content)
 type VideoVariant = Exclude<
   UploadVariantValue,
-  'AUDIO' | 'AUDIO_DOWNLOAD' | 'VIDEO_360P' | 'VIDEO_360P_DOWNLOAD'
+  | 'AUDIO'
+  | 'AUDIO_DOWNLOAD'
+  | 'VIDEO_360P'
+  | 'VIDEO_360P_DOWNLOAD'
+  | 'VIDEO_4K_DOWNLOAD'
+  | 'VIDEO_1080P_DOWNLOAD'
+  | 'VIDEO_720P_DOWNLOAD'
+  | 'VIDEO_480P_DOWNLOAD'
 >;
 
 export type HwAccel = 'none' | `ama:${number}`;
@@ -49,182 +52,172 @@ export function getVariants(probe: Probe): Array<UploadVariantValue> {
 
     if (stream.width >= 3840 || stream.height >= 2160) {
       res.push('VIDEO_4K');
-      res.push('VIDEO_4K_DOWNLOAD');
     }
 
     if (stream.width >= 1920 || stream.height >= 1080) {
       res.push('VIDEO_1080P');
-      res.push('VIDEO_1080P_DOWNLOAD');
     }
 
     if (stream.width >= 1280 || stream.height >= 720) {
       res.push('VIDEO_720P');
-      if (res.length === 1) {
-        res.push('VIDEO_720P_DOWNLOAD');
-      }
     }
 
     if (stream.width >= 960 || stream.height >= 540) {
-      // TODO: replace 480 with 540, in the same job where 360 is deleted
       res.push('VIDEO_480P');
-      if (res.length === 1) {
-        res.push('VIDEO_480P_DOWNLOAD');
-      }
     }
   }
 
-  res.push('AUDIO', 'AUDIO_DOWNLOAD');
+  if (probe.streams.some((s) => s.codec_type === 'audio')) {
+    res.push('AUDIO');
+  }
 
   return res;
 }
 
-function videoVariantToKbps(variant: VideoVariant) {
-  if (variant === 'VIDEO_4K' || variant === 'VIDEO_4K_DOWNLOAD') {
+function videoVariantToKbps(variant: VideoVariant): number {
+  if (variant === 'VIDEO_4K') {
     return 18200;
-  } else if (variant === 'VIDEO_1080P' || variant === 'VIDEO_1080P_DOWNLOAD') {
+  } else if (variant === 'VIDEO_1080P') {
     return 5000;
-  } else if (variant === 'VIDEO_720P' || variant === 'VIDEO_720P_DOWNLOAD') {
+  } else if (variant === 'VIDEO_720P') {
     return 2800;
-  } else if (variant === 'VIDEO_480P' || variant === 'VIDEO_480P_DOWNLOAD') {
+  } else if (variant === 'VIDEO_480P') {
     return 1400;
   } else {
-    const nope: never = variant;
-    throw new Error(`Invalid variant: ${nope}`);
+    throw new Error(`Invalid variant: ${String(variant)}`);
   }
 }
 
 function videoVariantToDimensions(variant: VideoVariant): [number, number] {
-  if (variant === 'VIDEO_4K' || variant === 'VIDEO_4K_DOWNLOAD') {
+  if (variant === 'VIDEO_4K') {
     return [3840, 2160];
-  } else if (variant === 'VIDEO_1080P' || variant === 'VIDEO_1080P_DOWNLOAD') {
+  } else if (variant === 'VIDEO_1080P') {
     return [1920, 1080];
-  } else if (variant === 'VIDEO_720P' || variant === 'VIDEO_720P_DOWNLOAD') {
+  } else if (variant === 'VIDEO_720P') {
     return [1280, 720];
-  } else if (variant === 'VIDEO_480P' || variant === 'VIDEO_480P_DOWNLOAD') {
+  } else if (variant === 'VIDEO_480P') {
     return [960, 540];
   } else {
-    const nope: never = variant;
-    throw new Error(`Invalid variant: ${nope}`);
+    throw new Error(`Invalid variant: ${String(variant)}`);
   }
 }
 
-function variantToPlaylistName(variant: UploadVariantValue) {
-  return `${variant}.m3u8`;
-}
-
-function variantToDownloadName(variant: UploadVariantValue) {
-  return `${variant}.${variant.startsWith('VIDEO') ? 'mp4' : 'm4a'}`;
-}
-
-function variantIsVideo(
-  v: UploadVariantValue,
-): v is Exclude<UploadVariantValue, `AUDIO${string}`> {
-  return v.startsWith('VIDEO');
-}
-
-function variantIsAudio(
-  v: UploadVariantValue,
-): v is Extract<UploadVariantValue, `AUDIO${string}`> {
-  return v.startsWith('AUDIO');
-}
-
-function videoVariantToBufSize(variant: VideoVariant): string {
-  switch (variant) {
-    case 'VIDEO_4K':
-    case 'VIDEO_4K_DOWNLOAD':
-      return '27300k';
-    case 'VIDEO_1080P':
-    case 'VIDEO_1080P_DOWNLOAD':
-      return '7500k';
-    case 'VIDEO_720P':
-    case 'VIDEO_720P_DOWNLOAD':
-      return '4200k';
-    case 'VIDEO_480P':
-    case 'VIDEO_480P_DOWNLOAD':
-      return '2100k';
+function videoVariantToAvcCodec(variant: VideoVariant): string {
+  if (variant === 'VIDEO_4K') {
+    return 'avc1.640033';
+  } else if (variant === 'VIDEO_1080P') {
+    return 'avc1.640028';
+  } else if (variant === 'VIDEO_720P') {
+    return 'avc1.64001f';
+  } else if (variant === 'VIDEO_480P') {
+    return 'avc1.64001f';
+  } else {
+    throw new Error(`Invalid variant: ${String(variant)}`);
   }
 }
 
-// TODO: remove 360P, see above
-function variantToAudioBitRate(
-  variant: Exclude<UploadVariantValue, 'VIDEO_360P' | 'VIDEO_360P_DOWNLOAD'>,
-): string {
-  switch (variant) {
-    case 'VIDEO_4K':
-    case 'VIDEO_4K_DOWNLOAD':
-    case 'VIDEO_1080P':
-    case 'VIDEO_1080P_DOWNLOAD':
-    case 'AUDIO':
-    case 'AUDIO_DOWNLOAD':
-      return '192k';
-    case 'VIDEO_720P':
-    case 'VIDEO_720P_DOWNLOAD':
-    case 'VIDEO_480P':
-    case 'VIDEO_480P_DOWNLOAD':
-      return '128k';
+function videoVariantToLevel(variant: VideoVariant): string {
+  if (variant === 'VIDEO_4K') {
+    return '5.1';
+  } else if (variant === 'VIDEO_1080P') {
+    return '4.0';
+  } else if (variant === 'VIDEO_720P') {
+    return '3.1';
+  } else if (variant === 'VIDEO_480P') {
+    return '3.1';
+  } else {
+    throw new Error(`Invalid variant: ${String(variant)}`);
   }
 }
 
-// TODO: remove 360P, see above
-function variantToOutputArgs(
-  variant: Exclude<UploadVariantValue, 'VIDEO_360P' | 'VIDEO_360P_DOWNLOAD'>,
-) {
-  const outputName = variant.endsWith('_DOWNLOAD')
-    ? variantToDownloadName(variant)
-    : variantToPlaylistName(variant);
-  const bvm = variantIsVideo(variant)
-    ? [
-        '-b:v',
-        `${videoVariantToKbps(variant)}k`,
-        '-maxrate',
-        `${Math.floor(videoVariantToKbps(variant) * 1.07)}k`,
-      ]
+function videoVariantToOutputArgs(
+  variant: VideoVariant,
+  hwAccel: HwAccel,
+  hasAudio: boolean,
+): string[] {
+  const kbps = videoVariantToKbps(variant);
+  const audioMapArgs: string[] = hasAudio ? ['-map', '0:a'] : [];
+  const audioCodecArgs: string[] = hasAudio
+    ? ['-c:a', 'aac', '-ar', '48000', '-b:a', '192k']
     : [];
-  const bufsize = variantIsVideo(variant)
-    ? ['-bufsize', videoVariantToBufSize(variant)]
-    : [];
-  const audioOnlyOutput = variantIsAudio(variant) ? ['-vn'] : [];
-  const segmentFilename = !variant.endsWith('_DOWNLOAD')
-    ? ['-hls_segment_filename', `${variant}_%04d.ts`]
-    : [];
-
+  const profileLevelArgs = hwAccel.startsWith('ama:')
+    ? []
+    : ['-profile:v', 'high', '-level:v', videoVariantToLevel(variant)];
   return [
-    ...BASE_ARGS,
-    ...bvm,
-    ...bufsize,
-    ...audioOnlyOutput,
+    '-map',
+    `[${variant}]`,
+    ...audioMapArgs,
+    '-c:v',
+    hwAccel.startsWith('ama:') ? 'h264_ama' : 'h264',
+    ...profileLevelArgs,
+    ...audioCodecArgs,
+    '-g',
+    '48',
+    '-keyint_min',
+    '48',
+    '-b:v',
+    `${kbps}k`,
+    '-maxrate',
+    `${Math.floor(kbps * 1.5)}k`,
+    '-bufsize',
+    `${Math.floor(kbps * 3)}k`,
+    ...BASE_HLS_ARGS,
+    '-hls_fmp4_init_filename',
+    `${variant}_init.mp4`,
+    '-hls_segment_filename',
+    `${variant}_%04d.m4s`,
+    `${variant}.m3u8`,
+  ];
+}
+
+function audioOutputArgs(): string[] {
+  return [
+    '-map',
+    '0:a',
+    '-vn',
+    '-c:a',
+    'aac',
+    '-ar',
+    '48000',
     '-b:a',
-    variantToAudioBitRate(variant),
-    ...segmentFilename,
-    outputName,
+    '192k',
+    ...BASE_HLS_ARGS,
+    '-hls_fmp4_init_filename',
+    'AUDIO_init.mp4',
+    '-hls_segment_filename',
+    'AUDIO_%04d.m4s',
+    'AUDIO.m3u8',
   ];
 }
 
 export function variantsToMasterVideoPlaylist(
   variants: Array<UploadVariantValue>,
+  hasMuxedAudio = false,
 ) {
-  return [
-    '#EXTM3U',
-    '#EXT-X-VERSION:3',
-    ...variants
-      // Audio must not be included in the master playlist: https://developer.apple.com/documentation/http_live_streaming/http_live_streaming_hls_authoring_specification_for_apple_devices
-      // Don't include downloads in master playlist
-      .filter(
-        // TODO: remove 360P, see above
-        (
-          v,
-        ): v is Exclude<
-          UploadVariantValue,
-          'AUDIO' | `${string}_DOWNLOAD` | 'VIDEO_360P'
-        > => v !== 'AUDIO' && !v.endsWith('_DOWNLOAD') && !v.includes('360P'),
-      )
-      .flatMap((v) => [
-        `#EXT-X-STREAM-INF:BANDWIDTH=${
-          videoVariantToKbps(v) * 1000
-        },RESOLUTION=${videoVariantToDimensions(v).join('x')}`,
-        variantToPlaylistName(v),
-      ]),
-  ].join('\n');
+  const videoVariants = variants.filter(
+    (v): v is VideoVariant =>
+      v.startsWith('VIDEO') && !v.endsWith('_DOWNLOAD') && !v.includes('360P'),
+  );
+
+  const hasSeparateAudio = variants.includes('AUDIO');
+  const includeAudioCodec = hasSeparateAudio || hasMuxedAudio;
+
+  const lines = ['#EXTM3U', '#EXT-X-VERSION:3', ''];
+
+  for (const v of videoVariants) {
+    const kbps = videoVariantToKbps(v);
+    const [w, h] = videoVariantToDimensions(v);
+    const codec = videoVariantToAvcCodec(v);
+    const bandwidth =
+      (Math.floor(kbps * 1.5) + (includeAudioCodec ? 192 : 0)) * 1000;
+    const codecStr = includeAudioCodec ? `${codec},mp4a.40.2` : codec;
+    lines.push(
+      `#EXT-X-STREAM-INF:BANDWIDTH=${bandwidth},RESOLUTION=${w}x${h},CODECS="${codecStr}"`,
+      `${v}.m3u8`,
+    );
+  }
+
+  return `${lines.join('\n')}\n`;
 }
 
 export function extraDecodeArgs(probe: Probe, hwAccel: HwAccel) {
@@ -261,40 +254,20 @@ export function ffmpegSoftwareFilterComplex(
 ): Array<string> {
   // TODO: remove 360P, see above
   const videoVariants = variants.filter(
-    (
-      v,
-    ): v is Exclude<
-      UploadVariantValue,
-      `AUDIO${string}` | `VIDEO_360P${string}`
-    > => v.startsWith('VIDEO') && !v.includes('360P'),
+    (v): v is VideoVariant =>
+      v.startsWith('VIDEO') && !v.endsWith('_DOWNLOAD') && !v.includes('360P'),
   );
 
   if (videoVariants.length === 0) {
     return [];
   }
 
-  // Construct filter_complex
-  const resolutions = videoVariants.filter(
-    (v): v is Exclude<(typeof videoVariants)[number], `${string}_DOWNLOAD`> =>
-      !v.endsWith('_DOWNLOAD'),
-  );
-  const downloads = videoVariants.filter(
-    (v): v is Extract<(typeof videoVariants)[number], `${string}_DOWNLOAD`> =>
-      v.endsWith('_DOWNLOAD'),
-  );
-  const filterComplex = `${resolutions
-    .map((r) => videoVariantToDimensions(r))
-    // Ensure dimensions are divisible by 2
-    .map((d, i) => `[0:v]scale=${d[0]}x${d[1]},setsar=1[${resolutions[i]}]`)
-    .join(';')};${downloads
-    .map(
-      (d) =>
-        `[${d.replace('_DOWNLOAD', '')}]split[${d}][${d.replace(
-          '_DOWNLOAD',
-          '',
-        )}]`,
-    )
-    .join(';')}`;
+  const filterComplex = videoVariants
+    .map((v) => {
+      const [w, h] = videoVariantToDimensions(v);
+      return `[0:v]scale=${w}:${h}:flags=lanczos,setsar=1[${v}]`;
+    })
+    .join(';');
 
   return ['-filter_complex', filterComplex];
 }
@@ -307,50 +280,24 @@ export function ffmpegAmaFilterComplex(
 ): Array<string> {
   // TODO: remove 360P, see above
   const videoVariants = variants.filter(
-    (
-      v,
-    ): v is Exclude<
-      UploadVariantValue,
-      `AUDIO${string}` | `VIDEO_360P${string}`
-    > => v.startsWith('VIDEO') && !v.includes('360P'),
+    (v): v is VideoVariant =>
+      v.startsWith('VIDEO') && !v.endsWith('_DOWNLOAD') && !v.includes('360P'),
   );
 
   if (videoVariants.length === 0) {
     return [];
   }
 
-  // Construct filter_complex
   const hwUpload = probe.streams.some((s) =>
     ['h264', 'hevc', 'av1'].includes(s.codec_name as string),
   )
     ? ''
     : 'hwupload,';
 
-  const resolutions = videoVariants.filter(
-    (v): v is Exclude<(typeof videoVariants)[number], `${string}_DOWNLOAD`> =>
-      !v.endsWith('_DOWNLOAD'),
-  );
-  const downloads = videoVariants.filter(
-    (v): v is Extract<(typeof videoVariants)[number], `${string}_DOWNLOAD`> =>
-      v.endsWith('_DOWNLOAD'),
-  );
-
-  const filterComplex = `${hwUpload}scaler_ama=outputs=${
-    resolutions.length
-  }:out_res=${resolutions
-    .map((r) => videoVariantToDimensions(r))
+  const filterComplex = `${hwUpload}scaler_ama=outputs=${videoVariants.length}:out_res=${videoVariants
+    .map((v) => videoVariantToDimensions(v))
     .map((d) => `(${d[0]}x${d[1]})`)
-    .join('')} ${resolutions.map((r) => `[${r}]`).join('')};${downloads
-    .map(
-      (d) =>
-        `[${d.replace('_DOWNLOAD', '')}]split[${d}][${d.replace(
-          '_DOWNLOAD',
-          '',
-        )}]`,
-    )
-    .join(';')}`;
-
-  // Construct output maps
+    .join('')} ${videoVariants.map((v) => `[${v}]`).join('')}`;
 
   return ['-filter_complex', filterComplex];
 }
@@ -358,34 +305,21 @@ export function ffmpegAmaFilterComplex(
 function variantsToOutputMaps(
   variants: Array<UploadVariantValue>,
   hwAccel: HwAccel,
-) {
+): string[] {
   // TODO: remove 360P, see above
-  return variants
-    .filter(
-      (v): v is Exclude<UploadVariantValue, `VIDEO_360P${string}`> =>
-        !v.includes('360P'),
-    )
-    .flatMap((v) =>
-      v.startsWith('VIDEO')
-        ? [
-            '-map',
-            `[${v}]`,
-            '-map',
-            '0:a',
-            ...BASE_AUDIO_ARGS,
-            '-c:v',
-            hwAccel.startsWith('ama:') ? 'h264_ama' : 'h264',
-            ...BASE_ARGS,
-            ...variantToOutputArgs(v),
-          ]
-        : [
-            '-map',
-            '0:a',
-            ...BASE_AUDIO_ARGS,
-            ...BASE_ARGS,
-            ...variantToOutputArgs(v),
-          ],
-    );
+  const videoVariants = variants.filter(
+    (v): v is VideoVariant =>
+      v.startsWith('VIDEO') && !v.endsWith('_DOWNLOAD') && !v.includes('360P'),
+  );
+
+  const hasAudio = variants.includes('AUDIO');
+
+  return [
+    ...videoVariants.flatMap((v) =>
+      videoVariantToOutputArgs(v, hwAccel, hasAudio),
+    ),
+    ...(hasAudio ? audioOutputArgs() : []),
+  ];
 }
 
 export function ffmpegEncodingArgs(
@@ -469,6 +403,132 @@ export function runFfmpegThumbnails(
 
   moduleLogger.info(`runFfmpegThumbnails: ${proc.spawnargs.join(' ')}`);
 
+  return proc;
+}
+
+export function parseM3u8(content: string): {
+  segments: string[];
+  hlsTime: number;
+} {
+  const lines = content.split('\n').map((l) => l.trim());
+  const segments: string[] = [];
+  let hlsTime = 7;
+
+  for (const line of lines) {
+    if (line.startsWith('#EXT-X-TARGETDURATION:')) {
+      const val = parseInt(line.slice(22), 10);
+      if (!Number.isNaN(val) && val > 0) hlsTime = val;
+    } else if (line.length > 0 && !line.startsWith('#')) {
+      segments.push(line);
+    }
+  }
+
+  return { segments, hlsTime };
+}
+
+export function remuxVideoArgs(
+  variant: string,
+  concatListPath: string,
+  hlsTime: number,
+  hasAudio = true,
+): string[] {
+  const audioArgs = hasAudio
+    ? ['-c:a', 'copy', '-bsf:a', 'aac_adtstoasc']
+    : ['-an'];
+  return [
+    '-hide_banner',
+    '-y',
+    '-f',
+    'concat',
+    '-safe',
+    '0',
+    '-i',
+    concatListPath,
+    '-c:v',
+    'copy',
+    ...audioArgs,
+    '-progress',
+    '-',
+    '-hls_time',
+    `${hlsTime}`,
+    '-hls_playlist_type',
+    'vod',
+    '-hls_flags',
+    'temp_file',
+    '-hls_segment_type',
+    'fmp4',
+    '-hls_fmp4_init_filename',
+    `${variant}_init.mp4`,
+    '-hls_segment_filename',
+    `${variant}_%04d.m4s`,
+    `${variant}.m3u8`,
+  ];
+}
+
+export function remuxAudioArgs(
+  concatListPath: string,
+  hlsTime: number,
+): string[] {
+  return [
+    '-hide_banner',
+    '-y',
+    '-f',
+    'concat',
+    '-safe',
+    '0',
+    '-i',
+    concatListPath,
+    '-vn',
+    '-c:a',
+    'copy',
+    '-bsf:a',
+    'aac_adtstoasc',
+    '-progress',
+    '-',
+    '-hls_time',
+    `${hlsTime}`,
+    '-hls_playlist_type',
+    'vod',
+    '-hls_flags',
+    'temp_file',
+    '-hls_segment_type',
+    'fmp4',
+    '-hls_fmp4_init_filename',
+    'AUDIO_init.mp4',
+    '-hls_segment_filename',
+    'AUDIO_%04d.m4s',
+    'AUDIO.m3u8',
+  ];
+}
+
+export function runFfmpegRemuxVideo(
+  cwd: string,
+  variant: string,
+  concatListPath: string,
+  hlsTime: number,
+  signal: AbortSignal,
+  hasAudio = true,
+) {
+  const proc = execa(
+    'ffmpeg',
+    remuxVideoArgs(variant, concatListPath, hlsTime, hasAudio),
+    { cwd, cancelSignal: signal },
+  );
+  moduleLogger.info(`runFfmpegRemuxVideo: ${proc.spawnargs.join(' ')}`);
+  return proc;
+}
+
+export function runFfmpegRemuxAudio(
+  cwd: string,
+  concatListPath: string,
+  hlsTime: number,
+  signal: AbortSignal,
+) {
+  const proc = execa('ffmpeg', remuxAudioArgs(concatListPath, hlsTime), {
+    cwd,
+    cancelSignal: signal,
+  });
+  moduleLogger.info(`runFfmpegRemuxAudio: ${proc.spawnargs.join(' ')}`);
   return proc;
 }
 

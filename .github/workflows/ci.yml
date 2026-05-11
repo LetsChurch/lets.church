@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "packages/**"
+      - "services/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - ".github/workflows/ci.yml"
@@ -86,9 +87,25 @@ jobs:
       - name: Run tests
         run: pnpm -r run test
 
+  test-go:
+    runs-on: depot-ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/download/go.mod
+          cache-dependency-path: services/download/go.sum
+
+      - name: Run Go tests
+        run: GOEXPERIMENT=jsonv2 go test ./...
+        working-directory: services/download
+
   build:
     runs-on: depot-ubuntu-24.04
-    needs: [check, test]
+    needs: [check, test, test-go]
     if: github.ref == 'refs/heads/kyrios'
 
     steps:

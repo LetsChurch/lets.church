@@ -81,6 +81,7 @@ export type UploadRecordUpdateData = {
   originalFileName?: string | null;
   probe?: unknown;
   variants?: string[];
+  pipelineVersion?: number | null;
   score?: number;
   scoreStaleAt?: Date | null;
   [key: string]: unknown;

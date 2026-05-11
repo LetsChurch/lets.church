@@ -145,14 +145,17 @@ ncu:
 
 fix:
   pnpm -r run fix
+  cd services/download && go fmt ./...
 
 ffix:
   pnpm -r run fix!
+  cd services/download && go fmt ./...
 
 export CI := "1"
 
 test:
   pnpm -r test
+  GOEXPERIMENT=jsonv2 go -C services/download test ./...
 
 transcribe file:
   docker compose run --rm -v $PWD:/host -w /host transcribe-worker /bin/bash -c 'ffmpeg -i {{file}} -ar 16000 -ac 1 {{file}}.wav'
