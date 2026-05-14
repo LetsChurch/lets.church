@@ -371,16 +371,16 @@ export function Player({
     };
   }, [uploadRecordId, viewHash, recordViewSeconds, onVideoEnded]);
 
-  // Track streaming resolution in PostHog (video only — audio has no resolution levels)
+  // Track playback start and streaming resolution in PostHog
   useEffect(() => {
     const videoElement = videoRef.current;
-    if (!videoElement || mediaType !== 'video') return;
+    if (!videoElement) return;
 
     let hasStarted = false;
     let hlsCleanup: (() => void) | undefined;
 
     const setupHls = () => {
-      if (hlsCleanup) return;
+      if (hlsCleanup || mediaType !== 'video') return;
       const hls = videoElement.api;
       if (!hls) return;
 
@@ -389,6 +389,7 @@ export function Player({
         if (!level) return;
         posthog.capture('media_quality_changed', {
           upload_record_id: uploadRecordId,
+          media_type: 'video',
           height: level.height,
           bitrate: level.bitrate,
         });
@@ -401,13 +402,21 @@ export function Player({
     const onPlay = () => {
       if (hasStarted) return;
       hasStarted = true;
-      const hls = videoElement.api;
-      const idx = hls?.currentLevel ?? -1;
-      const level = idx >= 0 ? hls?.levels[idx] : undefined;
-      posthog.capture('media_playback_started', {
-        upload_record_id: uploadRecordId,
-        ...(level ? { height: level.height, bitrate: level.bitrate } : {}),
-      });
+      if (mediaType === 'video') {
+        const hls = videoElement.api;
+        const idx = hls?.currentLevel ?? -1;
+        const level = idx >= 0 ? hls?.levels[idx] : undefined;
+        posthog.capture('media_playback_started', {
+          upload_record_id: uploadRecordId,
+          media_type: 'video',
+          ...(level ? { height: level.height, bitrate: level.bitrate } : {}),
+        });
+      } else {
+        posthog.capture('media_playback_started', {
+          upload_record_id: uploadRecordId,
+          media_type: 'audio',
+        });
+      }
     };
 
     const ac = new AbortController();
