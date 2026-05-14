@@ -2,6 +2,7 @@ import { useStore } from '@nanostores/react';
 import { IconRewindBackward10, IconRewindForward10 } from '@tabler/icons-react';
 import { useMutation } from '@tanstack/react-query';
 import type { HlsVideoElement } from 'hls-video-element';
+import { Hls } from 'hls-video-element';
 import HlsVideo from 'hls-video-element/react';
 import type { MediaController as MediaControllerElement } from 'media-chrome';
 import {
@@ -17,6 +18,7 @@ import {
   MediaTimeDisplay,
   MediaTimeRange,
 } from 'media-chrome/react';
+import posthog from 'posthog-js';
 import { useEffect, useRef, useState } from 'react';
 import { LcTooltip } from '@/components/lc-tooltip';
 import Logo from '@/components/logo';
@@ -368,6 +370,57 @@ export function Player({
       }
     };
   }, [uploadRecordId, viewHash, recordViewSeconds, onVideoEnded]);
+
+  // Track streaming resolution in PostHog (video only — audio has no resolution levels)
+  useEffect(() => {
+    const videoElement = videoRef.current;
+    if (!videoElement || mediaType !== 'video') return;
+
+    let hasStarted = false;
+    let hlsCleanup: (() => void) | undefined;
+
+    const setupHls = () => {
+      if (hlsCleanup) return;
+      const hls = videoElement.api;
+      if (!hls) return;
+
+      const onLevelSwitched = (_event: string, data: { level: number }) => {
+        const level = hls.levels[data.level];
+        if (!level) return;
+        posthog.capture('media_quality_changed', {
+          upload_record_id: uploadRecordId,
+          height: level.height,
+          bitrate: level.bitrate,
+        });
+      };
+
+      hls.on(Hls.Events.LEVEL_SWITCHED, onLevelSwitched);
+      hlsCleanup = () => hls.off(Hls.Events.LEVEL_SWITCHED, onLevelSwitched);
+    };
+
+    const onPlay = () => {
+      if (hasStarted) return;
+      hasStarted = true;
+      const hls = videoElement.api;
+      const idx = hls?.currentLevel ?? -1;
+      const level = idx >= 0 ? hls?.levels[idx] : undefined;
+      posthog.capture('media_playback_started', {
+        upload_record_id: uploadRecordId,
+        ...(level ? { height: level.height, bitrate: level.bitrate } : {}),
+      });
+    };
+
+    const ac = new AbortController();
+
+    setupHls();
+    videoElement.addEventListener('canplay', setupHls, { signal: ac.signal });
+    videoElement.addEventListener('play', onPlay, { signal: ac.signal });
+
+    return () => {
+      ac.abort();
+      hlsCleanup?.();
+    };
+  }, [uploadRecordId, mediaType]);
 
   return (
     <LcTooltip.Provider>
