@@ -791,7 +791,6 @@ function ChannelUploadPage() {
                       }}
                       searchable
                       clearable
-                      disabled={isProcessing}
                       searchValue={seriesSearchValue}
                       onSearchChange={setSeriesSearchValue}
                       nothingFoundMessage={
