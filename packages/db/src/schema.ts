@@ -769,6 +769,7 @@ export const UploadRecord = pgTable(
       .notNull()
       .default(true),
     downloadsEnabled: boolean('downloads_enabled').notNull().default(true),
+    pipelineVersion: integer('pipeline_version').notNull().default(2),
   },
   (UploadRecord) => ({
     upload_record_createdBy_fkey: foreignKey({

@@ -28,7 +28,7 @@ export function useSearchFilters() {
     sort: 'relevance' | 'date-asc' | 'date-desc' | undefined,
   ) => {
     navigate({
-      search: (prev) => ({ ...prev, sort }),
+      search: (prev: Record<string, unknown>) => ({ ...prev, sort }),
     });
   };
 
@@ -42,13 +42,13 @@ export function useSearchFilters() {
       | undefined,
   ) => {
     navigate({
-      search: (prev) => ({ ...prev, dateRange }),
+      search: (prev: Record<string, unknown>) => ({ ...prev, dateRange }),
     });
   };
 
   const setChannelSlugs = (channelSlugs: string[] | undefined) => {
     navigate({
-      search: (prev) => ({ ...prev, channelSlugs }),
+      search: (prev: Record<string, unknown>) => ({ ...prev, channelSlugs }),
     });
   };
 
@@ -60,13 +60,13 @@ export function useSearchFilters() {
 
   const setFocus = (focus: 'media' | 'transcripts') => {
     navigate({
-      search: (prev) => ({ ...prev, focus }),
+      search: (prev: Record<string, unknown>) => ({ ...prev, focus }),
     });
   };
 
   const clearFilters = () => {
     navigate({
-      search: (prev) => ({
+      search: (prev: Record<string, unknown>) => ({
         ...prev,
         sort: undefined,
         dateRange: undefined,

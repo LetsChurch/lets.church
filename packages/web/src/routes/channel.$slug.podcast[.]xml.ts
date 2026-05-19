@@ -1,11 +1,16 @@
 import { db, UploadRecordDownloadSize } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
+import { CURRENT_PIPELINE_VERSION } from '@letschurch/temporal/queues';
 import { createFileRoute } from '@tanstack/react-router';
 import { and, eq, inArray } from 'drizzle-orm';
 import { Podcast } from 'podcast';
 import { podcastImage } from '@/util/image-sizes';
 import logger from '@/util/logger';
-import { getPublicImageUrl, getPublicMediaUrl } from '@/util/server-env';
+import {
+  getPublicImageUrl,
+  getPublicMediaUrl,
+  makeDownloadServiceUrl,
+} from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 
 const moduleLogger = logger.child({
@@ -124,20 +129,26 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
               defaultThumbnailPath: true,
               overrideThumbnailPath: true,
               variants: true,
+              pipelineVersion: true,
+              lengthSeconds: true,
             },
             orderBy: (t, { desc }) => desc(t.publishedAt),
             limit: 500,
           });
 
-          // Filter to only those with AUDIO_DOWNLOAD variant
-          const audioUploads = uploads.filter((u) =>
-            u.variants.includes('AUDIO_DOWNLOAD'),
+          // Include uploads with either AUDIO_DOWNLOAD (legacy) or AUDIO (current) variant
+          const audioUploads = uploads.filter(
+            (u) =>
+              u.variants.includes('AUDIO_DOWNLOAD') ||
+              u.variants.includes('AUDIO'),
           );
 
-          // Fetch download sizes for these uploads
-          const uploadIds = audioUploads.map((u) => u.id);
+          // Fetch download sizes for legacy uploads that have them
+          const oldFormatIds = audioUploads
+            .filter((u) => u.pipelineVersion < CURRENT_PIPELINE_VERSION)
+            .map((u) => u.id);
           const downloadSizes =
-            uploadIds.length > 0
+            oldFormatIds.length > 0
               ? await db
                   .select({
                     uploadRecordId: UploadRecordDownloadSize.uploadRecordId,
@@ -148,7 +159,7 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
                     and(
                       inArray(
                         UploadRecordDownloadSize.uploadRecordId,
-                        uploadIds,
+                        oldFormatIds,
                       ),
                       eq(UploadRecordDownloadSize.variant, 'AUDIO_DOWNLOAD'),
                     ),
@@ -161,6 +172,8 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
 
           // Add items to feed
           for (const upload of audioUploads) {
+            const isLegacyPipeline =
+              upload.pipelineVersion < CURRENT_PIPELINE_VERSION;
             const thumbnailUrl = resolveThumbnailUrl({
               overrideThumbnailPath: upload.overrideThumbnailPath,
               defaultThumbnailPath: upload.defaultThumbnailPath,
@@ -169,13 +182,23 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
             });
 
             const uploadUrl = `${siteUrl}/media/${upload.id}`;
-            const audioDownloadUrl = getPublicMediaUrl(
-              `${upload.id}/AUDIO_DOWNLOAD.m4a`,
+            const baseFilename = (upload.title ?? `media_${upload.id}`).replace(
+              /[^\w\s.-]/g,
+              '_',
             );
+            const audioDownloadUrl = isLegacyPipeline
+              ? getPublicMediaUrl(`${upload.id}/AUDIO_DOWNLOAD.m4a`)
+              : await makeDownloadServiceUrl(
+                  upload.id,
+                  'AUDIO',
+                  `${baseFilename}.m4a`,
+                );
 
-            const sizeBytes = downloadSizeMap.has(upload.id)
-              ? Number(downloadSizeMap.get(upload.id)?.valueOf())
-              : 0;
+            const sizeBytes = isLegacyPipeline
+              ? downloadSizeMap.has(upload.id)
+                ? Number(downloadSizeMap.get(upload.id)?.valueOf())
+                : 0
+              : Math.ceil((upload.lengthSeconds ?? 0) * 24000);
 
             const content = [
               thumbnailUrl

@@ -1,5 +1,10 @@
 FROM videah/oxipng:7.0.0 AS oxipng
 
+FROM golang:1.26-bookworm AS build-download
+WORKDIR /build
+COPY services/download/ .
+RUN CGO_ENABLED=0 GOOS=linux GOEXPERIMENT=jsonv2 go build -ldflags="-w -s" -o download-service .
+
 FROM debian:bullseye-slim AS build-audiowaveform
 RUN apt-get update && apt-get install -y git wget cmake build-essential libmad0-dev libid3tag0-dev libsndfile1-dev libgd-dev libboost-filesystem-dev libboost-program-options-dev libboost-regex-dev
 RUN mkdir -p /home/build
@@ -151,6 +156,16 @@ RUN pnpm --filter @letschurch/import-worker exec playwright install-deps chromiu
 USER nodeapp
 RUN pnpm --filter @letschurch/import-worker exec playwright install chromium
 CMD ["pnpm", "--filter", "@letschurch/import-worker", "run", "start"]
+
+FROM debian:bookworm-slim AS download-service
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+  --mount=type=cache,target=/var/lib/apt,sharing=locked \
+  apt-get update && apt-get install -y --no-install-recommends ffmpeg && \
+  rm -rf /var/lib/apt/lists/* && \
+  useradd -r -M -s /sbin/nologin app
+COPY --from=build-download /build/download-service /usr/local/bin/download-service
+USER app
+CMD ["/usr/local/bin/download-service"]
 
 FROM nvidia/cuda:12.6.2-cudnn-runtime-ubuntu22.04 AS transcribe-worker
 ARG WHISPER_MODEL=tiny.en

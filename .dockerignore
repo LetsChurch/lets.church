@@ -1,6 +1,9 @@
 # Git
 .git
 
+# Go build artifacts
+services/download/download
+
 # Build artifacts (generated during build stage)
 packages/web/.nitro
 packages/web/.output

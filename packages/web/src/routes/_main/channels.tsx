@@ -188,7 +188,7 @@ function RouteComponent() {
 
   const handleSortChange = (newSort: 'name' | 'subscribers' | 'newest') => {
     navigate({
-      search: (prev) => ({ ...prev, sort: newSort }),
+      search: (prev: Record<string, unknown>) => ({ ...prev, sort: newSort }),
     });
   };
 

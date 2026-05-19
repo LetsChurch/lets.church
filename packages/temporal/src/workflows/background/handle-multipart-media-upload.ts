@@ -8,7 +8,7 @@ import {
   startChild,
 } from '@temporalio/workflow';
 import type * as activities from '../../activities/background';
-import { BACKGROUND_QUEUE, PRIORITY_USER_UPLOAD } from '../../queues';
+import { BACKGROUND_QUEUE, PRIORITY_USER } from '../../queues';
 import {
   CHANNEL_ID_KEY,
   CHANNEL_SLUG_KEY,
@@ -126,10 +126,10 @@ export async function handleMultipartMediaUploadWorkflow(
 
     if (postProcess === 'media') {
       await startChild(processMediaWorkflow, {
-        args: [targetId],
+        args: [targetId, 'everything'],
         workflowId: `processMedia:${s3UploadKey}`,
         taskQueue: BACKGROUND_QUEUE,
-        priority: { priorityKey: PRIORITY_USER_UPLOAD },
+        priority: { priorityKey: PRIORITY_USER },
         parentClosePolicy: ParentClosePolicy.ABANDON,
         typedSearchAttributes: childSearchAttrs,
         retry: {
@@ -141,7 +141,7 @@ export async function handleMultipartMediaUploadWorkflow(
         args: [targetId, s3UploadKey, postProcess],
         workflowId: `processImage:${s3UploadKey}`,
         taskQueue: BACKGROUND_QUEUE,
-        priority: { priorityKey: PRIORITY_USER_UPLOAD },
+        priority: { priorityKey: PRIORITY_USER },
         parentClosePolicy: ParentClosePolicy.ABANDON,
         typedSearchAttributes: childSearchAttrs,
         retry: {

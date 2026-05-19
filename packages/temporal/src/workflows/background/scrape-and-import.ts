@@ -4,7 +4,7 @@ import {
   startChild,
 } from '@temporalio/workflow';
 import type * as importSourceActivities from '../../activities/import-source';
-import { BACKGROUND_QUEUE, IMPORT_QUEUE } from '../../queues';
+import { BACKGROUND_QUEUE, IMPORT_QUEUE, PRIORITY_IMPORT } from '../../queues';
 import {
   CHANNEL_SLUG_KEY,
   IMPORT_SOURCE_ID_KEY,
@@ -116,6 +116,7 @@ export async function scrapeAndImportWorkflow(
         const handle = await startChild(importMediaWorkflow, {
           taskQueue: BACKGROUND_QUEUE,
           workflowId: `importMedia:${importSourceId}:${urlHash}:${Date.now()}`,
+          priority: { priorityKey: PRIORITY_IMPORT },
           args: [
             {
               url: item.url,

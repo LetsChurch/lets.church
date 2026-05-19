@@ -6,6 +6,7 @@ variables:
     - Dockerfile
     - docker-bake.hcl
     - packages/**/*
+    - services/**/*
     - pnpm-lock.yaml
     - pnpm-workspace.yaml
 
@@ -118,6 +119,7 @@ deploy-manifests:
     - git clone "https://ci:${GIT_PUSH_TOKEN}@gitlab.com/LetsChurch/manifests.git" manifests-repo
     - cd manifests-repo/prod
     - kustomize edit set image registry.gitlab.com/letschurch/lets.church/background-worker:$CI_COMMIT_SHORT_SHA
+    - kustomize edit set image registry.gitlab.com/letschurch/lets.church/download-service:$CI_COMMIT_SHORT_SHA
     - kustomize edit set image registry.gitlab.com/letschurch/lets.church/import-worker:$CI_COMMIT_SHORT_SHA
     - kustomize edit set image registry.gitlab.com/letschurch/lets.church/probe-worker:$CI_COMMIT_SHORT_SHA
     - kustomize edit set image registry.gitlab.com/letschurch/lets.church/transcode-worker:$CI_COMMIT_SHORT_SHA

@@ -55,6 +55,9 @@ export {
   reindexWorkflow,
 } from './reindex';
 export { remakeThumbnailsWorkflow } from './remake-thumbnails';
+export { remuxAllWorkflow } from './remux-all';
+export { remuxMediaWorkflow } from './remux-media';
+export { reprocessAllWorkflow } from './reprocess-all';
 export { resetPasswordWorkflow } from './reset-password';
 export { restitchTranscriptWorkflow } from './restitch-transcript';
 export { scrapeAndImportWorkflow } from './scrape-and-import';

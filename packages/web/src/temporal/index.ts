@@ -11,7 +11,12 @@ import type {
   UploadRecordCreateData,
   UploadRecordUpdateData,
 } from '@letschurch/temporal/client';
-import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
+import {
+  BACKGROUND_QUEUE,
+  PRIORITY_IMPORT,
+  PRIORITY_REPROCESS,
+  PRIORITY_USER,
+} from '@letschurch/temporal/queues';
 import {
   makeBackupToGlacierWorkflowId,
   makeCreateUploadRecordWorkflowId,
@@ -22,11 +27,18 @@ import {
   makePostUserRegistrationWorkflowId,
   makeProcessMediaWorkflowId,
   makeRecordDownloadSizeWorkflowId,
+  makeRemuxAllWorkflowId,
+  makeReprocessAllWorkflowId,
   makeResetPasswordWorkflowId,
   makeScrapeAndImportWorkflowId,
   makeUpdateUploadRecordWorkflowId,
   makeVerificationEmailWorkflowId,
+  type RemuxScope,
+  type ReprocessScope,
 } from '@letschurch/temporal/workflow-ids';
+
+export type { RemuxScope, ReprocessScope };
+
 import { eq } from 'drizzle-orm';
 
 export type InvitationEmailArgs = {
@@ -81,6 +93,8 @@ import {
   getBackfillFilenamesProgressQuery,
 } from '@letschurch/temporal/workflows/background/backfill-original-filenames';
 import { recordDownloadSizeWorkflow } from '@letschurch/temporal/workflows/background/record-download-size';
+import { remuxAllWorkflow } from '@letschurch/temporal/workflows/background/remux-all';
+import { reprocessAllWorkflow } from '@letschurch/temporal/workflows/background/reprocess-all';
 import {
   completeResetPasswordSignal,
   resetPasswordWorkflow,
@@ -263,6 +277,7 @@ export async function sendEmail(
   return (await client).workflow.start(sendEmailWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_USER },
     args,
     workflowId: id,
   });
@@ -272,6 +287,7 @@ export async function sendInvitationEmail(args: InvitationEmailArgs) {
   return (await client).workflow.start(sendInvitationEmailWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_USER },
     args: [args],
     workflowId: makeInvitationEmailWorkflowId(args.type, args.invitationId),
   });
@@ -281,6 +297,7 @@ export async function sendVerificationEmail(args: SendVerificationEmailArgs) {
   return (await client).workflow.start(sendVerificationEmailWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_USER },
     args: [args],
     workflowId: makeVerificationEmailWorkflowId(args.userId),
   });
@@ -294,6 +311,7 @@ export async function resetPassword(
   return (await client).workflow.start(resetPasswordWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_USER },
     args,
     workflowId: makeResetPasswordWorkflowId(id),
     typedSearchAttributes: [{ key: USER_ID_KEY, value: userId }],
@@ -414,6 +432,7 @@ export async function importMedia(
   return (await client).workflow.start(importMediaWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_IMPORT },
     args,
     workflowId: makeImportMediaWorkflowId(url),
     typedSearchAttributes: [
@@ -454,6 +473,7 @@ export async function startBackfillUploadStates(
   return (await client).workflow.start(backfillUploadStatesWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_REPROCESS },
     workflowId: BACKFILL_UPLOAD_STATES_WORKFLOW_ID,
     args: [params],
   });
@@ -515,6 +535,7 @@ export async function startCleanupStaleUploadStates(
   return (await client).workflow.start(cleanupStaleUploadStatesWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_REPROCESS },
     workflowId: CLEANUP_STALE_UPLOAD_STATES_WORKFLOW_ID,
     args: [params],
   });
@@ -574,6 +595,7 @@ export async function startBulkBackupToGlacier(
   return (await client).workflow.start(bulkBackupToGlacierWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_REPROCESS },
     workflowId: BULK_BACKUP_WORKFLOW_ID,
     args: [params],
   });
@@ -631,6 +653,7 @@ export async function startBackfillUploadStateSizes(
   return (await client).workflow.start(backfillUploadStateSizesWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_REPROCESS },
     workflowId: BACKFILL_SIZES_WORKFLOW_ID,
     args: [params],
   });
@@ -691,6 +714,7 @@ export async function startBackfillFilenames(
   return (await client).workflow.start(backfillFilenamesWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_REPROCESS },
     workflowId: BACKFILL_FILENAMES_WORKFLOW_ID,
     args: [params],
   });
@@ -887,6 +911,7 @@ export async function triggerManualImport(importSourceId: string) {
   return (await client).workflow.start(scrapeAndImportWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_IMPORT },
     workflowId: makeScrapeAndImportWorkflowId(
       importSource.channel.slug,
       importSourceId,
@@ -938,6 +963,7 @@ export async function triggerHistoricalImport(
   return (await client).workflow.start(scrapeAndImportWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_IMPORT },
     workflowId: makeScrapeAndImportWorkflowId(
       importSource.channel.slug,
       importSourceId,
@@ -968,6 +994,7 @@ export async function startReindex(params: ReindexWorkflowParams) {
   return (await client).workflow.start(reindexWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_REPROCESS },
     workflowId: makeReindexWorkflowId(params.kind),
     args: [params],
   });
@@ -1011,5 +1038,84 @@ export async function getReindexProgress(kind: ReindexWorkflowParams['kind']) {
 
 export async function cancelReindex(kind: ReindexWorkflowParams['kind']) {
   const handle = (await client).workflow.getHandle(makeReindexWorkflowId(kind));
+  await handle.cancel();
+}
+
+// Reprocess Workflows
+
+export async function startReprocess(
+  scope: ReprocessScope,
+  processingScope: 'transcode' | 'transcribe' | 'everything' = 'transcode',
+) {
+  return (await client).workflow.start(reprocessAllWorkflow, {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_REPROCESS },
+    workflowId: makeReprocessAllWorkflowId(scope),
+    args: [scope, processingScope],
+  });
+}
+
+export async function getReprocessWorkflowStatus(scope: ReprocessScope) {
+  try {
+    const handle = (await client).workflow.getHandle(
+      makeReprocessAllWorkflowId(scope),
+    );
+    const description = await handle.describe();
+    return description.status.name.toLowerCase() as
+      | 'running'
+      | 'completed'
+      | 'failed'
+      | 'canceled'
+      | 'terminated'
+      | 'timed_out';
+  } catch {
+    return null;
+  }
+}
+
+export async function cancelReprocess(scope: ReprocessScope) {
+  const handle = (await client).workflow.getHandle(
+    makeReprocessAllWorkflowId(scope),
+  );
+  await handle.cancel();
+}
+
+// Remux Workflows
+
+export async function startRemuxAll(scope: RemuxScope = { kind: 'legacy' }) {
+  return (await client).workflow.start(remuxAllWorkflow, {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_REPROCESS },
+    workflowId: makeRemuxAllWorkflowId(scope),
+    args: [scope],
+  });
+}
+
+export async function getRemuxWorkflowStatus(
+  scope: RemuxScope = { kind: 'legacy' },
+) {
+  try {
+    const handle = (await client).workflow.getHandle(
+      makeRemuxAllWorkflowId(scope),
+    );
+    const description = await handle.describe();
+    return description.status.name.toLowerCase() as
+      | 'running'
+      | 'completed'
+      | 'failed'
+      | 'canceled'
+      | 'terminated'
+      | 'timed_out';
+  } catch {
+    return null;
+  }
+}
+
+export async function cancelRemuxAll(scope: RemuxScope = { kind: 'legacy' }) {
+  const handle = (await client).workflow.getHandle(
+    makeRemuxAllWorkflowId(scope),
+  );
   await handle.cancel();
 }
