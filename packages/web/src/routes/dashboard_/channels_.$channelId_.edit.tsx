@@ -500,33 +500,6 @@ function ChannelEditPage() {
     },
   });
 
-  // Update form values when data loads
-  if (channel) {
-    form.reset({
-      name: channel.name || '',
-      slug: channel.slug || '',
-      description: channel.description || '',
-      visibility: channel.visibility,
-      websiteUrl: channel.websiteUrl || '',
-      facebookUrl: channel.facebookUrl || '',
-      instagramUrl: channel.instagramUrl || '',
-      xUrl: channel.xUrl || '',
-      youtubeUrl: channel.youtubeUrl || '',
-      tiktokUrl: channel.tiktokUrl || '',
-      linkedinUrl: channel.linkedinUrl || '',
-      threadsUrl: channel.threadsUrl || '',
-      applePodcastsUrl: channel.applePodcastsUrl || '',
-      spotifyUrl: channel.spotifyUrl || '',
-      rssUrl: channel.rssUrl || '',
-      defaultUploadVisibility: channel.defaultUploadVisibility ?? 'PRIVATE',
-      defaultUploadLicense: channel.defaultUploadLicense ?? 'STANDARD',
-      defaultUploadCommentsEnabled:
-        channel.defaultUploadCommentsEnabled ?? true,
-      defaultUploadDownloadsEnabled:
-        channel.defaultUploadDownloadsEnabled ?? true,
-    });
-  }
-
   return (
     <Container size="xl" py="md" pos="relative">
       <LoadingOverlay visible={updateMutation.isPending} />
