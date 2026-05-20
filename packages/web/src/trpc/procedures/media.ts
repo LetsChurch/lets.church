@@ -381,11 +381,35 @@ export const mediaProcedures = {
 
         if (isLegacyPipeline) {
           // Old format: serve presigned S3 URLs for pre-generated files
+          const legacyVideoVariantOrder = [
+            'VIDEO_4K_DOWNLOAD',
+            'VIDEO_1080P_DOWNLOAD',
+            'VIDEO_720P_DOWNLOAD',
+            'VIDEO_480P_DOWNLOAD',
+          ];
+          const availableLegacyVideoVariants = variants.filter((v) =>
+            legacyVideoVariantOrder.includes(v),
+          );
+          const highQualityLegacyVariants = availableLegacyVideoVariants.filter(
+            (v) => v === 'VIDEO_4K_DOWNLOAD' || v === 'VIDEO_1080P_DOWNLOAD',
+          );
+          const allowedLegacyVideoVariants = new Set(
+            highQualityLegacyVariants.length > 0
+              ? highQualityLegacyVariants
+              : availableLegacyVideoVariants.slice(0, 1),
+          );
+
           for (const variant of variants) {
             if (
               variant.endsWith('_DOWNLOAD') &&
               !variant.includes('360P') // TODO: remove 360P, see ffmpeg.ts
             ) {
+              if (
+                legacyVideoVariantOrder.includes(variant) &&
+                !allowedLegacyVideoVariants.has(variant)
+              ) {
+                continue;
+              }
               const ext = variant.startsWith('VIDEO') ? 'mp4' : 'm4a';
               let kind: MediaDownloadKind = 'AUDIO';
               let label = 'Audio';
@@ -425,13 +449,15 @@ export const mediaProcedures = {
           }
         } else {
           // New format: signed download service URLs
-          const videoEntries: Array<{
+          type VideoEntry = {
             kind: MediaDownloadKind;
             label: string;
             variant: string;
             ext: string;
             quality: string;
-          }> = [
+          };
+
+          const allVideoResolutionEntries: Array<VideoEntry> = [
             {
               kind: 'VIDEO_4K',
               label: '4k Video',
@@ -460,6 +486,24 @@ export const mediaProcedures = {
               ext: 'mp4',
               quality: '480p',
             },
+          ];
+
+          // Only offer 4K/1080p for download; if neither is available, fall back to the highest available resolution
+          const availableVideoResolutionEntries =
+            allVideoResolutionEntries.filter((e) =>
+              variants.includes(e.variant as (typeof variants)[number]),
+            );
+          const highQualityVideoEntries =
+            availableVideoResolutionEntries.filter(
+              (e) => e.kind === 'VIDEO_4K' || e.kind === 'VIDEO_1080P',
+            );
+          const filteredVideoResolutionEntries =
+            highQualityVideoEntries.length > 0
+              ? highQualityVideoEntries
+              : availableVideoResolutionEntries.slice(0, 1);
+
+          const videoEntries: Array<VideoEntry> = [
+            ...filteredVideoResolutionEntries,
             {
               kind: 'AUDIO',
               label: 'Audio',
