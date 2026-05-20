@@ -2,10 +2,10 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { z } from 'zod';
 import { ChurchesView } from '@/components/churches-view';
 import {
-  DEFAULT_NEARBY_RANGE,
-  DEFAULT_RANGE,
-  MURICA,
-} from '@/constants/churches';
+  parseChurchesLocation,
+  parseChurchesOrganization,
+  parseChurchesTags,
+} from '@/util/churches-search';
 
 // Search params schema for TanStack Router
 const churchesSearchSchema = z.object({
@@ -21,37 +21,16 @@ export const Route = createFileRoute('/embed/churches')({
   component: RouteComponent,
 });
 
-// Hook to parse location from search params
 function useParsedLocation() {
-  const search = Route.useSearch();
-
-  return {
-    range:
-      search.range ?? (search.center ? DEFAULT_NEARBY_RANGE : DEFAULT_RANGE),
-    center:
-      (search.center
-        ?.split(',')
-        .map((v: string) => parseFloat(v))
-        .slice(0, 2) as [number, number] | undefined) ?? MURICA,
-  };
+  return parseChurchesLocation(Route.useSearch());
 }
 
-// Hook to parse organization from search params
 function useParsedOrganization() {
-  const search = Route.useSearch();
-
-  return {
-    organizationSlug: search.organization ?? null,
-  };
+  return parseChurchesOrganization(Route.useSearch());
 }
 
-// Hook to parse tags from search params
 function useParsedTags() {
-  const search = Route.useSearch();
-
-  return {
-    tags: search.tag?.split(',').filter(Boolean) ?? [],
-  };
+  return parseChurchesTags(Route.useSearch());
 }
 
 // Combined hook that returns all parsed filters
