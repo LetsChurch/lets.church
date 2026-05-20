@@ -57,6 +57,8 @@ test:
       - packages/**/*
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
+  variables:
+    PLAYWRIGHT_BROWSERS_PATH: "$CI_PROJECT_DIR/.cache/ms-playwright"
   before_script:
     - corepack enable
   script:
@@ -69,9 +71,12 @@ test:
           - pnpm-lock.yaml
       paths:
         - .pnpm-store
-    - key: playwright-$CI_COMMIT_REF_SLUG
+    - key:
+        files:
+          - pnpm-lock.yaml
+        prefix: playwright
       paths:
-        - /root/.cache/ms-playwright
+        - .cache/ms-playwright
 
 #  ____  _   _ ___ _     ____
 # | __ )| | | |_ _| |   |  _ \

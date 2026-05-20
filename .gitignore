@@ -2,6 +2,8 @@
 .direnv
 
 node_modules
+.pnpm-store
+.cache
 
 *.log
 *.tsbuildinfo
