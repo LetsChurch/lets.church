@@ -29,11 +29,8 @@ open http://localhost:${HOST_LISTMONK_PORT}
 # Open Mailpit Web UI
 open http://localhost:${HOST_MAILPIT_WEB_PORT}
 
-# Run Prisma Studio
-DATABASE_URL=$HOST_DATABASE_URL  npm --prefix $(git rev-parse --show-toplevel)/services/gateway run prisma:studio
-
-# Open pgweb
-open http://localhost:${HOST_PGWEB_PORT}
+# Run Drizzle Kit Studio
+DATABASE_URL=$HOST_DATABASE_URL pnpm --filter db run db:studio
 
 # Open Storybook
 open http://localhost:${HOST_STORYBOOK_PORT}
