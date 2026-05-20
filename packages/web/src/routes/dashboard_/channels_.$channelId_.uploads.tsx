@@ -26,6 +26,7 @@ import { notifications } from '@mantine/notifications';
 import { useStore } from '@nanostores/react';
 import {
   IconChevronDown,
+  IconCube3dSphere,
   IconDotsVertical,
   IconDownload,
   IconEdit,
@@ -994,9 +995,11 @@ function ChannelUploadsPage() {
                                 height: '100%',
                               }}
                             >
-                              <Text size="xs" c="dimmed">
-                                📹
-                              </Text>
+                              <IconCube3dSphere
+                                size={24}
+                                stroke={1}
+                                color="var(--mantine-color-gray-5)"
+                              />
                             </Box>
                           )}
                         </AspectRatio>
