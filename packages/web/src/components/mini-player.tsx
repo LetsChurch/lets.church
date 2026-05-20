@@ -237,7 +237,7 @@ export function MiniPlayer({
             playsInline
             style={{ width: '100%', display: 'block' }}
           />
-          <div className="absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5 font-mono text-[10px] text-white">
+          <div className="absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white tabular-nums">
             {formatTime(displayTime * 1000)}
           </div>
         </div>
@@ -267,7 +267,7 @@ export function MiniPlayer({
             width={PLAYER_WIDTH}
             height={AUDIO_PLAYER_HEIGHT}
           />
-          <div className="absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5 font-mono text-[10px] text-white">
+          <div className="absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white tabular-nums">
             {formatTime(displayTime * 1000)}
           </div>
         </div>

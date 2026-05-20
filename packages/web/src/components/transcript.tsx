@@ -105,7 +105,7 @@ export function Transcript({
             onClick={() => handleClick(line.start)}
           >
             <div
-              className={`pt-1 font-mono text-[10px] leading-[1.4] tracking-[-0.2px] ${
+              className={`pt-1 text-[10px] tabular-nums leading-[1.4] tracking-[-0.2px] ${
                 i === currentI
                   ? 'text-brand'
                   : 'text-primary/50 group-hover:text-primary/70'

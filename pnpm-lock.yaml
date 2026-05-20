@@ -6,30 +6,9 @@ settings:
 
 catalogs:
   default:
-    '@aws-sdk/client-s3':
-      specifier: 3.948.0
-      version: 3.948.0
-    '@aws-sdk/s3-request-presigner':
-      specifier: 3.948.0
-      version: 3.948.0
     '@biomejs/biome':
       specifier: 2.3.4
       version: 2.3.4
-    '@sentry/node':
-      specifier: ^10.25.0
-      version: 10.25.0
-    '@temporalio/activity':
-      specifier: ^1.13.2
-      version: 1.13.2
-    '@temporalio/client':
-      specifier: ^1.13.2
-      version: 1.13.2
-    '@temporalio/worker':
-      specifier: ^1.13.2
-      version: 1.13.2
-    '@temporalio/workflow':
-      specifier: ^1.13.2
-      version: 1.13.2
     '@types/node':
       specifier: ^24.10.0
       version: 24.10.0
@@ -39,15 +18,9 @@ catalogs:
     es-toolkit:
       specifier: ^1.41.0
       version: 1.41.0
-    p-map:
-      specifier: ^7.0.3
-      version: 7.0.3
     p-retry:
       specifier: ^7.1.0
       version: 7.1.0
-    pino:
-      specifier: ^10.1.0
-      version: 10.1.0
     tsx:
       specifier: ^4.20.6
       version: 4.20.6
@@ -581,9 +554,6 @@ importers:
         specifier: ^10.1.0
         version: 10.1.0
       '@fontsource-variable/inter':
-        specifier: ^5.2.8
-        version: 5.2.8
-      '@fontsource-variable/roboto-mono':
         specifier: ^5.2.8
         version: 5.2.8
       '@hello-pangea/dnd':
@@ -2127,9 +2097,6 @@ packages:
 
   '@fontsource-variable/inter@5.2.8':
     resolution: {integrity: sha512-kOfP2D+ykbcX/P3IFnokOhVRNoTozo5/JxhAIVYLpea/UBmCQ/YWPBfWIDuBImXX/15KH+eKh4xpEUyS2sQQGQ==}
-
-  '@fontsource-variable/roboto-mono@5.2.8':
-    resolution: {integrity: sha512-6M2U3wGIUxYNKRrUoKls8BRRIPDA57T8J0agqwyDkiEHrLEEAqptsxcUl3eTm6tnRNEn6yEm4pCefvtnujebDA==}
 
   '@grpc/grpc-js@1.13.4':
     resolution: {integrity: sha512-GsFaMXCkMqkKIvwCQjCrwH+GHbPKBjhwo/8ZuUkWHqbI73Kky9I+pQltrlT0+MWpedCoosda53lgjYfyEPgxBg==}
@@ -7381,9 +7348,6 @@ packages:
     peerDependencies:
       pg: '>=8.0'
 
-  pg-protocol@1.10.3:
-    resolution: {integrity: sha512-6DIBgBQaTKDJyxnXaLiLR8wBpQQcGWuAESkRBX/t6OwA8YsqP+iVSiond2EDy6Y/dsGk8rh/jtax3js5NeV7JQ==}
-
   pg-protocol@1.13.0:
     resolution: {integrity: sha512-zzdvXfS6v89r6v7OcFCHfHlyG/wvry1ALxZo4LqgUoy7W9xhBDMaqOuMiF3qEV45VqsN6rdlcehHrfDtlCPc8w==}
 
@@ -10927,8 +10891,6 @@ snapshots:
 
   '@fontsource-variable/inter@5.2.8': {}
 
-  '@fontsource-variable/roboto-mono@5.2.8': {}
-
   '@grpc/grpc-js@1.13.4':
     dependencies:
       '@grpc/proto-loader': 0.7.15
@@ -13549,7 +13511,7 @@ snapshots:
   '@types/pg@8.15.5':
     dependencies:
       '@types/node': 24.10.0
-      pg-protocol: 1.10.3
+      pg-protocol: 1.13.0
       pg-types: 2.2.0
 
   '@types/react-dom@19.2.3(@types/react@19.2.4)':
@@ -16943,8 +16905,6 @@ snapshots:
   pg-pool@3.13.0(pg@8.20.0):
     dependencies:
       pg: 8.20.0
-
-  pg-protocol@1.10.3: {}
 
   pg-protocol@1.13.0: {}
 

@@ -49,7 +49,7 @@ export function MediaCard({
         ) : null}
         <div className="absolute right-3 bottom-3 left-3 flex flex-col items-end gap-1">
           {duration ? (
-            <div className="flex h-4 items-center justify-center rounded-full bg-gray-950/50 px-1.5 font-medium font-time text-[10px] text-shadow text-white leading-none tracking-tight backdrop-blur-sm dark:bg-white/50 dark:text-gray-950">
+            <div className="flex h-4 items-center justify-center rounded-full bg-gray-950/50 px-1.5 font-medium text-[10px] text-shadow text-white tabular-nums leading-none tracking-tight backdrop-blur-sm dark:bg-white/50 dark:text-gray-950">
               {duration}
             </div>
           ) : null}

@@ -100,7 +100,7 @@ export function PlaylistSidebar({
                     )}
                   </div>
                   {item.lengthSeconds ? (
-                    <div className="absolute right-1 bottom-1 flex h-4 items-center justify-center rounded-full bg-gray-950/70 px-1.5 font-medium font-time text-[10px] text-shadow text-white leading-none tracking-tight backdrop-blur-sm dark:bg-white/50 dark:text-gray-950">
+                    <div className="absolute right-1 bottom-1 flex h-4 items-center justify-center rounded-full bg-gray-950/70 px-1.5 font-medium text-[10px] text-shadow text-white tabular-nums leading-none tracking-tight backdrop-blur-sm dark:bg-white/50 dark:text-gray-950">
                       {formatTime(item.lengthSeconds * 1000)}
                     </div>
                   ) : null}

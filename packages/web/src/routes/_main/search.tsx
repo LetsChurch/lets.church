@@ -620,7 +620,7 @@ function Result({
               onMouseMove={onSegmentMouseMove}
               onClick={(e) => handleSegmentClick(e, segment)}
             >
-              <div className="pt-1 font-mono text-[10px] leading-[1.4] tracking-[-0.2px]">
+              <div className="pt-1 text-[10px] tabular-nums leading-[1.4] tracking-[-0.2px]">
                 {formatTime(segment.start)}
               </div>
               <div

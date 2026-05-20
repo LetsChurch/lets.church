@@ -653,7 +653,7 @@ export function Player({
                       className={cn(
                         'bg-transparent text-xs group-[[mediaisfullscreen]]:text-base',
                         '[--media-text-color:white]',
-                        '[--media-font:var(--font-time)]',
+                        'tabular-nums',
                       )}
                       showDuration={false}
                     />
@@ -661,7 +661,7 @@ export function Player({
                       className={cn(
                         'bg-transparent text-xs group-[[mediaisfullscreen]]:text-base',
                         '[--media-text-color:white]',
-                        '[--media-font:var(--font-time)]',
+                        'tabular-nums',
                       )}
                     />
                   </div>

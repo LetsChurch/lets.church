@@ -2,7 +2,6 @@
 
 import type { Preview, } from '@storybook/react-vite'
 import '@fontsource-variable/inter';
-import '@fontsource-variable/roboto-mono';
 import { withThemeByDataAttribute } from '@storybook/addon-themes'
 import {
   createMemoryHistory,

@@ -50,7 +50,7 @@ export function SearchRow({
         </div>
         <div className="absolute right-1.5 bottom-1.5 left-1.5 flex flex-col items-end gap-1 md:right-2 md:bottom-2 md:left-2">
           {duration ? (
-            <div className="flex h-4 items-center justify-center rounded-full bg-gray-950/50 px-1.5 font-medium font-time text-[10px] text-shadow text-white leading-none tracking-tight backdrop-blur-sm md:h-5 md:px-2 md:text-xs dark:bg-white/50 dark:text-gray-950">
+            <div className="flex h-4 items-center justify-center rounded-full bg-gray-950/50 px-1.5 font-medium text-[10px] text-shadow text-white tabular-nums leading-none tracking-tight backdrop-blur-sm md:h-5 md:px-2 md:text-xs dark:bg-white/50 dark:text-gray-950">
               {duration}
             </div>
           ) : null}
@@ -69,7 +69,7 @@ export function SearchRow({
           </h4>
           {transcriptSegment ? (
             <div className="rounded-md bg-gray-950/5 p-2 md:p-3 dark:bg-white/5">
-              <div className="font-mono text-muted text-xs">
+              <div className="text-muted text-xs tabular-nums">
                 {formatTime(transcriptSegment.start)}
               </div>
               <div

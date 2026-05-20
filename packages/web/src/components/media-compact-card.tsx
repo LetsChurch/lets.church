@@ -36,7 +36,7 @@ export function MediaCompactCard({
         ) : null}
         <div className="absolute right-1.5 bottom-1.5 left-1.5 flex flex-col items-end gap-1">
           {duration ? (
-            <div className="flex h-4 items-center justify-center rounded-full bg-zinc-950/80 px-1.5 font-medium font-time text-[10px] text-primary leading-none tracking-tight backdrop-blur-sm">
+            <div className="flex h-4 items-center justify-center rounded-full bg-zinc-950/80 px-1.5 font-medium text-[10px] text-primary tabular-nums leading-none tracking-tight backdrop-blur-sm">
               {duration}
             </div>
           ) : null}

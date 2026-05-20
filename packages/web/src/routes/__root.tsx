@@ -9,7 +9,6 @@ import { createServerFn } from '@tanstack/react-start';
 import posthog from 'posthog-js';
 import { type ReactNode, useEffect } from 'react';
 import '@fontsource-variable/inter';
-import '@fontsource-variable/roboto-mono';
 import appCss from '@/app.css?url';
 import type { AppContextType } from '@/router';
 import { setBrowserSize } from '@/stores/browser-size';

@@ -4,7 +4,6 @@
 
 @theme {
   --font-sans: "Inter Variable", sans-serif;
-  --font-time: "Roboto Mono Variable", monospace;
 
   /* Light theme - default values */
   --color-primary: var(--color-gray-950);

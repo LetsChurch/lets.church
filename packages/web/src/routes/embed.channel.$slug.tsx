@@ -579,7 +579,7 @@ function Result({
               className="relative z-10 flex cursor-pointer flex-row gap-1.5 rounded-md bg-gray-950/5 p-3 text-gray-950 transition-colors hover:bg-gray-950/10"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="pt-1 font-mono text-[10px] leading-[1.4] tracking-[-0.2px]">
+              <div className="pt-1 text-[10px] tabular-nums leading-[1.4] tracking-[-0.2px]">
                 {formatTime(segment.start)}
               </div>
               <div
