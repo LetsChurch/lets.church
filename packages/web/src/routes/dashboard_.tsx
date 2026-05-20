@@ -27,6 +27,7 @@ import { DashboardSearchBar } from './dashboard_/-components/search-bar';
 import styles from './dashboard_/-styles.module.css';
 
 export const Route = createFileRoute('/dashboard_')({
+  ssr: false,
   beforeLoad: async ({ context }) => {
     const hasSession = await context.queryClient.fetchQuery(
       context.trpc.common.hasValidSession.queryOptions(),
