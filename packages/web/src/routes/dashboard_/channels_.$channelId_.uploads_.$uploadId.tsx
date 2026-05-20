@@ -949,7 +949,7 @@ function ChannelUploadPage() {
                   {isTranscoding ? (
                     <Box>
                       <Text size="sm" fw={500} mb="xs">
-                        Transcoding video...
+                        Transcoding media...
                       </Text>
                       <Progress
                         value={upload.transcodingProgress * 100}
@@ -967,12 +967,19 @@ function ChannelUploadPage() {
                     </Box>
                   ) : null}
                 </>
-              ) : upload.mediaSource || upload.audioSource ? (
+              ) : upload.mediaSource ? (
                 <HlsVideo
-                  src={upload.mediaSource || upload.audioSource || ''}
+                  src={upload.mediaSource}
                   className={styles.fullWidth}
                   playsInline
                   controls
+                />
+              ) : upload.audioSource ? (
+                <HlsVideo
+                  src={upload.audioSource}
+                  className={styles.fullWidth}
+                  controls
+                  style={{ height: '54px' }}
                 />
               ) : (
                 <Box
