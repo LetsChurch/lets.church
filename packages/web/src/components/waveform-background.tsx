@@ -9,6 +9,7 @@ type WaveformBackgroundProps = {
 };
 
 const TARGET_BAR_WIDTH = 5;
+const GAP_SIZE = 4; // matches gap-1 in Tailwind (4px)
 
 function chunk<T>(array: T[], size: number): T[][] {
   const chunks: T[][] = [];
@@ -51,7 +52,12 @@ export function WaveformBackground({
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (entry) {
-        setBarCount(Math.floor(entry.contentRect.width / TARGET_BAR_WIDTH));
+        setBarCount(
+          Math.floor(
+            (entry.contentRect.width + GAP_SIZE) /
+              (TARGET_BAR_WIDTH + GAP_SIZE),
+          ),
+        );
       }
     });
 

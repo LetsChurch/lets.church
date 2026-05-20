@@ -83,6 +83,7 @@ export function Player({
   const controllerRef = useRef<MediaControllerElement>(null);
   const reportTimerRef = useRef<number | undefined>(undefined);
   const currentTime = useStore($currentTime);
+  const [elementDuration, setElementDuration] = useState<number>(0);
 
   const hasVideo = !!mediaSource;
   const hasAudio = !!audioSource;
@@ -91,6 +92,7 @@ export function Player({
   const [mediaType, setMediaType] = useState<'video' | 'audio'>(
     hasVideo ? 'video' : 'audio',
   );
+
   const [savedPosition, setSavedPosition] = useState(0);
   const [savedPlayState, setSavedPlayState] = useState(false);
   const [seekFeedback, setSeekFeedback] = useState<{
@@ -314,6 +316,12 @@ export function Player({
       $currentTime.set(videoElement.currentTime);
     };
 
+    const handleDurationChange = () => {
+      if (videoElement.duration && Number.isFinite(videoElement.duration)) {
+        setElementDuration(videoElement.duration);
+      }
+    };
+
     const handleEnded = () => {
       onVideoEnded?.();
     };
@@ -325,6 +333,7 @@ export function Player({
     });
 
     videoElement.addEventListener('timeupdate', handleTimeUpdate);
+    videoElement.addEventListener('durationchange', handleDurationChange);
     videoElement.addEventListener('ended', handleEnded);
 
     async function reportTimeRanges() {
@@ -355,6 +364,7 @@ export function Player({
     return () => {
       clearTimeout(reportTimerRef.current);
       videoElement.removeEventListener('timeupdate', handleTimeUpdate);
+      videoElement.removeEventListener('durationchange', handleDurationChange);
       videoElement.removeEventListener('ended', handleEnded);
       cleanSetPlayAt();
       // Report one final time on unmount
@@ -448,7 +458,7 @@ export function Player({
               <WaveformBackground
                 peaksJsonUrl={peaksJsonUrl}
                 currentTime={currentTime}
-                lengthSeconds={lengthSeconds ?? undefined}
+                lengthSeconds={elementDuration || lengthSeconds || undefined}
               />
             )}
             <MediaController
