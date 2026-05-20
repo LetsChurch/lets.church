@@ -2023,10 +2023,10 @@ export const adminRouter = router({
           });
         }
 
-        if (!upload.transcodingFinishedAt || !upload.transcribingFinishedAt) {
+        if (!upload.transcodingFinishedAt) {
           throw new TRPCError({
             code: 'BAD_REQUEST',
-            message: 'Upload must be fully processed before featuring',
+            message: 'Upload must finish transcoding before featuring',
           });
         }
 

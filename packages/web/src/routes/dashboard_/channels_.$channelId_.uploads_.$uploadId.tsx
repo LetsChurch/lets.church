@@ -1,6 +1,7 @@
 import {
   ActionIcon,
   Alert,
+  Anchor,
   Box,
   Button,
   Container,
@@ -279,9 +280,16 @@ function ChannelUploadPage() {
     trpc.dashboard.admin.toggleFeaturedUpload.mutationOptions({
       onSuccess: async ({ isFeatured }) => {
         showSuccess({
-          message: isFeatured
-            ? 'Upload added to featured!'
-            : 'Upload removed from featured',
+          message: isFeatured ? (
+            <>
+              Upload added to featured!{' '}
+              <Anchor component={Link} to="/dashboard/admin/featured">
+                View featured uploads
+              </Anchor>
+            </>
+          ) : (
+            'Upload removed from featured'
+          ),
         });
 
         await queryClient.invalidateQueries({
