@@ -314,7 +314,7 @@ export const homeProcedures = {
           slug: Channel.slug,
           description: Channel.description,
           avatarPath: Channel.avatarPath,
-          followerCount: sql<number>`coalesce(${subscriberCountSq.cnt}, 0)`,
+          followerCount: sql<number>`coalesce(${subscriberCountSq.cnt}, 0)::int`,
         })
         .from(Channel)
         .leftJoin(

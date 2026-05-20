@@ -1154,8 +1154,8 @@ export const channelRouter = router({
             defaultThumbnailPath: UploadRecord.defaultThumbnailPath,
             overrideThumbnailPath: UploadRecord.overrideThumbnailPath,
             isFeatured: sql<boolean>`${FeaturedUpload.uploadRecordId} is not null`,
-            viewCount: sql<number>`coalesce(${viewCountSq.cnt}, 0)`,
-            commentCount: sql<number>`coalesce(${commentCountSq.cnt}, 0)`,
+            viewCount: sql<number>`coalesce(${viewCountSq.cnt}, 0)::int`,
+            commentCount: sql<number>`coalesce(${commentCountSq.cnt}, 0)::int`,
           })
           .from(UploadRecord)
           .leftJoin(
@@ -1700,7 +1700,7 @@ export const channelRouter = router({
         type: UploadList.type,
         createdAt: UploadList.createdAt,
         updatedAt: UploadList.updatedAt,
-        uploadCount: sql<number>`coalesce(${uploadCountSq.cnt}, 0)`,
+        uploadCount: sql<number>`coalesce(${uploadCountSq.cnt}, 0)::int`,
       })
       .from(UploadList)
       .leftJoin(uploadCountSq, eq(UploadList.id, uploadCountSq.uploadListId))
@@ -1738,7 +1738,7 @@ export const channelRouter = router({
         .select({
           id: UploadList.id,
           title: UploadList.title,
-          uploadCount: sql<number>`coalesce(${uploadCountSq.cnt}, 0)`,
+          uploadCount: sql<number>`coalesce(${uploadCountSq.cnt}, 0)::int`,
         })
         .from(UploadList)
         .leftJoin(uploadCountSq, eq(UploadList.id, uploadCountSq.uploadListId))

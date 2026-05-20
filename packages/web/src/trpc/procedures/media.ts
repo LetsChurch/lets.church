@@ -577,13 +577,39 @@ export const mediaProcedures = {
 
   getMediaSources: publicProcedure
     .input(z.object({ mediaId: IncomingIdSchema }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      const sessionUserId = ctx.session?.appUserId ?? null;
+
       const media = await db.query.UploadRecord.findFirst({
-        columns: { id: true, variants: true, probe: true },
+        columns: { id: true, variants: true, probe: true, visibility: true },
+        with: {
+          channel: {
+            columns: { id: true, visibility: true, approvedAt: true },
+          },
+        },
         where: (t, { eq }) => eq(t.id, input.mediaId),
       });
 
       if (!media) return null;
+
+      if (media.channel.visibility === 'PRIVATE' || !media.channel.approvedAt) {
+        return null;
+      }
+
+      if (media.visibility === 'PRIVATE') {
+        if (!sessionUserId) return null;
+        if (!ctx.isSiteAdmin) {
+          const membershipCheck = await db.query.ChannelMembership.findFirst({
+            columns: { appUserId: true },
+            where: (t, { and, eq }) =>
+              and(
+                eq(t.channelId, media.channel.id),
+                eq(t.appUserId, sessionUserId),
+              ),
+          });
+          if (!membershipCheck) return null;
+        }
+      }
 
       const hasVideo = media.variants.some((v) => v.startsWith('VIDEO'));
       const hasAudio = media.variants.includes('AUDIO');
@@ -778,7 +804,7 @@ export const mediaProcedures = {
 
   getTranscript: publicProcedure
     .input(getTranscriptSchema)
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       moduleLogger.info(
         {
           context: {
@@ -787,6 +813,38 @@ export const mediaProcedures = {
         },
         'Fetching transcript',
       );
+
+      const sessionUserId = ctx.session?.appUserId ?? null;
+      const media = await db.query.UploadRecord.findFirst({
+        columns: { id: true, visibility: true },
+        with: {
+          channel: {
+            columns: { id: true, visibility: true, approvedAt: true },
+          },
+        },
+        where: (t, { eq }) => eq(t.id, input.mediaId),
+      });
+
+      if (!media) return null;
+
+      if (media.channel.visibility === 'PRIVATE' || !media.channel.approvedAt) {
+        return null;
+      }
+
+      if (media.visibility === 'PRIVATE') {
+        if (!sessionUserId) return null;
+        if (!ctx.isSiteAdmin) {
+          const membershipCheck = await db.query.ChannelMembership.findFirst({
+            columns: { appUserId: true },
+            where: (t, { and, eq }) =>
+              and(
+                eq(t.channelId, media.channel.id),
+                eq(t.appUserId, sessionUserId),
+              ),
+          });
+          if (!membershipCheck) return null;
+        }
+      }
 
       try {
         const url = getPublicMediaUrl(`${input.mediaId}/transcript.vtt`);
@@ -964,6 +1022,38 @@ export const mediaProcedures = {
         'Fetching comments',
       );
 
+      const sessionUserId = ctx.session?.appUserId ?? null;
+      const media = await db.query.UploadRecord.findFirst({
+        columns: { id: true, visibility: true },
+        with: {
+          channel: {
+            columns: { id: true, visibility: true, approvedAt: true },
+          },
+        },
+        where: (t, { eq }) => eq(t.id, input.mediaId),
+      });
+
+      if (!media) return [];
+
+      if (media.channel.visibility === 'PRIVATE' || !media.channel.approvedAt) {
+        return [];
+      }
+
+      if (media.visibility === 'PRIVATE') {
+        if (!sessionUserId) return [];
+        if (!ctx.isSiteAdmin) {
+          const membershipCheck = await db.query.ChannelMembership.findFirst({
+            columns: { appUserId: true },
+            where: (t, { and, eq }) =>
+              and(
+                eq(t.channelId, media.channel.id),
+                eq(t.appUserId, sessionUserId),
+              ),
+          });
+          if (!membershipCheck) return [];
+        }
+      }
+
       const comments = await db.query.UploadUserComment.findMany({
         columns: {
           id: true,
@@ -1046,6 +1136,48 @@ export const mediaProcedures = {
         },
         'Fetching replies',
       );
+
+      const sessionUserId = ctx.session?.appUserId ?? null;
+      const parentComment = await db.query.UploadUserComment.findFirst({
+        columns: { id: true },
+        with: {
+          upload: {
+            columns: { visibility: true },
+            with: {
+              channel: {
+                columns: { id: true, visibility: true, approvedAt: true },
+              },
+            },
+          },
+        },
+        where: (t, { eq }) => eq(t.id, input.commentId),
+      });
+
+      if (!parentComment) return [];
+
+      const { upload } = parentComment;
+
+      if (
+        upload.channel.visibility === 'PRIVATE' ||
+        !upload.channel.approvedAt
+      ) {
+        return [];
+      }
+
+      if (upload.visibility === 'PRIVATE') {
+        if (!sessionUserId) return [];
+        if (!ctx.isSiteAdmin) {
+          const membershipCheck = await db.query.ChannelMembership.findFirst({
+            columns: { appUserId: true },
+            where: (t, { and, eq }) =>
+              and(
+                eq(t.channelId, upload.channel.id),
+                eq(t.appUserId, sessionUserId),
+              ),
+          });
+          if (!membershipCheck) return [];
+        }
+      }
 
       const replies = await db.query.UploadUserComment.findMany({
         columns: {

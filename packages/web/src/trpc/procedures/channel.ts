@@ -147,9 +147,9 @@ export const channelProcedures = {
           spotifyUrl: Channel.spotifyUrl,
           rssUrl: Channel.rssUrl,
           fallbackThumbnailPath: fallbackThumbnailSq.thumbnailPath,
-          subscriberCount: sql<number>`coalesce(${subscriberCountSq.cnt}, 0)`,
+          subscriberCount: sql<number>`coalesce(${subscriberCountSq.cnt}, 0)::int`,
           isFollowing: sql<boolean>`${isFollowingSq.channelId} is not null`,
-          uploadCount: sql<number>`coalesce(${uploadCountSq.cnt}, 0)`,
+          uploadCount: sql<number>`coalesce(${uploadCountSq.cnt}, 0)::int`,
         })
         .from(Channel)
         .leftJoin(uploadCountSq, eq(Channel.id, uploadCountSq.channelId))
@@ -451,7 +451,7 @@ export const channelProcedures = {
           type: UploadList.type,
           createdAt: UploadList.createdAt,
           updatedAt: UploadList.updatedAt,
-          uploadCount: sql<number>`coalesce(${uploadCountSq.cnt}, 0)`,
+          uploadCount: sql<number>`coalesce(${uploadCountSq.cnt}, 0)::int`,
           overrideThumbnailPath: firstThumbnailSq.overrideThumbnailPath,
           defaultThumbnailPath: firstThumbnailSq.defaultThumbnailPath,
         })
@@ -612,7 +612,7 @@ export const channelProcedures = {
           description: Channel.description,
           avatarPath: Channel.avatarPath,
           createdAt: Channel.createdAt,
-          subscriberCount: sql<number>`coalesce(${subscriberCountSq.cnt}, 0)`,
+          subscriberCount: sql<number>`coalesce(${subscriberCountSq.cnt}, 0)::int`,
         })
         .from(Channel)
         .leftJoin(
