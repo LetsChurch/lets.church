@@ -80,6 +80,14 @@ export async function scrapeAndImportWorkflow(
     // Normal scraping operation
     const source = await getImportSource(importSourceId);
 
+    if (!source.createdBy) {
+      throw new Error(
+        `Import source ${importSourceId} has no creator (user was deleted)`,
+      );
+    }
+
+    const { createdBy } = source;
+
     const items = await scrapeImportSource(
       source.url,
       source.lastImportedUploadDate,
@@ -120,7 +128,7 @@ export async function scrapeAndImportWorkflow(
           args: [
             {
               url: item.url,
-              username: source.createdBy.username,
+              username: createdBy.username,
               channelSlug: source.channel.slug,
               title: item.title || 'Imported Media',
               description: item.description || null,
@@ -136,7 +144,7 @@ export async function scrapeAndImportWorkflow(
           typedSearchAttributes: [
             { key: IMPORT_SOURCE_ID_KEY, value: importSourceId },
             { key: CHANNEL_SLUG_KEY, value: source.channel.slug },
-            { key: USERNAME_KEY, value: source.createdBy.username },
+            { key: USERNAME_KEY, value: createdBy.username },
           ],
           parentClosePolicy: ParentClosePolicy.ABANDON,
           retry: { maximumAttempts: 3 },

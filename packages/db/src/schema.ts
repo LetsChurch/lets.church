@@ -247,7 +247,7 @@ export const ChannelSubscription = pgTable(
 );
 
 export const OrganizationTag = pgTable('organization_tag', {
-  slug: text('slug').notNull().unique(),
+  slug: text('slug').notNull().primaryKey(),
   label: text('label').notNull(),
   description: text('description'),
   moreInfoLink: text('more_info_link'),
@@ -454,7 +454,7 @@ export const OrganizationInvitation = pgTable(
     status: InvitationStatus('status').notNull().default('PENDING'),
     isAdmin: boolean('is_admin').notNull(),
     canEdit: boolean('can_edit').notNull(),
-    invitedById: uuid('invited_by_id').notNull(),
+    invitedById: uuid('invited_by_id'),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     expiresAt: timestamp('expires_at', { precision: 3 }).notNull(),
     respondedAt: timestamp('responded_at', { precision: 3 }),
@@ -472,7 +472,7 @@ export const OrganizationInvitation = pgTable(
       columns: [OrganizationInvitation.invitedById],
       foreignColumns: [AppUser.id],
     })
-      .onDelete('cascade')
+      .onDelete('set null')
       .onUpdate('cascade'),
     OrganizationInvitation_organizationId_email_unique_idx: uniqueIndex(
       'OrganizationInvitation_organizationId_email_key',
@@ -644,7 +644,7 @@ export const ChannelInvitation = pgTable(
     canEdit: boolean('can_edit').notNull(),
     canUpload: boolean('can_upload').notNull().default(true),
     canDownload: boolean('can_download').notNull(),
-    invitedById: uuid('invited_by_id').notNull(),
+    invitedById: uuid('invited_by_id'),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
     expiresAt: timestamp('expires_at', { precision: 3 }).notNull(),
     respondedAt: timestamp('responded_at', { precision: 3 }),
@@ -662,7 +662,7 @@ export const ChannelInvitation = pgTable(
       columns: [ChannelInvitation.invitedById],
       foreignColumns: [AppUser.id],
     })
-      .onDelete('cascade')
+      .onDelete('set null')
       .onUpdate('cascade'),
     ChannelInvitation_channelId_email_unique_idx: uniqueIndex(
       'ChannelInvitation_channelId_email_key',
@@ -811,12 +811,13 @@ export const UploadRecordDownloadSize = pgTable(
     })
       .onDelete('cascade')
       .onUpdate('cascade'),
-    UploadRecordDownloadSize_uploadRecordId_variant_unique_idx: uniqueIndex(
-      'UploadRecordDownloadSize_uploadRecordId_variant_key',
-    ).on(
-      UploadRecordDownloadSize.uploadRecordId,
-      UploadRecordDownloadSize.variant,
-    ),
+    UploadRecordDownloadSize_cpk: primaryKey({
+      name: 'UploadRecordDownloadSize_cpk',
+      columns: [
+        UploadRecordDownloadSize.uploadRecordId,
+        UploadRecordDownloadSize.variant,
+      ],
+    }),
   }),
 );
 
@@ -1154,7 +1155,7 @@ export const ChannelImportSource = pgTable(
       .notNull()
       .default('NOT_STARTED'),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
-    createdById: uuid('created_by_id').notNull(),
+    createdById: uuid('created_by_id'),
     updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
     updatedById: uuid('updated_by_id'),
   },
@@ -1171,14 +1172,14 @@ export const ChannelImportSource = pgTable(
       columns: [ChannelImportSource.createdById],
       foreignColumns: [AppUser.id],
     })
-      .onDelete('cascade')
+      .onDelete('set null')
       .onUpdate('cascade'),
     channel_import_source_updatedBy_fkey: foreignKey({
       name: 'channel_import_source_updatedBy_fkey',
       columns: [ChannelImportSource.updatedById],
       foreignColumns: [AppUser.id],
     })
-      .onDelete('cascade')
+      .onDelete('set null')
       .onUpdate('cascade'),
   }),
 );

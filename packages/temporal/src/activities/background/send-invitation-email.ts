@@ -66,18 +66,16 @@ export default async function sendInvitationEmailActivity(
       `Organization not found for invitation ${invitationId}`,
     );
 
-    const invitedBy = await db
-      .select({ username: AppUser.username, fullName: AppUser.fullName })
-      .from(AppUser)
-      .where(eq(AppUser.id, invitation.invitedById))
-      .then((r) => r[0]);
+    const invitedBy = invitation.invitedById
+      ? await db
+          .select({ username: AppUser.username, fullName: AppUser.fullName })
+          .from(AppUser)
+          .where(eq(AppUser.id, invitation.invitedById))
+          .then((r) => r[0] ?? null)
+      : null;
 
-    invariant(
-      invitedBy,
-      `InvitedBy user not found for invitation ${invitationId}`,
-    );
-
-    const inviterName = invitedBy.fullName || invitedBy.username;
+    const inviterName =
+      invitedBy?.fullName || invitedBy?.username || 'An administrator';
     const orgTypeName =
       organization.type === 'CHURCH' ? 'church' : 'organization';
     const roleName = invitation.isAdmin
@@ -199,18 +197,16 @@ export default async function sendInvitationEmailActivity(
 
     invariant(channel, `Channel not found for invitation ${invitationId}`);
 
-    const invitedBy = await db
-      .select({ username: AppUser.username, fullName: AppUser.fullName })
-      .from(AppUser)
-      .where(eq(AppUser.id, invitation.invitedById))
-      .then((r) => r[0]);
+    const invitedBy = invitation.invitedById
+      ? await db
+          .select({ username: AppUser.username, fullName: AppUser.fullName })
+          .from(AppUser)
+          .where(eq(AppUser.id, invitation.invitedById))
+          .then((r) => r[0] ?? null)
+      : null;
 
-    invariant(
-      invitedBy,
-      `InvitedBy user not found for invitation ${invitationId}`,
-    );
-
-    const inviterName = invitedBy.fullName || invitedBy.username;
+    const inviterName =
+      invitedBy?.fullName || invitedBy?.username || 'An administrator';
     const roleName = invitation.isAdmin
       ? 'Admin'
       : invitation.canEdit

@@ -64,7 +64,7 @@ type ChannelInvitation = {
   invitedBy: {
     username: string;
     fullName: string | null;
-  };
+  } | null;
 };
 
 export const Route = createFileRoute(
@@ -329,8 +329,9 @@ function ChannelMembersPage() {
                   </Table.Td>
                   <Table.Td>
                     <Text size="sm">
-                      {invitation.invitedBy.fullName ||
-                        invitation.invitedBy.username}
+                      {invitation.invitedBy?.fullName ||
+                        invitation.invitedBy?.username ||
+                        'An administrator'}
                     </Text>
                   </Table.Td>
                   <Table.Td>

@@ -25,14 +25,16 @@ export async function getImportSource(importSourceId: string) {
     .where(eq(Channel.id, source.channelId))
     .then((r) => r[0] ?? null);
 
-  const createdBy = await db
-    .select({
-      id: AppUser.id,
-      username: AppUser.username,
-    })
-    .from(AppUser)
-    .where(eq(AppUser.id, source.createdById))
-    .then((r) => r[0] ?? null);
+  const createdBy = source.createdById
+    ? await db
+        .select({
+          id: AppUser.id,
+          username: AppUser.username,
+        })
+        .from(AppUser)
+        .where(eq(AppUser.id, source.createdById))
+        .then((r) => r[0] ?? null)
+    : null;
 
   return {
     ...source,
