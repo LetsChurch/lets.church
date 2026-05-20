@@ -777,7 +777,7 @@ export const UploadRecord = pgTable(
       columns: [UploadRecord.appUserId],
       foreignColumns: [AppUser.id],
     })
-      .onDelete('cascade')
+      .onDelete('restrict')
       .onUpdate('cascade'),
     upload_record_channel_fkey: foreignKey({
       name: 'upload_record_channel_fkey',
@@ -791,7 +791,7 @@ export const UploadRecord = pgTable(
       columns: [UploadRecord.uploadFinalizedById],
       foreignColumns: [AppUser.id],
     })
-      .onDelete('cascade')
+      .onDelete('set null')
       .onUpdate('cascade'),
   }),
 );
