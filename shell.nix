@@ -1,11 +1,11 @@
 # generate the sha256 like this:
-# nix-prefetch-url --unpack https://github.com/nixos/nixpkgs/archive/de6d4da6dfb6e16bc181a603674e3f5b5cda0bdf.tar.gz
+# nix-prefetch-url --unpack https://github.com/nixos/nixpkgs/archive/64d83f2b8c6efbbc41e94ebb146a3e92b347e0a5.tar.gz
 # Using the sha256 prevents re-fetching and/or checking etag from the network
 
 let
   nixpkgs = fetchTarball {
-    url = "https://github.com/nixos/nixpkgs/archive/de6d4da6dfb6e16bc181a603674e3f5b5cda0bdf.tar.gz";
-    sha256 = "1miwvi498qa1275qfn08hci28asbv0sahd59vnvsxzb9dgd945jx";
+    url = "https://github.com/nixos/nixpkgs/archive/64d83f2b8c6efbbc41e94ebb146a3e92b347e0a5.tar.gz";
+    sha256 = "1dxzicwfbz0l03snjil8bqxcmnzr44nnhv2m1qpqawp5lg2anzkf";
   };
   pkgs = import nixpkgs { config = {}; overlays = []; };
 in 
@@ -24,7 +24,7 @@ pkgs.mkShell {
     kustomize
     lazydocker
     navi
-    nodejs_23
+    nodejs
     pnpm
     rclone
     sampler
