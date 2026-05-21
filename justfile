@@ -136,6 +136,8 @@ truncate:
 
 check:
   pnpm -r run check
+  ruff format --check services/transcribe
+  ruff check services/transcribe
 
 knip:
   pnpm knip
@@ -146,10 +148,14 @@ ncu:
 fix:
   pnpm -r run fix
   cd services/download && go fmt ./...
+  ruff format services/transcribe
+  ruff check --fix services/transcribe
 
 ffix:
   pnpm -r run fix!
   cd services/download && go fmt ./...
+  ruff format services/transcribe
+  ruff check --fix --unsafe-fixes services/transcribe
 
 export CI := "1"
 

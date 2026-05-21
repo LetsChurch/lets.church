@@ -43,6 +43,16 @@ check:
     paths:
       - .pnpm-store
 
+check-python:
+  image: ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+  stage: verify
+  only:
+    changes:
+      - services/transcribe/**/*
+  script:
+    - uvx ruff format --check services/transcribe
+    - uvx ruff check services/transcribe
+
 #  _____ _____ ____ _____
 # |_   _| ____/ ___|_   _|
 #   | | |  _| \___ \ | |

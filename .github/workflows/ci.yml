@@ -38,6 +38,23 @@ jobs:
       - name: Run checks
         run: pnpm -r run check
 
+  check-python:
+    runs-on: depot-ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ruff format --check
+        uses: astral-sh/ruff-action@v3
+        with:
+          src: "services/transcribe"
+          args: "format --check"
+
+      - name: ruff check
+        uses: astral-sh/ruff-action@v3
+        with:
+          src: "services/transcribe"
+
   test:
     runs-on: depot-ubuntu-24.04
 
@@ -105,7 +122,7 @@ jobs:
 
   build:
     runs-on: depot-ubuntu-24.04
-    needs: [check, test, test-go]
+    needs: [check, check-python, test, test-go]
     if: github.ref == 'refs/heads/kyrios'
 
     steps:

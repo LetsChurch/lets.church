@@ -200,34 +200,22 @@ services:
     build:
       context: .
       target: transcribe-worker
-    command: pnpm --filter @letschurch/transcribe-worker run dev
+      args:
+        WHISPER_MODEL: ${WHISPER_MODEL:-tiny.en}
     restart: unless-stopped
     environment:
-      NODE_ENV: development
       SENTRY_DSN: ${SENTRY_TRANSCRIBE_WORKER_DSN}
-      SERVICE_NAME: transcribe-worker
       IDENTITY: dev
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 1
-      WHISPER_MODEL: tiny.en
+      TRANSCRIBE_TASK_QUEUE: ${TRANSCRIBE_TASK_QUEUE:-transcribe}
+      WHISPER_MODEL: ${WHISPER_MODEL:-tiny.en}
+      WTPSPLIT_MODEL: ${WTPSPLIT_MODEL:-sat-12l-sm}
+      TITANET_MODEL: ${TITANET_MODEL:-nvidia/speakerverification_en_titanet_large}
       <<: [*s3-ingest-env, *s3-public-env]
     volumes:
-      - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
-      - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
-      - ./packages/util:/usr/src/app/packages/util
-      - /usr/src/app/packages/util/node_modules
-      - ./packages/s3:/usr/src/app/packages/s3
-      - /usr/src/app/packages/s3/node_modules
-      - ./packages/db:/usr/src/app/packages/db
-      - /usr/src/app/packages/db/src/generated
-      - /usr/src/app/packages/db/node_modules
-      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
-      - /usr/src/app/packages/elasticsearch/node_modules
-      - ./packages/temporal:/usr/src/app/packages/temporal
-      - /usr/src/app/packages/temporal/node_modules
-      - ./packages/transcribe-worker:/usr/src/app/packages/transcribe-worker
-      - /usr/src/app/packages/transcribe-worker/node_modules
+      - ./services/transcribe/src:/app/src
     depends_on:
       - temporal
 
