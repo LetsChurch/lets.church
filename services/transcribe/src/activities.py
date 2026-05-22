@@ -218,7 +218,7 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
         }
 
         vtt_path = work_dir / "transcript.vtt"
-        json_path = work_dir / "transcript.original.json"
+        json_path = work_dir / "transcript.json"
         txt_path = work_dir / "transcript.txt"
         vtt_path.write_text(vtt_text)
         json_path.write_text(json.dumps(whisper_json))
@@ -229,7 +229,7 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
         # ingest object stays where it was; we only write transcripts to public.
         activity.heartbeat("uploading transcript")
         transcript_key = f"{upload_record_id}/transcript.vtt"
-        transcript_json_key = f"{upload_record_id}/transcript.original.json"
+        transcript_json_key = f"{upload_record_id}/transcript.json"
         transcript_txt_key = f"{upload_record_id}/transcript.txt"
         public_s3.upload_file(
             str(vtt_path),
