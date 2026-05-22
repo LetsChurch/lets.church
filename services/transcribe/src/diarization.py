@@ -2,10 +2,15 @@
 
 Pipeline:
   1. Slice each whisper segment into overlapping fixed-size windows.
-  2. Extract a titanet_large embedding (192-dim) for each window.
-  3. Agglomerative-cluster the L2-normalized embeddings using cosine distance.
-  4. Assign each whisper segment / word the majority cluster of its windows.
-  5. Per cluster, average the normalized window embeddings to produce a speaker vector.
+  2. Batch-extract a titanet_large embedding (192-dim) per window.
+  3. Average a segment's window embeddings into one per-segment embedding.
+  4. Agglomerative-cluster the per-segment embeddings (cosine distance).
+  5. Each segment takes its cluster's label directly; per-cluster mean embedding
+     becomes the speaker vector.
+
+Clustering on segments (not windows) keeps the O(N^2) agglomerative step small —
+N is the number of speech segments, ~10x fewer points than windows — and the
+embedding pass is batched so the GPU isn't fed one 1.5s clip at a time.
 
 This intentionally does not depend on pyannote — VAD is provided upstream by
 faster-whisper's `vad_filter=True`, so whisper segment timings define the
@@ -74,6 +79,7 @@ class TitanetDiarizer:
         window_size: float = 1.5,
         hop: float = 0.75,
         min_window_size: float = 0.5,
+        embed_batch_size: int = 64,
     ):
         from nemo.collections.asr.models import EncDecSpeakerLabelModel
 
@@ -82,6 +88,7 @@ class TitanetDiarizer:
         self.window_size = window_size
         self.hop = hop
         self.min_window_size = min_window_size
+        self.embed_batch_size = embed_batch_size
 
         self.model = EncDecSpeakerLabelModel.from_pretrained(model_name)
         self.model = self.model.to(device)
@@ -89,16 +96,32 @@ class TitanetDiarizer:
         logger.info("titanet model loaded")
 
     @torch.inference_mode()
-    def _embed(self, chunk: np.ndarray) -> np.ndarray:
-        """Compute a single titanet embedding for one audio chunk."""
-        if chunk.shape[0] < int(self.min_window_size * SAMPLE_RATE):
-            pad = int(self.min_window_size * SAMPLE_RATE) - chunk.shape[0]
-            chunk = np.pad(chunk, (0, pad))
+    def _embed_batch(self, chunks: list[np.ndarray]) -> np.ndarray:
+        """Embed a batch of variable-length audio chunks; returns (B, D)."""
+        min_len = int(self.min_window_size * SAMPLE_RATE)
+        padded = [
+            c if c.shape[0] >= min_len else np.pad(c, (0, min_len - c.shape[0])) for c in chunks
+        ]
+        max_len = max(c.shape[0] for c in padded)
 
-        signal = torch.from_numpy(chunk).unsqueeze(0).to(self.device).float()
-        length = torch.tensor([chunk.shape[0]], device=self.device)
+        batch = np.zeros((len(padded), max_len), dtype=np.float32)
+        lengths = np.empty(len(padded), dtype=np.int64)
+        for i, c in enumerate(padded):
+            batch[i, : c.shape[0]] = c
+            lengths[i] = c.shape[0]
+
+        signal = torch.from_numpy(batch).to(self.device)
+        length = torch.from_numpy(lengths).to(self.device)
         _logits, emb = self.model.forward(input_signal=signal, input_signal_length=length)
-        return emb.squeeze(0).cpu().numpy()
+        return emb.cpu().numpy()
+
+    def _embed_windows(self, audio: np.ndarray, windows: list[_Window], sr: int) -> np.ndarray:
+        """Batch-embed every window; returns (n_windows, D)."""
+        chunks = [_slice_audio(audio, w.start, w.end, sr) for w in windows]
+        out: list[np.ndarray] = []
+        for i in range(0, len(chunks), self.embed_batch_size):
+            out.append(self._embed_batch(chunks[i : i + self.embed_batch_size]))
+        return np.concatenate(out, axis=0)
 
     def diarize(
         self,
@@ -119,7 +142,7 @@ class TitanetDiarizer:
         if not segments:
             return [], {}
 
-        # Build windows that cover every segment.
+        # Build windows that cover every segment, tracking each window's segment.
         windows: list[_Window] = []
         for i, seg in enumerate(segments):
             windows.extend(
@@ -129,15 +152,21 @@ class TitanetDiarizer:
         if not windows:
             return [None] * len(segments), {}
 
-        # Embed each window.
-        embeddings = np.stack(
-            [self._embed(_slice_audio(audio, w.start, w.end, sr)) for w in windows]
-        )
-        embeddings = normalize(embeddings)
+        # Batch-embed windows, L2-normalize, then pool into one embedding per segment.
+        window_embeddings = normalize(self._embed_windows(audio, windows, sr))
 
-        # Cluster.
-        n_unique = embeddings.shape[0]
-        if n_unique == 1:
+        seg_to_window_idxs: dict[int, list[int]] = {}
+        for wi, w in enumerate(windows):
+            seg_to_window_idxs.setdefault(w.seg_index, []).append(wi)
+
+        present_seg_indices = sorted(seg_to_window_idxs.keys())
+        seg_embeddings = np.stack(
+            [window_embeddings[seg_to_window_idxs[si]].mean(axis=0) for si in present_seg_indices]
+        )
+        seg_embeddings = normalize(seg_embeddings)
+
+        # Cluster the per-segment embeddings.
+        if seg_embeddings.shape[0] == 1:
             cluster_labels = np.zeros(1, dtype=np.int64)
         else:
             n_clusters: int | None = None
@@ -150,13 +179,13 @@ class TitanetDiarizer:
                 metric="cosine",
                 linkage="average",
             )
-            cluster_labels = clustering.fit_predict(embeddings)
+            cluster_labels = clustering.fit_predict(seg_embeddings)
 
             # Cap the number of speakers if requested by merging the smallest clusters
             # into the nearest larger one. Cheap heuristic, matches what pyannote does
             # downstream when min/max_speakers are specified.
             if max_speakers is not None and len(set(cluster_labels)) > max_speakers:
-                cluster_labels = _cap_clusters(embeddings, cluster_labels, max_speakers)
+                cluster_labels = _cap_clusters(seg_embeddings, cluster_labels, max_speakers)
             if min_speakers is not None and len(set(cluster_labels)) < min_speakers:
                 # Can't synthesize speakers; just leave as-is.
                 pass
@@ -164,28 +193,21 @@ class TitanetDiarizer:
         # Map cluster ids to stable SPEAKER_NN labels, ordered by first appearance.
         label_map: dict[int, str] = {}
         for cid in cluster_labels:
-            if cid not in label_map:
-                label_map[cid] = f"SPEAKER_{len(label_map):02d}"
+            if int(cid) not in label_map:
+                label_map[int(cid)] = f"SPEAKER_{len(label_map):02d}"
 
-        # Per-segment label = majority window label, breaking ties by total window duration.
+        # Each present segment takes its cluster's label directly (no window vote).
         per_segment_labels: list[str | None] = [None] * len(segments)
-        seg_window_votes: list[dict[str, float]] = [{} for _ in segments]
-        for w, cid in zip(windows, cluster_labels, strict=True):
-            spk = label_map[int(cid)]
-            seg_window_votes[w.seg_index][spk] = seg_window_votes[w.seg_index].get(spk, 0.0) + (
-                w.end - w.start
-            )
-        for i, votes in enumerate(seg_window_votes):
-            if votes:
-                per_segment_labels[i] = max(votes.items(), key=lambda kv: kv[1])[0]
+        for si, cid in zip(present_seg_indices, cluster_labels, strict=True):
+            per_segment_labels[si] = label_map[int(cid)]
 
-        # Speaker centroid vectors (mean of normalized embeddings, then re-normalized).
+        # Speaker centroid vectors (mean of per-segment embeddings, then re-normalized).
         speaker_vectors: dict[str, list[float]] = {}
         for cid, spk in label_map.items():
             mask = cluster_labels == cid
             if not mask.any():
                 continue
-            centroid = embeddings[mask].mean(axis=0)
+            centroid = seg_embeddings[mask].mean(axis=0)
             n = np.linalg.norm(centroid)
             if n > 0:
                 centroid = centroid / n
