@@ -92,6 +92,37 @@ export const Route = createFileRoute(
   },
 });
 
+// Progress bar for a processing step. At 0% the step is still queued, so we
+// show an indeterminate (full, animated) bar and a "Queued" label; once it
+// starts reporting progress we switch to a determinate bar with a percentage.
+function ProcessingProgress({
+  label,
+  progress,
+}: {
+  label: string;
+  progress: number;
+}) {
+  const queued = progress <= 0;
+  return (
+    <Box>
+      <Text size="sm" fw={500} mb="xs">
+        {label}
+      </Text>
+      <Progress
+        value={queued ? 100 : progress * 100}
+        size="lg"
+        animated
+        striped
+      />
+      <Text size="xs" c="dimmed" mt="xs">
+        {queued
+          ? 'Queued'
+          : `${Math.min(Math.round(progress * 100), 99)}% complete`}
+      </Text>
+    </Box>
+  );
+}
+
 function ChannelUploadPage() {
   const { channelId, uploadId } = Route.useParams();
   const navigate = useNavigate();
@@ -947,24 +978,10 @@ function ChannelUploadPage() {
 
                   {/* Transcoding Progress - show when not uploading */}
                   {isTranscoding ? (
-                    <Box>
-                      <Text size="sm" fw={500} mb="xs">
-                        Transcoding media...
-                      </Text>
-                      <Progress
-                        value={upload.transcodingProgress * 100}
-                        size="lg"
-                        animated
-                        striped
-                      />
-                      <Text size="xs" c="dimmed" mt="xs">
-                        {Math.min(
-                          Math.round(upload.transcodingProgress * 100),
-                          99,
-                        )}
-                        % complete
-                      </Text>
-                    </Box>
+                    <ProcessingProgress
+                      label="Transcoding media..."
+                      progress={upload.transcodingProgress}
+                    />
                   ) : null}
                 </>
               ) : upload.mediaSource ? (
@@ -998,15 +1015,10 @@ function ChannelUploadPage() {
 
               {/* Transcribing Progress - show when not uploading (even alongside player) */}
               {isTranscribing ? (
-                <Box>
-                  <Text size="sm" fw={500} mb="xs">
-                    Transcribing audio...
-                  </Text>
-                  <Progress value={100} size="lg" animated striped />
-                  <Text size="xs" c="dimmed" mt="xs">
-                    Processing audio transcript
-                  </Text>
-                </Box>
+                <ProcessingProgress
+                  label="Transcribing audio..."
+                  progress={upload.transcribingProgress}
+                />
               ) : null}
             </Stack>
 

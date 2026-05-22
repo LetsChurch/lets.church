@@ -761,6 +761,9 @@ export const UploadRecord = pgTable(
     transcribingFinishedAt: timestamp('transcribing_finished_at', {
       precision: 3,
     }),
+    transcribingProgress: doublePrecision('transcribing_progress')
+      .notNull()
+      .default(0),
     deletedAt: timestamp('deleted_at', { precision: 3 }),
     variants: UploadVariant('variants').array().notNull(),
     score: doublePrecision('score').notNull(),

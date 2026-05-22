@@ -43,6 +43,13 @@
       "when": 1779246000828,
       "tag": "0005_upload_record_user_fk_restrict",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779475001495,
+      "tag": "0006_transcribing_progress",
+      "breakpoints": true
     }
   ]
 }
