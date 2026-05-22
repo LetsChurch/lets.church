@@ -53,6 +53,25 @@ check-python:
     - uvx ruff format --check services/transcribe
     - uvx ruff check services/transcribe
 
+test-python:
+  image: ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+  stage: verify
+  only:
+    changes:
+      - services/transcribe/**/*
+  # Tested modules are stdlib-only — ephemeral pytest + hypothesis env, no torch/nemo.
+  script:
+    - cd services/transcribe && uv run --no-project --with pytest --with hypothesis pytest
+
+test-go:
+  image: golang:1.26-bookworm
+  stage: verify
+  only:
+    changes:
+      - services/download/**/*
+  script:
+    - cd services/download && GOEXPERIMENT=jsonv2 go test ./...
+
 #  _____ _____ ____ _____
 # |_   _| ____/ ___|_   _|
 #   | | |  _| \___ \ | |

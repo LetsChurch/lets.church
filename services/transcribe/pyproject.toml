@@ -28,4 +28,13 @@ packages = ["src"]
 dev = [
     "ruff>=0.8.0",
     "mypy>=1.13.0",
+    "pytest>=8.0.0",
+    "hypothesis>=6.0.0",
 ]
+
+[tool.pytest.ini_options]
+# Tests target the stdlib-only modules (vtt, windowing, segmentation), so they
+# import `src.*` without pulling torch/nemo. `pythonpath = ["."]` makes the
+# `src` package importable from the project root.
+pythonpath = ["."]
+testpaths = ["tests"]

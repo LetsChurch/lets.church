@@ -162,6 +162,13 @@ export CI := "1"
 test:
   pnpm -r test
   GOEXPERIMENT=jsonv2 go -C services/download test ./...
+  just test-python
+
+# Run the transcribe worker's deterministic unit tests. Uses an ephemeral uv
+# env (pytest + hypothesis only) — no torch/nemo, since the tested modules
+# (vtt, windowing, segmentation) are stdlib-only.
+test-python:
+  cd services/transcribe && uv run --no-project --with pytest --with hypothesis pytest
 
 transcribe file:
   docker compose run --rm -v $PWD:/host -w /host transcribe-worker /bin/bash -c 'ffmpeg -i {{file}} -ar 16000 -ac 1 {{file}}.wav'
