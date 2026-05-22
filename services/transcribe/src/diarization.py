@@ -20,7 +20,6 @@ candidate speech intervals.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
 
 import numpy as np
 import torch
@@ -28,39 +27,9 @@ from sklearn.cluster import AgglomerativeClustering
 from sklearn.preprocessing import normalize
 
 from .audio import SAMPLE_RATE
+from .windowing import Window, windows_for_segment
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class _Window:
-    seg_index: int
-    start: float
-    end: float
-
-
-def _windows_for_segment(
-    seg_index: int,
-    start: float,
-    end: float,
-    window_size: float,
-    hop: float,
-) -> list[_Window]:
-    duration = end - start
-    if duration <= 0:
-        return []
-    if duration <= window_size:
-        return [_Window(seg_index, start, end)]
-
-    windows: list[_Window] = []
-    t = start
-    while t + window_size <= end:
-        windows.append(_Window(seg_index, t, t + window_size))
-        t += hop
-    # Tail window so we cover up to `end`.
-    if windows and windows[-1].end < end - 0.05:
-        windows.append(_Window(seg_index, max(start, end - window_size), end))
-    return windows
 
 
 def _slice_audio(audio: np.ndarray, start: float, end: float, sr: int) -> np.ndarray:
@@ -115,7 +84,7 @@ class TitanetDiarizer:
         _logits, emb = self.model.forward(input_signal=signal, input_signal_length=length)
         return emb.cpu().numpy()
 
-    def _embed_windows(self, audio: np.ndarray, windows: list[_Window], sr: int) -> np.ndarray:
+    def _embed_windows(self, audio: np.ndarray, windows: list[Window], sr: int) -> np.ndarray:
         """Batch-embed every window; returns (n_windows, D)."""
         chunks = [_slice_audio(audio, w.start, w.end, sr) for w in windows]
         out: list[np.ndarray] = []
@@ -143,10 +112,10 @@ class TitanetDiarizer:
             return [], {}
 
         # Build windows that cover every segment, tracking each window's segment.
-        windows: list[_Window] = []
+        windows: list[Window] = []
         for i, seg in enumerate(segments):
             windows.extend(
-                _windows_for_segment(i, seg["start"], seg["end"], self.window_size, self.hop)
+                windows_for_segment(i, seg["start"], seg["end"], self.window_size, self.hop)
             )
 
         if not windows:

@@ -7,7 +7,8 @@ Pipeline:
   4. Diarize with titanet (speaker labels + 192-dim speaker vectors).
   5. Re-segment + restore terminal punctuation with wtpsplit per speaker turn.
      Paragraph boundaries come from wtpsplit's `do_paragraph_segmentation`.
-  6. Emit VTT with one cue per paragraph, plaintext with `\\n\\n` between
+  6. Emit VTT with one cue per sentence (long sentences split at word
+     boundaries under a duration ceiling), plaintext with `\\n\\n` between
      paragraphs, and a whisper-schema-compatible JSON (with speaker_embeddings).
 
 Progress is streamed through the background queue's `updateUploadRecordWorkflow`
@@ -33,6 +34,7 @@ from .diarization import assign_word_speakers
 from .models import get_model_manager
 from .segmentation import process_speaker_segments
 from .storage import get_s3_client, update_upload_record
+from .vtt import segments_to_plaintext, segments_to_vtt
 
 logger = logging.getLogger(__name__)
 
@@ -62,62 +64,6 @@ class ThrottledProgressUpdater:
             await update_upload_record(self.upload_record_id, {"transcribingProgress": progress})
         except Exception as exc:
             activity.logger.warning(f"Failed to send progress update {progress}: {exc}")
-
-
-def _format_timestamp(seconds: float) -> str:
-    if seconds < 0:
-        seconds = 0
-    total_ms = int(round(seconds * 1000))
-    hours, rem_ms = divmod(total_ms, 3600 * 1000)
-    minutes, rem_ms = divmod(rem_ms, 60 * 1000)
-    secs, ms = divmod(rem_ms, 1000)
-    return f"{hours:02d}:{minutes:02d}:{secs:02d}.{ms:03d}"
-
-
-def _group_paragraphs(segments: list[dict[str, Any]]) -> list[list[dict[str, Any]]]:
-    """Group consecutive sentence-segments into paragraphs.
-
-    `is_paragraph_start=True` on a non-first segment marks the boundary.
-    `paragraph_idx` is per-speaker-group, so we can't compare it across speakers;
-    use `is_paragraph_start` instead.
-    """
-    paragraphs: list[list[dict[str, Any]]] = []
-    current: list[dict[str, Any]] = []
-    for i, seg in enumerate(segments):
-        if i > 0 and seg.get("is_paragraph_start"):
-            if current:
-                paragraphs.append(current)
-            current = []
-        current.append(seg)
-    if current:
-        paragraphs.append(current)
-    return paragraphs
-
-
-def segments_to_vtt(segments: list[dict[str, Any]]) -> str:
-    """WebVTT with one cue per paragraph. Sentences within a paragraph join with spaces."""
-    paragraphs = _group_paragraphs(segments)
-    if not paragraphs:
-        return "WEBVTT"
-    lines = ["WEBVTT", ""]
-    for para in paragraphs:
-        start = float(para[0].get("start", 0.0))
-        end = float(para[-1].get("end", 0.0))
-        text = " ".join(str(s.get("text", "")).strip() for s in para).strip()
-        if not text:
-            continue
-        lines.append(f"{_format_timestamp(start)} --> {_format_timestamp(end)}")
-        lines.append(text)
-        lines.append("")
-    return "\n".join(lines)
-
-
-def segments_to_plaintext(segments: list[dict[str, Any]]) -> str:
-    """Paragraphs joined with \\n\\n, sentences within paragraph joined with spaces."""
-    paragraphs = _group_paragraphs(segments)
-    return "\n\n".join(
-        " ".join(str(s.get("text", "")).strip() for s in para).strip() for para in paragraphs
-    ).strip()
 
 
 @activity.defn
