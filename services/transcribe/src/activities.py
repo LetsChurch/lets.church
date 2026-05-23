@@ -29,6 +29,7 @@ from typing import Any
 
 from temporalio import activity
 
+from .alignment import align_segments
 from .audio import convert_to_wav, load_audio
 from .diarization import assign_word_speakers
 from .models import get_model_manager
@@ -152,19 +153,30 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
             f"duration={info.duration:.2f}s"
         )
 
-        # 2. Diarize with titanet (speaker labels + speaker vectors).
-        activity.heartbeat("diarizing")
+        # Load the audio once for the GPU-side stages below (alignment + diarization).
         audio = load_audio(str(wav_path))
+
+        # 2. CTC forced alignment refines whisper's word_timestamps to true
+        # frame ranges (much tighter for word-level highlighting). Skipped via
+        # ALIGN_ENABLED=false; falls back per-segment on internal errors.
+        if models.align is not None:
+            activity.heartbeat("aligning")
+            segments = align_segments(audio, segments, models.align)
+            activity.logger.info("alignment done")
+        await progress.update(0.65, force=True)
+
+        # 3. Diarize with titanet (speaker labels + speaker vectors).
+        activity.heartbeat("diarizing")
         per_segment_labels, speaker_vectors = models.diarizer.diarize(audio, segments)
         for seg, label in zip(segments, per_segment_labels, strict=True):
             seg["speaker"] = label
         assign_word_speakers(segments)
-        await progress.update(0.75, force=True)
+        await progress.update(0.80, force=True)
         activity.logger.info(
             f"diarization done: speakers={len(speaker_vectors)} ({sorted(speaker_vectors.keys())})"
         )
 
-        # 3. Re-segment + restore terminal punctuation via wtpsplit per speaker turn.
+        # 4. Re-segment + restore terminal punctuation via wtpsplit per speaker turn.
         activity.heartbeat("segmenting sentences")
         before = len(segments)
         segments = process_speaker_segments(segments, models.sat, threshold=0.4)
@@ -172,56 +184,65 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
         activity.logger.info(
             f"segmentation done: segments {before} -> {len(segments)}, paragraphs={paragraph_count}"
         )
-        await progress.update(0.88, force=True)
+        await progress.update(0.90, force=True)
 
         # 4. Build VTT (one cue per paragraph) + plaintext (\\n\\n between paragraphs).
         vtt_text = segments_to_vtt(segments)
         plain_text = segments_to_plaintext(segments)
 
-        # 5. Build whisper-shaped JSON. Extra fields (speaker, paragraph_idx,
-        # is_paragraph_start, top-level speaker_embeddings) ride along; the TS
-        # Zod schema strips unknowns in strip mode.
-        whisper_segments: list[dict[str, Any]] = []
-        for idx, seg in enumerate(segments):
-            whisper_segments.append(
-                {
-                    "id": idx,
-                    "start": float(seg.get("start", 0.0)),
-                    "end": float(seg.get("end", 0.0)),
-                    "text": str(seg.get("text", "")),
-                    "tokens": [],
-                    "temperature": 0.0,
-                    "avg_logprob": 0.0,
-                    "compression_ratio": 0.0,
-                    "no_speech_prob": 0.0,
-                    "speaker": seg.get("speaker"),
-                    "paragraph_idx": seg.get("paragraph_idx"),
-                    "is_paragraph_start": seg.get("is_paragraph_start"),
-                    "words": [
-                        {
-                            "start": float(w["start"]),
-                            "end": float(w["end"]),
-                            "word": str(w["word"]),
-                            "probability": float(w.get("probability", 1.0)),
-                            "speaker": w.get("speaker"),
-                        }
-                        for w in seg.get("words", [])
-                    ],
+        # 5. Build the transcript JSON. This is the JS-consumed contract, so keys
+        # are camelCase (internal Python dicts above stay snake_case). Sentence-level
+        # segments carry paragraph markers + per-word timings; the new paragraph
+        # storage activity is the sole consumer.
+        json_segments: list[dict[str, Any]] = []
+        for seg in segments:
+            json_words: list[dict[str, Any]] = []
+            for w in seg.get("words", []):
+                word_dict: dict[str, Any] = {
+                    "word": str(w["word"]),
+                    "start": float(w["start"]),
+                    "end": float(w["end"]),
+                    "probability": float(w.get("probability", 1.0)),
+                    "speaker": w.get("speaker"),
                 }
-            )
-        whisper_json = {
-            "text": plain_text,
+                # `original_*` are populated by `align_segments`; absent on
+                # words that fell back to whisper timings (start/end already
+                # are the originals there).
+                if "original_start" in w:
+                    word_dict["originalStart"] = float(w["original_start"])
+                    word_dict["originalEnd"] = float(w["original_end"])
+                json_words.append(word_dict)
+
+            # Derive segment-level originals from the words' originals so they
+            # survive wtpsplit re-segmentation (which rebuilds segment bounds
+            # from words). Skipped when no word carries originals.
+            originals = [w for w in json_words if "originalStart" in w]
+            seg_dict: dict[str, Any] = {
+                "start": float(seg.get("start", 0.0)),
+                "end": float(seg.get("end", 0.0)),
+                "text": str(seg.get("text", "")),
+                "speaker": seg.get("speaker"),
+                "paragraphIdx": seg.get("paragraph_idx"),
+                "isParagraphStart": seg.get("is_paragraph_start"),
+                "words": json_words,
+            }
+            if originals:
+                seg_dict["originalStart"] = originals[0]["originalStart"]
+                seg_dict["originalEnd"] = originals[-1]["originalEnd"]
+            json_segments.append(seg_dict)
+        transcript_json = {
             "language": info.language or "en",
             "duration": info.duration,
-            "segments": whisper_segments,
-            "speaker_embeddings": speaker_vectors,
+            "text": plain_text,
+            "speakerEmbeddings": speaker_vectors,
+            "segments": json_segments,
         }
 
         vtt_path = work_dir / "transcript.vtt"
         json_path = work_dir / "transcript.json"
         txt_path = work_dir / "transcript.txt"
         vtt_path.write_text(vtt_text)
-        json_path.write_text(json.dumps(whisper_json))
+        json_path.write_text(json.dumps(transcript_json))
         txt_path.write_text(plain_text)
 
         # 6. Upload artifacts to the public bucket (matches the TS transcribe

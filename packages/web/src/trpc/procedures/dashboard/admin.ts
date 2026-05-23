@@ -3673,7 +3673,7 @@ export const adminRouter = router({
   getReindexStatus: adminProcedure.query(async () => {
     const kinds: ReindexKind[] = [
       'upload',
-      'transcriptHtml',
+      'transcript',
       'channel',
       'organization',
     ];
@@ -3691,7 +3691,7 @@ export const adminRouter = router({
   startReindex: adminProcedure
     .input(
       z.object({
-        kind: z.enum(['upload', 'transcriptHtml', 'channel', 'organization']),
+        kind: z.enum(['upload', 'transcript', 'channel', 'organization']),
         batchSize: z.number().min(1).max(500).default(50),
       }),
     )
@@ -3734,7 +3734,7 @@ export const adminRouter = router({
   cancelReindex: adminProcedure
     .input(
       z.object({
-        kind: z.enum(['upload', 'transcriptHtml', 'channel', 'organization']),
+        kind: z.enum(['upload', 'transcript', 'channel', 'organization']),
       }),
     )
     .mutation(async ({ ctx, input }) => {

@@ -918,6 +918,62 @@ export const mediaProcedures = {
       }
     }),
 
+  // Paragraph transcript with per-word timings (the newer pipeline). Returns
+  // null when no rows exist so the client can fall back to the legacy VTT
+  // transcript (getTranscript). Access checks mirror getTranscript exactly.
+  getTranscriptParagraphs: publicProcedure
+    .input(getTranscriptSchema)
+    .query(async ({ input, ctx }) => {
+      const sessionUserId = ctx.session?.appUserId ?? null;
+      const media = await db.query.UploadRecord.findFirst({
+        columns: { id: true, visibility: true },
+        with: {
+          channel: {
+            columns: { id: true, visibility: true, approvedAt: true },
+          },
+        },
+        where: (t, { eq }) => eq(t.id, input.mediaId),
+      });
+
+      if (!media) return null;
+
+      if (media.channel.visibility === 'PRIVATE' || !media.channel.approvedAt) {
+        return null;
+      }
+
+      if (media.visibility === 'PRIVATE') {
+        if (!sessionUserId) return null;
+        if (!ctx.isSiteAdmin) {
+          const membershipCheck = await db.query.ChannelMembership.findFirst({
+            columns: { appUserId: true },
+            where: (t, { and, eq }) =>
+              and(
+                eq(t.channelId, media.channel.id),
+                eq(t.appUserId, sessionUserId),
+              ),
+          });
+          if (!membershipCheck) return null;
+        }
+      }
+
+      const paragraphs = await db.query.TranscriptParagraph.findMany({
+        columns: {
+          order: true,
+          start: true,
+          end: true,
+          speaker: true,
+          text: true,
+          words: true,
+        },
+        where: (t, { eq }) => eq(t.uploadRecordId, input.mediaId),
+        orderBy: (t, { asc }) => asc(t.order),
+      });
+
+      if (paragraphs.length === 0) return null;
+
+      return paragraphs;
+    }),
+
   rateMedia: authProcedure
     .input(
       z.object({

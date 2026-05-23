@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 import traceback
 
 # Belt-and-braces: hide CUDA from any transitive import that decides to probe.
@@ -19,13 +20,36 @@ os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
 os.environ.setdefault("NEMO_DISABLE_TELEMETRY", "1")
 
 
-def _snapshot(repo_id: str) -> None:
+def _snapshot(repo_id: str, *, attempts: int = 3) -> None:
     from huggingface_hub import snapshot_download
 
     token = os.getenv("HUGGINGFACE_TOKEN") or None
     print(f"Snapshotting {repo_id}")
-    snapshot_download(repo_id=repo_id, token=token)
-    print(f"OK {repo_id}")
+    # Retry with backoff to ride out transient HF/CDN hiccups during build.
+    # Notes on bounds:
+    #  - We *don't* set a wall-clock timeout on the whole download — large-v3
+    #    is multi-GB and legitimately takes minutes on slow runners.
+    #  - `etag_timeout=30` (default 10) caps the HEAD/metadata request, which
+    #    is the usual culprit when builds hang (slow auth/redirects).
+    #  - Body-chunk stalls are governed by huggingface_hub's own
+    #    `HF_HUB_DOWNLOAD_TIMEOUT` env var; leaving that to its default.
+    # snapshot_download resumes partial files between attempts, so a retry
+    # picks up where the previous one died rather than re-downloading.
+    delay = 5.0
+    for attempt in range(1, attempts + 1):
+        try:
+            snapshot_download(repo_id=repo_id, token=token, etag_timeout=30)
+            print(f"OK {repo_id}")
+            return
+        except Exception as exc:
+            if attempt == attempts:
+                raise
+            print(
+                f"snapshot {repo_id} attempt {attempt}/{attempts} failed: {exc}; "
+                f"retrying in {delay:.0f}s"
+            )
+            time.sleep(delay)
+            delay *= 3
 
 
 def _whisper_repo(model_name: str) -> str:

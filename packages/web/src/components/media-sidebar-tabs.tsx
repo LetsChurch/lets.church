@@ -8,6 +8,10 @@ import {
 import { useState } from 'react';
 import { PlaylistSidebar } from '@/components/playlist-sidebar';
 import { Transcript } from '@/components/transcript';
+import {
+  type TranscriptParagraph,
+  TranscriptParagraphs,
+} from '@/components/transcript-paragraphs';
 import { TranscriptSearchResults } from '@/components/transcript-search-results';
 import {
   $isSearchActive,
@@ -33,6 +37,9 @@ type PlaylistItem = {
 
 type MediaSidebarTabsProps = {
   transcript: Array<{ start: number; text: string }>;
+  // When present, render the newer word-level paragraph transcript instead of
+  // the legacy VTT lines (search is deferred in this mode).
+  paragraphs?: Array<TranscriptParagraph> | null;
   isTranscriptProcessing: boolean;
   playlistContext?: {
     listId: string;
@@ -45,9 +52,11 @@ type MediaSidebarTabsProps = {
 
 export function MediaSidebarTabs({
   transcript,
+  paragraphs,
   isTranscriptProcessing,
   playlistContext,
 }: MediaSidebarTabsProps) {
+  const useParagraphs = Boolean(paragraphs && paragraphs.length > 0);
   const hasPlaylist = Boolean(playlistContext);
   const [activeTab, setActiveTab] = useState<'transcript' | 'playlist'>(
     hasPlaylist ? 'playlist' : 'transcript',
@@ -145,20 +154,29 @@ export function MediaSidebarTabs({
                   <h3 className="flex-1 font-medium text-primary text-sm">
                     Transcript
                   </h3>
-                  <button
-                    type="button"
-                    className="rounded-lg p-2 hover:bg-white/10"
-                    onClick={handleSearchClick}
-                  >
-                    <IconSearch size={16} className="text-primary/80" />
-                  </button>
+                  {/* Search is deferred in paragraph mode (it targets the
+                      legacy line array). */}
+                  {useParagraphs ? null : (
+                    <button
+                      type="button"
+                      className="rounded-lg p-2 hover:bg-white/10"
+                      onClick={handleSearchClick}
+                    >
+                      <IconSearch size={16} className="text-primary/80" />
+                    </button>
+                  )}
                 </>
               )}
             </div>
 
             {/* Transcript Content */}
             <div className="fade-bottom flex-1 overflow-hidden">
-              {isSearchActive && hasQuery ? (
+              {useParagraphs ? (
+                <TranscriptParagraphs
+                  paragraphs={paragraphs ?? []}
+                  isTranscriptProcessing={isTranscriptProcessing}
+                />
+              ) : isSearchActive && hasQuery ? (
                 <TranscriptSearchResults />
               ) : (
                 <Transcript

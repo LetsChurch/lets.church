@@ -41,7 +41,7 @@ const KIND_LABELS: Record<ReindexKind, { label: string; description: string }> =
       label: 'Uploads',
       description: 'Title, description, and metadata for all upload records',
     },
-    transcriptHtml: {
+    transcript: {
       label: 'Transcripts',
       description: 'Full-text transcript content for transcribed uploads',
     },
@@ -57,7 +57,7 @@ const KIND_LABELS: Record<ReindexKind, { label: string; description: string }> =
 
 const KINDS: ReindexKind[] = [
   'upload',
-  'transcriptHtml',
+  'transcript',
   'channel',
   'organization',
 ];

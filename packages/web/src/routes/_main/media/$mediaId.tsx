@@ -28,6 +28,10 @@ import { MobileDrawer } from '@/components/mobile-drawer';
 import { Player } from '@/components/player';
 import { PlaylistSidebar } from '@/components/playlist-sidebar';
 import { Transcript } from '@/components/transcript';
+import {
+  type TranscriptParagraph,
+  TranscriptParagraphs,
+} from '@/components/transcript-paragraphs';
 import { TranscriptSearchResults } from '@/components/transcript-search-results';
 import { WindowSplitter } from '@/components/window-splitter';
 import { useAutoplay } from '@/hooks/use-autoplay';
@@ -63,32 +67,38 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
     list: z.string().optional(),
   }),
   loader: async ({ context: { queryClient, trpc }, params }) => {
-    const [media, viewData, transcript, rating, comments] = await Promise.all([
-      queryClient.ensureQueryData(
-        trpc.media.getMediaById.queryOptions({
-          mediaId: params.mediaId,
+    const [media, viewData, transcript, paragraphs, rating, comments] =
+      await Promise.all([
+        queryClient.ensureQueryData(
+          trpc.media.getMediaById.queryOptions({
+            mediaId: params.mediaId,
+          }),
+        ),
+        trpcClient.media.createUploadView.mutate({
+          uploadRecordId: params.mediaId,
+          source: UploadViewSource.WEBSITE,
         }),
-      ),
-      trpcClient.media.createUploadView.mutate({
-        uploadRecordId: params.mediaId,
-        source: UploadViewSource.WEBSITE,
-      }),
-      queryClient.ensureQueryData(
-        trpc.media.getTranscript.queryOptions({
-          mediaId: params.mediaId,
-        }),
-      ),
-      queryClient.ensureQueryData(
-        trpc.media.getMediaRating.queryOptions({
-          mediaId: params.mediaId,
-        }),
-      ),
-      queryClient.ensureQueryData(
-        trpc.media.getComments.queryOptions({
-          mediaId: params.mediaId,
-        }),
-      ),
-    ]);
+        queryClient.ensureQueryData(
+          trpc.media.getTranscript.queryOptions({
+            mediaId: params.mediaId,
+          }),
+        ),
+        queryClient.ensureQueryData(
+          trpc.media.getTranscriptParagraphs.queryOptions({
+            mediaId: params.mediaId,
+          }),
+        ),
+        queryClient.ensureQueryData(
+          trpc.media.getMediaRating.queryOptions({
+            mediaId: params.mediaId,
+          }),
+        ),
+        queryClient.ensureQueryData(
+          trpc.media.getComments.queryOptions({
+            mediaId: params.mediaId,
+          }),
+        ),
+      ]);
 
     if (media.series?.id) {
       await queryClient.prefetchQuery(
@@ -103,6 +113,7 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
       media: mediaWithoutProbe,
       viewHash: viewData?.viewHash ?? '',
       transcript: transcript ?? [],
+      paragraphs: paragraphs ?? null,
       rating,
       comments,
     };
@@ -242,11 +253,14 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
 
 function MobileTranscriptDrawerContent({
   transcript,
+  paragraphs,
   isTranscriptProcessing,
 }: {
   transcript: Array<{ start: number; text: string }>;
+  paragraphs?: Array<TranscriptParagraph> | null;
   isTranscriptProcessing: boolean;
 }) {
+  const useParagraphs = Boolean(paragraphs && paragraphs.length > 0);
   const isSearchActive = useStore($isSearchActive);
   const searchQuery = useStore($searchQuery);
   const searchResults = useStore($searchResults);
@@ -304,19 +318,26 @@ function MobileTranscriptDrawerContent({
                 Transcript
               </MobileDrawer.Title>
             </div>
-            <button
-              type="button"
-              className="flex size-7 items-center justify-center rounded-lg hover:bg-white/10"
-              onClick={handleSearchClick}
-            >
-              <IconSearch size={16} className="text-primary/80" />
-            </button>
+            {useParagraphs ? null : (
+              <button
+                type="button"
+                className="flex size-7 items-center justify-center rounded-lg hover:bg-white/10"
+                onClick={handleSearchClick}
+              >
+                <IconSearch size={16} className="text-primary/80" />
+              </button>
+            )}
           </>
         )}
       </div>
 
       <div className="fade-bottom flex min-h-0 flex-1 flex-col overflow-hidden">
-        {isSearchActive && hasQuery ? (
+        {useParagraphs ? (
+          <TranscriptParagraphs
+            paragraphs={paragraphs ?? []}
+            isTranscriptProcessing={isTranscriptProcessing}
+          />
+        ) : isSearchActive && hasQuery ? (
           <TranscriptSearchResults />
         ) : (
           <Transcript
@@ -488,6 +509,16 @@ function RouteComponent() {
     refetchInterval: media && !media.transcribingFinishedAt ? 60000 : false,
   });
   const transcript = transcriptData ?? [];
+
+  // Word-level paragraph transcript (newer pipeline). Null until rows exist,
+  // in which case the sidebar falls back to the legacy line transcript above.
+  const { data: paragraphsData } = useSuspenseQuery({
+    ...trpc.media.getTranscriptParagraphs.queryOptions({
+      mediaId: params.mediaId,
+    }),
+    refetchInterval: media && !media.transcribingFinishedAt ? 60000 : false,
+  });
+  const paragraphs = paragraphsData ?? null;
 
   const { data: ratingData } = useSuspenseQuery(
     trpc.media.getMediaRating.queryOptions({
@@ -908,6 +939,7 @@ function RouteComponent() {
             <div style={{ width: `${transcriptWidth}px` }}>
               <MediaSidebarTabs
                 transcript={transcript}
+                paragraphs={paragraphs}
                 isTranscriptProcessing={!media.transcribingFinishedAt}
                 playlistContext={
                   hasPlaylistContext && activeListId && playlistItems.length > 0
@@ -938,6 +970,7 @@ function RouteComponent() {
           <MobileDrawer.Content className="h-[85vh]">
             <MobileTranscriptDrawerContent
               transcript={transcript}
+              paragraphs={paragraphs}
               isTranscriptProcessing={!media.transcribingFinishedAt}
             />
           </MobileDrawer.Content>

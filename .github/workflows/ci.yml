@@ -63,6 +63,13 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
+        with:
+          # Match `services/transcribe/.python-version` and pyproject.toml's
+          # `requires-python = ">=3.11,<3.12"`. uv would already resolve this
+          # from `.python-version`, but pinning here keeps the CI environment
+          # explicit and protects against the working-directory step running
+          # before uv resolves the project file.
+          python-version: "3.11"
 
       # Tested modules (vtt, windowing, segmentation) are stdlib-only, so we run
       # in an ephemeral env with just pytest + hypothesis — no torch/nemo install.

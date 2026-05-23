@@ -11,6 +11,7 @@ import logging
 from faster_whisper import WhisperModel
 from wtpsplit import SaT
 
+from .alignment import AlignModel, load_align_model
 from .diarization import TitanetDiarizer
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,7 @@ class ModelManager:
         compute_type: str,
         wtpsplit_model: str = "sat-12l-sm",
         titanet_model: str = "nvidia/speakerverification_en_titanet_large",
+        align_enabled: bool = True,
     ):
         self.device = device
         self.compute_type = compute_type
@@ -31,6 +33,15 @@ class ModelManager:
         logger.info(f"Loading faster-whisper model: {whisper_model} ({device}/{compute_type})")
         self.whisper = WhisperModel(whisper_model, device=device, compute_type=compute_type)
         logger.info("faster-whisper model loaded")
+
+        # CTC forced alignment refines whisper's word timestamps to true frame
+        # ranges, which matters for word-level highlighting on the media page.
+        self.align: AlignModel | None
+        if align_enabled:
+            self.align = load_align_model(device=device)
+        else:
+            logger.info("alignment disabled (ALIGN_ENABLED=false)")
+            self.align = None
 
         logger.info(f"Loading titanet diarizer: {titanet_model}")
         self.diarizer = TitanetDiarizer(device=device, model_name=titanet_model)
@@ -53,6 +64,7 @@ def initialize_models(
     compute_type: str,
     wtpsplit_model: str = "sat-12l-sm",
     titanet_model: str = "nvidia/speakerverification_en_titanet_large",
+    align_enabled: bool = True,
 ) -> None:
     global _manager
     _manager = ModelManager(
@@ -61,6 +73,7 @@ def initialize_models(
         compute_type=compute_type,
         wtpsplit_model=wtpsplit_model,
         titanet_model=titanet_model,
+        align_enabled=align_enabled,
     )
 
 

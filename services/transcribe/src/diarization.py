@@ -81,7 +81,8 @@ class TitanetDiarizer:
 
         signal = torch.from_numpy(batch).to(self.device)
         length = torch.from_numpy(lengths).to(self.device)
-        _logits, emb = self.model.forward(input_signal=signal, input_signal_length=length)
+        # Call the module (not .forward) so nn.Module hooks / NeMo type-checks run.
+        _logits, emb = self.model(input_signal=signal, input_signal_length=length)
         return emb.cpu().numpy()
 
     def _embed_windows(self, audio: np.ndarray, windows: list[Window], sr: int) -> np.ndarray:
@@ -210,7 +211,8 @@ def _cap_clusters(embeddings: np.ndarray, labels: np.ndarray, max_speakers: int)
                 best_score = score
                 best_other = other
 
-        assert best_other is not None
+        if best_other is None:
+            raise RuntimeError("no other cluster found to merge with")
         labels[labels == smallest] = best_other
     return labels
 

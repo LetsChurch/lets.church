@@ -35,6 +35,7 @@ async def main() -> None:
     whisper_model = os.getenv("WHISPER_MODEL", "base")
     wtpsplit_model = os.getenv("WTPSPLIT_MODEL", "sat-12l-sm")
     titanet_model = os.getenv("TITANET_MODEL", "nvidia/speakerverification_en_titanet_large")
+    align_enabled = os.getenv("ALIGN_ENABLED", "true").lower() not in ("0", "false", "no")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     compute_type = "float16" if device == "cuda" else "int8"
@@ -44,7 +45,8 @@ async def main() -> None:
         f"temporal={temporal_address} device={device}"
     )
     logger.info(
-        f"models: whisper={whisper_model} wtpsplit={wtpsplit_model} titanet={titanet_model}"
+        f"models: whisper={whisper_model} wtpsplit={wtpsplit_model} "
+        f"titanet={titanet_model} align={align_enabled}"
     )
 
     initialize_models(
@@ -53,6 +55,7 @@ async def main() -> None:
         compute_type=compute_type,
         wtpsplit_model=wtpsplit_model,
         titanet_model=titanet_model,
+        align_enabled=align_enabled,
     )
     logger.info("models initialized; connecting to Temporal")
 

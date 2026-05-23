@@ -40,11 +40,7 @@ export async function deleteUploadRecordSearch(id: string) {
     context: { id },
   });
 
-  for (const index of [
-    'lc_uploads_v2',
-    'lc_transcripts',
-    'lc_transcripts_v2',
-  ] as const) {
+  for (const index of ['lc_uploads_v2', 'lc_transcripts'] as const) {
     activityLogger.info(`Deleting from index ${index}`);
     await esClient.delete({ index, id }, { ignore: [404] });
     activityLogger.info('Done!');

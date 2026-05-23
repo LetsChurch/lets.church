@@ -41,7 +41,9 @@ const { transcribe } = proxyActivities<typeof transcribeActivities>({
   retry: { maximumAttempts: 2 },
 });
 
-const { getFinalizedUploadKey } = proxyActivities<typeof backgroundActivities>({
+const { getFinalizedUploadKey, storeTranscriptParagraphs } = proxyActivities<
+  typeof backgroundActivities
+>({
   startToCloseTimeout: '10 minute',
   heartbeatTimeout: '1 minute',
   taskQueue: BACKGROUND_QUEUE,
@@ -93,13 +95,7 @@ export async function processMediaWorkflow(
         retry: { maximumAttempts: 2 },
       });
 
-      await executeChild(indexDocumentWorkflow, {
-        workflowId: `transcriptHtml:${s3UploadKey}`,
-        args: ['transcriptHtml', targetId, res.transcriptJsonKey],
-        taskQueue: BACKGROUND_QUEUE,
-        priority: { priorityKey: PRIORITY_USER },
-        retry: { maximumAttempts: 2 },
-      });
+      await storeTranscriptParagraphs(targetId, res.transcriptJsonKey);
     }
 
     await executeChild(indexDocumentWorkflow, {

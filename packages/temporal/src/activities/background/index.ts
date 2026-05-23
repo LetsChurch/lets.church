@@ -90,7 +90,6 @@ export {
   type ReindexKind,
   reindexBatch,
 } from './reindex';
-export { default as restitchTranscript } from './restitch-transcript';
 export {
   default as sendEmail,
   validateSendEmailConfig,
@@ -112,6 +111,7 @@ export { default as setOrganizationAvatar } from './set-organization-avatar';
 export { default as setOrganizationCover } from './set-organization-cover';
 export { default as setProfileAvatar } from './set-profile-avatar';
 export { default as setUploadThumbnail } from './set-upload-thumbnail';
+export { default as storeTranscriptParagraphs } from './store-transcript-paragraphs';
 export { default as subscribeNewsletter } from './subscribe-newsletter';
 export { default as updateCommentScores } from './update-comment-scores';
 export { default as updateDailySalt } from './update-daily-salt';

@@ -61,14 +61,6 @@ export function makeTranscriptWorkflowId(s3UploadKey: string) {
   return `transcript:${s3UploadKey}`;
 }
 
-export function makeTranscriptHtmlWorkflowId(s3UploadKey: string) {
-  return `transcriptHtml:${s3UploadKey}`;
-}
-
-export function makeRestitchTranscriptWorkflowId(targetId: string) {
-  return `transcript:restitch:${targetId}`;
-}
-
 // Document indexing
 export function makeIndexDocumentWorkflowId(
   kind: DocumentKind,

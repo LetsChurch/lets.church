@@ -824,6 +824,42 @@ export const UploadRecordDownloadSize = pgTable(
   }),
 );
 
+export const TranscriptParagraph = pgTable(
+  'transcript_paragraph',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    uploadRecordId: uuid('upload_record_id').notNull(),
+    // Paragraph order within the upload.
+    order: integer('order').notNull(),
+    // Seconds (matches the worker's transcript.json word/segment timings).
+    start: doublePrecision('start').notNull(),
+    end: doublePrecision('end').notNull(),
+    // Worker-local speaker label (e.g. SPEAKER_00); not yet surfaced in the UI.
+    speaker: text('speaker'),
+    // 192-dim titanet embedding for this paragraph's speaker (denormalized;
+    // speaker identity/dedup is a later concern). JSONB now; convertible to a
+    // pgvector column later if/when the extension is enabled.
+    speakerEmbedding: jsonb('speaker_embedding').$type<number[]>(),
+    text: text('text').notNull(),
+    // Per-word timings for in-player word-level highlighting.
+    words: jsonb('words')
+      .$type<Array<{ word: string; start: number; end: number }>>()
+      .notNull(),
+  },
+  (TranscriptParagraph) => ({
+    transcript_paragraph_uploadRecord_fkey: foreignKey({
+      name: 'transcript_paragraph_uploadRecord_fkey',
+      columns: [TranscriptParagraph.uploadRecordId],
+      foreignColumns: [UploadRecord.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    TranscriptParagraph_uploadRecordId_order_idx: uniqueIndex(
+      'transcript_paragraph_upload_record_id_order_idx',
+    ).on(TranscriptParagraph.uploadRecordId, TranscriptParagraph.order),
+  }),
+);
+
 export const UploadUserRating = pgTable(
   'upload_user_rating',
   {

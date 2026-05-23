@@ -13,19 +13,13 @@ import { and, eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
 import logger from '../../util/logger';
-import { stitchToHtml, whisperJsonSchema } from '../../util/whisper';
 import { transcriptSegmentSchema } from '../../util/zod';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/index-document',
 });
 
-export type DocumentKind =
-  | 'transcript'
-  | 'transcriptHtml'
-  | 'upload'
-  | 'organization'
-  | 'channel';
+export type DocumentKind = 'transcript' | 'upload' | 'organization' | 'channel';
 
 async function getDocument(
   kind: DocumentKind,
@@ -88,60 +82,6 @@ async function getDocument(
           transcribingFinishedAt: transcribingFinishedAt?.toISOString() ?? null,
           channelVisibility: channelRow.visibility,
         }),
-      };
-    }
-    case 'transcriptHtml': {
-      log.info('Fetching transcript');
-      invariant(s3UploadKey, 'uploadKey is required for transcript');
-      const res = await publicS3.getObject(s3UploadKey);
-      const body = await res.Body?.transformToString('utf-8');
-      invariant(body, `No object with key ${s3UploadKey} found`);
-      const html = stitchToHtml(whisperJsonSchema.parse(JSON.parse(body)));
-
-      log.info('Fetching metadata');
-      const upRecRow = await db
-        .select({
-          publishedAt: UploadRecord.publishedAt,
-          visibility: UploadRecord.visibility,
-          transcodingFinishedAt: UploadRecord.transcodingFinishedAt,
-          transcribingFinishedAt: UploadRecord.transcribingFinishedAt,
-          channelId: UploadRecord.channelId,
-        })
-        .from(UploadRecord)
-        .where(eq(UploadRecord.id, documentId))
-        .then((r) => r[0]);
-
-      invariant(upRecRow, `Upload record ${documentId} not found`);
-
-      const channelRow = await db
-        .select({ visibility: Channel.visibility })
-        .from(Channel)
-        .where(eq(Channel.id, upRecRow.channelId))
-        .then((r) => r[0]);
-
-      invariant(
-        channelRow,
-        `Channel not found for upload record ${documentId}`,
-      );
-
-      const {
-        publishedAt,
-        transcodingFinishedAt,
-        transcribingFinishedAt,
-        ...upRec
-      } = upRecRow;
-
-      return {
-        index: 'lc_transcripts_v2',
-        id: documentId,
-        document: {
-          ...upRec,
-          html,
-          publishedAt: publishedAt.toISOString(),
-          transcodingFinishedAt: transcodingFinishedAt?.toISOString() ?? null,
-          transcribingFinishedAt: transcribingFinishedAt?.toISOString() ?? null,
-          channelVisibility: channelRow.visibility,
-        },
       };
     }
     case 'upload': {

@@ -154,50 +154,6 @@ const targetMappings: Record<
       },
     },
   },
-  lc_transcripts_v2: {
-    properties: {
-      channelId: {
-        type: 'keyword',
-      },
-      publishedAt: {
-        type: 'date',
-      },
-      visibility: {
-        type: 'keyword',
-      },
-      channelVisibility: {
-        type: 'keyword',
-      },
-      html: {
-        type: 'text',
-        analyzer: 'ignore_html_tags',
-      },
-      transcodingFinishedAt: {
-        type: 'date',
-      },
-      transcribingFinishedAt: {
-        type: 'date',
-      },
-    },
-    settings: {
-      number_of_replicas: 0,
-      analysis: {
-        char_filter: {
-          ignore_html_tags: {
-            type: 'html_strip',
-          },
-        },
-        analyzer: {
-          ignore_html_tags: {
-            tokenizer: 'standard',
-            filter: ['lowercase', 'stop', 'apostrophe', 'porter_stem'],
-            char_filter: ['ignore_html_tags'],
-            type: 'custom',
-          },
-        },
-      },
-    },
-  },
 };
 
 // Get server mappings and transform into expected format
