@@ -154,6 +154,67 @@ const targetMappings: Record<
       },
     },
   },
+  // Unified upload + transcript index for the new RRF-style search. One doc
+  // per upload with nested paragraphs (preserves `inner_hits` so future search
+  // can show + jump to the matched paragraph, mirroring lc_transcripts). The
+  // existing lc_uploads_v2 and lc_transcripts stay populated for current
+  // search; this index is additive.
+  lc_media_v1: {
+    settings: {
+      number_of_replicas: 0,
+    },
+    properties: {
+      // identity + access-control denormalization
+      channelId: { type: 'keyword' },
+      visibility: { type: 'keyword' },
+      channelVisibility: { type: 'keyword' },
+      channelApprovedAt: { type: 'date' },
+      publishedAt: { type: 'date' },
+      lengthSeconds: { type: 'double' },
+      transcodingFinishedAt: { type: 'date' },
+      transcribingFinishedAt: { type: 'date' },
+      // lexical fields (BM25)
+      title: { type: 'text' },
+      description: { type: 'text' },
+      channelName: {
+        type: 'text',
+        fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+      },
+      summary: { type: 'text' },
+      // Video-level semantic vectors (cosine for RRF fusion + related-videos).
+      // searchSummary text is intentionally NOT indexed — it exists only to
+      // produce searchSummaryEmbedding, so users never see synthetic prose.
+      summaryEmbedding: {
+        type: 'dense_vector',
+        dims: 1536,
+        similarity: 'cosine',
+        index: true,
+      },
+      searchSummaryEmbedding: {
+        type: 'dense_vector',
+        dims: 1536,
+        similarity: 'cosine',
+        index: true,
+      },
+      // Nested paragraphs — supports inner_hits on both BM25 and knn queries.
+      paragraphs: {
+        type: 'nested',
+        properties: {
+          order: { type: 'integer' },
+          start: { type: 'double' },
+          end: { type: 'double' },
+          speaker: { type: 'keyword' },
+          text: { type: 'text' },
+          embedding: {
+            type: 'dense_vector',
+            dims: 1536,
+            similarity: 'cosine',
+            index: true,
+          },
+        },
+      },
+    },
+  },
 };
 
 // Get server mappings and transform into expected format

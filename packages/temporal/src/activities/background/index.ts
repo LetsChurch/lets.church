@@ -64,6 +64,8 @@ export {
 } from './delete-glacier-backup';
 export { default as deleteOldThumbnails } from './delete-old-thumbnails';
 export * from './delete-upload-record';
+export { default as embedTranscriptParagraphs } from './embed-transcript-paragraphs';
+export { default as embedUpload } from './embed-upload';
 export { default as finalizeUploadRecord } from './finalize-upload-record';
 export {
   default as geocodeOrganization,
@@ -113,6 +115,7 @@ export { default as setProfileAvatar } from './set-profile-avatar';
 export { default as setUploadThumbnail } from './set-upload-thumbnail';
 export { default as storeTranscriptParagraphs } from './store-transcript-paragraphs';
 export { default as subscribeNewsletter } from './subscribe-newsletter';
+export { default as summarizeUpload } from './summarize-upload';
 export { default as updateCommentScores } from './update-comment-scores';
 export { default as updateDailySalt } from './update-daily-salt';
 export { default as updateUploadRecord } from './update-upload-record';

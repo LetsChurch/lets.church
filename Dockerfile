@@ -221,4 +221,6 @@ ENV HF_HOME=/models/huggingface \
     NEMO_CACHE_DIR=/models/nemo
 # Source last so code changes don't invalidate the model-cache layer.
 COPY --chown=worker:worker services/transcribe/src/ ./src/
+# Tooling for dev — used by `just regenerate-seed-transcript`.
+COPY --chown=worker:worker services/transcribe/scripts/ ./scripts/
 CMD ["uv", "run", "python", "-m", "src.worker"]

@@ -31,6 +31,7 @@ import {
   makeReprocessAllWorkflowId,
   makeResetPasswordWorkflowId,
   makeScrapeAndImportWorkflowId,
+  makeSummarizeUploadWorkflowId,
   makeUpdateUploadRecordWorkflowId,
   makeVerificationEmailWorkflowId,
   type RemuxScope,
@@ -147,6 +148,7 @@ export {
   makeRecordDownloadSizeWorkflowId,
   makeResetPasswordWorkflowId,
   makeScrapeAndImportWorkflowId,
+  makeSummarizeUploadWorkflowId,
   makeUpdateUploadRecordWorkflowId,
   makeVerificationEmailWorkflowId,
 };

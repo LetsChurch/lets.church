@@ -773,6 +773,17 @@ export const UploadRecord = pgTable(
       .default(true),
     downloadsEnabled: boolean('downloads_enabled').notNull().default(true),
     pipelineVersion: integer('pipeline_version').notNull().default(2),
+    // Display summary (frontend Summary tab). Populated by the summarize-upload
+    // activity after transcript paragraphs land.
+    summary: text('summary'),
+    // Search-optimized restatement (concepts/entities/scripture refs); never
+    // rendered to users, exists only to be embedded for similarity search.
+    searchSummary: text('search_summary'),
+    // 1536-dim OpenAI text-embedding-3-small vectors. JSONB now; convertible
+    // to pgvector when the extension is enabled (same plan as speaker_embedding).
+    summaryEmbedding: jsonb('summary_embedding').$type<number[]>(),
+    searchSummaryEmbedding: jsonb('search_summary_embedding').$type<number[]>(),
+    summarizedAt: timestamp('summarized_at', { precision: 3 }),
   },
   (UploadRecord) => ({
     upload_record_createdBy_fkey: foreignKey({
@@ -845,6 +856,10 @@ export const TranscriptParagraph = pgTable(
     words: jsonb('words')
       .$type<Array<{ word: string; start: number; end: number }>>()
       .notNull(),
+    // 1536-dim OpenAI text-embedding-3-small vector for this paragraph's text
+    // (semantic search signal). Same JSONB-now / pgvector-later pattern as
+    // speaker_embedding above.
+    embedding: jsonb('embedding').$type<number[]>(),
   },
   (TranscriptParagraph) => ({
     transcript_paragraph_uploadRecord_fkey: foreignKey({

@@ -43,6 +43,15 @@ export function makeUpdateUploadRecordWorkflowId(uploadRecordId: string) {
   return `updateUploadRecord:${uploadRecordId}`;
 }
 
+// Per-upload run of the LLM summary + embeddings + lc_media_v1 indexer
+// pipeline (`summarizeUploadWorkflow`). No timestamp suffix: we want
+// Temporal to refuse a second concurrent run for the same upload (the admin
+// procedure also catches RUNNING and surfaces a clean error, but
+// ID-uniqueness is the belt to the procedure's braces).
+export function makeSummarizeUploadWorkflowId(uploadRecordId: string) {
+  return `summarizeUpload:${uploadRecordId}`;
+}
+
 export function makeRecordDownloadSizeWorkflowId(
   uploadRecordId: string,
   variant?: string,

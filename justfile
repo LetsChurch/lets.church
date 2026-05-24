@@ -114,6 +114,15 @@ s3-prune-multipart-uploads:
 seed-db:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run seed'
 
+# Snapshot the current dev DB's LLM data (summaries + embeddings + paragraphs
+# with embeddings) into `seed-data/llm/*.json` so the next `just seed` can
+# direct-insert instead of paying OpenRouter fees and 5-15min of wall time.
+# Run this after a successful live-pipeline seed (i.e. one that called the
+# real summarizeUploadWorkflow); the JSONs are git-LFS-tracked, commit them.
+# See docs/seed-data.md.
+dump-llm-seed-data:
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run dump-llm-seed-data'
+
 seed-s3-ingest:
   rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-ingest lcdevs3:${S3_INGEST_BUCKET}
 seed-s3-public:
@@ -123,6 +132,29 @@ seed-s3-backup:
 seed-s3: seed-s3-ingest seed-s3-public seed-s3-backup
 
 seed: seed-s3 seed-db
+
+# Regenerate a real seed transcript.json for one upload by running the actual
+# transcribe pipeline (whisper + CTC align + titanet diarize + wtpsplit) against
+# the upload's existing HLS audio. Writes directly to
+# `seed-data/lcdevs3/letschurch-dev-public/{uuid}/transcript.json` (via the
+# `./seed-data:/seed-data` bind mount) so the next `just seed` picks it up.
+# Default model is `base.en`; pass a second arg for prod quality, e.g.
+# `just regenerate-seed-transcript <uuid> large-v3` (first run downloads ~3GB).
+# See `docs/seed-data.md` for the end-to-end workflow.
+regenerate-seed-transcript uuid model="base.en":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  hls_dir="seed-data/lcdevs3/letschurch-dev-public/{{uuid}}"
+  if [ ! -f "$hls_dir/AUDIO.m3u8" ]; then
+    echo "no HLS audio at $hls_dir/AUDIO.m3u8" >&2; exit 1
+  fi
+  echo "running transcribe pipeline (whisper={{model}}) — first new model downloads into the container's cache"
+  docker compose exec transcribe-worker sh -c \
+    "cd /app && uv run --no-sync python scripts/transcribe_file.py \
+      --input /seed-data/lcdevs3/letschurch-dev-public/{{uuid}}/AUDIO.m3u8 \
+      --output /seed-data/lcdevs3/letschurch-dev-public/{{uuid}}/transcript.json \
+      --whisper-model {{model}}"
+  echo "wrote $hls_dir/transcript.json"
 
 reset:
   just stop

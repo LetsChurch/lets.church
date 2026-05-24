@@ -1,5 +1,6 @@
 import { Tabs } from '@base-ui-components/react/tabs';
 import type { UploadLicense } from '@letschurch/db/types';
+import { IconSparkles } from '@tabler/icons-react';
 import { useEffect, useRef } from 'react';
 import { LcTooltip } from '@/components/lc-tooltip';
 import { $setPlayAt } from '@/stores/player';
@@ -7,6 +8,7 @@ import { getLicenseInfo } from '@/util/license';
 
 type MediaInfoTabsProps = {
   descriptionHtml: string | null;
+  summary: string | null;
   viewCount: number;
   publishedAt: Date | null;
   createdAt: Date;
@@ -24,6 +26,7 @@ type MediaInfoTabsProps = {
 
 export function MediaInfoTabs({
   descriptionHtml,
+  summary,
   viewCount,
   publishedAt,
   createdAt,
@@ -79,20 +82,33 @@ export function MediaInfoTabs({
             Details
           </span>
         </Tabs.Tab>
-        <LcTooltip
-          content="Coming soon"
-          render={
-            <Tabs.Tab
-              value="summary"
-              className="relative pt-1.5 pb-2"
-              disabled
-            />
-          }
-        >
-          <span className="font-medium text-primary/30 text-sm data-selected:text-primary data-selected:opacity-100">
-            Summary
-          </span>
-        </LcTooltip>
+        {summary ? (
+          <Tabs.Tab value="summary" className="relative pt-1.5 pb-2">
+            <span className="inline-flex items-center gap-1 font-medium text-primary/70 text-sm data-selected:text-primary data-selected:opacity-100">
+              <IconSparkles size={14} aria-hidden="true" />
+              Summary
+            </span>
+          </Tabs.Tab>
+        ) : (
+          // No summary yet — keep the tab visible but disabled so users know
+          // it's a planned surface, not a missing feature. Sparkles still
+          // appears so the icon's presence is consistent across both states.
+          <LcTooltip
+            content="Coming soon"
+            render={
+              <Tabs.Tab
+                value="summary"
+                className="relative pt-1.5 pb-2"
+                disabled
+              />
+            }
+          >
+            <span className="inline-flex items-center gap-1 font-medium text-primary/30 text-sm data-selected:text-primary data-selected:opacity-100">
+              <IconSparkles size={14} aria-hidden="true" />
+              Summary
+            </span>
+          </LcTooltip>
+        )}
         {showTranscriptTab ? (
           <button
             type="button"
@@ -192,9 +208,18 @@ export function MediaInfoTabs({
 
       {/* Summary Content */}
       <Tabs.Panel value="summary" className="relative text-left">
-        <p className="p-5 text-primary text-sm leading-[1.4]">
-          Summary content goes here
-        </p>
+        {summary ? (
+          // LLM-generated narrative summary from upload_record.summary
+          // (produced by the summarize-upload activity). Plain prose — no
+          // markdown — so render as text with preserved line breaks.
+          <p className="whitespace-pre-line p-5 text-primary text-sm leading-[1.5]">
+            {summary}
+          </p>
+        ) : (
+          <p className="p-5 text-primary/70 text-sm leading-[1.4]">
+            A summary has not yet been generated for this media.
+          </p>
+        )}
       </Tabs.Panel>
     </Tabs.Root>
   );

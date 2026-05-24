@@ -173,6 +173,9 @@ export const mediaProcedures = {
           license: true,
           transcribingFinishedAt: true,
           visibility: true,
+          // LLM-generated display summary (Summary tab). Null until the
+          // post-transcript summarize-upload activity has run for this upload.
+          summary: true,
         },
         with: {
           channel: {

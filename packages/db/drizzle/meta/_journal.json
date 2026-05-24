@@ -57,6 +57,13 @@
       "when": 1779483461030,
       "tag": "0007_transcript_paragraph",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1779506466114,
+      "tag": "0008_summaries_and_embeddings",
+      "breakpoints": true
     }
   ]
 }

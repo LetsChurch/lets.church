@@ -5,11 +5,12 @@ import {
   OrganizationAddress,
   OrganizationOrganizationAssociation,
   OrganizationTagInstance,
+  TranscriptParagraph,
   UploadRecord,
 } from '@letschurch/db';
 import { client, escapeDocument } from '@letschurch/elasticsearch';
 import { publicS3 } from '@letschurch/s3/public';
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
 import logger from '../../util/logger';
@@ -19,7 +20,12 @@ const moduleLogger = logger.child({
   module: 'temporal/activities/background/index-document',
 });
 
-export type DocumentKind = 'transcript' | 'upload' | 'organization' | 'channel';
+export type DocumentKind =
+  | 'transcript'
+  | 'upload'
+  | 'organization'
+  | 'channel'
+  | 'media';
 
 async function getDocument(
   kind: DocumentKind,
@@ -233,6 +239,96 @@ async function getDocument(
             return r[0];
           }),
       };
+    case 'media': {
+      log.info('Fetching upload + channel + paragraphs');
+      const upRecRow = await db
+        .select({
+          channelId: UploadRecord.channelId,
+          title: UploadRecord.title,
+          description: UploadRecord.description,
+          visibility: UploadRecord.visibility,
+          publishedAt: UploadRecord.publishedAt,
+          lengthSeconds: UploadRecord.lengthSeconds,
+          transcodingFinishedAt: UploadRecord.transcodingFinishedAt,
+          transcribingFinishedAt: UploadRecord.transcribingFinishedAt,
+          summary: UploadRecord.summary,
+          summaryEmbedding: UploadRecord.summaryEmbedding,
+          searchSummaryEmbedding: UploadRecord.searchSummaryEmbedding,
+        })
+        .from(UploadRecord)
+        .where(eq(UploadRecord.id, documentId))
+        .then((r) => r[0]);
+
+      invariant(upRecRow, `Upload record ${documentId} not found`);
+
+      // Uploads that haven't yet been through the LLM post-processing pipeline
+      // (legacy data, or a partial re-process) get skipped here. The caller
+      // (`indexDocument`) treats a null return as a no-op so reindex jobs over
+      // mixed populations don't error.
+      if (!upRecRow.summaryEmbedding || !upRecRow.searchSummaryEmbedding) {
+        log.warn('No summary embedding present; skipping lc_media_v1 write');
+        return null;
+      }
+
+      const channelRow = await db
+        .select({
+          name: Channel.name,
+          visibility: Channel.visibility,
+          approvedAt: Channel.approvedAt,
+        })
+        .from(Channel)
+        .where(eq(Channel.id, upRecRow.channelId))
+        .then((r) => r[0]);
+
+      invariant(
+        channelRow,
+        `Channel not found for upload record ${documentId}`,
+      );
+
+      const paragraphs = await db
+        .select({
+          order: TranscriptParagraph.order,
+          start: TranscriptParagraph.start,
+          end: TranscriptParagraph.end,
+          speaker: TranscriptParagraph.speaker,
+          text: TranscriptParagraph.text,
+          embedding: TranscriptParagraph.embedding,
+        })
+        .from(TranscriptParagraph)
+        .where(eq(TranscriptParagraph.uploadRecordId, documentId))
+        .orderBy(asc(TranscriptParagraph.order));
+
+      return {
+        index: 'lc_media_v1',
+        id: documentId,
+        document: escapeDocument({
+          channelId: upRecRow.channelId,
+          visibility: upRecRow.visibility,
+          channelVisibility: channelRow.visibility,
+          channelApprovedAt: channelRow.approvedAt?.toISOString() ?? null,
+          publishedAt: upRecRow.publishedAt.toISOString(),
+          lengthSeconds: upRecRow.lengthSeconds,
+          transcodingFinishedAt:
+            upRecRow.transcodingFinishedAt?.toISOString() ?? null,
+          transcribingFinishedAt:
+            upRecRow.transcribingFinishedAt?.toISOString() ?? null,
+          title: upRecRow.title,
+          description: upRecRow.description,
+          channelName: channelRow.name,
+          summary: upRecRow.summary,
+          summaryEmbedding: upRecRow.summaryEmbedding,
+          searchSummaryEmbedding: upRecRow.searchSummaryEmbedding,
+          paragraphs: paragraphs.map((p) => ({
+            order: p.order,
+            start: p.start,
+            end: p.end,
+            speaker: p.speaker,
+            text: p.text,
+            embedding: p.embedding,
+          })),
+        }),
+      };
+    }
     default: {
       const un: never = kind;
       throw new Error(`Unknown document kind: ${un}`);
@@ -262,6 +358,13 @@ export default async function indexDocument(
     activityLogger,
     s3UploadKey,
   );
+
+  if (doc === null) {
+    // getDocument decided to skip this write (e.g. lc_media_v1 when the
+    // upload hasn't been LLM-post-processed yet). Not an error.
+    activityLogger.info('Skipped (no document to index)');
+    return;
+  }
 
   const indexRes = await client.index({
     index: doc.index,

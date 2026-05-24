@@ -15,8 +15,10 @@ import {
   TRANSCODE_QUEUE,
   TRANSCRIBE_QUEUE,
 } from '../../queues';
+import { UPLOAD_ID_KEY } from '../../search-attributes';
 import { probeIsVideoFile } from '../../util/zod';
 import { indexDocumentWorkflow } from './index-document';
+import { summarizeUploadWorkflow } from './summarize-upload';
 
 const { probe } = proxyActivities<typeof probeActivities>({
   startToCloseTimeout: '20 minutes',
@@ -62,6 +64,14 @@ export async function processMediaWorkflow(
   targetId: string,
   scope: 'transcode' | 'transcribe' | 'everything' = 'everything',
 ) {
+  // Propagate UploadId to every child / grandchild so the whole tree is
+  // searchable in the Temporal UI by upload. Temporal does NOT inherit
+  // search attributes automatically — see handle-multipart-media-upload.ts
+  // for the same pattern. Other keys (channel, user) aren't readily
+  // available here without an extra DB lookup; UploadId alone is enough to
+  // navigate the tree.
+  const childSearchAttrs = [{ key: UPLOAD_ID_KEY, value: targetId }];
+
   try {
     const s3UploadKey = await getFinalizedUploadKey(targetId);
 
@@ -92,10 +102,26 @@ export async function processMediaWorkflow(
         args: ['transcript', targetId, res.transcriptKey],
         taskQueue: BACKGROUND_QUEUE,
         priority: { priorityKey: PRIORITY_USER },
+        typedSearchAttributes: childSearchAttrs,
         retry: { maximumAttempts: 2 },
       });
 
       await storeTranscriptParagraphs(targetId, res.transcriptJsonKey);
+
+      // LLM post-processing + new search-index write — same pipeline the
+      // admin "Regenerate Summary" action invokes, so prompt/schema changes
+      // stay in one place. `embedParagraphs: true` because paragraphs are
+      // fresh from storeTranscriptParagraphs and need embedding for the
+      // first time (the admin path defaults this to false since paragraph
+      // text is stable across summary regens).
+      await executeChild(summarizeUploadWorkflow, {
+        workflowId: `summarizeUpload:on-transcribe:${s3UploadKey}`,
+        args: [targetId, { embedParagraphs: true }],
+        taskQueue: BACKGROUND_QUEUE,
+        priority: { priorityKey: PRIORITY_USER },
+        typedSearchAttributes: childSearchAttrs,
+        retry: { maximumAttempts: 2 },
+      });
     }
 
     await executeChild(indexDocumentWorkflow, {
@@ -103,6 +129,7 @@ export async function processMediaWorkflow(
       args: ['upload', targetId],
       taskQueue: BACKGROUND_QUEUE,
       priority: { priorityKey: PRIORITY_USER },
+      typedSearchAttributes: childSearchAttrs,
       retry: { maximumAttempts: 2 },
     });
   } catch (err) {

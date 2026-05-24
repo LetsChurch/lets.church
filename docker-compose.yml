@@ -77,6 +77,10 @@ services:
       - /usr/src/app/packages/temporal/node_modules
       - ./packages/web:/usr/src/app/packages/web
       - /usr/src/app/packages/web/node_modules
+      # Seed-data LLM snapshots — read at seed time by dev.ts (the JSONs
+      # under seed-data/llm/ aren't S3-synced, they're consumed directly off
+      # disk). Also lets `just dump-llm-seed-data` write back into the repo.
+      - ./seed-data:/seed-data
 
   background-worker:
     build:
@@ -97,6 +101,8 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1m
       WEB_URL: ${HOST_WEB_URL}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OPENROUTER_SUMMARY_MODEL: ${OPENROUTER_SUMMARY_MODEL:-openai/gpt-5.4-mini}
       <<: [*s3-ingest-env, *s3-public-env, *s3-backup-env]
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
@@ -216,6 +222,12 @@ services:
       <<: [*s3-ingest-env, *s3-public-env]
     volumes:
       - ./services/transcribe/src:/app/src
+      # Tooling for `just regenerate-seed-transcript` — bind the scripts and
+      # seed-data into the container so the seed-generation CLI can read HLS
+      # playlists directly and write transcript.json straight back into the
+      # repo's seed-data tree without docker-cp round-trips.
+      - ./services/transcribe/scripts:/app/scripts
+      - ./seed-data:/seed-data
     depends_on:
       - temporal
 

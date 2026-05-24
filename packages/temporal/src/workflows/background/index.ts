@@ -66,6 +66,7 @@ export {
   type SendVerificationEmailArgs,
   sendVerificationEmailWorkflow,
 } from './send-verification-email';
+export { summarizeUploadWorkflow } from './summarize-upload';
 export { updateCommentScoresWorkflow } from './update-comment-scores';
 export { updateDailySaltWorkflow } from './update-daily-salt';
 export {

@@ -10,6 +10,7 @@ import {
   OrganizationChannelAssociation,
   OrganizationTag,
   SearchLogEntry,
+  TranscriptParagraph,
   UploadRecord,
   UploadState,
 } from '@letschurch/db';
@@ -20,11 +21,13 @@ import {
   CURRENT_PIPELINE_VERSION,
   PRIORITY_RETRY,
 } from '@letschurch/temporal/queues';
+import { UPLOAD_ID_KEY } from '@letschurch/temporal/search-attributes';
 import {
   deleteChannelWorkflow,
   geocodeOrganizationWorkflow,
   postUserRegistrationWorkflow,
   processMediaWorkflow,
+  summarizeUploadWorkflow,
 } from '@letschurch/temporal/workflows/background';
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
@@ -69,6 +72,7 @@ import {
   getRemuxWorkflowStatus,
   getReprocessWorkflowStatus,
   makeProcessMediaWorkflowId,
+  makeSummarizeUploadWorkflowId,
   type ReindexKind,
   type RemuxScope,
   type ReprocessScope,
@@ -3165,6 +3169,134 @@ export const adminRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to retry upload processing',
+        });
+      }
+    }),
+
+  // Re-runs the LLM summary chain (summarize + embed summaries + reindex
+  // lc_media_v1) for a single upload, without re-transcribing. Useful for
+  // spot-fixing summaries after a prompt change.
+  regenerateUploadSummary: adminProcedure
+    .input(
+      z.object({
+        uploadRecordId: z.uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          targetId: input.uploadRecordId,
+        },
+        'Regenerating upload summary',
+      );
+
+      try {
+        const upload = await db.query.UploadRecord.findFirst({
+          where: (t, { eq }) => eq(t.id, input.uploadRecordId),
+          columns: {
+            id: true,
+            transcribingFinishedAt: true,
+          },
+        });
+
+        if (!upload) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Upload not found',
+          });
+        }
+
+        if (!upload.transcribingFinishedAt) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Upload has not finished transcribing',
+          });
+        }
+
+        // Probe for at least one paragraph so we can refuse cleanly on legacy
+        // uploads that haven't been through the new transcribe pipeline (the
+        // summarize activity would otherwise fail mid-run with a less obvious
+        // error). `select 1 ... limit 1` rather than a count — we only need
+        // existence.
+        const hasParagraph = await db
+          .select({ id: TranscriptParagraph.id })
+          .from(TranscriptParagraph)
+          .where(eq(TranscriptParagraph.uploadRecordId, input.uploadRecordId))
+          .limit(1);
+
+        if (hasParagraph.length === 0) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message:
+              'Upload has no transcript paragraphs — reprocess through the full pipeline first',
+          });
+        }
+
+        const temporalClient = await client;
+        const workflowId = makeSummarizeUploadWorkflowId(input.uploadRecordId);
+
+        // Refuse a second run while one is in flight. Mirrors
+        // retryUploadProcessing's RUNNING check (an unknown workflow id
+        // throws, which is fine — we'll start it below).
+        try {
+          const handle = temporalClient.workflow.getHandle(workflowId);
+          const description = await handle.describe();
+          if (description.status.name === 'RUNNING') {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Summary regeneration is already running',
+            });
+          }
+        } catch (error) {
+          if (error instanceof TRPCError) {
+            throw error;
+          }
+        }
+
+        await temporalClient.workflow.start(summarizeUploadWorkflow, {
+          taskQueue: BACKGROUND_QUEUE,
+          workflowId,
+          args: [input.uploadRecordId],
+          retry: { maximumAttempts: 3 },
+          // Same convention as the rest of the upload-scoped workflows so
+          // the run is filterable by UploadId in the Temporal UI.
+          typedSearchAttributes: [
+            { key: UPLOAD_ID_KEY, value: input.uploadRecordId },
+          ],
+          // Reuse: this id is per-upload (no timestamp), so allow re-runs to
+          // replace the previous completion.
+          workflowIdReusePolicy: 'ALLOW_DUPLICATE',
+        });
+
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.uploadRecordId,
+          },
+          'Summary regeneration workflow started',
+        );
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.uploadRecordId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to regenerate upload summary',
+        );
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to regenerate upload summary',
         });
       }
     }),

@@ -31,6 +31,7 @@ import {
   IconEyeOff,
   IconPhoto,
   IconRefresh,
+  IconSparkles,
   IconStar,
   IconStarFilled,
   IconTrash,
@@ -364,6 +365,32 @@ function ChannelUploadPage() {
       onError: (error) => {
         showFailure({
           message: error.message || 'Failed to retry upload processing',
+        });
+      },
+    }),
+  );
+
+  // Re-runs only the LLM summary chain for this upload (summarize + embed +
+  // lc_media_v1 reindex). Cheap (~$0.005), no whisper involvement. Useful
+  // after prompt changes for spot-fixing existing summaries without a full
+  // reprocess.
+  const regenerateSummaryMutation = useMutation(
+    trpc.dashboard.admin.regenerateUploadSummary.mutationOptions({
+      onSuccess: async () => {
+        showSuccess({
+          message:
+            'Summary regeneration started. Refresh in a minute to see the new summary.',
+        });
+        await queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getUploadRecord.queryKey({
+            channelId,
+            uploadId,
+          }),
+        });
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to regenerate summary',
         });
       },
     }),
@@ -936,6 +963,26 @@ function ChannelUploadPage() {
                 fullWidth
               >
                 Retry Processing
+              </Button>
+            ) : null}
+
+            {/* Regenerate Summary - site admins, on uploads that have finished
+                transcribing. Server-side guards against legacy uploads with no
+                transcript paragraphs. */}
+            {isSiteAdmin && upload.transcribingFinishedAt ? (
+              <Button
+                variant="light"
+                color="indigo"
+                leftSection={<IconSparkles size={16} />}
+                onClick={() => {
+                  regenerateSummaryMutation.mutate({
+                    uploadRecordId: uploadId,
+                  });
+                }}
+                loading={regenerateSummaryMutation.isPending}
+                fullWidth
+              >
+                Regenerate Summary
               </Button>
             ) : null}
 

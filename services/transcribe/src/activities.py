@@ -33,6 +33,7 @@ from .alignment import align_segments
 from .audio import convert_to_wav, load_audio
 from .diarization import assign_word_speakers
 from .models import get_model_manager
+from .pipeline import build_transcript_json, iter_whisper_segments
 from .segmentation import process_speaker_segments
 from .storage import get_s3_client, update_upload_record
 from .vtt import segments_to_plaintext, segments_to_vtt
@@ -125,26 +126,12 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
 
         segments: list[dict[str, Any]] = []
         duration = info.duration or 1.0
-        for seg in segments_iter:
-            words: list[dict[str, Any]] = []
-            for w in seg.words or []:
-                words.append(
-                    {
-                        "word": w.word.strip() if w.word else "",
-                        "start": round(w.start, 3),
-                        "end": round(w.end, 3),
-                        "probability": round(w.probability, 4),
-                    }
-                )
-            segments.append(
-                {
-                    "start": round(seg.start, 3),
-                    "end": round(seg.end, 3),
-                    "text": seg.text.strip(),
-                    "words": words,
-                }
-            )
-            frac = min(seg.end / duration, 1.0)
+        # iter_whisper_segments yields each segment as a dict; we accumulate
+        # while emitting progress so the worker doesn't block on a final
+        # `await` after the entire (potentially long) transcription completes.
+        for seg in iter_whisper_segments(segments_iter):
+            segments.append(seg)
+            frac = min(seg["end"] / duration, 1.0)
             await progress.update(round(0.15 + frac * 0.40, 4))
 
         await progress.update(0.55, force=True)
@@ -190,53 +177,16 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
         vtt_text = segments_to_vtt(segments)
         plain_text = segments_to_plaintext(segments)
 
-        # 5. Build the transcript JSON. This is the JS-consumed contract, so keys
-        # are camelCase (internal Python dicts above stay snake_case). Sentence-level
-        # segments carry paragraph markers + per-word timings; the new paragraph
-        # storage activity is the sole consumer.
-        json_segments: list[dict[str, Any]] = []
-        for seg in segments:
-            json_words: list[dict[str, Any]] = []
-            for w in seg.get("words", []):
-                word_dict: dict[str, Any] = {
-                    "word": str(w["word"]),
-                    "start": float(w["start"]),
-                    "end": float(w["end"]),
-                    "probability": float(w.get("probability", 1.0)),
-                    "speaker": w.get("speaker"),
-                }
-                # `original_*` are populated by `align_segments`; absent on
-                # words that fell back to whisper timings (start/end already
-                # are the originals there).
-                if "original_start" in w:
-                    word_dict["originalStart"] = float(w["original_start"])
-                    word_dict["originalEnd"] = float(w["original_end"])
-                json_words.append(word_dict)
-
-            # Derive segment-level originals from the words' originals so they
-            # survive wtpsplit re-segmentation (which rebuilds segment bounds
-            # from words). Skipped when no word carries originals.
-            originals = [w for w in json_words if "originalStart" in w]
-            seg_dict: dict[str, Any] = {
-                "start": float(seg.get("start", 0.0)),
-                "end": float(seg.get("end", 0.0)),
-                "text": str(seg.get("text", "")),
-                "speaker": seg.get("speaker"),
-                "paragraphIdx": seg.get("paragraph_idx"),
-                "isParagraphStart": seg.get("is_paragraph_start"),
-                "words": json_words,
-            }
-            if originals:
-                seg_dict["originalStart"] = originals[0]["originalStart"]
-                seg_dict["originalEnd"] = originals[-1]["originalEnd"]
-            json_segments.append(seg_dict)
-        transcript_json = {
-            "language": info.language or "en",
-            "duration": info.duration,
-            "text": plain_text,
-            "speakerEmbeddings": speaker_vectors,
-            "segments": json_segments,
-        }
+        # 5. Build the transcript JSON via the shared camelCase serializer
+        # (`src/pipeline.py`). Internal Python dicts stay snake_case; only
+        # this final shape goes to JS consumers.
+        transcript_json = build_transcript_json(
+            segments=segments,
+            speaker_vectors=speaker_vectors,
+            language=info.language or "en",
+            duration=info.duration,
+            plain_text=plain_text,
+        )
 
         vtt_path = work_dir / "transcript.vtt"
         json_path = work_dir / "transcript.json"
