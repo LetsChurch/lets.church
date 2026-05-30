@@ -11,6 +11,7 @@ import {
   Image,
   Loader,
   LoadingOverlay,
+  Menu,
   Modal,
   Progress,
   Radio,
@@ -26,6 +27,7 @@ import { Dropzone } from '@mantine/dropzone';
 import { useStore } from '@nanostores/react';
 import {
   IconCheck,
+  IconChevronDown,
   IconCopy,
   IconEye,
   IconEyeOff,
@@ -189,6 +191,11 @@ function ChannelUploadPage() {
   const [thumbnailUrlBeforeUpload, setThumbnailUrlBeforeUpload] = useState<
     string | null
   >(null);
+  // Disable the LLM Eval menu item while the route transition is in
+  // flight so a fast double-click can't fire `navigate` twice. The state
+  // is only flipped back on navigate's rejection — the resolved case
+  // unmounts this route, so the cleanup is implicit.
+  const [navigatingToLlmEval, setNavigatingToLlmEval] = useState(false);
 
   // Series state variables
   const [seriesSearchValue, setSeriesSearchValue] = useState('');
@@ -956,125 +963,161 @@ function ChannelUploadPage() {
               View Media Page
             </Button>
 
-            {/* Featured Toggle - Only for site admins */}
-            {isSiteAdmin ? (
-              <Button
-                variant={upload.isFeatured ? 'filled' : 'light'}
-                color={upload.isFeatured ? 'yellow' : 'gray'}
-                leftSection={
-                  upload.isFeatured ? (
-                    <IconStarFilled size={16} />
-                  ) : (
-                    <IconStar size={16} />
-                  )
-                }
-                onClick={() => {
-                  toggleFeaturedMutation.mutate({ uploadId });
-                }}
-                loading={toggleFeaturedMutation.isPending}
-                disabled={isProcessing}
-                fullWidth
-              >
-                {upload.isFeatured ? 'Remove from Featured' : 'Feature'}
-              </Button>
-            ) : null}
+            {/* Consolidated admin actions. Trigger renders for anyone with
+                some admin scope (channel OR site); items inside are gated
+                by the same scope each standalone button had before — site
+                admins see feature/retry/regen/eval, channel admins see
+                only delete, site admins see both groups separated by a
+                divider. */}
+            {isAdmin ? (
+              <Menu position="bottom-end" width="target" withinPortal>
+                <Menu.Target>
+                  <Button
+                    variant="light"
+                    color="gray"
+                    rightSection={<IconChevronDown size={14} />}
+                    fullWidth
+                  >
+                    Admin actions
+                  </Button>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  {isSiteAdmin ? (
+                    <>
+                      <Menu.Item
+                        leftSection={
+                          toggleFeaturedMutation.isPending ? (
+                            <Loader size={14} />
+                          ) : upload.isFeatured ? (
+                            <IconStarFilled size={16} />
+                          ) : (
+                            <IconStar size={16} />
+                          )
+                        }
+                        onClick={() => {
+                          toggleFeaturedMutation.mutate({ uploadId });
+                        }}
+                        disabled={
+                          isProcessing || toggleFeaturedMutation.isPending
+                        }
+                      >
+                        {upload.isFeatured ? 'Remove from Featured' : 'Feature'}
+                      </Menu.Item>
 
-            {/* Retry Button - Only for site admins on failed uploads without active workflows */}
-            {isSiteAdmin && isFailedUpload ? (
-              <Button
-                variant="light"
-                color="orange"
-                leftSection={<IconRefresh size={16} />}
-                onClick={() => {
-                  retryUploadMutation.mutate({ uploadRecordId: uploadId });
-                }}
-                loading={retryUploadMutation.isPending}
-                fullWidth
-              >
-                Retry Processing
-              </Button>
-            ) : null}
+                      {isFailedUpload ? (
+                        <Menu.Item
+                          leftSection={
+                            retryUploadMutation.isPending ? (
+                              <Loader size={14} />
+                            ) : (
+                              <IconRefresh size={16} />
+                            )
+                          }
+                          onClick={() => {
+                            retryUploadMutation.mutate({
+                              uploadRecordId: uploadId,
+                            });
+                          }}
+                          disabled={retryUploadMutation.isPending}
+                        >
+                          Retry Processing
+                        </Menu.Item>
+                      ) : null}
 
-            {/* Regenerate Summary / Annotations - site admins, on uploads
-                that have finished transcribing. Server-side guards against
-                legacy uploads with no transcript paragraphs. Two separate
-                buttons because the underlying workflows are independent —
-                only pay for the side you're iterating on. */}
-            {isSiteAdmin && upload.transcribingFinishedAt ? (
-              <Button
-                variant="light"
-                color="indigo"
-                leftSection={<IconSparkles size={16} />}
-                onClick={() => {
-                  regenerateSummaryMutation.mutate({
-                    uploadRecordId: uploadId,
-                  });
-                }}
-                loading={regenerateSummaryMutation.isPending}
-                fullWidth
-              >
-                Regenerate Summary
-              </Button>
-            ) : null}
+                      {/* Summary / annotation regen + LLM eval depend on
+                          paragraphs from transcribe. Server-side guards
+                          also reject legacy uploads with no paragraphs. */}
+                      {upload.transcribingFinishedAt ? (
+                        <>
+                          <Menu.Item
+                            leftSection={
+                              regenerateSummaryMutation.isPending ? (
+                                <Loader size={14} />
+                              ) : (
+                                <IconSparkles size={16} />
+                              )
+                            }
+                            onClick={() => {
+                              regenerateSummaryMutation.mutate({
+                                uploadRecordId: uploadId,
+                              });
+                            }}
+                            disabled={regenerateSummaryMutation.isPending}
+                          >
+                            Regenerate Summary
+                          </Menu.Item>
 
-            {isSiteAdmin && upload.transcribingFinishedAt ? (
-              <Button
-                variant="light"
-                color="indigo"
-                leftSection={<IconSparkles size={16} />}
-                onClick={() => {
-                  regenerateAnnotationsMutation.mutate({
-                    uploadRecordId: uploadId,
-                  });
-                }}
-                loading={regenerateAnnotationsMutation.isPending}
-                fullWidth
-              >
-                Regenerate Annotations
-              </Button>
-            ) : null}
+                          <Menu.Item
+                            leftSection={
+                              regenerateAnnotationsMutation.isPending ? (
+                                <Loader size={14} />
+                              ) : (
+                                <IconSparkles size={16} />
+                              )
+                            }
+                            onClick={() => {
+                              regenerateAnnotationsMutation.mutate({
+                                uploadRecordId: uploadId,
+                              });
+                            }}
+                            disabled={regenerateAnnotationsMutation.isPending}
+                          >
+                            Regenerate Annotations
+                          </Menu.Item>
 
-            {/* LLM Eval — site admins, on uploads that have finished
-                transcribing. Opens the side-by-side model evaluator with
-                this upload + the current annotate/summary defaults
-                pre-filled in the URL. Read-only — never mutates this
-                upload's stored summary or annotations. */}
-            {isSiteAdmin && upload.transcribingFinishedAt ? (
-              <Button
-                onClick={() => {
-                  // Mantine's polymorphic <Button component={Link}> loses
-                  // TanStack Router's typed-route generic, so the
-                  // typed-search prop can't be passed that way. Plain
-                  // navigate() keeps the search typed.
-                  void navigate({
-                    to: '/dashboard/admin/llm-eval',
-                    search: {
-                      uploadId,
-                      task: 'annotate',
-                      models: 'openai/gpt-5.4-mini',
-                    },
-                  });
-                }}
-                variant="light"
-                color="violet"
-                leftSection={<IconFlask size={16} />}
-                fullWidth
-              >
-                LLM Eval
-              </Button>
-            ) : null}
+                          <Menu.Item
+                            leftSection={
+                              navigatingToLlmEval ? (
+                                <Loader size={14} />
+                              ) : (
+                                <IconFlask size={16} />
+                              )
+                            }
+                            onClick={() => {
+                              // Mantine's polymorphic <Menu.Item
+                              // component={Link}> loses TanStack Router's
+                              // typed-route generic, so the typed-search
+                              // prop can't be passed that way. Plain
+                              // navigate() keeps the search typed.
+                              setNavigatingToLlmEval(true);
+                              navigate({
+                                to: '/dashboard/admin/llm-eval',
+                                search: {
+                                  uploadId,
+                                  task: 'annotate',
+                                  models: 'openai/gpt-5.4-mini',
+                                },
+                              }).catch(() => {
+                                // Resolved case unmounts this route; this
+                                // branch only fires if navigation rejects
+                                // (e.g. beforeLoad guard redirect) and we
+                                // stay mounted — clear the spinner so the
+                                // item is clickable again.
+                                setNavigatingToLlmEval(false);
+                              });
+                            }}
+                            disabled={navigatingToLlmEval}
+                          >
+                            LLM Eval
+                          </Menu.Item>
+                        </>
+                      ) : null}
+                    </>
+                  ) : null}
 
-            {/* Delete Button - Only for channel admins and site admins */}
-            {canDelete ? (
-              <Button
-                variant="light"
-                color="red"
-                leftSection={<IconTrash size={16} />}
-                onClick={() => setShowDeleteModal(true)}
-                fullWidth
-              >
-                Delete Upload
-              </Button>
+                  {isSiteAdmin && canDelete ? <Menu.Divider /> : null}
+
+                  {canDelete ? (
+                    <Menu.Item
+                      color="red"
+                      leftSection={<IconTrash size={16} />}
+                      onClick={() => setShowDeleteModal(true)}
+                    >
+                      Delete Upload
+                    </Menu.Item>
+                  ) : null}
+                </Menu.Dropdown>
+              </Menu>
             ) : null}
 
             {/* Player or Progress Bars */}
