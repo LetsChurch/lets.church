@@ -52,6 +52,15 @@ export function makeSummarizeUploadWorkflowId(uploadRecordId: string) {
   return `summarizeUpload:${uploadRecordId}`;
 }
 
+// Per-upload run of the annotation pipeline (`annotateTranscriptWorkflow`):
+// outline + scripture + keyword annotations, then a media-doc reindex so the
+// new annotations land in lc_media_v1. Independent of the summary workflow
+// — admins regenerate either one on its own. Same no-timestamp / refuse-
+// concurrent rationale as the summary id.
+export function makeAnnotateTranscriptWorkflowId(uploadRecordId: string) {
+  return `annotateTranscript:${uploadRecordId}`;
+}
+
 export function makeRecordDownloadSizeWorkflowId(
   uploadRecordId: string,
   variant?: string,

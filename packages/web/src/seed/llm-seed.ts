@@ -67,5 +67,17 @@ export type LlmSeedSnapshot = {
     text: string;
     words: Array<{ word: string; start: number; end: number }>;
     embedding: number[] | null;
+    // Automatic annotations produced by the annotate-transcript activity:
+    // OUTLINE (block-level headings, no offsets — title in metadata),
+    // BIBLE + KEYWORD (inline, half-open [startWord, endWord) ranges into
+    // the `words` array above, debug-only `rawSpan` carries the LLM's
+    // verbatim text). Empty array for paragraphs the model didn't annotate.
+    annotations: Array<{
+      kind: 'OUTLINE' | 'BIBLE' | 'KEYWORD';
+      startWord: number | null;
+      endWord: number | null;
+      rawSpan: string | null;
+      metadata: Record<string, unknown>;
+    }>;
   }>;
 };

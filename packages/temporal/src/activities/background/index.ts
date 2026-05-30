@@ -16,6 +16,7 @@ export { updateImportRun } from '../import-source/update-import-run';
 export { updateImportSourceTimestamps } from '../import-source/update-import-source-timestamps';
 export { updateImportSourceWorkflowStatus } from '../import-source/update-import-source-workflow-status';
 export { default as abortMultipartUpload } from './abort-multipart-upload';
+export { default as annotateTranscript } from './annotate-transcript';
 export {
   type BackfillFilenamesBatchResult,
   backfillFilenamesBatch,

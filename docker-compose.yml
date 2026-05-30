@@ -60,6 +60,13 @@ services:
       TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
       WEB_URL: ${HOST_WEB_URL}
       ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
+      # OpenRouter access for the admin LLM-eval surface
+      # (`evaluateLlmModel` tRPC mutation) and for dev-only seed bootstrap
+      # scripts (`just generate-seed-annotations`) — both execute inside
+      # this container and call OpenRouter directly.
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OPENROUTER_SUMMARY_MODEL: ${OPENROUTER_SUMMARY_MODEL:-openai/gpt-5.4-mini}
+      OPENROUTER_ANNOTATE_MODEL: ${OPENROUTER_ANNOTATE_MODEL:-openai/gpt-5.4-mini}
       <<: [*s3-ingest-env, *s3-public-env]
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
@@ -103,6 +110,7 @@ services:
       WEB_URL: ${HOST_WEB_URL}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       OPENROUTER_SUMMARY_MODEL: ${OPENROUTER_SUMMARY_MODEL:-openai/gpt-5.4-mini}
+      OPENROUTER_ANNOTATE_MODEL: ${OPENROUTER_ANNOTATE_MODEL:-openai/gpt-5.4-mini}
       <<: [*s3-ingest-env, *s3-public-env, *s3-backup-env]
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml

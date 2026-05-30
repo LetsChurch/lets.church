@@ -1,3 +1,4 @@
+export { annotateTranscriptWorkflow } from './annotate-transcript';
 export {
   type BackfillFilenamesWorkflowParams,
   backfillFilenamesWorkflow,

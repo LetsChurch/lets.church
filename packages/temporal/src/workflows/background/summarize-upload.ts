@@ -22,10 +22,19 @@ export type SummarizeUploadOptions = {
    * them is wasted spend.
    */
   embedParagraphs?: boolean;
+  /**
+   * When true, the summarize activity overwrites any existing summary.
+   * Default false: the activity short-circuits if `upload_record.summary`
+   * is already populated, so parent-workflow retries (process-media's
+   * `Promise.allSettled` re-runs the happy-path child if its sibling
+   * fails) don't re-bill LLM tokens for work already done. The admin
+   * "Regenerate Summary" mutation passes `force: true`.
+   */
+  force?: boolean;
 };
 
 /**
- * Shared LLM post-processing pipeline.
+ * LLM summary + embeddings post-processing pipeline.
  *
  *   summarize → embed-summary (sequential)
  *   embed-paragraphs (parallel, opt-in)
@@ -34,7 +43,10 @@ export type SummarizeUploadOptions = {
  * Called as a child workflow from `processMediaWorkflow` on the transcribe
  * path (with `embedParagraphs: true`), and as a top-level workflow from the
  * admin `regenerateUploadSummary` tRPC mutation (default options) when an
- * operator wants to spot-fix a tropey summary without re-transcribing.
+ * operator wants to spot-fix a summary without re-transcribing. Does NOT
+ * run the annotation pipeline — that's `annotateTranscriptWorkflow`, called
+ * separately. Splitting them lets admins regenerate one without paying for
+ * the other.
  *
  * Note: the file/workflow share a name with the `summarizeUpload` activity
  * (different directory, different exported identifier — the workflow appends
@@ -43,11 +55,11 @@ export type SummarizeUploadOptions = {
  */
 export async function summarizeUploadWorkflow(
   uploadRecordId: string,
-  { embedParagraphs = false }: SummarizeUploadOptions = {},
+  { embedParagraphs = false, force = false }: SummarizeUploadOptions = {},
 ) {
   await Promise.all([
     (async () => {
-      await summarizeUpload(uploadRecordId);
+      await summarizeUpload(uploadRecordId, { force });
       await embedUpload(uploadRecordId);
     })(),
     embedParagraphs ? embedTranscriptParagraphs(uploadRecordId) : undefined,

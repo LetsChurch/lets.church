@@ -29,6 +29,7 @@ import {
   IconCopy,
   IconEye,
   IconEyeOff,
+  IconFlask,
   IconPhoto,
   IconRefresh,
   IconSparkles,
@@ -126,6 +127,8 @@ function ProcessingProgress({
 
 function ChannelUploadPage() {
   const { channelId, uploadId } = Route.useParams();
+  // TanStack Router navigate — typed via the route's generated tree, used
+  // both for the post-delete redirect and for the LLM-eval admin shortcut.
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const trpc = useTRPC();
@@ -391,6 +394,32 @@ function ChannelUploadPage() {
       onError: (error) => {
         showFailure({
           message: error.message || 'Failed to regenerate summary',
+        });
+      },
+    }),
+  );
+
+  // Same idea as regenerateSummaryMutation but for the annotation pipeline
+  // (outline + scripture + keyword annotations + lc_media_v1 reindex).
+  // Independent of summary so prompt-tuning loops on either side don't pay
+  // for the other.
+  const regenerateAnnotationsMutation = useMutation(
+    trpc.dashboard.admin.regenerateUploadAnnotations.mutationOptions({
+      onSuccess: async () => {
+        showSuccess({
+          message:
+            'Annotation regeneration started. Refresh in a minute to see the new annotations.',
+        });
+        await queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getUploadRecord.queryKey({
+            channelId,
+            uploadId,
+          }),
+        });
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to regenerate annotations',
         });
       },
     }),
@@ -966,9 +995,11 @@ function ChannelUploadPage() {
               </Button>
             ) : null}
 
-            {/* Regenerate Summary - site admins, on uploads that have finished
-                transcribing. Server-side guards against legacy uploads with no
-                transcript paragraphs. */}
+            {/* Regenerate Summary / Annotations - site admins, on uploads
+                that have finished transcribing. Server-side guards against
+                legacy uploads with no transcript paragraphs. Two separate
+                buttons because the underlying workflows are independent —
+                only pay for the side you're iterating on. */}
             {isSiteAdmin && upload.transcribingFinishedAt ? (
               <Button
                 variant="light"
@@ -983,6 +1014,53 @@ function ChannelUploadPage() {
                 fullWidth
               >
                 Regenerate Summary
+              </Button>
+            ) : null}
+
+            {isSiteAdmin && upload.transcribingFinishedAt ? (
+              <Button
+                variant="light"
+                color="indigo"
+                leftSection={<IconSparkles size={16} />}
+                onClick={() => {
+                  regenerateAnnotationsMutation.mutate({
+                    uploadRecordId: uploadId,
+                  });
+                }}
+                loading={regenerateAnnotationsMutation.isPending}
+                fullWidth
+              >
+                Regenerate Annotations
+              </Button>
+            ) : null}
+
+            {/* LLM Eval — site admins, on uploads that have finished
+                transcribing. Opens the side-by-side model evaluator with
+                this upload + the current annotate/summary defaults
+                pre-filled in the URL. Read-only — never mutates this
+                upload's stored summary or annotations. */}
+            {isSiteAdmin && upload.transcribingFinishedAt ? (
+              <Button
+                onClick={() => {
+                  // Mantine's polymorphic <Button component={Link}> loses
+                  // TanStack Router's typed-route generic, so the
+                  // typed-search prop can't be passed that way. Plain
+                  // navigate() keeps the search typed.
+                  void navigate({
+                    to: '/dashboard/admin/llm-eval',
+                    search: {
+                      uploadId,
+                      task: 'annotate',
+                      models: 'openai/gpt-5.4-mini',
+                    },
+                  });
+                }}
+                variant="light"
+                color="violet"
+                leftSection={<IconFlask size={16} />}
+                fullWidth
+              >
+                LLM Eval
               </Button>
             ) : null}
 

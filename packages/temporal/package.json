@@ -18,6 +18,8 @@
     "./util/temporal": "./src/util/temporal.ts",
     "./util/zod": "./src/util/zod.ts",
     "./util/email": "./src/util/email.ts",
+    "./util/llm": "./src/util/llm.ts",
+    "./util/llm-pricing": "./src/util/llm-pricing.ts",
     "./workflow-ids": "./src/workflow-ids.ts",
     "./search-attributes": "./src/search-attributes.ts"
   },
@@ -43,6 +45,7 @@
     "@tokenizer/s3": "^1.0.1",
     "blurhash": "^2.0.5",
     "crawlee": "^3.15.3",
+    "diff": "^8.0.2",
     "es-toolkit": "catalog:",
     "execa": "^9.6.0",
     "fast-glob": "^3.3.3",

@@ -64,6 +64,34 @@
       "when": 1779506466114,
       "tag": "0008_summaries_and_embeddings",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1779706059466,
+      "tag": "0009_annotations",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1779707721607,
+      "tag": "0010_drop_annotation_text",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1779707735754,
+      "tag": "0011_add_annotation_raw_span",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1780149867570,
+      "tag": "0012_llm-call-tracking",
+      "breakpoints": true
     }
   ]
 }

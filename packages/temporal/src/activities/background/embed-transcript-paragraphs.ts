@@ -1,7 +1,12 @@
 import { db, TranscriptParagraph } from '@letschurch/db';
 import { asc, eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
-import { EMBED_DIMS, EMBED_MODEL, llm } from '../../util/llm';
+import {
+  createEmbeddingsTracked,
+  EMBED_DIMS,
+  EMBED_MODEL,
+  openrouterExtras,
+} from '../../util/llm';
 import logger from '../../util/logger';
 
 const moduleLogger = logger.child({
@@ -42,9 +47,11 @@ export default async function embedTranscriptParagraphs(
   }
 
   activityLogger.info(`Embedding ${rows.length} paragraphs`);
-  const res = await llm.embeddings.create({
+  const res = await createEmbeddingsTracked({
+    tracking: { activity: 'embedTranscriptParagraphs', uploadRecordId },
     model: EMBED_MODEL,
     input: rows.map((r) => r.text),
+    ...(openrouterExtras as Record<string, unknown>),
   });
 
   invariant(

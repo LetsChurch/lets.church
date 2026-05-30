@@ -4,8 +4,10 @@ import {
   boolean,
   doublePrecision,
   foreignKey,
+  index,
   integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
   primaryKey,
@@ -40,6 +42,15 @@ export const InvitationStatus = pgEnum('invitation_status', [
   'DECLINED',
   'EXPIRED',
   'CANCELLED',
+]);
+
+// Kinds of automatic + future-user annotations on transcript_paragraph rows.
+// Today only the three automatic kinds; user/author kinds (USER_PRIVATE,
+// AUTHOR_PUBLIC) will be added via ALTER TYPE when those code paths ship.
+export const AnnotationKind = pgEnum('annotation_kind', [
+  'OUTLINE',
+  'BIBLE',
+  'KEYWORD',
 ]);
 
 export const OrganizationTagCategory = pgEnum('organization_tag_category', [
@@ -872,6 +883,52 @@ export const TranscriptParagraph = pgTable(
     TranscriptParagraph_uploadRecordId_order_idx: uniqueIndex(
       'transcript_paragraph_upload_record_id_order_idx',
     ).on(TranscriptParagraph.uploadRecordId, TranscriptParagraph.order),
+  }),
+);
+
+export const Annotation = pgTable(
+  'annotation',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    paragraphId: uuid('paragraph_id').notNull(),
+    kind: AnnotationKind('kind').notNull(),
+    // Half-open word range [startWord, endWord) into paragraph.words[].
+    // Set for inline kinds (BIBLE, KEYWORD); null for block kinds (OUTLINE
+    // attaches to the whole paragraph as "this paragraph opens a section").
+    // Word-level (not char) granularity is robust to the LLM lightly editing
+    // surrounding text — at worst we lose an annotation, never cut a word.
+    startWord: integer('start_word'),
+    endWord: integer('end_word'),
+    // The LLM's verbatim span (as it returned it). Debug-only: the canonical
+    // text-of-record for an inline annotation is `words[startWord..endWord]`
+    // on the parent paragraph, and OUTLINE titles live in `metadata.title`.
+    // We keep `rawSpan` so SELECT statements show what each row covers
+    // without joining + slicing, and so we can audit cases where the LLM's
+    // span drifts from the canonical word-tokenization. Null for OUTLINE
+    // (no span exists).
+    rawSpan: text('raw_span'),
+    // The only multiplexed column — kind-specific payload. Typed at usage
+    // sites with a small zod schema:
+    //   OUTLINE: { level: 1 | 2 | 3, title: string }
+    //   BIBLE:   { book: string /* OSIS, e.g. "1Cor" */, chapter: number,
+    //              verse?: number, endChapter?: number, endVerse?: number }
+    //   KEYWORD: {} (placeholder for future per-keyword metadata)
+    metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+  },
+  (Annotation) => ({
+    annotation_paragraph_fkey: foreignKey({
+      name: 'annotation_paragraph_fkey',
+      columns: [Annotation.paragraphId],
+      foreignColumns: [TranscriptParagraph.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    annotation_paragraph_kind_idx: index('annotation_paragraph_kind_idx').on(
+      Annotation.paragraphId,
+      Annotation.kind,
+    ),
   }),
 );
 
@@ -1913,3 +1970,102 @@ export const ImportHistoryRelations = relations(ImportHistory, ({ one }) => ({
     references: [UploadRecord.id],
   }),
 }));
+
+// Audit log of every chat-completion call we make to an upstream LLM
+// (annotation, summarization, and the admin LLM-eval surface). One row
+// per call, recorded right after the completion comes back — including
+// calls that subsequently fail downstream guards (silent-summarization,
+// content-filter), since we paid for those tokens too.
+//
+// `computedCostUsd` is calculated on our side from `MODEL_PRICING` at
+// the time of the call (see `packages/temporal/src/util/llm-pricing.ts`).
+// `providerCostUsd` is what OpenRouter returned in `usage.cost` when
+// available — kept for reconciliation against our table. The two can
+// diverge when the price table is stale or when OpenRouter routes to a
+// provider whose price we haven't catalogued; alert when the deltas
+// exceed a threshold.
+export const LlmCall = pgTable(
+  'llm_call',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // OpenRouter model id, e.g. 'openai/gpt-5.4-mini'. Stored verbatim
+    // because pricing windows are keyed on this exact string.
+    model: text('model').notNull(),
+    // Logical activity tag — 'annotateTranscript', 'summarizeUpload',
+    // 'evalAnnotate', etc. Free-form so new activities don't need a
+    // schema migration.
+    activity: text('activity').notNull(),
+    // Nullable: the admin LLM-eval surface and other non-upload-bound
+    // flows have no upload. SET NULL on delete so an upload deletion
+    // doesn't shred its cost history (we still want the spend record).
+    uploadRecordId: uuid('upload_record_id'),
+    promptTokens: integer('prompt_tokens'),
+    completionTokens: integer('completion_tokens'),
+    // Provider-reported cached-input token count when available
+    // (Anthropic prompt caching, OpenAI cache_hits). Null when the
+    // provider doesn't expose it — most routes don't today.
+    cachedTokens: integer('cached_tokens'),
+    // Our-table-computed cost. Numeric (not double) because we're
+    // accumulating fractions-of-a-cent values that need to sum exactly.
+    computedCostUsd: numeric('computed_cost_usd', {
+      precision: 18,
+      scale: 8,
+    }),
+    // OpenRouter's reported usage.cost (when set on the request and
+    // returned non-null). Kept for reconciliation against our pricing
+    // table.
+    providerCostUsd: numeric('provider_cost_usd', {
+      precision: 18,
+      scale: 8,
+    }),
+    durationMs: integer('duration_ms').notNull(),
+    // The model's finish_reason — 'stop' on success, or 'length' /
+    // 'content_filter' on the failure paths that the downstream guards
+    // also catch. Null when the provider didn't return one.
+    finishReason: text('finish_reason'),
+    // Caller-supplied disposition tag. 'success' on the happy path,
+    // 'guard_*' values when one of the activity's downstream guards
+    // rejected the response (silent_summarization, length_truncation,
+    // content_filter, empty_content), or 'create_failed' when
+    // `llm.chat.completions.create` itself threw. Distinct from
+    // `finish_reason` because a silent-summarization rejection still
+    // has `finish_reason='stop'` — the model "successfully" returned a
+    // summary we then threw out. Free-form so new guards don't need a
+    // migration; defaults to 'success' so "all calls" dashboards never
+    // miss a row.
+    outcome: text('outcome').notNull().default('success'),
+    // Free-form failure detail when `outcome` is a guard rejection
+    // (mirrors the thrown Error's message). Null on success.
+    errorMessage: text('error_message'),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+  },
+  (LlmCall) => ({
+    llm_call_uploadRecord_fkey: foreignKey({
+      name: 'llm_call_uploadRecord_fkey',
+      columns: [LlmCall.uploadRecordId],
+      foreignColumns: [UploadRecord.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+    llm_call_created_at_idx: index('llm_call_created_at_idx').on(
+      LlmCall.createdAt,
+    ),
+    llm_call_model_created_at_idx: index('llm_call_model_created_at_idx').on(
+      LlmCall.model,
+      LlmCall.createdAt,
+    ),
+    llm_call_activity_created_at_idx: index(
+      'llm_call_activity_created_at_idx',
+    ).on(LlmCall.activity, LlmCall.createdAt),
+    // Per-upload cost drill-down: "all spend for upload X" without a
+    // seqscan as the table grows.
+    llm_call_upload_record_id_idx: index('llm_call_upload_record_id_idx').on(
+      LlmCall.uploadRecordId,
+    ),
+    // Failure-mode aggregation: "last N hours of guard-rejected calls",
+    // used while tuning the silent-summarization floor.
+    llm_call_outcome_created_at_idx: index(
+      'llm_call_outcome_created_at_idx',
+    ).on(LlmCall.outcome, LlmCall.createdAt),
+  }),
+);

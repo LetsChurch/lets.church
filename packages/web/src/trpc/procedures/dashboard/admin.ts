@@ -16,6 +16,8 @@ import {
 } from '@letschurch/db';
 import { ingestConfig } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
+import { runAnnotation } from '@letschurch/temporal/activities/background/annotate-transcript';
+import { runSummary } from '@letschurch/temporal/activities/background/summarize-upload';
 import {
   BACKGROUND_QUEUE,
   CURRENT_PIPELINE_VERSION,
@@ -23,6 +25,13 @@ import {
 } from '@letschurch/temporal/queues';
 import { UPLOAD_ID_KEY } from '@letschurch/temporal/search-attributes';
 import {
+  ANNOTATE_MODEL,
+  EMBED_MODEL,
+  SUMMARY_MODEL,
+} from '@letschurch/temporal/util/llm';
+import { assertProductionPricingCoverage } from '@letschurch/temporal/util/llm-pricing';
+import {
+  annotateTranscriptWorkflow,
   deleteChannelWorkflow,
   geocodeOrganizationWorkflow,
   postUserRegistrationWorkflow,
@@ -71,6 +80,7 @@ import {
   getReindexProgress,
   getRemuxWorkflowStatus,
   getReprocessWorkflowStatus,
+  makeAnnotateTranscriptWorkflowId,
   makeProcessMediaWorkflowId,
   makeSummarizeUploadWorkflowId,
   type ReindexKind,
@@ -101,6 +111,20 @@ import { newsletterListsRouter } from '../newsletter-lists';
 
 const moduleLogger = logger.child({
   module: 'trpc/procedures/dashboard/admin',
+});
+
+// Mirror of the background-worker boot check, scoped to the web
+// container's evaluateLlmModel surface + seed scripts that the
+// background-worker assert doesn't reach. Fires once at server boot:
+// `routeTree.gen.ts` does a synchronous static import of
+// `routes/trpc.$.ts` → `appRouter` → `dashboardRouter` → `adminRouter`
+// (this module), so the assertion runs when the route tree loads, well
+// before any request hits `/trpc`. ESM caches the module so the warn
+// fires exactly once per process.
+assertProductionPricingCoverage({
+  summary: SUMMARY_MODEL,
+  annotate: ANNOTATE_MODEL,
+  embed: EMBED_MODEL,
 });
 
 const adminProcedure = authProcedure.use(async ({ ctx, next }) => {
@@ -3238,7 +3262,10 @@ export const adminRouter = router({
 
         // Refuse a second run while one is in flight. Mirrors
         // retryUploadProcessing's RUNNING check (an unknown workflow id
-        // throws, which is fine — we'll start it below).
+        // throws, which is fine — we'll start it below). Any other
+        // error from `describe()` (Temporal connectivity, auth, etc.)
+        // gets logged before being swallowed so a real connectivity
+        // issue isn't hidden by the workflow.start that follows.
         try {
           const handle = temporalClient.workflow.getHandle(workflowId);
           const description = await handle.describe();
@@ -3252,12 +3279,26 @@ export const adminRouter = router({
           if (error instanceof TRPCError) {
             throw error;
           }
+          moduleLogger.warn(
+            {
+              targetId: input.uploadRecordId,
+              workflowId,
+              context: {
+                error: error instanceof Error ? error.message : String(error),
+              },
+            },
+            'Failed to check for in-flight summarize workflow before starting a new one (likely unknown-workflow for first run; could also be Temporal connectivity)',
+          );
         }
 
         await temporalClient.workflow.start(summarizeUploadWorkflow, {
           taskQueue: BACKGROUND_QUEUE,
           workflowId,
-          args: [input.uploadRecordId],
+          // `force: true` — admin explicitly asked to regenerate, so the
+          // activity's "skip if summary present" idempotency check must
+          // be bypassed. Without this the existing summary is treated as
+          // "already done" and the call no-ops.
+          args: [input.uploadRecordId, { force: true }],
           retry: { maximumAttempts: 3 },
           // Same convention as the rest of the upload-scoped workflows so
           // the run is filterable by UploadId in the Temporal UI.
@@ -3299,6 +3340,295 @@ export const adminRouter = router({
           message: 'Failed to regenerate upload summary',
         });
       }
+    }),
+
+  // Re-runs only the annotation pipeline for this upload (annotate +
+  // lc_media_v1 reindex). Independent of summary regen so admins can fix
+  // annotations after a prompt change without paying for the summary
+  // (~$0.02 / call each for gpt-5.4-mini on a typical sermon-length
+  // transcript). Same legacy-upload guard and RUNNING-check as the summary
+  // procedure.
+  regenerateUploadAnnotations: adminProcedure
+    .input(
+      z.object({
+        uploadRecordId: z.uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          targetId: input.uploadRecordId,
+        },
+        'Regenerating upload annotations',
+      );
+
+      try {
+        const upload = await db.query.UploadRecord.findFirst({
+          where: (t, { eq }) => eq(t.id, input.uploadRecordId),
+          columns: {
+            id: true,
+            transcribingFinishedAt: true,
+          },
+        });
+
+        if (!upload) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Upload not found',
+          });
+        }
+
+        if (!upload.transcribingFinishedAt) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Upload has not finished transcribing',
+          });
+        }
+
+        const hasParagraph = await db
+          .select({ id: TranscriptParagraph.id })
+          .from(TranscriptParagraph)
+          .where(eq(TranscriptParagraph.uploadRecordId, input.uploadRecordId))
+          .limit(1);
+
+        if (hasParagraph.length === 0) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message:
+              'Upload has no transcript paragraphs — reprocess through the full pipeline first',
+          });
+        }
+
+        const temporalClient = await client;
+        const workflowId = makeAnnotateTranscriptWorkflowId(
+          input.uploadRecordId,
+        );
+
+        try {
+          const handle = temporalClient.workflow.getHandle(workflowId);
+          const description = await handle.describe();
+          if (description.status.name === 'RUNNING') {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Annotation regeneration is already running',
+            });
+          }
+        } catch (error) {
+          if (error instanceof TRPCError) {
+            throw error;
+          }
+          moduleLogger.warn(
+            {
+              targetId: input.uploadRecordId,
+              workflowId,
+              context: {
+                error: error instanceof Error ? error.message : String(error),
+              },
+            },
+            'Failed to check for in-flight annotate workflow before starting a new one (likely unknown-workflow for first run; could also be Temporal connectivity)',
+          );
+        }
+
+        await temporalClient.workflow.start(annotateTranscriptWorkflow, {
+          taskQueue: BACKGROUND_QUEUE,
+          workflowId,
+          // `force: true` — admin explicitly asked to regenerate, so the
+          // activity's "skip if annotations present" idempotency check
+          // must be bypassed. Without this any existing annotation rows
+          // are treated as "already done" and the call no-ops.
+          args: [input.uploadRecordId, { force: true }],
+          retry: { maximumAttempts: 3 },
+          typedSearchAttributes: [
+            { key: UPLOAD_ID_KEY, value: input.uploadRecordId },
+          ],
+          workflowIdReusePolicy: 'ALLOW_DUPLICATE',
+        });
+
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.uploadRecordId,
+          },
+          'Annotation regeneration workflow started',
+        );
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.uploadRecordId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to regenerate upload annotations',
+        );
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to regenerate upload annotations',
+        });
+      }
+    }),
+
+  // Admin LLM evaluation: one upload + one task + one model, returns
+  // the parsed output + run stats. The page calls this once per model so
+  // results stream in independently as each LLM round-trip resolves —
+  // fast models render first, slow ones don't block the rest. Read-only:
+  // does NOT touch the upload's persisted summary / annotations.
+  evaluateLlmModel: adminProcedure
+    .input(
+      z.object({
+        uploadRecordId: IncomingIdSchema,
+        task: z.enum(['annotate', 'summarize']),
+        model: z.string().min(1),
+        // Override the activity's default output cap. Required for
+        // providers with tight output limits (e.g. DeepSeek v3.x =
+        // 8K-16K). OpenRouter rejects the request up-front when
+        // `max_tokens` exceeds the model's cap, so this is the lever
+        // for "make this model usable for this transcript".
+        maxTokens: z.number().int().positive().max(131072).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          targetId: input.uploadRecordId,
+          context: { model: input.model, task: input.task },
+        },
+        'Evaluating LLM model',
+      );
+
+      const upload = await db.query.UploadRecord.findFirst({
+        where: (t, { eq }) => eq(t.id, input.uploadRecordId),
+        columns: { id: true, title: true, description: true, channelId: true },
+      });
+      if (!upload) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Upload not found' });
+      }
+
+      const channel = await db.query.Channel.findFirst({
+        where: (t, { eq }) => eq(t.id, upload.channelId),
+        columns: { name: true },
+      });
+      if (!channel) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Channel not found for upload',
+        });
+      }
+
+      const paragraphs = await db
+        .select({
+          id: TranscriptParagraph.id,
+          order: TranscriptParagraph.order,
+          text: TranscriptParagraph.text,
+          words: TranscriptParagraph.words,
+        })
+        .from(TranscriptParagraph)
+        .where(eq(TranscriptParagraph.uploadRecordId, input.uploadRecordId))
+        .orderBy(TranscriptParagraph.order);
+      moduleLogger.info(
+        {
+          uploadRecordId: input.uploadRecordId,
+          context: { paragraphCount: paragraphs.length },
+        },
+        'evaluateLlmModel paragraph lookup',
+      );
+      if (paragraphs.length === 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Upload has no transcript paragraphs — cannot evaluate models against it',
+        });
+      }
+
+      const metadata = {
+        channelName: channel.name,
+        title: upload.title,
+        description: upload.description,
+      };
+
+      if (input.task === 'annotate') {
+        const r = await runAnnotation(paragraphs, metadata, input.model, {
+          maxTokens: input.maxTokens,
+          tracking: {
+            activity: 'evalAnnotate',
+            uploadRecordId: input.uploadRecordId,
+          },
+        });
+        return {
+          task: 'annotate' as const,
+          annotations: r.annotations,
+          stats: r.stats,
+          prompt: r.prompt,
+          responseText: r.responseText,
+          skippedItems: r.skippedItems,
+        };
+      }
+      const r = await runSummary(
+        paragraphs.map((p) => p.text),
+        metadata,
+        input.model,
+        {
+          maxTokens: input.maxTokens,
+          tracking: {
+            activity: 'evalSummarize',
+            uploadRecordId: input.uploadRecordId,
+          },
+        },
+      );
+      return {
+        task: 'summarize' as const,
+        summary: r.summary,
+        searchSummary: r.searchSummary,
+        stats: r.stats,
+        prompt: r.prompt,
+        responseText: r.responseText,
+      };
+    }),
+
+  // Loader for the LLM-eval page's upload picker. Used both to seed the
+  // Select's display label when the page is opened with `uploadId` in
+  // the URL (search.performSearch is keyword-based and doesn't return
+  // by-id), and to give the per-model result cards the paragraph
+  // source-of-record they render annotations against.
+  getUploadForEval: adminProcedure
+    .input(z.object({ uploadRecordId: IncomingIdSchema }))
+    .query(async ({ input }) => {
+      const upload = await db.query.UploadRecord.findFirst({
+        where: (t, { eq }) => eq(t.id, input.uploadRecordId),
+        columns: { id: true, title: true, channelId: true },
+      });
+      if (!upload) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Upload not found' });
+      }
+      const channel = await db.query.Channel.findFirst({
+        where: (t, { eq }) => eq(t.id, upload.channelId),
+        columns: { name: true },
+      });
+      const paragraphs = await db
+        .select({
+          id: TranscriptParagraph.id,
+          order: TranscriptParagraph.order,
+          text: TranscriptParagraph.text,
+        })
+        .from(TranscriptParagraph)
+        .where(eq(TranscriptParagraph.uploadRecordId, input.uploadRecordId))
+        .orderBy(TranscriptParagraph.order);
+      return {
+        id: upload.id,
+        title: upload.title,
+        channelName: channel?.name ?? '(unknown channel)',
+        paragraphs,
+      };
     }),
 
   bulkRetryProcessingUploads: adminProcedure.mutation(async ({ ctx }) => {

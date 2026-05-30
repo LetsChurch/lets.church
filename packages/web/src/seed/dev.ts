@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { faker } from '@faker-js/faker';
 import {
+  Annotation,
   AppUser,
   AppUserEmail,
   Channel,
@@ -1679,19 +1680,47 @@ if (process.env.LIVE_PIPELINE === '1') {
       `[seed] loading LLM snapshot for ${uploadId} (${snapshot.paragraphs.length} paragraphs)`,
     );
 
-    await db.insert(TranscriptParagraph).values(
-      snapshot.paragraphs.map((p) => ({
-        uploadRecordId: uploadId,
-        order: p.order,
-        start: p.start,
-        end: p.end,
-        speaker: p.speaker,
-        speakerEmbedding: p.speakerEmbedding,
-        text: p.text,
-        words: p.words,
-        embedding: p.embedding,
-      })),
+    // `.returning({ id, order })` so we can map snapshot annotations
+    // (keyed by paragraph order) onto the newly-inserted paragraph ids.
+    const insertedParagraphs = await db
+      .insert(TranscriptParagraph)
+      .values(
+        snapshot.paragraphs.map((p) => ({
+          uploadRecordId: uploadId,
+          order: p.order,
+          start: p.start,
+          end: p.end,
+          speaker: p.speaker,
+          speakerEmbedding: p.speakerEmbedding,
+          text: p.text,
+          words: p.words,
+          embedding: p.embedding,
+        })),
+      )
+      .returning({
+        id: TranscriptParagraph.id,
+        order: TranscriptParagraph.order,
+      });
+
+    const paragraphIdByOrder = new Map(
+      insertedParagraphs.map((p) => [p.order, p.id]),
     );
+    const annotationInserts = snapshot.paragraphs.flatMap((p) => {
+      const paragraphId = paragraphIdByOrder.get(p.order);
+      if (!paragraphId) return [];
+      return p.annotations.map((a) => ({
+        paragraphId,
+        kind: a.kind,
+        startWord: a.startWord,
+        endWord: a.endWord,
+        rawSpan: a.rawSpan,
+        metadata: a.metadata,
+        updatedAt: new Date(),
+      }));
+    });
+    if (annotationInserts.length > 0) {
+      await db.insert(Annotation).values(annotationInserts);
+    }
 
     await db
       .update(UploadRecord)

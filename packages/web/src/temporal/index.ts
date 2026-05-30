@@ -18,6 +18,7 @@ import {
   PRIORITY_USER,
 } from '@letschurch/temporal/queues';
 import {
+  makeAnnotateTranscriptWorkflowId,
   makeBackupToGlacierWorkflowId,
   makeCreateUploadRecordWorkflowId,
   makeDeleteUploadWorkflowId,
@@ -144,6 +145,7 @@ export {
   makeImportMediaWorkflowId,
   makeInvitationEmailWorkflowId,
   makePostUserRegistrationWorkflowId,
+  makeAnnotateTranscriptWorkflowId,
   makeProcessMediaWorkflowId,
   makeRecordDownloadSizeWorkflowId,
   makeResetPasswordWorkflowId,

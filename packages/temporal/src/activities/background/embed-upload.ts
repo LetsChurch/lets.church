@@ -1,7 +1,12 @@
 import { db, UploadRecord } from '@letschurch/db';
 import { eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
-import { EMBED_DIMS, EMBED_MODEL, llm } from '../../util/llm';
+import {
+  createEmbeddingsTracked,
+  EMBED_DIMS,
+  EMBED_MODEL,
+  openrouterExtras,
+} from '../../util/llm';
 import logger from '../../util/logger';
 
 const moduleLogger = logger.child({
@@ -38,9 +43,11 @@ export default async function embedUpload(uploadRecordId: string) {
     `Summaries missing for ${uploadRecordId} — run summarizeUpload first`,
   );
 
-  const res = await llm.embeddings.create({
+  const res = await createEmbeddingsTracked({
+    tracking: { activity: 'embedUpload', uploadRecordId },
     model: EMBED_MODEL,
     input: [row.summary, row.searchSummary],
+    ...(openrouterExtras as Record<string, unknown>),
   });
 
   invariant(

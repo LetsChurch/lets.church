@@ -61,6 +61,7 @@ import { Route as DashboardAdminProcessingUploadsRouteImport } from './routes/da
 import { Route as DashboardAdminOrganizationsRouteImport } from './routes/dashboard_/admin_.organizations'
 import { Route as DashboardAdminOrganizationTagsRouteImport } from './routes/dashboard_/admin_.organization-tags'
 import { Route as DashboardAdminNewsletterListsRouteImport } from './routes/dashboard_/admin_.newsletter-lists'
+import { Route as DashboardAdminLlmEvalRouteImport } from './routes/dashboard_/admin_.llm-eval'
 import { Route as DashboardAdminImportSourcesRouteImport } from './routes/dashboard_/admin_.import-sources'
 import { Route as DashboardAdminFeaturedRouteImport } from './routes/dashboard_/admin_/featured'
 import { Route as DashboardAdminFailedUploadsRouteImport } from './routes/dashboard_/admin_.failed-uploads'
@@ -368,6 +369,11 @@ const DashboardAdminNewsletterListsRoute =
     path: '/admin/newsletter-lists',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardAdminLlmEvalRoute = DashboardAdminLlmEvalRouteImport.update({
+  id: '/admin_/llm-eval',
+  path: '/admin/llm-eval',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardAdminImportSourcesRoute =
   DashboardAdminImportSourcesRouteImport.update({
     id: '/admin_/import-sources',
@@ -630,6 +636,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/failed-uploads': typeof DashboardAdminFailedUploadsRoute
   '/dashboard/admin/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard/admin/import-sources': typeof DashboardAdminImportSourcesRoute
+  '/dashboard/admin/llm-eval': typeof DashboardAdminLlmEvalRoute
   '/dashboard/admin/newsletter-lists': typeof DashboardAdminNewsletterListsRoute
   '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard/admin/organizations': typeof DashboardAdminOrganizationsRoute
@@ -718,6 +725,7 @@ export interface FileRoutesByTo {
   '/dashboard/admin/failed-uploads': typeof DashboardAdminFailedUploadsRoute
   '/dashboard/admin/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard/admin/import-sources': typeof DashboardAdminImportSourcesRoute
+  '/dashboard/admin/llm-eval': typeof DashboardAdminLlmEvalRoute
   '/dashboard/admin/newsletter-lists': typeof DashboardAdminNewsletterListsRoute
   '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard/admin/organizations': typeof DashboardAdminOrganizationsRoute
@@ -810,6 +818,7 @@ export interface FileRoutesById {
   '/dashboard_/admin_/failed-uploads': typeof DashboardAdminFailedUploadsRoute
   '/dashboard_/admin_/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard_/admin_/import-sources': typeof DashboardAdminImportSourcesRoute
+  '/dashboard_/admin_/llm-eval': typeof DashboardAdminLlmEvalRoute
   '/dashboard_/admin_/newsletter-lists': typeof DashboardAdminNewsletterListsRoute
   '/dashboard_/admin_/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard_/admin_/organizations': typeof DashboardAdminOrganizationsRoute
@@ -902,6 +911,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/failed-uploads'
     | '/dashboard/admin/featured'
     | '/dashboard/admin/import-sources'
+    | '/dashboard/admin/llm-eval'
     | '/dashboard/admin/newsletter-lists'
     | '/dashboard/admin/organization-tags'
     | '/dashboard/admin/organizations'
@@ -990,6 +1000,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/failed-uploads'
     | '/dashboard/admin/featured'
     | '/dashboard/admin/import-sources'
+    | '/dashboard/admin/llm-eval'
     | '/dashboard/admin/newsletter-lists'
     | '/dashboard/admin/organization-tags'
     | '/dashboard/admin/organizations'
@@ -1081,6 +1092,7 @@ export interface FileRouteTypes {
     | '/dashboard_/admin_/failed-uploads'
     | '/dashboard_/admin_/featured'
     | '/dashboard_/admin_/import-sources'
+    | '/dashboard_/admin_/llm-eval'
     | '/dashboard_/admin_/newsletter-lists'
     | '/dashboard_/admin_/organization-tags'
     | '/dashboard_/admin_/organizations'
@@ -1501,6 +1513,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAdminNewsletterListsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard_/admin_/llm-eval': {
+      id: '/dashboard_/admin_/llm-eval'
+      path: '/admin/llm-eval'
+      fullPath: '/dashboard/admin/llm-eval'
+      preLoaderRoute: typeof DashboardAdminLlmEvalRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard_/admin_/import-sources': {
       id: '/dashboard_/admin_/import-sources'
       path: '/admin/import-sources'
@@ -1863,6 +1882,7 @@ interface DashboardRouteChildren {
   DashboardAdminFailedUploadsRoute: typeof DashboardAdminFailedUploadsRoute
   DashboardAdminFeaturedRoute: typeof DashboardAdminFeaturedRoute
   DashboardAdminImportSourcesRoute: typeof DashboardAdminImportSourcesRoute
+  DashboardAdminLlmEvalRoute: typeof DashboardAdminLlmEvalRoute
   DashboardAdminNewsletterListsRoute: typeof DashboardAdminNewsletterListsRoute
   DashboardAdminOrganizationTagsRoute: typeof DashboardAdminOrganizationTagsRoute
   DashboardAdminOrganizationsRoute: typeof DashboardAdminOrganizationsRoute
@@ -1912,6 +1932,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAdminFailedUploadsRoute: DashboardAdminFailedUploadsRoute,
   DashboardAdminFeaturedRoute: DashboardAdminFeaturedRoute,
   DashboardAdminImportSourcesRoute: DashboardAdminImportSourcesRoute,
+  DashboardAdminLlmEvalRoute: DashboardAdminLlmEvalRoute,
   DashboardAdminNewsletterListsRoute: DashboardAdminNewsletterListsRoute,
   DashboardAdminOrganizationTagsRoute: DashboardAdminOrganizationTagsRoute,
   DashboardAdminOrganizationsRoute: DashboardAdminOrganizationsRoute,

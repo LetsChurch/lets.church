@@ -1,6 +1,7 @@
 import {
   ChannelSubscription,
   db,
+  TranscriptParagraph,
   UploadList,
   UploadListEntry,
   UploadUserComment,
@@ -539,6 +540,27 @@ export const mediaProcedures = {
 
         // Add transcript downloads only if transcription completed
         if (transcribingFinishedAt) {
+          // Two generations of uploads live side-by-side in S3:
+          //   * New (Python transcribe worker, this branch): uploads
+          //     `transcript.txt` (paragraphs joined with blank lines) and
+          //     persists rows to `transcript_paragraph`.
+          //   * Legacy (older TS worker): uploaded `transcript.original.txt`
+          //     (raw whisper output, no paragraph grouping) and did not
+          //     populate `transcript_paragraph`.
+          // Presence of paragraph rows is the cleanest signal for which
+          // generation produced this upload — we don't have to probe S3
+          // and the bit aligns with what's actually shown in the UI.
+          const hasParagraphs =
+            (
+              await db
+                .select({ id: TranscriptParagraph.id })
+                .from(TranscriptParagraph)
+                .where(eq(TranscriptParagraph.uploadRecordId, media.id))
+                .limit(1)
+            ).length > 0;
+          const txtKey = hasParagraphs
+            ? `${media.id}/transcript.txt`
+            : `${media.id}/transcript.original.txt`;
           downloadPromises.push(
             getPublicUrlWithFilename(
               publicS3,
@@ -553,7 +575,7 @@ export const mediaProcedures = {
             }),
             getPublicUrlWithFilename(
               publicS3,
-              `${media.id}/transcript.original.txt`,
+              txtKey,
               `${baseFilename} transcript.txt`,
             ).then((url) => {
               downloadUrls.push({

@@ -123,6 +123,15 @@ seed-db:
 dump-llm-seed-data:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run dump-llm-seed-data'
 
+# One-time bootstrap that runs only the `annotateTranscript` activity against
+# the LLM-seeded uploads in the currently-seeded dev DB. Use when adding the
+# annotation layer to an already-seeded local stack — cheaper than a full
+# `LIVE_PIPELINE=1` refresh which would also re-summarize + re-embed.
+# After this runs successfully, `just dump-llm-seed-data` captures the new
+# annotations into seed-data/llm/*.json (LFS-tracked).
+generate-seed-annotations:
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run generate-seed-annotations'
+
 seed-s3-ingest:
   rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-ingest lcdevs3:${S3_INGEST_BUCKET}
 seed-s3-public:

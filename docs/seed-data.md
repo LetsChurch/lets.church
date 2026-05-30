@@ -62,6 +62,28 @@ real LLM workflow — so to refresh them after a prompt change or a
 transcript regen, you need to first put the live-pipeline data into the DB,
 then dump it out.
 
+### Narrow refresh: just annotations
+
+If only a single derived layer needs to land in the seed (e.g. you just
+added the annotation tables and want to populate them across the existing
+LLM-seeded uploads), don't run a full `LIVE_PIPELINE=1` refresh — it'd
+re-summarize and re-embed everything you already have. Use the targeted
+recipe instead:
+
+```bash
+just seed                          # baseline from existing snapshots
+just generate-seed-annotations     # runs only annotateTranscript per upload
+just dump-llm-seed-data            # capture the new annotations into JSON
+# commit refreshed seed-data/llm/*.json
+```
+
+The `generate-seed-annotations` recipe shells into the web container and
+runs `tsx src/seed/generate-annotations.ts`, which calls
+`annotateTranscript(uploadId)` directly (it's a plain async function, no
+Temporal runtime needed) for every id in `LLM_SEEDED_UPLOAD_IDS`. ~$0.18
+× N uploads in OpenRouter tokens, ~10 minutes wall time for the current
+27-upload corpus.
+
 ### Initial / one-shot regeneration of everything
 
 1. **Regenerate transcripts in bulk** with one model load
@@ -233,6 +255,9 @@ prompt changes.
 | LLM snapshot JSONs (LFS-tracked) | `seed-data/llm/*.json` |
 | LLM snapshot dumper | `packages/web/src/seed/dump-llm-seed-data.ts` |
 | `just dump-llm-seed-data` | `Justfile` |
+| Narrow annotation bootstrap script | `packages/web/src/seed/generate-annotations.ts` |
+| `just generate-seed-annotations` | `Justfile` |
+| Annotation pipeline activity | `packages/temporal/src/activities/background/annotate-transcript.ts` |
 | Bind mount of seed-data into web | `docker-compose.yml` (`web.volumes`) |
 | LFS rule for snapshots | `.gitattributes` (`seed-data/llm/*.json filter=lfs …`) |
 | Storage activity (live pipeline) | `packages/temporal/src/activities/background/store-transcript-paragraphs.ts` |
