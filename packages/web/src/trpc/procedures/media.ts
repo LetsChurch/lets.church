@@ -981,8 +981,9 @@ export const mediaProcedures = {
         }
       }
 
-      const paragraphs = await db.query.TranscriptParagraph.findMany({
+      const paragraphRows = await db.query.TranscriptParagraph.findMany({
         columns: {
+          id: true,
           order: true,
           start: true,
           end: true,
@@ -994,9 +995,69 @@ export const mediaProcedures = {
         orderBy: (t, { asc }) => asc(t.order),
       });
 
-      if (paragraphs.length === 0) return null;
+      if (paragraphRows.length === 0) return null;
 
-      return paragraphs;
+      // No Drizzle `relations()` is defined for TranscriptParagraph ↔
+      // Annotation; a second findMany + JS group-by avoids introducing
+      // relations just for this read path. One DB query, indexed by
+      // `annotation_paragraph_kind_idx`.
+      const annotationRows = await db.query.Annotation.findMany({
+        columns: {
+          id: true,
+          paragraphId: true,
+          kind: true,
+          startWord: true,
+          endWord: true,
+          metadata: true,
+        },
+        where: (t, { inArray: inA }) =>
+          inA(
+            t.paragraphId,
+            paragraphRows.map((p) => p.id),
+          ),
+      });
+      // `{ [key: string]: {} }` (vs `Record<string, unknown>`): tRPC's
+      // queryOptions inference normalizes `unknown` to `{}` (non-null
+      // object) when computing the queryFn's data type, so the loader
+      // and component see the narrowed form. Matching it here keeps the
+      // procedure's return assignable to TanStack's loader-return slot
+      // — without it, the `ensureQueryData(...)` result type drifts
+      // from the declared loader-data type and the route fails to
+      // typecheck with "two different types with this name exist".
+      type AnnotationOut = {
+        kind: (typeof annotationRows)[number]['kind'];
+        startWord: number | null;
+        endWord: number | null;
+        // biome-ignore lint/complexity/noBannedTypes: see comment above — TanStack/tRPC inference uses `{}` for the JSON-safe metadata shape; matching here keeps the loader contract aligned.
+        metadata: { [key: string]: {} };
+      };
+      const annotationsByParagraphId = new Map<string, Array<AnnotationOut>>();
+      for (const a of annotationRows) {
+        const list = annotationsByParagraphId.get(a.paragraphId) ?? [];
+        list.push({
+          kind: a.kind,
+          startWord: a.startWord,
+          endWord: a.endWord,
+          // biome-ignore lint/complexity/noBannedTypes: see AnnotationOut type comment.
+          metadata: a.metadata as { [key: string]: {} },
+        });
+        annotationsByParagraphId.set(a.paragraphId, list);
+      }
+      // Stable order: nulls first (OUTLINE), then ascending by startWord.
+      // Gives the renderer a deterministic span iteration that mirrors
+      // reading order.
+      for (const list of annotationsByParagraphId.values()) {
+        list.sort((a, b) => {
+          const aw = a.startWord ?? -1;
+          const bw = b.startWord ?? -1;
+          return aw - bw;
+        });
+      }
+
+      return paragraphRows.map(({ id, ...rest }) => ({
+        ...rest,
+        annotations: annotationsByParagraphId.get(id) ?? [],
+      }));
     }),
 
   rateMedia: authProcedure
