@@ -13,7 +13,7 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute, Link, useLocation } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { z } from 'zod';
 import { AutoplayCountdown } from '@/components/autoplay-countdown';
 import { CommentsSection } from '@/components/comments-section';
@@ -38,6 +38,7 @@ import { useAutoplay } from '@/hooks/use-autoplay';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { IncomingIdSchema, idTranslator } from '@/schemas/common';
 import { useSetBackgroundImage } from '@/stores/header';
+import type { TranscriptLine } from '@/stores/transcript-search';
 import {
   $isSearchActive,
   $searchQuery,
@@ -265,6 +266,28 @@ function MobileTranscriptDrawerContent({
   const searchQuery = useStore($searchQuery);
   const searchResults = useStore($searchResults);
 
+  // Mirror of the desktop sidebar's `searchableLines`: feed paragraphs
+  // (in ms) to the search store when we're in paragraph mode. See
+  // media-sidebar-tabs.tsx for the rationale.
+  const searchableLines = useMemo<TranscriptLine[]>(() => {
+    if (useParagraphs && paragraphs) {
+      return paragraphs.map((p, i) => ({
+        id: i,
+        start: p.start * 1000,
+        text: p.text,
+      }));
+    }
+    return transcript;
+  }, [useParagraphs, paragraphs, transcript]);
+
+  // Paragraph-mode search results re-render through TranscriptParagraphs
+  // so annotations stay visible. See media-sidebar-tabs.tsx for context.
+  const matchedParagraphs = useMemo(() => {
+    if (!useParagraphs || !paragraphs) return null;
+    const matchedIds = new Set(searchResults.map((r) => r.id));
+    return paragraphs.filter((_, i) => matchedIds.has(i));
+  }, [useParagraphs, paragraphs, searchResults]);
+
   const handleSearchClick = () => {
     $isSearchActive.set(true);
   };
@@ -276,7 +299,7 @@ function MobileTranscriptDrawerContent({
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     $searchQuery.set(query);
-    void performSearch(query, transcript);
+    void performSearch(query, searchableLines);
   };
 
   const hasQuery = searchQuery.trim().length > 0;
@@ -318,27 +341,33 @@ function MobileTranscriptDrawerContent({
                 Transcript
               </MobileDrawer.Title>
             </div>
-            {useParagraphs ? null : (
-              <button
-                type="button"
-                className="flex size-7 items-center justify-center rounded-lg hover:bg-white/10"
-                onClick={handleSearchClick}
-              >
-                <IconSearch size={16} className="text-primary/80" />
-              </button>
-            )}
+            <button
+              type="button"
+              className="flex size-7 items-center justify-center rounded-lg hover:bg-white/10"
+              onClick={handleSearchClick}
+            >
+              <IconSearch size={16} className="text-primary/80" />
+            </button>
           </>
         )}
       </div>
 
       <div className="fade-bottom flex min-h-0 flex-1 flex-col overflow-hidden">
-        {useParagraphs ? (
+        {isSearchActive && hasQuery ? (
+          useParagraphs && matchedParagraphs && matchedParagraphs.length > 0 ? (
+            <TranscriptParagraphs
+              paragraphs={matchedParagraphs}
+              isTranscriptProcessing={isTranscriptProcessing}
+              highlightQuery={searchQuery}
+            />
+          ) : (
+            <TranscriptSearchResults />
+          )
+        ) : useParagraphs ? (
           <TranscriptParagraphs
             paragraphs={paragraphs ?? []}
             isTranscriptProcessing={isTranscriptProcessing}
           />
-        ) : isSearchActive && hasQuery ? (
-          <TranscriptSearchResults />
         ) : (
           <Transcript
             transcript={transcript}
@@ -486,7 +515,11 @@ function RouteComponent() {
       : undefined,
   });
 
-  // Parse timestamp from URL hash on mount
+  // Parse timestamp from URL hash on mount. TanStack Router's
+  // `location.hash` already has the leading `#` stripped
+  // (router-core/router.js: `hash.split('#').reverse()[0]`), so pass it
+  // straight to URLSearchParams — slicing the first character would
+  // drop the leading key letter and break the parse.
   useEffect(() => {
     if (location.hash) {
       const hashParams = new URLSearchParams(location.hash);
@@ -500,6 +533,17 @@ function RouteComponent() {
       }
     }
   }, [location.hash]);
+
+  // Drop the FlexSearch index when navigating between media — the index
+  // is module-global and otherwise persists across routes, leaving the
+  // next page's first search running against the previous page's
+  // transcript until the user manually closes search.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the body doesn't reference `params.mediaId`, but its value change is exactly the trigger we want — same-route navigation between media ids must re-run cleanup.
+  useEffect(() => {
+    return () => {
+      resetSearch();
+    };
+  }, [params.mediaId]);
 
   // Poll for transcript updates when transcription is in progress
   const { data: transcriptData } = useSuspenseQuery({

@@ -5,7 +5,7 @@ import {
   IconTextCaption,
   IconX,
 } from '@tabler/icons-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { PlaylistSidebar } from '@/components/playlist-sidebar';
 import { Transcript } from '@/components/transcript';
 import {
@@ -19,6 +19,7 @@ import {
   $searchResults,
   performSearch,
   resetSearch,
+  type TranscriptLine,
 } from '@/stores/transcript-search';
 
 type PlaylistItem = {
@@ -66,6 +67,31 @@ export function MediaSidebarTabs({
   const searchQuery = useStore($searchQuery);
   const searchResults = useStore($searchResults);
 
+  // FlexSearch indexes one "line" at a time — feed paragraphs as
+  // paragraph-sized "lines" when we're in paragraph mode (the search
+  // store + results component expect milliseconds, so multiply seconds
+  // by 1000 here). Falls back to the legacy VTT line array.
+  const searchableLines = useMemo<TranscriptLine[]>(() => {
+    if (useParagraphs && paragraphs) {
+      return paragraphs.map((p, i) => ({
+        id: i,
+        start: p.start * 1000,
+        text: p.text,
+      }));
+    }
+    return transcript;
+  }, [useParagraphs, paragraphs, transcript]);
+
+  // In paragraph mode, render search results through `TranscriptParagraphs`
+  // (filtered to the matching rows) so annotation highlights remain
+  // visible. The legacy text-only `TranscriptSearchResults` view runs
+  // off raw `highlighted` HTML and has no annotation awareness.
+  const matchedParagraphs = useMemo(() => {
+    if (!useParagraphs || !paragraphs) return null;
+    const matchedIds = new Set(searchResults.map((r) => r.id));
+    return paragraphs.filter((_, i) => matchedIds.has(i));
+  }, [useParagraphs, paragraphs, searchResults]);
+
   const handleSearchClick = () => {
     $isSearchActive.set(true);
   };
@@ -77,7 +103,7 @@ export function MediaSidebarTabs({
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     $searchQuery.set(query);
-    void performSearch(query, transcript);
+    void performSearch(query, searchableLines);
   };
 
   const hasQuery = searchQuery.trim().length > 0;
@@ -154,30 +180,41 @@ export function MediaSidebarTabs({
                   <h3 className="flex-1 font-medium text-primary text-sm">
                     Transcript
                   </h3>
-                  {/* Search is deferred in paragraph mode (it targets the
-                      legacy line array). */}
-                  {useParagraphs ? null : (
-                    <button
-                      type="button"
-                      className="rounded-lg p-2 hover:bg-white/10"
-                      onClick={handleSearchClick}
-                    >
-                      <IconSearch size={16} className="text-primary/80" />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className="rounded-lg p-2 hover:bg-white/10"
+                    onClick={handleSearchClick}
+                  >
+                    <IconSearch size={16} className="text-primary/80" />
+                  </button>
                 </>
               )}
             </div>
 
-            {/* Transcript Content */}
+            {/* Transcript Content — search results take precedence over
+                the body view in both paragraph and legacy modes.
+                `TranscriptSearchResults` owns the empty-state copy for
+                both modes; in paragraph mode we delegate to it when
+                there are no matches rather than duplicating the
+                "No results found" text. */}
             <div className="fade-bottom flex-1 overflow-hidden">
-              {useParagraphs ? (
+              {isSearchActive && hasQuery ? (
+                useParagraphs &&
+                matchedParagraphs &&
+                matchedParagraphs.length > 0 ? (
+                  <TranscriptParagraphs
+                    paragraphs={matchedParagraphs}
+                    isTranscriptProcessing={isTranscriptProcessing}
+                    highlightQuery={searchQuery}
+                  />
+                ) : (
+                  <TranscriptSearchResults />
+                )
+              ) : useParagraphs ? (
                 <TranscriptParagraphs
                   paragraphs={paragraphs ?? []}
                   isTranscriptProcessing={isTranscriptProcessing}
                 />
-              ) : isSearchActive && hasQuery ? (
-                <TranscriptSearchResults />
               ) : (
                 <Transcript
                   transcript={transcript}

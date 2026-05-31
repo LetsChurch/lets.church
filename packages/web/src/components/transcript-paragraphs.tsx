@@ -1,8 +1,21 @@
 import { useStore } from '@nanostores/react';
-import { IconExternalLink, IconSearch } from '@tabler/icons-react';
+import {
+  IconCheck,
+  IconExternalLink,
+  IconLink,
+  IconSearch,
+} from '@tabler/icons-react';
 import { Link } from '@tanstack/react-router';
 import bSearch from 'binary-search';
-import { Fragment, memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import {
+  Fragment,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { LcTooltip } from '@/components/lc-tooltip';
 import { $currentTime, $setPlayAt } from '@/stores/player';
 import {
@@ -43,6 +56,11 @@ export type TranscriptParagraph = {
 type Props = {
   paragraphs: Array<TranscriptParagraph>;
   isTranscriptProcessing?: boolean;
+  // When set (paragraph-search results), per-word matches get the same
+  // orange `<mark>` styling the legacy text-only results view used. Each
+  // whitespace-separated term is matched case-insensitively as a regex
+  // substring against each word.
+  highlightQuery?: string;
 };
 
 type WordChunk = {
@@ -132,14 +150,20 @@ function indexParagraph(paragraph: TranscriptParagraph) {
 // is inside an annotation span — the annotation provides its own hover
 // treatment at the span level, and per-word hover dots competed with it
 // for attention. Click-to-seek stays intact regardless.
+//
+// `isMatched` (search-result mode) overrides both active and hover bg
+// with the orange match indicator so the user can spot their query
+// term in context.
 function WordButton({
   word,
   isActive,
+  isMatched,
   onSeek,
   inAnnotation,
 }: {
   word: TranscriptWord;
   isActive: boolean;
+  isMatched: boolean;
   onSeek: (start: number) => void;
   inAnnotation: boolean;
 }) {
@@ -152,11 +176,13 @@ function WordButton({
       // tightly when active; box size is identical between states so
       // no layout jitter as the highlight advances.
       className={`cursor-pointer appearance-none rounded ${
-        isActive
-          ? 'bg-brand/20 text-brand dark:bg-primary/20 dark:text-primary'
-          : inAnnotation
-            ? ''
-            : 'hover:bg-primary/10'
+        isMatched
+          ? 'bg-orange-400/40 text-primary'
+          : isActive
+            ? 'bg-brand/20 text-brand dark:bg-primary/20 dark:text-primary'
+            : inAnnotation
+              ? ''
+              : 'hover:bg-primary/10'
       }`}
     >
       {word.word}
@@ -173,6 +199,64 @@ const BIBLE_ICON_CLASS =
 const KEYWORD_ICON_CLASS =
   'inline-flex items-center align-middle -translate-y-0.5 text-sky-700 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300';
 
+// Inline icon-button shown next to a timestamp or heading on hover —
+// click copies a `<page>#t=<seconds>` deep-link to the clipboard,
+// briefly swapping the link icon for a checkmark as feedback. Layout
+// stays stable across the show/hide because we use `invisible` (the
+// box keeps its size) plus `group-hover:visible` on the parent row.
+function CopyLinkButton({
+  seconds,
+  className,
+}: {
+  seconds: number;
+  className?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const handleClick = async () => {
+    const base = window.location.href.split('#')[0] ?? '';
+    const seekTo = Math.max(0, Math.round(seconds));
+    try {
+      await navigator.clipboard.writeText(`${base}#t=${seekTo}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // navigator.clipboard rejects on insecure contexts (http://) or
+      // when the browser denies permission. Silent — the icon is a
+      // convenience; users can still copy via the URL bar.
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      aria-label={copied ? 'Link copied' : 'Copy link to timestamp'}
+      className={`shrink-0 cursor-pointer text-primary/40 hover:text-primary/80 ${className ?? ''}`}
+    >
+      {copied ? (
+        <IconCheck size={12} aria-hidden="true" />
+      ) : (
+        <IconLink size={12} aria-hidden="true" />
+      )}
+    </button>
+  );
+}
+
+// Build a case-insensitive regex from a whitespace-separated query so
+// each non-empty term matches as a substring against each word.
+// Returns null for empty queries; callers should skip matching in that
+// case. Memoized at the TranscriptParagraphs level since the query is
+// the same for every paragraph in the same render.
+function buildHighlightPattern(query: string | undefined): RegExp | null {
+  if (!query) return null;
+  const terms = query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((t) => t.length > 0)
+    .map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  if (terms.length === 0) return null;
+  return new RegExp(`(${terms.join('|')})`, 'i');
+}
+
 // Memoized so that, as playback ticks, only the paragraph(s) whose
 // activeWordIndex/isActive actually changed re-render — not all of the
 // (potentially thousands of) word spans.
@@ -181,16 +265,31 @@ const ParagraphView = memo(function ParagraphView({
   activeWordIndex,
   isActive,
   onSeek,
+  highlightPattern,
 }: {
   paragraph: TranscriptParagraph;
   activeWordIndex: number;
   isActive: boolean;
   onSeek: (start: number) => void;
+  highlightPattern: RegExp | null;
 }) {
   const { outline, chunks } = useMemo(
     () => indexParagraph(paragraph),
     [paragraph],
   );
+
+  // Set of word indices that match the active search query (paragraph-
+  // search results render with this populated; the normal transcript
+  // view passes a null pattern so the set is empty).
+  const matchSet = useMemo(() => {
+    const set = new Set<number>();
+    if (!highlightPattern) return set;
+    for (let i = 0; i < paragraph.words.length; i++) {
+      const w = paragraph.words[i];
+      if (w && highlightPattern.test(w.word)) set.add(i);
+    }
+    return set;
+  }, [paragraph.words, highlightPattern]);
 
   // OUTLINE title: stored as `metadata.title`. Defensive in case a
   // future variant of the metadata shape lands without it.
@@ -202,141 +301,170 @@ const ParagraphView = memo(function ParagraphView({
   return (
     <>
       {outlineTitle ? (
-        <h3 className="col-start-2 pt-6 pb-1">
+        // `col-span-2 grid grid-cols-subgrid` gives the row a real box
+        // spanning both outer columns (so hovering the gap between
+        // icon and heading still triggers group-hover) while keeping
+        // the inner cells aligned to the outer grid's column tracks
+        // via CSS subgrid — `display: contents` left dead-zones in the
+        // gap where neither child caught the hover.
+        <div className="group col-span-2 grid grid-cols-subgrid pt-6 pb-1">
+          <div className="flex items-center justify-end">
+            <CopyLinkButton
+              seconds={paragraph.start}
+              className="invisible group-hover:visible"
+            />
+          </div>
+          <h3>
+            <button
+              type="button"
+              onClick={() => onSeek(paragraph.start)}
+              className="cursor-pointer text-left font-semibold text-base text-primary hover:text-primary/80"
+            >
+              {outlineTitle}
+            </button>
+          </h3>
+        </div>
+      ) : null}
+      {/* Timestamp (seconds → ms for formatTime). Click seeks to the
+          paragraph; hovering anywhere on the row reveals the copy-
+          link icon immediately to the left of the timestamp, both
+          right-aligned in col 1. Same subgrid wrapper as the heading
+          row so hover covers the full row width. */}
+      <div className="group col-span-2 grid grid-cols-subgrid">
+        <div className="flex items-center justify-end gap-1 self-start pt-1">
+          <CopyLinkButton
+            seconds={paragraph.start}
+            className="invisible group-hover:visible"
+          />
           <button
             type="button"
+            data-p={paragraph.order}
             onClick={() => onSeek(paragraph.start)}
-            className="cursor-pointer text-left font-semibold text-base text-primary hover:text-primary/80"
+            className={`cursor-pointer text-right text-[10px] tabular-nums leading-[1.4] tracking-[-0.2px] ${
+              isActive
+                ? 'text-brand dark:text-primary'
+                : 'text-primary/50 hover:text-primary/70'
+            }`}
           >
-            {outlineTitle}
+            {formatTime(paragraph.start * 1000)}
           </button>
-        </h3>
-      ) : null}
-      {/* Timestamp (seconds → ms for formatTime); click seeks to the paragraph. */}
-      <button
-        type="button"
-        data-p={paragraph.order}
-        onClick={() => onSeek(paragraph.start)}
-        className={`self-start pt-1 text-left text-[10px] tabular-nums leading-[1.4] tracking-[-0.2px] ${
-          isActive
-            ? 'text-brand dark:text-primary'
-            : 'text-primary/50 hover:text-primary/70'
-        }`}
-      >
-        {formatTime(paragraph.start * 1000)}
-      </button>
-      <p
-        className={`text-sm leading-[1.6] transition-colors ${
-          isActive ? 'text-primary' : 'text-primary/60'
-        }`}
-      >
-        {chunks.map((chunk) => {
-          const inAnnotation = chunk.annotation !== null;
-          const wordButtons = paragraph.words
-            .slice(chunk.startIdx, chunk.endIdx)
-            .map((w, i) => {
-              const wordIdx = chunk.startIdx + i;
-              return (
-                <Fragment key={`${wordIdx}-${w.start}`}>
-                  <WordButton
-                    word={w}
-                    isActive={wordIdx === activeWordIndex}
-                    onSeek={onSeek}
-                    inAnnotation={inAnnotation}
-                  />{' '}
-                </Fragment>
-              );
-            });
+        </div>
+        <p
+          className={`text-sm leading-[1.6] transition-colors ${
+            isActive ? 'text-primary' : 'text-primary/60'
+          }`}
+        >
+          {chunks.map((chunk) => {
+            const inAnnotation = chunk.annotation !== null;
+            const wordButtons = paragraph.words
+              .slice(chunk.startIdx, chunk.endIdx)
+              .map((w, i) => {
+                const wordIdx = chunk.startIdx + i;
+                return (
+                  <Fragment key={`${wordIdx}-${w.start}`}>
+                    <WordButton
+                      word={w}
+                      isActive={wordIdx === activeWordIndex}
+                      isMatched={matchSet.has(wordIdx)}
+                      onSeek={onSeek}
+                      inAnnotation={inAnnotation}
+                    />{' '}
+                  </Fragment>
+                );
+              });
 
-          if (chunk.annotation === null) {
-            return (
-              <Fragment key={`${chunk.startIdx}-plain`}>{wordButtons}</Fragment>
-            );
-          }
-
-          if (chunk.annotation.kind === 'BIBLE') {
-            // Defensive: parseBibleMetadata rejects rows with genuinely
-            // malformed jsonb. Should never fire — the activity's
-            // bibleMetadataSchema (closed OSIS enum) rejects bad
-            // metadata at insert time — but keep a silent fallback so
-            // an unexpected row can't crash the transcript render.
-            const meta = parseBibleMetadata(chunk.annotation.metadata);
-            const url = meta ? buildBibleHubUrl(meta) : null;
-            if (!meta || !url) {
+            if (chunk.annotation === null) {
               return (
-                <Fragment key={`${chunk.startIdx}-bible-skip`}>
+                <Fragment key={`${chunk.startIdx}-plain`}>
                   {wordButtons}
                 </Fragment>
               );
             }
-            const ref = formatBibleRef(meta);
-            // Highlighter metaphor — light mode draws a yellow
-            // background behind the span (text stays original); dark
-            // mode swaps to a solid yellow text color with no
-            // background, since translucent yellow over a dark
-            // surface reads muddy. `text-decoration` underlines would
-            // render only on the inter-word text nodes (UA stylesheet
-            // `text-decoration: none` on the child `<button>`s
-            // suppresses them under the words), which is why we don't
-            // use them. The trailing tooltip icon (a real `<a>`) is
-            // the action surface — both keyboard-focusable and
-            // middle-clickable for a new tab.
+
+            if (chunk.annotation.kind === 'BIBLE') {
+              // Defensive: parseBibleMetadata rejects rows with genuinely
+              // malformed jsonb. Should never fire — the activity's
+              // bibleMetadataSchema (closed OSIS enum) rejects bad
+              // metadata at insert time — but keep a silent fallback so
+              // an unexpected row can't crash the transcript render.
+              const meta = parseBibleMetadata(chunk.annotation.metadata);
+              const url = meta ? buildBibleHubUrl(meta) : null;
+              if (!meta || !url) {
+                return (
+                  <Fragment key={`${chunk.startIdx}-bible-skip`}>
+                    {wordButtons}
+                  </Fragment>
+                );
+              }
+              const ref = formatBibleRef(meta);
+              // Highlighter metaphor — light mode draws a yellow
+              // background behind the span (text stays original); dark
+              // mode swaps to a solid yellow text color with no
+              // background, since translucent yellow over a dark
+              // surface reads muddy. `text-decoration` underlines would
+              // render only on the inter-word text nodes (UA stylesheet
+              // `text-decoration: none` on the child `<button>`s
+              // suppresses them under the words), which is why we don't
+              // use them. The trailing tooltip icon (a real `<a>`) is
+              // the action surface — both keyboard-focusable and
+              // middle-clickable for a new tab.
+              return (
+                <Fragment key={`${chunk.startIdx}-bible`}>
+                  <span className="rounded-sm bg-yellow-300/30 px-0.5 dark:bg-transparent dark:text-yellow-300">
+                    {wordButtons}
+                  </span>
+                  <LcTooltip
+                    content={`${ref} on BibleHub`}
+                    render={
+                      // biome-ignore lint/a11y/useAnchorContent: the icon child below becomes the anchor's content at runtime via Tooltip.Trigger's render-pass-through; `aria-label` provides explicit accessible text regardless.
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`${ref} on BibleHub`}
+                        className={BIBLE_ICON_CLASS}
+                      />
+                    }
+                  >
+                    <IconExternalLink size={12} aria-hidden="true" />
+                  </LcTooltip>{' '}
+                </Fragment>
+              );
+            }
+
+            // KEYWORD — search-route link, real <a> under the hood (via
+            // TanStack <Link>) so middle-click opens a new tab. Strip
+            // leading/trailing punctuation from each word so `q=` is a
+            // clean phrase (`"Christ, his death"` would land as
+            // `q=Christ%2C%20his%20death`).
+            const spanText = paragraph.words
+              .slice(chunk.startIdx, chunk.endIdx)
+              .map((w) => stripWordPunctuation(w.word))
+              .filter((w) => w.length > 0)
+              .join(' ');
             return (
-              <Fragment key={`${chunk.startIdx}-bible`}>
-                <span className="rounded-sm bg-yellow-300/30 px-0.5 dark:bg-transparent dark:text-yellow-300">
+              <Fragment key={`${chunk.startIdx}-keyword`}>
+                <span className="rounded-sm bg-sky-400/25 px-0.5 dark:bg-transparent dark:text-sky-400">
                   {wordButtons}
                 </span>
                 <LcTooltip
-                  content={`${ref} on BibleHub`}
+                  content={`Search "${spanText}"`}
                   render={
-                    // biome-ignore lint/a11y/useAnchorContent: the icon child below becomes the anchor's content at runtime via Tooltip.Trigger's render-pass-through; `aria-label` provides explicit accessible text regardless.
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={`${ref} on BibleHub`}
-                      className={BIBLE_ICON_CLASS}
+                    <Link
+                      to="/search"
+                      search={{ q: spanText }}
+                      aria-label={`Search "${spanText}"`}
+                      className={KEYWORD_ICON_CLASS}
                     />
                   }
                 >
-                  <IconExternalLink size={12} aria-hidden="true" />
+                  <IconSearch size={12} aria-hidden="true" />
                 </LcTooltip>{' '}
               </Fragment>
             );
-          }
-
-          // KEYWORD — search-route link, real <a> under the hood (via
-          // TanStack <Link>) so middle-click opens a new tab. Strip
-          // leading/trailing punctuation from each word so `q=` is a
-          // clean phrase (`"Christ, his death"` would land as
-          // `q=Christ%2C%20his%20death`).
-          const spanText = paragraph.words
-            .slice(chunk.startIdx, chunk.endIdx)
-            .map((w) => stripWordPunctuation(w.word))
-            .filter((w) => w.length > 0)
-            .join(' ');
-          return (
-            <Fragment key={`${chunk.startIdx}-keyword`}>
-              <span className="rounded-sm bg-sky-400/25 px-0.5 dark:bg-transparent dark:text-sky-400">
-                {wordButtons}
-              </span>
-              <LcTooltip
-                content={`Search "${spanText}"`}
-                render={
-                  <Link
-                    to="/search"
-                    search={{ q: spanText }}
-                    aria-label={`Search "${spanText}"`}
-                    className={KEYWORD_ICON_CLASS}
-                  />
-                }
-              >
-                <IconSearch size={12} aria-hidden="true" />
-              </LcTooltip>{' '}
-            </Fragment>
-          );
-        })}
-      </p>
+          })}
+        </p>
+      </div>
     </>
   );
 });
@@ -344,9 +472,16 @@ const ParagraphView = memo(function ParagraphView({
 export function TranscriptParagraphs({
   paragraphs,
   isTranscriptProcessing = false,
+  highlightQuery,
 }: Props) {
   const currentTime = useStore($currentTime);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Pattern is the same for every paragraph in this render — build once.
+  const highlightPattern = useMemo(
+    () => buildHighlightPattern(highlightQuery),
+    [highlightQuery],
+  );
 
   // Flattened word starts (seconds) for binary search; each maps back to its
   // paragraph + word position.
@@ -377,13 +512,17 @@ export function TranscriptParagraphs({
   }, [flat, currentTime]);
 
   // Auto-scroll the active paragraph into view when it changes.
+  // Skipped in search mode (`highlightPattern` set) — the user is
+  // browsing a filtered match list and an unrelated playback-driven
+  // scroll would yank the list out from under them.
   useEffect(() => {
+    if (highlightPattern) return;
     if (active.paragraphIndex < 0 || !containerRef.current) return;
     const order = paragraphs[active.paragraphIndex]?.order;
     containerRef.current
       .querySelector(`[data-p="${order}"]`)
       ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [active.paragraphIndex, paragraphs]);
+  }, [active.paragraphIndex, paragraphs, highlightPattern]);
 
   const handleSeek = useCallback((start: number) => {
     $setPlayAt.set(start);
@@ -422,7 +561,7 @@ export function TranscriptParagraphs({
   }
 
   return (
-    <div ref={containerRef} className="size-full overflow-auto p-5">
+    <div ref={containerRef} className="size-full overflow-auto py-5 pr-5 pl-2">
       <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-3">
         {paragraphs.map((p, pi) => (
           <ParagraphView
@@ -433,6 +572,7 @@ export function TranscriptParagraphs({
             }
             isActive={pi === active.paragraphIndex}
             onSeek={handleSeek}
+            highlightPattern={highlightPattern}
           />
         ))}
       </div>
