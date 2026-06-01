@@ -3,6 +3,7 @@ import {
   Badge,
   Button,
   Card,
+  Checkbox,
   Group,
   SegmentedControl,
   Stack,
@@ -63,6 +64,15 @@ function ReprocessPage() {
     useState<ProcessingScope>('transcode');
   const [allProcessingScope, setAllProcessingScope] =
     useState<ProcessingScope>('transcode');
+
+  // Per-card toggle for OpenAI Batch API mode. When checked, each
+  // group of 100 uploads' LLM stages (summarize/annotate/embed)
+  // submit via the Batch API at 50% cost with a ~24h SLA; live
+  // path otherwise. Only meaningful for scopes that include
+  // transcribe.
+  const [legacyViaBatch, setLegacyViaBatch] = useState(false);
+  const [channelViaBatch, setChannelViaBatch] = useState(false);
+  const [allViaBatch, setAllViaBatch] = useState(false);
 
   const { data: status, refetch: refetchStatus } = useSuspenseQuery({
     ...trpc.dashboard.admin.getReprocessStatus.queryOptions(),
@@ -154,6 +164,17 @@ function ReprocessPage() {
             disabled={status.legacyStatus === 'running'}
           />
 
+          <Checkbox
+            size="xs"
+            label="Use OpenAI Batch API (50% cost, ~24h SLA per group of 100)"
+            checked={legacyViaBatch}
+            onChange={(e) => setLegacyViaBatch(e.currentTarget.checked)}
+            disabled={
+              status.legacyStatus === 'running' ||
+              legacyProcessingScope === 'transcode'
+            }
+          />
+
           {status.legacyStatus === 'running' ? (
             <Button
               size="xs"
@@ -181,6 +202,7 @@ function ReprocessPage() {
                 startMutation.mutate({
                   scope: { kind: 'legacy' },
                   processingScope: legacyProcessingScope,
+                  viaBatch: legacyViaBatch,
                 })
               }
             >
@@ -221,6 +243,17 @@ function ReprocessPage() {
             disabled={channelStatus === 'running'}
           />
 
+          <Checkbox
+            size="xs"
+            label="Use OpenAI Batch API (50% cost, ~24h SLA per group of 100)"
+            checked={channelViaBatch}
+            onChange={(e) => setChannelViaBatch(e.currentTarget.checked)}
+            disabled={
+              channelStatus === 'running' ||
+              channelProcessingScope === 'transcode'
+            }
+          />
+
           {channelStatus === 'running' ? (
             <Button
               size="xs"
@@ -250,6 +283,7 @@ function ReprocessPage() {
                 startMutation.mutate({
                   scope: { kind: 'channel', channelSlug: channelSlug.trim() },
                   processingScope: channelProcessingScope,
+                  viaBatch: channelViaBatch,
                 })
               }
             >
@@ -288,6 +322,17 @@ function ReprocessPage() {
             disabled={status.allStatus === 'running'}
           />
 
+          <Checkbox
+            size="xs"
+            label="Use OpenAI Batch API (50% cost, ~24h SLA per group of 100)"
+            checked={allViaBatch}
+            onChange={(e) => setAllViaBatch(e.currentTarget.checked)}
+            disabled={
+              status.allStatus === 'running' ||
+              allProcessingScope === 'transcode'
+            }
+          />
+
           {status.allStatus === 'running' ? (
             <Button
               size="xs"
@@ -313,6 +358,7 @@ function ReprocessPage() {
                 startMutation.mutate({
                   scope: { kind: 'all' },
                   processingScope: allProcessingScope,
+                  viaBatch: allViaBatch,
                 })
               }
             >

@@ -4256,6 +4256,7 @@ export const adminRouter = router({
         processingScope: z
           .enum(['transcode', 'transcribe', 'everything'])
           .default('transcode'),
+        viaBatch: z.boolean().default(false),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -4265,10 +4266,35 @@ export const adminRouter = router({
           context: {
             scope: input.scope,
             processingScope: input.processingScope,
+            viaBatch: input.viaBatch,
           },
         },
         'Starting reprocess',
       );
+
+      // Pre-flight: OpenAI Batch only accepts openai/* model ids
+      // (model id is rewritten by stripping the prefix before
+      // submission). If a chat/embed model isn't openai/-prefixed,
+      // batch mode would silently fail at submit time — reject up
+      // front with a useful message.
+      if (input.viaBatch) {
+        const offenders: string[] = [];
+        if (!SUMMARY_MODEL.startsWith('openai/')) {
+          offenders.push(`SUMMARY_MODEL=${SUMMARY_MODEL}`);
+        }
+        if (!ANNOTATE_MODEL.startsWith('openai/')) {
+          offenders.push(`ANNOTATE_MODEL=${ANNOTATE_MODEL}`);
+        }
+        if (!EMBED_MODEL.startsWith('openai/')) {
+          offenders.push(`EMBED_MODEL=${EMBED_MODEL}`);
+        }
+        if (offenders.length > 0) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Batch mode requires openai/* models. Non-openai configured: ${offenders.join(', ')}`,
+          });
+        }
+      }
 
       let scope: ReprocessScope;
       if (input.scope.kind === 'channel') {
@@ -4297,7 +4323,9 @@ export const adminRouter = router({
           });
         }
 
-        await startReprocess(scope, input.processingScope);
+        await startReprocess(scope, input.processingScope, {
+          viaBatch: input.viaBatch,
+        });
         return { success: true };
       } catch (err) {
         if (err instanceof TRPCError) throw err;

@@ -108,6 +108,7 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1m
       WEB_URL: ${HOST_WEB_URL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       OPENROUTER_SUMMARY_MODEL: ${OPENROUTER_SUMMARY_MODEL:-openai/gpt-5.4-mini}
       OPENROUTER_ANNOTATE_MODEL: ${OPENROUTER_ANNOTATE_MODEL:-openai/gpt-5.4-mini}
@@ -279,6 +280,7 @@ services:
   listmonk:
     image: listmonk/listmonk:v5.1.0
     command: [sh, -c, "./listmonk --install --yes && ./listmonk"]
+    restart: unless-stopped
     environment:
       LISTMONK_db__host: postgres
       LISTMONK_db__port: 5432
@@ -300,6 +302,7 @@ services:
 
   imgproxy:
     image: darthsim/imgproxy:v3.21.0
+    restart: unless-stopped
     environment:
       IMGPROXY_KEY: ${IMGPROXY_KEY}
       IMGPROXY_SALT: ${IMGPROXY_SALT}
@@ -364,6 +367,7 @@ services:
 
   temporal:
     image: temporalio/server:1.31.0
+    restart: unless-stopped
     environment:
       BIND_ON_IP: "0.0.0.0"
       DB: postgres12_pgx
@@ -416,6 +420,7 @@ services:
 
   temporal-admin-tools:
     image: temporalio/admin-tools:1.31.0
+    restart: unless-stopped
     environment:
       TEMPORAL_ADDRESS: temporal:7233
     stdin_open: true
@@ -425,6 +430,7 @@ services:
 
   temporal-ui:
     image: temporalio/ui:2.44.1
+    restart: unless-stopped
     environment:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_CORS_ORIGINS: http://localhost:3000
@@ -438,6 +444,7 @@ services:
   #
   postgres:
     image: postgres:18.3-alpine3.23
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${PG_USER}
       POSTGRES_PASSWORD: ${PG_PASSWORD}
@@ -463,6 +470,7 @@ services:
 
   elasticsearch:
     image: elasticsearch:8.19.7
+    restart: unless-stopped
     environment:
       - cluster.routing.allocation.disk.threshold_enabled=true
       - cluster.routing.allocation.disk.watermark.low=512mb
@@ -511,6 +519,7 @@ services:
 
   kibana:
     image: kibana:9.1.5
+    restart: unless-stopped
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch:9200
     depends_on:
@@ -519,7 +528,7 @@ services:
       - 127.0.0.1:${HOST_KIBANA_PORT}:5601
   mailpit:
     image: axllent/mailpit:v1.13.0
-    restart: always
+    restart: unless-stopped
     ports:
       - 127.0.0.1:${HOST_MAILPIT_SMTP_PORT}:1025 # smtp server
       - 127.0.0.1:${HOST_MAILPIT_WEB_PORT}:8025 # web ui

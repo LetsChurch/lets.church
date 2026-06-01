@@ -108,6 +108,13 @@ export type RecordLlmCallArgs = {
   outcome: string;
   /** Failure detail mirroring the thrown Error message. Null on success. */
   errorMessage?: string | null;
+  /**
+   * Set when the call was processed via OpenAI's Batch API. Halves the
+   * `computedCostUsd` we write (Batch invoices at 50% of live rates)
+   * and tags the row so dashboards can split live vs batch spend.
+   * Defaults to false for the live path.
+   */
+  viaBatch?: boolean;
   /** Override the clock for tests / backfills. Defaults to `new Date()`. */
   at?: Date;
 };
@@ -344,7 +351,13 @@ export async function createEmbeddingsTracked(
  */
 export async function recordLlmCall(args: RecordLlmCallArgs): Promise<void> {
   const at = args.at ?? new Date();
-  const computed =
+  const viaBatch = args.viaBatch ?? false;
+  // OpenAI Batch invoices at 50% of the posted rate, so we halve the
+  // computed cost at write time. `computeCost` itself stays a pure
+  // lookup against the pricing table — the multiplier is applied
+  // here so the pricing table remains the single source of truth for
+  // live rates.
+  const computedRaw =
     args.promptTokens != null && args.completionTokens != null
       ? computeCost(
           args.model,
@@ -354,6 +367,8 @@ export async function recordLlmCall(args: RecordLlmCallArgs): Promise<void> {
           at,
         )
       : null;
+  const computed =
+    computedRaw === null ? null : viaBatch ? computedRaw * 0.5 : computedRaw;
   await db.insert(LlmCall).values({
     model: args.model,
     activity: args.activity,
@@ -373,6 +388,7 @@ export async function recordLlmCall(args: RecordLlmCallArgs): Promise<void> {
     // `createEmbeddingsTracked`) always pass an explicit value.
     outcome: args.outcome,
     errorMessage: args.errorMessage ?? null,
+    viaBatch,
     createdAt: at,
   });
 }

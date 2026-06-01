@@ -92,6 +92,13 @@
       "when": 1780149867570,
       "tag": "0012_llm-call-tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1780199591611,
+      "tag": "0013_llm-call-via-batch",
+      "breakpoints": true
     }
   ]
 }

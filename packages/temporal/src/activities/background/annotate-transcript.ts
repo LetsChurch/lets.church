@@ -225,6 +225,281 @@ export type RunAnnotationResult = {
 // OpenRouter reject the call before it ever runs).
 export const DEFAULT_ANNOTATION_MAX_TOKENS = 32768;
 
+// Exported so the OpenAI Batch path can submit the exact same system
+// prompt the live `runAnnotation` uses.
+export const ANNOTATE_SYSTEM_PROMPT_REF = (): string => SYSTEM_PROMPT;
+
+// Build the user-message content for an annotate request. Pure —
+// shared between the live `runAnnotation` and the batch request
+// builder so the two paths can't drift on prompt shape.
+export function buildAnnotationUserContent(
+  paragraphs: EvalParagraph[],
+  metadata: AnnotationMetadata,
+): string {
+  const transcriptBody = paragraphs.map((p) => p.text).join('\n\n');
+  const metadataLines = [
+    `Channel: ${metadata.channelName}`,
+    metadata.title ? `Title: ${metadata.title}` : null,
+    metadata.description ? `Description: ${metadata.description}` : null,
+  ].filter((l): l is string => l !== null);
+  return `${metadataLines.join('\n')}\n\nTranscript:\n\n${transcriptBody}`;
+}
+
+// Build a chat.completions.create body for an annotation request,
+// for the batch path's JSONL serialisation. Live `runAnnotation`
+// keeps its body inline to satisfy the typed wrapper signature.
+export function buildAnnotationChatBody(
+  paragraphs: EvalParagraph[],
+  metadata: AnnotationMetadata,
+  model: string,
+  maxTokens: number = DEFAULT_ANNOTATION_MAX_TOKENS,
+): Record<string, unknown> {
+  return {
+    model,
+    max_tokens: maxTokens,
+    temperature: 0.6,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      {
+        role: 'user',
+        content: buildAnnotationUserContent(paragraphs, metadata),
+      },
+    ],
+  };
+}
+
+// Parse a model-emitted annotation response: fence-strip, build the
+// char-diff + word-position maps, walk headings + inline-link pass +
+// keyword global pass. Returns the resolved annotations + skipped
+// items + counts, plus the stripped text for "copy output" eval
+// affordances. Pure — both `runAnnotation` (live) and the batch
+// output processor call this.
+export function parseAnnotationResponse(
+  raw: string,
+  paragraphs: EvalParagraph[],
+): {
+  annotations: ResolvedAnnotation[];
+  skippedItems: SkippedAnnotation[];
+  counts: { outline: number; bible: number; keyword: number; skipped: number };
+  responseText: string;
+} {
+  // Defensive fence-strip in case the model wraps its document despite
+  // explicit instructions. Doing it once up-front means `responseText`
+  // is clean for the eval "copy output" affordance and the diff pass
+  // sees the same text the eval UI shows.
+  const stripped = raw
+    .trim()
+    .replace(/^```(?:markdown|md)?\s*/i, '')
+    .replace(/\s*```$/i, '');
+
+  // Build two position maps:
+  //   1. wordAt: char offset in `transcriptBody` → (paragraphIdx,
+  //      wordIdx), null for whitespace and the `\n\n` separators.
+  //   2. modelToOriginal: char offset in `stripped` → char offset in
+  //      `transcriptBody`, -1 for chars the model added (link
+  //      decorations, inserted headings, spurious whitespace).
+  //
+  // Together they let us walk every link/heading the model emitted and
+  // find exactly where it lives in the original — bypassing any
+  // per-paragraph alignment that would otherwise fail when the model
+  // merges, splits, or reorders paragraphs.
+  const transcriptBody = paragraphs.map((p) => p.text).join('\n\n');
+  const wordAt = buildWordPositionMap(paragraphs);
+  const modelToOriginal = buildModelToOriginalMap(transcriptBody, stripped);
+
+  const annotations: ResolvedAnnotation[] = [];
+  const skippedItems: SkippedAnnotation[] = [];
+  let outlineCount = 0;
+  let bibleCount = 0;
+  let keywordCount = 0;
+  let skippedInline = 0;
+
+  // --- Headings -----------------------------------------------------
+  // A heading line in the model output is a pure insertion (no
+  // corresponding chars in the original). To attach it to a paragraph,
+  // scan forward past the heading line for the first model char that
+  // *does* map back to the original — that char's paragraph is the one
+  // the heading opens.
+  HEADING_RE.lastIndex = 0;
+  for (const headingMatch of stripped.matchAll(HEADING_RE)) {
+    const title = headingMatch[1]?.trim();
+    if (!title || headingMatch.index === undefined) continue;
+    let scan = headingMatch.index + headingMatch[0].length;
+    while (scan < stripped.length && modelToOriginal[scan] === -1) scan++;
+    if (scan >= stripped.length) continue;
+    const origPos = modelToOriginal[scan] as number;
+    const wp = wordAt[origPos];
+    if (!wp) continue;
+    const paragraph = paragraphs[wp.paragraphIdx] as EvalParagraph;
+    annotations.push({
+      paragraphId: paragraph.id,
+      kind: 'OUTLINE',
+      startWord: null,
+      endWord: null,
+      rawSpan: null,
+      metadata: { level: 1, title },
+    });
+    outlineCount += 1;
+  }
+
+  // --- Inline links -------------------------------------------------
+  // Bible refs: resolve each link's span chars through the diff map to
+  // find its real position in the original transcript. From there,
+  // wordAt gives us paragraph + word range.
+  //
+  // Keywords: collect the distinct span texts the model wrapped. We
+  // *don't* use their positions — keywords aren't context-specific, so
+  // we'll do a global pass below to highlight every occurrence in
+  // every paragraph.
+  const keywordSpans = new Set<string>();
+  LINK_RE.lastIndex = 0;
+  for (const match of stripped.matchAll(LINK_RE)) {
+    const [, span, kindLower, queryRaw] = match;
+    if (!span || !kindLower || match.index === undefined) continue;
+
+    if (kindLower === 'keyword') {
+      keywordSpans.add(span);
+      continue;
+    }
+
+    // Bible: locate the span via the model→original map.
+    const spanStartModel = match.index + 1; // skip the '['
+    const spanEndModel = spanStartModel + span.length; // exclusive
+
+    let startOrig = -1;
+    for (let k = spanStartModel; k < spanEndModel; k++) {
+      if (modelToOriginal[k] !== -1) {
+        startOrig = modelToOriginal[k] as number;
+        break;
+      }
+    }
+    let endOrig = -1;
+    for (let k = spanEndModel - 1; k >= spanStartModel; k--) {
+      if (modelToOriginal[k] !== -1) {
+        endOrig = modelToOriginal[k] as number;
+        break;
+      }
+    }
+
+    const intendedMetadata = parseBibleQueryMetadata(queryRaw);
+
+    if (startOrig === -1 || endOrig === -1) {
+      skippedInline += 1;
+      skippedItems.push({
+        paragraphId: '',
+        paragraphOrder: -1,
+        kind: 'BIBLE',
+        span,
+        metadata: intendedMetadata,
+        reason: 'not_found',
+      });
+      continue;
+    }
+
+    const startWp = wordAt[startOrig];
+    const endWp = wordAt[endOrig];
+    if (!startWp || !endWp || startWp.paragraphIdx !== endWp.paragraphIdx) {
+      skippedInline += 1;
+      const ownerIdx = startWp?.paragraphIdx ?? endWp?.paragraphIdx;
+      const owner = ownerIdx !== undefined ? paragraphs[ownerIdx] : undefined;
+      skippedItems.push({
+        paragraphId: owner?.id ?? '',
+        paragraphOrder: owner?.order ?? -1,
+        kind: 'BIBLE',
+        span,
+        metadata: intendedMetadata,
+        reason: 'not_found',
+      });
+      continue;
+    }
+
+    const paragraph = paragraphs[startWp.paragraphIdx] as EvalParagraph;
+    const query = queryRaw ? queryRaw.slice(1) : '';
+    const params = new URLSearchParams(query);
+    const metaCandidate = bibleMetadataSchema.safeParse({
+      book: params.get('book') ?? '',
+      chapter: params.get('chapter') ?? undefined,
+      verse: params.get('verse') ?? undefined,
+      endChapter: params.get('endChapter') ?? undefined,
+      endVerse: params.get('endVerse') ?? undefined,
+    });
+    if (!metaCandidate.success) {
+      skippedInline += 1;
+      skippedItems.push({
+        paragraphId: paragraph.id,
+        paragraphOrder: paragraph.order,
+        kind: 'BIBLE',
+        span,
+        metadata: intendedMetadata,
+        reason: 'invalid_metadata',
+      });
+      continue;
+    }
+    annotations.push({
+      paragraphId: paragraph.id,
+      kind: 'BIBLE',
+      startWord: startWp.wordIdx,
+      endWord: endWp.wordIdx + 1,
+      rawSpan: span,
+      metadata: metaCandidate.data as unknown as Record<string, unknown>,
+    });
+    bibleCount += 1;
+  }
+
+  // --- Keyword global highlight pass --------------------------------
+  for (const span of keywordSpans) {
+    const spanTokens = tokenize(span);
+    if (spanTokens.length === 0) continue;
+    let matched = false;
+    for (const p of paragraphs) {
+      const tokens = p.words.map((w) => normalizeWord(w.word));
+      for (let i = 0; i + spanTokens.length <= tokens.length; i++) {
+        let ok = true;
+        for (let j = 0; j < spanTokens.length; j++) {
+          if (tokens[i + j] !== spanTokens[j]) {
+            ok = false;
+            break;
+          }
+        }
+        if (!ok) continue;
+        annotations.push({
+          paragraphId: p.id,
+          kind: 'KEYWORD',
+          startWord: i,
+          endWord: i + spanTokens.length,
+          rawSpan: span,
+          metadata: {},
+        });
+        keywordCount += 1;
+        matched = true;
+      }
+    }
+    if (!matched) {
+      skippedInline += 1;
+      skippedItems.push({
+        paragraphId: '',
+        paragraphOrder: -1,
+        kind: 'KEYWORD',
+        span,
+        metadata: {},
+        reason: 'not_found',
+      });
+    }
+  }
+
+  return {
+    annotations,
+    skippedItems,
+    counts: {
+      outline: outlineCount,
+      bible: bibleCount,
+      keyword: keywordCount,
+      skipped: skippedInline,
+    },
+    responseText: stripped,
+  };
+}
+
 /**
  * Pure LLM-call + parse layer for annotation. Sends the paragraphs to the
  * chosen model, decodes the structured response, resolves inline spans to
@@ -594,231 +869,17 @@ export async function runAnnotation(
 
   const raw = choice?.message.content;
   invariant(raw, 'Model returned no content');
-  // Defensive fence-strip in case the model wraps its document despite
-  // explicit instructions. Doing it once up-front means `responseText`
-  // is clean for the eval "copy output" affordance and the diff pass
-  // sees the same text the eval UI shows.
-  const stripped = raw
-    .trim()
-    .replace(/^```(?:markdown|md)?\s*/i, '')
-    .replace(/\s*```$/i, '');
-
-  // Build two position maps:
-  //   1. wordAt: char offset in `transcriptBody` → (paragraphIdx,
-  //      wordIdx), null for whitespace and the `\n\n` separators.
-  //   2. modelToOriginal: char offset in `stripped` → char offset in
-  //      `transcriptBody`, -1 for chars the model added (link
-  //      decorations, inserted headings, spurious whitespace).
-  //
-  // Together they let us walk every link/heading the model emitted and
-  // find exactly where it lives in the original — bypassing any
-  // per-paragraph alignment that would otherwise fail when the model
-  // merges, splits, or reorders paragraphs.
-  const wordAt = buildWordPositionMap(paragraphs);
-  const modelToOriginal = buildModelToOriginalMap(transcriptBody, stripped);
-
-  const annotations: ResolvedAnnotation[] = [];
-  const skippedItems: SkippedAnnotation[] = [];
-  let outlineCount = 0;
-  let bibleCount = 0;
-  let keywordCount = 0;
-  let skippedInline = 0;
-
-  // --- Headings -----------------------------------------------------
-  // A heading line in the model output is a pure insertion (no
-  // corresponding chars in the original). To attach it to a paragraph,
-  // scan forward past the heading line for the first model char that
-  // *does* map back to the original — that char's paragraph is the one
-  // the heading opens.
-  HEADING_RE.lastIndex = 0;
-  for (const headingMatch of stripped.matchAll(HEADING_RE)) {
-    const title = headingMatch[1]?.trim();
-    if (!title || headingMatch.index === undefined) continue;
-    let scan = headingMatch.index + headingMatch[0].length;
-    while (scan < stripped.length && modelToOriginal[scan] === -1) scan++;
-    if (scan >= stripped.length) continue;
-    const origPos = modelToOriginal[scan] as number;
-    const wp = wordAt[origPos];
-    if (!wp) continue;
-    const paragraph = paragraphs[wp.paragraphIdx] as EvalParagraph;
-    annotations.push({
-      paragraphId: paragraph.id,
-      kind: 'OUTLINE',
-      startWord: null,
-      endWord: null,
-      rawSpan: null,
-      metadata: { level: 1, title },
-    });
-    outlineCount += 1;
-  }
-
-  // --- Inline links -------------------------------------------------
-  // Bible refs: resolve each link's span chars through the diff map to
-  // find its real position in the original transcript. From there,
-  // wordAt gives us paragraph + word range.
-  //
-  // Keywords: collect the distinct span texts the model wrapped. We
-  // *don't* use their positions — keywords aren't context-specific, so
-  // we'll do a global pass below to highlight every occurrence in
-  // every paragraph.
-  const keywordSpans = new Set<string>();
-  LINK_RE.lastIndex = 0;
-  for (const match of stripped.matchAll(LINK_RE)) {
-    const [, span, kindLower, queryRaw] = match;
-    if (!span || !kindLower || match.index === undefined) continue;
-
-    if (kindLower === 'keyword') {
-      keywordSpans.add(span);
-      continue;
-    }
-
-    // Bible: locate the span via the model→original map.
-    const spanStartModel = match.index + 1; // skip the '['
-    const spanEndModel = spanStartModel + span.length; // exclusive
-
-    let startOrig = -1;
-    for (let k = spanStartModel; k < spanEndModel; k++) {
-      if (modelToOriginal[k] !== -1) {
-        startOrig = modelToOriginal[k] as number;
-        break;
-      }
-    }
-    let endOrig = -1;
-    for (let k = spanEndModel - 1; k >= spanStartModel; k--) {
-      if (modelToOriginal[k] !== -1) {
-        endOrig = modelToOriginal[k] as number;
-        break;
-      }
-    }
-
-    const intendedMetadata = parseBibleQueryMetadata(queryRaw);
-
-    if (startOrig === -1 || endOrig === -1) {
-      // None of the span's chars survived to the original — model
-      // emitted text that wasn't in the input. Skip.
-      skippedInline += 1;
-      skippedItems.push({
-        paragraphId: '',
-        paragraphOrder: -1,
-        kind: 'BIBLE',
-        span,
-        metadata: intendedMetadata,
-        reason: 'not_found',
-      });
-      continue;
-    }
-
-    const startWp = wordAt[startOrig];
-    const endWp = wordAt[endOrig];
-    if (!startWp || !endWp || startWp.paragraphIdx !== endWp.paragraphIdx) {
-      // Span endpoints land in whitespace, separator, or cross a
-      // paragraph boundary (would only happen if model glued paragraphs
-      // together — but the diff still gave us positions, just bad ones).
-      skippedInline += 1;
-      const ownerIdx = startWp?.paragraphIdx ?? endWp?.paragraphIdx;
-      const owner = ownerIdx !== undefined ? paragraphs[ownerIdx] : undefined;
-      skippedItems.push({
-        paragraphId: owner?.id ?? '',
-        paragraphOrder: owner?.order ?? -1,
-        kind: 'BIBLE',
-        span,
-        metadata: intendedMetadata,
-        reason: 'not_found',
-      });
-      continue;
-    }
-
-    const paragraph = paragraphs[startWp.paragraphIdx] as EvalParagraph;
-    const query = queryRaw ? queryRaw.slice(1) : '';
-    const params = new URLSearchParams(query);
-    const metaCandidate = bibleMetadataSchema.safeParse({
-      book: params.get('book') ?? '',
-      chapter: params.get('chapter') ?? undefined,
-      verse: params.get('verse') ?? undefined,
-      endChapter: params.get('endChapter') ?? undefined,
-      endVerse: params.get('endVerse') ?? undefined,
-    });
-    if (!metaCandidate.success) {
-      skippedInline += 1;
-      skippedItems.push({
-        paragraphId: paragraph.id,
-        paragraphOrder: paragraph.order,
-        kind: 'BIBLE',
-        span,
-        metadata: intendedMetadata,
-        reason: 'invalid_metadata',
-      });
-      continue;
-    }
-    annotations.push({
-      paragraphId: paragraph.id,
-      kind: 'BIBLE',
-      startWord: startWp.wordIdx,
-      endWord: endWp.wordIdx + 1, // half-open
-      rawSpan: span,
-      metadata: metaCandidate.data as unknown as Record<string, unknown>,
-    });
-    bibleCount += 1;
-  }
-
-  // --- Keyword global highlight pass --------------------------------
-  // Keywords aren't context-specific: the model only needs to flag a
-  // distinctive term once, and we propagate the highlight to every
-  // occurrence of that term anywhere in the transcript. This recovers
-  // (a) repeated terms in the same paragraph that exact-match would
-  // skip as "ambiguous", and (b) terms appearing in paragraphs the
-  // model didn't wrap them in.
-  for (const span of keywordSpans) {
-    const spanTokens = tokenize(span);
-    if (spanTokens.length === 0) continue;
-    let matched = false;
-    for (const p of paragraphs) {
-      const tokens = p.words.map((w) => normalizeWord(w.word));
-      for (let i = 0; i + spanTokens.length <= tokens.length; i++) {
-        let ok = true;
-        for (let j = 0; j < spanTokens.length; j++) {
-          if (tokens[i + j] !== spanTokens[j]) {
-            ok = false;
-            break;
-          }
-        }
-        if (!ok) continue;
-        annotations.push({
-          paragraphId: p.id,
-          kind: 'KEYWORD',
-          startWord: i,
-          endWord: i + spanTokens.length,
-          rawSpan: span,
-          metadata: {},
-        });
-        keywordCount += 1;
-        matched = true;
-      }
-    }
-    if (!matched) {
-      // Model emitted a keyword span that doesn't appear in the
-      // transcript at all — likely a hallucination or a tokenization
-      // mismatch (joined acronym vs spaced form).
-      skippedInline += 1;
-      skippedItems.push({
-        paragraphId: '',
-        paragraphOrder: -1,
-        kind: 'KEYWORD',
-        span,
-        metadata: {},
-        reason: 'not_found',
-      });
-    }
-  }
+  const { annotations, skippedItems, counts, responseText } =
+    parseAnnotationResponse(raw, paragraphs);
 
   return {
     annotations,
     stats: {
       paragraphs: paragraphs.length,
-      outline: outlineCount,
-      bible: bibleCount,
-      keyword: keywordCount,
-      skipped: skippedInline,
+      outline: counts.outline,
+      bible: counts.bible,
+      keyword: counts.keyword,
+      skipped: counts.skipped,
       durationMs,
       promptTokens: completion.usage?.prompt_tokens ?? null,
       completionTokens: completion.usage?.completion_tokens ?? null,
@@ -837,7 +898,7 @@ export async function runAnnotation(
       ),
     },
     prompt: { system: SYSTEM_PROMPT, user: userContent },
-    responseText: stripped,
+    responseText,
     skippedItems,
   };
 }

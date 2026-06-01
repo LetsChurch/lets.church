@@ -1050,13 +1050,19 @@ export async function cancelReindex(kind: ReindexWorkflowParams['kind']) {
 export async function startReprocess(
   scope: ReprocessScope,
   processingScope: 'transcode' | 'transcribe' | 'everything' = 'transcode',
+  options: { viaBatch?: boolean } = {},
 ) {
   return (await client).workflow.start(reprocessAllWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_REPROCESS },
     workflowId: makeReprocessAllWorkflowId(scope),
-    args: [scope, processingScope],
+    args: [
+      scope,
+      processingScope,
+      null,
+      { viaBatch: options.viaBatch ?? false },
+    ],
   });
 }
 

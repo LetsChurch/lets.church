@@ -2037,6 +2037,12 @@ export const LlmCall = pgTable(
     // Free-form failure detail when `outcome` is a guard rejection
     // (mirrors the thrown Error's message). Null on success.
     errorMessage: text('error_message'),
+    // True when the call was processed via OpenAI's Batch API rather
+    // than the live (OpenRouter) path — Batch invoices at 50% of the
+    // posted rate, so `computedCostUsd` for these rows is already
+    // halved before insert. Lets cost dashboards split live vs batch
+    // spend without inferring it.
+    viaBatch: boolean('via_batch').notNull().default(false),
     createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
   },
   (LlmCall) => ({

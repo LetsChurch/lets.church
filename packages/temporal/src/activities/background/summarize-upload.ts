@@ -94,6 +94,70 @@ export type RunSummaryResult = {
 // ones (DeepSeek v3.x).
 export const DEFAULT_SUMMARY_MAX_TOKENS = 4096;
 
+// Exported system prompt so the batch path can submit the exact same
+// instructions the live `runSummary` uses.
+export const SUMMARY_SYSTEM_PROMPT = SYSTEM_PROMPT;
+
+// Build the user-message content for a summary request. Pure — used
+// by both the live `runSummary` and the batch request builder so the
+// two paths can't drift on prompt shape.
+export function buildSummaryUserContent(
+  paragraphTexts: string[],
+  metadata: SummaryMetadata,
+): string {
+  const transcript = paragraphTexts.join('\n\n');
+  const metadataLines = [
+    `Channel: ${metadata.channelName}`,
+    metadata.title ? `Title: ${metadata.title}` : null,
+    metadata.description ? `Description: ${metadata.description}` : null,
+  ].filter((l): l is string => l !== null);
+  return `${metadataLines.join('\n')}\n\nTranscript:\n\n${transcript}`;
+}
+
+// Build a chat.completions.create body for a summary request. Used by
+// the live path (then spread with `openrouterExtras`) and the batch
+// builder (which strips those extras and the `openai/` model prefix).
+export function buildSummaryChatBody(
+  paragraphTexts: string[],
+  metadata: SummaryMetadata,
+  model: string,
+  maxTokens: number = DEFAULT_SUMMARY_MAX_TOKENS,
+): Record<string, unknown> {
+  return {
+    model,
+    response_format: { type: 'json_object' },
+    max_tokens: maxTokens,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      {
+        role: 'user',
+        content: buildSummaryUserContent(paragraphTexts, metadata),
+      },
+    ],
+  };
+}
+
+// Parse a model-emitted summary response: defensive fence-strip, then
+// JSON + zod. Returns the raw stripped JSON alongside the parsed
+// values so callers can stash `responseText` for the LLM-eval surface.
+export function parseSummaryResponse(raw: string): {
+  summary: string;
+  searchSummary: string;
+  responseText: string;
+} {
+  // Strip ```json fences some providers add despite json_object mode.
+  const stripped = raw
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '');
+  const parsed = responseSchema.parse(JSON.parse(stripped));
+  return {
+    summary: parsed.summary,
+    searchSummary: parsed.searchSummary,
+    responseText: stripped,
+  };
+}
+
 export async function runSummary(
   paragraphTexts: string[],
   metadata: SummaryMetadata,
@@ -113,13 +177,7 @@ export async function runSummary(
   invariant(paragraphTexts.length > 0, 'runSummary: no paragraphs provided');
   const maxTokens = options.maxTokens ?? DEFAULT_SUMMARY_MAX_TOKENS;
 
-  const transcript = paragraphTexts.join('\n\n');
-  const metadataLines = [
-    `Channel: ${metadata.channelName}`,
-    metadata.title ? `Title: ${metadata.title}` : null,
-    metadata.description ? `Description: ${metadata.description}` : null,
-  ].filter((l): l is string => l !== null);
-  const userContent = `${metadataLines.join('\n')}\n\nTranscript:\n\n${transcript}`;
+  const userContent = buildSummaryUserContent(paragraphTexts, metadata);
 
   // Summary output is bounded (250 + 200 words for the two fields ≈ 1K
   // tokens with JSON overhead); 4K leaves plenty of headroom across
@@ -130,6 +188,10 @@ export async function runSummary(
   // guards (finish_reason length/content_filter, empty content,
   // create() throw). No activity-specific guards needed here — the
   // zod parse below catches malformed JSON.
+  //
+  // Body kept inline (vs reusing `buildSummaryChatBody`) so the
+  // typed `createChatCompletionTracked` signature is happy — that
+  // helper exists for the batch path which serialises as raw JSON.
   const t0 = Date.now();
   const completion = await createChatCompletionTracked({
     tracking: options.tracking,
@@ -147,22 +209,17 @@ export async function runSummary(
 
   const raw = choice?.message.content;
   invariant(raw, 'Model returned no content');
-  // Strip ```json fences some providers add despite json_object mode.
-  const stripped = raw
-    .trim()
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/i, '');
-  const parsed = responseSchema.parse(JSON.parse(stripped));
+  const { summary, searchSummary, responseText } = parseSummaryResponse(raw);
 
   return {
-    summary: parsed.summary,
-    searchSummary: parsed.searchSummary,
+    summary,
+    searchSummary,
     stats: {
       durationMs,
       promptTokens: completion.usage?.prompt_tokens ?? null,
       completionTokens: completion.usage?.completion_tokens ?? null,
-      summaryLength: parsed.summary.length,
-      searchSummaryLength: parsed.searchSummary.length,
+      summaryLength: summary.length,
+      searchSummaryLength: searchSummary.length,
       // See annotate-transcript.ts for the rationale on resolveCostUsd
       // (provider-reported cost when present and non-zero, else table).
       costUsd: resolveCostUsd(
@@ -174,7 +231,7 @@ export async function runSummary(
       ),
     },
     prompt: { system: SYSTEM_PROMPT, user: userContent },
-    responseText: stripped,
+    responseText,
   };
 }
 
