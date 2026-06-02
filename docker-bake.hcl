@@ -20,6 +20,7 @@ group "default" {
     "background-worker",
     "probe-worker",
     "transcode-worker",
+    "transcode-worker-ama",
     "import-worker",
     "transcribe-worker",
     "download-service"
@@ -89,6 +90,13 @@ target "transcode-worker" {
   tags = ["${REGISTRY}/transcode-worker:${TAG}"]
   platforms = PLATFORMS
   project-id = "letschurch-transcode-worker"
+}
+
+target "transcode-worker-ama" {
+  target = "transcode-worker-ama"
+  tags = ["${REGISTRY}/transcode-worker-ama:${TAG}"]
+  platforms = ["linux/amd64"]
+  project-id = "letschurch-transcode-worker-ama"
 }
 
 target "import-worker" {

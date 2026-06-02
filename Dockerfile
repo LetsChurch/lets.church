@@ -136,6 +136,44 @@ COPY --from=build-audiowaveform /home/build/audiowaveform/build/audiowaveform /u
 USER nodeapp
 CMD ["pnpm", "--filter", "@letschurch/transcode-worker", "run", "start"]
 
+FROM ubuntu:22.04 AS transcode-worker-ama
+ARG DEBIAN_FRONTEND=noninteractive
+ENV PNPM_HOME="/pnpm"
+ENV PATH="/opt/amd/ama/ma35/bin:$PNPM_HOME:$PATH"
+ENV NODE_ENV=production
+# Graft Node from the official image
+COPY --from=node:24.4.1-slim /usr/local/bin/node /usr/local/bin/
+COPY --from=node:24.4.1-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s /usr/local/lib/node_modules/corepack/dist/corepack.js /usr/local/bin/corepack && \
+  corepack enable
+# System tools + ffmpeg fallback (Prisma needs openssl/libssl-dev)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl openssl libssl-dev \
+    wget pciutils ffmpeg imagemagick jpegoptim && \
+  rm -rf /var/lib/apt/lists/*
+# AMA SDK (Ubuntu 22.04 / jammy required for Xilinx APT repo)
+RUN wget -qO /usr/share/keyrings/xilinx-master-signing-key.asc \
+    https://www.xilinx.com/support/download/2018-2-1/xilinx-master-signing-key.asc && \
+  echo "deb [arch=amd64 signed-by=/usr/share/keyrings/xilinx-master-signing-key.asc] \
+    https://packages.xilinx.com/artifactory/debian-packages jammy main" \
+    > /etc/apt/sources.list.d/xilinx-ama.list && \
+  apt-get update && apt-get install -y --no-install-recommends \
+    amd-ama-core amd-ama-xma amd-ama-ffmpeg && \
+  apt-mark hold amd-ama-core amd-ama-xma amd-ama-ffmpeg && \
+  rm -rf /var/lib/apt/lists/*
+COPY --from=oxipng /usr/local/bin/oxipng /usr/local/bin/oxipng
+COPY --from=build-audiowaveform /home/build/audiowaveform/build/audiowaveform /usr/bin/
+RUN mkdir -p /usr/src/app /data
+WORKDIR /usr/src/app
+RUN groupadd -r nodeapp && useradd -r -g nodeapp -m nodeapp && \
+  chown -R nodeapp:nodeapp /usr/src/app /data
+COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml package.json ./
+COPY --chown=nodeapp:nodeapp --from=prod-deps /usr/src/app/node_modules ./node_modules
+COPY --chown=nodeapp:nodeapp --from=prod-deps /usr/src/app/packages/ ./packages/
+COPY --chown=nodeapp:nodeapp --from=build /usr/src/app/packages/ ./packages/
+USER nodeapp
+CMD ["pnpm", "--filter", "@letschurch/transcode-worker", "run", "start"]
+
 FROM prod-with-ffmpeg AS import-worker
 USER root
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
