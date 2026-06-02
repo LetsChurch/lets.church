@@ -3211,11 +3211,14 @@ export const adminRouter = router({
   }),
 
   /**
-   * Uploads whose summary pipeline failed and never produced a summary.
-   * Same shape as `getFailedAnnotations` — most-recent
-   * `activity='summarizeUpload'` `llm_call` has a non-success outcome AND
-   * `upload_record.summary` is still null. A retry that succeeded would
-   * populate `summary` and drop the row from this list.
+   * Uploads whose most recent summarize attempt failed. Same shape as
+   * `getFailedAnnotations` — gated purely on the most-recent
+   * `activity='summarizeUpload'` `llm_call` having a non-success
+   * outcome. Uploads whose prior summarize succeeded but whose most
+   * recent regenerate failed are intentionally included; the admin
+   * wants to know their regen didn't take. A successful retry rolls
+   * forward the latest-llm_call pointer and drops the row from the
+   * list.
    */
   getFailedSummaries: adminProcedure
     .input(

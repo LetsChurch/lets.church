@@ -15,10 +15,8 @@ function getMapboxToken(): string {
 }
 
 const moduleLogger = logger.child({
-  module: 'temporal/activities/background/index-document',
+  module: 'temporal/activities/background/geocode-organization',
 });
-
-export type DocumentKind = 'transcript' | 'upload' | 'organization' | 'channel';
 
 // https://github.com/colinhacks/zod/discussions/2178#discussioncomment-5256971
 // @see: https://github.com/colinhacks/zod#json-type

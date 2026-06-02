@@ -408,12 +408,19 @@ export default async function summarizeUpload(
   const sectionInputs = await loadOutlineSectionsForSummary(uploadRecordId);
 
   if (!options.force && upload.summary && upload.searchSummary) {
-    // Skip when the persisted sections count matches the current outline
-    // set — same shape both ways means a re-run wouldn't add information.
+    // Skip when persisted section ids exactly match the current outline
+    // set — same set both ways means a re-run wouldn't add information.
     // Mismatch (typically `outlines > 0 && sections === 0` after a
-    // graceful-degradation summarize/late-annotate sequence) re-runs so
-    // descriptions land for the now-available headings.
-    if (sectionInputs.length === upload.sections.length) {
+    // graceful-degradation summarize/late-annotate sequence, but also
+    // covers same-count-different-ids cases: annotate dropped a
+    // heading and added a new one) re-runs so descriptions land for
+    // the now-available headings.
+    const storedIds = new Set(upload.sections.map((s) => s.id));
+    const currentIds = new Set(sectionInputs.map((s) => s.id));
+    const idsMatch =
+      storedIds.size === currentIds.size &&
+      [...currentIds].every((id) => storedIds.has(id));
+    if (idsMatch) {
       activityLogger.info(
         `Skipping summarize — summary already present (force=false): display=${upload.summary.length}ch, search=${upload.searchSummary.length}ch, sections=${upload.sections.length}`,
       );
@@ -423,7 +430,7 @@ export default async function summarizeUpload(
       };
     }
     activityLogger.info(
-      `Re-summarizing despite existing summary — outline/section mismatch (outlines=${sectionInputs.length}, persisted sections=${upload.sections.length})`,
+      `Re-summarizing despite existing summary — outline/section id mismatch (outlines=${sectionInputs.length}, persisted sections=${upload.sections.length})`,
     );
   }
 

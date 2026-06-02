@@ -61,12 +61,21 @@ export async function summarizeUploadWorkflow(
   uploadRecordId: string,
   { embedParagraphs = false, force = false }: SummarizeUploadOptions = {},
 ) {
+  // `force` propagates to every step in the chain so admin Regenerate
+  // (which always passes force=true) actually rewrites: summary text →
+  // summary embeddings (otherwise the old vector outlives the new
+  // text), and paragraph embeddings when requested. The first-pass
+  // transcribe path runs with force=false so retries reuse durable
+  // landings instead of re-billing tokens — see each activity's
+  // idempotency comment.
   await Promise.all([
     (async () => {
       await summarizeUpload(uploadRecordId, { force });
-      await embedUpload(uploadRecordId);
+      await embedUpload(uploadRecordId, { force });
     })(),
-    embedParagraphs ? embedTranscriptParagraphs(uploadRecordId) : undefined,
+    embedParagraphs
+      ? embedTranscriptParagraphs(uploadRecordId, { force })
+      : undefined,
   ]);
 
   // Unique child workflow id per invocation. `Date.now()` is deterministic

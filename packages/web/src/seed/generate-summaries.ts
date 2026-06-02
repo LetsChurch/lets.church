@@ -27,11 +27,13 @@ let failed = 0;
 for (const uploadId of LLM_SEEDED_UPLOAD_IDS) {
   console.log(`[summarize] ${uploadId} …`);
   try {
-    // `force: true` so re-running this script after a prompt change actually
-    // re-summarizes; the activity's default idempotency check would otherwise
-    // skip any upload that already has a summary.
+    // `force: true` on both so re-running this script after a prompt
+    // change actually rewrites summary text AND the matching summary
+    // embeddings. Skipping the embed force-flag would leave the old
+    // vectors pointing at the new text — silent search-quality drift in
+    // the next dump.
     await summarizeUpload(uploadId, { force: true });
-    await embedUpload(uploadId);
+    await embedUpload(uploadId, { force: true });
     console.log(`[summarize] ${uploadId} done`);
     succeeded += 1;
   } catch (err) {
