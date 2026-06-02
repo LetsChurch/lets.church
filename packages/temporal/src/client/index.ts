@@ -74,6 +74,7 @@ export type UploadRecordUpdateData = {
   transcodingProgress?: number;
   transcribingStartedAt?: Date | null;
   transcribingFinishedAt?: Date | null;
+  transcribingProgress?: number;
   finalizedUploadKey?: string | null;
   uploadFinalizedAt?: Date | null;
   uploadFinalized?: boolean;

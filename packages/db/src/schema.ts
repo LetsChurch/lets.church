@@ -4,8 +4,10 @@ import {
   boolean,
   doublePrecision,
   foreignKey,
+  index,
   integer,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
   primaryKey,
@@ -40,6 +42,15 @@ export const InvitationStatus = pgEnum('invitation_status', [
   'DECLINED',
   'EXPIRED',
   'CANCELLED',
+]);
+
+// Kinds of automatic + future-user annotations on transcript_paragraph rows.
+// Today only the three automatic kinds; user/author kinds (USER_PRIVATE,
+// AUTHOR_PUBLIC) will be added via ALTER TYPE when those code paths ship.
+export const AnnotationKind = pgEnum('annotation_kind', [
+  'OUTLINE',
+  'BIBLE',
+  'KEYWORD',
 ]);
 
 export const OrganizationTagCategory = pgEnum('organization_tag_category', [
@@ -761,6 +772,9 @@ export const UploadRecord = pgTable(
     transcribingFinishedAt: timestamp('transcribing_finished_at', {
       precision: 3,
     }),
+    transcribingProgress: doublePrecision('transcribing_progress')
+      .notNull()
+      .default(0),
     deletedAt: timestamp('deleted_at', { precision: 3 }),
     variants: UploadVariant('variants').array().notNull(),
     score: doublePrecision('score').notNull(),
@@ -770,6 +784,29 @@ export const UploadRecord = pgTable(
       .default(true),
     downloadsEnabled: boolean('downloads_enabled').notNull().default(true),
     pipelineVersion: integer('pipeline_version').notNull().default(2),
+    // Display summary (frontend Summary tab). Populated by the summarize-upload
+    // activity after transcript paragraphs land.
+    summary: text('summary'),
+    // Search-optimized restatement (concepts/entities/scripture refs); never
+    // rendered to users, exists only to be embedded for similarity search.
+    searchSummary: text('search_summary'),
+    // 1536-dim OpenAI text-embedding-3-small vectors. JSONB now; convertible
+    // to pgvector when the extension is enabled (same plan as speaker_embedding).
+    summaryEmbedding: jsonb('summary_embedding').$type<number[]>(),
+    searchSummaryEmbedding: jsonb('search_summary_embedding').$type<number[]>(),
+    summarizedAt: timestamp('summarized_at', { precision: 3 }),
+    // YouTube-style outline panel: per-section description tied to one
+    // OUTLINE annotation. Populated by the summarize activity, which
+    // reads outlines from `annotation` (written by annotate first) and
+    // generates a 2-3 sentence description for each section. Empty
+    // array when the upload has no outlines or summarize hasn't run.
+    //   { id: <annotation.id>, description: string }
+    // Frontend joins this with the annotation table for titles +
+    // paragraph anchors (which give the start/end timestamps).
+    sections: jsonb('sections')
+      .$type<Array<{ id: string; description: string }>>()
+      .notNull()
+      .default([]),
   },
   (UploadRecord) => ({
     upload_record_createdBy_fkey: foreignKey({
@@ -818,6 +855,92 @@ export const UploadRecordDownloadSize = pgTable(
         UploadRecordDownloadSize.variant,
       ],
     }),
+  }),
+);
+
+export const TranscriptParagraph = pgTable(
+  'transcript_paragraph',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    uploadRecordId: uuid('upload_record_id').notNull(),
+    // Paragraph order within the upload.
+    order: integer('order').notNull(),
+    // Seconds (matches the worker's transcript.json word/segment timings).
+    start: doublePrecision('start').notNull(),
+    end: doublePrecision('end').notNull(),
+    // Worker-local speaker label (e.g. SPEAKER_00); not yet surfaced in the UI.
+    speaker: text('speaker'),
+    // 192-dim titanet embedding for this paragraph's speaker (denormalized;
+    // speaker identity/dedup is a later concern). JSONB now; convertible to a
+    // pgvector column later if/when the extension is enabled.
+    speakerEmbedding: jsonb('speaker_embedding').$type<number[]>(),
+    text: text('text').notNull(),
+    // Per-word timings for in-player word-level highlighting.
+    words: jsonb('words')
+      .$type<Array<{ word: string; start: number; end: number }>>()
+      .notNull(),
+    // 1536-dim OpenAI text-embedding-3-small vector for this paragraph's text
+    // (semantic search signal). Same JSONB-now / pgvector-later pattern as
+    // speaker_embedding above.
+    embedding: jsonb('embedding').$type<number[]>(),
+  },
+  (TranscriptParagraph) => ({
+    transcript_paragraph_uploadRecord_fkey: foreignKey({
+      name: 'transcript_paragraph_uploadRecord_fkey',
+      columns: [TranscriptParagraph.uploadRecordId],
+      foreignColumns: [UploadRecord.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    TranscriptParagraph_uploadRecordId_order_idx: uniqueIndex(
+      'transcript_paragraph_upload_record_id_order_idx',
+    ).on(TranscriptParagraph.uploadRecordId, TranscriptParagraph.order),
+  }),
+);
+
+export const Annotation = pgTable(
+  'annotation',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    paragraphId: uuid('paragraph_id').notNull(),
+    kind: AnnotationKind('kind').notNull(),
+    // Half-open word range [startWord, endWord) into paragraph.words[].
+    // Set for inline kinds (BIBLE, KEYWORD); null for block kinds (OUTLINE
+    // attaches to the whole paragraph as "this paragraph opens a section").
+    // Word-level (not char) granularity is robust to the LLM lightly editing
+    // surrounding text — at worst we lose an annotation, never cut a word.
+    startWord: integer('start_word'),
+    endWord: integer('end_word'),
+    // The LLM's verbatim span (as it returned it). Debug-only: the canonical
+    // text-of-record for an inline annotation is `words[startWord..endWord]`
+    // on the parent paragraph, and OUTLINE titles live in `metadata.title`.
+    // We keep `rawSpan` so SELECT statements show what each row covers
+    // without joining + slicing, and so we can audit cases where the LLM's
+    // span drifts from the canonical word-tokenization. Null for OUTLINE
+    // (no span exists).
+    rawSpan: text('raw_span'),
+    // The only multiplexed column — kind-specific payload. Typed at usage
+    // sites with a small zod schema:
+    //   OUTLINE: { level: 1 | 2 | 3, title: string }
+    //   BIBLE:   { book: string /* OSIS, e.g. "1Cor" */, chapter: number,
+    //              verse?: number, endChapter?: number, endVerse?: number }
+    //   KEYWORD: {} (placeholder for future per-keyword metadata)
+    metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+  },
+  (Annotation) => ({
+    annotation_paragraph_fkey: foreignKey({
+      name: 'annotation_paragraph_fkey',
+      columns: [Annotation.paragraphId],
+      foreignColumns: [TranscriptParagraph.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    annotation_paragraph_kind_idx: index('annotation_paragraph_kind_idx').on(
+      Annotation.paragraphId,
+      Annotation.kind,
+    ),
   }),
 );
 
@@ -1859,3 +1982,108 @@ export const ImportHistoryRelations = relations(ImportHistory, ({ one }) => ({
     references: [UploadRecord.id],
   }),
 }));
+
+// Audit log of every chat-completion call we make to an upstream LLM
+// (annotation, summarization, and the admin LLM-eval surface). One row
+// per call, recorded right after the completion comes back — including
+// calls that subsequently fail downstream guards (silent-summarization,
+// content-filter), since we paid for those tokens too.
+//
+// `computedCostUsd` is calculated on our side from `MODEL_PRICING` at
+// the time of the call (see `packages/temporal/src/util/llm-pricing.ts`).
+// `providerCostUsd` is what OpenRouter returned in `usage.cost` when
+// available — kept for reconciliation against our table. The two can
+// diverge when the price table is stale or when OpenRouter routes to a
+// provider whose price we haven't catalogued; alert when the deltas
+// exceed a threshold.
+export const LlmCall = pgTable(
+  'llm_call',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // OpenRouter model id, e.g. 'openai/gpt-5.4-mini'. Stored verbatim
+    // because pricing windows are keyed on this exact string.
+    model: text('model').notNull(),
+    // Logical activity tag — 'annotateTranscript', 'summarizeUpload',
+    // 'evalAnnotate', etc. Free-form so new activities don't need a
+    // schema migration.
+    activity: text('activity').notNull(),
+    // Nullable: the admin LLM-eval surface and other non-upload-bound
+    // flows have no upload. SET NULL on delete so an upload deletion
+    // doesn't shred its cost history (we still want the spend record).
+    uploadRecordId: uuid('upload_record_id'),
+    promptTokens: integer('prompt_tokens'),
+    completionTokens: integer('completion_tokens'),
+    // Provider-reported cached-input token count when available
+    // (Anthropic prompt caching, OpenAI cache_hits). Null when the
+    // provider doesn't expose it — most routes don't today.
+    cachedTokens: integer('cached_tokens'),
+    // Our-table-computed cost. Numeric (not double) because we're
+    // accumulating fractions-of-a-cent values that need to sum exactly.
+    computedCostUsd: numeric('computed_cost_usd', {
+      precision: 18,
+      scale: 8,
+    }),
+    // OpenRouter's reported usage.cost (when set on the request and
+    // returned non-null). Kept for reconciliation against our pricing
+    // table.
+    providerCostUsd: numeric('provider_cost_usd', {
+      precision: 18,
+      scale: 8,
+    }),
+    durationMs: integer('duration_ms').notNull(),
+    // The model's finish_reason — 'stop' on success, or 'length' /
+    // 'content_filter' on the failure paths that the downstream guards
+    // also catch. Null when the provider didn't return one.
+    finishReason: text('finish_reason'),
+    // Caller-supplied disposition tag. 'success' on the happy path,
+    // 'guard_*' values when one of the activity's downstream guards
+    // rejected the response (silent_summarization, length_truncation,
+    // content_filter, empty_content), or 'create_failed' when
+    // `llm.chat.completions.create` itself threw. Distinct from
+    // `finish_reason` because a silent-summarization rejection still
+    // has `finish_reason='stop'` — the model "successfully" returned a
+    // summary we then threw out. Free-form so new guards don't need a
+    // migration; defaults to 'success' so "all calls" dashboards never
+    // miss a row.
+    outcome: text('outcome').notNull().default('success'),
+    // Free-form failure detail when `outcome` is a guard rejection
+    // (mirrors the thrown Error's message). Null on success.
+    errorMessage: text('error_message'),
+    // True when the call was processed via OpenAI's Batch API rather
+    // than the live (OpenRouter) path — Batch invoices at 50% of the
+    // posted rate, so `computedCostUsd` for these rows is already
+    // halved before insert. Lets cost dashboards split live vs batch
+    // spend without inferring it.
+    viaBatch: boolean('via_batch').notNull().default(false),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+  },
+  (LlmCall) => ({
+    llm_call_uploadRecord_fkey: foreignKey({
+      name: 'llm_call_uploadRecord_fkey',
+      columns: [LlmCall.uploadRecordId],
+      foreignColumns: [UploadRecord.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+    llm_call_created_at_idx: index('llm_call_created_at_idx').on(
+      LlmCall.createdAt,
+    ),
+    llm_call_model_created_at_idx: index('llm_call_model_created_at_idx').on(
+      LlmCall.model,
+      LlmCall.createdAt,
+    ),
+    llm_call_activity_created_at_idx: index(
+      'llm_call_activity_created_at_idx',
+    ).on(LlmCall.activity, LlmCall.createdAt),
+    // Per-upload cost drill-down: "all spend for upload X" without a
+    // seqscan as the table grows.
+    llm_call_upload_record_id_idx: index('llm_call_upload_record_id_idx').on(
+      LlmCall.uploadRecordId,
+    ),
+    // Failure-mode aggregation: "last N hours of guard-rejected calls",
+    // used while tuning the silent-summarization floor.
+    llm_call_outcome_created_at_idx: index(
+      'llm_call_outcome_created_at_idx',
+    ).on(LlmCall.outcome, LlmCall.createdAt),
+  }),
+);

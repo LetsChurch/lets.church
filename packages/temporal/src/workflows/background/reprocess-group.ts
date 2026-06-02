@@ -1,0 +1,361 @@
+import {
+  CancellationScope,
+  executeChild,
+  isCancellation,
+  proxyActivities,
+  sleep,
+} from '@temporalio/workflow';
+import { invariant } from 'es-toolkit';
+import type * as backgroundActivities from '../../activities/background';
+import type * as probeActivities from '../../activities/probe';
+import type * as transcodeActivities from '../../activities/transcode';
+import type * as transcribeActivities from '../../activities/transcribe';
+import {
+  BACKGROUND_QUEUE,
+  PRIORITY_REPROCESS,
+  PROBE_QUEUE,
+  TRANSCODE_QUEUE,
+  TRANSCRIBE_QUEUE,
+} from '../../queues';
+import { UPLOAD_ID_KEY } from '../../search-attributes';
+import type { BatchStatus } from '../../util/openai-batch';
+import { probeIsVideoFile } from '../../util/zod';
+import { indexDocumentWorkflow } from './index-document';
+
+const { probe } = proxyActivities<typeof probeActivities>({
+  startToCloseTimeout: '20 minutes',
+  heartbeatTimeout: '10 minutes',
+  taskQueue: PROBE_QUEUE,
+  retry: { maximumAttempts: 2 },
+});
+
+const { transcode, createThumbnails } = proxyActivities<
+  typeof transcodeActivities
+>({
+  startToCloseTimeout: '180 minutes',
+  heartbeatTimeout: '10 minutes',
+  taskQueue: TRANSCODE_QUEUE,
+  retry: { maximumAttempts: 2 },
+});
+
+const { transcribe } = proxyActivities<typeof transcribeActivities>({
+  startToCloseTimeout: '180 minutes',
+  heartbeatTimeout: '10 minutes',
+  taskQueue: TRANSCRIBE_QUEUE,
+  retry: { maximumAttempts: 2 },
+});
+
+const { getFinalizedUploadKey, storeTranscriptParagraphs } = proxyActivities<
+  typeof backgroundActivities
+>({
+  startToCloseTimeout: '10 minutes',
+  heartbeatTimeout: '1 minute',
+  taskQueue: BACKGROUND_QUEUE,
+  retry: { maximumAttempts: 5 },
+});
+
+const {
+  submitLlmBatch,
+  processLlmBatchOutput,
+  cleanupBatchFiles,
+  embedUploadSummariesBulk,
+} = proxyActivities<typeof backgroundActivities>({
+  // All of these are short — submit uploads a JSONL + creates a
+  // batch; process streams a (bounded) output file and writes DB
+  // rows; cleanupBatchFiles is a few `files.delete` calls;
+  // embedUploadSummariesBulk is one live `embeddings.create` round-
+  // trip (≤200 inputs) + a transactional UPDATE per upload.
+  // 30m gives generous headroom for the larger groups. No
+  // heartbeatTimeout because none of these activities heartbeat —
+  // startToCloseTimeout is the only ceiling.
+  startToCloseTimeout: '30 minutes',
+  taskQueue: BACKGROUND_QUEUE,
+  retry: { maximumAttempts: 3 },
+});
+
+const { getLlmBatchStatus, cancelLlmBatch } = proxyActivities<
+  typeof backgroundActivities
+>({
+  // Single `batches.retrieve` / `batches.cancel` per call — short,
+  // safe to retry. The poll *loop* lives in the workflow body via
+  // `sleep()` so the multi-hour wait is durable across worker
+  // restarts (no heartbeating activity to lose).
+  startToCloseTimeout: '1 minute',
+  taskQueue: BACKGROUND_QUEUE,
+  retry: {
+    maximumAttempts: 5,
+    initialInterval: '10 seconds',
+    backoffCoefficient: 2,
+    maximumInterval: '5 minutes',
+  },
+});
+
+// Polling cadence — flat 10 minutes between checks. Expressed as a
+// workflow `sleep()` so the wait state is durable across worker
+// restarts. 10 minutes × 24h SLA = ~144 polls worst case, which is
+// trivial API load; the previous tiered cadence wasn't actually
+// catching completions faster in practice.
+const POLL_INTERVAL_MS = 10 * 60 * 1000;
+
+/**
+ * Wait for an OpenAI batch to reach a terminal status by polling
+ * via workflow timers. On workflow cancellation the timer rejects,
+ * the catch fires a best-effort `cancelLlmBatch` from a non-
+ * cancellable scope so the cleanup happens, and the cancellation
+ * re-throws.
+ */
+async function waitForBatch(batchId: string): Promise<BatchStatus> {
+  try {
+    while (true) {
+      const status = await getLlmBatchStatus(batchId);
+      if (isBatchTerminal(status.status)) return status;
+      await sleep(POLL_INTERVAL_MS);
+    }
+  } catch (err) {
+    if (isCancellation(err)) {
+      await CancellationScope.nonCancellable(() => cancelLlmBatch(batchId));
+    }
+    throw err;
+  }
+}
+
+// Inlined to avoid importing from `util/openai-batch` in workflow
+// code (that module pulls in the OpenAI SDK + env validation,
+// neither of which is safe to evaluate inside the workflow
+// sandbox). Mirrors `isBatchTerminal` from that module.
+function isBatchTerminal(status: BatchStatus['status']): boolean {
+  return (
+    status === 'completed' ||
+    status === 'failed' ||
+    status === 'expired' ||
+    status === 'cancelled'
+  );
+}
+
+/**
+ * OpenAI Batch-API reprocess for a group of uploads. Replaces the
+ * per-upload `processMediaWorkflow` chain when the admin enables
+ * "Use OpenAI Batch API" on the reprocess page.
+ *
+ * Phases:
+ *   1. Live per-upload prep: probe → transcode + transcribe +
+ *      thumbnails → storeTranscriptParagraphs. All uploads run in
+ *      parallel via `Promise.allSettled` so a single broken upload
+ *      doesn't kill the group.
+ *   2-3. In parallel, submit the chat batch (summarize + annotate)
+ *      and the paragraph-embed batch, then poll both to terminal.
+ *   4. Process both outputs (DB writes + `llm_call` rows with
+ *      `viaBatch: true`).
+ *   5. Submit the summary-embed batch (depends on phase-4 summaries),
+ *      poll, process.
+ *   6. Reindex each successful upload's media row.
+ *
+ * Pre-filtering (skip uploads whose LLM work is already done) is
+ * deferred — for now the batch resubmits all requests at 50% cost.
+ * Add a `force` toggle + pre-flight DB check later if backfill
+ * re-runs become wasteful.
+ */
+export async function reprocessGroupWorkflow(
+  uploadIds: string[],
+  processingScope: 'transcode' | 'transcribe' | 'everything' = 'everything',
+): Promise<void> {
+  if (uploadIds.length === 0) return;
+
+  // --- Phase 1: per-upload live prep ----------------------------
+  const prepResults = await Promise.allSettled(
+    uploadIds.map(async (uploadId) => {
+      const s3UploadKey = await getFinalizedUploadKey(uploadId);
+      const probeRes = await probe(uploadId, s3UploadKey);
+      invariant(probeRes !== null, `probe returned null for ${uploadId}`);
+
+      const wantsTranscribe =
+        processingScope === 'everything' || processingScope === 'transcribe';
+      const wantsTranscode =
+        processingScope === 'everything' || processingScope === 'transcode';
+
+      const transcribePromise = wantsTranscribe
+        ? transcribe(uploadId, s3UploadKey)
+        : null;
+
+      await Promise.all([
+        transcribePromise,
+        wantsTranscode ? transcode(uploadId, s3UploadKey, probeRes) : null,
+        ...(wantsTranscode && probeIsVideoFile(probeRes)
+          ? [createThumbnails(uploadId, s3UploadKey, probeRes)]
+          : []),
+      ]);
+
+      if (transcribePromise) {
+        const res = await transcribePromise;
+        await storeTranscriptParagraphs(uploadId, res.transcriptJsonKey);
+      }
+      return { uploadId, transcribed: wantsTranscribe };
+    }),
+  );
+
+  const transcribedUploadIds: string[] = [];
+  for (const r of prepResults) {
+    if (r.status === 'fulfilled' && r.value.transcribed) {
+      transcribedUploadIds.push(r.value.uploadId);
+    }
+  }
+
+  // If nothing got transcribed (transcode-only run, or every upload
+  // failed in prep) there's no LLM work to batch — fall straight to
+  // reindex below. The LLM stages are split across two batch waves:
+  //   Wave 1 (parallel): annotate batch + paragraph-embed batches.
+  //                      annotate writes OUTLINE annotations, which
+  //                      the summarize wave reads as input.
+  //   Wave 2 (after 1):  summarize batch — uses outlines + paragraphs
+  //                      to produce summary + searchSummary + per-
+  //                      section descriptions.
+  //   Live tail:         bulk embed-summary (one round-trip, no batch).
+  // Each kind's submit returns an array of OpenAI batches; embed_-
+  // paragraphs may split when total inputs exceed the 50K cap.
+  if (transcribedUploadIds.length > 0) {
+    // --- Wave 1, Phase 2: submit annotate + paragraph-embed --------
+    const [annotateSubmit, embedParagraphsSubmit] = await Promise.all([
+      submitLlmBatch({
+        uploadRecordIds: transcribedUploadIds,
+        kind: 'annotate',
+      }),
+      submitLlmBatch({
+        uploadRecordIds: transcribedUploadIds,
+        kind: 'embed_paragraphs',
+      }),
+    ]);
+
+    // --- Wave 1, Phase 3: poll both kinds in parallel --------------
+    const [annotateStatuses, embedParagraphsStatuses] = await Promise.all([
+      Promise.all(annotateSubmit.batches.map((b) => waitForBatch(b.batchId))),
+      Promise.all(
+        embedParagraphsSubmit.batches.map((b) => waitForBatch(b.batchId)),
+      ),
+    ]);
+
+    // --- Wave 1, Phase 4: process both outputs (annotate writes
+    //     OUTLINE annotations + scripture/keyword annotations to DB;
+    //     paragraph-embed writes vectors) -------------------------
+    await Promise.all([
+      ...annotateSubmit.batches.map((b, i) => {
+        const status = annotateStatuses[i];
+        if (!status) return null;
+        return processLlmBatchOutput({
+          batchId: b.batchId,
+          outputFileId: status.outputFileId,
+          errorFileId: status.errorFileId,
+          kind: 'annotate',
+        });
+      }),
+      ...embedParagraphsSubmit.batches.map((b, i) => {
+        const status = embedParagraphsStatuses[i];
+        if (!status) return null;
+        return processLlmBatchOutput({
+          batchId: b.batchId,
+          outputFileId: status.outputFileId,
+          errorFileId: status.errorFileId,
+          kind: 'embed_paragraphs',
+        });
+      }),
+    ]);
+
+    // --- Wave 1 cleanup: drop input/output/error files ------------
+    await cleanupBatchFiles({
+      fileIds: collectFileIds([
+        ...annotateSubmit.batches.flatMap((b, i) => [
+          b.inputFileId,
+          annotateStatuses[i]?.outputFileId ?? null,
+          annotateStatuses[i]?.errorFileId ?? null,
+        ]),
+        ...embedParagraphsSubmit.batches.flatMap((b, i) => [
+          b.inputFileId,
+          embedParagraphsStatuses[i]?.outputFileId ?? null,
+          embedParagraphsStatuses[i]?.errorFileId ?? null,
+        ]),
+      ]),
+    });
+
+    // --- Wave 2, Phase 5: submit summarize (depends on annotate's
+    //     outlines having landed in `annotation`) -------------------
+    if (annotateSubmit.includedUploadIds.length > 0) {
+      const summarizeSubmit = await submitLlmBatch({
+        uploadRecordIds: annotateSubmit.includedUploadIds,
+        kind: 'summarize',
+      });
+
+      // --- Wave 2, Phase 6: poll summarize batch ------------------
+      const summarizeStatuses = await Promise.all(
+        summarizeSubmit.batches.map((b) => waitForBatch(b.batchId)),
+      );
+
+      // --- Wave 2, Phase 7: process summarize output (writes
+      //     summary + searchSummary + per-section descriptions) ----
+      await Promise.all(
+        summarizeSubmit.batches.map((b, i) => {
+          const status = summarizeStatuses[i];
+          if (!status) return null;
+          return processLlmBatchOutput({
+            batchId: b.batchId,
+            outputFileId: status.outputFileId,
+            errorFileId: status.errorFileId,
+            kind: 'summarize',
+          });
+        }),
+      );
+
+      // --- Wave 2 cleanup ----------------------------------------
+      await cleanupBatchFiles({
+        fileIds: collectFileIds(
+          summarizeSubmit.batches.flatMap((b, i) => [
+            b.inputFileId,
+            summarizeStatuses[i]?.outputFileId ?? null,
+            summarizeStatuses[i]?.errorFileId ?? null,
+          ]),
+        ),
+      });
+
+      // --- Live tail, Phase 8: bulk embed summaries ---------------
+      // One live `embeddings.create` round-trip for every upload in
+      // the summarize batch. Replaces the previous embed-summary
+      // batch — the work is too small to justify another 24h
+      // batch cycle (~$0.001/100 uploads of batch discount).
+      if (summarizeSubmit.includedUploadIds.length > 0) {
+        await embedUploadSummariesBulk({
+          uploadRecordIds: summarizeSubmit.includedUploadIds,
+        });
+      }
+    }
+  }
+
+  // --- Phase 6: per-upload reindex (parallel children) ------------
+  // Spawn one child per upload so we get per-upload retries and the
+  // Temporal UI shows individual reindex progress. Cheap workflow.
+  const fulfilledUploadIds = prepResults
+    .filter(
+      (
+        r,
+      ): r is PromiseFulfilledResult<{
+        uploadId: string;
+        transcribed: boolean;
+      }> => r.status === 'fulfilled',
+    )
+    .map((r) => r.value.uploadId);
+  await Promise.all(
+    fulfilledUploadIds.map((uploadId) =>
+      executeChild(indexDocumentWorkflow, {
+        workflowId: `media:${uploadId}:batch:${Date.now()}`,
+        args: ['media', uploadId],
+        taskQueue: BACKGROUND_QUEUE,
+        priority: { priorityKey: PRIORITY_REPROCESS },
+        typedSearchAttributes: [{ key: UPLOAD_ID_KEY, value: uploadId }],
+        retry: { maximumAttempts: 2 },
+      }),
+    ),
+  );
+}
+
+// Filter a list of optional file ids down to the non-null/empty
+// strings that the cleanup activity should actually try to delete.
+function collectFileIds(ids: ReadonlyArray<string | null>): string[] {
+  return ids.filter((id): id is string => typeof id === 'string' && id !== '');
+}

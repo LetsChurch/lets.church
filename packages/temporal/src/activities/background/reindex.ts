@@ -4,11 +4,7 @@ import { asc, isNotNull, sql } from 'drizzle-orm';
 import logger from '../../util/logger';
 import indexDocument from './index-document';
 
-export type ReindexKind =
-  | 'upload'
-  | 'transcriptHtml'
-  | 'channel'
-  | 'organization';
+export type ReindexKind = 'upload' | 'transcript' | 'channel' | 'organization';
 
 export type ReindexBatchResult = {
   indexed: number;
@@ -26,7 +22,7 @@ export async function getReindexCount(kind: ReindexKind): Promise<number> {
       const r = await db.select({ count: countCol }).from(UploadRecord);
       return Number(r[0]?.count ?? 0);
     }
-    case 'transcriptHtml': {
+    case 'transcript': {
       const r = await db
         .select({ count: countCol })
         .from(UploadRecord)
@@ -49,7 +45,7 @@ export async function reindexBatch(
   offset: number,
   batchSize: number,
 ): Promise<ReindexBatchResult> {
-  type Row = { id: string; s3Key?: string; vttKey?: string };
+  type Row = { id: string; s3Key?: string };
   let rows: Row[] = [];
 
   switch (kind) {
@@ -63,7 +59,7 @@ export async function reindexBatch(
       rows = r.map((x) => ({ id: x.id }));
       break;
     }
-    case 'transcriptHtml': {
+    case 'transcript': {
       const r = await db
         .select({ id: UploadRecord.id })
         .from(UploadRecord)
@@ -73,8 +69,7 @@ export async function reindexBatch(
         .offset(offset);
       rows = r.map((x) => ({
         id: x.id,
-        s3Key: `${x.id}/transcript.original.json`,
-        vttKey: `${x.id}/transcript.vtt`,
+        s3Key: `${x.id}/transcript.vtt`,
       }));
       break;
     }
@@ -101,12 +96,9 @@ export async function reindexBatch(
   }
 
   let indexed = 0;
-  for (const { id, s3Key, vttKey } of rows) {
+  for (const { id, s3Key } of rows) {
     try {
       await indexDocument(kind, id, s3Key);
-      if (vttKey) {
-        await indexDocument('transcript', id, vttKey);
-      }
       indexed++;
     } catch (err) {
       moduleLogger.error(

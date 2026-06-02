@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+build/
+dist/
+*.egg-info/
+*.egg
+
+# uv
+.uv-cache/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local model caches (Docker uses /models/{huggingface,torch})
+.cache/
+models/
+
+# Logs
+*.log
+
+# Local env
+.env
+.env.local

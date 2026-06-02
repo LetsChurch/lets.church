@@ -63,8 +63,6 @@ export function probeIsVideoFile(probe: Probe) {
   return !probeIsAudioFile(probe);
 }
 
-// NOTE: This is a simplified version without bible references
-// The full version in web package includes bible reference parsing
 export const transcriptSegmentSchema = z.array(
   z.object({
     text: z.string(),

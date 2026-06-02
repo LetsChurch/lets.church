@@ -167,43 +167,60 @@ COPY --from=build-download /build/download-service /usr/local/bin/download-servi
 USER app
 CMD ["/usr/local/bin/download-service"]
 
-FROM nvidia/cuda:12.6.2-cudnn-runtime-ubuntu22.04 AS transcribe-worker
-ARG WHISPER_MODEL=tiny.en
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-COPY --from=node:24.4.1-slim /usr/local/bin/node /usr/local/bin/
-COPY --from=node:24.4.1-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
-RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
-  ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx && \
-  ln -s /usr/local/lib/node_modules/corepack/dist/corepack.js /usr/local/bin/corepack
-RUN corepack enable
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+# Python Temporal worker: faster-whisper + NeMo titanet diarization + wtpsplit.
+#
+# Multi-arch: builds native arm64 on Apple Silicon Docker Desktop and amd64 on
+# Linux/GPU hosts. We deliberately avoid the nvidia/cuda base image — PyTorch's
+# pip wheels already bundle the CUDA runtime + cuDNN on amd64, and the host
+# driver comes in via the NVIDIA Container Toolkit at deploy time. The cuda
+# base image's libcuda stub causes NeMo's import-time CUDA probe to segfault
+# under Rosetta on Apple Silicon and on no-GPU Linux build hosts.
+FROM python:3.11-slim-bookworm AS transcribe-worker
+ARG WHISPER_MODEL=base
+ARG WTPSPLIT_MODEL=sat-12l-sm
+ARG TITANET_MODEL=nvidia/speakerverification_en_titanet_large
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-  --mount=type=cache,target=/var/lib/apt,sharing=locked \
-  --mount=type=cache,target=/root/.cache/pip \
-  --mount=type=cache,target=/tmp/whisper-models \
-  apt-get update && \
-  apt-get install -y --no-install-recommends ca-certificates curl gnupg python3 python3-pip git ffmpeg && \
-  mkdir -p /opt/whisper/models && \
-  if [ ! -f /tmp/whisper-models/${WHISPER_MODEL}.tar.gz ]; then \
-  curl -o /tmp/whisper-models/${WHISPER_MODEL}.tar.gz https://data.letschurch.cloud/whisper-ctranslate2/models/${WHISPER_MODEL}.tar.gz; \
-  fi && \
-  tar -xzf /tmp/whisper-models/${WHISPER_MODEL}.tar.gz -C /opt/whisper/models && \
-  rm -rf /var/lib/apt/lists/* && \
-  apt-get clean && \
-  pip3 install --no-cache-dir git+https://github.com/Softcatala/whisper-ctranslate2.git@0.2.9
-# Create directories before user creation to avoid needing root later
-RUN mkdir -p /usr/src/app /data
-WORKDIR /usr/src/app
-# Create user early to avoid expensive chown operations later
-RUN groupadd -r nodeapp && useradd -r -g nodeapp -m nodeapp && \
-  chown -R nodeapp:nodeapp /usr/src/app /data
-COPY --chown=nodeapp:nodeapp pnpm-workspace.yaml package.json ./
-# Copy node_modules
-COPY --chown=nodeapp:nodeapp --from=prod-deps /usr/src/app/node_modules ./node_modules
-COPY --chown=nodeapp:nodeapp --from=prod-deps /usr/src/app/packages/ ./packages/
-# Copy package sources
-COPY --chown=nodeapp:nodeapp --from=build /usr/src/app/packages/ ./packages/
-USER nodeapp
-ENV NODE_ENV=production
-CMD ["pnpm", "--filter", "@letschurch/transcribe-worker", "run", "start"]
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ffmpeg libsndfile1 sox libsox-fmt-all git curl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    mv /root/.local/bin/uv /usr/local/bin/uv && \
+    mv /root/.local/bin/uvx /usr/local/bin/uvx
+RUN groupadd -r worker && useradd -r -g worker -m -d /home/worker worker && \
+    mkdir -p /app /models/huggingface /models/torch /models/nemo \
+        /home/worker/.cache/uv /home/worker/.cache/pip /home/worker/.cache/torch \
+        /home/worker/.cache/huggingface /data/transcribe && \
+    chown -R worker:worker /app /models /home/worker /data/transcribe
+WORKDIR /app
+COPY --chown=worker:worker services/transcribe/pyproject.toml services/transcribe/.python-version ./
+USER worker
+# uv generates uv.lock on first sync; rebuilds reuse it.
+RUN uv sync && rm -rf /home/worker/.cache/uv
+COPY --chown=worker:worker services/transcribe/download_models.py ./
+# Pre-warm model weights straight into the HF cache via huggingface_hub.
+# We never import NeMo/torch at build time — that would trigger CUDA probing
+# inside the builder (no GPU) and segfault. NeMo + faster-whisper + SaT all
+# resolve from the HF cache at runtime.
+RUN WHISPER_MODEL=${WHISPER_MODEL} \
+    WTPSPLIT_MODEL=${WTPSPLIT_MODEL} \
+    TITANET_MODEL=${TITANET_MODEL} \
+    uv run python download_models.py && \
+    if [ -d /home/worker/.cache/huggingface ] && [ -n "$(ls -A /home/worker/.cache/huggingface 2>/dev/null)" ]; then \
+        cp -r /home/worker/.cache/huggingface/* /models/huggingface/; \
+    fi && \
+    if [ -d /home/worker/.cache/torch ] && [ -n "$(ls -A /home/worker/.cache/torch 2>/dev/null)" ]; then \
+        cp -r /home/worker/.cache/torch/* /models/torch/; \
+    fi && \
+    rm -rf /home/worker/.cache/huggingface/* /home/worker/.cache/torch/* /home/worker/.cache/pip/*
+ENV HF_HOME=/models/huggingface \
+    TORCH_HOME=/models/torch \
+    NEMO_CACHE_DIR=/models/nemo
+# Source last so code changes don't invalidate the model-cache layer.
+COPY --chown=worker:worker services/transcribe/src/ ./src/
+# Tooling for dev — used by `just regenerate-seed-transcript`.
+COPY --chown=worker:worker services/transcribe/scripts/ ./scripts/
+CMD ["uv", "run", "python", "-m", "src.worker"]

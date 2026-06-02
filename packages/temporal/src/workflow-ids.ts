@@ -43,6 +43,24 @@ export function makeUpdateUploadRecordWorkflowId(uploadRecordId: string) {
   return `updateUploadRecord:${uploadRecordId}`;
 }
 
+// Per-upload run of the LLM summary + embeddings + lc_media_v1 indexer
+// pipeline (`summarizeUploadWorkflow`). No timestamp suffix: we want
+// Temporal to refuse a second concurrent run for the same upload (the admin
+// procedure also catches RUNNING and surfaces a clean error, but
+// ID-uniqueness is the belt to the procedure's braces).
+export function makeSummarizeUploadWorkflowId(uploadRecordId: string) {
+  return `summarizeUpload:${uploadRecordId}`;
+}
+
+// Per-upload run of the annotation pipeline (`annotateTranscriptWorkflow`):
+// outline + scripture + keyword annotations, then a media-doc reindex so the
+// new annotations land in lc_media_v1. Independent of the summary workflow
+// — admins regenerate either one on its own. Same no-timestamp / refuse-
+// concurrent rationale as the summary id.
+export function makeAnnotateTranscriptWorkflowId(uploadRecordId: string) {
+  return `annotateTranscript:${uploadRecordId}`;
+}
+
 export function makeRecordDownloadSizeWorkflowId(
   uploadRecordId: string,
   variant?: string,
@@ -59,14 +77,6 @@ export function makeUploadWorkflowId(s3UploadKey: string) {
 // Transcript workflows
 export function makeTranscriptWorkflowId(s3UploadKey: string) {
   return `transcript:${s3UploadKey}`;
-}
-
-export function makeTranscriptHtmlWorkflowId(s3UploadKey: string) {
-  return `transcriptHtml:${s3UploadKey}`;
-}
-
-export function makeRestitchTranscriptWorkflowId(targetId: string) {
-  return `transcript:restitch:${targetId}`;
 }
 
 // Document indexing
@@ -119,6 +129,9 @@ import type { ReprocessScope } from './reprocess-scope';
 export function makeReprocessAllWorkflowId(scope: ReprocessScope): string {
   if (scope.kind === 'channel')
     return `reprocessAll:channel:${scope.channelId}`;
+  // `no_paragraphs` is the post-rename version of the prior `legacy`
+  // pipeline-migration scope; same workflow shape, different selection
+  // criterion. The `kind` value goes verbatim into the workflow id.
   return `reprocessAll:${scope.kind}`;
 }
 

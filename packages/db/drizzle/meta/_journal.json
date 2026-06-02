@@ -43,6 +43,41 @@
       "when": 1779246000828,
       "tag": "0005_upload_record_user_fk_restrict",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779475001495,
+      "tag": "0006_transcribing_progress",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779483461030,
+      "tag": "0007_transcript_paragraph",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780369206401,
+      "tag": "0008_summaries_embeddings_sections",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1780369276233,
+      "tag": "0009_annotations",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1780369307446,
+      "tag": "0010_llm_call_tracking",
+      "breakpoints": true
     }
   ]
 }

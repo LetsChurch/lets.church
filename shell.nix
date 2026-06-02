@@ -27,6 +27,7 @@ pkgs.mkShell {
     nodejs
     pnpm
     rclone
+    ruff
     sampler
     templ
     unixtools.xxd

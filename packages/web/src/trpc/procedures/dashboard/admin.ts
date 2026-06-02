@@ -5,32 +5,46 @@ import {
   ChannelSubscription,
   db,
   FeaturedUpload,
+  LlmCall,
   Organization,
   OrganizationAddress,
   OrganizationChannelAssociation,
   OrganizationTag,
   SearchLogEntry,
+  TranscriptParagraph,
   UploadRecord,
   UploadState,
 } from '@letschurch/db';
 import { ingestConfig } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
+import { runAnnotation } from '@letschurch/temporal/activities/background/annotate-transcript';
+import { runSummary } from '@letschurch/temporal/activities/background/summarize-upload';
 import {
   BACKGROUND_QUEUE,
   CURRENT_PIPELINE_VERSION,
   PRIORITY_RETRY,
 } from '@letschurch/temporal/queues';
+import { UPLOAD_ID_KEY } from '@letschurch/temporal/search-attributes';
 import {
+  ANNOTATE_MODEL,
+  EMBED_MODEL,
+  SUMMARY_MODEL,
+} from '@letschurch/temporal/util/llm';
+import { assertProductionPricingCoverage } from '@letschurch/temporal/util/llm-pricing';
+import {
+  annotateTranscriptWorkflow,
   deleteChannelWorkflow,
   geocodeOrganizationWorkflow,
   postUserRegistrationWorkflow,
   processMediaWorkflow,
+  summarizeUploadWorkflow,
 } from '@letschurch/temporal/workflows/background';
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
 import {
   and,
   count,
+  desc,
   eq,
   gt,
   ilike,
@@ -38,6 +52,7 @@ import {
   isNotNull,
   isNull,
   lt,
+  notExists,
   or,
   sql,
   sum,
@@ -68,7 +83,9 @@ import {
   getReindexProgress,
   getRemuxWorkflowStatus,
   getReprocessWorkflowStatus,
+  makeAnnotateTranscriptWorkflowId,
   makeProcessMediaWorkflowId,
+  makeSummarizeUploadWorkflowId,
   type ReindexKind,
   type RemuxScope,
   type ReprocessScope,
@@ -97,6 +114,20 @@ import { newsletterListsRouter } from '../newsletter-lists';
 
 const moduleLogger = logger.child({
   module: 'trpc/procedures/dashboard/admin',
+});
+
+// Mirror of the background-worker boot check, scoped to the web
+// container's evaluateLlmModel surface + seed scripts that the
+// background-worker assert doesn't reach. Fires once at server boot:
+// `routeTree.gen.ts` does a synchronous static import of
+// `routes/trpc.$.ts` → `appRouter` → `dashboardRouter` → `adminRouter`
+// (this module), so the assertion runs when the route tree loads, well
+// before any request hits `/trpc`. ESM caches the module so the warn
+// fires exactly once per process.
+assertProductionPricingCoverage({
+  summary: SUMMARY_MODEL,
+  annotate: ANNOTATE_MODEL,
+  embed: EMBED_MODEL,
 });
 
 const adminProcedure = authProcedure.use(async ({ ctx, next }) => {
@@ -3045,6 +3076,260 @@ export const adminRouter = router({
       }
     }),
 
+  /**
+   * Uploads whose annotation pipeline failed and never produced any OUTLINE
+   * annotations. Surface for the admin failed-annotations page so an
+   * operator can review the failure reason (typically OpenAI's content
+   * filter on politically/theologically frank content, after which the
+   * configured fallback model also failed) and decide whether to retry,
+   * switch the configured fallback, or accept that this content can't be
+   * annotated.
+   *
+   * "Failure" = the most recent `llm_call` row for this upload with
+   * `activity='annotateTranscript'` has a non-success outcome (e.g.
+   * `guard_content_filter`). Uploads that succeeded after a prior failure
+   * are excluded by the "no OUTLINE annotation" filter below.
+   */
+  getFailedAnnotations: adminProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+      }),
+    )
+    .query(async ({ input }) => {
+      const failedRows = await db
+        .select({
+          uploadId: UploadRecord.id,
+          title: UploadRecord.title,
+          channelId: Channel.id,
+          channelName: Channel.name,
+          channelSlug: Channel.slug,
+          transcribingFinishedAt: UploadRecord.transcribingFinishedAt,
+          model: LlmCall.model,
+          outcome: LlmCall.outcome,
+          errorMessage: LlmCall.errorMessage,
+          lastAttemptAt: LlmCall.createdAt,
+        })
+        .from(UploadRecord)
+        .innerJoin(Channel, eq(UploadRecord.channelId, Channel.id))
+        .innerJoin(
+          LlmCall,
+          and(
+            eq(LlmCall.uploadRecordId, UploadRecord.id),
+            eq(LlmCall.activity, 'annotateTranscript'),
+            // Latest llm_call for this upload + activity. NOT EXISTS a
+            // later row for the same (upload, activity) pair.
+            notExists(
+              db
+                .select({ one: sql<number>`1` })
+                .from(sql`${LlmCall} AS later`)
+                .where(
+                  and(
+                    sql`later.upload_record_id = ${UploadRecord.id}`,
+                    sql`later.activity = 'annotateTranscript'`,
+                    sql`later.created_at > ${LlmCall.createdAt}`,
+                  ),
+                ),
+            ),
+          ),
+        )
+        .where(
+          and(
+            isNotNull(UploadRecord.transcribingFinishedAt),
+            // The join already restricts LlmCall to the most-recent
+            // annotate call per upload; failing the success check here
+            // means the latest attempt failed. We don't also check for
+            // OUTLINE existence — a legal-but-zero-outline successful
+            // run has `outcome='success'` so it's already excluded by
+            // this same check, and uploads whose prior runs landed
+            // outlines but whose most recent regenerate failed *should*
+            // surface here so the admin knows the regen they kicked off
+            // didn't take.
+            sql`${LlmCall.outcome} != 'success'`,
+          ),
+        )
+        .orderBy(desc(LlmCall.createdAt))
+        .limit(input.limit)
+        .offset(input.offset);
+
+      return {
+        uploads: failedRows.map((row) => ({
+          id: row.uploadId,
+          title: row.title,
+          channel: {
+            id: row.channelId,
+            name: row.channelName,
+            slug: row.channelSlug,
+          },
+          transcribingFinishedAt: row.transcribingFinishedAt,
+          lastAttempt: {
+            model: row.model,
+            outcome: row.outcome,
+            errorMessage: row.errorMessage,
+            at: row.lastAttemptAt,
+          },
+        })),
+      };
+    }),
+
+  /** Count of failed-annotations matching `getFailedAnnotations` — backs
+   * the admin-dashboard badge so the surface only shows up when there's
+   * something to act on. Keeps the same join semantics as the list
+   * procedure so the count matches what `getFailedAnnotations` returns. */
+  getFailedAnnotationsCount: adminProcedure.query(async () => {
+    const rows = await db
+      .select({ cnt: count() })
+      .from(UploadRecord)
+      .innerJoin(
+        LlmCall,
+        and(
+          eq(LlmCall.uploadRecordId, UploadRecord.id),
+          eq(LlmCall.activity, 'annotateTranscript'),
+          notExists(
+            db
+              .select({ one: sql<number>`1` })
+              .from(sql`${LlmCall} AS later`)
+              .where(
+                and(
+                  sql`later.upload_record_id = ${UploadRecord.id}`,
+                  sql`later.activity = 'annotateTranscript'`,
+                  sql`later.created_at > ${LlmCall.createdAt}`,
+                ),
+              ),
+          ),
+        ),
+      )
+      .where(
+        and(
+          isNotNull(UploadRecord.transcribingFinishedAt),
+          sql`${LlmCall.outcome} != 'success'`,
+        ),
+      );
+    return rows[0]?.cnt ?? 0;
+  }),
+
+  /**
+   * Uploads whose most recent summarize attempt failed. Same shape as
+   * `getFailedAnnotations` — gated purely on the most-recent
+   * `activity='summarizeUpload'` `llm_call` having a non-success
+   * outcome. Uploads whose prior summarize succeeded but whose most
+   * recent regenerate failed are intentionally included; the admin
+   * wants to know their regen didn't take. A successful retry rolls
+   * forward the latest-llm_call pointer and drops the row from the
+   * list.
+   */
+  getFailedSummaries: adminProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+      }),
+    )
+    .query(async ({ input }) => {
+      const failedRows = await db
+        .select({
+          uploadId: UploadRecord.id,
+          title: UploadRecord.title,
+          channelId: Channel.id,
+          channelName: Channel.name,
+          channelSlug: Channel.slug,
+          transcribingFinishedAt: UploadRecord.transcribingFinishedAt,
+          model: LlmCall.model,
+          outcome: LlmCall.outcome,
+          errorMessage: LlmCall.errorMessage,
+          lastAttemptAt: LlmCall.createdAt,
+        })
+        .from(UploadRecord)
+        .innerJoin(Channel, eq(UploadRecord.channelId, Channel.id))
+        .innerJoin(
+          LlmCall,
+          and(
+            eq(LlmCall.uploadRecordId, UploadRecord.id),
+            eq(LlmCall.activity, 'summarizeUpload'),
+            notExists(
+              db
+                .select({ one: sql<number>`1` })
+                .from(sql`${LlmCall} AS later`)
+                .where(
+                  and(
+                    sql`later.upload_record_id = ${UploadRecord.id}`,
+                    sql`later.activity = 'summarizeUpload'`,
+                    sql`later.created_at > ${LlmCall.createdAt}`,
+                  ),
+                ),
+            ),
+          ),
+        )
+        .where(
+          and(
+            isNotNull(UploadRecord.transcribingFinishedAt),
+            // Same gating reasoning as getFailedAnnotations: the join
+            // restricts LlmCall to the most-recent summarize call, and
+            // a successful-but-empty run already has `outcome='success'`
+            // so it's excluded here. Showing uploads with a prior good
+            // summary + a failed regen is intentional — the admin
+            // wants to know their regen didn't take.
+            sql`${LlmCall.outcome} != 'success'`,
+          ),
+        )
+        .orderBy(desc(LlmCall.createdAt))
+        .limit(input.limit)
+        .offset(input.offset);
+
+      return {
+        uploads: failedRows.map((row) => ({
+          id: row.uploadId,
+          title: row.title,
+          channel: {
+            id: row.channelId,
+            name: row.channelName,
+            slug: row.channelSlug,
+          },
+          transcribingFinishedAt: row.transcribingFinishedAt,
+          lastAttempt: {
+            model: row.model,
+            outcome: row.outcome,
+            errorMessage: row.errorMessage,
+            at: row.lastAttemptAt,
+          },
+        })),
+      };
+    }),
+
+  /** Count for the dashboard badge, mirroring `getFailedAnnotationsCount`. */
+  getFailedSummariesCount: adminProcedure.query(async () => {
+    const rows = await db
+      .select({ cnt: count() })
+      .from(UploadRecord)
+      .innerJoin(
+        LlmCall,
+        and(
+          eq(LlmCall.uploadRecordId, UploadRecord.id),
+          eq(LlmCall.activity, 'summarizeUpload'),
+          notExists(
+            db
+              .select({ one: sql<number>`1` })
+              .from(sql`${LlmCall} AS later`)
+              .where(
+                and(
+                  sql`later.upload_record_id = ${UploadRecord.id}`,
+                  sql`later.activity = 'summarizeUpload'`,
+                  sql`later.created_at > ${LlmCall.createdAt}`,
+                ),
+              ),
+          ),
+        ),
+      )
+      .where(
+        and(
+          isNotNull(UploadRecord.transcribingFinishedAt),
+          sql`${LlmCall.outcome} != 'success'`,
+        ),
+      );
+    return rows[0]?.cnt ?? 0;
+  }),
+
   retryUploadProcessing: adminProcedure
     .input(
       z.object({
@@ -3167,6 +3452,440 @@ export const adminRouter = router({
           message: 'Failed to retry upload processing',
         });
       }
+    }),
+
+  // Re-runs the LLM summary chain (summarize + embed summaries + reindex
+  // lc_media_v1) for a single upload, without re-transcribing. Useful for
+  // spot-fixing summaries after a prompt change.
+  regenerateUploadSummary: adminProcedure
+    .input(
+      z.object({
+        uploadRecordId: z.uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          targetId: input.uploadRecordId,
+        },
+        'Regenerating upload summary',
+      );
+
+      try {
+        const upload = await db.query.UploadRecord.findFirst({
+          where: (t, { eq }) => eq(t.id, input.uploadRecordId),
+          columns: {
+            id: true,
+            transcribingFinishedAt: true,
+          },
+        });
+
+        if (!upload) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Upload not found',
+          });
+        }
+
+        if (!upload.transcribingFinishedAt) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Upload has not finished transcribing',
+          });
+        }
+
+        // Probe for at least one paragraph so we can refuse cleanly on legacy
+        // uploads that haven't been through the new transcribe pipeline (the
+        // summarize activity would otherwise fail mid-run with a less obvious
+        // error). `select 1 ... limit 1` rather than a count — we only need
+        // existence.
+        const hasParagraph = await db
+          .select({ id: TranscriptParagraph.id })
+          .from(TranscriptParagraph)
+          .where(eq(TranscriptParagraph.uploadRecordId, input.uploadRecordId))
+          .limit(1);
+
+        if (hasParagraph.length === 0) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message:
+              'Upload has no transcript paragraphs — reprocess through the full pipeline first',
+          });
+        }
+
+        const temporalClient = await client;
+        const workflowId = makeSummarizeUploadWorkflowId(input.uploadRecordId);
+
+        // Refuse a second run while one is in flight. Mirrors
+        // retryUploadProcessing's RUNNING check (an unknown workflow id
+        // throws, which is fine — we'll start it below). Any other
+        // error from `describe()` (Temporal connectivity, auth, etc.)
+        // gets logged before being swallowed so a real connectivity
+        // issue isn't hidden by the workflow.start that follows.
+        try {
+          const handle = temporalClient.workflow.getHandle(workflowId);
+          const description = await handle.describe();
+          if (description.status.name === 'RUNNING') {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Summary regeneration is already running',
+            });
+          }
+        } catch (error) {
+          if (error instanceof TRPCError) {
+            throw error;
+          }
+          moduleLogger.warn(
+            {
+              targetId: input.uploadRecordId,
+              workflowId,
+              context: {
+                error: error instanceof Error ? error.message : String(error),
+              },
+            },
+            'Failed to check for in-flight summarize workflow before starting a new one (likely unknown-workflow for first run; could also be Temporal connectivity)',
+          );
+        }
+
+        await temporalClient.workflow.start(summarizeUploadWorkflow, {
+          taskQueue: BACKGROUND_QUEUE,
+          workflowId,
+          // `force: true` — admin explicitly asked to regenerate, so the
+          // activity's "skip if summary present" idempotency check must
+          // be bypassed. Without this the existing summary is treated as
+          // "already done" and the call no-ops.
+          args: [input.uploadRecordId, { force: true }],
+          retry: { maximumAttempts: 3 },
+          // Same convention as the rest of the upload-scoped workflows so
+          // the run is filterable by UploadId in the Temporal UI.
+          typedSearchAttributes: [
+            { key: UPLOAD_ID_KEY, value: input.uploadRecordId },
+          ],
+          // Reuse: this id is per-upload (no timestamp), so allow re-runs to
+          // replace the previous completion.
+          workflowIdReusePolicy: 'ALLOW_DUPLICATE',
+        });
+
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.uploadRecordId,
+          },
+          'Summary regeneration workflow started',
+        );
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.uploadRecordId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to regenerate upload summary',
+        );
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to regenerate upload summary',
+        });
+      }
+    }),
+
+  // Re-runs only the annotation pipeline for this upload (annotate +
+  // lc_media_v1 reindex). Independent of summary regen so admins can fix
+  // annotations after a prompt change without paying for the summary
+  // (~$0.02 / call each for gpt-5.4-mini on a typical sermon-length
+  // transcript). Same legacy-upload guard and RUNNING-check as the summary
+  // procedure.
+  regenerateUploadAnnotations: adminProcedure
+    .input(
+      z.object({
+        uploadRecordId: z.uuid(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          targetId: input.uploadRecordId,
+        },
+        'Regenerating upload annotations',
+      );
+
+      try {
+        const upload = await db.query.UploadRecord.findFirst({
+          where: (t, { eq }) => eq(t.id, input.uploadRecordId),
+          columns: {
+            id: true,
+            transcribingFinishedAt: true,
+          },
+        });
+
+        if (!upload) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Upload not found',
+          });
+        }
+
+        if (!upload.transcribingFinishedAt) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Upload has not finished transcribing',
+          });
+        }
+
+        const hasParagraph = await db
+          .select({ id: TranscriptParagraph.id })
+          .from(TranscriptParagraph)
+          .where(eq(TranscriptParagraph.uploadRecordId, input.uploadRecordId))
+          .limit(1);
+
+        if (hasParagraph.length === 0) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message:
+              'Upload has no transcript paragraphs — reprocess through the full pipeline first',
+          });
+        }
+
+        const temporalClient = await client;
+        const workflowId = makeAnnotateTranscriptWorkflowId(
+          input.uploadRecordId,
+        );
+
+        try {
+          const handle = temporalClient.workflow.getHandle(workflowId);
+          const description = await handle.describe();
+          if (description.status.name === 'RUNNING') {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Annotation regeneration is already running',
+            });
+          }
+        } catch (error) {
+          if (error instanceof TRPCError) {
+            throw error;
+          }
+          moduleLogger.warn(
+            {
+              targetId: input.uploadRecordId,
+              workflowId,
+              context: {
+                error: error instanceof Error ? error.message : String(error),
+              },
+            },
+            'Failed to check for in-flight annotate workflow before starting a new one (likely unknown-workflow for first run; could also be Temporal connectivity)',
+          );
+        }
+
+        await temporalClient.workflow.start(annotateTranscriptWorkflow, {
+          taskQueue: BACKGROUND_QUEUE,
+          workflowId,
+          // `force: true` — admin explicitly asked to regenerate, so the
+          // activity's "skip if annotations present" idempotency check
+          // must be bypassed. Without this any existing annotation rows
+          // are treated as "already done" and the call no-ops.
+          args: [input.uploadRecordId, { force: true }],
+          retry: { maximumAttempts: 3 },
+          typedSearchAttributes: [
+            { key: UPLOAD_ID_KEY, value: input.uploadRecordId },
+          ],
+          workflowIdReusePolicy: 'ALLOW_DUPLICATE',
+        });
+
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.uploadRecordId,
+          },
+          'Annotation regeneration workflow started',
+        );
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.uploadRecordId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to regenerate upload annotations',
+        );
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to regenerate upload annotations',
+        });
+      }
+    }),
+
+  // Admin LLM evaluation: one upload + one task + one model, returns
+  // the parsed output + run stats. The page calls this once per model so
+  // results stream in independently as each LLM round-trip resolves —
+  // fast models render first, slow ones don't block the rest. Read-only:
+  // does NOT touch the upload's persisted summary / annotations.
+  evaluateLlmModel: adminProcedure
+    .input(
+      z.object({
+        uploadRecordId: IncomingIdSchema,
+        task: z.enum(['annotate', 'summarize']),
+        model: z.string().min(1),
+        // Override the activity's default output cap. Required for
+        // providers with tight output limits (e.g. DeepSeek v3.x =
+        // 8K-16K). OpenRouter rejects the request up-front when
+        // `max_tokens` exceeds the model's cap, so this is the lever
+        // for "make this model usable for this transcript".
+        maxTokens: z.number().int().positive().max(131072).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          targetId: input.uploadRecordId,
+          context: { model: input.model, task: input.task },
+        },
+        'Evaluating LLM model',
+      );
+
+      const upload = await db.query.UploadRecord.findFirst({
+        where: (t, { eq }) => eq(t.id, input.uploadRecordId),
+        columns: { id: true, title: true, description: true, channelId: true },
+      });
+      if (!upload) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Upload not found' });
+      }
+
+      const channel = await db.query.Channel.findFirst({
+        where: (t, { eq }) => eq(t.id, upload.channelId),
+        columns: { name: true },
+      });
+      if (!channel) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Channel not found for upload',
+        });
+      }
+
+      const paragraphs = await db
+        .select({
+          id: TranscriptParagraph.id,
+          order: TranscriptParagraph.order,
+          text: TranscriptParagraph.text,
+          words: TranscriptParagraph.words,
+        })
+        .from(TranscriptParagraph)
+        .where(eq(TranscriptParagraph.uploadRecordId, input.uploadRecordId))
+        .orderBy(TranscriptParagraph.order);
+      moduleLogger.info(
+        {
+          uploadRecordId: input.uploadRecordId,
+          context: { paragraphCount: paragraphs.length },
+        },
+        'evaluateLlmModel paragraph lookup',
+      );
+      if (paragraphs.length === 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message:
+            'Upload has no transcript paragraphs — cannot evaluate models against it',
+        });
+      }
+
+      const metadata = {
+        channelName: channel.name,
+        title: upload.title,
+        description: upload.description,
+      };
+
+      if (input.task === 'annotate') {
+        const r = await runAnnotation(paragraphs, metadata, input.model, {
+          maxTokens: input.maxTokens,
+          tracking: {
+            activity: 'evalAnnotate',
+            uploadRecordId: input.uploadRecordId,
+          },
+        });
+        return {
+          task: 'annotate' as const,
+          annotations: r.annotations,
+          stats: r.stats,
+          prompt: r.prompt,
+          responseText: r.responseText,
+          skippedItems: r.skippedItems,
+        };
+      }
+      const r = await runSummary(
+        paragraphs.map((p) => p.text),
+        metadata,
+        input.model,
+        {
+          maxTokens: input.maxTokens,
+          tracking: {
+            activity: 'evalSummarize',
+            uploadRecordId: input.uploadRecordId,
+          },
+        },
+      );
+      return {
+        task: 'summarize' as const,
+        summary: r.summary,
+        searchSummary: r.searchSummary,
+        stats: r.stats,
+        prompt: r.prompt,
+        responseText: r.responseText,
+      };
+    }),
+
+  // Loader for the LLM-eval page's upload picker. Used both to seed the
+  // Select's display label when the page is opened with `uploadId` in
+  // the URL (search.performSearch is keyword-based and doesn't return
+  // by-id), and to give the per-model result cards the paragraph
+  // source-of-record they render annotations against.
+  getUploadForEval: adminProcedure
+    .input(z.object({ uploadRecordId: IncomingIdSchema }))
+    .query(async ({ input }) => {
+      const upload = await db.query.UploadRecord.findFirst({
+        where: (t, { eq }) => eq(t.id, input.uploadRecordId),
+        columns: { id: true, title: true, channelId: true },
+      });
+      if (!upload) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Upload not found' });
+      }
+      const channel = await db.query.Channel.findFirst({
+        where: (t, { eq }) => eq(t.id, upload.channelId),
+        columns: { name: true },
+      });
+      const paragraphs = await db
+        .select({
+          id: TranscriptParagraph.id,
+          order: TranscriptParagraph.order,
+          text: TranscriptParagraph.text,
+        })
+        .from(TranscriptParagraph)
+        .where(eq(TranscriptParagraph.uploadRecordId, input.uploadRecordId))
+        .orderBy(TranscriptParagraph.order);
+      return {
+        id: upload.id,
+        title: upload.title,
+        channelName: channel?.name ?? '(unknown channel)',
+        paragraphs,
+      };
     }),
 
   bulkRetryProcessingUploads: adminProcedure.mutation(async ({ ctx }) => {
@@ -3673,7 +4392,7 @@ export const adminRouter = router({
   getReindexStatus: adminProcedure.query(async () => {
     const kinds: ReindexKind[] = [
       'upload',
-      'transcriptHtml',
+      'transcript',
       'channel',
       'organization',
     ];
@@ -3691,7 +4410,7 @@ export const adminRouter = router({
   startReindex: adminProcedure
     .input(
       z.object({
-        kind: z.enum(['upload', 'transcriptHtml', 'channel', 'organization']),
+        kind: z.enum(['upload', 'transcript', 'channel', 'organization']),
         batchSize: z.number().min(1).max(500).default(50),
       }),
     )
@@ -3734,7 +4453,7 @@ export const adminRouter = router({
   cancelReindex: adminProcedure
     .input(
       z.object({
-        kind: z.enum(['upload', 'transcriptHtml', 'channel', 'organization']),
+        kind: z.enum(['upload', 'transcript', 'channel', 'organization']),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -3766,34 +4485,47 @@ export const adminRouter = router({
   // Reprocess procedures
 
   getReprocessStatus: adminProcedure.query(async () => {
-    const [legacyCount, legacyStatus, allStatus] = await Promise.all([
-      db
-        .select({ cnt: count() })
-        .from(UploadRecord)
-        .where(
-          and(
-            lt(UploadRecord.pipelineVersion, CURRENT_PIPELINE_VERSION),
-            isNotNull(UploadRecord.transcodingFinishedAt),
-          ),
-        )
-        .then((r) => r[0]?.cnt ?? 0),
-      getReprocessWorkflowStatus({ kind: 'legacy' }),
-      getReprocessWorkflowStatus({ kind: 'all' }),
-    ]);
-    return { legacyCount, legacyStatus, allStatus };
+    const [noParagraphsCount, noParagraphsStatus, allStatus] =
+      await Promise.all([
+        // Uploads with no rows in `transcript_paragraph`. Matches the
+        // get-reprocess-batch helper's filter — counted here directly
+        // (rather than calling the helper) so we don't have to spin up
+        // the temporal activity client for a count-only read.
+        db
+          .select({ cnt: count() })
+          .from(UploadRecord)
+          .where(
+            and(
+              isNotNull(UploadRecord.transcodingFinishedAt),
+              notExists(
+                db
+                  .select({ one: sql<number>`1` })
+                  .from(TranscriptParagraph)
+                  .where(
+                    eq(TranscriptParagraph.uploadRecordId, UploadRecord.id),
+                  ),
+              ),
+            ),
+          )
+          .then((r) => r[0]?.cnt ?? 0),
+        getReprocessWorkflowStatus({ kind: 'no_paragraphs' }),
+        getReprocessWorkflowStatus({ kind: 'all' }),
+      ]);
+    return { noParagraphsCount, noParagraphsStatus, allStatus };
   }),
 
   startReprocess: adminProcedure
     .input(
       z.object({
         scope: z.discriminatedUnion('kind', [
-          z.object({ kind: z.literal('legacy') }),
+          z.object({ kind: z.literal('no_paragraphs') }),
           z.object({ kind: z.literal('all') }),
           z.object({ kind: z.literal('channel'), channelSlug: z.string() }),
         ]),
         processingScope: z
           .enum(['transcode', 'transcribe', 'everything'])
           .default('transcode'),
+        viaBatch: z.boolean().default(false),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -3803,10 +4535,35 @@ export const adminRouter = router({
           context: {
             scope: input.scope,
             processingScope: input.processingScope,
+            viaBatch: input.viaBatch,
           },
         },
         'Starting reprocess',
       );
+
+      // Pre-flight: OpenAI Batch only accepts openai/* model ids
+      // (model id is rewritten by stripping the prefix before
+      // submission). If a chat/embed model isn't openai/-prefixed,
+      // batch mode would silently fail at submit time — reject up
+      // front with a useful message.
+      if (input.viaBatch) {
+        const offenders: string[] = [];
+        if (!SUMMARY_MODEL.startsWith('openai/')) {
+          offenders.push(`SUMMARY_MODEL=${SUMMARY_MODEL}`);
+        }
+        if (!ANNOTATE_MODEL.startsWith('openai/')) {
+          offenders.push(`ANNOTATE_MODEL=${ANNOTATE_MODEL}`);
+        }
+        if (!EMBED_MODEL.startsWith('openai/')) {
+          offenders.push(`EMBED_MODEL=${EMBED_MODEL}`);
+        }
+        if (offenders.length > 0) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Batch mode requires openai/* models. Non-openai configured: ${offenders.join(', ')}`,
+          });
+        }
+      }
 
       let scope: ReprocessScope;
       if (input.scope.kind === 'channel') {
@@ -3835,7 +4592,9 @@ export const adminRouter = router({
           });
         }
 
-        await startReprocess(scope, input.processingScope);
+        await startReprocess(scope, input.processingScope, {
+          viaBatch: input.viaBatch,
+        });
         return { success: true };
       } catch (err) {
         if (err instanceof TRPCError) throw err;
@@ -3860,7 +4619,7 @@ export const adminRouter = router({
     .input(
       z.object({
         scope: z.discriminatedUnion('kind', [
-          z.object({ kind: z.literal('legacy') }),
+          z.object({ kind: z.literal('no_paragraphs') }),
           z.object({ kind: z.literal('all') }),
           z.object({ kind: z.literal('channel'), channelSlug: z.string() }),
         ]),

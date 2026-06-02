@@ -6,7 +6,12 @@ export const { TRPCProvider, useTRPC } = createTRPCContext<AppRouter>();
 import { QueryClient } from '@tanstack/react-query';
 import { createIsomorphicFn } from '@tanstack/react-start';
 import { getRequest } from '@tanstack/react-start/server';
-import { createTRPCClient, httpBatchLink } from '@trpc/client';
+import {
+  createTRPCClient,
+  httpBatchLink,
+  httpLink,
+  splitLink,
+} from '@trpc/client';
 import { createTRPCOptionsProxy } from '@trpc/tanstack-react-query';
 import superjson from 'superjson';
 
@@ -46,23 +51,49 @@ const getIncomingHeaders = createIsomorphicFn()
  * This trpc client uses the above getIncomingHeaders function to properly set
  * headers.
  */
+const sharedLinkOpts = {
+  transformer: superjson,
+  url: getUrl(),
+  headers: async () => {
+    const headers = getIncomingHeaders();
+    // On server-side, explicitly ensure cookie header is forwarded
+    // This is critical for authentication during SSR
+    return headers;
+  },
+  fetch(
+    url: Parameters<typeof fetch>[0],
+    options?: Parameters<typeof fetch>[1],
+  ) {
+    return fetch(url, {
+      ...options,
+      credentials: 'include',
+    });
+  },
+};
+
 export const trpcClient = createTRPCClient<AppRouter>({
   links: [
-    httpBatchLink({
-      transformer: superjson,
-      url: getUrl(),
-      headers: async () => {
-        const headers = getIncomingHeaders();
-        // On server-side, explicitly ensure cookie header is forwarded
-        // This is critical for authentication during SSR
-        return headers;
-      },
-      fetch(url, options) {
-        return fetch(url, {
-          ...options,
-          credentials: 'include',
-        });
-      },
+    // Route long-running LLM-eval calls through the non-batching httpLink
+    // so each per-model mutation gets its own HTTP request and resolves
+    // independently. Without this, the default httpBatchLink bundles all
+    // N parallel mutateAsync calls into one HTTP POST that only responds
+    // after the slowest model finishes — even though tRPC processes the
+    // batch entries concurrently server-side, the client can't render
+    // any card until all of them are done. Everything else stays batched.
+    //
+    // NOTE: the path string below must stay in lockstep with the
+    // procedure name in
+    // `packages/web/src/trpc/procedures/dashboard/admin.ts`. If
+    // `evaluateLlmModel` gets renamed, this string-match silently
+    // falls through to the batching path and the eval-page UX
+    // regresses to "blocks until the slowest model finishes". Update
+    // both sides together.
+    splitLink({
+      condition: (op) =>
+        op.type === 'mutation' &&
+        op.path === 'dashboard.admin.evaluateLlmModel',
+      true: httpLink(sharedLinkOpts),
+      false: httpBatchLink(sharedLinkOpts),
     }),
   ],
 });

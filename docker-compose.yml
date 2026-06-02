@@ -60,6 +60,13 @@ services:
       TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
       WEB_URL: ${HOST_WEB_URL}
       ZXCVBN_MINIMUM_SCORE: ${ZXCVBN_MINIMUM_SCORE}
+      # OpenRouter access for the admin LLM-eval surface
+      # (`evaluateLlmModel` tRPC mutation) and for dev-only seed bootstrap
+      # scripts (`just generate-seed-annotations`) — both execute inside
+      # this container and call OpenRouter directly.
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OPENROUTER_SUMMARY_MODEL: ${OPENROUTER_SUMMARY_MODEL:-openai/gpt-5.4-mini}
+      OPENROUTER_ANNOTATE_MODEL: ${OPENROUTER_ANNOTATE_MODEL:-openai/gpt-5.4-mini}
       <<: [*s3-ingest-env, *s3-public-env]
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
@@ -77,6 +84,10 @@ services:
       - /usr/src/app/packages/temporal/node_modules
       - ./packages/web:/usr/src/app/packages/web
       - /usr/src/app/packages/web/node_modules
+      # Seed-data LLM snapshots — read at seed time by dev.ts (the JSONs
+      # under seed-data/llm/ aren't S3-synced, they're consumed directly off
+      # disk). Also lets `just dump-llm-seed-data` write back into the repo.
+      - ./seed-data:/seed-data
 
   background-worker:
     build:
@@ -97,6 +108,12 @@ services:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1m
       WEB_URL: ${HOST_WEB_URL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OPENROUTER_SUMMARY_MODEL: ${OPENROUTER_SUMMARY_MODEL:-openai/gpt-5.4-mini}
+      OPENROUTER_ANNOTATE_MODEL: ${OPENROUTER_ANNOTATE_MODEL:-openai/gpt-5.4-mini}
+      OPENROUTER_ANNOTATE_FALLBACK_MODEL: ${OPENROUTER_ANNOTATE_FALLBACK_MODEL:-anthropic/claude-haiku-4-5}
+      OPENROUTER_SUMMARY_FALLBACK_MODEL: ${OPENROUTER_SUMMARY_FALLBACK_MODEL:-anthropic/claude-haiku-4-5}
       <<: [*s3-ingest-env, *s3-public-env, *s3-backup-env]
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
@@ -200,34 +217,35 @@ services:
     build:
       context: .
       target: transcribe-worker
-    command: pnpm --filter @letschurch/transcribe-worker run dev
+      args:
+        WHISPER_MODEL: ${WHISPER_MODEL:-tiny.en}
     restart: unless-stopped
     environment:
-      NODE_ENV: development
       SENTRY_DSN: ${SENTRY_TRANSCRIBE_WORKER_DSN}
-      SERVICE_NAME: transcribe-worker
       IDENTITY: dev
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
       MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 1
-      WHISPER_MODEL: tiny.en
+      TRANSCRIBE_TASK_QUEUE: ${TRANSCRIBE_TASK_QUEUE:-transcribe}
+      WHISPER_MODEL: ${WHISPER_MODEL:-tiny.en}
+      WTPSPLIT_MODEL: ${WTPSPLIT_MODEL:-sat-12l-sm}
+      WTPSPLIT_SENTENCE_THRESHOLD: ${WTPSPLIT_SENTENCE_THRESHOLD:-0.4}
+      WTPSPLIT_PARAGRAPH_THRESHOLD: ${WTPSPLIT_PARAGRAPH_THRESHOLD:-0.5}
+      # Post-process knob — wtpsplit's paragraph signal rarely fires on
+      # continuous ASR transcripts, so we merge same-speaker sentences
+      # until each paragraph reaches at least this many characters.
+      # `0` disables merging (sentence-grained paragraphs as before).
+      PARAGRAPH_TARGET_CHARS: ${PARAGRAPH_TARGET_CHARS:-200}
+      TITANET_MODEL: ${TITANET_MODEL:-nvidia/speakerverification_en_titanet_large}
       <<: [*s3-ingest-env, *s3-public-env]
     volumes:
-      - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
-      - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
-      - ./packages/util:/usr/src/app/packages/util
-      - /usr/src/app/packages/util/node_modules
-      - ./packages/s3:/usr/src/app/packages/s3
-      - /usr/src/app/packages/s3/node_modules
-      - ./packages/db:/usr/src/app/packages/db
-      - /usr/src/app/packages/db/src/generated
-      - /usr/src/app/packages/db/node_modules
-      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
-      - /usr/src/app/packages/elasticsearch/node_modules
-      - ./packages/temporal:/usr/src/app/packages/temporal
-      - /usr/src/app/packages/temporal/node_modules
-      - ./packages/transcribe-worker:/usr/src/app/packages/transcribe-worker
-      - /usr/src/app/packages/transcribe-worker/node_modules
+      - ./services/transcribe/src:/app/src
+      # Tooling for `just regenerate-seed-transcript` — bind the scripts and
+      # seed-data into the container so the seed-generation CLI can read HLS
+      # playlists directly and write transcript.json straight back into the
+      # repo's seed-data tree without docker-cp round-trips.
+      - ./services/transcribe/scripts:/app/scripts
+      - ./seed-data:/seed-data
     depends_on:
       - temporal
 
@@ -271,6 +289,7 @@ services:
   listmonk:
     image: listmonk/listmonk:v5.1.0
     command: [sh, -c, "./listmonk --install --yes && ./listmonk"]
+    restart: unless-stopped
     environment:
       LISTMONK_db__host: postgres
       LISTMONK_db__port: 5432
@@ -292,6 +311,7 @@ services:
 
   imgproxy:
     image: darthsim/imgproxy:v3.21.0
+    restart: unless-stopped
     environment:
       IMGPROXY_KEY: ${IMGPROXY_KEY}
       IMGPROXY_SALT: ${IMGPROXY_SALT}
@@ -356,6 +376,7 @@ services:
 
   temporal:
     image: temporalio/server:1.31.0
+    restart: unless-stopped
     environment:
       BIND_ON_IP: "0.0.0.0"
       DB: postgres12_pgx
@@ -408,6 +429,7 @@ services:
 
   temporal-admin-tools:
     image: temporalio/admin-tools:1.31.0
+    restart: unless-stopped
     environment:
       TEMPORAL_ADDRESS: temporal:7233
     stdin_open: true
@@ -417,6 +439,7 @@ services:
 
   temporal-ui:
     image: temporalio/ui:2.44.1
+    restart: unless-stopped
     environment:
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_CORS_ORIGINS: http://localhost:3000
@@ -430,6 +453,7 @@ services:
   #
   postgres:
     image: postgres:18.3-alpine3.23
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${PG_USER}
       POSTGRES_PASSWORD: ${PG_PASSWORD}
@@ -455,6 +479,7 @@ services:
 
   elasticsearch:
     image: elasticsearch:8.19.7
+    restart: unless-stopped
     environment:
       - cluster.routing.allocation.disk.threshold_enabled=true
       - cluster.routing.allocation.disk.watermark.low=512mb
@@ -503,6 +528,7 @@ services:
 
   kibana:
     image: kibana:9.1.5
+    restart: unless-stopped
     environment:
       ELASTICSEARCH_HOSTS: http://elasticsearch:9200
     depends_on:
@@ -511,7 +537,7 @@ services:
       - 127.0.0.1:${HOST_KIBANA_PORT}:5601
   mailpit:
     image: axllent/mailpit:v1.13.0
-    restart: always
+    restart: unless-stopped
     ports:
       - 127.0.0.1:${HOST_MAILPIT_SMTP_PORT}:1025 # smtp server
       - 127.0.0.1:${HOST_MAILPIT_WEB_PORT}:8025 # web ui

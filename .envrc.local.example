@@ -34,6 +34,12 @@ export RCLONE_CONFIG_MAPTILES_SECRET_ACCESS_KEY=
 
 export ADMIN_EMAIL=admin@example.com
 
+export OPENAI_API_KEY=
+export OPENROUTER_API_KEY=
+# Optional override. Default is openai/gpt-5.4-mini. Cheaper:
+# openai/gpt-5.4-nano. Better quality: openai/gpt-5.4 or openai/gpt-5.5.
+# export OPENROUTER_SUMMARY_MODEL=openai/gpt-5.4-mini
+
 export LISTMONK_USER=admin
 export LISTMONK_PASSWORD=password
 export LISTMONK_API_USER=api

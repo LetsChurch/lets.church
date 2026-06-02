@@ -130,20 +130,6 @@ const targetMappings: Record<
           text: {
             type: 'text',
           },
-          bibleReferences: {
-            type: 'nested',
-            properties: {
-              book: {
-                type: 'keyword',
-              },
-              chapter: {
-                type: 'integer',
-              },
-              verse: {
-                type: 'integer',
-              },
-            },
-          },
         },
       },
       transcodingFinishedAt: {
@@ -154,45 +140,62 @@ const targetMappings: Record<
       },
     },
   },
-  lc_transcripts_v2: {
-    properties: {
-      channelId: {
-        type: 'keyword',
-      },
-      publishedAt: {
-        type: 'date',
-      },
-      visibility: {
-        type: 'keyword',
-      },
-      channelVisibility: {
-        type: 'keyword',
-      },
-      html: {
-        type: 'text',
-        analyzer: 'ignore_html_tags',
-      },
-      transcodingFinishedAt: {
-        type: 'date',
-      },
-      transcribingFinishedAt: {
-        type: 'date',
-      },
-    },
+  // Unified upload + transcript index for the new RRF-style search. One doc
+  // per upload with nested paragraphs (preserves `inner_hits` so future search
+  // can show + jump to the matched paragraph, mirroring lc_transcripts). The
+  // existing lc_uploads_v2 and lc_transcripts stay populated for current
+  // search; this index is additive.
+  lc_media_v1: {
     settings: {
       number_of_replicas: 0,
-      analysis: {
-        char_filter: {
-          ignore_html_tags: {
-            type: 'html_strip',
-          },
-        },
-        analyzer: {
-          ignore_html_tags: {
-            tokenizer: 'standard',
-            filter: ['lowercase', 'stop', 'apostrophe', 'porter_stem'],
-            char_filter: ['ignore_html_tags'],
-            type: 'custom',
+    },
+    properties: {
+      // identity + access-control denormalization
+      channelId: { type: 'keyword' },
+      visibility: { type: 'keyword' },
+      channelVisibility: { type: 'keyword' },
+      channelApprovedAt: { type: 'date' },
+      publishedAt: { type: 'date' },
+      lengthSeconds: { type: 'double' },
+      transcodingFinishedAt: { type: 'date' },
+      transcribingFinishedAt: { type: 'date' },
+      // lexical fields (BM25)
+      title: { type: 'text' },
+      description: { type: 'text' },
+      channelName: {
+        type: 'text',
+        fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+      },
+      summary: { type: 'text' },
+      // Video-level semantic vectors (cosine for RRF fusion + related-videos).
+      // searchSummary text is intentionally NOT indexed — it exists only to
+      // produce searchSummaryEmbedding, so users never see synthetic prose.
+      summaryEmbedding: {
+        type: 'dense_vector',
+        dims: 1536,
+        similarity: 'cosine',
+        index: true,
+      },
+      searchSummaryEmbedding: {
+        type: 'dense_vector',
+        dims: 1536,
+        similarity: 'cosine',
+        index: true,
+      },
+      // Nested paragraphs — supports inner_hits on both BM25 and knn queries.
+      paragraphs: {
+        type: 'nested',
+        properties: {
+          order: { type: 'integer' },
+          start: { type: 'double' },
+          end: { type: 'double' },
+          speaker: { type: 'keyword' },
+          text: { type: 'text' },
+          embedding: {
+            type: 'dense_vector',
+            dims: 1536,
+            similarity: 'cosine',
+            index: true,
           },
         },
       },

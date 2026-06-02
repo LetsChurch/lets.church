@@ -1,3 +1,4 @@
+export { annotateTranscriptWorkflow } from './annotate-transcript';
 export {
   type BackfillFilenamesWorkflowParams,
   backfillFilenamesWorkflow,
@@ -58,8 +59,8 @@ export { remakeThumbnailsWorkflow } from './remake-thumbnails';
 export { remuxAllWorkflow } from './remux-all';
 export { remuxMediaWorkflow } from './remux-media';
 export { reprocessAllWorkflow } from './reprocess-all';
+export { reprocessGroupWorkflow } from './reprocess-group';
 export { resetPasswordWorkflow } from './reset-password';
-export { restitchTranscriptWorkflow } from './restitch-transcript';
 export { scrapeAndImportWorkflow } from './scrape-and-import';
 export { sendEmailWorkflow } from './send-email';
 export { sendInvitationEmailWorkflow } from './send-invitation-email';
@@ -67,6 +68,7 @@ export {
   type SendVerificationEmailArgs,
   sendVerificationEmailWorkflow,
 } from './send-verification-email';
+export { summarizeUploadWorkflow } from './summarize-upload';
 export { updateCommentScoresWorkflow } from './update-comment-scores';
 export { updateDailySaltWorkflow } from './update-daily-salt';
 export {

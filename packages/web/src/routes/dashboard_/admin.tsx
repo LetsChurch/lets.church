@@ -73,6 +73,14 @@ function AdminPage() {
     trpc.dashboard.admin.getFailedUploadsCount.queryOptions(),
   );
 
+  const {
+    data: failedAnnotationsCount,
+    isLoading: isLoadingFailedAnnotations,
+  } = useQuery(trpc.dashboard.admin.getFailedAnnotationsCount.queryOptions());
+
+  const { data: failedSummariesCount, isLoading: isLoadingFailedSummaries } =
+    useQuery(trpc.dashboard.admin.getFailedSummariesCount.queryOptions());
+
   const { data: deletingUploadsCount, isLoading: isLoadingDeleting } = useQuery(
     trpc.dashboard.admin.getDeletingUploadsCount.queryOptions(),
   );
@@ -331,6 +339,77 @@ function AdminPage() {
           </Group>
           <Text size="sm" c="dimmed">
             Manage S3 backups for uploaded media
+          </Text>
+        </Card>
+      </SimpleGrid>
+
+      <Title order={2} size="h4" mb="sm">
+        AI
+      </Title>
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md" mb="xl">
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
+          to="/dashboard/admin/llm-eval"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>LLM Eval</Text>
+          </Group>
+          <Text size="sm" c="dimmed">
+            Run summarize/annotate prompts against arbitrary OpenRouter models
+          </Text>
+        </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
+          to="/dashboard/admin/failed-annotations"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Failed Annotations</Text>
+            {isLoadingFailedAnnotations ? (
+              <Loader size="xs" />
+            ) : (
+              <Badge
+                color={failedAnnotationsCount === 0 ? 'green' : 'red'}
+                size="sm"
+              >
+                {failedAnnotationsCount === 0 ? 'None' : failedAnnotationsCount}
+              </Badge>
+            )}
+          </Group>
+          <Text size="sm" c="dimmed">
+            Uploads where both primary and fallback annotate models failed
+          </Text>
+        </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
+          to="/dashboard/admin/failed-summaries"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Failed Summaries</Text>
+            {isLoadingFailedSummaries ? (
+              <Loader size="xs" />
+            ) : (
+              <Badge
+                color={failedSummariesCount === 0 ? 'green' : 'red'}
+                size="sm"
+              >
+                {failedSummariesCount === 0 ? 'None' : failedSummariesCount}
+              </Badge>
+            )}
+          </Group>
+          <Text size="sm" c="dimmed">
+            Uploads where both primary and fallback summarize models failed
           </Text>
         </Card>
       </SimpleGrid>

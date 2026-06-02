@@ -1,12 +1,24 @@
 import { Tabs } from '@base-ui-components/react/tabs';
 import type { UploadLicense } from '@letschurch/db/types';
+import { IconSparkles } from '@tabler/icons-react';
 import { useEffect, useRef } from 'react';
 import { LcTooltip } from '@/components/lc-tooltip';
 import { $setPlayAt } from '@/stores/player';
+import { formatTime } from '@/util/format';
 import { getLicenseInfo } from '@/util/license';
+
+export type MediaOutlineEntry = {
+  id: string;
+  title: string;
+  startSeconds: number;
+  endSeconds: number;
+  description: string | null;
+};
 
 type MediaInfoTabsProps = {
   descriptionHtml: string | null;
+  summary: string | null;
+  outline: ReadonlyArray<MediaOutlineEntry>;
   viewCount: number;
   publishedAt: Date | null;
   createdAt: Date;
@@ -24,6 +36,8 @@ type MediaInfoTabsProps = {
 
 export function MediaInfoTabs({
   descriptionHtml,
+  summary,
+  outline,
   viewCount,
   publishedAt,
   createdAt,
@@ -79,20 +93,33 @@ export function MediaInfoTabs({
             Details
           </span>
         </Tabs.Tab>
-        <LcTooltip
-          content="Coming soon"
-          render={
-            <Tabs.Tab
-              value="summary"
-              className="relative pt-1.5 pb-2"
-              disabled
-            />
-          }
-        >
-          <span className="font-medium text-primary/30 text-sm data-selected:text-primary data-selected:opacity-100">
-            Summary
-          </span>
-        </LcTooltip>
+        {summary ? (
+          <Tabs.Tab value="summary" className="relative pt-1.5 pb-2">
+            <span className="inline-flex items-center gap-1 font-medium text-primary/70 text-sm data-selected:text-primary data-selected:opacity-100">
+              <IconSparkles size={14} aria-hidden="true" />
+              Summary
+            </span>
+          </Tabs.Tab>
+        ) : (
+          // No summary yet — keep the tab visible but disabled so users know
+          // it's a planned surface, not a missing feature. Sparkles still
+          // appears so the icon's presence is consistent across both states.
+          <LcTooltip
+            content="Coming soon"
+            render={
+              <Tabs.Tab
+                value="summary"
+                className="relative pt-1.5 pb-2"
+                disabled
+              />
+            }
+          >
+            <span className="inline-flex items-center gap-1 font-medium text-primary/30 text-sm data-selected:text-primary data-selected:opacity-100">
+              <IconSparkles size={14} aria-hidden="true" />
+              Summary
+            </span>
+          </LcTooltip>
+        )}
         {showTranscriptTab ? (
           <button
             type="button"
@@ -192,9 +219,51 @@ export function MediaInfoTabs({
 
       {/* Summary Content */}
       <Tabs.Panel value="summary" className="relative text-left">
-        <p className="p-5 text-primary text-sm leading-[1.4]">
-          Summary content goes here
-        </p>
+        {summary ? (
+          // LLM-generated narrative summary from upload_record.summary
+          // (produced by the summarize-upload activity). Plain prose — no
+          // markdown — so render as text with preserved line breaks.
+          <p className="whitespace-pre-line p-5 text-primary text-sm leading-[1.5]">
+            {summary}
+          </p>
+        ) : (
+          <p className="p-5 text-primary/70 text-sm leading-[1.4]">
+            A summary has not yet been generated for this media.
+          </p>
+        )}
+        {outline.length > 0 ? (
+          // YouTube-style chapter list. Each entry is derived from an OUTLINE
+          // annotation (title + paragraph start) joined to a per-section
+          // description from `upload_record.sections`. Clicking the
+          // timestamp seeks the player via the same store the description
+          // links use.
+          <div className="border-zinc-200 border-t px-5 py-4 dark:border-zinc-800">
+            <h3 className="mb-3 font-semibold text-primary text-sm">
+              Chapters
+            </h3>
+            <ol className="space-y-3">
+              {outline.map((entry) => (
+                <li key={entry.id} className="text-sm leading-[1.5]">
+                  <div className="flex items-baseline gap-2">
+                    <button
+                      type="button"
+                      onClick={() => $setPlayAt.set(entry.startSeconds)}
+                      className="font-mono text-blue-500 text-xs tabular-nums hover:underline dark:text-blue-400"
+                    >
+                      {formatTime(entry.startSeconds * 1000)}
+                    </button>
+                    <span className="font-medium text-primary">
+                      {entry.title}
+                    </span>
+                  </div>
+                  {entry.description ? (
+                    <p className="mt-1 text-primary/70">{entry.description}</p>
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+          </div>
+        ) : null}
       </Tabs.Panel>
     </Tabs.Root>
   );

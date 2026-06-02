@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { getBibleReferences } from './bible';
 
 const streamUnionSchema = z
   .discriminatedUnion('codec_type', [
@@ -34,25 +33,6 @@ export const ffprobeSchema = z.object({
 });
 
 export type Probe = z.infer<typeof ffprobeSchema>;
-
-export const transcriptSegmentSchema = z.array(
-  z
-    .object({
-      text: z.string(),
-      start: z.number(),
-      end: z.number(),
-    })
-    .transform((segment) => ({
-      ...segment,
-      bibleReferences: Array.from(getBibleReferences(segment.text)).map(
-        ({ book, chapter, verse }) => ({
-          book: book as string,
-          chapter: chapter ?? null,
-          verse: verse ?? null,
-        }),
-      ),
-    })),
-);
 
 export const imageMagickJsonSchema = z.array(
   z.looseObject({

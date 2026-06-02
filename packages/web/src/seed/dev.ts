@@ -1,5 +1,8 @@
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { faker } from '@faker-js/faker';
 import {
+  Annotation,
   AppUser,
   AppUserEmail,
   Channel,
@@ -13,11 +16,16 @@ import {
   OrganizationMembership,
   OrganizationOrganizationAssociation,
   OrganizationTagInstance,
+  TranscriptParagraph,
   UploadList,
   UploadListEntry,
   UploadRecord,
 } from '@letschurch/db';
-import { indexDocument } from '@letschurch/temporal/client';
+import storeTranscriptParagraphs from '@letschurch/temporal/activities/background/store-transcript-paragraphs';
+import { client, indexDocument } from '@letschurch/temporal/client';
+import { UPLOAD_ID_KEY } from '@letschurch/temporal/search-attributes';
+import { makeSummarizeUploadWorkflowId } from '@letschurch/temporal/workflow-ids';
+import { summarizeUploadWorkflow } from '@letschurch/temporal/workflows/background';
 import slugify from '@sindresorhus/slugify';
 import argon2 from 'argon2';
 import { eq } from 'drizzle-orm';
@@ -37,6 +45,11 @@ import ppp from './geocoding/prosperitys-pitfall-pavilion';
 import screwtape from './geocoding/screwtape-sanctuary';
 import solas from './geocoding/solas-sanctuary';
 import sovereignJoy from './geocoding/sovereign-joy-sanctuary';
+import {
+  LLM_SEED_DATA_DIR,
+  LLM_SEEDED_UPLOAD_IDS,
+  type LlmSeedSnapshot,
+} from './llm-seed';
 import {
   augsburgConfessionTagSlug,
   baptistTagSlug,
@@ -1618,3 +1631,121 @@ await db.insert(FeaturedUpload).values([
     updatedAt: new Date(),
   },
 ]);
+
+// LLM seed phase. Runs AFTER every UploadRecord insert above so the
+// upload_record_id FK is satisfied. The list of uploads + the directory
+// path live in `./llm-seed.ts` so the dumper and the seed agree on both.
+//
+// Two paths:
+//
+// 1. Default (snapshot path) — direct-insert the LLM-derived state from
+//    the committed snapshot JSONs under `seed-data/llm/` (read via the
+//    `./seed-data:/seed-data` bind mount). Fast and free — no OpenRouter
+//    calls.
+//
+// 2. `LIVE_PIPELINE=1` — run the real summarizeUploadWorkflow against the
+//    background-worker (which has OPENROUTER_API_KEY), waiting for each.
+//    Used to refresh the snapshots after a prompt change or transcript
+//    regen: `LIVE_PIPELINE=1 just seed-db` then `just dump-llm-seed-data`
+//    snapshots the result back into the repo. See `docs/seed-data.md`.
+if (process.env.LIVE_PIPELINE === '1') {
+  const temporalClient = await client;
+  for (const uploadId of LLM_SEEDED_UPLOAD_IDS) {
+    console.log(`[seed:live] storing transcript paragraphs for ${uploadId}`);
+    await storeTranscriptParagraphs(uploadId, `${uploadId}/transcript.json`);
+
+    console.log(
+      `[seed:live] generating summaries + embeddings for ${uploadId}`,
+    );
+    const handle = await temporalClient.workflow.start(
+      summarizeUploadWorkflow,
+      {
+        taskQueue: 'background',
+        workflowId: makeSummarizeUploadWorkflowId(uploadId),
+        args: [uploadId, { embedParagraphs: true }],
+        typedSearchAttributes: [{ key: UPLOAD_ID_KEY, value: uploadId }],
+        retry: { maximumAttempts: 3 },
+        workflowIdReusePolicy: 'ALLOW_DUPLICATE',
+      },
+    );
+    await handle.result();
+    console.log(`[seed:live] ${uploadId} done`);
+  }
+} else {
+  for (const uploadId of LLM_SEEDED_UPLOAD_IDS) {
+    const snapshot: LlmSeedSnapshot = JSON.parse(
+      await readFile(path.join(LLM_SEED_DATA_DIR, `${uploadId}.json`), 'utf-8'),
+    );
+    console.log(
+      `[seed] loading LLM snapshot for ${uploadId} (${snapshot.paragraphs.length} paragraphs)`,
+    );
+
+    // `.returning({ id, order })` so we can map snapshot annotations
+    // (keyed by paragraph order) onto the newly-inserted paragraph ids.
+    const insertedParagraphs = await db
+      .insert(TranscriptParagraph)
+      .values(
+        snapshot.paragraphs.map((p) => ({
+          uploadRecordId: uploadId,
+          order: p.order,
+          start: p.start,
+          end: p.end,
+          speaker: p.speaker,
+          speakerEmbedding: p.speakerEmbedding,
+          text: p.text,
+          words: p.words,
+          embedding: p.embedding,
+        })),
+      )
+      .returning({
+        id: TranscriptParagraph.id,
+        order: TranscriptParagraph.order,
+      });
+
+    const paragraphIdByOrder = new Map(
+      insertedParagraphs.map((p) => [p.order, p.id]),
+    );
+    const annotationInserts = snapshot.paragraphs.flatMap((p) => {
+      const paragraphId = paragraphIdByOrder.get(p.order);
+      if (!paragraphId) return [];
+      return p.annotations.map((a) => ({
+        // Preserve the dumped id so `upload_record.sections` (keyed by
+        // OUTLINE annotation id) stays joinable on reseed. Falls through
+        // to drizzle's default `gen_random_uuid()` when the snapshot
+        // predates id preservation (pre-2026-06 dumps) — those uploads
+        // need a re-summarize + re-dump to recover their section
+        // descriptions.
+        ...(a.id ? { id: a.id } : {}),
+        paragraphId,
+        kind: a.kind,
+        startWord: a.startWord,
+        endWord: a.endWord,
+        rawSpan: a.rawSpan,
+        metadata: a.metadata,
+        updatedAt: new Date(),
+      }));
+    });
+    if (annotationInserts.length > 0) {
+      await db.insert(Annotation).values(annotationInserts);
+    }
+
+    await db
+      .update(UploadRecord)
+      .set({
+        summary: snapshot.summary,
+        searchSummary: snapshot.searchSummary,
+        // Older snapshots predate the sections column — fall through to []
+        // to match the upload_record default rather than failing the seed.
+        sections: snapshot.sections ?? [],
+        summaryEmbedding: snapshot.summaryEmbedding,
+        searchSummaryEmbedding: snapshot.searchSummaryEmbedding,
+        summarizedAt: new Date(snapshot.summarizedAt),
+      })
+      .where(eq(UploadRecord.id, uploadId));
+
+    // Push the unified doc to lc_media_v1. Same fire-and-forget pattern as
+    // the existing 'transcript' / 'upload' index calls above — the worker
+    // writes ES async, the seed returns quickly.
+    await indexDocument('media', uploadId);
+  }
+}

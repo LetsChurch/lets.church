@@ -6,6 +6,12 @@ import {
   validateSendVerificationEmailConfig,
 } from '@letschurch/temporal/activities/background';
 import { BACKGROUND_QUEUE, GLACIER_QUEUE } from '@letschurch/temporal/queues';
+import {
+  ANNOTATE_MODEL,
+  EMBED_MODEL,
+  SUMMARY_MODEL,
+} from '@letschurch/temporal/util/llm';
+import { assertProductionPricingCoverage } from '@letschurch/temporal/util/llm-pricing';
 import { waitOnTemporal } from '@letschurch/temporal/util/temporal';
 import * as Sentry from '@sentry/node';
 import { NativeConnection, Worker } from '@temporalio/worker';
@@ -32,6 +38,11 @@ if (process.env.NODE_ENV !== 'development') {
 validateSendEmailConfig();
 validateSendVerificationEmailConfig();
 validateGeocodeConfig();
+assertProductionPricingCoverage({
+  summary: SUMMARY_MODEL,
+  annotate: ANNOTATE_MODEL,
+  embed: EMBED_MODEL,
+});
 
 await waitOnTemporal();
 

@@ -11,6 +11,7 @@ import {
   Image,
   Loader,
   LoadingOverlay,
+  Menu,
   Modal,
   Progress,
   Radio,
@@ -26,11 +27,14 @@ import { Dropzone } from '@mantine/dropzone';
 import { useStore } from '@nanostores/react';
 import {
   IconCheck,
+  IconChevronDown,
   IconCopy,
   IconEye,
   IconEyeOff,
+  IconFlask,
   IconPhoto,
   IconRefresh,
+  IconSparkles,
   IconStar,
   IconStarFilled,
   IconTrash,
@@ -92,8 +96,41 @@ export const Route = createFileRoute(
   },
 });
 
+// Progress bar for a processing step. At 0% the step is still queued, so we
+// show an indeterminate (full, animated) bar and a "Queued" label; once it
+// starts reporting progress we switch to a determinate bar with a percentage.
+function ProcessingProgress({
+  label,
+  progress,
+}: {
+  label: string;
+  progress: number;
+}) {
+  const queued = progress <= 0;
+  return (
+    <Box>
+      <Text size="sm" fw={500} mb="xs">
+        {label}
+      </Text>
+      <Progress
+        value={queued ? 100 : progress * 100}
+        size="lg"
+        animated
+        striped
+      />
+      <Text size="xs" c="dimmed" mt="xs">
+        {queued
+          ? 'Queued'
+          : `${Math.min(Math.round(progress * 100), 99)}% complete`}
+      </Text>
+    </Box>
+  );
+}
+
 function ChannelUploadPage() {
   const { channelId, uploadId } = Route.useParams();
+  // TanStack Router navigate — typed via the route's generated tree, used
+  // both for the post-delete redirect and for the LLM-eval admin shortcut.
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const trpc = useTRPC();
@@ -154,6 +191,11 @@ function ChannelUploadPage() {
   const [thumbnailUrlBeforeUpload, setThumbnailUrlBeforeUpload] = useState<
     string | null
   >(null);
+  // Disable the LLM Eval menu item while the route transition is in
+  // flight so a fast double-click can't fire `navigate` twice. The state
+  // is only flipped back on navigate's rejection — the resolved case
+  // unmounts this route, so the cleanup is implicit.
+  const [navigatingToLlmEval, setNavigatingToLlmEval] = useState(false);
 
   // Series state variables
   const [seriesSearchValue, setSeriesSearchValue] = useState('');
@@ -333,6 +375,58 @@ function ChannelUploadPage() {
       onError: (error) => {
         showFailure({
           message: error.message || 'Failed to retry upload processing',
+        });
+      },
+    }),
+  );
+
+  // Re-runs only the LLM summary chain for this upload (summarize + embed +
+  // lc_media_v1 reindex). Cheap (~$0.005), no whisper involvement. Useful
+  // after prompt changes for spot-fixing existing summaries without a full
+  // reprocess.
+  const regenerateSummaryMutation = useMutation(
+    trpc.dashboard.admin.regenerateUploadSummary.mutationOptions({
+      onSuccess: async () => {
+        showSuccess({
+          message:
+            'Summary regeneration started. Refresh in a minute to see the new summary.',
+        });
+        await queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getUploadRecord.queryKey({
+            channelId,
+            uploadId,
+          }),
+        });
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to regenerate summary',
+        });
+      },
+    }),
+  );
+
+  // Same idea as regenerateSummaryMutation but for the annotation pipeline
+  // (outline + scripture + keyword annotations + lc_media_v1 reindex).
+  // Independent of summary so prompt-tuning loops on either side don't pay
+  // for the other.
+  const regenerateAnnotationsMutation = useMutation(
+    trpc.dashboard.admin.regenerateUploadAnnotations.mutationOptions({
+      onSuccess: async () => {
+        showSuccess({
+          message:
+            'Annotation regeneration started. Refresh in a minute to see the new annotations.',
+        });
+        await queryClient.invalidateQueries({
+          queryKey: trpc.dashboard.channels.getUploadRecord.queryKey({
+            channelId,
+            uploadId,
+          }),
+        });
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to regenerate annotations',
         });
       },
     }),
@@ -869,56 +963,161 @@ function ChannelUploadPage() {
               View Media Page
             </Button>
 
-            {/* Featured Toggle - Only for site admins */}
-            {isSiteAdmin ? (
-              <Button
-                variant={upload.isFeatured ? 'filled' : 'light'}
-                color={upload.isFeatured ? 'yellow' : 'gray'}
-                leftSection={
-                  upload.isFeatured ? (
-                    <IconStarFilled size={16} />
-                  ) : (
-                    <IconStar size={16} />
-                  )
-                }
-                onClick={() => {
-                  toggleFeaturedMutation.mutate({ uploadId });
-                }}
-                loading={toggleFeaturedMutation.isPending}
-                disabled={isProcessing}
-                fullWidth
-              >
-                {upload.isFeatured ? 'Remove from Featured' : 'Feature'}
-              </Button>
-            ) : null}
+            {/* Consolidated admin actions. Trigger renders for anyone with
+                some admin scope (channel OR site); items inside are gated
+                by the same scope each standalone button had before — site
+                admins see feature/retry/regen/eval, channel admins see
+                only delete, site admins see both groups separated by a
+                divider. */}
+            {isAdmin ? (
+              <Menu position="bottom-end" width="target" withinPortal>
+                <Menu.Target>
+                  <Button
+                    variant="light"
+                    color="gray"
+                    rightSection={<IconChevronDown size={14} />}
+                    fullWidth
+                  >
+                    Admin actions
+                  </Button>
+                </Menu.Target>
+                <Menu.Dropdown>
+                  {isSiteAdmin ? (
+                    <>
+                      <Menu.Item
+                        leftSection={
+                          toggleFeaturedMutation.isPending ? (
+                            <Loader size={14} />
+                          ) : upload.isFeatured ? (
+                            <IconStarFilled size={16} />
+                          ) : (
+                            <IconStar size={16} />
+                          )
+                        }
+                        onClick={() => {
+                          toggleFeaturedMutation.mutate({ uploadId });
+                        }}
+                        disabled={
+                          isProcessing || toggleFeaturedMutation.isPending
+                        }
+                      >
+                        {upload.isFeatured ? 'Remove from Featured' : 'Feature'}
+                      </Menu.Item>
 
-            {/* Retry Button - Only for site admins on failed uploads without active workflows */}
-            {isSiteAdmin && isFailedUpload ? (
-              <Button
-                variant="light"
-                color="orange"
-                leftSection={<IconRefresh size={16} />}
-                onClick={() => {
-                  retryUploadMutation.mutate({ uploadRecordId: uploadId });
-                }}
-                loading={retryUploadMutation.isPending}
-                fullWidth
-              >
-                Retry Processing
-              </Button>
-            ) : null}
+                      {isFailedUpload ? (
+                        <Menu.Item
+                          leftSection={
+                            retryUploadMutation.isPending ? (
+                              <Loader size={14} />
+                            ) : (
+                              <IconRefresh size={16} />
+                            )
+                          }
+                          onClick={() => {
+                            retryUploadMutation.mutate({
+                              uploadRecordId: uploadId,
+                            });
+                          }}
+                          disabled={retryUploadMutation.isPending}
+                        >
+                          Retry Processing
+                        </Menu.Item>
+                      ) : null}
 
-            {/* Delete Button - Only for channel admins and site admins */}
-            {canDelete ? (
-              <Button
-                variant="light"
-                color="red"
-                leftSection={<IconTrash size={16} />}
-                onClick={() => setShowDeleteModal(true)}
-                fullWidth
-              >
-                Delete Upload
-              </Button>
+                      {/* Summary / annotation regen + LLM eval depend on
+                          paragraphs from transcribe. Server-side guards
+                          also reject legacy uploads with no paragraphs. */}
+                      {upload.transcribingFinishedAt ? (
+                        <>
+                          <Menu.Item
+                            leftSection={
+                              regenerateSummaryMutation.isPending ? (
+                                <Loader size={14} />
+                              ) : (
+                                <IconSparkles size={16} />
+                              )
+                            }
+                            onClick={() => {
+                              regenerateSummaryMutation.mutate({
+                                uploadRecordId: uploadId,
+                              });
+                            }}
+                            disabled={regenerateSummaryMutation.isPending}
+                          >
+                            Regenerate Summary
+                          </Menu.Item>
+
+                          <Menu.Item
+                            leftSection={
+                              regenerateAnnotationsMutation.isPending ? (
+                                <Loader size={14} />
+                              ) : (
+                                <IconSparkles size={16} />
+                              )
+                            }
+                            onClick={() => {
+                              regenerateAnnotationsMutation.mutate({
+                                uploadRecordId: uploadId,
+                              });
+                            }}
+                            disabled={regenerateAnnotationsMutation.isPending}
+                          >
+                            Regenerate Annotations
+                          </Menu.Item>
+
+                          <Menu.Item
+                            leftSection={
+                              navigatingToLlmEval ? (
+                                <Loader size={14} />
+                              ) : (
+                                <IconFlask size={16} />
+                              )
+                            }
+                            onClick={() => {
+                              // Mantine's polymorphic <Menu.Item
+                              // component={Link}> loses TanStack Router's
+                              // typed-route generic, so the typed-search
+                              // prop can't be passed that way. Plain
+                              // navigate() keeps the search typed.
+                              setNavigatingToLlmEval(true);
+                              navigate({
+                                to: '/dashboard/admin/llm-eval',
+                                search: {
+                                  uploadId,
+                                  task: 'annotate',
+                                  models: 'openai/gpt-5.4-mini',
+                                },
+                              }).catch(() => {
+                                // Resolved case unmounts this route; this
+                                // branch only fires if navigation rejects
+                                // (e.g. beforeLoad guard redirect) and we
+                                // stay mounted — clear the spinner so the
+                                // item is clickable again.
+                                setNavigatingToLlmEval(false);
+                              });
+                            }}
+                            disabled={navigatingToLlmEval}
+                          >
+                            LLM Eval
+                          </Menu.Item>
+                        </>
+                      ) : null}
+                    </>
+                  ) : null}
+
+                  {isSiteAdmin && canDelete ? <Menu.Divider /> : null}
+
+                  {canDelete ? (
+                    <Menu.Item
+                      color="red"
+                      leftSection={<IconTrash size={16} />}
+                      onClick={() => setShowDeleteModal(true)}
+                    >
+                      Delete Upload
+                    </Menu.Item>
+                  ) : null}
+                </Menu.Dropdown>
+              </Menu>
             ) : null}
 
             {/* Player or Progress Bars */}
@@ -947,24 +1146,10 @@ function ChannelUploadPage() {
 
                   {/* Transcoding Progress - show when not uploading */}
                   {isTranscoding ? (
-                    <Box>
-                      <Text size="sm" fw={500} mb="xs">
-                        Transcoding media...
-                      </Text>
-                      <Progress
-                        value={upload.transcodingProgress * 100}
-                        size="lg"
-                        animated
-                        striped
-                      />
-                      <Text size="xs" c="dimmed" mt="xs">
-                        {Math.min(
-                          Math.round(upload.transcodingProgress * 100),
-                          99,
-                        )}
-                        % complete
-                      </Text>
-                    </Box>
+                    <ProcessingProgress
+                      label="Transcoding media..."
+                      progress={upload.transcodingProgress}
+                    />
                   ) : null}
                 </>
               ) : upload.mediaSource ? (
@@ -998,15 +1183,10 @@ function ChannelUploadPage() {
 
               {/* Transcribing Progress - show when not uploading (even alongside player) */}
               {isTranscribing ? (
-                <Box>
-                  <Text size="sm" fw={500} mb="xs">
-                    Transcribing audio...
-                  </Text>
-                  <Progress value={100} size="lg" animated striped />
-                  <Text size="xs" c="dimmed" mt="xs">
-                    Processing audio transcript
-                  </Text>
-                </Box>
+                <ProcessingProgress
+                  label="Transcribing audio..."
+                  progress={upload.transcribingProgress}
+                />
               ) : null}
             </Stack>
 

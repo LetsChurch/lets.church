@@ -13,7 +13,7 @@ import {
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute, Link, useLocation } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { z } from 'zod';
 import { AutoplayCountdown } from '@/components/autoplay-countdown';
 import { CommentsSection } from '@/components/comments-section';
@@ -28,12 +28,17 @@ import { MobileDrawer } from '@/components/mobile-drawer';
 import { Player } from '@/components/player';
 import { PlaylistSidebar } from '@/components/playlist-sidebar';
 import { Transcript } from '@/components/transcript';
+import {
+  type TranscriptParagraph,
+  TranscriptParagraphs,
+} from '@/components/transcript-paragraphs';
 import { TranscriptSearchResults } from '@/components/transcript-search-results';
 import { WindowSplitter } from '@/components/window-splitter';
 import { useAutoplay } from '@/hooks/use-autoplay';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import { IncomingIdSchema, idTranslator } from '@/schemas/common';
 import { useSetBackgroundImage } from '@/stores/header';
+import type { TranscriptLine } from '@/stores/transcript-search';
 import {
   $isSearchActive,
   $searchQuery,
@@ -63,32 +68,38 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
     list: z.string().optional(),
   }),
   loader: async ({ context: { queryClient, trpc }, params }) => {
-    const [media, viewData, transcript, rating, comments] = await Promise.all([
-      queryClient.ensureQueryData(
-        trpc.media.getMediaById.queryOptions({
-          mediaId: params.mediaId,
+    const [media, viewData, transcript, paragraphs, rating, comments] =
+      await Promise.all([
+        queryClient.ensureQueryData(
+          trpc.media.getMediaById.queryOptions({
+            mediaId: params.mediaId,
+          }),
+        ),
+        trpcClient.media.createUploadView.mutate({
+          uploadRecordId: params.mediaId,
+          source: UploadViewSource.WEBSITE,
         }),
-      ),
-      trpcClient.media.createUploadView.mutate({
-        uploadRecordId: params.mediaId,
-        source: UploadViewSource.WEBSITE,
-      }),
-      queryClient.ensureQueryData(
-        trpc.media.getTranscript.queryOptions({
-          mediaId: params.mediaId,
-        }),
-      ),
-      queryClient.ensureQueryData(
-        trpc.media.getMediaRating.queryOptions({
-          mediaId: params.mediaId,
-        }),
-      ),
-      queryClient.ensureQueryData(
-        trpc.media.getComments.queryOptions({
-          mediaId: params.mediaId,
-        }),
-      ),
-    ]);
+        queryClient.ensureQueryData(
+          trpc.media.getTranscript.queryOptions({
+            mediaId: params.mediaId,
+          }),
+        ),
+        queryClient.ensureQueryData(
+          trpc.media.getTranscriptParagraphs.queryOptions({
+            mediaId: params.mediaId,
+          }),
+        ),
+        queryClient.ensureQueryData(
+          trpc.media.getMediaRating.queryOptions({
+            mediaId: params.mediaId,
+          }),
+        ),
+        queryClient.ensureQueryData(
+          trpc.media.getComments.queryOptions({
+            mediaId: params.mediaId,
+          }),
+        ),
+      ]);
 
     if (media.series?.id) {
       await queryClient.prefetchQuery(
@@ -103,6 +114,7 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
       media: mediaWithoutProbe,
       viewHash: viewData?.viewHash ?? '',
       transcript: transcript ?? [],
+      paragraphs: paragraphs ?? null,
       rating,
       comments,
     };
@@ -242,14 +254,39 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
 
 function MobileTranscriptDrawerContent({
   transcript,
+  paragraphs,
   isTranscriptProcessing,
 }: {
   transcript: Array<{ start: number; text: string }>;
+  paragraphs?: Array<TranscriptParagraph> | null;
   isTranscriptProcessing: boolean;
 }) {
+  const useParagraphs = Boolean(paragraphs && paragraphs.length > 0);
   const isSearchActive = useStore($isSearchActive);
   const searchQuery = useStore($searchQuery);
   const searchResults = useStore($searchResults);
+
+  // Mirror of the desktop sidebar's `searchableLines`: feed paragraphs
+  // (in ms) to the search store when we're in paragraph mode. See
+  // media-sidebar-tabs.tsx for the rationale.
+  const searchableLines = useMemo<TranscriptLine[]>(() => {
+    if (useParagraphs && paragraphs) {
+      return paragraphs.map((p, i) => ({
+        id: i,
+        start: p.start * 1000,
+        text: p.text,
+      }));
+    }
+    return transcript;
+  }, [useParagraphs, paragraphs, transcript]);
+
+  // Paragraph-mode search results re-render through TranscriptParagraphs
+  // so annotations stay visible. See media-sidebar-tabs.tsx for context.
+  const matchedParagraphs = useMemo(() => {
+    if (!useParagraphs || !paragraphs) return null;
+    const matchedIds = new Set(searchResults.map((r) => r.id));
+    return paragraphs.filter((_, i) => matchedIds.has(i));
+  }, [useParagraphs, paragraphs, searchResults]);
 
   const handleSearchClick = () => {
     $isSearchActive.set(true);
@@ -262,7 +299,7 @@ function MobileTranscriptDrawerContent({
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     $searchQuery.set(query);
-    void performSearch(query, transcript);
+    void performSearch(query, searchableLines);
   };
 
   const hasQuery = searchQuery.trim().length > 0;
@@ -317,7 +354,20 @@ function MobileTranscriptDrawerContent({
 
       <div className="fade-bottom flex min-h-0 flex-1 flex-col overflow-hidden">
         {isSearchActive && hasQuery ? (
-          <TranscriptSearchResults />
+          useParagraphs && matchedParagraphs && matchedParagraphs.length > 0 ? (
+            <TranscriptParagraphs
+              paragraphs={matchedParagraphs}
+              isTranscriptProcessing={isTranscriptProcessing}
+              highlightQuery={searchQuery}
+            />
+          ) : (
+            <TranscriptSearchResults />
+          )
+        ) : useParagraphs ? (
+          <TranscriptParagraphs
+            paragraphs={paragraphs ?? []}
+            isTranscriptProcessing={isTranscriptProcessing}
+          />
         ) : (
           <Transcript
             transcript={transcript}
@@ -465,7 +515,11 @@ function RouteComponent() {
       : undefined,
   });
 
-  // Parse timestamp from URL hash on mount
+  // Parse timestamp from URL hash on mount. TanStack Router's
+  // `location.hash` already has the leading `#` stripped
+  // (router-core/router.js: `hash.split('#').reverse()[0]`), so pass it
+  // straight to URLSearchParams — slicing the first character would
+  // drop the leading key letter and break the parse.
   useEffect(() => {
     if (location.hash) {
       const hashParams = new URLSearchParams(location.hash);
@@ -480,6 +534,17 @@ function RouteComponent() {
     }
   }, [location.hash]);
 
+  // Drop the FlexSearch index when navigating between media — the index
+  // is module-global and otherwise persists across routes, leaving the
+  // next page's first search running against the previous page's
+  // transcript until the user manually closes search.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the body doesn't reference `params.mediaId`, but its value change is exactly the trigger we want — same-route navigation between media ids must re-run cleanup.
+  useEffect(() => {
+    return () => {
+      resetSearch();
+    };
+  }, [params.mediaId]);
+
   // Poll for transcript updates when transcription is in progress
   const { data: transcriptData } = useSuspenseQuery({
     ...trpc.media.getTranscript.queryOptions({
@@ -488,6 +553,16 @@ function RouteComponent() {
     refetchInterval: media && !media.transcribingFinishedAt ? 60000 : false,
   });
   const transcript = transcriptData ?? [];
+
+  // Word-level paragraph transcript (newer pipeline). Null until rows exist,
+  // in which case the sidebar falls back to the legacy line transcript above.
+  const { data: paragraphsData } = useSuspenseQuery({
+    ...trpc.media.getTranscriptParagraphs.queryOptions({
+      mediaId: params.mediaId,
+    }),
+    refetchInterval: media && !media.transcribingFinishedAt ? 60000 : false,
+  });
+  const paragraphs = paragraphsData ?? null;
 
   const { data: ratingData } = useSuspenseQuery(
     trpc.media.getMediaRating.queryOptions({
@@ -843,6 +918,8 @@ function RouteComponent() {
 
             <MediaInfoTabs
               descriptionHtml={media.descriptionHtml}
+              summary={media.summary}
+              outline={media.outline}
               viewCount={media.viewCount}
               publishedAt={media.publishedAt}
               createdAt={media.createdAt}
@@ -908,6 +985,7 @@ function RouteComponent() {
             <div style={{ width: `${transcriptWidth}px` }}>
               <MediaSidebarTabs
                 transcript={transcript}
+                paragraphs={paragraphs}
                 isTranscriptProcessing={!media.transcribingFinishedAt}
                 playlistContext={
                   hasPlaylistContext && activeListId && playlistItems.length > 0
@@ -938,6 +1016,7 @@ function RouteComponent() {
           <MobileDrawer.Content className="h-[85vh]">
             <MobileTranscriptDrawerContent
               transcript={transcript}
+              paragraphs={paragraphs}
               isTranscriptProcessing={!media.transcribingFinishedAt}
             />
           </MobileDrawer.Content>

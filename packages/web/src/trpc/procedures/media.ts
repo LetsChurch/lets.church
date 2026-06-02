@@ -1,6 +1,8 @@
 import {
+  Annotation,
   ChannelSubscription,
   db,
+  TranscriptParagraph,
   UploadList,
   UploadListEntry,
   UploadUserComment,
@@ -173,6 +175,13 @@ export const mediaProcedures = {
           license: true,
           transcribingFinishedAt: true,
           visibility: true,
+          // LLM-generated display summary (Summary tab). Null until the
+          // post-transcript summarize-upload activity has run for this upload.
+          summary: true,
+          // Per-section descriptions keyed to OUTLINE annotation IDs.
+          // Joined to those annotations + their paragraph start time below
+          // to produce the YouTube-style outline panel.
+          sections: true,
         },
         with: {
           channel: {
@@ -307,6 +316,7 @@ export const mediaProcedures = {
         membership,
         viewCountResult,
         subscriberCountResult,
+        outlineRows,
       ] = await Promise.all([
         sessionUserId
           ? db.query.ChannelSubscription.findFirst({
@@ -348,6 +358,30 @@ export const mediaProcedures = {
           .from(ChannelSubscription)
           .where(eq(ChannelSubscription.channelId, channel.id))
           .then((r) => r[0]),
+        // OUTLINE annotations + paragraph start times for this upload, used
+        // alongside `media.sections` below to build the YouTube-style outline
+        // panel. Empty array when annotate hasn't run yet — the panel just
+        // doesn't render. Ordered by paragraph order so the LAG step further
+        // down can derive each section's end timestamp from the next start.
+        db
+          .select({
+            id: Annotation.id,
+            metadata: Annotation.metadata,
+            start: TranscriptParagraph.start,
+            order: TranscriptParagraph.order,
+          })
+          .from(Annotation)
+          .innerJoin(
+            TranscriptParagraph,
+            eq(Annotation.paragraphId, TranscriptParagraph.id),
+          )
+          .where(
+            and(
+              eq(TranscriptParagraph.uploadRecordId, media.id),
+              eq(Annotation.kind, 'OUTLINE'),
+            ),
+          )
+          .orderBy(TranscriptParagraph.order),
       ]);
 
       const isFollowing = !!subscription;
@@ -356,6 +390,34 @@ export const mediaProcedures = {
         ctx.isSiteAdmin || !!(membership?.isAdmin || membership?.canEdit);
       const viewCount = viewCountResult?.count ?? 0;
       const subscriberCount = Number(subscriberCountResult?.count ?? 0);
+
+      // Assemble the YouTube-style outline panel data: one entry per OUTLINE
+      // annotation, matched to its per-section description from
+      // `upload_record.sections` by annotation id. `endSeconds` is the next
+      // section's start (or media length for the last); the UI uses it for
+      // the timestamp range label. Sections without a matching description
+      // (model hallucinated an id, or a re-annotate ran after summarize)
+      // are surfaced anyway with a null description so the chapter list
+      // stays correct.
+      const sectionDescriptionById = new Map(
+        (mediaRest.sections ?? []).map((s) => [s.id, s.description]),
+      );
+      const outline = outlineRows.map((row, i) => {
+        const next = outlineRows[i + 1];
+        const endSeconds = next
+          ? next.start
+          : (mediaRest.lengthSeconds ?? row.start);
+        const meta = row.metadata as { title?: unknown; level?: unknown };
+        const title =
+          typeof meta.title === 'string' ? meta.title : 'Untitled section';
+        return {
+          id: OutgoingIdSchema.parse(row.id),
+          title,
+          startSeconds: row.start,
+          endSeconds,
+          description: sectionDescriptionById.get(row.id) ?? null,
+        };
+      });
 
       // Generate download URLs based on available variants
       type MediaDownloadKind =
@@ -536,6 +598,27 @@ export const mediaProcedures = {
 
         // Add transcript downloads only if transcription completed
         if (transcribingFinishedAt) {
+          // Two generations of uploads live side-by-side in S3:
+          //   * New (Python transcribe worker, this branch): uploads
+          //     `transcript.txt` (paragraphs joined with blank lines) and
+          //     persists rows to `transcript_paragraph`.
+          //   * Legacy (older TS worker): uploaded `transcript.original.txt`
+          //     (raw whisper output, no paragraph grouping) and did not
+          //     populate `transcript_paragraph`.
+          // Presence of paragraph rows is the cleanest signal for which
+          // generation produced this upload — we don't have to probe S3
+          // and the bit aligns with what's actually shown in the UI.
+          const hasParagraphs =
+            (
+              await db
+                .select({ id: TranscriptParagraph.id })
+                .from(TranscriptParagraph)
+                .where(eq(TranscriptParagraph.uploadRecordId, media.id))
+                .limit(1)
+            ).length > 0;
+          const txtKey = hasParagraphs
+            ? `${media.id}/transcript.txt`
+            : `${media.id}/transcript.original.txt`;
           downloadPromises.push(
             getPublicUrlWithFilename(
               publicS3,
@@ -550,7 +633,7 @@ export const mediaProcedures = {
             }),
             getPublicUrlWithFilename(
               publicS3,
-              `${media.id}/transcript.original.txt`,
+              txtKey,
               `${baseFilename} transcript.txt`,
             ).then((url) => {
               downloadUrls.push({
@@ -588,8 +671,10 @@ export const mediaProcedures = {
         ? { id: OutgoingIdSchema.parse(seriesRow.id), title: seriesRow.title }
         : null;
 
+      const { sections: _sections, ...mediaRestNoSections } = mediaRest;
+
       return {
-        ...mediaRest,
+        ...mediaRestNoSections,
         descriptionHtml,
         id: OutgoingIdSchema.parse(mediaRest.id),
         thumbnailUrl,
@@ -608,6 +693,7 @@ export const mediaProcedures = {
         viewCount,
         transcribingFinishedAt,
         series,
+        outline,
         channel: {
           id: OutgoingIdSchema.parse(channel.id),
           name: channel.name,
@@ -916,6 +1002,123 @@ export const mediaProcedures = {
         );
         return null;
       }
+    }),
+
+  // Paragraph transcript with per-word timings (the newer pipeline). Returns
+  // null when no rows exist so the client can fall back to the legacy VTT
+  // transcript (getTranscript). Access checks mirror getTranscript exactly.
+  getTranscriptParagraphs: publicProcedure
+    .input(getTranscriptSchema)
+    .query(async ({ input, ctx }) => {
+      const sessionUserId = ctx.session?.appUserId ?? null;
+      const media = await db.query.UploadRecord.findFirst({
+        columns: { id: true, visibility: true },
+        with: {
+          channel: {
+            columns: { id: true, visibility: true, approvedAt: true },
+          },
+        },
+        where: (t, { eq }) => eq(t.id, input.mediaId),
+      });
+
+      if (!media) return null;
+
+      if (media.channel.visibility === 'PRIVATE' || !media.channel.approvedAt) {
+        return null;
+      }
+
+      if (media.visibility === 'PRIVATE') {
+        if (!sessionUserId) return null;
+        if (!ctx.isSiteAdmin) {
+          const membershipCheck = await db.query.ChannelMembership.findFirst({
+            columns: { appUserId: true },
+            where: (t, { and, eq }) =>
+              and(
+                eq(t.channelId, media.channel.id),
+                eq(t.appUserId, sessionUserId),
+              ),
+          });
+          if (!membershipCheck) return null;
+        }
+      }
+
+      const paragraphRows = await db.query.TranscriptParagraph.findMany({
+        columns: {
+          id: true,
+          order: true,
+          start: true,
+          end: true,
+          speaker: true,
+          text: true,
+          words: true,
+        },
+        where: (t, { eq }) => eq(t.uploadRecordId, input.mediaId),
+        orderBy: (t, { asc }) => asc(t.order),
+      });
+
+      if (paragraphRows.length === 0) return null;
+
+      // No Drizzle `relations()` is defined for TranscriptParagraph ↔
+      // Annotation; a second findMany + JS group-by avoids introducing
+      // relations just for this read path. One DB query, indexed by
+      // `annotation_paragraph_kind_idx`.
+      const annotationRows = await db.query.Annotation.findMany({
+        columns: {
+          id: true,
+          paragraphId: true,
+          kind: true,
+          startWord: true,
+          endWord: true,
+          metadata: true,
+        },
+        where: (t, { inArray: inA }) =>
+          inA(
+            t.paragraphId,
+            paragraphRows.map((p) => p.id),
+          ),
+      });
+      // `{ [key: string]: {} }` (vs `Record<string, unknown>`): tRPC's
+      // queryOptions inference normalizes `unknown` to `{}` (non-null
+      // object) when computing the queryFn's data type, so the loader
+      // and component see the narrowed form. Matching it here keeps the
+      // procedure's return assignable to TanStack's loader-return slot
+      // — without it, the `ensureQueryData(...)` result type drifts
+      // from the declared loader-data type and the route fails to
+      // typecheck with "two different types with this name exist".
+      type AnnotationOut = {
+        kind: (typeof annotationRows)[number]['kind'];
+        startWord: number | null;
+        endWord: number | null;
+        // biome-ignore lint/complexity/noBannedTypes: see comment above — TanStack/tRPC inference uses `{}` for the JSON-safe metadata shape; matching here keeps the loader contract aligned.
+        metadata: { [key: string]: {} };
+      };
+      const annotationsByParagraphId = new Map<string, Array<AnnotationOut>>();
+      for (const a of annotationRows) {
+        const list = annotationsByParagraphId.get(a.paragraphId) ?? [];
+        list.push({
+          kind: a.kind,
+          startWord: a.startWord,
+          endWord: a.endWord,
+          // biome-ignore lint/complexity/noBannedTypes: see AnnotationOut type comment.
+          metadata: a.metadata as { [key: string]: {} },
+        });
+        annotationsByParagraphId.set(a.paragraphId, list);
+      }
+      // Stable order: nulls first (OUTLINE), then ascending by startWord.
+      // Gives the renderer a deterministic span iteration that mirrors
+      // reading order.
+      for (const list of annotationsByParagraphId.values()) {
+        list.sort((a, b) => {
+          const aw = a.startWord ?? -1;
+          const bw = b.startWord ?? -1;
+          return aw - bw;
+        });
+      }
+
+      return paragraphRows.map(({ id, ...rest }) => ({
+        ...rest,
+        annotations: annotationsByParagraphId.get(id) ?? [],
+      }));
     }),
 
   rateMedia: authProcedure

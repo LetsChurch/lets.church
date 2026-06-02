@@ -38,6 +38,45 @@ jobs:
       - name: Run checks
         run: pnpm -r run check
 
+  check-python:
+    runs-on: depot-ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ruff format --check
+        uses: astral-sh/ruff-action@v3
+        with:
+          src: "services/transcribe"
+          args: "format --check"
+
+      - name: ruff check
+        uses: astral-sh/ruff-action@v3
+        with:
+          src: "services/transcribe"
+
+  test-python:
+    runs-on: depot-ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          # Match `services/transcribe/.python-version` and pyproject.toml's
+          # `requires-python = ">=3.11,<3.12"`. uv would already resolve this
+          # from `.python-version`, but pinning here keeps the CI environment
+          # explicit and protects against the working-directory step running
+          # before uv resolves the project file.
+          python-version: "3.11"
+
+      # Tested modules (vtt, windowing, segmentation) are stdlib-only, so we run
+      # in an ephemeral env with just pytest + hypothesis — no torch/nemo install.
+      - name: Run python tests
+        working-directory: services/transcribe
+        run: uv run --no-project --with pytest --with hypothesis pytest
+
   test:
     runs-on: depot-ubuntu-24.04
 
@@ -105,7 +144,7 @@ jobs:
 
   build:
     runs-on: depot-ubuntu-24.04
-    needs: [check, test, test-go]
+    needs: [check, check-python, test-python, test, test-go]
     if: github.ref == 'refs/heads/kyrios'
 
     steps:

@@ -18,6 +18,7 @@ import {
   PRIORITY_USER,
 } from '@letschurch/temporal/queues';
 import {
+  makeAnnotateTranscriptWorkflowId,
   makeBackupToGlacierWorkflowId,
   makeCreateUploadRecordWorkflowId,
   makeDeleteUploadWorkflowId,
@@ -31,6 +32,7 @@ import {
   makeReprocessAllWorkflowId,
   makeResetPasswordWorkflowId,
   makeScrapeAndImportWorkflowId,
+  makeSummarizeUploadWorkflowId,
   makeUpdateUploadRecordWorkflowId,
   makeVerificationEmailWorkflowId,
   type RemuxScope,
@@ -143,10 +145,12 @@ export {
   makeImportMediaWorkflowId,
   makeInvitationEmailWorkflowId,
   makePostUserRegistrationWorkflowId,
+  makeAnnotateTranscriptWorkflowId,
   makeProcessMediaWorkflowId,
   makeRecordDownloadSizeWorkflowId,
   makeResetPasswordWorkflowId,
   makeScrapeAndImportWorkflowId,
+  makeSummarizeUploadWorkflowId,
   makeUpdateUploadRecordWorkflowId,
   makeVerificationEmailWorkflowId,
 };
@@ -1046,13 +1050,19 @@ export async function cancelReindex(kind: ReindexWorkflowParams['kind']) {
 export async function startReprocess(
   scope: ReprocessScope,
   processingScope: 'transcode' | 'transcribe' | 'everything' = 'transcode',
+  options: { viaBatch?: boolean } = {},
 ) {
   return (await client).workflow.start(reprocessAllWorkflow, {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_REPROCESS },
     workflowId: makeReprocessAllWorkflowId(scope),
-    args: [scope, processingScope],
+    args: [
+      scope,
+      processingScope,
+      null,
+      { viaBatch: options.viaBatch ?? false },
+    ],
   });
 }
 

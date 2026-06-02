@@ -1372,6 +1372,7 @@ export const channelRouter = router({
           transcodingFinishedAt: true,
           transcribingFinishedAt: true,
           transcodingProgress: true,
+          transcribingProgress: true,
           variants: true,
         },
         with: {
