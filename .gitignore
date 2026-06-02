@@ -7,3 +7,10 @@ node_modules
 
 *.log
 *.tsbuildinfo
+
+# Scratch directory for one-off prompt-tuning evals (segmented text
+# corpora, baseline annotation outputs). Inputs land here so the
+# transcribe-worker and web containers can read them via the existing
+# seed-data bind mount; nothing in here is part of the committed seed
+# snapshots.
+seed-data/eval/

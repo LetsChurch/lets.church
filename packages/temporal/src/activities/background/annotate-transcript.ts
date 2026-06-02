@@ -527,7 +527,8 @@ Headings:
   * Q&A / call-in shows: each new caller's question is its own heading boundary. The host typically transitions ("all right, let's go with [name]", "let's talk to [name]", "go ahead [name]", "okay, [name]") and the caller poses a discrete question — the answer to that question is its own substantive section. Title by the question's topic, not the caller's name (e.g. "# Whether Christians May Have Images of Christ", not "# Marco's Question" or "# Question from Marco"). When the host returns to monologue between callers (e.g. for an off-topic tangent or a brief sign-off comment), apply the normal banter rule — those interludes don't earn a heading.
   * Enumerated essays / "N reasons for/why…" / sermon-point-list talks: each numbered or named item gets its own heading. If the speaker says "first reason / second reason / third reason", "first point / second point", "reason number one / reason number two", "and the third thing is…", write a heading per item — not one heading covering all the reasons. Title by the item's content (e.g. "# Sufficiency of Scripture", not "# Reason One").
   * Recorded clips with commentary: each clip the speaker introduces and then analyzes is its own heading boundary (signaled by "let's play this clip", "here's the next one", "this next clip is about…", "let me play this for you"). Title by the clip's topic or who the clip is critiquing.
-- Banter is anything that isn't substantive teaching: greetings, welcomes, weather, scheduling chitchat, sound checks, tech setup, host/guest small talk, off-topic news asides, sponsor reads, sign-offs. Banter paragraphs appear in the output verbatim but they DO NOT have a heading above them and they ARE NOT named by a heading. If a heading you're about to write would be titled around banter ("Welcome and Technical Setup", "Opening Banter", "Introductory Chatter", "Show Opens With…", "Pre-Show News Roundup", anything describing or wrapping the open chatter), DO NOT write it — that's not a section of the outline.
+  * Formal debates: opening statements, cross-examinations, rebuttals, closing statements, and audience Q&A are each their own heading boundary. The moderator's intro (format announcement + reading of debater credentials) is banter, not a section. Title each section by speaker surname + the argument/topic of that segment.
+- Banter is anything that isn't substantive teaching: greetings, welcomes, weather, scheduling chitchat, sound checks, tech setup, host/guest small talk, off-topic news asides, sponsor reads, sign-offs, copyright/legal disclaimers, and (in formal debates) the moderator's format announcement + reading of the debaters' credentials. Banter paragraphs appear in the output verbatim but they DO NOT have a heading above them and they ARE NOT named by a heading. If a heading you're about to write would be titled around banter ("Welcome and Technical Setup", "Opening Banter", "Introductory Chatter", "Show Opens With…", "Pre-Show News Roundup", "Debate Format and Introductions", "Moderator's Introduction", or any other title that names the program's intro/format/credentials/disclaimer rather than its actual content), DO NOT write it — that's not a section of the outline.
 - Where the first heading goes: if the program opens with banter (most do), the document's first lines are those banter paragraphs themselves, with no heading above them. The first "# Title" line appears later, immediately before the paragraph that opens the first substantive teaching topic (often signaled by phrases like "gotta start off the program today", "we've got to address", "speaking of X, …", a hard topic pivot). The document does not begin with a heading when the program begins with banter.
 - Inline annotations (below) likewise focus on substantive content; spans inside pure banter paragraphs can be skipped.
 
@@ -741,11 +742,13 @@ const CHARS_PER_TOKEN = 4;
 // Fraction of estimated-transcript-tokens the completion must hit. Tuned
 // against the corpus: healthy gpt-5.4-mini runs land at 0.95-1.05 (echo
 // + heading + link decoration overhead), Llama 4 summarization failures
-// land at 0.2-0.3. 0.8 is comfortably in between, but if a model that
-// trims banter aggressively shows up in the corpus the floor may need
-// to drop. Watch for false-alarms in the LlmCall audit log
-// (finish_reason='stop' rows with non-null errors).
-const SILENT_SUMMARY_FLOOR = 0.8;
+// land at 0.2-0.3. Lowered from 0.8 → 0.75 after the debate-format prompt
+// expansion shifted Dorean chapters 11-14 to 76-79% (the prompt now asks
+// the model to be more disciplined about not heading-wrapping intros and
+// other banter, which trims its echo budget on dense passages). Still
+// comfortably above the Llama failure mode; watch the audit log
+// (finish_reason='stop' rows with non-null errors) when bumping again.
+const SILENT_SUMMARY_FLOOR = 0.75;
 
 /**
  * Eval-only: full-markdown-document annotation mode. See the block
