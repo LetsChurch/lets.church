@@ -49,6 +49,24 @@ class ModelManager:
 
         logger.info(f"Loading wtpsplit SaT model: {wtpsplit_model}")
         sat = SaT(wtpsplit_model)
+        # SaT loads on CPU by default and proxies `.to()` / `.half()` through
+        # to the inner SubwordXLMForTokenClassification (transformers
+        # nn.Module). We mirror the worker-wide `device` choice rather than
+        # selecting independently — `device` here is always one of {'cpu',
+        # 'cuda'} because faster-whisper (which sets the worker default in
+        # worker.py) uses ctranslate2, and ctranslate2 doesn't support MPS.
+        #
+        # If you're running the transcribe worker natively on macOS for
+        # debugging, the worker will pick 'cpu' here too — MPS would only
+        # accelerate SaT, not whisper/align/titanet, so the bottleneck
+        # isn't worth the conditional path. The standalone macOS-native
+        # scripts (services/transcribe/scripts/sweep_thresholds.py,
+        # resegment_seed_snapshots.py) detect MPS themselves and call
+        # `sat.to('mps')` at their own call site for that reason.
+        #
+        # `.half()` on the CUDA path runs SaT at fp16 — matches the
+        # whisper compute_type and roughly halves SaT's VRAM. Skipped on
+        # CPU to avoid pointless precision loss.
         if device == "cuda":
             sat.half().to(device)
         self.sat = sat
