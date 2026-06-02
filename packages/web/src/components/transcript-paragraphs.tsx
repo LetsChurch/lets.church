@@ -248,16 +248,17 @@ function WordButton({
 }
 
 // Inline-highlight treatments applied when a reference pill is being
-// hovered. Matches the historical highlighter metaphor — yellow for
-// scripture, sky for keywords — so users learn the color↔kind mapping
-// once and can read it across the pill rail + the inline span. Light
-// mode draws a translucent background behind the words; dark mode
-// swaps to a solid text color with no background since translucent
-// over a dark surface reads muddy.
+// hovered. The color↔kind mapping (yellow=scripture, sky=keyword) lives
+// on the pill itself — the inline span just needs to read as "this
+// is the matching text". Light mode draws a translucent colored
+// background behind the words. Dark mode brightens to plain white
+// instead of a colored text fill: solid yellow/sky text over a dark
+// surface read as muddy, and the pill's own color already conveys
+// kind.
 const BIBLE_HIGHLIGHT_CLASS =
-  'bg-yellow-300/30 dark:bg-transparent dark:text-yellow-300';
+  'bg-yellow-300/30 dark:bg-transparent dark:text-white';
 const KEYWORD_HIGHLIGHT_CLASS =
-  'bg-sky-400/25 dark:bg-transparent dark:text-sky-400';
+  'bg-sky-400/25 dark:bg-transparent dark:text-white';
 
 // Inline icon-button shown next to a timestamp or heading on hover —
 // click copies a `<page>#t=<seconds>` deep-link to the clipboard,
