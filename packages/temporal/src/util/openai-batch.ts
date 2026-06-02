@@ -1,3 +1,5 @@
+import * as readline from 'node:readline';
+import { Readable } from 'node:stream';
 import OpenAI, { toFile } from 'openai';
 import { z } from 'zod';
 
@@ -163,14 +165,28 @@ export async function pollBatch(batchId: string): Promise<BatchStatus> {
 // at a time. The file content endpoint returns a `Response` whose
 // body is a stream; we accumulate into a string and split. Output
 // files for a 50K-request batch are bounded by the 200MB API limit
-// so a one-shot read is fine in practice. Iterates so memory usage
-// stays linear in the parse step.
+// Stream the file body line-by-line — `response.text()` would buffer
+// the entire output as a single JS string, which trips V8's max
+// string length (~512 MB) for embed and large annotate batches.
+// Annotate echoes the full transcript in every response and embed
+// returns 1536-dim vectors per paragraph, so a 100-line shard easily
+// exceeds the cap. Using readline on a Node stream view of the body
+// keeps live memory bounded to the largest single line.
 export async function* downloadOutput(
   fileId: string,
 ): AsyncGenerator<BatchResponseLine, void, void> {
   const response = await openaiBatch.files.content(fileId);
-  const text = await response.text();
-  for (const raw of text.split('\n')) {
+  if (!response.body) {
+    throw new Error(`OpenAI file ${fileId}: empty response body`);
+  }
+  const nodeStream = Readable.fromWeb(
+    response.body as unknown as import('node:stream/web').ReadableStream,
+  );
+  const rl = readline.createInterface({
+    input: nodeStream,
+    crlfDelay: Number.POSITIVE_INFINITY,
+  });
+  for await (const raw of rl) {
     const line = raw.trim();
     if (!line) continue;
     yield JSON.parse(line) as BatchResponseLine;
