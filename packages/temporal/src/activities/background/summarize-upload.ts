@@ -429,8 +429,10 @@ export default async function summarizeUpload(
         searchSummaryLength: upload.searchSummary.length,
       };
     }
+    const missing = [...currentIds].filter((id) => !storedIds.has(id)).length;
+    const orphaned = [...storedIds].filter((id) => !currentIds.has(id)).length;
     activityLogger.info(
-      `Re-summarizing despite existing summary — outline/section id mismatch (outlines=${sectionInputs.length}, persisted sections=${upload.sections.length})`,
+      `Re-summarizing despite existing summary — outline ids changed (current=${currentIds.size}, stored=${storedIds.size}, missing-from-stored=${missing}, orphaned-in-stored=${orphaned})`,
     );
   }
 

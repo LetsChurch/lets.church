@@ -1011,6 +1011,17 @@ export default async function annotateTranscript(
         .insert(Annotation)
         .values(annotations.map((a) => ({ ...a, updatedAt: now })));
     }
+    // Clear `upload_record.sections` in the same transaction. The
+    // delete-then-insert above produces fresh OUTLINE UUIDs, and the
+    // existing sections array references the OLD UUIDs that no longer
+    // exist — so any persisted descriptions are now dangling. Wipe
+    // them so the next summarize re-populates the array against the
+    // current outline set rather than the frontend rendering titles
+    // without descriptions until somebody manually re-summarizes.
+    await tx
+      .update(UploadRecord)
+      .set({ sections: [] })
+      .where(eq(UploadRecord.id, uploadRecordId));
   });
 
   activityLogger.info(

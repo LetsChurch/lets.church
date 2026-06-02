@@ -21,9 +21,12 @@ const moduleLogger = logger.child({
  * Idempotency: by default (`force: false`) only rows where `embedding IS
  * NULL` are sent — parent-workflow retries that re-enter this activity
  * after a flake don't re-bill tokens or write duplicate `llm_call` rows
- * for paragraphs whose previous attempt already landed. The admin
- * `regenerateUploadAnnotations` / `Reprocess Media` paths pass
- * `force: true` to overwrite.
+ * for paragraphs whose previous attempt already landed. Production
+ * callers leave `force=false`: paragraph text is stable across summary-
+ * prompt changes, so re-running the seed scripts or admin "Regenerate
+ * Summary" doesn't need to re-embed. The `force` knob exists for the
+ * (currently unused) case of a paragraph-segmentation rerun where the
+ * underlying text actually changed.
  *
  * Chunking: OpenAI's embeddings endpoint caps `input` at 2048 strings per
  * request (`EMBED_MAX_INPUTS`); long uploads exceed that. We slice the
