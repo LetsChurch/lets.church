@@ -14,6 +14,7 @@ from src.segmentation import (
     _normalize,
     capitalize_segment_starts,
     group_consecutive_by_speaker,
+    merge_paragraphs_by_chars,
     process_speaker_segments,
     sentences_to_segments,
 )
@@ -168,3 +169,95 @@ def test_process_model_failure_falls_back_to_originals():
 
     seg = _seg("A", [_word("hello", 0.0, 1.0)], text="hello")
     assert process_speaker_segments([seg], BoomSaT()) == [seg]
+
+
+# --- merge_paragraphs_by_chars ------------------------------------------------
+
+
+def _para_seg(text: str, idx: int, start: bool) -> dict:
+    """Minimal segment for merge tests — only the fields the merger reads
+    and writes. Real pipeline segments carry more (start/end/words/speaker)
+    but the merger doesn't touch those."""
+    return {
+        "text": text,
+        "paragraph_idx": idx,
+        "is_paragraph_start": start,
+    }
+
+
+def test_merge_zero_target_is_noop():
+    segs = [
+        _para_seg("First.", 0, True),
+        _para_seg("Second.", 1, True),
+        _para_seg("Third.", 2, True),
+    ]
+    snapshot = [dict(s) for s in segs]
+    merge_paragraphs_by_chars(segs, 0)
+    assert segs == snapshot
+
+
+def test_merge_negative_target_is_noop():
+    segs = [_para_seg("A.", 0, True), _para_seg("B.", 1, True)]
+    snapshot = [dict(s) for s in segs]
+    merge_paragraphs_by_chars(segs, -1)
+    assert segs == snapshot
+
+
+def test_merge_empty_input_is_noop():
+    segs: list[dict] = []
+    merge_paragraphs_by_chars(segs, 100)
+    assert segs == []
+
+
+def test_merge_first_segment_is_always_paragraph_start():
+    # Even if the input arrives with is_paragraph_start=False on the first
+    # segment (shouldn't happen in the real pipeline, but be defensive),
+    # the merger normalises it to True.
+    segs = [
+        _para_seg("Hello.", 0, False),
+        _para_seg("World.", 0, False),
+    ]
+    merge_paragraphs_by_chars(segs, 50)
+    assert segs[0]["is_paragraph_start"] is True
+    assert segs[0]["paragraph_idx"] == 0
+
+
+def test_merge_keeps_sentences_together_until_target():
+    # "First sentence." = 15 chars, "Second sentence." = 16 chars, etc.
+    # Target 30: after the first sentence we're at 15 (< 30) so the next
+    # sentence keeps the same paragraph. After two sentences we're at
+    # 15+1+16=32 (>= 30) so the third opens a new paragraph.
+    segs = [
+        _para_seg("First sentence.", 0, True),
+        _para_seg("Second sentence.", 1, True),
+        _para_seg("Third sentence.", 2, True),
+        _para_seg("Fourth sentence.", 3, True),
+    ]
+    merge_paragraphs_by_chars(segs, 30)
+    assert [s["is_paragraph_start"] for s in segs] == [True, False, True, False]
+    assert [s["paragraph_idx"] for s in segs] == [0, 0, 1, 1]
+
+
+def test_merge_long_single_sentence_still_opens_new_paragraph_next():
+    # First sentence already overshoots the target alone — the next
+    # sentence still becomes its own paragraph; we never split mid-
+    # sentence to honor a target.
+    segs = [
+        _para_seg("X" * 200 + ".", 0, True),
+        _para_seg("Short.", 1, True),
+        _para_seg("Another.", 2, True),
+    ]
+    merge_paragraphs_by_chars(segs, 50)
+    assert [s["is_paragraph_start"] for s in segs] == [True, True, False]
+    assert [s["paragraph_idx"] for s in segs] == [0, 1, 1]
+
+
+def test_merge_high_target_collapses_to_one_paragraph():
+    segs = [
+        _para_seg("A.", 0, True),
+        _para_seg("B.", 1, True),
+        _para_seg("C.", 2, True),
+    ]
+    merge_paragraphs_by_chars(segs, 1000)
+    assert [s["is_paragraph_start"] for s in segs] == [True, False, False]
+    assert [s["paragraph_idx"] for s in segs] == [0, 0, 0]

@@ -153,10 +153,60 @@ def capitalize_segment_starts(segments: list[dict[str, Any]]) -> None:
                 seg["text"] = " ".join(seg_tokens)
 
 
+def merge_paragraphs_by_chars(
+    segments: list[dict[str, Any]],
+    target_chars: int,
+) -> None:
+    """Re-flag `is_paragraph_start` so paragraphs aggregate to at least
+    `target_chars`. Mutates segments in place.
+
+    Soft lower bound: a paragraph keeps absorbing the next sentence
+    until its accumulated text length reaches the target; then the
+    next sentence opens a new paragraph. Natural sentence boundaries
+    are preserved (we never split mid-sentence) — we just emit fewer
+    paragraph markers. `paragraph_idx` is renumbered to match so a
+    debugger dump stays consistent with the new boundaries.
+
+    Caller is responsible for scoping this to a single speaker group;
+    crossing speakers would silently merge across `is_paragraph_start`
+    re-resets, which is wrong. `process_speaker_segments` calls this
+    per-group, then concatenates the groups.
+
+    `target_chars <= 0` is a no-op so callers can plumb through "off"
+    without a conditional at the call site.
+    """
+    if target_chars <= 0 or not segments:
+        return
+    current_chars = 0
+    current_idx = 0
+    for i, seg in enumerate(segments):
+        text_len = len(seg.get("text", ""))
+        if i == 0:
+            seg["is_paragraph_start"] = True
+            seg["paragraph_idx"] = 0
+            current_chars = text_len
+            current_idx = 0
+            continue
+        if current_chars >= target_chars:
+            current_idx += 1
+            seg["is_paragraph_start"] = True
+            seg["paragraph_idx"] = current_idx
+            current_chars = text_len
+        else:
+            seg["is_paragraph_start"] = False
+            seg["paragraph_idx"] = current_idx
+            # +1 for the implicit space that joins sentences when the
+            # paragraph is reconstructed downstream — keeps the
+            # accumulator honest about rendered length.
+            current_chars += text_len + 1
+
+
 def process_speaker_segments(
     segments: list[dict[str, Any]],
     sat_model,
     threshold: float = 0.4,
+    paragraph_threshold: float = 0.5,
+    paragraph_target_chars: int = 0,
 ) -> list[dict[str, Any]]:
     """Re-segment by speaker turn through wtpsplit; preserve per-word timings.
 
@@ -164,6 +214,16 @@ def process_speaker_segments(
     delegates the deterministic mapping/casing to the pure helpers above. Falls
     back to the original segments for a turn when it has no words, no usable
     text, the model raises, or nothing maps.
+
+    `threshold` is wtpsplit's sentence-boundary threshold; `paragraph_threshold`
+    is the paragraph-boundary threshold (defaults to wtpsplit's own 0.5, but
+    set explicitly here so a future SaT default change doesn't silently shift
+    output). `paragraph_target_chars > 0` merges adjacent paragraphs within
+    each speaker group until each accumulated paragraph reaches that many
+    characters — wtpsplit's paragraph_threshold rarely fires on continuous
+    ASR-style transcripts (the model's paragraph signal was trained on text
+    with explicit newlines), so this is the knob that actually controls
+    paragraph size for the audience-facing transcript view.
     """
     if not segments:
         return segments
@@ -186,7 +246,10 @@ def process_speaker_segments(
 
         try:
             paragraphs = sat_model.split(
-                combined, do_paragraph_segmentation=True, threshold=threshold
+                combined,
+                do_paragraph_segmentation=True,
+                threshold=threshold,
+                paragraph_threshold=paragraph_threshold,
             )
         except Exception as exc:
             logger.warning(f"wtpsplit failed for speaker {speaker}: {exc}")
@@ -195,6 +258,12 @@ def process_speaker_segments(
 
         produced = sentences_to_segments(paragraphs, words, speaker)
         if produced:
+            # Char-count merge runs PER speaker group — bridging the
+            # group boundary would silently glue together two speakers'
+            # last/first sentences. The downstream group-by-paragraph
+            # walker only respects is_paragraph_start within a group
+            # anyway, so this scoping matches the downstream model.
+            merge_paragraphs_by_chars(produced, paragraph_target_chars)
             processed.extend(produced)
         else:
             logger.warning(

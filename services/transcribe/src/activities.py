@@ -74,6 +74,19 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
     activity.logger.info(f"transcribe start: upload={upload_record_id} key={s3_upload_key}")
 
     work_dir_base = os.environ.get("TRANSCRIBE_WORKING_DIRECTORY", "/data/transcribe")
+
+    # Segmentation knobs. `threshold` is wtpsplit's sentence-boundary
+    # threshold; `paragraph_threshold` is the paragraph-boundary one
+    # (set explicitly so a future wtpsplit default change doesn't shift
+    # output silently). `target_chars` post-merges paragraphs within a
+    # speaker group to at least that many characters — wtpsplit's
+    # paragraph signal rarely fires on continuous ASR transcripts so
+    # this is the knob that actually controls paragraph size for the
+    # audience-facing transcript view. 0 disables merging.
+    sentence_threshold = float(os.getenv("WTPSPLIT_SENTENCE_THRESHOLD", "0.4"))
+    paragraph_threshold = float(os.getenv("WTPSPLIT_PARAGRAPH_THRESHOLD", "0.5"))
+    paragraph_target_chars = int(os.getenv("PARAGRAPH_TARGET_CHARS", "200"))
+
     s3_ingest_endpoint = os.environ.get("S3_INGEST_ENDPOINT")
     s3_ingest_bucket = os.environ["S3_INGEST_BUCKET"]
     s3_ingest_key = os.environ["S3_INGEST_ACCESS_KEY_ID"]
@@ -166,7 +179,13 @@ async def transcribe(upload_record_id: str, s3_upload_key: str) -> dict[str, Any
         # 4. Re-segment + restore terminal punctuation via wtpsplit per speaker turn.
         activity.heartbeat("segmenting sentences")
         before = len(segments)
-        segments = process_speaker_segments(segments, models.sat, threshold=0.4)
+        segments = process_speaker_segments(
+            segments,
+            models.sat,
+            threshold=sentence_threshold,
+            paragraph_threshold=paragraph_threshold,
+            paragraph_target_chars=paragraph_target_chars,
+        )
         paragraph_count = sum(1 for s in segments if s.get("is_paragraph_start"))
         activity.logger.info(
             f"segmentation done: segments {before} -> {len(segments)}, paragraphs={paragraph_count}"
