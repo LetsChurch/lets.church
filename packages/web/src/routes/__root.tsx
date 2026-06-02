@@ -122,6 +122,25 @@ function RootComponent() {
       person_profiles: 'identified_only',
     });
 
+    const canPlay = (type: string) =>
+      typeof MediaSource !== 'undefined' && MediaSource.isTypeSupported(type);
+
+    posthog.setPersonProperties({
+      // Video
+      av1_supported: canPlay('video/mp4; codecs="av01.0.05M.08"'),
+      h264_supported: canPlay('video/mp4; codecs="avc1.42E01E"'),
+      h265_supported:
+        canPlay('video/mp4; codecs="hvc1.1.6.L93.B0"') ||
+        canPlay('video/mp4; codecs="hev1.1.6.L93.B0"'),
+      vp9_supported: canPlay('video/mp4; codecs="vp09.00.10.08"'),
+      vp8_supported: canPlay('video/webm; codecs="vp8"'),
+      // Audio
+      aac_supported: canPlay('audio/mp4; codecs="mp4a.40.2"'),
+      opus_supported: canPlay('audio/webm; codecs="opus"'),
+      flac_supported: canPlay('audio/mp4; codecs="flac"'),
+      vorbis_supported: canPlay('audio/webm; codecs="vorbis"'),
+    });
+
     // Set browser size cookie on mount and when window resizes
     const updateBrowserSize = () => {
       setBrowserSize({
