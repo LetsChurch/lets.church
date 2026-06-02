@@ -257,7 +257,12 @@ export function buildAnnotationChatBody(
 ): Record<string, unknown> {
   return {
     model,
-    max_tokens: maxTokens,
+    // gpt-5.4 family rejects `max_tokens` and requires
+    // `max_completion_tokens`. OpenRouter accepts the new name and
+    // forwards it correctly to non-OpenAI providers (verified against
+    // anthropic/claude-haiku-4-5), so both the direct-OpenAI batch
+    // path and the live OpenRouter path stay on the same field.
+    max_completion_tokens: maxTokens,
     temperature: 0.6,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
@@ -817,7 +822,7 @@ export async function runAnnotation(
     // `llm_call` for auditing; both failing leaves a paper trail the
     // admin failed-annotations surface picks up.
     fallbackModel: ANNOTATE_FALLBACK_MODEL,
-    max_tokens: maxTokens,
+    max_completion_tokens: maxTokens,
     // Empirically the best temperature for verbatim-echo + outlining on
     // gpt-5.4-mini across our seed-corpus transcripts (4 transcripts × 4
     // temperatures × 3 runs each, May 2026). The provider default (1.0)

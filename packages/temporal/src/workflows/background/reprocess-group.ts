@@ -318,17 +318,27 @@ export async function reprocessGroupWorkflow(
     }
 
     // --- Wave 1 cleanup: drop input/output/error files ------------
+    // Preserve error files for batches that had any failures —
+    // OpenAI's 30-day file expiry then keeps the forensic trail
+    // alive long enough to diagnose a class of failure (today's
+    // gpt-5.4 `max_tokens` regression took a lot longer to chase
+    // down because we'd already deleted the file). Successful
+    // batches' nullish error files cost nothing to "skip".
     await cleanupBatchFiles({
       fileIds: collectFileIds([
         ...annotateSubmit.batches.flatMap((b, i) => [
           b.inputFileId,
           annotateStatuses[i]?.outputFileId ?? null,
-          annotateStatuses[i]?.errorFileId ?? null,
+          annotateResults[i]?.failed
+            ? null
+            : (annotateStatuses[i]?.errorFileId ?? null),
         ]),
         ...embedParagraphsSubmit.batches.flatMap((b, i) => [
           b.inputFileId,
           embedParagraphsStatuses[i]?.outputFileId ?? null,
-          embedParagraphsStatuses[i]?.errorFileId ?? null,
+          embedParagraphsResults[i]?.failed
+            ? null
+            : (embedParagraphsStatuses[i]?.errorFileId ?? null),
         ]),
       ]),
     });
@@ -378,12 +388,17 @@ export async function reprocessGroupWorkflow(
       }
 
       // --- Wave 2 cleanup ----------------------------------------
+      // Same error-file preservation rule as Wave 1 — keep the file
+      // for any batch that had failures so the 30-day OpenAI window
+      // is available for postmortem.
       await cleanupBatchFiles({
         fileIds: collectFileIds(
           summarizeSubmit.batches.flatMap((b, i) => [
             b.inputFileId,
             summarizeStatuses[i]?.outputFileId ?? null,
-            summarizeStatuses[i]?.errorFileId ?? null,
+            summarizeResults[i]?.failed
+              ? null
+              : (summarizeStatuses[i]?.errorFileId ?? null),
           ]),
         ),
       });

@@ -175,7 +175,9 @@ export function buildSummaryChatBody(
   return {
     model,
     response_format: { type: 'json_object' },
-    max_tokens: maxTokens,
+    // gpt-5.4 family requires `max_completion_tokens` (see annotate
+    // batch body for the equivalent comment + verification).
+    max_completion_tokens: maxTokens,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       {
@@ -314,7 +316,7 @@ export async function runSummary(
     // theologically frank source material.
     fallbackModel: SUMMARY_FALLBACK_MODEL,
     response_format: { type: 'json_object' },
-    max_tokens: maxTokens,
+    max_completion_tokens: maxTokens,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: userContent },

@@ -100,6 +100,17 @@ export default async function processLlmBatchOutput(
       failed += 1;
       const { uploadId } = parseCustomId(line.custom_id);
       failedUploadIds.add(uploadId);
+      // Persist the raw line when our reader doesn't recognize the
+      // shape — OpenAI's parameter-validation rejections (e.g. the
+      // gpt-5.4 `max_tokens` → `max_completion_tokens` switchover)
+      // emit error lines that don't carry the {code, message} pair we
+      // expect, and the previous `'unknown batch error'` fallback
+      // dropped the actual diagnostic on the floor. Truncate to keep
+      // the column reasonable; the full file is still on OpenAI's
+      // side for the 30-day retention window.
+      const errorMessage = line.error
+        ? `${line.error.code}: ${line.error.message}`
+        : JSON.stringify(line.error ?? line).slice(0, 1024);
       await recordLlmCall({
         model: modelForKind(args.kind),
         activity: activityForCustomId(line.custom_id),
@@ -108,13 +119,11 @@ export default async function processLlmBatchOutput(
         completionTokens: null,
         durationMs: 0,
         outcome: 'batch_request_failed',
-        errorMessage: line.error
-          ? `${line.error.code}: ${line.error.message}`
-          : 'unknown batch error',
+        errorMessage,
         viaBatch: true,
       });
       activityLogger.warn(
-        `Batch ${args.batchId} request ${line.custom_id} failed: ${line.error?.message ?? 'unknown'}`,
+        `Batch ${args.batchId} request ${line.custom_id} failed: ${errorMessage}`,
       );
     }
   }
