@@ -248,6 +248,12 @@ services:
       - ./seed-data:/seed-data
     depends_on:
       - temporal
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
 
   import-worker:
     build:

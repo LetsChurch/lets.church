@@ -57,6 +57,18 @@ async def main() -> None:
         titanet_model=titanet_model,
         align_enabled=align_enabled,
     )
+
+    # Readiness marker — kubelet readinessProbe checks for this file. We only
+    # touch it after initialize_models completes successfully, which exercises
+    # the GPU (model.to(device) + torchmetrics dummy kernel launch). If the
+    # PyTorch/CUDA build doesn't support the host GPU's compute capability the
+    # call above raises and the pod stays unready instead of silently idling.
+    try:
+        with open("/tmp/ready", "w") as f:
+            f.write("ok\n")
+    except OSError:
+        logger.exception("failed to write readiness marker")
+
     logger.info("models initialized; connecting to Temporal")
 
     client = await Client.connect(temporal_address, identity=identity)
