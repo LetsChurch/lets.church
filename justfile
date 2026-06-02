@@ -132,6 +132,16 @@ dump-llm-seed-data:
 generate-seed-annotations:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run generate-seed-annotations'
 
+# Re-run the summarize activity against the LLM-seeded uploads using whatever
+# OUTLINE annotations are currently in the DB, then re-embed the resulting
+# summary + searchSummary. Use this when the summarize prompt changes (e.g.
+# the YouTube-style sections rollout) without paying for a full
+# `LIVE_PIPELINE=1` reseed. After this runs successfully,
+# `just dump-llm-seed-data` captures the new summaries (and the `sections`
+# column) into seed-data/llm/*.json (LFS-tracked).
+generate-seed-summaries:
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run generate-seed-summaries'
+
 seed-s3-ingest:
   rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-ingest lcdevs3:${S3_INGEST_BUCKET}
 seed-s3-public:

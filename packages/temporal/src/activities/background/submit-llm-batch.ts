@@ -12,16 +12,17 @@ import {
   buildAnnotationChatBody,
   type EvalParagraph,
 } from './annotate-transcript';
-import { buildSummaryChatBody } from './summarize-upload';
+import {
+  buildSummaryChatBody,
+  DEFAULT_SUMMARY_MAX_TOKENS,
+  loadOutlineSectionsForSummary,
+} from './summarize-upload';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/submit-llm-batch',
 });
 
-export type LlmBatchKind =
-  | 'summarize_annotate'
-  | 'embed_paragraphs'
-  | 'embed_summary';
+export type LlmBatchKind = 'annotate' | 'summarize' | 'embed_paragraphs';
 
 export type SubmitLlmBatchArgs = {
   uploadRecordIds: string[];
@@ -92,7 +93,7 @@ export default async function submitLlmBatch(
 
   const included: string[] = [];
 
-  if (args.kind === 'summarize_annotate') {
+  if (args.kind === 'annotate') {
     const requests: BatchRequestLine[] = [];
     const uploads = await db
       .select({
@@ -133,13 +134,6 @@ export default async function submitLlmBatch(
         );
         continue;
       }
-      const paragraphTexts = uploadParagraphs.map((p) => p.text);
-      requests.push(
-        buildChatRequest(
-          `summarize:${uploadId}`,
-          buildSummaryChatBody(paragraphTexts, upload, SUMMARY_MODEL),
-        ),
-      );
       requests.push(
         buildChatRequest(
           `annotate:${uploadId}`,
@@ -151,18 +145,99 @@ export default async function submitLlmBatch(
 
     if (requests.length === 0) {
       activityLogger.info(
-        'No qualifying summarize_annotate work — returning empty result',
+        'No qualifying annotate work — returning empty result',
       );
       return EMPTY_RESULT;
     }
-    // 2 chat reqs per upload × 100 uploads ≪ 50K — single batch
-    // always suffices for this kind.
+    // 1 chat req per upload × 100 uploads = 100 requests ≪ 50K —
+    // single batch always suffices.
     const { batchId, inputFileId } = await submitBatch(
       requests,
       '/v1/chat/completions',
     );
     activityLogger.info(
-      `Submitted summarize_annotate batch ${batchId} (${requests.length} requests, ${included.length} uploads)`,
+      `Submitted annotate batch ${batchId} (${requests.length} requests, ${included.length} uploads)`,
+    );
+    return {
+      batches: [{ batchId, inputFileId, requestCount: requests.length }],
+      includedUploadIds: included,
+    };
+  }
+
+  if (args.kind === 'summarize') {
+    // Summarize depends on annotate having already run + persisted
+    // OUTLINE annotations. Per upload we load (a) metadata for the
+    // prompt header, (b) paragraph texts to fill the transcript
+    // body, and (c) outline sections so the prompt can ask the model
+    // for per-section descriptions tied back to the already-chosen
+    // section breaks.
+    const requests: BatchRequestLine[] = [];
+    const uploads = await db
+      .select({
+        id: UploadRecord.id,
+        title: UploadRecord.title,
+        description: UploadRecord.description,
+        channelName: Channel.name,
+      })
+      .from(UploadRecord)
+      .innerJoin(Channel, eq(Channel.id, UploadRecord.channelId))
+      .where(inArray(UploadRecord.id, args.uploadRecordIds));
+    const uploadById = new Map(uploads.map((u) => [u.id, u]));
+
+    const paragraphs = await db
+      .select({
+        text: TranscriptParagraph.text,
+        uploadRecordId: TranscriptParagraph.uploadRecordId,
+      })
+      .from(TranscriptParagraph)
+      .where(inArray(TranscriptParagraph.uploadRecordId, args.uploadRecordIds))
+      .orderBy(asc(TranscriptParagraph.order));
+    const paragraphsByUpload = new Map<string, string[]>();
+    for (const p of paragraphs) {
+      const list = paragraphsByUpload.get(p.uploadRecordId) ?? [];
+      list.push(p.text);
+      paragraphsByUpload.set(p.uploadRecordId, list);
+    }
+
+    for (const uploadId of args.uploadRecordIds) {
+      const upload = uploadById.get(uploadId);
+      const paragraphTexts = paragraphsByUpload.get(uploadId);
+      if (!upload || !paragraphTexts || paragraphTexts.length === 0) {
+        activityLogger.warn(
+          `submitLlmBatch: skipping ${uploadId} — missing record or paragraphs`,
+        );
+        continue;
+      }
+      // One-by-one outline load: cheap because annotate just wrote
+      // these to the DB; keeps the prompt-build code simple.
+      const sectionInputs = await loadOutlineSectionsForSummary(uploadId);
+      requests.push(
+        buildChatRequest(
+          `summarize:${uploadId}`,
+          buildSummaryChatBody(
+            paragraphTexts,
+            upload,
+            SUMMARY_MODEL,
+            DEFAULT_SUMMARY_MAX_TOKENS,
+            sectionInputs,
+          ),
+        ),
+      );
+      included.push(uploadId);
+    }
+
+    if (requests.length === 0) {
+      activityLogger.info(
+        'No qualifying summarize work — returning empty result',
+      );
+      return EMPTY_RESULT;
+    }
+    const { batchId, inputFileId } = await submitBatch(
+      requests,
+      '/v1/chat/completions',
+    );
+    activityLogger.info(
+      `Submitted summarize batch ${batchId} (${requests.length} requests, ${included.length} uploads)`,
     );
     return {
       batches: [{ batchId, inputFileId, requestCount: requests.length }],
@@ -261,50 +336,8 @@ export default async function submitLlmBatch(
     return { batches, includedUploadIds: included };
   }
 
-  // kind === 'embed_summary'
-  const requests: BatchRequestLine[] = [];
-  const uploads = await db
-    .select({
-      id: UploadRecord.id,
-      summary: UploadRecord.summary,
-      searchSummary: UploadRecord.searchSummary,
-    })
-    .from(UploadRecord)
-    .where(inArray(UploadRecord.id, args.uploadRecordIds));
-
-  for (const upload of uploads) {
-    if (!upload.summary || !upload.searchSummary) {
-      activityLogger.warn(
-        `submitLlmBatch: skipping ${upload.id} — missing summary/searchSummary for embed_summary`,
-      );
-      continue;
-    }
-    requests.push(
-      buildEmbedRequest(`embed-summary:${upload.id}`, {
-        model: EMBED_MODEL,
-        input: [upload.summary, upload.searchSummary],
-      }),
-    );
-    included.push(upload.id);
-  }
-
-  if (requests.length === 0) {
-    activityLogger.info(
-      'No qualifying embed_summary work — returning empty result',
-    );
-    return EMPTY_RESULT;
-  }
-  // 2 inputs per upload — 100 uploads = 200 inputs ≪ 50K. Single
-  // batch always suffices.
-  const { batchId, inputFileId } = await submitBatch(
-    requests,
-    '/v1/embeddings',
-  );
-  activityLogger.info(
-    `Submitted embed_summary batch ${batchId} (${requests.length} requests, ${included.length} uploads)`,
-  );
-  return {
-    batches: [{ batchId, inputFileId, requestCount: requests.length }],
-    includedUploadIds: included,
-  };
+  // Unreachable per LlmBatchKind. embed-summary is intentionally a
+  // live activity (see `embedUploadSummariesBulk`) — its work is too
+  // small to justify a third 24h batch cycle.
+  throw new Error(`Unknown LlmBatchKind: ${args.kind satisfies never}`);
 }

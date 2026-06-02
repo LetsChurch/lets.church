@@ -54,18 +54,24 @@ const { getFinalizedUploadKey, storeTranscriptParagraphs } = proxyActivities<
   retry: { maximumAttempts: 5 },
 });
 
-const { submitLlmBatch, processLlmBatchOutput, cleanupBatchFiles } =
-  proxyActivities<typeof backgroundActivities>({
-    // Both activities are short — submit uploads a JSONL + creates a
-    // batch; process streams a (bounded) output file and writes DB
-    // rows. 30m gives generous headroom for the larger groups.
-    // cleanupBatchFiles is a few `files.delete` calls — short and
-    // best-effort (failures swallowed inside the activity).
-    startToCloseTimeout: '30 minutes',
-    heartbeatTimeout: '1 minute',
-    taskQueue: BACKGROUND_QUEUE,
-    retry: { maximumAttempts: 3 },
-  });
+const {
+  submitLlmBatch,
+  processLlmBatchOutput,
+  cleanupBatchFiles,
+  embedUploadSummariesBulk,
+} = proxyActivities<typeof backgroundActivities>({
+  // All of these are short — submit uploads a JSONL + creates a
+  // batch; process streams a (bounded) output file and writes DB
+  // rows; cleanupBatchFiles is a few `files.delete` calls;
+  // embedUploadSummariesBulk is one live `embeddings.create` round-
+  // trip (≤200 inputs) + a transactional UPDATE per upload.
+  // 30m gives generous headroom for the larger groups. No
+  // heartbeatTimeout because none of these activities heartbeat —
+  // startToCloseTimeout is the only ceiling.
+  startToCloseTimeout: '30 minutes',
+  taskQueue: BACKGROUND_QUEUE,
+  retry: { maximumAttempts: 3 },
+});
 
 const { getLlmBatchStatus, cancelLlmBatch } = proxyActivities<
   typeof backgroundActivities
@@ -196,16 +202,22 @@ export async function reprocessGroupWorkflow(
 
   // If nothing got transcribed (transcode-only run, or every upload
   // failed in prep) there's no LLM work to batch — fall straight to
-  // reindex below. Each kind's submit returns an array of OpenAI
-  // batches (most kinds always 0 or 1; embed_paragraphs may split
-  // across multiple to stay under OpenAI's 50K-inputs-per-batch
-  // limit). All poll/process/cleanup ops fan out across the array.
+  // reindex below. The LLM stages are split across two batch waves:
+  //   Wave 1 (parallel): annotate batch + paragraph-embed batches.
+  //                      annotate writes OUTLINE annotations, which
+  //                      the summarize wave reads as input.
+  //   Wave 2 (after 1):  summarize batch — uses outlines + paragraphs
+  //                      to produce summary + searchSummary + per-
+  //                      section descriptions.
+  //   Live tail:         bulk embed-summary (one round-trip, no batch).
+  // Each kind's submit returns an array of OpenAI batches; embed_-
+  // paragraphs may split when total inputs exceed the 50K cap.
   if (transcribedUploadIds.length > 0) {
-    // --- Phase 2: submit chat + paragraph-embed batches in parallel
-    const [chatSubmit, embedParagraphsSubmit] = await Promise.all([
+    // --- Wave 1, Phase 2: submit annotate + paragraph-embed --------
+    const [annotateSubmit, embedParagraphsSubmit] = await Promise.all([
       submitLlmBatch({
         uploadRecordIds: transcribedUploadIds,
-        kind: 'summarize_annotate',
+        kind: 'annotate',
       }),
       submitLlmBatch({
         uploadRecordIds: transcribedUploadIds,
@@ -213,29 +225,26 @@ export async function reprocessGroupWorkflow(
       }),
     ]);
 
-    // --- Phase 3: poll every batch from both kinds in parallel ---
-    // Both `Promise.all`s are awaited in one combined `Promise.all`
-    // so chat and paragraph-embed polls run concurrently — submitted
-    // together to OpenAI in phase 2, so they finish in roughly the
-    // same window. (Sequential awaits would serialise the two 24h
-    // SLAs unnecessarily.)
-    const [chatStatuses, embedParagraphsStatuses] = await Promise.all([
-      Promise.all(chatSubmit.batches.map((b) => waitForBatch(b.batchId))),
+    // --- Wave 1, Phase 3: poll both kinds in parallel --------------
+    const [annotateStatuses, embedParagraphsStatuses] = await Promise.all([
+      Promise.all(annotateSubmit.batches.map((b) => waitForBatch(b.batchId))),
       Promise.all(
         embedParagraphsSubmit.batches.map((b) => waitForBatch(b.batchId)),
       ),
     ]);
 
-    // --- Phase 4: process every batch's output in parallel -------
+    // --- Wave 1, Phase 4: process both outputs (annotate writes
+    //     OUTLINE annotations + scripture/keyword annotations to DB;
+    //     paragraph-embed writes vectors) -------------------------
     await Promise.all([
-      ...chatSubmit.batches.map((b, i) => {
-        const status = chatStatuses[i];
+      ...annotateSubmit.batches.map((b, i) => {
+        const status = annotateStatuses[i];
         if (!status) return null;
         return processLlmBatchOutput({
           batchId: b.batchId,
           outputFileId: status.outputFileId,
           errorFileId: status.errorFileId,
-          kind: 'summarize_annotate',
+          kind: 'annotate',
         });
       }),
       ...embedParagraphsSubmit.batches.map((b, i) => {
@@ -250,17 +259,13 @@ export async function reprocessGroupWorkflow(
       }),
     ]);
 
-    // --- Phase 4b: delete the input + output + error files once
-    // their batch's output has been consumed. Files persist in
-    // OpenAI's Files storage and count against the org's quota; this
-    // keeps the Files list tidy across many reprocess runs.
-    // Best-effort — failures swallowed inside the activity.
+    // --- Wave 1 cleanup: drop input/output/error files ------------
     await cleanupBatchFiles({
       fileIds: collectFileIds([
-        ...chatSubmit.batches.flatMap((b, i) => [
+        ...annotateSubmit.batches.flatMap((b, i) => [
           b.inputFileId,
-          chatStatuses[i]?.outputFileId ?? null,
-          chatStatuses[i]?.errorFileId ?? null,
+          annotateStatuses[i]?.outputFileId ?? null,
+          annotateStatuses[i]?.errorFileId ?? null,
         ]),
         ...embedParagraphsSubmit.batches.flatMap((b, i) => [
           b.inputFileId,
@@ -270,39 +275,53 @@ export async function reprocessGroupWorkflow(
       ]),
     });
 
-    // --- Phase 5: summary-embed batch (depends on phase-4 summaries) ---
-    // Skip cleanly when no summaries got written — `submitLlmBatch`
-    // returns an empty result rather than throwing, so the
-    // downstream reindex still runs.
-    if (chatSubmit.includedUploadIds.length > 0) {
-      const embedSummarySubmit = await submitLlmBatch({
-        uploadRecordIds: chatSubmit.includedUploadIds,
-        kind: 'embed_summary',
+    // --- Wave 2, Phase 5: submit summarize (depends on annotate's
+    //     outlines having landed in `annotation`) -------------------
+    if (annotateSubmit.includedUploadIds.length > 0) {
+      const summarizeSubmit = await submitLlmBatch({
+        uploadRecordIds: annotateSubmit.includedUploadIds,
+        kind: 'summarize',
       });
-      if (embedSummarySubmit.batches.length > 0) {
-        const embedSummaryStatuses = await Promise.all(
-          embedSummarySubmit.batches.map((b) => waitForBatch(b.batchId)),
-        );
-        await Promise.all(
-          embedSummarySubmit.batches.map((b, i) => {
-            const status = embedSummaryStatuses[i];
-            if (!status) return null;
-            return processLlmBatchOutput({
-              batchId: b.batchId,
-              outputFileId: status.outputFileId,
-              errorFileId: status.errorFileId,
-              kind: 'embed_summary',
-            });
-          }),
-        );
-        await cleanupBatchFiles({
-          fileIds: collectFileIds(
-            embedSummarySubmit.batches.flatMap((b, i) => [
-              b.inputFileId,
-              embedSummaryStatuses[i]?.outputFileId ?? null,
-              embedSummaryStatuses[i]?.errorFileId ?? null,
-            ]),
-          ),
+
+      // --- Wave 2, Phase 6: poll summarize batch ------------------
+      const summarizeStatuses = await Promise.all(
+        summarizeSubmit.batches.map((b) => waitForBatch(b.batchId)),
+      );
+
+      // --- Wave 2, Phase 7: process summarize output (writes
+      //     summary + searchSummary + per-section descriptions) ----
+      await Promise.all(
+        summarizeSubmit.batches.map((b, i) => {
+          const status = summarizeStatuses[i];
+          if (!status) return null;
+          return processLlmBatchOutput({
+            batchId: b.batchId,
+            outputFileId: status.outputFileId,
+            errorFileId: status.errorFileId,
+            kind: 'summarize',
+          });
+        }),
+      );
+
+      // --- Wave 2 cleanup ----------------------------------------
+      await cleanupBatchFiles({
+        fileIds: collectFileIds(
+          summarizeSubmit.batches.flatMap((b, i) => [
+            b.inputFileId,
+            summarizeStatuses[i]?.outputFileId ?? null,
+            summarizeStatuses[i]?.errorFileId ?? null,
+          ]),
+        ),
+      });
+
+      // --- Live tail, Phase 8: bulk embed summaries ---------------
+      // One live `embeddings.create` round-trip for every upload in
+      // the summarize batch. Replaces the previous embed-summary
+      // batch — the work is too small to justify another 24h
+      // batch cycle (~$0.001/100 uploads of batch discount).
+      if (summarizeSubmit.includedUploadIds.length > 0) {
+        await embedUploadSummariesBulk({
+          uploadRecordIds: summarizeSubmit.includedUploadIds,
         });
       }
     }

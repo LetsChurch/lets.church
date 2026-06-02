@@ -10,6 +10,7 @@ import { asc, count, eq, inArray } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 import { z } from 'zod';
 import {
+  ANNOTATE_FALLBACK_MODEL,
   ANNOTATE_MODEL,
   createChatCompletionTracked,
   openrouterExtras,
@@ -806,6 +807,13 @@ export async function runAnnotation(
   const completion = await createChatCompletionTracked({
     tracking: options.tracking,
     model,
+    // Switch to ANNOTATE_FALLBACK_MODEL (defaults to Anthropic Haiku) only
+    // when OpenAI's content classifier blocks the response — covers
+    // politically/theologically frank content that hits the OpenAI guard
+    // but is fine for our use case. Both attempts are recorded in
+    // `llm_call` for auditing; both failing leaves a paper trail the
+    // admin failed-annotations surface picks up.
+    fallbackModel: ANNOTATE_FALLBACK_MODEL,
     max_tokens: maxTokens,
     // Empirically the best temperature for verbatim-echo + outlining on
     // gpt-5.4-mini across our seed-corpus transcripts (4 transcripts × 4

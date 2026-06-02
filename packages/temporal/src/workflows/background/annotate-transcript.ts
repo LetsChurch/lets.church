@@ -5,8 +5,12 @@ import { UPLOAD_ID_KEY } from '../../search-attributes';
 import { indexDocumentWorkflow } from './index-document';
 
 const { annotateTranscript } = proxyActivities<typeof backgroundActivities>({
+  // No heartbeatTimeout: the activity is a single LLM round-trip and
+  // doesn't heartbeat. A heartbeat-based timeout would cap each attempt
+  // at that interval instead of using `startToCloseTimeout` as the real
+  // ceiling, which matters once the content_filter fallback chains a
+  // second model into the same attempt.
   startToCloseTimeout: '10 minute',
-  heartbeatTimeout: '1 minute',
   taskQueue: BACKGROUND_QUEUE,
   retry: { maximumAttempts: 3 },
 });

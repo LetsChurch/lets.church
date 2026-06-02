@@ -38,6 +38,7 @@ for (const uploadId of LLM_SEEDED_UPLOAD_IDS) {
     .select({
       summary: UploadRecord.summary,
       searchSummary: UploadRecord.searchSummary,
+      sections: UploadRecord.sections,
       summaryEmbedding: UploadRecord.summaryEmbedding,
       searchSummaryEmbedding: UploadRecord.searchSummaryEmbedding,
       summarizedAt: UploadRecord.summarizedAt,
@@ -113,6 +114,7 @@ for (const uploadId of LLM_SEEDED_UPLOAD_IDS) {
     uploadRecordId: uploadId,
     summary: upload.summary,
     searchSummary: upload.searchSummary,
+    sections: upload.sections,
     summaryEmbedding: upload.summaryEmbedding,
     searchSummaryEmbedding: upload.searchSummaryEmbedding,
     summarizedAt: upload.summarizedAt.toISOString(),

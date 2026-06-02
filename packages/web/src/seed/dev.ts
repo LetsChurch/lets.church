@@ -1727,6 +1727,9 @@ if (process.env.LIVE_PIPELINE === '1') {
       .set({
         summary: snapshot.summary,
         searchSummary: snapshot.searchSummary,
+        // Older snapshots predate the sections column — fall through to []
+        // to match the upload_record default rather than failing the seed.
+        sections: snapshot.sections ?? [],
         summaryEmbedding: snapshot.summaryEmbedding,
         searchSummaryEmbedding: snapshot.searchSummaryEmbedding,
         summarizedAt: new Date(snapshot.summarizedAt),

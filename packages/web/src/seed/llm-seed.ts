@@ -55,6 +55,11 @@ export type LlmSeedSnapshot = {
   uploadRecordId: string;
   summary: string;
   searchSummary: string;
+  // Per-section descriptions keyed to OUTLINE annotation IDs. Produced by
+  // the summarize activity using the OUTLINE annotations below as input;
+  // populated post-annotate in the live + batch pipelines. Empty array on
+  // legacy snapshots — `[]` matches the `upload_record.sections` default.
+  sections: Array<{ id: string; description: string }>;
   summaryEmbedding: number[];
   searchSummaryEmbedding: number[];
   summarizedAt: string; // ISO timestamp

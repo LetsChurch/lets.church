@@ -1,10 +1,12 @@
 import {
+  Annotation,
   AppUser,
   AppUserEmail,
   Channel,
   ChannelSubscription,
   db,
   FeaturedUpload,
+  LlmCall,
   Organization,
   OrganizationAddress,
   OrganizationChannelAssociation,
@@ -43,6 +45,7 @@ import * as argon2 from 'argon2';
 import {
   and,
   count,
+  desc,
   eq,
   gt,
   ilike,
@@ -50,6 +53,7 @@ import {
   isNotNull,
   isNull,
   lt,
+  notExists,
   or,
   sql,
   sum,
@@ -3072,6 +3076,277 @@ export const adminRouter = router({
         });
       }
     }),
+
+  /**
+   * Uploads whose annotation pipeline failed and never produced any OUTLINE
+   * annotations. Surface for the admin failed-annotations page so an
+   * operator can review the failure reason (typically OpenAI's content
+   * filter on politically/theologically frank content, after which the
+   * configured fallback model also failed) and decide whether to retry,
+   * switch the configured fallback, or accept that this content can't be
+   * annotated.
+   *
+   * "Failure" = the most recent `llm_call` row for this upload with
+   * `activity='annotateTranscript'` has a non-success outcome (e.g.
+   * `guard_content_filter`). Uploads that succeeded after a prior failure
+   * are excluded by the "no OUTLINE annotation" filter below.
+   */
+  getFailedAnnotations: adminProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+      }),
+    )
+    .query(async ({ input }) => {
+      const failedRows = await db
+        .select({
+          uploadId: UploadRecord.id,
+          title: UploadRecord.title,
+          channelId: Channel.id,
+          channelName: Channel.name,
+          channelSlug: Channel.slug,
+          transcribingFinishedAt: UploadRecord.transcribingFinishedAt,
+          model: LlmCall.model,
+          outcome: LlmCall.outcome,
+          errorMessage: LlmCall.errorMessage,
+          lastAttemptAt: LlmCall.createdAt,
+        })
+        .from(UploadRecord)
+        .innerJoin(Channel, eq(UploadRecord.channelId, Channel.id))
+        .innerJoin(
+          LlmCall,
+          and(
+            eq(LlmCall.uploadRecordId, UploadRecord.id),
+            eq(LlmCall.activity, 'annotateTranscript'),
+            // Latest llm_call for this upload + activity. NOT EXISTS a
+            // later row for the same (upload, activity) pair.
+            notExists(
+              db
+                .select({ one: sql<number>`1` })
+                .from(sql`${LlmCall} AS later`)
+                .where(
+                  and(
+                    sql`later.upload_record_id = ${UploadRecord.id}`,
+                    sql`later.activity = 'annotateTranscript'`,
+                    sql`later.created_at > ${LlmCall.createdAt}`,
+                  ),
+                ),
+            ),
+          ),
+        )
+        .where(
+          and(
+            isNotNull(UploadRecord.transcribingFinishedAt),
+            sql`${LlmCall.outcome} != 'success'`,
+            // No OUTLINE annotation landed (a successful retry would have
+            // produced one and we'd want to exclude the upload from the
+            // failure list).
+            notExists(
+              db
+                .select({ one: sql<number>`1` })
+                .from(Annotation)
+                .innerJoin(
+                  TranscriptParagraph,
+                  eq(Annotation.paragraphId, TranscriptParagraph.id),
+                )
+                .where(
+                  and(
+                    eq(TranscriptParagraph.uploadRecordId, UploadRecord.id),
+                    eq(Annotation.kind, 'OUTLINE'),
+                  ),
+                ),
+            ),
+          ),
+        )
+        .orderBy(desc(LlmCall.createdAt))
+        .limit(input.limit)
+        .offset(input.offset);
+
+      return {
+        uploads: failedRows.map((row) => ({
+          id: row.uploadId,
+          title: row.title,
+          channel: {
+            id: row.channelId,
+            name: row.channelName,
+            slug: row.channelSlug,
+          },
+          transcribingFinishedAt: row.transcribingFinishedAt,
+          lastAttempt: {
+            model: row.model,
+            outcome: row.outcome,
+            errorMessage: row.errorMessage,
+            at: row.lastAttemptAt,
+          },
+        })),
+      };
+    }),
+
+  /** Count of failed-annotations matching `getFailedAnnotations` — backs
+   * the admin-dashboard badge so the surface only shows up when there's
+   * something to act on. Keeps the same join semantics as the list
+   * procedure so the count matches what `getFailedAnnotations` returns. */
+  getFailedAnnotationsCount: adminProcedure.query(async () => {
+    const rows = await db
+      .select({ cnt: count() })
+      .from(UploadRecord)
+      .innerJoin(
+        LlmCall,
+        and(
+          eq(LlmCall.uploadRecordId, UploadRecord.id),
+          eq(LlmCall.activity, 'annotateTranscript'),
+          notExists(
+            db
+              .select({ one: sql<number>`1` })
+              .from(sql`${LlmCall} AS later`)
+              .where(
+                and(
+                  sql`later.upload_record_id = ${UploadRecord.id}`,
+                  sql`later.activity = 'annotateTranscript'`,
+                  sql`later.created_at > ${LlmCall.createdAt}`,
+                ),
+              ),
+          ),
+        ),
+      )
+      .where(
+        and(
+          isNotNull(UploadRecord.transcribingFinishedAt),
+          sql`${LlmCall.outcome} != 'success'`,
+          notExists(
+            db
+              .select({ one: sql<number>`1` })
+              .from(Annotation)
+              .innerJoin(
+                TranscriptParagraph,
+                eq(Annotation.paragraphId, TranscriptParagraph.id),
+              )
+              .where(
+                and(
+                  eq(TranscriptParagraph.uploadRecordId, UploadRecord.id),
+                  eq(Annotation.kind, 'OUTLINE'),
+                ),
+              ),
+          ),
+        ),
+      );
+    return rows[0]?.cnt ?? 0;
+  }),
+
+  /**
+   * Uploads whose summary pipeline failed and never produced a summary.
+   * Same shape as `getFailedAnnotations` — most-recent
+   * `activity='summarizeUpload'` `llm_call` has a non-success outcome AND
+   * `upload_record.summary` is still null. A retry that succeeded would
+   * populate `summary` and drop the row from this list.
+   */
+  getFailedSummaries: adminProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(50),
+        offset: z.number().min(0).default(0),
+      }),
+    )
+    .query(async ({ input }) => {
+      const failedRows = await db
+        .select({
+          uploadId: UploadRecord.id,
+          title: UploadRecord.title,
+          channelId: Channel.id,
+          channelName: Channel.name,
+          channelSlug: Channel.slug,
+          transcribingFinishedAt: UploadRecord.transcribingFinishedAt,
+          model: LlmCall.model,
+          outcome: LlmCall.outcome,
+          errorMessage: LlmCall.errorMessage,
+          lastAttemptAt: LlmCall.createdAt,
+        })
+        .from(UploadRecord)
+        .innerJoin(Channel, eq(UploadRecord.channelId, Channel.id))
+        .innerJoin(
+          LlmCall,
+          and(
+            eq(LlmCall.uploadRecordId, UploadRecord.id),
+            eq(LlmCall.activity, 'summarizeUpload'),
+            notExists(
+              db
+                .select({ one: sql<number>`1` })
+                .from(sql`${LlmCall} AS later`)
+                .where(
+                  and(
+                    sql`later.upload_record_id = ${UploadRecord.id}`,
+                    sql`later.activity = 'summarizeUpload'`,
+                    sql`later.created_at > ${LlmCall.createdAt}`,
+                  ),
+                ),
+            ),
+          ),
+        )
+        .where(
+          and(
+            isNotNull(UploadRecord.transcribingFinishedAt),
+            sql`${LlmCall.outcome} != 'success'`,
+            isNull(UploadRecord.summary),
+          ),
+        )
+        .orderBy(desc(LlmCall.createdAt))
+        .limit(input.limit)
+        .offset(input.offset);
+
+      return {
+        uploads: failedRows.map((row) => ({
+          id: row.uploadId,
+          title: row.title,
+          channel: {
+            id: row.channelId,
+            name: row.channelName,
+            slug: row.channelSlug,
+          },
+          transcribingFinishedAt: row.transcribingFinishedAt,
+          lastAttempt: {
+            model: row.model,
+            outcome: row.outcome,
+            errorMessage: row.errorMessage,
+            at: row.lastAttemptAt,
+          },
+        })),
+      };
+    }),
+
+  /** Count for the dashboard badge, mirroring `getFailedAnnotationsCount`. */
+  getFailedSummariesCount: adminProcedure.query(async () => {
+    const rows = await db
+      .select({ cnt: count() })
+      .from(UploadRecord)
+      .innerJoin(
+        LlmCall,
+        and(
+          eq(LlmCall.uploadRecordId, UploadRecord.id),
+          eq(LlmCall.activity, 'summarizeUpload'),
+          notExists(
+            db
+              .select({ one: sql<number>`1` })
+              .from(sql`${LlmCall} AS later`)
+              .where(
+                and(
+                  sql`later.upload_record_id = ${UploadRecord.id}`,
+                  sql`later.activity = 'summarizeUpload'`,
+                  sql`later.created_at > ${LlmCall.createdAt}`,
+                ),
+              ),
+          ),
+        ),
+      )
+      .where(
+        and(
+          isNotNull(UploadRecord.transcribingFinishedAt),
+          sql`${LlmCall.outcome} != 'success'`,
+          isNull(UploadRecord.summary),
+        ),
+      );
+    return rows[0]?.cnt ?? 0;
+  }),
 
   retryUploadProcessing: adminProcedure
     .input(

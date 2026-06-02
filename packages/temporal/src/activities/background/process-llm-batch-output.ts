@@ -23,7 +23,10 @@ import {
   parseAnnotationResponse,
 } from './annotate-transcript';
 import type { LlmBatchKind } from './submit-llm-batch';
-import { parseSummaryResponse } from './summarize-upload';
+import {
+  loadOutlineSectionsForSummary,
+  parseSummaryResponse,
+} from './summarize-upload';
 
 const moduleLogger = logger.child({
   module: 'temporal/activities/background/process-llm-batch-output',
@@ -151,11 +154,9 @@ async function dispatchResponseLine(
   // contain. Cheap defensive check against caller bugs that submit a
   // chat-batch outputFileId as `kind: embed_paragraphs` etc.
   if (
-    (kind === 'summarize_annotate' &&
-      customKind !== 'summarize' &&
-      customKind !== 'annotate') ||
-    (kind === 'embed_paragraphs' && customKind !== 'embed-paragraphs') ||
-    (kind === 'embed_summary' && customKind !== 'embed-summary')
+    (kind === 'annotate' && customKind !== 'annotate') ||
+    (kind === 'summarize' && customKind !== 'summarize') ||
+    (kind === 'embed_paragraphs' && customKind !== 'embed-paragraphs')
   ) {
     moduleLogger.warn(
       `Batch kind/custom_id mismatch: kind=${kind}, custom_id=${line.custom_id}`,
@@ -164,10 +165,11 @@ async function dispatchResponseLine(
 }
 
 // Custom-id grammar (set in `submit-llm-batch.ts`):
-//   summarize:<uuid>
 //   annotate:<uuid>
-//   embed-summary:<uuid>
+//   summarize:<uuid>
 //   embed-paragraphs:<uuid>:<chunkIdx>     (chunkIdx ∈ [0, ⌈n/2048⌉))
+// embed-summary is intentionally not batched — it runs as a live
+// `embedUploadSummariesBulk` activity in the group workflow.
 // UUIDs don't contain `:`, so split on `:` is unambiguous. The
 // chunkIdx is only set for embed-paragraphs; null otherwise.
 function parseCustomId(customId: string): {
@@ -193,12 +195,11 @@ function activityForCustomId(customId: string): string {
   if (kind === 'summarize') return 'summarizeUpload';
   if (kind === 'annotate') return 'annotateTranscript';
   if (kind === 'embed-paragraphs') return 'embedTranscriptParagraphs';
-  if (kind === 'embed-summary') return 'embedUpload';
   return kind;
 }
 
 function modelForKind(kind: LlmBatchKind): string {
-  if (kind === 'summarize_annotate') return SUMMARY_MODEL;
+  if (kind === 'annotate' || kind === 'summarize') return SUMMARY_MODEL;
   return EMBED_MODEL;
 }
 
@@ -227,10 +228,19 @@ async function handleSummary(
   const body = line.response?.body as ChatCompletionResponse;
   const raw = body?.choices?.[0]?.message?.content;
   invariant(raw, `Summary batch ${line.custom_id}: empty content`);
-  const { summary, searchSummary } = parseSummaryResponse(raw);
+  // Load the same outline section IDs the prompt was built from
+  // (annotate persisted these BEFORE this summarize batch ran). We
+  // pass them to the parser so an extra/hallucinated section in the
+  // model's response gets filtered out before hitting the DB.
+  const sectionInputs = await loadOutlineSectionsForSummary(uploadId);
+  const expectedIds = new Set(sectionInputs.map((s) => s.id));
+  const { summary, searchSummary, sections } = parseSummaryResponse(
+    raw,
+    expectedIds,
+  );
   await db
     .update(UploadRecord)
-    .set({ summary, searchSummary, summarizedAt: new Date() })
+    .set({ summary, searchSummary, sections, summarizedAt: new Date() })
     .where(eq(UploadRecord.id, uploadId));
   await recordLlmCall({
     model: SUMMARY_MODEL,

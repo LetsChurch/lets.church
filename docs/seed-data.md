@@ -84,6 +84,30 @@ Temporal runtime needed) for every id in `LLM_SEEDED_UPLOAD_IDS`. ~$0.18
 × N uploads in OpenRouter tokens, ~10 minutes wall time for the current
 27-upload corpus.
 
+### Narrow refresh: just summaries
+
+The summarize prompt reads the OUTLINE annotations produced by annotate
+and emits per-section descriptions alongside the prose summary. When the
+summarize prompt changes (e.g. the YouTube-style sections rollout) the
+narrow recipe is the same shape as annotations but a step further down
+the pipeline:
+
+```bash
+just seed                          # baseline from existing snapshots (annotations included)
+just generate-seed-summaries       # runs summarizeUpload + embedUpload per upload
+just dump-llm-seed-data            # capture the new summaries + sections into JSON
+# commit refreshed seed-data/llm/*.json
+```
+
+`generate-seed-summaries` calls `summarizeUpload(uploadId, { force: true })`
+followed by `embedUpload(uploadId)` for each LLM-seeded upload — both are
+plain async functions. `force: true` so the activity's idempotency check
+doesn't skip uploads with an existing summary. Sequencing matters: the
+recipe assumes OUTLINE annotations already exist in the DB (they do
+after `just seed` because the snapshot includes them); if you've just
+swapped in a new annotation prompt, run `just generate-seed-annotations`
+first so summarize gets the new outlines as input.
+
 ### Initial / one-shot regeneration of everything
 
 1. **Regenerate transcripts in bulk** with one model load
@@ -105,10 +129,12 @@ Temporal runtime needed) for every id in `LLM_SEEDED_UPLOAD_IDS`. ~$0.18
    it after the run.
 2. `just seed-s3-public` — push the new transcripts into minio.
 3. `LIVE_PIPELINE=1 just truncate && LIVE_PIPELINE=1 just seed-db` —
-   `dev.ts` detects the env var and runs the real
-   `summarizeUploadWorkflow` against the background-worker for each
-   upload. ~10–30s × N uploads of OpenRouter time, ~$0.05 of tokens for
-   the current 27-upload corpus.
+   `dev.ts` detects the env var and runs the real `annotateTranscript`
+   activity followed by `summarizeUploadWorkflow` against the background-
+   worker for each upload. Sequencing matters: annotate writes OUTLINE
+   annotations, and summarize reads them to produce per-section
+   descriptions. ~30–60s × N uploads of OpenRouter time, ~$0.50–0.80 of
+   tokens for the current 27-upload corpus (annotate dominates).
 4. `just dump-llm-seed-data` — snapshot the freshly-seeded DB into
    `seed-data/llm/` (git-LFS-tracked).
 5. Commit the refreshed JSONs (and the new transcripts if regenerated).
@@ -216,14 +242,34 @@ Snapshot-based seed (the default flow):
 Refreshing the snapshots (`just dump-llm-seed-data` against a freshly
 live-pipeline-seeded DB):
 
+- 1 chat completion per upload against `OPENROUTER_ANNOTATE_MODEL` (default
+  `openai/gpt-5.4-mini`) — ~$0.01–0.03 per upload. Annotate echoes the
+  transcript back with inline section headings and scripture/keyword
+  annotations, so completion tokens scale with transcript length.
 - 1 chat completion per upload against `OPENROUTER_SUMMARY_MODEL` (default
-  `openai/gpt-5.4-mini`) — ~$0.001–0.005 per upload depending on transcript
-  length.
-- 2 embedding calls per upload to `openai/text-embedding-3-small` via
-  OpenRouter — sub-cent.
-- `~10–30 s` wall time per upload during the live-pipeline seed (sequential
-  workflow runs serialize). With 27 uploads that's **~5–15 minutes** of
-  one-time LLM cost.
+  `openai/gpt-5.4-mini`) — ~$0.005–0.01 per upload. Summarize consumes
+  the outline + paragraphs and emits prose summary + searchSummary +
+  per-section descriptions.
+- 1 embedding call per paragraph (`embedTranscriptParagraphs`) + 2
+  embedding calls per upload summary (`embedUpload`), all routed to
+  `openai/text-embedding-3-small` via OpenRouter — sub-cent total per
+  upload.
+- `~30–60 s` wall time per upload during the live-pipeline seed (annotate
+  runs first, then summarize). With 27 uploads that's **~15–30 minutes**
+  of one-time LLM cost.
+
+When the OpenAI content filter blocks either annotate or summarize
+(`finish_reason=content_filter`), the wrapper retries the same request
+against `OPENROUTER_ANNOTATE_FALLBACK_MODEL` /
+`OPENROUTER_SUMMARY_FALLBACK_MODEL` (default `anthropic/claude-haiku-4-5`
+for both). The fallback typically lands the call at ~2.9× the primary
+model's per-call cost, but only when the primary fails — for the seed
+corpus that's a handful of uploads per refresh.
+
+Snapshot JSON shape per upload now includes a `sections` array keyed to
+OUTLINE annotation IDs (one entry per section with a 2–3 sentence
+description). Empty array on legacy snapshots from before the sections
+rollout — `dev.ts` falls back to `[]` on load.
 
 Per upload at transcript-regeneration time
 (`just regenerate-seed-transcript`):
@@ -257,6 +303,8 @@ prompt changes.
 | `just dump-llm-seed-data` | `Justfile` |
 | Narrow annotation bootstrap script | `packages/web/src/seed/generate-annotations.ts` |
 | `just generate-seed-annotations` | `Justfile` |
+| Narrow summary bootstrap script | `packages/web/src/seed/generate-summaries.ts` |
+| `just generate-seed-summaries` | `Justfile` |
 | Annotation pipeline activity | `packages/temporal/src/activities/background/annotate-transcript.ts` |
 | Bind mount of seed-data into web | `docker-compose.yml` (`web.volumes`) |
 | LFS rule for snapshots | `.gitattributes` (`seed-data/llm/*.json filter=lfs …`) |

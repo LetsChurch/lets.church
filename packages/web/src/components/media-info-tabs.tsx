@@ -4,11 +4,21 @@ import { IconSparkles } from '@tabler/icons-react';
 import { useEffect, useRef } from 'react';
 import { LcTooltip } from '@/components/lc-tooltip';
 import { $setPlayAt } from '@/stores/player';
+import { formatTime } from '@/util/format';
 import { getLicenseInfo } from '@/util/license';
+
+export type MediaOutlineEntry = {
+  id: string;
+  title: string;
+  startSeconds: number;
+  endSeconds: number;
+  description: string | null;
+};
 
 type MediaInfoTabsProps = {
   descriptionHtml: string | null;
   summary: string | null;
+  outline: ReadonlyArray<MediaOutlineEntry>;
   viewCount: number;
   publishedAt: Date | null;
   createdAt: Date;
@@ -27,6 +37,7 @@ type MediaInfoTabsProps = {
 export function MediaInfoTabs({
   descriptionHtml,
   summary,
+  outline,
   viewCount,
   publishedAt,
   createdAt,
@@ -220,6 +231,39 @@ export function MediaInfoTabs({
             A summary has not yet been generated for this media.
           </p>
         )}
+        {outline.length > 0 ? (
+          // YouTube-style chapter list. Each entry is derived from an OUTLINE
+          // annotation (title + paragraph start) joined to a per-section
+          // description from `upload_record.sections`. Clicking the
+          // timestamp seeks the player via the same store the description
+          // links use.
+          <div className="border-zinc-200 border-t px-5 py-4 dark:border-zinc-800">
+            <h3 className="mb-3 font-semibold text-primary text-sm">
+              In this {lengthSeconds ? 'video' : 'audio'}
+            </h3>
+            <ol className="space-y-3">
+              {outline.map((entry) => (
+                <li key={entry.id} className="text-sm leading-[1.5]">
+                  <div className="flex items-baseline gap-2">
+                    <button
+                      type="button"
+                      onClick={() => $setPlayAt.set(entry.startSeconds)}
+                      className="font-mono text-blue-500 text-xs tabular-nums hover:underline dark:text-blue-400"
+                    >
+                      {formatTime(entry.startSeconds * 1000)}
+                    </button>
+                    <span className="font-medium text-primary">
+                      {entry.title}
+                    </span>
+                  </div>
+                  {entry.description ? (
+                    <p className="mt-1 text-primary/70">{entry.description}</p>
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+          </div>
+        ) : null}
       </Tabs.Panel>
     </Tabs.Root>
   );

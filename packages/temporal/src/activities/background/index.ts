@@ -72,6 +72,11 @@ export { default as deleteOldThumbnails } from './delete-old-thumbnails';
 export * from './delete-upload-record';
 export { default as embedTranscriptParagraphs } from './embed-transcript-paragraphs';
 export { default as embedUpload } from './embed-upload';
+export {
+  default as embedUploadSummariesBulk,
+  type EmbedUploadSummariesBulkArgs,
+  type EmbedUploadSummariesBulkResult,
+} from './embed-upload-summaries-bulk';
 export { default as finalizeUploadRecord } from './finalize-upload-record';
 export {
   default as geocodeOrganization,

@@ -1,10 +1,17 @@
-import { Channel, db, TranscriptParagraph, UploadRecord } from '@letschurch/db';
-import { asc, eq } from 'drizzle-orm';
+import {
+  Annotation,
+  Channel,
+  db,
+  TranscriptParagraph,
+  UploadRecord,
+} from '@letschurch/db';
+import { and, asc, eq, isNotNull } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 import { z } from 'zod';
 import {
   createChatCompletionTracked,
   openrouterExtras,
+  SUMMARY_FALLBACK_MODEL,
   SUMMARY_MODEL,
 } from '../../util/llm';
 import { resolveCostUsd } from '../../util/llm-pricing';
@@ -25,11 +32,12 @@ Output: return ONLY a JSON object (no markdown code fences, no commentary) with 
 
 {
   "summary": "<150-250 words of well-organized prose for the Summary tab>",
-  "searchSummary": "<100-200 words optimized for semantic search>"
+  "searchSummary": "<100-200 words optimized for semantic search>",
+  "sections": [ { "id": "<exact id from the Sections list below>", "description": "<2-3 sentences>" } ]
 }
 
-Voice and openers:
-- Do NOT use generic AI-summarizer phrasing. Forbidden openers: "The conversation/talk/sermon/video introduces…", "The speaker reflects on / discusses / explores…", "In this [talk/episode/video]…", "This [sermon/conversation] covers…". Open with a concrete claim, scripture, named subject, or specific topic from the content itself.
+Voice and openers (apply to BOTH \`summary\` AND each section \`description\`):
+- Do NOT use generic AI-summarizer phrasing. Forbidden openers: "The conversation/talk/sermon/video introduces…", "The speaker reflects on / discusses / explores…", "In this [talk/episode/video]…", "This [sermon/conversation] covers…", "In this section…". Open with a concrete claim, scripture, named subject, or specific topic from the content itself.
 - Do NOT lead with a thematic preview or topic list — sentences whose function is to announce "the main themes are X, Y, and Z" or to "tie threads together" or to enumerate what the summary will cover. Skip that meta-sentence and start with the first concrete sentence the summary actually needs (e.g. the speaker doing something specific, the first claim made, the setting + named subject).
 - Use names when they appear in the metadata or the transcript (speaker, host, guest, channel). Never use "the speaker" if a name is available. Use last names or full names as the source provides; do not invent or guess names. If no name is anywhere in the metadata or transcript, refer to the subject directly without inventing a generic descriptor.
 - Third person, present tense where natural. No headings, bullets, or markdown.
@@ -37,13 +45,33 @@ Voice and openers:
 Field guidance:
 - summary: 150-250 words of well-organized prose for the Summary tab on the media page. Cover the main argument(s), key scripture, and takeaways.
 - searchSummary: 100-200 words optimized for semantic search and topic-similarity discovery. Keyword- and entity-dense alternative phrasing: concepts, named people, places, scripture references (book + chapter + verse where stated), central claims. Never shown to users; prioritize concept coverage over prose quality.
+- sections: ONE entry per section in the Sections list provided in the user message, in the same order. Each entry's \`id\` MUST match the bracketed id from that list verbatim. Each \`description\` is 2-3 sentences specific to what that section actually teaches — name the speaker's claims, scripture references, and concrete subjects. Apply the same voice/opener rules as summary. The section TITLES are fixed (already chosen), do not restate them; describe what's in that span of the transcript.
+- If the Sections list is empty, return \`"sections": []\` and produce summary/searchSummary as usual.
 
 Output the JSON object directly. Do NOT wrap it in \`\`\`json fences. Do NOT add any prose before or after.`;
+
+const sectionSchema = z.object({
+  id: z.string().min(1),
+  description: z.string().min(1),
+});
 
 const responseSchema = z.object({
   summary: z.string().min(1),
   searchSummary: z.string().min(1),
+  sections: z.array(sectionSchema).default([]),
 });
+
+// One entry in the outline-aware summarize input: a section the
+// annotate pass already identified, plus the paragraph range it
+// covers (used to build the user-message prompt + to compute the
+// frontend's timestamp range).
+export type SummarySectionInput = {
+  /** Annotation id — the model echoes it back so we know which description belongs where. */
+  id: string;
+  title: string;
+  /** Inclusive 0-based paragraph order where the section starts. */
+  firstParagraphOrder: number;
+};
 
 export type SummaryMetadata = {
   channelName: string;
@@ -57,6 +85,7 @@ export type SummaryStats = {
   completionTokens: number | null;
   summaryLength: number;
   searchSummaryLength: number;
+  sectionCount: number;
   // USD cost reported by OpenRouter when `usage: { include: true }` is
   // set on the request. Null when the upstream provider doesn't report
   // it (some Anthropic/Google routings, or future models that opt out).
@@ -66,6 +95,7 @@ export type SummaryStats = {
 export type RunSummaryResult = {
   summary: string;
   searchSummary: string;
+  sections: Array<{ id: string; description: string }>;
   stats: SummaryStats;
   // The exact messages we sent to the model. Returned so the admin
   // LLM-eval surface can show "copy prompt" for debugging.
@@ -101,17 +131,35 @@ export const SUMMARY_SYSTEM_PROMPT = SYSTEM_PROMPT;
 // Build the user-message content for a summary request. Pure — used
 // by both the live `runSummary` and the batch request builder so the
 // two paths can't drift on prompt shape.
+//
+// `sections` (optional): pre-identified outline from the annotate
+// pass. When provided, the model is asked to also produce a 2-3
+// sentence description per section, returned in the `sections`
+// array keyed by section id. When empty, the prompt just yields
+// `summary`/`searchSummary` and `sections: []`.
 export function buildSummaryUserContent(
   paragraphTexts: string[],
   metadata: SummaryMetadata,
+  sections: ReadonlyArray<SummarySectionInput> = [],
 ): string {
-  const transcript = paragraphTexts.join('\n\n');
+  const numbered = paragraphTexts.map((t, i) => `[P${i}] ${t}`).join('\n\n');
   const metadataLines = [
     `Channel: ${metadata.channelName}`,
     metadata.title ? `Title: ${metadata.title}` : null,
     metadata.description ? `Description: ${metadata.description}` : null,
   ].filter((l): l is string => l !== null);
-  return `${metadataLines.join('\n')}\n\nTranscript:\n\n${transcript}`;
+  const sectionLines =
+    sections.length > 0
+      ? [
+          '',
+          'Sections (already identified by an outline pass — echo each `id` verbatim in the `sections` output, one description per section, in order):',
+          ...sections.map(
+            (s) =>
+              `[${s.id}] starts at paragraph P${s.firstParagraphOrder}: ${s.title}`,
+          ),
+        ].join('\n')
+      : '';
+  return `${metadataLines.join('\n')}${sectionLines}\n\nTranscript:\n\n${numbered}`;
 }
 
 // Build a chat.completions.create body for a summary request. Used by
@@ -122,6 +170,7 @@ export function buildSummaryChatBody(
   metadata: SummaryMetadata,
   model: string,
   maxTokens: number = DEFAULT_SUMMARY_MAX_TOKENS,
+  sections: ReadonlyArray<SummarySectionInput> = [],
 ): Record<string, unknown> {
   return {
     model,
@@ -131,7 +180,7 @@ export function buildSummaryChatBody(
       { role: 'system', content: SYSTEM_PROMPT },
       {
         role: 'user',
-        content: buildSummaryUserContent(paragraphTexts, metadata),
+        content: buildSummaryUserContent(paragraphTexts, metadata, sections),
       },
     ],
   };
@@ -140,9 +189,20 @@ export function buildSummaryChatBody(
 // Parse a model-emitted summary response: defensive fence-strip, then
 // JSON + zod. Returns the raw stripped JSON alongside the parsed
 // values so callers can stash `responseText` for the LLM-eval surface.
-export function parseSummaryResponse(raw: string): {
+//
+// `expectedSectionIds` is always required — it's the set of OUTLINE
+// annotation IDs the user message advertised to the model. Sections
+// whose id isn't in the set are dropped (model hallucinated an extra
+// section), and when the set is empty (annotate never ran for this
+// upload) ALL sections are dropped — the UI joins sections to OUTLINE
+// annotations by id, so unjoinable sections only inflate storage.
+export function parseSummaryResponse(
+  raw: string,
+  expectedSectionIds: ReadonlySet<string>,
+): {
   summary: string;
   searchSummary: string;
+  sections: Array<{ id: string; description: string }>;
   responseText: string;
 } {
   // Strip ```json fences some providers add despite json_object mode.
@@ -151,11 +211,54 @@ export function parseSummaryResponse(raw: string): {
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/\s*```$/i, '');
   const parsed = responseSchema.parse(JSON.parse(stripped));
+  const sections = parsed.sections.filter((s) => expectedSectionIds.has(s.id));
   return {
     summary: parsed.summary,
     searchSummary: parsed.searchSummary,
+    sections,
     responseText: stripped,
   };
+}
+
+// Load OUTLINE annotations for one upload (in paragraph order) and
+// reshape into the `SummarySectionInput` form the summarize prompt
+// expects. Used by both `summarizeUpload` (live) and the batch
+// submit activity. Returns an empty array when annotate hasn't run
+// yet — summarize then falls back to the no-sections prompt shape.
+export async function loadOutlineSectionsForSummary(
+  uploadRecordId: string,
+): Promise<SummarySectionInput[]> {
+  const rows = await db
+    .select({
+      id: Annotation.id,
+      metadata: Annotation.metadata,
+      paragraphOrder: TranscriptParagraph.order,
+    })
+    .from(Annotation)
+    .innerJoin(
+      TranscriptParagraph,
+      eq(TranscriptParagraph.id, Annotation.paragraphId),
+    )
+    .where(
+      and(
+        eq(TranscriptParagraph.uploadRecordId, uploadRecordId),
+        eq(Annotation.kind, 'OUTLINE'),
+        isNotNull(TranscriptParagraph.order),
+      ),
+    )
+    .orderBy(asc(TranscriptParagraph.order));
+  const sections: SummarySectionInput[] = [];
+  for (const row of rows) {
+    const title =
+      typeof row.metadata.title === 'string' ? row.metadata.title : null;
+    if (!title) continue;
+    sections.push({
+      id: row.id,
+      title,
+      firstParagraphOrder: row.paragraphOrder,
+    });
+  }
+  return sections;
 }
 
 export async function runSummary(
@@ -164,6 +267,8 @@ export async function runSummary(
   model: string,
   options: {
     maxTokens?: number;
+    /** Outline-aware sections (from annotate). Empty / omitted → no sections. */
+    sections?: ReadonlyArray<SummarySectionInput>;
     /**
      * When set, the chat-completion call is logged to `llm_call`. Omit
      * from one-off scripts / unit tests where audit noise is undesirable.
@@ -176,13 +281,20 @@ export async function runSummary(
 ): Promise<RunSummaryResult> {
   invariant(paragraphTexts.length > 0, 'runSummary: no paragraphs provided');
   const maxTokens = options.maxTokens ?? DEFAULT_SUMMARY_MAX_TOKENS;
+  const sections = options.sections ?? [];
 
-  const userContent = buildSummaryUserContent(paragraphTexts, metadata);
+  const userContent = buildSummaryUserContent(
+    paragraphTexts,
+    metadata,
+    sections,
+  );
+  const expectedSectionIds = new Set(sections.map((s) => s.id));
 
   // Summary output is bounded (250 + 200 words for the two fields ≈ 1K
-  // tokens with JSON overhead); 4K leaves plenty of headroom across
-  // providers. The explicit cap prevents the same silent-truncation
-  // surprise we hit on annotate when the provider default is small.
+  // tokens with JSON overhead; section descriptions add ~50 tokens
+  // each — even 10 sections fit comfortably under 4K). The explicit
+  // cap prevents the same silent-truncation surprise we hit on
+  // annotate when the provider default is small.
   // `openrouterExtras` adds OpenRouter-specific routing + cost hints.
   // Wrapper handles timing, audit-log insertion, and all built-in
   // guards (finish_reason length/content_filter, empty content,
@@ -196,6 +308,11 @@ export async function runSummary(
   const completion = await createChatCompletionTracked({
     tracking: options.tracking,
     model,
+    // Same content_filter fallback hook as annotate. Most summarize prompts
+    // are short transcript echoes (much smaller than annotate), but the
+    // model still occasionally trips OpenAI's classifier on politically/
+    // theologically frank source material.
+    fallbackModel: SUMMARY_FALLBACK_MODEL,
     response_format: { type: 'json_object' },
     max_tokens: maxTokens,
     messages: [
@@ -209,17 +326,24 @@ export async function runSummary(
 
   const raw = choice?.message.content;
   invariant(raw, 'Model returned no content');
-  const { summary, searchSummary, responseText } = parseSummaryResponse(raw);
+  const {
+    summary,
+    searchSummary,
+    sections: parsedSections,
+    responseText,
+  } = parseSummaryResponse(raw, expectedSectionIds);
 
   return {
     summary,
     searchSummary,
+    sections: parsedSections,
     stats: {
       durationMs,
       promptTokens: completion.usage?.prompt_tokens ?? null,
       completionTokens: completion.usage?.completion_tokens ?? null,
       summaryLength: summary.length,
       searchSummaryLength: searchSummary.length,
+      sectionCount: parsedSections.length,
       // See annotate-transcript.ts for the rationale on resolveCostUsd
       // (provider-reported cost when present and non-zero, else table).
       costUsd: resolveCostUsd(
@@ -295,14 +419,21 @@ export default async function summarizeUpload(
     `No transcript paragraphs for ${uploadRecordId} — cannot summarize`,
   );
 
+  // Outline annotations from the annotate pass are the source of
+  // truth for section breaks. The summarize prompt receives them as
+  // input + emits a description per section in its JSON output.
+  // Empty array (annotate hasn't run, or produced zero outlines) →
+  // prompt falls back to the no-sections shape.
+  const sectionInputs = await loadOutlineSectionsForSummary(uploadRecordId);
   activityLogger.info(
-    `Summarizing ${paragraphs.length} paragraphs with ${SUMMARY_MODEL}`,
+    `Summarizing ${paragraphs.length} paragraphs with ${SUMMARY_MODEL} (${sectionInputs.length} outline sections)`,
   );
-  const { summary, searchSummary, stats } = await runSummary(
+  const { summary, searchSummary, sections, stats } = await runSummary(
     paragraphs.map((p) => p.text),
     upload,
     SUMMARY_MODEL,
     {
+      sections: sectionInputs,
       tracking: { activity: 'summarizeUpload', uploadRecordId },
     },
   );
@@ -312,12 +443,13 @@ export default async function summarizeUpload(
     .set({
       summary,
       searchSummary,
+      sections,
       summarizedAt: new Date(),
     })
     .where(eq(UploadRecord.id, uploadRecordId));
 
   activityLogger.info(
-    `Saved summaries: display=${stats.summaryLength}ch, search=${stats.searchSummaryLength}ch`,
+    `Saved summaries: display=${stats.summaryLength}ch, search=${stats.searchSummaryLength}ch, sections=${stats.sectionCount}`,
   );
   return {
     summaryLength: stats.summaryLength,

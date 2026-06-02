@@ -6,8 +6,12 @@ import { indexDocumentWorkflow } from './index-document';
 
 const { summarizeUpload, embedUpload, embedTranscriptParagraphs } =
   proxyActivities<typeof backgroundActivities>({
+    // No heartbeatTimeout: these activities are single LLM round-trips
+    // (or a small batched embed) and don't heartbeat. Without a
+    // heartbeat-based timeout, `startToCloseTimeout` is the only ceiling
+    // — which matters once the content_filter fallback chains a second
+    // model into the same attempt.
     startToCloseTimeout: '10 minute',
-    heartbeatTimeout: '1 minute',
     taskQueue: BACKGROUND_QUEUE,
     retry: { maximumAttempts: 3 },
   });

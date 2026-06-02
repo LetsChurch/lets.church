@@ -1,4 +1,5 @@
 import {
+  Annotation,
   ChannelSubscription,
   db,
   TranscriptParagraph,
@@ -177,6 +178,10 @@ export const mediaProcedures = {
           // LLM-generated display summary (Summary tab). Null until the
           // post-transcript summarize-upload activity has run for this upload.
           summary: true,
+          // Per-section descriptions keyed to OUTLINE annotation IDs.
+          // Joined to those annotations + their paragraph start time below
+          // to produce the YouTube-style outline panel.
+          sections: true,
         },
         with: {
           channel: {
@@ -311,6 +316,7 @@ export const mediaProcedures = {
         membership,
         viewCountResult,
         subscriberCountResult,
+        outlineRows,
       ] = await Promise.all([
         sessionUserId
           ? db.query.ChannelSubscription.findFirst({
@@ -352,6 +358,30 @@ export const mediaProcedures = {
           .from(ChannelSubscription)
           .where(eq(ChannelSubscription.channelId, channel.id))
           .then((r) => r[0]),
+        // OUTLINE annotations + paragraph start times for this upload, used
+        // alongside `media.sections` below to build the YouTube-style outline
+        // panel. Empty array when annotate hasn't run yet — the panel just
+        // doesn't render. Ordered by paragraph order so the LAG step further
+        // down can derive each section's end timestamp from the next start.
+        db
+          .select({
+            id: Annotation.id,
+            metadata: Annotation.metadata,
+            start: TranscriptParagraph.start,
+            order: TranscriptParagraph.order,
+          })
+          .from(Annotation)
+          .innerJoin(
+            TranscriptParagraph,
+            eq(Annotation.paragraphId, TranscriptParagraph.id),
+          )
+          .where(
+            and(
+              eq(TranscriptParagraph.uploadRecordId, media.id),
+              eq(Annotation.kind, 'OUTLINE'),
+            ),
+          )
+          .orderBy(TranscriptParagraph.order),
       ]);
 
       const isFollowing = !!subscription;
@@ -360,6 +390,34 @@ export const mediaProcedures = {
         ctx.isSiteAdmin || !!(membership?.isAdmin || membership?.canEdit);
       const viewCount = viewCountResult?.count ?? 0;
       const subscriberCount = Number(subscriberCountResult?.count ?? 0);
+
+      // Assemble the YouTube-style outline panel data: one entry per OUTLINE
+      // annotation, matched to its per-section description from
+      // `upload_record.sections` by annotation id. `endSeconds` is the next
+      // section's start (or media length for the last); the UI uses it for
+      // the timestamp range label. Sections without a matching description
+      // (model hallucinated an id, or a re-annotate ran after summarize)
+      // are surfaced anyway with a null description so the chapter list
+      // stays correct.
+      const sectionDescriptionById = new Map(
+        (mediaRest.sections ?? []).map((s) => [s.id, s.description]),
+      );
+      const outline = outlineRows.map((row, i) => {
+        const next = outlineRows[i + 1];
+        const endSeconds = next
+          ? next.start
+          : (mediaRest.lengthSeconds ?? row.start);
+        const meta = row.metadata as { title?: unknown; level?: unknown };
+        const title =
+          typeof meta.title === 'string' ? meta.title : 'Untitled section';
+        return {
+          id: OutgoingIdSchema.parse(row.id),
+          title,
+          startSeconds: row.start,
+          endSeconds,
+          description: sectionDescriptionById.get(row.id) ?? null,
+        };
+      });
 
       // Generate download URLs based on available variants
       type MediaDownloadKind =
@@ -613,8 +671,10 @@ export const mediaProcedures = {
         ? { id: OutgoingIdSchema.parse(seriesRow.id), title: seriesRow.title }
         : null;
 
+      const { sections: _sections, ...mediaRestNoSections } = mediaRest;
+
       return {
-        ...mediaRest,
+        ...mediaRestNoSections,
         descriptionHtml,
         id: OutgoingIdSchema.parse(mediaRest.id),
         thumbnailUrl,
@@ -633,6 +693,7 @@ export const mediaProcedures = {
         viewCount,
         transcribingFinishedAt,
         series,
+        outline,
         channel: {
           id: OutgoingIdSchema.parse(channel.id),
           name: channel.name,

@@ -112,6 +112,8 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       OPENROUTER_SUMMARY_MODEL: ${OPENROUTER_SUMMARY_MODEL:-openai/gpt-5.4-mini}
       OPENROUTER_ANNOTATE_MODEL: ${OPENROUTER_ANNOTATE_MODEL:-openai/gpt-5.4-mini}
+      OPENROUTER_ANNOTATE_FALLBACK_MODEL: ${OPENROUTER_ANNOTATE_FALLBACK_MODEL:-anthropic/claude-haiku-4-5}
+      OPENROUTER_SUMMARY_FALLBACK_MODEL: ${OPENROUTER_SUMMARY_FALLBACK_MODEL:-anthropic/claude-haiku-4-5}
       <<: [*s3-ingest-env, *s3-public-env, *s3-backup-env]
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml

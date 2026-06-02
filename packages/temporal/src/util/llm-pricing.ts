@@ -69,6 +69,20 @@ export const MODEL_PRICING: ModelPricing[] = [
     ],
   },
   {
+    // Annotate fallback model — fires only when OpenAI's content filter
+    // rejects the gpt-5.4-mini response. Listed so the (relatively rare)
+    // fallback calls land with a populated `computed_cost_usd` instead of
+    // null. Cached input pricing isn't exposed via OpenRouter.
+    model: 'anthropic/claude-haiku-4-5',
+    windows: [
+      {
+        effectiveFrom: '2026-05-01',
+        inputPerMTokens: 1.0,
+        outputPerMTokens: 5.0,
+      },
+    ],
+  },
+  {
     // Production embedding model (hardcoded in util/llm.ts).
     model: 'openai/text-embedding-3-small',
     windows: [

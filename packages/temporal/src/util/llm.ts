@@ -15,6 +15,20 @@ const env = z
     // + the silent-summarization guard in the activity together close
     // the residual variance we measured during prompt tuning.
     OPENROUTER_ANNOTATE_MODEL: z.string().default('openai/gpt-5.4-mini'),
+    // Fallback model for annotate when the primary's response is blocked by
+    // the provider content filter (finish_reason=content_filter). Routed via
+    // OpenRouter to a non-OpenAI provider so the same content that tripped
+    // OpenAI's classifier has a chance to land. Empty string disables the
+    // fallback (the activity throws guard_content_filter as before).
+    OPENROUTER_ANNOTATE_FALLBACK_MODEL: z
+      .string()
+      .default('anthropic/claude-haiku-4-5'),
+    // Same content_filter fallback for the summarize activity. Separate env
+    // so an operator can pick a different fallback per task (e.g. cheaper
+    // for summarize, higher-quality for annotate).
+    OPENROUTER_SUMMARY_FALLBACK_MODEL: z
+      .string()
+      .default('anthropic/claude-haiku-4-5'),
   })
   .parse(process.env);
 
@@ -35,6 +49,14 @@ export const llm = new OpenAI({
 // or `openai/gpt-5.4` / `openai/gpt-5.5` (better).
 export const SUMMARY_MODEL = env.OPENROUTER_SUMMARY_MODEL;
 export const ANNOTATE_MODEL = env.OPENROUTER_ANNOTATE_MODEL;
+export const ANNOTATE_FALLBACK_MODEL =
+  env.OPENROUTER_ANNOTATE_FALLBACK_MODEL.length > 0
+    ? env.OPENROUTER_ANNOTATE_FALLBACK_MODEL
+    : null;
+export const SUMMARY_FALLBACK_MODEL =
+  env.OPENROUTER_SUMMARY_FALLBACK_MODEL.length > 0
+    ? env.OPENROUTER_SUMMARY_FALLBACK_MODEL
+    : null;
 
 // Hardcoded — NOT env-configurable. Changing the embedding model invalidates
 // every stored vector because cross-model cosine similarity is meaningless.
@@ -170,12 +192,28 @@ export type CreateTrackedChatCompletionArgs =
     guards?: (
       completion: OpenAI.ChatCompletion,
     ) => GuardOutcome | Promise<GuardOutcome>;
+    /**
+     * Optional fallback model to retry against if the primary trips
+     * `guard_content_filter` (provider content filter blocked the
+     * response). Used by annotate for OpenAI's classifier rejecting
+     * politically/theologically frank content; the fallback is routed
+     * to a different provider on OpenRouter. The primary's failed call
+     * is still recorded in `llm_call`, so an audit trail of both
+     * attempts lands. Set to null/undefined to disable fallback (the
+     * wrapper throws `guard_content_filter` as before).
+     *
+     * Only `content_filter` triggers the fallback — `length`,
+     * `empty_content`, and activity-specific guards are different
+     * problems (prompt too big, broken response) and shouldn't silently
+     * switch models.
+     */
+    fallbackModel?: string | null;
   };
 
 export async function createChatCompletionTracked(
   args: CreateTrackedChatCompletionArgs,
 ): Promise<OpenAI.ChatCompletion> {
-  const { tracking, guards, ...createArgs } = args;
+  const { tracking, guards, fallbackModel, ...createArgs } = args;
   const t0 = Date.now();
 
   let completion: OpenAI.ChatCompletion;
@@ -252,6 +290,21 @@ export async function createChatCompletionTracked(
   }
 
   if (result.errorMessage) {
+    // Fallback path: a different model on OpenRouter when the primary's
+    // provider classifier blocks the response. Recurse with the fallback
+    // model swapped in + `fallbackModel: null` so we only ever switch once
+    // per request. All other failure modes (length, empty, custom guards)
+    // throw normally — switching models there would mask different
+    // underlying bugs.
+    if (result.outcome === 'guard_content_filter' && fallbackModel) {
+      return createChatCompletionTracked({
+        ...createArgs,
+        model: fallbackModel,
+        tracking,
+        guards,
+        fallbackModel: null,
+      });
+    }
     throw new Error(result.errorMessage);
   }
 

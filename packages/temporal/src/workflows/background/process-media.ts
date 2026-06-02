@@ -109,85 +109,56 @@ export async function processMediaWorkflow(
 
       await storeTranscriptParagraphs(targetId, res.transcriptJsonKey);
 
-      // LLM post-processing + new search-index write. Summary and
-      // annotation pipelines run as independent child workflows so admins
-      // can regenerate either one from the dashboard without paying for
-      // the other (~$0.02 / call each). On the first-pass transcribe path
-      // we want both, fanned out in parallel.
-      //
-      // `Promise.allSettled` (not `Promise.all`): if one child rejects
-      // first, the other should still run to completion rather than
-      // being terminated mid-LLM-call by the default
-      // `parentClosePolicy: TERMINATE`. Without this, a summary failure
-      // would kill an in-flight annotation that's already burned tokens
-      // and written `llm_call` rows. After both settle, we re-throw any
-      // failures so the parent workflow's retry budget still applies —
-      // each child also has its own internal `maximumAttempts: 2` so
-      // transient errors are absorbed before we get here.
+      // LLM post-processing. Summary and annotation pipelines run as
+      // independent child workflows so admins can regenerate either one
+      // from the dashboard without paying for the other (~$0.02 / call
+      // each). They run **sequentially** — annotate first, then
+      // summarize — because the summarize prompt consumes the OUTLINE
+      // annotations written by annotate to produce per-section
+      // descriptions (YouTube-style chapters). Without outlines on
+      // disk first, summarize falls back to a flat summary with no
+      // sections.
       //
       // `embedParagraphs: true` because paragraphs are fresh from
       // storeTranscriptParagraphs and need embedding for the first time
       // (the admin regen path defaults this to false since paragraph text
       // is stable across summary prompt changes). `force` is NOT passed
-      // — see the parent-retry note below for why default-false is
-      // load-bearing here.
+      // — annotate / summarize both short-circuit on existing rows so a
+      // parent retry costs one DB SELECT per child, not duplicate LLM
+      // calls. The admin "Regenerate" mutations pass `force: true` to
+      // bypass that idempotency.
       //
-      // Parent-retry race note: `executeChild`'s `ChildWorkflowOptions`
-      // type does NOT support `workflowIdConflictPolicy` (it's
-      // client-side only — see `@temporalio/workflow` interfaces.d.ts
-      // where `ChildWorkflowOptions` Omits it from CommonWorkflowOptions).
-      // The only available knob is `workflowIdReusePolicy`, which
-      // governs Closed-vs-new collisions, not Running-vs-new. So if a
-      // parent retry catches a prior child still Running on the server,
-      // the server rejects with `WorkflowExecutionAlreadyStarted` —
-      // there's no in-workflow API to attach to the running child.
-      //
-      // `Promise.allSettled` is our defense: both children fully settle
-      // (to either fulfilled or rejected) before the aggregator
-      // re-throws, so under normal flow no child is still Running when
-      // the parent retries. The remaining race window only opens if
-      // something cancels the parent mid-`allSettled` (timeout, signal,
-      // worker death). In that case the parent retry will hit the
-      // race; given how rare that is in practice we accept it rather
-      // than `TERMINATE_IF_RUNNING` (which would kill healthy in-flight
-      // children).
-      //
-      // Cost on a normal parent retry — when one child failed and the
-      // other succeeded, parent retry re-runs BOTH child workflows.
-      // The previously-failed child re-attempts its LLM call (the
-      // point of the retry). The previously-succeeded child would
-      // otherwise re-bill tokens for work already in the DB; the
-      // activities' `force: false` default short-circuits as soon as
-      // they see existing summary / annotation rows for this upload,
-      // so the redundant attempt costs one DB SELECT and not a
-      // duplicate LLM call. The admin "Regenerate" mutations pass
-      // `force: true` to bypass that idempotency.
-      const childResults = await Promise.allSettled([
-        executeChild(summarizeUploadWorkflow, {
-          workflowId: `summarizeUpload:on-transcribe:${s3UploadKey}`,
-          args: [targetId, { embedParagraphs: true }],
-          taskQueue: BACKGROUND_QUEUE,
-          priority: { priorityKey: PRIORITY_USER },
-          typedSearchAttributes: childSearchAttrs,
-          retry: { maximumAttempts: 2 },
-        }),
-        executeChild(annotateTranscriptWorkflow, {
+      // Graceful degradation: if annotate fails, we still attempt
+      // summarize (it writes a sections-less summary), then re-throw
+      // the annotate failure so the parent retry budget still applies.
+      // This avoids paying for annotate then losing the summary on a
+      // single-flake annotate failure.
+      let annotateError: unknown = null;
+      try {
+        await executeChild(annotateTranscriptWorkflow, {
           workflowId: `annotateTranscript:on-transcribe:${s3UploadKey}`,
           args: [targetId],
           taskQueue: BACKGROUND_QUEUE,
           priority: { priorityKey: PRIORITY_USER },
           typedSearchAttributes: childSearchAttrs,
           retry: { maximumAttempts: 2 },
-        }),
-      ]);
-      const childFailures = childResults
-        .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
-        .map((r) =>
-          r.reason instanceof Error ? r.reason.message : String(r.reason),
-        );
-      if (childFailures.length > 0) {
+        });
+      } catch (err) {
+        annotateError = err;
+      }
+
+      await executeChild(summarizeUploadWorkflow, {
+        workflowId: `summarizeUpload:on-transcribe:${s3UploadKey}`,
+        args: [targetId, { embedParagraphs: true }],
+        taskQueue: BACKGROUND_QUEUE,
+        priority: { priorityKey: PRIORITY_USER },
+        typedSearchAttributes: childSearchAttrs,
+        retry: { maximumAttempts: 2 },
+      });
+
+      if (annotateError !== null) {
         throw new Error(
-          `Post-transcribe pipeline: ${childFailures.length} of ${childResults.length} child workflows failed — ${childFailures.join('; ')}`,
+          `Post-transcribe pipeline: annotate failed — ${annotateError instanceof Error ? annotateError.message : String(annotateError)}`,
         );
       }
     }

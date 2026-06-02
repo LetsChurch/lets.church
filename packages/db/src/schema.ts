@@ -795,6 +795,18 @@ export const UploadRecord = pgTable(
     summaryEmbedding: jsonb('summary_embedding').$type<number[]>(),
     searchSummaryEmbedding: jsonb('search_summary_embedding').$type<number[]>(),
     summarizedAt: timestamp('summarized_at', { precision: 3 }),
+    // YouTube-style outline panel: per-section description tied to one
+    // OUTLINE annotation. Populated by the summarize activity, which
+    // reads outlines from `annotation` (written by annotate first) and
+    // generates a 2-3 sentence description for each section. Empty
+    // array when the upload has no outlines or summarize hasn't run.
+    //   { id: <annotation.id>, description: string }
+    // Frontend joins this with the annotation table for titles +
+    // paragraph anchors (which give the start/end timestamps).
+    sections: jsonb('sections')
+      .$type<Array<{ id: string; description: string }>>()
+      .notNull()
+      .default([]),
   },
   (UploadRecord) => ({
     upload_record_createdBy_fkey: foreignKey({

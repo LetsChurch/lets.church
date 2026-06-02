@@ -919,6 +919,7 @@ function RouteComponent() {
             <MediaInfoTabs
               descriptionHtml={media.descriptionHtml}
               summary={media.summary}
+              outline={media.outline}
               viewCount={media.viewCount}
               publishedAt={media.publishedAt}
               createdAt={media.createdAt}
