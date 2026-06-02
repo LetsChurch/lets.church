@@ -1,6 +1,6 @@
 {
-  "id": "1cf53bd2-e2ec-45c2-8488-90161c6a3179",
-  "prevId": "16696047-5f94-45e4-ba6c-15514ea2695a",
+  "id": "ff3067d0-c1f9-469a-a106-585807869bb3",
+  "prevId": "c0ba7f8b-e5ea-49d1-adb6-7cc26cb612fa",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -40,11 +40,11 @@
           "primaryKey": false,
           "notNull": false
         },
-        "text": {
-          "name": "text",
+        "raw_span": {
+          "name": "raw_span",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "metadata": {
           "name": "metadata",
@@ -3048,6 +3048,13 @@
           "type": "timestamp (3)",
           "primaryKey": false,
           "notNull": false
+        },
+        "sections": {
+          "name": "sections",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
         }
       },
       "indexes": {},

@@ -1,1 +1,0 @@
-ALTER TABLE "upload_record" ADD COLUMN "sections" jsonb DEFAULT '[]'::jsonb NOT NULL;

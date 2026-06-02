@@ -1,1 +1,0 @@
-ALTER TABLE "annotation" ADD COLUMN "raw_span" text;

@@ -61,50 +61,22 @@
     {
       "idx": 8,
       "version": "7",
-      "when": 1779506466114,
-      "tag": "0008_summaries_and_embeddings",
+      "when": 1780369206401,
+      "tag": "0008_summaries_embeddings_sections",
       "breakpoints": true
     },
     {
       "idx": 9,
       "version": "7",
-      "when": 1779706059466,
+      "when": 1780369276233,
       "tag": "0009_annotations",
       "breakpoints": true
     },
     {
       "idx": 10,
       "version": "7",
-      "when": 1779707721607,
-      "tag": "0010_drop_annotation_text",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "7",
-      "when": 1779707735754,
-      "tag": "0011_add_annotation_raw_span",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "7",
-      "when": 1780149867570,
-      "tag": "0012_llm-call-tracking",
-      "breakpoints": true
-    },
-    {
-      "idx": 13,
-      "version": "7",
-      "when": 1780199591611,
-      "tag": "0013_llm-call-via-batch",
-      "breakpoints": true
-    },
-    {
-      "idx": 14,
-      "version": "7",
-      "when": 1780340455862,
-      "tag": "0014_upload-record-sections",
+      "when": 1780369307446,
+      "tag": "0010_llm_call_tracking",
       "breakpoints": true
     }
   ]

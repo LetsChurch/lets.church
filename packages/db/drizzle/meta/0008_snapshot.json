@@ -1,5 +1,5 @@
 {
-  "id": "16696047-5f94-45e4-ba6c-15514ea2695a",
+  "id": "c0ba7f8b-e5ea-49d1-adb6-7cc26cb612fa",
   "prevId": "c5b24da9-2fda-42a7-b886-cb9d3e62dd18",
   "version": "7",
   "dialect": "postgresql",
@@ -2942,6 +2942,13 @@
           "type": "timestamp (3)",
           "primaryKey": false,
           "notNull": false
+        },
+        "sections": {
+          "name": "sections",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
         }
       },
       "indexes": {},

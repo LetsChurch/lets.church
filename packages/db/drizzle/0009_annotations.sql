@@ -5,7 +5,7 @@ CREATE TABLE "annotation" (
 	"kind" "annotation_kind" NOT NULL,
 	"start_word" integer,
 	"end_word" integer,
-	"text" text NOT NULL,
+	"raw_span" text,
 	"metadata" jsonb NOT NULL,
 	"created_at" timestamp (3) DEFAULT now() NOT NULL,
 	"updated_at" timestamp (3) NOT NULL

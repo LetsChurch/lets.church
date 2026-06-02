@@ -12,6 +12,7 @@ CREATE TABLE "llm_call" (
 	"finish_reason" text,
 	"outcome" text DEFAULT 'success' NOT NULL,
 	"error_message" text,
+	"via_batch" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp (3) DEFAULT now() NOT NULL
 );
 --> statement-breakpoint

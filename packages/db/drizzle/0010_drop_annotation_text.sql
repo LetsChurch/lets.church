@@ -1,1 +1,0 @@
-ALTER TABLE "annotation" DROP COLUMN "text";

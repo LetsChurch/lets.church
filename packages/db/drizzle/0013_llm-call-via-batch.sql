@@ -1,1 +1,0 @@
-ALTER TABLE "llm_call" ADD COLUMN "via_batch" boolean DEFAULT false NOT NULL;
