@@ -73,6 +73,20 @@ const {
   retry: { maximumAttempts: 3 },
 });
 
+// Live retries for batch failures. Each makes one (or two, via the
+// activity's built-in fallback-model path) LLM round-trip. The annotate
+// echoes a full transcript so completion tokens are large; 30m SCT is
+// generous headroom. `maximumAttempts: 1` because the activity already
+// handles content-filter / empty-response by switching to the fallback
+// model internally — retrying the whole activity on top of that
+// rarely changes the outcome and just delays the next upload.
+const { annotateTranscript, summarizeUpload, embedTranscriptParagraphs } =
+  proxyActivities<typeof backgroundActivities>({
+    startToCloseTimeout: '30 minutes',
+    taskQueue: BACKGROUND_QUEUE,
+    retry: { maximumAttempts: 1 },
+  });
+
 const { getLlmBatchStatus, cancelLlmBatch } = proxyActivities<
   typeof backgroundActivities
 >({
@@ -236,8 +250,8 @@ export async function reprocessGroupWorkflow(
     // --- Wave 1, Phase 4: process both outputs (annotate writes
     //     OUTLINE annotations + scripture/keyword annotations to DB;
     //     paragraph-embed writes vectors) -------------------------
-    await Promise.all([
-      ...annotateSubmit.batches.map((b, i) => {
+    const annotateResults = await Promise.all(
+      annotateSubmit.batches.map((b, i) => {
         const status = annotateStatuses[i];
         if (!status) return null;
         return processLlmBatchOutput({
@@ -247,7 +261,9 @@ export async function reprocessGroupWorkflow(
           kind: 'annotate',
         });
       }),
-      ...embedParagraphsSubmit.batches.map((b, i) => {
+    );
+    const embedParagraphsResults = await Promise.all(
+      embedParagraphsSubmit.batches.map((b, i) => {
         const status = embedParagraphsStatuses[i];
         if (!status) return null;
         return processLlmBatchOutput({
@@ -257,7 +273,49 @@ export async function reprocessGroupWorkflow(
           kind: 'embed_paragraphs',
         });
       }),
-    ]);
+    );
+
+    // --- Wave 1, Phase 4.5: live retries for annotate failures ----
+    // The annotate batch can drop individual uploads either via the
+    // OpenAI error file (rate limit, content classifier, malformed
+    // input) or via our own per-line apply (parse error, schema
+    // mismatch). The live activity does one normal-model attempt and
+    // an automatic fallback-model attempt on content-filter blocks,
+    // so it covers both classes. Each retry is independently
+    // catch-handled — one upload's failure shouldn't sink the group.
+    const annotateRetryIds = new Set<string>();
+    for (const r of annotateResults) {
+      if (!r) continue;
+      for (const id of r.failedUploadIds) annotateRetryIds.add(id);
+    }
+    if (annotateRetryIds.size > 0) {
+      await Promise.all(
+        [...annotateRetryIds].map((uploadId) =>
+          annotateTranscript(uploadId).catch(() => undefined),
+        ),
+      );
+    }
+
+    // --- Wave 1, Phase 4.6: live retries for embed-paragraphs ----
+    // Embed batches split per-upload into ≤EMBED_MAX_INPUTS chunks,
+    // so a single failed chunk leaves an upload with partial vector
+    // coverage (some paragraphs embedded, the chunk's range missing).
+    // The live `embedTranscriptParagraphs` activity with the default
+    // `force: false` only touches rows where `embedding IS NULL`, so
+    // one call per affected upload picks up exactly the missing
+    // chunk(s) and doesn't redo any successful ones.
+    const embedRetryIds = new Set<string>();
+    for (const r of embedParagraphsResults) {
+      if (!r) continue;
+      for (const id of r.failedUploadIds) embedRetryIds.add(id);
+    }
+    if (embedRetryIds.size > 0) {
+      await Promise.all(
+        [...embedRetryIds].map((uploadId) =>
+          embedTranscriptParagraphs(uploadId).catch(() => undefined),
+        ),
+      );
+    }
 
     // --- Wave 1 cleanup: drop input/output/error files ------------
     await cleanupBatchFiles({
@@ -290,7 +348,7 @@ export async function reprocessGroupWorkflow(
 
       // --- Wave 2, Phase 7: process summarize output (writes
       //     summary + searchSummary + per-section descriptions) ----
-      await Promise.all(
+      const summarizeResults = await Promise.all(
         summarizeSubmit.batches.map((b, i) => {
           const status = summarizeStatuses[i];
           if (!status) return null;
@@ -302,6 +360,22 @@ export async function reprocessGroupWorkflow(
           });
         }),
       );
+
+      // --- Wave 2, Phase 7.5: live retries for summarize failures
+      // Same shape as the annotate retry path. The live summarize
+      // activity uses SUMMARY_FALLBACK_MODEL on content-filter blocks.
+      const summarizeRetryIds = new Set<string>();
+      for (const r of summarizeResults) {
+        if (!r) continue;
+        for (const id of r.failedUploadIds) summarizeRetryIds.add(id);
+      }
+      if (summarizeRetryIds.size > 0) {
+        await Promise.all(
+          [...summarizeRetryIds].map((uploadId) =>
+            summarizeUpload(uploadId).catch(() => undefined),
+          ),
+        );
+      }
 
       // --- Wave 2 cleanup ----------------------------------------
       await cleanupBatchFiles({

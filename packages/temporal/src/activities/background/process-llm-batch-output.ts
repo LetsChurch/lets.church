@@ -49,6 +49,12 @@ export type ProcessLlmBatchOutputArgs = {
 export type ProcessLlmBatchOutputResult = {
   succeeded: number;
   failed: number;
+  // Upload IDs whose batch line failed — either because the OpenAI batch
+  // service rejected the request (errorFileId) or because applying the
+  // response threw on our side (parse error, DB error, schema mismatch).
+  // The workflow uses this list to retry those uploads via the matching
+  // live activity (which has model-fallback logic of its own).
+  failedUploadIds: string[];
 };
 
 // Stream the output JSONL of a completed OpenAI batch and apply each
@@ -72,6 +78,7 @@ export default async function processLlmBatchOutput(
 
   let succeeded = 0;
   let failed = 0;
+  const failedUploadIds = new Set<string>();
 
   if (args.outputFileId) {
     for await (const line of downloadOutput(args.outputFileId)) {
@@ -80,6 +87,7 @@ export default async function processLlmBatchOutput(
         succeeded += 1;
       } catch (err) {
         failed += 1;
+        failedUploadIds.add(parseCustomId(line.custom_id).uploadId);
         activityLogger.warn(
           `Failed to apply batch line ${line.custom_id}: ${err instanceof Error ? err.message : String(err)}`,
         );
@@ -91,6 +99,7 @@ export default async function processLlmBatchOutput(
     for await (const line of downloadOutput(args.errorFileId)) {
       failed += 1;
       const { uploadId } = parseCustomId(line.custom_id);
+      failedUploadIds.add(uploadId);
       await recordLlmCall({
         model: modelForKind(args.kind),
         activity: activityForCustomId(line.custom_id),
@@ -113,7 +122,7 @@ export default async function processLlmBatchOutput(
   activityLogger.info(
     `Processed batch ${args.batchId}: ${succeeded} succeeded, ${failed} failed`,
   );
-  return { succeeded, failed };
+  return { succeeded, failed, failedUploadIds: [...failedUploadIds] };
 }
 
 async function dispatchResponseLine(
