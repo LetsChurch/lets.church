@@ -1709,6 +1709,13 @@ if (process.env.LIVE_PIPELINE === '1') {
       const paragraphId = paragraphIdByOrder.get(p.order);
       if (!paragraphId) return [];
       return p.annotations.map((a) => ({
+        // Preserve the dumped id so `upload_record.sections` (keyed by
+        // OUTLINE annotation id) stays joinable on reseed. Falls through
+        // to drizzle's default `gen_random_uuid()` when the snapshot
+        // predates id preservation (pre-2026-06 dumps) — those uploads
+        // need a re-summarize + re-dump to recover their section
+        // descriptions.
+        ...(a.id ? { id: a.id } : {}),
         paragraphId,
         kind: a.kind,
         startWord: a.startWord,

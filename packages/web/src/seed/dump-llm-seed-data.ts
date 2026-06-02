@@ -80,6 +80,7 @@ for (const uploadId of LLM_SEEDED_UPLOAD_IDS) {
   // snapshot paragraph entry.
   const annotationRows = await db
     .select({
+      id: Annotation.id,
       paragraphId: Annotation.paragraphId,
       kind: Annotation.kind,
       startWord: Annotation.startWord,
@@ -101,6 +102,7 @@ for (const uploadId of LLM_SEEDED_UPLOAD_IDS) {
   for (const a of annotationRows) {
     const list = annotationsByParagraphId.get(a.paragraphId) ?? [];
     list.push({
+      id: a.id,
       kind: a.kind,
       startWord: a.startWord,
       endWord: a.endWord,

@@ -77,7 +77,14 @@ export type LlmSeedSnapshot = {
     // BIBLE + KEYWORD (inline, half-open [startWord, endWord) ranges into
     // the `words` array above, debug-only `rawSpan` carries the LLM's
     // verbatim text). Empty array for paragraphs the model didn't annotate.
+    //
+    // `id` is preserved across dump/reload so that `sections` (keyed by
+    // OUTLINE annotation id) stays joinable after a seed restore. Older
+    // snapshots without ids get freshly-generated UUIDs at load time;
+    // their sections will end up dangling and the UI won't show
+    // descriptions until a re-summarize + re-dump.
     annotations: Array<{
+      id?: string;
       kind: 'OUTLINE' | 'BIBLE' | 'KEYWORD';
       startWord: number | null;
       endWord: number | null;
