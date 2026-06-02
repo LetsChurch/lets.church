@@ -1,7 +1,7 @@
 import { useStore } from '@nanostores/react';
 import {
+  IconBible,
   IconCheck,
-  IconExternalLink,
   IconLink,
   IconSearch,
 } from '@tabler/icons-react';
@@ -16,7 +16,6 @@ import {
   useRef,
   useState,
 } from 'react';
-import { LcTooltip } from '@/components/lc-tooltip';
 import { $currentTime, $setPlayAt } from '@/stores/player';
 import {
   buildBibleHubUrl,
@@ -65,15 +64,33 @@ type Props = {
 
 type WordChunk = {
   annotation: TranscriptAnnotation | null;
+  // Canonical key shared by every chunk that represents the same logical
+  // annotation in this paragraph (e.g. the same Bible reference cited
+  // twice). Used to drive the hover-highlight: hovering a pill below the
+  // paragraph paints every chunk whose `key` matches the pill's. null
+  // for unannotated chunks.
+  key: string | null;
   startIdx: number; // inclusive
   endIdx: number; // exclusive
 };
 
+// One reference pill rendered under a paragraph. Deduped per paragraph by
+// `key` so a reference cited twice in the same paragraph shows once.
+type Pill =
+  | { kind: 'BIBLE'; key: string; ref: string; url: string }
+  | { kind: 'KEYWORD'; key: string; text: string };
+
 // Build a per-word annotation index for the paragraph. Overlap policy: BIBLE
 // wins over KEYWORD (scripture refs are higher-signal than generic keyword
 // highlights) — BIBLE fills first, KEYWORD only paints empty cells.
-// Then collapse consecutive same-reference cells into chunks for rendering.
-function indexParagraph(paragraph: TranscriptParagraph) {
+// Then collapse consecutive same-reference cells into chunks for rendering,
+// and emit a deduped list of `pills` (one per unique annotation key) for
+// the new under-paragraph reference rail.
+function indexParagraph(paragraph: TranscriptParagraph): {
+  outline: TranscriptAnnotation | null;
+  chunks: Array<WordChunk>;
+  pills: Array<Pill>;
+} {
   const outline =
     paragraph.annotations.find((a) => a.kind === 'OUTLINE') ?? null;
 
@@ -98,47 +115,87 @@ function indexParagraph(paragraph: TranscriptParagraph) {
     }
   }
 
-  // Merge by rendered-content equality, not row identity. The LLM
-  // sometimes emits per-word markdown links for one scripture ref
-  // (`[John](#bible?...) [3:16](#bible?...)` instead of a single
-  // `[John 3:16](#bible?...)`), and the backend writes one annotation
-  // row per markdown link. Comparing annotation references would
-  // render each word as its own icon; building a canonical key from
-  // the known metadata fields collapses adjacent rows that resolve to
-  // the same logical link. Canonical (not `JSON.stringify(metadata)`)
-  // so the merge is robust to object-key insertion order. KEYWORD
-  // metadata is empty today; adjacent KEYWORD rows always merge
-  // (the resulting link searches for the joined span, equivalent to
-  // a multi-word KEYWORD row).
-  const keys = byWord.map((ann) => {
-    if (!ann) return null;
-    if (ann.kind === 'BIBLE') {
-      const m = ann.metadata as {
-        book?: unknown;
-        chapter?: unknown;
-        verse?: unknown;
-        endChapter?: unknown;
-        endVerse?: unknown;
-      };
-      return `BIBLE:${m.book ?? ''}:${m.chapter ?? ''}:${m.verse ?? ''}:${m.endChapter ?? ''}:${m.endVerse ?? ''}`;
-    }
-    return ann.kind;
-  });
-  const chunks: Array<WordChunk> = [];
-  let i = 0;
-  while (i < keys.length) {
-    const key = keys[i];
-    let j = i + 1;
-    while (j < keys.length && keys[j] === key) j++;
-    chunks.push({
-      annotation: byWord[i] ?? null,
-      startIdx: i,
-      endIdx: j,
-    });
-    i = j;
+  // Canonical key per word position. BIBLE keys are derived from the
+  // (book, chapter, verse, endChapter, endVerse) tuple so the LLM
+  // emitting per-word markdown links (`[John](#bible?...) [3:16](#bible?...)`
+  // = two rows) still collapses to one pill. KEYWORD keys are the
+  // joined span text — distinct keywords get distinct pills, repeated
+  // keywords don't duplicate.
+  function bibleKey(ann: TranscriptAnnotation): string {
+    const m = ann.metadata as {
+      book?: unknown;
+      chapter?: unknown;
+      verse?: unknown;
+      endChapter?: unknown;
+      endVerse?: unknown;
+    };
+    return `BIBLE:${m.book ?? ''}:${m.chapter ?? ''}:${m.verse ?? ''}:${m.endChapter ?? ''}:${m.endVerse ?? ''}`;
   }
 
-  return { outline, chunks };
+  // First pass: per-word key, for chunk merging.
+  const wordKeys = byWord.map((ann) => {
+    if (!ann) return null;
+    if (ann.kind === 'BIBLE') return bibleKey(ann);
+    // KEYWORD key uses the WORD index so consecutive KEYWORD cells
+    // merge into one chunk; we replace with a span-text-derived key
+    // after the chunk pass when we know the actual span boundaries.
+    return 'KEYWORD';
+  });
+
+  // Build chunks first using the simple per-word key.
+  const rawChunks: Array<WordChunk> = [];
+  {
+    let i = 0;
+    while (i < wordKeys.length) {
+      const key = wordKeys[i];
+      let j = i + 1;
+      while (j < wordKeys.length && wordKeys[j] === key) j++;
+      rawChunks.push({
+        annotation: byWord[i] ?? null,
+        key: key ?? null,
+        startIdx: i,
+        endIdx: j,
+      });
+      i = j;
+    }
+  }
+
+  // Second pass: refine KEYWORD chunk keys to the joined-span text so
+  // two distinct keyword phrases get distinct pills + hover targets.
+  const chunks: Array<WordChunk> = rawChunks.map((c) => {
+    if (c.annotation?.kind !== 'KEYWORD') return c;
+    const spanText = paragraph.words
+      .slice(c.startIdx, c.endIdx)
+      .map((w) => stripWordPunctuation(w.word))
+      .filter((w) => w.length > 0)
+      .join(' ');
+    return { ...c, key: `KEYWORD:${spanText.toLowerCase()}` };
+  });
+
+  // Deduplicate chunks into pills, preserving first-occurrence order.
+  const pills: Array<Pill> = [];
+  const seen = new Set<string>();
+  for (const c of chunks) {
+    if (!c.annotation || !c.key || seen.has(c.key)) continue;
+    if (c.annotation.kind === 'BIBLE') {
+      const meta = parseBibleMetadata(c.annotation.metadata);
+      const url = meta ? buildBibleHubUrl(meta) : null;
+      if (!meta || !url) continue;
+      pills.push({ kind: 'BIBLE', key: c.key, ref: formatBibleRef(meta), url });
+      seen.add(c.key);
+    } else if (c.annotation.kind === 'KEYWORD') {
+      const spanText = paragraph.words
+        .slice(c.startIdx, c.endIdx)
+        .map((w) => stripWordPunctuation(w.word))
+        .filter((w) => w.length > 0)
+        .join(' ');
+      if (spanText.length === 0) continue;
+      pills.push({ kind: 'KEYWORD', key: c.key, text: spanText });
+      seen.add(c.key);
+    }
+  }
+
+  return { outline, chunks, pills };
 }
 
 // Render a single word as the existing seek-on-click button. Lifted out so
@@ -190,14 +247,17 @@ function WordButton({
   );
 }
 
-// Color treatments for the inline action icon trailing each annotation
-// span. Matches the highlighter hue family so the icon visually belongs
-// to its annotation. Darker shade in light mode for contrast against
-// white; lighter shade in dark mode matching the swapped text color.
-const BIBLE_ICON_CLASS =
-  'inline-flex items-center align-middle -translate-y-0.5 text-yellow-700 hover:text-yellow-800 dark:text-yellow-300 dark:hover:text-yellow-200';
-const KEYWORD_ICON_CLASS =
-  'inline-flex items-center align-middle -translate-y-0.5 text-sky-700 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-300';
+// Inline-highlight treatments applied when a reference pill is being
+// hovered. Matches the historical highlighter metaphor — yellow for
+// scripture, sky for keywords — so users learn the color↔kind mapping
+// once and can read it across the pill rail + the inline span. Light
+// mode draws a translucent background behind the words; dark mode
+// swaps to a solid text color with no background since translucent
+// over a dark surface reads muddy.
+const BIBLE_HIGHLIGHT_CLASS =
+  'bg-yellow-300/30 dark:bg-transparent dark:text-yellow-300';
+const KEYWORD_HIGHLIGHT_CLASS =
+  'bg-sky-400/25 dark:bg-transparent dark:text-sky-400';
 
 // Inline icon-button shown next to a timestamp or heading on hover —
 // click copies a `<page>#t=<seconds>` deep-link to the clipboard,
@@ -264,19 +324,31 @@ const ParagraphView = memo(function ParagraphView({
   paragraph,
   activeWordIndex,
   isActive,
+  isFirstParagraph,
   onSeek,
   highlightPattern,
 }: {
   paragraph: TranscriptParagraph;
   activeWordIndex: number;
   isActive: boolean;
+  // First paragraph in the transcript. Used to suppress the section-
+  // break divider that's drawn above every other section-starting
+  // paragraph — the very first one has no preceding section to part
+  // from.
+  isFirstParagraph: boolean;
   onSeek: (start: number) => void;
   highlightPattern: RegExp | null;
 }) {
-  const { outline, chunks } = useMemo(
+  const { outline, chunks, pills } = useMemo(
     () => indexParagraph(paragraph),
     [paragraph],
   );
+
+  // Which reference pill (if any) the cursor is currently over. Drives
+  // the inline highlight across every chunk whose `key` matches —
+  // covers the "reference cited twice in one paragraph" case (both
+  // spans light up together) as well as the common single-span case.
+  const [hoveredPillKey, setHoveredPillKey] = useState<string | null>(null);
 
   // Set of word indices that match the active search query (paragraph-
   // search results render with this populated; the normal transcript
@@ -300,36 +372,20 @@ const ParagraphView = memo(function ParagraphView({
 
   return (
     <>
-      {outlineTitle ? (
-        // `col-span-2 grid grid-cols-subgrid` gives the row a real box
-        // spanning both outer columns (so hovering the gap between
-        // icon and heading still triggers group-hover) while keeping
-        // the inner cells aligned to the outer grid's column tracks
-        // via CSS subgrid — `display: contents` left dead-zones in the
-        // gap where neither child caught the hover.
-        <div className="group col-span-2 grid grid-cols-subgrid pt-6 pb-1">
-          <div className="flex items-center justify-end">
-            <CopyLinkButton
-              seconds={paragraph.start}
-              className="invisible group-hover:visible"
-            />
-          </div>
-          <h3>
-            <button
-              type="button"
-              onClick={() => onSeek(paragraph.start)}
-              className="cursor-pointer text-left font-semibold text-base text-primary hover:text-primary/80"
-            >
-              {outlineTitle}
-            </button>
-          </h3>
-        </div>
+      {/* Section break between OUTLINE-bearing paragraphs after the
+          first. Spans both grid columns so it visually divides the
+          two adjacent sections rather than just the body column. */}
+      {outlineTitle && !isFirstParagraph ? (
+        <div
+          aria-hidden="true"
+          className="col-span-2 mt-4 border-zinc-200 border-t dark:border-zinc-800"
+        />
       ) : null}
-      {/* Timestamp (seconds → ms for formatTime). Click seeks to the
-          paragraph; hovering anywhere on the row reveals the copy-
-          link icon immediately to the left of the timestamp, both
-          right-aligned in col 1. Same subgrid wrapper as the heading
-          row so hover covers the full row width. */}
+      {/* Single row per paragraph. Column 1 holds the timestamp (and
+          a hover-revealed copy-link icon); column 2 holds the optional
+          OUTLINE heading stacked above the body words, then a pill
+          rail under the body when this paragraph has any scripture/
+          keyword annotations. */}
       <div className="group col-span-2 grid grid-cols-subgrid">
         <div className="flex items-center justify-end gap-1 self-start pt-1">
           <CopyLinkButton
@@ -349,121 +405,121 @@ const ParagraphView = memo(function ParagraphView({
             {formatTime(paragraph.start * 1000)}
           </button>
         </div>
-        <p
-          className={`text-sm leading-[1.6] transition-colors ${
-            isActive ? 'text-primary' : 'text-primary/60'
-          }`}
-        >
-          {chunks.map((chunk) => {
-            const inAnnotation = chunk.annotation !== null;
-            const wordButtons = paragraph.words
-              .slice(chunk.startIdx, chunk.endIdx)
-              .map((w, i) => {
-                const wordIdx = chunk.startIdx + i;
-                return (
-                  <Fragment key={`${wordIdx}-${w.start}`}>
-                    <WordButton
-                      word={w}
-                      isActive={wordIdx === activeWordIndex}
-                      isMatched={matchSet.has(wordIdx)}
-                      onSeek={onSeek}
-                      inAnnotation={inAnnotation}
-                    />{' '}
-                  </Fragment>
-                );
-              });
+        <div>
+          {outlineTitle ? (
+            // Heading sits inline with the timestamp (both anchored to
+            // the top of the row), then the body wraps below. The
+            // heading is still a seek button — clicking it jumps to the
+            // section's start the same as clicking the timestamp.
+            <h3 className="mb-1">
+              <button
+                type="button"
+                onClick={() => onSeek(paragraph.start)}
+                className="cursor-pointer text-left font-semibold text-base text-primary hover:text-primary/80"
+              >
+                {outlineTitle}
+              </button>
+            </h3>
+          ) : null}
+          <p
+            className={`text-sm leading-[1.6] transition-colors ${
+              isActive ? 'text-primary' : 'text-primary/60'
+            }`}
+          >
+            {chunks.map((chunk) => {
+              const inAnnotation = chunk.annotation !== null;
+              const wordButtons = paragraph.words
+                .slice(chunk.startIdx, chunk.endIdx)
+                .map((w, i) => {
+                  const wordIdx = chunk.startIdx + i;
+                  return (
+                    <Fragment key={`${wordIdx}-${w.start}`}>
+                      <WordButton
+                        word={w}
+                        isActive={wordIdx === activeWordIndex}
+                        isMatched={matchSet.has(wordIdx)}
+                        onSeek={onSeek}
+                        inAnnotation={inAnnotation}
+                      />{' '}
+                    </Fragment>
+                  );
+                });
 
-            if (chunk.annotation === null) {
-              return (
-                <Fragment key={`${chunk.startIdx}-plain`}>
-                  {wordButtons}
-                </Fragment>
-              );
-            }
-
-            if (chunk.annotation.kind === 'BIBLE') {
-              // Defensive: parseBibleMetadata rejects rows with genuinely
-              // malformed jsonb. Should never fire — the activity's
-              // bibleMetadataSchema (closed OSIS enum) rejects bad
-              // metadata at insert time — but keep a silent fallback so
-              // an unexpected row can't crash the transcript render.
-              const meta = parseBibleMetadata(chunk.annotation.metadata);
-              const url = meta ? buildBibleHubUrl(meta) : null;
-              if (!meta || !url) {
+              if (chunk.annotation === null) {
                 return (
-                  <Fragment key={`${chunk.startIdx}-bible-skip`}>
+                  <Fragment key={`${chunk.startIdx}-plain`}>
                     {wordButtons}
                   </Fragment>
                 );
               }
-              const ref = formatBibleRef(meta);
-              // Highlighter metaphor — light mode draws a yellow
-              // background behind the span (text stays original); dark
-              // mode swaps to a solid yellow text color with no
-              // background, since translucent yellow over a dark
-              // surface reads muddy. `text-decoration` underlines would
-              // render only on the inter-word text nodes (UA stylesheet
-              // `text-decoration: none` on the child `<button>`s
-              // suppresses them under the words), which is why we don't
-              // use them. The trailing tooltip icon (a real `<a>`) is
-              // the action surface — both keyboard-focusable and
-              // middle-clickable for a new tab.
+
+              // Inline highlight is now hover-driven — applied only when
+              // the matching pill below is being pointed at. Idle state
+              // is plain text, which keeps long passages with dense
+              // annotation from looking visually shouted at.
+              const isHovered =
+                chunk.key !== null && chunk.key === hoveredPillKey;
+              const highlightClass =
+                chunk.annotation.kind === 'BIBLE'
+                  ? BIBLE_HIGHLIGHT_CLASS
+                  : KEYWORD_HIGHLIGHT_CLASS;
               return (
-                <Fragment key={`${chunk.startIdx}-bible`}>
-                  <span className="rounded-sm bg-yellow-300/30 px-0.5 dark:bg-transparent dark:text-yellow-300">
+                <Fragment key={`${chunk.startIdx}-${chunk.key}`}>
+                  <span
+                    className={`rounded-sm px-0.5 transition-colors ${
+                      isHovered ? highlightClass : ''
+                    }`}
+                  >
                     {wordButtons}
                   </span>
-                  <LcTooltip
-                    content={`${ref} on BibleHub`}
-                    render={
-                      // biome-ignore lint/a11y/useAnchorContent: the icon child below becomes the anchor's content at runtime via Tooltip.Trigger's render-pass-through; `aria-label` provides explicit accessible text regardless.
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={`${ref} on BibleHub`}
-                        className={BIBLE_ICON_CLASS}
-                      />
-                    }
-                  >
-                    <IconExternalLink size={12} aria-hidden="true" />
-                  </LcTooltip>{' '}
                 </Fragment>
               );
-            }
-
-            // KEYWORD — search-route link, real <a> under the hood (via
-            // TanStack <Link>) so middle-click opens a new tab. Strip
-            // leading/trailing punctuation from each word so `q=` is a
-            // clean phrase (`"Christ, his death"` would land as
-            // `q=Christ%2C%20his%20death`).
-            const spanText = paragraph.words
-              .slice(chunk.startIdx, chunk.endIdx)
-              .map((w) => stripWordPunctuation(w.word))
-              .filter((w) => w.length > 0)
-              .join(' ');
-            return (
-              <Fragment key={`${chunk.startIdx}-keyword`}>
-                <span className="rounded-sm bg-sky-400/25 px-0.5 dark:bg-transparent dark:text-sky-400">
-                  {wordButtons}
-                </span>
-                <LcTooltip
-                  content={`Search "${spanText}"`}
-                  render={
-                    <Link
-                      to="/search"
-                      search={{ q: spanText }}
-                      aria-label={`Search "${spanText}"`}
-                      className={KEYWORD_ICON_CLASS}
-                    />
-                  }
-                >
-                  <IconSearch size={12} aria-hidden="true" />
-                </LcTooltip>{' '}
-              </Fragment>
-            );
-          })}
-        </p>
+            })}
+          </p>
+          {pills.length > 0 ? (
+            // Reference rail. One pill per unique annotation in this
+            // paragraph. Hovering a pill highlights every chunk that
+            // shares its key in the body above; clicking opens the
+            // canonical destination (BibleHub for scripture, site
+            // search for keywords).
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {pills.map((pill) =>
+                pill.kind === 'BIBLE' ? (
+                  <a
+                    key={pill.key}
+                    href={pill.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${pill.ref} on BibleHub`}
+                    onMouseEnter={() => setHoveredPillKey(pill.key)}
+                    onMouseLeave={() => setHoveredPillKey(null)}
+                    onFocus={() => setHoveredPillKey(pill.key)}
+                    onBlur={() => setHoveredPillKey(null)}
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-primary/5 px-2 py-0.5 text-primary/70 text-xs hover:bg-primary/10 hover:text-primary dark:bg-primary/10 dark:hover:bg-primary/20"
+                  >
+                    <IconBible size={12} aria-hidden="true" />
+                    {pill.ref}
+                  </a>
+                ) : (
+                  <Link
+                    key={pill.key}
+                    to="/search"
+                    search={{ q: pill.text }}
+                    aria-label={`Search "${pill.text}"`}
+                    onMouseEnter={() => setHoveredPillKey(pill.key)}
+                    onMouseLeave={() => setHoveredPillKey(null)}
+                    onFocus={() => setHoveredPillKey(pill.key)}
+                    onBlur={() => setHoveredPillKey(null)}
+                    className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-primary/5 px-2 py-0.5 text-primary/70 text-xs hover:bg-primary/10 hover:text-primary dark:bg-primary/10 dark:hover:bg-primary/20"
+                  >
+                    <IconSearch size={12} aria-hidden="true" />
+                    {pill.text}
+                  </Link>
+                ),
+              )}
+            </div>
+          ) : null}
+        </div>
       </div>
     </>
   );
@@ -571,6 +627,7 @@ export function TranscriptParagraphs({
               pi === active.paragraphIndex ? active.wordIndex : -1
             }
             isActive={pi === active.paragraphIndex}
+            isFirstParagraph={pi === 0}
             onSeek={handleSeek}
             highlightPattern={highlightPattern}
           />
