@@ -215,6 +215,9 @@ RUN WHISPER_MODEL=${WHISPER_MODEL} \
     if [ -d /home/worker/.cache/torch ] && [ -n "$(ls -A /home/worker/.cache/torch 2>/dev/null)" ]; then \
         cp -r /home/worker/.cache/torch/* /models/torch/; \
     fi && \
+    mkdir -p /models/torch/hub/checkpoints && \
+    curl -fsSL -o /models/torch/hub/checkpoints/wav2vec2_fairseq_base_ls960_asr_ls960.pth \
+        https://download.pytorch.org/torchaudio/models/wav2vec2_fairseq_base_ls960_asr_ls960.pth && \
     rm -rf /home/worker/.cache/huggingface/* /home/worker/.cache/torch/* /home/worker/.cache/pip/*
 ENV HF_HOME=/models/huggingface \
     TORCH_HOME=/models/torch \
