@@ -129,6 +129,9 @@ import type { ReprocessScope } from './reprocess-scope';
 export function makeReprocessAllWorkflowId(scope: ReprocessScope): string {
   if (scope.kind === 'channel')
     return `reprocessAll:channel:${scope.channelId}`;
+  // `no_paragraphs` is the post-rename version of the prior `legacy`
+  // pipeline-migration scope; same workflow shape, different selection
+  // criterion. The `kind` value goes verbatim into the workflow id.
   return `reprocessAll:${scope.kind}`;
 }
 

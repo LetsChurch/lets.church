@@ -1,5 +1,4 @@
 import {
-  Annotation,
   AppUser,
   AppUserEmail,
   Channel,
@@ -4486,28 +4485,40 @@ export const adminRouter = router({
   // Reprocess procedures
 
   getReprocessStatus: adminProcedure.query(async () => {
-    const [legacyCount, legacyStatus, allStatus] = await Promise.all([
-      db
-        .select({ cnt: count() })
-        .from(UploadRecord)
-        .where(
-          and(
-            lt(UploadRecord.pipelineVersion, CURRENT_PIPELINE_VERSION),
-            isNotNull(UploadRecord.transcodingFinishedAt),
-          ),
-        )
-        .then((r) => r[0]?.cnt ?? 0),
-      getReprocessWorkflowStatus({ kind: 'legacy' }),
-      getReprocessWorkflowStatus({ kind: 'all' }),
-    ]);
-    return { legacyCount, legacyStatus, allStatus };
+    const [noParagraphsCount, noParagraphsStatus, allStatus] =
+      await Promise.all([
+        // Uploads with no rows in `transcript_paragraph`. Matches the
+        // get-reprocess-batch helper's filter — counted here directly
+        // (rather than calling the helper) so we don't have to spin up
+        // the temporal activity client for a count-only read.
+        db
+          .select({ cnt: count() })
+          .from(UploadRecord)
+          .where(
+            and(
+              isNotNull(UploadRecord.transcodingFinishedAt),
+              notExists(
+                db
+                  .select({ one: sql<number>`1` })
+                  .from(TranscriptParagraph)
+                  .where(
+                    eq(TranscriptParagraph.uploadRecordId, UploadRecord.id),
+                  ),
+              ),
+            ),
+          )
+          .then((r) => r[0]?.cnt ?? 0),
+        getReprocessWorkflowStatus({ kind: 'no_paragraphs' }),
+        getReprocessWorkflowStatus({ kind: 'all' }),
+      ]);
+    return { noParagraphsCount, noParagraphsStatus, allStatus };
   }),
 
   startReprocess: adminProcedure
     .input(
       z.object({
         scope: z.discriminatedUnion('kind', [
-          z.object({ kind: z.literal('legacy') }),
+          z.object({ kind: z.literal('no_paragraphs') }),
           z.object({ kind: z.literal('all') }),
           z.object({ kind: z.literal('channel'), channelSlug: z.string() }),
         ]),
@@ -4608,7 +4619,7 @@ export const adminRouter = router({
     .input(
       z.object({
         scope: z.discriminatedUnion('kind', [
-          z.object({ kind: z.literal('legacy') }),
+          z.object({ kind: z.literal('no_paragraphs') }),
           z.object({ kind: z.literal('all') }),
           z.object({ kind: z.literal('channel'), channelSlug: z.string() }),
         ]),

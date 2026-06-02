@@ -58,8 +58,13 @@ function ReprocessPage() {
   const [channelSlug, setChannelSlug] = useState('');
   const deferredChannelSlug = useDeferredValue(channelSlug);
 
-  const [legacyProcessingScope, setLegacyProcessingScope] =
-    useState<ProcessingScope>('transcode');
+  // Defaults to `transcribe` for the no-paragraphs block — the whole
+  // point of that scope is to push affected uploads through the new
+  // transcribe pipeline so paragraphs land. The other blocks default
+  // to `transcode` since their motivation is usually a transcode-side
+  // change.
+  const [noParagraphsProcessingScope, setNoParagraphsProcessingScope] =
+    useState<ProcessingScope>('transcribe');
   const [channelProcessingScope, setChannelProcessingScope] =
     useState<ProcessingScope>('transcode');
   const [allProcessingScope, setAllProcessingScope] =
@@ -70,7 +75,7 @@ function ReprocessPage() {
   // submit via the Batch API at 50% cost with a ~24h SLA; live
   // path otherwise. Only meaningful for scopes that include
   // transcribe.
-  const [legacyViaBatch, setLegacyViaBatch] = useState(false);
+  const [noParagraphsViaBatch, setNoParagraphsViaBatch] = useState(false);
   const [channelViaBatch, setChannelViaBatch] = useState(false);
   const [allViaBatch, setAllViaBatch] = useState(false);
 
@@ -79,7 +84,7 @@ function ReprocessPage() {
     refetchInterval: (query) => {
       const d = query.state.data;
       if (!d) return false;
-      return d.legacyStatus === 'running' || d.allStatus === 'running'
+      return d.noParagraphsStatus === 'running' || d.allStatus === 'running'
         ? 3000
         : false;
     },
@@ -133,18 +138,20 @@ function ReprocessPage() {
         </Text>
       </div>
 
-      {/* Legacy migration */}
+      {/* New transcription pipeline */}
       <Card withBorder>
         <Stack gap="sm">
           <Group justify="space-between">
             <div>
-              <Text fw={600}>Pipeline Version Migration</Text>
+              <Text fw={600}>New Transcription Pipeline</Text>
               <Text size="sm" c="dimmed">
-                Uploads processed by an older pipeline version. Run this to
-                bring all legacy content up to the current pipeline.
+                Uploads with no `transcript_paragraph` rows — they predate the
+                diarization + paragraph-segmentation pipeline. Run this to bring
+                them up. Scheduled newest-first so the most recent content
+                catches up before backfilling older archives.
               </Text>
             </div>
-            {statusBadge(status.legacyStatus)}
+            {statusBadge(status.noParagraphsStatus)}
           </Group>
 
           <Group>
@@ -152,40 +159,42 @@ function ReprocessPage() {
               Remaining:
             </Text>
             <Text size="sm" fw={500}>
-              {status.legacyCount.toLocaleString()} uploads
+              {status.noParagraphsCount.toLocaleString()} uploads
             </Text>
           </Group>
 
           <SegmentedControl
             size="xs"
-            value={legacyProcessingScope}
-            onChange={(v) => setLegacyProcessingScope(v as ProcessingScope)}
+            value={noParagraphsProcessingScope}
+            onChange={(v) =>
+              setNoParagraphsProcessingScope(v as ProcessingScope)
+            }
             data={processingScopeData}
-            disabled={status.legacyStatus === 'running'}
+            disabled={status.noParagraphsStatus === 'running'}
           />
 
           <Checkbox
             size="xs"
             label="Use OpenAI Batch API (50% cost, ~24h SLA per group of 100)"
-            checked={legacyViaBatch}
-            onChange={(e) => setLegacyViaBatch(e.currentTarget.checked)}
+            checked={noParagraphsViaBatch}
+            onChange={(e) => setNoParagraphsViaBatch(e.currentTarget.checked)}
             disabled={
-              status.legacyStatus === 'running' ||
-              legacyProcessingScope === 'transcode'
+              status.noParagraphsStatus === 'running' ||
+              noParagraphsProcessingScope === 'transcode'
             }
           />
 
-          {status.legacyStatus === 'running' ? (
+          {status.noParagraphsStatus === 'running' ? (
             <Button
               size="xs"
               color="red"
               variant="light"
               loading={
                 cancelMutation.isPending &&
-                cancelMutation.variables?.scope.kind === 'legacy'
+                cancelMutation.variables?.scope.kind === 'no_paragraphs'
               }
               onClick={() =>
-                cancelMutation.mutate({ scope: { kind: 'legacy' } })
+                cancelMutation.mutate({ scope: { kind: 'no_paragraphs' } })
               }
             >
               Cancel
@@ -193,21 +202,21 @@ function ReprocessPage() {
           ) : (
             <Button
               size="xs"
-              disabled={status.legacyCount === 0}
+              disabled={status.noParagraphsCount === 0}
               loading={
                 startMutation.isPending &&
-                startMutation.variables?.scope.kind === 'legacy'
+                startMutation.variables?.scope.kind === 'no_paragraphs'
               }
               onClick={() =>
                 startMutation.mutate({
-                  scope: { kind: 'legacy' },
-                  processingScope: legacyProcessingScope,
-                  viaBatch: legacyViaBatch,
+                  scope: { kind: 'no_paragraphs' },
+                  processingScope: noParagraphsProcessingScope,
+                  viaBatch: noParagraphsViaBatch,
                 })
               }
             >
-              {status.legacyCount === 0
-                ? 'Migration complete'
+              {status.noParagraphsCount === 0
+                ? 'All uploads have paragraphs'
                 : 'Start migration'}
             </Button>
           )}

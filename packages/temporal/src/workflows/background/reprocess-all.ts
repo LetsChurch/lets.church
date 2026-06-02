@@ -91,11 +91,11 @@ export async function reprocessAllWorkflow(
           priority: { priorityKey: PRIORITY_REPROCESS },
           retry: { maximumAttempts: 1 },
           // No `typedSearchAttributes` on the group workflow itself —
-          // a group spans up to 100 uploads (and many channels in
-          // 'legacy' / 'all' scopes), so cherry-picking `items[0]`'s
-          // ids would be misleading. The per-upload indexDocument
-          // grandchildren inside the group still set `UPLOAD_ID_KEY`
-          // so the upload-tree filter stays intact.
+          // a group spans up to 100 uploads (and many channels in the
+          // `no_paragraphs` / `all` scopes), so cherry-picking
+          // `items[0]`'s ids would be misleading. The per-upload
+          // indexDocument grandchildren inside the group still set
+          // `UPLOAD_ID_KEY` so the upload-tree filter stays intact.
         });
       } catch (err) {
         // Mirror the unbatched per-upload branch's already-started

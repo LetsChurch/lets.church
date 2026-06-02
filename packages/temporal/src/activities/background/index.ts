@@ -91,7 +91,7 @@ export {
   type RemuxBatch,
 } from './get-remux-batch';
 export {
-  getLegacyUploadCount,
+  getNoParagraphsUploadCount,
   getReprocessBatch,
   type ReprocessBatch,
 } from './get-reprocess-batch';
