@@ -4,6 +4,7 @@ import { invariant } from 'es-toolkit';
 import {
   createEmbeddingsTracked,
   EMBED_DIMS,
+  EMBED_MAX_INPUTS,
   EMBED_MODEL,
   openrouterExtras,
 } from '../../util/llm';
@@ -22,13 +23,18 @@ export type EmbedUploadSummariesBulkResult = {
   skipped: number;
 };
 
+// Two inputs per upload (summary + searchSummary); cap each embeddings.create
+// at the model's 2048-input limit. 1024 uploads per request is the right
+// shape — most reprocess groups are <100 uploads so this still ships as a
+// single round-trip in practice.
+const UPLOADS_PER_EMBED_REQUEST = Math.floor(EMBED_MAX_INPUTS / 2);
+
 /**
  * Live bulk-embed of upload summaries for the batch-reprocess group
  * workflow's phase-7. Each upload's summary + searchSummary together
- * are tiny (≤400 tokens) and the OpenRouter `embeddings.create`
- * endpoint accepts up to 2048 inputs per request, so for a group of
- * 100 uploads we send a single request with up to 200 inputs (2 per
- * upload, alternating).
+ * are tiny (≤400 tokens); we send them in 2 inputs/upload chunks of up
+ * to `UPLOADS_PER_EMBED_REQUEST` (1024) uploads per request to respect
+ * `EMBED_MAX_INPUTS`.
  *
  * Why live instead of a 3rd OpenAI batch: the cost difference between
  * live and batch on this work is sub-dollar (~$0.001 / 100 uploads),
@@ -55,12 +61,14 @@ export default async function embedUploadSummariesBulk(
     .from(UploadRecord)
     .where(inArray(UploadRecord.id, args.uploadRecordIds));
 
-  // Build the input array: alternating summary, searchSummary per
-  // upload, in the same order the rows arrived. Track the upload id
-  // for each pair so we can map embeddings back when the response
-  // returns.
-  const inputs: string[] = [];
-  const eligibleUploadIds: string[] = [];
+  // Filter to uploads that actually have both summaries. Anything missing
+  // (a summarize that failed earlier in the batch) is logged + counted as
+  // skipped — the caller treats the skip count separately from a failure.
+  const eligible: Array<{
+    id: string;
+    summary: string;
+    searchSummary: string;
+  }> = [];
   let skipped = 0;
   for (const row of rows) {
     if (!row.summary || !row.searchSummary) {
@@ -70,59 +78,73 @@ export default async function embedUploadSummariesBulk(
       skipped += 1;
       continue;
     }
-    eligibleUploadIds.push(row.id);
-    inputs.push(row.summary, row.searchSummary);
+    eligible.push({
+      id: row.id,
+      summary: row.summary,
+      searchSummary: row.searchSummary,
+    });
   }
-  if (inputs.length === 0) {
+  if (eligible.length === 0) {
     return { embedded: 0, skipped };
   }
 
-  const res = await createEmbeddingsTracked({
-    tracking: { activity: 'embedUploadSummariesBulk' },
-    model: EMBED_MODEL,
-    input: inputs,
-    ...(openrouterExtras as Record<string, unknown>),
-  });
-  invariant(
-    res.data.length === inputs.length,
-    `embedUploadSummariesBulk: expected ${inputs.length} embeddings, got ${res.data.length}`,
+  const chunkCount = Math.ceil(eligible.length / UPLOADS_PER_EMBED_REQUEST);
+  activityLogger.info(
+    `Embedding ${eligible.length} upload summary pairs across ${chunkCount} chunk(s)`,
   );
-  for (const [i, d] of res.data.entries()) {
+
+  let embedded = 0;
+  for (let chunkIdx = 0; chunkIdx < chunkCount; chunkIdx++) {
+    const start = chunkIdx * UPLOADS_PER_EMBED_REQUEST;
+    const slice = eligible.slice(start, start + UPLOADS_PER_EMBED_REQUEST);
+    const inputs: string[] = [];
+    for (const row of slice) inputs.push(row.summary, row.searchSummary);
+
+    const res = await createEmbeddingsTracked({
+      tracking: { activity: 'embedUploadSummariesBulk' },
+      model: EMBED_MODEL,
+      input: inputs,
+      ...(openrouterExtras as Record<string, unknown>),
+    });
     invariant(
-      d.index === i,
-      `embedUploadSummariesBulk: index/order mismatch at ${i}`,
+      res.data.length === inputs.length,
+      `embedUploadSummariesBulk: expected ${inputs.length} embeddings on chunk ${chunkIdx}, got ${res.data.length}`,
     );
-    invariant(
-      d.embedding.length === EMBED_DIMS,
-      `embedUploadSummariesBulk: bad embedding dim at ${i}`,
-    );
+    for (const [i, d] of res.data.entries()) {
+      invariant(
+        d.index === i,
+        `embedUploadSummariesBulk: index/order mismatch on chunk ${chunkIdx} at ${i}`,
+      );
+      invariant(
+        d.embedding.length === EMBED_DIMS,
+        `embedUploadSummariesBulk: bad embedding dim on chunk ${chunkIdx} at ${i}`,
+      );
+    }
+
+    await db.transaction(async (tx) => {
+      await Promise.all(
+        slice.map((row, i) => {
+          const summaryEmb = res.data[i * 2]?.embedding;
+          const searchEmb = res.data[i * 2 + 1]?.embedding;
+          invariant(
+            summaryEmb && searchEmb,
+            `embedUploadSummariesBulk: missing embedding pair for ${row.id}`,
+          );
+          return tx
+            .update(UploadRecord)
+            .set({
+              summaryEmbedding: summaryEmb,
+              searchSummaryEmbedding: searchEmb,
+            })
+            .where(eq(UploadRecord.id, row.id));
+        }),
+      );
+    });
+    embedded += slice.length;
   }
 
-  // Write each pair in a transaction. 100 uploads × 1 round-trip each
-  // is well within the live path's latency budget; if scale grows,
-  // batch the UPDATEs into a single multi-statement query.
-  await db.transaction(async (tx) => {
-    await Promise.all(
-      eligibleUploadIds.map((uploadId, i) => {
-        const summaryEmb = res.data[i * 2]?.embedding;
-        const searchEmb = res.data[i * 2 + 1]?.embedding;
-        invariant(
-          summaryEmb && searchEmb,
-          `embedUploadSummariesBulk: missing embedding pair for ${uploadId}`,
-        );
-        return tx
-          .update(UploadRecord)
-          .set({
-            summaryEmbedding: summaryEmb,
-            searchSummaryEmbedding: searchEmb,
-          })
-          .where(eq(UploadRecord.id, uploadId));
-      }),
-    );
-  });
-
   activityLogger.info(
-    `Embedded ${eligibleUploadIds.length} upload summary pairs (${skipped} skipped)`,
+    `Embedded ${embedded} upload summary pairs (${skipped} skipped)`,
   );
-  return { embedded: eligibleUploadIds.length, skipped };
+  return { embedded, skipped };
 }

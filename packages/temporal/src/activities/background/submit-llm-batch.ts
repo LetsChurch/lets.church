@@ -1,6 +1,11 @@
 import { Channel, db, TranscriptParagraph, UploadRecord } from '@letschurch/db';
 import { asc, eq, inArray } from 'drizzle-orm';
-import { ANNOTATE_MODEL, EMBED_MODEL, SUMMARY_MODEL } from '../../util/llm';
+import {
+  ANNOTATE_MODEL,
+  EMBED_MAX_INPUTS,
+  EMBED_MODEL,
+  SUMMARY_MODEL,
+} from '../../util/llm';
 import logger from '../../util/logger';
 import {
   type BatchRequestLine,
@@ -65,13 +70,10 @@ const MAX_EMBED_INPUTS_PER_BATCH = 45_000;
 // density on this platform is ~14-19/min, so ~2 hours of content
 // already hits this — long-form podcasts and conference recordings
 // regularly cross it. Each upload's paragraphs are split into
-// 2048-input chunks; the chunkIdx is encoded in the custom_id
-// (`embed-paragraphs:<uploadId>:<chunkIdx>`) so the processor can
-// slice paragraphs back into the right window.
-//
-// Must match `EMBED_PARAGRAPHS_CHUNK_SIZE` in
-// `process-llm-batch-output.ts`.
-const MAX_INPUTS_PER_EMBED_REQUEST = 2_048;
+// EMBED_MAX_INPUTS-sized chunks; the chunkIdx is encoded in the
+// custom_id (`embed-paragraphs:<uploadId>:<chunkIdx>`) so the
+// processor can slice paragraphs back into the right window.
+const MAX_INPUTS_PER_EMBED_REQUEST = EMBED_MAX_INPUTS;
 
 // Build all the chat / embed request lines for a group of uploads,
 // upload to OpenAI as one JSONL, create the batch, return the

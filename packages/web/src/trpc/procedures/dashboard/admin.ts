@@ -3138,25 +3138,16 @@ export const adminRouter = router({
         .where(
           and(
             isNotNull(UploadRecord.transcribingFinishedAt),
+            // The join already restricts LlmCall to the most-recent
+            // annotate call per upload; failing the success check here
+            // means the latest attempt failed. We don't also check for
+            // OUTLINE existence — a legal-but-zero-outline successful
+            // run has `outcome='success'` so it's already excluded by
+            // this same check, and uploads whose prior runs landed
+            // outlines but whose most recent regenerate failed *should*
+            // surface here so the admin knows the regen they kicked off
+            // didn't take.
             sql`${LlmCall.outcome} != 'success'`,
-            // No OUTLINE annotation landed (a successful retry would have
-            // produced one and we'd want to exclude the upload from the
-            // failure list).
-            notExists(
-              db
-                .select({ one: sql<number>`1` })
-                .from(Annotation)
-                .innerJoin(
-                  TranscriptParagraph,
-                  eq(Annotation.paragraphId, TranscriptParagraph.id),
-                )
-                .where(
-                  and(
-                    eq(TranscriptParagraph.uploadRecordId, UploadRecord.id),
-                    eq(Annotation.kind, 'OUTLINE'),
-                  ),
-                ),
-            ),
           ),
         )
         .orderBy(desc(LlmCall.createdAt))
@@ -3214,21 +3205,6 @@ export const adminRouter = router({
         and(
           isNotNull(UploadRecord.transcribingFinishedAt),
           sql`${LlmCall.outcome} != 'success'`,
-          notExists(
-            db
-              .select({ one: sql<number>`1` })
-              .from(Annotation)
-              .innerJoin(
-                TranscriptParagraph,
-                eq(Annotation.paragraphId, TranscriptParagraph.id),
-              )
-              .where(
-                and(
-                  eq(TranscriptParagraph.uploadRecordId, UploadRecord.id),
-                  eq(Annotation.kind, 'OUTLINE'),
-                ),
-              ),
-          ),
         ),
       );
     return rows[0]?.cnt ?? 0;
@@ -3286,8 +3262,13 @@ export const adminRouter = router({
         .where(
           and(
             isNotNull(UploadRecord.transcribingFinishedAt),
+            // Same gating reasoning as getFailedAnnotations: the join
+            // restricts LlmCall to the most-recent summarize call, and
+            // a successful-but-empty run already has `outcome='success'`
+            // so it's excluded here. Showing uploads with a prior good
+            // summary + a failed regen is intentional — the admin
+            // wants to know their regen didn't take.
             sql`${LlmCall.outcome} != 'success'`,
-            isNull(UploadRecord.summary),
           ),
         )
         .orderBy(desc(LlmCall.createdAt))
@@ -3342,7 +3323,6 @@ export const adminRouter = router({
         and(
           isNotNull(UploadRecord.transcribingFinishedAt),
           sql`${LlmCall.outcome} != 'success'`,
-          isNull(UploadRecord.summary),
         ),
       );
     return rows[0]?.cnt ?? 0;

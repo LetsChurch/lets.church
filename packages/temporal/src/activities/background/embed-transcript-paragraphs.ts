@@ -1,9 +1,10 @@
 import { db, TranscriptParagraph } from '@letschurch/db';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNull } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 import {
   createEmbeddingsTracked,
   EMBED_DIMS,
+  EMBED_MAX_INPUTS,
   EMBED_MODEL,
   openrouterExtras,
 } from '../../util/llm';
@@ -14,75 +15,97 @@ const moduleLogger = logger.child({
 });
 
 /**
- * Embed every `transcript_paragraph` row for an upload with
- * `openai/text-embedding-3-small` (1536 dims) via OpenRouter, then persist
- * the vectors back to the same rows.
+ * Embed `transcript_paragraph` rows with `openai/text-embedding-3-small`
+ * (1536 dims) via OpenRouter, then persist vectors back.
  *
- * One HTTP request: OpenAI's embeddings endpoint accepts up to 2048 `input`
- * strings per call (and OpenRouter routes the same request format), and the
- * largest sermon we'd see has well under 100 paragraphs. The SDK's built-in
- * exponential backoff handles 429/5xx (`maxRetries: 5` in `util/llm.ts`); the
- * Temporal activity retry sits on top of that.
+ * Idempotency: by default (`force: false`) only rows where `embedding IS
+ * NULL` are sent — parent-workflow retries that re-enter this activity
+ * after a flake don't re-bill tokens or write duplicate `llm_call` rows
+ * for paragraphs whose previous attempt already landed. The admin
+ * `regenerateUploadAnnotations` / `Reprocess Media` paths pass
+ * `force: true` to overwrite.
  *
- * The write is N updates inside a single transaction (different embedding per
- * row, no stable upsert key). Idempotent: re-running overwrites.
+ * Chunking: OpenAI's embeddings endpoint caps `input` at 2048 strings per
+ * request (`EMBED_MAX_INPUTS`); long uploads exceed that. We slice the
+ * pending rows into chunks and write each chunk's vectors in its own
+ * transaction so a flake mid-job leaves the durable rows intact for the
+ * next retry to skip past.
  */
 export default async function embedTranscriptParagraphs(
   uploadRecordId: string,
+  options: { force?: boolean } = {},
 ) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'embedTranscriptParagraphs',
     context: { args: { uploadRecordId } },
   });
+  const force = options.force ?? false;
 
   const rows = await db
     .select({ id: TranscriptParagraph.id, text: TranscriptParagraph.text })
     .from(TranscriptParagraph)
-    .where(eq(TranscriptParagraph.uploadRecordId, uploadRecordId))
+    .where(
+      force
+        ? eq(TranscriptParagraph.uploadRecordId, uploadRecordId)
+        : and(
+            eq(TranscriptParagraph.uploadRecordId, uploadRecordId),
+            isNull(TranscriptParagraph.embedding),
+          ),
+    )
     .orderBy(asc(TranscriptParagraph.order));
 
   if (rows.length === 0) {
-    activityLogger.info('No paragraphs to embed');
+    activityLogger.info(
+      force ? 'No paragraphs to embed' : 'All paragraphs already embedded',
+    );
     return { paragraphs: 0 };
   }
 
-  activityLogger.info(`Embedding ${rows.length} paragraphs`);
-  const res = await createEmbeddingsTracked({
-    tracking: { activity: 'embedTranscriptParagraphs', uploadRecordId },
-    model: EMBED_MODEL,
-    input: rows.map((r) => r.text),
-    ...(openrouterExtras as Record<string, unknown>),
-  });
-
-  invariant(
-    res.data.length === rows.length,
-    `Embedding count mismatch: expected ${rows.length}, got ${res.data.length}`,
+  const chunkCount = Math.ceil(rows.length / EMBED_MAX_INPUTS);
+  activityLogger.info(
+    `Embedding ${rows.length} paragraphs across ${chunkCount} chunk(s)` +
+      (force ? ' (force)' : ''),
   );
 
-  // OpenAI returns embeddings in the same order as input; double-check the
-  // index field matches so a future provider change can't silently misalign.
-  for (const [i, d] of res.data.entries()) {
+  let embedded = 0;
+  for (let chunkIdx = 0; chunkIdx < chunkCount; chunkIdx++) {
+    const start = chunkIdx * EMBED_MAX_INPUTS;
+    const slice = rows.slice(start, start + EMBED_MAX_INPUTS);
+    const res = await createEmbeddingsTracked({
+      tracking: { activity: 'embedTranscriptParagraphs', uploadRecordId },
+      model: EMBED_MODEL,
+      input: slice.map((r) => r.text),
+      ...(openrouterExtras as Record<string, unknown>),
+    });
+
     invariant(
-      d.index === i,
-      `Embedding index mismatch at position ${i}: got ${d.index}`,
+      res.data.length === slice.length,
+      `Embedding count mismatch on chunk ${chunkIdx}: expected ${slice.length}, got ${res.data.length}`,
     );
-    invariant(
-      d.embedding.length === EMBED_DIMS,
-      `Embedding dim mismatch at position ${i}: got ${d.embedding.length}`,
-    );
+    for (const [i, d] of res.data.entries()) {
+      invariant(
+        d.index === i,
+        `Embedding index mismatch on chunk ${chunkIdx} pos ${i}: got ${d.index}`,
+      );
+      invariant(
+        d.embedding.length === EMBED_DIMS,
+        `Embedding dim mismatch on chunk ${chunkIdx} pos ${i}: got ${d.embedding.length}`,
+      );
+    }
+
+    await db.transaction(async (tx) => {
+      await Promise.all(
+        slice.map((r, i) =>
+          tx
+            .update(TranscriptParagraph)
+            .set({ embedding: res.data[i]?.embedding })
+            .where(eq(TranscriptParagraph.id, r.id)),
+        ),
+      );
+    });
+    embedded += slice.length;
   }
 
-  await db.transaction(async (tx) => {
-    await Promise.all(
-      rows.map((r, i) =>
-        tx
-          .update(TranscriptParagraph)
-          .set({ embedding: res.data[i]?.embedding })
-          .where(eq(TranscriptParagraph.id, r.id)),
-      ),
-    );
-  });
-
-  activityLogger.info(`Embedded ${rows.length} paragraphs`);
-  return { paragraphs: rows.length };
+  activityLogger.info(`Embedded ${embedded} paragraphs`);
+  return { paragraphs: embedded };
 }

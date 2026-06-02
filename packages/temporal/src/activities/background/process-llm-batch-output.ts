@@ -9,6 +9,7 @@ import { invariant } from 'es-toolkit';
 import {
   ANNOTATE_MODEL,
   EMBED_DIMS,
+  EMBED_MAX_INPUTS,
   EMBED_MODEL,
   recordLlmCall,
   SUMMARY_MODEL,
@@ -32,11 +33,11 @@ const moduleLogger = logger.child({
   module: 'temporal/activities/background/process-llm-batch-output',
 });
 
-// Must match `MAX_INPUTS_PER_EMBED_REQUEST` in `submit-llm-batch.ts`.
-// embed-paragraphs requests are chunked at this size; the chunkIdx
-// in the custom_id encodes which window of an upload's paragraphs
-// the response corresponds to.
-const EMBED_PARAGRAPHS_CHUNK_SIZE = 2_048;
+// Window size for embed-paragraphs batch requests. Hoisted constant
+// shared with the submit side (`submit-llm-batch.ts` chunks at the
+// same value); the chunkIdx in the custom_id encodes which window of
+// an upload's paragraphs the response corresponds to.
+const EMBED_PARAGRAPHS_CHUNK_SIZE = EMBED_MAX_INPUTS;
 
 export type ProcessLlmBatchOutputArgs = {
   batchId: string;
@@ -327,18 +328,32 @@ async function handleEmbedParagraphs(
   // `order`) so embeddings line up by `data[i].index`. The submit
   // path uses the identical ORDER BY, and chunks the upload's
   // paragraphs into 2048-input windows; this chunk corresponds to
-  // the slice `[chunkIdx*2048, chunkIdx*2048 + data.length)`.
+  // the slice `[chunkIdx*2048, chunkIdx*2048 + expectedChunkLen)`.
   const rows = await db
     .select({ id: TranscriptParagraph.id })
     .from(TranscriptParagraph)
     .where(eq(TranscriptParagraph.uploadRecordId, uploadId))
     .orderBy(asc(TranscriptParagraph.order));
   const chunkStart = chunkIdx * EMBED_PARAGRAPHS_CHUNK_SIZE;
-  const chunkRows = rows.slice(chunkStart, chunkStart + data.length);
   invariant(
-    chunkRows.length === data.length,
-    `Embed-paragraphs batch ${line.custom_id}: chunk slice mismatch — expected ${data.length} rows at offset ${chunkStart}, got ${chunkRows.length}`,
+    chunkStart >= 0 && chunkStart < rows.length,
+    `Embed-paragraphs batch ${line.custom_id}: chunkStart ${chunkStart} out of range for ${rows.length} rows`,
   );
+  // Derive the expected chunk length from the submit-side window —
+  // NOT from `data.length`. If the provider ever returns a partial
+  // response, or paragraphs were added/deleted between submit and
+  // process (a re-transcribe mid-batch is the realistic case),
+  // slicing by `data.length` would silently misalign embeddings
+  // with paragraphs. Asserting the expected size catches both.
+  const expectedChunkLen = Math.min(
+    EMBED_PARAGRAPHS_CHUNK_SIZE,
+    rows.length - chunkStart,
+  );
+  invariant(
+    data.length === expectedChunkLen,
+    `Embed-paragraphs batch ${line.custom_id}: response length ${data.length} != expected ${expectedChunkLen} (chunkStart=${chunkStart}, totalRows=${rows.length}). Paragraph count may have changed since submit; skip + re-run rather than misalign vectors.`,
+  );
+  const chunkRows = rows.slice(chunkStart, chunkStart + expectedChunkLen);
 
   await db.transaction(async (tx) => {
     await Promise.all(

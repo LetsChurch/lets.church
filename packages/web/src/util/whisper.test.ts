@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
   readWhisperJsonFile,
-  stitchToHtml,
   stitchTranscript,
   whisperJsonToVtt,
 } from './whisper';
@@ -98,34 +97,5 @@ describe('whisperJsonToVtt', () => {
       Segment 4
       "
     `);
-  });
-});
-
-describe('stitchToHtml', () => {
-  test('empty transcript', () => {
-    expect(
-      stitchToHtml({ text: '', segments: [], language: 'English' }),
-    ).toMatchInlineSnapshot('""');
-  });
-
-  test('single-segment transcript', async () => {
-    const data = await readWhisperJsonFile(
-      decodeURIComponent(
-        new URL('./__fixtures__/thankyou.json', import.meta.url).pathname,
-      ),
-    );
-
-    expect(stitchToHtml(data)).toMatchSnapshot();
-  });
-
-  test('02 - Introduction.json', async () => {
-    const data = await readWhisperJsonFile(
-      decodeURIComponent(
-        new URL('./__fixtures__/02 - Introduction.json', import.meta.url)
-          .pathname,
-      ),
-    );
-
-    expect(stitchToHtml(data)).toMatchSnapshot();
   });
 });

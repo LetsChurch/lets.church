@@ -21,17 +21,29 @@ const moduleLogger = logger.child({
  * One HTTP call with two-element `input` array — both vectors come back in
  * one round-trip. Depends on `summarize-upload` having run first (will throw
  * if either summary is null).
+ *
+ * Idempotency: by default (`force: false`) returns immediately when both
+ * embeddings are already populated, so parent-workflow retries don't
+ * re-bill tokens. The admin `regenerateUploadSummary` path passes
+ * `force: true` to overwrite — the production call site shouldn't, since
+ * summary text changing is what should trigger a re-embed.
  */
-export default async function embedUpload(uploadRecordId: string) {
+export default async function embedUpload(
+  uploadRecordId: string,
+  options: { force?: boolean } = {},
+) {
   const activityLogger = moduleLogger.child({
     temporalActivity: 'embedUpload',
     context: { args: { uploadRecordId } },
   });
+  const force = options.force ?? false;
 
   const row = await db
     .select({
       summary: UploadRecord.summary,
       searchSummary: UploadRecord.searchSummary,
+      summaryEmbedding: UploadRecord.summaryEmbedding,
+      searchSummaryEmbedding: UploadRecord.searchSummaryEmbedding,
     })
     .from(UploadRecord)
     .where(eq(UploadRecord.id, uploadRecordId))
@@ -42,6 +54,11 @@ export default async function embedUpload(uploadRecordId: string) {
     row.summary && row.searchSummary,
     `Summaries missing for ${uploadRecordId} — run summarizeUpload first`,
   );
+
+  if (!force && row.summaryEmbedding && row.searchSummaryEmbedding) {
+    activityLogger.info('Summary embeddings already present, skipping');
+    return {};
+  }
 
   const res = await createEmbeddingsTracked({
     tracking: { activity: 'embedUpload', uploadRecordId },

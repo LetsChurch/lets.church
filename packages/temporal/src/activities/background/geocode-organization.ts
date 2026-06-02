@@ -18,12 +18,7 @@ const moduleLogger = logger.child({
   module: 'temporal/activities/background/index-document',
 });
 
-export type DocumentKind =
-  | 'transcript'
-  | 'transcriptHtml'
-  | 'upload'
-  | 'organization'
-  | 'channel';
+export type DocumentKind = 'transcript' | 'upload' | 'organization' | 'channel';
 
 // https://github.com/colinhacks/zod/discussions/2178#discussioncomment-5256971
 // @see: https://github.com/colinhacks/zod#json-type

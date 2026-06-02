@@ -64,6 +64,14 @@ export const SUMMARY_FALLBACK_MODEL =
 export const EMBED_MODEL = 'openai/text-embedding-3-small';
 export const EMBED_DIMS = 1536;
 
+// OpenAI's per-request input cap for `embeddings.create` (`openai/text-
+// embedding-3-small` is in the 2048-bracket of the embeddings API). Live
+// and batch embed paths both have to chunk requests at this limit;
+// hoisted here so they can't drift. Verify when bumping the embedding
+// model — the cap is per-model and the relevant docs are at
+// https://platform.openai.com/docs/api-reference/embeddings/create.
+export const EMBED_MAX_INPUTS = 2_048;
+
 /**
  * OpenRouter-specific request body extras spread into every background LLM
  * call (chat completions + embeddings).

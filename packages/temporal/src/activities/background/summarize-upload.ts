@@ -381,8 +381,8 @@ export default async function summarizeUpload(
   });
 
   // Metadata gives the model a concrete anchor for openers + name resolution.
-  // The existing summary fields are pulled in the same query so the
-  // idempotency check below doesn't need a second round-trip.
+  // Pull `sections` here so the idempotency check below can compare what's
+  // stored against the current outline set without a second round-trip.
   const upload = await db
     .select({
       title: UploadRecord.title,
@@ -390,6 +390,7 @@ export default async function summarizeUpload(
       channelName: Channel.name,
       summary: UploadRecord.summary,
       searchSummary: UploadRecord.searchSummary,
+      sections: UploadRecord.sections,
     })
     .from(UploadRecord)
     .innerJoin(Channel, eq(Channel.id, UploadRecord.channelId))
@@ -398,14 +399,32 @@ export default async function summarizeUpload(
 
   invariant(upload, `Upload record ${uploadRecordId} not found`);
 
+  // Outline annotations from the annotate pass are the source of truth
+  // for section breaks. Loaded BEFORE the idempotency check so we can
+  // detect the stale-sections case: summarize ran first (no outlines
+  // available, sections=[]), annotate later succeeded on retry, but
+  // the existing summary would otherwise short-circuit forever, leaving
+  // `sections` empty even though OUTLINE annotations now exist.
+  const sectionInputs = await loadOutlineSectionsForSummary(uploadRecordId);
+
   if (!options.force && upload.summary && upload.searchSummary) {
+    // Skip when the persisted sections count matches the current outline
+    // set — same shape both ways means a re-run wouldn't add information.
+    // Mismatch (typically `outlines > 0 && sections === 0` after a
+    // graceful-degradation summarize/late-annotate sequence) re-runs so
+    // descriptions land for the now-available headings.
+    if (sectionInputs.length === upload.sections.length) {
+      activityLogger.info(
+        `Skipping summarize — summary already present (force=false): display=${upload.summary.length}ch, search=${upload.searchSummary.length}ch, sections=${upload.sections.length}`,
+      );
+      return {
+        summaryLength: upload.summary.length,
+        searchSummaryLength: upload.searchSummary.length,
+      };
+    }
     activityLogger.info(
-      `Skipping summarize — summary already present (force=false): display=${upload.summary.length}ch, search=${upload.searchSummary.length}ch`,
+      `Re-summarizing despite existing summary — outline/section mismatch (outlines=${sectionInputs.length}, persisted sections=${upload.sections.length})`,
     );
-    return {
-      summaryLength: upload.summary.length,
-      searchSummaryLength: upload.searchSummary.length,
-    };
   }
 
   const paragraphs = await db
@@ -418,13 +437,6 @@ export default async function summarizeUpload(
     paragraphs.length > 0,
     `No transcript paragraphs for ${uploadRecordId} — cannot summarize`,
   );
-
-  // Outline annotations from the annotate pass are the source of
-  // truth for section breaks. The summarize prompt receives them as
-  // input + emits a description per section in its JSON output.
-  // Empty array (annotate hasn't run, or produced zero outlines) →
-  // prompt falls back to the no-sections shape.
-  const sectionInputs = await loadOutlineSectionsForSummary(uploadRecordId);
   activityLogger.info(
     `Summarizing ${paragraphs.length} paragraphs with ${SUMMARY_MODEL} (${sectionInputs.length} outline sections)`,
   );
