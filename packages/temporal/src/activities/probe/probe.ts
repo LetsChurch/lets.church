@@ -80,7 +80,8 @@ export default async function probe(
 
     const downloadStart = Date.now();
     await ingestS3.streamObjectToFile(s3UploadKey, downloadPath, {
-      heartbeat: () => Context.current().heartbeat('download'),
+      signal,
+      heartbeat: (progress) => Context.current().heartbeat(progress),
     });
     const downloadDuration = Date.now() - downloadStart;
 

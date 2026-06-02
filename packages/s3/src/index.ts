@@ -1,6 +1,6 @@
 import { createReadStream, createWriteStream } from 'node:fs';
-import { stat } from 'node:fs/promises';
-import { type Readable, Transform } from 'node:stream';
+import { open as fsOpen, stat } from 'node:fs/promises';
+import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import {
   AbortMultipartUploadCommand,
@@ -9,7 +9,7 @@ import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
   GetObjectCommand,
-  type GetObjectCommandInput,
+  HeadObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
   S3,
@@ -201,34 +201,64 @@ export class LcS3Client {
     key: string,
     path: string,
     extra?:
-      | (Omit<GetObjectCommandInput, 'Bucket' | 'Key'> & {
+      | {
           heartbeat?: (arg: string) => unknown;
-        })
+          signal?: AbortSignal;
+          partSize?: number;
+        }
       | ((arg: string) => unknown),
   ) {
-    const { getArgs, heartbeat } =
-      typeof extra === 'function'
-        ? { getArgs: {}, heartbeat: extra }
-        : { getArgs: extra, heartbeat: undefined };
-    const cmd = new GetObjectCommand({
-      Bucket: this.bucket,
-      Key: key,
-      ...getArgs,
-    });
-    const res = await this.client.send(cmd);
+    const opts: {
+      heartbeat?: (arg: string) => unknown;
+      signal?: AbortSignal;
+      partSize?: number;
+    } = typeof extra === 'function' ? { heartbeat: extra } : (extra ?? {});
+    const partSize = opts.partSize ?? 100 * 1024 * 1024;
+    const { heartbeat, signal } = opts;
 
-    invariant(res.Body, 'No body in response!');
-    return pipeline(
-      res.Body.transformToWebStream() as unknown as NodeJS.ReadableStream,
-      new Transform({
-        transform(chunk, _encoding, callback) {
-          this.push(chunk);
-          heartbeat?.(`${chunk.length} bytes`);
-          callback();
-        },
-      }),
-      createWriteStream(path),
+    // Range-based download: one HEAD then sequential GETs of `partSize`
+    // bytes each. Heartbeats fire once per completed part — i.e. tied to
+    // bytes actually persisted, not to "did a chunk appear on the wire".
+    // The previous per-chunk-Transform pattern stopped heartbeating during
+    // TCP/S3 stalls, which let a long stall blow past `heartbeatTimeout`.
+    // The AbortSignal is plumbed into both HEAD and each GET so activity
+    // cancellation aborts the in-flight HTTP request instead of letting
+    // the download finish into a dead activity.
+    const head = await this.client.send(
+      new HeadObjectCommand({ Bucket: this.bucket, Key: key }),
+      { abortSignal: signal },
     );
+    const total = head.ContentLength;
+    invariant(total, `HeadObject returned no ContentLength for ${key}`);
+
+    // Create+truncate so each ranged part can write at its byte offset
+    // via `flags: 'r+'`.
+    const fh = await fsOpen(path, 'w');
+    await fh.close();
+
+    let downloaded = 0;
+    while (downloaded < total) {
+      signal?.throwIfAborted();
+      const end: number = Math.min(downloaded + partSize, total) - 1;
+
+      const res = await this.client.send(
+        new GetObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+          Range: `bytes=${downloaded}-${end}`,
+        }),
+        { abortSignal: signal },
+      );
+      invariant(res.Body, `No body in GetObject range response for ${key}`);
+
+      await pipeline(
+        res.Body.transformToWebStream() as unknown as NodeJS.ReadableStream,
+        createWriteStream(path, { flags: 'r+', start: downloaded }),
+      );
+
+      downloaded = end + 1;
+      heartbeat?.(`${downloaded}/${total}`);
+    }
   }
 
   async *listObjects(prefix?: string) {
