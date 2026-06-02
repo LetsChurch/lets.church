@@ -239,7 +239,7 @@ export function MediaInfoTabs({
           // links use.
           <div className="border-zinc-200 border-t px-5 py-4 dark:border-zinc-800">
             <h3 className="mb-3 font-semibold text-primary text-sm">
-              In this {lengthSeconds ? 'video' : 'audio'}
+              Chapters
             </h3>
             <ol className="space-y-3">
               {outline.map((entry) => (
