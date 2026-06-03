@@ -127,13 +127,21 @@ export function bibleBookOrder(book: string): number {
 
 export function formatBibleRef(meta: BibleMetadata): string {
   const name = BOOKS[meta.book]?.name ?? meta.book;
-  if (meta.chapter == null) return name;
-  if (meta.verse == null) return `${name} ${meta.chapter}`;
+  const rest = formatBibleRefShort(meta);
+  return rest ? `${name} ${rest}` : name;
+}
+
+// Reference without the book name (e.g. "3:5-7"). Used for per-occurrence
+// labels inside a grouped scripture-index heading where the book name is
+// already shown above.
+export function formatBibleRefShort(meta: BibleMetadata): string {
+  if (meta.chapter == null) return '';
+  if (meta.verse == null) return `${meta.chapter}`;
   if (meta.endChapter != null && meta.endVerse != null) {
-    return `${name} ${meta.chapter}:${meta.verse}-${meta.endChapter}:${meta.endVerse}`;
+    return `${meta.chapter}:${meta.verse}-${meta.endChapter}:${meta.endVerse}`;
   }
   if (meta.endVerse != null) {
-    return `${name} ${meta.chapter}:${meta.verse}-${meta.endVerse}`;
+    return `${meta.chapter}:${meta.verse}-${meta.endVerse}`;
   }
-  return `${name} ${meta.chapter}:${meta.verse}`;
+  return `${meta.chapter}:${meta.verse}`;
 }

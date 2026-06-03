@@ -8,6 +8,7 @@ import {
   bibleBookOrder,
   buildBibleHubUrl,
   formatBibleRef,
+  formatBibleRefShort,
   parseBibleMetadata,
 } from '@/util/bible-url';
 
@@ -27,21 +28,39 @@ export type ScriptureExcerpt = {
   after: string;
 };
 
-// One place a reference is cited: where to seek, and the surrounding text.
+// One place a reference is cited: where to seek, the surrounding text,
+// and which specific reference within the group was cited (a group may
+// span e.g. Proverbs 3:5-7, but a given occurrence might only cite 3:6).
 export type ScriptureOccurrence = {
   seconds: number;
   excerpt: ScriptureExcerpt;
+  // Short form (no book name) of the specific reference for this occurrence.
+  // Equals the group ref's short form when the group has one underlying entry.
+  ref: string;
+  url: string;
 };
 
-export type ScriptureIndexEntry = {
-  // Canonical (book, chapter, verse, endChapter, endVerse) key — matches
-  // the per-paragraph `bibleKey` in transcript-paragraphs.tsx so the same
-  // reference cited across paragraphs collapses to one entry.
+// A canonically-ordered scripture-index row. When `entryCount` > 1, the
+// `ref` is a synthesized union range covering all merged citations (e.g.
+// "Proverbs 3:5-7" absorbing 3:5, 3:6, 3:7) and each occurrence carries
+// its own narrower `ref` for display next to the timestamp. When
+// `entryCount` === 1 the group is a passthrough — the heading and the
+// single underlying citation are the same.
+export type ScriptureIndexGroup = {
   key: string;
   ref: string;
   url: string;
-  occurrences: Array<ScriptureOccurrence>;
   meta: BibleMetadata;
+  occurrences: Array<ScriptureOccurrence>;
+  entryCount: number;
+};
+
+type ScriptureEntry = {
+  key: string;
+  ref: string;
+  url: string;
+  meta: BibleMetadata;
+  occurrences: Array<ScriptureOccurrence>;
 };
 
 function bibleKey(meta: BibleMetadata): string {
@@ -97,16 +116,17 @@ function buildExcerpt(
 
 // Aggregate all BIBLE annotations across the transcript into a deduped,
 // canonically-ordered (Genesis → Revelation, then chapter/verse) list —
-// a back-of-the-book scripture index. Each entry records every place the
-// reference is cited (timestamp + surrounding excerpt) so the UI can offer
-// seek chips with context. Returns [] when there are no paragraphs or no
-// scripture annotations.
+// a back-of-the-book scripture index. Entries that overlap or are
+// verse-adjacent within the same single chapter (e.g. 3:5-7 with 3:5,
+// 3:6, 3:7) collapse into one group with a synthesized union heading;
+// each occurrence keeps its specific reference for display. Returns []
+// when there are no paragraphs or no scripture annotations.
 export function buildScriptureIndex(
   paragraphs: ReadonlyArray<TranscriptParagraph> | null | undefined,
-): Array<ScriptureIndexEntry> {
+): Array<ScriptureIndexGroup> {
   if (!paragraphs || paragraphs.length === 0) return [];
 
-  const byKey = new Map<string, ScriptureIndexEntry>();
+  const byKey = new Map<string, ScriptureEntry>();
 
   for (const paragraph of paragraphs) {
     for (const annotation of paragraph.annotations) {
@@ -120,6 +140,8 @@ export function buildScriptureIndex(
       const occurrence: ScriptureOccurrence = {
         seconds: paragraph.start,
         excerpt: buildExcerpt(paragraph, annotation),
+        ref: formatBibleRefShort(meta),
+        url,
       };
       const existing = byKey.get(key);
       if (existing) {
@@ -141,17 +163,106 @@ export function buildScriptureIndex(
   }
 
   const entries = Array.from(byKey.values());
-  for (const entry of entries) {
-    entry.occurrences.sort((a, b) => a.seconds - b.seconds);
-  }
-
   entries.sort((a, b) => {
     const bookDelta = bibleBookOrder(a.meta.book) - bibleBookOrder(b.meta.book);
     if (bookDelta !== 0) return bookDelta;
     const chapterDelta = (a.meta.chapter ?? 0) - (b.meta.chapter ?? 0);
     if (chapterDelta !== 0) return chapterDelta;
-    return (a.meta.verse ?? 0) - (b.meta.verse ?? 0);
+    const verseDelta = (a.meta.verse ?? 0) - (b.meta.verse ?? 0);
+    if (verseDelta !== 0) return verseDelta;
+    // Longer ranges first so they anchor the group's heading. Encode
+    // (endChapter, endVerse) into one comparable number so cross-chapter
+    // ranges still sort wider-first against same-start singletons.
+    const aEnd =
+      (a.meta.endChapter ?? a.meta.chapter ?? 0) * 10000 +
+      (a.meta.endVerse ?? a.meta.verse ?? 0);
+    const bEnd =
+      (b.meta.endChapter ?? b.meta.chapter ?? 0) * 10000 +
+      (b.meta.endVerse ?? b.meta.verse ?? 0);
+    return bEnd - aEnd;
   });
 
-  return entries;
+  return groupEntries(entries);
+}
+
+// A meta is "single-chapter, verse-anchored" iff it cites at least one
+// specific verse and the range stays within one chapter. Only these can
+// participate in verse-overlap/adjacency grouping; book- or chapter-only
+// citations and cross-chapter ranges stay on their own.
+function isSingleChapterVerse(meta: BibleMetadata): boolean {
+  return (
+    meta.chapter != null &&
+    meta.verse != null &&
+    (meta.endChapter == null || meta.endChapter === meta.chapter)
+  );
+}
+
+function unionMeta(a: BibleMetadata, b: BibleMetadata): BibleMetadata {
+  // Caller guarantees both are single-chapter, same book + chapter.
+  const aStart = a.verse ?? 0;
+  const bStart = b.verse ?? 0;
+  const aEnd = a.endVerse ?? aStart;
+  const bEnd = b.endVerse ?? bStart;
+  const start = Math.min(aStart, bStart);
+  const end = Math.max(aEnd, bEnd);
+  return {
+    ...a,
+    verse: start,
+    endVerse: end > start ? end : null,
+    endChapter: null,
+  };
+}
+
+function groupEntries(
+  entries: Array<ScriptureEntry>,
+): Array<ScriptureIndexGroup> {
+  const groups: Array<ScriptureIndexGroup> = [];
+  let current: {
+    meta: BibleMetadata;
+    occurrences: Array<ScriptureOccurrence>;
+    entryCount: number;
+  } | null = null;
+
+  const flush = () => {
+    if (!current) return;
+    current.occurrences.sort((a, b) => a.seconds - b.seconds);
+    const url = buildBibleHubUrl(current.meta);
+    if (url) {
+      groups.push({
+        key: bibleKey(current.meta),
+        ref: formatBibleRef(current.meta),
+        url,
+        meta: current.meta,
+        occurrences: current.occurrences,
+        entryCount: current.entryCount,
+      });
+    }
+    current = null;
+  };
+
+  for (const entry of entries) {
+    if (
+      current &&
+      isSingleChapterVerse(current.meta) &&
+      isSingleChapterVerse(entry.meta) &&
+      current.meta.book === entry.meta.book &&
+      current.meta.chapter === entry.meta.chapter &&
+      // Overlap or adjacent (gap of zero): start ≤ current end + 1.
+      (entry.meta.verse ?? 0) <=
+        (current.meta.endVerse ?? current.meta.verse ?? 0) + 1
+    ) {
+      current.meta = unionMeta(current.meta, entry.meta);
+      current.occurrences.push(...entry.occurrences);
+      current.entryCount += 1;
+      continue;
+    }
+    flush();
+    current = {
+      meta: entry.meta,
+      occurrences: [...entry.occurrences],
+      entryCount: 1,
+    };
+  }
+  flush();
+  return groups;
 }

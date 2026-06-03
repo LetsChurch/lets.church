@@ -13,7 +13,7 @@ import { $setPlayAt } from '@/stores/player';
 import { formatTime } from '@/util/format';
 import type { KeywordIndexEntry } from '@/util/keyword-index';
 import { getLicenseInfo } from '@/util/license';
-import type { ScriptureIndexEntry } from '@/util/scripture-index';
+import type { ScriptureIndexGroup } from '@/util/scripture-index';
 
 export type MediaOutlineEntry = {
   id: string;
@@ -27,7 +27,7 @@ type MediaInfoTabsProps = {
   descriptionHtml: string | null;
   summary: string | null;
   outline: ReadonlyArray<MediaOutlineEntry>;
-  scriptureIndex: ReadonlyArray<ScriptureIndexEntry>;
+  scriptureIndex: ReadonlyArray<ScriptureIndexGroup>;
   keywordIndex: ReadonlyArray<KeywordIndexEntry>;
   viewCount: number;
   publishedAt: Date | null;
@@ -292,16 +292,16 @@ export function MediaInfoTabs({
               Scripture Index
             </h3>
             <ol className="space-y-5">
-              {scriptureIndex.map((entry) => (
-                <li key={entry.key} className="text-sm leading-[1.5]">
+              {scriptureIndex.map((group) => (
+                <li key={group.key} className="text-sm leading-[1.5]">
                   <a
-                    href={entry.url}
+                    href={group.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label={`${entry.ref} on BibleHub (opens in a new tab)`}
+                    aria-label={`${group.ref} on BibleHub (opens in a new tab)`}
                     className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
                   >
-                    {entry.ref}
+                    {group.ref}
                     <IconExternalLink
                       size={12}
                       aria-hidden="true"
@@ -309,9 +309,9 @@ export function MediaInfoTabs({
                     />
                   </a>
                   <ul className="mt-1 space-y-1">
-                    {entry.occurrences.map((occurrence) => (
+                    {group.occurrences.map((occurrence) => (
                       <li
-                        key={occurrence.seconds}
+                        key={`${occurrence.ref}:${occurrence.seconds}`}
                         className="flex items-baseline gap-2"
                       >
                         <button
@@ -322,6 +322,16 @@ export function MediaInfoTabs({
                           <IconClock size={12} aria-hidden="true" />
                           {formatTime(occurrence.seconds * 1000)}
                         </button>
+                        {group.entryCount > 1 ? (
+                          <a
+                            href={occurrence.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 font-medium text-primary/80 text-xs tabular-nums hover:underline"
+                          >
+                            {occurrence.ref}
+                          </a>
+                        ) : null}
                         <p className="text-primary/60 text-xs leading-[1.5]">
                           {occurrence.excerpt.before}
                           <span className="text-primary/90">
