@@ -1078,11 +1078,26 @@ export async function cancelReindex(kind: ReindexWorkflowParams['kind']) {
 
 // Reprocess Workflows
 
+// Resolve channel slug from id for typedSearchAttributes on channel-scoped
+// reprocess/remux workflows. Returns null for non-channel scopes or missing
+// channels — both are silently dropped from the attribute list.
+async function lookupChannelScopeSlug(
+  scope: ReprocessScope | RemuxScope,
+): Promise<string | null> {
+  if (scope.kind !== 'channel') return null;
+  const channel = await db.query.Channel.findFirst({
+    columns: { slug: true },
+    where: (t, { eq }) => eq(t.id, scope.channelId),
+  });
+  return channel?.slug ?? null;
+}
+
 export async function startReprocess(
   scope: ReprocessScope,
   processingScope: 'transcode' | 'transcribe' | 'everything' = 'transcode',
   options: { viaBatch?: boolean } = {},
 ) {
+  const channelSlug = await lookupChannelScopeSlug(scope);
   return startBackground('reprocessAllWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
@@ -1094,6 +1109,15 @@ export async function startReprocess(
       null,
       { viaBatch: options.viaBatch ?? false },
     ],
+    typedSearchAttributes:
+      scope.kind === 'channel'
+        ? [
+            { key: CHANNEL_ID_KEY, value: scope.channelId },
+            ...(channelSlug
+              ? [{ key: CHANNEL_SLUG_KEY, value: channelSlug }]
+              : []),
+          ]
+        : [],
   });
 }
 
@@ -1125,12 +1149,22 @@ export async function cancelReprocess(scope: ReprocessScope) {
 // Remux Workflows
 
 export async function startRemuxAll(scope: RemuxScope = { kind: 'legacy' }) {
+  const channelSlug = await lookupChannelScopeSlug(scope);
   return startBackground('remuxAllWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_REPROCESS },
     workflowId: makeRemuxAllWorkflowId(scope),
     args: [scope],
+    typedSearchAttributes:
+      scope.kind === 'channel'
+        ? [
+            { key: CHANNEL_ID_KEY, value: scope.channelId },
+            ...(channelSlug
+              ? [{ key: CHANNEL_SLUG_KEY, value: channelSlug }]
+              : []),
+          ]
+        : [],
   });
 }
 
