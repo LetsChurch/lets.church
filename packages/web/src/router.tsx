@@ -31,6 +31,8 @@ export function getRouter() {
   const router = createTanStackRouter({
     routeTree,
     scrollRestoration: true,
+    // _main.tsx uses <main className="overflow-y-auto"> as the scroll container, not window.
+    scrollToTopSelectors: ['main.overflow-y-auto'],
     context,
     Wrap: ({ children }) => (
       <TrpcProvider queryClient={context.queryClient}>{children}</TrpcProvider>
