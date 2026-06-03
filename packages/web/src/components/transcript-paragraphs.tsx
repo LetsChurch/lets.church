@@ -202,12 +202,10 @@ function indexParagraph(paragraph: TranscriptParagraph): {
 // Render a single word as the existing seek-on-click button. Lifted out so
 // both the un-annotated and annotated chunks share the same markup — the
 // active-word highlight stays on the inner button regardless of whether
-// the chunk is wrapped in an annotation hovercard.
-//
-// `inAnnotation` suppresses the per-word hover background when the chunk
-// is inside an annotation span — the annotation provides its own hover
-// treatment at the span level, and per-word hover dots competed with it
-// for attention. Click-to-seek stays intact regardless.
+// the chunk is wrapped in an annotation span. Every word gets the same
+// per-word hover background: annotation highlights now live below the
+// paragraph as pills (and only paint the span on pill hover), so there's
+// no inline treatment for the per-word hover to compete with.
 //
 // `isMatched` (search-result mode) overrides both active and hover bg
 // with the orange match indicator so the user can spot their query
@@ -217,13 +215,11 @@ function WordButton({
   isActive,
   isMatched,
   onSeek,
-  inAnnotation,
 }: {
   word: TranscriptWord;
   isActive: boolean;
   isMatched: boolean;
   onSeek: (start: number) => void;
-  inAnnotation: boolean;
 }) {
   return (
     <button
@@ -238,9 +234,7 @@ function WordButton({
           ? 'bg-orange-400/40 text-primary'
           : isActive
             ? 'bg-brand/20 text-brand dark:bg-primary/20 dark:text-primary'
-            : inAnnotation
-              ? ''
-              : 'hover:bg-primary/10'
+            : 'hover:bg-primary/10'
       }`}
     >
       {word.word}
@@ -429,7 +423,6 @@ const ParagraphView = memo(function ParagraphView({
             }`}
           >
             {chunks.map((chunk) => {
-              const inAnnotation = chunk.annotation !== null;
               const wordButtons = paragraph.words
                 .slice(chunk.startIdx, chunk.endIdx)
                 .map((w, i) => {
@@ -441,7 +434,6 @@ const ParagraphView = memo(function ParagraphView({
                         isActive={wordIdx === activeWordIndex}
                         isMatched={matchSet.has(wordIdx)}
                         onSeek={onSeek}
-                        inAnnotation={inAnnotation}
                       />{' '}
                     </Fragment>
                   );
