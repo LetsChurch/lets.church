@@ -322,9 +322,9 @@ export function MediaInfoTabs({
                           <IconClock size={12} aria-hidden="true" />
                           {formatTime(occurrence.seconds * 1000)}
                         </button>
-                        <p className="text-primary/60 text-xs italic leading-[1.5]">
+                        <p className="text-primary/60 text-xs leading-[1.5]">
                           {occurrence.excerpt.before}
-                          <span className="text-primary/90 not-italic">
+                          <span className="text-primary/90">
                             {occurrence.excerpt.span}
                           </span>
                           {occurrence.excerpt.after}
