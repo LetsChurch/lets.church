@@ -1,7 +1,6 @@
 import type { S3ClientId } from '@letschurch/s3';
 import {
   condition,
-  defineSignal,
   ParentClosePolicy,
   proxyActivities,
   setHandler,
@@ -9,6 +8,7 @@ import {
 } from '@temporalio/workflow';
 import type * as activities from '../../activities/background';
 import { BACKGROUND_QUEUE, PRIORITY_USER } from '../../queues';
+import { uploadDoneSignal } from '../../refs';
 import {
   CHANNEL_ID_KEY,
   CHANNEL_SLUG_KEY,
@@ -33,8 +33,7 @@ const {
   retry: { maximumAttempts: 5 },
 });
 
-export const uploadDoneSignal =
-  defineSignal<[Array<string>, string]>('uploadDone');
+export { uploadDoneSignal };
 
 export type HandleMultipartMediaUploadParams = {
   targetId: string;

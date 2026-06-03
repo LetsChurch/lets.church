@@ -17,7 +17,6 @@ import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { BACKGROUND_QUEUE } from '@letschurch/temporal/queues';
 import { emailHtml, sanitizeForHtml } from '@letschurch/temporal/util/email';
-import { sendEmailWorkflow } from '@letschurch/temporal/workflows/background/send-email';
 import { TRPCError } from '@trpc/server';
 import {
   and,
@@ -70,6 +69,7 @@ import {
   importMedia,
   makeProcessMediaWorkflowId,
   sendInvitationEmail,
+  startBackground,
 } from '@/temporal';
 import {
   mantineAvatarLg2x,
@@ -280,7 +280,7 @@ export const channelRouter = router({
             `,
           ).html;
 
-          await (await client).workflow.start(sendEmailWorkflow, {
+          await startBackground('sendEmailWorkflow', {
             args: [
               {
                 from: 'hello@lets.church',

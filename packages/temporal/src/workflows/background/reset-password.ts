@@ -1,12 +1,10 @@
-import {
-  condition,
-  defineSignal,
-  proxyActivities,
-  setHandler,
-} from '@temporalio/workflow';
+import { condition, proxyActivities, setHandler } from '@temporalio/workflow';
 import { invariant } from 'es-toolkit';
 import type * as activities from '../../activities/background';
 import { BACKGROUND_QUEUE } from '../../queues';
+import { completeResetPasswordSignal } from '../../refs';
+
+export { completeResetPasswordSignal };
 
 const { sendEmail, updateUser, verifyUserEmail } = proxyActivities<
   typeof activities
@@ -15,10 +13,6 @@ const { sendEmail, updateUser, verifyUserEmail } = proxyActivities<
   taskQueue: BACKGROUND_QUEUE,
   retry: { maximumAttempts: 8 },
 });
-
-export const completeResetPasswordSignal = defineSignal<[string]>(
-  'completeResetPassword',
-);
 
 export async function resetPasswordWorkflow(
   userId: string,

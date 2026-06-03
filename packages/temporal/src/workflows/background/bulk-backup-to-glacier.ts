@@ -1,6 +1,5 @@
 import {
   continueAsNew,
-  defineQuery,
   ParentClosePolicy,
   proxyActivities,
   setHandler,
@@ -9,7 +8,10 @@ import {
 } from '@temporalio/workflow';
 import type * as activities from '../../activities/background';
 import { BACKGROUND_QUEUE } from '../../queues';
+import { getBulkBackupProgressQuery } from '../../refs';
 import { backupToGlacierWorkflow } from './backup-to-glacier';
+
+export { getBulkBackupProgressQuery };
 
 const { claimUploadStatesForBackup, countUploadStatesByStatus } =
   proxyActivities<typeof activities>({
@@ -18,13 +20,6 @@ const { claimUploadStatesForBackup, countUploadStatesByStatus } =
     taskQueue: BACKGROUND_QUEUE,
     retry: { maximumAttempts: 3 },
   });
-
-// Query to get current progress
-export const getBulkBackupProgressQuery = defineQuery<{
-  totalStarted: number;
-  batchesCompleted: number;
-  remaining: number;
-}>('getBulkBackupProgress');
 
 export type BulkBackupToGlacierWorkflowParams = {
   batchSize: number;

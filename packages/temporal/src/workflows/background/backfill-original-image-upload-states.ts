@@ -1,12 +1,14 @@
 import {
   continueAsNew,
-  defineQuery,
   proxyActivities,
   setHandler,
   sleep,
 } from '@temporalio/workflow';
 import type * as activities from '../../activities/background';
 import { BACKGROUND_QUEUE } from '../../queues';
+import { getBackfillOriginalImagesProgressQuery } from '../../refs';
+
+export { getBackfillOriginalImagesProgressQuery };
 
 const { backfillOriginalImageUploadStatesBatch } = proxyActivities<
   typeof activities
@@ -16,12 +18,6 @@ const { backfillOriginalImageUploadStatesBatch } = proxyActivities<
   taskQueue: BACKGROUND_QUEUE,
   retry: { maximumAttempts: 3 },
 });
-
-// Query to get current progress
-export const getBackfillOriginalImagesProgressQuery = defineQuery<{
-  totalCreated: number;
-  batchesCompleted: number;
-}>('getBackfillOriginalImagesProgress');
 
 export type BackfillOriginalImageUploadStatesWorkflowParams = {
   batchSize: number;

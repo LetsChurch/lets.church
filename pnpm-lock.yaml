@@ -667,9 +667,6 @@ importers:
       '@temporalio/client':
         specifier: 'catalog:'
         version: 1.17.2
-      '@temporalio/workflow':
-        specifier: 'catalog:'
-        version: 1.17.2
       '@trpc/client':
         specifier: ^11.7.1
         version: 11.7.1(@trpc/server@11.7.1(typescript@5.9.3))(typescript@5.9.3)

@@ -1,5 +1,4 @@
 import {
-  defineQuery,
   ParentClosePolicy,
   proxyActivities,
   setHandler,
@@ -7,8 +6,14 @@ import {
 } from '@temporalio/workflow';
 import type * as activities from '../../activities/background';
 import { BACKGROUND_QUEUE } from '../../queues';
+import {
+  type DeleteChannelProgressState,
+  getDeleteChannelProgressQuery,
+} from '../../refs';
 import { CHANNEL_ID_KEY } from '../../search-attributes';
 import { deleteUploadWorkflow } from './delete-upload';
+
+export { type DeleteChannelProgressState, getDeleteChannelProgressQuery };
 
 // Activity proxies with different timeout configurations
 const { markChannelDeleted, getChannelUploadIds } = proxyActivities<
@@ -35,25 +40,6 @@ const { deleteChannelAssociations, deleteChannelDb } = proxyActivities<
   taskQueue: BACKGROUND_QUEUE,
   retry: { maximumAttempts: 5 },
 });
-
-// Progress tracking types
-export type DeleteChannelProgressState = {
-  currentStep:
-    | 'marking_deleted'
-    | 'deleting_uploads'
-    | 'deleting_channel_files'
-    | 'deleting_associations'
-    | 'deleting_channel_db'
-    | 'completed';
-  totalUploads: number;
-  uploadsStarted: number;
-  channelFilesDeleted: boolean;
-  associationsDeleted: boolean;
-  channelDeleted: boolean;
-};
-
-export const getDeleteChannelProgressQuery =
-  defineQuery<DeleteChannelProgressState>('getDeleteChannelProgress');
 
 export async function deleteChannelWorkflow(
   channelId: string,

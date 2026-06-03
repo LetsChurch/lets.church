@@ -30,12 +30,7 @@ export default defineConfig((_config) => ({
   ssr: {
     noExternal: ['@tanstack/react-start', '@tanstack/react-router'],
     external: [
-      '@letschurch/temporal',
       '@node-rs/xxhash',
-      '@temporalio/activity',
-      '@temporalio/client',
-      // Transitively imported via @letschurch/temporal/workflows/background; must stay in web's package.json so Nitro's nft trace copies it into .output.
-      '@temporalio/workflow',
       'argon2',
       'blurhash',
       'execa',

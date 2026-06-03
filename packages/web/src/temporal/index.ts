@@ -48,39 +48,37 @@ export type InvitationEmailArgs = {
   type: 'organization' | 'channel';
 };
 
+// Type-only namespace import of every workflow export, erased at runtime so the
+// SSR bundle never pulls @temporalio/workflow into web. `startBackground` /
+// `signalWithStartBackground` below constrain the runtime string name to a key
+// of this namespace, so renaming or removing a workflow breaks every call site
+// at compile time. See https://github.com/temporalio/sdk-typescript/issues/2098.
+import type * as bg from '@letschurch/temporal/workflows/background';
+import type {
+  BackfillFilenamesWorkflowParams,
+  BackfillUploadStateSizesWorkflowParams,
+  BackfillUploadStatesWorkflowParams,
+  BulkBackupToGlacierWorkflowParams,
+  CleanupStaleUploadStatesWorkflowParams,
+  ReindexWorkflowParams,
+  SendVerificationEmailArgs,
+} from '@letschurch/temporal/workflows/background';
+
+export type { ReindexKind } from '@letschurch/temporal/activities/background/reindex';
+
+import { createRequire } from 'node:module';
+// Runtime signal/query refs (plain { type, name } objects — no @temporalio/workflow dep).
 import {
-  type BackfillUploadStateSizesWorkflowParams,
-  type BackfillUploadStatesWorkflowParams,
-  type BulkBackupToGlacierWorkflowParams,
-  backfillUploadStateSizesWorkflow,
-  backfillUploadStatesWorkflow,
-  bulkBackupToGlacierWorkflow,
-  type CleanupStaleUploadStatesWorkflowParams,
-  cleanupStaleUploadStatesWorkflow,
-  createUploadRecordWorkflow,
-  deleteUploadWorkflow,
-  geocodeOrganizationWorkflow,
+  completeResetPasswordSignal,
+  getBackfillFilenamesProgressQuery,
   getBackfillProgressQuery,
   getBackfillSizesProgressQuery,
   getBulkBackupProgressQuery,
   getCleanupProgressQuery,
   getReindexProgressQuery,
-  handleMultipartMediaUploadWorkflow,
-  importMediaWorkflow,
-  postUserRegistrationWorkflow,
-  type ReindexWorkflowParams,
-  reindexWorkflow,
-  type SendVerificationEmailArgs,
-  sendEmailWorkflow,
-  sendInvitationEmailWorkflow,
-  sendVerificationEmailWorkflow,
   updateUploadRecordSignal,
-  updateUploadRecordWorkflow,
   uploadDoneSignal,
-} from '@letschurch/temporal/workflows/background';
-
-export type { ReindexKind } from '@letschurch/temporal/activities/background/reindex';
-
+} from '@letschurch/temporal/refs';
 import {
   CHANNEL_ID_KEY,
   CHANNEL_SLUG_KEY,
@@ -89,31 +87,23 @@ import {
   USER_ID_KEY,
   USERNAME_KEY,
 } from '@letschurch/temporal/search-attributes';
-import {
-  type BackfillFilenamesWorkflowParams,
-  backfillFilenamesWorkflow,
-  getBackfillFilenamesProgressQuery,
-} from '@letschurch/temporal/workflows/background/backfill-original-filenames';
-import { recordDownloadSizeWorkflow } from '@letschurch/temporal/workflows/background/record-download-size';
-import { remuxAllWorkflow } from '@letschurch/temporal/workflows/background/remux-all';
-import { reprocessAllWorkflow } from '@letschurch/temporal/workflows/background/reprocess-all';
-import {
-  completeResetPasswordSignal,
-  resetPasswordWorkflow,
-} from '@letschurch/temporal/workflows/background/reset-password';
-import { scrapeAndImportWorkflow } from '@letschurch/temporal/workflows/background/scrape-and-import';
 import { xxh32 } from '@node-rs/xxhash';
-import { Client, Connection, type WorkflowOptions } from '@temporalio/client';
+import type {
+  WithWorkflowArgs,
+  Workflow,
+  WorkflowOptions,
+  WorkflowSignalWithStartOptions,
+  WorkflowStartOptions,
+} from '@temporalio/client';
 import PLazy from 'p-lazy';
 import waitOn from 'wait-on';
 import { z } from 'zod';
 import logger from '../util/logger';
 import type { UploadPostProcessValue } from '../util/types';
 
-export {
-  indexDocument,
-  type UploadRecordCreateData,
-  type UploadRecordUpdateData,
+export type {
+  UploadRecordCreateData,
+  UploadRecordUpdateData,
 } from '@letschurch/temporal/client';
 
 const moduleLogger = logger.child({ module: 'temporal' });
@@ -122,9 +112,17 @@ const { TEMPORAL_ADDRESS } = z
   .object({ TEMPORAL_ADDRESS: z.string() })
   .parse(process.env);
 
+// createRequire here is load-bearing: any static or even dynamic ESM import of
+// '@temporalio/client' makes Vite/Rollup "see through" its CJS barrel and emit
+// broken deep/absolute-path imports into the SSR bundle. A runtime require keeps
+// the package fully opaque. See https://github.com/temporalio/sdk-typescript/issues/2098.
+const requireFromHere = createRequire(import.meta.url);
+
 export const client = PLazy.from(async () => {
   await waitOnTemporal();
-
+  const { Client, Connection } = requireFromHere(
+    '@temporalio/client',
+  ) as typeof import('@temporalio/client');
   return new Client({
     connection: await Connection.connect({
       address: TEMPORAL_ADDRESS,
@@ -135,6 +133,36 @@ export const client = PLazy.from(async () => {
 const retryOps: Pick<WorkflowOptions, 'retry'> = {
   retry: { maximumAttempts: 5 },
 };
+
+// Names of every workflow function exported from @letschurch/temporal/workflows/background.
+// `K extends BackgroundWorkflowName` binds the string name to the workflow's
+// type — rename a workflow and every call site fails to compile.
+export type BackgroundWorkflowName = {
+  [K in keyof typeof bg]: (typeof bg)[K] extends Workflow ? K : never;
+}[keyof typeof bg];
+
+export async function startBackground<K extends BackgroundWorkflowName>(
+  name: K,
+  options: WorkflowStartOptions<(typeof bg)[K]>,
+) {
+  return (await client).workflow.start<(typeof bg)[K]>(name, options);
+}
+
+export async function signalWithStartBackground<
+  K extends BackgroundWorkflowName,
+  SignalArgs extends unknown[] = [],
+>(
+  name: K,
+  options: WithWorkflowArgs<
+    (typeof bg)[K],
+    WorkflowSignalWithStartOptions<SignalArgs>
+  >,
+) {
+  return (await client).workflow.signalWithStart<(typeof bg)[K], SignalArgs>(
+    name,
+    options,
+  );
+}
 
 // Re-export workflow ID helpers from shared package
 export {
@@ -186,7 +214,7 @@ export async function handleMultipartMediaUpload(
           .then((r) => r[0] ?? null)
       : null;
 
-  return (await client).workflow.start(handleMultipartMediaUploadWorkflow, {
+  return startBackground('handleMultipartMediaUploadWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     workflowId: makeMultipartMediaUploadWorkflowId(s3UploadId, s3UploadKey),
@@ -227,7 +255,7 @@ export async function createUploadRecord(
   data: UploadRecordCreateData,
   importId?: string,
 ) {
-  const res = await (await client).workflow.start(createUploadRecordWorkflow, {
+  const res = await startBackground('createUploadRecordWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     workflowId: makeCreateUploadRecordWorkflowId(
@@ -245,7 +273,10 @@ export async function updateUploadRecord(
   uploadRecordId: string,
   data: UploadRecordUpdateData,
 ) {
-  return (await client).workflow.signalWithStart(updateUploadRecordWorkflow, {
+  return signalWithStartBackground<
+    'updateUploadRecordWorkflow',
+    [UploadRecordUpdateData, boolean?]
+  >('updateUploadRecordWorkflow', {
     taskQueue: BACKGROUND_QUEUE,
     workflowId: makeUpdateUploadRecordWorkflowId(uploadRecordId),
     args: [uploadRecordId],
@@ -263,9 +294,9 @@ export async function recordDownloadSize(
   variant: (typeof UploadVariant)['enumValues'][number],
   bytes: number,
 ) {
-  return (await client).workflow.start(recordDownloadSizeWorkflow, {
+  return startBackground('recordDownloadSizeWorkflow', {
     taskQueue: BACKGROUND_QUEUE,
-    workflowId: makeRecordDownloadSizeWorkflowId(uploadRecordId),
+    workflowId: makeRecordDownloadSizeWorkflowId(uploadRecordId, variant),
     args: [uploadRecordId, variant, bytes],
     typedSearchAttributes: [{ key: UPLOAD_ID_KEY, value: uploadRecordId }],
     retry: {
@@ -276,9 +307,9 @@ export async function recordDownloadSize(
 
 export async function sendEmail(
   id: string,
-  ...args: Parameters<typeof sendEmailWorkflow>
+  ...args: Parameters<typeof bg.sendEmailWorkflow>
 ) {
-  return (await client).workflow.start(sendEmailWorkflow, {
+  return startBackground('sendEmailWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_USER },
@@ -288,7 +319,7 @@ export async function sendEmail(
 }
 
 export async function sendInvitationEmail(args: InvitationEmailArgs) {
-  return (await client).workflow.start(sendInvitationEmailWorkflow, {
+  return startBackground('sendInvitationEmailWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_USER },
@@ -298,7 +329,7 @@ export async function sendInvitationEmail(args: InvitationEmailArgs) {
 }
 
 export async function sendVerificationEmail(args: SendVerificationEmailArgs) {
-  return (await client).workflow.start(sendVerificationEmailWorkflow, {
+  return startBackground('sendVerificationEmailWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_USER },
@@ -309,10 +340,10 @@ export async function sendVerificationEmail(args: SendVerificationEmailArgs) {
 
 export async function resetPassword(
   id: string,
-  ...args: Parameters<typeof resetPasswordWorkflow>
+  ...args: Parameters<typeof bg.resetPasswordWorkflow>
 ) {
   const [userId] = args;
-  return (await client).workflow.start(resetPasswordWorkflow, {
+  return startBackground('resetPasswordWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_USER },
@@ -329,7 +360,7 @@ export async function completeResetPassword(id: string, hash: string) {
 }
 
 export async function geocodeOrganization(id: string) {
-  return (await client).workflow.start(geocodeOrganizationWorkflow, {
+  return startBackground('geocodeOrganizationWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     args: [id],
@@ -339,10 +370,10 @@ export async function geocodeOrganization(id: string) {
 
 export async function postUserRegistration(
   userId: string,
-  ...args: Parameters<typeof postUserRegistrationWorkflow>
+  ...args: Parameters<typeof bg.postUserRegistrationWorkflow>
 ) {
   const { username } = args[0];
-  return (await client).workflow.start(postUserRegistrationWorkflow, {
+  return startBackground('postUserRegistrationWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     args,
@@ -411,7 +442,7 @@ export async function deleteUpload(uploadRecordId: string) {
     .where(eq(UploadRecord.id, uploadRecordId))
     .then((r) => r[0] ?? null);
 
-  return (await client).workflow.start(deleteUploadWorkflow, {
+  return startBackground('deleteUploadWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     args: [uploadRecordId],
@@ -430,10 +461,10 @@ export async function deleteUpload(uploadRecordId: string) {
 }
 
 export async function importMedia(
-  ...args: Parameters<typeof importMediaWorkflow>
+  ...args: Parameters<typeof bg.importMediaWorkflow>
 ) {
   const { url, username, channelSlug, importSourceId } = args[0];
-  return (await client).workflow.start(importMediaWorkflow, {
+  return startBackground('importMediaWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_IMPORT },
@@ -474,7 +505,7 @@ const BACKFILL_UPLOAD_STATES_WORKFLOW_ID = 'backfillUploadStates';
 export async function startBackfillUploadStates(
   params: BackfillUploadStatesWorkflowParams,
 ) {
-  return (await client).workflow.start(backfillUploadStatesWorkflow, {
+  return startBackground('backfillUploadStatesWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_REPROCESS },
@@ -536,7 +567,7 @@ const CLEANUP_STALE_UPLOAD_STATES_WORKFLOW_ID = 'cleanupStaleUploadStates';
 export async function startCleanupStaleUploadStates(
   params: CleanupStaleUploadStatesWorkflowParams,
 ) {
-  return (await client).workflow.start(cleanupStaleUploadStatesWorkflow, {
+  return startBackground('cleanupStaleUploadStatesWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_REPROCESS },
@@ -596,7 +627,7 @@ const BULK_BACKUP_WORKFLOW_ID = 'bulkBackupToGlacier';
 export async function startBulkBackupToGlacier(
   params: BulkBackupToGlacierWorkflowParams,
 ) {
-  return (await client).workflow.start(bulkBackupToGlacierWorkflow, {
+  return startBackground('bulkBackupToGlacierWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_REPROCESS },
@@ -654,7 +685,7 @@ const BACKFILL_SIZES_WORKFLOW_ID = 'backfillUploadStateSizes';
 export async function startBackfillUploadStateSizes(
   params: BackfillUploadStateSizesWorkflowParams,
 ) {
-  return (await client).workflow.start(backfillUploadStateSizesWorkflow, {
+  return startBackground('backfillUploadStateSizesWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_REPROCESS },
@@ -715,7 +746,7 @@ const BACKFILL_FILENAMES_WORKFLOW_ID = 'backfillOriginalFilenames';
 export async function startBackfillFilenames(
   params: BackfillFilenamesWorkflowParams,
 ) {
-  return (await client).workflow.start(backfillFilenamesWorkflow, {
+  return startBackground('backfillFilenamesWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_REPROCESS },
@@ -795,7 +826,7 @@ export async function startImportSourceScheduler(importSourceId: string) {
     },
     action: {
       type: 'startWorkflow',
-      workflowType: scrapeAndImportWorkflow,
+      workflowType: 'scrapeAndImportWorkflow' satisfies BackgroundWorkflowName,
       args: [importSourceId],
       taskQueue: BACKGROUND_QUEUE,
       workflowId: makeScrapeAndImportWorkflowId(
@@ -912,7 +943,7 @@ export async function triggerManualImport(importSourceId: string) {
     throw new Error(`Import source ${importSourceId} not found`);
   }
 
-  return (await client).workflow.start(scrapeAndImportWorkflow, {
+  return startBackground('scrapeAndImportWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_IMPORT },
@@ -964,7 +995,7 @@ export async function triggerHistoricalImport(
     throw new Error(`Import source ${importSourceId} not found`);
   }
 
-  return (await client).workflow.start(scrapeAndImportWorkflow, {
+  return startBackground('scrapeAndImportWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_IMPORT },
@@ -995,7 +1026,7 @@ function makeReindexWorkflowId(kind: ReindexWorkflowParams['kind']) {
 }
 
 export async function startReindex(params: ReindexWorkflowParams) {
-  return (await client).workflow.start(reindexWorkflow, {
+  return startBackground('reindexWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_REPROCESS },
@@ -1052,7 +1083,7 @@ export async function startReprocess(
   processingScope: 'transcode' | 'transcribe' | 'everything' = 'transcode',
   options: { viaBatch?: boolean } = {},
 ) {
-  return (await client).workflow.start(reprocessAllWorkflow, {
+  return startBackground('reprocessAllWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_REPROCESS },
@@ -1094,7 +1125,7 @@ export async function cancelReprocess(scope: ReprocessScope) {
 // Remux Workflows
 
 export async function startRemuxAll(scope: RemuxScope = { kind: 'legacy' }) {
-  return (await client).workflow.start(remuxAllWorkflow, {
+  return startBackground('remuxAllWorkflow', {
     ...retryOps,
     taskQueue: BACKGROUND_QUEUE,
     priority: { priorityKey: PRIORITY_REPROCESS },

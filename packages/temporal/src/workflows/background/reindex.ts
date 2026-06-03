@@ -1,12 +1,14 @@
 import {
   continueAsNew,
-  defineQuery,
   proxyActivities,
   setHandler,
 } from '@temporalio/workflow';
 import type * as activities from '../../activities/background';
 import type { ReindexKind } from '../../activities/background/reindex';
 import { BACKGROUND_QUEUE } from '../../queues';
+import { getReindexProgressQuery } from '../../refs';
+
+export { getReindexProgressQuery };
 
 const { reindexBatch, getReindexCount } = proxyActivities<typeof activities>({
   startToCloseTimeout: '10 minutes',
@@ -14,12 +16,6 @@ const { reindexBatch, getReindexCount } = proxyActivities<typeof activities>({
   taskQueue: BACKGROUND_QUEUE,
   retry: { maximumAttempts: 3 },
 });
-
-export const getReindexProgressQuery = defineQuery<{
-  totalIndexed: number;
-  offset: number;
-  total: number;
-}>('getReindexProgress');
 
 export type ReindexWorkflowParams = {
   kind: ReindexKind;

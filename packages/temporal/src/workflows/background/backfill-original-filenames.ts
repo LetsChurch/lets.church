@@ -1,24 +1,19 @@
 import {
   continueAsNew,
-  defineQuery,
   proxyActivities,
   setHandler,
   sleep,
 } from '@temporalio/workflow';
 import type * as activities from '../../activities/background';
+import { getBackfillFilenamesProgressQuery } from '../../refs';
+
+export { getBackfillFilenamesProgressQuery };
 
 const { backfillFilenamesBatch, getBackfillFilenamesCount } = proxyActivities<
   typeof activities
 >({
   startToCloseTimeout: '5 minutes',
 });
-
-export const getBackfillFilenamesProgressQuery = defineQuery<{
-  totalProcessed: number;
-  totalUpdated: number;
-  remaining: number;
-  batchesCompleted: number;
-}>('getBackfillFilenamesProgress');
 
 export type BackfillFilenamesWorkflowParams = {
   batchSize: number;

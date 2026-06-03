@@ -1,12 +1,10 @@
-import {
-  condition,
-  defineSignal,
-  proxyActivities,
-  setHandler,
-} from '@temporalio/workflow';
+import { condition, proxyActivities, setHandler } from '@temporalio/workflow';
 import type * as activities from '../../activities/background';
 import type { UploadRecordUpdateData } from '../../client';
 import { BACKGROUND_QUEUE } from '../../queues';
+import { updateUploadRecordSignal } from '../../refs';
+
+export { updateUploadRecordSignal };
 
 const { updateUploadRecord: updateUploadRecordActivity, indexDocument } =
   proxyActivities<typeof activities>({
@@ -14,9 +12,6 @@ const { updateUploadRecord: updateUploadRecordActivity, indexDocument } =
     taskQueue: BACKGROUND_QUEUE,
     retry: { maximumAttempts: 5 },
   });
-
-export const updateUploadRecordSignal =
-  defineSignal<[UploadRecordUpdateData, boolean?]>('updateRecord');
 
 export async function updateUploadRecordWorkflow(uploadRecordId: string) {
   const queue: Array<{ data: UploadRecordUpdateData; skipIndex: boolean }> = [];

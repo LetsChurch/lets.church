@@ -14,7 +14,7 @@
     "./workflows/background/*": "./src/workflows/background/*.ts",
     "./queues": "./src/queues.ts",
     "./client": "./src/client/index.ts",
-    "./signals": "./src/signals.ts",
+    "./refs": "./src/refs.ts",
     "./util/temporal": "./src/util/temporal.ts",
     "./util/zod": "./src/util/zod.ts",
     "./util/email": "./src/util/email.ts",

@@ -31,14 +31,6 @@ import {
   SUMMARY_MODEL,
 } from '@letschurch/temporal/util/llm';
 import { assertProductionPricingCoverage } from '@letschurch/temporal/util/llm-pricing';
-import {
-  annotateTranscriptWorkflow,
-  deleteChannelWorkflow,
-  geocodeOrganizationWorkflow,
-  postUserRegistrationWorkflow,
-  processMediaWorkflow,
-  summarizeUploadWorkflow,
-} from '@letschurch/temporal/workflows/background';
 import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
 import {
@@ -93,6 +85,7 @@ import {
   startBackfillFilenames,
   startBackfillUploadStateSizes,
   startBackfillUploadStates,
+  startBackground,
   startBulkBackupToGlacier,
   startCleanupStaleUploadStates,
   startReindex,
@@ -862,8 +855,8 @@ export const adminRouter = router({
           .where(eq(OrganizationAddress.organizationId, input.organizationId));
 
         const temporalClient = await client;
-        const workflowHandle = await temporalClient.workflow.start(
-          geocodeOrganizationWorkflow,
+        const workflowHandle = await startBackground(
+          'geocodeOrganizationWorkflow',
           {
             taskQueue: BACKGROUND_QUEUE,
             workflowId: `geocodeOrganization:${input.organizationId}:${Date.now()}`,
@@ -927,15 +920,12 @@ export const adminRouter = router({
 
       try {
         const temporalClient = await client;
-        const workflowHandle = await temporalClient.workflow.start(
-          deleteChannelWorkflow,
-          {
-            taskQueue: BACKGROUND_QUEUE,
-            workflowId: `deleteChannel:${input.channelId}:${Date.now()}`,
-            args: [input.channelId, input.channelName],
-            retry: { maximumAttempts: 5 },
-          },
-        );
+        const workflowHandle = await startBackground('deleteChannelWorkflow', {
+          taskQueue: BACKGROUND_QUEUE,
+          workflowId: `deleteChannel:${input.channelId}:${Date.now()}`,
+          args: [input.channelId, input.channelName],
+          retry: { maximumAttempts: 5 },
+        });
 
         moduleLogger.info(
           {
@@ -1524,7 +1514,7 @@ export const adminRouter = router({
         const temporalClient = await client;
         await Promise.all(
           unverifiedEmails.map((emailRecord) =>
-            temporalClient.workflow.start(postUserRegistrationWorkflow, {
+            startBackground('postUserRegistrationWorkflow', {
               args: [
                 {
                   userId: user.id,
@@ -3414,7 +3404,7 @@ export const adminRouter = router({
         }
 
         // Start the workflow
-        await temporalClient.workflow.start(processMediaWorkflow, {
+        await startBackground('processMediaWorkflow', {
           taskQueue: BACKGROUND_QUEUE,
           workflowId,
           args: [input.uploadRecordId, scope],
@@ -3548,7 +3538,7 @@ export const adminRouter = router({
           );
         }
 
-        await temporalClient.workflow.start(summarizeUploadWorkflow, {
+        await startBackground('summarizeUploadWorkflow', {
           taskQueue: BACKGROUND_QUEUE,
           workflowId,
           // `force: true` — admin explicitly asked to regenerate, so the
@@ -3687,7 +3677,7 @@ export const adminRouter = router({
           );
         }
 
-        await temporalClient.workflow.start(annotateTranscriptWorkflow, {
+        await startBackground('annotateTranscriptWorkflow', {
           taskQueue: BACKGROUND_QUEUE,
           workflowId,
           // `force: true` — admin explicitly asked to regenerate, so the
@@ -4030,7 +4020,7 @@ export const adminRouter = router({
           const workflowId = makeProcessMediaWorkflowId(
             upload.finalizedUploadKey,
           );
-          await temporalClient.workflow.start(processMediaWorkflow, {
+          await startBackground('processMediaWorkflow', {
             taskQueue: BACKGROUND_QUEUE,
             workflowId,
             args: [upload.id, scope],

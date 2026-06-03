@@ -1,12 +1,14 @@
 import {
   continueAsNew,
-  defineQuery,
   proxyActivities,
   setHandler,
   sleep,
 } from '@temporalio/workflow';
 import type * as activities from '../../activities/background';
 import { BACKGROUND_QUEUE } from '../../queues';
+import { getCleanupProgressQuery } from '../../refs';
+
+export { getCleanupProgressQuery };
 
 const { getStaleUploadStatesCount, cleanupStaleUploadStatesBatch } =
   proxyActivities<typeof activities>({
@@ -15,13 +17,6 @@ const { getStaleUploadStatesCount, cleanupStaleUploadStatesBatch } =
     taskQueue: BACKGROUND_QUEUE,
     retry: { maximumAttempts: 3 },
   });
-
-// Query to get current progress
-export const getCleanupProgressQuery = defineQuery<{
-  totalDeleted: number;
-  remaining: number;
-  batchesCompleted: number;
-}>('getCleanupProgress');
 
 export type CleanupStaleUploadStatesWorkflowParams = {
   batchSize: number;
