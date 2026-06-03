@@ -56,7 +56,7 @@ export default async function importMedia(
 
     uploadRecordId = await createUploadRecord(
       data,
-      Context.current().info.workflowExecution.workflowId,
+      Context.current().info.workflowExecution?.workflowId,
     );
     mediaUploadKey = `${uploadRecordId}/${uuid()}`;
 
