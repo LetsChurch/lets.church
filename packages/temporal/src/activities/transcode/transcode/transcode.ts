@@ -87,7 +87,11 @@ export default async function transcode(
   Context.current().heartbeat('job start');
   const signal = Context.current().cancellationSignal;
   const workingDir = join(WORK_DIR, uploadRecordId);
-  const throttledUpdateUploadRecord = throttle(updateUploadRecord, 2500);
+  const throttledUpdateUploadRecord = throttle(
+    (id: string, data: Parameters<typeof updateUploadRecord>[1]) =>
+      updateUploadRecord(id, data, true),
+    2500,
+  );
 
   await updateUploadRecord(uploadRecordId, {
     transcodingStartedAt: new Date(),
@@ -193,7 +197,7 @@ export default async function transcode(
     throttledUpdateUploadRecord.cancel();
 
     activityLogger.info('Marking transcoding progress as done');
-    await updateUploadRecord(uploadRecordId, { transcodingProgress: 1 });
+    await updateUploadRecord(uploadRecordId, { transcodingProgress: 1 }, true);
 
     activityLogger.info('Finding playlist files');
 

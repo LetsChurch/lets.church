@@ -109,13 +109,16 @@ export async function createUploadRecord(
 export async function updateUploadRecord(
   uploadRecordId: string,
   data: UploadRecordUpdateData,
+  // Set for search-irrelevant updates (e.g. progress ticks) to avoid triggering
+  // an Elasticsearch reindex. The DB write still happens; only the reindex is skipped.
+  skipIndex = false,
 ) {
   return (await client).workflow.signalWithStart(updateUploadRecordWorkflow, {
     taskQueue: BACKGROUND_QUEUE,
     workflowId: makeUpdateUploadRecordWorkflowId(uploadRecordId),
     args: [uploadRecordId],
     signal: updateUploadRecordSignal,
-    signalArgs: [data],
+    signalArgs: [data, skipIndex],
     typedSearchAttributes: [{ key: UPLOAD_ID_KEY, value: uploadRecordId }],
     retry: {
       maximumAttempts: 8,

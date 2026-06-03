@@ -16,24 +16,31 @@ const { updateUploadRecord: updateUploadRecordActivity, indexDocument } =
   });
 
 export const updateUploadRecordSignal =
-  defineSignal<[UploadRecordUpdateData]>('updateRecord');
+  defineSignal<[UploadRecordUpdateData, boolean?]>('updateRecord');
 
 export async function updateUploadRecordWorkflow(uploadRecordId: string) {
-  const queue: Array<UploadRecordUpdateData> = [];
+  const queue: Array<{ data: UploadRecordUpdateData; skipIndex: boolean }> = [];
 
   setHandler(
     updateUploadRecordSignal,
-    (incomingData) => void queue.push(incomingData),
+    (incomingData, skipIndex = false) =>
+      void queue.push({ data: incomingData, skipIndex }),
   );
 
   while (await condition(() => queue.length > 0, '15 seconds')) {
-    let data: UploadRecordUpdateData | undefined;
+    let shouldIndex = false;
     while (queue.length > 0) {
-      data = queue.shift();
-      if (data) {
-        await updateUploadRecordActivity(uploadRecordId, data);
+      const item = queue.shift();
+      if (item) {
+        await updateUploadRecordActivity(uploadRecordId, item.data);
+        if (!item.skipIndex) {
+          shouldIndex = true;
+        }
       }
     }
-    await indexDocument('upload', uploadRecordId);
+    // Skip the reindex when every batched update opted out (e.g. progress ticks).
+    if (shouldIndex) {
+      await indexDocument('upload', uploadRecordId);
+    }
   }
 }
