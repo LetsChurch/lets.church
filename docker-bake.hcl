@@ -104,7 +104,7 @@ target "transcribe-worker" {
   platforms = PLATFORMS
   project-id = "letschurch-transcribe-worker"
   args = {
-    WHISPER_MODEL = "large-v3"
+    WHISPER_MODEL = "large-v2"
   }
 }
 
