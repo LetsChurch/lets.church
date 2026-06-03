@@ -33,6 +33,15 @@ export function stripWordPunctuation(word: string): string {
   return word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}']+$/gu, '');
 }
 
+// faster-whisper sometimes splits a hyphenated word into two timed tokens
+// ("co" + "-labor"); they're stored verbatim, so naively joining words
+// with spaces strands the hyphen ("co -labor"). Treat a token that starts
+// with a hyphen+letter (or a previous token ending in letter+hyphen) as a
+// continuation, so the pair renders glued ("co-labor").
+export function wordsJoinWithoutSpace(prev: string, next: string): boolean {
+  return /\p{L}-$/u.test(prev) || /^-\p{L}/u.test(next);
+}
+
 export type TranscriptWord = { word: string; start: number; end: number };
 
 export type TranscriptAnnotation = {
@@ -423,21 +432,57 @@ const ParagraphView = memo(function ParagraphView({
             }`}
           >
             {chunks.map((chunk) => {
-              const wordButtons = paragraph.words
-                .slice(chunk.startIdx, chunk.endIdx)
-                .map((w, i) => {
-                  const wordIdx = chunk.startIdx + i;
+              const chunkWords = paragraph.words.slice(
+                chunk.startIdx,
+                chunk.endIdx,
+              );
+
+              // Group consecutive hyphen-split tokens (e.g. "co" + "-labor")
+              // into a single run. Each group renders with no internal space
+              // and `whitespace-nowrap`, so the rejoined word shows as
+              // "co-labor" and never breaks across lines (not at the seam,
+              // nor at its own hyphen). Single-word groups are the norm.
+              const groups: Array<{
+                offset: number;
+                words: typeof chunkWords;
+              }> = [];
+              chunkWords.forEach((w, i) => {
+                const gluedToPrev =
+                  i > 0 &&
+                  wordsJoinWithoutSpace(chunkWords[i - 1]?.word ?? '', w.word);
+                if (gluedToPrev && groups.length > 0) {
+                  groups[groups.length - 1]?.words.push(w);
+                } else {
+                  groups.push({ offset: i, words: [w] });
+                }
+              });
+
+              const wordButtons = groups.map((group) => {
+                const buttons = group.words.map((w, gi) => {
+                  const wordIdx = chunk.startIdx + group.offset + gi;
                   return (
-                    <Fragment key={`${wordIdx}-${w.start}`}>
-                      <WordButton
-                        word={w}
-                        isActive={wordIdx === activeWordIndex}
-                        isMatched={matchSet.has(wordIdx)}
-                        onSeek={onSeek}
-                      />{' '}
-                    </Fragment>
+                    <WordButton
+                      key={`${wordIdx}-${w.start}`}
+                      word={w}
+                      isActive={wordIdx === activeWordIndex}
+                      isMatched={matchSet.has(wordIdx)}
+                      onSeek={onSeek}
+                    />
                   );
                 });
+                // Trailing space separates this group from the next word.
+                return (
+                  <Fragment
+                    key={`${chunk.startIdx + group.offset}-${group.words[0]?.start}`}
+                  >
+                    {group.words.length > 1 ? (
+                      <span className="whitespace-nowrap">{buttons}</span>
+                    ) : (
+                      buttons
+                    )}{' '}
+                  </Fragment>
+                );
+              });
 
               if (chunk.annotation === null) {
                 return (

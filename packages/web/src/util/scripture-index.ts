@@ -1,6 +1,7 @@
-import type {
-  TranscriptAnnotation,
-  TranscriptParagraph,
+import {
+  type TranscriptAnnotation,
+  type TranscriptParagraph,
+  wordsJoinWithoutSpace,
 } from '@/components/transcript-paragraphs';
 import {
   type BibleMetadata,
@@ -55,12 +56,18 @@ function buildExcerpt(
   annotation: TranscriptAnnotation,
 ): ScriptureExcerpt {
   const words = paragraph.words;
-  const join = (lo: number, hi: number) =>
-    words
-      .slice(lo, hi)
-      .map((w) => w.word)
-      .join(' ')
-      .trim();
+  // Join words with spaces, except where faster-whisper split a hyphenated
+  // word into two tokens — keep those glued (see wordsJoinWithoutSpace).
+  const join = (lo: number, hi: number) => {
+    let out = '';
+    for (let i = lo; i < hi; i++) {
+      const word = words[i]?.word ?? '';
+      const prev = words[i - 1]?.word;
+      if (i > lo && !(prev && wordsJoinWithoutSpace(prev, word))) out += ' ';
+      out += word;
+    }
+    return out.trim();
+  };
 
   if (annotation.startWord == null || annotation.endWord == null) {
     const hi = Math.min(words.length, EXCERPT_CONTEXT_WORDS * 2);
