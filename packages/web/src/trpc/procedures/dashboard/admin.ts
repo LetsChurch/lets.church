@@ -854,7 +854,6 @@ export const adminRouter = router({
           })
           .where(eq(OrganizationAddress.organizationId, input.organizationId));
 
-        const temporalClient = await client;
         const workflowHandle = await startBackground(
           'geocodeOrganizationWorkflow',
           {
@@ -919,7 +918,6 @@ export const adminRouter = router({
       );
 
       try {
-        const temporalClient = await client;
         const workflowHandle = await startBackground('deleteChannelWorkflow', {
           taskQueue: BACKGROUND_QUEUE,
           workflowId: `deleteChannel:${input.channelId}:${Date.now()}`,
@@ -1511,7 +1509,6 @@ export const adminRouter = router({
           });
         }
 
-        const temporalClient = await client;
         await Promise.all(
           unverifiedEmails.map((emailRecord) =>
             startBackground('postUserRegistrationWorkflow', {
@@ -3942,7 +3939,6 @@ export const adminRouter = router({
         'Filtered uploads for bulk retry',
       );
 
-      const temporalClient = await client;
       let retriedCount = 0;
 
       moduleLogger.info(
