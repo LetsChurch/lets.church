@@ -92,10 +92,19 @@ export function useVideoLayout({
       setPageSidebarCollapsed(customEvent.detail.collapsed);
     };
 
+    let rafId: number | null = null;
+    const scheduleRecalculate = () => {
+      if (rafId !== null) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null;
+        recalculate();
+      });
+    };
+
     const ac = new AbortController();
 
-    // Recalculate on resize
-    window.addEventListener('resize', recalculate, ac);
+    // Recalculate on resize (coalesced to one per frame)
+    window.addEventListener('resize', scheduleRecalculate, ac);
 
     // Listen for sidebar changes
     window.addEventListener(SIDEBAR_CHANGE_EVENT, handleSidebarChange, ac);
@@ -105,6 +114,7 @@ export function useVideoLayout({
 
     return () => {
       ac.abort();
+      if (rafId !== null) window.cancelAnimationFrame(rafId);
     };
   }, [
     aspectWidth,
