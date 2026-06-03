@@ -1,11 +1,19 @@
 import { Tabs } from '@base-ui-components/react/tabs';
 import type { UploadLicense } from '@letschurch/db/types';
-import { IconSparkles } from '@tabler/icons-react';
+import {
+  IconClock,
+  IconExternalLink,
+  IconSearch,
+  IconSparkles,
+} from '@tabler/icons-react';
+import { Link } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 import { LcTooltip } from '@/components/lc-tooltip';
 import { $setPlayAt } from '@/stores/player';
 import { formatTime } from '@/util/format';
+import type { KeywordIndexEntry } from '@/util/keyword-index';
 import { getLicenseInfo } from '@/util/license';
+import type { ScriptureIndexEntry } from '@/util/scripture-index';
 
 export type MediaOutlineEntry = {
   id: string;
@@ -19,6 +27,8 @@ type MediaInfoTabsProps = {
   descriptionHtml: string | null;
   summary: string | null;
   outline: ReadonlyArray<MediaOutlineEntry>;
+  scriptureIndex: ReadonlyArray<ScriptureIndexEntry>;
+  keywordIndex: ReadonlyArray<KeywordIndexEntry>;
   viewCount: number;
   publishedAt: Date | null;
   createdAt: Date;
@@ -38,6 +48,8 @@ export function MediaInfoTabs({
   descriptionHtml,
   summary,
   outline,
+  scriptureIndex,
+  keywordIndex,
   viewCount,
   publishedAt,
   createdAt,
@@ -84,7 +96,11 @@ export function MediaInfoTabs({
   return (
     <Tabs.Root
       defaultValue="details"
-      className="relative isolate mt-7 flex flex-col overflow-hidden rounded-2xl border-fancy-pants bg-zinc-100 dark:bg-zinc-900"
+      // `overflow-clip` (not `overflow-hidden`) clips the rounded corners
+      // without making this a scroll container — so the Overview tab's
+      // sticky AI disclaimer can pin to the viewport bottom while the long
+      // panel scrolls, instead of being trapped inside this card.
+      className="relative isolate mt-7 flex flex-col overflow-clip rounded-2xl border-fancy-pants bg-zinc-100 dark:bg-zinc-900"
     >
       {/* Tabs */}
       <Tabs.List className="relative top-0 flex gap-4 border-zinc-200 border-b px-5 dark:border-zinc-800">
@@ -97,7 +113,7 @@ export function MediaInfoTabs({
           <Tabs.Tab value="summary" className="relative pt-1.5 pb-2">
             <span className="inline-flex items-center gap-1 font-medium text-primary/70 text-sm data-selected:text-primary data-selected:opacity-100">
               <IconSparkles size={14} aria-hidden="true" />
-              Summary
+              Overview
             </span>
           </Tabs.Tab>
         ) : (
@@ -116,7 +132,7 @@ export function MediaInfoTabs({
           >
             <span className="inline-flex items-center gap-1 font-medium text-primary/30 text-sm data-selected:text-primary data-selected:opacity-100">
               <IconSparkles size={14} aria-hidden="true" />
-              Summary
+              Overview
             </span>
           </LcTooltip>
         )}
@@ -228,7 +244,7 @@ export function MediaInfoTabs({
           </p>
         ) : (
           <p className="p-5 text-primary/70 text-sm leading-[1.4]">
-            A summary has not yet been generated for this media.
+            An overview has not yet been generated for this media.
           </p>
         )}
         {outline.length > 0 ? (
@@ -248,8 +264,9 @@ export function MediaInfoTabs({
                     <button
                       type="button"
                       onClick={() => $setPlayAt.set(entry.startSeconds)}
-                      className="font-mono text-blue-500 text-xs tabular-nums hover:underline dark:text-blue-400"
+                      className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md bg-primary/5 px-2 py-0.5 text-primary/70 text-xs tabular-nums hover:bg-primary/10 hover:text-primary dark:bg-primary/10 dark:hover:bg-primary/20"
                     >
+                      <IconClock size={12} aria-hidden="true" />
                       {formatTime(entry.startSeconds * 1000)}
                     </button>
                     <span className="font-medium text-primary">
@@ -263,6 +280,99 @@ export function MediaInfoTabs({
               ))}
             </ol>
           </div>
+        ) : null}
+        {scriptureIndex.length > 0 ? (
+          // Back-of-the-book scripture index: every Bible reference cited
+          // in the transcript (from BIBLE annotations), deduped and ordered
+          // canonically. The reference links to BibleHub; each timestamp
+          // chip seeks the player to where it's cited via the same store
+          // the chapter list and description links use.
+          <div className="border-zinc-200 border-t px-5 py-4 dark:border-zinc-800">
+            <h3 className="mb-3 font-semibold text-primary text-sm">
+              Scripture Index
+            </h3>
+            <ol className="space-y-5">
+              {scriptureIndex.map((entry) => (
+                <li key={entry.key} className="text-sm leading-[1.5]">
+                  <a
+                    href={entry.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${entry.ref} on BibleHub (opens in a new tab)`}
+                    className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+                  >
+                    {entry.ref}
+                    <IconExternalLink
+                      size={12}
+                      aria-hidden="true"
+                      className="text-primary/50"
+                    />
+                  </a>
+                  <ul className="mt-1 space-y-1">
+                    {entry.occurrences.map((occurrence) => (
+                      <li
+                        key={occurrence.seconds}
+                        className="flex items-baseline gap-2"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => $setPlayAt.set(occurrence.seconds)}
+                          className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md bg-primary/5 px-2 py-0.5 text-primary/70 text-xs tabular-nums hover:bg-primary/10 hover:text-primary dark:bg-primary/10 dark:hover:bg-primary/20"
+                        >
+                          <IconClock size={12} aria-hidden="true" />
+                          {formatTime(occurrence.seconds * 1000)}
+                        </button>
+                        <p className="text-primary/60 text-xs italic leading-[1.5]">
+                          {occurrence.excerpt.before}
+                          <span className="text-primary/90 not-italic">
+                            {occurrence.excerpt.span}
+                          </span>
+                          {occurrence.excerpt.after}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ol>
+          </div>
+        ) : null}
+        {keywordIndex.length > 0 ? (
+          // Detected keywords and phrases (from KEYWORD annotations),
+          // deduped and alphabetized. Each links to a site search for the
+          // phrase — the same destination as the inline keyword pills in
+          // the transcript.
+          <div className="border-zinc-200 border-t px-5 py-4 dark:border-zinc-800">
+            <h3 className="mb-3 font-semibold text-primary text-sm">
+              Keywords &amp; Phrases
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {keywordIndex.map((entry) => (
+                <Link
+                  key={entry.key}
+                  to="/search"
+                  search={{ q: entry.text }}
+                  aria-label={`Search "${entry.text}"`}
+                  className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-primary/5 px-2 py-0.5 text-primary/70 text-xs hover:bg-primary/10 hover:text-primary dark:bg-primary/10 dark:hover:bg-primary/20"
+                >
+                  <IconSearch size={12} aria-hidden="true" />
+                  {entry.text}
+                </Link>
+              ))}
+            </div>
+          </div>
+        ) : null}
+        {summary ||
+        outline.length > 0 ||
+        scriptureIndex.length > 0 ||
+        keywordIndex.length > 0 ? (
+          // The summary, chapters, scripture index, and keywords on this
+          // tab are all LLM-generated, so flag them as such. Shown only
+          // when there's generated content to disclaim.
+          <p className="sticky bottom-0 z-10 flex items-center gap-1 border-zinc-200 border-t bg-zinc-100/95 px-5 py-3 text-primary/50 text-xs backdrop-blur-sm dark:border-zinc-800 dark:bg-zinc-900/95">
+            <IconSparkles size={12} aria-hidden="true" className="shrink-0" />
+            Generated by AI. Please verify important details.
+          </p>
         ) : null}
       </Tabs.Panel>
     </Tabs.Root>

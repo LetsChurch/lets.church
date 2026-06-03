@@ -113,6 +113,18 @@ export function buildBibleHubUrl(meta: BibleMetadata): string | null {
   return `${base}/${meta.chapter}-${meta.verse}.htm`;
 }
 
+// Canonical (Genesis → Revelation) sort index for an OSIS book id.
+// `BOOKS` is declared in canonical order, so its key order is the
+// ordering we want; books absent from the table sort last (stable
+// fallback for the same bogus-row case `buildBibleHubUrl` guards).
+const BOOK_ORDER: Record<string, number> = Object.fromEntries(
+  Object.keys(BOOKS).map((book, i) => [book, i]),
+);
+
+export function bibleBookOrder(book: string): number {
+  return BOOK_ORDER[book] ?? Number.MAX_SAFE_INTEGER;
+}
+
 export function formatBibleRef(meta: BibleMetadata): string {
   const name = BOOKS[meta.book]?.name ?? meta.book;
   if (meta.chapter == null) return name;

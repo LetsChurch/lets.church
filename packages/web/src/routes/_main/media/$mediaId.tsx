@@ -52,6 +52,8 @@ import {
   setTranscriptWidth as saveTranscriptWidth,
 } from '@/stores/transcript-width';
 import { trpcClient, useTRPC } from '@/trpc/react';
+import { buildKeywordIndex } from '@/util/keyword-index';
+import { buildScriptureIndex } from '@/util/scripture-index';
 import { useVideoLayout } from '@/util/use-video-layout';
 
 export const Route = createFileRoute('/_main/media/$mediaId')({
@@ -564,6 +566,18 @@ function RouteComponent() {
   });
   const paragraphs = paragraphsData ?? null;
 
+  // Back-of-the-book scripture index for the Summary tab — derived from
+  // the BIBLE annotations already loaded with the paragraph transcript,
+  // so no extra request is needed.
+  const scriptureIndex = useMemo(
+    () => buildScriptureIndex(paragraphs),
+    [paragraphs],
+  );
+  const keywordIndex = useMemo(
+    () => buildKeywordIndex(paragraphs),
+    [paragraphs],
+  );
+
   const { data: ratingData } = useSuspenseQuery(
     trpc.media.getMediaRating.queryOptions({
       mediaId: params.mediaId,
@@ -920,6 +934,8 @@ function RouteComponent() {
               descriptionHtml={media.descriptionHtml}
               summary={media.summary}
               outline={media.outline}
+              scriptureIndex={scriptureIndex}
+              keywordIndex={keywordIndex}
               viewCount={media.viewCount}
               publishedAt={media.publishedAt}
               createdAt={media.createdAt}

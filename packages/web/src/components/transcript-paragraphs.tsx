@@ -2,6 +2,7 @@ import { useStore } from '@nanostores/react';
 import {
   IconBible,
   IconCheck,
+  IconExternalLink,
   IconLink,
   IconSearch,
 } from '@tabler/icons-react';
@@ -28,7 +29,7 @@ import { formatTime } from '@/util/format';
 // apostrophes ("can't" → "can't"). Mirrors the backend's `normalizeWord`
 // in annotate-transcript.ts, minus the lowercasing — search queries
 // preserve case so brand names / proper nouns match downstream.
-function stripWordPunctuation(word: string): string {
+export function stripWordPunctuation(word: string): string {
   return word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}']+$/gu, '');
 }
 
@@ -491,7 +492,7 @@ const ParagraphView = memo(function ParagraphView({
                     href={pill.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label={`${pill.ref} on BibleHub`}
+                    aria-label={`${pill.ref} on BibleHub (opens in a new tab)`}
                     onMouseEnter={() => setHoveredPillKey(pill.key)}
                     onMouseLeave={() => setHoveredPillKey(null)}
                     onFocus={() => setHoveredPillKey(pill.key)}
@@ -500,6 +501,11 @@ const ParagraphView = memo(function ParagraphView({
                   >
                     <IconBible size={12} aria-hidden="true" />
                     {pill.ref}
+                    <IconExternalLink
+                      size={12}
+                      aria-hidden="true"
+                      className="opacity-60"
+                    />
                   </a>
                 ) : (
                   <Link
