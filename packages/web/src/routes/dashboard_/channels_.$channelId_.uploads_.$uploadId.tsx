@@ -1181,19 +1181,13 @@ function ChannelUploadPage() {
                       </Menu.Item>
                     </>
                   ) : null}
-
-                  <Menu.Divider />
-
-                  <Menu.Item
-                    color="red"
-                    leftSection={<IconTrash size={16} />}
-                    onClick={() => setShowDeleteModal(true)}
-                  >
-                    Delete Upload
-                  </Menu.Item>
                 </Menu.Dropdown>
               </Menu>
-            ) : canDelete ? (
+            ) : null}
+
+            {/* Delete stands on its own for anyone who can delete (channel
+                admins and site admins); the menu above is site-admin only. */}
+            {canDelete ? (
               <Button
                 color="red"
                 variant="light"
