@@ -487,21 +487,6 @@ function AdminPage() {
             Re-transcode uploads through the current pipeline
           </Text>
         </Card>
-        <Card
-          shadow="xs"
-          padding="lg"
-          radius="md"
-          withBorder
-          component={Link}
-          to="/dashboard/admin/remux"
-        >
-          <Group justify="space-between" mb="xs">
-            <Text fw={500}>Remux Media</Text>
-          </Group>
-          <Text size="sm" c="dimmed">
-            Convert v1 (MPEG-TS) uploads to v2 (fMP4) without re-encoding
-          </Text>
-        </Card>
       </SimpleGrid>
     </>
   );

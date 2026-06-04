@@ -56,7 +56,6 @@ import { Route as DashboardAdminUsersRouteImport } from './routes/dashboard_/adm
 import { Route as DashboardAdminUploadBackupsRouteImport } from './routes/dashboard_/admin_.upload-backups'
 import { Route as DashboardAdminSearchesRouteImport } from './routes/dashboard_/admin_/searches'
 import { Route as DashboardAdminReprocessRouteImport } from './routes/dashboard_/admin_.reprocess'
-import { Route as DashboardAdminRemuxRouteImport } from './routes/dashboard_/admin_.remux'
 import { Route as DashboardAdminProcessingUploadsRouteImport } from './routes/dashboard_/admin_.processing-uploads'
 import { Route as DashboardAdminOrganizationsRouteImport } from './routes/dashboard_/admin_.organizations'
 import { Route as DashboardAdminOrganizationTagsRouteImport } from './routes/dashboard_/admin_.organization-tags'
@@ -340,11 +339,6 @@ const DashboardAdminSearchesRoute = DashboardAdminSearchesRouteImport.update({
 const DashboardAdminReprocessRoute = DashboardAdminReprocessRouteImport.update({
   id: '/admin_/reprocess',
   path: '/admin/reprocess',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardAdminRemuxRoute = DashboardAdminRemuxRouteImport.update({
-  id: '/admin_/remux',
-  path: '/admin/remux',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardAdminProcessingUploadsRoute =
@@ -658,7 +652,6 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/organizations': typeof DashboardAdminOrganizationsRoute
   '/dashboard/admin/processing-uploads': typeof DashboardAdminProcessingUploadsRoute
   '/dashboard/admin/reindex': typeof DashboardAdminReindexRoute
-  '/dashboard/admin/remux': typeof DashboardAdminRemuxRoute
   '/dashboard/admin/reprocess': typeof DashboardAdminReprocessRoute
   '/dashboard/admin/searches': typeof DashboardAdminSearchesRoute
   '/dashboard/admin/upload-backups': typeof DashboardAdminUploadBackupsRoute
@@ -749,7 +742,6 @@ export interface FileRoutesByTo {
   '/dashboard/admin/organizations': typeof DashboardAdminOrganizationsRoute
   '/dashboard/admin/processing-uploads': typeof DashboardAdminProcessingUploadsRoute
   '/dashboard/admin/reindex': typeof DashboardAdminReindexRoute
-  '/dashboard/admin/remux': typeof DashboardAdminRemuxRoute
   '/dashboard/admin/reprocess': typeof DashboardAdminReprocessRoute
   '/dashboard/admin/searches': typeof DashboardAdminSearchesRoute
   '/dashboard/admin/upload-backups': typeof DashboardAdminUploadBackupsRoute
@@ -844,7 +836,6 @@ export interface FileRoutesById {
   '/dashboard_/admin_/organizations': typeof DashboardAdminOrganizationsRoute
   '/dashboard_/admin_/processing-uploads': typeof DashboardAdminProcessingUploadsRoute
   '/dashboard_/admin_/reindex': typeof DashboardAdminReindexRoute
-  '/dashboard_/admin_/remux': typeof DashboardAdminRemuxRoute
   '/dashboard_/admin_/reprocess': typeof DashboardAdminReprocessRoute
   '/dashboard_/admin_/searches': typeof DashboardAdminSearchesRoute
   '/dashboard_/admin_/upload-backups': typeof DashboardAdminUploadBackupsRoute
@@ -939,7 +930,6 @@ export interface FileRouteTypes {
     | '/dashboard/admin/organizations'
     | '/dashboard/admin/processing-uploads'
     | '/dashboard/admin/reindex'
-    | '/dashboard/admin/remux'
     | '/dashboard/admin/reprocess'
     | '/dashboard/admin/searches'
     | '/dashboard/admin/upload-backups'
@@ -1030,7 +1020,6 @@ export interface FileRouteTypes {
     | '/dashboard/admin/organizations'
     | '/dashboard/admin/processing-uploads'
     | '/dashboard/admin/reindex'
-    | '/dashboard/admin/remux'
     | '/dashboard/admin/reprocess'
     | '/dashboard/admin/searches'
     | '/dashboard/admin/upload-backups'
@@ -1124,7 +1113,6 @@ export interface FileRouteTypes {
     | '/dashboard_/admin_/organizations'
     | '/dashboard_/admin_/processing-uploads'
     | '/dashboard_/admin_/reindex'
-    | '/dashboard_/admin_/remux'
     | '/dashboard_/admin_/reprocess'
     | '/dashboard_/admin_/searches'
     | '/dashboard_/admin_/upload-backups'
@@ -1502,13 +1490,6 @@ declare module '@tanstack/react-router' {
       path: '/admin/reprocess'
       fullPath: '/dashboard/admin/reprocess'
       preLoaderRoute: typeof DashboardAdminReprocessRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/dashboard_/admin_/remux': {
-      id: '/dashboard_/admin_/remux'
-      path: '/admin/remux'
-      fullPath: '/dashboard/admin/remux'
-      preLoaderRoute: typeof DashboardAdminRemuxRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard_/admin_/processing-uploads': {
@@ -1930,7 +1911,6 @@ interface DashboardRouteChildren {
   DashboardAdminOrganizationsRoute: typeof DashboardAdminOrganizationsRoute
   DashboardAdminProcessingUploadsRoute: typeof DashboardAdminProcessingUploadsRoute
   DashboardAdminReindexRoute: typeof DashboardAdminReindexRoute
-  DashboardAdminRemuxRoute: typeof DashboardAdminRemuxRoute
   DashboardAdminReprocessRoute: typeof DashboardAdminReprocessRoute
   DashboardAdminSearchesRoute: typeof DashboardAdminSearchesRoute
   DashboardAdminUploadBackupsRoute: typeof DashboardAdminUploadBackupsRoute
@@ -1982,7 +1962,6 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAdminOrganizationsRoute: DashboardAdminOrganizationsRoute,
   DashboardAdminProcessingUploadsRoute: DashboardAdminProcessingUploadsRoute,
   DashboardAdminReindexRoute: DashboardAdminReindexRoute,
-  DashboardAdminRemuxRoute: DashboardAdminRemuxRoute,
   DashboardAdminReprocessRoute: DashboardAdminReprocessRoute,
   DashboardAdminSearchesRoute: DashboardAdminSearchesRoute,
   DashboardAdminUploadBackupsRoute: DashboardAdminUploadBackupsRoute,

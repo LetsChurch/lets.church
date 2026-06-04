@@ -19,11 +19,7 @@ import { ingestConfig } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { runAnnotation } from '@letschurch/temporal/activities/background/annotate-transcript';
 import { runSummary } from '@letschurch/temporal/activities/background/summarize-upload';
-import {
-  BACKGROUND_QUEUE,
-  CURRENT_PIPELINE_VERSION,
-  PRIORITY_RETRY,
-} from '@letschurch/temporal/queues';
+import { BACKGROUND_QUEUE, PRIORITY_RETRY } from '@letschurch/temporal/queues';
 import { UPLOAD_ID_KEY } from '@letschurch/temporal/search-attributes';
 import {
   ANNOTATE_MODEL,
@@ -43,7 +39,6 @@ import {
   inArray,
   isNotNull,
   isNull,
-  lt,
   notExists,
   or,
   sql,
@@ -63,7 +58,6 @@ import {
   cancelBulkBackupToGlacier,
   cancelCleanupStaleUploadStates,
   cancelReindex,
-  cancelRemuxAll,
   cancelReprocess,
   client,
   deleteUpload,
@@ -73,13 +67,11 @@ import {
   getBulkBackupToGlacierProgress,
   getCleanupStaleUploadStatesProgress,
   getReindexProgress,
-  getRemuxWorkflowStatus,
   getReprocessWorkflowStatus,
   makeAnnotateTranscriptWorkflowId,
   makeProcessMediaWorkflowId,
   makeSummarizeUploadWorkflowId,
   type ReindexKind,
-  type RemuxScope,
   type ReprocessScope,
   resetPassword,
   startBackfillFilenames,
@@ -89,7 +81,6 @@ import {
   startBulkBackupToGlacier,
   startCleanupStaleUploadStates,
   startReindex,
-  startRemuxAll,
   startReprocess,
 } from '@/temporal';
 import { mantineAvatarSm2x } from '@/util/avatar-sizes';
@@ -4670,153 +4661,5 @@ export const adminRouter = router({
         channelId: channel.id,
       });
       return status;
-    }),
-
-  // Remux procedures
-
-  getRemuxStatus: adminProcedure.query(async () => {
-    const [legacyCount, legacyStatus] = await Promise.all([
-      db
-        .select({ cnt: count() })
-        .from(UploadRecord)
-        .where(
-          and(
-            lt(UploadRecord.pipelineVersion, CURRENT_PIPELINE_VERSION),
-            isNotNull(UploadRecord.transcodingFinishedAt),
-          ),
-        )
-        .then((r) => r[0]?.cnt ?? 0),
-      getRemuxWorkflowStatus({ kind: 'legacy' }),
-    ]);
-    return { legacyCount, legacyStatus };
-  }),
-
-  startRemux: adminProcedure
-    .input(
-      z.object({
-        scope: z.discriminatedUnion('kind', [
-          z.object({ kind: z.literal('legacy') }),
-          z.object({ kind: z.literal('channel'), channelSlug: z.string() }),
-        ]),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      moduleLogger.info(
-        { appUserId: ctx.session.appUserId, context: { scope: input.scope } },
-        'Starting remux',
-      );
-
-      let scope: RemuxScope;
-      if (input.scope.kind === 'channel') {
-        const { channelSlug } = input.scope;
-        const channel = await db.query.Channel.findFirst({
-          columns: { id: true },
-          where: (t, { eq }) => eq(t.slug, channelSlug),
-        });
-        if (!channel) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: `Channel not found: ${channelSlug}`,
-          });
-        }
-        scope = { kind: 'channel', channelId: channel.id };
-      } else {
-        scope = input.scope;
-      }
-
-      try {
-        const current = await getRemuxWorkflowStatus(scope);
-        if (current === 'running') {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Remux workflow is already running for this scope',
-          });
-        }
-
-        await startRemuxAll(scope);
-        return { success: true };
-      } catch (err) {
-        if (err instanceof TRPCError) throw err;
-        moduleLogger.error(
-          {
-            appUserId: ctx.session.appUserId,
-            context: {
-              scope: input.scope,
-              error: err instanceof Error ? err.message : String(err),
-            },
-          },
-          'Failed to start remux workflow',
-        );
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to start remux workflow',
-        });
-      }
-    }),
-
-  cancelRemux: adminProcedure
-    .input(
-      z.object({
-        scope: z.discriminatedUnion('kind', [
-          z.object({ kind: z.literal('legacy') }),
-          z.object({ kind: z.literal('channel'), channelSlug: z.string() }),
-        ]),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      moduleLogger.info(
-        { appUserId: ctx.session.appUserId, context: { scope: input.scope } },
-        'Cancelling remux',
-      );
-
-      let scope: RemuxScope;
-      if (input.scope.kind === 'channel') {
-        const { channelSlug } = input.scope;
-        const channel = await db.query.Channel.findFirst({
-          columns: { id: true },
-          where: (t, { eq }) => eq(t.slug, channelSlug),
-        });
-        if (!channel) {
-          throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: `Channel not found: ${channelSlug}`,
-          });
-        }
-        scope = { kind: 'channel', channelId: channel.id };
-      } else {
-        scope = input.scope;
-      }
-
-      try {
-        await cancelRemuxAll(scope);
-        return { success: true };
-      } catch (err) {
-        if (err instanceof TRPCError) throw err;
-        moduleLogger.error(
-          {
-            appUserId: ctx.session.appUserId,
-            context: {
-              scope: input.scope,
-              error: err instanceof Error ? err.message : String(err),
-            },
-          },
-          'Failed to cancel remux workflow',
-        );
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to cancel remux workflow',
-        });
-      }
-    }),
-
-  getChannelRemuxStatus: adminProcedure
-    .input(z.object({ channelSlug: z.string() }))
-    .query(async ({ input }) => {
-      const channel = await db.query.Channel.findFirst({
-        columns: { id: true },
-        where: (t, { eq }) => eq(t.slug, input.channelSlug),
-      });
-      if (!channel) return null;
-      return getRemuxWorkflowStatus({ kind: 'channel', channelId: channel.id });
     }),
 });

@@ -28,18 +28,16 @@ import {
   makePostUserRegistrationWorkflowId,
   makeProcessMediaWorkflowId,
   makeRecordDownloadSizeWorkflowId,
-  makeRemuxAllWorkflowId,
   makeReprocessAllWorkflowId,
   makeResetPasswordWorkflowId,
   makeScrapeAndImportWorkflowId,
   makeSummarizeUploadWorkflowId,
   makeUpdateUploadRecordWorkflowId,
   makeVerificationEmailWorkflowId,
-  type RemuxScope,
   type ReprocessScope,
 } from '@letschurch/temporal/workflow-ids';
 
-export type { RemuxScope, ReprocessScope };
+export type { ReprocessScope };
 
 import { eq } from 'drizzle-orm';
 
@@ -1079,10 +1077,10 @@ export async function cancelReindex(kind: ReindexWorkflowParams['kind']) {
 // Reprocess Workflows
 
 // Resolve channel slug from id for typedSearchAttributes on channel-scoped
-// reprocess/remux workflows. Returns null for non-channel scopes or missing
+// reprocess workflows. Returns null for non-channel scopes or missing
 // channels — both are silently dropped from the attribute list.
 async function lookupChannelScopeSlug(
-  scope: ReprocessScope | RemuxScope,
+  scope: ReprocessScope,
 ): Promise<string | null> {
   if (scope.kind !== 'channel') return null;
   const channel = await db.query.Channel.findFirst({
@@ -1142,55 +1140,6 @@ export async function getReprocessWorkflowStatus(scope: ReprocessScope) {
 export async function cancelReprocess(scope: ReprocessScope) {
   const handle = (await client).workflow.getHandle(
     makeReprocessAllWorkflowId(scope),
-  );
-  await handle.cancel();
-}
-
-// Remux Workflows
-
-export async function startRemuxAll(scope: RemuxScope = { kind: 'legacy' }) {
-  const channelSlug = await lookupChannelScopeSlug(scope);
-  return startBackground('remuxAllWorkflow', {
-    ...retryOps,
-    taskQueue: BACKGROUND_QUEUE,
-    priority: { priorityKey: PRIORITY_REPROCESS },
-    workflowId: makeRemuxAllWorkflowId(scope),
-    args: [scope],
-    typedSearchAttributes:
-      scope.kind === 'channel'
-        ? [
-            { key: CHANNEL_ID_KEY, value: scope.channelId },
-            ...(channelSlug
-              ? [{ key: CHANNEL_SLUG_KEY, value: channelSlug }]
-              : []),
-          ]
-        : [],
-  });
-}
-
-export async function getRemuxWorkflowStatus(
-  scope: RemuxScope = { kind: 'legacy' },
-) {
-  try {
-    const handle = (await client).workflow.getHandle(
-      makeRemuxAllWorkflowId(scope),
-    );
-    const description = await handle.describe();
-    return description.status.name.toLowerCase() as
-      | 'running'
-      | 'completed'
-      | 'failed'
-      | 'canceled'
-      | 'terminated'
-      | 'timed_out';
-  } catch {
-    return null;
-  }
-}
-
-export async function cancelRemuxAll(scope: RemuxScope = { kind: 'legacy' }) {
-  const handle = (await client).workflow.getHandle(
-    makeRemuxAllWorkflowId(scope),
   );
   await handle.cancel();
 }

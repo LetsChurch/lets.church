@@ -139,21 +139,6 @@ export function makeReprocessUploadWorkflowId(uploadRecordId: string) {
   return `reprocessUpload:${uploadRecordId}`;
 }
 
-export type { RemuxScope } from './remux-scope';
-
-import type { RemuxScope } from './remux-scope';
-
-export function makeRemuxUploadWorkflowId(uploadRecordId: string) {
-  return `remuxUpload:${uploadRecordId}`;
-}
-
-export function makeRemuxAllWorkflowId(
-  scope: RemuxScope = { kind: 'legacy' },
-): string {
-  if (scope.kind === 'channel') return `remuxAll:channel:${scope.channelId}`;
-  return `remuxAll:${scope.kind}`;
-}
-
 // Import workflows
 export function makeImportMediaWorkflowId(url: string) {
   return `importMedia:${xxh32(url)}:${Date.now()}`;

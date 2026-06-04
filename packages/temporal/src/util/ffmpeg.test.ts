@@ -4,8 +4,6 @@ import {
   ffmpegEncodingArgs,
   getVariants,
   parseM3u8,
-  remuxAudioArgs,
-  remuxVideoArgs,
   variantsToMasterVideoPlaylist,
 } from './ffmpeg';
 import { ffprobeSchema } from './zod';
@@ -654,7 +652,7 @@ test('variantsToMasterVideoPlaylist', () => {
     "
   `);
 
-  // hasMuxedAudio=true: audio baked into segments (remux path), codec hint still included
+  // hasMuxedAudio=true: audio baked into segments, codec hint still included
   expect(
     variantsToMasterVideoPlaylist(['VIDEO_720P'], true),
   ).toMatchInlineSnapshot(`
@@ -1089,116 +1087,6 @@ test('ffmpegEncodingArgs ama hwupload for non-hw-accelerated codec', () => {
       "48000",
       "-b:a",
       "192k",
-      "-hls_time",
-      "7",
-      "-hls_playlist_type",
-      "vod",
-      "-hls_flags",
-      "temp_file",
-      "-hls_segment_type",
-      "fmp4",
-      "-hls_fmp4_init_filename",
-      "AUDIO_init.mp4",
-      "-hls_segment_filename",
-      "AUDIO_%04d.m4s",
-      "AUDIO.m3u8",
-    ]
-  `);
-});
-
-describe('remuxVideoArgs', () => {
-  test('with audio', () => {
-    expect(
-      remuxVideoArgs('VIDEO_720P', '/work/concat.txt', 6, true),
-    ).toMatchInlineSnapshot(`
-      [
-        "-hide_banner",
-        "-y",
-        "-f",
-        "concat",
-        "-safe",
-        "0",
-        "-i",
-        "/work/concat.txt",
-        "-c:v",
-        "copy",
-        "-c:a",
-        "copy",
-        "-bsf:a",
-        "aac_adtstoasc",
-        "-progress",
-        "-",
-        "-hls_time",
-        "6",
-        "-hls_playlist_type",
-        "vod",
-        "-hls_flags",
-        "temp_file",
-        "-hls_segment_type",
-        "fmp4",
-        "-hls_fmp4_init_filename",
-        "VIDEO_720P_init.mp4",
-        "-hls_segment_filename",
-        "VIDEO_720P_%04d.m4s",
-        "VIDEO_720P.m3u8",
-      ]
-    `);
-  });
-
-  test('without audio', () => {
-    expect(
-      remuxVideoArgs('VIDEO_720P', '/work/concat.txt', 6, false),
-    ).toMatchInlineSnapshot(`
-      [
-        "-hide_banner",
-        "-y",
-        "-f",
-        "concat",
-        "-safe",
-        "0",
-        "-i",
-        "/work/concat.txt",
-        "-c:v",
-        "copy",
-        "-an",
-        "-progress",
-        "-",
-        "-hls_time",
-        "6",
-        "-hls_playlist_type",
-        "vod",
-        "-hls_flags",
-        "temp_file",
-        "-hls_segment_type",
-        "fmp4",
-        "-hls_fmp4_init_filename",
-        "VIDEO_720P_init.mp4",
-        "-hls_segment_filename",
-        "VIDEO_720P_%04d.m4s",
-        "VIDEO_720P.m3u8",
-      ]
-    `);
-  });
-});
-
-test('remuxAudioArgs', () => {
-  expect(remuxAudioArgs('/work/audio_concat.txt', 7)).toMatchInlineSnapshot(`
-    [
-      "-hide_banner",
-      "-y",
-      "-f",
-      "concat",
-      "-safe",
-      "0",
-      "-i",
-      "/work/audio_concat.txt",
-      "-vn",
-      "-c:a",
-      "copy",
-      "-bsf:a",
-      "aac_adtstoasc",
-      "-progress",
-      "-",
       "-hls_time",
       "7",
       "-hls_playlist_type",

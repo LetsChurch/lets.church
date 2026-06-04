@@ -86,11 +86,6 @@ export { default as getFinalizedUploadKey } from './get-finalized-upload-key';
 export { default as getLlmBatchStatus } from './get-llm-batch-status';
 export { default as getProbe } from './get-probe';
 export {
-  getLegacyRemuxCount,
-  getRemuxBatch,
-  type RemuxBatch,
-} from './get-remux-batch';
-export {
   getNoParagraphsUploadCount,
   getReprocessBatch,
   type ReprocessBatch,
