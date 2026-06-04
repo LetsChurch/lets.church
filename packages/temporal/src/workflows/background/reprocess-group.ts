@@ -53,20 +53,30 @@ const { getFinalizedUploadKey, getStoredProbe, storeTranscriptParagraphs } =
     retry: { maximumAttempts: 5 },
   });
 
-const {
-  submitLlmBatch,
-  processLlmBatchOutput,
-  cleanupBatchFiles,
-  embedUploadSummariesBulk,
-} = proxyActivities<typeof backgroundActivities>({
-  // All of these are short — submit uploads a JSONL + creates a
-  // batch; process streams a (bounded) output file and writes DB
-  // rows; cleanupBatchFiles is a few `files.delete` calls;
-  // embedUploadSummariesBulk is one live `embeddings.create` round-
-  // trip (≤200 inputs) + a transactional UPDATE per upload.
-  // 30m gives generous headroom for the larger groups. No
-  // heartbeatTimeout because none of these activities heartbeat —
+const { submitLlmBatch, processLlmBatchOutput } = proxyActivities<
+  typeof backgroundActivities
+>({
+  // These two scale with group size: `submitLlmBatch` builds and
+  // uploads a JSONL whose annotate kind echoes each upload's full
+  // transcript, and `processLlmBatchOutput` streams the whole output
+  // file and does per-upload DB writes. Large reprocess groups were
+  // hitting START_TO_CLOSE at 30m, so the ceiling is 2h. No
+  // heartbeatTimeout because neither activity heartbeats —
   // startToCloseTimeout is the only ceiling.
+  startToCloseTimeout: '120 minutes',
+  taskQueue: BACKGROUND_QUEUE,
+  retry: { maximumAttempts: 3 },
+});
+
+const { cleanupBatchFiles, embedUploadSummariesBulk } = proxyActivities<
+  typeof backgroundActivities
+>({
+  // Both are short, fixed-cost: cleanupBatchFiles is a few
+  // `files.delete` calls; embedUploadSummariesBulk is one live
+  // `embeddings.create` round-trip (≤200 inputs) + a transactional
+  // UPDATE per upload. 30m is generous headroom. No heartbeatTimeout
+  // because neither heartbeats — startToCloseTimeout is the only
+  // ceiling.
   startToCloseTimeout: '30 minutes',
   taskQueue: BACKGROUND_QUEUE,
   retry: { maximumAttempts: 3 },
