@@ -623,11 +623,13 @@ test('variantsToMasterVideoPlaylist', () => {
     variantsToMasterVideoPlaylist(['VIDEO_4K', 'VIDEO_1080P', 'AUDIO']),
   ).toMatchInlineSnapshot(`
     "#EXTM3U
-    #EXT-X-VERSION:3
+    #EXT-X-VERSION:6
 
-    #EXT-X-STREAM-INF:BANDWIDTH=27492000,RESOLUTION=3840x2160,CODECS="avc1.640033,mp4a.40.2"
+    #EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",NAME="Audio",DEFAULT=YES,AUTOSELECT=YES,URI="AUDIO.m3u8"
+
+    #EXT-X-STREAM-INF:BANDWIDTH=27492000,RESOLUTION=3840x2160,CODECS="avc1.640033,mp4a.40.2",AUDIO="audio"
     VIDEO_4K.m3u8
-    #EXT-X-STREAM-INF:BANDWIDTH=7692000,RESOLUTION=1920x1080,CODECS="avc1.640028,mp4a.40.2"
+    #EXT-X-STREAM-INF:BANDWIDTH=7692000,RESOLUTION=1920x1080,CODECS="avc1.640028,mp4a.40.2",AUDIO="audio"
     VIDEO_1080P.m3u8
     "
   `);
@@ -641,33 +643,24 @@ test('variantsToMasterVideoPlaylist', () => {
     ]),
   ).toMatchInlineSnapshot(`
     "#EXTM3U
-    #EXT-X-VERSION:3
+    #EXT-X-VERSION:6
 
-    #EXT-X-STREAM-INF:BANDWIDTH=7692000,RESOLUTION=1920x1080,CODECS="avc1.640028,mp4a.40.2"
+    #EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",NAME="Audio",DEFAULT=YES,AUTOSELECT=YES,URI="AUDIO.m3u8"
+
+    #EXT-X-STREAM-INF:BANDWIDTH=7692000,RESOLUTION=1920x1080,CODECS="avc1.640028,mp4a.40.2",AUDIO="audio"
     VIDEO_1080P.m3u8
-    #EXT-X-STREAM-INF:BANDWIDTH=4392000,RESOLUTION=1280x720,CODECS="avc1.64001f,mp4a.40.2"
+    #EXT-X-STREAM-INF:BANDWIDTH=4392000,RESOLUTION=1280x720,CODECS="avc1.64001f,mp4a.40.2",AUDIO="audio"
     VIDEO_720P.m3u8
-    #EXT-X-STREAM-INF:BANDWIDTH=2292000,RESOLUTION=960x540,CODECS="avc1.64001f,mp4a.40.2"
+    #EXT-X-STREAM-INF:BANDWIDTH=2292000,RESOLUTION=960x540,CODECS="avc1.64001f,mp4a.40.2",AUDIO="audio"
     VIDEO_480P.m3u8
     "
   `);
 
-  // hasMuxedAudio=true: audio baked into segments, codec hint still included
-  expect(
-    variantsToMasterVideoPlaylist(['VIDEO_720P'], true),
-  ).toMatchInlineSnapshot(`
-    "#EXTM3U
-    #EXT-X-VERSION:3
-
-    #EXT-X-STREAM-INF:BANDWIDTH=4392000,RESOLUTION=1280x720,CODECS="avc1.64001f,mp4a.40.2"
-    VIDEO_720P.m3u8
-    "
-  `);
-
-  // video-only (no audio stream, hasMuxedAudio=false): no mp4a codec hint, no audio bandwidth
+  // video-only (no audio stream): no mp4a codec hint, no audio bandwidth,
+  // no audio rendition group
   expect(variantsToMasterVideoPlaylist(['VIDEO_720P'])).toMatchInlineSnapshot(`
     "#EXTM3U
-    #EXT-X-VERSION:3
+    #EXT-X-VERSION:6
 
     #EXT-X-STREAM-INF:BANDWIDTH=4200000,RESOLUTION=1280x720,CODECS="avc1.64001f"
     VIDEO_720P.m3u8
@@ -757,8 +750,7 @@ test('ffmpegEncodingArgs software 4K+1080P', () => {
       "[0:v]scale=3840:2160:flags=lanczos,setsar=1[VIDEO_4K];[0:v]scale=1920:1080:flags=lanczos,setsar=1[VIDEO_1080P]",
       "-map",
       "[VIDEO_4K]",
-      "-map",
-      "0:a",
+      "-an",
       "-c:v",
       "h264",
       "-profile:v",
@@ -775,16 +767,14 @@ test('ffmpegEncodingArgs software 4K+1080P', () => {
       "bt709",
       "-color_range",
       "tv",
-      "-c:a",
-      "aac",
-      "-ar",
-      "48000",
-      "-b:a",
-      "192k",
+      "-force_key_frames",
+      "expr:gte(t,n_forced*7)",
+      "-sc_threshold",
+      "0",
       "-g",
-      "48",
-      "-keyint_min",
-      "48",
+      "1000000",
+      "-fps_mode",
+      "cfr",
       "-b:v",
       "18200k",
       "-maxrate",
@@ -808,8 +798,7 @@ test('ffmpegEncodingArgs software 4K+1080P', () => {
       "VIDEO_4K.m3u8",
       "-map",
       "[VIDEO_1080P]",
-      "-map",
-      "0:a",
+      "-an",
       "-c:v",
       "h264",
       "-profile:v",
@@ -826,16 +815,14 @@ test('ffmpegEncodingArgs software 4K+1080P', () => {
       "bt709",
       "-color_range",
       "tv",
-      "-c:a",
-      "aac",
-      "-ar",
-      "48000",
-      "-b:a",
-      "192k",
+      "-force_key_frames",
+      "expr:gte(t,n_forced*7)",
+      "-sc_threshold",
+      "0",
       "-g",
-      "48",
-      "-keyint_min",
-      "48",
+      "1000000",
+      "-fps_mode",
+      "cfr",
       "-b:v",
       "5000k",
       "-maxrate",
@@ -931,8 +918,7 @@ test('ffmpegEncodingArgs ama 4K+1080P h264', () => {
       "scaler_ama=outputs=2:out_res=(3840x2160)(1920x1080) [VIDEO_4K][VIDEO_1080P]",
       "-map",
       "[VIDEO_4K]",
-      "-map",
-      "0:a",
+      "-an",
       "-c:v",
       "h264_ama",
       "-pix_fmt",
@@ -945,16 +931,14 @@ test('ffmpegEncodingArgs ama 4K+1080P h264', () => {
       "bt709",
       "-color_range",
       "tv",
-      "-c:a",
-      "aac",
-      "-ar",
-      "48000",
-      "-b:a",
-      "192k",
+      "-force_key_frames",
+      "expr:gte(t,n_forced*7)",
+      "-sc_threshold",
+      "0",
       "-g",
-      "48",
-      "-keyint_min",
-      "48",
+      "1000000",
+      "-fps_mode",
+      "cfr",
       "-b:v",
       "18200k",
       "-maxrate",
@@ -978,8 +962,7 @@ test('ffmpegEncodingArgs ama 4K+1080P h264', () => {
       "VIDEO_4K.m3u8",
       "-map",
       "[VIDEO_1080P]",
-      "-map",
-      "0:a",
+      "-an",
       "-c:v",
       "h264_ama",
       "-pix_fmt",
@@ -992,16 +975,14 @@ test('ffmpegEncodingArgs ama 4K+1080P h264', () => {
       "bt709",
       "-color_range",
       "tv",
-      "-c:a",
-      "aac",
-      "-ar",
-      "48000",
-      "-b:a",
-      "192k",
+      "-force_key_frames",
+      "expr:gte(t,n_forced*7)",
+      "-sc_threshold",
+      "0",
       "-g",
-      "48",
-      "-keyint_min",
-      "48",
+      "1000000",
+      "-fps_mode",
+      "cfr",
       "-b:v",
       "5000k",
       "-maxrate",
@@ -1064,8 +1045,7 @@ test('ffmpegEncodingArgs ama hwupload for non-hw-accelerated codec', () => {
       "hwupload,scaler_ama=outputs=2:out_res=(3840x2160)(1920x1080) [VIDEO_4K][VIDEO_1080P]",
       "-map",
       "[VIDEO_4K]",
-      "-map",
-      "0:a",
+      "-an",
       "-c:v",
       "h264_ama",
       "-pix_fmt",
@@ -1078,16 +1058,14 @@ test('ffmpegEncodingArgs ama hwupload for non-hw-accelerated codec', () => {
       "bt709",
       "-color_range",
       "tv",
-      "-c:a",
-      "aac",
-      "-ar",
-      "48000",
-      "-b:a",
-      "192k",
+      "-force_key_frames",
+      "expr:gte(t,n_forced*7)",
+      "-sc_threshold",
+      "0",
       "-g",
-      "48",
-      "-keyint_min",
-      "48",
+      "1000000",
+      "-fps_mode",
+      "cfr",
       "-b:v",
       "18200k",
       "-maxrate",
@@ -1111,8 +1089,7 @@ test('ffmpegEncodingArgs ama hwupload for non-hw-accelerated codec', () => {
       "VIDEO_4K.m3u8",
       "-map",
       "[VIDEO_1080P]",
-      "-map",
-      "0:a",
+      "-an",
       "-c:v",
       "h264_ama",
       "-pix_fmt",
@@ -1125,16 +1102,14 @@ test('ffmpegEncodingArgs ama hwupload for non-hw-accelerated codec', () => {
       "bt709",
       "-color_range",
       "tv",
-      "-c:a",
-      "aac",
-      "-ar",
-      "48000",
-      "-b:a",
-      "192k",
+      "-force_key_frames",
+      "expr:gte(t,n_forced*7)",
+      "-sc_threshold",
+      "0",
       "-g",
-      "48",
-      "-keyint_min",
-      "48",
+      "1000000",
+      "-fps_mode",
+      "cfr",
       "-b:v",
       "5000k",
       "-maxrate",

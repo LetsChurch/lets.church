@@ -138,13 +138,8 @@ function videoVariantToLevel(variant: VideoVariant): string {
 function videoVariantToOutputArgs(
   variant: VideoVariant,
   hwAccel: HwAccel,
-  hasAudio: boolean,
 ): string[] {
   const kbps = videoVariantToKbps(variant);
-  const audioMapArgs: string[] = hasAudio ? ['-map', '0:a'] : [];
-  const audioCodecArgs: string[] = hasAudio
-    ? ['-c:a', 'aac', '-ar', '48000', '-b:a', '192k']
-    : [];
   // `-profile:v` / `-level:v` are libx264-only; the AMA encoder manages
   // profile/level itself and doesn't take these flags.
   const profileLevelArgs = hwAccel.startsWith('ama:')
@@ -176,16 +171,28 @@ function videoVariantToOutputArgs(
   return [
     '-map',
     `[${variant}]`,
-    ...audioMapArgs,
+    // Video carries no audio — audio is a single shared fMP4 rendition
+    // (see audioOutputArgs) referenced from the master playlist, so it's
+    // encoded/stored once instead of muxed into every video variant.
+    '-an',
     '-c:v',
     hwAccel.startsWith('ama:') ? 'h264_ama' : 'h264',
     ...profileLevelArgs,
     ...formatColorArgs,
-    ...audioCodecArgs,
+    // Pin an IDR to the HLS segment grid + disable scene-cut / open GOP
+    // so every segment is exactly HLS_TIME long. The separate AUDIO
+    // rendition is cut on the same grid, keeping the two aligned to
+    // within the constant B-frame reorder offset. -fps_mode cfr so the
+    // time-based force_key_frames expression maps to even boundaries
+    // even on variable-frame-rate sources.
+    '-force_key_frames',
+    `expr:gte(t,n_forced*${HLS_TIME})`,
+    '-sc_threshold',
+    '0',
     '-g',
-    '48',
-    '-keyint_min',
-    '48',
+    '1000000',
+    '-fps_mode',
+    'cfr',
     '-b:v',
     `${kbps}k`,
     '-maxrate',
@@ -223,27 +230,38 @@ function audioOutputArgs(): string[] {
 
 export function variantsToMasterVideoPlaylist(
   variants: Array<UploadVariantValue>,
-  hasMuxedAudio = false,
 ) {
   const videoVariants = variants.filter(
     (v): v is VideoVariant =>
       v.startsWith('VIDEO') && !v.endsWith('_DOWNLOAD') && !v.includes('360P'),
   );
 
-  const hasSeparateAudio = variants.includes('AUDIO');
-  const includeAudioCodec = hasSeparateAudio || hasMuxedAudio;
+  // Audio is a single shared fMP4 rendition (AUDIO.m3u8), not muxed into
+  // the video segments. Reference it as an `#EXT-X-MEDIA` group so the
+  // player fetches it once regardless of the selected video quality. The
+  // sync that makes this safe comes from the forced-on-grid keyframes in
+  // `videoVariantToOutputArgs`.
+  const hasAudio = variants.includes('AUDIO');
 
-  const lines = ['#EXTM3U', '#EXT-X-VERSION:3', ''];
+  // fMP4 segments + audio rendition groups require HLS v6.
+  const lines = ['#EXTM3U', '#EXT-X-VERSION:6', ''];
+
+  if (hasAudio) {
+    lines.push(
+      '#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",NAME="Audio",DEFAULT=YES,AUTOSELECT=YES,URI="AUDIO.m3u8"',
+      '',
+    );
+  }
 
   for (const v of videoVariants) {
     const kbps = videoVariantToKbps(v);
     const [w, h] = videoVariantToDimensions(v);
     const codec = videoVariantToAvcCodec(v);
-    const bandwidth =
-      (Math.floor(kbps * 1.5) + (includeAudioCodec ? 192 : 0)) * 1000;
-    const codecStr = includeAudioCodec ? `${codec},mp4a.40.2` : codec;
+    const bandwidth = (Math.floor(kbps * 1.5) + (hasAudio ? 192 : 0)) * 1000;
+    const codecStr = hasAudio ? `${codec},mp4a.40.2` : codec;
+    const audioAttr = hasAudio ? ',AUDIO="audio"' : '';
     lines.push(
-      `#EXT-X-STREAM-INF:BANDWIDTH=${bandwidth},RESOLUTION=${w}x${h},CODECS="${codecStr}"`,
+      `#EXT-X-STREAM-INF:BANDWIDTH=${bandwidth},RESOLUTION=${w}x${h},CODECS="${codecStr}"${audioAttr}`,
       `${v}.m3u8`,
     );
   }
@@ -346,9 +364,7 @@ function variantsToOutputMaps(
   const hasAudio = variants.includes('AUDIO');
 
   return [
-    ...videoVariants.flatMap((v) =>
-      videoVariantToOutputArgs(v, hwAccel, hasAudio),
-    ),
+    ...videoVariants.flatMap((v) => videoVariantToOutputArgs(v, hwAccel)),
     ...(hasAudio ? audioOutputArgs() : []),
   ];
 }
