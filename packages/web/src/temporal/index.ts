@@ -1093,7 +1093,13 @@ async function lookupChannelScopeSlug(
 export async function startReprocess(
   scope: ReprocessScope,
   processingScope: 'transcode' | 'transcribe' | 'everything' = 'transcode',
-  options: { viaBatch?: boolean } = {},
+  options: {
+    viaBatch?: boolean;
+    skipProbe?: boolean;
+    dateStart?: string;
+    dateEnd?: string;
+    videoOnly?: boolean;
+  } = {},
 ) {
   const channelSlug = await lookupChannelScopeSlug(scope);
   return startBackground('reprocessAllWorkflow', {
@@ -1105,7 +1111,13 @@ export async function startReprocess(
       scope,
       processingScope,
       null,
-      { viaBatch: options.viaBatch ?? false },
+      {
+        viaBatch: options.viaBatch ?? false,
+        skipProbe: options.skipProbe ?? true,
+        dateStart: options.dateStart,
+        dateEnd: options.dateEnd,
+        videoOnly: options.videoOnly ?? false,
+      },
     ],
     typedSearchAttributes:
       scope.kind === 'channel'

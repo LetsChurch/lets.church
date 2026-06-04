@@ -33,6 +33,25 @@ export type ReprocessAllOptions = {
    * `processMediaWorkflow` behavior with live LLM calls.
    */
   viaBatch?: boolean;
+  /**
+   * Reuse each upload's stored probe.json instead of a fresh download +
+   * ffprobe (falling back to a live probe per upload when none is
+   * stored). Defaults to true for reprocess runs.
+   */
+  skipProbe?: boolean;
+  /**
+   * Inclusive ISO datetime bounds restricting which uploads are
+   * selected. The column they apply to is chosen from `processingScope`
+   * (creation date for a full run, transcode/transcribe finish date
+   * otherwise). Not used by the `no_paragraphs` migration scope.
+   */
+  dateStart?: string;
+  dateEnd?: string;
+  /**
+   * When true (and the run transcodes), only reprocess uploads that
+   * already have a video variant.
+   */
+  videoOnly?: boolean;
 };
 
 export async function reprocessAllWorkflow(
@@ -41,10 +60,18 @@ export async function reprocessAllWorkflow(
   cursor: string | null = null,
   options: ReprocessAllOptions = {},
 ): Promise<void> {
+  const skipProbe = options.skipProbe ?? true;
+
   const { items, nextCursor } = await getReprocessBatch(
     scope,
     BATCH_SIZE,
     cursor,
+    {
+      processingScope,
+      dateStart: options.dateStart,
+      dateEnd: options.dateEnd,
+      videoOnly: options.videoOnly,
+    },
   );
 
   if (options.viaBatch) {
@@ -85,7 +112,7 @@ export async function reprocessAllWorkflow(
       try {
         await startChild(reprocessGroupWorkflow, {
           workflowId: `reprocessGroup:${items[0]?.id ?? 'empty'}:${items.length}`,
-          args: [items.map((i) => i.id), processingScope],
+          args: [items.map((i) => i.id), processingScope, skipProbe],
           taskQueue: BACKGROUND_QUEUE,
           parentClosePolicy: ParentClosePolicy.ABANDON,
           priority: { priorityKey: PRIORITY_REPROCESS },
@@ -116,7 +143,7 @@ export async function reprocessAllWorkflow(
       try {
         await startChild(processMediaWorkflow, {
           workflowId: `reprocessUpload:${item.id}`,
-          args: [item.id, processingScope],
+          args: [item.id, processingScope, skipProbe],
           taskQueue: BACKGROUND_QUEUE,
           parentClosePolicy: ParentClosePolicy.ABANDON,
           priority: { priorityKey: PRIORITY_REPROCESS },

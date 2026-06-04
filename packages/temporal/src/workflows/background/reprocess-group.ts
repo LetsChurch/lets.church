@@ -45,14 +45,13 @@ const { transcribe } = proxyActivities<typeof transcribeActivities>({
   retry: { maximumAttempts: 2 },
 });
 
-const { getFinalizedUploadKey, storeTranscriptParagraphs } = proxyActivities<
-  typeof backgroundActivities
->({
-  startToCloseTimeout: '10 minutes',
-  heartbeatTimeout: '1 minute',
-  taskQueue: BACKGROUND_QUEUE,
-  retry: { maximumAttempts: 5 },
-});
+const { getFinalizedUploadKey, getStoredProbe, storeTranscriptParagraphs } =
+  proxyActivities<typeof backgroundActivities>({
+    startToCloseTimeout: '10 minutes',
+    heartbeatTimeout: '1 minute',
+    taskQueue: BACKGROUND_QUEUE,
+    retry: { maximumAttempts: 5 },
+  });
 
 const {
   submitLlmBatch,
@@ -172,6 +171,10 @@ function isBatchTerminal(status: BatchStatus['status']): boolean {
 export async function reprocessGroupWorkflow(
   uploadIds: string[],
   processingScope: 'transcode' | 'transcribe' | 'everything' = 'everything',
+  // Mirrors `processMediaWorkflow`: reuse the stored probe.json instead
+  // of a fresh download + ffprobe, falling back to a live probe per
+  // upload when none is stored. Defaults false; reprocess flows opt in.
+  skipProbe = false,
 ): Promise<void> {
   if (uploadIds.length === 0) return;
 
@@ -179,7 +182,9 @@ export async function reprocessGroupWorkflow(
   const prepResults = await Promise.allSettled(
     uploadIds.map(async (uploadId) => {
       const s3UploadKey = await getFinalizedUploadKey(uploadId);
-      const probeRes = await probe(uploadId, s3UploadKey);
+      const probeRes =
+        (skipProbe ? await getStoredProbe(uploadId) : null) ??
+        (await probe(uploadId, s3UploadKey));
       invariant(probeRes !== null, `probe returned null for ${uploadId}`);
 
       const wantsTranscribe =

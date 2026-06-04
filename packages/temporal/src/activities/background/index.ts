@@ -90,6 +90,7 @@ export {
   getReprocessBatch,
   type ReprocessBatch,
 } from './get-reprocess-batch';
+export { getStoredProbe } from './get-stored-probe';
 export { default as indexDocument } from './index-document';
 export { default as processImage } from './process-image';
 export {

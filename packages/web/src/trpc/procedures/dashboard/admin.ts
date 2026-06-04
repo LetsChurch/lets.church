@@ -4503,6 +4503,22 @@ export const adminRouter = router({
           .enum(['transcode', 'transcribe', 'everything'])
           .default('transcode'),
         viaBatch: z.boolean().default(false),
+        // Reuse stored probe metadata instead of re-probing. Defaults
+        // on (including the no_paragraphs migration); falls back to a
+        // live probe per-upload when no stored probe exists.
+        skipProbe: z.boolean().default(true),
+        // Optional creation/finish-date window (ISO datetimes). The
+        // column applied is chosen from processingScope on the worker.
+        // Not offered for the no_paragraphs migration scope.
+        dateRange: z
+          .object({
+            start: z.string().datetime().optional(),
+            end: z.string().datetime().optional(),
+          })
+          .optional(),
+        // Only reprocess uploads that already have a video variant.
+        // Ignored unless the run transcodes.
+        videoOnly: z.boolean().default(false),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -4513,6 +4529,9 @@ export const adminRouter = router({
             scope: input.scope,
             processingScope: input.processingScope,
             viaBatch: input.viaBatch,
+            skipProbe: input.skipProbe,
+            dateRange: input.dateRange,
+            videoOnly: input.videoOnly,
           },
         },
         'Starting reprocess',
@@ -4571,6 +4590,10 @@ export const adminRouter = router({
 
         await startReprocess(scope, input.processingScope, {
           viaBatch: input.viaBatch,
+          skipProbe: input.skipProbe,
+          dateStart: input.dateRange?.start,
+          dateEnd: input.dateRange?.end,
+          videoOnly: input.videoOnly,
         });
         return { success: true };
       } catch (err) {

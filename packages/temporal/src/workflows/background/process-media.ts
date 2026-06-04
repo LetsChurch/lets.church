@@ -44,14 +44,13 @@ const { transcribe } = proxyActivities<typeof transcribeActivities>({
   retry: { maximumAttempts: 2 },
 });
 
-const { getFinalizedUploadKey, storeTranscriptParagraphs } = proxyActivities<
-  typeof backgroundActivities
->({
-  startToCloseTimeout: '10 minute',
-  heartbeatTimeout: '1 minute',
-  taskQueue: BACKGROUND_QUEUE,
-  retry: { maximumAttempts: 5 },
-});
+const { getFinalizedUploadKey, getStoredProbe, storeTranscriptParagraphs } =
+  proxyActivities<typeof backgroundActivities>({
+    startToCloseTimeout: '10 minute',
+    heartbeatTimeout: '1 minute',
+    taskQueue: BACKGROUND_QUEUE,
+    retry: { maximumAttempts: 5 },
+  });
 
 const { sendUploadErrorNotification } = proxyActivities<
   typeof backgroundActivities
@@ -64,6 +63,11 @@ const { sendUploadErrorNotification } = proxyActivities<
 export async function processMediaWorkflow(
   targetId: string,
   scope: 'transcode' | 'transcribe' | 'everything' = 'everything',
+  // When true, reuse the probe metadata persisted on the initial run
+  // (via `getStoredProbe`) instead of paying for a fresh download +
+  // ffprobe. Defaults to false so fresh uploads, imports, and retries
+  // always probe live; reprocess flows opt in (and default it to true).
+  skipProbe = false,
 ) {
   // Propagate UploadId to every child / grandchild so the whole tree is
   // searchable in the Temporal UI by upload. Temporal does NOT inherit
@@ -76,7 +80,12 @@ export async function processMediaWorkflow(
   try {
     const s3UploadKey = await getFinalizedUploadKey(targetId);
 
-    const probeRes = await probe(targetId, s3UploadKey);
+    // Skip-probe reuses the stored probe.json; a null result (missing or
+    // unparseable) transparently falls back to a live probe so no upload
+    // is silently left unprocessed.
+    const probeRes =
+      (skipProbe ? await getStoredProbe(targetId) : null) ??
+      (await probe(targetId, s3UploadKey));
     invariant(probeRes !== null, 'Probe is null!');
 
     const transcribePromise =

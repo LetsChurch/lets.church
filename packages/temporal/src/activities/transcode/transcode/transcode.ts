@@ -36,11 +36,26 @@ const formatter = new Intl.ListFormat('en', {
   type: 'conjunction',
 });
 
+// Matches the HLS artifacts transcode produces: fMP4 init segments,
+// media segments, and playlists. Used to scope the post-transcode
+// stale-file cleanup so non-HLS artifacts (thumbnails, transcript.*,
+// peaks.*) are preserved.
+function isHlsArtifact(filename: string): boolean {
+  return (
+    /\.m4s$/i.test(filename) ||
+    /\.m3u8$/i.test(filename) ||
+    /_init\.mp4$/i.test(filename)
+  );
+}
+
 async function uploadSegments(
   id: string,
   dir: string,
   log: typeof logger,
-  excludeInit = false,
+  excludeInit: boolean,
+  // Records the basename of every uploaded segment so the caller can
+  // diff against existing S3 keys and prune stale ones afterward.
+  writtenFiles: Set<string>,
 ) {
   const patterns = excludeInit
     ? [join(dir, '*.m4s')]
@@ -49,16 +64,18 @@ async function uploadSegments(
   const signal = Context.current().cancellationSignal;
 
   for (const path of segmentFiles) {
+    const filename = basename(path);
     Context.current().heartbeat(`Starting upload: ${path}`);
     log.info(`Uploading media segment: ${path}`);
 
     await publicS3.retryablePutFile({
-      key: `${id}/${basename(path)}`,
+      key: `${id}/${filename}`,
       contentType: 'video/mp4',
       contentLength: (await stat(path)).size,
       path,
       signal,
     });
+    writtenFiles.add(filename);
 
     log.info(`Done uploading media segment: ${path}`);
     log.info(`Deleting ${path}`);
@@ -100,26 +117,14 @@ export default async function transcode(
   const stdout: Array<string> = [];
   const stderr: Array<string> = [];
 
-  try {
-    activityLogger.info(`Cleaning up old media files for ${uploadRecordId}`);
-    const keysToDelete: string[] = [];
-    for await (const key of publicS3.listKeys(`${uploadRecordId}/`)) {
-      const filename = key.slice(uploadRecordId.length + 1);
-      if (
-        !filename.startsWith('transcript.') &&
-        !/\.(jpg|jpeg|png|webp)$/i.test(filename)
-      ) {
-        keysToDelete.push(key);
-      }
-    }
-    if (keysToDelete.length > 0) {
-      activityLogger.info(`Deleting ${keysToDelete.length} old media files`);
-      await publicS3.deleteKeys(keysToDelete, () =>
-        Context.current().heartbeat('deleteOldMedia'),
-      );
-    }
-    activityLogger.info('Old media files cleaned up');
+  // Basenames of every HLS file written this run (segments, init
+  // segments, and playlists). After encoding we diff this against the
+  // existing S3 objects to prune stale segments from a prior encode
+  // WITHOUT a destructive up-front wipe — the old rendition stays
+  // playable until the new one is fully uploaded.
+  const writtenFiles = new Set<string>();
 
+  try {
     activityLogger.info(`Making work directory: ${workingDir}`);
 
     await mkdirp(workingDir);
@@ -182,11 +187,23 @@ export default async function transcode(
 
     while (encodeProc.exitCode === null) {
       Context.current().heartbeat('waiting for ffmpeg');
-      await uploadSegments(uploadRecordId, workingDir, activityLogger, true);
+      await uploadSegments(
+        uploadRecordId,
+        workingDir,
+        activityLogger,
+        true,
+        writtenFiles,
+      );
       await setTimeout(1000);
     }
 
-    await uploadSegments(uploadRecordId, workingDir, activityLogger);
+    await uploadSegments(
+      uploadRecordId,
+      workingDir,
+      activityLogger,
+      false,
+      writtenFiles,
+    );
 
     const encodeProcRes = await encodeProc;
 
@@ -218,6 +235,7 @@ export default async function transcode(
         contentLength: (await stat(path)).size,
         signal,
       });
+      writtenFiles.add(filename);
       Context.current().heartbeat(`Uploaded playlist file: ${filename}`);
       activityLogger.info(`Uploaded playlist file: ${filename}`);
     }
@@ -240,6 +258,7 @@ export default async function transcode(
         body: playlistBuffer,
         signal,
       });
+      writtenFiles.add('master.m3u8');
       Context.current().heartbeat('Uploaded master playlist file');
       activityLogger.info('Uploaded master playlist file');
     } else {
@@ -249,6 +268,29 @@ export default async function transcode(
         )}`,
       );
     }
+
+    // Prune stale HLS artifacts left over from a previous encode that
+    // the new output didn't overwrite — e.g. higher-indexed segments
+    // from a longer prior render, or a variant rendition no longer
+    // produced. Scoped to HLS files (segments/init/playlists) so
+    // thumbnails, transcript.*, peaks.*, and probe data are preserved.
+    // Runs only after every new segment + playlist is uploaded, so the
+    // upload is never left without a playable rendition.
+    activityLogger.info('Cleaning up stale HLS segments');
+    const staleKeys: string[] = [];
+    for await (const key of publicS3.listKeys(`${uploadRecordId}/`)) {
+      const filename = key.slice(uploadRecordId.length + 1);
+      if (isHlsArtifact(filename) && !writtenFiles.has(filename)) {
+        staleKeys.push(key);
+      }
+    }
+    if (staleKeys.length > 0) {
+      activityLogger.info(`Deleting ${staleKeys.length} stale HLS segments`);
+      await publicS3.deleteKeys(staleKeys, () =>
+        Context.current().heartbeat('deleteStaleSegments'),
+      );
+    }
+    activityLogger.info('Stale HLS segments cleaned up');
 
     // Generate and upload peaks
     activityLogger.info('Generating peaks');

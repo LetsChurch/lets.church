@@ -11,6 +11,7 @@ import {
   TextInput,
   Title,
 } from '@mantine/core';
+import { DateInput } from '@mantine/dates';
 import { IconAlertTriangle } from '@tabler/icons-react';
 import { useMutation, useQuery, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
@@ -44,6 +45,22 @@ const processingScopeData = [
   { value: 'everything', label: 'Everything' },
 ];
 
+// `videoOnly` only makes sense when the run re-encodes media.
+function transcodes(scope: ProcessingScope) {
+  return scope === 'transcode' || scope === 'everything';
+}
+
+// DateInput hands back a `YYYY-MM-DD` string (or null). Widen each bound
+// to a full-day UTC range and emit ISO datetimes for the API; returns
+// undefined when neither bound is set so the worker skips the filter.
+function toDateRange(start: string | null, end: string | null) {
+  if (!start && !end) return undefined;
+  return {
+    start: start ? new Date(`${start}T00:00:00.000Z`).toISOString() : undefined,
+    end: end ? new Date(`${end}T23:59:59.999Z`).toISOString() : undefined,
+  };
+}
+
 function statusBadge(status: string | null | undefined) {
   if (!status) return <Badge color="gray">Idle</Badge>;
   if (status === 'running') return <Badge color="blue">Running</Badge>;
@@ -75,9 +92,32 @@ function ReprocessPage() {
   // submit via the Batch API at 50% cost with a ~24h SLA; live
   // path otherwise. Only meaningful for scopes that include
   // transcribe.
-  const [noParagraphsViaBatch, setNoParagraphsViaBatch] = useState(false);
+  // Batch defaults ON for the mass-reprocess flows (the migration and
+  // all-uploads) where the 50% cost saving matters most; the targeted
+  // by-channel flow defaults OFF.
+  const [noParagraphsViaBatch, setNoParagraphsViaBatch] = useState(true);
   const [channelViaBatch, setChannelViaBatch] = useState(false);
-  const [allViaBatch, setAllViaBatch] = useState(false);
+  const [allViaBatch, setAllViaBatch] = useState(true);
+
+  // Skip-probe defaults on everywhere (including the migration): reuse
+  // the probe captured on the first run instead of re-downloading +
+  // re-probing. Falls back to a live probe per-upload when none stored.
+  const [noParagraphsSkipProbe, setNoParagraphsSkipProbe] = useState(true);
+  const [channelSkipProbe, setChannelSkipProbe] = useState(true);
+  const [allSkipProbe, setAllSkipProbe] = useState(true);
+
+  // Restrict a transcoding run to uploads that already have a video
+  // variant (skips audio-only). Only meaningful when the run transcodes.
+  // Not offered on the migration card (it's transcribe-driven).
+  const [channelVideoOnly, setChannelVideoOnly] = useState(false);
+  const [allVideoOnly, setAllVideoOnly] = useState(false);
+
+  // Optional date window for the channel + all-uploads flows (the
+  // migration scope is intentionally left without one).
+  const [channelDateStart, setChannelDateStart] = useState<string | null>(null);
+  const [channelDateEnd, setChannelDateEnd] = useState<string | null>(null);
+  const [allDateStart, setAllDateStart] = useState<string | null>(null);
+  const [allDateEnd, setAllDateEnd] = useState<string | null>(null);
 
   const { data: status, refetch: refetchStatus } = useSuspenseQuery({
     ...trpc.dashboard.admin.getReprocessStatus.queryOptions(),
@@ -184,6 +224,14 @@ function ReprocessPage() {
             }
           />
 
+          <Checkbox
+            size="xs"
+            label="Skip probe (reuse stored metadata)"
+            checked={noParagraphsSkipProbe}
+            onChange={(e) => setNoParagraphsSkipProbe(e.currentTarget.checked)}
+            disabled={status.noParagraphsStatus === 'running'}
+          />
+
           {status.noParagraphsStatus === 'running' ? (
             <Button
               size="xs"
@@ -212,6 +260,7 @@ function ReprocessPage() {
                   scope: { kind: 'no_paragraphs' },
                   processingScope: noParagraphsProcessingScope,
                   viaBatch: noParagraphsViaBatch,
+                  skipProbe: noParagraphsSkipProbe,
                 })
               }
             >
@@ -263,6 +312,53 @@ function ReprocessPage() {
             }
           />
 
+          <Checkbox
+            size="xs"
+            label="Skip probe (reuse stored metadata)"
+            checked={channelSkipProbe}
+            onChange={(e) => setChannelSkipProbe(e.currentTarget.checked)}
+            disabled={channelStatus === 'running'}
+          />
+
+          <Checkbox
+            size="xs"
+            label="Only uploads with video variants"
+            checked={channelVideoOnly && transcodes(channelProcessingScope)}
+            onChange={(e) => setChannelVideoOnly(e.currentTarget.checked)}
+            disabled={
+              channelStatus === 'running' || !transcodes(channelProcessingScope)
+            }
+          />
+
+          <Group grow>
+            <DateInput
+              size="xs"
+              clearable
+              label={
+                channelProcessingScope === 'everything'
+                  ? 'Created after'
+                  : `${channelProcessingScope === 'transcribe' ? 'Transcribed' : 'Transcoded'} after`
+              }
+              placeholder="Optional"
+              value={channelDateStart}
+              onChange={setChannelDateStart}
+              disabled={channelStatus === 'running'}
+            />
+            <DateInput
+              size="xs"
+              clearable
+              label={
+                channelProcessingScope === 'everything'
+                  ? 'Created before'
+                  : `${channelProcessingScope === 'transcribe' ? 'Transcribed' : 'Transcoded'} before`
+              }
+              placeholder="Optional"
+              value={channelDateEnd}
+              onChange={setChannelDateEnd}
+              disabled={channelStatus === 'running'}
+            />
+          </Group>
+
           {channelStatus === 'running' ? (
             <Button
               size="xs"
@@ -293,6 +389,10 @@ function ReprocessPage() {
                   scope: { kind: 'channel', channelSlug: channelSlug.trim() },
                   processingScope: channelProcessingScope,
                   viaBatch: channelViaBatch,
+                  skipProbe: channelSkipProbe,
+                  videoOnly:
+                    channelVideoOnly && transcodes(channelProcessingScope),
+                  dateRange: toDateRange(channelDateStart, channelDateEnd),
                 })
               }
             >
@@ -342,6 +442,53 @@ function ReprocessPage() {
             }
           />
 
+          <Checkbox
+            size="xs"
+            label="Skip probe (reuse stored metadata)"
+            checked={allSkipProbe}
+            onChange={(e) => setAllSkipProbe(e.currentTarget.checked)}
+            disabled={status.allStatus === 'running'}
+          />
+
+          <Checkbox
+            size="xs"
+            label="Only uploads with video variants"
+            checked={allVideoOnly && transcodes(allProcessingScope)}
+            onChange={(e) => setAllVideoOnly(e.currentTarget.checked)}
+            disabled={
+              status.allStatus === 'running' || !transcodes(allProcessingScope)
+            }
+          />
+
+          <Group grow>
+            <DateInput
+              size="xs"
+              clearable
+              label={
+                allProcessingScope === 'everything'
+                  ? 'Created after'
+                  : `${allProcessingScope === 'transcribe' ? 'Transcribed' : 'Transcoded'} after`
+              }
+              placeholder="Optional"
+              value={allDateStart}
+              onChange={setAllDateStart}
+              disabled={status.allStatus === 'running'}
+            />
+            <DateInput
+              size="xs"
+              clearable
+              label={
+                allProcessingScope === 'everything'
+                  ? 'Created before'
+                  : `${allProcessingScope === 'transcribe' ? 'Transcribed' : 'Transcoded'} before`
+              }
+              placeholder="Optional"
+              value={allDateEnd}
+              onChange={setAllDateEnd}
+              disabled={status.allStatus === 'running'}
+            />
+          </Group>
+
           {status.allStatus === 'running' ? (
             <Button
               size="xs"
@@ -368,6 +515,9 @@ function ReprocessPage() {
                   scope: { kind: 'all' },
                   processingScope: allProcessingScope,
                   viaBatch: allViaBatch,
+                  skipProbe: allSkipProbe,
+                  videoOnly: allVideoOnly && transcodes(allProcessingScope),
+                  dateRange: toDateRange(allDateStart, allDateEnd),
                 })
               }
             >
