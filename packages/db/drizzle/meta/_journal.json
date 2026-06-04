@@ -78,6 +78,13 @@
       "when": 1780369307446,
       "tag": "0010_llm_call_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1780566730851,
+      "tag": "0011_add_llm_call_response_text",
+      "breakpoints": true
     }
   ]
 }

@@ -139,6 +139,14 @@ export type RecordLlmCallArgs = {
   /** Failure detail mirroring the thrown Error message. Null on success. */
   errorMessage?: string | null;
   /**
+   * The model's full, verbatim response text (chat completion
+   * `choices[0].message.content`). Persisted so the complete raw
+   * completion survives the activity's lossy parse-to-structured-rows
+   * step. Null/omitted for embeddings (vector, not text) and for the
+   * failure paths with no response body.
+   */
+  responseText?: string | null;
+  /**
    * Set when the call was processed via OpenAI's Batch API. Halves the
    * `computedCostUsd` we write (Batch invoices at 50% of live rates)
    * and tags the row so dashboards can split live vs batch spend.
@@ -294,6 +302,11 @@ export async function createChatCompletionTracked(
       finishReason: choice?.finish_reason ?? null,
       outcome: result.outcome,
       errorMessage: result.errorMessage,
+      // Retain the verbatim completion text even on guard rejections —
+      // a silent-summarization or length-truncated response is exactly
+      // what we want to inspect after the fact. Null when the provider
+      // returned no content (content_filter / empty_content).
+      responseText: choice?.message.content ?? null,
     });
   }
 
@@ -449,6 +462,7 @@ export async function recordLlmCall(args: RecordLlmCallArgs): Promise<void> {
     // `createEmbeddingsTracked`) always pass an explicit value.
     outcome: args.outcome,
     errorMessage: args.errorMessage ?? null,
+    responseText: args.responseText ?? null,
     viaBatch,
     createdAt: at,
   });

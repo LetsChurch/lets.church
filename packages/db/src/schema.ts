@@ -2049,6 +2049,18 @@ export const LlmCall = pgTable(
     // Free-form failure detail when `outcome` is a guard rejection
     // (mirrors the thrown Error's message). Null on success.
     errorMessage: text('error_message'),
+    // The model's full, verbatim response text — `choices[0].message.content`
+    // for chat completions, captured on both the live and batch paths. This
+    // is the only place the complete raw completion is retained: the
+    // activities parse it down to structured rows (annotations, summary
+    // sections) and discard the rest, so keep it here for re-parsing after a
+    // parser change, debugging skipped spans, and audit. Null for embeddings
+    // (the response is a vector, not text), for `create_failed` /
+    // `batch_request_failed` rows (no response body), and for content-filter
+    // rejections (the provider returns no content). Can be large; it's a
+    // plain `text` column with no index — query by joining on the other
+    // indexed columns (upload, activity, created_at), never by scanning this.
+    responseText: text('response_text'),
     // True when the call was processed via OpenAI's Batch API rather
     // than the live (OpenRouter) path — Batch invoices at 50% of the
     // posted rate, so `computedCostUsd` for these rows is already

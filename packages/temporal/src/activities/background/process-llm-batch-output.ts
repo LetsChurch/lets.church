@@ -270,6 +270,7 @@ async function handleSummary(
     durationMs: 0,
     finishReason: body.choices?.[0]?.finish_reason ?? null,
     outcome: 'success',
+    responseText: raw,
     viaBatch: true,
   });
 }
@@ -330,6 +331,7 @@ async function handleAnnotate(
     durationMs: 0,
     finishReason: body.choices?.[0]?.finish_reason ?? null,
     outcome: 'success',
+    responseText: raw,
     viaBatch: true,
   });
 }
