@@ -19,7 +19,11 @@ import { ingestConfig } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { runAnnotation } from '@letschurch/temporal/activities/background/annotate-transcript';
 import { runSummary } from '@letschurch/temporal/activities/background/summarize-upload';
-import { BACKGROUND_QUEUE, PRIORITY_RETRY } from '@letschurch/temporal/queues';
+import {
+  BACKGROUND_QUEUE,
+  PRIORITY_REPROCESS,
+  PRIORITY_RETRY,
+} from '@letschurch/temporal/queues';
 import { UPLOAD_ID_KEY } from '@letschurch/temporal/search-attributes';
 import {
   ANNOTATE_MODEL,
@@ -3428,6 +3432,115 @@ export const adminRouter = router({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to retry upload processing',
+        });
+      }
+    }),
+
+  // Reprocess a single upload through the media pipeline at the chosen
+  // scope (transcode / transcribe / everything). Unlike retryUploadProcessing
+  // this is intentional even for fully-processed uploads, and the scope is
+  // chosen by the admin rather than inferred. Runs at reprocess priority so
+  // it doesn't disrupt live uploads.
+  reprocessUpload: adminProcedure
+    .input(
+      z.object({
+        uploadRecordId: z.uuid(),
+        processingScope: z
+          .enum(['transcode', 'transcribe', 'everything'])
+          .default('everything'),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      moduleLogger.info(
+        {
+          appUserId: ctx.session.appUserId,
+          targetId: input.uploadRecordId,
+          context: { processingScope: input.processingScope },
+        },
+        'Reprocessing upload',
+      );
+
+      try {
+        const upload = await db.query.UploadRecord.findFirst({
+          where: (t, { eq }) => eq(t.id, input.uploadRecordId),
+          columns: {
+            id: true,
+            uploadFinalized: true,
+            finalizedUploadKey: true,
+          },
+        });
+
+        if (!upload) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Upload not found',
+          });
+        }
+
+        if (!upload.uploadFinalized || !upload.finalizedUploadKey) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Upload is not finalized',
+          });
+        }
+
+        const temporalClient = await client;
+        const workflowId = makeProcessMediaWorkflowId(
+          upload.finalizedUploadKey,
+        );
+
+        try {
+          const handle = temporalClient.workflow.getHandle(workflowId);
+          const description = await handle.describe();
+          if (description.status.name === 'RUNNING') {
+            throw new TRPCError({
+              code: 'BAD_REQUEST',
+              message: 'Processing workflow is already running',
+            });
+          }
+        } catch (error) {
+          // Workflow doesn't exist yet — fine, we'll start it.
+          if (error instanceof TRPCError) {
+            throw error;
+          }
+        }
+
+        await startBackground('processMediaWorkflow', {
+          taskQueue: BACKGROUND_QUEUE,
+          workflowId,
+          args: [input.uploadRecordId, input.processingScope],
+          priority: { priorityKey: PRIORITY_REPROCESS },
+          retry: { maximumAttempts: 2 },
+        });
+
+        moduleLogger.info(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.uploadRecordId,
+          },
+          'Upload reprocessing workflow started',
+        );
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            targetId: input.uploadRecordId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to reprocess upload',
+        );
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to reprocess upload',
         });
       }
     }),
