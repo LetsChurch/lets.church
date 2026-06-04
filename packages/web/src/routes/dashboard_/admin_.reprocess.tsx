@@ -480,8 +480,9 @@ function ReprocessPage() {
 
           <Alert icon={<IconAlertTriangle size={16} />} color="orange">
             <Text size="sm">
-              This will queue every upload in the system. It may take days to
-              complete at lowest priority.
+              This will queue every upload in the system. It will take a very
+              long time, but will not block new uploads because it is running at
+              lowest priority.
             </Text>
           </Alert>
 
