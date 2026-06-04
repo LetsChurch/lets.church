@@ -233,6 +233,9 @@ function ChannelUploadPage() {
     'transcode' | 'transcribe' | 'everything'
   >('everything');
   const [reprocessSkipProbe, setReprocessSkipProbe] = useState(true);
+  const [reprocessSkipLlm, setReprocessSkipLlm] = useState(false);
+  const [reprocessSkipLlmIfExists, setReprocessSkipLlmIfExists] =
+    useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isProcessingThumbnail, setIsProcessingThumbnail] = useState(false);
   const [thumbnailUrlBeforeUpload, setThumbnailUrlBeforeUpload] = useState<
@@ -1599,6 +1602,20 @@ function ChannelUploadPage() {
             checked={reprocessSkipProbe}
             onChange={(e) => setReprocessSkipProbe(e.currentTarget.checked)}
           />
+          <Checkbox
+            label="Skip LLM calls (summary & annotations)"
+            checked={reprocessSkipLlm}
+            onChange={(e) => setReprocessSkipLlm(e.currentTarget.checked)}
+          />
+          <Checkbox
+            ml="lg"
+            label="Only skip if it already has a summary & annotations"
+            checked={reprocessSkipLlm && reprocessSkipLlmIfExists}
+            disabled={!reprocessSkipLlm}
+            onChange={(e) =>
+              setReprocessSkipLlmIfExists(e.currentTarget.checked)
+            }
+          />
           <Group justify="flex-end" gap="sm">
             <Button
               variant="default"
@@ -1613,6 +1630,11 @@ function ChannelUploadPage() {
                   uploadRecordId: uploadId,
                   processingScope: reprocessScope,
                   skipProbe: reprocessSkipProbe,
+                  llmMode: !reprocessSkipLlm
+                    ? 'run'
+                    : reprocessSkipLlmIfExists
+                      ? 'skip-existing'
+                      : 'skip',
                 })
               }
               loading={reprocessUploadMutation.isPending}

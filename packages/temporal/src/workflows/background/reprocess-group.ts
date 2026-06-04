@@ -45,13 +45,17 @@ const { transcribe } = proxyActivities<typeof transcribeActivities>({
   retry: { maximumAttempts: 2 },
 });
 
-const { getFinalizedUploadKey, getStoredProbe, storeTranscriptParagraphs } =
-  proxyActivities<typeof backgroundActivities>({
-    startToCloseTimeout: '10 minutes',
-    heartbeatTimeout: '1 minute',
-    taskQueue: BACKGROUND_QUEUE,
-    retry: { maximumAttempts: 5 },
-  });
+const {
+  getFinalizedUploadKey,
+  getStoredProbe,
+  getUploadsMissingLlmData,
+  storeTranscriptParagraphs,
+} = proxyActivities<typeof backgroundActivities>({
+  startToCloseTimeout: '10 minutes',
+  heartbeatTimeout: '1 minute',
+  taskQueue: BACKGROUND_QUEUE,
+  retry: { maximumAttempts: 5 },
+});
 
 const { submitLlmBatch, processLlmBatchOutput } = proxyActivities<
   typeof backgroundActivities
@@ -173,10 +177,10 @@ function isBatchTerminal(status: BatchStatus['status']): boolean {
  *      poll, process.
  *   6. Reindex each successful upload's media row.
  *
- * Pre-filtering (skip uploads whose LLM work is already done) is
- * deferred — for now the batch resubmits all requests at 50% cost.
- * Add a `force` toggle + pre-flight DB check later if backfill
- * re-runs become wasteful.
+ * With `llmMode: 'run'` (default) the batch resubmits LLM requests for
+ * every transcribed upload at 50% cost. 'skip' drops the LLM waves
+ * entirely; 'skip-existing' pre-filters to uploads missing a summary/
+ * annotations so the batch only spends LLM on the gaps.
  */
 export async function reprocessGroupWorkflow(
   uploadIds: string[],
@@ -185,6 +189,8 @@ export async function reprocessGroupWorkflow(
   // of a fresh download + ffprobe, falling back to a live probe per
   // upload when none is stored. Defaults false; reprocess flows opt in.
   skipProbe = false,
+  // LLM stage control — see `processMediaWorkflow` / `getUploadsMissingLlmData`.
+  llmMode: 'run' | 'skip' | 'skip-existing' = 'run',
 ): Promise<void> {
   if (uploadIds.length === 0) return;
 
@@ -229,6 +235,17 @@ export async function reprocessGroupWorkflow(
     }
   }
 
+  // LLM stage gating. 'skip' drops the LLM waves entirely; 'skip-existing'
+  // restricts them to uploads missing a summary/annotations so the batch
+  // only spends LLM on the gaps. The reindex below still covers every
+  // prepped upload regardless of this filter.
+  let llmUploadIds = transcribedUploadIds;
+  if (llmMode === 'skip') {
+    llmUploadIds = [];
+  } else if (llmMode === 'skip-existing' && transcribedUploadIds.length > 0) {
+    llmUploadIds = await getUploadsMissingLlmData(transcribedUploadIds);
+  }
+
   // If nothing got transcribed (transcode-only run, or every upload
   // failed in prep) there's no LLM work to batch — fall straight to
   // reindex below. The LLM stages are split across two batch waves:
@@ -241,15 +258,15 @@ export async function reprocessGroupWorkflow(
   //   Live tail:         bulk embed-summary (one round-trip, no batch).
   // Each kind's submit returns an array of OpenAI batches; embed_-
   // paragraphs may split when total inputs exceed the 50K cap.
-  if (transcribedUploadIds.length > 0) {
+  if (llmUploadIds.length > 0) {
     // --- Wave 1, Phase 2: submit annotate + paragraph-embed --------
     const [annotateSubmit, embedParagraphsSubmit] = await Promise.all([
       submitLlmBatch({
-        uploadRecordIds: transcribedUploadIds,
+        uploadRecordIds: llmUploadIds,
         kind: 'annotate',
       }),
       submitLlmBatch({
-        uploadRecordIds: transcribedUploadIds,
+        uploadRecordIds: llmUploadIds,
         kind: 'embed_paragraphs',
       }),
     ]);

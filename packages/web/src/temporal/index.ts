@@ -1099,6 +1099,7 @@ export async function startReprocess(
     dateStart?: string;
     dateEnd?: string;
     videoOnly?: boolean;
+    llmMode?: 'run' | 'skip' | 'skip-existing';
   } = {},
 ) {
   const channelSlug = await lookupChannelScopeSlug(scope);
@@ -1117,6 +1118,7 @@ export async function startReprocess(
         dateStart: options.dateStart,
         dateEnd: options.dateEnd,
         videoOnly: options.videoOnly ?? false,
+        llmMode: options.llmMode ?? 'run',
       },
     ],
     typedSearchAttributes:

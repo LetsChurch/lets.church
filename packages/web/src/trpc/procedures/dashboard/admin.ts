@@ -3451,6 +3451,9 @@ export const adminRouter = router({
         // Reuse the stored probe instead of re-probing; falls back to a
         // live probe per-upload if none is stored. Defaults on.
         skipProbe: z.boolean().default(true),
+        // LLM stage control: run (default), skip entirely, or skip only
+        // if this upload already has a summary + annotations.
+        llmMode: z.enum(['run', 'skip', 'skip-existing']).default('run'),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -3461,6 +3464,7 @@ export const adminRouter = router({
           context: {
             processingScope: input.processingScope,
             skipProbe: input.skipProbe,
+            llmMode: input.llmMode,
           },
         },
         'Reprocessing upload',
@@ -3514,7 +3518,12 @@ export const adminRouter = router({
         await startBackground('processMediaWorkflow', {
           taskQueue: BACKGROUND_QUEUE,
           workflowId,
-          args: [input.uploadRecordId, input.processingScope, input.skipProbe],
+          args: [
+            input.uploadRecordId,
+            input.processingScope,
+            input.skipProbe,
+            input.llmMode,
+          ],
           priority: { priorityKey: PRIORITY_REPROCESS },
           retry: { maximumAttempts: 2 },
         });
@@ -4638,6 +4647,9 @@ export const adminRouter = router({
         // Only reprocess uploads that already have a video variant.
         // Ignored unless the run transcodes.
         videoOnly: z.boolean().default(false),
+        // LLM stage control: run (default), skip entirely, or skip only
+        // uploads that already have a summary + annotations.
+        llmMode: z.enum(['run', 'skip', 'skip-existing']).default('run'),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -4651,6 +4663,7 @@ export const adminRouter = router({
             skipProbe: input.skipProbe,
             dateRange: input.dateRange,
             videoOnly: input.videoOnly,
+            llmMode: input.llmMode,
           },
         },
         'Starting reprocess',
@@ -4713,6 +4726,7 @@ export const adminRouter = router({
           dateStart: input.dateRange?.start,
           dateEnd: input.dateRange?.end,
           videoOnly: input.videoOnly,
+          llmMode: input.llmMode,
         });
         return { success: true };
       } catch (err) {
