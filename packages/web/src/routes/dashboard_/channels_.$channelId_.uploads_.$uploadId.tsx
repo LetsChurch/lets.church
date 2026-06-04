@@ -135,6 +135,13 @@ function ChannelUploadPage() {
   const queryClient = useQueryClient();
   const trpc = useTRPC();
 
+  // Site-admin status comes from the session user's role, not channel
+  // membership — a site admin who isn't a member of this channel still
+  // needs the admin actions menu.
+  const { data: currentUser } = useQuery(
+    trpc.common.getCurrentUser.queryOptions(),
+  );
+
   const { [uploadId]: uploadProgress } = useStore($uploadProgress, {
     keys: [uploadId],
   });
@@ -165,13 +172,9 @@ function ChannelUploadPage() {
   const isTranscribing = !isUploading && !upload.transcribingFinishedAt;
   const isProcessing = isUploading || isTranscoding;
 
-  // Check if user is site admin
-  // userMembership comes from the channel and contains the current user's membership
-  // which includes the appUser role
-  const isSiteAdmin =
-    channel.userMembership &&
-    'appUser' in channel.userMembership &&
-    channel.userMembership.appUser.role === 'ADMIN';
+  // Site admins get the admin actions menu regardless of whether they're a
+  // member of this channel, so derive it from the session user's role.
+  const isSiteAdmin = currentUser?.role === 'ADMIN';
 
   // Permission logic matching the uploads list page
   const isChannelAdmin = channel.userMembership?.isAdmin ?? false;
