@@ -17,6 +17,7 @@ import {
   Radio,
   Select,
   Stack,
+  Table,
   Text,
   Textarea,
   TextInput,
@@ -26,6 +27,7 @@ import {
 import { Dropzone } from '@mantine/dropzone';
 import { useStore } from '@nanostores/react';
 import {
+  IconBug,
   IconCheck,
   IconChevronDown,
   IconCopy,
@@ -127,6 +129,36 @@ function ProcessingProgress({
   );
 }
 
+// Debug-modal formatters. superjson deserializes timestamps back into Date
+// objects, so these accept Date | null.
+function fmtDate(d: Date | null | undefined) {
+  return d ? d.toLocaleString() : '—';
+}
+
+function fmtDuration(
+  start: Date | null | undefined,
+  end: Date | null | undefined,
+) {
+  if (!start || !end) return '—';
+  const ms = end.getTime() - start.getTime();
+  if (ms < 0) return '—';
+  const s = Math.round(ms / 1000);
+  const m = Math.floor(s / 60);
+  return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
+}
+
+function fmtLength(sec: number | null | undefined) {
+  if (sec == null) return '—';
+  const s = Math.round(sec);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m ${s % 60}s` : `${m}m ${s % 60}s`;
+}
+
+function fmtBytes(n: number | null | undefined) {
+  return n == null ? '—' : `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
 function ChannelUploadPage() {
   const { channelId, uploadId } = Route.useParams();
   // TanStack Router navigate — typed via the route's generated tree, used
@@ -189,6 +221,7 @@ function ChannelUploadPage() {
 
   const [newThumbnailFile, setNewThumbnailFile] = useState<File | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showDebugModal, setShowDebugModal] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isProcessingThumbnail, setIsProcessingThumbnail] = useState(false);
   const [thumbnailUrlBeforeUpload, setThumbnailUrlBeforeUpload] = useState<
@@ -988,6 +1021,13 @@ function ChannelUploadPage() {
                   {isSiteAdmin ? (
                     <>
                       <Menu.Item
+                        leftSection={<IconBug size={16} />}
+                        onClick={() => setShowDebugModal(true)}
+                      >
+                        Debug Info
+                      </Menu.Item>
+
+                      <Menu.Item
                         leftSection={
                           toggleFeaturedMutation.isPending ? (
                             <Loader size={14} />
@@ -1375,6 +1415,90 @@ function ChannelUploadPage() {
           </Stack>
         </Grid.Col>
       </Grid>
+
+      {/* Site-admin debug modal */}
+      <Modal
+        opened={showDebugModal}
+        onClose={() => setShowDebugModal(false)}
+        title="Upload debug info"
+        size="lg"
+        centered
+      >
+        {upload.debug ? (
+          <Table verticalSpacing="xs" withRowBorders={false}>
+            <Table.Tbody>
+              {(
+                [
+                  ['Upload ID', uploadId],
+                  ['Encoder', upload.debug.transcodeEncoder ?? 'unknown'],
+                  ['Split audio', upload.debug.splitAudio ? 'Yes' : 'No'],
+                  ['Pipeline version', String(upload.debug.pipelineVersion)],
+                  ['Variants', upload.debug.variants.join(', ') || '—'],
+                  [
+                    'Transcode started',
+                    fmtDate(upload.debug.transcodingStartedAt),
+                  ],
+                  [
+                    'Transcode finished',
+                    fmtDate(upload.debug.transcodingFinishedAt),
+                  ],
+                  [
+                    'Transcode duration',
+                    fmtDuration(
+                      upload.debug.transcodingStartedAt,
+                      upload.debug.transcodingFinishedAt,
+                    ),
+                  ],
+                  [
+                    'Transcribe started',
+                    fmtDate(upload.debug.transcribingStartedAt),
+                  ],
+                  [
+                    'Transcribe finished',
+                    fmtDate(upload.debug.transcribingFinishedAt),
+                  ],
+                  [
+                    'Transcribe duration',
+                    fmtDuration(
+                      upload.debug.transcribingStartedAt,
+                      upload.debug.transcribingFinishedAt,
+                    ),
+                  ],
+                  ['Length', fmtLength(upload.debug.lengthSeconds)],
+                  ['Size', fmtBytes(upload.debug.uploadSizeBytes)],
+                  ['Original file', upload.debug.originalFileName ?? '—'],
+                  ['Created', fmtDate(upload.debug.createdAt)],
+                  ['Updated', fmtDate(upload.debug.updatedAt)],
+                  ['Finalized key', upload.debug.finalizedUploadKey ?? '—'],
+                ] as const
+              ).map(([label, value]) => (
+                <Table.Tr key={label}>
+                  <Table.Td
+                    style={{
+                      fontWeight: 500,
+                      whiteSpace: 'nowrap',
+                      verticalAlign: 'top',
+                    }}
+                  >
+                    {label}
+                  </Table.Td>
+                  <Table.Td
+                    style={{
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    {value}
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        ) : (
+          <Text c="dimmed">No debug info available.</Text>
+        )}
+      </Modal>
 
       {/* Delete Confirmation Modal */}
       <Modal

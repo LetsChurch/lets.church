@@ -1374,6 +1374,17 @@ export const channelRouter = router({
           transcodingProgress: true,
           transcribingProgress: true,
           variants: true,
+          // Site-admin debug bundle (gated below; see `debug`).
+          createdAt: true,
+          updatedAt: true,
+          uploadSizeBytes: true,
+          lengthSeconds: true,
+          originalFileName: true,
+          transcodingStartedAt: true,
+          transcribingStartedAt: true,
+          pipelineVersion: true,
+          transcodeEncoder: true,
+          splitAudio: true,
         },
         with: {
           featuredUpload: {
@@ -1441,6 +1452,18 @@ export const channelRouter = router({
         featuredUpload,
         variants,
         uploadListEntries,
+        // Pulled out so they only reach the client inside the site-admin
+        // `debug` bundle below, never the default payload.
+        createdAt,
+        updatedAt,
+        uploadSizeBytes,
+        lengthSeconds,
+        originalFileName,
+        transcodingStartedAt,
+        transcribingStartedAt,
+        pipelineVersion,
+        transcodeEncoder,
+        splitAudio,
         ...uploadRest
       } = upload;
       const thumbnailPath = overrideThumbnailPath ?? defaultThumbnailPath;
@@ -1489,6 +1512,28 @@ export const channelRouter = router({
           e.uploadList.channelId === input.channelId,
       );
 
+      // Internal processing metadata, surfaced only to site admins via the
+      // upload page's debug modal.
+      const debug = ctx.isSiteAdmin
+        ? {
+            createdAt,
+            updatedAt,
+            originalFileName,
+            uploadSizeBytes:
+              uploadSizeBytes != null ? Number(uploadSizeBytes) : null,
+            lengthSeconds,
+            pipelineVersion,
+            transcodeEncoder,
+            splitAudio,
+            variants,
+            finalizedUploadKey: upload.finalizedUploadKey,
+            transcodingStartedAt,
+            transcodingFinishedAt: upload.transcodingFinishedAt,
+            transcribingStartedAt,
+            transcribingFinishedAt: upload.transcribingFinishedAt,
+          }
+        : null;
+
       return {
         upload: {
           ...uploadRest,
@@ -1504,6 +1549,7 @@ export const channelRouter = router({
               }
             : null,
           hasActiveWorkflow,
+          debug,
         },
         channel: {
           ...upload.channel,
