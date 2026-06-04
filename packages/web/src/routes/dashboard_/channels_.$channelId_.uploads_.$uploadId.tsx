@@ -33,6 +33,7 @@ import {
   IconCheck,
   IconChevronDown,
   IconCopy,
+  IconDownload,
   IconEye,
   IconEyeOff,
   IconFlask,
@@ -215,6 +216,8 @@ function ChannelUploadPage() {
   const isChannelAdmin = channel.userMembership?.isAdmin ?? false;
   const isAdmin = isChannelAdmin || isSiteAdmin;
   const canDelete = isAdmin; // Only channel admins and site admins can delete
+  // Matches the uploads list page: admins or members with download permission.
+  const canDownload = isAdmin || (channel.userMembership?.canDownload ?? false);
 
   const isFailedUpload =
     upload.uploadFinalized &&
@@ -357,6 +360,19 @@ function ChannelUploadPage() {
       onError: (error) => {
         showFailure({
           message: error.message || 'Failed to update upload details',
+        });
+      },
+    }),
+  );
+
+  const downloadOriginalMutation = useMutation(
+    trpc.dashboard.channels.getOriginalDownloadUrl.mutationOptions({
+      onSuccess: ({ url }) => {
+        window.open(url, '_blank');
+      },
+      onError: (error) => {
+        showFailure({
+          message: error.message || 'Failed to get download URL',
         });
       },
     }),
@@ -1030,6 +1046,22 @@ function ChannelUploadPage() {
             >
               View Media Page
             </Button>
+
+            {/* Download the original uploaded file — same permission as the
+                uploads list (admins or members with download permission). */}
+            {canDownload && upload.finalizedUploadKey ? (
+              <Button
+                variant="light"
+                leftSection={<IconDownload size={16} />}
+                fullWidth
+                loading={downloadOriginalMutation.isPending}
+                onClick={() =>
+                  downloadOriginalMutation.mutate({ channelId, uploadId })
+                }
+              >
+                Download Original
+              </Button>
+            ) : null}
 
             {/* Site admins get the full admin actions menu; channel admins
                 (without site-admin scope) get only a delete button. */}

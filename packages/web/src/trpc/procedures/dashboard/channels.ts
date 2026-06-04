@@ -1402,6 +1402,7 @@ export const channelRouter = router({
                 columns: {
                   isAdmin: true,
                   canEdit: true,
+                  canDownload: true,
                   appUserId: true,
                 },
                 with: {
