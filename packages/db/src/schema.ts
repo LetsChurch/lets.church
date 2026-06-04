@@ -115,6 +115,14 @@ export const UploadVariant = pgEnum('upload_variant', [
   'AUDIO_DOWNLOAD',
 ]);
 
+// Which ffmpeg encoder the most recent transcode used: libx264 (software)
+// or h264_ama (AMD MA35 hardware). Named after the actual `-c:v` encoders
+// so it extends cleanly if other encoders are added.
+export const TranscodeEncoder = pgEnum('transcode_encoder', [
+  'libx264',
+  'h264_ama',
+]);
+
 export const UploadStateType = pgEnum('upload_state_type', [
   'MEDIA',
   'THUMBNAIL',
@@ -784,6 +792,16 @@ export const UploadRecord = pgTable(
       .default(true),
     downloadsEnabled: boolean('downloads_enabled').notNull().default(true),
     pipelineVersion: integer('pipeline_version').notNull().default(2),
+    // How the most recent transcode encoded this upload.
+    //   transcodeEncoder — 'libx264' (software) or 'h264_ama' (MA35
+    //     hardware); null for uploads transcoded before this was tracked
+    //     (their encoder is genuinely unknown).
+    //   splitAudio — true when audio is a separate fMP4 rendition
+    //     referenced by the master playlist (#EXT-X-MEDIA); false when
+    //     muxed into the video segments. Defaults false: every upload
+    //     predating the split-audio pipeline was muxed.
+    transcodeEncoder: TranscodeEncoder('transcode_encoder'),
+    splitAudio: boolean('split_audio').notNull().default(false),
     // Display summary (frontend Summary tab). Populated by the summarize-upload
     // activity after transcript paragraphs land.
     summary: text('summary'),
