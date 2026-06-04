@@ -4,6 +4,7 @@ import {
   Anchor,
   Box,
   Button,
+  Checkbox,
   Container,
   CopyButton,
   Grid,
@@ -228,6 +229,7 @@ function ChannelUploadPage() {
   const [reprocessScope, setReprocessScope] = useState<
     'transcode' | 'transcribe' | 'everything'
   >('everything');
+  const [reprocessSkipProbe, setReprocessSkipProbe] = useState(true);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isProcessingThumbnail, setIsProcessingThumbnail] = useState(false);
   const [thumbnailUrlBeforeUpload, setThumbnailUrlBeforeUpload] = useState<
@@ -1560,6 +1562,11 @@ function ChannelUploadPage() {
             ]}
             fullWidth
           />
+          <Checkbox
+            label="Skip probe (reuse stored metadata)"
+            checked={reprocessSkipProbe}
+            onChange={(e) => setReprocessSkipProbe(e.currentTarget.checked)}
+          />
           <Group justify="flex-end" gap="sm">
             <Button
               variant="default"
@@ -1573,6 +1580,7 @@ function ChannelUploadPage() {
                 reprocessUploadMutation.mutate({
                   uploadRecordId: uploadId,
                   processingScope: reprocessScope,
+                  skipProbe: reprocessSkipProbe,
                 })
               }
               loading={reprocessUploadMutation.isPending}

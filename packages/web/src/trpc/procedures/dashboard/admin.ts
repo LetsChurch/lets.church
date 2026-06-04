@@ -3448,6 +3448,9 @@ export const adminRouter = router({
         processingScope: z
           .enum(['transcode', 'transcribe', 'everything'])
           .default('everything'),
+        // Reuse the stored probe instead of re-probing; falls back to a
+        // live probe per-upload if none is stored. Defaults on.
+        skipProbe: z.boolean().default(true),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -3455,7 +3458,10 @@ export const adminRouter = router({
         {
           appUserId: ctx.session.appUserId,
           targetId: input.uploadRecordId,
-          context: { processingScope: input.processingScope },
+          context: {
+            processingScope: input.processingScope,
+            skipProbe: input.skipProbe,
+          },
         },
         'Reprocessing upload',
       );
@@ -3508,7 +3514,7 @@ export const adminRouter = router({
         await startBackground('processMediaWorkflow', {
           taskQueue: BACKGROUND_QUEUE,
           workflowId,
-          args: [input.uploadRecordId, input.processingScope],
+          args: [input.uploadRecordId, input.processingScope, input.skipProbe],
           priority: { priorityKey: PRIORITY_REPROCESS },
           retry: { maximumAttempts: 2 },
         });
