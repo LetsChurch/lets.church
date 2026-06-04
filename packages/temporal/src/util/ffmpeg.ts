@@ -11,6 +11,11 @@ const moduleLogger = logger.child({ module: 'util/ffmpeg' });
 const HLS_TIME = 7;
 
 const BASE_HLS_ARGS = [
+  // Defensive: avoid "Too many packets buffered for output stream"
+  // muxer failures on inputs with large interleaving gaps. Applies to
+  // every HLS output (each video variant + audio).
+  '-max_muxing_queue_size',
+  '1024',
   '-hls_time',
   `${HLS_TIME}`,
   '-hls_playlist_type',
@@ -140,9 +145,34 @@ function videoVariantToOutputArgs(
   const audioCodecArgs: string[] = hasAudio
     ? ['-c:a', 'aac', '-ar', '48000', '-b:a', '192k']
     : [];
+  // `-profile:v` / `-level:v` are libx264-only; the AMA encoder manages
+  // profile/level itself and doesn't take these flags.
   const profileLevelArgs = hwAccel.startsWith('ama:')
     ? []
     : ['-profile:v', 'high', '-level:v', videoVariantToLevel(variant)];
+
+  // Pixel format + color, set explicitly on BOTH paths. The AMA pipeline
+  // already emits 8-bit yuv420p + bt709/tv natively, and `-pix_fmt
+  // yuv420p` was verified to be a no-op there (verbose graph shows no
+  // hwdownload / format-converter inserted), so stating it costs nothing
+  // and guarantees the output regardless of encoder. Software-side it
+  // forces 8-bit 4:2:0 so 10-bit / 4:2:2 / 4:4:4 sources stay broadly
+  // decodable (Safari, iOS, smart TVs). NOTE: the color flags TAG, they
+  // don't convert — fine for typical bt709 HD uploads; genuine bt601/SD
+  // sources would need a real colorspace conversion. (The 10-bit-source
+  // case on the AMA path specifically is not yet validated.)
+  const formatColorArgs = [
+    '-pix_fmt',
+    'yuv420p',
+    '-colorspace',
+    'bt709',
+    '-color_primaries',
+    'bt709',
+    '-color_trc',
+    'bt709',
+    '-color_range',
+    'tv',
+  ];
   return [
     '-map',
     `[${variant}]`,
@@ -150,6 +180,7 @@ function videoVariantToOutputArgs(
     '-c:v',
     hwAccel.startsWith('ama:') ? 'h264_ama' : 'h264',
     ...profileLevelArgs,
+    ...formatColorArgs,
     ...audioCodecArgs,
     '-g',
     '48',
