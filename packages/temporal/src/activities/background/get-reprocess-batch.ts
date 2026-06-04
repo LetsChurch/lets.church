@@ -12,7 +12,6 @@ import {
   count,
   desc,
   eq,
-  gt,
   gte,
   isNotNull,
   lt,
@@ -72,23 +71,17 @@ function parseCursor(cursor: string | null): BatchCursor | null {
   return JSON.parse(cursor) as BatchCursor;
 }
 
-// `no_paragraphs` orders newest-first per product requirement (recent
-// content catches up first); the other scopes keep the legacy asc-by-
-// createdAt order. Returned as a tuple of `(direction, cursorPredicate)`
-// so the caller can pass them into orderBy + where uniformly.
-function isReverseOrdered(scope: ReprocessScope): boolean {
-  return scope.kind === 'no_paragraphs';
-}
-
-function buildCursorPredicate(scope: ReprocessScope, cursor: string | null) {
+// All scopes process newest-first (reverse creation order) so the most
+// recent uploads catch up first. The cursor walks strictly "older than
+// the last row" via `lt` to match the desc ordering in getReprocessBatch.
+function buildCursorPredicate(cursor: string | null) {
   const parsed = parseCursor(cursor);
   if (!parsed) return undefined;
-  const cmp = isReverseOrdered(scope) ? lt : gt;
   return or(
-    cmp(UploadRecord.createdAt, new Date(parsed.createdAt)),
+    lt(UploadRecord.createdAt, new Date(parsed.createdAt)),
     and(
       eq(UploadRecord.createdAt, new Date(parsed.createdAt)),
-      cmp(UploadRecord.id, parsed.id),
+      lt(UploadRecord.id, parsed.id),
     ),
   );
 }
@@ -135,7 +128,7 @@ function buildWhere(
   filters?: ReprocessBatchFilters,
 ) {
   const finished = isNotNull(UploadRecord.transcodingFinishedAt);
-  const afterCursor = buildCursorPredicate(scope, cursor);
+  const afterCursor = buildCursorPredicate(cursor);
   const extra = filterConditions(filters);
   if (scope.kind === 'no_paragraphs') {
     // Subquery flavor (NOT EXISTS) rather than LEFT JOIN ... IS NULL
@@ -176,9 +169,8 @@ export async function getReprocessBatch(
   );
 
   const where = buildWhere(scope, cursor, filters);
-  const orderBy = isReverseOrdered(scope)
-    ? [desc(UploadRecord.createdAt), desc(UploadRecord.id)]
-    : [UploadRecord.createdAt, UploadRecord.id];
+  // Newest-first across every scope (see buildCursorPredicate).
+  const orderBy = [desc(UploadRecord.createdAt), desc(UploadRecord.id)];
 
   const rows = await db
     .select({
