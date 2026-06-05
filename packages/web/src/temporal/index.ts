@@ -13,9 +13,14 @@ import type {
 } from '@letschurch/temporal/client';
 import {
   BACKGROUND_QUEUE,
+  GLACIER_QUEUE,
+  IMPORT_QUEUE,
   PRIORITY_IMPORT,
   PRIORITY_REPROCESS,
   PRIORITY_USER,
+  PROBE_QUEUE,
+  TRANSCODE_QUEUE,
+  TRANSCRIBE_QUEUE,
 } from '@letschurch/temporal/queues';
 import {
   makeAnnotateTranscriptWorkflowId,
@@ -1156,4 +1161,141 @@ export async function cancelReprocess(scope: ReprocessScope) {
     makeReprocessAllWorkflowId(scope),
   );
   await handle.cancel();
+}
+
+// Task queues we surface stats for on the admin dashboard, in rough
+// upstream-to-downstream pipeline order.
+const STATS_QUEUES: ReadonlyArray<{ name: string; label: string }> = [
+  { name: BACKGROUND_QUEUE, label: 'Background' },
+  { name: IMPORT_QUEUE, label: 'Import' },
+  { name: PROBE_QUEUE, label: 'Probe' },
+  { name: TRANSCODE_QUEUE, label: 'Transcode' },
+  { name: TRANSCRIBE_QUEUE, label: 'Transcribe' },
+  { name: GLACIER_QUEUE, label: 'Glacier Backup' },
+];
+
+// TaskQueueType enum values (temporal.api.enums.v1.TaskQueueType).
+const TASK_QUEUE_TYPE_WORKFLOW = 1;
+const TASK_QUEUE_TYPE_ACTIVITY = 2;
+
+// protobufjs may hand back a Long, a number, or null/undefined for int64 fields.
+function toNumber(value: unknown): number {
+  if (value == null) return 0;
+  if (typeof value === 'number') return value;
+  if (typeof value === 'object' && 'toNumber' in value) {
+    return (value as { toNumber: () => number }).toNumber();
+  }
+  return Number(value) || 0;
+}
+
+export type QueueStat = {
+  name: string;
+  label: string;
+  /** Approximate number of backlogged workflow + activity tasks. */
+  backlogCount: number;
+  /** Age (seconds) of the oldest backlogged task, if any. */
+  backlogAgeSeconds: number | null;
+  /** Estimated seconds to drain the backlog, if a dispatch rate is known. */
+  etaSeconds: number | null;
+};
+
+async function describeQueueType(
+  service: Awaited<typeof client>['workflowService'],
+  namespace: string,
+  name: string,
+  taskQueueType: number,
+) {
+  const res = await service.describeTaskQueue({
+    namespace,
+    taskQueue: { name },
+    taskQueueType,
+    reportStats: true,
+  });
+  const stats = res.stats;
+  const backlogCount = toNumber(stats?.approximateBacklogCount);
+  const backlogAgeSeconds = stats?.approximateBacklogAge
+    ? toNumber(stats.approximateBacklogAge.seconds)
+    : null;
+  const dispatchRate = stats?.tasksDispatchRate ?? 0;
+  const etaSeconds =
+    backlogCount > 0 && dispatchRate > 0 ? backlogCount / dispatchRate : null;
+  return { backlogCount, backlogAgeSeconds, etaSeconds };
+}
+
+/**
+ * Fetch backlog/throughput stats for each pipeline task queue via the Temporal
+ * `DescribeTaskQueue` API (enhanced reporting). Workflow and activity task
+ * types are combined per queue. Queues that error or are unknown report zeros.
+ */
+export async function getQueueStats(): Promise<QueueStat[]> {
+  const c = await client;
+  const namespace = c.options.namespace ?? 'default';
+
+  return Promise.all(
+    STATS_QUEUES.map(async ({ name, label }) => {
+      try {
+        const [wf, act] = await Promise.all([
+          describeQueueType(
+            c.workflowService,
+            namespace,
+            name,
+            TASK_QUEUE_TYPE_WORKFLOW,
+          ),
+          describeQueueType(
+            c.workflowService,
+            namespace,
+            name,
+            TASK_QUEUE_TYPE_ACTIVITY,
+          ),
+        ]);
+
+        const backlogAges = [
+          wf.backlogAgeSeconds,
+          act.backlogAgeSeconds,
+        ].filter((v): v is number => v != null && v > 0);
+        const etas = [wf.etaSeconds, act.etaSeconds].filter(
+          (v): v is number => v != null,
+        );
+
+        return {
+          name,
+          label,
+          backlogCount: wf.backlogCount + act.backlogCount,
+          backlogAgeSeconds: backlogAges.length
+            ? Math.max(...backlogAges)
+            : null,
+          // The queue is clear once the slowest-draining type finishes.
+          etaSeconds: etas.length ? Math.max(...etas) : null,
+        } satisfies QueueStat;
+      } catch (error) {
+        moduleLogger.warn(
+          {
+            context: {
+              queue: name,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to describe task queue',
+        );
+        return {
+          name,
+          label,
+          backlogCount: 0,
+          backlogAgeSeconds: null,
+          etaSeconds: null,
+        } satisfies QueueStat;
+      }
+    }),
+  );
+}
+
+/**
+ * Count workflow executions currently running across the namespace. Unlike the
+ * task-queue backlog, this reflects in-progress work — pipelines a worker has
+ * already picked up and is actively executing.
+ */
+export async function getRunningWorkflowCount(): Promise<number> {
+  const c = await client;
+  const { count } = await c.workflow.count("ExecutionStatus = 'Running'");
+  return count;
 }

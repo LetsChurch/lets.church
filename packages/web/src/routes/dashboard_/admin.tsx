@@ -50,6 +50,19 @@ export const Route = createFileRoute('/dashboard_/admin')({
   },
 });
 
+// Format a duration in seconds into a compact human string (e.g. "~3m", "~2h 5m").
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return '<1m';
+  const totalMinutes = Math.round(seconds / 60);
+  if (totalMinutes < 60) return `${totalMinutes}m`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours < 24) return minutes ? `${hours}h ${minutes}m` : `${hours}h`;
+  const days = Math.floor(hours / 24);
+  const remHours = hours % 24;
+  return remHours ? `${days}d ${remHours}h` : `${days}d`;
+}
+
 function AdminPage() {
   const trpc = useTRPC();
 
@@ -64,6 +77,19 @@ function AdminPage() {
   const { data: backfillStatus } = useSuspenseQuery(
     trpc.dashboard.admin.getBackfillFilenamesStatus.queryOptions(),
   );
+
+  // Async-load Temporal queue stats (kept out of the loader so the page renders
+  // immediately; refetched periodically so the numbers stay live).
+  const { data: queueStats, isLoading: isLoadingQueueStats } = useQuery({
+    ...trpc.dashboard.admin.getQueueStats.queryOptions(),
+    refetchInterval: 15_000,
+  });
+
+  // Number of workflows actively executing right now (in-progress work).
+  const { data: runningWorkflowCount } = useQuery({
+    ...trpc.dashboard.admin.getRunningWorkflowCount.queryOptions(),
+    refetchInterval: 15_000,
+  });
 
   // Lazy-load counts that require workflow status checks
   const { data: processingUploadsCount, isLoading: isLoadingProcessing } =
@@ -90,6 +116,64 @@ function AdminPage() {
       <Title order={1} mb="lg">
         Admin
       </Title>
+
+      <Group mb="sm" gap="sm">
+        <Title order={2} size="h4">
+          Queues
+        </Title>
+        {runningWorkflowCount != null ? (
+          <Badge color={runningWorkflowCount > 0 ? 'blue' : 'gray'} size="sm">
+            {runningWorkflowCount > 0
+              ? `${runningWorkflowCount.toLocaleString()} running`
+              : 'None running'}
+          </Badge>
+        ) : null}
+      </Group>
+      {isLoadingQueueStats ? (
+        <Group mb="xl" gap="xs">
+          <Loader size="sm" />
+          <Text size="sm" c="dimmed">
+            Loading queue stats…
+          </Text>
+        </Group>
+      ) : queueStats && queueStats.length > 0 ? (
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md" mb="xl">
+          {queueStats.map((queue) => (
+            <Card
+              key={queue.name}
+              shadow="xs"
+              padding="lg"
+              radius="md"
+              withBorder
+            >
+              <Group justify="space-between" mb="xs">
+                <Text fw={500}>{queue.label}</Text>
+                <Badge
+                  color={queue.backlogCount > 0 ? 'yellow' : 'green'}
+                  size="sm"
+                >
+                  {queue.backlogCount > 0
+                    ? `${queue.backlogCount.toLocaleString()} queued`
+                    : 'Idle'}
+                </Badge>
+              </Group>
+              <Text size="sm" c="dimmed">
+                {queue.backlogCount > 0
+                  ? queue.etaSeconds != null
+                    ? `ETA ~${formatDuration(queue.etaSeconds)} to clear`
+                    : queue.backlogAgeSeconds != null
+                      ? `Oldest task waiting ${formatDuration(queue.backlogAgeSeconds)}`
+                      : 'ETA unavailable'
+                  : 'No backlogged tasks'}
+              </Text>
+            </Card>
+          ))}
+        </SimpleGrid>
+      ) : (
+        <Text size="sm" c="dimmed" mb="xl">
+          Queue stats unavailable.
+        </Text>
+      )}
 
       <Title order={2} size="h4" mb="sm">
         Content

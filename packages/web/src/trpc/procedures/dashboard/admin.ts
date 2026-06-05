@@ -70,8 +70,10 @@ import {
   getBackfillUploadStatesProgress,
   getBulkBackupToGlacierProgress,
   getCleanupStaleUploadStatesProgress,
+  getQueueStats,
   getReindexProgress,
   getReprocessWorkflowStatus,
+  getRunningWorkflowCount,
   makeAnnotateTranscriptWorkflowId,
   makeProcessMediaWorkflowId,
   makeSummarizeUploadWorkflowId,
@@ -1582,6 +1584,50 @@ export const adminRouter = router({
       throw new TRPCError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Failed to fetch processing uploads count',
+      });
+    }
+  }),
+
+  getQueueStats: adminProcedure.query(async () => {
+    moduleLogger.info('Fetching Temporal queue stats');
+
+    try {
+      return await getQueueStats();
+    } catch (error) {
+      moduleLogger.error(
+        {
+          context: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        },
+        'Failed to fetch Temporal queue stats',
+      );
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch Temporal queue stats',
+      });
+    }
+  }),
+
+  getRunningWorkflowCount: adminProcedure.query(async () => {
+    moduleLogger.info('Fetching running workflow count');
+
+    try {
+      return await getRunningWorkflowCount();
+    } catch (error) {
+      moduleLogger.error(
+        {
+          context: {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        },
+        'Failed to fetch running workflow count',
+      );
+
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to fetch running workflow count',
       });
     }
   }),
