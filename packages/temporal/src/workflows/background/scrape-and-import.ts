@@ -3,6 +3,7 @@ import {
   proxyActivities,
   startChild,
 } from '@temporalio/workflow';
+import type * as backgroundActivities from '../../activities/background';
 import type * as importSourceActivities from '../../activities/import-source';
 import { BACKGROUND_QUEUE, IMPORT_QUEUE, PRIORITY_IMPORT } from '../../queues';
 import {
@@ -32,6 +33,12 @@ const {
 const { scrapeImportSource } = proxyActivities<typeof importSourceActivities>({
   startToCloseTimeout: '30 minutes',
   taskQueue: IMPORT_QUEUE,
+  retry: { maximumAttempts: 3 },
+});
+
+const { triggerPagerDutyAlert } = proxyActivities<typeof backgroundActivities>({
+  startToCloseTimeout: '1 minute',
+  taskQueue: BACKGROUND_QUEUE,
   retry: { maximumAttempts: 3 },
 });
 
@@ -203,6 +210,18 @@ export async function scrapeAndImportWorkflow(
     });
 
     await sendImportErrorNotification(importSourceId, errorMessage);
+
+    // Best-effort ops alert on scrape failure.
+    try {
+      await triggerPagerDutyAlert({
+        dedupKey: `scrape-import:${importSourceId}`,
+        summary: `Import-source scrape failed (${importSourceId}): ${errorMessage}`,
+        component: 'scrape-import',
+        customDetails: { importSourceId, runId, error: errorMessage },
+      });
+    } catch {
+      // swallow — alerting is best-effort
+    }
 
     throw error;
   }

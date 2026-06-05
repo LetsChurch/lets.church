@@ -2,7 +2,9 @@ import {
   ParentClosePolicy,
   proxyActivities,
   startChild,
+  workflowInfo,
 } from '@temporalio/workflow';
+import type * as backgroundActivities from '../../activities/background';
 import type * as importSourceActivities from '../../activities/import-source';
 import type { UploadRecordCreateData } from '../../client';
 import { BACKGROUND_QUEUE, IMPORT_QUEUE, PRIORITY_IMPORT } from '../../queues';
@@ -36,6 +38,12 @@ const { sendImportErrorNotification } = proxyActivities<
 >({
   startToCloseTimeout: '1 minute',
   taskQueue: BACKGROUND_QUEUE,
+});
+
+const { triggerPagerDutyAlert } = proxyActivities<typeof backgroundActivities>({
+  startToCloseTimeout: '1 minute',
+  taskQueue: BACKGROUND_QUEUE,
+  retry: { maximumAttempts: 3 },
 });
 
 export async function importMediaWorkflow({
@@ -135,6 +143,29 @@ export async function importMediaWorkflow({
         );
       } catch (_notificationError) {
         // Don't fail workflow if notification fails
+      }
+    }
+
+    // Best-effort ops alert once retries are exhausted.
+    const { attempt, retryPolicy } = workflowInfo();
+    const maxAttempts = retryPolicy?.maximumAttempts ?? 1;
+    if (attempt >= maxAttempts) {
+      try {
+        await triggerPagerDutyAlert({
+          dedupKey: `import-media:${url}`,
+          summary: `Media import failed for ${url}: ${errorMessage}`,
+          component: 'import-media',
+          customDetails: {
+            url,
+            importSourceId,
+            channelSlug,
+            attempt,
+            maxAttempts,
+            error: errorMessage,
+          },
+        });
+      } catch {
+        // swallow — alerting is best-effort
       }
     }
 

@@ -136,6 +136,10 @@ export {
 } from './submit-llm-batch';
 export { default as subscribeNewsletter } from './subscribe-newsletter';
 export { default as summarizeUpload } from './summarize-upload';
+export {
+  type TriggerPagerDutyAlertArgs,
+  triggerPagerDutyAlert,
+} from './trigger-pagerduty-alert';
 export { default as updateCommentScores } from './update-comment-scores';
 export { default as updateDailySalt } from './update-daily-salt';
 export { default as updateUploadRecord } from './update-upload-record';

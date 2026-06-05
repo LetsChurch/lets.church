@@ -56,7 +56,7 @@ const {
   retry: { maximumAttempts: 5 },
 });
 
-const { sendUploadErrorNotification } = proxyActivities<
+const { sendUploadErrorNotification, triggerPagerDutyAlert } = proxyActivities<
   typeof backgroundActivities
 >({
   startToCloseTimeout: '1 minute',
@@ -206,10 +206,26 @@ export async function processMediaWorkflow(
     const { attempt, retryPolicy } = workflowInfo();
     const maxAttempts = retryPolicy?.maximumAttempts ?? 1;
     if (attempt >= maxAttempts) {
-      await sendUploadErrorNotification(
-        targetId,
-        err instanceof Error ? err.message : String(err),
-      );
+      const message = err instanceof Error ? err.message : String(err);
+      await sendUploadErrorNotification(targetId, message);
+      // Best-effort ops alert on final failure; never mask the original
+      // error if PagerDuty itself is unavailable.
+      try {
+        await triggerPagerDutyAlert({
+          dedupKey: `process-media:${targetId}`,
+          summary: `Media processing failed for upload ${targetId}: ${message}`,
+          component: 'process-media',
+          customDetails: {
+            uploadRecordId: targetId,
+            scope,
+            attempt,
+            maxAttempts,
+            error: message,
+          },
+        });
+      } catch {
+        // swallow — alerting is best-effort
+      }
     }
     throw err;
   }
