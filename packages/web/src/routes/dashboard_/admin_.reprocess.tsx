@@ -50,14 +50,6 @@ function transcodes(scope: ProcessingScope) {
   return scope === 'transcode' || scope === 'everything';
 }
 
-// Map the two LLM checkboxes to the worker's llmMode. "Skip LLM" off =>
-// run; on => skip everything, unless "only if data exists" is also on, in
-// which case skip only the uploads that already have a summary + annotations.
-function llmModeFrom(skipLlm: boolean, onlyExisting: boolean) {
-  if (!skipLlm) return 'run' as const;
-  return onlyExisting ? ('skip-existing' as const) : ('skip' as const);
-}
-
 // DateInput hands back a `YYYY-MM-DD` string (or null). Widen each bound
 // to a full-day UTC range and emit ISO datetimes for the API; returns
 // undefined when neither bound is set so the worker skips the filter.
@@ -119,17 +111,6 @@ function ReprocessPage() {
   // Not offered on the migration card (it's transcribe-driven).
   const [channelVideoOnly, setChannelVideoOnly] = useState(false);
   const [allVideoOnly, setAllVideoOnly] = useState(false);
-
-  // LLM stage control per card: skip the LLM calls (summary + annotations),
-  // and optionally only skip uploads that already have that data (so a batch
-  // run only spends LLM on the gaps).
-  const [noParagraphsSkipLlm, setNoParagraphsSkipLlm] = useState(false);
-  const [noParagraphsSkipLlmIfExists, setNoParagraphsSkipLlmIfExists] =
-    useState(false);
-  const [channelSkipLlm, setChannelSkipLlm] = useState(false);
-  const [channelSkipLlmIfExists, setChannelSkipLlmIfExists] = useState(false);
-  const [allSkipLlm, setAllSkipLlm] = useState(false);
-  const [allSkipLlmIfExists, setAllSkipLlmIfExists] = useState(false);
 
   // Optional date window for the channel + all-uploads flows (the
   // migration scope is intentionally left without one).
@@ -251,27 +232,6 @@ function ReprocessPage() {
             disabled={status.noParagraphsStatus === 'running'}
           />
 
-          <Checkbox
-            size="xs"
-            label="Skip LLM calls (summary & annotations)"
-            checked={noParagraphsSkipLlm}
-            onChange={(e) => setNoParagraphsSkipLlm(e.currentTarget.checked)}
-            disabled={status.noParagraphsStatus === 'running'}
-          />
-
-          <Checkbox
-            size="xs"
-            ml="lg"
-            label="Only skip uploads that already have that data"
-            checked={noParagraphsSkipLlm && noParagraphsSkipLlmIfExists}
-            onChange={(e) =>
-              setNoParagraphsSkipLlmIfExists(e.currentTarget.checked)
-            }
-            disabled={
-              status.noParagraphsStatus === 'running' || !noParagraphsSkipLlm
-            }
-          />
-
           {status.noParagraphsStatus === 'running' ? (
             <Button
               size="xs"
@@ -301,10 +261,6 @@ function ReprocessPage() {
                   processingScope: noParagraphsProcessingScope,
                   viaBatch: noParagraphsViaBatch,
                   skipProbe: noParagraphsSkipProbe,
-                  llmMode: llmModeFrom(
-                    noParagraphsSkipLlm,
-                    noParagraphsSkipLlmIfExists,
-                  ),
                 })
               }
             >
@@ -374,23 +330,6 @@ function ReprocessPage() {
             }
           />
 
-          <Checkbox
-            size="xs"
-            label="Skip LLM calls (summary & annotations)"
-            checked={channelSkipLlm}
-            onChange={(e) => setChannelSkipLlm(e.currentTarget.checked)}
-            disabled={channelStatus === 'running'}
-          />
-
-          <Checkbox
-            size="xs"
-            ml="lg"
-            label="Only skip uploads that already have that data"
-            checked={channelSkipLlm && channelSkipLlmIfExists}
-            onChange={(e) => setChannelSkipLlmIfExists(e.currentTarget.checked)}
-            disabled={channelStatus === 'running' || !channelSkipLlm}
-          />
-
           <Group grow>
             <DateInput
               size="xs"
@@ -454,7 +393,6 @@ function ReprocessPage() {
                   videoOnly:
                     channelVideoOnly && transcodes(channelProcessingScope),
                   dateRange: toDateRange(channelDateStart, channelDateEnd),
-                  llmMode: llmModeFrom(channelSkipLlm, channelSkipLlmIfExists),
                 })
               }
             >
@@ -523,23 +461,6 @@ function ReprocessPage() {
             }
           />
 
-          <Checkbox
-            size="xs"
-            label="Skip LLM calls (summary & annotations)"
-            checked={allSkipLlm}
-            onChange={(e) => setAllSkipLlm(e.currentTarget.checked)}
-            disabled={status.allStatus === 'running'}
-          />
-
-          <Checkbox
-            size="xs"
-            ml="lg"
-            label="Only skip uploads that already have that data"
-            checked={allSkipLlm && allSkipLlmIfExists}
-            onChange={(e) => setAllSkipLlmIfExists(e.currentTarget.checked)}
-            disabled={status.allStatus === 'running' || !allSkipLlm}
-          />
-
           <Group grow>
             <DateInput
               size="xs"
@@ -598,7 +519,6 @@ function ReprocessPage() {
                   skipProbe: allSkipProbe,
                   videoOnly: allVideoOnly && transcodes(allProcessingScope),
                   dateRange: toDateRange(allDateStart, allDateEnd),
-                  llmMode: llmModeFrom(allSkipLlm, allSkipLlmIfExists),
                 })
               }
             >

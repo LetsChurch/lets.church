@@ -45,17 +45,13 @@ const { transcribe } = proxyActivities<typeof transcribeActivities>({
   retry: { maximumAttempts: 2 },
 });
 
-const {
-  getFinalizedUploadKey,
-  getStoredProbe,
-  getUploadsMissingLlmData,
-  storeTranscriptParagraphs,
-} = proxyActivities<typeof backgroundActivities>({
-  startToCloseTimeout: '10 minutes',
-  heartbeatTimeout: '1 minute',
-  taskQueue: BACKGROUND_QUEUE,
-  retry: { maximumAttempts: 5 },
-});
+const { getFinalizedUploadKey, getStoredProbe, storeTranscriptParagraphs } =
+  proxyActivities<typeof backgroundActivities>({
+    startToCloseTimeout: '10 minutes',
+    heartbeatTimeout: '1 minute',
+    taskQueue: BACKGROUND_QUEUE,
+    retry: { maximumAttempts: 5 },
+  });
 
 const { submitLlmBatch } = proxyActivities<typeof backgroundActivities>({
   // Scales with group size: builds + uploads a JSONL whose annotate kind
@@ -185,10 +181,12 @@ function isBatchTerminal(status: BatchStatus['status']): boolean {
  *      poll, process.
  *   6. Reindex each successful upload's media row.
  *
- * With `llmMode: 'run'` (default) the batch resubmits LLM requests for
- * every transcribed upload at 50% cost. 'skip' drops the LLM waves
- * entirely; 'skip-existing' pre-filters to uploads missing a summary/
- * annotations so the batch only spends LLM on the gaps.
+ * The batch resubmits LLM requests for every transcribed upload at 50%
+ * cost. There is intentionally no skip option: phase 1's
+ * storeTranscriptParagraphs delete-then-inserts paragraphs, which
+ * cascade-deletes each upload's annotations (annotation ->
+ * transcript_paragraph FK is ON DELETE CASCADE), so any transcribed
+ * upload must have its LLM data regenerated.
  */
 export async function reprocessGroupWorkflow(
   uploadIds: string[],
@@ -197,8 +195,6 @@ export async function reprocessGroupWorkflow(
   // of a fresh download + ffprobe, falling back to a live probe per
   // upload when none is stored. Defaults false; reprocess flows opt in.
   skipProbe = false,
-  // LLM stage control — see `processMediaWorkflow` / `getUploadsMissingLlmData`.
-  llmMode: 'run' | 'skip' | 'skip-existing' = 'run',
 ): Promise<void> {
   if (uploadIds.length === 0) return;
 
@@ -243,16 +239,10 @@ export async function reprocessGroupWorkflow(
     }
   }
 
-  // LLM stage gating. 'skip' drops the LLM waves entirely; 'skip-existing'
-  // restricts them to uploads missing a summary/annotations so the batch
-  // only spends LLM on the gaps. The reindex below still covers every
-  // prepped upload regardless of this filter.
-  let llmUploadIds = transcribedUploadIds;
-  if (llmMode === 'skip') {
-    llmUploadIds = [];
-  } else if (llmMode === 'skip-existing' && transcribedUploadIds.length > 0) {
-    llmUploadIds = await getUploadsMissingLlmData(transcribedUploadIds);
-  }
+  // Every transcribed upload needs its LLM stages re-run (its annotations
+  // were cascade-deleted when phase 1 rewrote the paragraphs). The reindex
+  // below covers every prepped upload regardless.
+  const llmUploadIds = transcribedUploadIds;
 
   // If nothing got transcribed (transcode-only run, or every upload
   // failed in prep) there's no LLM work to batch — fall straight to

@@ -56,14 +56,6 @@ export type ReprocessAllOptions = {
    * already have a video variant.
    */
   videoOnly?: boolean;
-  /**
-   * LLM stage control passed through to each upload:
-   *   'run' (default) — run summarize + annotate
-   *   'skip'          — skip the LLM stages entirely
-   *   'skip-existing' — skip only uploads that already have a summary
-   *                     and annotations; run for the ones missing them
-   */
-  llmMode?: 'run' | 'skip' | 'skip-existing';
 };
 
 export async function reprocessAllWorkflow(
@@ -73,7 +65,6 @@ export async function reprocessAllWorkflow(
   options: ReprocessAllOptions = {},
 ): Promise<void> {
   const skipProbe = options.skipProbe ?? true;
-  const llmMode = options.llmMode ?? 'run';
 
   const { items, nextCursor } = await getReprocessBatch(
     scope,
@@ -125,7 +116,7 @@ export async function reprocessAllWorkflow(
       try {
         await startChild(reprocessGroupWorkflow, {
           workflowId: `reprocessGroup:${items[0]?.id ?? 'empty'}:${items.length}`,
-          args: [items.map((i) => i.id), processingScope, skipProbe, llmMode],
+          args: [items.map((i) => i.id), processingScope, skipProbe],
           taskQueue: BACKGROUND_QUEUE,
           parentClosePolicy: ParentClosePolicy.ABANDON,
           priority: { priorityKey: PRIORITY_REPROCESS },
@@ -156,7 +147,7 @@ export async function reprocessAllWorkflow(
       try {
         await startChild(processMediaWorkflow, {
           workflowId: `reprocessUpload:${item.id}`,
-          args: [item.id, processingScope, skipProbe, llmMode],
+          args: [item.id, processingScope, skipProbe],
           taskQueue: BACKGROUND_QUEUE,
           parentClosePolicy: ParentClosePolicy.ABANDON,
           priority: { priorityKey: PRIORITY_REPROCESS },
