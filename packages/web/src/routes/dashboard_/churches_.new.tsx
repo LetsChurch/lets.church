@@ -38,14 +38,12 @@ export const Route = createFileRoute('/dashboard_/churches_/new')({
       throw redirect({ to: '/auth/login' });
     }
   },
-  loader: async () => {
-    return {
-      backNavigation: {
-        label: 'Churches',
-        to: '/dashboard/churches',
-      },
-    };
-  },
+  loader: () => ({
+    backNavigation: {
+      label: 'Churches',
+      to: '/dashboard/churches',
+    },
+  }),
 });
 
 function CreateChurchPage() {

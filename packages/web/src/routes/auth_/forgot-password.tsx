@@ -1,6 +1,6 @@
 import { Alert, Paper, Stack, Text } from '@mantine/core';
 import { IconCheck, IconInfoCircle } from '@tabler/icons-react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 import { z } from 'zod';
@@ -17,17 +17,18 @@ export const Route = createFileRoute('/auth_/forgot-password')({
       throw redirect({ to: '/' });
     }
   },
-  loader: async ({ context: { queryClient, trpc } }) => ({
-    env: await queryClient.fetchQuery(trpc.common.getClientEnv.queryOptions()),
-  }),
+  loader: ({ context: { queryClient, trpc } }) =>
+    queryClient.ensureQueryData(trpc.common.getClientEnv.queryOptions()),
 });
 
 function ForgotPasswordRoute() {
-  const { env } = Route.useLoaderData();
   const [error, setError] = useState<string | false>(false);
   const [success, setSuccess] = useState(false);
 
   const trpc = useTRPC();
+  const { data: env } = useSuspenseQuery(
+    trpc.common.getClientEnv.queryOptions(),
+  );
 
   const forgotPasswordMutation = useMutation(
     trpc.auth.forgotPassword.mutationOptions({

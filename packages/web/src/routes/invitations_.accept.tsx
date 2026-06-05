@@ -10,7 +10,7 @@ import {
   Title,
 } from '@mantine/core';
 import { IconAlertCircle, IconCheck, IconX } from '@tabler/icons-react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import {
   createFileRoute,
   Link,
@@ -39,7 +39,7 @@ export const Route = createFileRoute('/invitations_/accept')({
   validateSearch: searchSchema,
   loader: async ({ context: { queryClient, trpc }, location }) => {
     // Check authentication first
-    const hasSession = await queryClient.fetchQuery(
+    const hasSession = await queryClient.ensureQueryData(
       trpc.common.hasValidSession.queryOptions(),
     );
 
@@ -56,8 +56,9 @@ export const Route = createFileRoute('/invitations_/accept')({
     // Parse token from search params
     const { token } = searchSchema.parse(location.search);
 
-    // Fetch invitation details
-    const invitation = await queryClient.fetchQuery(
+    // Fetch invitation details (also primes the cache for the component's
+    // useSuspenseQuery below)
+    const invitation = await queryClient.ensureQueryData(
       trpc.common.getInvitationDetails.queryOptions({ token }),
     );
 
@@ -79,22 +80,16 @@ export const Route = createFileRoute('/invitations_/accept')({
         to: '/invitations/invalid',
       });
     }
-
-    // Returned (not read via useSuspenseQuery) on purpose: the redirect guards
-    // above narrow this discriminated union down to the PENDING variant via
-    // control-flow analysis, and useLoaderData propagates that narrowed type
-    // to the component. Re-reading it through a query hook would surface the
-    // raw union and lose the narrowing — and an accept page has no need for
-    // observer/refetch behavior anyway.
-    return { invitation };
   },
 });
 
 function RouteComponent() {
-  const { invitation } = Route.useLoaderData();
   const { token } = Route.useSearch();
   const router = useRouter();
   const trpc = useTRPC();
+  const { data: invitation } = useSuspenseQuery(
+    trpc.common.getInvitationDetails.queryOptions({ token }),
+  );
   const [error, setError] = useState<string | null>(null);
   const [resendSuccess, setResendSuccess] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -180,6 +175,14 @@ function RouteComponent() {
       },
     }),
   );
+
+  // The loader already redirected away unless this is a PENDING invitation, but
+  // the query exposes the raw discriminated union. Narrowing on `status` here
+  // recovers the PENDING variant (the one carrying organization/channel). This
+  // sits after all hooks so it doesn't violate the rules of hooks.
+  if (!invitation || invitation.status !== 'PENDING') {
+    return null;
+  }
 
   const handleAccept = () => {
     if (invitation.type === 'organization') {

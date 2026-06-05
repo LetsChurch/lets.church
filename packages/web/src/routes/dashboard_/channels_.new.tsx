@@ -35,14 +35,12 @@ export const Route = createFileRoute('/dashboard_/channels_/new')({
       throw redirect({ to: '/auth/login' });
     }
   },
-  loader: async () => {
-    return {
-      backNavigation: {
-        label: 'My Channels',
-        to: '/dashboard/channels',
-      },
-    };
-  },
+  loader: () => ({
+    backNavigation: {
+      label: 'My Channels',
+      to: '/dashboard/channels',
+    },
+  }),
 });
 
 function CreateChannelPage() {

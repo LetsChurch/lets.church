@@ -12,13 +12,12 @@ import { formatTime } from '@/util/format';
 
 export const Route = createFileRoute('/_main/history')({
   component: RouteComponent,
-  loader: async ({ context }) => {
-    await context.queryClient.prefetchInfiniteQuery(
+  loader: ({ context }) =>
+    context.queryClient.prefetchInfiniteQuery(
       context.trpc.library.getHistory.infiniteQueryOptions({
         limit: 20,
       }),
-    );
-  },
+    ),
   head: () => ({
     meta: [
       {

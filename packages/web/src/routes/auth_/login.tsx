@@ -1,6 +1,10 @@
 import { Alert, Paper, Stack, Text } from '@mantine/core';
 import { IconInfoCircle } from '@tabler/icons-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import {
   createFileRoute,
   Link,
@@ -22,18 +26,19 @@ export const Route = createFileRoute('/auth_/login')({
       throw redirect({ to: '/' });
     }
   },
-  loader: async ({ context: { queryClient, trpc } }) => ({
-    env: await queryClient.fetchQuery(trpc.common.getClientEnv.queryOptions()),
-  }),
+  loader: ({ context: { queryClient, trpc } }) =>
+    queryClient.ensureQueryData(trpc.common.getClientEnv.queryOptions()),
 });
 
 function LoginRoute() {
-  const { env } = Route.useLoaderData();
   const [error, setError] = useState<string | false>(false);
 
   const router = useRouter();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
+  const { data: env } = useSuspenseQuery(
+    trpc.common.getClientEnv.queryOptions(),
+  );
 
   const loginMutation = useMutation(
     trpc.auth.login.mutationOptions({

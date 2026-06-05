@@ -11,8 +11,10 @@ import {
   Title,
 } from '@mantine/core';
 import { IconDots, IconEdit, IconTrash } from '@tabler/icons-react';
+import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import clsx from 'clsx';
+import { useTRPC } from '@/trpc/react';
 import classes from './-channels.module.css';
 import styles from './-styles.module.css';
 
@@ -27,11 +29,12 @@ export const Route = createFileRoute('/dashboard_/channels')({
     }
   },
   loader: async ({ context: { queryClient, trpc } }) => {
-    const data = await queryClient.ensureQueryData(
+    // Prime the channels query (read back via useSuspenseQuery in the
+    // component); backNavigation is loader-only data the dashboard layout reads.
+    await queryClient.ensureQueryData(
       trpc.dashboard.channels.getChannels.queryOptions(),
     );
     return {
-      data,
       backNavigation: {
         label: 'Dashboard',
         to: '/dashboard',
@@ -41,7 +44,10 @@ export const Route = createFileRoute('/dashboard_/channels')({
 });
 
 function ChannelsPage() {
-  const { data: channels } = Route.useLoaderData();
+  const trpc = useTRPC();
+  const { data: channels } = useSuspenseQuery(
+    trpc.dashboard.channels.getChannels.queryOptions(),
+  );
 
   return (
     <>

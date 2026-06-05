@@ -1,6 +1,7 @@
 import { UploadViewSource } from '@letschurch/db/types';
 import { useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
 import { Player } from '@/components/player';
 import { trpcClient, useTRPC } from '@/trpc/react';
 
@@ -12,24 +13,21 @@ export const Route = createFileRoute('/embed/media/$mediaId')({
     };
   },
   loader: async ({ context: { queryClient, trpc }, params }) => {
-    const [media, viewData] = await Promise.all([
-      queryClient.ensureQueryData(
-        trpc.media.getMediaById.queryOptions({
-          mediaId: params.mediaId,
-        }),
-      ),
-      trpcClient.media.createUploadView.mutate({
-        uploadRecordId: params.mediaId,
-        source: UploadViewSource.EMBED,
+    // Only primes/returns media (head() needs it for SEO meta, where hooks
+    // can't run). View recording happens in a mount effect in the component —
+    // loaders also run on preload/revalidation, which would count views the
+    // user never actually saw.
+    const media = await queryClient.ensureQueryData(
+      trpc.media.getMediaById.queryOptions({
+        mediaId: params.mediaId,
       }),
-    ]);
+    );
 
     // Exclude the probe field from media to avoid serialization issues
     const { probe: _probe, ...mediaWithoutProbe } = media;
 
     return {
       media: mediaWithoutProbe,
-      viewHash: viewData?.viewHash ?? '',
     };
   },
   head: ({ loaderData }) => {
@@ -111,14 +109,34 @@ function RouteComponent() {
   const params = Route.useParams();
   const search = Route.useSearch();
   const trpc = useTRPC();
-  const loaderData = Route.useLoaderData();
-  const viewHash = loaderData?.viewHash ?? '';
 
   const { data: media } = useSuspenseQuery(
     trpc.media.getMediaById.queryOptions({
       mediaId: params.mediaId,
     }),
   );
+
+  // Record a view once the embed actually mounts on the client — not in the
+  // loader, which also runs on preload/revalidation. createUploadView returns
+  // the daily viewHash the player uses to record watch-time; it stays '' until
+  // the mutation resolves, which the player treats as "not ready to record".
+  const [viewHash, setViewHash] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    trpcClient.media.createUploadView
+      .mutate({
+        uploadRecordId: params.mediaId,
+        source: UploadViewSource.EMBED,
+      })
+      .then((res) => {
+        if (!cancelled) {
+          setViewHash(res?.viewHash ?? '');
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [params.mediaId]);
 
   // Determine what type to show based on query param and availability
   const requestedType = search.type;

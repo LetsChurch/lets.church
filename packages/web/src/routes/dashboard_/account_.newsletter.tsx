@@ -1,6 +1,6 @@
 import { Alert, Card, Stack, Text, Title } from '@mantine/core';
 import { IconInfoCircle } from '@tabler/icons-react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useAppMantineForm } from '@/components/mantine';
@@ -17,12 +17,13 @@ export const Route = createFileRoute('/dashboard_/account_/newsletter')({
     }
   },
   loader: async ({ context }) => {
-    const env = await context.queryClient.fetchQuery(
+    // Prime the env query (read back via useSuspenseQuery in the component);
+    // backNavigation is loader-only data the dashboard layout reads.
+    await context.queryClient.ensureQueryData(
       context.trpc.common.getClientEnv.queryOptions(),
     );
 
     return {
-      env,
       backNavigation: {
         label: 'Account',
         to: '/dashboard/account',
@@ -32,8 +33,10 @@ export const Route = createFileRoute('/dashboard_/account_/newsletter')({
 });
 
 function NewsletterPage() {
-  const { env } = Route.useLoaderData();
   const trpc = useTRPC();
+  const { data: env } = useSuspenseQuery(
+    trpc.common.getClientEnv.queryOptions(),
+  );
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
