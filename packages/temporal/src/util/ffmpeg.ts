@@ -146,28 +146,34 @@ function videoVariantToOutputArgs(
     ? []
     : ['-profile:v', 'high', '-level:v', videoVariantToLevel(variant)];
 
-  // Pixel format + color, set explicitly on BOTH paths. The AMA pipeline
-  // already emits 8-bit yuv420p + bt709/tv natively, and `-pix_fmt
-  // yuv420p` was verified to be a no-op there (verbose graph shows no
-  // hwdownload / format-converter inserted), so stating it costs nothing
-  // and guarantees the output regardless of encoder. Software-side it
-  // forces 8-bit 4:2:0 so 10-bit / 4:2:2 / 4:4:4 sources stay broadly
-  // decodable (Safari, iOS, smart TVs). NOTE: the color flags TAG, they
-  // don't convert — fine for typical bt709 HD uploads; genuine bt601/SD
-  // sources would need a real colorspace conversion. (The 10-bit-source
-  // case on the AMA path specifically is not yet validated.)
-  const formatColorArgs = [
-    '-pix_fmt',
-    'yuv420p',
-    '-colorspace',
-    'bt709',
-    '-color_primaries',
-    'bt709',
-    '-color_trc',
-    'bt709',
-    '-color_range',
-    'tv',
-  ];
+  // Pixel format + color, software path ONLY. `-pix_fmt yuv420p` forces
+  // 8-bit 4:2:0 so 10-bit / 4:2:2 / 4:4:4 sources stay broadly decodable
+  // (Safari, iOS, smart TVs); the color flags TAG (not convert) — fine
+  // for typical bt709 HD uploads, though genuine bt601/SD sources would
+  // need a real colorspace conversion.
+  //
+  // These must NOT be set on the AMA path. `scaler_ama` emits on-device
+  // hardware surfaces (pixel format `vpe`) that `h264_ama` consumes
+  // directly; requesting `-pix_fmt yuv420p` makes ffmpeg splice an
+  // auto_scale filter to convert `vpe -> yuv420p`, which has no on-device
+  // implementation and aborts the graph ("Impossible to convert between
+  // the formats supported by 'scaler_ama' and 'auto_scale'", error -38).
+  // The AMA encoder manages pixel format and carries input color metadata
+  // itself, so we leave these off entirely.
+  const formatColorArgs = hwAccel.startsWith('ama:')
+    ? []
+    : [
+        '-pix_fmt',
+        'yuv420p',
+        '-colorspace',
+        'bt709',
+        '-color_primaries',
+        'bt709',
+        '-color_trc',
+        'bt709',
+        '-color_range',
+        'tv',
+      ];
   return [
     '-map',
     `[${variant}]`,
