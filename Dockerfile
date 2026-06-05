@@ -138,6 +138,9 @@ CMD ["pnpm", "--filter", "@letschurch/transcode-worker", "run", "start"]
 
 FROM ubuntu:22.04 AS transcode-worker-ama
 ARG DEBIAN_FRONTEND=noninteractive
+# AMA SDK version — must match the amd-ama-driver installed on the host (e.g. tnw-worker-01).
+# Bump this in lockstep with the host driver; see https://amd.github.io/ama-sdk/latest/docker.html
+ARG AMA_SDK_VERSION=1.5.0
 ENV PNPM_HOME="/pnpm"
 ENV PATH="/opt/amd/ama/ma35/bin:$PNPM_HOME:$PATH"
 ENV NODE_ENV=production
@@ -158,7 +161,9 @@ RUN wget -qO /usr/share/keyrings/xilinx-master-signing-key.asc \
     https://packages.xilinx.com/artifactory/debian-packages jammy main" \
     > /etc/apt/sources.list.d/xilinx-ama.list && \
   apt-get update && apt-get install -y --no-install-recommends \
-    amd-ama-core amd-ama-xma amd-ama-ffmpeg && \
+    amd-ama-core=${AMA_SDK_VERSION}-* \
+    amd-ama-xma=${AMA_SDK_VERSION}-* \
+    amd-ama-ffmpeg=${AMA_SDK_VERSION}-* && \
   apt-mark hold amd-ama-core amd-ama-xma amd-ama-ffmpeg && \
   rm -rf /var/lib/apt/lists/*
 COPY --from=oxipng /usr/local/bin/oxipng /usr/local/bin/oxipng
