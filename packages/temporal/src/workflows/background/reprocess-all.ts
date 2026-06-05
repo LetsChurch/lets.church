@@ -23,7 +23,11 @@ const { getReprocessBatch } = proxyActivities<typeof backgroundActivities>({
   retry: { maximumAttempts: 3 },
 });
 
-const BATCH_SIZE = 100;
+// Uploads per iteration. In viaBatch mode this is also the size of each
+// reprocessGroupWorkflow's OpenAI batch, so keep it modest: 50 keeps each
+// group's submit/process activity well within its timeout while still
+// amortizing the batch overhead.
+const BATCH_SIZE = 50;
 
 export type ReprocessAllOptions = {
   /**

@@ -57,17 +57,25 @@ const {
   retry: { maximumAttempts: 5 },
 });
 
-const { submitLlmBatch, processLlmBatchOutput } = proxyActivities<
-  typeof backgroundActivities
->({
-  // These two scale with group size: `submitLlmBatch` builds and
-  // uploads a JSONL whose annotate kind echoes each upload's full
-  // transcript, and `processLlmBatchOutput` streams the whole output
-  // file and does per-upload DB writes. Large reprocess groups were
-  // hitting START_TO_CLOSE at 30m, so the ceiling is 2h. No
-  // heartbeatTimeout because neither activity heartbeats —
-  // startToCloseTimeout is the only ceiling.
+const { submitLlmBatch } = proxyActivities<typeof backgroundActivities>({
+  // Scales with group size: builds + uploads a JSONL whose annotate kind
+  // echoes each upload's full transcript. Single build+upload, no
+  // heartbeat, so startToCloseTimeout is the only ceiling.
   startToCloseTimeout: '120 minutes',
+  taskQueue: BACKGROUND_QUEUE,
+  retry: { maximumAttempts: 3 },
+});
+
+const { processLlmBatchOutput } = proxyActivities<typeof backgroundActivities>({
+  // Streams the whole output file and does per-upload DB writes; runtime
+  // scales with group size and can be long for big groups. It heartbeats
+  // per line, so a genuine hang is caught by heartbeatTimeout in minutes
+  // instead of burning the whole ceiling; the generous startToClose just
+  // bounds total runtime. All applies are idempotent (summary update,
+  // annotate delete+insert, embed update), so a retry from the start is
+  // safe.
+  startToCloseTimeout: '6 hours',
+  heartbeatTimeout: '10 minutes',
   taskQueue: BACKGROUND_QUEUE,
   retry: { maximumAttempts: 3 },
 });

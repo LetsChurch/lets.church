@@ -4,7 +4,8 @@ import {
   TranscriptParagraph,
   UploadRecord,
 } from '@letschurch/db';
-import { asc, eq, inArray } from 'drizzle-orm';
+import { Context } from '@temporalio/activity';
+import { asc, eq, inArray, sql } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 import {
   ANNOTATE_MODEL,
@@ -92,6 +93,15 @@ export default async function processLlmBatchOutput(
           `Failed to apply batch line ${line.custom_id}: ${err instanceof Error ? err.message : String(err)}`,
         );
       }
+      // Heartbeat per line so a genuine hang is caught by heartbeatTimeout
+      // in minutes rather than burning the whole start-to-close ceiling on
+      // a large group.
+      Context.current().heartbeat({
+        kind: args.kind,
+        phase: 'output',
+        succeeded,
+        failed,
+      });
     }
   }
 
@@ -125,6 +135,7 @@ export default async function processLlmBatchOutput(
       activityLogger.warn(
         `Batch ${args.batchId} request ${line.custom_id} failed: ${errorMessage}`,
       );
+      Context.current().heartbeat({ kind: args.kind, phase: 'error', failed });
     }
   }
 
@@ -375,29 +386,32 @@ async function handleEmbedParagraphs(
   );
   const chunkRows = rows.slice(chunkStart, chunkStart + expectedChunkLen);
 
-  await db.transaction(async (tx) => {
-    await Promise.all(
-      chunkRows.map((r, i) => {
-        // Parity with `embed-transcript-paragraphs.ts`'s live path:
-        // OpenAI documents `data` as input-ordered but we still
-        // assert `index === i` so a future routing change can't
-        // silently misalign vectors with paragraphs.
-        const d = data[i];
-        invariant(
-          d && d.index === i,
-          `Embed-paragraphs batch ${line.custom_id}: index/order mismatch at ${i}`,
-        );
-        invariant(
-          d.embedding.length === EMBED_DIMS,
-          `Embed-paragraphs batch ${line.custom_id}: bad embedding dim at ${i}`,
-        );
-        return tx
-          .update(TranscriptParagraph)
-          .set({ embedding: d.embedding })
-          .where(eq(TranscriptParagraph.id, r.id));
-      }),
+  // Parity with `embed-transcript-paragraphs.ts`'s live path: OpenAI
+  // documents `data` as input-ordered but we still assert `index === i`
+  // so a future routing change can't silently misalign vectors with
+  // paragraphs. Build the (id, embedding) pairs first, then apply them in
+  // a SINGLE bulk UPDATE — a long sermon is thousands of paragraphs, and
+  // the previous one-statement-per-row pattern was the dominant cost of
+  // this activity on large batch groups.
+  const updates = chunkRows.map((r, i) => {
+    const d = data[i];
+    invariant(
+      d && d.index === i,
+      `Embed-paragraphs batch ${line.custom_id}: index/order mismatch at ${i}`,
     );
+    invariant(
+      d.embedding.length === EMBED_DIMS,
+      `Embed-paragraphs batch ${line.custom_id}: bad embedding dim at ${i}`,
+    );
+    return { id: r.id, embedding: d.embedding };
   });
+  await db.execute(sql`
+    UPDATE ${TranscriptParagraph} AS t
+    SET embedding = v.embedding
+    FROM jsonb_to_recordset(${JSON.stringify(updates)}::jsonb)
+      AS v(id uuid, embedding jsonb)
+    WHERE t.id = v.id
+  `);
 
   await recordLlmCall({
     model: EMBED_MODEL,
