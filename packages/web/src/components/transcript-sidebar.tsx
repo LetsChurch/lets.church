@@ -39,7 +39,7 @@ export function TranscriptSidebar({ transcript }: TranscriptSidebarProps) {
   const hasQuery = searchQuery.trim().length > 0;
 
   return (
-    <div>
+    <div className="h-full">
       <div className="sticky top-4 bottom-4 isolate flex h-[calc(100vh-6rem)] flex-col overflow-hidden rounded-2xl border-fancy-pants bg-zinc-100 dark:bg-zinc-900">
         {/* Sidebar Header */}
         <div className="flex items-center gap-2 border-zinc-200 border-b px-5 py-2.5 dark:border-zinc-800">
