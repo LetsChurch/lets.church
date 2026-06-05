@@ -30,6 +30,16 @@ export function getRouter() {
 
   const router = createTanStackRouter({
     routeTree,
+    // Preload routes on hover/touch intent. Safe now that loaders only prime
+    // caches and guard — no side-effecting work (e.g. view recording) lives in
+    // a loader, so preloading a route can't trigger user-visible side effects.
+    defaultPreload: 'intent',
+    // Let React Query be the single source of truth for caching. Without this,
+    // the router keeps its own 30s preload cache, creating a second caching
+    // layer with a different TTL than Query's staleTime. Setting it to 0 means
+    // preloads always re-run loaders and Query decides whether to actually
+    // refetch. See https://tkdodo.eu/blog/tan-stack-router-and-query
+    defaultPreloadStaleTime: 0,
     scrollRestoration: true,
     // _main.tsx uses <main className="overflow-y-auto"> as the scroll container, not window.
     scrollToTopSelectors: ['main.overflow-y-auto'],

@@ -1,6 +1,6 @@
 import { Alert, Paper, Stack, Text } from '@mantine/core';
 import { IconInfoCircle } from '@tabler/icons-react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   createFileRoute,
   Link,
@@ -40,6 +40,7 @@ function RouteComponent() {
 
   const router = useRouter();
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
 
   const registerMutation = useMutation(
     trpc.auth.register.mutationOptions({
@@ -49,6 +50,11 @@ function RouteComponent() {
           return;
         }
 
+        // Registering logs the user in, changing the authenticated identity, so
+        // invalidate the whole query cache before re-running loaders. Without
+        // this the default staleTime keeps the logged-out session data "fresh"
+        // and the UI (e.g. the header's login button) never updates.
+        await queryClient.invalidateQueries();
         await router.invalidate();
         await router.navigate({ to: '/' });
       },

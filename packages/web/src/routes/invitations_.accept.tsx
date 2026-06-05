@@ -80,6 +80,12 @@ export const Route = createFileRoute('/invitations_/accept')({
       });
     }
 
+    // Returned (not read via useSuspenseQuery) on purpose: the redirect guards
+    // above narrow this discriminated union down to the PENDING variant via
+    // control-flow analysis, and useLoaderData propagates that narrowed type
+    // to the component. Re-reading it through a query hook would surface the
+    // raw union and lose the narrowing — and an accept page has no need for
+    // observer/refetch behavior anyway.
     return { invitation };
   },
 });

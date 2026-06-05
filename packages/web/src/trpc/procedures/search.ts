@@ -9,7 +9,6 @@ import {
 import { publicS3 } from '@letschurch/s3/public';
 import { TRPCError } from '@trpc/server';
 import { and, count, eq, inArray } from 'drizzle-orm';
-import { v5 as uuidv5 } from 'uuid';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarSm2x, appAvatarXs2x } from '@/util/avatar-sizes';
@@ -21,46 +20,6 @@ import { authProcedure, publicProcedure } from '../trpc';
 const moduleLogger = logger.child({
   module: 'trpc/procedures/search',
 });
-
-// Namespace UUID for search logs (generated once using uuidv4)
-const SEARCH_LOG_NAMESPACE = 'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d';
-
-/**
- * Generate a deterministic ID for a search query based on its parameters
- * and a time bucket (5 minutes). This makes search logging idempotent
- * by preventing duplicate entries for the same search within the time window.
- */
-function generateSearchLogId(
-  query: string,
-  params: {
-    focus: string;
-    channelIds?: string[] | null;
-    sort?: string;
-    dateRange?: string;
-  },
-  appUserId: string | undefined,
-  timeBucketMinutes: number = 5,
-): string {
-  // Round timestamp to time bucket (e.g., 5 minute intervals)
-  const now = new Date();
-  const bucketMs = timeBucketMinutes * 60 * 1000;
-  const bucketedTimestamp = Math.floor(now.getTime() / bucketMs) * bucketMs;
-
-  // Create a stable string representation using delimited fields
-  // This guarantees consistent ordering regardless of JSON.stringify behavior
-  const searchKey = [
-    query.trim().toLowerCase(),
-    params.focus,
-    (params.channelIds ?? []).sort().join(','),
-    params.sort ?? '',
-    params.dateRange ?? '',
-    appUserId ?? '',
-    bucketedTimestamp.toString(),
-  ].join('|');
-
-  // Generate a deterministic UUID v5 from the stable string
-  return uuidv5(searchKey, SEARCH_LOG_NAMESPACE);
-}
 
 const searchQuerySchema = z.object({
   q: z.string().min(1),
@@ -276,7 +235,6 @@ export const searchProcedures = {
       moduleLogger.info('Search result counts');
 
       // Log the search with result counts
-      // Using idempotent logging with deterministic IDs to prevent duplicates
       try {
         // Determine if we should skip logging
         const isAdmin = ctx.session?.appUser?.role === 'ADMIN';
@@ -285,22 +243,9 @@ export const searchProcedures = {
         // Only log if query is not empty or whitespace AND this is the initial search (not pagination)
         // AND we're not skipping logging (admin viewing search logs)
         if (q.trim().length > 0 && cursor === 0 && !shouldSkipLogging) {
-          // Generate deterministic ID for idempotent logging
-          const logId = generateSearchLogId(
-            q,
-            {
-              focus,
-              channelIds: channelIds ?? undefined,
-              sort,
-              dateRange,
-            },
-            ctx.session?.appUserId,
-          );
-
           const logEntry = await db
             .insert(SearchLogEntry)
             .values({
-              id: logId,
               query: q,
               params: {
                 focus,
@@ -314,14 +259,6 @@ export const searchProcedures = {
               mediaCount,
               transcriptCount,
               channelCount: 0, // Will be updated after we fetch channels
-            })
-            .onConflictDoUpdate({
-              target: SearchLogEntry.id,
-              set: {
-                // Update counts in case results changed (ES index updated, etc.)
-                mediaCount,
-                transcriptCount,
-              },
             })
             .returning()
             .then((r) => {
@@ -339,7 +276,6 @@ export const searchProcedures = {
               context: {
                 userId: ctx.session?.appUserId,
                 searchLogId: searchLogEntryId,
-                isNewEntry: logEntry.createdAt.getTime() > Date.now() - 1000,
               },
             },
             'Search query logged to database',

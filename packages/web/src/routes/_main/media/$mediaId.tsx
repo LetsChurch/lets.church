@@ -70,38 +70,39 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
     list: z.string().optional(),
   }),
   loader: async ({ context: { queryClient, trpc }, params }) => {
-    const [media, viewData, transcript, paragraphs, rating, comments] =
-      await Promise.all([
-        queryClient.ensureQueryData(
-          trpc.media.getMediaById.queryOptions({
-            mediaId: params.mediaId,
-          }),
-        ),
-        trpcClient.media.createUploadView.mutate({
-          uploadRecordId: params.mediaId,
-          source: UploadViewSource.WEBSITE,
+    // The transcript/paragraphs/rating/comments ensureQueryData calls run for
+    // their cache-priming side effect (the component reads them via
+    // useSuspenseQuery); only media is used here directly. View recording is
+    // deliberately NOT done here — loaders also run on preload/revalidation,
+    // which would count views the user never actually saw. It happens in a
+    // mount effect in the component instead.
+    const [media] = await Promise.all([
+      queryClient.ensureQueryData(
+        trpc.media.getMediaById.queryOptions({
+          mediaId: params.mediaId,
         }),
-        queryClient.ensureQueryData(
-          trpc.media.getTranscript.queryOptions({
-            mediaId: params.mediaId,
-          }),
-        ),
-        queryClient.ensureQueryData(
-          trpc.media.getTranscriptParagraphs.queryOptions({
-            mediaId: params.mediaId,
-          }),
-        ),
-        queryClient.ensureQueryData(
-          trpc.media.getMediaRating.queryOptions({
-            mediaId: params.mediaId,
-          }),
-        ),
-        queryClient.ensureQueryData(
-          trpc.media.getComments.queryOptions({
-            mediaId: params.mediaId,
-          }),
-        ),
-      ]);
+      ),
+      queryClient.ensureQueryData(
+        trpc.media.getTranscript.queryOptions({
+          mediaId: params.mediaId,
+        }),
+      ),
+      queryClient.ensureQueryData(
+        trpc.media.getTranscriptParagraphs.queryOptions({
+          mediaId: params.mediaId,
+        }),
+      ),
+      queryClient.ensureQueryData(
+        trpc.media.getMediaRating.queryOptions({
+          mediaId: params.mediaId,
+        }),
+      ),
+      queryClient.ensureQueryData(
+        trpc.media.getComments.queryOptions({
+          mediaId: params.mediaId,
+        }),
+      ),
+    ]);
 
     if (media.series?.id) {
       await queryClient.prefetchQuery(
@@ -112,13 +113,13 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
     // Exclude the probe field from media to avoid serialization issues
     const { probe: _probe, ...mediaWithoutProbe } = media;
 
+    // Only `media` is read off loaderData (consumed by head() for SEO meta,
+    // where hooks can't run). transcript/paragraphs/rating/comments are read
+    // in the component via useSuspenseQuery — the ensureQueryData calls above
+    // already primed them into the cache, so returning them here too would
+    // just bloat the serialized SSR payload.
     return {
       media: mediaWithoutProbe,
-      viewHash: viewData?.viewHash ?? '',
-      transcript: transcript ?? [],
-      paragraphs: paragraphs ?? null,
-      rating,
-      comments,
     };
   },
   head: ({ loaderData }) => {
@@ -456,8 +457,29 @@ function RouteComponent() {
     'rate' | 'save' | 'follow' | 'comment'
   >('rate');
   const [unfollowConfirmOpen, setUnfollowConfirmOpen] = useState(false);
-  const loaderData = Route.useLoaderData();
-  const viewHash = loaderData?.viewHash ?? '';
+
+  // Record a view once the page actually mounts on the client — not in the
+  // loader, which also runs on preload/revalidation and would count views the
+  // user never saw. createUploadView returns the daily viewHash the player
+  // uses to record watch-time; it stays '' until the mutation resolves, which
+  // the player treats as "not ready to record yet".
+  const [viewHash, setViewHash] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    trpcClient.media.createUploadView
+      .mutate({
+        uploadRecordId: params.mediaId,
+        source: UploadViewSource.WEBSITE,
+      })
+      .then((res) => {
+        if (!cancelled) {
+          setViewHash(res?.viewHash ?? '');
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [params.mediaId]);
   const [initialTimestamp, setInitialTimestamp] = useState<number | undefined>(
     undefined,
   );

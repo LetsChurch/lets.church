@@ -105,6 +105,12 @@ export const trpcClient = createTRPCClient<AppRouter>({
 export function getContext() {
   const queryClient = new QueryClient({
     defaultOptions: {
+      // Without a default staleTime, every SSR-rendered query is considered
+      // stale the instant it hydrates on the client, triggering an immediate
+      // background refetch on mount — re-running work we just did on the
+      // server. A small default keeps freshly-hydrated data fresh long enough
+      // to avoid that double-fetch.
+      queries: { staleTime: 60_000 },
       dehydrate: { serializeData: superjson.serialize },
       hydrate: { deserializeData: superjson.deserialize },
     },

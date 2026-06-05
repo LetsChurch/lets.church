@@ -1,6 +1,6 @@
 import { Alert, Paper, Stack, Text } from '@mantine/core';
 import { IconInfoCircle } from '@tabler/icons-react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   createFileRoute,
   Link,
@@ -33,6 +33,7 @@ function LoginRoute() {
 
   const router = useRouter();
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
 
   const loginMutation = useMutation(
     trpc.auth.login.mutationOptions({
@@ -42,6 +43,14 @@ function LoginRoute() {
           return;
         }
 
+        // Logging in changes the authenticated identity, so every cached query
+        // may now be wrong (session, current user, follows, ratings, dashboard
+        // data, …). Invalidate the whole cache so active queries refetch and
+        // loaders re-run against the new session. router.invalidate() alone
+        // only re-runs loaders, which read through fetchQuery — and the default
+        // staleTime would otherwise keep the logged-out session data "fresh",
+        // leaving the UI (e.g. the header's login button) stuck.
+        await queryClient.invalidateQueries();
         await router.invalidate();
         await router.navigate({ to: '/' });
       },
