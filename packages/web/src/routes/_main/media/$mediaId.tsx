@@ -9,10 +9,12 @@ import {
 } from '@tabler/icons-react';
 import {
   useMutation,
+  useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
 import { createFileRoute, Link, useLocation } from '@tanstack/react-router';
+import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
 import { z } from 'zod';
 import { AutoplayCountdown } from '@/components/autoplay-countdown';
@@ -20,7 +22,7 @@ import { CommentsSection } from '@/components/comments-section';
 import LcButton from '@/components/lc-button';
 import { LcModal, ModalHeader } from '@/components/lc-modal';
 import MainLayout from '@/components/main-layout';
-// import { MediaCarousel } from '@/components/media-carousel';
+import { MediaCarousel } from '@/components/media-carousel';
 import { MediaHeader } from '@/components/media-header';
 import { MediaInfoTabs } from '@/components/media-info-tabs';
 import { MediaSidebarTabs } from '@/components/media-sidebar-tabs';
@@ -52,9 +54,34 @@ import {
   setTranscriptWidth as saveTranscriptWidth,
 } from '@/stores/transcript-width';
 import { trpcClient, useTRPC } from '@/trpc/react';
+import { formatTime } from '@/util/format';
 import { buildKeywordIndex } from '@/util/keyword-index';
 import { buildScriptureIndex } from '@/util/scripture-index';
 import { useVideoLayout } from '@/util/use-video-layout';
+
+function toCarouselItem(item: {
+  id: string;
+  title: string | null;
+  thumbnailUrl: string | null;
+  channelName: string;
+  channelAvatarUrl: string | null;
+  lengthSeconds: number | null;
+  publishedAt: string | Date;
+}) {
+  return {
+    id: item.id,
+    title: item.title,
+    thumbnailUrl: item.thumbnailUrl,
+    channelName: item.channelName,
+    channelAvatarUrl: item.channelAvatarUrl,
+    duration: item.lengthSeconds
+      ? formatTime(item.lengthSeconds * 1000)
+      : undefined,
+    timestamp: item.publishedAt
+      ? formatDistanceToNow(new Date(item.publishedAt), { addSuffix: true })
+      : undefined,
+  };
+}
 
 export const Route = createFileRoute('/_main/media/$mediaId')({
   component: RouteComponent,
@@ -515,6 +542,22 @@ function RouteComponent() {
               items: [],
             }),
         },
+  );
+
+  // Related content (semantic neighbors via the media summary embedding).
+  // Non-suspense + below-the-fold, so it loads independently of the page.
+  const { data: relatedMedia } = useQuery(
+    trpc.media.getRelatedMedia.queryOptions({ mediaId: params.mediaId }),
+  );
+
+  const sameChannelItems = useMemo(
+    () => (relatedMedia?.sameChannel ?? []).map(toCarouselItem),
+    [relatedMedia],
+  );
+
+  const otherRelatedItems = useMemo(
+    () => (relatedMedia?.otherChannels ?? []).map(toCarouselItem),
+    [relatedMedia],
   );
 
   // Find current and next items
@@ -987,27 +1030,33 @@ function RouteComponent() {
               />
             ) : null}
 
-            {/* TODO */}
-            {/* <div className="mt-10 pb-4"> */}
-            {/*   <h2 className="mb-4 font-bold text-lg text-primary"> */}
-            {/*     Related Content */}
-            {/*   </h2> */}
-            {/*   <MediaCarousel */}
-            {/*     items={[1, 2, 3, 4, 5, 6].map((i) => ({ */}
-            {/*       id: `${i}`, */}
-            {/*       title: `Related Video ${i}`, */}
-            {/*       thumbnailUrl: null, */}
-            {/*       channelName: 'Channel Name', */}
-            {/*       channelAvatarUrl: null, */}
-            {/*       duration: '10:23', */}
-            {/*       timestamp: '2 days ago', */}
-            {/*       progress: i === 1 ? 45 : undefined, */}
-            {/*     }))} */}
-            {/*     fadeMargin="-mx-4 px-4" */}
-            {/*     fadeSize={16} */}
-            {/*     buttonPositioning="inside" */}
-            {/*   /> */}
-            {/* </div> */}
+            {sameChannelItems.length > 0 ? (
+              <div className="mt-10 pb-4">
+                <h2 className="mb-4 font-bold text-lg text-primary">
+                  More from {media.channel.name}
+                </h2>
+                <MediaCarousel
+                  items={sameChannelItems}
+                  edgeMargin="-mx-4 px-4"
+                  fadeSize={16}
+                  buttonPositioning="inside"
+                />
+              </div>
+            ) : null}
+
+            {otherRelatedItems.length > 0 ? (
+              <div className="mt-10 pb-4">
+                <h2 className="mb-4 font-bold text-lg text-primary">
+                  Other Related Content
+                </h2>
+                <MediaCarousel
+                  items={otherRelatedItems}
+                  edgeMargin="-mx-4 px-4"
+                  fadeSize={16}
+                  buttonPositioning="inside"
+                />
+              </div>
+            ) : null}
           </div>
         </div>
 

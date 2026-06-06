@@ -12,6 +12,7 @@ import {
   UploadViewSecond,
   UploadViewSource,
 } from '@letschurch/db';
+import { client } from '@letschurch/elasticsearch';
 import { getPublicUrlWithFilename } from '@letschurch/s3';
 import { publicS3 } from '@letschurch/s3/public';
 import { CURRENT_PIPELINE_VERSION } from '@letschurch/temporal/queues';
@@ -140,6 +141,11 @@ const getMediaByIdSchema = z.object({
 
 const getTranscriptSchema = z.object({
   mediaId: IncomingIdSchema,
+});
+
+const getRelatedMediaSchema = z.object({
+  mediaId: IncomingIdSchema,
+  limit: z.number().min(1).max(24).default(12),
 });
 
 export const mediaProcedures = {
@@ -1667,5 +1673,202 @@ export const mediaProcedures = {
           previousRating: null,
         };
       }
+    }),
+
+  getRelatedMedia: publicProcedure
+    .input(getRelatedMediaSchema)
+    .query(async ({ input, ctx }) => {
+      const { mediaId, limit } = input;
+      const empty = { sameChannel: [], otherChannels: [] };
+
+      // Pull the current upload's summary embedding from Postgres (the source
+      // of truth for the vector). Null until the summarize-upload activity has
+      // run, in which case there's no related content to show yet.
+      const current = await db.query.UploadRecord.findFirst({
+        columns: { summaryEmbedding: true, channelId: true, visibility: true },
+        with: {
+          channel: {
+            columns: { id: true, visibility: true, approvedAt: true },
+          },
+        },
+        where: (t, { eq }) => eq(t.id, mediaId),
+      });
+
+      if (!current) {
+        return empty;
+      }
+
+      // Mirror the access checks used by getMediaById/getTranscript: the caller
+      // must be able to view the source media before we surface anything
+      // derived from it (its embedding, even indirectly).
+      if (
+        current.channel.visibility === 'PRIVATE' ||
+        !current.channel.approvedAt
+      ) {
+        return empty;
+      }
+
+      if (current.visibility === 'PRIVATE') {
+        const sessionUserId = ctx.session?.appUserId ?? null;
+        if (!sessionUserId) return empty;
+        if (!ctx.isSiteAdmin) {
+          const membershipCheck = await db.query.ChannelMembership.findFirst({
+            columns: { appUserId: true },
+            where: (t, { and, eq }) =>
+              and(
+                eq(t.channelId, current.channel.id),
+                eq(t.appUserId, sessionUserId),
+              ),
+          });
+          if (!membershipCheck) return empty;
+        }
+      }
+
+      const queryVector = current.summaryEmbedding;
+
+      if (!queryVector || queryVector.length === 0) {
+        return empty;
+      }
+
+      const { channelId } = current;
+
+      // Over-fetch a few extra neighbors so post-filtering against the DB
+      // (visibility / approval / transcoding state) can still yield `limit`.
+      const k = limit + 5;
+
+      // Run two kNN searches over the same summary vector: one restricted to
+      // this channel ("More from <Channel>"), one excluding it ("Other Related
+      // Content"). Same access-control constraints + kNN params on both; only
+      // the channel clause differs.
+      const knnByChannel = (sameChannel: boolean) =>
+        client.search({
+          index: 'lc_media_v1',
+          _source: false,
+          size: k,
+          knn: {
+            field: 'summaryEmbedding',
+            query_vector: queryVector,
+            k,
+            num_candidates: Math.max(k * 10, 100),
+            filter: {
+              bool: {
+                must: [
+                  { term: { visibility: 'PUBLIC' } },
+                  { term: { channelVisibility: 'PUBLIC' } },
+                  { exists: { field: 'channelApprovedAt' } },
+                  { exists: { field: 'transcodingFinishedAt' } },
+                  { exists: { field: 'transcribingFinishedAt' } },
+                  ...(sameChannel ? [{ term: { channelId } }] : []),
+                ],
+                // Same channel excludes the current upload; cross-channel
+                // excludes the whole channel (which excludes it too).
+                must_not: sameChannel
+                  ? [{ ids: { values: [mediaId] } }]
+                  : [{ term: { channelId } }],
+              },
+            },
+          },
+        });
+
+      const [sameChannelRes, otherChannelsRes] = await Promise.all([
+        knnByChannel(true),
+        knnByChannel(false),
+      ]);
+
+      const hitIds = (res: typeof sameChannelRes) =>
+        res.hits.hits
+          .map((hit) => hit._id)
+          .filter((id): id is string => Boolean(id));
+
+      const sameChannelIds = hitIds(sameChannelRes);
+      const otherChannelIds = hitIds(otherChannelsRes);
+
+      const allIds = Array.from(
+        new Set([...sameChannelIds, ...otherChannelIds]),
+      );
+
+      if (allIds.length === 0) {
+        return empty;
+      }
+
+      // Fetch full upload data from the database (Elasticsearch is the
+      // relevance source of truth; the DB is the data source of truth).
+      const uploads = await db.query.UploadRecord.findMany({
+        where: (t, { inArray, and, isNotNull }) =>
+          and(inArray(t.id, allIds), isNotNull(t.transcodingFinishedAt)),
+        columns: {
+          id: true,
+          title: true,
+          publishedAt: true,
+          lengthSeconds: true,
+          defaultThumbnailPath: true,
+          overrideThumbnailPath: true,
+        },
+        with: {
+          channel: {
+            columns: {
+              id: true,
+              name: true,
+              avatarPath: true,
+              defaultThumbnailPath: true,
+              visibility: true,
+              approvedAt: true,
+              deletedAt: true,
+            },
+          },
+        },
+      });
+
+      const uploadsMap = new Map(
+        uploads
+          .filter(
+            (u) =>
+              u.channel.visibility === 'PUBLIC' &&
+              u.channel.approvedAt !== null &&
+              u.channel.deletedAt === null,
+          )
+          .map((u) => [u.id, u]),
+      );
+
+      // Preserve Elasticsearch ordering (semantic similarity) and cap at limit.
+      const buildList = (ids: Array<string>) =>
+        ids
+          .map((id) => uploadsMap.get(id))
+          .filter((upload): upload is NonNullable<typeof upload> =>
+            Boolean(upload),
+          )
+          .slice(0, limit)
+          .map((upload) => {
+            const { channel } = upload;
+
+            const thumbnailUrl = resolveThumbnailUrl({
+              overrideThumbnailPath: upload.overrideThumbnailPath,
+              defaultThumbnailPath: upload.defaultThumbnailPath,
+              channelDefaultThumbnailPath: channel.defaultThumbnailPath,
+              size: 'card',
+            });
+
+            const channelAvatarUrl = channel.avatarPath
+              ? getPublicImageUrl(
+                  publicS3.getS3ProtocolUri(channel.avatarPath),
+                  { resize: appAvatarXs2x },
+                )
+              : null;
+
+            return {
+              id: OutgoingIdSchema.parse(upload.id),
+              title: upload.title,
+              thumbnailUrl,
+              channelName: channel.name,
+              channelAvatarUrl,
+              lengthSeconds: upload.lengthSeconds,
+              publishedAt: upload.publishedAt,
+            };
+          });
+
+      return {
+        sameChannel: buildList(sameChannelIds),
+        otherChannels: buildList(otherChannelIds),
+      };
     }),
 };
