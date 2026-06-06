@@ -1,12 +1,17 @@
 import { UploadViewSource } from '@letschurch/db/types';
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, notFound } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { Player } from '@/components/player';
 import { trpcClient, useTRPC } from '@/trpc/react';
 
 export const Route = createFileRoute('/embed/media/$mediaId')({
   component: RouteComponent,
+  notFoundComponent: () => (
+    <div className="flex min-h-screen items-center justify-center bg-black px-4 text-center">
+      <p className="text-gray-300 text-sm">Media not found.</p>
+    </div>
+  ),
   validateSearch: (search: Record<string, unknown>) => {
     return {
       type: (search.type as 'video' | 'audio' | undefined) ?? 'video',
@@ -22,6 +27,12 @@ export const Route = createFileRoute('/embed/media/$mediaId')({
         mediaId: params.mediaId,
       }),
     );
+
+    // getMediaById returns null for missing/private/unapproved media; render
+    // the route's notFoundComponent instead of crashing on the destructure.
+    if (!media) {
+      throw notFound();
+    }
 
     // Exclude the probe field from media to avoid serialization issues
     const { probe: _probe, ...mediaWithoutProbe } = media;
@@ -110,11 +121,16 @@ function RouteComponent() {
   const search = Route.useSearch();
   const trpc = useTRPC();
 
-  const { data: media } = useSuspenseQuery(
+  const { data: mediaData } = useSuspenseQuery(
     trpc.media.getMediaById.queryOptions({
       mediaId: params.mediaId,
     }),
   );
+
+  // getMediaById returns null for missing/inaccessible media, but the loader
+  // throws notFound() in that case, so by the time this component renders the
+  // media is guaranteed to be present.
+  const media = mediaData as NonNullable<typeof mediaData>;
 
   // Record a view once the embed actually mounts on the client — not in the
   // loader, which also runs on preload/revalidation. createUploadView returns

@@ -1,7 +1,7 @@
 import { Autocomplete } from '@base-ui-components/react/autocomplete';
 import { IconSearch, IconX } from '@tabler/icons-react';
 import { useInfiniteQuery, useSuspenseQuery } from '@tanstack/react-query';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute, notFound, useNavigate } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
 import type { FormEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
@@ -43,6 +43,11 @@ type SearchResultItem = {
 
 export const Route = createFileRoute('/embed/channel/$slug')({
   component: RouteComponent,
+  notFoundComponent: () => (
+    <div className="flex min-h-screen items-center justify-center bg-white px-4 text-center">
+      <p className="text-gray-600 text-sm">Channel not found.</p>
+    </div>
+  ),
   validateSearch: z.object({
     q: z.string().optional(),
     focus: z.enum(['media', 'transcripts']).catch('media'),
@@ -61,9 +66,18 @@ export const Route = createFileRoute('/embed/channel/$slug')({
     const { slug } = params;
 
     // Ensure channel exists
-    const channelPromise = context.queryClient.ensureQueryData(
-      context.trpc.channel.getChannelBySlug.queryOptions({ slug }),
-    );
+    const channelPromise = context.queryClient
+      .ensureQueryData(
+        context.trpc.channel.getChannelBySlug.queryOptions({ slug }),
+      )
+      .then((channel) => {
+        // getChannelBySlug returns null for missing/private/unapproved
+        // channels; render the route's notFoundComponent instead.
+        if (!channel) {
+          throw notFound();
+        }
+        return channel;
+      });
 
     if (deps.q) {
       // Prefetch search results
@@ -141,9 +155,14 @@ function RouteComponent() {
   const search = Route.useSearch();
   const trpc = useTRPC();
 
-  const { data: channel } = useSuspenseQuery(
+  const { data: channelData } = useSuspenseQuery(
     trpc.channel.getChannelBySlug.queryOptions({ slug: params.slug }),
   );
+
+  // getChannelBySlug returns null for missing/inaccessible channels, but the
+  // loader throws notFound() in that case, so by the time this component
+  // renders the channel is guaranteed to be present.
+  const channel = channelData as NonNullable<typeof channelData>;
 
   const hasQuery = search.q && search.q.trim().length > 0;
 

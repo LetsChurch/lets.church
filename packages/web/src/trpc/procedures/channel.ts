@@ -167,11 +167,15 @@ export const channelProcedures = {
 
       if (!channel) {
         moduleLogger.warn({ context: { slug } }, 'Channel not found');
-        throw new Error('Channel not found');
+        return null;
       }
 
+      // UNLISTED channels are reachable by direct link (just not surfaced in
+      // search/listings), so only PRIVATE/unapproved/deleted channels are
+      // treated as not found. Return null rather than throwing so the route
+      // loader renders the in-page "not found" UI instead of a 500.
       if (
-        channel.visibility !== 'PUBLIC' ||
+        channel.visibility === 'PRIVATE' ||
         !channel.approvedAt ||
         channel.deletedAt
       ) {
@@ -186,7 +190,7 @@ export const channelProcedures = {
           },
           'Channel not accessible',
         );
-        throw new Error('Channel not found');
+        return null;
       }
 
       const avatarUrl = channel.avatarPath
@@ -267,7 +271,7 @@ export const channelProcedures = {
 
       if (
         !channelRecord ||
-        channelRecord.visibility !== 'PUBLIC' ||
+        channelRecord.visibility === 'PRIVATE' ||
         !channelRecord.approvedAt ||
         channelRecord.deletedAt
       ) {
@@ -398,7 +402,7 @@ export const channelProcedures = {
 
       if (
         !channelRecord ||
-        channelRecord.visibility !== 'PUBLIC' ||
+        channelRecord.visibility === 'PRIVATE' ||
         !channelRecord.approvedAt ||
         channelRecord.deletedAt
       ) {
@@ -504,7 +508,7 @@ export const channelProcedures = {
 
       if (
         !channelRecord ||
-        channelRecord.visibility !== 'PUBLIC' ||
+        channelRecord.visibility === 'PRIVATE' ||
         !channelRecord.approvedAt ||
         channelRecord.deletedAt
       ) {

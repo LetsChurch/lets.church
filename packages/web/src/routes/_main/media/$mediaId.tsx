@@ -13,7 +13,12 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { createFileRoute, Link, useLocation } from '@tanstack/react-router';
+import {
+  createFileRoute,
+  Link,
+  notFound,
+  useLocation,
+} from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
 import { z } from 'zod';
@@ -85,6 +90,7 @@ function toCarouselItem(item: {
 
 export const Route = createFileRoute('/_main/media/$mediaId')({
   component: RouteComponent,
+  notFoundComponent: MediaNotFound,
   params: {
     parse: (params) => ({
       mediaId: IncomingIdSchema.parse(params.mediaId),
@@ -130,6 +136,12 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
         }),
       ),
     ]);
+
+    // getMediaById returns null for missing/private/unapproved media; render
+    // the route's notFoundComponent instead of crashing on the destructure.
+    if (!media) {
+      throw notFound();
+    }
 
     if (media.series?.id) {
       await queryClient.prefetchQuery(
@@ -469,6 +481,28 @@ function MobilePlaylistDrawerContent({
   );
 }
 
+function MediaNotFound() {
+  return (
+    <MainLayout>
+      <div className="mx-auto mt-32 max-w-5xl px-6 text-center">
+        <h1 className="font-bold text-4xl text-zinc-900 tracking-tight dark:text-white">
+          Media not found
+        </h1>
+        <p className="mx-auto mt-4 max-w-md text-lg text-zinc-600 leading-relaxed dark:text-zinc-400">
+          The media you're looking for doesn't exist, is private, or may have
+          been removed.
+        </p>
+        <Link
+          to="/"
+          className="mt-8 inline-block rounded-lg bg-indigo-600 px-6 py-3 font-medium text-white transition-all hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+        >
+          Back to home
+        </Link>
+      </div>
+    </MainLayout>
+  );
+}
+
 function RouteComponent() {
   const params = Route.useParams();
   const location = useLocation();
@@ -514,7 +548,7 @@ function RouteComponent() {
     getInitialTranscriptWidth(),
   );
 
-  const { data: media } = useSuspenseQuery({
+  const { data: mediaData } = useSuspenseQuery({
     ...trpc.media.getMediaById.queryOptions({
       mediaId: params.mediaId,
     }),
@@ -523,6 +557,11 @@ function RouteComponent() {
       return data && !data.transcribingFinishedAt ? 60000 : false;
     },
   });
+
+  // getMediaById returns null for missing/inaccessible media, but the loader
+  // throws notFound() in that case, so by the time this component renders the
+  // media is guaranteed to be present.
+  const media = mediaData as NonNullable<typeof mediaData>;
 
   // Use explicit ?list= param if provided, otherwise fall back to the upload's series
   const activeListId = searchParams.list ?? media.series?.id ?? undefined;

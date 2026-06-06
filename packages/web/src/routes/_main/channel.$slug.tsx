@@ -19,7 +19,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from '@tanstack/react-query';
-import { createFileRoute, Link } from '@tanstack/react-router';
+import { createFileRoute, Link, notFound } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useRef, useState } from 'react';
 import { Avatar } from '@/components/avatar';
@@ -38,12 +38,19 @@ import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from '@/util/image-sizes';
 
 export const Route = createFileRoute('/_main/channel/$slug')({
   component: RouteComponent,
+  notFoundComponent: ChannelNotFound,
   loader: async ({ context, params }) => {
     const { slug } = params;
 
     const channel = await context.queryClient.ensureQueryData(
       context.trpc.channel.getChannelBySlug.queryOptions({ slug }),
     );
+
+    // getChannelBySlug returns null for missing/private/unapproved channels;
+    // render the route's notFoundComponent instead of an in-page fallback.
+    if (!channel) {
+      throw notFound();
+    }
 
     // Fetch first page of media
     const mediaPromise = context.queryClient.prefetchInfiniteQuery(
@@ -206,6 +213,31 @@ function getColorFromString(str: string): {
   return palettes[index];
 }
 
+function ChannelNotFound() {
+  return (
+    <div className="mx-auto mt-32 max-w-5xl px-6 text-center">
+      <IconWorld
+        size={64}
+        className="mx-auto mb-6 text-zinc-300 dark:text-zinc-700"
+        strokeWidth={1.5}
+      />
+      <h1 className="font-bold text-4xl text-zinc-900 tracking-tight dark:text-white">
+        Channel not found
+      </h1>
+      <p className="mx-auto mt-4 max-w-md text-lg text-zinc-600 leading-relaxed dark:text-zinc-400">
+        The channel you're looking for doesn't exist or may have been removed.
+      </p>
+      <Link
+        to="/channels"
+        search={{ sort: 'subscribers', search: undefined }}
+        className="mt-8 inline-block rounded-lg bg-indigo-600 px-6 py-3 font-medium text-white transition-all hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+      >
+        Browse all channels
+      </Link>
+    </div>
+  );
+}
+
 function RouteComponent() {
   const { slug } = Route.useParams();
   const isLoggedIn = useIsLoggedIn();
@@ -213,9 +245,14 @@ function RouteComponent() {
   const queryClient = useQueryClient();
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  const { data: channel } = useSuspenseQuery(
+  const { data: channelData } = useSuspenseQuery(
     trpc.channel.getChannelBySlug.queryOptions({ slug }),
   );
+
+  // getChannelBySlug returns null for missing/inaccessible channels, but the
+  // loader throws notFound() in that case, so by the time this component
+  // renders the channel is guaranteed to be present.
+  const channel = channelData as NonNullable<typeof channelData>;
 
   const { data: allLists } = useSuspenseQuery(
     trpc.channel.getChannelPlaylists.queryOptions({ slug }),

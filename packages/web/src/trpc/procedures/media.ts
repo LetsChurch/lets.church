@@ -205,8 +205,12 @@ export const mediaProcedures = {
         where: (t, { eq }) => eq(t.id, input.mediaId),
       });
 
+      // Return null (rather than throwing) for anything the caller can't view
+      // so the route loader renders an in-page "not found" instead of a 500.
+      // UNLISTED media and media from UNLISTED channels stay viewable by direct
+      // link — only PRIVATE/unapproved cases are gated here.
       if (!media) {
-        throw new Error('Media not found');
+        return null;
       }
 
       // Check if channel is approved and not private
@@ -222,13 +226,13 @@ export const mediaProcedures = {
           },
           'Access denied to media from unapproved/private channel',
         );
-        throw new Error('Media not found');
+        return null;
       }
 
       // Check if upload itself is private
       if (media.visibility === 'PRIVATE') {
         if (!sessionUserId) {
-          throw new Error('Media not found');
+          return null;
         }
         if (!ctx.isSiteAdmin) {
           const membershipCheck = await db.query.ChannelMembership.findFirst({
@@ -240,7 +244,7 @@ export const mediaProcedures = {
               ),
           });
           if (!membershipCheck) {
-            throw new Error('Media not found');
+            return null;
           }
         }
       }
