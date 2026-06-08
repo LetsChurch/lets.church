@@ -43,9 +43,13 @@ export const listProcedures = {
         },
       });
 
+      // Return null (rather than throwing) for anything the caller can't view
+      // so consumers — e.g. the media page's series sidebar — render an empty
+      // state instead of crashing SSR with a 500. Throwing here propagates
+      // through useSuspenseQuery and takes the whole page down.
       if (!list) {
         moduleLogger.warn({ context: { listId } }, 'List not found');
-        throw new Error('List not found');
+        return null;
       }
 
       // Validate list type
@@ -54,16 +58,19 @@ export const listProcedures = {
           { context: { listId, type: list.type } },
           'Invalid list type',
         );
-        throw new Error('List not found');
+        return null;
       }
 
       if (!list.channel) {
         moduleLogger.warn({ context: { listId } }, 'List has no channel');
-        throw new Error('List not found');
+        return null;
       }
 
+      // Mirror getMediaById's access model: UNLISTED channels stay reachable by
+      // direct link (their media already is), so only gate PRIVATE/unapproved/
+      // deleted channels here.
       if (
-        list.channel.visibility !== 'PUBLIC' ||
+        list.channel.visibility === 'PRIVATE' ||
         !list.channel.approvedAt ||
         list.channel.deletedAt
       ) {
@@ -78,7 +85,7 @@ export const listProcedures = {
           },
           'Channel not accessible',
         );
-        throw new Error('List not found');
+        return null;
       }
 
       // Fetch all list entries

@@ -565,7 +565,6 @@ function RouteComponent() {
 
   // Use explicit ?list= param if provided, otherwise fall back to the upload's series
   const activeListId = searchParams.list ?? media.series?.id ?? undefined;
-  const hasPlaylistContext = Boolean(activeListId);
 
   const { data: playlistData } = useSuspenseQuery(
     activeListId
@@ -599,8 +598,12 @@ function RouteComponent() {
     [relatedMedia],
   );
 
-  // Find current and next items
+  // Find current and next items. getAllListItems returns null when the list is
+  // missing or its channel isn't viewable (e.g. an UNLISTED series reached by
+  // direct link), so derive playlist context from the resolved items rather
+  // than the bare id — otherwise we'd show an empty playlist tab/sidebar.
   const playlistItems = playlistData?.items ?? [];
+  const hasPlaylistContext = Boolean(activeListId) && playlistItems.length > 0;
   const mediaIdShort = idTranslator.fromUUID(params.mediaId);
   const currentIndex = playlistItems.findIndex(
     (item) => item.id === mediaIdShort,
@@ -1048,7 +1051,7 @@ function RouteComponent() {
               showTranscriptTab={!layout.showSidebar}
               showPlaylistTab={!layout.showSidebar && hasPlaylistContext}
               playlistTabLabel={
-                playlistData.type === 'SERIES' ? 'Series' : 'Playlist'
+                playlistData?.type === 'SERIES' ? 'Series' : 'Playlist'
               }
               showCommentsTab={!layout.showSidebar}
               commentsEnabled={media.userCommentsEnabled}
@@ -1118,7 +1121,7 @@ function RouteComponent() {
                     ? {
                         listId: activeListId,
                         listType:
-                          playlistData.type === 'SERIES'
+                          playlistData?.type === 'SERIES'
                             ? 'series'
                             : 'playlist',
                         listTitle: playlistData?.title,
@@ -1160,7 +1163,7 @@ function RouteComponent() {
               <MobilePlaylistDrawerContent
                 listId={activeListId}
                 listType={
-                  playlistData.type === 'SERIES' ? 'series' : 'playlist'
+                  playlistData?.type === 'SERIES' ? 'series' : 'playlist'
                 }
                 listTitle={playlistData?.title}
                 items={playlistItems}
