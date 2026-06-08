@@ -121,10 +121,14 @@ export const listProcedures = {
         orderBy: (t, { asc }) => [asc(t.rank), asc(t.createdAt)],
       });
 
-      // Filter to public, transcoded, non-deleted uploads
+      // Filter to viewable, transcoded, non-deleted uploads. Mirror
+      // getMediaById's access model: UNLISTED uploads stay reachable by direct
+      // link, so only PRIVATE is gated. Without this, an UNLISTED media item
+      // reached directly would render with an empty series sidebar because its
+      // own entry (and any sibling UNLISTED entries) got filtered out.
       const filteredEntries = entries.filter(
         (e) =>
-          e.upload.visibility === 'PUBLIC' &&
+          e.upload.visibility !== 'PRIVATE' &&
           e.upload.transcodingFinishedAt !== null &&
           e.upload.deletedAt === null,
       );
