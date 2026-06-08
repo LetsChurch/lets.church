@@ -15,7 +15,6 @@ export function SearchCard() {
         to: '/search',
         search: {
           q: searchQuery,
-          focus: 'media' as const,
         },
       });
     }

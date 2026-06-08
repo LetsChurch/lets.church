@@ -36,7 +36,7 @@
   "dependencies": {
     "@letschurch/db": "workspace:*",
     "drizzle-orm": "^0.45.1",
-    "@letschurch/elasticsearch": "workspace:*",
+    "@letschurch/opensearch": "workspace:*",
     "@letschurch/s3": "workspace:*",
     "@letschurch/util": "workspace:*",
     "@node-rs/xxhash": "^1.7.6",

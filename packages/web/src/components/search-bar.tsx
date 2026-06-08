@@ -161,7 +161,6 @@ export default function SearchBar({
         to: '/search',
         search: {
           q: searchQuery,
-          focus: 'media' as const,
           channelSlugs: channelSlug ? [channelSlug] : undefined,
         },
       });
@@ -183,7 +182,6 @@ export default function SearchBar({
         to: '/search',
         search: {
           q: undefined,
-          focus: 'media' as const,
           channelSlugs: undefined,
         },
       });
@@ -201,7 +199,6 @@ export default function SearchBar({
         to: '/search',
         search: {
           q: searchQuery,
-          focus: 'media' as const,
           channelSlugs: channelSlug ? [channelSlug] : undefined,
         },
       });

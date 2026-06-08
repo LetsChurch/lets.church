@@ -1,24 +1,21 @@
-import { Client, type estypes, HttpConnection } from '@elastic/elasticsearch';
-import waitOn from 'wait-on';
 import { z } from 'zod';
 import { adjacentPairs, escapeDocument } from './utils';
 
 export { escapeDocument };
+// Client + transport wrappers live in ./client to avoid an index <-> media-search
+// import cycle (which triggered a Vite SSR TDZ error). Re-export them here so
+// existing `@letschurch/opensearch` imports keep working.
+export {
+  client,
+  type OsMsearchItem,
+  type OsQuery,
+  osMsearch,
+  osSearch,
+  waitForElasticsearch,
+} from './client';
+export * from './media-search';
 
-const { ELASTICSEARCH_URL } = z
-  .object({ ELASTICSEARCH_URL: z.string() })
-  .parse(process.env);
-
-export const client = new Client({
-  node: ELASTICSEARCH_URL,
-  Connection: HttpConnection, // Required for Bun
-});
-
-export async function waitForElasticsearch() {
-  return waitOn({
-    resources: [ELASTICSEARCH_URL],
-  });
-}
+import { client, type OsMsearchItem, type OsQuery } from './client';
 
 type PublishedAtRange = { gte?: string; lte?: string };
 type OrderBy = 'avg' | 'sum' | 'date' | 'dateDesc';
@@ -30,10 +27,10 @@ function makePostFilterSpread({
   channelIds?: Array<string> | null;
   publishedAt?: PublishedAtRange | undefined;
   orderBy?: OrderBy | undefined;
-}): Partial<estypes.SearchRequest> {
-  const res: Partial<estypes.SearchRequest> = {};
+}): Record<string, unknown> {
+  const res: Record<string, unknown> = {};
 
-  const must: Array<estypes.QueryDslQueryContainer> = [];
+  const must: Array<OsQuery> = [];
 
   if ((Array.isArray(channelIds) && channelIds.length > 0) || publishedAt) {
     res.post_filter = { bool: { must: [], should: [] } };
@@ -67,7 +64,7 @@ export function msearchUploads(
     publishedAt?: PublishedAtRange | undefined;
     orderBy?: OrderBy | undefined;
   },
-): [estypes.MsearchRequestItem, estypes.MsearchRequestItem] {
+): [OsMsearchItem, OsMsearchItem] {
   const trimmed = query.trim();
   const words = trimmed.split(/\s+/g);
 
@@ -152,7 +149,7 @@ export function msearchTranscripts(
     orderBy?: OrderBy | undefined;
     phrase?: boolean;
   },
-): [estypes.MsearchRequestItem, estypes.MsearchRequestItem] {
+): [OsMsearchItem, OsMsearchItem] {
   const trimmed = query.trim();
   const words = trimmed.split(/\s+/g);
 
@@ -269,7 +266,7 @@ export function msearchChannels(
   query: string,
   from = 0,
   size = 0,
-): [estypes.MsearchRequestItem, estypes.MsearchRequestItem] {
+): [OsMsearchItem, OsMsearchItem] {
   return [
     { index: 'lc_channels' },
     {
@@ -304,7 +301,7 @@ export function msearchOrganizations(
     organization?: string | null;
     tags?: string[] | null;
   },
-): [estypes.MsearchRequestItem, estypes.MsearchRequestItem] {
+): [OsMsearchItem, OsMsearchItem] {
   const trimmed = query.trim();
 
   return [
@@ -502,15 +499,20 @@ export async function* listIds(
     | 'lc_channels'
     | 'lc_organizations',
 ) {
+  type ScrollBody = {
+    _scroll_id?: string;
+    hits: { hits: Array<{ _id?: string }> };
+  };
+
   const searchRes = await client.search({
     index,
     scroll: '10m',
-    size: 1000,
-    query: { match_all: {} },
+    body: { size: 1000, query: { match_all: {} } },
   });
 
-  let scrollId = searchRes._scroll_id;
-  let hits = searchRes.hits.hits;
+  let body = searchRes.body as ScrollBody;
+  let scrollId: string | undefined = body._scroll_id;
+  let hits: Array<{ _id?: string }> = body.hits.hits;
 
   while (hits?.length && scrollId) {
     for (const { _id: id } of hits) {
@@ -520,14 +522,15 @@ export async function* listIds(
     }
 
     const scrollRes = await client.scroll({
-      scroll_id: scrollId,
-      scroll: '10m',
+      body: { scroll_id: scrollId, scroll: '10m' },
     });
-    scrollId = scrollRes._scroll_id;
-    hits = scrollRes.hits.hits;
+    body = scrollRes.body as ScrollBody;
+    scrollId = body._scroll_id;
+    hits = body.hits.hits;
   }
 }
 
 export async function uploadExists(id: string): Promise<boolean> {
-  return client.exists({ index: 'lc_uploads_v2', id });
+  const res = await client.exists({ index: 'lc_uploads_v2', id });
+  return res.body;
 }

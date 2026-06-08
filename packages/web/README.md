@@ -20,7 +20,7 @@ The following variables are parsed at **module load time** and must be present f
 | Variable | Description |
 |----------|-------------|
 | `DATABASE_URL` | PostgreSQL connection string |
-| `ELASTICSEARCH_URL` | Elasticsearch node URL |
+| `OPENSEARCH_URL` | OpenSearch node URL |
 | `TEMPORAL_ADDRESS` | Temporal server address |
 | `JWT_SECRET` | Secret for JWT token signing (hex) |
 | `MEDIA_URL` | Base URL for served media assets |

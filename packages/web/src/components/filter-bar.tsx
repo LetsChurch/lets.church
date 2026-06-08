@@ -54,7 +54,6 @@ export function FilterBar() {
   const trpc = useTRPC();
   const searchParams = useSearch({ strict: false }) as {
     q?: string;
-    focus?: 'media' | 'transcripts';
   };
 
   const [emblaRef] = useEmblaCarousel(
@@ -69,7 +68,6 @@ export function FilterBar() {
   const { data: searchData } = useQuery({
     ...trpc.search.performSearch.queryOptions({
       q: searchParams.q ?? '',
-      focus: searchParams.focus ?? 'media',
       channelSlugs: filters.channelSlugs,
       limit: 20,
       sort: filters.sort,

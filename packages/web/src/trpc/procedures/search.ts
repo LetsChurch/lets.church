@@ -1,12 +1,20 @@
 import { db, SearchLogEntry, UploadView } from '@letschurch/db';
 import {
-  client,
+  type MediaSegment,
   MSearchResponseSchema,
+  mergeParagraphSnippets,
   msearchChannels,
   msearchTranscripts,
   msearchUploads,
-} from '@letschurch/elasticsearch';
+  osMsearch,
+  runMediaHybridSearch,
+  runMediaKnnProbe,
+} from '@letschurch/opensearch';
 import { publicS3 } from '@letschurch/s3/public';
+import {
+  createEmbeddingsTracked,
+  EMBED_MODEL,
+} from '@letschurch/temporal/util/llm';
 import { TRPCError } from '@trpc/server';
 import { and, count, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
@@ -16,11 +24,21 @@ import logger from '@/util/logger';
 import { isChannelRoutable } from '@/util/media-visibility';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
+import { hydrateUploads } from '../search/hydrate';
+import { parseSearchQuery } from '../search/parse-query';
 import { authProcedure, publicProcedure } from '../trpc';
 
 const moduleLogger = logger.child({
   module: 'trpc/procedures/search',
 });
+
+// Whole-set relevance gate for hybrid results: when the best video's absolute
+// cosine (recovered from the doc-level searchSummaryEmbedding kNN score as
+// 2*score - 1) is below this floor, nothing in the library is actually on-topic,
+// so we suppress the (semantically-vague) result list rather than show noise.
+// Set a touch below the answer gate's 0.3 — showing a few related videos is less
+// committal than asserting an answer. Tunable; the decision is logged.
+const RESULTS_RELEVANCE_COSINE_FLOOR = 0.25;
 
 const searchQuerySchema = z.object({
   q: z.string().min(1),
@@ -39,6 +57,101 @@ const searchQuerySchema = z.object({
 const uploadThumbnailSchema = z.object({
   uploadId: IncomingIdSchema,
 });
+
+const hybridSearchSchema = z.object({
+  q: z.string().min(1),
+  channelIds: z.array(IncomingIdSchema).optional().nullable(),
+  channelSlugs: z.array(z.string()).optional().nullable(),
+  // Verbatim phrases (from the parser's `quotes`) to boost as phrase matches.
+  quotes: z.array(z.string()).optional().nullable(),
+  // Inclusive publish-date bounds (date-only, from the parser's `dates`).
+  dateGte: z.string().optional().nullable(),
+  dateLte: z.string().optional().nullable(),
+  // Manual date-range filter from the UI (computed to a publishedAt range
+  // server-side, same buckets as performSearch). Explicit dateGte/dateLte win.
+  dateRange: z
+    .enum(['all-time', 'today', 'this-week', 'this-month', 'this-year'])
+    .optional(),
+  // Accepted for input parity with the UI. RRF defines its own ordering, so
+  // hybrid search currently honors relevance only; date sorts are ignored.
+  sort: z.enum(['relevance', 'date-asc', 'date-desc']).optional(),
+  limit: z.number().min(1).max(50).default(20),
+  cursor: z.number().min(0).default(0),
+  skipLogging: z.boolean().optional().default(false),
+});
+
+// Map the UI's coarse date-range bucket to an absolute publishedAt range.
+// Mirrors performSearch's switch so the two filters behave identically.
+function dateRangeToPublishedAt(
+  dateRange: string | undefined,
+  now: Date,
+): { gte: string; lte: string } | null {
+  if (!dateRange || dateRange === 'all-time') return null;
+  let startDate: Date;
+  switch (dateRange) {
+    case 'today':
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      break;
+    case 'this-week':
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - now.getDay());
+      startDate.setHours(0, 0, 0, 0);
+      break;
+    case 'this-month':
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      break;
+    case 'this-year':
+      startDate = new Date(now.getFullYear(), 0, 1);
+      break;
+    default:
+      return null;
+  }
+  return { gte: startDate.toISOString(), lte: now.toISOString() };
+}
+
+// Resolve channel UUIDs to the display shape the carousel + facet filters use
+// (outgoing id, name, slug, avatar). Order follows the input ids.
+async function hydrateChannelsForDisplay(channelIds: string[]) {
+  if (channelIds.length === 0) return [];
+  const dbChannels = await db.query.Channel.findMany({
+    where: (t, { inArray: inArr, eq: eqOp, and: andOp, isNotNull, isNull }) =>
+      andOp(
+        inArr(t.id, channelIds),
+        eqOp(t.visibility, 'PUBLIC'),
+        isNotNull(t.approvedAt),
+        isNull(t.deletedAt),
+      ),
+    columns: { id: true, name: true, slug: true, avatarPath: true },
+  });
+  const byId = new Map(dbChannels.map((c) => [c.id, c]));
+  return channelIds
+    .map((id) => byId.get(id))
+    .filter((c): c is NonNullable<typeof c> => Boolean(c))
+    .map((channel) => ({
+      ...channel,
+      id: OutgoingIdSchema.parse(channel.id),
+      avatarUrl: channel.avatarPath
+        ? getPublicImageUrl(publicS3.getS3ProtocolUri(channel.avatarPath), {
+            resize: appAvatarSm2x,
+          })
+        : null,
+    }));
+}
+
+// Convert provided channel slugs to internal UUIDs (public + approved only).
+async function channelSlugsToIds(slugs: string[]): Promise<string[]> {
+  if (slugs.length === 0) return [];
+  const channels = await db.query.Channel.findMany({
+    where: (t, { inArray: inArr, eq: eqOp, and: andOp, isNotNull }) =>
+      andOp(
+        inArr(t.slug, slugs),
+        eqOp(t.visibility, 'PUBLIC'),
+        isNotNull(t.approvedAt),
+      ),
+    columns: { id: true },
+  });
+  return channels.map((c) => c.id);
+}
 
 export const searchProcedures = {
   getUploadThumbnail: publicProcedure
@@ -223,9 +336,7 @@ export const searchProcedures = {
         'Executing ElasticSearch multisearch',
       );
 
-      const response = await client.msearch({
-        searches,
-      });
+      const response = await osMsearch(searches);
 
       // Parse and validate the response
       const parsed = MSearchResponseSchema.parse(response);
@@ -728,6 +839,178 @@ export const searchProcedures = {
         channels: channelsWithAvatars,
         facetedChannels: facetedChannelsWithAvatars,
         nextCursor,
+      };
+    }),
+
+  // Hybrid (BM25 + document/paragraph kNN, fused with RRF) search over
+  // lc_media_v1. One request-time query embedding; matched paragraphs surface
+  // as `segments` on each item (times in ms, matching the existing UI).
+  hybridSearch: publicProcedure
+    .input(hybridSearchSchema)
+    .query(async ({ input, ctx }) => {
+      const {
+        q,
+        channelSlugs,
+        channelIds: inputChannelIds,
+        quotes,
+        dateGte,
+        dateLte,
+        dateRange,
+        limit,
+        cursor,
+        skipLogging,
+      } = input;
+
+      const channelIds =
+        channelSlugs && channelSlugs.length > 0
+          ? await channelSlugsToIds(channelSlugs)
+          : (inputChannelIds ?? null);
+
+      // Explicit parser bounds win; otherwise fall back to the UI date bucket.
+      const publishedAt =
+        dateGte || dateLte
+          ? {
+              ...(dateGte ? { gte: dateGte } : {}),
+              ...(dateLte ? { lte: dateLte } : {}),
+            }
+          : dateRangeToPublishedAt(dateRange, new Date());
+
+      // Embed the query once with the model the index was built with. Parse the
+      // query in parallel — it drives the speaker notice and answer-panel
+      // decision on the client, is recorded on the search log, and supplies the
+      // quoted phrases for phrase-boosting. The parse is cached (see
+      // parseSearchQuery), so it's identical on every page of a paginated search
+      // — keeping the derived quotes/filters deterministic across pages.
+      const [embedRes, parsed] = await Promise.all([
+        createEmbeddingsTracked({
+          model: EMBED_MODEL,
+          input: q,
+          tracking: { activity: 'searchEmbedQuery' },
+        }),
+        parseSearchQuery(q),
+      ]);
+      const queryVector = embedRes.data[0]?.embedding;
+      if (!queryVector) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to embed search query',
+        });
+      }
+
+      // Quoted phrases drive `match_phrase` boosts in the retriever. Prefer
+      // explicit input quotes; otherwise use the parser's extracted quotes.
+      const quoteList = quotes && quotes.length > 0 ? quotes : parsed.quotes;
+
+      const [hybrid, channelsRaw, probeScore] = await Promise.all([
+        runMediaHybridSearch({
+          lexicalText: q,
+          quotes: quoteList,
+          channelIds,
+          publishedAt,
+          queryVector,
+          from: cursor,
+          size: limit,
+        }),
+        osMsearch(msearchChannels(q, 0, 10)),
+        // Absolute relevance probe (reuses the same query embedding). A probe
+        // failure shouldn't suppress results, so fail open to null (= relevant).
+        runMediaKnnProbe({ queryVector, channelIds, publishedAt }).catch(
+          () => null,
+        ),
+      ]);
+
+      // Whole-set relevance gate: when the best video isn't close enough, the
+      // RRF list is just semantically-vague noise — drop the media results
+      // (channels carousel still shows). Null probe → treat as relevant.
+      const topCosine = probeScore == null ? null : 2 * probeScore - 1;
+      const relevant =
+        topCosine == null || topCosine >= RESULTS_RELEVANCE_COSINE_FLOOR;
+      if (!relevant) {
+        moduleLogger.info(
+          { context: { query: q, cosine: topCosine } },
+          'Hybrid results gated off (below relevance floor)',
+        );
+      }
+
+      const mediaCount = relevant ? hybrid.total : 0;
+      const gatedHits = relevant ? hybrid.hits : [];
+      const uploadIds = gatedHits.map((h) => h._id);
+
+      const segmentsByUploadId = new Map<string, MediaSegment[]>();
+      for (const hit of gatedHits) {
+        segmentsByUploadId.set(hit._id, mergeParagraphSnippets(hit));
+      }
+
+      const facetBuckets = relevant ? hybrid.facetChannelIds : [];
+      const carouselIds =
+        MSearchResponseSchema.parse(channelsRaw)
+          .responses[0]?.hits.hits.filter((h) => h._index === 'lc_channels')
+          .map((h) => h._id) ?? [];
+
+      const [items, facetedChannels, channels] = await Promise.all([
+        hydrateUploads(uploadIds, segmentsByUploadId),
+        hydrateChannelsForDisplay(facetBuckets.map((b) => b.key)),
+        hydrateChannelsForDisplay(carouselIds),
+      ]);
+
+      // Log the search (initial page only, skip for admins inspecting logs).
+      // The row id is handed back so the answer route can append the final
+      // answer to this same row's params (see /api/search-answer).
+      let searchLogId: string | null = null;
+      try {
+        const isAdmin = ctx.session?.appUser?.role === 'ADMIN';
+        if (q.trim().length > 0 && cursor === 0 && !(skipLogging && isAdmin)) {
+          const [row] = await db
+            .insert(SearchLogEntry)
+            .values({
+              query: q,
+              params: {
+                mode: 'hybrid',
+                channelIds: channelIds ?? [],
+                quotes: quoteList,
+                dateGte: dateGte ?? null,
+                dateLte: dateLte ?? null,
+                limit,
+                cursor,
+                // The structured LLM parse of this query (questions, speakers,
+                // keywords, dates, …) — recorded for analytics/debugging.
+                parsed,
+              },
+              appUserId: ctx.session?.appUserId ?? null,
+              mediaCount,
+              transcriptCount: 0,
+              channelCount: channels.length,
+            })
+            .returning({ id: SearchLogEntry.id });
+          searchLogId = row?.id ?? null;
+        }
+      } catch (error) {
+        moduleLogger.error(
+          {
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to log hybrid search',
+        );
+      }
+
+      const nextCursor = items.length === limit ? cursor + limit : null;
+
+      return {
+        items,
+        mediaCount,
+        channels,
+        facetedChannels,
+        nextCursor,
+        searchLogId,
+        // Lets the client drive the speaker notice and answer-panel decision
+        // without a separate parseQuery round-trip.
+        parsed: {
+          questions: parsed.questions,
+          speakers: parsed.speakers,
+          speakerNotice: parsed.speakers.length > 0,
+        },
       };
     }),
 

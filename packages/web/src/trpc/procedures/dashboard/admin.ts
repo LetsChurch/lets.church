@@ -101,6 +101,7 @@ import {
   startStorageAudit,
 } from '@/temporal';
 import { mantineAvatarSm2x } from '@/util/avatar-sizes';
+import { clearByPrefix } from '@/util/cache';
 import logger from '@/util/logger';
 import {
   getMaintenanceSettings,
@@ -4351,6 +4352,20 @@ export const adminRouter = router({
         totalCount: totalCountRows[0]?.cnt ?? 0,
       };
     }),
+
+  // Flush the Valkey-backed search caches (query parses + final AI answers) so
+  // the next search re-parses and regenerates. No-op when Valkey is unset.
+  clearSearchCache: adminProcedure.mutation(async () => {
+    const [parses, answers] = await Promise.all([
+      clearByPrefix('search-parse:'),
+      clearByPrefix('search-answer:'),
+    ]);
+    moduleLogger.info(
+      { context: { parses, answers } },
+      'Cleared search caches',
+    );
+    return { parses, answers, total: parses + answers };
+  }),
 
   getDeletingUploadsCount: adminProcedure.query(async () => {
     moduleLogger.info('Fetching deleting uploads count');

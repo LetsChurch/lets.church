@@ -1,5 +1,5 @@
 import { db, UploadRecord } from '@letschurch/db';
-import { client as esClient } from '@letschurch/elasticsearch';
+import { client as esClient } from '@letschurch/opensearch';
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { Context } from '@temporalio/activity';

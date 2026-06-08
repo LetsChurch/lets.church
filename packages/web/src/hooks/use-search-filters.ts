@@ -4,7 +4,6 @@ type SearchFilters = {
   sort?: 'relevance' | 'date-asc' | 'date-desc';
   dateRange?: 'all-time' | 'today' | 'this-week' | 'this-month' | 'this-year';
   channelSlugs?: string[];
-  focus?: 'media' | 'transcripts';
 };
 
 export function useSearchFilters() {
@@ -15,7 +14,6 @@ export function useSearchFilters() {
     sort: searchParams.sort,
     dateRange: searchParams.dateRange,
     channelSlugs: searchParams.channelSlugs,
-    focus: searchParams.focus,
   };
 
   // Check if any filters are active (non-default values)
@@ -58,12 +56,6 @@ export function useSearchFilters() {
     setChannelSlugs(newSlugs.length > 0 ? newSlugs : undefined);
   };
 
-  const setFocus = (focus: 'media' | 'transcripts') => {
-    navigate({
-      search: (prev: Record<string, unknown>) => ({ ...prev, focus }),
-    });
-  };
-
   const clearFilters = () => {
     navigate({
       search: (prev: Record<string, unknown>) => ({
@@ -81,7 +73,6 @@ export function useSearchFilters() {
     setDateRange,
     setChannelSlugs,
     removeChannelSlug,
-    setFocus,
     clearFilters,
     hasActiveFilters,
   };

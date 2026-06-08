@@ -1,11 +1,11 @@
-import type { estypes } from '@elastic/elasticsearch';
 import { logger as baseLogger } from '@letschurch/util';
 import { diff } from 'jest-diff';
 import pc from 'picocolors';
-import { client, waitForElasticsearch } from './index';
+import { client, waitForElasticsearch } from './client';
+import { RRF_PIPELINE } from './media-search';
 
 const logger = baseLogger.child({
-  package: '@letschurch/elasticsearch',
+  package: '@letschurch/opensearch',
 });
 
 const moduleLogger = logger.child({ module: 'elasticsearch/mappings' });
@@ -15,12 +15,13 @@ await waitForElasticsearch();
 moduleLogger.info('Elasticsearch is ready');
 moduleLogger.info('Starting index mapping deployment');
 
-// Define target mappings
+// Define target mappings. Loosely typed: the OpenSearch client's generated
+// mapping types are thin, and these are plain JSON we send verbatim.
 const targetMappings: Record<
   string, // index name
   {
-    properties: Record<estypes.PropertyName, estypes.MappingProperty>;
-    settings?: estypes.IndicesIndexSettings;
+    properties: Record<string, Record<string, unknown>>;
+    settings?: Record<string, unknown>;
   }
 > = {
   lc_channels: {
@@ -148,6 +149,10 @@ const targetMappings: Record<
   lc_media_v1: {
     settings: {
       number_of_replicas: 0,
+      // Enable approximate kNN (HNSW) for this index's knn_vector fields.
+      // Static setting — applied at index creation, so a fresh reindex is
+      // required to turn it on for an existing index.
+      'index.knn': true,
     },
     properties: {
       // identity + access-control denormalization
@@ -167,20 +172,27 @@ const targetMappings: Record<
         fields: { keyword: { type: 'keyword', ignore_above: 256 } },
       },
       summary: { type: 'text' },
+      // Reserved for a future speaker-identity library: a doc-level rollup of
+      // resolved speaker names across the upload's paragraphs. Empty until that
+      // library exists; populated via re-index (mapping additions are additive,
+      // so no churn). The query parser already extracts speaker names, so once
+      // this is filled, speaker queries can flip from lexical-only to a real
+      // `terms` filter with no schema change.
+      speakers: { type: 'keyword' },
       // Video-level semantic vectors (cosine for RRF fusion + related-videos).
       // searchSummary text is intentionally NOT indexed — it exists only to
       // produce searchSummaryEmbedding, so users never see synthetic prose.
       summaryEmbedding: {
-        type: 'dense_vector',
-        dims: 1536,
-        similarity: 'cosine',
-        index: true,
+        type: 'knn_vector',
+        dimension: 1536,
+        space_type: 'cosinesimil',
+        method: { name: 'hnsw', engine: 'faiss' },
       },
       searchSummaryEmbedding: {
-        type: 'dense_vector',
-        dims: 1536,
-        similarity: 'cosine',
-        index: true,
+        type: 'knn_vector',
+        dimension: 1536,
+        space_type: 'cosinesimil',
+        method: { name: 'hnsw', engine: 'faiss' },
       },
       // Nested paragraphs — supports inner_hits on both BM25 and knn queries.
       paragraphs: {
@@ -189,13 +201,20 @@ const targetMappings: Record<
           order: { type: 'integer' },
           start: { type: 'double' },
           end: { type: 'double' },
+          // Worker-local diarization label (SPEAKER_00, …) — not a real name.
           speaker: { type: 'keyword' },
+          // Reserved for the future speaker-identity library: the resolved
+          // human name for this paragraph's speaker. Null until then.
+          speakerName: {
+            type: 'text',
+            fields: { keyword: { type: 'keyword', ignore_above: 256 } },
+          },
           text: { type: 'text' },
           embedding: {
-            type: 'dense_vector',
-            dims: 1536,
-            similarity: 'cosine',
-            index: true,
+            type: 'knn_vector',
+            dimension: 1536,
+            space_type: 'cosinesimil',
+            method: { name: 'hnsw', engine: 'faiss' },
           },
         },
       },
@@ -204,8 +223,14 @@ const targetMappings: Record<
 };
 
 // Get server mappings and transform into expected format
+const getMappingRes = await client.indices.getMapping();
 const serverMappings = Object.fromEntries(
-  Object.entries(await client.indices.getMapping())
+  Object.entries(
+    getMappingRes.body as Record<
+      string,
+      { mappings: { properties?: Record<string, Record<string, unknown>> } }
+    >,
+  )
     .filter(([indexName]) => indexName.startsWith('lc_'))
     .map(
       ([
@@ -262,19 +287,42 @@ const serverIndexNames = new Set(Object.keys(serverMappings));
 
 // Do the deployment
 for (const [name, mappings] of Object.entries(targetMappings)) {
-  // If the server doesn't have an index by the given name, create it
+  // If the server doesn't have an index by the given name, create it. Static
+  // settings (e.g. `index.knn`) only apply here, so a new index must be
+  // created — they can't be added to an existing index via putMapping.
   if (!serverIndexNames.has(name)) {
     moduleLogger.info(`Creating index: ${name}`);
-    await client.indices.create({ index: name, settings: mappings.settings });
+    await client.indices.create({
+      index: name,
+      body: { settings: mappings.settings },
+    });
   }
 
   // PUT the index mapping
   moduleLogger.info(`PUTting index mapping for ${name}`);
   await client.indices.putMapping({
     index: name,
-    properties: mappings.properties,
+    body: { properties: mappings.properties },
   });
 }
+
+// Create / update the RRF search pipeline used by hybrid media search. The JS
+// client has no typed search-pipeline API, so we issue the raw request.
+moduleLogger.info(`Creating search pipeline: ${RRF_PIPELINE}`);
+await client.transport.request({
+  method: 'PUT',
+  path: `/_search/pipeline/${RRF_PIPELINE}`,
+  body: {
+    description: 'Reciprocal Rank Fusion for lc_media_v1 hybrid search',
+    phase_results_processors: [
+      {
+        'score-ranker-processor': {
+          combination: { technique: 'rrf', rank_constant: 60 },
+        },
+      },
+    ],
+  },
+});
 
 // Done!
 moduleLogger.info('All done!');

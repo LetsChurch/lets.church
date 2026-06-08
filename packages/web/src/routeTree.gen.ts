@@ -9,17 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as MaintenanceRouteImport } from './routes/maintenance'
 import { Route as DashboardRouteImport } from './routes/dashboard_'
 import { Route as AuthRouteImport } from './routes/auth_'
 import { Route as MainRouteImport } from './routes/_main'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard_/index'
 import { Route as MainIndexRouteImport } from './routes/_main/index'
 import { Route as TrpcSplatRouteImport } from './routes/trpc.$'
-import { Route as OidcUserinfoRouteImport } from './routes/oidc.userinfo'
-import { Route as OidcTokenRouteImport } from './routes/oidc.token'
-import { Route as OidcLogoutRouteImport } from './routes/oidc.logout'
-import { Route as OidcAuthorizeRouteImport } from './routes/oidc.authorize'
 import { Route as MediaRssDotxmlRouteImport } from './routes/media.rss[.]xml'
 import { Route as InvitationsInvalidRouteImport } from './routes/invitations_.invalid'
 import { Route as InvitationsExpiredRouteImport } from './routes/invitations_.expired'
@@ -37,6 +32,7 @@ import { Route as AuthRegisterRouteImport } from './routes/auth_/register'
 import { Route as AuthLogoutRouteImport } from './routes/auth_/logout'
 import { Route as AuthLoginRouteImport } from './routes/auth_/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth_/forgot-password'
+import { Route as ApiSearchAnswerRouteImport } from './routes/api/search-answer'
 import { Route as MainSearchRouteImport } from './routes/_main/search'
 import { Route as MainLibraryRouteImport } from './routes/_main/library'
 import { Route as MainHistoryRouteImport } from './routes/_main/history'
@@ -45,8 +41,7 @@ import { Route as MainChurchesRouteImport } from './routes/_main/churches'
 import { Route as MainChannelsRouteImport } from './routes/_main/channels'
 import { Route as MainAboutRouteImport } from './routes/_main.about'
 import { Route as MainSlugRouteImport } from './routes/_main/$slug'
-import { Route as DotwellKnownOpenidConfigurationRouteImport } from './routes/[.]well-known.openid-configuration'
-import { Route as DotwellKnownJwksDotjsonRouteImport } from './routes/[.]well-known.jwks[.]json'
+import { Route as DashboardAdminReindexRouteImport } from './routes/dashboard_/admin_.reindex'
 import { Route as MainAboutIndexRouteImport } from './routes/_main/about/index'
 import { Route as SeriesSeriesIdRssDotxmlRouteImport } from './routes/series.$seriesId.rss[.]xml'
 import { Route as PlaylistPlaylistIdRssDotxmlRouteImport } from './routes/playlist.$playlistId.rss[.]xml'
@@ -60,15 +55,12 @@ import { Route as DashboardChannelsNewRouteImport } from './routes/dashboard_/ch
 import { Route as DashboardChannelsChannelIdRouteImport } from './routes/dashboard_/channels_.$channelId'
 import { Route as DashboardAdminUsersRouteImport } from './routes/dashboard_/admin_.users'
 import { Route as DashboardAdminUploadBackupsRouteImport } from './routes/dashboard_/admin_.upload-backups'
-import { Route as DashboardAdminStorageAuditRouteImport } from './routes/dashboard_/admin_.storage-audit'
 import { Route as DashboardAdminSearchesRouteImport } from './routes/dashboard_/admin_/searches'
 import { Route as DashboardAdminReprocessRouteImport } from './routes/dashboard_/admin_.reprocess'
-import { Route as DashboardAdminReindexRouteImport } from './routes/dashboard_/admin_.reindex'
 import { Route as DashboardAdminProcessingUploadsRouteImport } from './routes/dashboard_/admin_.processing-uploads'
 import { Route as DashboardAdminOrganizationsRouteImport } from './routes/dashboard_/admin_.organizations'
 import { Route as DashboardAdminOrganizationTagsRouteImport } from './routes/dashboard_/admin_.organization-tags'
 import { Route as DashboardAdminNewsletterListsRouteImport } from './routes/dashboard_/admin_.newsletter-lists'
-import { Route as DashboardAdminMaintenanceRouteImport } from './routes/dashboard_/admin_/maintenance'
 import { Route as DashboardAdminLlmEvalRouteImport } from './routes/dashboard_/admin_.llm-eval'
 import { Route as DashboardAdminImportSourcesRouteImport } from './routes/dashboard_/admin_.import-sources'
 import { Route as DashboardAdminFeaturedRouteImport } from './routes/dashboard_/admin_/featured'
@@ -110,11 +102,6 @@ import { Route as DashboardChannelsChannelIdEditRouteImport } from './routes/das
 import { Route as DashboardChannelsChannelIdUploadsUploadIdRouteImport } from './routes/dashboard_/channels_.$channelId_.uploads_.$uploadId'
 import { Route as DashboardChannelsChannelIdPlaylistsPlaylistIdRouteImport } from './routes/dashboard_/channels_.$channelId_.playlists_.$playlistId'
 
-const MaintenanceRoute = MaintenanceRouteImport.update({
-  id: '/maintenance',
-  path: '/maintenance',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard_',
   path: '/dashboard',
@@ -142,26 +129,6 @@ const MainIndexRoute = MainIndexRouteImport.update({
 const TrpcSplatRoute = TrpcSplatRouteImport.update({
   id: '/trpc/$',
   path: '/trpc/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OidcUserinfoRoute = OidcUserinfoRouteImport.update({
-  id: '/oidc/userinfo',
-  path: '/oidc/userinfo',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OidcTokenRoute = OidcTokenRouteImport.update({
-  id: '/oidc/token',
-  path: '/oidc/token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OidcLogoutRoute = OidcLogoutRouteImport.update({
-  id: '/oidc/logout',
-  path: '/oidc/logout',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OidcAuthorizeRoute = OidcAuthorizeRouteImport.update({
-  id: '/oidc/authorize',
-  path: '/oidc/authorize',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MediaRssDotxmlRoute = MediaRssDotxmlRouteImport.update({
@@ -249,6 +216,11 @@ const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => AuthRoute,
 } as any)
+const ApiSearchAnswerRoute = ApiSearchAnswerRouteImport.update({
+  id: '/api/search-answer',
+  path: '/api/search-answer',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MainSearchRoute = MainSearchRouteImport.update({
   id: '/search',
   path: '/search',
@@ -289,16 +261,10 @@ const MainSlugRoute = MainSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => MainRoute,
 } as any)
-const DotwellKnownOpenidConfigurationRoute =
-  DotwellKnownOpenidConfigurationRouteImport.update({
-    id: '/.well-known/openid-configuration',
-    path: '/.well-known/openid-configuration',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const DotwellKnownJwksDotjsonRoute = DotwellKnownJwksDotjsonRouteImport.update({
-  id: '/.well-known/jwks.json',
-  path: '/.well-known/jwks.json',
-  getParentRoute: () => rootRouteImport,
+const DashboardAdminReindexRoute = DashboardAdminReindexRouteImport.update({
+  id: '/admin_/reindex',
+  path: '/admin/reindex',
+  getParentRoute: () => DashboardRoute,
 } as any)
 const MainAboutIndexRoute = MainAboutIndexRouteImport.update({
   id: '/',
@@ -371,12 +337,6 @@ const DashboardAdminUploadBackupsRoute =
     path: '/admin/upload-backups',
     getParentRoute: () => DashboardRoute,
   } as any)
-const DashboardAdminStorageAuditRoute =
-  DashboardAdminStorageAuditRouteImport.update({
-    id: '/admin_/storage-audit',
-    path: '/admin/storage-audit',
-    getParentRoute: () => DashboardRoute,
-  } as any)
 const DashboardAdminSearchesRoute = DashboardAdminSearchesRouteImport.update({
   id: '/admin_/searches',
   path: '/admin/searches',
@@ -385,11 +345,6 @@ const DashboardAdminSearchesRoute = DashboardAdminSearchesRouteImport.update({
 const DashboardAdminReprocessRoute = DashboardAdminReprocessRouteImport.update({
   id: '/admin_/reprocess',
   path: '/admin/reprocess',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardAdminReindexRoute = DashboardAdminReindexRouteImport.update({
-  id: '/admin_/reindex',
-  path: '/admin/reindex',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardAdminProcessingUploadsRoute =
@@ -414,12 +369,6 @@ const DashboardAdminNewsletterListsRoute =
   DashboardAdminNewsletterListsRouteImport.update({
     id: '/admin_/newsletter-lists',
     path: '/admin/newsletter-lists',
-    getParentRoute: () => DashboardRoute,
-  } as any)
-const DashboardAdminMaintenanceRoute =
-  DashboardAdminMaintenanceRouteImport.update({
-    id: '/admin_/maintenance',
-    path: '/admin/maintenance',
     getParentRoute: () => DashboardRoute,
   } as any)
 const DashboardAdminLlmEvalRoute = DashboardAdminLlmEvalRouteImport.update({
@@ -647,12 +596,8 @@ const DashboardChannelsChannelIdPlaylistsPlaylistIdRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof MainIndexRoute
   '/auth': typeof AuthRouteWithChildren
   '/dashboard': typeof DashboardRouteWithChildren
-  '/maintenance': typeof MaintenanceRoute
-  '/.well-known/jwks.json': typeof DotwellKnownJwksDotjsonRoute
-  '/.well-known/openid-configuration': typeof DotwellKnownOpenidConfigurationRoute
   '/$slug': typeof MainSlugRoute
   '/about': typeof MainAboutRouteWithChildren
   '/channels': typeof MainChannelsRoute
@@ -661,6 +606,7 @@ export interface FileRoutesByFullPath {
   '/history': typeof MainHistoryRoute
   '/library': typeof MainLibraryRoute
   '/search': typeof MainSearchRoute
+  '/api/search-answer': typeof ApiSearchAnswerRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
@@ -678,11 +624,8 @@ export interface FileRoutesByFullPath {
   '/invitations/expired': typeof InvitationsExpiredRoute
   '/invitations/invalid': typeof InvitationsInvalidRoute
   '/media/rss.xml': typeof MediaRssDotxmlRoute
-  '/oidc/authorize': typeof OidcAuthorizeRoute
-  '/oidc/logout': typeof OidcLogoutRoute
-  '/oidc/token': typeof OidcTokenRoute
-  '/oidc/userinfo': typeof OidcUserinfoRoute
   '/trpc/$': typeof TrpcSplatRoute
+  '/': typeof MainIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/about/add-church': typeof MainAboutAddChurchRoute
   '/about/add-content': typeof MainAboutAddContentRoute
@@ -711,7 +654,6 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard/admin/import-sources': typeof DashboardAdminImportSourcesRoute
   '/dashboard/admin/llm-eval': typeof DashboardAdminLlmEvalRoute
-  '/dashboard/admin/maintenance': typeof DashboardAdminMaintenanceRoute
   '/dashboard/admin/newsletter-lists': typeof DashboardAdminNewsletterListsRoute
   '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard/admin/organizations': typeof DashboardAdminOrganizationsRoute
@@ -719,7 +661,6 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/reindex': typeof DashboardAdminReindexRoute
   '/dashboard/admin/reprocess': typeof DashboardAdminReprocessRoute
   '/dashboard/admin/searches': typeof DashboardAdminSearchesRoute
-  '/dashboard/admin/storage-audit': typeof DashboardAdminStorageAuditRoute
   '/dashboard/admin/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
   '/dashboard/channels/$channelId': typeof DashboardChannelsChannelIdRoute
@@ -749,9 +690,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
-  '/maintenance': typeof MaintenanceRoute
-  '/.well-known/jwks.json': typeof DotwellKnownJwksDotjsonRoute
-  '/.well-known/openid-configuration': typeof DotwellKnownOpenidConfigurationRoute
   '/$slug': typeof MainSlugRoute
   '/channels': typeof MainChannelsRoute
   '/churches': typeof MainChurchesRoute
@@ -759,6 +697,7 @@ export interface FileRoutesByTo {
   '/history': typeof MainHistoryRoute
   '/library': typeof MainLibraryRoute
   '/search': typeof MainSearchRoute
+  '/api/search-answer': typeof ApiSearchAnswerRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
@@ -776,10 +715,6 @@ export interface FileRoutesByTo {
   '/invitations/expired': typeof InvitationsExpiredRoute
   '/invitations/invalid': typeof InvitationsInvalidRoute
   '/media/rss.xml': typeof MediaRssDotxmlRoute
-  '/oidc/authorize': typeof OidcAuthorizeRoute
-  '/oidc/logout': typeof OidcLogoutRoute
-  '/oidc/token': typeof OidcTokenRoute
-  '/oidc/userinfo': typeof OidcUserinfoRoute
   '/trpc/$': typeof TrpcSplatRoute
   '/': typeof MainIndexRoute
   '/dashboard': typeof DashboardIndexRoute
@@ -810,7 +745,6 @@ export interface FileRoutesByTo {
   '/dashboard/admin/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard/admin/import-sources': typeof DashboardAdminImportSourcesRoute
   '/dashboard/admin/llm-eval': typeof DashboardAdminLlmEvalRoute
-  '/dashboard/admin/maintenance': typeof DashboardAdminMaintenanceRoute
   '/dashboard/admin/newsletter-lists': typeof DashboardAdminNewsletterListsRoute
   '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard/admin/organizations': typeof DashboardAdminOrganizationsRoute
@@ -818,7 +752,6 @@ export interface FileRoutesByTo {
   '/dashboard/admin/reindex': typeof DashboardAdminReindexRoute
   '/dashboard/admin/reprocess': typeof DashboardAdminReprocessRoute
   '/dashboard/admin/searches': typeof DashboardAdminSearchesRoute
-  '/dashboard/admin/storage-audit': typeof DashboardAdminStorageAuditRoute
   '/dashboard/admin/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
   '/dashboard/channels/$channelId': typeof DashboardChannelsChannelIdRoute
@@ -851,9 +784,6 @@ export interface FileRoutesById {
   '/_main': typeof MainRouteWithChildren
   '/auth_': typeof AuthRouteWithChildren
   '/dashboard_': typeof DashboardRouteWithChildren
-  '/maintenance': typeof MaintenanceRoute
-  '/.well-known/jwks.json': typeof DotwellKnownJwksDotjsonRoute
-  '/.well-known/openid-configuration': typeof DotwellKnownOpenidConfigurationRoute
   '/_main/$slug': typeof MainSlugRoute
   '/_main/about': typeof MainAboutRouteWithChildren
   '/_main/channels': typeof MainChannelsRoute
@@ -862,6 +792,7 @@ export interface FileRoutesById {
   '/_main/history': typeof MainHistoryRoute
   '/_main/library': typeof MainLibraryRoute
   '/_main/search': typeof MainSearchRoute
+  '/api/search-answer': typeof ApiSearchAnswerRoute
   '/auth_/forgot-password': typeof AuthForgotPasswordRoute
   '/auth_/login': typeof AuthLoginRoute
   '/auth_/logout': typeof AuthLogoutRoute
@@ -879,10 +810,6 @@ export interface FileRoutesById {
   '/invitations_/expired': typeof InvitationsExpiredRoute
   '/invitations_/invalid': typeof InvitationsInvalidRoute
   '/media/rss.xml': typeof MediaRssDotxmlRoute
-  '/oidc/authorize': typeof OidcAuthorizeRoute
-  '/oidc/logout': typeof OidcLogoutRoute
-  '/oidc/token': typeof OidcTokenRoute
-  '/oidc/userinfo': typeof OidcUserinfoRoute
   '/trpc/$': typeof TrpcSplatRoute
   '/_main/': typeof MainIndexRoute
   '/dashboard_/': typeof DashboardIndexRoute
@@ -913,7 +840,6 @@ export interface FileRoutesById {
   '/dashboard_/admin_/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard_/admin_/import-sources': typeof DashboardAdminImportSourcesRoute
   '/dashboard_/admin_/llm-eval': typeof DashboardAdminLlmEvalRoute
-  '/dashboard_/admin_/maintenance': typeof DashboardAdminMaintenanceRoute
   '/dashboard_/admin_/newsletter-lists': typeof DashboardAdminNewsletterListsRoute
   '/dashboard_/admin_/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard_/admin_/organizations': typeof DashboardAdminOrganizationsRoute
@@ -921,7 +847,6 @@ export interface FileRoutesById {
   '/dashboard_/admin_/reindex': typeof DashboardAdminReindexRoute
   '/dashboard_/admin_/reprocess': typeof DashboardAdminReprocessRoute
   '/dashboard_/admin_/searches': typeof DashboardAdminSearchesRoute
-  '/dashboard_/admin_/storage-audit': typeof DashboardAdminStorageAuditRoute
   '/dashboard_/admin_/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard_/admin_/users': typeof DashboardAdminUsersRoute
   '/dashboard_/channels_/$channelId': typeof DashboardChannelsChannelIdRoute
@@ -952,12 +877,8 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
     | '/auth'
     | '/dashboard'
-    | '/maintenance'
-    | '/.well-known/jwks.json'
-    | '/.well-known/openid-configuration'
     | '/$slug'
     | '/about'
     | '/channels'
@@ -966,6 +887,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/library'
     | '/search'
+    | '/api/search-answer'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/logout'
@@ -983,11 +905,8 @@ export interface FileRouteTypes {
     | '/invitations/expired'
     | '/invitations/invalid'
     | '/media/rss.xml'
-    | '/oidc/authorize'
-    | '/oidc/logout'
-    | '/oidc/token'
-    | '/oidc/userinfo'
     | '/trpc/$'
+    | '/'
     | '/dashboard/'
     | '/about/add-church'
     | '/about/add-content'
@@ -1016,7 +935,6 @@ export interface FileRouteTypes {
     | '/dashboard/admin/featured'
     | '/dashboard/admin/import-sources'
     | '/dashboard/admin/llm-eval'
-    | '/dashboard/admin/maintenance'
     | '/dashboard/admin/newsletter-lists'
     | '/dashboard/admin/organization-tags'
     | '/dashboard/admin/organizations'
@@ -1024,7 +942,6 @@ export interface FileRouteTypes {
     | '/dashboard/admin/reindex'
     | '/dashboard/admin/reprocess'
     | '/dashboard/admin/searches'
-    | '/dashboard/admin/storage-audit'
     | '/dashboard/admin/upload-backups'
     | '/dashboard/admin/users'
     | '/dashboard/channels/$channelId'
@@ -1054,9 +971,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
-    | '/maintenance'
-    | '/.well-known/jwks.json'
-    | '/.well-known/openid-configuration'
     | '/$slug'
     | '/channels'
     | '/churches'
@@ -1064,6 +978,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/library'
     | '/search'
+    | '/api/search-answer'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/logout'
@@ -1081,10 +996,6 @@ export interface FileRouteTypes {
     | '/invitations/expired'
     | '/invitations/invalid'
     | '/media/rss.xml'
-    | '/oidc/authorize'
-    | '/oidc/logout'
-    | '/oidc/token'
-    | '/oidc/userinfo'
     | '/trpc/$'
     | '/'
     | '/dashboard'
@@ -1115,7 +1026,6 @@ export interface FileRouteTypes {
     | '/dashboard/admin/featured'
     | '/dashboard/admin/import-sources'
     | '/dashboard/admin/llm-eval'
-    | '/dashboard/admin/maintenance'
     | '/dashboard/admin/newsletter-lists'
     | '/dashboard/admin/organization-tags'
     | '/dashboard/admin/organizations'
@@ -1123,7 +1033,6 @@ export interface FileRouteTypes {
     | '/dashboard/admin/reindex'
     | '/dashboard/admin/reprocess'
     | '/dashboard/admin/searches'
-    | '/dashboard/admin/storage-audit'
     | '/dashboard/admin/upload-backups'
     | '/dashboard/admin/users'
     | '/dashboard/channels/$channelId'
@@ -1155,9 +1064,6 @@ export interface FileRouteTypes {
     | '/_main'
     | '/auth_'
     | '/dashboard_'
-    | '/maintenance'
-    | '/.well-known/jwks.json'
-    | '/.well-known/openid-configuration'
     | '/_main/$slug'
     | '/_main/about'
     | '/_main/channels'
@@ -1166,6 +1072,7 @@ export interface FileRouteTypes {
     | '/_main/history'
     | '/_main/library'
     | '/_main/search'
+    | '/api/search-answer'
     | '/auth_/forgot-password'
     | '/auth_/login'
     | '/auth_/logout'
@@ -1183,10 +1090,6 @@ export interface FileRouteTypes {
     | '/invitations_/expired'
     | '/invitations_/invalid'
     | '/media/rss.xml'
-    | '/oidc/authorize'
-    | '/oidc/logout'
-    | '/oidc/token'
-    | '/oidc/userinfo'
     | '/trpc/$'
     | '/_main/'
     | '/dashboard_/'
@@ -1217,7 +1120,6 @@ export interface FileRouteTypes {
     | '/dashboard_/admin_/featured'
     | '/dashboard_/admin_/import-sources'
     | '/dashboard_/admin_/llm-eval'
-    | '/dashboard_/admin_/maintenance'
     | '/dashboard_/admin_/newsletter-lists'
     | '/dashboard_/admin_/organization-tags'
     | '/dashboard_/admin_/organizations'
@@ -1225,7 +1127,6 @@ export interface FileRouteTypes {
     | '/dashboard_/admin_/reindex'
     | '/dashboard_/admin_/reprocess'
     | '/dashboard_/admin_/searches'
-    | '/dashboard_/admin_/storage-audit'
     | '/dashboard_/admin_/upload-backups'
     | '/dashboard_/admin_/users'
     | '/dashboard_/channels_/$channelId'
@@ -1258,18 +1159,12 @@ export interface RootRouteChildren {
   MainRoute: typeof MainRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   DashboardRoute: typeof DashboardRouteWithChildren
-  MaintenanceRoute: typeof MaintenanceRoute
-  DotwellKnownJwksDotjsonRoute: typeof DotwellKnownJwksDotjsonRoute
-  DotwellKnownOpenidConfigurationRoute: typeof DotwellKnownOpenidConfigurationRoute
+  ApiSearchAnswerRoute: typeof ApiSearchAnswerRoute
   EmbedChurchesRoute: typeof EmbedChurchesRoute
   InvitationsAcceptRoute: typeof InvitationsAcceptRoute
   InvitationsExpiredRoute: typeof InvitationsExpiredRoute
   InvitationsInvalidRoute: typeof InvitationsInvalidRoute
   MediaRssDotxmlRoute: typeof MediaRssDotxmlRoute
-  OidcAuthorizeRoute: typeof OidcAuthorizeRoute
-  OidcLogoutRoute: typeof OidcLogoutRoute
-  OidcTokenRoute: typeof OidcTokenRoute
-  OidcUserinfoRoute: typeof OidcUserinfoRoute
   TrpcSplatRoute: typeof TrpcSplatRoute
   ChannelSlugPodcastDotxmlRoute: typeof ChannelSlugPodcastDotxmlRoute
   ChannelSlugRssDotxmlRoute: typeof ChannelSlugRssDotxmlRoute
@@ -1281,13 +1176,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/maintenance': {
-      id: '/maintenance'
-      path: '/maintenance'
-      fullPath: '/maintenance'
-      preLoaderRoute: typeof MaintenanceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/dashboard_': {
       id: '/dashboard_'
       path: '/dashboard'
@@ -1305,7 +1193,7 @@ declare module '@tanstack/react-router' {
     '/_main': {
       id: '/_main'
       path: ''
-      fullPath: '/'
+      fullPath: ''
       preLoaderRoute: typeof MainRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -1328,34 +1216,6 @@ declare module '@tanstack/react-router' {
       path: '/trpc/$'
       fullPath: '/trpc/$'
       preLoaderRoute: typeof TrpcSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/oidc/userinfo': {
-      id: '/oidc/userinfo'
-      path: '/oidc/userinfo'
-      fullPath: '/oidc/userinfo'
-      preLoaderRoute: typeof OidcUserinfoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/oidc/token': {
-      id: '/oidc/token'
-      path: '/oidc/token'
-      fullPath: '/oidc/token'
-      preLoaderRoute: typeof OidcTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/oidc/logout': {
-      id: '/oidc/logout'
-      path: '/oidc/logout'
-      fullPath: '/oidc/logout'
-      preLoaderRoute: typeof OidcLogoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/oidc/authorize': {
-      id: '/oidc/authorize'
-      path: '/oidc/authorize'
-      fullPath: '/oidc/authorize'
-      preLoaderRoute: typeof OidcAuthorizeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/media/rss.xml': {
@@ -1477,6 +1337,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/api/search-answer': {
+      id: '/api/search-answer'
+      path: '/api/search-answer'
+      fullPath: '/api/search-answer'
+      preLoaderRoute: typeof ApiSearchAnswerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_main/search': {
       id: '/_main/search'
       path: '/search'
@@ -1533,19 +1400,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainSlugRouteImport
       parentRoute: typeof MainRoute
     }
-    '/.well-known/openid-configuration': {
-      id: '/.well-known/openid-configuration'
-      path: '/.well-known/openid-configuration'
-      fullPath: '/.well-known/openid-configuration'
-      preLoaderRoute: typeof DotwellKnownOpenidConfigurationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/.well-known/jwks.json': {
-      id: '/.well-known/jwks.json'
-      path: '/.well-known/jwks.json'
-      fullPath: '/.well-known/jwks.json'
-      preLoaderRoute: typeof DotwellKnownJwksDotjsonRouteImport
-      parentRoute: typeof rootRouteImport
+    '/dashboard_/admin_/reindex': {
+      id: '/dashboard_/admin_/reindex'
+      path: '/admin/reindex'
+      fullPath: '/dashboard/admin/reindex'
+      preLoaderRoute: typeof DashboardAdminReindexRouteImport
+      parentRoute: typeof DashboardRoute
     }
     '/_main/about/': {
       id: '/_main/about/'
@@ -1638,13 +1498,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAdminUploadBackupsRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/dashboard_/admin_/storage-audit': {
-      id: '/dashboard_/admin_/storage-audit'
-      path: '/admin/storage-audit'
-      fullPath: '/dashboard/admin/storage-audit'
-      preLoaderRoute: typeof DashboardAdminStorageAuditRouteImport
-      parentRoute: typeof DashboardRoute
-    }
     '/dashboard_/admin_/searches': {
       id: '/dashboard_/admin_/searches'
       path: '/admin/searches'
@@ -1657,13 +1510,6 @@ declare module '@tanstack/react-router' {
       path: '/admin/reprocess'
       fullPath: '/dashboard/admin/reprocess'
       preLoaderRoute: typeof DashboardAdminReprocessRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/dashboard_/admin_/reindex': {
-      id: '/dashboard_/admin_/reindex'
-      path: '/admin/reindex'
-      fullPath: '/dashboard/admin/reindex'
-      preLoaderRoute: typeof DashboardAdminReindexRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard_/admin_/processing-uploads': {
@@ -1692,13 +1538,6 @@ declare module '@tanstack/react-router' {
       path: '/admin/newsletter-lists'
       fullPath: '/dashboard/admin/newsletter-lists'
       preLoaderRoute: typeof DashboardAdminNewsletterListsRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/dashboard_/admin_/maintenance': {
-      id: '/dashboard_/admin_/maintenance'
-      path: '/admin/maintenance'
-      fullPath: '/dashboard/admin/maintenance'
-      preLoaderRoute: typeof DashboardAdminMaintenanceRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard_/admin_/llm-eval': {
@@ -2087,7 +1926,6 @@ interface DashboardRouteChildren {
   DashboardAdminFeaturedRoute: typeof DashboardAdminFeaturedRoute
   DashboardAdminImportSourcesRoute: typeof DashboardAdminImportSourcesRoute
   DashboardAdminLlmEvalRoute: typeof DashboardAdminLlmEvalRoute
-  DashboardAdminMaintenanceRoute: typeof DashboardAdminMaintenanceRoute
   DashboardAdminNewsletterListsRoute: typeof DashboardAdminNewsletterListsRoute
   DashboardAdminOrganizationTagsRoute: typeof DashboardAdminOrganizationTagsRoute
   DashboardAdminOrganizationsRoute: typeof DashboardAdminOrganizationsRoute
@@ -2095,7 +1933,6 @@ interface DashboardRouteChildren {
   DashboardAdminReindexRoute: typeof DashboardAdminReindexRoute
   DashboardAdminReprocessRoute: typeof DashboardAdminReprocessRoute
   DashboardAdminSearchesRoute: typeof DashboardAdminSearchesRoute
-  DashboardAdminStorageAuditRoute: typeof DashboardAdminStorageAuditRoute
   DashboardAdminUploadBackupsRoute: typeof DashboardAdminUploadBackupsRoute
   DashboardAdminUsersRoute: typeof DashboardAdminUsersRoute
   DashboardChannelsChannelIdRoute: typeof DashboardChannelsChannelIdRoute
@@ -2140,7 +1977,6 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAdminFeaturedRoute: DashboardAdminFeaturedRoute,
   DashboardAdminImportSourcesRoute: DashboardAdminImportSourcesRoute,
   DashboardAdminLlmEvalRoute: DashboardAdminLlmEvalRoute,
-  DashboardAdminMaintenanceRoute: DashboardAdminMaintenanceRoute,
   DashboardAdminNewsletterListsRoute: DashboardAdminNewsletterListsRoute,
   DashboardAdminOrganizationTagsRoute: DashboardAdminOrganizationTagsRoute,
   DashboardAdminOrganizationsRoute: DashboardAdminOrganizationsRoute,
@@ -2148,7 +1984,6 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAdminReindexRoute: DashboardAdminReindexRoute,
   DashboardAdminReprocessRoute: DashboardAdminReprocessRoute,
   DashboardAdminSearchesRoute: DashboardAdminSearchesRoute,
-  DashboardAdminStorageAuditRoute: DashboardAdminStorageAuditRoute,
   DashboardAdminUploadBackupsRoute: DashboardAdminUploadBackupsRoute,
   DashboardAdminUsersRoute: DashboardAdminUsersRoute,
   DashboardChannelsChannelIdRoute: DashboardChannelsChannelIdRoute,
@@ -2188,18 +2023,12 @@ const rootRouteChildren: RootRouteChildren = {
   MainRoute: MainRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   DashboardRoute: DashboardRouteWithChildren,
-  MaintenanceRoute: MaintenanceRoute,
-  DotwellKnownJwksDotjsonRoute: DotwellKnownJwksDotjsonRoute,
-  DotwellKnownOpenidConfigurationRoute: DotwellKnownOpenidConfigurationRoute,
+  ApiSearchAnswerRoute: ApiSearchAnswerRoute,
   EmbedChurchesRoute: EmbedChurchesRoute,
   InvitationsAcceptRoute: InvitationsAcceptRoute,
   InvitationsExpiredRoute: InvitationsExpiredRoute,
   InvitationsInvalidRoute: InvitationsInvalidRoute,
   MediaRssDotxmlRoute: MediaRssDotxmlRoute,
-  OidcAuthorizeRoute: OidcAuthorizeRoute,
-  OidcLogoutRoute: OidcLogoutRoute,
-  OidcTokenRoute: OidcTokenRoute,
-  OidcUserinfoRoute: OidcUserinfoRoute,
   TrpcSplatRoute: TrpcSplatRoute,
   ChannelSlugPodcastDotxmlRoute: ChannelSlugPodcastDotxmlRoute,
   ChannelSlugRssDotxmlRoute: ChannelSlugRssDotxmlRoute,
@@ -2216,7 +2045,6 @@ import type { getRouter } from './router.tsx'
 import type { createStart } from '@tanstack/react-start'
 declare module '@tanstack/react-start' {
   interface Register {
-    ssr: true
     router: Awaited<ReturnType<typeof getRouter>>
   }
 }

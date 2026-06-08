@@ -25,7 +25,7 @@ build-preview *params:
 # Wait for docker services to be healthy (timeout after 60 seconds)
 check-health:
   docker compose exec postgres sh -c 'timeout 60 sh -c "until pg_isready; do sleep 1; done"'
-  docker compose exec elasticsearch sh -c 'timeout 60 sh -c "until curl -sf elasticsearch:9200/_cat/health >/dev/null; do sleep 1; done"'
+  docker compose exec opensearch sh -c 'timeout 60 sh -c "until curl -sf opensearch:9200/_cat/health >/dev/null; do sleep 1; done"'
 
 # Start development services, initialize database, and seed data (web + lets.bible)
 up:
@@ -40,7 +40,7 @@ pup:
   just preview
   @echo "Waiting for migration services to complete..."
   @timeout 20 sh -c 'until docker compose -f docker-compose.yml -f docker-compose.preview.yml ps --status exited | grep -q "db-migrate.*Exited (0)"; do sleep 1; done' || echo "Warning: db-migrate timeout"
-  @timeout 120 sh -c 'until docker compose -f docker-compose.yml -f docker-compose.preview.yml ps --status exited | grep -q "elasticsearch-migrate.*Exited (0)"; do sleep 1; done' || echo "Warning: elasticsearch-migrate timeout"
+  @timeout 120 sh -c 'until docker compose -f docker-compose.yml -f docker-compose.preview.yml ps --status exited | grep -q "opensearch-migrate.*Exited (0)"; do sleep 1; done' || echo "Warning: opensearch-migrate timeout"
   @echo "Migrations completed successfully!"
   just seed
 
@@ -177,8 +177,8 @@ lets-bible-flex:
 # (cross-refs + commentaries are separate tables — included here so they aren't empty after a DB reset).
 lets-bible-up: lets-bible-migrate lets-bible-es-push lets-bible-seed-bible lets-bible-seed-lexicon lets-bible-seed-crossrefs lets-bible-seed-commentaries lets-bible-index lets-bible-flex
 
-es-push-mappings:
-  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/elasticsearch run push-mappings'
+os-push-mappings:
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/opensearch run push-mappings'
 
 temporal-schedule: restart-workers
   just temporal workflow execute --task-queue background --type updateDailySaltWorkflow --workflow-id update-daily-salt
@@ -191,7 +191,7 @@ temporal-schedule-delete:
   just temporal schedule delete --schedule-id update-upload-scores
   just temporal schedule delete --schedule-id update-comment-scores
 
-init: db-migrate es-push-mappings temporal-schedule
+init: db-migrate os-push-mappings temporal-schedule
 
 s3-prune-multipart-uploads:
   S3_BUCKET=${S3_INGEST_BUCKET} pnpm --filter @letschurch/web run s3:prune-multipart-uploads

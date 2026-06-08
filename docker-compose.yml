@@ -37,13 +37,16 @@ services:
     depends_on:
       temporal-namespace-setup:
         condition: service_completed_successfully
+      valkey:
+        condition: service_healthy
     ports:
       - 127.0.0.1:${HOST_WEB_PORT}:3000
     environment:
       NODE_ENV: development
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
-      ELASTICSEARCH_URL: http://elasticsearch:9200
+      OPENSEARCH_URL: http://opensearch:9200
+      VALKEY_URL: redis://valkey:6379
       IMGPROXY_KEY: ${IMGPROXY_KEY}
       IMGPROXY_SALT: ${IMGPROXY_SALT}
       IMGPROXY_URL: ${HOST_IMGPROXY_URL}
@@ -89,8 +92,8 @@ services:
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
       - /usr/src/app/packages/db/node_modules
-      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
-      - /usr/src/app/packages/elasticsearch/node_modules
+      - ./packages/opensearch:/usr/src/app/packages/opensearch
+      - /usr/src/app/packages/opensearch/node_modules
       - ./packages/temporal:/usr/src/app/packages/temporal
       - /usr/src/app/packages/temporal/node_modules
       - ./packages/web:/usr/src/app/packages/web
@@ -162,7 +165,7 @@ services:
       SERVICE_NAME: background-worker
       IDENTITY: dev
       DATABASE_URL: postgres://letschurch:password@postgres:5432/letschurch
-      ELASTICSEARCH_URL: http://elasticsearch:9200
+      OPENSEARCH_URL: http://opensearch:9200
       LISTMONK_INTERNAL_URL: http://listmonk:9000
       MAPBOX_GEOCODING_TOKEN: ${MAPBOX_GEOCODING_TOKEN}
       SMTP_URL: smtp://mailpit:1025?pool=true
@@ -187,8 +190,8 @@ services:
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
       - /usr/src/app/packages/db/node_modules
-      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
-      - /usr/src/app/packages/elasticsearch/node_modules
+      - ./packages/opensearch:/usr/src/app/packages/opensearch
+      - /usr/src/app/packages/opensearch/node_modules
       - ./packages/temporal:/usr/src/app/packages/temporal
       - /usr/src/app/packages/temporal/node_modules
       - ./packages/background-worker:/usr/src/app/packages/background-worker
@@ -221,8 +224,8 @@ services:
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
       - /usr/src/app/packages/db/node_modules
-      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
-      - /usr/src/app/packages/elasticsearch/node_modules
+      - ./packages/opensearch:/usr/src/app/packages/opensearch
+      - /usr/src/app/packages/opensearch/node_modules
       - ./packages/temporal:/usr/src/app/packages/temporal
       - /usr/src/app/packages/temporal/node_modules
       - ./packages/probe-worker:/usr/src/app/packages/probe-worker
@@ -255,8 +258,8 @@ services:
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
       - /usr/src/app/packages/db/node_modules
-      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
-      - /usr/src/app/packages/elasticsearch/node_modules
+      - ./packages/opensearch:/usr/src/app/packages/opensearch
+      - /usr/src/app/packages/opensearch/node_modules
       - ./packages/temporal:/usr/src/app/packages/temporal
       - /usr/src/app/packages/temporal/node_modules
       - ./packages/transcode-worker:/usr/src/app/packages/transcode-worker
@@ -285,20 +288,16 @@ services:
     environment:
       SENTRY_DSN: ${SENTRY_TRANSCRIBE_WORKER_DSN}
       IDENTITY: dev
+      MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 1
+      PARAGRAPH_TARGET_CHARS: ${PARAGRAPH_TARGET_CHARS:-200}
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1h
-      MAX_CONCURRENT_ACTIVITY_TASK_EXECUTIONS: 1
+      TITANET_MODEL: ${TITANET_MODEL:-nvidia/speakerverification_en_titanet_large}
       TRANSCRIBE_TASK_QUEUE: ${TRANSCRIBE_TASK_QUEUE:-transcribe}
       WHISPER_MODEL: ${WHISPER_MODEL:-tiny.en}
       WTPSPLIT_MODEL: ${WTPSPLIT_MODEL:-sat-12l-sm}
-      WTPSPLIT_SENTENCE_THRESHOLD: ${WTPSPLIT_SENTENCE_THRESHOLD:-0.4}
       WTPSPLIT_PARAGRAPH_THRESHOLD: ${WTPSPLIT_PARAGRAPH_THRESHOLD:-0.5}
-      # Post-process knob — wtpsplit's paragraph signal rarely fires on
-      # continuous ASR transcripts, so we merge same-speaker sentences
-      # until each paragraph reaches at least this many characters.
-      # `0` disables merging (sentence-grained paragraphs as before).
-      PARAGRAPH_TARGET_CHARS: ${PARAGRAPH_TARGET_CHARS:-200}
-      TITANET_MODEL: ${TITANET_MODEL:-nvidia/speakerverification_en_titanet_large}
+      WTPSPLIT_SENTENCE_THRESHOLD: ${WTPSPLIT_SENTENCE_THRESHOLD:-0.4}
       <<: [*s3-ingest-env, *s3-public-env]
     volumes:
       - ./services/transcribe/src:/app/src
@@ -342,8 +341,8 @@ services:
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
       - /usr/src/app/packages/db/node_modules
-      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
-      - /usr/src/app/packages/elasticsearch/node_modules
+      - ./packages/opensearch:/usr/src/app/packages/opensearch
+      - /usr/src/app/packages/opensearch/node_modules
       - ./packages/temporal:/usr/src/app/packages/temporal
       - /usr/src/app/packages/temporal/node_modules
       - ./packages/import-worker:/usr/src/app/packages/import-worker
@@ -399,7 +398,7 @@ services:
       POSTGRES_USER: temporal
       SQL_PASSWORD: password
       DBNAME: temporal
-      ES_SEEDS: elasticsearch
+      ES_SEEDS: opensearch
     command:
       - sh
       - -c
@@ -440,7 +439,7 @@ services:
         temporal-elasticsearch-tool --endpoint "http://$${ES_SEEDS}:9200" setup-schema --fail
     depends_on:
       - postgres
-      - elasticsearch
+      - opensearch
 
   temporal:
     image: temporalio/server:1.31.0
@@ -455,7 +454,7 @@ services:
       DBNAME: temporal
       DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yml
       ENABLE_ES: true
-      ES_SEEDS: elasticsearch
+      ES_SEEDS: opensearch
       ES_VERSION: v7 # Even though we run v8, temporal only has configuration for v7
     ports:
       - 127.0.0.1:${HOST_TEMPORAL_PORT}:7233
@@ -475,7 +474,7 @@ services:
     image: temporalio/admin-tools:1.31.0
     environment:
       TEMPORAL_ADDRESS: temporal:7233
-      ES_SEEDS: elasticsearch
+      ES_SEEDS: opensearch
     command:
       - sh
       - -c
@@ -545,8 +544,8 @@ services:
       timeout: 5s
       retries: 5
 
-  elasticsearch:
-    image: elasticsearch:8.19.7
+  opensearch:
+    image: opensearchproject/opensearch:3.6.0
     restart: unless-stopped
     environment:
       - cluster.routing.allocation.disk.threshold_enabled=true
@@ -554,16 +553,28 @@ services:
       - cluster.routing.allocation.disk.watermark.high=256mb
       - cluster.routing.allocation.disk.watermark.flood_stage=128mb
       - discovery.type=single-node
-      - ES_JAVA_OPTS=-Xms256m -Xmx256m
-      - xpack.security.enabled=false
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+      - DISABLE_SECURITY_PLUGIN=true
     ports:
-      - 127.0.0.1:${HOST_ES_PORT}:9200
+      - 127.0.0.1:${HOST_OPENSEARCH_PORT}:9200
     volumes:
-      - es-data:/usr/share/elasticsearch/data
+      - es-data:/usr/share/opensearch/data
     healthcheck:
-      test: curl -s -f elasticsearch:9200/_cat/health >/dev/null || exit 1
+      test: curl -s -f opensearch:9200/_cluster/health >/dev/null || exit 1
       interval: 30s
       timeout: 10s
+      retries: 5
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+    command: ["valkey-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - 127.0.0.1:${HOST_VALKEY_PORT}:6379
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
       retries: 5
 
   #
@@ -587,22 +598,13 @@ services:
       - ./packages/db:/usr/src/app/packages/db
       - /usr/src/app/packages/db/src/generated
       - /usr/src/app/packages/db/node_modules
-      - ./packages/elasticsearch:/usr/src/app/packages/elasticsearch
-      - /usr/src/app/packages/elasticsearch/node_modules
+      - ./packages/opensearch:/usr/src/app/packages/opensearch
+      - /usr/src/app/packages/opensearch/node_modules
       - ./packages/temporal:/usr/src/app/packages/temporal
       - /usr/src/app/packages/temporal/node_modules
       - ./packages/web:/usr/src/app/packages/web
       - /usr/src/app/packages/web/node_modules
 
-  kibana:
-    image: kibana:9.1.5
-    restart: unless-stopped
-    environment:
-      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
-    depends_on:
-      - elasticsearch
-    ports:
-      - 127.0.0.1:${HOST_KIBANA_PORT}:5601
   mailpit:
     image: axllent/mailpit:v1.13.0
     restart: unless-stopped

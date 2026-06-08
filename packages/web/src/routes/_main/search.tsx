@@ -1,22 +1,23 @@
+import { Collapsible } from '@base-ui-components/react/collapsible';
 import { IconX } from '@tabler/icons-react';
-import {
-  useInfiniteQuery,
-  useQuery,
-  useSuspenseQuery,
-} from '@tanstack/react-query';
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { useInfiniteQuery, useSuspenseQuery } from '@tanstack/react-query';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
 import posthog from 'posthog-js';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
+import { AnswerPanel } from '@/components/answer-panel';
 import { AvatarCarousel } from '@/components/avatar-carousel';
 import { EmptyState } from '@/components/empty-state';
 import { FilterBar } from '@/components/filter-bar';
 import MainLayout from '@/components/main-layout';
-import { MiniPlayer } from '@/components/mini-player';
+import {
+  MediaPreviewGroup,
+  MediaPreviewScope,
+  MediaPreviewTarget,
+} from '@/components/media-preview-link';
 import SearchBar from '@/components/search-bar';
 import { SearchRow } from '@/components/search-row';
-import SearchTabs from '@/components/search-tabs';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import {
   useDeleteRecentSearch,
@@ -58,7 +59,6 @@ export const Route = createFileRoute('/_main/search')({
   component: RouteComponent,
   validateSearch: z.object({
     q: z.string().optional(),
-    focus: z.enum(['media', 'transcripts']).optional().default('media'),
     channelSlugs: z.array(z.string()).optional(),
     sort: z.enum(['relevance', 'date-asc', 'date-desc']).optional(),
     dateRange: z
@@ -68,7 +68,6 @@ export const Route = createFileRoute('/_main/search')({
   }),
   loaderDeps: ({ search }) => ({
     q: search.q,
-    focus: search.focus,
     channelSlugs: search.channelSlugs,
     sort: search.sort,
     dateRange: search.dateRange,
@@ -76,11 +75,12 @@ export const Route = createFileRoute('/_main/search')({
   }),
   loader: async ({ context, deps }) => {
     if (deps.q) {
-      // Fetch search results (slug-to-ID conversion happens in the procedure)
+      // Hybrid (BM25 + vector RRF) results over lc_media_v1. Slug→ID conversion,
+      // the query embedding, and the structured query parse (speaker notice +
+      // answer-panel decision, returned on page 0) all happen in the procedure.
       const searchData = await context.queryClient.fetchInfiniteQuery(
-        context.trpc.search.performSearch.infiniteQueryOptions({
+        context.trpc.search.hybridSearch.infiniteQueryOptions({
           q: deps.q,
-          focus: deps.focus as 'media' | 'transcripts',
           channelSlugs: deps.channelSlugs,
           limit: 20,
           sort: deps.sort,
@@ -221,15 +221,13 @@ export const Route = createFileRoute('/_main/search')({
 });
 
 function RouteComponent() {
-  const { q, focus, channelSlugs, sort, dateRange, skipLogging } =
-    Route.useSearch();
+  const { q, channelSlugs, sort, dateRange, skipLogging } = Route.useSearch();
   const trpc = useTRPC();
 
   // Get faceted channels for filter options
   const { data: searchData } = useInfiniteQuery({
-    ...trpc.search.performSearch.infiniteQueryOptions({
+    ...trpc.search.hybridSearch.infiniteQueryOptions({
       q: q ?? '',
-      focus,
       channelSlugs,
       limit: 20,
       sort,
@@ -278,83 +276,10 @@ const _trendingSearches = [
 const emptyArray: ReadonlyArray<unknown> = [];
 
 function SearchResults({ q }: { q: string }) {
-  const { focus, channelSlugs, sort, dateRange, skipLogging } =
-    Route.useSearch();
+  const { channelSlugs, sort, dateRange, skipLogging } = Route.useSearch();
   const { hasActiveFilters } = useSearchFilters();
   const trpc = useTRPC();
-  const navigate = useNavigate({ from: Route.fullPath });
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  const [activeHover, setActiveHover] = useState<{
-    item: SearchResultItem;
-    segmentIndex: number;
-  } | null>(null);
-  const [miniPlayerMousePos, setMiniPlayerMousePos] = useState({ x: 0, y: 0 });
-  const hoverTimerRef = useRef<number | undefined>(undefined);
-  const closeTimerRef = useRef<number | undefined>(undefined);
-  const activeHoverRef = useRef(activeHover);
-  activeHoverRef.current = activeHover;
-  const miniPlayerCurrentTimeRef = useRef<number>(0);
-
-  const { data: miniPlayerSources } = useQuery({
-    ...trpc.media.getMediaSources.queryOptions({
-      mediaId: activeHover?.item.id ?? '',
-    }),
-    enabled: activeHover !== null,
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-
-  useEffect(
-    () => () => {
-      window.clearTimeout(hoverTimerRef.current);
-      window.clearTimeout(closeTimerRef.current);
-    },
-    [],
-  );
-
-  const handleSegmentMouseEnter = useCallback(
-    (item: SearchResultItem, segmentIndex: number, e: React.MouseEvent) => {
-      setMiniPlayerMousePos({ x: e.clientX, y: e.clientY });
-      window.clearTimeout(closeTimerRef.current);
-
-      const segmentStartSeconds =
-        (item.segments?.[segmentIndex]?.start ?? 0) / 1000;
-
-      if (activeHoverRef.current?.item.id === item.id) {
-        // Same media — skip delay, scrub to new segment immediately
-        window.clearTimeout(hoverTimerRef.current);
-        miniPlayerCurrentTimeRef.current = segmentStartSeconds;
-        setActiveHover({ item, segmentIndex });
-      } else {
-        // Different media — normal 500ms delay before opening
-        window.clearTimeout(hoverTimerRef.current);
-        hoverTimerRef.current = window.setTimeout(() => {
-          miniPlayerCurrentTimeRef.current = segmentStartSeconds;
-          setActiveHover({ item, segmentIndex });
-          posthog.capture('transcript_preview_opened', {
-            upload_id: item.id,
-            media_title: item.title,
-            channel_id: item.channel.id,
-            channel_name: item.channel.name,
-            published_at: item.publishedAt?.toISOString() ?? null,
-            length_seconds: item.lengthSeconds,
-            segment_start_seconds: segmentStartSeconds,
-          });
-        }, 500);
-      }
-    },
-    [],
-  );
-
-  const handleSegmentMouseLeave = useCallback(() => {
-    window.clearTimeout(hoverTimerRef.current);
-    closeTimerRef.current = window.setTimeout(() => {
-      setActiveHover(null);
-    }, 100);
-  }, []);
-
-  const handleSegmentMouseMove = useCallback((e: React.MouseEvent) => {
-    setMiniPlayerMousePos({ x: e.clientX, y: e.clientY });
-  }, []);
 
   const {
     data: searchData,
@@ -362,9 +287,8 @@ function SearchResults({ q }: { q: string }) {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    ...trpc.search.performSearch.infiniteQueryOptions({
+    ...trpc.search.hybridSearch.infiniteQueryOptions({
       q,
-      focus,
       channelSlugs,
       limit: 20,
       sort,
@@ -383,6 +307,10 @@ function SearchResults({ q }: { q: string }) {
     },
     initialPageParam: 0,
   });
+
+  // Query parse + search-log id come back on page 0 of the hybrid search.
+  const parsed = searchData?.pages?.[0]?.parsed ?? null;
+  const searchLogId = searchData?.pages?.[0]?.searchLogId ?? null;
 
   // Infinite scroll observer
   useEffect(() => {
@@ -413,7 +341,6 @@ function SearchResults({ q }: { q: string }) {
 
   const firstPage = searchData?.pages[0];
   const mediaCount = firstPage?.mediaCount ?? 0;
-  const transcriptCount = firstPage?.transcriptCount ?? 0;
   const channels = firstPage
     ? firstPage.channels
     : (emptyArray as ReadonlyArray<{
@@ -431,161 +358,144 @@ function SearchResults({ q }: { q: string }) {
       return [];
     }) ?? [];
 
-  const handleTabChange = (newFocus: 'media' | 'transcripts') => {
-    navigate({
-      search: (prev: Record<string, unknown>) => ({ ...prev, focus: newFocus }),
-    });
-  };
-
   if (!q) {
     return <NoSearch />;
   }
 
   return (
-    <div className="space-y-8">
-      {hasActiveFilters ? (
-        <div className="space-y-4">
-          <FilterBar />
-        </div>
-      ) : null}
+    // One preview delay-group across the answer + results: the first hover waits,
+    // then moving between any reference/result preview is instant.
+    <MediaPreviewGroup>
+      <div className="space-y-8">
+        {hasActiveFilters ? (
+          <div className="space-y-4">
+            <FilterBar />
+          </div>
+        ) : null}
 
-      <SearchTabs
-        activeTab={focus === 'transcripts' ? 'transcripts' : 'media'}
-        mediaCount={mediaCount}
-        transcriptCount={transcriptCount}
-        onTabChange={handleTabChange}
-      />
+        {parsed?.speakerNotice ? (
+          <div className="rounded-md border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-amber-200/90 text-sm">
+            Filtering by speaker (e.g. {parsed.speakers.slice(0, 3).join(', ')})
+            isn't available yet — searching those names across titles and
+            transcripts instead.
+          </div>
+        ) : null}
 
-      {channels.length > 0 ? (
-        <div className="space-y-4">
-          <h2 className="font-medium text-primary">Channels</h2>
-          <AvatarCarousel items={channels} />
-        </div>
-      ) : null}
+        {parsed && parsed.questions.length > 0 ? (
+          <AnswerPanel q={q} searchLogId={searchLogId} />
+        ) : null}
 
-      {items.length > 0 ? (
-        <div className="space-y-4">
-          {items.map((item) => {
-            return (
-              <Result
-                key={item.id}
-                item={item}
-                focus={focus}
-                onSegmentMouseEnter={handleSegmentMouseEnter}
-                onSegmentMouseLeave={handleSegmentMouseLeave}
-                onSegmentMouseMove={handleSegmentMouseMove}
-                isActiveWithSources={
-                  activeHover?.item.id === item.id && miniPlayerSources != null
-                }
-                miniPlayerCurrentTimeRef={miniPlayerCurrentTimeRef}
-              />
-            );
-          })}
-        </div>
-      ) : (
-        <EmptyState
-          emptyTitle="There are no matches"
-          emptyBody="Try rephrasing your query or removing filters"
-          variant="error"
-        />
-      )}
+        {mediaCount > 0 ? (
+          <p className="text-muted text-sm">
+            {mediaCount.toLocaleString()}{' '}
+            {mediaCount === 1 ? 'result' : 'results'}
+          </p>
+        ) : null}
 
-      {/* Infinite scroll trigger */}
-      <div ref={loadMoreRef} className="h-20" />
+        {channels.length > 0 ? (
+          <div className="space-y-4">
+            <h2 className="font-medium text-primary">Channels</h2>
+            <AvatarCarousel items={channels} />
+          </div>
+        ) : null}
 
-      {/* Loading indicator */}
-      {isFetchingNextPage ? (
-        <div className="flex justify-center py-8">
-          <div className="text-sm text-zinc-400">Loading more...</div>
-        </div>
-      ) : null}
+        {items.length > 0 ? (
+          <div className="space-y-4">
+            {items.map((item) => (
+              <Result key={item.id} item={item} />
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            emptyTitle="There are no matches"
+            emptyBody="Try rephrasing your query or removing filters"
+            variant="error"
+          />
+        )}
 
-      {/* Related searches */}
-      {/* TODO */}
-      {/* <div className="space-y-4"> */}
-      {/*   <h2 className="font-medium text-primary">Related Searches</h2> */}
-      {/*   <div className="flex flex-wrap gap-2"> */}
-      {/*     {trendingSearches.map((search) => ( */}
-      {/*       <TrendingSearchPill key={search} search={search} /> */}
-      {/*     ))} */}
-      {/*   </div> */}
-      {/* </div> */}
+        {/* Infinite scroll trigger */}
+        <div ref={loadMoreRef} className="h-20" />
 
-      {activeHover && miniPlayerSources ? (
-        <MiniPlayer
-          mediaSource={miniPlayerSources.mediaSource}
-          audioSource={miniPlayerSources.audioSource}
-          thumbnailUrl={activeHover.item.thumbnailUrl}
-          videoWidth={miniPlayerSources.videoWidth}
-          videoHeight={miniPlayerSources.videoHeight}
-          initialTimestamp={
-            (activeHover.item.segments?.[activeHover.segmentIndex]?.start ??
-              0) / 1000
-          }
-          mousePos={miniPlayerMousePos}
-          currentTimeRef={miniPlayerCurrentTimeRef}
-        />
-      ) : null}
-    </div>
+        {/* Loading indicator */}
+        {isFetchingNextPage ? (
+          <div className="flex justify-center py-8">
+            <div className="text-sm text-zinc-400">Loading more...</div>
+          </div>
+        ) : null}
+
+        {/* Related searches */}
+        {/* TODO */}
+        {/* <div className="space-y-4"> */}
+        {/*   <h2 className="font-medium text-primary">Related Searches</h2> */}
+        {/*   <div className="flex flex-wrap gap-2"> */}
+        {/*     {trendingSearches.map((search) => ( */}
+        {/*       <TrendingSearchPill key={search} search={search} /> */}
+        {/*     ))} */}
+        {/*   </div> */}
+        {/* </div> */}
+      </div>
+    </MediaPreviewGroup>
   );
 }
 
-function Result({
+// One transcript segment row, using the shared hover preview.
+function SegmentPreview({
   item,
-  focus,
-  onSegmentMouseEnter,
-  onSegmentMouseLeave,
-  onSegmentMouseMove,
-  isActiveWithSources,
-  miniPlayerCurrentTimeRef,
+  segment,
 }: {
   item: SearchResultItem;
-  focus: 'media' | 'transcripts' | undefined;
-  onSegmentMouseEnter: (
-    item: SearchResultItem,
-    segmentIndex: number,
-    e: React.MouseEvent,
-  ) => void;
-  onSegmentMouseLeave: () => void;
-  onSegmentMouseMove: (e: React.MouseEvent) => void;
-  isActiveWithSources: boolean;
-  miniPlayerCurrentTimeRef: React.MutableRefObject<number>;
+  segment: TranscriptSegment;
 }) {
-  const navigate = useNavigate();
-  const [showAllSegments, setShowAllSegments] = useState(false);
+  const startSeconds = segment.start / 1000;
+
+  return (
+    <MediaPreviewTarget
+      mediaId={item.id}
+      startSeconds={startSeconds}
+      thumbnailUrl={item.thumbnailUrl}
+      className="relative z-10 flex cursor-pointer flex-row gap-1.5 rounded-md bg-white/5 p-3 text-primary transition-colors hover:bg-white/10"
+      onPreviewOpen={() =>
+        posthog.capture('transcript_preview_opened', {
+          upload_id: item.id,
+          media_title: item.title,
+          channel_id: item.channel.id,
+          channel_name: item.channel.name,
+          published_at: item.publishedAt?.toISOString() ?? null,
+          length_seconds: item.lengthSeconds,
+          segment_start_seconds: startSeconds,
+        })
+      }
+      onActivate={(seconds, usedPreview) =>
+        posthog.capture('transcript_result_clicked', {
+          upload_id: item.id,
+          media_title: item.title,
+          channel_id: item.channel.id,
+          channel_name: item.channel.name,
+          published_at: item.publishedAt?.toISOString() ?? null,
+          length_seconds: item.lengthSeconds,
+          segment_start_seconds: startSeconds,
+          navigate_to_seconds: seconds,
+          used_mini_player: usedPreview,
+        })
+      }
+    >
+      <div className="pt-1 text-[10px] tabular-nums leading-[1.4] tracking-[-0.2px]">
+        {formatTime(segment.start)}
+      </div>
+      <div
+        className="[&_mark]:-my-0.5 [&_mark]:-mx-1 text-primary/80 text-sm [&_mark]:rounded-sm [&_mark]:bg-orange-400/40 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:text-primary"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: escaped ElasticSearch output
+        dangerouslySetInnerHTML={{ __html: segment.text }}
+      />
+    </MediaPreviewTarget>
+  );
+}
+
+function Result({ item }: { item: SearchResultItem }) {
+  const [showAll, setShowAll] = useState(false);
 
   const segments = item.segments ?? [];
-  const hasMultipleSegments = segments.length > 1;
-  const displayedSegments = showAllSegments ? segments : segments.slice(0, 1);
-
-  const handleSegmentClick = (
-    e: React.MouseEvent,
-    segment: TranscriptSegment,
-  ) => {
-    const segmentStartSeconds = segment.start / 1000;
-    const navigateToSeconds = isActiveWithSources
-      ? miniPlayerCurrentTimeRef.current
-      : segmentStartSeconds;
-    posthog.capture('transcript_result_clicked', {
-      upload_id: item.id,
-      media_title: item.title,
-      channel_id: item.channel.id,
-      channel_name: item.channel.name,
-      published_at: item.publishedAt?.toISOString() ?? null,
-      length_seconds: item.lengthSeconds,
-      segment_start_seconds: segmentStartSeconds,
-      navigate_to_seconds: navigateToSeconds,
-      used_mini_player: isActiveWithSources,
-    });
-    if (isActiveWithSources) {
-      e.preventDefault();
-      navigate({
-        to: '/media/$mediaId',
-        params: { mediaId: item.id },
-        hash: `t=${navigateToSeconds}`,
-      });
-    }
-  };
+  const [first, ...rest] = segments;
 
   return (
     <SearchRow
@@ -605,47 +515,31 @@ function Result({
         item.lengthSeconds ? formatTime(item.lengthSeconds * 1000) : undefined
       }
     >
-      {focus === 'transcripts' && segments.length > 0 ? (
-        <div className="mt-2 space-y-2">
-          {displayedSegments.map((segment, index) => (
-            <Link
-              key={index}
-              to="/media/$mediaId"
-              params={{ mediaId: item.id }}
-              hash={`t=${segment.start / 1000}`}
-              className="relative z-10 flex cursor-pointer flex-row gap-1.5 rounded-md bg-white/5 p-3 text-primary transition-colors hover:bg-white/10"
-              onMouseEnter={(e) => onSegmentMouseEnter(item, index, e)}
-              onMouseLeave={onSegmentMouseLeave}
-              onMouseMove={onSegmentMouseMove}
-              onClick={(e) => handleSegmentClick(e, segment)}
-            >
-              <div className="pt-1 text-[10px] tabular-nums leading-[1.4] tracking-[-0.2px]">
-                {formatTime(segment.start)}
-              </div>
-              <div
-                className="[&_mark]:-my-0.5 [&_mark]:-mx-1 text-primary/80 text-sm [&_mark]:rounded-sm [&_mark]:bg-orange-400/40 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:text-primary"
-                dangerouslySetInnerHTML={{
-                  __html: segment.text,
-                }}
-              />
-            </Link>
-          ))}
-          {hasMultipleSegments ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setShowAllSegments((show) => !show);
-              }}
-              className="relative z-10 w-full px-1 py-0.5 text-center text-muted text-xs transition-colors hover:text-primary"
-            >
-              {showAllSegments
-                ? 'Show less'
-                : `Show ${segments.length - 1} more`}
-            </button>
-          ) : null}
-        </div>
+      {first ? (
+        // One preview card for the whole row — all segments are the same media,
+        // so moving between them re-anchors + re-seeks the same player instantly.
+        <MediaPreviewScope side="right" sideOffset={12}>
+          <div className="mt-2 space-y-2">
+            <SegmentPreview item={item} segment={first} />
+            {rest.length > 0 ? (
+              <Collapsible.Root open={showAll} onOpenChange={setShowAll}>
+                <Collapsible.Panel className="space-y-2">
+                  {rest.map((segment, index) => (
+                    <SegmentPreview
+                      // biome-ignore lint/suspicious/noArrayIndexKey: stable order
+                      key={index}
+                      item={item}
+                      segment={segment}
+                    />
+                  ))}
+                </Collapsible.Panel>
+                <Collapsible.Trigger className="relative z-10 mt-2 w-full px-1 py-0.5 text-center text-muted text-xs transition-colors hover:text-primary">
+                  {showAll ? 'Show less' : `Show ${rest.length} more`}
+                </Collapsible.Trigger>
+              </Collapsible.Root>
+            ) : null}
+          </div>
+        </MediaPreviewScope>
       ) : null}
     </SearchRow>
   );
@@ -671,7 +565,7 @@ function NoSearch() {
 
   const handleSearchClick = (query: string) => {
     navigate({
-      search: { q: query, focus: 'media' as const, channelSlugs: undefined },
+      search: { q: query, channelSlugs: undefined },
     });
   };
 

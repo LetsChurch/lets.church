@@ -13,7 +13,7 @@ import {
   UploadViewSecond,
   UploadViewSource,
 } from '@letschurch/db';
-import { client } from '@letschurch/elasticsearch';
+import { osSearch } from '@letschurch/opensearch';
 import { getPublicUrlWithFilename } from '@letschurch/s3';
 import { publicS3 } from '@letschurch/s3/public';
 import { xxh64 } from '@node-rs/xxhash';
@@ -1796,30 +1796,34 @@ export const mediaProcedures = {
       // Content"). Same access-control constraints + kNN params on both; only
       // the channel clause differs.
       const knnByChannel = (sameChannel: boolean) =>
-        client.search({
+        osSearch({
           index: 'lc_media_v1',
           _source: false,
           size: k,
-          knn: {
-            field: 'summaryEmbedding',
-            query_vector: queryVector,
-            k,
-            num_candidates: Math.max(k * 10, 100),
-            filter: {
-              bool: {
-                must: [
-                  { term: { visibility: 'PUBLIC' } },
-                  { term: { channelVisibility: 'PUBLIC' } },
-                  { exists: { field: 'channelApprovedAt' } },
-                  { exists: { field: 'transcodingFinishedAt' } },
-                  { exists: { field: 'transcribingFinishedAt' } },
-                  ...(sameChannel ? [{ term: { channelId } }] : []),
-                ],
-                // Same channel excludes the current upload; cross-channel
-                // excludes the whole channel (which excludes it too).
-                must_not: sameChannel
-                  ? [{ ids: { values: [mediaId] } }]
-                  : [{ term: { channelId } }],
+          // OpenSearch knn query: vector + k + an optional `filter` query that
+          // restricts which parent docs are eligible (efficient filtering).
+          query: {
+            knn: {
+              summaryEmbedding: {
+                vector: queryVector,
+                k,
+                filter: {
+                  bool: {
+                    must: [
+                      { term: { visibility: 'PUBLIC' } },
+                      { term: { channelVisibility: 'PUBLIC' } },
+                      { exists: { field: 'channelApprovedAt' } },
+                      { exists: { field: 'transcodingFinishedAt' } },
+                      { exists: { field: 'transcribingFinishedAt' } },
+                      ...(sameChannel ? [{ term: { channelId } }] : []),
+                    ],
+                    // Same channel excludes the current upload; cross-channel
+                    // excludes the whole channel (which excludes it too).
+                    must_not: sameChannel
+                      ? [{ ids: { values: [mediaId] } }]
+                      : [{ term: { channelId } }],
+                  },
+                },
               },
             },
           },
@@ -1830,8 +1834,11 @@ export const mediaProcedures = {
         knnByChannel(false),
       ]);
 
-      const hitIds = (res: typeof sameChannelRes) =>
-        res.hits.hits
+      const hitIds = (res: Record<string, unknown>) =>
+        (
+          (res as { hits?: { hits?: Array<{ _id?: string }> } }).hits?.hits ??
+          []
+        )
           .map((hit) => hit._id)
           .filter((id): id is string => Boolean(id));
 

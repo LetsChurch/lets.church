@@ -8,7 +8,7 @@ import {
   TranscriptParagraph,
   UploadRecord,
 } from '@letschurch/db';
-import { client, escapeDocument } from '@letschurch/elasticsearch';
+import { client, escapeDocument } from '@letschurch/opensearch';
 import { publicS3 } from '@letschurch/s3/public';
 import { and, asc, eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
@@ -316,6 +316,9 @@ async function getDocument(
           description: upRecRow.description,
           channelName: channelRow.name,
           summary: upRecRow.summary,
+          // Reserved for the future speaker-identity library (see mappings.ts);
+          // empty until speaker resolution exists, backfilled via re-index.
+          speakers: [] as string[],
           summaryEmbedding: upRecRow.summaryEmbedding,
           searchSummaryEmbedding: upRecRow.searchSummaryEmbedding,
           paragraphs: paragraphs.map((p) => ({
@@ -323,6 +326,7 @@ async function getDocument(
             start: p.start,
             end: p.end,
             speaker: p.speaker,
+            speakerName: null,
             text: p.text,
             embedding: p.embedding,
           })),
@@ -369,11 +373,11 @@ export default async function indexDocument(
   const indexRes = await client.index({
     index: doc.index,
     id: doc.id,
-    document: doc.document,
+    body: doc.document,
   });
 
   invariant(
-    ['created', 'updated'].includes(indexRes.result),
+    ['created', 'updated'].includes(indexRes.body.result ?? ''),
     `Document not indexed`,
   );
 

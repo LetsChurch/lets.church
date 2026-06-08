@@ -1,9 +1,9 @@
 import { Channel, db, UploadRecord } from '@letschurch/db';
 import {
-  client,
   MSearchResponseSchema,
   msearchOrganizations,
-} from '@letschurch/elasticsearch';
+  osMsearch,
+} from '@letschurch/opensearch';
 import { publicS3 } from '@letschurch/s3/public';
 import { and, desc, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import { z } from 'zod';
@@ -91,9 +91,7 @@ export const churchProcedures = {
         tags: tags ?? null,
       });
 
-      const response = await client.msearch({
-        searches,
-      });
+      const response = await osMsearch(searches);
 
       const parsed = MSearchResponseSchema.parse(response);
       const [organizationsResponse] = parsed.responses;
@@ -221,9 +219,7 @@ export const churchProcedures = {
         orgType: 'MINISTRY',
       });
 
-      const response = await client.msearch({
-        searches,
-      });
+      const response = await osMsearch(searches);
 
       const parsed = MSearchResponseSchema.parse(response);
       const [organizationsResponse] = parsed.responses;
