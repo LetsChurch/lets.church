@@ -13,6 +13,9 @@ type Props = {
   thumbnailUrl: string | null;
   initialTimestamp: number;
   currentTimeRef: React.MutableRefObject<number>;
+  /** Optional caption shown beneath the player (e.g. the cited media's title
+   * for answer footnotes). Omit for previews that don't need a label. */
+  title?: string | null;
 };
 
 // Position-agnostic preview player: renders just the player surface (fixed
@@ -23,6 +26,7 @@ export function MiniPlayer({
   thumbnailUrl,
   initialTimestamp,
   currentTimeRef,
+  title,
 }: Props) {
   const videoRef = useRef<HlsVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -248,6 +252,13 @@ export function MiniPlayer({
           </div>
         </div>
       )}
+      {title ? (
+        <div className="bg-zinc-900 px-2.5 py-2">
+          <p className="line-clamp-2 font-medium text-white text-xs leading-snug">
+            {title}
+          </p>
+        </div>
+      ) : null}
     </div>
   );
 }

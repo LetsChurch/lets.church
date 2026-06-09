@@ -3,6 +3,10 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 type SearchFilters = {
   sort?: 'relevance' | 'date-asc' | 'date-desc';
   dateRange?: 'all-time' | 'today' | 'this-week' | 'this-month' | 'this-year';
+  // Custom inclusive publish-date bounds (YYYY-MM-DD). When either is set it
+  // takes precedence over the coarse `dateRange` bucket.
+  dateStart?: string;
+  dateEnd?: string;
   channelSlugs?: string[];
 };
 
@@ -13,13 +17,18 @@ export function useSearchFilters() {
   const filters = {
     sort: searchParams.sort,
     dateRange: searchParams.dateRange,
+    dateStart: searchParams.dateStart,
+    dateEnd: searchParams.dateEnd,
     channelSlugs: searchParams.channelSlugs,
   };
+
+  const hasCustomDates = Boolean(filters.dateStart || filters.dateEnd);
 
   // Check if any filters are active (non-default values)
   const hasActiveFilters =
     (filters.sort && filters.sort !== 'relevance') ||
     (filters.dateRange && filters.dateRange !== 'all-time') ||
+    hasCustomDates ||
     (filters.channelSlugs && filters.channelSlugs.length > 0);
 
   const setSort = (
@@ -30,6 +39,8 @@ export function useSearchFilters() {
     });
   };
 
+  // Selecting a coarse bucket clears any custom range (they're mutually
+  // exclusive in the UI; explicit bounds otherwise win server-side).
   const setDateRange = (
     dateRange:
       | 'all-time'
@@ -40,7 +51,27 @@ export function useSearchFilters() {
       | undefined,
   ) => {
     navigate({
-      search: (prev: Record<string, unknown>) => ({ ...prev, dateRange }),
+      search: (prev: Record<string, unknown>) => ({
+        ...prev,
+        dateRange,
+        dateStart: undefined,
+        dateEnd: undefined,
+      }),
+    });
+  };
+
+  // Setting a custom range clears the coarse bucket.
+  const setCustomDates = (
+    dateStart: string | undefined,
+    dateEnd: string | undefined,
+  ) => {
+    navigate({
+      search: (prev: Record<string, unknown>) => ({
+        ...prev,
+        dateRange: undefined,
+        dateStart: dateStart || undefined,
+        dateEnd: dateEnd || undefined,
+      }),
     });
   };
 
@@ -62,6 +93,8 @@ export function useSearchFilters() {
         ...prev,
         sort: undefined,
         dateRange: undefined,
+        dateStart: undefined,
+        dateEnd: undefined,
         channelSlugs: undefined,
       }),
     });
@@ -69,8 +102,10 @@ export function useSearchFilters() {
 
   return {
     filters,
+    hasCustomDates,
     setSort,
     setDateRange,
+    setCustomDates,
     setChannelSlugs,
     removeChannelSlug,
     clearFilters,

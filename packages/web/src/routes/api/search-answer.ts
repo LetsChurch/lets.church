@@ -23,6 +23,11 @@ const ANSWER_CACHE_TTL_SECONDS = 60 * 60 * 24;
 
 const bodySchema = z.object({
   query: z.string().min(1),
+  // The parser's reformulated question (e.g. "Bible examples of grace-based
+  // giving" -> "What are some Bible examples of grace-based giving?"). Used to
+  // frame the generated answer + the answerability check; retrieval still runs
+  // on the raw `query` to preserve recall. Falls back to `query` when absent.
+  question: z.string().optional().nullable(),
   // Per search-session conversation thread (multi-turn follow-ups share it).
   threadId: z.string().min(1),
   // Stable per-browser id; only used for anonymous users (logged-in users are
@@ -56,6 +61,11 @@ export const Route = createFileRoute('/api/search-answer')({
         } catch {
           return new Response('Invalid request body', { status: 400 });
         }
+
+        // Frame the answer (and the answerability check) with the parser's
+        // reformulated question when present; retrieval/embedding/cache still
+        // key off the raw `parsed.query` so recall is unchanged.
+        const framingQuestion = parsed.question?.trim() || parsed.query;
 
         // Server-only deps loaded lazily so Mastra / pg never enter the client
         // bundle (this route file is part of the shared route tree).
@@ -289,7 +299,7 @@ export const Route = createFileRoute('/api/search-answer')({
 
           // 3. Cheap nano pre-check: do the passages actually answer this?
           const answerable = await isAnswerableFromSources(
-            parsed.query,
+            framingQuestion,
             sourcesBlock,
           );
           if (!answerable) {
@@ -300,7 +310,7 @@ export const Route = createFileRoute('/api/search-answer')({
             return declineResponse();
           }
 
-          const prompt = `Question: ${parsed.query}
+          const prompt = `Question: ${framingQuestion}
 
 Answer using ONLY the numbered sources below (these are already fetched — you do not need to search again unless the question needs comparison or counts).
 

@@ -1,22 +1,16 @@
-import { Autocomplete } from '@base-ui/react/autocomplete';
-import {
-  IconAdjustmentsHorizontal,
-  IconSearch,
-  IconX,
-} from '@tabler/icons-react';
+import { Autocomplete } from '@base-ui-components/react/autocomplete';
+import { IconSearch, IconX } from '@tabler/icons-react';
 import { useLocation, useNavigate } from '@tanstack/react-router';
 import { cva, type VariantProps } from 'class-variance-authority';
 import type { FormEvent } from 'react';
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import {
   useAddRecentSearch,
   useDeleteRecentSearch,
   useRecentSearches,
 } from '@/hooks/use-recent-searches';
-import { useSearchFilters } from '@/hooks/use-search-filters';
 import { cn } from '@/util/cn';
-import { SearchSettingsModal } from './search-settings-modal';
 
 // Form container variants
 const searchBarFormVariants = cva(
@@ -122,21 +116,11 @@ export default function SearchBar({
   defaultValue,
   channelSlug,
   variant,
-  availableChannels = [],
 }: SearchProps) {
   const navigate = useNavigate({ from: '/search' });
   const location = useLocation();
-  const {
-    filters,
-    setSort,
-    setDateRange,
-    setChannelSlugs,
-    clearFilters,
-    hasActiveFilters,
-  } = useSearchFilters();
   const isLoggedIn = useIsLoggedIn();
   const isOnSearchPage = location.pathname === '/search';
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   const { data: recentSearches = [] } = useRecentSearches();
@@ -230,23 +214,6 @@ export default function SearchBar({
           </Autocomplete.Clear>
           <Autocomplete.Value>
             {(value) =>
-              value && isOnSearchPage ? (
-                <button
-                  type="button"
-                  onClick={() => setIsSettingsOpen(true)}
-                  className={searchBarButtonVariants({
-                    variant,
-                    isActive: hasActiveFilters,
-                  })}
-                  aria-label="Filters"
-                >
-                  <IconAdjustmentsHorizontal size={24} />
-                </button>
-              ) : null
-            }
-          </Autocomplete.Value>
-          <Autocomplete.Value>
-            {(value) =>
               value ? null : (
                 <button
                   type="submit"
@@ -311,22 +278,6 @@ export default function SearchBar({
           </Autocomplete.Popup>
         </Autocomplete.Positioner>
       </Autocomplete.Portal>
-
-      <SearchSettingsModal
-        open={isSettingsOpen}
-        onOpenChange={setIsSettingsOpen}
-        sort={filters.sort}
-        onSortChange={setSort}
-        dateRange={filters.dateRange}
-        onDateRangeChange={setDateRange}
-        channelSlugs={filters.channelSlugs}
-        onChannelSlugsChange={setChannelSlugs}
-        availableChannels={availableChannels}
-        onClearFilters={() => {
-          setIsSettingsOpen(false);
-          clearFilters();
-        }}
-      />
     </Autocomplete.Root>
   );
 }

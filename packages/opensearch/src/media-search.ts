@@ -78,6 +78,13 @@ export type BuildMediaSearchArgs = {
   queryVector: number[];
   from?: number;
   size?: number;
+  /**
+   * Optional field sort (e.g. `[{ publishedAt: 'desc' }]`). When set, hits are
+   * ordered by the field instead of the fused RRF relevance score (`_score`
+   * comes back null). Omit for relevance order. The RRF search pipeline
+   * tolerates a field sort — it still normalizes, then OpenSearch reorders.
+   */
+  sort?: unknown;
   /** Max paragraph snippets returned per sub-query per hit. */
   innerHitsSize?: number;
   /**
@@ -124,6 +131,7 @@ export function buildMediaHybridBody({
   queryVector,
   from = 0,
   size = 20,
+  sort,
   innerHitsSize = 3,
   highlight = true,
 }: BuildMediaSearchArgs): OsMsearchItem {
@@ -217,6 +225,7 @@ export function buildMediaHybridBody({
     aggs: {
       channelIds: { terms: { field: 'channelId', size: 100 } },
     },
+    ...(sort ? { sort } : {}),
   };
 }
 
@@ -242,6 +251,42 @@ export async function runMediaHybridSearch(
     total: parsed.hits.total.value,
     facetChannelIds: parsed.aggregations?.channelIds?.buckets ?? [],
   };
+}
+
+/**
+ * Channel facet list for the search UI. Runs the same hybrid query as
+ * `runMediaHybridSearch` but **without** the channel filter. Omitting the
+ * channel filter is what keeps faceting additive: picking one channel must not
+ * drop the other channels from the list, so the user can broaden their
+ * selection. Access + date filters still apply, so the list stays scoped to
+ * channels that actually have matches for this query within the chosen date
+ * range.
+ *
+ * We only want the `channelId` terms aggregation, not hits — but the RRF
+ * score-normalization processor throws on `size: 0` ("number of documents after
+ * fetch phase [0] is different from number of documents from query phase [N]"),
+ * since it needs a non-empty fetch window to normalize. Aggregations are
+ * computed in the query phase over *all* matching docs regardless of the window,
+ * so `size: 1` gives the complete facet counts while keeping the processor
+ * happy; the single fetched hit is discarded.
+ */
+export async function runMediaChannelFacets(
+  args: BuildMediaSearchArgs,
+): Promise<Array<{ key: string; doc_count: number }>> {
+  const body = buildMediaHybridBody({
+    ...args,
+    channelIds: null,
+    from: 0,
+    size: 1,
+    highlight: false,
+  });
+  const raw = await osSearch({
+    index: MEDIA_INDEX,
+    search_pipeline: RRF_PIPELINE,
+    ...body,
+  });
+  const parsed = MediaSearchResponseSchema.parse(raw);
+  return parsed.aggregations?.channelIds?.buckets ?? [];
 }
 
 const KnnProbeResponseSchema = z.object({

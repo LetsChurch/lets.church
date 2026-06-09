@@ -136,6 +136,7 @@ function CitationBadge({ s, n }: { s: AnswerSource; n: number }) {
       mediaId={s.id}
       startSeconds={s.startSeconds}
       thumbnailUrl={s.thumbnailUrl}
+      title={sourceLabel(s)}
       className="ml-0.5 inline-flex items-center rounded bg-white/15 px-1 align-super font-medium text-[10px] text-white/80 no-underline transition-colors hover:bg-white/25 hover:text-white"
     >
       {n}
@@ -195,6 +196,7 @@ function SourceChip({ s }: { s: AnswerSource }) {
       mediaId={s.id}
       startSeconds={s.startSeconds}
       thumbnailUrl={s.thumbnailUrl}
+      title={sourceLabel(s)}
       className="inline-flex max-w-[14rem] items-center gap-1.5 rounded-full bg-white/15 py-1 pr-3 pl-1 font-medium text-white/80 text-xs no-underline transition-colors hover:bg-white/25"
     >
       <Avatar
@@ -255,9 +257,13 @@ const COLLAPSED_HEIGHT = 112;
 
 export function AnswerPanel({
   q,
+  question,
   searchLogId,
 }: {
   q: string;
+  // The parser's reformulated question for this query (used to frame the
+  // answer). Retrieval still runs on the raw query `q` to preserve recall.
+  question?: string | null;
   searchLogId?: string | null;
 }) {
   const [text, setText] = useState('');
@@ -272,6 +278,10 @@ export function AnswerPanel({
   // re-firing when it resolves a tick after mount.
   const searchLogIdRef = useRef(searchLogId);
   searchLogIdRef.current = searchLogId;
+  // Same as searchLogId: read via ref so resolving a tick after mount doesn't
+  // re-fire the q-keyed fetch effect.
+  const questionRef = useRef(question);
+  questionRef.current = question;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -288,6 +298,7 @@ export function AnswerPanel({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             query: q,
+            question: questionRef.current ?? null,
             threadId: getThreadId(),
             resourceId: getResourceId(),
             searchLogId: searchLogIdRef.current ?? null,

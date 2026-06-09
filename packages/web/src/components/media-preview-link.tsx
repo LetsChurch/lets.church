@@ -91,6 +91,9 @@ type TargetData = {
   mediaId: string;
   startSeconds: number;
   thumbnailUrl: string | null;
+  /** Optional caption shown beneath the preview player (answer footnotes pass
+   * the cited media's title; other previews leave it undefined). */
+  title?: string | null;
   /** The element the preview should point at. */
   anchor: HTMLElement;
   onPreviewOpen?: () => void;
@@ -277,6 +280,7 @@ export function MediaPreviewScope({
                   thumbnailUrl={active.thumbnailUrl}
                   initialTimestamp={active.startSeconds}
                   currentTimeRef={currentTimeRef}
+                  title={active.title}
                 />
               ) : (
                 <div className="h-24 w-80 animate-pulse rounded-xl bg-white/10" />
@@ -297,6 +301,9 @@ type MediaPreviewTargetProps = {
   /** Deep-link / preview start time, in seconds. */
   startSeconds: number;
   thumbnailUrl?: string | null;
+  /** Optional caption shown beneath the preview player (e.g. the cited media's
+   * title for answer footnotes). Omit where no label is wanted. */
+  title?: string | null;
   children: ReactNode;
   className?: string;
   /** Fired when the hover preview opens (e.g. analytics). */
@@ -318,6 +325,7 @@ export function MediaPreviewTarget({
   mediaId,
   startSeconds,
   thumbnailUrl = null,
+  title,
   children,
   className,
   onPreviewOpen,
@@ -333,6 +341,7 @@ export function MediaPreviewTarget({
       mediaId,
       startSeconds,
       thumbnailUrl,
+      title,
       anchor: e.currentTarget,
       onPreviewOpen,
     });

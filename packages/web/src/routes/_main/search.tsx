@@ -9,21 +9,21 @@ import { z } from 'zod';
 import { AnswerPanel } from '@/components/answer-panel';
 import { AvatarCarousel } from '@/components/avatar-carousel';
 import { EmptyState } from '@/components/empty-state';
-import { FilterBar } from '@/components/filter-bar';
 import MainLayout from '@/components/main-layout';
 import {
   MediaPreviewGroup,
   MediaPreviewScope,
   MediaPreviewTarget,
 } from '@/components/media-preview-link';
+import { RelatedSearches } from '@/components/related-searches';
 import SearchBar from '@/components/search-bar';
+import { MobileFacets, SearchFacets } from '@/components/search-facets';
 import { SearchRow } from '@/components/search-row';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import {
   useDeleteRecentSearch,
   useRecentSearches,
 } from '@/hooks/use-recent-searches';
-import { useSearchFilters } from '@/hooks/use-search-filters';
 import { useTRPC } from '@/trpc/react';
 import { formatTime } from '@/util/format';
 
@@ -64,6 +64,10 @@ export const Route = createFileRoute('/_main/search')({
     dateRange: z
       .enum(['all-time', 'today', 'this-week', 'this-month', 'this-year'])
       .optional(),
+    // Custom inclusive publish-date bounds (YYYY-MM-DD); when set they take
+    // precedence over the dateRange bucket.
+    dateStart: z.string().optional(),
+    dateEnd: z.string().optional(),
     skipLogging: z.boolean().optional(),
   }),
   loaderDeps: ({ search }) => ({
@@ -71,6 +75,8 @@ export const Route = createFileRoute('/_main/search')({
     channelSlugs: search.channelSlugs,
     sort: search.sort,
     dateRange: search.dateRange,
+    dateStart: search.dateStart,
+    dateEnd: search.dateEnd,
     skipLogging: search.skipLogging,
   }),
   loader: async ({ context, deps }) => {
@@ -85,6 +91,8 @@ export const Route = createFileRoute('/_main/search')({
           limit: 20,
           sort: deps.sort,
           dateRange: deps.dateRange,
+          dateGte: deps.dateStart,
+          dateLte: deps.dateEnd,
           skipLogging: deps.skipLogging,
         }),
       );
@@ -221,43 +229,15 @@ export const Route = createFileRoute('/_main/search')({
 });
 
 function RouteComponent() {
-  const { q, channelSlugs, sort, dateRange, skipLogging } = Route.useSearch();
-  const trpc = useTRPC();
-
-  // Get faceted channels for filter options
-  const { data: searchData } = useInfiniteQuery({
-    ...trpc.search.hybridSearch.infiniteQueryOptions({
-      q: q ?? '',
-      channelSlugs,
-      limit: 20,
-      sort,
-      dateRange,
-      skipLogging,
-    }),
-    enabled: Boolean(q),
-    getNextPageParam: (lastPage) => {
-      if (
-        lastPage &&
-        typeof lastPage === 'object' &&
-        'nextCursor' in lastPage
-      ) {
-        return lastPage.nextCursor;
-      }
-      return null;
-    },
-    initialPageParam: 0,
-  });
-
-  const facetedChannels = searchData?.pages[0]?.facetedChannels ?? [];
+  const { q } = Route.useSearch();
 
   return (
     <MainLayout
       defaultSearchValue={q}
       containerClassName="mx-auto max-w-7xl px-4 py-4"
-      availableChannels={facetedChannels}
       headerChildren={
         <div className="mb-6 px-4 sm:hidden">
-          <SearchBar defaultValue={q} availableChannels={facetedChannels} />
+          <SearchBar defaultValue={q} />
         </div>
       }
     >
@@ -274,12 +254,18 @@ const _trendingSearches = [
 ];
 
 const emptyArray: ReadonlyArray<unknown> = [];
+const emptyStrings: ReadonlyArray<string> = [];
+const emptyMatchedChannels: ReadonlyArray<{ slug: string; name: string }> = [];
 
 function SearchResults({ q }: { q: string }) {
-  const { channelSlugs, sort, dateRange, skipLogging } = Route.useSearch();
-  const { hasActiveFilters } = useSearchFilters();
+  const { channelSlugs, sort, dateRange, dateStart, dateEnd, skipLogging } =
+    Route.useSearch();
   const trpc = useTRPC();
+  const navigate = useNavigate({ from: Route.fullPath });
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  // Tracks the query we've already applied parser pre-fills for, so clearing a
+  // pre-filled filter doesn't immediately re-apply it (only a new query does).
+  const prefilledQueryRef = useRef<string | null>(null);
 
   const {
     data: searchData,
@@ -293,6 +279,8 @@ function SearchResults({ q }: { q: string }) {
       limit: 20,
       sort,
       dateRange,
+      dateGte: dateStart,
+      dateLte: dateEnd,
       skipLogging,
     }),
     getNextPageParam: (lastPage) => {
@@ -311,6 +299,51 @@ function SearchResults({ q }: { q: string }) {
   // Query parse + search-log id come back on page 0 of the hybrid search.
   const parsed = searchData?.pages?.[0]?.parsed ?? null;
   const searchLogId = searchData?.pages?.[0]?.searchLogId ?? null;
+  const facetedChannels = searchData?.pages?.[0]?.facetedChannels ?? [];
+  const relatedSearches =
+    searchData?.pages?.[0]?.relatedSearches ?? emptyStrings;
+
+  // Best-effort filter pre-fill from the parser: when it pulls a channel name
+  // or a date range out of the query and the user hasn't set the corresponding
+  // filter, apply it (scoping results and checking the facet). Done once per
+  // query — gated on `parsed` (i.e. page 0 has loaded) and tracked via the ref
+  // so clearing a pre-filled value doesn't re-apply it; only a new query does.
+  const matchedChannels = parsed?.matchedChannels ?? emptyMatchedChannels;
+  const parsedDates = parsed?.dates ?? null;
+  useEffect(() => {
+    if (prefilledQueryRef.current === q) return;
+    if (!parsed) return; // wait for page 0 before deciding
+    prefilledQueryRef.current = q;
+
+    const patch: Record<string, unknown> = {};
+    if (matchedChannels.length > 0 && !channelSlugs?.length) {
+      patch.channelSlugs = matchedChannels.map((c) => c.slug);
+    }
+    const hasDateFilter =
+      (dateRange && dateRange !== 'all-time') || dateStart || dateEnd;
+    if (parsedDates && (parsedDates.gte || parsedDates.lte) && !hasDateFilter) {
+      patch.dateRange = undefined;
+      patch.dateStart = parsedDates.gte ?? undefined;
+      patch.dateEnd = parsedDates.lte ?? undefined;
+    }
+    if (Object.keys(patch).length > 0) {
+      navigate({
+        to: '/search',
+        search: (prev) => ({ ...prev, ...patch }),
+        replace: true,
+      });
+    }
+  }, [
+    q,
+    parsed,
+    matchedChannels,
+    parsedDates,
+    channelSlugs,
+    dateRange,
+    dateStart,
+    dateEnd,
+    navigate,
+  ]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -366,73 +399,79 @@ function SearchResults({ q }: { q: string }) {
     // One preview delay-group across the answer + results: the first hover waits,
     // then moving between any reference/result preview is instant.
     <MediaPreviewGroup>
-      <div className="space-y-8">
-        {hasActiveFilters ? (
-          <div className="space-y-4">
-            <FilterBar />
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-8">
+        <div className="min-w-0 space-y-8">
+          {/* Facets live in the sidebar on desktop; on mobile they collapse
+              into a drawer behind this button. */}
+          <div className="lg:hidden">
+            <MobileFacets availableChannels={facetedChannels} />
           </div>
-        ) : null}
 
-        {parsed?.speakerNotice ? (
-          <div className="rounded-md border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-amber-200/90 text-sm">
-            Filtering by speaker (e.g. {parsed.speakers.slice(0, 3).join(', ')})
-            isn't available yet — searching those names across titles and
-            transcripts instead.
+          {parsed?.speakerNotice ? (
+            <div className="rounded-md border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-amber-200/90 text-sm">
+              Filtering by speaker (e.g.{' '}
+              {parsed.speakers.slice(0, 3).join(', ')}) isn't available yet —
+              searching those names across titles and transcripts instead.
+            </div>
+          ) : null}
+
+          {parsed && parsed.questions.length > 0 ? (
+            <AnswerPanel
+              q={q}
+              question={parsed.questions[0]}
+              searchLogId={searchLogId}
+            />
+          ) : null}
+
+          {mediaCount > 0 ? (
+            <p className="text-muted text-sm">
+              {mediaCount.toLocaleString()}{' '}
+              {mediaCount === 1 ? 'result' : 'results'}
+            </p>
+          ) : null}
+
+          {channels.length > 0 ? (
+            <div className="space-y-4">
+              <h2 className="font-medium text-primary">Channels</h2>
+              <AvatarCarousel items={channels} />
+            </div>
+          ) : null}
+
+          {items.length > 0 ? (
+            <div className="space-y-4">
+              {items.map((item) => (
+                <Result key={item.id} item={item} />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              emptyTitle="There are no matches"
+              emptyBody="Try rephrasing your query or removing filters"
+              variant="error"
+            />
+          )}
+
+          {/* Infinite scroll trigger */}
+          <div ref={loadMoreRef} className="h-20" />
+
+          {/* Loading indicator */}
+          {isFetchingNextPage ? (
+            <div className="flex justify-center py-8">
+              <div className="text-sm text-zinc-400">Loading more...</div>
+            </div>
+          ) : null}
+
+          {/* Related searches — shown in the sidebar on desktop; here at the
+              end of the results on mobile (the sidebar is hidden there). */}
+          <div className="lg:hidden">
+            <RelatedSearches searches={relatedSearches} />
           </div>
-        ) : null}
+        </div>
 
-        {parsed && parsed.questions.length > 0 ? (
-          <AnswerPanel q={q} searchLogId={searchLogId} />
-        ) : null}
-
-        {mediaCount > 0 ? (
-          <p className="text-muted text-sm">
-            {mediaCount.toLocaleString()}{' '}
-            {mediaCount === 1 ? 'result' : 'results'}
-          </p>
-        ) : null}
-
-        {channels.length > 0 ? (
-          <div className="space-y-4">
-            <h2 className="font-medium text-primary">Channels</h2>
-            <AvatarCarousel items={channels} />
-          </div>
-        ) : null}
-
-        {items.length > 0 ? (
-          <div className="space-y-4">
-            {items.map((item) => (
-              <Result key={item.id} item={item} />
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            emptyTitle="There are no matches"
-            emptyBody="Try rephrasing your query or removing filters"
-            variant="error"
-          />
-        )}
-
-        {/* Infinite scroll trigger */}
-        <div ref={loadMoreRef} className="h-20" />
-
-        {/* Loading indicator */}
-        {isFetchingNextPage ? (
-          <div className="flex justify-center py-8">
-            <div className="text-sm text-zinc-400">Loading more...</div>
-          </div>
-        ) : null}
-
-        {/* Related searches */}
-        {/* TODO */}
-        {/* <div className="space-y-4"> */}
-        {/*   <h2 className="font-medium text-primary">Related Searches</h2> */}
-        {/*   <div className="flex flex-wrap gap-2"> */}
-        {/*     {trendingSearches.map((search) => ( */}
-        {/*       <TrendingSearchPill key={search} search={search} /> */}
-        {/*     ))} */}
-        {/*   </div> */}
-        {/* </div> */}
+        <aside className="hidden space-y-8 lg:sticky lg:top-4 lg:block lg:pb-8">
+          <SearchFacets availableChannels={facetedChannels} />
+          <RelatedSearches searches={relatedSearches} />
+        </aside>
       </div>
     </MediaPreviewGroup>
   );

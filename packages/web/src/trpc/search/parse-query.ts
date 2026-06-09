@@ -99,7 +99,7 @@ function systemPrompt(todayIso: string): string {
   return `You parse a media-search query for a Christian sermon/teaching video library into structured fields. Today's date is ${todayIso}; resolve every relative date expression against it.
 
 Extract these fields:
-- questions: Any questions the user is asking, in their original wording. A query can be both a question AND have other fields. If the user is not asking anything, use null.
+- questions: Questions to answer for the user. Include BOTH literal questions AND non-interrogative information needs that call for a synthesized, multi-source answer — an explanation, examples, a comparison, or "what Scripture/teaching says about X". Reformulate such a need into the natural question it implies (e.g. "Bible examples of free, grace-based giving" -> "What are some Bible examples of free, grace-based giving?"; "passages about suffering and hope" -> "What do the Scriptures say about suffering and hope?"). A query can be both a question AND have other fields. Do NOT treat these as questions: navigational lookups for a specific channel, ministry, or speaker; requests to browse or list media; or bare topic/keyword queries where a plain list of videos is the natural result. Use null when none applies.
 - quotes: Text the user wants matched verbatim — quoted in the query, or clearly a quotation being looked up.
 - speakers: Names or identities of people credited with speaking (e.g. "James White", "Dr. Robinson", "Pastor Bill"). Only real personal names/titles, not channels or topics.
 - channels: Names of sources, ministries, churches, shows, or channels (e.g. "Apologia", "Cornerstone Baptist Church").
@@ -160,7 +160,7 @@ export async function parseSearchQuery(
   // every page of a paginated search), making the derived filters/quotes
   // deterministic. Keyed by model + day (relative dates resolve against today)
   // + the query. Best-effort: a cache miss/outage just re-parses.
-  const cacheKey = `search-parse:v2:${OPENROUTER_SEARCH_PARSE_MODEL}:${todayIso}:${trimmed}`;
+  const cacheKey = `search-parse:v3:${OPENROUTER_SEARCH_PARSE_MODEL}:${todayIso}:${trimmed}`;
   const cached = await cacheGetJson<ParsedQuery>(cacheKey);
   if (cached) return cached;
 

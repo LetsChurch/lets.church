@@ -7,6 +7,7 @@ import {
   msearchTranscripts,
   msearchUploads,
   osMsearch,
+  runMediaChannelFacets,
   runMediaHybridSearch,
   runMediaKnnProbe,
 } from '@letschurch/opensearch';
@@ -24,8 +25,10 @@ import logger from '@/util/logger';
 import { isChannelRoutable } from '@/util/media-visibility';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
+import { resolveChannelNames } from '../search/channels';
 import { hydrateUploads } from '../search/hydrate';
 import { parseSearchQuery } from '../search/parse-query';
+import { generateRelatedSearches } from '../search/related-searches';
 import { authProcedure, publicProcedure } from '../trpc';
 
 const moduleLogger = logger.child({
@@ -72,8 +75,8 @@ const hybridSearchSchema = z.object({
   dateRange: z
     .enum(['all-time', 'today', 'this-week', 'this-month', 'this-year'])
     .optional(),
-  // Accepted for input parity with the UI. RRF defines its own ordering, so
-  // hybrid search currently honors relevance only; date sorts are ignored.
+  // 'relevance' (default) keeps the fused RRF order; 'date-asc'/'date-desc'
+  // order results by publishedAt (applied as a field sort on the hybrid query).
   sort: z.enum(['relevance', 'date-asc', 'date-desc']).optional(),
   limit: z.number().min(1).max(50).default(20),
   cursor: z.number().min(0).default(0),
@@ -856,6 +859,7 @@ export const searchProcedures = {
         dateGte,
         dateLte,
         dateRange,
+        sort,
         limit,
         cursor,
         skipLogging,
@@ -874,6 +878,16 @@ export const searchProcedures = {
               ...(dateLte ? { lte: dateLte } : {}),
             }
           : dateRangeToPublishedAt(dateRange, new Date());
+
+      // Map the UI sort to a field sort. 'relevance' (default) keeps the fused
+      // RRF order; the date sorts order by publishedAt (the RRF pipeline still
+      // runs, then OpenSearch reorders by the field).
+      const hybridSort =
+        sort === 'date-asc'
+          ? [{ publishedAt: 'asc' }]
+          : sort === 'date-desc'
+            ? [{ publishedAt: 'desc' }]
+            : undefined;
 
       // Embed the query once with the model the index was built with. Parse the
       // query in parallel — it drives the speaker notice and answer-panel
@@ -901,7 +915,14 @@ export const searchProcedures = {
       // explicit input quotes; otherwise use the parser's extracted quotes.
       const quoteList = quotes && quotes.length > 0 ? quotes : parsed.quotes;
 
-      const [hybrid, channelsRaw, probeScore] = await Promise.all([
+      const [
+        hybrid,
+        channelFacetBuckets,
+        channelsRaw,
+        probeScore,
+        matchedChannels,
+        relatedSearches,
+      ] = await Promise.all([
         runMediaHybridSearch({
           lexicalText: q,
           quotes: quoteList,
@@ -910,13 +931,38 @@ export const searchProcedures = {
           queryVector,
           from: cursor,
           size: limit,
+          sort: hybridSort,
         }),
+        // Channel facet list. Computed with the channel filter dropped (but
+        // the same query + date) so selecting a channel doesn't collapse the
+        // list — the other channels stay available to broaden the selection.
+        // Only the client's page 0 consumes it, so skip the extra hybrid query
+        // on subsequent pages.
+        cursor === 0
+          ? runMediaChannelFacets({
+              lexicalText: q,
+              quotes: quoteList,
+              publishedAt,
+              queryVector,
+            }).catch(() => [])
+          : Promise.resolve([]),
         osMsearch(msearchChannels(q, 0, 10)),
         // Absolute relevance probe (reuses the same query embedding). A probe
         // failure shouldn't suppress results, so fail open to null (= relevant).
         runMediaKnnProbe({ queryVector, channelIds, publishedAt }).catch(
           () => null,
         ),
+        // Best-effort: resolve any channel/ministry names the parser pulled
+        // out to real channels so the client can pre-fill the channel facet.
+        // Only runs when the parser actually found a channel name.
+        parsed.channels.length > 0
+          ? resolveChannelNames(parsed.channels).catch(() => [])
+          : Promise.resolve([]),
+        // Related searches / follow-up questions (nano), shown as pills in the
+        // sidebar. Page 0 only — the client reads them once per query.
+        cursor === 0
+          ? generateRelatedSearches(q).catch(() => [])
+          : Promise.resolve([]),
       ]);
 
       // Whole-set relevance gate: when the best video isn't close enough, the
@@ -941,7 +987,7 @@ export const searchProcedures = {
         segmentsByUploadId.set(hit._id, mergeParagraphSnippets(hit));
       }
 
-      const facetBuckets = relevant ? hybrid.facetChannelIds : [];
+      const facetBuckets = relevant ? channelFacetBuckets : [];
       const carouselIds =
         MSearchResponseSchema.parse(channelsRaw)
           .responses[0]?.hits.hits.filter((h) => h._index === 'lc_channels')
@@ -1002,6 +1048,7 @@ export const searchProcedures = {
         mediaCount,
         channels,
         facetedChannels,
+        relatedSearches,
         nextCursor,
         searchLogId,
         // Lets the client drive the speaker notice and answer-panel decision
@@ -1010,6 +1057,18 @@ export const searchProcedures = {
           questions: parsed.questions,
           speakers: parsed.speakers,
           speakerNotice: parsed.speakers.length > 0,
+          // Channels the parser pulled from the query, resolved to real
+          // channels. The client pre-fills the channel facet with these (once
+          // per query) when the user hasn't already chosen channels.
+          matchedChannels: matchedChannels.map((c) => ({
+            slug: c.slug,
+            name: c.name,
+          })),
+          // Inclusive publish-date range the parser inferred ("since 2020",
+          // "before Easter", …), or null. The client pre-fills the Date facet's
+          // custom range with this (once per query) when the user hasn't set a
+          // date filter.
+          dates: parsed.dates,
         },
       };
     }),
