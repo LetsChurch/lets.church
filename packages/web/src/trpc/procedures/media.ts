@@ -22,7 +22,6 @@ import { TRPCError } from '@trpc/server';
 import { and, count, eq, inArray, sql } from 'drizzle-orm';
 import rehypeExternalLinks from 'rehype-external-links';
 import rehypeStringify from 'rehype-stringify';
-import remarkBreaks from 'remark-breaks';
 import remarkLinkify from 'remark-linkify';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
@@ -119,7 +118,6 @@ function rehypeTimestamps() {
 const md = unified()
   .use(remarkLinkify)
   .use(remarkParse)
-  .use(remarkBreaks)
   .use(remarkRehype)
   .use(rehypeExternalLinks, {
     rel: ['nofollow', 'noopener', 'noreferrer'],
