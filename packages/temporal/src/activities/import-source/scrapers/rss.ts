@@ -1,4 +1,5 @@
 import { parseFeed } from '@rowanmanning/feed-parser';
+import { htmlToMarkdown } from '../../../util/import/html-to-markdown';
 import logger from '../../../util/logger';
 import type { ScrapedMediaItem } from '../scrape-import-source';
 
@@ -69,12 +70,14 @@ export async function scrapeRssFeed(
         }
       }
 
-      // Extract description from content or description field
+      // Extract description from content or description field. Feed
+      // descriptions are typically HTML, which the web app's Markdown render
+      // pipeline drops, so convert to Markdown before storing.
       let description = '';
       if (item.description) {
-        description = item.description;
+        description = htmlToMarkdown(item.description);
       } else if (item.content) {
-        description = item.content;
+        description = htmlToMarkdown(item.content);
       }
 
       results.push({

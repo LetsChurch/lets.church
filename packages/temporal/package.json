@@ -18,6 +18,7 @@
     "./util/temporal": "./src/util/temporal.ts",
     "./util/zod": "./src/util/zod.ts",
     "./util/email": "./src/util/email.ts",
+    "./util/import/*": "./src/util/import/*.ts",
     "./util/llm": "./src/util/llm.ts",
     "./util/llm-pricing": "./src/util/llm-pricing.ts",
     "./workflow-ids": "./src/workflow-ids.ts",
