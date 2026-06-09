@@ -39,7 +39,7 @@ export const client = new Client({
   ssl: { rejectUnauthorized: OPENSEARCH_SSL_REJECT_UNAUTHORIZED === 'true' },
 });
 
-export async function waitForElasticsearch() {
+export async function waitForOpenSearch() {
   // TCP probe (not HTTP) so we don't trip on TLS / auth before readiness.
   const u = new URL(OPENSEARCH_URL);
   const port = u.port || (u.protocol === 'https:' ? '443' : '80');

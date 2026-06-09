@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 const { OPENROUTER_API_KEY, OPENROUTER_SEARCH_AGENT_MODEL } = z
   .object({
-    OPENROUTER_API_KEY: z.string().min(1),
+    OPENROUTER_API_KEY: z.string().trim().min(1),
     // The answer-generation model for the search agent. Env-configurable; the
     // default mini tier is plenty for grounded RAG over retrieved passages.
     OPENROUTER_SEARCH_AGENT_MODEL: z.string().default('openai/gpt-5.4-mini'),

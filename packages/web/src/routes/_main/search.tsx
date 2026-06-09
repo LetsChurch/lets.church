@@ -1,6 +1,11 @@
 import { Collapsible } from '@base-ui-components/react/collapsible';
 import { IconX } from '@tabler/icons-react';
-import { useInfiniteQuery, useSuspenseQuery } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useQuery,
+  useSuspenseQuery,
+} from '@tanstack/react-query';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
 import posthog from 'posthog-js';
@@ -15,10 +20,14 @@ import {
   MediaPreviewScope,
   MediaPreviewTarget,
 } from '@/components/media-preview-link';
-import { RelatedSearches } from '@/components/related-searches';
 import SearchBar from '@/components/search-bar';
-import { MobileFacets, SearchFacets } from '@/components/search-facets';
+import {
+  type DateSuggestion,
+  MobileFacets,
+  SearchFacets,
+} from '@/components/search-facets';
 import { SearchRow } from '@/components/search-row';
+import { SuggestedSearches } from '@/components/suggested-searches';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import {
   useDeleteRecentSearch,
@@ -81,10 +90,7 @@ export const Route = createFileRoute('/_main/search')({
   }),
   loader: async ({ context, deps }) => {
     if (deps.q) {
-      // Hybrid (BM25 + vector RRF) results over lc_media_v1. Slug→ID conversion,
-      // the query embedding, and the structured query parse (speaker notice +
-      // answer-panel decision, returned on page 0) all happen in the procedure.
-      const searchData = await context.queryClient.fetchInfiniteQuery(
+      const searchOptions =
         context.trpc.search.hybridSearch.infiniteQueryOptions({
           q: deps.q,
           channelSlugs: deps.channelSlugs,
@@ -94,27 +100,32 @@ export const Route = createFileRoute('/_main/search')({
           dateGte: deps.dateStart,
           dateLte: deps.dateEnd,
           skipLogging: deps.skipLogging,
-        }),
-      );
+        });
 
-      // Get first search result ID and fetch thumbnail
-      const firstItem = searchData?.pages?.[0]?.items?.[0] as
-        | SearchResultItem
-        | undefined;
-      let firstResultThumbnailUrl = null;
-
-      if (firstItem?.id) {
-        firstResultThumbnailUrl = await context.queryClient.fetchQuery(
-          context.trpc.search.getUploadThumbnail.queryOptions({
-            uploadId: firstItem.id,
-          }),
-        );
+      // On the server (initial load / crawlers) await results so the HTML and
+      // the OG `<meta>` image (first result's thumbnail) are complete. On client
+      // navigation, DON'T block — kick the query off and let the route render a
+      // skeleton immediately (SearchResults' query drives the loading state), so
+      // clicking a related-search pill transitions instantly instead of freezing
+      // on the old page.
+      if (typeof window === 'undefined') {
+        const searchData =
+          await context.queryClient.fetchInfiniteQuery(searchOptions);
+        const firstItem = searchData?.pages?.[0]?.items?.[0] as
+          | SearchResultItem
+          | undefined;
+        const firstResultThumbnailUrl = firstItem?.id
+          ? await context.queryClient.fetchQuery(
+              context.trpc.search.getUploadThumbnail.queryOptions({
+                uploadId: firstItem.id,
+              }),
+            )
+          : null;
+        return { query: deps.q, firstResultThumbnailUrl };
       }
 
-      return {
-        query: deps.q,
-        firstResultThumbnailUrl,
-      };
+      void context.queryClient.prefetchInfiniteQuery(searchOptions);
+      return { query: deps.q, firstResultThumbnailUrl: null };
     }
 
     // Prefetch trending uploads for empty search
@@ -257,21 +268,42 @@ const emptyArray: ReadonlyArray<unknown> = [];
 const emptyStrings: ReadonlyArray<string> = [];
 const emptyMatchedChannels: ReadonlyArray<{ slug: string; name: string }> = [];
 
+// Placeholder result rows shown while the first page of results loads, so a
+// fresh search transitions instantly instead of freezing on the old page.
+function SearchResultsSkeleton() {
+  return (
+    <div className="space-y-4" aria-hidden="true">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div
+          // biome-ignore lint/suspicious/noArrayIndexKey: static placeholder list
+          key={i}
+          className="flex gap-4 rounded-lg p-2"
+        >
+          <div className="h-[90px] w-40 shrink-0 animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-800" />
+          <div className="min-w-0 flex-1 space-y-2 py-1">
+            <div className="h-4 w-2/3 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+            <div className="h-3 w-1/3 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+            <div className="h-12 w-full animate-pulse rounded bg-zinc-200 dark:bg-zinc-800" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function SearchResults({ q }: { q: string }) {
   const { channelSlugs, sort, dateRange, dateStart, dateEnd, skipLogging } =
     Route.useSearch();
   const trpc = useTRPC();
-  const navigate = useNavigate({ from: Route.fullPath });
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  // Tracks the query we've already applied parser pre-fills for, so clearing a
-  // pre-filled filter doesn't immediately re-apply it (only a new query does).
-  const prefilledQueryRef = useRef<string | null>(null);
 
   const {
     data: searchData,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isPending,
+    isPlaceholderData,
   } = useInfiniteQuery({
     ...trpc.search.hybridSearch.infiniteQueryOptions({
       q,
@@ -294,56 +326,127 @@ function SearchResults({ q }: { q: string }) {
       return null;
     },
     initialPageParam: 0,
+    // Changing a filter (channel, date, sort) re-keys this query. Keep the
+    // previous results + facets on screen while the new ones load instead of
+    // wiping to a skeleton — selecting a channel shouldn't blank the facet list
+    // (which is filter-independent anyway). A genuinely new query still
+    // skeletons, gated below.
+    placeholderData: keepPreviousData,
   });
 
-  // Query parse + search-log id come back on page 0 of the hybrid search.
-  const parsed = searchData?.pages?.[0]?.parsed ?? null;
-  const searchLogId = searchData?.pages?.[0]?.searchLogId ?? null;
-  const facetedChannels = searchData?.pages?.[0]?.facetedChannels ?? [];
-  const relatedSearches =
-    searchData?.pages?.[0]?.relatedSearches ?? emptyStrings;
+  // Search-log id + faceted channels come back on page 0 of the hybrid search.
+  const firstPage = searchData?.pages?.[0];
+  const searchLogId = firstPage?.searchLogId ?? null;
+  const facetedChannels = firstPage?.facetedChannels ?? [];
 
-  // Best-effort filter pre-fill from the parser: when it pulls a channel name
-  // or a date range out of the query and the user hasn't set the corresponding
-  // filter, apply it (scoping results and checking the facet). Done once per
-  // query — gated on `parsed` (i.e. page 0 has loaded) and tracked via the ref
-  // so clearing a pre-filled value doesn't re-apply it; only a new query does.
-  const matchedChannels = parsed?.matchedChannels ?? emptyMatchedChannels;
-  const parsedDates = parsed?.dates ?? null;
+  // Skeleton only while loading a *new query* — never on a filter change (where
+  // `keepPreviousData` keeps the old results/facets up). `settledQRef` records
+  // the query whose data is currently shown; if the displayed data is a
+  // placeholder for a different query, we're loading a new search → skeleton.
+  // (Using settled data, not a render-time `q` diff, avoids a flash on the
+  // initial hydrated load where data is already present.)
+  const settledQRef = useRef<string | null>(null);
   useEffect(() => {
-    if (prefilledQueryRef.current === q) return;
-    if (!parsed) return; // wait for page 0 before deciding
-    prefilledQueryRef.current = q;
+    if (!isPlaceholderData && firstPage != null) {
+      settledQRef.current = q;
+    }
+  }, [isPlaceholderData, firstPage, q]);
+  const loadingResults =
+    isPending || (isPlaceholderData && settledQRef.current !== q);
 
-    const patch: Record<string, unknown> = {};
-    if (matchedChannels.length > 0 && !channelSlugs?.length) {
-      patch.channelSlugs = matchedChannels.map((c) => c.slug);
+  // Sidebar/answer metadata (the structured parse + related searches) is fetched
+  // separately so it never blocks the results — they render the moment
+  // retrieval returns. We gate it on page 0 being in so it fires exactly once
+  // with the settled `searchLogId` (used to attach the parse to that log row),
+  // avoiding a null→id re-key and the stale-parse flash that would feed the
+  // answer panel a previous query's question.
+  const { data: meta } = useQuery({
+    ...trpc.search.searchMeta.queryOptions({
+      q,
+      searchLogId,
+      // Ground the parser's channel suggestion in the channels that actually
+      // matched (the facet set), so it only ever suggests a real, useful filter.
+      facetChannels: facetedChannels.map((c) => ({
+        slug: c.slug,
+        name: c.name,
+      })),
+    }),
+    enabled: firstPage != null,
+    // Keep the previous parse/related on screen across filter changes (a new
+    // log id re-keys this query) so the sidebar doesn't flash.
+    placeholderData: keepPreviousData,
+  });
+  // Meta is "loading" once retrieval is in (so it's enabled) but hasn't returned
+  // yet — that's when the suggested-searches pills show their skeleton.
+  const metaLoading = firstPage != null && meta === undefined;
+  const parsed = meta?.parsed ?? null;
+  const relatedSearches = meta?.relatedSearches ?? emptyStrings;
+  // Recommendations are a property of the QUERY, not the current filters. The
+  // meta query re-keys on every filter change (a new log id; date filters even
+  // reshape the facet candidates), which can momentarily drop a recommendation —
+  // so we capture the first non-empty set the parser returns for this query and
+  // hold it, resetting only when the query itself changes. That way applying a
+  // suggested filter and then clearing it brings its sparkle back.
+  const recsRef = useRef<{
+    q: string;
+    channels: ReadonlyArray<{ slug: string; name: string }>;
+    date: {
+      dateRange: 'today' | 'this-week' | 'this-month' | 'this-year' | null;
+      dates: { gte: string | null; lte: string | null } | null;
+      dateLabel: string | null;
+    } | null;
+  }>({ q, channels: emptyMatchedChannels, date: null });
+  if (recsRef.current.q !== q) {
+    recsRef.current = { q, channels: emptyMatchedChannels, date: null };
+  }
+  if (parsed) {
+    if (
+      recsRef.current.channels.length === 0 &&
+      parsed.matchedChannels.length
+    ) {
+      recsRef.current.channels = parsed.matchedChannels;
     }
-    const hasDateFilter =
-      (dateRange && dateRange !== 'all-time') || dateStart || dateEnd;
-    if (parsedDates && (parsedDates.gte || parsedDates.lte) && !hasDateFilter) {
-      patch.dateRange = undefined;
-      patch.dateStart = parsedDates.gte ?? undefined;
-      patch.dateEnd = parsedDates.lte ?? undefined;
+    const parsedHasDate =
+      parsed.dateRange != null ||
+      (parsed.dates != null &&
+        (parsed.dates.gte != null || parsed.dates.lte != null));
+    if (recsRef.current.date == null && parsedHasDate) {
+      recsRef.current.date = {
+        dateRange: parsed.dateRange,
+        dates: parsed.dates,
+        dateLabel: parsed.dateLabel,
+      };
     }
-    if (Object.keys(patch).length > 0) {
-      navigate({
-        to: '/search',
-        search: (prev) => ({ ...prev, ...patch }),
-        replace: true,
-      });
-    }
-  }, [
-    q,
-    parsed,
-    matchedChannels,
-    parsedDates,
-    channelSlugs,
-    dateRange,
-    dateStart,
-    dateEnd,
-    navigate,
-  ]);
+  }
+  const queryRecChannels = recsRef.current.channels;
+  const queryRecDate = recsRef.current.date;
+
+  // Suggestions are hidden while their corresponding filter is applied and
+  // reappear when it's cleared (never auto-applied).
+  const hasDateFilter = Boolean(
+    (dateRange && dateRange !== 'all-time') || dateStart || dateEnd,
+  );
+  const suggestChannels = !channelSlugs?.length
+    ? queryRecChannels
+    : emptyMatchedChannels;
+  const recommendedChannelSlugs = suggestChannels.map((c) => c.slug);
+  // The date recommendation: a current-period bucket (marks that Date facet
+  // option), or an absolute range with an optional relative label ("Past
+  // month", "Since 2020"). Suppressed once the user has set any date filter.
+  const dateSuggestion: DateSuggestion | null =
+    hasDateFilter || !queryRecDate
+      ? null
+      : queryRecDate.dateRange
+        ? { kind: 'bucket', bucket: queryRecDate.dateRange }
+        : queryRecDate.dates &&
+            (queryRecDate.dates.gte || queryRecDate.dates.lte)
+          ? {
+              kind: 'range',
+              gte: queryRecDate.dates.gte,
+              lte: queryRecDate.dates.lte,
+              label: queryRecDate.dateLabel ?? null,
+            }
+          : null;
 
   // Infinite scroll observer
   useEffect(() => {
@@ -372,7 +475,6 @@ function SearchResults({ q }: { q: string }) {
     };
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const firstPage = searchData?.pages[0];
   const mediaCount = firstPage?.mediaCount ?? 0;
   const channels = firstPage
     ? firstPage.channels
@@ -402,9 +504,15 @@ function SearchResults({ q }: { q: string }) {
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-8">
         <div className="min-w-0 space-y-8">
           {/* Facets live in the sidebar on desktop; on mobile they collapse
-              into a drawer behind this button. */}
+              into a drawer behind this button — which also holds the AI filter
+              suggestions and badges their count. */}
           <div className="lg:hidden">
-            <MobileFacets availableChannels={facetedChannels} />
+            <MobileFacets
+              availableChannels={facetedChannels}
+              channelsLoading={loadingResults}
+              recommendedChannelSlugs={recommendedChannelSlugs}
+              recommendedDate={dateSuggestion}
+            />
           </div>
 
           {parsed?.speakerNotice ? (
@@ -415,13 +523,19 @@ function SearchResults({ q }: { q: string }) {
             </div>
           ) : null}
 
-          {parsed && parsed.questions.length > 0 ? (
-            <AnswerPanel
-              q={q}
-              question={parsed.questions[0]}
-              searchLogId={searchLogId}
-            />
-          ) : null}
+          {/* Always render the AI card so it streams in immediately rather than
+              popping in once the parse resolves — the route returns a direct
+              answer, an overview of the results, or a concise decline, so it's
+              always meaningful. It shows "Seeking…" at once; `ready` holds the
+              fetch until THIS query's page 0 has settled (not a kept-previous
+              placeholder), so it answers — and logs to — the current query, not
+              the last one. Keyed by q to stream fresh per query. */}
+          <AnswerPanel
+            key={q}
+            q={q}
+            searchLogId={searchLogId}
+            ready={firstPage != null && !loadingResults}
+          />
 
           {mediaCount > 0 ? (
             <p className="text-muted text-sm">
@@ -437,7 +551,9 @@ function SearchResults({ q }: { q: string }) {
             </div>
           ) : null}
 
-          {items.length > 0 ? (
+          {loadingResults ? (
+            <SearchResultsSkeleton />
+          ) : items.length > 0 ? (
             <div className="space-y-4">
               {items.map((item) => (
                 <Result key={item.id} item={item} />
@@ -461,16 +577,27 @@ function SearchResults({ q }: { q: string }) {
             </div>
           ) : null}
 
-          {/* Related searches — shown in the sidebar on desktop; here at the
+          {/* Suggested searches — shown in the sidebar on desktop; here at the
               end of the results on mobile (the sidebar is hidden there). */}
           <div className="lg:hidden">
-            <RelatedSearches searches={relatedSearches} />
+            <SuggestedSearches
+              searches={relatedSearches}
+              loading={metaLoading}
+            />
           </div>
         </div>
 
-        <aside className="hidden space-y-8 lg:sticky lg:top-4 lg:block lg:pb-8">
-          <SearchFacets availableChannels={facetedChannels} />
-          <RelatedSearches searches={relatedSearches} />
+        {/* Sticky, capped to the viewport and scrolling on its own, so a tall
+            sidebar (facets + suggested searches) scrolls independently of the
+            results column instead of clipping its lower content. */}
+        <aside className="hidden space-y-8 lg:sticky lg:top-4 lg:block lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:pb-8">
+          <SearchFacets
+            availableChannels={facetedChannels}
+            channelsLoading={loadingResults}
+            recommendedChannelSlugs={recommendedChannelSlugs}
+            recommendedDate={dateSuggestion}
+          />
+          <SuggestedSearches searches={relatedSearches} loading={metaLoading} />
         </aside>
       </div>
     </MediaPreviewGroup>

@@ -17,7 +17,7 @@ import {
   EMBED_MODEL,
 } from '@letschurch/temporal/util/llm';
 import { TRPCError } from '@trpc/server';
-import { and, count, eq, inArray } from 'drizzle-orm';
+import { and, count, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarSm2x, appAvatarXs2x } from '@/util/avatar-sizes';
@@ -25,9 +25,8 @@ import logger from '@/util/logger';
 import { isChannelRoutable } from '@/util/media-visibility';
 import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
-import { resolveChannelNames } from '../search/channels';
 import { hydrateUploads } from '../search/hydrate';
-import { parseSearchQuery } from '../search/parse-query';
+import { extractQuotedPhrases, parseSearchQuery } from '../search/parse-query';
 import { generateRelatedSearches } from '../search/related-searches';
 import { authProcedure, publicProcedure } from '../trpc';
 
@@ -42,6 +41,10 @@ const moduleLogger = logger.child({
 // Set a touch below the answer gate's 0.3 — showing a few related videos is less
 // committal than asserting an answer. Tunable; the decision is logged.
 const RESULTS_RELEVANCE_COSINE_FLOOR = 0.25;
+
+// Cap on how many faceted channels are handed to the parser as grounding
+// candidates for its channel suggestion (facets are doc_count-ordered).
+const MAX_CANDIDATE_CHANNELS = 12;
 
 const searchQuerySchema = z.object({
   q: z.string().min(1),
@@ -61,6 +64,16 @@ const uploadThumbnailSchema = z.object({
   uploadId: IncomingIdSchema,
 });
 
+// Accept only ISO-8601-parseable date strings (date-only "YYYY-MM-DD" or full
+// timestamps) at the boundary, so a malformed value can't reach — and error —
+// the OpenSearch `publishedAt` range query. Empty string is permitted: it's
+// falsy downstream and treated as "no bound".
+const isoDateString = z
+  .string()
+  .refine((s) => s.length === 0 || !Number.isNaN(Date.parse(s)), {
+    message: 'Must be an ISO-8601 date string (e.g. "2024-01-31")',
+  });
+
 const hybridSearchSchema = z.object({
   q: z.string().min(1),
   channelIds: z.array(IncomingIdSchema).optional().nullable(),
@@ -68,8 +81,8 @@ const hybridSearchSchema = z.object({
   // Verbatim phrases (from the parser's `quotes`) to boost as phrase matches.
   quotes: z.array(z.string()).optional().nullable(),
   // Inclusive publish-date bounds (date-only, from the parser's `dates`).
-  dateGte: z.string().optional().nullable(),
-  dateLte: z.string().optional().nullable(),
+  dateGte: isoDateString.optional().nullable(),
+  dateLte: isoDateString.optional().nullable(),
   // Manual date-range filter from the UI (computed to a publishedAt range
   // server-side, same buckets as performSearch). Explicit dateGte/dateLte win.
   dateRange: z
@@ -145,11 +158,12 @@ async function hydrateChannelsForDisplay(channelIds: string[]) {
 async function channelSlugsToIds(slugs: string[]): Promise<string[]> {
   if (slugs.length === 0) return [];
   const channels = await db.query.Channel.findMany({
-    where: (t, { inArray: inArr, eq: eqOp, and: andOp, isNotNull }) =>
+    where: (t, { inArray: inArr, eq: eqOp, and: andOp, isNotNull, isNull }) =>
       andOp(
         inArr(t.slug, slugs),
         eqOp(t.visibility, 'PUBLIC'),
         isNotNull(t.approvedAt),
+        isNull(t.deletedAt),
       ),
     columns: { id: true },
   });
@@ -889,20 +903,17 @@ export const searchProcedures = {
             ? [{ publishedAt: 'desc' }]
             : undefined;
 
-      // Embed the query once with the model the index was built with. Parse the
-      // query in parallel — it drives the speaker notice and answer-panel
-      // decision on the client, is recorded on the search log, and supplies the
-      // quoted phrases for phrase-boosting. The parse is cached (see
-      // parseSearchQuery), so it's identical on every page of a paginated search
-      // — keeping the derived quotes/filters deterministic across pages.
-      const [embedRes, parsed] = await Promise.all([
-        createEmbeddingsTracked({
-          model: EMBED_MODEL,
-          input: q,
-          tracking: { activity: 'searchEmbedQuery' },
-        }),
-        parseSearchQuery(q),
-      ]);
+      // Embed the query once with the model the index was built with. The
+      // structured LLM parse + related-search generation are NOT on this path —
+      // they're deliberately decoupled into `searchMeta` (a separate client
+      // query) so a navigation renders results the moment retrieval returns,
+      // without waiting on the (slower) nano LLM calls. Quote phrase-boosting
+      // therefore uses the deterministic regex extractor instead of the parse.
+      const embedRes = await createEmbeddingsTracked({
+        model: EMBED_MODEL,
+        input: q,
+        tracking: { activity: 'searchEmbedQuery' },
+      });
       const queryVector = embedRes.data[0]?.embedding;
       if (!queryVector) {
         throw new TRPCError({
@@ -912,58 +923,43 @@ export const searchProcedures = {
       }
 
       // Quoted phrases drive `match_phrase` boosts in the retriever. Prefer
-      // explicit input quotes; otherwise use the parser's extracted quotes.
-      const quoteList = quotes && quotes.length > 0 ? quotes : parsed.quotes;
+      // explicit input quotes; otherwise extract them deterministically from the
+      // raw query (stable across pages, no LLM dependency).
+      const quoteList =
+        quotes && quotes.length > 0 ? quotes : extractQuotedPhrases(q);
 
-      const [
-        hybrid,
-        channelFacetBuckets,
-        channelsRaw,
-        probeScore,
-        matchedChannels,
-        relatedSearches,
-      ] = await Promise.all([
-        runMediaHybridSearch({
-          lexicalText: q,
-          quotes: quoteList,
-          channelIds,
-          publishedAt,
-          queryVector,
-          from: cursor,
-          size: limit,
-          sort: hybridSort,
-        }),
-        // Channel facet list. Computed with the channel filter dropped (but
-        // the same query + date) so selecting a channel doesn't collapse the
-        // list — the other channels stay available to broaden the selection.
-        // Only the client's page 0 consumes it, so skip the extra hybrid query
-        // on subsequent pages.
-        cursor === 0
-          ? runMediaChannelFacets({
-              lexicalText: q,
-              quotes: quoteList,
-              publishedAt,
-              queryVector,
-            }).catch(() => [])
-          : Promise.resolve([]),
-        osMsearch(msearchChannels(q, 0, 10)),
-        // Absolute relevance probe (reuses the same query embedding). A probe
-        // failure shouldn't suppress results, so fail open to null (= relevant).
-        runMediaKnnProbe({ queryVector, channelIds, publishedAt }).catch(
-          () => null,
-        ),
-        // Best-effort: resolve any channel/ministry names the parser pulled
-        // out to real channels so the client can pre-fill the channel facet.
-        // Only runs when the parser actually found a channel name.
-        parsed.channels.length > 0
-          ? resolveChannelNames(parsed.channels).catch(() => [])
-          : Promise.resolve([]),
-        // Related searches / follow-up questions (nano), shown as pills in the
-        // sidebar. Page 0 only — the client reads them once per query.
-        cursor === 0
-          ? generateRelatedSearches(q).catch(() => [])
-          : Promise.resolve([]),
-      ]);
+      const [hybrid, channelFacetBuckets, channelsRaw, probeScore] =
+        await Promise.all([
+          runMediaHybridSearch({
+            lexicalText: q,
+            quotes: quoteList,
+            channelIds,
+            publishedAt,
+            queryVector,
+            from: cursor,
+            size: limit,
+            sort: hybridSort,
+          }),
+          // Channel facet list. Computed with the channel filter dropped (but
+          // the same query + date) so selecting a channel doesn't collapse the
+          // list — the other channels stay available to broaden the selection.
+          // Only the client's page 0 consumes it, so skip the extra hybrid query
+          // on subsequent pages.
+          cursor === 0
+            ? runMediaChannelFacets({
+                lexicalText: q,
+                quotes: quoteList,
+                publishedAt,
+                queryVector,
+              }).catch(() => [])
+            : Promise.resolve([]),
+          osMsearch(msearchChannels(q, 0, 10)),
+          // Absolute relevance probe (reuses the same query embedding). A probe
+          // failure shouldn't suppress results, so fail open to null (= relevant).
+          runMediaKnnProbe({ queryVector, channelIds, publishedAt }).catch(
+            () => null,
+          ),
+        ]);
 
       // Whole-set relevance gate: when the best video isn't close enough, the
       // RRF list is just semantically-vague noise — drop the media results
@@ -1018,9 +1014,9 @@ export const searchProcedures = {
                 dateLte: dateLte ?? null,
                 limit,
                 cursor,
-                // The structured LLM parse of this query (questions, speakers,
-                // keywords, dates, …) — recorded for analytics/debugging.
-                parsed,
+                // The structured LLM parse (questions, speakers, keywords,
+                // dates, …) is merged in out-of-band by `searchMeta` once it
+                // resolves — see that procedure.
               },
               appUserId: ctx.session?.appUserId ?? null,
               mediaCount,
@@ -1048,27 +1044,103 @@ export const searchProcedures = {
         mediaCount,
         channels,
         facetedChannels,
-        relatedSearches,
         nextCursor,
         searchLogId,
-        // Lets the client drive the speaker notice and answer-panel decision
-        // without a separate parseQuery round-trip.
+      };
+    }),
+
+  // Sidebar/answer metadata for a query: the structured LLM parse (questions →
+  // answer-panel decision, speakers → notice, channels/dates → filter
+  // suggestions) and nano-generated related searches. Split out of
+  // `hybridSearch` so retrieval never blocks on these (slower) LLM calls — the
+  // client fetches this in parallel and the results render the moment retrieval
+  // returns. Both LLM calls are Valkey-cached, so this is cheap on repeats.
+  searchMeta: publicProcedure
+    .input(
+      z.object({
+        q: z.string().min(1),
+        // The search_log_entry row hybridSearch created for this query. When
+        // present, the structured parse is merged into its params (so a search's
+        // parse, answer, and sources all land in one row for the admin log).
+        searchLogId: z.string().nullish(),
+        // Channels that actually have results for this query (from
+        // hybridSearch's facet aggregation). Passed so the parser grounds its
+        // channel suggestion in real candidates instead of guessing from the
+        // query text — so we can only ever suggest a real, non-empty filter.
+        facetChannels: z
+          .array(z.object({ slug: z.string(), name: z.string() }))
+          .optional(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const { q, searchLogId, facetChannels } = input;
+
+      // Facets are doc_count-ordered; only the top few dominant channels are
+      // plausible "you're looking for this channel" suggestions, and capping
+      // keeps the parser prompt + its cache key bounded.
+      const candidates = (facetChannels ?? []).slice(0, MAX_CANDIDATE_CHANNELS);
+
+      const [parsed, relatedSearches] = await Promise.all([
+        parseSearchQuery(q, {
+          candidateChannels: candidates.map((c) => c.name),
+        }),
+        generateRelatedSearches(q).catch(() => []),
+      ]);
+
+      // Ground the suggestion: keep only parser-picked channels that map (by
+      // normalized name) back to a real candidate, carrying its slug. The parser
+      // is told to echo candidate names verbatim, so this is a direct lookup —
+      // no extra OpenSearch round-trip.
+      const candidateByName = new Map(
+        candidates.map((c) => [c.name.trim().toLowerCase(), c]),
+      );
+      const matchedChannels: Array<{ slug: string; name: string }> = [];
+      const seenSlugs = new Set<string>();
+      for (const name of parsed.channels) {
+        const candidate = candidateByName.get(name.trim().toLowerCase());
+        if (candidate && !seenSlugs.has(candidate.slug)) {
+          seenSlugs.add(candidate.slug);
+          matchedChannels.push({ slug: candidate.slug, name: candidate.name });
+        }
+      }
+
+      // Best-effort: attach the structured parse to this search's log row.
+      // No-op when there's no row id (logging skipped, or pagination).
+      if (searchLogId) {
+        try {
+          await db
+            .update(SearchLogEntry)
+            .set({
+              params: sql`${SearchLogEntry.params} || ${JSON.stringify({ parsed })}::jsonb`,
+            })
+            .where(eq(SearchLogEntry.id, searchLogId));
+        } catch (error) {
+          moduleLogger.warn(
+            {
+              context: {
+                error: error instanceof Error ? error.message : String(error),
+              },
+            },
+            'Failed to attach parse to search log',
+          );
+        }
+      }
+
+      return {
+        relatedSearches,
         parsed: {
           questions: parsed.questions,
           speakers: parsed.speakers,
           speakerNotice: parsed.speakers.length > 0,
-          // Channels the parser pulled from the query, resolved to real
-          // channels. The client pre-fills the channel facet with these (once
-          // per query) when the user hasn't already chosen channels.
-          matchedChannels: matchedChannels.map((c) => ({
-            slug: c.slug,
-            name: c.name,
-          })),
-          // Inclusive publish-date range the parser inferred ("since 2020",
-          // "before Easter", …), or null. The client pre-fills the Date facet's
-          // custom range with this (once per query) when the user hasn't set a
-          // date filter.
+          // Real facet channels the parser judged the query to be seeking —
+          // offered as click-to-apply channel-filter suggestions.
+          matchedChannels,
+          // Date suggestion: a current-period bucket ("this week" → the facet
+          // bucket), or an absolute range with an optional relative label
+          // ("past month", "since 2020"). Null when no time bound was implied.
+          dateRange: parsed.dateRange,
           dates: parsed.dates,
+          dateLabel: parsed.dateLabel,
         },
       };
     }),

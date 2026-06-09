@@ -27,34 +27,52 @@ const DateRangeSchema = z.object({
   lte: z.string().nullable(),
 });
 
+// The UI's coarse "current period" date buckets (mirrors the Date facet's
+// options). When the query asks for one of these exactly, we suggest the bucket
+// itself so it lights up the facet and reuses the UI's own date math; any other
+// time expression resolves to an absolute `dates` range instead.
+export const DATE_BUCKETS = [
+  'today',
+  'this-week',
+  'this-month',
+  'this-year',
+] as const;
+export type DateBucket = (typeof DATE_BUCKETS)[number];
+
 // Raw shape the model returns (nullable arrays). Normalized to non-null arrays
 // by `parseSearchQuery` before callers see it.
 const RawParsedQuerySchema = z.object({
   questions: z.array(z.string()).nullable(),
-  quotes: z.array(z.string()).nullable(),
   speakers: z.array(z.string()).nullable(),
   channels: z.array(z.string()).nullable(),
-  objects: z.array(z.string()).nullable(),
-  keywords: z.array(z.string()).nullable(),
+  dateRange: z.enum(DATE_BUCKETS).nullable(),
   dates: DateRangeSchema.nullable(),
+  dateLabel: z.string().nullable(),
 });
 
+// The parser is an AI-*enhancement* pass: results + channel facets are already
+// shown from the (non-LLM) hybrid search, so this only extracts the few fields
+// that refine the UI after the fact. Quoted phrases are handled deterministically
+// (extractQuotedPhrases); keywords/objects were never consumed (search runs on
+// the raw query), so they're intentionally not extracted.
 export type ParsedQuery = {
-  /** Questions the user is asking (drives the streamed-answer branch). */
+  /** Reformulated question(s) — frame the (best-effort) streamed answer. */
   questions: string[];
-  /** Verbatim quoted phrases to match exactly. */
-  quotes: string[];
-  /** Person names attributed as speakers (no identity library yet — folded
-   * into lexical text + a UI notice; never an index filter). */
+  /** Person names credited as speakers (no identity library yet — drives a UI
+   * notice only; never an index filter). */
   speakers: string[];
-  /** Free-text channel / ministry names to resolve to channel filters. */
+  /** Channel(s) the query is seeking, selected from the grounded candidate
+   * facets passed in — drives the channel-filter suggestion. */
   channels: string[];
-  /** Visual objects (no image embeddings yet — folded into lexical text). */
-  objects: string[];
-  /** Residual semantic search terms. */
-  keywords: string[];
-  /** Published-at range, or null if the query implies no time bound. */
+  /** A current-period UI bucket ("this week", …) when the query asks for one
+   * exactly — suggested as that facet bucket. Mutually exclusive with `dates`. */
+  dateRange: DateBucket | null;
+  /** Absolute published-at range for any other time bound, or null. */
   dates: { gte: string | null; lte: string | null } | null;
+  /** Short relative label ("Past month", "Last year") when `dates` came from a
+   * relative expression — drives the date suggestion chip's text. Null for an
+   * absolute range (the chip formats the dates) or when there's no range. */
+  dateLabel: string | null;
 };
 
 // JSON Schema mirror of RawParsedQuerySchema for OpenAI/OpenRouter structured
@@ -68,11 +86,12 @@ const responseJsonSchema = {
     additionalProperties: false,
     properties: {
       questions: { type: ['array', 'null'], items: { type: 'string' } },
-      quotes: { type: ['array', 'null'], items: { type: 'string' } },
       speakers: { type: ['array', 'null'], items: { type: 'string' } },
       channels: { type: ['array', 'null'], items: { type: 'string' } },
-      objects: { type: ['array', 'null'], items: { type: 'string' } },
-      keywords: { type: ['array', 'null'], items: { type: 'string' } },
+      dateRange: {
+        type: ['string', 'null'],
+        enum: [...DATE_BUCKETS, null],
+      },
       dates: {
         type: ['object', 'null'],
         additionalProperties: false,
@@ -82,62 +101,95 @@ const responseJsonSchema = {
         },
         required: ['gte', 'lte'],
       },
+      dateLabel: { type: ['string', 'null'] },
     },
     required: [
       'questions',
-      'quotes',
       'speakers',
       'channels',
-      'objects',
-      'keywords',
+      'dateRange',
       'dates',
+      'dateLabel',
     ],
   },
 } as const;
 
-function systemPrompt(todayIso: string): string {
-  return `You parse a media-search query for a Christian sermon/teaching video library into structured fields. Today's date is ${todayIso}; resolve every relative date expression against it.
+function systemPrompt(todayIso: string, candidateChannels?: string[]): string {
+  // Channels are grounded in the real facet candidates (channels that actually
+  // have results for this query), so the suggestion can only ever be a real,
+  // useful filter — never a hallucinated or zero-result channel name.
+  const channelsRule =
+    candidateChannels && candidateChannels.length > 0
+      ? `- channels: From the CANDIDATE CHANNELS listed below, return the one(s) the query is clearly seeking — a navigational/source query like "the dorean principle" or "Apologia on baptism". Echo the candidate's name verbatim. Include a candidate ONLY when the query specifically targets that source; for a general topical query leave it null. Never output a channel that is not in the candidate list.`
+      : `- channels: Leave null (no candidate channels are available for this query).`;
+
+  const candidateSection =
+    candidateChannels && candidateChannels.length > 0
+      ? `\n\nCANDIDATE CHANNELS (these have results for this query):\n${candidateChannels.map((c) => `- ${c}`).join('\n')}`
+      : '';
+
+  return `You enrich a media-search query for a Christian sermon/teaching video library. The matching videos and channel facets are ALREADY shown to the user by a separate (non-AI) search — your job is only to extract a few optional fields that refine the experience after the fact. Today's date is ${todayIso}; resolve every relative date expression against it.
 
 Extract these fields:
-- questions: Questions to answer for the user. Include BOTH literal questions AND non-interrogative information needs that call for a synthesized, multi-source answer — an explanation, examples, a comparison, or "what Scripture/teaching says about X". Reformulate such a need into the natural question it implies (e.g. "Bible examples of free, grace-based giving" -> "What are some Bible examples of free, grace-based giving?"; "passages about suffering and hope" -> "What do the Scriptures say about suffering and hope?"). A query can be both a question AND have other fields. Do NOT treat these as questions: navigational lookups for a specific channel, ministry, or speaker; requests to browse or list media; or bare topic/keyword queries where a plain list of videos is the natural result. Use null when none applies.
-- quotes: Text the user wants matched verbatim — quoted in the query, or clearly a quotation being looked up.
+- questions: Questions to answer for the user. Include BOTH literal questions AND non-interrogative information needs that call for a synthesized, multi-source answer — an explanation, examples, a comparison, or "what Scripture/teaching says about X". Reformulate such a need into the natural question it implies (e.g. "Bible examples of free, grace-based giving" -> "What are some Bible examples of free, grace-based giving?"; "passages about suffering and hope" -> "What do the Scriptures say about suffering and hope?"). Do NOT treat as questions: navigational lookups for a specific channel/ministry/speaker, requests to browse or list media, or bare topic/keyword queries where a plain list of videos is the natural result. Use null when none applies.
 - speakers: Names or identities of people credited with speaking (e.g. "James White", "Dr. Robinson", "Pastor Bill"). Only real personal names/titles, not channels or topics.
-- channels: Names of sources, ministries, churches, shows, or channels (e.g. "Apologia", "Cornerstone Baptist Church").
-- objects: Visual objects or imagery the user wants to find (e.g. "cat shirt", "colorful sweater").
-- keywords: The core topical search terms — the residual concepts to search for after the above are removed. Keep these even when other fields are present.
-- dates: A single inclusive publish-date range as { "gte": "YYYY-MM-DD" | null, "lte": "YYYY-MM-DD" | null }, or null when the query implies no time bound. Resolve relative expressions ("last week", "since 2020", "before Easter") to absolute YYYY-MM-DD bounds against today. Use only one open bound when the query is one-sided ("since 2020" -> gte only; "before 2019" -> lte only). Do not invent a range when none is implied.
+${channelsRule}
+- dateRange: If (and ONLY if) the query asks for one of these exact current-period spans, set it to the matching value and leave \`dates\` and \`dateLabel\` null: "today" -> "today"; "this week" -> "this-week"; "this month" -> "this-month"; "this year" -> "this-year". For any other time expression, leave dateRange null.
+- dates: For any OTHER time bound — absolute ("in 2021", "since 2020", "before 2019") OR a relative span that is NOT a current-period bucket ("past month", "last year", "last week", "recently", "last 90 days") — set a single inclusive { "gte": "YYYY-MM-DD" | null, "lte": "YYYY-MM-DD" | null } resolved against today (use one open bound for one-sided queries: "since 2020" -> gte only; "before 2019" -> lte only). Leave null when the query implies no time bound OR when dateRange is set.
+- dateLabel: When you fill \`dates\` from a RELATIVE expression, a short Title Case label of how the user phrased it ("Past month", "Last year", "Last week", "Recently"). Null when \`dates\` is an absolute calendar range, or when \`dates\` is null.
 
 Rules:
-- Set a field to null when it does not apply (do not output empty arrays).
-- Do not put the same span in multiple incompatible fields; prefer the most specific (a person name -> speakers, not keywords).
-- Output ONLY the JSON object, no commentary.`;
+- Set a field to null when it does not apply (do not output empty arrays). Never set both dateRange and dates.
+- Output ONLY the JSON object, no commentary.${candidateSection}`;
 }
 
-const FALLBACK = (query: string): ParsedQuery => ({
+// Verbatim phrases the user double-quoted, using straight ("…") or curly
+// (“…”) double quotes. Deterministic (no LLM), so the hybrid search's
+// `match_phrase` boost is stable across pages and never waits on the (now
+// decoupled) query parse. Returns each balanced pair's inner text, trimmed,
+// non-empty, de-duplicated. Apostrophes / single quotes are intentionally
+// ignored (they'd swallow contractions like "don't").
+const QUOTE_RE = /"([^"]+)"|“([^”]+)”/g;
+
+export function extractQuotedPhrases(query: string): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const match of query.matchAll(QUOTE_RE)) {
+    const phrase = (match[1] ?? match[2] ?? '').trim();
+    if (!phrase || seen.has(phrase)) continue;
+    seen.add(phrase);
+    out.push(phrase);
+  }
+  return out;
+}
+
+const FALLBACK = (): ParsedQuery => ({
   questions: [],
-  quotes: [],
   speakers: [],
   channels: [],
-  objects: [],
-  keywords: [query.trim()].filter(Boolean),
+  dateRange: null,
   dates: null,
+  dateLabel: null,
 });
 
 function normalize(raw: z.infer<typeof RawParsedQuerySchema>): ParsedQuery {
   const arr = (v: string[] | null) =>
     (v ?? []).map((s) => s.trim()).filter(Boolean);
+  // A current-period bucket wins and is mutually exclusive with an absolute
+  // range; the relative label only applies when there's an absolute range.
+  const dateRange = raw.dateRange;
   const dates =
-    raw.dates && (raw.dates.gte || raw.dates.lte)
+    !dateRange && raw.dates && (raw.dates.gte || raw.dates.lte)
       ? { gte: raw.dates.gte, lte: raw.dates.lte }
       : null;
+  const dateLabel = dates ? raw.dateLabel?.trim() || null : null;
   return {
     questions: arr(raw.questions),
-    quotes: arr(raw.quotes),
     speakers: arr(raw.speakers),
     channels: arr(raw.channels),
-    objects: arr(raw.objects),
-    keywords: arr(raw.keywords),
+    dateRange,
     dates,
+    dateLabel,
   };
 }
 
@@ -149,18 +201,26 @@ function normalize(raw: z.infer<typeof RawParsedQuerySchema>): ParsedQuery {
  */
 export async function parseSearchQuery(
   query: string,
-  { now = new Date() }: { now?: Date } = {},
+  {
+    now = new Date(),
+    candidateChannels,
+  }: { now?: Date; candidateChannels?: string[] } = {},
 ): Promise<ParsedQuery> {
   const trimmed = query.trim();
-  if (!trimmed) return FALLBACK(query);
+  if (!trimmed) return FALLBACK();
 
   const todayIso = now.toISOString().slice(0, 10);
 
   // Cache the parse so the same query parses identically across requests (e.g.
-  // every page of a paginated search), making the derived filters/quotes
-  // deterministic. Keyed by model + day (relative dates resolve against today)
-  // + the query. Best-effort: a cache miss/outage just re-parses.
-  const cacheKey = `search-parse:v3:${OPENROUTER_SEARCH_PARSE_MODEL}:${todayIso}:${trimmed}`;
+  // every page of a paginated search). Keyed by model + day (relative dates
+  // resolve against today) + the candidate channel set (which now grounds the
+  // `channels` field, so the output is a function of it too) + the query.
+  // Best-effort: a cache miss/outage just re-parses.
+  const candidateSig = (candidateChannels ?? [])
+    .map((c) => c.trim().toLowerCase())
+    .sort()
+    .join('|');
+  const cacheKey = `search-parse:v5:${OPENROUTER_SEARCH_PARSE_MODEL}:${todayIso}:${candidateSig}:${trimmed}`;
   const cached = await cacheGetJson<ParsedQuery>(cacheKey);
   if (cached) return cached;
 
@@ -168,7 +228,7 @@ export async function parseSearchQuery(
     const completion = await createChatCompletionTracked({
       model: OPENROUTER_SEARCH_PARSE_MODEL,
       messages: [
-        { role: 'system', content: systemPrompt(todayIso) },
+        { role: 'system', content: systemPrompt(todayIso, candidateChannels) },
         { role: 'user', content: trimmed },
       ],
       response_format: {
@@ -198,8 +258,8 @@ export async function parseSearchQuery(
           query: trimmed,
         },
       },
-      'Search query parse failed; falling back to keyword-only',
+      'Search query parse failed; returning empty enrichment',
     );
-    return FALLBACK(query);
+    return FALLBACK();
   }
 }

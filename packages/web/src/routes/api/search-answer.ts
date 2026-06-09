@@ -72,7 +72,7 @@ export const Route = createFileRoute('/api/search-answer')({
         const [
           { searchAgent },
           { runAgentMediaSearch },
-          { isAnswerableFromSources },
+          { classifyAnswerMode },
           { SEARCH_AGENT_MODEL },
           { runMediaKnnProbe },
           { recordLlmCall },
@@ -256,8 +256,8 @@ export const Route = createFileRoute('/api/search-answer')({
             );
           }
 
-          // --- Relevance gates: skip generating an ungrounded answer. ---
-          // 1. Nothing retrieved at all.
+          // Nothing retrieved at all — there's nothing to answer OR overview,
+          // so this is the only genuine decline.
           if (sources.length === 0) {
             moduleLogger.info(
               { context: { query: parsed.query, reason: 'no-results' } },
@@ -266,7 +266,17 @@ export const Route = createFileRoute('/api/search-answer')({
             return declineResponse();
           }
 
-          // 2. Absolute kNN cosine floor (cheap, no LLM).
+          // --- Decide ANSWER vs OVERVIEW vs DECLINE. ---
+          // answer  → directly answer the question from the sources.
+          // overview→ sources are on-topic but don't fully answer; summarize the
+          //           related material (grounded, no fabricated answer).
+          // decline → retrieval missed / off-topic; say we couldn't find it
+          //           rather than pivoting to unrelated material.
+          let mode: 'answer' | 'overview' | 'decline' = 'answer';
+
+          // 1. Absolute kNN cosine floor (cheap, no LLM): if nothing in the
+          //    library is even semantically close, decline outright — there's
+          //    nothing worth overviewing.
           if (queryVector) {
             try {
               const score = await runMediaKnnProbe({ queryVector });
@@ -276,16 +286,10 @@ export const Route = createFileRoute('/api/search-answer')({
                 'Answer relevance probe',
               );
               if (cosine != null && cosine < RELEVANCE_COSINE_FLOOR) {
-                moduleLogger.info(
-                  {
-                    context: { query: parsed.query, reason: 'cosine', cosine },
-                  },
-                  'Answer gated off',
-                );
-                return declineResponse();
+                mode = 'decline';
               }
             } catch (err) {
-              // Probe failure shouldn't suppress a possibly-good answer.
+              // Probe failure shouldn't downgrade a possibly-good answer.
               moduleLogger.warn(
                 {
                   context: {
@@ -297,20 +301,36 @@ export const Route = createFileRoute('/api/search-answer')({
             }
           }
 
-          // 3. Cheap nano pre-check: do the passages actually answer this?
-          const answerable = await isAnswerableFromSources(
-            framingQuestion,
-            sourcesBlock,
-          );
-          if (!answerable) {
+          // 2. Cheap nano classifier: answer vs overview vs decline. Only the
+          //    nano gate can tell "on-topic but no direct answer" (overview)
+          //    from "retrieval missed / off-topic" (decline) — the latter is
+          //    what produces awkward "we don't cover that, but here's unrelated
+          //    material" pivots, so it declines instead.
+          if (mode !== 'decline') {
+            mode = await classifyAnswerMode(framingQuestion, sourcesBlock);
+          }
+
+          if (mode === 'decline') {
             moduleLogger.info(
-              { context: { query: parsed.query, reason: 'nano-gate' } },
+              { context: { query: parsed.query, reason: 'gate' } },
               'Answer gated off',
             );
             return declineResponse();
           }
 
-          const prompt = `Question: ${framingQuestion}
+          if (mode === 'overview') {
+            moduleLogger.info(
+              { context: { query: parsed.query, mode: 'overview' } },
+              'Streaming an overview of related results',
+            );
+          }
+
+          // The answer path directly answers the question; the overview path
+          // (when the sources are on-topic but don't answer it) summarizes the
+          // related content without asserting an answer.
+          const prompt =
+            mode === 'answer'
+              ? `Question: ${framingQuestion}
 
 Answer using ONLY the numbered sources below (these are already fetched — you do not need to search again unless the question needs comparison or counts).
 
@@ -319,6 +339,17 @@ Formatting rules:
 - After that, add any supporting detail, lists, or short sections that help.
 - Write in Markdown.
 - Cite your sources inline with bracketed numbers that match the list below (e.g. place [1] or [2] immediately after the sentence it supports). Only cite numbers that appear in the list; never invent a citation or a source.
+
+Sources:
+${sourcesBlock}`
+              : `Topic: ${framingQuestion}
+
+The numbered sources below are on this topic but don't form a single direct answer. Give the reader a brief, grounded overview of what the library covers on it. Do NOT fabricate specifics the sources don't support.
+
+Formatting rules:
+- Lead straight into what the sources cover on this topic (you may note in passing if coverage is partial). Do NOT open with an apology, a heading, or a restatement of the topic, and do NOT pivot to material that isn't about the topic.
+- Keep it to 2–4 sentences. Write in Markdown. Use ONLY the sources below; do not search again.
+- Cite sources inline with bracketed numbers that match the list (e.g. [1], [2]). Only cite numbers that appear in the list; never invent a citation or a source.
 
 Sources:
 ${sourcesBlock}`;

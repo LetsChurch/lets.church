@@ -4353,18 +4353,20 @@ export const adminRouter = router({
       };
     }),
 
-  // Flush the Valkey-backed search caches (query parses + final AI answers) so
-  // the next search re-parses and regenerates. No-op when Valkey is unset.
+  // Flush the Valkey-backed search caches (query parses, related searches, and
+  // final AI answers) so the next search re-parses and regenerates. No-op when
+  // Valkey is unset.
   clearSearchCache: adminProcedure.mutation(async () => {
-    const [parses, answers] = await Promise.all([
+    const [parses, related, answers] = await Promise.all([
       clearByPrefix('search-parse:'),
+      clearByPrefix('search-related:'),
       clearByPrefix('search-answer:'),
     ]);
     moduleLogger.info(
-      { context: { parses, answers } },
+      { context: { parses, related, answers } },
       'Cleared search caches',
     );
-    return { parses, answers, total: parses + answers };
+    return { parses, related, answers, total: parses + related + answers };
   }),
 
   getDeletingUploadsCount: adminProcedure.query(async () => {

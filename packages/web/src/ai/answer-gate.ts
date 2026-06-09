@@ -12,42 +12,52 @@ const { OPENROUTER_SEARCH_PARSE_MODEL } = z
   })
   .parse(process.env);
 
+// How the answer card should respond, given the query + retrieved passages.
+export type AnswerMode = 'answer' | 'overview' | 'decline';
+
 const responseJsonSchema = {
-  name: 'answerability',
+  name: 'answerMode',
   strict: true,
   schema: {
     type: 'object',
     additionalProperties: false,
     properties: {
-      answerable: { type: 'boolean' },
+      mode: { type: 'string', enum: ['answer', 'overview', 'decline'] },
     },
-    required: ['answerable'],
+    required: ['mode'],
   },
 } as const;
 
-const ResultSchema = z.object({ answerable: z.boolean() });
+const ResultSchema = z.object({
+  mode: z.enum(['answer', 'overview', 'decline']),
+});
 
-const SYSTEM = `You are a relevance gate for a Christian sermon/teaching video search engine. Given a user's question and transcript passages retrieved from the library, decide ONE thing: are the passages on-topic enough to attempt a grounded answer?
+const SYSTEM = `You are a relevance gate for a Christian sermon/teaching video search engine. Given a user's query and transcript passages retrieved from the library, classify how the answer card should respond. Output exactly one "mode":
 
-Answer "answerable": true when the passages discuss the question's subject OR closely related material that could support at least a partial, useful answer — even if they don't give a complete or formal definition. Lean toward true whenever the passages are clearly about the topic.
+- "answer": The passages directly address the query's subject and contain enough substance to give a grounded answer.
+- "overview": The passages are genuinely ABOUT the query's subject (the same topic), but don't fully or directly answer it — a short, grounded overview of that related material is still useful.
+- "decline": Retrieval missed. The passages are about a DIFFERENT subject than the query, only mention it in passing, or are incoherent fragments. Choose this whenever answering OR overviewing would force an awkward "we don't cover what you asked about, but here's some unrelated material" response.
 
-Answer "answerable": false ONLY when retrieval clearly missed: the passages are about a different subject, mention the topic merely in passing, or are incoherent fragments with no substantive content on it. Example of false: a "who is <person>" question where the passages never describe that person and are about an unrelated topic.
+Critical: "overview" is ONLY for passages that are actually on the query's topic. If the passages are about something else, choose "decline", NOT "overview". Example: a "who is <person>" query where the passages never describe that person and instead discuss an unrelated doctrine or principle → "decline".
 
-Output ONLY the JSON object.`;
+Prefer "answer" when the passages clearly support one. Output ONLY the JSON object.`;
 
 /**
- * Cheap nano pre-check: would the retrieved passages let us actually answer the
- * question? Runs before the (more expensive) answer agent so we can skip
- * generating an ungrounded "I couldn't find anything" response. Fail-soft: on
- * any model/parse error it returns true (let the agent try) rather than
- * suppressing a possibly-good answer. The call is recorded in `llm_call`
- * (activity `searchAnswerGate`).
+ * Cheap nano gate run before the (more expensive) answer agent. Classifies the
+ * retrieved passages relative to the query into:
+ *   - 'answer'  → generate a direct, grounded answer
+ *   - 'overview'→ summarize the on-topic-but-incomplete related material
+ *   - 'decline' → retrieval missed; say we couldn't find it (never pivot to
+ *                 unrelated material)
+ * Fail-soft: on any model/parse error it returns 'answer' (let the agent try)
+ * rather than suppressing a possibly-good answer. Empty sources → 'decline'.
+ * The call is recorded in `llm_call` (activity `searchAnswerGate`).
  */
-export async function isAnswerableFromSources(
+export async function classifyAnswerMode(
   query: string,
   sourcesBlock: string,
-): Promise<boolean> {
-  if (!sourcesBlock.trim()) return false;
+): Promise<AnswerMode> {
+  if (!sourcesBlock.trim()) return 'decline';
   try {
     const completion = await createChatCompletionTracked({
       model: OPENROUTER_SEARCH_PARSE_MODEL,
@@ -55,7 +65,7 @@ export async function isAnswerableFromSources(
         { role: 'system', content: SYSTEM },
         {
           role: 'user',
-          content: `Question: ${query}\n\nRetrieved passages:\n${sourcesBlock}`,
+          content: `Query: ${query}\n\nRetrieved passages:\n${sourcesBlock}`,
         },
       ],
       response_format: { type: 'json_schema', json_schema: responseJsonSchema },
@@ -66,12 +76,12 @@ export async function isAnswerableFromSources(
       .trim()
       .replace(/^```(?:json)?\s*/i, '')
       .replace(/\s*```$/i, '');
-    return ResultSchema.parse(JSON.parse(cleaned)).answerable;
+    return ResultSchema.parse(JSON.parse(cleaned)).mode;
   } catch (err) {
     moduleLogger.warn(
       { context: { error: err instanceof Error ? err.message : String(err) } },
-      'Answerability gate failed; allowing the answer through',
+      'Answer mode gate failed; allowing a direct answer attempt',
     );
-    return true;
+    return 'answer';
   }
 }

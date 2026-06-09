@@ -39,12 +39,10 @@ export function escapeDocument<T extends JsonValue>(doc: T): T {
   ) as T;
 }
 
-export function adjacentPairs<T>(arr: [T, ...T[]]): Array<[T, T] | [T]> {
-  if (arr.length <= 2) {
-    return [arr] as Array<[T, T]>;
-  }
-
-  const pairs: [T, T][] = [];
+// Requires at least two elements and always returns 2-tuples — the previous
+// `arr.length <= 2` shortcut mis-cast a single-element input to a `[T, T]`.
+export function adjacentPairs<T>(arr: [T, T, ...T[]]): Array<[T, T]> {
+  const pairs: Array<[T, T]> = [];
 
   for (let i = 0; i < arr.length - 1; i++) {
     pairs.push([arr[i] as T, arr[i + 1] as T]);

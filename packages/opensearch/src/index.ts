@@ -11,7 +11,7 @@ export {
   type OsQuery,
   osMsearch,
   osSearch,
-  waitForElasticsearch,
+  waitForOpenSearch,
 } from './client';
 export * from './media-search';
 
@@ -201,18 +201,18 @@ export function msearchTranscripts(
                           },
                           // Match adjacent pairs of words within a certain proximity
                           ...(words.length > 1
-                            ? adjacentPairs(words as [string, ...string[]]).map(
-                                (pair) => ({
-                                  match_phrase: {
-                                    'segments.text': {
-                                      query: pair.join(' '),
-                                      slop: 2,
-                                      // Adjacent pair match, double score
-                                      boost: 2,
-                                    },
+                            ? adjacentPairs(
+                                words as [string, string, ...string[]],
+                              ).map((pair) => ({
+                                match_phrase: {
+                                  'segments.text': {
+                                    query: pair.join(' '),
+                                    slop: 2,
+                                    // Adjacent pair match, double score
+                                    boost: 2,
                                   },
-                                }),
-                              )
+                                },
+                              }))
                             : []),
                         ],
                       },
@@ -514,19 +514,31 @@ export async function* listIds(
   let scrollId: string | undefined = body._scroll_id;
   let hits: Array<{ _id?: string }> = body.hits.hits;
 
-  while (hits?.length && scrollId) {
-    for (const { _id: id } of hits) {
-      if (id) {
-        yield id;
+  try {
+    while (hits?.length && scrollId) {
+      for (const { _id: id } of hits) {
+        if (id) {
+          yield id;
+        }
       }
-    }
 
-    const scrollRes = await client.scroll({
-      body: { scroll_id: scrollId, scroll: '10m' },
-    });
-    body = scrollRes.body as ScrollBody;
-    scrollId = body._scroll_id;
-    hits = body.hits.hits;
+      const scrollRes = await client.scroll({
+        body: { scroll_id: scrollId, scroll: '10m' },
+      });
+      body = scrollRes.body as ScrollBody;
+      scrollId = body._scroll_id;
+      hits = body.hits.hits;
+    }
+  } finally {
+    // Always release the server-side scroll context — on normal completion,
+    // on error, and when the consumer stops iterating early (which triggers
+    // this generator's `finally`). Best-effort: a failed cleanup shouldn't mask
+    // the original outcome.
+    if (scrollId) {
+      await client
+        .clearScroll({ body: { scroll_id: scrollId } })
+        .catch(() => {});
+    }
   }
 }
 

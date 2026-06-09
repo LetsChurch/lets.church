@@ -255,77 +255,29 @@ function SourceChips({ sources }: { sources: AnswerSource[] }) {
 // the rest fades out behind a "See more" toggle.
 const COLLAPSED_HEIGHT = 112;
 
-export function AnswerPanel({
-  q,
-  question,
-  searchLogId,
+export type AnswerStatus = 'streaming' | 'done' | 'error';
+
+/**
+ * The presentational indigo answer card. Pure: given the answer's `status` and
+ * the parsed `answer` + `sources`, it renders the right state — shimmering
+ * "Seeking…" while waiting, the streamed markdown (with inline citation badges,
+ * a "See more" collapse, and cited-source chips) once text arrives, or an error
+ * line. `AnswerPanel` drives it from the live stream; Storybook drives it
+ * directly for each state.
+ */
+export function AnswerCard({
+  status,
+  answer,
+  sources,
 }: {
-  q: string;
-  // The parser's reformulated question for this query (used to frame the
-  // answer). Retrieval still runs on the raw query `q` to preserve recall.
-  question?: string | null;
-  searchLogId?: string | null;
+  status: AnswerStatus;
+  answer: string;
+  sources: AnswerSource[];
 }) {
-  const [text, setText] = useState('');
-  const [status, setStatus] = useState<'streaming' | 'done' | 'error'>(
-    'streaming',
-  );
   const [expanded, setExpanded] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
-  // Read via ref so the fetch effect (keyed on q) picks up the id without
-  // re-firing when it resolves a tick after mount.
-  const searchLogIdRef = useRef(searchLogId);
-  searchLogIdRef.current = searchLogId;
-  // Same as searchLogId: read via ref so resolving a tick after mount doesn't
-  // re-fire the q-keyed fetch effect.
-  const questionRef = useRef(question);
-  questionRef.current = question;
 
-  useEffect(() => {
-    const controller = new AbortController();
-    abortRef.current?.abort();
-    abortRef.current = controller;
-    setText('');
-    setStatus('streaming');
-    setExpanded(false);
-
-    (async () => {
-      try {
-        const res = await fetch('/api/search-answer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: q,
-            question: questionRef.current ?? null,
-            threadId: getThreadId(),
-            resourceId: getResourceId(),
-            searchLogId: searchLogIdRef.current ?? null,
-          }),
-          signal: controller.signal,
-        });
-        if (!res.ok || !res.body) {
-          setStatus('error');
-          return;
-        }
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          setText((prev) => prev + decoder.decode(value, { stream: true }));
-        }
-        setStatus('done');
-      } catch {
-        if (!controller.signal.aborted) setStatus('error');
-      }
-    })();
-
-    return () => controller.abort();
-  }, [q]);
-
-  const { answer, sources } = parseStream(text);
   // Read latest sources via a ref so the (stable) markdown components can look
   // up a citation's source without rebuilding on every streamed chunk.
   const sourcesRef = useRef<AnswerSource[]>([]);
@@ -364,7 +316,7 @@ export function AnswerPanel({
 
   // Defensive: the server always sends either a real answer or a concise
   // decline message, so a done-but-empty stream only happens on a truncated
-  // response — hide the empty shell rather than spin on "Thinking…".
+  // response — hide the empty shell rather than spin on "Seeking…".
   if (status === 'done' && !answer) return null;
 
   return (
@@ -406,7 +358,7 @@ export function AnswerPanel({
           <SourceChips sources={pickCitedSources(answer, sources)} />
         </MediaPreviewScope>
       ) : (
-        <p className="text-sm text-white/70">Thinking…</p>
+        <p className="text-shimmer text-sm">Seeking…</p>
       )}
       <p className="mt-3 flex items-center gap-1 text-white/50 text-xs">
         <IconSparkles size={12} aria-hidden="true" className="shrink-0" />
@@ -414,4 +366,72 @@ export function AnswerPanel({
       </p>
     </div>
   );
+}
+
+export function AnswerPanel({
+  q,
+  searchLogId,
+  ready = true,
+}: {
+  q: string;
+  searchLogId?: string | null;
+  // Gates the fetch (not the render): the card shows "Seeking…" immediately, but
+  // we hold the request until THIS query's page 0 is in (so `searchLogId` is the
+  // current query's row, not a stale placeholder). The answer is framed on the
+  // raw query `q` — we don't wait on (or use) the slower parse, which would lag
+  // a query behind and answer the previous search.
+  ready?: boolean;
+}) {
+  const [text, setText] = useState('');
+  const [status, setStatus] = useState<AnswerStatus>('streaming');
+  const abortRef = useRef<AbortController | null>(null);
+  // Read via ref so the fetch effect (keyed on q) picks up the id without
+  // re-firing when it resolves a tick after mount.
+  const searchLogIdRef = useRef(searchLogId);
+  searchLogIdRef.current = searchLogId;
+
+  useEffect(() => {
+    if (!ready) return;
+    const controller = new AbortController();
+    abortRef.current?.abort();
+    abortRef.current = controller;
+    setText('');
+    setStatus('streaming');
+
+    (async () => {
+      try {
+        const res = await fetch('/api/search-answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: q,
+            threadId: getThreadId(),
+            resourceId: getResourceId(),
+            searchLogId: searchLogIdRef.current ?? null,
+          }),
+          signal: controller.signal,
+        });
+        if (!res.ok || !res.body) {
+          setStatus('error');
+          return;
+        }
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          setText((prev) => prev + decoder.decode(value, { stream: true }));
+        }
+        setStatus('done');
+      } catch {
+        if (!controller.signal.aborted) setStatus('error');
+      }
+    })();
+
+    return () => controller.abort();
+  }, [q, ready]);
+
+  const { answer, sources } = parseStream(text);
+
+  return <AnswerCard status={status} answer={answer} sources={sources} />;
 }

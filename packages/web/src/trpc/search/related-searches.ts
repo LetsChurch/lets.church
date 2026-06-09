@@ -41,7 +41,10 @@ function systemPrompt(): string {
   return `You suggest related searches for a Christian sermon/teaching video library. Given the user's query, produce up to ${MAX_RELATED} short, distinct follow-up searches or questions the user is likely to want next.
 
 Rules:
-- Each suggestion is a complete, standalone search query or question (e.g. "How are we sanctified?", "Bible verses on grace").
+- Each suggestion must be FULLY SELF-CONTAINED: it must make complete sense on its own to someone who has NOT seen the user's query, the results, or any prior context. Write what a person would actually type into a search box from scratch.
+- A good suggestion is either a complete question ("How are we sanctified by grace?") or a concrete topic phrase naming its full subject ("Bible verses on God's mercy").
+- NEVER use referential or anaphoric words that point at unstated context — no "this", "that", "the principle", "the passage", "the doctrine", "more on it", etc. Name the actual subject instead.
+- NEVER use trailing/dangling fragments like "… explained", "… explored", "… discussed", or "… overview". These aren't real searches. (Bad: "Grace, mercy, and the principle explained". Good: "What is the difference between grace and mercy?")
 - Stay closely related to the query's topic, but vary the angle (a definition, an application, a related doctrine, a relevant passage).
 - Do not repeat the user's query verbatim, and don't duplicate suggestions. Keep each concise (≈8 words or fewer where natural).
 - Output ONLY the JSON object {"related": [...]}.`;
@@ -60,7 +63,8 @@ export async function generateRelatedSearches(
   const trimmed = query.trim();
   if (!trimmed) return [];
 
-  const cacheKey = `search-related:v1:${OPENROUTER_SEARCH_RELATED_MODEL}:${trimmed}`;
+  // v2: self-contained-suggestion prompt (no anaphora / dangling fragments).
+  const cacheKey = `search-related:v2:${OPENROUTER_SEARCH_RELATED_MODEL}:${trimmed}`;
   const cached = await cacheGetJson<string[]>(cacheKey);
   if (cached) return cached;
 

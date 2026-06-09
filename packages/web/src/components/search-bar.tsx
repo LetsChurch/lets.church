@@ -190,7 +190,15 @@ export default function SearchBar({
   };
 
   return (
-    <Autocomplete.Root defaultValue={defaultValue} items={searchQueries}>
+    // Keyed on the query so the (uncontrolled) input re-syncs when `q` changes
+    // via navigation — clicking a suggested/recent search, or a filter that
+    // clears the query — not just on first mount. Typing doesn't change `q`, so
+    // it never remounts mid-entry.
+    <Autocomplete.Root
+      key={defaultValue ?? ''}
+      defaultValue={defaultValue}
+      items={searchQueries}
+    >
       <form
         ref={formRef}
         onSubmit={handleSubmit}

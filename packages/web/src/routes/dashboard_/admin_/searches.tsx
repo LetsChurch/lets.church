@@ -22,9 +22,9 @@ import { formatDistanceToNow } from 'date-fns';
 import { Fragment, useState } from 'react';
 import { useTRPC } from '@/trpc/react';
 
-// The search_log_entry `params` jsonb. hybridSearch records the structured LLM
-// parse under `parsed`; the answer route appends the final answer under
-// `answer` (see routes/api/search-answer.ts).
+// The search_log_entry `params` jsonb. hybridSearch creates the row; searchMeta
+// merges the structured LLM parse under `parsed`, and the answer route appends
+// the final answer under `answer` (see routes/api/search-answer.ts).
 type ParsedQuery = {
   questions?: string[];
   keywords?: string[];
@@ -186,10 +186,10 @@ function SearchLogsPage() {
 
   const clearCache = useMutation(
     trpc.dashboard.admin.clearSearchCache.mutationOptions({
-      onSuccess: ({ total, parses, answers }) => {
+      onSuccess: ({ total, parses, related, answers }) => {
         notifications.show({
           title: 'Search cache cleared',
-          message: `Removed ${total} entries (${parses} parses, ${answers} answers).`,
+          message: `Removed ${total} entries (${parses} parses, ${related} related, ${answers} answers).`,
           color: 'green',
         });
       },

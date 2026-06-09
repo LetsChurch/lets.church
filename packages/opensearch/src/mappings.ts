@@ -1,7 +1,7 @@
 import { logger as baseLogger } from '@letschurch/util';
 import { diff } from 'jest-diff';
 import pc from 'picocolors';
-import { client, waitForElasticsearch } from './client';
+import { client, waitForOpenSearch } from './client';
 import { RRF_PIPELINE } from './media-search';
 
 const logger = baseLogger.child({
@@ -11,7 +11,7 @@ const logger = baseLogger.child({
 const moduleLogger = logger.child({ module: 'elasticsearch/mappings' });
 
 moduleLogger.info('Waiting for Elasticsearch to be ready');
-await waitForElasticsearch();
+await waitForOpenSearch();
 moduleLogger.info('Elasticsearch is ready');
 moduleLogger.info('Starting index mapping deployment');
 
@@ -247,7 +247,12 @@ const serverMappings = Object.fromEntries(
               Object.entries(properties || {}).map(([property, mapping]) => [
                 property,
                 Object.fromEntries(
-                  Object.entries(mapping).filter(([key]) => !key.includes('_')),
+                  // Drop only OpenSearch-internal keys (`_`-prefixed), not valid
+                  // mapping keys that merely contain an underscore (e.g.
+                  // `space_type`, `ignore_above`).
+                  Object.entries(mapping).filter(
+                    ([key]) => !key.startsWith('_'),
+                  ),
                 ),
               ]),
             ),
