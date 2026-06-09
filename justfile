@@ -234,6 +234,14 @@ generate-seed-summaries:
 backfill-diarization-merge:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run backfill-diarization-merge'
 
+# Re-index the LLM-seeded uploads into lc_media_v1 so the new doc-level
+# `bibleRefs` field (the Bible-verse facet source) is populated from existing
+# BIBLE annotations. Run after `just os-push-mappings` adds the field. No LLM
+# calls and nothing to dump — `bibleRefs` is derived at index time from the
+# annotations already in the DB. (Prod equivalent: a full media re-index.)
+generate-seed-bible-refs:
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run generate-seed-bible-refs'
+
 seed-s3-ingest:
   rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-ingest lcdevs3:${S3_INGEST_BUCKET}
 seed-s3-public:

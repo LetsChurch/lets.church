@@ -69,6 +69,10 @@ export const Route = createFileRoute('/_main/search')({
   validateSearch: z.object({
     q: z.string().optional(),
     channelSlugs: z.array(z.string()).optional(),
+    // OSIS verse facet tokens ("John.3.16"). OR semantics across the list.
+    bibleRefs: z.array(z.string()).optional(),
+    // OSIS book ids ("Rom") from the Bible-book facet. OR semantics.
+    bibleBooks: z.array(z.string()).optional(),
     sort: z.enum(['relevance', 'date-asc', 'date-desc']).optional(),
     dateRange: z
       .enum(['all-time', 'today', 'this-week', 'this-month', 'this-year'])
@@ -82,6 +86,8 @@ export const Route = createFileRoute('/_main/search')({
   loaderDeps: ({ search }) => ({
     q: search.q,
     channelSlugs: search.channelSlugs,
+    bibleRefs: search.bibleRefs,
+    bibleBooks: search.bibleBooks,
     sort: search.sort,
     dateRange: search.dateRange,
     dateStart: search.dateStart,
@@ -94,6 +100,8 @@ export const Route = createFileRoute('/_main/search')({
         context.trpc.search.hybridSearch.infiniteQueryOptions({
           q: deps.q,
           channelSlugs: deps.channelSlugs,
+          bibleRefs: deps.bibleRefs,
+          bibleBooks: deps.bibleBooks,
           limit: 20,
           sort: deps.sort,
           dateRange: deps.dateRange,
@@ -267,6 +275,11 @@ const _trendingSearches = [
 const emptyArray: ReadonlyArray<unknown> = [];
 const emptyStrings: ReadonlyArray<string> = [];
 const emptyMatchedChannels: ReadonlyArray<{ slug: string; name: string }> = [];
+const emptyVerses: ReadonlyArray<{
+  ref: string;
+  label: string;
+  count: number;
+}> = [];
 
 // Placeholder result rows shown while the first page of results loads, so a
 // fresh search transitions instantly instead of freezing on the old page.
@@ -292,8 +305,16 @@ function SearchResultsSkeleton() {
 }
 
 function SearchResults({ q }: { q: string }) {
-  const { channelSlugs, sort, dateRange, dateStart, dateEnd, skipLogging } =
-    Route.useSearch();
+  const {
+    channelSlugs,
+    bibleRefs,
+    bibleBooks,
+    sort,
+    dateRange,
+    dateStart,
+    dateEnd,
+    skipLogging,
+  } = Route.useSearch();
   const trpc = useTRPC();
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -308,6 +329,8 @@ function SearchResults({ q }: { q: string }) {
     ...trpc.search.hybridSearch.infiniteQueryOptions({
       q,
       channelSlugs,
+      bibleRefs,
+      bibleBooks,
       limit: 20,
       sort,
       dateRange,
@@ -338,6 +361,7 @@ function SearchResults({ q }: { q: string }) {
   const firstPage = searchData?.pages?.[0];
   const searchLogId = firstPage?.searchLogId ?? null;
   const facetedChannels = firstPage?.facetedChannels ?? [];
+  const facetedVerses = firstPage?.facetedVerses ?? emptyVerses;
 
   // Skeleton only while loading a *new query* — never on a filter change (where
   // `keepPreviousData` keeps the old results/facets up). `settledQRef` records
@@ -509,6 +533,7 @@ function SearchResults({ q }: { q: string }) {
           <div className="lg:hidden">
             <MobileFacets
               availableChannels={facetedChannels}
+              availableVerses={facetedVerses}
               channelsLoading={loadingResults}
               recommendedChannelSlugs={recommendedChannelSlugs}
               recommendedDate={dateSuggestion}
@@ -593,6 +618,7 @@ function SearchResults({ q }: { q: string }) {
         <aside className="hidden space-y-8 lg:sticky lg:top-4 lg:block lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:pb-8">
           <SearchFacets
             availableChannels={facetedChannels}
+            availableVerses={facetedVerses}
             channelsLoading={loadingResults}
             recommendedChannelSlugs={recommendedChannelSlugs}
             recommendedDate={dateSuggestion}

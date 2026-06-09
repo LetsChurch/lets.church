@@ -14,6 +14,16 @@ const MANY_CHANNELS = Array.from({ length: 16 }, (_, i) => ({
   slug: `reformed-${i + 1}`,
 }));
 
+// Verse facet rows as the server returns them: OSIS token + label + count,
+// most-cited first.
+const VERSES = [
+  { ref: 'Rom.3.23', label: 'Romans 3:23', count: 14 },
+  { ref: 'John.3.16', label: 'John 3:16', count: 11 },
+  { ref: 'Eph.2.8', label: 'Ephesians 2:8', count: 9 },
+  { ref: 'Gen.1.1', label: 'Genesis 1:1', count: 6 },
+  { ref: 'Rom.8.28', label: 'Romans 8:28', count: 4 },
+];
+
 const meta = {
   title: 'Components/SearchFacets',
   component: SearchFacets,
@@ -87,6 +97,15 @@ export const WithRecommendedRange: Story = {
       lte: '2024-06-09',
       label: 'Past month',
     },
+  },
+};
+
+// The Bible-verse facet: most-cited verses across the result set, each with its
+// count, selectable to filter (OR semantics across picks).
+export const WithBibleVerses: Story = {
+  args: {
+    availableChannels: CHANNELS,
+    availableVerses: VERSES,
   },
 };
 

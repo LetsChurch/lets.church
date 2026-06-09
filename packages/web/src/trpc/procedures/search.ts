@@ -7,6 +7,7 @@ import {
   msearchTranscripts,
   msearchUploads,
   osMsearch,
+  runMediaBibleVerseFacets,
   runMediaChannelFacets,
   runMediaHybridSearch,
   runMediaKnnProbe,
@@ -21,6 +22,7 @@ import { and, count, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarSm2x, appAvatarXs2x } from '@/util/avatar-sizes';
+import { formatVerseRef } from '@/util/bible-url';
 import logger from '@/util/logger';
 import { isChannelRoutable } from '@/util/media-visibility';
 import { getPublicImageUrl } from '@/util/server-env';
@@ -83,6 +85,10 @@ const hybridSearchSchema = z.object({
   // Inclusive publish-date bounds (date-only, from the parser's `dates`).
   dateGte: isoDateString.optional().nullable(),
   dateLte: isoDateString.optional().nullable(),
+  // OSIS verse tokens ("John.3.16") from the Bible-verse facet. OR semantics.
+  bibleRefs: z.array(z.string()).optional().nullable(),
+  // OSIS book ids ("Rom") from the Bible-book facet. OR semantics.
+  bibleBooks: z.array(z.string()).optional().nullable(),
   // Manual date-range filter from the UI (computed to a publishedAt range
   // server-side, same buckets as performSearch). Explicit dateGte/dateLte win.
   dateRange: z
@@ -873,6 +879,8 @@ export const searchProcedures = {
         dateGte,
         dateLte,
         dateRange,
+        bibleRefs: inputBibleRefs,
+        bibleBooks: inputBibleBooks,
         sort,
         limit,
         cursor,
@@ -883,6 +891,11 @@ export const searchProcedures = {
         channelSlugs && channelSlugs.length > 0
           ? await channelSlugsToIds(channelSlugs)
           : (inputChannelIds ?? null);
+
+      const bibleRefs =
+        inputBibleRefs && inputBibleRefs.length > 0 ? inputBibleRefs : null;
+      const bibleBooks =
+        inputBibleBooks && inputBibleBooks.length > 0 ? inputBibleBooks : null;
 
       // Explicit parser bounds win; otherwise fall back to the UI date bucket.
       const publishedAt =
@@ -928,38 +941,64 @@ export const searchProcedures = {
       const quoteList =
         quotes && quotes.length > 0 ? quotes : extractQuotedPhrases(q);
 
-      const [hybrid, channelFacetBuckets, channelsRaw, probeScore] =
-        await Promise.all([
-          runMediaHybridSearch({
-            lexicalText: q,
-            quotes: quoteList,
-            channelIds,
-            publishedAt,
-            queryVector,
-            from: cursor,
-            size: limit,
-            sort: hybridSort,
-          }),
-          // Channel facet list. Computed with the channel filter dropped (but
-          // the same query + date) so selecting a channel doesn't collapse the
-          // list — the other channels stay available to broaden the selection.
-          // Only the client's page 0 consumes it, so skip the extra hybrid query
-          // on subsequent pages.
-          cursor === 0
-            ? runMediaChannelFacets({
-                lexicalText: q,
-                quotes: quoteList,
-                publishedAt,
-                queryVector,
-              }).catch(() => [])
-            : Promise.resolve([]),
-          osMsearch(msearchChannels(q, 0, 10)),
-          // Absolute relevance probe (reuses the same query embedding). A probe
-          // failure shouldn't suppress results, so fail open to null (= relevant).
-          runMediaKnnProbe({ queryVector, channelIds, publishedAt }).catch(
-            () => null,
-          ),
-        ]);
+      const [
+        hybrid,
+        channelFacetBuckets,
+        verseFacetBuckets,
+        channelsRaw,
+        probeScore,
+      ] = await Promise.all([
+        runMediaHybridSearch({
+          lexicalText: q,
+          quotes: quoteList,
+          channelIds,
+          publishedAt,
+          bibleRefs,
+          bibleBooks,
+          queryVector,
+          from: cursor,
+          size: limit,
+          sort: hybridSort,
+        }),
+        // Channel facet list. Computed with the channel filter dropped (but the
+        // same query + date + verse filters) so selecting a channel doesn't
+        // collapse the list — the other channels stay available to broaden the
+        // selection. Only the client's page 0 consumes it, so skip the extra
+        // hybrid query on subsequent pages.
+        cursor === 0
+          ? runMediaChannelFacets({
+              lexicalText: q,
+              quotes: quoteList,
+              publishedAt,
+              bibleRefs,
+              bibleBooks,
+              queryVector,
+            }).catch(() => [])
+          : Promise.resolve([]),
+        // Bible-verse/book facet list. Mirror of the channel facets, dropping
+        // the scripture filters (keeping query + date + channel) so the verse
+        // list — and the book headers derived from it — stay additive. Page 0
+        // only.
+        cursor === 0
+          ? runMediaBibleVerseFacets({
+              lexicalText: q,
+              quotes: quoteList,
+              channelIds,
+              publishedAt,
+              queryVector,
+            }).catch(() => [])
+          : Promise.resolve([]),
+        osMsearch(msearchChannels(q, 0, 10)),
+        // Absolute relevance probe (reuses the same query embedding). A probe
+        // failure shouldn't suppress results, so fail open to null (= relevant).
+        runMediaKnnProbe({
+          queryVector,
+          channelIds,
+          publishedAt,
+          bibleRefs,
+          bibleBooks,
+        }).catch(() => null),
+      ]);
 
       // Whole-set relevance gate: when the best video isn't close enough, the
       // RRF list is just semantically-vague noise — drop the media results
@@ -984,6 +1023,13 @@ export const searchProcedures = {
       }
 
       const facetBuckets = relevant ? channelFacetBuckets : [];
+      // Verse facet rows: token (for the filter) + human label (for display) +
+      // doc_count. Already doc_count-ordered by OpenSearch (most-cited first).
+      const facetedVerses = (relevant ? verseFacetBuckets : []).map((b) => ({
+        ref: b.key,
+        label: formatVerseRef(b.key),
+        count: b.doc_count,
+      }));
       const carouselIds =
         MSearchResponseSchema.parse(channelsRaw)
           .responses[0]?.hits.hits.filter((h) => h._index === 'lc_channels')
@@ -1012,6 +1058,8 @@ export const searchProcedures = {
                 quotes: quoteList,
                 dateGte: dateGte ?? null,
                 dateLte: dateLte ?? null,
+                bibleRefs: bibleRefs ?? [],
+                bibleBooks: bibleBooks ?? [],
                 limit,
                 cursor,
                 // The structured LLM parse (questions, speakers, keywords,
@@ -1044,6 +1092,7 @@ export const searchProcedures = {
         mediaCount,
         channels,
         facetedChannels,
+        facetedVerses,
         nextCursor,
         searchLogId,
       };

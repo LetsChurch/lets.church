@@ -7,7 +7,16 @@ import {
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { useSearchFilters } from '@/hooks/use-search-filters';
+import {
+  bibleBookName,
+  bibleBookOrder,
+  formatBibleRefShort,
+  formatVerseRef,
+  isSingleChapterBook,
+  parseVerseRef,
+} from '@/util/bible-url';
 import { cn } from '@/util/cn';
+import { LcTooltip } from './lc-tooltip';
 import { MobileDrawer } from './mobile-drawer';
 
 type Channel = {
@@ -16,6 +25,128 @@ type Channel = {
   slug: string;
   avatarUrl?: string | null;
 };
+
+// A Bible-verse facet row: the OSIS token used as the filter value, a
+// human-readable label ("John 3:16"), and the result count.
+type Verse = {
+  ref: string;
+  label: string;
+  count: number;
+};
+
+// One verse chip within a book group: the filter token, the book-less short
+// ref ("3:16") shown on the chip, the count, and chapter/verse for ordering.
+type VerseChip = {
+  ref: string;
+  short: string;
+  count: number;
+  chapter: number;
+  verse: number;
+};
+
+// Verses grouped under their book for display: the book header, the verse
+// chips, and the book's aggregate count (used to rank books by relevance).
+type VerseGroup = {
+  book: string;
+  bookName: string;
+  count: number;
+  verses: VerseChip[];
+};
+
+// Reshape the flat (count-ordered) verse facet into book groups. Books are
+// ordered by aggregate count (most-discussed first; canonical order breaks
+// ties); chips within a book read canonically (chapter then verse). Tokens that
+// don't parse to a specific verse are dropped.
+function groupVersesByBook(
+  verses: ReadonlyArray<Verse>,
+): ReadonlyArray<VerseGroup> {
+  const byBook = new Map<string, VerseGroup>();
+  for (const v of verses) {
+    const meta = parseVerseRef(v.ref);
+    if (!meta || meta.chapter == null || meta.verse == null) continue;
+    const chip: VerseChip = {
+      ref: v.ref,
+      // Single-chapter books (Jude, Philemon, …) are cited by verse alone, so
+      // drop the always-1 chapter: "Jude 2", not "Jude 1:2".
+      short: isSingleChapterBook(meta.book)
+        ? String(meta.verse)
+        : formatBibleRefShort(meta),
+      count: v.count,
+      chapter: meta.chapter,
+      verse: meta.verse,
+    };
+    const existing = byBook.get(meta.book);
+    if (existing) {
+      existing.verses.push(chip);
+      existing.count += v.count;
+    } else {
+      byBook.set(meta.book, {
+        book: meta.book,
+        bookName: bibleBookName(meta.book),
+        count: v.count,
+        verses: [chip],
+      });
+    }
+  }
+  const groups = Array.from(byBook.values());
+  groups.sort(
+    (a, b) =>
+      b.count - a.count || bibleBookOrder(a.book) - bibleBookOrder(b.book),
+  );
+  for (const group of groups) {
+    group.verses.sort((a, b) => a.chapter - b.chapter || a.verse - b.verse);
+  }
+  return groups;
+}
+
+// Chip count above which a book's verse chips collapse to ~two rows behind a
+// "See more" toggle. Short books render in full (any number of rows, never
+// clipped); only long ones (Psalms, Romans) collapse — so there's no hidden
+// content without a toggle, and no measurement needed.
+const COLLAPSED_VERSE_LIMIT = 12;
+
+// Two-row max height for the collapsed chip area (chip ≈ 1.375rem + 0.375rem
+// row gap). A hair of slack so both rows show fully and the third is clipped.
+const COLLAPSED_CHIP_ROWS = 'max-h-13';
+
+// Collapse wrapping content (verse chips) to two rows behind a "See more"
+// toggle when `collapsible`. Otherwise the children render in full. No
+// measurement — the caller decides collapsibility from the chip count.
+function ClampedRows({
+  children,
+  collapsible,
+}: {
+  children: ReactNode;
+  collapsible: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const collapsed = collapsible && !expanded;
+
+  return (
+    <>
+      <div
+        className={cn(
+          'flex flex-wrap gap-1.5',
+          // Fade the clipped rows out at the bottom, matching the AI answer's
+          // "See more" collapse.
+          collapsed &&
+            `${COLLAPSED_CHIP_ROWS} overflow-hidden [-webkit-mask-image:linear-gradient(to_bottom,black_50%,transparent)] [mask-image:linear-gradient(to_bottom,black_50%,transparent)]`,
+        )}
+      >
+        {children}
+      </div>
+      {collapsible ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          className="mt-1 cursor-pointer font-medium text-muted text-xs transition-colors hover:text-primary"
+        >
+          {expanded ? 'See less' : 'See more'}
+        </button>
+      ) : null}
+    </>
+  );
+}
 
 type DateRange =
   | 'all-time'
@@ -166,14 +297,17 @@ function FacetOption({
  */
 export function SearchFacets({
   availableChannels = [],
+  availableVerses = [],
   bordered = true,
   channelsLoading = false,
   recommendedChannelSlugs = [],
   recommendedDate = null,
 }: {
   availableChannels?: Channel[];
+  /** Bible-verse facet rows (token + label + count), doc_count-ordered. */
+  availableVerses?: ReadonlyArray<Verse>;
   bordered?: boolean;
-  /** Show placeholder rows in the Channels section while results load. */
+  /** Show placeholder rows in the Channels/Verses sections while results load. */
   channelsLoading?: boolean;
   /** Channel slugs the parser recommends — marked with a sparkle in the list. */
   recommendedChannelSlugs?: ReadonlyArray<string>;
@@ -189,11 +323,15 @@ export function SearchFacets({
     setDateRange,
     setCustomDates,
     setChannelSlugs,
+    setBibleRefs,
+    setBibleBooks,
     clearFilters,
     hasActiveFilters,
   } = useSearchFilters();
 
   const selectedSlugs = filters.channelSlugs ?? [];
+  const selectedVerses = filters.bibleRefs ?? [];
+  const selectedBooks = filters.bibleBooks ?? [];
   const dateRange = filters.dateRange ?? 'all-time';
   const dateStart = filters.dateStart ?? '';
   const dateEnd = filters.dateEnd ?? '';
@@ -211,11 +349,37 @@ export function SearchFacets({
     setChannelSlugs(next.length > 0 ? next : undefined);
   };
 
+  const toggleVerse = (ref: string) => {
+    const next = selectedVerses.includes(ref)
+      ? selectedVerses.filter((r) => r !== ref)
+      : [...selectedVerses, ref];
+    setBibleRefs(next.length > 0 ? next : undefined);
+  };
+
+  const toggleBook = (book: string) => {
+    const next = selectedBooks.includes(book)
+      ? selectedBooks.filter((b) => b !== book)
+      : [...selectedBooks, book];
+    setBibleBooks(next.length > 0 ? next : undefined);
+  };
+
   // Keep selected channels visible even if they drop out of the faceted set
   // (e.g. a pre-filled channel whose scoped results don't surface it back).
   const channels = [...availableChannels].sort((a, b) =>
     a.name.localeCompare(b.name),
   );
+
+  // Verses come pre-ordered by count (most-cited first). Keep any selected
+  // verse visible even if a combined filter pushed it out of the faceted set,
+  // appending it with a 0 count so it can still be toggled off.
+  const verseRefs = new Set(availableVerses.map((v) => v.ref));
+  const verses: ReadonlyArray<Verse> = [
+    ...availableVerses,
+    ...selectedVerses
+      .filter((ref) => !verseRefs.has(ref))
+      .map((ref) => ({ ref, label: formatVerseRef(ref), count: 0 })),
+  ];
+  const verseGroups = groupVersesByBook(verses);
 
   const recommendedSlugs = new Set(recommendedChannelSlugs);
   const recommendedBucket =
@@ -260,6 +424,96 @@ export function SearchFacets({
                 key={i}
                 className="h-5 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800"
                 style={{ width: `${85 - i * 8}%` }}
+              />
+            ))}
+          </div>
+        </Section>
+      ) : null}
+
+      {verseGroups.length > 0 ? (
+        <Section title="Bible Verses">
+          {/* One tooltip provider around the whole panel so every chip's
+              full-reference tooltip shares the same hover delay grouping. */}
+          <LcTooltip.Provider>
+            <div className="max-h-80 w-full space-y-3 overflow-y-auto">
+              {verseGroups.map((group) => {
+                const bookSelected = selectedBooks.includes(group.book);
+                return (
+                  <div key={group.book}>
+                    {/* Clickable book header — filters to the whole book. */}
+                    <button
+                      type="button"
+                      onClick={() => toggleBook(group.book)}
+                      aria-pressed={bookSelected}
+                      className={cn(
+                        'flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-1 py-0.5 text-left font-medium text-sm transition-colors hover:bg-primary/10',
+                        bookSelected ? 'text-brand' : 'text-primary',
+                      )}
+                    >
+                      <span className="truncate">{group.bookName}</span>
+                      <IconCheck
+                        size={14}
+                        className={
+                          bookSelected
+                            ? 'shrink-0 text-brand'
+                            : 'shrink-0 opacity-0'
+                        }
+                      />
+                    </button>
+                    <div className="mt-1 pl-3">
+                      <ClampedRows
+                        collapsible={
+                          group.verses.length > COLLAPSED_VERSE_LIMIT
+                        }
+                      >
+                        {group.verses.map((verse) => {
+                          const isSelected = selectedVerses.includes(verse.ref);
+                          // Full reference, honoring single-chapter books via the
+                          // chip's `short` ("Jude 2", "John 3:16"), plus the count.
+                          const fullRef = `${group.bookName} ${verse.short}`;
+                          const tip = `${fullRef} · ${verse.count.toLocaleString()} ${
+                            verse.count === 1 ? 'result' : 'results'
+                          }`;
+                          return (
+                            <LcTooltip
+                              key={verse.ref}
+                              content={tip}
+                              render={
+                                <button
+                                  type="button"
+                                  onClick={() => toggleVerse(verse.ref)}
+                                  aria-pressed={isSelected}
+                                  aria-label={fullRef}
+                                  title={tip}
+                                  className={cn(
+                                    'cursor-pointer rounded-full border px-2 py-0.5 font-medium text-xs tabular-nums transition-colors',
+                                    isSelected
+                                      ? 'border-brand bg-brand/10 text-brand'
+                                      : 'border-gray-950/15 text-primary hover:bg-primary/10 dark:border-white/15',
+                                  )}
+                                />
+                              }
+                            >
+                              {verse.short}
+                            </LcTooltip>
+                          );
+                        })}
+                      </ClampedRows>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </LcTooltip.Provider>
+        </Section>
+      ) : channelsLoading ? (
+        <Section title="Bible Verses">
+          <div className="w-full space-y-2 py-1">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="h-5 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800"
+                style={{ width: `${70 - i * 12}%` }}
               />
             ))}
           </div>
@@ -404,11 +658,13 @@ export function SearchFacets({
  */
 export function MobileFacets({
   availableChannels = [],
+  availableVerses = [],
   channelsLoading = false,
   recommendedChannelSlugs = [],
   recommendedDate = null,
 }: {
   availableChannels?: Channel[];
+  availableVerses?: ReadonlyArray<Verse>;
   channelsLoading?: boolean;
   recommendedChannelSlugs?: ReadonlyArray<string>;
   recommendedDate?: DateSuggestion | null;
@@ -452,6 +708,7 @@ export function MobileFacets({
             <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-8">
               <SearchFacets
                 availableChannels={availableChannels}
+                availableVerses={availableVerses}
                 bordered={false}
                 channelsLoading={channelsLoading}
                 recommendedChannelSlugs={recommendedChannelSlugs}

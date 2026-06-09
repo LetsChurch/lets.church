@@ -36,6 +36,12 @@ const PARA_KNN = 'para_knn';
 // kNN candidate pool per sub-query.
 const KNN_K = 50;
 
+// Verse facet `terms` size. The Protestant canon has ~31,102 verses, so this
+// ceiling returns every distinct cited verse — the facet never truncates. (The
+// agg only materializes buckets for verses that actually appear, so a high cap
+// is cheap on a single-shard index.)
+const VERSE_FACET_SIZE = 31200;
+
 // Access-control + readiness filter. Mirrors the related-media kNN in web's
 // media.ts: only public, approved, fully-processed uploads. Every sub-query
 // carries this so no signal can leak private/unapproved content.
@@ -54,6 +60,8 @@ export type PublishedAtRange = { gte?: string; lte?: string };
 function buildFilter(
   channelIds?: string[] | null,
   publishedAt?: PublishedAtRange | null,
+  bibleRefs?: string[] | null,
+  bibleBooks?: string[] | null,
 ): OsQuery[] {
   const filter = accessControlFilter();
   if (Array.isArray(channelIds) && channelIds.length > 0) {
@@ -61,6 +69,16 @@ function buildFilter(
   }
   if (publishedAt && (publishedAt.gte || publishedAt.lte)) {
     filter.push({ range: { publishedAt } });
+  }
+  // OSIS verse tokens ("John.3.16"). `terms` is OR semantics — a doc matches if
+  // it cites any selected verse.
+  if (Array.isArray(bibleRefs) && bibleRefs.length > 0) {
+    filter.push({ terms: { bibleRefs } });
+  }
+  // OSIS book ids ("Rom"). OR semantics, AND'd with the verse filter when both
+  // are present (cites a selected book and a selected verse).
+  if (Array.isArray(bibleBooks) && bibleBooks.length > 0) {
+    filter.push({ terms: { bibleBooks } });
   }
   return filter;
 }
@@ -74,6 +92,10 @@ export type BuildMediaSearchArgs = {
   channelIds?: string[] | null;
   /** Published-at range derived from parsed dates. */
   publishedAt?: PublishedAtRange | null;
+  /** OSIS verse tokens ("John.3.16") to restrict to (the Bible-verse facet). */
+  bibleRefs?: string[] | null;
+  /** OSIS book ids ("Rom") to restrict to (the Bible-book facet). */
+  bibleBooks?: string[] | null;
   /** 1536-dim query embedding (text-embedding-3-small). */
   queryVector: number[];
   from?: number;
@@ -128,6 +150,8 @@ export function buildMediaHybridBody({
   quotes = [],
   channelIds,
   publishedAt,
+  bibleRefs,
+  bibleBooks,
   queryVector,
   from = 0,
   size = 20,
@@ -136,7 +160,7 @@ export function buildMediaHybridBody({
   highlight = true,
 }: BuildMediaSearchArgs): OsMsearchItem {
   const trimmed = lexicalText.trim();
-  const filter = buildFilter(channelIds, publishedAt);
+  const filter = buildFilter(channelIds, publishedAt, bibleRefs, bibleBooks);
 
   // (1) BM25 lexical
   const lexicalShould: OsQuery[] = [
@@ -224,6 +248,9 @@ export function buildMediaHybridBody({
     },
     aggs: {
       channelIds: { terms: { field: 'channelId', size: 100 } },
+      // Verse facet: every distinct cited verse across the matching set
+      // (doc_count order). Sized to the full canon so nothing is truncated.
+      bibleRefs: { terms: { field: 'bibleRefs', size: VERSE_FACET_SIZE } },
     },
     ...(sort ? { sort } : {}),
   };
@@ -289,6 +316,34 @@ export async function runMediaChannelFacets(
   return parsed.aggregations?.channelIds?.buckets ?? [];
 }
 
+/**
+ * Bible-verse facet list for the search UI. Same shape and rationale as
+ * `runMediaChannelFacets`, but drops **both** the verse and book filters
+ * (keeping the query + access + channel + date filters). Scripture is one facet
+ * dimension in the UI (books group the verse chips), so picking a book or verse
+ * must not collapse the displayed books/verses — the user can keep widening the
+ * selection. Buckets come back in doc_count order (most-cited verse first).
+ */
+export async function runMediaBibleVerseFacets(
+  args: BuildMediaSearchArgs,
+): Promise<Array<{ key: string; doc_count: number }>> {
+  const body = buildMediaHybridBody({
+    ...args,
+    bibleRefs: null,
+    bibleBooks: null,
+    from: 0,
+    size: 1,
+    highlight: false,
+  });
+  const raw = await osSearch({
+    index: MEDIA_INDEX,
+    search_pipeline: RRF_PIPELINE,
+    ...body,
+  });
+  const parsed = MediaSearchResponseSchema.parse(raw);
+  return parsed.aggregations?.bibleRefs?.buckets ?? [];
+}
+
 const KnnProbeResponseSchema = z.object({
   hits: z.object({
     hits: z.array(z.object({ _score: z.number().nullable() })),
@@ -310,12 +365,16 @@ export async function runMediaKnnProbe({
   queryVector,
   channelIds,
   publishedAt,
+  bibleRefs,
+  bibleBooks,
 }: {
   queryVector: number[];
   channelIds?: string[] | null;
   publishedAt?: PublishedAtRange | null;
+  bibleRefs?: string[] | null;
+  bibleBooks?: string[] | null;
 }): Promise<number | null> {
-  const filter = buildFilter(channelIds, publishedAt);
+  const filter = buildFilter(channelIds, publishedAt, bibleRefs, bibleBooks);
   const raw = await osSearch({
     index: MEDIA_INDEX,
     size: 1,
@@ -450,6 +509,13 @@ export const MediaSearchResponseSchema = z.object({
   aggregations: z
     .object({
       channelIds: z
+        .object({
+          buckets: z.array(
+            z.object({ key: z.string(), doc_count: z.number() }),
+          ),
+        })
+        .optional(),
+      bibleRefs: z
         .object({
           buckets: z.array(
             z.object({ key: z.string(), doc_count: z.number() }),

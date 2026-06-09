@@ -1,4 +1,5 @@
 import {
+  Annotation,
   Channel,
   db,
   Organization,
@@ -13,6 +14,10 @@ import { publicS3 } from '@letschurch/s3/public';
 import { and, asc, eq } from 'drizzle-orm';
 import { invariant } from 'es-toolkit';
 import { type NodeCue, parseSync as parseVtt } from 'subtitle';
+import {
+  bibleBookFromMetadata,
+  bibleRefsFromMetadata,
+} from '../../util/bible-refs';
 import logger from '../../util/logger';
 import { transcriptSegmentSchema } from '../../util/zod';
 
@@ -298,6 +303,38 @@ async function getDocument(
         .where(eq(TranscriptParagraph.uploadRecordId, documentId))
         .orderBy(asc(TranscriptParagraph.order));
 
+      // Doc-level rollup of every Bible verse cited anywhere in this upload's
+      // transcript (BIBLE annotations hang off paragraphs, so join through
+      // them), expanded to per-verse OSIS keyword tokens. Powers the verse
+      // facet + filter in search. De-duped across the whole transcript.
+      const bibleAnnotations = await db
+        .select({ metadata: Annotation.metadata })
+        .from(Annotation)
+        .innerJoin(
+          TranscriptParagraph,
+          eq(Annotation.paragraphId, TranscriptParagraph.id),
+        )
+        .where(
+          and(
+            eq(TranscriptParagraph.uploadRecordId, documentId),
+            eq(Annotation.kind, 'BIBLE'),
+          ),
+        );
+      const bibleRefs = Array.from(
+        new Set(
+          bibleAnnotations.flatMap((a) => bibleRefsFromMetadata(a.metadata)),
+        ),
+      );
+      // Distinct OSIS books cited (covers book-/chapter-only refs that produce
+      // no verse token) — the book facet + filter source.
+      const bibleBooks = Array.from(
+        new Set(
+          bibleAnnotations
+            .map((a) => bibleBookFromMetadata(a.metadata))
+            .filter((b): b is string => b != null),
+        ),
+      );
+
       return {
         index: 'lc_media_v1',
         id: documentId,
@@ -319,6 +356,11 @@ async function getDocument(
           // Reserved for the future speaker-identity library (see mappings.ts);
           // empty until speaker resolution exists, backfilled via re-index.
           speakers: [] as string[],
+          // Distinct Bible verses cited in the transcript (OSIS
+          // `Book.Chapter.Verse` tokens) — the verse facet + filter source.
+          bibleRefs,
+          // Distinct OSIS books cited — the book facet + filter source.
+          bibleBooks,
           summaryEmbedding: upRecRow.summaryEmbedding,
           searchSummaryEmbedding: upRecRow.searchSummaryEmbedding,
           paragraphs: paragraphs.map((p) => ({

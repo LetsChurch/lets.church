@@ -22,7 +22,8 @@
     "dump-llm-seed-data": "tsx src/seed/dump-llm-seed-data.ts",
     "generate-seed-annotations": "tsx src/seed/generate-annotations.ts",
     "generate-seed-summaries": "tsx src/seed/generate-summaries.ts",
-    "backfill-diarization-merge": "tsx src/seed/backfill-diarization-merge.ts"
+    "backfill-diarization-merge": "tsx src/seed/backfill-diarization-merge.ts",
+    "generate-seed-bible-refs": "tsx src/seed/generate-bible-refs.ts"
   },
   "dependencies": {
     "@base-ui/react": "catalog:",

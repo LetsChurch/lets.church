@@ -8,6 +8,10 @@ type SearchFilters = {
   dateStart?: string;
   dateEnd?: string;
   channelSlugs?: string[];
+  // OSIS verse facet tokens ("John.3.16"). OR semantics across the list.
+  bibleRefs?: string[];
+  // OSIS book ids ("Rom") from the Bible-book facet. OR semantics.
+  bibleBooks?: string[];
 };
 
 export function useSearchFilters() {
@@ -20,6 +24,8 @@ export function useSearchFilters() {
     dateStart: searchParams.dateStart,
     dateEnd: searchParams.dateEnd,
     channelSlugs: searchParams.channelSlugs,
+    bibleRefs: searchParams.bibleRefs,
+    bibleBooks: searchParams.bibleBooks,
   };
 
   const hasCustomDates = Boolean(filters.dateStart || filters.dateEnd);
@@ -29,7 +35,9 @@ export function useSearchFilters() {
     (filters.sort && filters.sort !== 'relevance') ||
     (filters.dateRange && filters.dateRange !== 'all-time') ||
     hasCustomDates ||
-    (filters.channelSlugs && filters.channelSlugs.length > 0);
+    (filters.channelSlugs && filters.channelSlugs.length > 0) ||
+    (filters.bibleRefs && filters.bibleRefs.length > 0) ||
+    (filters.bibleBooks && filters.bibleBooks.length > 0);
 
   const setSort = (
     sort: 'relevance' | 'date-asc' | 'date-desc' | undefined,
@@ -87,6 +95,18 @@ export function useSearchFilters() {
     setChannelSlugs(newSlugs.length > 0 ? newSlugs : undefined);
   };
 
+  const setBibleRefs = (bibleRefs: string[] | undefined) => {
+    navigate({
+      search: (prev: Record<string, unknown>) => ({ ...prev, bibleRefs }),
+    });
+  };
+
+  const setBibleBooks = (bibleBooks: string[] | undefined) => {
+    navigate({
+      search: (prev: Record<string, unknown>) => ({ ...prev, bibleBooks }),
+    });
+  };
+
   const clearFilters = () => {
     navigate({
       search: (prev: Record<string, unknown>) => ({
@@ -96,6 +116,8 @@ export function useSearchFilters() {
         dateStart: undefined,
         dateEnd: undefined,
         channelSlugs: undefined,
+        bibleRefs: undefined,
+        bibleBooks: undefined,
       }),
     });
   };
@@ -108,6 +130,8 @@ export function useSearchFilters() {
     setCustomDates,
     setChannelSlugs,
     removeChannelSlug,
+    setBibleRefs,
+    setBibleBooks,
     clearFilters,
     hasActiveFilters,
   };

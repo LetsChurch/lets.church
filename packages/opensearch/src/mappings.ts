@@ -179,6 +179,14 @@ const targetMappings: Record<
       // this is filled, speaker queries can flip from lexical-only to a real
       // `terms` filter with no schema change.
       speakers: { type: 'keyword' },
+      // Doc-level rollup of Bible verses cited in the transcript — OSIS
+      // `Book.Chapter.Verse` tokens (e.g. "John.3.16"), expanded from BIBLE
+      // annotations in index-document.ts. Powers the verse facet (terms agg)
+      // and verse filter. Additive mapping; populated via re-index.
+      bibleRefs: { type: 'keyword' },
+      // Doc-level rollup of OSIS book ids cited (e.g. "Rom", "John") — the
+      // coarser book facet + filter. Additive; populated via re-index.
+      bibleBooks: { type: 'keyword' },
       // Video-level semantic vectors (cosine for RRF fusion + related-videos).
       // searchSummary text is intentionally NOT indexed — it exists only to
       // produce searchSummaryEmbedding, so users never see synthetic prose.
