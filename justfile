@@ -142,12 +142,6 @@ generate-seed-annotations:
 generate-seed-summaries:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run generate-seed-summaries'
 
-# Backfill import-sourced upload descriptions that were stored as raw HTML
-# (which the Markdown render pipeline drops) by converting them to Markdown in
-# place. Scoped to import-sourced rows via ImportHistory; idempotent.
-backfill-html-descriptions:
-  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run backfill-html-descriptions'
-
 seed-s3-ingest:
   rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-ingest lcdevs3:${S3_INGEST_BUCKET}
 seed-s3-public:
