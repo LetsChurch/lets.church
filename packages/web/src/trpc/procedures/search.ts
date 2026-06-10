@@ -9,6 +9,7 @@ import {
   osMsearch,
   runMediaBibleVerseFacets,
   runMediaChannelFacets,
+  runMediaDateFacets,
   runMediaHybridSearch,
   runMediaKnnProbe,
 } from '@letschurch/opensearch';
@@ -945,6 +946,7 @@ export const searchProcedures = {
         hybrid,
         channelFacetBuckets,
         verseFacetBuckets,
+        yearFacetBuckets,
         channelsRaw,
         probeScore,
       ] = await Promise.all([
@@ -988,6 +990,18 @@ export const searchProcedures = {
               queryVector,
             }).catch(() => [])
           : Promise.resolve([]),
+        // Year facet list. Drops the date filter (keeping query + channel +
+        // scripture) so the year list stays additive. Page 0 only.
+        cursor === 0
+          ? runMediaDateFacets({
+              lexicalText: q,
+              quotes: quoteList,
+              channelIds,
+              bibleRefs,
+              bibleBooks,
+              queryVector,
+            }).catch(() => [])
+          : Promise.resolve([]),
         osMsearch(msearchChannels(q, 0, 10)),
         // Absolute relevance probe (reuses the same query embedding). A probe
         // failure shouldn't suppress results, so fail open to null (= relevant).
@@ -1028,6 +1042,12 @@ export const searchProcedures = {
       const facetedVerses = (relevant ? verseFacetBuckets : []).map((b) => ({
         ref: b.key,
         label: formatVerseRef(b.key),
+        count: b.doc_count,
+      }));
+      // Year facet rows: the year string + real per-year count (date_histogram,
+      // newest-first). Drives the absolute-year options in the Date facet.
+      const facetedYears = (relevant ? yearFacetBuckets : []).map((b) => ({
+        year: b.year,
         count: b.doc_count,
       }));
       const carouselIds =
@@ -1093,6 +1113,7 @@ export const searchProcedures = {
         channels,
         facetedChannels,
         facetedVerses,
+        facetedYears,
         nextCursor,
         searchLogId,
       };

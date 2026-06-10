@@ -34,6 +34,13 @@ type Verse = {
   count: number;
 };
 
+// A year facet row: the 4-digit year and its result count (from the
+// publishedAt date_histogram). Selecting one applies that calendar-year range.
+type Year = {
+  year: string;
+  count: number;
+};
+
 // One verse chip within a book group: the filter token, the book-less short
 // ref ("3:16") shown on the chip, the count, and chapter/verse for ordering.
 type VerseChip = {
@@ -255,12 +262,15 @@ function FacetOption({
   onClick,
   selected,
   recommended = false,
+  count,
   children,
 }: {
   onClick: () => void;
   selected: boolean;
   // Marks an AI-recommended option with a sparkle.
   recommended?: boolean;
+  // Result count shown muted before the check (e.g. year facet). Omit to hide.
+  count?: number;
   children: ReactNode;
 }) {
   return (
@@ -280,10 +290,17 @@ function FacetOption({
         ) : null}
         {recommended ? <span className="sr-only"> (recommended)</span> : null}
       </span>
-      <IconCheck
-        size={16}
-        className={selected ? 'shrink-0 text-primary' : 'shrink-0 opacity-0'}
-      />
+      <span className="flex shrink-0 items-center gap-2">
+        {typeof count === 'number' ? (
+          <span className="text-muted text-xs tabular-nums">
+            {count.toLocaleString()}
+          </span>
+        ) : null}
+        <IconCheck
+          size={16}
+          className={selected ? 'text-primary' : 'opacity-0'}
+        />
+      </span>
     </button>
   );
 }
@@ -298,6 +315,7 @@ function FacetOption({
 export function SearchFacets({
   availableChannels = [],
   availableVerses = [],
+  availableYears = [],
   bordered = true,
   channelsLoading = false,
   recommendedChannelSlugs = [],
@@ -306,6 +324,8 @@ export function SearchFacets({
   availableChannels?: Channel[];
   /** Bible-verse facet rows (token + label + count), doc_count-ordered. */
   availableVerses?: ReadonlyArray<Verse>;
+  /** Year facet rows (year + count), newest-first. */
+  availableYears?: ReadonlyArray<Year>;
   bordered?: boolean;
   /** Show placeholder rows in the Channels/Verses sections while results load. */
   channelsLoading?: boolean;
@@ -635,6 +655,41 @@ export function SearchFacets({
             ) : null}
           </div>
         ) : null}
+
+        {/* Per-year options with real counts (publishedAt histogram) — their own
+            section below the divider, beneath the relative presets + manual
+            range. Selecting one applies that calendar-year range; selecting it
+            again clears it. */}
+        {availableYears.length > 0 ? (
+          <div className="mt-2 w-full border-gray-950/10 border-t pt-2 dark:border-white/10">
+            <div className="max-h-44 w-full overflow-y-auto">
+              {availableYears.map((y) => {
+                const yearStart = `${y.year}-01-01`;
+                const yearEnd = `${y.year}-12-31`;
+                const yearSelected =
+                  hasCustomDates &&
+                  dateStart === yearStart &&
+                  dateEnd === yearEnd;
+                return (
+                  <FacetOption
+                    key={y.year}
+                    onClick={() => {
+                      setCustomDates(
+                        yearSelected ? undefined : yearStart,
+                        yearSelected ? undefined : yearEnd,
+                      );
+                      setCustomOpen(false);
+                    }}
+                    selected={yearSelected}
+                    count={y.count}
+                  >
+                    {y.year}
+                  </FacetOption>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
       </Section>
 
       {hasActiveFilters ? (
@@ -659,12 +714,14 @@ export function SearchFacets({
 export function MobileFacets({
   availableChannels = [],
   availableVerses = [],
+  availableYears = [],
   channelsLoading = false,
   recommendedChannelSlugs = [],
   recommendedDate = null,
 }: {
   availableChannels?: Channel[];
   availableVerses?: ReadonlyArray<Verse>;
+  availableYears?: ReadonlyArray<Year>;
   channelsLoading?: boolean;
   recommendedChannelSlugs?: ReadonlyArray<string>;
   recommendedDate?: DateSuggestion | null;
@@ -709,6 +766,7 @@ export function MobileFacets({
               <SearchFacets
                 availableChannels={availableChannels}
                 availableVerses={availableVerses}
+                availableYears={availableYears}
                 bordered={false}
                 channelsLoading={channelsLoading}
                 recommendedChannelSlugs={recommendedChannelSlugs}

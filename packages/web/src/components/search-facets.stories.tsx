@@ -24,6 +24,15 @@ const VERSES = [
   { ref: 'Rom.8.28', label: 'Romans 8:28', count: 4 },
 ];
 
+// Year facet rows from the publishedAt date_histogram, newest-first.
+const YEARS = [
+  { year: '2026', count: 42 },
+  { year: '2025', count: 138 },
+  { year: '2024', count: 96 },
+  { year: '2023', count: 51 },
+  { year: '2022', count: 17 },
+];
+
 const meta = {
   title: 'Components/SearchFacets',
   component: SearchFacets,
@@ -106,6 +115,15 @@ export const WithBibleVerses: Story = {
   args: {
     availableChannels: CHANNELS,
     availableVerses: VERSES,
+  },
+};
+
+// The Date facet with per-year options carrying real counts from the
+// publishedAt histogram, below the relative presets.
+export const WithYears: Story = {
+  args: {
+    availableChannels: CHANNELS,
+    availableYears: YEARS,
   },
 };
 

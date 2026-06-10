@@ -280,6 +280,7 @@ const emptyVerses: ReadonlyArray<{
   label: string;
   count: number;
 }> = [];
+const emptyYears: ReadonlyArray<{ year: string; count: number }> = [];
 
 // Placeholder result rows shown while the first page of results loads, so a
 // fresh search transitions instantly instead of freezing on the old page.
@@ -362,6 +363,7 @@ function SearchResults({ q }: { q: string }) {
   const searchLogId = firstPage?.searchLogId ?? null;
   const facetedChannels = firstPage?.facetedChannels ?? [];
   const facetedVerses = firstPage?.facetedVerses ?? emptyVerses;
+  const facetedYears = firstPage?.facetedYears ?? emptyYears;
 
   // Skeleton only while loading a *new query* — never on a filter change (where
   // `keepPreviousData` keeps the old results/facets up). `settledQRef` records
@@ -534,6 +536,7 @@ function SearchResults({ q }: { q: string }) {
             <MobileFacets
               availableChannels={facetedChannels}
               availableVerses={facetedVerses}
+              availableYears={facetedYears}
               channelsLoading={loadingResults}
               recommendedChannelSlugs={recommendedChannelSlugs}
               recommendedDate={dateSuggestion}
@@ -619,6 +622,7 @@ function SearchResults({ q }: { q: string }) {
           <SearchFacets
             availableChannels={facetedChannels}
             availableVerses={facetedVerses}
+            availableYears={facetedYears}
             channelsLoading={loadingResults}
             recommendedChannelSlugs={recommendedChannelSlugs}
             recommendedDate={dateSuggestion}

@@ -251,6 +251,17 @@ export function buildMediaHybridBody({
       // Verse facet: every distinct cited verse across the matching set
       // (doc_count order). Sized to the full canon so nothing is truncated.
       bibleRefs: { terms: { field: 'bibleRefs', size: VERSE_FACET_SIZE } },
+      // Year facet: real per-year counts over publishedAt (newest first),
+      // skipping empty years. `format: 'yyyy'` yields key_as_string = the year.
+      publishedYears: {
+        date_histogram: {
+          field: 'publishedAt',
+          calendar_interval: 'year',
+          min_doc_count: 1,
+          format: 'yyyy',
+          order: { _key: 'desc' },
+        },
+      },
     },
     ...(sort ? { sort } : {}),
   };
@@ -342,6 +353,35 @@ export async function runMediaBibleVerseFacets(
   });
   const parsed = MediaSearchResponseSchema.parse(raw);
   return parsed.aggregations?.bibleRefs?.buckets ?? [];
+}
+
+/**
+ * Year facet list for the search UI. Same shape and rationale as
+ * `runMediaChannelFacets`, but drops the **date** filter (keeping query +
+ * access + channel + scripture filters) so the year list stays additive:
+ * picking a year must not collapse the other years. Real per-year counts come
+ * from the `publishedYears` date_histogram. Buckets are newest-year-first.
+ */
+export async function runMediaDateFacets(
+  args: BuildMediaSearchArgs,
+): Promise<Array<{ year: string; doc_count: number }>> {
+  const body = buildMediaHybridBody({
+    ...args,
+    publishedAt: null,
+    from: 0,
+    size: 1,
+    highlight: false,
+  });
+  const raw = await osSearch({
+    index: MEDIA_INDEX,
+    search_pipeline: RRF_PIPELINE,
+    ...body,
+  });
+  const parsed = MediaSearchResponseSchema.parse(raw);
+  return (parsed.aggregations?.publishedYears?.buckets ?? []).map((b) => ({
+    year: b.key_as_string,
+    doc_count: b.doc_count,
+  }));
 }
 
 const KnnProbeResponseSchema = z.object({
@@ -519,6 +559,16 @@ export const MediaSearchResponseSchema = z.object({
         .object({
           buckets: z.array(
             z.object({ key: z.string(), doc_count: z.number() }),
+          ),
+        })
+        .optional(),
+      publishedYears: z
+        .object({
+          buckets: z.array(
+            z.object({
+              key_as_string: z.string(),
+              doc_count: z.number(),
+            }),
           ),
         })
         .optional(),
