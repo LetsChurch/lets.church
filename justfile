@@ -142,6 +142,13 @@ generate-seed-annotations:
 generate-seed-summaries:
   docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run generate-seed-summaries'
 
+# Apply the diarization "absorb short segments + contiguous renumber" fix to an
+# already-seeded DB in place (no audio re-transcribe; annotations preserved),
+# then re-index. Run after pulling the tuned diarizer; follow with
+# `just dump-llm-seed-data` to snapshot the cleaned labels back into the seed.
+backfill-diarization-merge:
+  docker compose exec web sh -c 'cd /usr/src/app && pnpm --filter @letschurch/web run backfill-diarization-merge'
+
 seed-s3-ingest:
   rclone sync --fast-list --checksum --transfers ${RCLONE_TRANSFERS} --checkers ${RCLONE_CHECKERS} -P ./seed-data/lcdevs3/letschurch-dev-ingest lcdevs3:${S3_INGEST_BUCKET}
 seed-s3-public:

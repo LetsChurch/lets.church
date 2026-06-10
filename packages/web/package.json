@@ -23,7 +23,8 @@
     "seed:tags": "tsx src/seed/tags.ts",
     "dump-llm-seed-data": "tsx src/seed/dump-llm-seed-data.ts",
     "generate-seed-annotations": "tsx src/seed/generate-annotations.ts",
-    "generate-seed-summaries": "tsx src/seed/generate-summaries.ts"
+    "generate-seed-summaries": "tsx src/seed/generate-summaries.ts",
+    "backfill-diarization-merge": "tsx src/seed/backfill-diarization-merge.ts"
   },
   "dependencies": {
     "@base-ui-components/react": "^1.0.0-beta.4",
