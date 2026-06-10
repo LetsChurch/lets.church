@@ -7,9 +7,7 @@ import {
   msearchTranscripts,
   msearchUploads,
   osMsearch,
-  runMediaBibleVerseFacets,
-  runMediaChannelFacets,
-  runMediaDateFacets,
+  runMediaFacets,
   runMediaHybridSearch,
   runMediaKnnProbe,
 } from '@letschurch/opensearch';
@@ -942,14 +940,7 @@ export const searchProcedures = {
       const quoteList =
         quotes && quotes.length > 0 ? quotes : extractQuotedPhrases(q);
 
-      const [
-        hybrid,
-        channelFacetBuckets,
-        verseFacetBuckets,
-        yearFacetBuckets,
-        channelsRaw,
-        probeScore,
-      ] = await Promise.all([
+      const [hybrid, facets, channelsRaw, probeScore] = await Promise.all([
         runMediaHybridSearch({
           lexicalText: q,
           quotes: quoteList,
@@ -962,57 +953,36 @@ export const searchProcedures = {
           size: limit,
           sort: hybridSort,
         }),
-        // Channel facet list. Computed with the channel filter dropped (but the
-        // same query + date + verse filters) so selecting a channel doesn't
-        // collapse the list — the other channels stay available to broaden the
-        // selection. Only the client's page 0 consumes it, so skip the extra
-        // hybrid query on subsequent pages.
+        // All facet lists (channels, verses, years) in one query, each computed
+        // independently of the current filter selections — every facet shows its
+        // full set for the query, so picking a value in one never reshapes
+        // another. The result set is still narrowed by the AND of all selections
+        // (the main hybrid query above). Only page 0 consumes the facets, so skip
+        // the extra query on subsequent pages.
         cursor === 0
-          ? runMediaChannelFacets({
+          ? runMediaFacets({
               lexicalText: q,
               quotes: quoteList,
-              publishedAt,
-              bibleRefs,
-              bibleBooks,
               queryVector,
-            }).catch(() => [])
-          : Promise.resolve([]),
-        // Bible-verse/book facet list. Mirror of the channel facets, dropping
-        // the scripture filters (keeping query + date + channel) so the verse
-        // list — and the book headers derived from it — stay additive. Page 0
-        // only.
-        cursor === 0
-          ? runMediaBibleVerseFacets({
-              lexicalText: q,
-              quotes: quoteList,
-              channelIds,
-              publishedAt,
-              queryVector,
-            }).catch(() => [])
-          : Promise.resolve([]),
-        // Year facet list. Drops the date filter (keeping query + channel +
-        // scripture) so the year list stays additive. Page 0 only.
-        cursor === 0
-          ? runMediaDateFacets({
-              lexicalText: q,
-              quotes: quoteList,
-              channelIds,
-              bibleRefs,
-              bibleBooks,
-              queryVector,
-            }).catch(() => [])
-          : Promise.resolve([]),
+            }).catch(() => null)
+          : Promise.resolve(null),
         osMsearch(msearchChannels(q, 0, 10)),
         // Absolute relevance probe (reuses the same query embedding). A probe
         // failure shouldn't suppress results, so fail open to null (= relevant).
-        runMediaKnnProbe({
-          queryVector,
-          channelIds,
-          publishedAt,
-          bibleRefs,
-          bibleBooks,
-        }).catch(() => null),
+        //
+        // Intentionally NOT filtered by the user's facet selections: the gate
+        // asks "is this query on-topic for the library at all", a property of
+        // the query, not the filtered subset. Applying a facet (e.g. one verse)
+        // shrinks the subset and would drop its top cosine below the floor —
+        // which previously flipped `relevant` off and emptied every facet list,
+        // collapsing the panel to just the selected value. Access control still
+        // applies (runMediaKnnProbe always carries it).
+        runMediaKnnProbe({ queryVector }).catch(() => null),
       ]);
+
+      const channelFacetBuckets = facets?.channels ?? [];
+      const verseFacetBuckets = facets?.verses ?? [];
+      const yearFacetBuckets = facets?.years ?? [];
 
       // Whole-set relevance gate: when the best video isn't close enough, the
       // RRF list is just semantically-vague noise — drop the media results

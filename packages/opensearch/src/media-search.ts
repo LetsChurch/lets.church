@@ -292,54 +292,32 @@ export async function runMediaHybridSearch(
 }
 
 /**
- * Channel facet list for the search UI. Runs the same hybrid query as
- * `runMediaHybridSearch` but **without** the channel filter. Omitting the
- * channel filter is what keeps faceting additive: picking one channel must not
- * drop the other channels from the list, so the user can broaden their
- * selection. Access + date filters still apply, so the list stays scoped to
- * channels that actually have matches for this query within the chosen date
- * range.
+ * All facet lists for the search UI in one query. Each facet is **independent**:
+ * the aggregations run with every user facet selection dropped (channel, date,
+ * and scripture), so they reflect only the query + access control. Selecting a
+ * value in one facet never reshapes another facet's options or counts — the
+ * sidebar shows the full set for the query, while the result set itself is
+ * narrowed by the AND of all selections (handled by the main search query, not
+ * here). Returns channel + verse `terms` buckets (doc_count order) and per-year
+ * `date_histogram` buckets (newest-first).
  *
- * We only want the `channelId` terms aggregation, not hits — but the RRF
- * score-normalization processor throws on `size: 0` ("number of documents after
- * fetch phase [0] is different from number of documents from query phase [N]"),
- * since it needs a non-empty fetch window to normalize. Aggregations are
- * computed in the query phase over *all* matching docs regardless of the window,
- * so `size: 1` gives the complete facet counts while keeping the processor
- * happy; the single fetched hit is discarded.
+ * We only want the aggregations, not hits — but the RRF score-normalization
+ * processor throws on `size: 0` ("number of documents after fetch phase [0] is
+ * different from number of documents from query phase [N]"), since it needs a
+ * non-empty fetch window to normalize. Aggregations are computed in the query
+ * phase over *all* matching docs regardless of the window, so `size: 1` gives
+ * complete facet counts while keeping the processor happy; the hit is discarded.
  */
-export async function runMediaChannelFacets(
-  args: BuildMediaSearchArgs,
-): Promise<Array<{ key: string; doc_count: number }>> {
+export async function runMediaFacets(args: BuildMediaSearchArgs): Promise<{
+  channels: Array<{ key: string; doc_count: number }>;
+  verses: Array<{ key: string; doc_count: number }>;
+  years: Array<{ year: string; doc_count: number }>;
+}> {
   const body = buildMediaHybridBody({
     ...args,
+    // Independent facets: drop every facet selection so each list is complete.
     channelIds: null,
-    from: 0,
-    size: 1,
-    highlight: false,
-  });
-  const raw = await osSearch({
-    index: MEDIA_INDEX,
-    search_pipeline: RRF_PIPELINE,
-    ...body,
-  });
-  const parsed = MediaSearchResponseSchema.parse(raw);
-  return parsed.aggregations?.channelIds?.buckets ?? [];
-}
-
-/**
- * Bible-verse facet list for the search UI. Same shape and rationale as
- * `runMediaChannelFacets`, but drops **both** the verse and book filters
- * (keeping the query + access + channel + date filters). Scripture is one facet
- * dimension in the UI (books group the verse chips), so picking a book or verse
- * must not collapse the displayed books/verses — the user can keep widening the
- * selection. Buckets come back in doc_count order (most-cited verse first).
- */
-export async function runMediaBibleVerseFacets(
-  args: BuildMediaSearchArgs,
-): Promise<Array<{ key: string; doc_count: number }>> {
-  const body = buildMediaHybridBody({
-    ...args,
+    publishedAt: null,
     bibleRefs: null,
     bibleBooks: null,
     from: 0,
@@ -351,37 +329,15 @@ export async function runMediaBibleVerseFacets(
     search_pipeline: RRF_PIPELINE,
     ...body,
   });
-  const parsed = MediaSearchResponseSchema.parse(raw);
-  return parsed.aggregations?.bibleRefs?.buckets ?? [];
-}
-
-/**
- * Year facet list for the search UI. Same shape and rationale as
- * `runMediaChannelFacets`, but drops the **date** filter (keeping query +
- * access + channel + scripture filters) so the year list stays additive:
- * picking a year must not collapse the other years. Real per-year counts come
- * from the `publishedYears` date_histogram. Buckets are newest-year-first.
- */
-export async function runMediaDateFacets(
-  args: BuildMediaSearchArgs,
-): Promise<Array<{ year: string; doc_count: number }>> {
-  const body = buildMediaHybridBody({
-    ...args,
-    publishedAt: null,
-    from: 0,
-    size: 1,
-    highlight: false,
-  });
-  const raw = await osSearch({
-    index: MEDIA_INDEX,
-    search_pipeline: RRF_PIPELINE,
-    ...body,
-  });
-  const parsed = MediaSearchResponseSchema.parse(raw);
-  return (parsed.aggregations?.publishedYears?.buckets ?? []).map((b) => ({
-    year: b.key_as_string,
-    doc_count: b.doc_count,
-  }));
+  const aggs = MediaSearchResponseSchema.parse(raw).aggregations;
+  return {
+    channels: aggs?.channelIds?.buckets ?? [],
+    verses: aggs?.bibleRefs?.buckets ?? [],
+    years: (aggs?.publishedYears?.buckets ?? []).map((b) => ({
+      year: b.key_as_string,
+      doc_count: b.doc_count,
+    })),
+  };
 }
 
 const KnnProbeResponseSchema = z.object({
