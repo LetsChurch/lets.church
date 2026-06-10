@@ -51,19 +51,17 @@ type VerseChip = {
   verse: number;
 };
 
-// Verses grouped under their book for display: the book header, the verse
-// chips, and the book's aggregate count (used to rank books by relevance).
+// Verses grouped under their book for display: the book header + its verse
+// chips.
 type VerseGroup = {
   book: string;
   bookName: string;
-  count: number;
   verses: VerseChip[];
 };
 
-// Reshape the flat (count-ordered) verse facet into book groups. Books are
-// ordered by aggregate count (most-discussed first; canonical order breaks
-// ties); chips within a book read canonically (chapter then verse). Tokens that
-// don't parse to a specific verse are dropped.
+// Reshape the flat verse facet into book groups, in canonical (Genesis →
+// Revelation) order; chips within a book read canonically (chapter then verse).
+// Tokens that don't parse to a specific verse are dropped.
 function groupVersesByBook(
   verses: ReadonlyArray<Verse>,
 ): ReadonlyArray<VerseGroup> {
@@ -85,61 +83,61 @@ function groupVersesByBook(
     const existing = byBook.get(meta.book);
     if (existing) {
       existing.verses.push(chip);
-      existing.count += v.count;
     } else {
       byBook.set(meta.book, {
         book: meta.book,
         bookName: bibleBookName(meta.book),
-        count: v.count,
         verses: [chip],
       });
     }
   }
   const groups = Array.from(byBook.values());
-  groups.sort(
-    (a, b) =>
-      b.count - a.count || bibleBookOrder(a.book) - bibleBookOrder(b.book),
-  );
+  // Canonical order (Genesis → Revelation) so the panel reads like a
+  // back-of-the-book scripture index rather than a relevance ranking.
+  groups.sort((a, b) => bibleBookOrder(a.book) - bibleBookOrder(b.book));
   for (const group of groups) {
     group.verses.sort((a, b) => a.chapter - b.chapter || a.verse - b.verse);
   }
   return groups;
 }
 
-// Chip count above which a book's verse chips collapse to ~two rows behind a
-// "See more" toggle. Short books render in full (any number of rows, never
-// clipped); only long ones (Psalms, Romans) collapse — so there's no hidden
-// content without a toggle, and no measurement needed.
+// Chip count above which a book's verse chips collapse to ~two rows; book count
+// above which the whole panel collapses. Content under the limit renders in full
+// (never clipped without a toggle), so no measurement is needed.
 const COLLAPSED_VERSE_LIMIT = 12;
+const COLLAPSED_BOOK_LIMIT = 6;
 
-// Two-row max height for the collapsed chip area (chip ≈ 1.375rem + 0.375rem
-// row gap). A hair of slack so both rows show fully and the third is clipped.
-const COLLAPSED_CHIP_ROWS = 'max-h-13';
+// Collapsed-state classes: a max height + clip + a bottom fade mask (matching
+// the AI answer's "See more" collapse). Kept as full literal strings so
+// Tailwind's scanner picks the arbitrary mask utilities up. Two rows for chips
+// (chip ≈ 1.375rem + 0.375rem gap); a taller window for the book panel, faded
+// only near its bottom edge.
+const CHIP_COLLAPSE =
+  'max-h-13 overflow-hidden [-webkit-mask-image:linear-gradient(to_bottom,black_50%,transparent)] [mask-image:linear-gradient(to_bottom,black_50%,transparent)]';
+const BOOK_PANEL_COLLAPSE =
+  'max-h-96 overflow-hidden [-webkit-mask-image:linear-gradient(to_bottom,black_80%,transparent)] [mask-image:linear-gradient(to_bottom,black_80%,transparent)]';
 
-// Collapse wrapping content (verse chips) to two rows behind a "See more"
-// toggle when `collapsible`. Otherwise the children render in full. No
-// measurement — the caller decides collapsibility from the chip count.
+// Collapse content behind a "See more" toggle when `collapsible`, with a faded
+// cutoff. Otherwise the children render in full. No measurement — the caller
+// decides collapsibility from a count. `className` is the always-on layout;
+// `collapsedClassName` adds the max-height + clip + fade while collapsed.
 function ClampedRows({
   children,
   collapsible,
+  className,
+  collapsedClassName,
 }: {
   children: ReactNode;
   collapsible: boolean;
+  className: string;
+  collapsedClassName: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const collapsed = collapsible && !expanded;
 
   return (
     <>
-      <div
-        className={cn(
-          'flex flex-wrap gap-1.5',
-          // Fade the clipped rows out at the bottom, matching the AI answer's
-          // "See more" collapse.
-          collapsed &&
-            `${COLLAPSED_CHIP_ROWS} overflow-hidden [-webkit-mask-image:linear-gradient(to_bottom,black_50%,transparent)] [mask-image:linear-gradient(to_bottom,black_50%,transparent)]`,
-        )}
-      >
+      <div className={cn(className, collapsed && collapsedClassName)}>
         {children}
       </div>
       {collapsible ? (
@@ -455,7 +453,13 @@ export function SearchFacets({
           {/* One tooltip provider around the whole panel so every chip's
               full-reference tooltip shares the same hover delay grouping. */}
           <LcTooltip.Provider>
-            <div className="max-h-80 w-full space-y-3 overflow-y-auto">
+            {/* Collapse the whole panel behind a faded "See more" once it spans
+                many books, rather than giving it its own scrollbar. */}
+            <ClampedRows
+              collapsible={verseGroups.length > COLLAPSED_BOOK_LIMIT}
+              className="w-full space-y-3"
+              collapsedClassName={BOOK_PANEL_COLLAPSE}
+            >
               {verseGroups.map((group) => {
                 const bookSelected = selectedBooks.includes(group.book);
                 return (
@@ -485,6 +489,8 @@ export function SearchFacets({
                         collapsible={
                           group.verses.length > COLLAPSED_VERSE_LIMIT
                         }
+                        className="flex flex-wrap gap-1.5"
+                        collapsedClassName={CHIP_COLLAPSE}
                       >
                         {group.verses.map((verse) => {
                           const isSelected = selectedVerses.includes(verse.ref);
@@ -523,7 +529,7 @@ export function SearchFacets({
                   </div>
                 );
               })}
-            </div>
+            </ClampedRows>
           </LcTooltip.Provider>
         </Section>
       ) : channelsLoading ? (
