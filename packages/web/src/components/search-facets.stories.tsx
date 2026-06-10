@@ -24,6 +24,15 @@ const VERSES = [
   { ref: 'Rom.8.28', label: 'Romans 8:28', count: 4 },
 ];
 
+// Speaker facet rows from the doc-level `speakers` terms agg, most-frequent
+// first.
+const SPEAKERS = [
+  { name: 'James White', count: 31 },
+  { name: 'Voddie Baucham', count: 18 },
+  { name: 'Paul Washer', count: 12 },
+  { name: 'R.C. Sproul', count: 7 },
+];
+
 // Year facet rows from the publishedAt date_histogram, newest-first.
 const YEARS = [
   { year: '2026', count: 42 },
@@ -115,6 +124,15 @@ export const WithBibleVerses: Story = {
   args: {
     availableChannels: CHANNELS,
     availableVerses: VERSES,
+  },
+};
+
+// The speaker facet: most-frequent speakers across the result set, each with
+// its count, selectable to filter (OR semantics across picks).
+export const WithSpeakers: Story = {
+  args: {
+    availableChannels: CHANNELS,
+    availableSpeakers: SPEAKERS,
   },
 };
 

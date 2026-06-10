@@ -5,6 +5,11 @@ import {
   ChannelSubscription,
   db,
   FeaturedUpload,
+  Speaker,
+  SpeakerAttribution,
+  SpeakerLink,
+  SpeakerParagraphLabel,
+  TranscriptParagraph,
   UploadLicense,
   UploadList,
   UploadListEntry,
@@ -12,6 +17,7 @@ import {
   UploadUserComment,
   UploadView,
 } from '@letschurch/db';
+import { suggestSpeakersByEmbedding } from '@letschurch/opensearch';
 import { PART_SIZE } from '@letschurch/s3';
 import { ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
@@ -21,12 +27,14 @@ import { emailHtml, sanitizeForHtml } from '@letschurch/temporal/util/email';
 import { TRPCError } from '@trpc/server';
 import {
   and,
+  asc,
   count,
   desc,
   eq,
   ilike,
   inArray,
   isNull,
+  ne,
   or,
   sql,
 } from 'drizzle-orm';
@@ -41,14 +49,18 @@ import {
 } from '@/schemas/common';
 import {
   addToPlaylistSchema,
+  approveSpeakerLinkSchema,
+  attributeSpeakerSchema,
   bulkSetVisibilitySchema,
   cancelChannelInvitationSchema,
   channelQuerySchema,
   channelUploadsQuerySchema,
   createChannelSchema,
   createPlaylistSchema,
+  createSpeakerSchema,
   createUploadSchema,
   deletePlaylistSchema,
+  deleteSpeakerSchema,
   deleteUploadSchema,
   importMediaSchema,
   inviteChannelMemberSchema,
@@ -56,11 +68,20 @@ import {
   removeFromPlaylistSchema,
   removeMemberSchema,
   reorderPlaylistSchema,
+  requestSpeakerLinkSchema,
   resendChannelInvitationSchema,
+  saveSpeakerLabelingSchema,
+  searchSpeakersSchema,
+  setParagraphLabelSchema,
+  speakerLinkActionSchema,
+  suggestSpeakerCandidatesSchema,
+  unattributeSpeakerSchema,
   updateChannelSchema,
   updatePlaylistSchema,
+  updateSpeakerSchema,
   updateUploadSchema,
   uploadQuerySchema,
+  uploadSpeakerQuerySchema,
 } from '@/schemas/dashboard';
 import {
   client,
@@ -71,6 +92,7 @@ import {
   makeProcessMediaWorkflowId,
   sendInvitationEmail,
   startBackground,
+  startIndexMediaDocument,
 } from '@/temporal';
 import {
   mantineAvatarLg2x,
@@ -177,6 +199,143 @@ const channelEditProcedure = channelProcedure.use(async ({ ctx, next }) => {
 
   return next();
 });
+
+// --- Speaker library helpers ---
+
+// Derive a URL-safe slug from a speaker's name (ascii lowercase, hyphenated).
+function speakerSlugify(name: string): string {
+  const base = name
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+  return base || 'speaker';
+}
+
+// Pick a slug unique within the channel: `base`, else `base-2`, `base-3`, … The
+// unique index spans all rows (incl. soft-deleted), so reserved slugs stay
+// reserved — acceptable for v1.
+async function uniqueSpeakerSlug(
+  channelId: string,
+  base: string,
+): Promise<string> {
+  const existing = await db
+    .select({ slug: Speaker.slug })
+    .from(Speaker)
+    .where(
+      and(
+        eq(Speaker.channelId, channelId),
+        or(eq(Speaker.slug, base), ilike(Speaker.slug, `${base}-%`)),
+      ),
+    );
+  const taken = new Set(existing.map((r) => r.slug));
+  if (!taken.has(base)) return base;
+  let n = 2;
+  while (taken.has(`${base}-${n}`)) n++;
+  return `${base}-${n}`;
+}
+
+// The channels whose speakers a given channel may attribute to: its own, plus
+// any channel it holds an ACCEPTED speaker link into. Used to scope candidate
+// suggestions to authorized identities.
+async function authorizedSpeakerChannelIds(
+  channelId: string,
+): Promise<string[]> {
+  const linked = await db
+    .selectDistinct({ channelId: Speaker.channelId })
+    .from(SpeakerLink)
+    .innerJoin(Speaker, eq(SpeakerLink.speakerId, Speaker.id))
+    .where(
+      and(
+        eq(SpeakerLink.requestingChannelId, channelId),
+        eq(SpeakerLink.status, 'ACCEPTED'),
+      ),
+    );
+  return Array.from(new Set([channelId, ...linked.map((r) => r.channelId)]));
+}
+
+// Verify a speaker may be attributed to an upload by a channel: either the
+// channel owns the (non-deleted) speaker, or it holds an ACCEPTED link whose
+// grant covers this upload (channel-wide when grantedUploadId is null).
+async function assertSpeakerUsable(
+  channelId: string,
+  speakerId: string,
+  uploadId: string,
+): Promise<void> {
+  const speaker = await db.query.Speaker.findFirst({
+    columns: { id: true, channelId: true },
+    where: (t, { and, eq, isNull }) =>
+      and(eq(t.id, speakerId), isNull(t.deletedAt)),
+  });
+  if (!speaker) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Speaker not found' });
+  }
+  if (speaker.channelId === channelId) return;
+
+  const link = await db.query.SpeakerLink.findFirst({
+    columns: { grantedUploadId: true },
+    where: (t, { and, eq }) =>
+      and(
+        eq(t.speakerId, speakerId),
+        eq(t.requestingChannelId, channelId),
+        eq(t.status, 'ACCEPTED'),
+      ),
+  });
+  if (!link || (link.grantedUploadId && link.grantedUploadId !== uploadId)) {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'This channel is not authorized to use that speaker here',
+    });
+  }
+}
+
+// Confirm an upload belongs to the channel; returns its id or throws NOT_FOUND.
+async function assertUploadInChannel(
+  channelId: string,
+  uploadId: string,
+): Promise<void> {
+  const upload = await db.query.UploadRecord.findFirst({
+    columns: { id: true },
+    where: (t, { and, eq }) =>
+      and(eq(t.id, uploadId), eq(t.channelId, channelId)),
+  });
+  if (!upload) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Upload not found' });
+  }
+}
+
+// Re-index every upload attributed to a speaker (after a name change or delete,
+// so the doc-level `speakers` rollup + paragraph speakerName stay current).
+async function reindexSpeakerUploads(speakerId: string): Promise<void> {
+  const uploads = await db
+    .selectDistinct({ uploadRecordId: SpeakerAttribution.uploadRecordId })
+    .from(SpeakerAttribution)
+    .where(eq(SpeakerAttribution.speakerId, speakerId));
+  await Promise.all(
+    uploads.map((u) => startIndexMediaDocument(u.uploadRecordId)),
+  );
+}
+
+// Load a link by id, verifying its speaker is owned by `channelId` (the side
+// that may approve/decline). Throws NOT_FOUND otherwise.
+async function loadOwnedSpeakerLink(
+  channelId: string,
+  linkId: string,
+): Promise<{ id: string; requestedForUploadId: string | null }> {
+  const [link] = await db
+    .select({
+      id: SpeakerLink.id,
+      requestedForUploadId: SpeakerLink.requestedForUploadId,
+    })
+    .from(SpeakerLink)
+    .innerJoin(Speaker, eq(SpeakerLink.speakerId, Speaker.id))
+    .where(and(eq(SpeakerLink.id, linkId), eq(Speaker.channelId, channelId)));
+  if (!link) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: 'Request not found' });
+  }
+  return link;
+}
 
 export const channelRouter = router({
   createChannel: authProcedure
@@ -453,38 +612,50 @@ export const channelRouter = router({
       }
     }
 
-    const [viewCountResult, subscriberCountResult, uploadCountResult] =
-      await Promise.all([
-        db
-          .select({ count: count() })
-          .from(UploadView)
-          .innerJoin(
-            UploadRecord,
-            eq(UploadView.uploadRecordId, UploadRecord.id),
-          )
-          .where(eq(UploadRecord.channelId, input.channelId))
-          .then((r) => r[0]),
-        db
-          .select({ count: count() })
-          .from(ChannelSubscription)
-          .where(eq(ChannelSubscription.channelId, input.channelId))
-          .then((r) => r[0]),
-        db
-          .select({ count: count() })
-          .from(UploadRecord)
-          .where(
-            and(
-              eq(UploadRecord.channelId, input.channelId),
-              isNull(UploadRecord.deletedAt),
-            ),
-          )
-          .then((r) => r[0]),
-      ]);
+    const [
+      viewCountResult,
+      subscriberCountResult,
+      uploadCountResult,
+      speakerCountResult,
+    ] = await Promise.all([
+      db
+        .select({ count: count() })
+        .from(UploadView)
+        .innerJoin(UploadRecord, eq(UploadView.uploadRecordId, UploadRecord.id))
+        .where(eq(UploadRecord.channelId, input.channelId))
+        .then((r) => r[0]),
+      db
+        .select({ count: count() })
+        .from(ChannelSubscription)
+        .where(eq(ChannelSubscription.channelId, input.channelId))
+        .then((r) => r[0]),
+      db
+        .select({ count: count() })
+        .from(UploadRecord)
+        .where(
+          and(
+            eq(UploadRecord.channelId, input.channelId),
+            isNull(UploadRecord.deletedAt),
+          ),
+        )
+        .then((r) => r[0]),
+      db
+        .select({ count: count() })
+        .from(Speaker)
+        .where(
+          and(
+            eq(Speaker.channelId, input.channelId),
+            isNull(Speaker.deletedAt),
+          ),
+        )
+        .then((r) => r[0]),
+    ]);
 
     const totalViews = Number(viewCountResult?.count ?? 0);
     const uploadRecordCount = Number(uploadCountResult?.count ?? 0);
     const subscriberCount = Number(subscriberCountResult?.count ?? 0);
     const membershipCount = channel.memberships.length;
+    const speakerCount = Number(speakerCountResult?.count ?? 0);
 
     const { avatarPath, ...channelWithoutPath } = channel;
     const avatarUrl = avatarPath
@@ -499,6 +670,7 @@ export const channelRouter = router({
         uploadRecords: uploadRecordCount,
         subscribers: subscriberCount,
         memberships: membershipCount,
+        speakers: speakerCount,
         uploadLists: 0, // Will be fetched separately if needed
       },
       avatarUrl,
@@ -947,6 +1119,686 @@ export const channelRouter = router({
         'Channel invitation resent',
       );
 
+      return { success: true };
+    }),
+
+  // --- Speaker library ---
+
+  // Transcript grouped (client-side) by effective speaker label, with the
+  // current label→speaker attributions, for the labeling modal.
+  getUploadTranscriptForLabeling: channelEditProcedure
+    .input(uploadSpeakerQuerySchema)
+    .query(async ({ input }) => {
+      await assertUploadInChannel(input.channelId, input.uploadId);
+
+      const paragraphs = await db
+        .select({
+          id: TranscriptParagraph.id,
+          order: TranscriptParagraph.order,
+          start: TranscriptParagraph.start,
+          end: TranscriptParagraph.end,
+          speaker: TranscriptParagraph.speaker,
+          text: TranscriptParagraph.text,
+        })
+        .from(TranscriptParagraph)
+        .where(eq(TranscriptParagraph.uploadRecordId, input.uploadId))
+        .orderBy(asc(TranscriptParagraph.order));
+
+      const overrides = await db
+        .select({
+          paragraphId: SpeakerParagraphLabel.paragraphId,
+          label: SpeakerParagraphLabel.label,
+        })
+        .from(SpeakerParagraphLabel)
+        .innerJoin(
+          TranscriptParagraph,
+          eq(SpeakerParagraphLabel.paragraphId, TranscriptParagraph.id),
+        )
+        .where(eq(TranscriptParagraph.uploadRecordId, input.uploadId));
+      const overrideByParagraphId = new Map(
+        overrides.map((o) => [o.paragraphId, o.label]),
+      );
+
+      // Current attributions (effective label → speaker), excluding
+      // soft-deleted speakers so they read as unlabeled.
+      const attributions = await db
+        .select({
+          label: SpeakerAttribution.speakerLabel,
+          speakerId: SpeakerAttribution.speakerId,
+          speakerName: Speaker.name,
+        })
+        .from(SpeakerAttribution)
+        .innerJoin(Speaker, eq(SpeakerAttribution.speakerId, Speaker.id))
+        .where(
+          and(
+            eq(SpeakerAttribution.uploadRecordId, input.uploadId),
+            isNull(Speaker.deletedAt),
+          ),
+        );
+
+      return {
+        paragraphs: paragraphs.map((p) => ({
+          id: p.id,
+          order: p.order,
+          start: p.start,
+          end: p.end,
+          speaker: p.speaker,
+          effectiveLabel: overrideByParagraphId.get(p.id) ?? p.speaker,
+          text: p.text,
+        })),
+        attributions,
+      };
+    }),
+
+  // Reassign a single paragraph to a different/new effective label. Setting it
+  // back to the diarization label clears the override.
+  setParagraphLabel: channelEditProcedure
+    .input(setParagraphLabelSchema)
+    .mutation(async ({ ctx, input }) => {
+      await assertUploadInChannel(input.channelId, input.uploadId);
+
+      const paragraph = await db.query.TranscriptParagraph.findFirst({
+        columns: { id: true, speaker: true },
+        where: (t, { and, eq }) =>
+          and(
+            eq(t.id, input.paragraphId),
+            eq(t.uploadRecordId, input.uploadId),
+          ),
+      });
+      if (!paragraph) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Paragraph not found',
+        });
+      }
+
+      if (input.label === paragraph.speaker) {
+        // Reverting to the diarization label — drop any override.
+        await db
+          .delete(SpeakerParagraphLabel)
+          .where(eq(SpeakerParagraphLabel.paragraphId, input.paragraphId));
+      } else {
+        await db
+          .insert(SpeakerParagraphLabel)
+          .values({
+            paragraphId: input.paragraphId,
+            label: input.label,
+            createdById: ctx.session.appUserId,
+            updatedAt: new Date(),
+          })
+          .onConflictDoUpdate({
+            target: [SpeakerParagraphLabel.paragraphId],
+            set: { label: input.label, updatedAt: new Date() },
+          });
+      }
+
+      await startIndexMediaDocument(input.uploadId);
+      return { success: true };
+    }),
+
+  // Attribute an effective label (every paragraph carrying it) to a speaker.
+  attributeSpeaker: channelEditProcedure
+    .input(attributeSpeakerSchema)
+    .mutation(async ({ ctx, input }) => {
+      await assertUploadInChannel(input.channelId, input.uploadId);
+      await assertSpeakerUsable(
+        input.channelId,
+        input.speakerId,
+        input.uploadId,
+      );
+
+      await db
+        .insert(SpeakerAttribution)
+        .values({
+          uploadRecordId: input.uploadId,
+          speakerLabel: input.speakerLabel,
+          speakerId: input.speakerId,
+          createdById: ctx.session.appUserId,
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: [
+            SpeakerAttribution.uploadRecordId,
+            SpeakerAttribution.speakerLabel,
+          ],
+          set: { speakerId: input.speakerId, updatedAt: new Date() },
+        });
+
+      await startIndexMediaDocument(input.uploadId);
+      return { success: true };
+    }),
+
+  unattributeSpeaker: channelEditProcedure
+    .input(unattributeSpeakerSchema)
+    .mutation(async ({ input }) => {
+      await assertUploadInChannel(input.channelId, input.uploadId);
+      await db
+        .delete(SpeakerAttribution)
+        .where(
+          and(
+            eq(SpeakerAttribution.uploadRecordId, input.uploadId),
+            eq(SpeakerAttribution.speakerLabel, input.speakerLabel),
+          ),
+        );
+      await startIndexMediaDocument(input.uploadId);
+      return { success: true };
+    }),
+
+  // Commit a whole labeling session at once: paragraph-label overrides +
+  // label→speaker attributions in a single transaction, then ONE reindex. The
+  // modal stages every edit locally and calls this on Save so a session reindexes
+  // once instead of per click. A null speakerId unassigns that label.
+  saveSpeakerLabeling: channelEditProcedure
+    .input(saveSpeakerLabelingSchema)
+    .mutation(async ({ ctx, input }) => {
+      await assertUploadInChannel(input.channelId, input.uploadId);
+
+      // Validate every referenced paragraph belongs to the upload and capture
+      // its diarization label (so reverting an override deletes the row).
+      const paragraphs = await db
+        .select({
+          id: TranscriptParagraph.id,
+          speaker: TranscriptParagraph.speaker,
+        })
+        .from(TranscriptParagraph)
+        .where(eq(TranscriptParagraph.uploadRecordId, input.uploadId));
+      const diarizationById = new Map(paragraphs.map((p) => [p.id, p.speaker]));
+      for (const { paragraphId } of input.paragraphLabels) {
+        if (!diarizationById.has(paragraphId)) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Paragraph not found',
+          });
+        }
+      }
+
+      // Authorize every assignment up front so a bad one fails the whole save.
+      for (const a of input.attributions) {
+        if (a.speakerId) {
+          await assertSpeakerUsable(
+            input.channelId,
+            a.speakerId,
+            input.uploadId,
+          );
+        }
+      }
+
+      const now = new Date();
+      await db.transaction(async (tx) => {
+        for (const { paragraphId, label } of input.paragraphLabels) {
+          if (label === diarizationById.get(paragraphId)) {
+            await tx
+              .delete(SpeakerParagraphLabel)
+              .where(eq(SpeakerParagraphLabel.paragraphId, paragraphId));
+          } else {
+            await tx
+              .insert(SpeakerParagraphLabel)
+              .values({
+                paragraphId,
+                label,
+                createdById: ctx.session.appUserId,
+                updatedAt: now,
+              })
+              .onConflictDoUpdate({
+                target: [SpeakerParagraphLabel.paragraphId],
+                set: { label, updatedAt: now },
+              });
+          }
+        }
+        for (const { speakerLabel, speakerId } of input.attributions) {
+          if (speakerId === null) {
+            await tx
+              .delete(SpeakerAttribution)
+              .where(
+                and(
+                  eq(SpeakerAttribution.uploadRecordId, input.uploadId),
+                  eq(SpeakerAttribution.speakerLabel, speakerLabel),
+                ),
+              );
+          } else {
+            await tx
+              .insert(SpeakerAttribution)
+              .values({
+                uploadRecordId: input.uploadId,
+                speakerLabel,
+                speakerId,
+                createdById: ctx.session.appUserId,
+                updatedAt: now,
+              })
+              .onConflictDoUpdate({
+                target: [
+                  SpeakerAttribution.uploadRecordId,
+                  SpeakerAttribution.speakerLabel,
+                ],
+                set: { speakerId, updatedAt: now },
+              });
+          }
+        }
+      });
+
+      await startIndexMediaDocument(input.uploadId);
+      return { success: true };
+    }),
+
+  // Ranked candidate identities for an unlabeled effective label, by voice
+  // similarity (titanet kNN, then bucket-by-identity). Falls back to the
+  // channel's most-used speakers when the embedding pool is cold.
+  suggestSpeakerCandidates: channelEditProcedure
+    .input(suggestSpeakerCandidatesSchema)
+    .query(async ({ input }) => {
+      await assertUploadInChannel(input.channelId, input.uploadId);
+
+      // Average the 192-dim titanet vectors of the paragraphs carrying this
+      // effective label (override ?? diarization speaker).
+      const rows = await db
+        .select({
+          id: TranscriptParagraph.id,
+          speaker: TranscriptParagraph.speaker,
+          speakerEmbedding: TranscriptParagraph.speakerEmbedding,
+          overrideLabel: SpeakerParagraphLabel.label,
+        })
+        .from(TranscriptParagraph)
+        .leftJoin(
+          SpeakerParagraphLabel,
+          eq(SpeakerParagraphLabel.paragraphId, TranscriptParagraph.id),
+        )
+        .where(eq(TranscriptParagraph.uploadRecordId, input.uploadId));
+
+      const vectors = rows
+        .filter((r) => (r.overrideLabel ?? r.speaker) === input.speakerLabel)
+        .map((r) => r.speakerEmbedding)
+        .filter((v): v is number[] => Array.isArray(v) && v.length > 0);
+
+      const channelIds = await authorizedSpeakerChannelIds(input.channelId);
+
+      let candidates: Array<{
+        speakerId: string;
+        name: string;
+        channelId: string;
+        channelName: string;
+        // Voice-match confidence (0–100) from the titanet kNN; null for the
+        // cold-start fallback (no embedding comparison).
+        matchPercent: number | null;
+      }> = [];
+
+      if (vectors.length > 0) {
+        const dims = vectors[0]?.length ?? 0;
+        const avg = new Array<number>(dims).fill(0);
+        for (const v of vectors) {
+          for (let i = 0; i < dims; i++) avg[i] += (v[i] ?? 0) / vectors.length;
+        }
+
+        const knn = await suggestSpeakersByEmbedding({
+          speakerEmbedding: avg,
+          channelIds,
+        });
+
+        if (knn.length > 0) {
+          // Resolve fresh names + ownership from the DB; drop ids that no
+          // longer resolve to a usable (non-deleted, authorized) speaker.
+          const ids = knn.map((c) => c.speakerId);
+          const speakers = await db
+            .select({
+              id: Speaker.id,
+              name: Speaker.name,
+              channelId: Speaker.channelId,
+              channelName: Channel.name,
+            })
+            .from(Speaker)
+            .innerJoin(Channel, eq(Speaker.channelId, Channel.id))
+            .where(
+              and(
+                inArray(Speaker.id, ids),
+                inArray(Speaker.channelId, channelIds),
+                isNull(Speaker.deletedAt),
+              ),
+            );
+          const byId = new Map(speakers.map((s) => [s.id, s]));
+          candidates = knn
+            .map((c) => {
+              const s = byId.get(c.speakerId);
+              if (!s) return null;
+              // faiss cosinesimil knn returns score = (1 + cosine) / 2, so
+              // cosine = 2*score - 1; surface it as a 0–100 match confidence.
+              const cosine = 2 * c.topScore - 1;
+              const matchPercent = Math.max(
+                0,
+                Math.min(100, Math.round(cosine * 100)),
+              );
+              return {
+                speakerId: s.id,
+                name: s.name,
+                channelId: s.channelId,
+                channelName: s.channelName,
+                matchPercent,
+              };
+            })
+            .filter((c): c is NonNullable<typeof c> => c != null);
+        }
+      }
+
+      // Only high-confidence voice matches are returned (the kNN floor handles
+      // this). When none qualify, there are simply no suggestions — the picker
+      // still lists the channel's speakers under "This channel" to choose from.
+      return { candidates };
+    }),
+
+  // Speakers owned by the channel, with attribution counts.
+  getChannelSpeakers: channelProcedure.query(async ({ ctx, input }) => {
+    const speakers = await db
+      .select({
+        id: Speaker.id,
+        name: Speaker.name,
+        slug: Speaker.slug,
+        bio: Speaker.bio,
+        createdAt: Speaker.createdAt,
+        attributionCount: count(SpeakerAttribution.id),
+      })
+      .from(Speaker)
+      .leftJoin(
+        SpeakerAttribution,
+        eq(SpeakerAttribution.speakerId, Speaker.id),
+      )
+      .where(
+        and(eq(Speaker.channelId, input.channelId), isNull(Speaker.deletedAt)),
+      )
+      .groupBy(Speaker.id)
+      .orderBy(asc(Speaker.name));
+
+    return { speakers, canAdmin: ctx.canAdmin };
+  }),
+
+  createSpeaker: channelEditProcedure
+    .input(createSpeakerSchema)
+    .mutation(async ({ ctx, input }) => {
+      const base = speakerSlugify(input.slug ?? input.name);
+      const slug = await uniqueSpeakerSlug(input.channelId, base);
+
+      const [speaker] = await db
+        .insert(Speaker)
+        .values({
+          channelId: input.channelId,
+          name: input.name,
+          slug,
+          bio: input.bio ?? null,
+          createdById: ctx.session.appUserId,
+          updatedAt: new Date(),
+        })
+        .returning({
+          id: Speaker.id,
+          name: Speaker.name,
+          slug: Speaker.slug,
+          bio: Speaker.bio,
+        });
+
+      if (!speaker) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      }
+      return { speaker };
+    }),
+
+  updateSpeaker: channelAdminProcedure
+    .input(updateSpeakerSchema)
+    .mutation(async ({ input }) => {
+      const [speaker] = await db
+        .update(Speaker)
+        .set({
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(input.bio !== undefined ? { bio: input.bio } : {}),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(Speaker.id, input.speakerId),
+            eq(Speaker.channelId, input.channelId),
+            isNull(Speaker.deletedAt),
+          ),
+        )
+        .returning({ id: Speaker.id });
+
+      if (!speaker) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Speaker not found',
+        });
+      }
+
+      // The name feeds the doc-level `speakers` rollup, so re-index every upload
+      // attributed to this speaker.
+      if (input.name !== undefined) {
+        await reindexSpeakerUploads(input.speakerId);
+      }
+      return { success: true };
+    }),
+
+  deleteSpeaker: channelAdminProcedure
+    .input(deleteSpeakerSchema)
+    .mutation(async ({ input }) => {
+      const [speaker] = await db
+        .update(Speaker)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(
+          and(
+            eq(Speaker.id, input.speakerId),
+            eq(Speaker.channelId, input.channelId),
+            isNull(Speaker.deletedAt),
+          ),
+        )
+        .returning({ id: Speaker.id });
+
+      if (!speaker) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Speaker not found',
+        });
+      }
+
+      // Attributions are kept; re-index drops the now-deleted name from search.
+      await reindexSpeakerUploads(input.speakerId);
+      return { success: true };
+    }),
+
+  // Search speakers owned by OTHER channels (to request a cross-channel link).
+  searchSpeakers: channelProcedure
+    .input(searchSpeakersSchema)
+    .query(async ({ input }) => {
+      const results = await db
+        .select({
+          speakerId: Speaker.id,
+          name: Speaker.name,
+          channelId: Speaker.channelId,
+          channelName: Channel.name,
+          linkStatus: SpeakerLink.status,
+        })
+        .from(Speaker)
+        .innerJoin(Channel, eq(Speaker.channelId, Channel.id))
+        .leftJoin(
+          SpeakerLink,
+          and(
+            eq(SpeakerLink.speakerId, Speaker.id),
+            eq(SpeakerLink.requestingChannelId, input.channelId),
+          ),
+        )
+        .where(
+          and(
+            ne(Speaker.channelId, input.channelId),
+            isNull(Speaker.deletedAt),
+            ilike(Speaker.name, `%${escapeLikePattern(input.query)}%`),
+          ),
+        )
+        .orderBy(asc(Speaker.name))
+        .limit(20);
+
+      return { results };
+    }),
+
+  requestSpeakerLink: channelAdminProcedure
+    .input(requestSpeakerLinkSchema)
+    .mutation(async ({ ctx, input }) => {
+      const speaker = await db.query.Speaker.findFirst({
+        columns: { id: true, channelId: true },
+        where: (t, { and, eq, isNull }) =>
+          and(eq(t.id, input.speakerId), isNull(t.deletedAt)),
+      });
+      if (!speaker) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Speaker not found',
+        });
+      }
+      if (speaker.channelId === input.channelId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'You already own this speaker',
+        });
+      }
+      if (input.forUploadId) {
+        await assertUploadInChannel(input.channelId, input.forUploadId);
+      }
+
+      await db
+        .insert(SpeakerLink)
+        .values({
+          speakerId: input.speakerId,
+          requestingChannelId: input.channelId,
+          status: 'PENDING',
+          requestedForUploadId: input.forUploadId ?? null,
+          requestedById: ctx.session.appUserId,
+        })
+        .onConflictDoUpdate({
+          target: [SpeakerLink.speakerId, SpeakerLink.requestingChannelId],
+          set: {
+            status: 'PENDING',
+            requestedForUploadId: input.forUploadId ?? null,
+            requestedById: ctx.session.appUserId,
+            respondedById: null,
+            respondedAt: null,
+            grantedUploadId: null,
+          },
+        });
+
+      return { success: true };
+    }),
+
+  // Pending requests from other channels to use THIS channel's speakers.
+  getIncomingSpeakerLinkRequests: channelAdminProcedure
+    .input(channelQuerySchema)
+    .query(async ({ input }) => {
+      const rows = await db
+        .select({
+          id: SpeakerLink.id,
+          createdAt: SpeakerLink.createdAt,
+          speakerId: Speaker.id,
+          speakerName: Speaker.name,
+          requestingChannelName: Channel.name,
+          requestedForUploadId: SpeakerLink.requestedForUploadId,
+        })
+        .from(SpeakerLink)
+        .innerJoin(Speaker, eq(SpeakerLink.speakerId, Speaker.id))
+        .innerJoin(Channel, eq(SpeakerLink.requestingChannelId, Channel.id))
+        .where(
+          and(
+            eq(Speaker.channelId, input.channelId),
+            eq(SpeakerLink.status, 'PENDING'),
+          ),
+        )
+        .orderBy(desc(SpeakerLink.createdAt));
+
+      return rows.map((r) => ({
+        ...r,
+        requestedForUploadId: r.requestedForUploadId
+          ? uuidTranslator.fromUUID(r.requestedForUploadId)
+          : null,
+      }));
+    }),
+
+  // This channel's outgoing link requests to other channels' speakers.
+  getOutgoingSpeakerLinkRequests: channelProcedure.query(async ({ input }) => {
+    const rows = await db
+      .select({
+        id: SpeakerLink.id,
+        status: SpeakerLink.status,
+        createdAt: SpeakerLink.createdAt,
+        respondedAt: SpeakerLink.respondedAt,
+        speakerName: Speaker.name,
+        ownerChannelName: Channel.name,
+        grantedUploadId: SpeakerLink.grantedUploadId,
+      })
+      .from(SpeakerLink)
+      .innerJoin(Speaker, eq(SpeakerLink.speakerId, Speaker.id))
+      .innerJoin(Channel, eq(Speaker.channelId, Channel.id))
+      .where(eq(SpeakerLink.requestingChannelId, input.channelId))
+      .orderBy(desc(SpeakerLink.createdAt));
+
+    return rows.map((r) => ({
+      ...r,
+      grantedUploadId: r.grantedUploadId
+        ? uuidTranslator.fromUUID(r.grantedUploadId)
+        : null,
+    }));
+  }),
+
+  approveSpeakerLink: channelAdminProcedure
+    .input(approveSpeakerLinkSchema)
+    .mutation(async ({ ctx, input }) => {
+      const link = await loadOwnedSpeakerLink(input.channelId, input.linkId);
+
+      if (input.scope === 'upload' && !link.requestedForUploadId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'This request has no specific upload to grant',
+        });
+      }
+
+      await db
+        .update(SpeakerLink)
+        .set({
+          status: 'ACCEPTED',
+          respondedById: ctx.session.appUserId,
+          respondedAt: new Date(),
+          grantedUploadId:
+            input.scope === 'upload' ? link.requestedForUploadId : null,
+        })
+        .where(eq(SpeakerLink.id, link.id));
+
+      return { success: true };
+    }),
+
+  declineSpeakerLink: channelAdminProcedure
+    .input(speakerLinkActionSchema)
+    .mutation(async ({ ctx, input }) => {
+      const link = await loadOwnedSpeakerLink(input.channelId, input.linkId);
+      await db
+        .update(SpeakerLink)
+        .set({
+          status: 'DECLINED',
+          respondedById: ctx.session.appUserId,
+          respondedAt: new Date(),
+        })
+        .where(eq(SpeakerLink.id, link.id));
+      return { success: true };
+    }),
+
+  // Requesting side cancels its own pending request.
+  cancelSpeakerLinkRequest: channelAdminProcedure
+    .input(speakerLinkActionSchema)
+    .mutation(async ({ input }) => {
+      const result = await db
+        .update(SpeakerLink)
+        .set({ status: 'CANCELLED' })
+        .where(
+          and(
+            eq(SpeakerLink.id, input.linkId),
+            eq(SpeakerLink.requestingChannelId, input.channelId),
+          ),
+        )
+        .returning({ id: SpeakerLink.id });
+      if (result.length === 0) {
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Request not found',
+        });
+      }
       return { success: true };
     }),
 

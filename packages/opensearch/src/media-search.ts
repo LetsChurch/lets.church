@@ -26,6 +26,12 @@ import { type OsMsearchItem, type OsQuery, osSearch } from './client';
 
 export const MEDIA_INDEX = 'lc_media_v1';
 
+// Flat companion index for speaker suggestions: one doc per (upload, label)
+// attribution, holding that label's mean 192-dim titanet vector + speakerId +
+// channelId. kNN + collapse(speakerId) over this gives server-side, score-ranked
+// identity suggestions (see suggestSpeakersByEmbedding).
+export const SPEAKER_VECTOR_INDEX = 'lc_speaker_vectors';
+
 // Search pipeline (PUT in mappings.ts) that RRF-fuses the hybrid sub-queries.
 export const RRF_PIPELINE = 'lc-media-rrf';
 
@@ -35,6 +41,13 @@ const PARA_KNN = 'para_knn';
 
 // kNN candidate pool per sub-query.
 const KNN_K = 50;
+
+// Speaker-suggestion confidence floor (0–100, in the cosine-derived match-%
+// the UI shows). faiss `cosinesimil` knn returns score = (1 + cosine)/2, so
+// cosine = 2*score - 1 and match% = round(cosine*100). Identities whose best
+// matching voice is below this are NOT suggested — only high-confidence voice
+// matches surface. (The dashboard's one-click quick-assign uses a stricter 80%.)
+const SPEAKER_SUGGEST_MIN_MATCH_PERCENT = 70;
 
 // Verse facet `terms` size. The Protestant canon has ~31,102 verses, so this
 // ceiling returns every distinct cited verse — the facet never truncates. (The
@@ -62,6 +75,7 @@ function buildFilter(
   publishedAt?: PublishedAtRange | null,
   bibleRefs?: string[] | null,
   bibleBooks?: string[] | null,
+  speakers?: string[] | null,
 ): OsQuery[] {
   const filter = accessControlFilter();
   if (Array.isArray(channelIds) && channelIds.length > 0) {
@@ -80,6 +94,10 @@ function buildFilter(
   if (Array.isArray(bibleBooks) && bibleBooks.length > 0) {
     filter.push({ terms: { bibleBooks } });
   }
+  // Resolved speaker names (doc-level rollup). OR within, AND'd across facets.
+  if (Array.isArray(speakers) && speakers.length > 0) {
+    filter.push({ terms: { speakers } });
+  }
   return filter;
 }
 
@@ -96,6 +114,8 @@ export type BuildMediaSearchArgs = {
   bibleRefs?: string[] | null;
   /** OSIS book ids ("Rom") to restrict to (the Bible-book facet). */
   bibleBooks?: string[] | null;
+  /** Resolved speaker names to restrict to (the speaker facet). */
+  speakers?: string[] | null;
   /** 1536-dim query embedding (text-embedding-3-small). */
   queryVector: number[];
   from?: number;
@@ -152,6 +172,7 @@ export function buildMediaHybridBody({
   publishedAt,
   bibleRefs,
   bibleBooks,
+  speakers,
   queryVector,
   from = 0,
   size = 20,
@@ -160,7 +181,13 @@ export function buildMediaHybridBody({
   highlight = true,
 }: BuildMediaSearchArgs): OsMsearchItem {
   const trimmed = lexicalText.trim();
-  const filter = buildFilter(channelIds, publishedAt, bibleRefs, bibleBooks);
+  const filter = buildFilter(
+    channelIds,
+    publishedAt,
+    bibleRefs,
+    bibleBooks,
+    speakers,
+  );
 
   // (1) BM25 lexical
   const lexicalShould: OsQuery[] = [
@@ -248,6 +275,8 @@ export function buildMediaHybridBody({
     },
     aggs: {
       channelIds: { terms: { field: 'channelId', size: 100 } },
+      // Speaker facet: distinct resolved speaker names across the matching set.
+      speakers: { terms: { field: 'speakers', size: 1000 } },
       // Verse facet: every distinct cited verse across the matching set
       // (doc_count order). Sized to the full canon so nothing is truncated.
       bibleRefs: { terms: { field: 'bibleRefs', size: VERSE_FACET_SIZE } },
@@ -310,6 +339,7 @@ export async function runMediaHybridSearch(
  */
 export async function runMediaFacets(args: BuildMediaSearchArgs): Promise<{
   channels: Array<{ key: string; doc_count: number }>;
+  speakers: Array<{ key: string; doc_count: number }>;
   verses: Array<{ key: string; doc_count: number }>;
   years: Array<{ year: string; doc_count: number }>;
 }> {
@@ -320,6 +350,7 @@ export async function runMediaFacets(args: BuildMediaSearchArgs): Promise<{
     publishedAt: null,
     bibleRefs: null,
     bibleBooks: null,
+    speakers: null,
     from: 0,
     size: 1,
     highlight: false,
@@ -332,6 +363,7 @@ export async function runMediaFacets(args: BuildMediaSearchArgs): Promise<{
   const aggs = MediaSearchResponseSchema.parse(raw).aggregations;
   return {
     channels: aggs?.channelIds?.buckets ?? [],
+    speakers: aggs?.speakers?.buckets ?? [],
     verses: aggs?.bibleRefs?.buckets ?? [],
     years: (aggs?.publishedYears?.buckets ?? []).map((b) => ({
       year: b.key_as_string,
@@ -363,14 +395,22 @@ export async function runMediaKnnProbe({
   publishedAt,
   bibleRefs,
   bibleBooks,
+  speakers,
 }: {
   queryVector: number[];
   channelIds?: string[] | null;
   publishedAt?: PublishedAtRange | null;
   bibleRefs?: string[] | null;
   bibleBooks?: string[] | null;
+  speakers?: string[] | null;
 }): Promise<number | null> {
-  const filter = buildFilter(channelIds, publishedAt, bibleRefs, bibleBooks);
+  const filter = buildFilter(
+    channelIds,
+    publishedAt,
+    bibleRefs,
+    bibleBooks,
+    speakers,
+  );
   const raw = await osSearch({
     index: MEDIA_INDEX,
     size: 1,
@@ -387,6 +427,87 @@ export async function runMediaKnnProbe({
     },
   });
   return KnnProbeResponseSchema.parse(raw).hits.hits[0]?._score ?? null;
+}
+
+// Collapsed hit shape for the speaker-suggestion kNN over `lc_speaker_vectors`.
+const SpeakerVectorResponseSchema = z.object({
+  hits: z.object({
+    hits: z.array(
+      z.object({
+        _score: z.number().nullable(),
+        _source: z.object({ speakerId: z.string() }),
+      }),
+    ),
+  }),
+});
+
+export type SpeakerCandidate = {
+  speakerId: string;
+  /** Best (highest) kNN score for this identity. cosine = 2*topScore - 1. */
+  topScore: number;
+};
+
+/**
+ * Suggest candidate speaker identities for an unlabeled diarization label by
+ * voice similarity. Runs approximate kNN over `lc_speaker_vectors` — a flat
+ * index holding ONE representative (mean) vector per `(upload, label)`
+ * attribution — and `collapse`s by `speakerId`, so OpenSearch returns one
+ * top-scoring hit per distinct speaker, ranked by cosine. Grouping is done
+ * server-side via collapse (no nested-agg `_score` ambiguity, no per-hit
+ * bucketing in Node); the caller only converts score → match %.
+ *
+ * Why a flat index instead of kNN over the nested `lc_media_v1` paragraphs:
+ * faiss filtered-kNN on a nested field returns nothing here, approximate nested
+ * kNN saturates on an upload's near-identical per-paragraph vectors, and neither
+ * aggregations (knn scoring barred in agg context) nor nested-agg `_score`
+ * (which is the parent's, not the paragraph's) can score-rank per speaker.
+ *
+ * `channelIds` scopes the pool to authorized content (the requesting channel +
+ * any channels whose speakers it may attribute via an approved link). No PUBLIC
+ * access-control filter is applied, so the caller MUST pass a trusted,
+ * authorization-derived channel set.
+ */
+export async function suggestSpeakersByEmbedding({
+  speakerEmbedding,
+  channelIds,
+  size = 20,
+  k = 200,
+  minMatchPercent = SPEAKER_SUGGEST_MIN_MATCH_PERCENT,
+}: {
+  speakerEmbedding: number[];
+  channelIds?: string[] | null;
+  /** Max distinct speakers to return (collapse groups). */
+  size?: number;
+  /** kNN candidate pool size before collapse. */
+  k?: number;
+  /** Drop identities whose best voice match is below this confidence (0–100). */
+  minMatchPercent?: number;
+}): Promise<SpeakerCandidate[]> {
+  const filter: OsQuery[] = [];
+  if (Array.isArray(channelIds) && channelIds.length > 0) {
+    filter.push({ terms: { channelId: channelIds } });
+  }
+
+  const raw = await osSearch({
+    index: SPEAKER_VECTOR_INDEX,
+    size,
+    _source: ['speakerId'],
+    query: {
+      bool: {
+        ...(filter.length > 0 ? { filter } : {}),
+        must: [{ knn: { embedding: { vector: speakerEmbedding, k } } }],
+      },
+    },
+    // One hit per speaker — the top-scoring (upload, label) vector for each.
+    collapse: { field: 'speakerId' },
+  });
+
+  const parsed = SpeakerVectorResponseSchema.parse(raw);
+  // cosinesimil knn returns score = (1 + cosine)/2; floor in the same domain.
+  const minScore = (minMatchPercent / 100 + 1) / 2;
+  return parsed.hits.hits
+    .map((h) => ({ speakerId: h._source.speakerId, topScore: h._score ?? 0 }))
+    .filter((c) => c.topScore >= minScore);
 }
 
 export type BuildMediaLexicalArgs = {
@@ -505,6 +626,13 @@ export const MediaSearchResponseSchema = z.object({
   aggregations: z
     .object({
       channelIds: z
+        .object({
+          buckets: z.array(
+            z.object({ key: z.string(), doc_count: z.number() }),
+          ),
+        })
+        .optional(),
+      speakers: z
         .object({
           buckets: z.array(
             z.object({ key: z.string(), doc_count: z.number() }),

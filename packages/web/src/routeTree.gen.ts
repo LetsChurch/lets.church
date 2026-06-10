@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as MaintenanceRouteImport } from './routes/maintenance'
 import { Route as DashboardRouteImport } from './routes/dashboard_'
 import { Route as AuthRouteImport } from './routes/auth_'
 import { Route as MainRouteImport } from './routes/_main'
@@ -55,12 +56,14 @@ import { Route as DashboardChannelsNewRouteImport } from './routes/dashboard_/ch
 import { Route as DashboardChannelsChannelIdRouteImport } from './routes/dashboard_/channels_.$channelId'
 import { Route as DashboardAdminUsersRouteImport } from './routes/dashboard_/admin_.users'
 import { Route as DashboardAdminUploadBackupsRouteImport } from './routes/dashboard_/admin_.upload-backups'
+import { Route as DashboardAdminStorageAuditRouteImport } from './routes/dashboard_/admin_.storage-audit'
 import { Route as DashboardAdminSearchesRouteImport } from './routes/dashboard_/admin_/searches'
 import { Route as DashboardAdminReprocessRouteImport } from './routes/dashboard_/admin_.reprocess'
 import { Route as DashboardAdminProcessingUploadsRouteImport } from './routes/dashboard_/admin_.processing-uploads'
 import { Route as DashboardAdminOrganizationsRouteImport } from './routes/dashboard_/admin_.organizations'
 import { Route as DashboardAdminOrganizationTagsRouteImport } from './routes/dashboard_/admin_.organization-tags'
 import { Route as DashboardAdminNewsletterListsRouteImport } from './routes/dashboard_/admin_.newsletter-lists'
+import { Route as DashboardAdminMaintenanceRouteImport } from './routes/dashboard_/admin_/maintenance'
 import { Route as DashboardAdminLlmEvalRouteImport } from './routes/dashboard_/admin_.llm-eval'
 import { Route as DashboardAdminImportSourcesRouteImport } from './routes/dashboard_/admin_.import-sources'
 import { Route as DashboardAdminFeaturedRouteImport } from './routes/dashboard_/admin_/featured'
@@ -96,12 +99,18 @@ import { Route as DashboardChurchesChurchIdLeadersRouteImport } from './routes/d
 import { Route as DashboardChurchesChurchIdEditRouteImport } from './routes/dashboard_/churches_.$churchId_.edit'
 import { Route as DashboardChurchesChurchIdChannelsRouteImport } from './routes/dashboard_/churches_.$churchId_.channels'
 import { Route as DashboardChannelsChannelIdUploadsRouteImport } from './routes/dashboard_/channels_.$channelId_.uploads'
+import { Route as DashboardChannelsChannelIdSpeakersRouteImport } from './routes/dashboard_/channels_.$channelId_.speakers'
 import { Route as DashboardChannelsChannelIdPlaylistsRouteImport } from './routes/dashboard_/channels_.$channelId_.playlists'
 import { Route as DashboardChannelsChannelIdMembersRouteImport } from './routes/dashboard_/channels_.$channelId_.members'
 import { Route as DashboardChannelsChannelIdEditRouteImport } from './routes/dashboard_/channels_.$channelId_.edit'
 import { Route as DashboardChannelsChannelIdUploadsUploadIdRouteImport } from './routes/dashboard_/channels_.$channelId_.uploads_.$uploadId'
 import { Route as DashboardChannelsChannelIdPlaylistsPlaylistIdRouteImport } from './routes/dashboard_/channels_.$channelId_.playlists_.$playlistId'
 
+const MaintenanceRoute = MaintenanceRouteImport.update({
+  id: '/maintenance',
+  path: '/maintenance',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard_',
   path: '/dashboard',
@@ -337,6 +346,12 @@ const DashboardAdminUploadBackupsRoute =
     path: '/admin/upload-backups',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardAdminStorageAuditRoute =
+  DashboardAdminStorageAuditRouteImport.update({
+    id: '/admin_/storage-audit',
+    path: '/admin/storage-audit',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardAdminSearchesRoute = DashboardAdminSearchesRouteImport.update({
   id: '/admin_/searches',
   path: '/admin/searches',
@@ -369,6 +384,12 @@ const DashboardAdminNewsletterListsRoute =
   DashboardAdminNewsletterListsRouteImport.update({
     id: '/admin_/newsletter-lists',
     path: '/admin/newsletter-lists',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardAdminMaintenanceRoute =
+  DashboardAdminMaintenanceRouteImport.update({
+    id: '/admin_/maintenance',
+    path: '/admin/maintenance',
     getParentRoute: () => DashboardRoute,
   } as any)
 const DashboardAdminLlmEvalRoute = DashboardAdminLlmEvalRouteImport.update({
@@ -564,6 +585,12 @@ const DashboardChannelsChannelIdUploadsRoute =
     path: '/channels/$channelId/uploads',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardChannelsChannelIdSpeakersRoute =
+  DashboardChannelsChannelIdSpeakersRouteImport.update({
+    id: '/channels_/$channelId_/speakers',
+    path: '/channels/$channelId/speakers',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardChannelsChannelIdPlaylistsRoute =
   DashboardChannelsChannelIdPlaylistsRouteImport.update({
     id: '/channels_/$channelId_/playlists',
@@ -598,6 +625,7 @@ const DashboardChannelsChannelIdPlaylistsPlaylistIdRoute =
 export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
   '/dashboard': typeof DashboardRouteWithChildren
+  '/maintenance': typeof MaintenanceRoute
   '/$slug': typeof MainSlugRoute
   '/about': typeof MainAboutRouteWithChildren
   '/channels': typeof MainChannelsRoute
@@ -654,6 +682,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard/admin/import-sources': typeof DashboardAdminImportSourcesRoute
   '/dashboard/admin/llm-eval': typeof DashboardAdminLlmEvalRoute
+  '/dashboard/admin/maintenance': typeof DashboardAdminMaintenanceRoute
   '/dashboard/admin/newsletter-lists': typeof DashboardAdminNewsletterListsRoute
   '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard/admin/organizations': typeof DashboardAdminOrganizationsRoute
@@ -661,6 +690,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/reindex': typeof DashboardAdminReindexRoute
   '/dashboard/admin/reprocess': typeof DashboardAdminReprocessRoute
   '/dashboard/admin/searches': typeof DashboardAdminSearchesRoute
+  '/dashboard/admin/storage-audit': typeof DashboardAdminStorageAuditRoute
   '/dashboard/admin/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
   '/dashboard/channels/$channelId': typeof DashboardChannelsChannelIdRoute
@@ -677,6 +707,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/channels/$channelId/edit': typeof DashboardChannelsChannelIdEditRoute
   '/dashboard/channels/$channelId/members': typeof DashboardChannelsChannelIdMembersRoute
   '/dashboard/channels/$channelId/playlists': typeof DashboardChannelsChannelIdPlaylistsRoute
+  '/dashboard/channels/$channelId/speakers': typeof DashboardChannelsChannelIdSpeakersRoute
   '/dashboard/channels/$channelId/uploads': typeof DashboardChannelsChannelIdUploadsRoute
   '/dashboard/churches/$churchId/channels': typeof DashboardChurchesChurchIdChannelsRoute
   '/dashboard/churches/$churchId/edit': typeof DashboardChurchesChurchIdEditRoute
@@ -690,6 +721,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
+  '/maintenance': typeof MaintenanceRoute
   '/$slug': typeof MainSlugRoute
   '/channels': typeof MainChannelsRoute
   '/churches': typeof MainChurchesRoute
@@ -745,6 +777,7 @@ export interface FileRoutesByTo {
   '/dashboard/admin/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard/admin/import-sources': typeof DashboardAdminImportSourcesRoute
   '/dashboard/admin/llm-eval': typeof DashboardAdminLlmEvalRoute
+  '/dashboard/admin/maintenance': typeof DashboardAdminMaintenanceRoute
   '/dashboard/admin/newsletter-lists': typeof DashboardAdminNewsletterListsRoute
   '/dashboard/admin/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard/admin/organizations': typeof DashboardAdminOrganizationsRoute
@@ -752,6 +785,7 @@ export interface FileRoutesByTo {
   '/dashboard/admin/reindex': typeof DashboardAdminReindexRoute
   '/dashboard/admin/reprocess': typeof DashboardAdminReprocessRoute
   '/dashboard/admin/searches': typeof DashboardAdminSearchesRoute
+  '/dashboard/admin/storage-audit': typeof DashboardAdminStorageAuditRoute
   '/dashboard/admin/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
   '/dashboard/channels/$channelId': typeof DashboardChannelsChannelIdRoute
@@ -768,6 +802,7 @@ export interface FileRoutesByTo {
   '/dashboard/channels/$channelId/edit': typeof DashboardChannelsChannelIdEditRoute
   '/dashboard/channels/$channelId/members': typeof DashboardChannelsChannelIdMembersRoute
   '/dashboard/channels/$channelId/playlists': typeof DashboardChannelsChannelIdPlaylistsRoute
+  '/dashboard/channels/$channelId/speakers': typeof DashboardChannelsChannelIdSpeakersRoute
   '/dashboard/channels/$channelId/uploads': typeof DashboardChannelsChannelIdUploadsRoute
   '/dashboard/churches/$churchId/channels': typeof DashboardChurchesChurchIdChannelsRoute
   '/dashboard/churches/$churchId/edit': typeof DashboardChurchesChurchIdEditRoute
@@ -784,6 +819,7 @@ export interface FileRoutesById {
   '/_main': typeof MainRouteWithChildren
   '/auth_': typeof AuthRouteWithChildren
   '/dashboard_': typeof DashboardRouteWithChildren
+  '/maintenance': typeof MaintenanceRoute
   '/_main/$slug': typeof MainSlugRoute
   '/_main/about': typeof MainAboutRouteWithChildren
   '/_main/channels': typeof MainChannelsRoute
@@ -840,6 +876,7 @@ export interface FileRoutesById {
   '/dashboard_/admin_/featured': typeof DashboardAdminFeaturedRoute
   '/dashboard_/admin_/import-sources': typeof DashboardAdminImportSourcesRoute
   '/dashboard_/admin_/llm-eval': typeof DashboardAdminLlmEvalRoute
+  '/dashboard_/admin_/maintenance': typeof DashboardAdminMaintenanceRoute
   '/dashboard_/admin_/newsletter-lists': typeof DashboardAdminNewsletterListsRoute
   '/dashboard_/admin_/organization-tags': typeof DashboardAdminOrganizationTagsRoute
   '/dashboard_/admin_/organizations': typeof DashboardAdminOrganizationsRoute
@@ -847,6 +884,7 @@ export interface FileRoutesById {
   '/dashboard_/admin_/reindex': typeof DashboardAdminReindexRoute
   '/dashboard_/admin_/reprocess': typeof DashboardAdminReprocessRoute
   '/dashboard_/admin_/searches': typeof DashboardAdminSearchesRoute
+  '/dashboard_/admin_/storage-audit': typeof DashboardAdminStorageAuditRoute
   '/dashboard_/admin_/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard_/admin_/users': typeof DashboardAdminUsersRoute
   '/dashboard_/channels_/$channelId': typeof DashboardChannelsChannelIdRoute
@@ -863,6 +901,7 @@ export interface FileRoutesById {
   '/dashboard_/channels_/$channelId_/edit': typeof DashboardChannelsChannelIdEditRoute
   '/dashboard_/channels_/$channelId_/members': typeof DashboardChannelsChannelIdMembersRoute
   '/dashboard_/channels_/$channelId_/playlists': typeof DashboardChannelsChannelIdPlaylistsRoute
+  '/dashboard_/channels_/$channelId_/speakers': typeof DashboardChannelsChannelIdSpeakersRoute
   '/dashboard_/channels_/$channelId_/uploads': typeof DashboardChannelsChannelIdUploadsRoute
   '/dashboard_/churches_/$churchId_/channels': typeof DashboardChurchesChurchIdChannelsRoute
   '/dashboard_/churches_/$churchId_/edit': typeof DashboardChurchesChurchIdEditRoute
@@ -879,6 +918,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/auth'
     | '/dashboard'
+    | '/maintenance'
     | '/$slug'
     | '/about'
     | '/channels'
@@ -935,6 +975,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/featured'
     | '/dashboard/admin/import-sources'
     | '/dashboard/admin/llm-eval'
+    | '/dashboard/admin/maintenance'
     | '/dashboard/admin/newsletter-lists'
     | '/dashboard/admin/organization-tags'
     | '/dashboard/admin/organizations'
@@ -942,6 +983,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/reindex'
     | '/dashboard/admin/reprocess'
     | '/dashboard/admin/searches'
+    | '/dashboard/admin/storage-audit'
     | '/dashboard/admin/upload-backups'
     | '/dashboard/admin/users'
     | '/dashboard/channels/$channelId'
@@ -958,6 +1000,7 @@ export interface FileRouteTypes {
     | '/dashboard/channels/$channelId/edit'
     | '/dashboard/channels/$channelId/members'
     | '/dashboard/channels/$channelId/playlists'
+    | '/dashboard/channels/$channelId/speakers'
     | '/dashboard/channels/$channelId/uploads'
     | '/dashboard/churches/$churchId/channels'
     | '/dashboard/churches/$churchId/edit'
@@ -971,6 +1014,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
+    | '/maintenance'
     | '/$slug'
     | '/channels'
     | '/churches'
@@ -1026,6 +1070,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/featured'
     | '/dashboard/admin/import-sources'
     | '/dashboard/admin/llm-eval'
+    | '/dashboard/admin/maintenance'
     | '/dashboard/admin/newsletter-lists'
     | '/dashboard/admin/organization-tags'
     | '/dashboard/admin/organizations'
@@ -1033,6 +1078,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/reindex'
     | '/dashboard/admin/reprocess'
     | '/dashboard/admin/searches'
+    | '/dashboard/admin/storage-audit'
     | '/dashboard/admin/upload-backups'
     | '/dashboard/admin/users'
     | '/dashboard/channels/$channelId'
@@ -1049,6 +1095,7 @@ export interface FileRouteTypes {
     | '/dashboard/channels/$channelId/edit'
     | '/dashboard/channels/$channelId/members'
     | '/dashboard/channels/$channelId/playlists'
+    | '/dashboard/channels/$channelId/speakers'
     | '/dashboard/channels/$channelId/uploads'
     | '/dashboard/churches/$churchId/channels'
     | '/dashboard/churches/$churchId/edit'
@@ -1064,6 +1111,7 @@ export interface FileRouteTypes {
     | '/_main'
     | '/auth_'
     | '/dashboard_'
+    | '/maintenance'
     | '/_main/$slug'
     | '/_main/about'
     | '/_main/channels'
@@ -1120,6 +1168,7 @@ export interface FileRouteTypes {
     | '/dashboard_/admin_/featured'
     | '/dashboard_/admin_/import-sources'
     | '/dashboard_/admin_/llm-eval'
+    | '/dashboard_/admin_/maintenance'
     | '/dashboard_/admin_/newsletter-lists'
     | '/dashboard_/admin_/organization-tags'
     | '/dashboard_/admin_/organizations'
@@ -1127,6 +1176,7 @@ export interface FileRouteTypes {
     | '/dashboard_/admin_/reindex'
     | '/dashboard_/admin_/reprocess'
     | '/dashboard_/admin_/searches'
+    | '/dashboard_/admin_/storage-audit'
     | '/dashboard_/admin_/upload-backups'
     | '/dashboard_/admin_/users'
     | '/dashboard_/channels_/$channelId'
@@ -1143,6 +1193,7 @@ export interface FileRouteTypes {
     | '/dashboard_/channels_/$channelId_/edit'
     | '/dashboard_/channels_/$channelId_/members'
     | '/dashboard_/channels_/$channelId_/playlists'
+    | '/dashboard_/channels_/$channelId_/speakers'
     | '/dashboard_/channels_/$channelId_/uploads'
     | '/dashboard_/churches_/$churchId_/channels'
     | '/dashboard_/churches_/$churchId_/edit'
@@ -1159,6 +1210,7 @@ export interface RootRouteChildren {
   MainRoute: typeof MainRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   DashboardRoute: typeof DashboardRouteWithChildren
+  MaintenanceRoute: typeof MaintenanceRoute
   ApiSearchAnswerRoute: typeof ApiSearchAnswerRoute
   EmbedChurchesRoute: typeof EmbedChurchesRoute
   InvitationsAcceptRoute: typeof InvitationsAcceptRoute
@@ -1176,6 +1228,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/maintenance': {
+      id: '/maintenance'
+      path: '/maintenance'
+      fullPath: '/maintenance'
+      preLoaderRoute: typeof MaintenanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard_': {
       id: '/dashboard_'
       path: '/dashboard'
@@ -1498,6 +1557,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAdminUploadBackupsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard_/admin_/storage-audit': {
+      id: '/dashboard_/admin_/storage-audit'
+      path: '/admin/storage-audit'
+      fullPath: '/dashboard/admin/storage-audit'
+      preLoaderRoute: typeof DashboardAdminStorageAuditRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard_/admin_/searches': {
       id: '/dashboard_/admin_/searches'
       path: '/admin/searches'
@@ -1538,6 +1604,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/newsletter-lists'
       fullPath: '/dashboard/admin/newsletter-lists'
       preLoaderRoute: typeof DashboardAdminNewsletterListsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard_/admin_/maintenance': {
+      id: '/dashboard_/admin_/maintenance'
+      path: '/admin/maintenance'
+      fullPath: '/dashboard/admin/maintenance'
+      preLoaderRoute: typeof DashboardAdminMaintenanceRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard_/admin_/llm-eval': {
@@ -1785,6 +1858,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardChannelsChannelIdUploadsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard_/channels_/$channelId_/speakers': {
+      id: '/dashboard_/channels_/$channelId_/speakers'
+      path: '/channels/$channelId/speakers'
+      fullPath: '/dashboard/channels/$channelId/speakers'
+      preLoaderRoute: typeof DashboardChannelsChannelIdSpeakersRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard_/channels_/$channelId_/playlists': {
       id: '/dashboard_/channels_/$channelId_/playlists'
       path: '/channels/$channelId/playlists'
@@ -1926,6 +2006,7 @@ interface DashboardRouteChildren {
   DashboardAdminFeaturedRoute: typeof DashboardAdminFeaturedRoute
   DashboardAdminImportSourcesRoute: typeof DashboardAdminImportSourcesRoute
   DashboardAdminLlmEvalRoute: typeof DashboardAdminLlmEvalRoute
+  DashboardAdminMaintenanceRoute: typeof DashboardAdminMaintenanceRoute
   DashboardAdminNewsletterListsRoute: typeof DashboardAdminNewsletterListsRoute
   DashboardAdminOrganizationTagsRoute: typeof DashboardAdminOrganizationTagsRoute
   DashboardAdminOrganizationsRoute: typeof DashboardAdminOrganizationsRoute
@@ -1933,6 +2014,7 @@ interface DashboardRouteChildren {
   DashboardAdminReindexRoute: typeof DashboardAdminReindexRoute
   DashboardAdminReprocessRoute: typeof DashboardAdminReprocessRoute
   DashboardAdminSearchesRoute: typeof DashboardAdminSearchesRoute
+  DashboardAdminStorageAuditRoute: typeof DashboardAdminStorageAuditRoute
   DashboardAdminUploadBackupsRoute: typeof DashboardAdminUploadBackupsRoute
   DashboardAdminUsersRoute: typeof DashboardAdminUsersRoute
   DashboardChannelsChannelIdRoute: typeof DashboardChannelsChannelIdRoute
@@ -1944,6 +2026,7 @@ interface DashboardRouteChildren {
   DashboardChannelsChannelIdEditRoute: typeof DashboardChannelsChannelIdEditRoute
   DashboardChannelsChannelIdMembersRoute: typeof DashboardChannelsChannelIdMembersRoute
   DashboardChannelsChannelIdPlaylistsRoute: typeof DashboardChannelsChannelIdPlaylistsRoute
+  DashboardChannelsChannelIdSpeakersRoute: typeof DashboardChannelsChannelIdSpeakersRoute
   DashboardChannelsChannelIdUploadsRoute: typeof DashboardChannelsChannelIdUploadsRoute
   DashboardChurchesChurchIdChannelsRoute: typeof DashboardChurchesChurchIdChannelsRoute
   DashboardChurchesChurchIdEditRoute: typeof DashboardChurchesChurchIdEditRoute
@@ -1977,6 +2060,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAdminFeaturedRoute: DashboardAdminFeaturedRoute,
   DashboardAdminImportSourcesRoute: DashboardAdminImportSourcesRoute,
   DashboardAdminLlmEvalRoute: DashboardAdminLlmEvalRoute,
+  DashboardAdminMaintenanceRoute: DashboardAdminMaintenanceRoute,
   DashboardAdminNewsletterListsRoute: DashboardAdminNewsletterListsRoute,
   DashboardAdminOrganizationTagsRoute: DashboardAdminOrganizationTagsRoute,
   DashboardAdminOrganizationsRoute: DashboardAdminOrganizationsRoute,
@@ -1984,6 +2068,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAdminReindexRoute: DashboardAdminReindexRoute,
   DashboardAdminReprocessRoute: DashboardAdminReprocessRoute,
   DashboardAdminSearchesRoute: DashboardAdminSearchesRoute,
+  DashboardAdminStorageAuditRoute: DashboardAdminStorageAuditRoute,
   DashboardAdminUploadBackupsRoute: DashboardAdminUploadBackupsRoute,
   DashboardAdminUsersRoute: DashboardAdminUsersRoute,
   DashboardChannelsChannelIdRoute: DashboardChannelsChannelIdRoute,
@@ -1997,6 +2082,8 @@ const DashboardRouteChildren: DashboardRouteChildren = {
     DashboardChannelsChannelIdMembersRoute,
   DashboardChannelsChannelIdPlaylistsRoute:
     DashboardChannelsChannelIdPlaylistsRoute,
+  DashboardChannelsChannelIdSpeakersRoute:
+    DashboardChannelsChannelIdSpeakersRoute,
   DashboardChannelsChannelIdUploadsRoute:
     DashboardChannelsChannelIdUploadsRoute,
   DashboardChurchesChurchIdChannelsRoute:
@@ -2023,6 +2110,7 @@ const rootRouteChildren: RootRouteChildren = {
   MainRoute: MainRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   DashboardRoute: DashboardRouteWithChildren,
+  MaintenanceRoute: MaintenanceRoute,
   ApiSearchAnswerRoute: ApiSearchAnswerRoute,
   EmbedChurchesRoute: EmbedChurchesRoute,
   InvitationsAcceptRoute: InvitationsAcceptRoute,

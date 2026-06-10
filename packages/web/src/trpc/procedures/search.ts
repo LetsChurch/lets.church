@@ -88,6 +88,8 @@ const hybridSearchSchema = z.object({
   bibleRefs: z.array(z.string()).optional().nullable(),
   // OSIS book ids ("Rom") from the Bible-book facet. OR semantics.
   bibleBooks: z.array(z.string()).optional().nullable(),
+  // Resolved speaker names from the speaker facet. OR semantics.
+  speakers: z.array(z.string()).optional().nullable(),
   // Manual date-range filter from the UI (computed to a publishedAt range
   // server-side, same buckets as performSearch). Explicit dateGte/dateLte win.
   dateRange: z
@@ -880,6 +882,7 @@ export const searchProcedures = {
         dateRange,
         bibleRefs: inputBibleRefs,
         bibleBooks: inputBibleBooks,
+        speakers: inputSpeakers,
         sort,
         limit,
         cursor,
@@ -895,6 +898,8 @@ export const searchProcedures = {
         inputBibleRefs && inputBibleRefs.length > 0 ? inputBibleRefs : null;
       const bibleBooks =
         inputBibleBooks && inputBibleBooks.length > 0 ? inputBibleBooks : null;
+      const speakers =
+        inputSpeakers && inputSpeakers.length > 0 ? inputSpeakers : null;
 
       // Explicit parser bounds win; otherwise fall back to the UI date bucket.
       const publishedAt =
@@ -948,6 +953,7 @@ export const searchProcedures = {
           publishedAt,
           bibleRefs,
           bibleBooks,
+          speakers,
           queryVector,
           from: cursor,
           size: limit,
@@ -981,6 +987,7 @@ export const searchProcedures = {
       ]);
 
       const channelFacetBuckets = facets?.channels ?? [];
+      const speakerFacetBuckets = facets?.speakers ?? [];
       const verseFacetBuckets = facets?.verses ?? [];
       const yearFacetBuckets = facets?.years ?? [];
 
@@ -1007,6 +1014,14 @@ export const searchProcedures = {
       }
 
       const facetBuckets = relevant ? channelFacetBuckets : [];
+      // Speaker facet rows: resolved name (filter value + label) + doc_count,
+      // most-frequent first (doc_count order from OpenSearch).
+      const facetedSpeakers = (relevant ? speakerFacetBuckets : []).map(
+        (b) => ({
+          name: b.key,
+          count: b.doc_count,
+        }),
+      );
       // Verse facet rows: token (for the filter) + human label (for display) +
       // doc_count. Already doc_count-ordered by OpenSearch (most-cited first).
       const facetedVerses = (relevant ? verseFacetBuckets : []).map((b) => ({
@@ -1050,6 +1065,7 @@ export const searchProcedures = {
                 dateLte: dateLte ?? null,
                 bibleRefs: bibleRefs ?? [],
                 bibleBooks: bibleBooks ?? [],
+                speakers: speakers ?? [],
                 limit,
                 cursor,
                 // The structured LLM parse (questions, speakers, keywords,
@@ -1082,6 +1098,7 @@ export const searchProcedures = {
         mediaCount,
         channels,
         facetedChannels,
+        facetedSpeakers,
         facetedVerses,
         facetedYears,
         nextCursor,
@@ -1110,10 +1127,14 @@ export const searchProcedures = {
         facetChannels: z
           .array(z.object({ slug: z.string(), name: z.string() }))
           .optional(),
+        // Speaker names that actually have results for this query (from
+        // hybridSearch's speaker facet). Used to ground the parser's extracted
+        // speaker names against real, filterable identities.
+        facetSpeakers: z.array(z.string()).optional(),
       }),
     )
     .query(async ({ input }) => {
-      const { q, searchLogId, facetChannels } = input;
+      const { q, searchLogId, facetChannels, facetSpeakers } = input;
 
       // Facets are doc_count-ordered; only the top few dominant channels are
       // plausible "you're looking for this channel" suggestions, and capping
@@ -1144,6 +1165,23 @@ export const searchProcedures = {
         }
       }
 
+      // Ground the parser's extracted speaker names against the speaker facet:
+      // a parsed name that maps (normalized) to a real, filterable speaker is
+      // offered as a click-to-apply speaker-facet suggestion (carrying the
+      // canonical facet name as the filter value).
+      const speakerByName = new Map(
+        (facetSpeakers ?? []).map((n) => [n.trim().toLowerCase(), n]),
+      );
+      const matchedSpeakers: string[] = [];
+      const seenSpeakers = new Set<string>();
+      for (const name of parsed.speakers) {
+        const canonical = speakerByName.get(name.trim().toLowerCase());
+        if (canonical && !seenSpeakers.has(canonical)) {
+          seenSpeakers.add(canonical);
+          matchedSpeakers.push(canonical);
+        }
+      }
+
       // Best-effort: attach the structured parse to this search's log row.
       // No-op when there's no row id (logging skipped, or pagination).
       if (searchLogId) {
@@ -1171,7 +1209,9 @@ export const searchProcedures = {
         parsed: {
           questions: parsed.questions,
           speakers: parsed.speakers,
-          speakerNotice: parsed.speakers.length > 0,
+          // Parsed speaker names that resolve to a real, filterable speaker —
+          // sparkled in the speaker facet as click-to-apply suggestions.
+          matchedSpeakers,
           // Real facet channels the parser judged the query to be seeking —
           // offered as click-to-apply channel-filter suggestions.
           matchedChannels,

@@ -15,6 +15,7 @@ import {
   IconCheck,
   IconHeart,
   IconList,
+  IconMicrophone,
   IconShield,
   IconVideo,
   IconX,
@@ -295,6 +296,17 @@ function ChannelDetailsPage() {
             icon={<IconShield size={22} stroke={1.5} />}
             tooltip="People who can manage and upload content to this channel"
             value={channel._count.memberships}
+          />
+        )}
+
+        {(isChannelAdmin || isSiteAdmin) && (
+          <StatCard
+            title="Speakers"
+            to="/dashboard/channels/$channelId/speakers"
+            color="violet"
+            icon={<IconMicrophone size={22} stroke={1.5} />}
+            tooltip="Named speakers your transcripts can be attributed to"
+            value={channel._count.speakers}
           />
         )}
 

@@ -172,6 +172,112 @@ export const resendChannelInvitationSchema = z.object({
   invitationId: IncomingIdSchema,
 });
 
+// Speaker library schemas
+export const speakerIdSchema = IncomingIdSchema;
+const speakerLabelSchema = z.string().trim().min(1).max(120);
+
+export const uploadSpeakerQuerySchema = z.object({
+  channelId: channelIdSchema,
+  uploadId: uploadIdSchema,
+});
+
+export const setParagraphLabelSchema = z.object({
+  channelId: channelIdSchema,
+  uploadId: uploadIdSchema,
+  paragraphId: IncomingIdSchema,
+  label: speakerLabelSchema,
+});
+
+// Batched save of a labeling session: paragraph-label overrides + label→speaker
+// attributions applied in one transaction with a single reindex. A null
+// speakerId unassigns the label.
+export const saveSpeakerLabelingSchema = z.object({
+  channelId: channelIdSchema,
+  uploadId: uploadIdSchema,
+  paragraphLabels: z
+    .array(
+      z.object({
+        paragraphId: IncomingIdSchema,
+        label: speakerLabelSchema,
+      }),
+    )
+    .default([]),
+  attributions: z
+    .array(
+      z.object({
+        speakerLabel: speakerLabelSchema,
+        speakerId: speakerIdSchema.nullable(),
+      }),
+    )
+    .default([]),
+});
+
+export const attributeSpeakerSchema = z.object({
+  channelId: channelIdSchema,
+  uploadId: uploadIdSchema,
+  speakerLabel: speakerLabelSchema,
+  speakerId: speakerIdSchema,
+});
+
+export const unattributeSpeakerSchema = z.object({
+  channelId: channelIdSchema,
+  uploadId: uploadIdSchema,
+  speakerLabel: speakerLabelSchema,
+});
+
+export const suggestSpeakerCandidatesSchema = z.object({
+  channelId: channelIdSchema,
+  uploadId: uploadIdSchema,
+  speakerLabel: speakerLabelSchema,
+});
+
+export const createSpeakerSchema = z.object({
+  channelId: channelIdSchema,
+  name: z.string().trim().min(1, 'Name is required').max(200),
+  slug: z
+    .string()
+    .regex(
+      /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+      'Slug can only contain lowercase letters, numbers, and hyphens',
+    )
+    .optional(),
+  bio: z.string().max(2000).optional(),
+});
+
+export const updateSpeakerSchema = z.object({
+  channelId: channelIdSchema,
+  speakerId: speakerIdSchema,
+  name: z.string().trim().min(1).max(200).optional(),
+  bio: z.string().max(2000).nullable().optional(),
+});
+
+export const deleteSpeakerSchema = z.object({
+  channelId: channelIdSchema,
+  speakerId: speakerIdSchema,
+});
+
+export const searchSpeakersSchema = z.object({
+  channelId: channelIdSchema,
+  query: z.string().trim().min(1).max(200),
+});
+
+export const requestSpeakerLinkSchema = z.object({
+  channelId: channelIdSchema,
+  speakerId: speakerIdSchema,
+  forUploadId: uploadIdSchema.optional(),
+});
+
+export const speakerLinkActionSchema = z.object({
+  channelId: channelIdSchema,
+  linkId: IncomingIdSchema,
+});
+
+export const approveSpeakerLinkSchema = z.object({
+  channelId: channelIdSchema,
+  linkId: IncomingIdSchema,
+  scope: z.enum(['upload', 'channel']),
+});
+
 export const createUploadSchema = z.object({
   channelId: channelIdSchema,
   originalFileName: z

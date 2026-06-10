@@ -73,6 +73,8 @@ export const Route = createFileRoute('/_main/search')({
     bibleRefs: z.array(z.string()).optional(),
     // OSIS book ids ("Rom") from the Bible-book facet. OR semantics.
     bibleBooks: z.array(z.string()).optional(),
+    // Resolved speaker names from the speaker facet. OR semantics.
+    speakers: z.array(z.string()).optional(),
     sort: z.enum(['relevance', 'date-asc', 'date-desc']).optional(),
     dateRange: z
       .enum(['all-time', 'today', 'this-week', 'this-month', 'this-year'])
@@ -88,6 +90,7 @@ export const Route = createFileRoute('/_main/search')({
     channelSlugs: search.channelSlugs,
     bibleRefs: search.bibleRefs,
     bibleBooks: search.bibleBooks,
+    speakers: search.speakers,
     sort: search.sort,
     dateRange: search.dateRange,
     dateStart: search.dateStart,
@@ -102,6 +105,7 @@ export const Route = createFileRoute('/_main/search')({
           channelSlugs: deps.channelSlugs,
           bibleRefs: deps.bibleRefs,
           bibleBooks: deps.bibleBooks,
+          speakers: deps.speakers,
           limit: 20,
           sort: deps.sort,
           dateRange: deps.dateRange,
@@ -281,6 +285,7 @@ const emptyVerses: ReadonlyArray<{
   count: number;
 }> = [];
 const emptyYears: ReadonlyArray<{ year: string; count: number }> = [];
+const emptySpeakers: ReadonlyArray<{ name: string; count: number }> = [];
 
 // Placeholder result rows shown while the first page of results loads, so a
 // fresh search transitions instantly instead of freezing on the old page.
@@ -310,6 +315,7 @@ function SearchResults({ q }: { q: string }) {
     channelSlugs,
     bibleRefs,
     bibleBooks,
+    speakers,
     sort,
     dateRange,
     dateStart,
@@ -332,6 +338,7 @@ function SearchResults({ q }: { q: string }) {
       channelSlugs,
       bibleRefs,
       bibleBooks,
+      speakers,
       limit: 20,
       sort,
       dateRange,
@@ -362,6 +369,7 @@ function SearchResults({ q }: { q: string }) {
   const firstPage = searchData?.pages?.[0];
   const searchLogId = firstPage?.searchLogId ?? null;
   const facetedChannels = firstPage?.facetedChannels ?? [];
+  const facetedSpeakers = firstPage?.facetedSpeakers ?? emptySpeakers;
   const facetedVerses = firstPage?.facetedVerses ?? emptyVerses;
   const facetedYears = firstPage?.facetedYears ?? emptyYears;
 
@@ -396,6 +404,9 @@ function SearchResults({ q }: { q: string }) {
         slug: c.slug,
         name: c.name,
       })),
+      // Ground the parser's speaker extraction in the speakers that actually
+      // matched, so a parsed name only ever suggests a real, filterable facet.
+      facetSpeakers: facetedSpeakers.map((s) => s.name),
     }),
     enabled: firstPage != null,
     // Keep the previous parse/related on screen across filter changes (a new
@@ -416,14 +427,20 @@ function SearchResults({ q }: { q: string }) {
   const recsRef = useRef<{
     q: string;
     channels: ReadonlyArray<{ slug: string; name: string }>;
+    speakers: ReadonlyArray<string>;
     date: {
       dateRange: 'today' | 'this-week' | 'this-month' | 'this-year' | null;
       dates: { gte: string | null; lte: string | null } | null;
       dateLabel: string | null;
     } | null;
-  }>({ q, channels: emptyMatchedChannels, date: null });
+  }>({ q, channels: emptyMatchedChannels, speakers: emptyStrings, date: null });
   if (recsRef.current.q !== q) {
-    recsRef.current = { q, channels: emptyMatchedChannels, date: null };
+    recsRef.current = {
+      q,
+      channels: emptyMatchedChannels,
+      speakers: emptyStrings,
+      date: null,
+    };
   }
   if (parsed) {
     if (
@@ -431,6 +448,12 @@ function SearchResults({ q }: { q: string }) {
       parsed.matchedChannels.length
     ) {
       recsRef.current.channels = parsed.matchedChannels;
+    }
+    if (
+      recsRef.current.speakers.length === 0 &&
+      parsed.matchedSpeakers.length
+    ) {
+      recsRef.current.speakers = parsed.matchedSpeakers;
     }
     const parsedHasDate =
       parsed.dateRange != null ||
@@ -456,6 +479,11 @@ function SearchResults({ q }: { q: string }) {
     ? queryRecChannels
     : emptyMatchedChannels;
   const recommendedChannelSlugs = suggestChannels.map((c) => c.slug);
+  // Speaker recommendation: parsed speaker names that resolved to a real,
+  // filterable speaker. Suppressed once the user has picked any speaker.
+  const recommendedSpeakers = !speakers?.length
+    ? recsRef.current.speakers
+    : emptyStrings;
   // The date recommendation: a current-period bucket (marks that Date facet
   // option), or an absolute range with an optional relative label ("Past
   // month", "Since 2020"). Suppressed once the user has set any date filter.
@@ -535,21 +563,15 @@ function SearchResults({ q }: { q: string }) {
           <div className="lg:hidden">
             <MobileFacets
               availableChannels={facetedChannels}
+              availableSpeakers={facetedSpeakers}
               availableVerses={facetedVerses}
               availableYears={facetedYears}
               channelsLoading={loadingResults}
               recommendedChannelSlugs={recommendedChannelSlugs}
+              recommendedSpeakers={recommendedSpeakers}
               recommendedDate={dateSuggestion}
             />
           </div>
-
-          {parsed?.speakerNotice ? (
-            <div className="rounded-md border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-amber-200/90 text-sm">
-              Filtering by speaker (e.g.{' '}
-              {parsed.speakers.slice(0, 3).join(', ')}) isn't available yet —
-              searching those names across titles and transcripts instead.
-            </div>
-          ) : null}
 
           {/* Always render the AI card so it streams in immediately rather than
               popping in once the parse resolves — the route returns a direct
@@ -621,10 +643,12 @@ function SearchResults({ q }: { q: string }) {
         <aside className="hidden space-y-8 lg:sticky lg:top-4 lg:block lg:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto lg:pb-8">
           <SearchFacets
             availableChannels={facetedChannels}
+            availableSpeakers={facetedSpeakers}
             availableVerses={facetedVerses}
             availableYears={facetedYears}
             channelsLoading={loadingResults}
             recommendedChannelSlugs={recommendedChannelSlugs}
+            recommendedSpeakers={recommendedSpeakers}
             recommendedDate={dateSuggestion}
           />
           <SuggestedSearches searches={relatedSearches} loading={metaLoading} />

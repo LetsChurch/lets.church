@@ -41,6 +41,13 @@ type Year = {
   count: number;
 };
 
+// A speaker facet row: the resolved speaker name (filter value + label) and its
+// result count (from the doc-level `speakers` terms agg).
+type Speaker = {
+  name: string;
+  count: number;
+};
+
 // One verse chip within a book group: the filter token, the book-less short
 // ref ("3:16") shown on the chip, the count, and chapter/verse for ordering.
 type VerseChip = {
@@ -312,14 +319,18 @@ function FacetOption({
  */
 export function SearchFacets({
   availableChannels = [],
+  availableSpeakers = [],
   availableVerses = [],
   availableYears = [],
   bordered = true,
   channelsLoading = false,
   recommendedChannelSlugs = [],
+  recommendedSpeakers = [],
   recommendedDate = null,
 }: {
   availableChannels?: Channel[];
+  /** Speaker facet rows (name + count), most-frequent first. */
+  availableSpeakers?: ReadonlyArray<Speaker>;
   /** Bible-verse facet rows (token + label + count), doc_count-ordered. */
   availableVerses?: ReadonlyArray<Verse>;
   /** Year facet rows (year + count), newest-first. */
@@ -329,6 +340,8 @@ export function SearchFacets({
   channelsLoading?: boolean;
   /** Channel slugs the parser recommends — marked with a sparkle in the list. */
   recommendedChannelSlugs?: ReadonlyArray<string>;
+  /** Speaker names the parser recommends — marked with a sparkle in the list. */
+  recommendedSpeakers?: ReadonlyArray<string>;
   /** Date the parser recommends — marks the matching bucket, or surfaces an
    * applyable chip in the custom-range block for an absolute/relative range. */
   recommendedDate?: DateSuggestion | null;
@@ -343,6 +356,7 @@ export function SearchFacets({
     setChannelSlugs,
     setBibleRefs,
     setBibleBooks,
+    setSpeakers,
     clearFilters,
     hasActiveFilters,
   } = useSearchFilters();
@@ -350,6 +364,7 @@ export function SearchFacets({
   const selectedSlugs = filters.channelSlugs ?? [];
   const selectedVerses = filters.bibleRefs ?? [];
   const selectedBooks = filters.bibleBooks ?? [];
+  const selectedSpeakers = filters.speakers ?? [];
   const dateRange = filters.dateRange ?? 'all-time';
   const dateStart = filters.dateStart ?? '';
   const dateEnd = filters.dateEnd ?? '';
@@ -381,11 +396,28 @@ export function SearchFacets({
     setBibleBooks(next.length > 0 ? next : undefined);
   };
 
+  const toggleSpeaker = (name: string) => {
+    const next = selectedSpeakers.includes(name)
+      ? selectedSpeakers.filter((s) => s !== name)
+      : [...selectedSpeakers, name];
+    setSpeakers(next.length > 0 ? next : undefined);
+  };
+
   // Keep selected channels visible even if they drop out of the faceted set
   // (e.g. a pre-filled channel whose scoped results don't surface it back).
   const channels = [...availableChannels].sort((a, b) =>
     a.name.localeCompare(b.name),
   );
+
+  // Speakers come pre-ordered by count. Keep any selected speaker visible even
+  // if a combined filter pushed it out of the faceted set (count 0).
+  const speakerNames = new Set(availableSpeakers.map((s) => s.name));
+  const speakers: ReadonlyArray<Speaker> = [
+    ...availableSpeakers,
+    ...selectedSpeakers
+      .filter((name) => !speakerNames.has(name))
+      .map((name) => ({ name, count: 0 })),
+  ];
 
   // Verses come pre-ordered by count (most-cited first). Keep any selected
   // verse visible even if a combined filter pushed it out of the faceted set,
@@ -400,6 +432,7 @@ export function SearchFacets({
   const verseGroups = groupVersesByBook(verses);
 
   const recommendedSlugs = new Set(recommendedChannelSlugs);
+  const recommendedSpeakerNames = new Set(recommendedSpeakers);
   const recommendedBucket =
     recommendedDate?.kind === 'bucket' ? recommendedDate.bucket : null;
   const recommendedRange =
@@ -443,6 +476,24 @@ export function SearchFacets({
                 className="h-5 animate-pulse rounded bg-zinc-200 dark:bg-zinc-800"
                 style={{ width: `${85 - i * 8}%` }}
               />
+            ))}
+          </div>
+        </Section>
+      ) : null}
+
+      {speakers.length > 0 ? (
+        <Section title="Speakers">
+          <div className="max-h-72 w-full overflow-y-auto">
+            {speakers.map((speaker) => (
+              <FacetOption
+                key={speaker.name}
+                onClick={() => toggleSpeaker(speaker.name)}
+                selected={selectedSpeakers.includes(speaker.name)}
+                recommended={recommendedSpeakerNames.has(speaker.name)}
+                count={speaker.count}
+              >
+                {speaker.name}
+              </FacetOption>
             ))}
           </div>
         </Section>
@@ -719,24 +770,30 @@ export function SearchFacets({
  */
 export function MobileFacets({
   availableChannels = [],
+  availableSpeakers = [],
   availableVerses = [],
   availableYears = [],
   channelsLoading = false,
   recommendedChannelSlugs = [],
+  recommendedSpeakers = [],
   recommendedDate = null,
 }: {
   availableChannels?: Channel[];
+  availableSpeakers?: ReadonlyArray<Speaker>;
   availableVerses?: ReadonlyArray<Verse>;
   availableYears?: ReadonlyArray<Year>;
   channelsLoading?: boolean;
   recommendedChannelSlugs?: ReadonlyArray<string>;
+  recommendedSpeakers?: ReadonlyArray<string>;
   recommendedDate?: DateSuggestion | null;
 }) {
   const [open, setOpen] = useState(false);
   const { hasActiveFilters } = useSearchFilters();
 
   const suggestionCount =
-    recommendedChannelSlugs.length + (recommendedDate ? 1 : 0);
+    recommendedChannelSlugs.length +
+    recommendedSpeakers.length +
+    (recommendedDate ? 1 : 0);
 
   return (
     <>
@@ -771,11 +828,13 @@ export function MobileFacets({
             <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-8">
               <SearchFacets
                 availableChannels={availableChannels}
+                availableSpeakers={availableSpeakers}
                 availableVerses={availableVerses}
                 availableYears={availableYears}
                 bordered={false}
                 channelsLoading={channelsLoading}
                 recommendedChannelSlugs={recommendedChannelSlugs}
+                recommendedSpeakers={recommendedSpeakers}
                 recommendedDate={recommendedDate}
               />
             </div>

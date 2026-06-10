@@ -12,6 +12,8 @@ type SearchFilters = {
   bibleRefs?: string[];
   // OSIS book ids ("Rom") from the Bible-book facet. OR semantics.
   bibleBooks?: string[];
+  // Resolved speaker names from the speaker facet. OR semantics.
+  speakers?: string[];
 };
 
 export function useSearchFilters() {
@@ -26,6 +28,7 @@ export function useSearchFilters() {
     channelSlugs: searchParams.channelSlugs,
     bibleRefs: searchParams.bibleRefs,
     bibleBooks: searchParams.bibleBooks,
+    speakers: searchParams.speakers,
   };
 
   const hasCustomDates = Boolean(filters.dateStart || filters.dateEnd);
@@ -37,7 +40,8 @@ export function useSearchFilters() {
     hasCustomDates ||
     (filters.channelSlugs && filters.channelSlugs.length > 0) ||
     (filters.bibleRefs && filters.bibleRefs.length > 0) ||
-    (filters.bibleBooks && filters.bibleBooks.length > 0);
+    (filters.bibleBooks && filters.bibleBooks.length > 0) ||
+    (filters.speakers && filters.speakers.length > 0);
 
   const setSort = (
     sort: 'relevance' | 'date-asc' | 'date-desc' | undefined,
@@ -107,6 +111,12 @@ export function useSearchFilters() {
     });
   };
 
+  const setSpeakers = (speakers: string[] | undefined) => {
+    navigate({
+      search: (prev: Record<string, unknown>) => ({ ...prev, speakers }),
+    });
+  };
+
   const clearFilters = () => {
     navigate({
       search: (prev: Record<string, unknown>) => ({
@@ -118,6 +128,7 @@ export function useSearchFilters() {
         channelSlugs: undefined,
         bibleRefs: undefined,
         bibleBooks: undefined,
+        speakers: undefined,
       }),
     });
   };
@@ -132,6 +143,7 @@ export function useSearchFilters() {
     removeChannelSlug,
     setBibleRefs,
     setBibleBooks,
+    setSpeakers,
     clearFilters,
     hasActiveFilters,
   };

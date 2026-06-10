@@ -172,12 +172,10 @@ const targetMappings: Record<
         fields: { keyword: { type: 'keyword', ignore_above: 256 } },
       },
       summary: { type: 'text' },
-      // Reserved for a future speaker-identity library: a doc-level rollup of
-      // resolved speaker names across the upload's paragraphs. Empty until that
-      // library exists; populated via re-index (mapping additions are additive,
-      // so no churn). The query parser already extracts speaker names, so once
-      // this is filled, speaker queries can flip from lexical-only to a real
-      // `terms` filter with no schema change.
+      // Doc-level rollup of resolved speaker names across the upload's
+      // paragraphs (from speaker_attribution in index-document.ts). Powers the
+      // speaker facet (terms agg) and speaker filter. Empty until the upload's
+      // labels are attributed; populated via re-index.
       speakers: { type: 'keyword' },
       // Doc-level rollup of Bible verses cited in the transcript — OSIS
       // `Book.Chapter.Verse` tokens (e.g. "John.3.16"), expanded from BIBLE
@@ -211,12 +209,17 @@ const targetMappings: Record<
           end: { type: 'double' },
           // Worker-local diarization label (SPEAKER_00, …) — not a real name.
           speaker: { type: 'keyword' },
-          // Reserved for the future speaker-identity library: the resolved
-          // human name for this paragraph's speaker. Null until then.
+          // The speaker-identity library's resolved values for this paragraph's
+          // effective label (override ?? diarization speaker), set in
+          // index-document.ts when a speaker_attribution exists. Null until the
+          // label is attributed.
           speakerName: {
             type: 'text',
             fields: { keyword: { type: 'keyword', ignore_above: 256 } },
           },
+          speakerId: { type: 'keyword' },
+          // (Speaker vectors live in the flat `lc_speaker_vectors` index, not
+          // here — see suggestSpeakersByEmbedding.)
           text: { type: 'text' },
           embedding: {
             type: 'knn_vector',
@@ -225,6 +228,28 @@ const targetMappings: Record<
             method: { name: 'hnsw', engine: 'faiss' },
           },
         },
+      },
+    },
+  },
+  // Flat companion to lc_media_v1 for speaker-identity suggestions. One doc per
+  // (upload, label) attribution = `${uploadRecordId}:${label}`, holding that
+  // label's mean titanet vector. Suggestion = kNN over `embedding` +
+  // collapse(speakerId): server-side, score-ranked identities, no nested-kNN /
+  // aggregation limitations. Synced by index-document.ts on every media reindex.
+  lc_speaker_vectors: {
+    settings: {
+      number_of_replicas: 0,
+      'index.knn': true,
+    },
+    properties: {
+      speakerId: { type: 'keyword' },
+      channelId: { type: 'keyword' },
+      uploadRecordId: { type: 'keyword' },
+      embedding: {
+        type: 'knn_vector',
+        dimension: 192,
+        space_type: 'cosinesimil',
+        method: { name: 'hnsw', engine: 'faiss' },
       },
     },
   },

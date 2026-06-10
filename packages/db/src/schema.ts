@@ -1033,6 +1033,204 @@ export const Annotation = pgTable(
   }),
 );
 
+// A named speaker identity owned by a channel. Diarized paragraph labels
+// (transcript_paragraph.speaker, e.g. SPEAKER_00) are attributed to these via
+// speaker_attribution; the 192-dim titanet embeddings power kNN candidate
+// suggestions. slug/bio/avatar are reserved so a public profile page can be
+// added later without a migration.
+export const Speaker = pgTable(
+  'speaker',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    channelId: uuid('channel_id').notNull(),
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
+    bio: text('bio'),
+    avatarPath: text('avatar_path'),
+    avatarBlurhash: text('avatar_blurhash'),
+    createdById: uuid('created_by_id'),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+    deletedAt: timestamp('deleted_at', { precision: 3 }),
+  },
+  (Speaker) => ({
+    speaker_channel_fkey: foreignKey({
+      name: 'speaker_channel_fkey',
+      columns: [Speaker.channelId],
+      foreignColumns: [Channel.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    speaker_createdBy_fkey: foreignKey({
+      name: 'speaker_createdBy_fkey',
+      columns: [Speaker.createdById],
+      foreignColumns: [AppUser.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+    Speaker_channelId_slug_idx: uniqueIndex('speaker_channel_id_slug_key').on(
+      Speaker.channelId,
+      Speaker.slug,
+    ),
+    Speaker_channelId_idx: index('speaker_channel_id_idx').on(
+      Speaker.channelId,
+    ),
+  }),
+);
+
+// Per-paragraph effective-label override. Lets a user reassign an individual
+// paragraph to a different (or new) speaker label before attributing — fixing
+// diarization splits/merges. Absent => effective label is the paragraph's
+// diarization speaker. Reset on reprocess (delete+insert of paragraphs), same
+// as annotations.
+export const SpeakerParagraphLabel = pgTable(
+  'speaker_paragraph_label',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    paragraphId: uuid('paragraph_id').notNull(),
+    label: text('label').notNull(),
+    createdById: uuid('created_by_id'),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+  },
+  (SpeakerParagraphLabel) => ({
+    speaker_paragraph_label_paragraph_fkey: foreignKey({
+      name: 'speaker_paragraph_label_paragraph_fkey',
+      columns: [SpeakerParagraphLabel.paragraphId],
+      foreignColumns: [TranscriptParagraph.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    speaker_paragraph_label_createdBy_fkey: foreignKey({
+      name: 'speaker_paragraph_label_createdBy_fkey',
+      columns: [SpeakerParagraphLabel.createdById],
+      foreignColumns: [AppUser.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+    SpeakerParagraphLabel_paragraphId_idx: uniqueIndex(
+      'speaker_paragraph_label_paragraph_id_key',
+    ).on(SpeakerParagraphLabel.paragraphId),
+  }),
+);
+
+// Maps an (upload, effective-label) pair to a speaker identity. Labeling one
+// paragraph names every paragraph with that effective label in the upload. The
+// speakerId may belong to another channel only when an ACCEPTED speaker_link
+// authorizes it (enforced in the tRPC layer, not by a DB constraint).
+export const SpeakerAttribution = pgTable(
+  'speaker_attribution',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    uploadRecordId: uuid('upload_record_id').notNull(),
+    speakerLabel: text('speaker_label').notNull(),
+    speakerId: uuid('speaker_id').notNull(),
+    createdById: uuid('created_by_id'),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+  },
+  (SpeakerAttribution) => ({
+    speaker_attribution_uploadRecord_fkey: foreignKey({
+      name: 'speaker_attribution_uploadRecord_fkey',
+      columns: [SpeakerAttribution.uploadRecordId],
+      foreignColumns: [UploadRecord.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    speaker_attribution_speaker_fkey: foreignKey({
+      name: 'speaker_attribution_speaker_fkey',
+      columns: [SpeakerAttribution.speakerId],
+      foreignColumns: [Speaker.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    speaker_attribution_createdBy_fkey: foreignKey({
+      name: 'speaker_attribution_createdBy_fkey',
+      columns: [SpeakerAttribution.createdById],
+      foreignColumns: [AppUser.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+    SpeakerAttribution_uploadRecordId_speakerLabel_idx: uniqueIndex(
+      'speaker_attribution_upload_record_id_speaker_label_key',
+    ).on(SpeakerAttribution.uploadRecordId, SpeakerAttribution.speakerLabel),
+    SpeakerAttribution_speakerId_idx: index(
+      'speaker_attribution_speaker_id_idx',
+    ).on(SpeakerAttribution.speakerId),
+  }),
+);
+
+// A cross-channel grant: requestingChannel asks to attribute its uploads to
+// another channel's speaker, approved by the owning channel (mirrors
+// channel_invitation). Scope is decided at approval time: grantedUploadId set =>
+// that upload only; null + ACCEPTED => channel-wide. requestedForUploadId
+// records the upload the requester was labeling when they asked.
+export const SpeakerLink = pgTable(
+  'speaker_link',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    speakerId: uuid('speaker_id').notNull(),
+    requestingChannelId: uuid('requesting_channel_id').notNull(),
+    status: InvitationStatus('status').notNull().default('PENDING'),
+    requestedForUploadId: uuid('requested_for_upload_id'),
+    grantedUploadId: uuid('granted_upload_id'),
+    requestedById: uuid('requested_by_id'),
+    respondedById: uuid('responded_by_id'),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    respondedAt: timestamp('responded_at', { precision: 3 }),
+  },
+  (SpeakerLink) => ({
+    speaker_link_speaker_fkey: foreignKey({
+      name: 'speaker_link_speaker_fkey',
+      columns: [SpeakerLink.speakerId],
+      foreignColumns: [Speaker.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    speaker_link_requestingChannel_fkey: foreignKey({
+      name: 'speaker_link_requestingChannel_fkey',
+      columns: [SpeakerLink.requestingChannelId],
+      foreignColumns: [Channel.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    speaker_link_requestedForUpload_fkey: foreignKey({
+      name: 'speaker_link_requestedForUpload_fkey',
+      columns: [SpeakerLink.requestedForUploadId],
+      foreignColumns: [UploadRecord.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+    speaker_link_grantedUpload_fkey: foreignKey({
+      name: 'speaker_link_grantedUpload_fkey',
+      columns: [SpeakerLink.grantedUploadId],
+      foreignColumns: [UploadRecord.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+    speaker_link_requestedBy_fkey: foreignKey({
+      name: 'speaker_link_requestedBy_fkey',
+      columns: [SpeakerLink.requestedById],
+      foreignColumns: [AppUser.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+    speaker_link_respondedBy_fkey: foreignKey({
+      name: 'speaker_link_respondedBy_fkey',
+      columns: [SpeakerLink.respondedById],
+      foreignColumns: [AppUser.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+    SpeakerLink_speakerId_requestingChannelId_idx: uniqueIndex(
+      'speaker_link_speaker_id_requesting_channel_id_key',
+    ).on(SpeakerLink.speakerId, SpeakerLink.requestingChannelId),
+    SpeakerLink_requestingChannelId_idx: index(
+      'speaker_link_requesting_channel_id_idx',
+    ).on(SpeakerLink.requestingChannelId),
+  }),
+);
+
 export const UploadUserRating = pgTable(
   'upload_user_rating',
   {
@@ -1801,6 +1999,12 @@ export const ChannelRelations = relations(Channel, ({ many, one }) => ({
   importSources: many(ChannelImportSource, {
     relationName: 'ChannelToChannelImportSource',
   }),
+  speakers: many(Speaker, {
+    relationName: 'ChannelToSpeaker',
+  }),
+  speakerLinkRequests: many(SpeakerLink, {
+    relationName: 'ChannelToSpeakerLink',
+  }),
 }));
 
 export const ChannelMembershipRelations = relations(
@@ -1834,6 +2038,54 @@ export const ChannelInvitationRelations = relations(
     }),
   }),
 );
+
+export const SpeakerRelations = relations(Speaker, ({ many, one }) => ({
+  channel: one(Channel, {
+    relationName: 'ChannelToSpeaker',
+    fields: [Speaker.channelId],
+    references: [Channel.id],
+  }),
+  createdBy: one(AppUser, {
+    relationName: 'AppUserToSpeaker',
+    fields: [Speaker.createdById],
+    references: [AppUser.id],
+  }),
+  attributions: many(SpeakerAttribution, {
+    relationName: 'SpeakerToSpeakerAttribution',
+  }),
+  links: many(SpeakerLink, {
+    relationName: 'SpeakerToSpeakerLink',
+  }),
+}));
+
+export const SpeakerAttributionRelations = relations(
+  SpeakerAttribution,
+  ({ one }) => ({
+    uploadRecord: one(UploadRecord, {
+      relationName: 'UploadRecordToSpeakerAttribution',
+      fields: [SpeakerAttribution.uploadRecordId],
+      references: [UploadRecord.id],
+    }),
+    speaker: one(Speaker, {
+      relationName: 'SpeakerToSpeakerAttribution',
+      fields: [SpeakerAttribution.speakerId],
+      references: [Speaker.id],
+    }),
+  }),
+);
+
+export const SpeakerLinkRelations = relations(SpeakerLink, ({ one }) => ({
+  speaker: one(Speaker, {
+    relationName: 'SpeakerToSpeakerLink',
+    fields: [SpeakerLink.speakerId],
+    references: [Speaker.id],
+  }),
+  requestingChannel: one(Channel, {
+    relationName: 'ChannelToSpeakerLink',
+    fields: [SpeakerLink.requestingChannelId],
+    references: [Channel.id],
+  }),
+}));
 
 export const UploadStateRelations = relations(UploadState, ({ one }) => ({
   uploadRecord: one(UploadRecord, {
