@@ -77,8 +77,15 @@ function buildFilter(
   bibleRefs?: string[] | null,
   bibleBooks?: string[] | null,
   speakers?: string[] | null,
+  uploadIds?: string[] | null,
 ): OsQuery[] {
   const filter = accessControlFilter();
+  // Restrict to specific media docs. The media doc `_id` IS the upload's internal
+  // UUID, so this scopes retrieval to one (or a few) videos — used by the
+  // per-video "ask about this video" feature.
+  if (Array.isArray(uploadIds) && uploadIds.length > 0) {
+    filter.push({ ids: { values: uploadIds } });
+  }
   if (Array.isArray(channelIds) && channelIds.length > 0) {
     filter.push({ terms: { channelId: channelIds } });
   }
@@ -117,6 +124,9 @@ export type BuildMediaSearchArgs = {
   bibleBooks?: string[] | null;
   /** Resolved speaker names to restrict to (the doc-level speaker facet). */
   speakers?: string[] | null;
+  /** Internal upload UUIDs (= media doc `_id`) to restrict to — scopes retrieval
+   * to specific videos (per-video "ask about this video"). */
+  uploadIds?: string[] | null;
   /**
    * Paragraph-level speaker scope (distinct from the doc-level `speakers`
    * facet). When set, results are restricted to videos that contain a paragraph
@@ -183,6 +193,7 @@ export function buildMediaHybridBody({
   bibleRefs,
   bibleBooks,
   speakers,
+  uploadIds,
   paragraphSpeakers,
   queryVector,
   from = 0,
@@ -198,6 +209,7 @@ export function buildMediaHybridBody({
     bibleRefs,
     bibleBooks,
     speakers,
+    uploadIds,
   );
 
   // Paragraph-level speaker scope: a bool over the analyzed speakerName so a
@@ -474,6 +486,7 @@ export async function runMediaKnnProbe({
   bibleRefs,
   bibleBooks,
   speakers,
+  uploadIds,
 }: {
   queryVector: number[];
   channelIds?: string[] | null;
@@ -481,6 +494,7 @@ export async function runMediaKnnProbe({
   bibleRefs?: string[] | null;
   bibleBooks?: string[] | null;
   speakers?: string[] | null;
+  uploadIds?: string[] | null;
 }): Promise<number | null> {
   const filter = buildFilter(
     channelIds,
@@ -488,6 +502,7 @@ export async function runMediaKnnProbe({
     bibleRefs,
     bibleBooks,
     speakers,
+    uploadIds,
   );
   const raw = await osSearch({
     index: MEDIA_INDEX,
@@ -795,4 +810,19 @@ export function mergeParagraphSnippets(
   return Array.from(byKey.values())
     .sort((a, b) => a.start - b.start)
     .slice(0, limit);
+}
+
+/**
+ * Start time (SECONDS) of the single strongest-matching paragraph for a hit —
+ * the top BM25 inner hit, else the top kNN inner hit. OpenSearch returns inner
+ * hits in score order, so `hits[0]` is the best match. Used as the citation
+ * anchor so a citation jumps to where the matched content actually is, rather
+ * than to the start of the surrounding context window (which can precede the
+ * match). Null when the hit carries no paragraph inner hits (legacy docs).
+ */
+export function topMatchStartSeconds(hit: MediaHit): number | null {
+  const top =
+    hit.inner_hits?.[PARA_BM25]?.hits.hits[0]?._source ??
+    hit.inner_hits?.[PARA_KNN]?.hits.hits[0]?._source;
+  return top ? Math.round(top.start) : null;
 }

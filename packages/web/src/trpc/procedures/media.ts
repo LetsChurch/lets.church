@@ -41,6 +41,7 @@ import {
 } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { ffprobeSchema } from '@/util/zod';
+import { generateSuggestedQuestions } from '../media/suggested-questions';
 import { authProcedure, publicProcedure } from '../trpc';
 
 const moduleLogger = logger.child({
@@ -177,6 +178,25 @@ const getRelatedMediaSchema = z.object({
 });
 
 export const mediaProcedures = {
+  // Starter questions for the media-page "ask about this video" dropdown.
+  // Generation is cached in Valkey (per upload), so it's fetched on page load
+  // (pre-generated) and returns instantly thereafter without per-view cost.
+  getSuggestedQuestions: publicProcedure
+    .input(z.object({ mediaId: IncomingIdSchema }))
+    .query(async ({ input }) => {
+      const media = await db.query.UploadRecord.findFirst({
+        columns: { id: true, title: true, description: true, summary: true },
+        where: (t, { eq: eqOp }) => eqOp(t.id, input.mediaId),
+      });
+      if (!media) return [];
+      return generateSuggestedQuestions(
+        media.id,
+        media.title,
+        media.description,
+        media.summary,
+      );
+    }),
+
   getMediaById: publicProcedure
     .input(getMediaByIdSchema)
     .query(async ({ input, ctx }) => {

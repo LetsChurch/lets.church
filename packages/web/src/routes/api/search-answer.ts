@@ -37,6 +37,10 @@ const bodySchema = z.object({
   // answer (or decline) is appended to its params. Null when logging was
   // skipped (e.g. admin inspecting logs).
   searchLogId: z.string().nullish(),
+  // Outgoing (base58) upload id when the question is about ONE specific video
+  // (the media-page "ask about this video" entry point). Scopes retrieval +
+  // the relevance probe to that upload's paragraphs. Omitted for library search.
+  uploadId: z.string().nullish(),
   // Filters pre-filled on the search URL when this query loaded (e.g. a channel
   // slug when searching from a channel page). The answer's grounding retrieval
   // is scoped to them so it reflects the same corpus as the results. The client
@@ -110,6 +114,15 @@ export const Route = createFileRoute('/api/search-answer')({
           return new Response('Invalid request body', { status: 400 });
         }
 
+        // Single-video scope: resolve the outgoing upload id to the internal
+        // UUID (= the media doc `_id`). Invalid ids degrade to "no scope" rather
+        // than erroring the whole request.
+        const internalUploadId = (() => {
+          if (!parsed.uploadId) return null;
+          const r = IncomingIdSchema.safeParse(parsed.uploadId);
+          return r.success ? r.data : null;
+        })();
+
         // Normalize the pre-filled URL filters into retrieval scope. Explicit
         // date bounds win over the coarse bucket (matching the results list).
         const filters = parsed.filters ?? null;
@@ -131,6 +144,7 @@ export const Route = createFileRoute('/api/search-answer')({
           dr: filters?.dateRange ?? null,
           ds: filters?.dateStart ?? null,
           de: filters?.dateEnd ?? null,
+          u: internalUploadId ?? null,
         });
 
         // Server-only deps loaded lazily so Mastra / pg never enter the client
@@ -144,7 +158,7 @@ export const Route = createFileRoute('/api/search-answer')({
           { recordLlmCall },
           { getSession },
           { hydrateUploads },
-          { db, SearchLogEntry },
+          { db, SearchLogEntry, UploadRecord },
           { eq, sql },
           { cacheGetJson, cacheSetJson },
           { parseSearchQuery },
@@ -183,6 +197,21 @@ export const Route = createFileRoute('/api/search-answer')({
             : [];
         const scopedChannelIds = scopedChannels.map((c) => c.id);
         const scopedChannelNames = scopedChannels.map((c) => c.name);
+
+        // For a single-video ask, load the title + summary to feed the agent as
+        // "other relevant information" beyond the retrieved transcript passages.
+        const videoMeta = internalUploadId
+          ? await db.query.UploadRecord.findFirst({
+              where: eq(UploadRecord.id, internalUploadId),
+              columns: { title: true, summary: true },
+            }).catch(() => null)
+          : null;
+
+        // Declines read differently per scope: a single-video ask can't claim the
+        // whole library lacks it, only that this video doesn't cover it.
+        const declineMessage = internalUploadId
+          ? "This video doesn't seem to cover that."
+          : GATED_ANSWER;
 
         // Append the final answer (real or decline) + the cited sources to the
         // search_log_entry row hybridSearch created, so each search's parse,
@@ -233,13 +262,20 @@ export const Route = createFileRoute('/api/search-answer')({
             { headers: STREAM_HEADERS },
           );
 
-        // Answer cache, keyed by query (shared, same day-scoped TTL as the
-        // parse). NOTE: keyed by query only, so it ignores per-thread
-        // conversation memory — fine for the single-turn search page; a genuine
-        // follow-up could be served a context-free answer.
+        // Answer cache (day-scoped TTL, like the parse). Keyed by the
+        // CONVERSATION (resource + thread) as well as the query/filters: the
+        // agent reads thread memory, so a follow-up ("what about his early
+        // ministry?") resolves against prior turns. Keying by query alone would
+        // replay one thread's context-dependent answer into another thread or
+        // user — wrong, and a cross-conversation bleed. The cost is losing
+        // cross-user dedup of identical queries; an identical query within the
+        // same conversation (re-render / refresh / back-nav) still hits.
         const answerCacheKey = `search-answer:v1:${SEARCH_AGENT_MODEL}:${new Date()
           .toISOString()
-          .slice(0, 10)}:${filterSig}:${parsed.query.trim()}`;
+          .slice(
+            0,
+            10,
+          )}:${resource}:${parsed.threadId}:${filterSig}:${parsed.query.trim()}`;
         const cacheAnswer = (answerSources: AnswerSource[], answer: string) =>
           cacheSetJson(
             answerCacheKey,
@@ -251,9 +287,9 @@ export const Route = createFileRoute('/api/search-answer')({
         // plain decline in the card with no sources — never a verbose,
         // retrieval-narrating apology. Cache + log it like a real answer.
         const declineResponse = () => {
-          void recordAnswer(GATED_ANSWER, []);
-          void cacheAnswer([], GATED_ANSWER);
-          return payloadResponse([], GATED_ANSWER);
+          void recordAnswer(declineMessage, []);
+          void cacheAnswer([], declineMessage);
+          return payloadResponse([], declineMessage);
         };
 
         // Cache hit: replay the stored payload (skips retrieval + the agent) and
@@ -288,10 +324,18 @@ export const Route = createFileRoute('/api/search-answer')({
             // grounded context and gives us the source list for the chips.
             const retrieved = await runAgentMediaSearch({
               query: parsed.query,
-              channelIds: scopedChannelIds.length > 0 ? scopedChannelIds : null,
+              // Pass the resolved ids when a channel filter was requested — even
+              // an empty array, so a filter that matched no public channel yields
+              // no results rather than broadening to the whole library. Null only
+              // when no channel filter was set.
+              channelIds:
+                filters?.channelSlugs && filters.channelSlugs.length > 0
+                  ? scopedChannelIds
+                  : null,
               speakerNames: filters?.speakers ?? undefined,
               bibleRefs: filters?.bibleRefs ?? undefined,
               bibleBooks: filters?.bibleBooks ?? undefined,
+              uploadIds: internalUploadId ? [internalUploadId] : undefined,
               dateGte: dateBounds?.gte,
               dateLte: dateBounds?.lte,
               limit: 8,
@@ -328,7 +372,9 @@ export const Route = createFileRoute('/api/search-answer')({
                 channelName: h.channel.name ?? r.channelName,
                 avatarUrl: h.channel.avatarUrl,
                 thumbnailUrl: h.thumbnailUrl,
-                startSeconds: Math.round(r.context[0]?.startSeconds ?? 0),
+                // Anchor the citation to the strongest match, not the earliest
+                // context block (which the ±1 window can drag toward 0s).
+                startSeconds: r.matchStartSeconds,
               });
               // Prefix each passage with its attributed speaker (when known) so
               // the model can attribute who said what; unattributed passages are
@@ -389,7 +435,10 @@ export const Route = createFileRoute('/api/search-answer')({
           //    nothing worth overviewing.
           if (queryVector) {
             try {
-              const score = await runMediaKnnProbe({ queryVector });
+              const score = await runMediaKnnProbe({
+                queryVector,
+                uploadIds: internalUploadId ? [internalUploadId] : undefined,
+              });
               const cosine = score == null ? null : 2 * score - 1;
               moduleLogger.info(
                 { context: { query: parsed.query, score, cosine } },
@@ -452,6 +501,19 @@ export const Route = createFileRoute('/api/search-answer')({
               ? `\n\nScope: these results are limited to the channel(s): ${scopedChannelNames.join(', ')}. If you search again, pass channelNames: ${JSON.stringify(scopedChannelNames)} so follow-ups stay within the same channel scope.`
               : '';
 
+          // Single-video ask: give the agent the video's identity + summary as
+          // extra grounding, and forbid pulling in other videos (the searchMedia
+          // tool can't scope to one upload, so it must NOT re-search).
+          const videoContext = internalUploadId
+            ? `\n\nThis question is about ONE video${
+                videoMeta?.title ? ` titled "${videoMeta.title}"` : ''
+              }.${
+                videoMeta?.summary
+                  ? ` Video summary: ${videoMeta.summary.slice(0, 1000)}`
+                  : ''
+              } Every source below is a passage from THIS video — answer only from them and do NOT search for or cite other videos.`
+            : '';
+
           // The answer path directly answers the question; the overview path
           // (when the sources are on-topic but don't answer it) summarizes the
           // related content without asserting an answer.
@@ -459,7 +521,7 @@ export const Route = createFileRoute('/api/search-answer')({
             mode === 'answer'
               ? `Question: ${framingQuestion}
 
-Answer using ONLY the numbered sources below (these are already fetched — you do not need to search again unless the question needs comparison or counts, or it asks what a specific PERSON said — in that case call searchMedia again with their name in speakerNames to scope to paragraphs they actually spoke).${scopeNote}
+Answer using ONLY the numbered sources below (these are already fetched — you do not need to search again unless the question needs comparison or counts, or it asks what a specific PERSON said — in that case call searchMedia again with their name in speakerNames to scope to paragraphs they actually spoke).${scopeNote}${videoContext}
 
 Formatting rules:
 - Begin with a concise, direct answer in one or two sentences. Do NOT open with a heading, title, or a restatement of the question.
@@ -472,7 +534,7 @@ Sources:
 ${sourcesBlock}`
               : `Topic: ${framingQuestion}
 
-The numbered sources below are on this topic but don't form a single direct answer. Give the reader a brief, grounded overview of what the library covers on it. Do NOT fabricate specifics the sources don't support.${scopeNote}
+The numbered sources below are on this topic but don't form a single direct answer. Give the reader a brief, grounded overview of what the library covers on it. Do NOT fabricate specifics the sources don't support.${scopeNote}${videoContext}
 
 Formatting rules:
 - Lead straight into what the sources cover on this topic (you may note in passing if coverage is partial). Do NOT open with an apology, a heading, or a restatement of the topic, and do NOT pivot to material that isn't about the topic.

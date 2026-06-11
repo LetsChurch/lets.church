@@ -1,4 +1,4 @@
-import { IconSparkles } from '@tabler/icons-react';
+import { IconClockHour3, IconSparkles } from '@tabler/icons-react';
 import {
   type ComponentProps,
   useEffect,
@@ -14,6 +14,7 @@ import {
   MediaPreviewScope,
   MediaPreviewTarget,
 } from '@/components/media-preview-link';
+import { formatTime } from '@/util/format';
 
 // useLayoutEffect warns during SSR; fall back to useEffect on the server.
 const useIsomorphicLayoutEffect =
@@ -128,16 +129,39 @@ function sourceLabel(s: AnswerSource): string {
   return s.title ?? s.channelName ?? 'Source';
 }
 
-// An inline citation badge: a superscript number that opens the same hover
-// preview as the source chips and deep-links to the cited moment.
-function CitationBadge({ s, n }: { s: AnswerSource; n: number }) {
+const CITATION_BADGE_CLASS =
+  'ml-0.5 inline-flex items-center rounded bg-white/15 px-1 align-super font-medium text-[10px] text-white/80 no-underline transition-colors hover:bg-white/25 hover:text-white';
+
+// An inline citation badge: a superscript number. In `onCite` mode (a single
+// video page) it's a button that seeks that page's player to the cited moment;
+// otherwise it opens the shared hover preview + deep-links to the moment.
+function CitationBadge({
+  s,
+  n,
+  onCite,
+}: {
+  s: AnswerSource;
+  n: number;
+  onCite?: (startSeconds: number) => void;
+}) {
+  if (onCite) {
+    return (
+      <button
+        type="button"
+        onClick={() => onCite(s.startSeconds)}
+        className={CITATION_BADGE_CLASS}
+      >
+        {n}
+      </button>
+    );
+  }
   return (
     <MediaPreviewTarget
       mediaId={s.id}
       startSeconds={s.startSeconds}
       thumbnailUrl={s.thumbnailUrl}
       title={sourceLabel(s)}
-      className="ml-0.5 inline-flex items-center rounded bg-white/15 px-1 align-super font-medium text-[10px] text-white/80 no-underline transition-colors hover:bg-white/25 hover:text-white"
+      className={CITATION_BADGE_CLASS}
     >
       {n}
     </MediaPreviewTarget>
@@ -188,16 +212,39 @@ const MARKDOWN_BLOCKS = {
   hr: () => <hr className="my-3 border-white/20" />,
 };
 
-// A compact citation chip (avatar + title) shown in the row. Hovering opens the
-// same MiniPlayer preview as transcript-result segments.
-function SourceChip({ s }: { s: AnswerSource }) {
+const SOURCE_CHIP_CLASS =
+  'inline-flex max-w-[14rem] items-center gap-1.5 rounded-full bg-white/15 py-1 pr-3 pl-1 font-medium text-white/80 text-xs no-underline transition-colors hover:bg-white/25';
+
+// A compact citation chip. In `onCite` mode (a single-video page) every source
+// is the same video, so the chip shows just the cited timestamp and seeks this
+// page's player. Otherwise it's an avatar + title chip opening the shared
+// MiniPlayer hover preview (the cross-library search results).
+function SourceChip({
+  s,
+  onCite,
+}: {
+  s: AnswerSource;
+  onCite?: (startSeconds: number) => void;
+}) {
+  if (onCite) {
+    return (
+      <button
+        type="button"
+        onClick={() => onCite(s.startSeconds)}
+        className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 font-medium text-white/80 text-xs tabular-nums transition-colors hover:bg-white/25"
+      >
+        <IconClockHour3 size={12} className="shrink-0" aria-hidden="true" />
+        {formatTime(s.startSeconds * 1000)}
+      </button>
+    );
+  }
   return (
     <MediaPreviewTarget
       mediaId={s.id}
       startSeconds={s.startSeconds}
       thumbnailUrl={s.thumbnailUrl}
       title={sourceLabel(s)}
-      className="inline-flex max-w-[14rem] items-center gap-1.5 rounded-full bg-white/15 py-1 pr-3 pl-1 font-medium text-white/80 text-xs no-underline transition-colors hover:bg-white/25"
+      className={SOURCE_CHIP_CLASS}
     >
       <Avatar
         src={s.avatarUrl}
@@ -210,7 +257,13 @@ function SourceChip({ s }: { s: AnswerSource }) {
   );
 }
 
-function SourceChips({ sources }: { sources: AnswerSource[] }) {
+function SourceChips({
+  sources,
+  onCite,
+}: {
+  sources: AnswerSource[];
+  onCite?: (startSeconds: number) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   if (sources.length === 0) return null;
   const visible = expanded ? sources : sources.slice(0, VISIBLE_SOURCES);
@@ -219,7 +272,7 @@ function SourceChips({ sources }: { sources: AnswerSource[] }) {
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2">
       {visible.map((s) => (
-        <SourceChip key={s.id} s={s} />
+        <SourceChip key={s.id} s={s} onCite={onCite} />
       ))}
       {hidden.length > 0 ? (
         <button
@@ -269,19 +322,29 @@ export function AnswerCard({
   status,
   answer,
   sources,
+  onCite,
+  heading,
 }: {
   status: AnswerStatus;
   answer: string;
   sources: AnswerSource[];
+  // When set (single-video page), citations seek THIS page's player instead of
+  // opening a hover preview / navigating. Receives the cited start time (seconds).
+  onCite?: (startSeconds: number) => void;
+  // Optional bold heading shown at the top of the card — used in direct-question
+  // mode (the media page) to echo the asked question above its answer.
+  heading?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Read latest sources via a ref so the (stable) markdown components can look
-  // up a citation's source without rebuilding on every streamed chunk.
+  // Read latest sources + onCite via refs so the (stable) markdown components can
+  // look up a citation without rebuilding on every streamed chunk.
   const sourcesRef = useRef<AnswerSource[]>([]);
   sourcesRef.current = sources;
+  const onCiteRef = useRef(onCite);
+  onCiteRef.current = onCite;
   const components = useMemo(
     () => ({
       ...MARKDOWN_BLOCKS,
@@ -291,7 +354,7 @@ export function AnswerCard({
           const n = Number(match[1]);
           const s = sourcesRef.current[n - 1];
           if (!s) return <sup className="text-[10px] text-white/50">{n}</sup>;
-          return <CitationBadge s={s} n={n} />;
+          return <CitationBadge s={s} n={n} onCite={onCiteRef.current} />;
         }
         return (
           <a href={href} target="_blank" rel="noopener noreferrer" {...rest}>
@@ -321,6 +384,11 @@ export function AnswerCard({
 
   return (
     <div className="rounded-2xl border-fancy-pants bg-indigo-500/40 p-5 text-white shadow-sm">
+      {heading ? (
+        <h2 className="mb-2 pr-6 font-semibold text-base text-white leading-snug">
+          {heading}
+        </h2>
+      ) : null}
       {status === 'error' ? (
         <p className="text-sm text-white/80">
           Sorry — we couldn't generate an answer for this query.
@@ -355,7 +423,10 @@ export function AnswerCard({
               {expanded ? 'See less' : 'See more'}
             </button>
           ) : null}
-          <SourceChips sources={pickCitedSources(answer, sources)} />
+          <SourceChips
+            sources={pickCitedSources(answer, sources)}
+            onCite={onCite}
+          />
         </MediaPreviewScope>
       ) : (
         <p className="text-shimmer text-sm">Seeking…</p>
@@ -457,4 +528,86 @@ export function AnswerPanel({
   const { answer, sources } = parseStream(text);
 
   return <AnswerCard status={status} answer={answer} sources={sources} />;
+}
+
+// Per-video, per-tab-session thread so follow-up asks about the SAME video share
+// conversation memory, kept separate from the library-search thread.
+function getVideoThreadId(mediaId: string): string {
+  if (typeof window === 'undefined') return 'ssr';
+  const KEY = `lc-video-ask-thread:${mediaId}`;
+  let id = window.sessionStorage.getItem(KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    window.sessionStorage.setItem(KEY, id);
+  }
+  return id;
+}
+
+/**
+ * The "ask about this video" answer view, shown inside the media transcript
+ * sidebar (replacing the transcript list). Streams `/api/search-answer` with the
+ * `uploadId` set so retrieval is scoped to this one video, and wires citations to
+ * seek the page's player via `onCite`. Re-streams whenever `question` changes.
+ */
+export function VideoAnswerPanel({
+  mediaId,
+  question,
+  onCite,
+}: {
+  mediaId: string;
+  question: string;
+  onCite: (startSeconds: number) => void;
+}) {
+  const [text, setText] = useState('');
+  const [status, setStatus] = useState<AnswerStatus>('streaming');
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setText('');
+    setStatus('streaming');
+
+    (async () => {
+      try {
+        const res = await fetch('/api/search-answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: question,
+            uploadId: mediaId,
+            threadId: getVideoThreadId(mediaId),
+            resourceId: getResourceId(),
+          }),
+          signal: controller.signal,
+        });
+        if (!res.ok || !res.body) {
+          setStatus('error');
+          return;
+        }
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          setText((prev) => prev + decoder.decode(value, { stream: true }));
+        }
+        setStatus('done');
+      } catch {
+        if (!controller.signal.aborted) setStatus('error');
+      }
+    })();
+
+    return () => controller.abort();
+  }, [mediaId, question]);
+
+  const { answer, sources } = parseStream(text);
+
+  return (
+    <AnswerCard
+      status={status}
+      answer={answer}
+      sources={sources}
+      heading={question}
+      onCite={onCite}
+    />
+  );
 }

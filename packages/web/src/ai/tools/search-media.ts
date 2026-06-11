@@ -9,6 +9,7 @@ import {
   type MediaSegment,
   mergeParagraphSnippets,
   runMediaHybridSearch,
+  topMatchStartSeconds,
 } from '@letschurch/opensearch';
 import {
   createEmbeddingsTracked,
@@ -128,6 +129,8 @@ export type AgentMediaSearchInput = {
   bibleRefs?: string[];
   /** OSIS book ids ("Rom"); restricts to docs citing that book. */
   bibleBooks?: string[];
+  /** Internal upload UUIDs to restrict retrieval to (per-video "ask"). */
+  uploadIds?: string[] | null;
   dateGte?: string;
   dateLte?: string;
   limit?: number;
@@ -138,6 +141,9 @@ export type AgentMediaSearchResult = {
   title: string | null;
   channelName: string | null;
   publishedAt: string | null;
+  // Start (seconds) of the strongest-matching paragraph — the citation anchor a
+  // source/footnote should jump to. Falls back to the first context block.
+  matchStartSeconds: number;
   context: Array<{
     cite: string;
     startSeconds: number;
@@ -163,6 +169,7 @@ export async function runAgentMediaSearch({
   speakerNames,
   bibleRefs,
   bibleBooks,
+  uploadIds,
   dateGte,
   dateLte,
   limit = 8,
@@ -171,15 +178,28 @@ export async function runAgentMediaSearch({
   total: number;
   queryVector: number[] | null;
 }> {
+  // Was a channel scope asked for at all? (Pre-resolved ids count even when the
+  // array is empty — that's an explicit "no matching channel", not "no scope".)
+  const channelScopeRequested =
+    preResolvedChannelIds != null ||
+    (channelSlugs?.length ?? 0) > 0 ||
+    (channelNames?.length ?? 0) > 0;
+
   // Precedence: pre-resolved ids → exact URL slugs → the parser's fuzzy names.
   const channelIds =
-    preResolvedChannelIds && preResolvedChannelIds.length > 0
+    preResolvedChannelIds != null
       ? preResolvedChannelIds
       : channelSlugs && channelSlugs.length > 0
         ? (await resolveChannelSlugs(channelSlugs)).map((c) => c.id)
         : channelNames && channelNames.length > 0
           ? (await resolveChannelNames(channelNames)).map((c) => c.id)
           : null;
+
+  // A scope was requested but resolved to no channel (e.g. a slug filter that
+  // matched nothing public) → return no results, NOT the whole library.
+  if (channelScopeRequested && channelIds != null && channelIds.length === 0) {
+    return { results: [], total: 0, queryVector: null };
+  }
 
   const publishedAt =
     dateGte || dateLte
@@ -207,6 +227,7 @@ export async function runAgentMediaSearch({
     publishedAt,
     bibleRefs: bibleRefs && bibleRefs.length > 0 ? bibleRefs : null,
     bibleBooks: bibleBooks && bibleBooks.length > 0 ? bibleBooks : null,
+    uploadIds: uploadIds && uploadIds.length > 0 ? uploadIds : null,
     paragraphSpeakers:
       speakerNames && speakerNames.length > 0 ? speakerNames : null,
     queryVector,
@@ -345,11 +366,17 @@ export async function runAgentMediaSearch({
         speaker: c.speakerName,
       }));
 
+      // Anchor citations to the strongest matched paragraph (not the earliest
+      // context block, which the ±1 window can push before the match → ~0s).
+      const matchStartSeconds =
+        topMatchStartSeconds(hit) ?? context[0]?.startSeconds ?? 0;
+
       return {
         uploadId,
         title: upload.title,
         channelName: upload.channel.name,
         publishedAt: upload.publishedAt?.toISOString() ?? null,
+        matchStartSeconds,
         context,
       };
     })
