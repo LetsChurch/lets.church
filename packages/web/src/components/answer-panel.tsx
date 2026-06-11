@@ -310,6 +310,52 @@ const COLLAPSED_HEIGHT = 112;
 
 export type AnswerStatus = 'streaming' | 'done' | 'error';
 
+// Playful loading verbs for the shimmering "…" while the answer is being
+// generated. A random one is picked each time the card enters its loading state
+// so the wait feels a little less monotonous.
+const SHIMMER_WORDS = [
+  'Seeking',
+  'Processing',
+  'Analyzing',
+  'Scanning',
+  'Calculating',
+  'Retrieving',
+  'Searching',
+  'Querying',
+  'Verifying',
+  'Cross-checking',
+  'Researching',
+  'Looking up',
+  'Gathering',
+  'Discovering',
+  'Exploring',
+  'Beep-booping',
+  'Crunching',
+  'Whirring',
+  'Churning',
+  'Buffering',
+  'Bootstrapping',
+  'Rummaging',
+  'Spelunking',
+  'Triangulating',
+];
+
+// Pick a loading verb client-side only: SSR and the first client render both
+// use SHIMMER_WORDS[0] (so they agree — a random pick during render would
+// hydration-mismatch), then a fresh word is chosen on each entry into the
+// seeking state.
+function useShimmerWord(seeking: boolean): string {
+  const [word, setWord] = useState(SHIMMER_WORDS[0]);
+  const wasSeeking = useRef(false);
+  useEffect(() => {
+    if (seeking && !wasSeeking.current) {
+      setWord(SHIMMER_WORDS[Math.floor(Math.random() * SHIMMER_WORDS.length)]);
+    }
+    wasSeeking.current = seeking;
+  }, [seeking]);
+  return word;
+}
+
 /**
  * The presentational indigo answer card. Pure: given the answer's `status` and
  * the parsed `answer` + `sources`, it renders the right state — shimmering
@@ -338,6 +384,7 @@ export function AnswerCard({
   const [expanded, setExpanded] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const shimmerWord = useShimmerWord(status === 'streaming' && !answer);
 
   // Read latest sources + onCite via refs so the (stable) markdown components can
   // look up a citation without rebuilding on every streamed chunk.
@@ -429,7 +476,7 @@ export function AnswerCard({
           />
         </MediaPreviewScope>
       ) : (
-        <p className="text-shimmer text-sm">Seeking…</p>
+        <p className="text-shimmer text-sm">{shimmerWord}…</p>
       )}
       <p className="mt-3 flex items-center gap-1 text-white/75 text-xs">
         <IconSparkles size={12} aria-hidden="true" className="shrink-0" />
