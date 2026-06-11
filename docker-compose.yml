@@ -1,5 +1,5 @@
 volumes:
-  es-data:
+  os-data:
   pg-data:
   pnpm-store:
 
@@ -558,7 +558,7 @@ services:
     ports:
       - 127.0.0.1:${HOST_OPENSEARCH_PORT}:9200
     volumes:
-      - es-data:/usr/share/opensearch/data
+      - os-data:/usr/share/opensearch/data
     healthcheck:
       test: curl -s -f opensearch:9200/_cluster/health >/dev/null || exit 1
       interval: 30s

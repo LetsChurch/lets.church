@@ -238,7 +238,12 @@ export const Route = createFileRoute('/api/search-answer')({
                 thumbnailUrl: h.thumbnailUrl,
                 startSeconds: Math.round(r.context[0]?.startSeconds ?? 0),
               });
-              const passages = r.context.map((c) => c.text).join('\n');
+              // Prefix each passage with its attributed speaker (when known) so
+              // the model can attribute who said what; unattributed passages are
+              // left bare rather than labeled with a raw diarization id.
+              const passages = r.context
+                .map((c) => (c.speaker ? `${c.speaker}: ${c.text}` : c.text))
+                .join('\n');
               numbered.push(
                 `[${n}] (${h.title ?? r.title ?? 'Untitled'} — ${h.channel.name ?? r.channelName ?? 'Unknown'}):\n${passages}`,
               );
@@ -332,12 +337,13 @@ export const Route = createFileRoute('/api/search-answer')({
             mode === 'answer'
               ? `Question: ${framingQuestion}
 
-Answer using ONLY the numbered sources below (these are already fetched — you do not need to search again unless the question needs comparison or counts).
+Answer using ONLY the numbered sources below (these are already fetched — you do not need to search again unless the question needs comparison or counts, or it asks what a specific PERSON said — in that case call searchMedia again with their name in speakerNames to scope to paragraphs they actually spoke).
 
 Formatting rules:
 - Begin with a concise, direct answer in one or two sentences. Do NOT open with a heading, title, or a restatement of the question.
 - After that, add any supporting detail, lists, or short sections that help.
 - Write in Markdown.
+- A passage prefixed with a name (e.g. "Conley Owens: …") is attributed to that speaker — you may name them and attribute their statements. Passages with no name prefix are unattributed; do not guess who is speaking.
 - Cite your sources inline with bracketed numbers that match the list below (e.g. place [1] or [2] immediately after the sentence it supports). Only cite numbers that appear in the list; never invent a citation or a source.
 
 Sources:

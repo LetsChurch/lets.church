@@ -12,6 +12,8 @@ import {
   OrganizationTag,
   SearchLogEntry,
   StorageAudit,
+  Speaker,
+  SpeakerAttribution,
   TranscriptParagraph,
   UploadRecord,
   UploadState,
@@ -41,7 +43,9 @@ import { TRPCError } from '@trpc/server';
 import * as argon2 from 'argon2';
 import {
   and,
+  asc,
   count,
+  countDistinct,
   desc,
   eq,
   gt,
@@ -57,6 +61,12 @@ import {
 import { z } from 'zod';
 import { usernameSchema } from '@/schemas/auth';
 import { IncomingIdSchema } from '@/schemas/common';
+import {
+  adminAssignSpeakerLabelsSchema,
+  adminCreateSpeakerFromClusterSchema,
+  adminLabelingQueueSchema,
+  adminSpeakersPageSchema,
+} from '@/schemas/dashboard';
 import {
   addFeaturedUploadSchema,
   removeFeaturedUploadSchema,
@@ -115,6 +125,12 @@ import {
   filterUploadsWithoutActiveWorkflows,
 } from '@/util/temporal-workflow';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
+import {
+  applySpeakerAssignments,
+  buildLabelingData,
+  createSpeakerAndAssign,
+  LABELING_QUEUE_CACHE_PREFIX,
+} from '../../speaker-labeling/queue';
 import { authProcedure, router } from '../../trpc';
 import { newsletterListsRouter } from '../newsletter-lists';
 
@@ -153,6 +169,102 @@ const adminProcedure = authProcedure.use(async ({ ctx, next }) => {
 });
 
 export const adminRouter = router({
+  // Site-wide labeling data across every channel with transcribed content:
+  // `queue` = segments matching an existing named speaker (channels without
+  // speakers simply contribute none); `clusters` = unmatched segments grouped
+  // by voice similarity — including channels not yet labeled at all.
+  getSpeakerLabelingQueue: adminProcedure
+    .input(adminLabelingQueueSchema)
+    .query(async ({ input }) => {
+      const contentChannels = await db
+        .selectDistinct({ channelId: UploadRecord.channelId })
+        .from(UploadRecord)
+        .where(
+          and(
+            isNotNull(UploadRecord.transcribingFinishedAt),
+            isNull(UploadRecord.deletedAt),
+          ),
+        );
+      return buildLabelingData({
+        owningChannelIds: contentChannels.map((r) => r.channelId),
+        minMatchPercent: input.minMatchPercent,
+        limit: input.limit,
+        cacheKey: `${LABELING_QUEUE_CACHE_PREFIX}admin:${input.minMatchPercent ?? 70}:${input.limit ?? 200}`,
+      });
+    }),
+
+  // Bulk-apply attributions from the site-wide queue. A site admin may assign
+  // across channels; each speaker still must be owned-or-linked by its upload's
+  // channel (assertSpeakerUsable, inside applySpeakerAssignments).
+  assignSpeakerLabels: adminProcedure
+    .input(adminAssignSpeakerLabelsSchema)
+    .mutation(async ({ ctx, input }) => {
+      return applySpeakerAssignments(input.assignments, {
+        actingUserId: ctx.session.appUserId,
+        authorizeChannel: () => true,
+      });
+    }),
+
+  // Create a new speaker (in the cluster's channel) and attribute its members.
+  createSpeakerFromCluster: adminProcedure
+    .input(adminCreateSpeakerFromClusterSchema)
+    .mutation(async ({ ctx, input }) => {
+      return createSpeakerAndAssign({
+        channelId: input.channelId,
+        name: input.name,
+        members: input.members,
+        actingUserId: ctx.session.appUserId,
+        authorizeChannel: () => true,
+      });
+    }),
+
+  // Site-wide roster of every named speaker, with its owning channel and how
+  // many uploads it's attributed to. Manage individual speakers from the owning
+  // channel's speakers page. Server-paginated (the roster can grow unbounded).
+  getAllSpeakers: adminProcedure
+    .input(adminSpeakersPageSchema)
+    .query(async ({ input }) => {
+      const pageSize = 50;
+      const [speakers, totalRow] = await Promise.all([
+        db
+          .select({
+            id: Speaker.id,
+            name: Speaker.name,
+            slug: Speaker.slug,
+            channelId: Speaker.channelId,
+            channelName: Channel.name,
+            createdAt: Speaker.createdAt,
+            // Distinct uploads the speaker is attributed to (a speaker tagged on
+            // multiple labels in one upload would otherwise over-count).
+            attributionCount: countDistinct(SpeakerAttribution.uploadRecordId),
+          })
+          .from(Speaker)
+          .innerJoin(Channel, eq(Channel.id, Speaker.channelId))
+          .leftJoin(
+            SpeakerAttribution,
+            eq(SpeakerAttribution.speakerId, Speaker.id),
+          )
+          .where(isNull(Speaker.deletedAt))
+          .groupBy(Speaker.id, Channel.name)
+          // Deterministic tiebreaker so LIMIT/OFFSET pages are stable.
+          .orderBy(asc(Channel.name), asc(Speaker.name), asc(Speaker.id))
+          .limit(pageSize)
+          .offset((input.page - 1) * pageSize),
+        db
+          .select({ count: count() })
+          .from(Speaker)
+          .where(isNull(Speaker.deletedAt))
+          .then((r) => r[0]),
+      ]);
+      const total = Number(totalRow?.count ?? 0);
+      return {
+        speakers,
+        total,
+        page: input.page,
+        pageCount: Math.max(1, Math.ceil(total / pageSize)),
+      };
+    }),
+
   getPendingApprovals: adminProcedure.query(async () => {
     moduleLogger.info('Fetching pending approvals');
 

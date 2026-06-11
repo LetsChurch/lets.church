@@ -6,6 +6,7 @@ import {
   Divider,
   Group,
   Loader,
+  Menu,
   Modal,
   Popover,
   ScrollArea,
@@ -16,16 +17,23 @@ import {
   Tooltip,
   UnstyledButton,
 } from '@mantine/core';
+import { useDebouncedValue } from '@mantine/hooks';
 import {
   IconArrowBackUp,
   IconCheck,
   IconDotsVertical,
   IconLink,
   IconPlus,
+  IconScissors,
   IconSparkles,
   IconUserOff,
 } from '@tabler/icons-react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { type CSSProperties, type ReactNode, useMemo, useState } from 'react';
 import { useTRPC } from '@/trpc/react';
 import { showFailure, showSuccess } from '../../-mantine';
@@ -65,7 +73,9 @@ type Turn = {
   label: string;
   start: number;
   paragraphIds: string[];
-  text: string;
+  // The turn's constituent paragraphs, so a single one can be split out of the
+  // turn's label without affecting its neighbors.
+  paragraphs: { id: string; text: string }[];
   // True when any paragraph in the turn has been moved off its diarization
   // label (a committed or staged override) — enables "Reset to detected".
   hasOverride: boolean;
@@ -234,13 +244,13 @@ export function SpeakerLabelingModal({
           label,
           start: p.start,
           paragraphIds: [p.id],
-          text: p.text,
+          paragraphs: [{ id: p.id, text: p.text }],
           hasOverride: overridden,
         };
         builtTurns.push(current);
       } else {
         current.paragraphIds.push(p.id);
-        current.text += `\n\n${p.text}`;
+        current.paragraphs.push({ id: p.id, text: p.text });
         current.hasOverride = current.hasOverride || overridden;
       }
     }
@@ -308,6 +318,23 @@ export function SpeakerLabelingModal({
   }, [labelOrder]);
   const displayLabel = (label: string) =>
     displayLabelMap.get(label) ?? prettyLabel(label);
+
+  // A brand-new diarization label for splitting a paragraph out on its own:
+  // SPEAKER_NN one past the highest number seen across detected labels, current
+  // effective labels, and staged overrides — so it's unique and renders as the
+  // next "Speaker N". Sequential splits get distinct labels (the prior split is
+  // already in paraLabelDraft, raising the max).
+  const makeFreshLabel = () => {
+    let max = -1;
+    const consider = (l: string | null | undefined) => {
+      const m = l ? /^SPEAKER_?0*(\d+)$/i.exec(l) : null;
+      if (m) max = Math.max(max, Number(m[1]));
+    };
+    for (const p of transcriptQuery.data?.paragraphs ?? []) consider(p.speaker);
+    for (const l of labelOrder) consider(l);
+    for (const l of Object.values(paraLabelDraft)) consider(l);
+    return `SPEAKER_${String(max + 1).padStart(2, '0')}`;
+  };
 
   const hasChanges =
     Object.keys(paraLabelDraft).length > 0 || Object.keys(attrDraft).length > 0;
@@ -421,12 +448,49 @@ export function SpeakerLabelingModal({
                           {formatTimestamp(turn.start)}
                         </Text>
                       </Group>
-                      <Text
-                        size="sm"
-                        style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}
-                      >
-                        {turn.text}
-                      </Text>
+                      <Stack gap={6}>
+                        {turn.paragraphs.map((para) => (
+                          <Group
+                            key={para.id}
+                            gap="xs"
+                            wrap="nowrap"
+                            align="flex-start"
+                            className={styles.paragraph}
+                          >
+                            <Text
+                              size="sm"
+                              style={{
+                                whiteSpace: 'pre-wrap',
+                                lineHeight: 1.6,
+                                flex: 1,
+                                minWidth: 0,
+                              }}
+                            >
+                              {para.text}
+                            </Text>
+                            {/* Only multi-paragraph turns can be split; a lone
+                                paragraph is already its own turn (use the header
+                                menu to move it). */}
+                            {turn.paragraphs.length > 1 ? (
+                              <ParagraphSplitControl
+                                otherLabels={labelOrder.filter(
+                                  (l) => l !== turn.label,
+                                )}
+                                displayLabel={displayLabel}
+                                onMove={(toLabel) =>
+                                  stageParagraphLabel([para.id], toLabel)
+                                }
+                                onSplitNew={() =>
+                                  stageParagraphLabel(
+                                    [para.id],
+                                    makeFreshLabel(),
+                                  )
+                                }
+                              />
+                            ) : null}
+                          </Group>
+                        ))}
+                      </Stack>
                     </div>
                   );
                 })}
@@ -467,13 +531,6 @@ export function SpeakerLabelingModal({
                   ))}
                 </Stack>
               </ScrollArea>
-              <Divider />
-              <div style={{ padding: 'var(--mantine-spacing-sm)' }}>
-                <AddSpeakerInput
-                  channelId={channelId}
-                  onChanged={invalidateChannelSpeakers}
-                />
-              </div>
             </div>
           </div>
 
@@ -684,6 +741,9 @@ function SpeakerAssignPopover({
   const [query, setQuery] = useState('');
   const [newLabel, setNewLabel] = useState('');
   const trimmed = query.trim();
+  // Debounced so the cross-channel search doesn't refetch on every keystroke;
+  // immediate UI (Create button, own-speaker filter) still uses `trimmed`.
+  const [debouncedQuery] = useDebouncedValue(trimmed, 200);
 
   const suggestionsQuery = useQuery({
     ...trpc.dashboard.channels.suggestSpeakerCandidates.queryOptions({
@@ -697,9 +757,13 @@ function SpeakerAssignPopover({
   const othersQuery = useQuery({
     ...trpc.dashboard.channels.searchSpeakers.queryOptions({
       channelId,
-      query: trimmed,
+      query: debouncedQuery,
     }),
-    enabled: opened && trimmed.length >= 2,
+    enabled: opened && debouncedQuery.length >= 2,
+    // Keep the prior results on screen while the next search loads so the
+    // dropdown doesn't collapse and re-expand (which shifts the Create button
+    // and reflows the whole popover) on each keystroke.
+    placeholderData: keepPreviousData,
   });
 
   const onError = (error: { message?: string }) =>
@@ -773,7 +837,10 @@ function SpeakerAssignPopover({
   const suggestions = (suggestionsQuery.data?.candidates ?? []).filter(
     (c) => c.speakerId !== attribution?.speakerId,
   );
-  const others = othersQuery.data?.results ?? [];
+  // Gated on the debounced length so kept-previous results don't linger once
+  // the field is cleared back below the search threshold.
+  const others =
+    debouncedQuery.length >= 2 ? (othersQuery.data?.results ?? []) : [];
   const ownNames = new Set(ownSpeakers.map((s) => s.name.toLowerCase()));
   const canCreate = trimmed.length > 0 && !ownNames.has(trimmed.toLowerCase());
 
@@ -808,7 +875,31 @@ function SpeakerAssignPopover({
             onChange={(e) => setQuery(e.currentTarget.value)}
             size="sm"
             data-autofocus
+            // Loading feedback lives in the input so the dropdown body never
+            // changes height while a search is in flight (which would shove the
+            // items below — including Create — around and read as flicker).
+            rightSection={
+              debouncedQuery.length >= 2 && othersQuery.isFetching ? (
+                <Loader size="xs" />
+              ) : null
+            }
           />
+          {/* Create is a fixed header action so it's always offered and never
+              moves as search results stream in below. */}
+          {canCreate ? (
+            <Button
+              variant="light"
+              justify="flex-start"
+              size="compact-sm"
+              fullWidth
+              mt="xs"
+              leftSection={<IconPlus size={14} />}
+              loading={createMutation.isPending}
+              onClick={createAndAssign}
+            >
+              Create “{trimmed}”
+            </Button>
+          ) : null}
         </div>
         <ScrollArea.Autosize mah={360}>
           <Stack gap={2} px="xs" pb="xs">
@@ -893,26 +984,6 @@ function SpeakerAssignPopover({
                     }}
                   />
                 ))}
-              </>
-            ) : trimmed.length >= 2 && othersQuery.isFetching ? (
-              <Group justify="center" py="xs">
-                <Loader size="xs" />
-              </Group>
-            ) : null}
-
-            {canCreate ? (
-              <>
-                <Divider my={2} />
-                <Button
-                  variant="light"
-                  justify="flex-start"
-                  size="compact-sm"
-                  leftSection={<IconPlus size={14} />}
-                  loading={createMutation.isPending}
-                  onClick={createAndAssign}
-                >
-                  Create “{trimmed}”
-                </Button>
               </>
             ) : null}
 
@@ -1044,56 +1115,50 @@ function PickerRow({
   );
 }
 
-// "Add a speaker…" — create a channel speaker (immediately, so it can be
-// assigned). Distinct from the staged labeling: it adds to the library.
-function AddSpeakerInput({
-  channelId,
-  onChanged,
+// Per-paragraph split affordance: pull a single paragraph out of its turn's
+// label, either onto a brand-new speaker (the common "diarization merged two
+// people" fix) or onto another existing local label. Staging the override
+// re-splits the turn on the next render.
+function ParagraphSplitControl({
+  otherLabels,
+  displayLabel,
+  onMove,
+  onSplitNew,
 }: {
-  channelId: string;
-  onChanged: () => void;
+  otherLabels: string[];
+  displayLabel: (label: string) => string;
+  onMove: (toLabel: string) => void;
+  onSplitNew: () => void;
 }) {
-  const trpc = useTRPC();
-  const [name, setName] = useState('');
-  const createMutation = useMutation(
-    trpc.dashboard.channels.createSpeaker.mutationOptions({
-      onSuccess: () => {
-        setName('');
-        onChanged();
-      },
-      onError: (error) =>
-        showFailure({ message: error.message || 'Failed to add speaker' }),
-    }),
-  );
-
-  const submit = () => {
-    if (name.trim().length === 0) return;
-    createMutation.mutate({ channelId, name: name.trim() });
-  };
-
   return (
-    <Group gap="xs" align="flex-end" wrap="nowrap">
-      <TextInput
-        placeholder="Add a speaker…"
-        value={name}
-        onChange={(e) => setName(e.currentTarget.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') submit();
-        }}
-        size="sm"
-        style={{ flex: 1 }}
-      />
-      <Tooltip label="Add speaker">
+    <Menu position="bottom-end" withinPortal shadow="md" width={220}>
+      <Menu.Target>
         <ActionIcon
-          variant="light"
-          size="lg"
-          loading={createMutation.isPending}
-          disabled={name.trim().length === 0}
-          onClick={submit}
+          variant="subtle"
+          color="gray"
+          size="sm"
+          className={styles.splitControl}
+          aria-label="Split this paragraph out"
         >
-          <IconPlus size={18} />
+          <IconScissors size={15} />
         </ActionIcon>
-      </Tooltip>
-    </Group>
+      </Menu.Target>
+      <Menu.Dropdown>
+        <Menu.Item leftSection={<IconPlus size={14} />} onClick={onSplitNew}>
+          Split to a new speaker
+        </Menu.Item>
+        {otherLabels.length > 0 ? (
+          <>
+            <Menu.Divider />
+            <Menu.Label>Move to</Menu.Label>
+            {otherLabels.map((l) => (
+              <Menu.Item key={l} onClick={() => onMove(l)}>
+                {displayLabel(l)}
+              </Menu.Item>
+            ))}
+          </>
+        ) : null}
+      </Menu.Dropdown>
+    </Menu>
   );
 }

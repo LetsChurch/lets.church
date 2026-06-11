@@ -1,4 +1,10 @@
-import { db, TranscriptParagraph } from '@letschurch/db';
+import {
+  db,
+  Speaker,
+  SpeakerAttribution,
+  SpeakerParagraphLabel,
+  TranscriptParagraph,
+} from '@letschurch/db';
 import {
   type MediaSegment,
   mergeParagraphSnippets,
@@ -9,7 +15,7 @@ import {
   EMBED_MODEL,
 } from '@letschurch/temporal/util/llm';
 import { createTool } from '@mastra/core/tools';
-import { and, eq, gte, lte, or } from 'drizzle-orm';
+import { and, eq, gte, isNull, lte, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { OutgoingIdSchema } from '@/schemas/common';
 import { resolveChannelNames } from '@/trpc/search/channels';
@@ -27,13 +33,21 @@ type Row = {
   order: number;
   start: number;
   text: string;
+  // Resolved speaker name (override → attribution → Speaker.name); null when the
+  // paragraph's diarization label isn't attributed to a named speaker.
+  speakerName: string | null;
+};
+
+type Block = {
+  startSeconds: number;
+  text: string;
+  speakerName: string | null;
 };
 
 // Merge contiguous paragraphs (by order) into a single context block, keeping
-// the earliest start (seconds) as the citation timestamp.
-function buildBlocks(
-  rows: Row[],
-): Array<{ startSeconds: number; text: string }> {
+// the earliest start (seconds) as the citation timestamp. A change of speaker
+// also breaks the block, so each block carries a single (or no) attribution.
+function buildBlocks(rows: Row[]): Block[] {
   const seen = new Set<number>();
   const uniq: Row[] = [];
   for (const r of rows) {
@@ -43,28 +57,43 @@ function buildBlocks(
   }
   uniq.sort((a, b) => a.order - b.order);
 
-  const blocks: Array<{ startSeconds: number; text: string }> = [];
-  let cur: { startSeconds: number; text: string; lastOrder: number } | null =
-    null;
+  const blocks: Block[] = [];
+  let cur: (Block & { lastOrder: number }) | null = null;
   for (const r of uniq) {
-    if (cur && r.order === cur.lastOrder + 1) {
+    if (
+      cur &&
+      r.order === cur.lastOrder + 1 &&
+      r.speakerName === cur.speakerName
+    ) {
       cur.text += ` ${r.text}`;
       cur.lastOrder = r.order;
     } else {
-      if (cur) blocks.push({ startSeconds: cur.startSeconds, text: cur.text });
+      if (cur)
+        blocks.push({
+          startSeconds: cur.startSeconds,
+          text: cur.text,
+          speakerName: cur.speakerName,
+        });
       cur = {
         startSeconds: Math.round(r.start),
         text: r.text,
+        speakerName: r.speakerName,
         lastOrder: r.order,
       };
     }
   }
-  if (cur) blocks.push({ startSeconds: cur.startSeconds, text: cur.text });
+  if (cur)
+    blocks.push({
+      startSeconds: cur.startSeconds,
+      text: cur.text,
+      speakerName: cur.speakerName,
+    });
   // Sanitize each (untrusted) passage: strip hidden chars and cap length so a
   // malicious transcript can't smuggle directives or flood the agent context.
   return blocks.map((b) => ({
     startSeconds: b.startSeconds,
     text: sanitizeSourceText(b.text),
+    speakerName: b.speakerName,
   }));
 }
 
@@ -73,6 +102,13 @@ export type AgentMediaSearchInput = {
   /** Verbatim phrases to phrase-match (match_phrase boost), e.g. an exact quote. */
   quotes?: string[];
   channelNames?: string[];
+  /**
+   * Restrict to paragraphs *spoken by* these named speakers ("what did X say").
+   * Only paragraphs attributed to a matching speaker can match/return, and only
+   * videos featuring them are eligible. Matches partial names ("Conley" →
+   * "Conley Owens"); empty/omitted means no speaker scope.
+   */
+  speakerNames?: string[];
   dateGte?: string;
   dateLte?: string;
   limit?: number;
@@ -83,7 +119,14 @@ export type AgentMediaSearchResult = {
   title: string | null;
   channelName: string | null;
   publishedAt: string | null;
-  context: Array<{ cite: string; startSeconds: number; text: string }>;
+  context: Array<{
+    cite: string;
+    startSeconds: number;
+    text: string;
+    // Named speaker for this passage, when the diarization label is attributed;
+    // null otherwise (we never expose raw "SPEAKER_00" labels to the model).
+    speaker: string | null;
+  }>;
 };
 
 /**
@@ -96,6 +139,7 @@ export async function runAgentMediaSearch({
   query,
   quotes,
   channelNames,
+  speakerNames,
   dateGte,
   dateLte,
   limit = 8,
@@ -133,6 +177,8 @@ export async function runAgentMediaSearch({
     quotes: quotes ?? [],
     channelIds,
     publishedAt,
+    paragraphSpeakers:
+      speakerNames && speakerNames.length > 0 ? speakerNames : null,
     queryVector,
     size: limit,
     // The agent's context text comes from the DB, not these snippets, so skip
@@ -180,8 +226,36 @@ export async function runAgentMediaSearch({
             order: TranscriptParagraph.order,
             start: TranscriptParagraph.start,
             text: TranscriptParagraph.text,
+            speakerName: Speaker.name,
           })
           .from(TranscriptParagraph)
+          // Effective label = per-paragraph override ?? diarization speaker;
+          // attribution maps (upload, effective label) → a named Speaker. Each
+          // join is unique-keyed, so no row fan-out.
+          .leftJoin(
+            SpeakerParagraphLabel,
+            eq(SpeakerParagraphLabel.paragraphId, TranscriptParagraph.id),
+          )
+          .leftJoin(
+            SpeakerAttribution,
+            and(
+              eq(
+                SpeakerAttribution.uploadRecordId,
+                TranscriptParagraph.uploadRecordId,
+              ),
+              eq(
+                SpeakerAttribution.speakerLabel,
+                sql`coalesce(${SpeakerParagraphLabel.label}, ${TranscriptParagraph.speaker})`,
+              ),
+            ),
+          )
+          .leftJoin(
+            Speaker,
+            and(
+              eq(Speaker.id, SpeakerAttribution.speakerId),
+              isNull(Speaker.deletedAt),
+            ),
+          )
           .where(or(...windowConditions))
           .orderBy(
             TranscriptParagraph.uploadRecordId,
@@ -218,15 +292,17 @@ export async function runAgentMediaSearch({
       const uploadId = parsedId.data;
 
       const rows = rowsByUpload.get(hit._id);
-      const rawContext =
+      const rawContext: Block[] =
         rows && rows.length > 0
           ? buildBlocks(rows)
           : // Legacy docs without paragraph ordering: fall back to the
             // matched snippet text (ms -> seconds, sanitize). Agent search runs
-            // with highlight off, so snippets carry no <mark> tags.
+            // with highlight off, so snippets carry no <mark> tags. No resolved
+            // speaker here — these predate the speaker library.
             (matchedByInternal.get(hit._id) ?? []).map((s) => ({
               startSeconds: Math.round(s.start / 1000),
               text: sanitizeSourceText(s.text),
+              speakerName: null,
             }));
 
       // Attach a ready-made citation token to each passage so the model can
@@ -236,6 +312,7 @@ export async function runAgentMediaSearch({
         cite: `[upload:${uploadId}@${c.startSeconds}]`,
         startSeconds: c.startSeconds,
         text: c.text,
+        speaker: c.speakerName,
       }));
 
       return {
@@ -254,7 +331,7 @@ export async function runAgentMediaSearch({
 export const searchMediaTool = createTool({
   id: 'searchMedia',
   description:
-    'Hybrid semantic + keyword search over the sermon/teaching video library. Returns the most relevant videos, each with context passages (the matched transcript paragraphs plus the paragraphs immediately around them) and a timestamp in seconds. Use this to ground every answer; call it multiple times with different queries when comparing sources or tracking a topic over time. Speaker identity is NOT searchable — pass speaker names as part of the query text, not as a filter. When looking for an exact wording, pass it in `quotes` for a verbatim phrase boost.',
+    'Hybrid semantic + keyword search over the sermon/teaching video library. Returns the most relevant videos, each with context passages (the matched transcript paragraphs plus the paragraphs immediately around them), a timestamp in seconds, and — when the diarized voice has been attributed — the name of the speaker for that passage. Use this to ground every answer; call it multiple times with different queries when comparing sources or tracking a topic over time. To answer "what did <person> say about …" or focus on one speaker, pass their name in `speakerNames` to restrict to paragraphs they actually spoke (this works only for speakers labeled in the library; if it returns nothing, retry without it and match the name in the query text). The `speaker` field on each returned passage gives the attributed name for citation, and is null when the voice is unattributed. When looking for an exact wording, pass it in `quotes` for a verbatim phrase boost.',
   inputSchema: z.object({
     query: z
       .string()
@@ -269,6 +346,12 @@ export const searchMediaTool = createTool({
       .array(z.string())
       .optional()
       .describe('Channel / ministry / church names to restrict to.'),
+    speakerNames: z
+      .array(z.string())
+      .optional()
+      .describe(
+        'Restrict to paragraphs SPOKEN BY these people — use for "what did <person> say about …" or to focus on one speaker. Only paragraphs attributed to a matching speaker are returned. Partial names work ("Conley" matches "Conley Owens"). If it returns nothing, the person likely isn\'t labeled in the library yet — retry without this and match the name in the query text instead.',
+      ),
     dateGte: z
       .string()
       .optional()
@@ -292,6 +375,9 @@ export const searchMediaTool = createTool({
             cite: z.string(),
             startSeconds: z.number(),
             text: z.string(),
+            // Named speaker for this passage when known (null if the diarized
+            // voice isn't attributed). Use it to attribute who said what.
+            speaker: z.string().nullable(),
           }),
         ),
       }),
@@ -302,6 +388,7 @@ export const searchMediaTool = createTool({
     query,
     quotes,
     channelNames,
+    speakerNames,
     dateGte,
     dateLte,
     limit = 8,
@@ -310,6 +397,7 @@ export const searchMediaTool = createTool({
       query,
       quotes,
       channelNames,
+      speakerNames,
       dateGte,
       dateLte,
       limit,

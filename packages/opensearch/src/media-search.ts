@@ -20,9 +20,10 @@ import { type OsMsearchItem, type OsQuery, osSearch } from './client';
 //
 // The query vector is a single request-time embedding of the user query with
 // the same model the index was built with (text-embedding-3-small, 1536 dims).
-// Speakers and visual "objects" extracted by the query parser are folded into
-// `lexicalText` only — there is no speaker-identity library yet (the `speaker`
-// keyword holds diarization labels like SPEAKER_00) and no image embeddings.
+// Speaker scoping is first-class: `paragraphSpeakers` restricts to paragraphs
+// whose attributed `paragraphs.speakerName` matches (the `speaker` keyword still
+// holds raw diarization labels like SPEAKER_00). Visual "objects" from the query
+// parser are folded into `lexicalText`; there are still no image embeddings.
 
 export const MEDIA_INDEX = 'lc_media_v1';
 
@@ -114,8 +115,17 @@ export type BuildMediaSearchArgs = {
   bibleRefs?: string[] | null;
   /** OSIS book ids ("Rom") to restrict to (the Bible-book facet). */
   bibleBooks?: string[] | null;
-  /** Resolved speaker names to restrict to (the speaker facet). */
+  /** Resolved speaker names to restrict to (the doc-level speaker facet). */
   speakers?: string[] | null;
+  /**
+   * Paragraph-level speaker scope (distinct from the doc-level `speakers`
+   * facet). When set, results are restricted to videos that contain a paragraph
+   * attributed to one of these speakers, AND the matched paragraphs (the
+   * inner_hits / context) are limited to that speaker's — i.e. "what did X say".
+   * Matched against the analyzed `paragraphs.speakerName`, so a partial name
+   * ("Conley") matches the stored full name ("Conley Owens").
+   */
+  paragraphSpeakers?: string[] | null;
   /** 1536-dim query embedding (text-embedding-3-small). */
   queryVector: number[];
   from?: number;
@@ -173,6 +183,7 @@ export function buildMediaHybridBody({
   bibleRefs,
   bibleBooks,
   speakers,
+  paragraphSpeakers,
   queryVector,
   from = 0,
   size = 20,
@@ -189,6 +200,35 @@ export function buildMediaHybridBody({
     speakers,
   );
 
+  // Paragraph-level speaker scope: a bool over the analyzed speakerName so a
+  // paragraph matches when its attributed speaker is one of the requested names.
+  // Used both as a nested constraint on the paragraph sub-queries (so the
+  // matched/context paragraphs are the speaker's) and — wrapped in a doc-level
+  // nested filter below — to drop videos the speaker never appears in.
+  const speakerNested =
+    paragraphSpeakers && paragraphSpeakers.length > 0
+      ? {
+          bool: {
+            should: paragraphSpeakers.map((n) => ({
+              match: {
+                'paragraphs.speakerName': { query: n, operator: 'and' },
+              },
+            })),
+            minimum_should_match: 1,
+          },
+        }
+      : null;
+  if (speakerNested) {
+    filter.push({ nested: { path: 'paragraphs', query: speakerNested } });
+  }
+
+  // Wrap a nested paragraph query so its matches are limited to the requested
+  // speaker (no-op when no speaker scope is set).
+  const scopeToSpeaker = (paragraphQuery: OsQuery): OsQuery =>
+    speakerNested
+      ? { bool: { must: [paragraphQuery], filter: [speakerNested] } }
+      : paragraphQuery;
+
   // (1) BM25 lexical
   const lexicalShould: OsQuery[] = [
     {
@@ -200,7 +240,7 @@ export function buildMediaHybridBody({
     {
       nested: {
         path: 'paragraphs',
-        query: { match: { 'paragraphs.text': trimmed } },
+        query: scopeToSpeaker({ match: { 'paragraphs.text': trimmed } }),
         score_mode: 'avg',
         inner_hits: paragraphInnerHits(PARA_BM25, innerHitsSize, highlight),
       },
@@ -213,7 +253,9 @@ export function buildMediaHybridBody({
     lexicalShould.push({
       nested: {
         path: 'paragraphs',
-        query: { match_phrase: { 'paragraphs.text': { query: q, boost: 2 } } },
+        query: scopeToSpeaker({
+          match_phrase: { 'paragraphs.text': { query: q, boost: 2 } },
+        }),
         score_mode: 'max',
       },
     });
@@ -249,6 +291,9 @@ export function buildMediaHybridBody({
                   vector: queryVector,
                   k: KNN_K,
                   expand_nested_docs: true,
+                  // Pre-filter the kNN to the requested speaker's paragraphs so
+                  // semantic matches are also speaker-scoped (no-op otherwise).
+                  ...(speakerNested ? { filter: speakerNested } : {}),
                 },
               },
             },

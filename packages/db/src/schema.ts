@@ -1231,6 +1231,66 @@ export const SpeakerLink = pgTable(
   }),
 );
 
+// A request from a speaker's OWNING channel asking the channel that owns an
+// upload to tag that speaker on a specific (upload, effective-label) segment.
+// The reverse of speaker_link: here the speaker owner initiates after spotting
+// an untagged appearance, and the content channel (the upload's channel)
+// approves — which performs the attribution. Reuses InvitationStatus.
+export const SpeakerTagRequest = pgTable(
+  'speaker_tag_request',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    speakerId: uuid('speaker_id').notNull(),
+    uploadRecordId: uuid('upload_record_id').notNull(),
+    speakerLabel: text('speaker_label').notNull(),
+    status: InvitationStatus('status').notNull().default('PENDING'),
+    requestedById: uuid('requested_by_id'),
+    respondedById: uuid('responded_by_id'),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    respondedAt: timestamp('responded_at', { precision: 3 }),
+  },
+  (SpeakerTagRequest) => ({
+    speaker_tag_request_speaker_fkey: foreignKey({
+      name: 'speaker_tag_request_speaker_fkey',
+      columns: [SpeakerTagRequest.speakerId],
+      foreignColumns: [Speaker.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    speaker_tag_request_uploadRecord_fkey: foreignKey({
+      name: 'speaker_tag_request_uploadRecord_fkey',
+      columns: [SpeakerTagRequest.uploadRecordId],
+      foreignColumns: [UploadRecord.id],
+    })
+      .onDelete('cascade')
+      .onUpdate('cascade'),
+    speaker_tag_request_requestedBy_fkey: foreignKey({
+      name: 'speaker_tag_request_requestedBy_fkey',
+      columns: [SpeakerTagRequest.requestedById],
+      foreignColumns: [AppUser.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+    speaker_tag_request_respondedBy_fkey: foreignKey({
+      name: 'speaker_tag_request_respondedBy_fkey',
+      columns: [SpeakerTagRequest.respondedById],
+      foreignColumns: [AppUser.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+    SpeakerTagRequest_speaker_upload_label_idx: uniqueIndex(
+      'speaker_tag_request_speaker_upload_label_key',
+    ).on(
+      SpeakerTagRequest.speakerId,
+      SpeakerTagRequest.uploadRecordId,
+      SpeakerTagRequest.speakerLabel,
+    ),
+    SpeakerTagRequest_uploadRecordId_idx: index(
+      'speaker_tag_request_upload_record_id_idx',
+    ).on(SpeakerTagRequest.uploadRecordId),
+  }),
+);
+
 export const UploadUserRating = pgTable(
   'upload_user_rating',
   {

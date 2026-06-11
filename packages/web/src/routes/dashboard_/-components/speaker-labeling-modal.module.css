@@ -6,3 +6,16 @@
 .row:hover {
   background: var(--mantine-color-default-hover);
 }
+
+/* Per-paragraph split affordance: hidden until the paragraph is hovered or
+   focused, kept visible while its menu is open. */
+.splitControl {
+  opacity: 0;
+  transition: opacity 80ms ease;
+}
+
+.paragraph:hover .splitControl,
+.paragraph:focus-within .splitControl,
+.splitControl[aria-expanded="true"] {
+  opacity: 1;
+}

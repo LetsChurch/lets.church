@@ -189,6 +189,37 @@ function AdminPage() {
           radius="md"
           withBorder
           component={Link}
+          to="/dashboard/admin/speaker-queue"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Speaker Labeling</Text>
+          </Group>
+          <Text size="sm" c="dimmed">
+            Match unlabeled voices to existing speakers, or name unknown ones,
+            across all channels
+          </Text>
+        </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
+          to="/dashboard/admin/speakers"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Speakers</Text>
+          </Group>
+          <Text size="sm" c="dimmed">
+            Every named speaker across all channels
+          </Text>
+        </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
           to="/dashboard/admin/featured"
         >
           <Group justify="space-between" mb="xs">

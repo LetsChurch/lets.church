@@ -181,8 +181,40 @@ function ChannelSpeakersPage() {
     }),
   );
 
+  const incomingTagQuery = useQuery({
+    ...trpc.dashboard.channels.getIncomingTagRequests.queryOptions({
+      channelId,
+    }),
+    enabled: canAdmin,
+  });
+  const invalidateIncomingTags = () =>
+    queryClient.invalidateQueries({
+      queryKey: trpc.dashboard.channels.getIncomingTagRequests.queryKey({
+        channelId,
+      }),
+    });
+  const approveTagMutation = useMutation(
+    trpc.dashboard.channels.approveTagRequest.mutationOptions({
+      onSuccess: async () => {
+        showSuccess({ message: 'Speaker tagged on the upload' });
+        await invalidateIncomingTags();
+      },
+      onError,
+    }),
+  );
+  const declineTagMutation = useMutation(
+    trpc.dashboard.channels.declineTagRequest.mutationOptions({
+      onSuccess: async () => {
+        showSuccess({ message: 'Tag request declined' });
+        await invalidateIncomingTags();
+      },
+      onError,
+    }),
+  );
+
   const incoming = incomingQuery.data ?? [];
   const outgoing = outgoingQuery.data ?? [];
+  const incomingTags = incomingTagQuery.data ?? [];
 
   return (
     <Stack gap="lg">
@@ -295,6 +327,75 @@ function ChannelSpeakersPage() {
                             declineMutation.mutate({
                               channelId,
                               linkId: req.id,
+                            })
+                          }
+                        >
+                          <IconX size={16} />
+                        </ActionIcon>
+                      </Tooltip>
+                    </Group>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+          <Divider my="md" />
+        </>
+      ) : null}
+
+      {/* Incoming requests from other channels to tag THEIR speaker on our
+          uploads. Approving performs the attribution. */}
+      {canAdmin && incomingTags.length > 0 ? (
+        <>
+          <Title order={3}>Incoming tag requests</Title>
+          <Text size="sm" c="dimmed">
+            Other channels asking you to tag their speaker on your uploads.
+            Approving tags the speaker on that upload.
+          </Text>
+          <Table verticalSpacing="md">
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Speaker</Table.Th>
+                <Table.Th>From channel</Table.Th>
+                <Table.Th>Your upload</Table.Th>
+                <Table.Th>Requested</Table.Th>
+                <Table.Th>Actions</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {incomingTags.map((req) => (
+                <Table.Tr key={req.id}>
+                  <Table.Td>{req.speakerName}</Table.Td>
+                  <Table.Td>{req.ownerChannelName}</Table.Td>
+                  <Table.Td>{req.uploadTitle ?? 'Untitled'}</Table.Td>
+                  <Table.Td>
+                    <Text size="sm">{formatDate(req.createdAt, 'short')}</Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Group gap="xs">
+                      <Button
+                        size="compact-sm"
+                        color="green"
+                        leftSection={<IconCheck size={14} />}
+                        loading={approveTagMutation.isPending}
+                        onClick={() =>
+                          approveTagMutation.mutate({
+                            channelId,
+                            requestId: req.id,
+                          })
+                        }
+                      >
+                        Approve & tag
+                      </Button>
+                      <Tooltip label="Decline">
+                        <ActionIcon
+                          color="red"
+                          variant="subtle"
+                          loading={declineTagMutation.isPending}
+                          onClick={() =>
+                            declineTagMutation.mutate({
+                              channelId,
+                              requestId: req.id,
                             })
                           }
                         >

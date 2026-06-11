@@ -127,6 +127,13 @@
       "when": 1782491361877,
       "tag": "0017_drop_split_audio",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1781710768332,
+      "tag": "0016_add_speaker_tag_request",
+      "breakpoints": true
     }
   ]
 }

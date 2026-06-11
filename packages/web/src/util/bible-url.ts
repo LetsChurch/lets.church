@@ -162,7 +162,15 @@ export function parseVerseRef(token: string): BibleMetadata | null {
   const [book, chapterStr, verseStr] = parts;
   const chapter = Number(chapterStr);
   const verse = Number(verseStr);
-  if (!book || !Number.isInteger(chapter) || !Number.isInteger(verse)) {
+  // Reject empty/non-positive parts — Number('') === 0 would otherwise pass the
+  // integer check and yield a bogus chapter/verse of 0.
+  if (
+    !book ||
+    !Number.isInteger(chapter) ||
+    chapter < 1 ||
+    !Number.isInteger(verse) ||
+    verse < 1
+  ) {
     return null;
   }
   return { book, chapter, verse };

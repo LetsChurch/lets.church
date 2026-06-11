@@ -409,9 +409,15 @@ function SearchResults({ q }: { q: string }) {
       facetSpeakers: facetedSpeakers.map((s) => s.name),
     }),
     enabled: firstPage != null,
-    // Keep the previous parse/related on screen across filter changes (a new
-    // log id re-keys this query) so the sidebar doesn't flash.
-    placeholderData: keepPreviousData,
+    // Keep the previous parse/related on screen across FILTER changes (same q,
+    // new log id) so the sidebar doesn't flash — but NOT across a new query, or
+    // the previous query's parse/recommendations would leak into the new one.
+    placeholderData: (prev, prevQuery) => {
+      const prevQ = (
+        prevQuery?.queryKey?.[1] as { input?: { q?: string } } | undefined
+      )?.input?.q;
+      return prevQ === q ? prev : undefined;
+    },
   });
   // Meta is "loading" once retrieval is in (so it's enabled) but hasn't returned
   // yet — that's when the suggested-searches pills show their skeleton.
