@@ -71,6 +71,7 @@
     "sharp": "^0.34.5",
     "short-uuid": "^5.2.0",
     "subtitle": "^4.2.2-alpha.0",
+    "top-user-agents": "^2.1.115",
     "uuid": "catalog:",
     "wait-on": "catalog:",
     "xss": "catalog:",

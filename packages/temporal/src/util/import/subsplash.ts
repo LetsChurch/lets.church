@@ -4,13 +4,13 @@ import { chromium, type Request } from 'playwright';
 import type { Logger } from '../logger';
 import type { DownloadResult } from '.';
 import { downloadUrl } from './download';
+import { USER_AGENT } from './user-agent';
 import { ytdlp } from './yt-dlp';
 
 async function launchChromium() {
   const browser = await chromium.launch();
   const context = await browser.newContext({
-    userAgent:
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
+    userAgent: USER_AGENT,
   });
 
   return { browser, context };

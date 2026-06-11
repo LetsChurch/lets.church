@@ -1,5 +1,6 @@
 import { parseFeed } from '@rowanmanning/feed-parser';
 import { htmlToMarkdown } from '../../../util/import/html-to-markdown';
+import { USER_AGENT } from '../../../util/import/user-agent';
 import logger from '../../../util/logger';
 import type { ScrapedMediaItem } from '../scrape-import-source';
 
@@ -16,7 +17,9 @@ export async function scrapeRssFeed(
 
   try {
     // Fetch and parse the RSS feed
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: { 'User-Agent': USER_AGENT },
+    });
 
     if (!response.ok) {
       throw new Error(`Failed to fetch RSS feed: ${response.statusText}`);

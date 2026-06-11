@@ -5,6 +5,7 @@ import { pipeline } from 'node:stream/promises';
 import type { Logger } from '@letschurch/util';
 import { noop } from 'es-toolkit';
 import { nanoid } from 'nanoid';
+import { USER_AGENT } from './user-agent';
 
 export async function downloadUrl(
   input: URL | string,
@@ -14,7 +15,7 @@ export async function downloadUrl(
 ): Promise<string> {
   const url = new URL(input);
   log.info(`Downloading URL ${url}`);
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
 
   if (!res.ok || !res.body) {
     throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);

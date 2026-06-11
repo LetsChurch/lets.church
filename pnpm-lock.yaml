@@ -447,6 +447,9 @@ importers:
       subtitle:
         specifier: ^4.2.2-alpha.0
         version: 4.2.2-alpha.0
+      top-user-agents:
+        specifier: ^2.1.115
+        version: 2.1.115
       uuid:
         specifier: 'catalog:'
         version: 13.0.0
@@ -8500,6 +8503,9 @@ packages:
   token-types@6.1.1:
     resolution: {integrity: sha512-kh9LVIWH5CnL63Ipf0jhlBIy0UsrMj/NJDfpsy1SqOXlLKEVyXXYrnFxFT1yOOYVGBSApeVnjPw/sBz5BfEjAQ==}
     engines: {node: '>=14.16'}
+
+  top-user-agents@2.1.115:
+    resolution: {integrity: sha512-jBNwHDVdUsCGuCIaGx9M5dti1XpsLns/YXi8W+r90pa4hO7/SCgn0XJaJSD1yioPug7CSZkkpFGxAC0vbtnjRA==}
 
   totalist@3.0.1:
     resolution: {integrity: sha512-sf4i37nQ2LBx4m3wB74y+ubopq6W/dIzXg0FDGjsYnZHVa1Da8FH853wlL2gtUhg+xJXjfk3kUZS3BRoQeoQBQ==}
@@ -18215,6 +18221,8 @@ snapshots:
       '@borewit/text-codec': 0.1.1
       '@tokenizer/token': 0.3.0
       ieee754: 1.2.1
+
+  top-user-agents@2.1.115: {}
 
   totalist@3.0.1: {}
 
