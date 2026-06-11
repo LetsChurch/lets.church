@@ -368,10 +368,23 @@ export function AnswerCard({
   );
 }
 
+// The search filters pre-filled on the URL when the query loaded (a subset of
+// the route's search params — the ones the answer's retrieval can scope to).
+export type AnswerFilters = {
+  channelSlugs?: ReadonlyArray<string>;
+  speakers?: ReadonlyArray<string>;
+  bibleRefs?: ReadonlyArray<string>;
+  bibleBooks?: ReadonlyArray<string>;
+  dateRange?: string;
+  dateStart?: string;
+  dateEnd?: string;
+};
+
 export function AnswerPanel({
   q,
   searchLogId,
   ready = true,
+  filters,
 }: {
   q: string;
   searchLogId?: string | null;
@@ -381,6 +394,11 @@ export function AnswerPanel({
   // raw query `q` — we don't wait on (or use) the slower parse, which would lag
   // a query behind and answer the previous search.
   ready?: boolean;
+  // Filters to scope the answer's retrieval to (e.g. a channel slug pre-filled
+  // when searching from a channel page). Captured via ref at fire time, so
+  // selecting a NEW filter afterward updates the results but does NOT regenerate
+  // the answer — it stays bound to the filters present when the query loaded.
+  filters?: AnswerFilters;
 }) {
   const [text, setText] = useState('');
   const [status, setStatus] = useState<AnswerStatus>('streaming');
@@ -389,6 +407,10 @@ export function AnswerPanel({
   // re-firing when it resolves a tick after mount.
   const searchLogIdRef = useRef(searchLogId);
   searchLogIdRef.current = searchLogId;
+  // Same: capture filters via ref so a later filter change doesn't re-fire the
+  // effect (its deps are [q, ready]) — the answer follows only the pre-filled set.
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
 
   useEffect(() => {
     if (!ready) return;
@@ -408,6 +430,7 @@ export function AnswerPanel({
             threadId: getThreadId(),
             resourceId: getResourceId(),
             searchLogId: searchLogIdRef.current ?? null,
+            filters: filtersRef.current ?? null,
           }),
           signal: controller.signal,
         });

@@ -18,7 +18,10 @@ import { createTool } from '@mastra/core/tools';
 import { and, eq, gte, isNull, lte, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { OutgoingIdSchema } from '@/schemas/common';
-import { resolveChannelNames } from '@/trpc/search/channels';
+import {
+  resolveChannelNames,
+  resolveChannelSlugs,
+} from '@/trpc/search/channels';
 import logger from '@/util/logger';
 import { sanitizeSourceText } from '../sanitize';
 
@@ -103,12 +106,28 @@ export type AgentMediaSearchInput = {
   quotes?: string[];
   channelNames?: string[];
   /**
+   * Pre-resolved channel ids. Highest precedence — when the caller has already
+   * resolved the channels (e.g. the answer route resolved the URL slugs once for
+   * both retrieval and the agent scope note), pass them here to skip re-resolving.
+   */
+  channelIds?: string[] | null;
+  /**
+   * Channel slugs (as carried on search URLs / facet filters). Resolved by exact
+   * slug match and takes precedence over `channelNames` when both are given.
+   * Used to scope the AI answer to a channel pre-filled on the URL.
+   */
+  channelSlugs?: string[];
+  /**
    * Restrict to paragraphs *spoken by* these named speakers ("what did X say").
    * Only paragraphs attributed to a matching speaker can match/return, and only
    * videos featuring them are eligible. Matches partial names ("Conley" →
    * "Conley Owens"); empty/omitted means no speaker scope.
    */
   speakerNames?: string[];
+  /** OSIS verse facet tokens ("John.3.16"); restricts to docs citing one of them. */
+  bibleRefs?: string[];
+  /** OSIS book ids ("Rom"); restricts to docs citing that book. */
+  bibleBooks?: string[];
   dateGte?: string;
   dateLte?: string;
   limit?: number;
@@ -139,7 +158,11 @@ export async function runAgentMediaSearch({
   query,
   quotes,
   channelNames,
+  channelIds: preResolvedChannelIds,
+  channelSlugs,
   speakerNames,
+  bibleRefs,
+  bibleBooks,
   dateGte,
   dateLte,
   limit = 8,
@@ -148,10 +171,15 @@ export async function runAgentMediaSearch({
   total: number;
   queryVector: number[] | null;
 }> {
+  // Precedence: pre-resolved ids → exact URL slugs → the parser's fuzzy names.
   const channelIds =
-    channelNames && channelNames.length > 0
-      ? (await resolveChannelNames(channelNames)).map((c) => c.id)
-      : null;
+    preResolvedChannelIds && preResolvedChannelIds.length > 0
+      ? preResolvedChannelIds
+      : channelSlugs && channelSlugs.length > 0
+        ? (await resolveChannelSlugs(channelSlugs)).map((c) => c.id)
+        : channelNames && channelNames.length > 0
+          ? (await resolveChannelNames(channelNames)).map((c) => c.id)
+          : null;
 
   const publishedAt =
     dateGte || dateLte
@@ -177,6 +205,8 @@ export async function runAgentMediaSearch({
     quotes: quotes ?? [],
     channelIds,
     publishedAt,
+    bibleRefs: bibleRefs && bibleRefs.length > 0 ? bibleRefs : null,
+    bibleBooks: bibleBooks && bibleBooks.length > 0 ? bibleBooks : null,
     paragraphSpeakers:
       speakerNames && speakerNames.length > 0 ? speakerNames : null,
     queryVector,

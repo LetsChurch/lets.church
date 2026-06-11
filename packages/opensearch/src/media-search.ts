@@ -366,21 +366,24 @@ export async function runMediaHybridSearch(
 }
 
 /**
- * All facet lists for the search UI in one query. Each facet is **independent**:
- * the aggregations run with every user facet selection dropped (channel, date,
- * and scripture), so they reflect only the query + access control. Selecting a
- * value in one facet never reshapes another facet's options or counts — the
- * sidebar shows the full set for the query, while the result set itself is
- * narrowed by the AND of all selections (handled by the main search query, not
- * here). Returns channel + verse `terms` buckets (doc_count order) and per-year
- * `date_histogram` buckets (newest-first).
+ * All facet lists for the search UI, computed with **leave-one-out** semantics:
+ * each facet's options are aggregated with its OWN selection dropped but every
+ * OTHER selection applied. So the channel facet ignores the channel filter (you
+ * can still switch or broaden channels), while speakers, verses, and years are
+ * scoped to the selected channel — and vice versa. Consequently every option a
+ * facet offers is guaranteed to yield ≥1 result when added to the current
+ * selections (no dead ends), and a facet never hides its own current pick.
+ * Unlike the prior "fully independent" design, selecting a value in one facet
+ * DOES reshape the others — standard faceted-search behavior. The result set is
+ * still the AND of all selections (the main hybrid query, not here).
  *
- * We only want the aggregations, not hits — but the RRF score-normalization
- * processor throws on `size: 0` ("number of documents after fetch phase [0] is
- * different from number of documents from query phase [N]"), since it needs a
- * non-empty fetch window to normalize. Aggregations are computed in the query
- * phase over *all* matching docs regardless of the window, so `size: 1` gives
- * complete facet counts while keeping the processor happy; the hit is discarded.
+ * A facet whose own selection is inactive reuses the fully-filtered body (dropping
+ * an absent filter changes nothing), so a search with 0–1 active filters issues
+ * only 1–2 aggregation queries, growing to one per active filter (+1) at most;
+ * they run in parallel. Each runs the hybrid query under RRF_PIPELINE with
+ * `size: 1` — the normalization processor throws on `size: 0`, and aggregations
+ * are computed over all matches in the query phase regardless, so the single
+ * fetched hit is just discarded.
  */
 export async function runMediaFacets(args: BuildMediaSearchArgs): Promise<{
   channels: Array<{ key: string; doc_count: number }>;
@@ -388,29 +391,59 @@ export async function runMediaFacets(args: BuildMediaSearchArgs): Promise<{
   verses: Array<{ key: string; doc_count: number }>;
   years: Array<{ year: string; doc_count: number }>;
 }> {
-  const body = buildMediaHybridBody({
-    ...args,
-    // Independent facets: drop every facet selection so each list is complete.
-    channelIds: null,
-    publishedAt: null,
-    bibleRefs: null,
-    bibleBooks: null,
-    speakers: null,
-    from: 0,
-    size: 1,
-    highlight: false,
-  });
-  const raw = await osSearch({
-    index: MEDIA_INDEX,
-    search_pipeline: RRF_PIPELINE,
-    ...body,
-  });
-  const aggs = MediaSearchResponseSchema.parse(raw).aggregations;
+  const base = { ...args, from: 0, size: 1, highlight: false };
+
+  const hasChannel = Boolean(args.channelIds && args.channelIds.length > 0);
+  const hasSpeaker = Boolean(args.speakers && args.speakers.length > 0);
+  // Verse + book are one "scripture" dimension: the verse facet drops both.
+  const hasScripture = Boolean(
+    (args.bibleRefs && args.bibleRefs.length > 0) ||
+      (args.bibleBooks && args.bibleBooks.length > 0),
+  );
+  const hasDate = Boolean(
+    args.publishedAt && (args.publishedAt.gte || args.publishedAt.lte),
+  );
+
+  // Body 0 applies every active filter; each facet with an active selection of
+  // its own adds a body that drops just that one. Facets without an active
+  // selection read from body 0 (dropping nothing changes nothing) — so identical
+  // bodies are never issued twice.
+  const bodies: OsMsearchItem[] = [buildMediaHybridBody(base)];
+  const fullIndex = 0;
+  const pushBody = (overrides: Partial<BuildMediaSearchArgs>): number => {
+    bodies.push(buildMediaHybridBody({ ...base, ...overrides }));
+    return bodies.length - 1;
+  };
+  const channelIndex = hasChannel ? pushBody({ channelIds: null }) : fullIndex;
+  const speakerIndex = hasSpeaker ? pushBody({ speakers: null }) : fullIndex;
+  const scriptureIndex = hasScripture
+    ? pushBody({ bibleRefs: null, bibleBooks: null })
+    : fullIndex;
+  const yearIndex = hasDate ? pushBody({ publishedAt: null }) : fullIndex;
+
+  // Issued as separate `_search` requests in parallel rather than one `_msearch`
+  // on purpose: a hybrid query needs the RRF normalization pipeline, and this
+  // OpenSearch version rejects `search_pipeline` in the `_msearch` metadata
+  // header ("key [search_pipeline] is not supported in the metadata section",
+  // 400) — so each facet body goes as its own `_search` with the pipeline as a
+  // URL param (the proven path). They run concurrently, so wall-clock stays ~one
+  // round-trip; the count is 1 + (active filters), usually 1–2. (An unpiped
+  // `_msearch` would technically yield correct aggregations since they're
+  // score-independent, but it returns garbage `_score`s — too sharp an edge.)
+  const responses = await Promise.all(
+    bodies.map((body) =>
+      osSearch({ index: MEDIA_INDEX, search_pipeline: RRF_PIPELINE, ...body }),
+    ),
+  );
+  const aggs = responses.map(
+    (raw) => MediaSearchResponseSchema.parse(raw).aggregations,
+  );
+
   return {
-    channels: aggs?.channelIds?.buckets ?? [],
-    speakers: aggs?.speakers?.buckets ?? [],
-    verses: aggs?.bibleRefs?.buckets ?? [],
-    years: (aggs?.publishedYears?.buckets ?? []).map((b) => ({
+    channels: aggs[channelIndex]?.channelIds?.buckets ?? [],
+    speakers: aggs[speakerIndex]?.speakers?.buckets ?? [],
+    verses: aggs[scriptureIndex]?.bibleRefs?.buckets ?? [],
+    years: (aggs[yearIndex]?.publishedYears?.buckets ?? []).map((b) => ({
       year: b.key_as_string,
       doc_count: b.doc_count,
     })),

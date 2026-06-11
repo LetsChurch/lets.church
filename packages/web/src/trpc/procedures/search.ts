@@ -959,16 +959,23 @@ export const searchProcedures = {
           size: limit,
           sort: hybridSort,
         }),
-        // All facet lists (channels, verses, years) in one query, each computed
-        // independently of the current filter selections — every facet shows its
-        // full set for the query, so picking a value in one never reshapes
-        // another. The result set is still narrowed by the AND of all selections
-        // (the main hybrid query above). Only page 0 consumes the facets, so skip
-        // the extra query on subsequent pages.
+        // All facet lists (channels, speakers, verses, years) with leave-one-out
+        // scoping: each facet drops its OWN selection but respects the others, so
+        // (e.g.) scoping to a channel narrows the speaker/verse/year facets to that
+        // channel while the channel facet still lists alternatives. Every offered
+        // option is guaranteed to return results when combined with the current
+        // selections. The result set is still the AND of all selections (the main
+        // hybrid query above). Only page 0 consumes the facets, so skip on later
+        // pages.
         cursor === 0
           ? runMediaFacets({
               lexicalText: q,
               quotes: quoteList,
+              channelIds,
+              publishedAt,
+              bibleRefs,
+              bibleBooks,
+              speakers,
               queryVector,
             }).catch(() => null)
           : Promise.resolve(null),

@@ -53,3 +53,33 @@ export async function resolveChannelNames(
     .map((id) => byId.get(id))
     .filter((c): c is NonNullable<typeof c> => Boolean(c));
 }
+
+/**
+ * Resolve channel slugs (as carried on search URLs / facet filters) to public,
+ * approved, non-deleted channels. Exact slug match — no fuzzy search — so it's a
+ * single DB lookup. Order follows the input slugs; unknown/non-public slugs drop.
+ * Used to scope the AI answer's retrieval to a channel that was pre-filled on the
+ * URL (e.g. searching from a channel page).
+ */
+export async function resolveChannelSlugs(
+  slugs: string[],
+): Promise<ResolvedChannel[]> {
+  const cleaned = slugs.map((s) => s.trim()).filter(Boolean);
+  if (cleaned.length === 0) return [];
+
+  const channels = await db.query.Channel.findMany({
+    where: (t, { inArray, eq, and, isNotNull, isNull }) =>
+      and(
+        inArray(t.slug, cleaned),
+        eq(t.visibility, 'PUBLIC'),
+        isNotNull(t.approvedAt),
+        isNull(t.deletedAt),
+      ),
+    columns: { id: true, slug: true, name: true },
+  });
+  const bySlug = new Map(channels.map((c) => [c.slug, c]));
+
+  return cleaned
+    .map((s) => bySlug.get(s))
+    .filter((c): c is NonNullable<typeof c> => Boolean(c));
+}

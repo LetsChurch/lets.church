@@ -591,6 +591,18 @@ function SearchResults({ q }: { q: string }) {
             q={q}
             searchLogId={searchLogId}
             ready={firstPage != null && !loadingResults}
+            // Scope the answer to whatever filters were pre-filled on the URL
+            // (e.g. a channel slug when searching from a channel page). Captured
+            // once when the query loads — changing a filter won't regenerate it.
+            filters={{
+              channelSlugs,
+              speakers,
+              bibleRefs,
+              bibleBooks,
+              dateRange,
+              dateStart,
+              dateEnd,
+            }}
           />
 
           {mediaCount > 0 ? (

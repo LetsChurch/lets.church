@@ -37,7 +37,55 @@ const bodySchema = z.object({
   // answer (or decline) is appended to its params. Null when logging was
   // skipped (e.g. admin inspecting logs).
   searchLogId: z.string().nullish(),
+  // Filters pre-filled on the search URL when this query loaded (e.g. a channel
+  // slug when searching from a channel page). The answer's grounding retrieval
+  // is scoped to them so it reflects the same corpus as the results. The client
+  // captures these at fire time and does NOT resend on a later filter change, so
+  // changing a filter never regenerates the answer.
+  filters: z
+    .object({
+      channelSlugs: z.array(z.string()).nullish(),
+      speakers: z.array(z.string()).nullish(),
+      bibleRefs: z.array(z.string()).nullish(),
+      bibleBooks: z.array(z.string()).nullish(),
+      dateRange: z
+        .enum(['all-time', 'today', 'this-week', 'this-month', 'this-year'])
+        .nullish(),
+      dateStart: z.string().nullish(),
+      dateEnd: z.string().nullish(),
+    })
+    .nullish(),
 });
+
+// Map the UI's coarse date-range bucket to absolute inclusive bounds. Mirrors
+// dateRangeToPublishedAt in trpc/procedures/search.ts so the answer's retrieval
+// honors a pre-filled date filter the same way the results list does.
+function dateBucketBounds(
+  dateRange: string | null | undefined,
+  now: Date,
+): { gte: string; lte: string } | null {
+  if (!dateRange || dateRange === 'all-time') return null;
+  let start: Date;
+  switch (dateRange) {
+    case 'today':
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      break;
+    case 'this-week':
+      start = new Date(now);
+      start.setDate(now.getDate() - now.getDay());
+      start.setHours(0, 0, 0, 0);
+      break;
+    case 'this-month':
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      break;
+    case 'this-year':
+      start = new Date(now.getFullYear(), 0, 1);
+      break;
+    default:
+      return null;
+  }
+  return { gte: start.toISOString(), lte: now.toISOString() };
+}
 
 const STREAM_HEADERS = {
   'Content-Type': 'text/plain; charset=utf-8',
@@ -62,10 +110,28 @@ export const Route = createFileRoute('/api/search-answer')({
           return new Response('Invalid request body', { status: 400 });
         }
 
-        // Frame the answer (and the answerability check) with the parser's
-        // reformulated question when present; retrieval/embedding/cache still
-        // key off the raw `parsed.query` so recall is unchanged.
-        const framingQuestion = parsed.question?.trim() || parsed.query;
+        // Normalize the pre-filled URL filters into retrieval scope. Explicit
+        // date bounds win over the coarse bucket (matching the results list).
+        const filters = parsed.filters ?? null;
+        const dateBounds =
+          filters?.dateStart || filters?.dateEnd
+            ? {
+                gte: filters.dateStart ?? undefined,
+                lte: filters.dateEnd ?? undefined,
+              }
+            : dateBucketBounds(filters?.dateRange, new Date());
+
+        // Stable signature of the scope, so a channel- (or date-/speaker-)scoped
+        // answer is cached separately from the unscoped one for the same query.
+        const filterSig = JSON.stringify({
+          c: [...(filters?.channelSlugs ?? [])].sort(),
+          s: [...(filters?.speakers ?? [])].sort(),
+          r: [...(filters?.bibleRefs ?? [])].sort(),
+          b: [...(filters?.bibleBooks ?? [])].sort(),
+          dr: filters?.dateRange ?? null,
+          ds: filters?.dateStart ?? null,
+          de: filters?.dateEnd ?? null,
+        });
 
         // Server-only deps loaded lazily so Mastra / pg never enter the client
         // bundle (this route file is part of the shared route tree).
@@ -81,6 +147,7 @@ export const Route = createFileRoute('/api/search-answer')({
           { db, SearchLogEntry },
           { eq, sql },
           { cacheGetJson, cacheSetJson },
+          { resolveChannelSlugs },
         ] = await Promise.all([
           import('@/ai/agent'),
           import('@/ai/tools/search-media'),
@@ -93,10 +160,20 @@ export const Route = createFileRoute('/api/search-answer')({
           import('@letschurch/db'),
           import('drizzle-orm'),
           import('@/util/cache'),
+          import('@/trpc/search/channels'),
         ]);
 
         const session = await getSession();
         const resource = session?.appUserId ?? `anon:${parsed.resourceId}`;
+
+        // Resolve the pre-filled channel slugs once: the ids scope retrieval; the
+        // names let the agent keep any follow-up search in the same channel scope.
+        const scopedChannels =
+          filters?.channelSlugs && filters.channelSlugs.length > 0
+            ? await resolveChannelSlugs(filters.channelSlugs).catch(() => [])
+            : [];
+        const scopedChannelIds = scopedChannels.map((c) => c.id);
+        const scopedChannelNames = scopedChannels.map((c) => c.name);
 
         // Append the final answer (real or decline) + the cited sources to the
         // search_log_entry row hybridSearch created, so each search's parse,
@@ -153,7 +230,7 @@ export const Route = createFileRoute('/api/search-answer')({
         // follow-up could be served a context-free answer.
         const answerCacheKey = `search-answer:v1:${SEARCH_AGENT_MODEL}:${new Date()
           .toISOString()
-          .slice(0, 10)}:${parsed.query.trim()}`;
+          .slice(0, 10)}:${filterSig}:${parsed.query.trim()}`;
         const cacheAnswer = (answerSources: AnswerSource[], answer: string) =>
           cacheSetJson(
             answerCacheKey,
@@ -202,6 +279,12 @@ export const Route = createFileRoute('/api/search-answer')({
             // grounded context and gives us the source list for the chips.
             const retrieved = await runAgentMediaSearch({
               query: parsed.query,
+              channelIds: scopedChannelIds.length > 0 ? scopedChannelIds : null,
+              speakerNames: filters?.speakers ?? undefined,
+              bibleRefs: filters?.bibleRefs ?? undefined,
+              bibleBooks: filters?.bibleBooks ?? undefined,
+              dateGte: dateBounds?.gte,
+              dateLte: dateBounds?.lte,
               limit: 8,
             });
             queryVector = retrieved.queryVector;
@@ -271,6 +354,11 @@ export const Route = createFileRoute('/api/search-answer')({
             return declineResponse();
           }
 
+          // Frame the answer (and the answerability check) with the parser's
+          // reformulated question when present; retrieval/embedding/cache still
+          // key off the raw `parsed.query` so recall is unchanged.
+          const framingQuestion = parsed.question?.trim() || parsed.query;
+
           // --- Decide ANSWER vs OVERVIEW vs DECLINE. ---
           // answer  → directly answer the question from the sources.
           // overview→ sources are on-topic but don't fully answer; summarize the
@@ -330,6 +418,15 @@ export const Route = createFileRoute('/api/search-answer')({
             );
           }
 
+          // When the search is scoped to specific channel(s), tell the agent so
+          // any follow-up searchMedia/aggregateMedia call stays within the same
+          // scope instead of pulling in other channels' content. The injected
+          // sources are already scoped; this only constrains re-searches.
+          const scopeNote =
+            scopedChannelNames.length > 0
+              ? `\n\nScope: these results are limited to the channel(s): ${scopedChannelNames.join(', ')}. If you search again, pass channelNames: ${JSON.stringify(scopedChannelNames)} so follow-ups stay within the same channel scope.`
+              : '';
+
           // The answer path directly answers the question; the overview path
           // (when the sources are on-topic but don't answer it) summarizes the
           // related content without asserting an answer.
@@ -337,7 +434,7 @@ export const Route = createFileRoute('/api/search-answer')({
             mode === 'answer'
               ? `Question: ${framingQuestion}
 
-Answer using ONLY the numbered sources below (these are already fetched — you do not need to search again unless the question needs comparison or counts, or it asks what a specific PERSON said — in that case call searchMedia again with their name in speakerNames to scope to paragraphs they actually spoke).
+Answer using ONLY the numbered sources below (these are already fetched — you do not need to search again unless the question needs comparison or counts, or it asks what a specific PERSON said — in that case call searchMedia again with their name in speakerNames to scope to paragraphs they actually spoke).${scopeNote}
 
 Formatting rules:
 - Begin with a concise, direct answer in one or two sentences. Do NOT open with a heading, title, or a restatement of the question.
@@ -350,7 +447,7 @@ Sources:
 ${sourcesBlock}`
               : `Topic: ${framingQuestion}
 
-The numbered sources below are on this topic but don't form a single direct answer. Give the reader a brief, grounded overview of what the library covers on it. Do NOT fabricate specifics the sources don't support.
+The numbered sources below are on this topic but don't form a single direct answer. Give the reader a brief, grounded overview of what the library covers on it. Do NOT fabricate specifics the sources don't support.${scopeNote}
 
 Formatting rules:
 - Lead straight into what the sources cover on this topic (you may note in passing if coverage is partial). Do NOT open with an apology, a heading, or a restatement of the topic, and do NOT pivot to material that isn't about the topic.
