@@ -565,7 +565,7 @@ export function SearchFacets({
                                   className={cn(
                                     'cursor-pointer rounded-full border px-2 py-0.5 font-medium text-xs tabular-nums transition-colors',
                                     isSelected
-                                      ? 'border-brand bg-brand/10 text-brand'
+                                      ? 'border-brand bg-brand/10 text-brand dark:border-white dark:bg-white/10 dark:text-white'
                                       : 'border-gray-950/15 text-primary hover:bg-primary/10 dark:border-white/15',
                                   )}
                                 />
