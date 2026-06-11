@@ -681,13 +681,25 @@ export async function createSpeakerAndAssign({
     throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
   }
 
-  const res = await applySpeakerAssignments(
-    members.map((m) => ({
-      uploadId: m.uploadId,
-      speakerLabel: m.speakerLabel,
-      speakerId: speaker.id,
-    })),
-    { actingUserId, authorizeChannel },
-  );
+  // If the assignment fails (member authorization, assertSpeakerUsable, …),
+  // remove the speaker we just created so it isn't left orphaned. The
+  // speaker_attribution FK cascades, so this also unwinds any rows that did land.
+  let res: { assigned: number; uploads: number };
+  try {
+    res = await applySpeakerAssignments(
+      members.map((m) => ({
+        uploadId: m.uploadId,
+        speakerLabel: m.speakerLabel,
+        speakerId: speaker.id,
+      })),
+      { actingUserId, authorizeChannel },
+    );
+  } catch (err) {
+    await db
+      .delete(Speaker)
+      .where(eq(Speaker.id, speaker.id))
+      .catch(() => {});
+    throw err;
+  }
   return { speakerId: speaker.id, ...res };
 }
