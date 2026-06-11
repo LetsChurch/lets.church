@@ -180,6 +180,18 @@ export const ErrorState: Story = {
   },
 };
 
+// The search page with a question heading: the parsed question renders as a
+// bold heading above the answer, but without `onCite` the source chips keep
+// their avatar/title hover-preview style (not the video-page timestamp pills).
+export const AnswerWithHeading: Story = {
+  args: {
+    status: 'done',
+    heading: 'How does grace-based giving differ from selling ministry?',
+    answer: ANSWER,
+    sources: SOURCES,
+  },
+};
+
 // The media-page ("ask about this video") variant: the question renders as a
 // bold heading, and because it's scoped to one video, `onCite` makes the source
 // chips show timestamps (and seek the player) instead of avatar/title preview
