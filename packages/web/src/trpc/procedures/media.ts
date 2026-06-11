@@ -1126,10 +1126,43 @@ export const mediaProcedures = {
         });
       }
 
-      return paragraphRows.map(({ id, ...rest }) => ({
-        ...rest,
-        annotations: annotationsByParagraphId.get(id) ?? [],
-      }));
+      // Resolve each paragraph's NAMED speaker: per-paragraph override label ??
+      // diarization label → speaker_attribution → Speaker.name. Lets the
+      // transcript surface a real name + a "more from this speaker" link; null
+      // when the voice isn't attributed to a (non-deleted) named speaker.
+      const paragraphIds = paragraphRows.map((p) => p.id);
+      const [overrideRows, attributionRows] = await Promise.all([
+        db.query.SpeakerParagraphLabel.findMany({
+          columns: { paragraphId: true, label: true },
+          where: (t, { inArray: inA }) => inA(t.paragraphId, paragraphIds),
+        }),
+        db.query.SpeakerAttribution.findMany({
+          columns: { speakerLabel: true },
+          where: (t, { eq }) => eq(t.uploadRecordId, input.mediaId),
+          with: { speaker: { columns: { name: true, deletedAt: true } } },
+        }),
+      ]);
+      const overrideByParagraph = new Map(
+        overrideRows.map((o) => [o.paragraphId, o.label]),
+      );
+      const nameByLabel = new Map<string, string>();
+      for (const a of attributionRows) {
+        if (a.speaker && a.speaker.deletedAt === null) {
+          nameByLabel.set(a.speakerLabel, a.speaker.name);
+        }
+      }
+
+      return paragraphRows.map(({ id, ...rest }) => {
+        const effectiveLabel = overrideByParagraph.get(id) ?? rest.speaker;
+        const speakerName = effectiveLabel
+          ? (nameByLabel.get(effectiveLabel) ?? null)
+          : null;
+        return {
+          ...rest,
+          speakerName,
+          annotations: annotationsByParagraphId.get(id) ?? [],
+        };
+      });
     }),
 
   rateMedia: authProcedure

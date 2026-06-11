@@ -37,6 +37,7 @@ function paragraph(
     start,
     end: start + words.length * 0.1,
     speaker: null,
+    speakerName: null,
     text: words.map((w) => w.word).join(' '),
     words,
     annotations,

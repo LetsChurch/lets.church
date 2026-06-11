@@ -2,6 +2,7 @@ import { useStore } from '@nanostores/react';
 import {
   IconBible,
   IconCheck,
+  IconChevronDown,
   IconExternalLink,
   IconLink,
   IconSearch,
@@ -17,6 +18,12 @@ import {
   useRef,
   useState,
 } from 'react';
+import {
+  LcMenu,
+  MenuItemButton,
+  MenuItemRouterLink,
+} from '@/components/lc-menu';
+import { LcTooltip } from '@/components/lc-tooltip';
 import { $currentTime, $setPlayAt } from '@/stores/player';
 import {
   buildBibleHubUrl,
@@ -57,7 +64,11 @@ export type TranscriptParagraph = {
   order: number;
   start: number;
   end: number;
+  // Raw diarization label (SPEAKER_NN). Carried through but not displayed.
   speaker: string | null;
+  // Resolved named speaker (override ?? diarization → attribution → Speaker.name),
+  // or null when the voice isn't attributed to a named speaker.
+  speakerName: string | null;
   text: string;
   words: Array<TranscriptWord>;
   annotations: Array<TranscriptAnnotation>;
@@ -265,20 +276,12 @@ const BIBLE_HIGHLIGHT_CLASS =
 const KEYWORD_HIGHLIGHT_CLASS =
   'bg-sky-400/25 dark:bg-transparent dark:text-white';
 
-// Inline icon-button shown next to a timestamp or heading on hover —
-// click copies a `<page>#t=<seconds>` deep-link to the clipboard,
-// briefly swapping the link icon for a checkmark as feedback. Layout
-// stays stable across the show/hide because we use `invisible` (the
-// box keeps its size) plus `group-hover:visible` on the parent row.
-function CopyLinkButton({
-  seconds,
-  className,
-}: {
-  seconds: number;
-  className?: string;
-}) {
+// Copy a `<page>#t=<seconds>` deep-link to the clipboard, exposing a transient
+// `copied` flag for the icon swap. `navigator.clipboard` rejects on insecure
+// contexts (http://) or when denied — silent, since the URL bar still works.
+function useCopyTimestampLink(seconds: number) {
   const [copied, setCopied] = useState(false);
-  const handleClick = async () => {
+  const copy = useCallback(async () => {
     const base = window.location.href.split('#')[0] ?? '';
     const seekTo = Math.max(0, Math.round(seconds));
     try {
@@ -286,24 +289,101 @@ function CopyLinkButton({
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      // navigator.clipboard rejects on insecure contexts (http://) or
-      // when the browser denies permission. Silent — the icon is a
-      // convenience; users can still copy via the URL bar.
+      // ignore — the icon is a convenience
     }
-  };
+  }, [seconds]);
+  return { copied, copy };
+}
+
+const TIMESTAMP_ACTION_CLASS =
+  'shrink-0 cursor-pointer text-primary/40 hover:text-primary/80';
+
+// Inline icon-button shown next to a timestamp/heading on hover — copies the
+// deep-link, briefly swapping the link icon for a checkmark. Layout stays stable
+// across show/hide via `invisible` (the box keeps its size) + `group-hover:visible`.
+function CopyLinkButton({
+  seconds,
+  className,
+}: {
+  seconds: number;
+  className?: string;
+}) {
+  const { copied, copy } = useCopyTimestampLink(seconds);
+  const label = copied ? 'Link copied' : 'Copy link to timestamp';
   return (
-    <button
-      type="button"
-      onClick={handleClick}
-      aria-label={copied ? 'Link copied' : 'Copy link to timestamp'}
-      className={`shrink-0 cursor-pointer text-primary/40 hover:text-primary/80 ${className ?? ''}`}
-    >
-      {copied ? (
-        <IconCheck size={12} aria-hidden="true" />
-      ) : (
-        <IconLink size={12} aria-hidden="true" />
-      )}
-    </button>
+    <LcTooltip content={label}>
+      <button
+        type="button"
+        onClick={copy}
+        aria-label={label}
+        className={`${TIMESTAMP_ACTION_CLASS} ${className ?? ''}`}
+      >
+        {copied ? (
+          <IconCheck size={12} aria-hidden="true" />
+        ) : (
+          <IconLink size={12} aria-hidden="true" />
+        )}
+      </button>
+    </LcTooltip>
+  );
+}
+
+// When a paragraph has a named speaker, the copy button is replaced by a chevron
+// that opens a menu: copy the timestamp link, or jump to a search scoped to that
+// speaker. `className` carries the same hover-reveal as CopyLinkButton; the
+// chevron stays visible while its menu is open.
+function TimestampMenu({
+  seconds,
+  speakerName,
+  className,
+}: {
+  seconds: number;
+  speakerName: string;
+  className?: string;
+}) {
+  const { copied, copy } = useCopyTimestampLink(seconds);
+  const [open, setOpen] = useState(false);
+  return (
+    <LcMenu.Root open={open} onOpenChange={setOpen}>
+      <LcMenu.Trigger
+        render={(props) => (
+          <button
+            {...props}
+            type="button"
+            aria-label="Timestamp and speaker actions"
+            className={`${TIMESTAMP_ACTION_CLASS} ${open ? 'visible' : (className ?? '')}`}
+          >
+            {copied ? (
+              <IconCheck size={12} aria-hidden="true" />
+            ) : (
+              <IconChevronDown size={12} aria-hidden="true" />
+            )}
+          </button>
+        )}
+      />
+      <LcMenu.Portal>
+        <LcMenu.Positioner sideOffset={6} align="start">
+          <LcMenu.Popup>
+            <MenuItemButton
+              onClick={() => {
+                void copy();
+                setOpen(false);
+              }}
+              icon={<IconLink size={14} className="shrink-0" />}
+            >
+              Copy link to timestamp
+            </MenuItemButton>
+            <MenuItemRouterLink
+              to="/search"
+              search={{ q: speakerName, speakers: [speakerName] }}
+              icon={<IconSearch size={14} className="shrink-0" />}
+            >
+              Search for more from {speakerName}
+            </MenuItemRouterLink>
+          </LcMenu.Popup>
+        </LcMenu.Positioner>
+      </LcMenu.Portal>
+    </LcMenu.Root>
   );
 }
 
@@ -394,10 +474,18 @@ const ParagraphView = memo(function ParagraphView({
           keyword annotations. */}
       <div className="group col-span-2 grid grid-cols-subgrid">
         <div className="flex items-center justify-end gap-1 self-start pt-1">
-          <CopyLinkButton
-            seconds={paragraph.start}
-            className="invisible group-hover:visible"
-          />
+          {paragraph.speakerName ? (
+            <TimestampMenu
+              seconds={paragraph.start}
+              speakerName={paragraph.speakerName}
+              className="invisible group-hover:visible"
+            />
+          ) : (
+            <CopyLinkButton
+              seconds={paragraph.start}
+              className="invisible group-hover:visible"
+            />
+          )}
           <button
             type="button"
             data-p={paragraph.order}
@@ -661,22 +749,27 @@ export function TranscriptParagraphs({
   }
 
   return (
-    <div ref={containerRef} className="size-full overflow-auto py-5 pr-5 pl-2">
-      <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-3">
-        {paragraphs.map((p, pi) => (
-          <ParagraphView
-            key={p.order}
-            paragraph={p}
-            activeWordIndex={
-              pi === active.paragraphIndex ? active.wordIndex : -1
-            }
-            isActive={pi === active.paragraphIndex}
-            isFirstParagraph={pi === 0}
-            onSeek={handleSeek}
-            highlightPattern={highlightPattern}
-          />
-        ))}
+    <LcTooltip.Provider>
+      <div
+        ref={containerRef}
+        className="size-full overflow-auto py-5 pr-5 pl-2"
+      >
+        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-3">
+          {paragraphs.map((p, pi) => (
+            <ParagraphView
+              key={p.order}
+              paragraph={p}
+              activeWordIndex={
+                pi === active.paragraphIndex ? active.wordIndex : -1
+              }
+              isActive={pi === active.paragraphIndex}
+              isFirstParagraph={pi === 0}
+              onSeek={handleSeek}
+              highlightPattern={highlightPattern}
+            />
+          ))}
+        </div>
       </div>
-    </div>
+    </LcTooltip.Provider>
   );
 }
