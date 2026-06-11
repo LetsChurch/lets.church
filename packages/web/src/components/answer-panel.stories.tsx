@@ -70,7 +70,7 @@ const ANSWER = `Grace-based giving means supporting gospel ministry freely rathe
 
 The principle warns that placing a minister under direct financial obligation can compromise the sincerity of the message [3].`;
 
-const OVERVIEW = `The library covers grace-based giving in some depth: how ministry should be supported by co-labor rather than sold [1], how Paul and the Jerusalem apostles received support [2], and how the principle bears on the copyright and distribution of Christian resources [3].`;
+const OVERVIEW = `Grace-based giving is treated as supporting ministry through co-labor rather than selling it [1]: Paul and the Jerusalem apostles received voluntary support [2], and the same logic bears on how Christian resources are copyrighted and distributed [3].`;
 
 const LONG_ANSWER = `Grace-based giving is the practice of supporting ministry as a free gift rather than a transaction. It rests on a few connected ideas drawn throughout the sources.
 
@@ -177,5 +177,31 @@ export const ErrorState: Story = {
     status: 'error',
     answer: '',
     sources: [],
+  },
+};
+
+// The media-page ("ask about this video") variant: the question renders as a
+// bold heading, and because it's scoped to one video, `onCite` makes the source
+// chips show timestamps (and seek the player) instead of avatar/title preview
+// chips.
+export const VideoAnswer: Story = {
+  args: {
+    status: 'done',
+    heading: 'How does grace-based giving differ from selling ministry?',
+    answer: ANSWER,
+    sources: SOURCES,
+    onCite: () => undefined,
+  },
+};
+
+// The same media-page variant while still loading: the question heading is
+// already shown above the shimmering "Seeking…".
+export const VideoSeeking: Story = {
+  args: {
+    status: 'streaming',
+    heading: 'How does grace-based giving differ from selling ministry?',
+    answer: '',
+    sources: [],
+    onCite: () => undefined,
   },
 };

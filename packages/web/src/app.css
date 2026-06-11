@@ -74,15 +74,18 @@
 }
 
 /* Animated "shimmer" sweep for transient loading text (e.g. the AI answer
-   card's "Seeking…"). Tuned for light text on a dark / indigo surface. */
+   card's "Seeking…"). White text on the indigo card. Light mode uses a higher
+   base opacity so it reads against the lighter light-mode card; dark mode (a
+   deeper indigo) keeps the lower base for more shimmer contrast (overridden
+   below). */
 @utility text-shimmer {
   background: linear-gradient(
     100deg,
-    rgba(255, 255, 255, 0.45) 0%,
-    rgba(255, 255, 255, 0.45) 40%,
+    rgba(255, 255, 255, 0.7) 0%,
+    rgba(255, 255, 255, 0.7) 40%,
     rgba(255, 255, 255, 1) 50%,
-    rgba(255, 255, 255, 0.45) 60%,
-    rgba(255, 255, 255, 0.45) 100%
+    rgba(255, 255, 255, 0.7) 60%,
+    rgba(255, 255, 255, 0.7) 100%
   );
   background-size: 200% 100%;
   background-clip: text;
@@ -105,6 +108,18 @@
   .text-shimmer {
     animation: none;
   }
+}
+
+/* Dark mode card is a deeper indigo, so a lower base reads + shimmers more. */
+[data-theme="dark"] .text-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0.45) 0%,
+    rgba(255, 255, 255, 0.45) 40%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(255, 255, 255, 0.45) 60%,
+    rgba(255, 255, 255, 0.45) 100%
+  );
 }
 
 @utility aspect-media {
