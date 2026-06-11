@@ -20,7 +20,6 @@ import { suggestSpeakersByEmbedding } from '@letschurch/opensearch';
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { startIndexMediaDocument } from '@/temporal';
-import { cacheGetJson, cacheSetJson, clearByPrefix } from '@/util/cache';
 import {
   assertSpeakerUsable,
   authorizedSpeakerChannelIds,
@@ -28,9 +27,6 @@ import {
   uniqueSpeakerSlug,
 } from './helpers';
 
-// Shared cache prefix so any assignment can invalidate every queue/cluster view.
-export const LABELING_QUEUE_CACHE_PREFIX = 'labeling-queue:';
-const QUEUE_CACHE_TTL_SECONDS = 600; // 10 min
 // Cap concurrent kNN round-trips when scanning many labels.
 const KNN_CONCURRENCY = 8;
 // Candidates returned per segment (1 top match + a few alternatives).
@@ -396,23 +392,21 @@ export type BuildLabelingDataArgs = {
   clusterThreshold?: number;
   /** Max ranked queue items to return (descending confidence). */
   limit?: number;
-  /** When set, results are cached in Valkey under this key (prefix-invalidated). */
-  cacheKey?: string;
 };
 
+// TODO(perf): this scans every owning channel's unlabeled segments and runs a
+// kNN per segment (bounded to KNN_CONCURRENCY) on each call. If the labeling
+// pages get slow at scale, cache the result in Valkey keyed by
+// `labeling-queue:channel:<id>:<minMatchPercent>` (and `:admin:` for the
+// site-wide view) and invalidate that prefix from every attribution write
+// (applySpeakerAssignments / createSpeakerAndAssign / approveTagRequest).
 export async function buildLabelingData({
   owningChannelIds,
   minMatchPercent = 70,
   clusterThreshold = CLUSTER_THRESHOLD_DEFAULT,
   limit = 200,
-  cacheKey,
 }: BuildLabelingDataArgs): Promise<LabelingData> {
   if (owningChannelIds.length === 0) return { queue: [], clusters: [] };
-
-  if (cacheKey) {
-    const cached = await cacheGetJson<LabelingData>(cacheKey);
-    if (cached) return cached;
-  }
 
   const segments = await collectUnlabeledSegments(owningChannelIds);
   const candidates = segments.filter(
@@ -506,35 +500,29 @@ export async function buildLabelingData({
   }
 
   queue.sort((a, b) => b.topMatch.matchPercent - a.topMatch.matchPercent);
-  const data: LabelingData = {
+  return {
     queue: queue.slice(0, limit),
     clusters: clusterUnmatched(unmatched, clusterThreshold),
   };
-
-  if (cacheKey) await cacheSetJson(cacheKey, data, QUEUE_CACHE_TTL_SECONDS);
-  return data;
 }
 
 // Find untagged segments on OTHER channels that voice-match one of `channelId`'s
 // own speakers. Scans every channel's unlabeled segments, drops this channel's,
 // and kNN-matches each against ONLY this channel's speaker pool — a hit means
 // "your speaker appears here but isn't tagged".
+// TODO(perf): like buildLabelingData, this scans every OTHER channel's unlabeled
+// segments and runs a kNN per segment. If "Appearances elsewhere" gets slow at
+// scale, cache under `labeling-queue:appearances:<channelId>` and invalidate that
+// prefix on attribution writes.
 export async function buildSpeakerAppearances({
   channelId,
   minMatchPercent = 80,
   limit = 200,
-  cacheKey,
 }: {
   channelId: string;
   minMatchPercent?: number;
   limit?: number;
-  cacheKey?: string;
 }): Promise<SpeakerAppearance[]> {
-  if (cacheKey) {
-    const cached = await cacheGetJson<SpeakerAppearance[]>(cacheKey);
-    if (cached) return cached;
-  }
-
   const contentChannels = await db
     .selectDistinct({ channelId: UploadRecord.channelId })
     .from(UploadRecord)
@@ -548,7 +536,6 @@ export async function buildSpeakerAppearances({
     await collectUnlabeledSegments(contentChannels.map((c) => c.channelId))
   ).filter((s) => s.channelId !== channelId && s.avgVector);
   if (segments.length === 0) {
-    if (cacheKey) await cacheSetJson(cacheKey, [], QUEUE_CACHE_TTL_SECONDS);
     return [];
   }
 
@@ -593,10 +580,7 @@ export async function buildSpeakerAppearances({
     });
   }
   items.sort((a, b) => b.matchPercent - a.matchPercent);
-  const limited = items.slice(0, limit);
-
-  if (cacheKey) await cacheSetJson(cacheKey, limited, QUEUE_CACHE_TTL_SECONDS);
-  return limited;
+  return items.slice(0, limit);
 }
 
 // Apply a batch of (upload, label) → speaker attributions, authorizing each
@@ -652,11 +636,6 @@ export async function applySpeakerAssignments(
   });
 
   await Promise.all(uploadIds.map((id) => startIndexMediaDocument(id)));
-  try {
-    await clearByPrefix(LABELING_QUEUE_CACHE_PREFIX);
-  } catch {
-    // Best-effort cache invalidation; a stale entry expires within the TTL.
-  }
 
   return { assigned: assignments.length, uploads: uploadIds.length };
 }

@@ -129,7 +129,6 @@ import {
   applySpeakerAssignments,
   buildLabelingData,
   createSpeakerAndAssign,
-  LABELING_QUEUE_CACHE_PREFIX,
 } from '../../speaker-labeling/queue';
 import { authProcedure, router } from '../../trpc';
 import { newsletterListsRouter } from '../newsletter-lists';
@@ -189,7 +188,6 @@ export const adminRouter = router({
         owningChannelIds: contentChannels.map((r) => r.channelId),
         minMatchPercent: input.minMatchPercent,
         limit: input.limit,
-        cacheKey: `${LABELING_QUEUE_CACHE_PREFIX}admin:${input.minMatchPercent ?? 70}:${input.limit ?? 200}`,
       });
     }),
 

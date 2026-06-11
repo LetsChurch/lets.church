@@ -106,7 +106,6 @@ import {
   mantineAvatarSm2x,
   mantineAvatarXl2x,
 } from '@/util/avatar-sizes';
-import { clearByPrefix } from '@/util/cache';
 import { coverImageFull, thumbnailMedium } from '@/util/image-sizes';
 import logger from '@/util/logger';
 import { escapeLikePattern } from '@/util/misc';
@@ -124,7 +123,6 @@ import {
   buildLabelingData,
   buildSpeakerAppearances,
   createSpeakerAndAssign,
-  LABELING_QUEUE_CACHE_PREFIX,
 } from '../../speaker-labeling/queue';
 import { authProcedure, router } from '../../trpc';
 
@@ -1350,8 +1348,6 @@ export const channelRouter = router({
       });
 
       await startIndexMediaDocument(input.uploadId);
-      // Manual edits change which segments are unlabeled — drop cached queues.
-      await clearByPrefix(LABELING_QUEUE_CACHE_PREFIX).catch(() => {});
       return { success: true };
     }),
 
@@ -1364,7 +1360,6 @@ export const channelRouter = router({
       return buildLabelingData({
         owningChannelIds: [input.channelId],
         minMatchPercent: input.minMatchPercent,
-        cacheKey: `${LABELING_QUEUE_CACHE_PREFIX}channel:${input.channelId}:${input.minMatchPercent ?? 70}`,
       });
     }),
 
@@ -1828,7 +1823,6 @@ export const channelRouter = router({
   getSpeakerAppearances: channelAdminProcedure.query(async ({ input }) => {
     const appearances = await buildSpeakerAppearances({
       channelId: input.channelId,
-      cacheKey: `${LABELING_QUEUE_CACHE_PREFIX}appearances:${input.channelId}`,
     });
     const pending = await db
       .select({
@@ -1913,7 +1907,6 @@ export const channelRouter = router({
             respondedAt: null,
           },
         });
-      await clearByPrefix(LABELING_QUEUE_CACHE_PREFIX).catch(() => {});
       return { success: true };
     }),
 
@@ -2006,7 +1999,6 @@ export const channelRouter = router({
           });
       });
       await startIndexMediaDocument(req.uploadRecordId);
-      await clearByPrefix(LABELING_QUEUE_CACHE_PREFIX).catch(() => {});
       return { success: true };
     }),
 
