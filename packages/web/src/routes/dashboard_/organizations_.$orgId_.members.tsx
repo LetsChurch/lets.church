@@ -160,9 +160,9 @@ function OrganizationMembersPage() {
     trpc.dashboard.organizations.inviteToOrganization.mutationOptions({
       onSuccess: () => {
         showSuccess({ message: 'Invitation sent successfully' });
-        queryClient.invalidateQueries({
-          queryKey: ['dashboard', 'organizations'],
-        });
+        queryClient.invalidateQueries(
+          trpc.dashboard.organizations.pathFilter(),
+        );
         closeInviteMemberModal();
         form.reset();
       },
@@ -176,9 +176,9 @@ function OrganizationMembersPage() {
     trpc.dashboard.organizations.removeOrganizationMember.mutationOptions({
       onSuccess: () => {
         showSuccess({ message: 'User removed successfully' });
-        queryClient.invalidateQueries({
-          queryKey: ['dashboard', 'organizations'],
-        });
+        queryClient.invalidateQueries(
+          trpc.dashboard.organizations.pathFilter(),
+        );
       },
       onError: (error) => {
         showFailure({ message: error.message || 'Failed to remove user' });
@@ -190,9 +190,9 @@ function OrganizationMembersPage() {
     trpc.dashboard.organizations.cancelInvitation.mutationOptions({
       onSuccess: () => {
         showSuccess({ message: 'Invitation cancelled' });
-        queryClient.invalidateQueries({
-          queryKey: ['dashboard', 'organizations'],
-        });
+        queryClient.invalidateQueries(
+          trpc.dashboard.organizations.pathFilter(),
+        );
       },
       onError: (error) => {
         showFailure({
@@ -206,9 +206,9 @@ function OrganizationMembersPage() {
     trpc.dashboard.organizations.resendInvitation.mutationOptions({
       onSuccess: () => {
         showSuccess({ message: 'Invitation resent' });
-        queryClient.invalidateQueries({
-          queryKey: ['dashboard', 'organizations'],
-        });
+        queryClient.invalidateQueries(
+          trpc.dashboard.organizations.pathFilter(),
+        );
       },
       onError: (error) => {
         showFailure({

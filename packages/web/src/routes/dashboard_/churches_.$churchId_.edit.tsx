@@ -176,9 +176,9 @@ function ChurchEditPage() {
           resetDroppedAvatar();
         }
 
-        await queryClient.invalidateQueries({
-          queryKey: ['dashboard', 'churches'],
-        });
+        await queryClient.invalidateQueries(
+          trpc.dashboard.churches.pathFilter(),
+        );
 
         await router.navigate({
           to: '/dashboard/churches/$churchId',

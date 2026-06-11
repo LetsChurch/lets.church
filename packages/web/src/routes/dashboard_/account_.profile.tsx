@@ -198,13 +198,6 @@ function ProfilePage() {
     },
   });
 
-  // Update form values when data loads
-  form.reset({
-    fullName: profileQuery.data.fullName,
-    email: profileQuery.data.email,
-    username: profileQuery.data.username,
-  });
-
   return (
     <Container size="xl" py="md">
       <Grid gutter="xl">

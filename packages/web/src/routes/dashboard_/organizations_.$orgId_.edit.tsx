@@ -73,9 +73,9 @@ function OrganizationEditPage() {
         });
 
         // Invalidate and refetch organization data
-        await queryClient.invalidateQueries({
-          queryKey: ['dashboard', 'organizations'],
-        });
+        await queryClient.invalidateQueries(
+          trpc.dashboard.organizations.pathFilter(),
+        );
 
         // Navigate back to organization details
         await router.navigate({
