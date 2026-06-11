@@ -147,6 +147,7 @@ export const Route = createFileRoute('/api/search-answer')({
           { db, SearchLogEntry },
           { eq, sql },
           { cacheGetJson, cacheSetJson },
+          { parseSearchQuery },
           { resolveChannelSlugs },
         ] = await Promise.all([
           import('@/ai/agent'),
@@ -160,11 +161,19 @@ export const Route = createFileRoute('/api/search-answer')({
           import('@letschurch/db'),
           import('drizzle-orm'),
           import('@/util/cache'),
+          import('@/trpc/search/parse-query'),
           import('@/trpc/search/channels'),
         ]);
 
         const session = await getSession();
         const resource = session?.appUserId ?? `anon:${parsed.resourceId}`;
+
+        // Parse the query for intent + a reformulated question, concurrently with
+        // the retrieval below (cached by query+day, so usually free). We use it to
+        // (a) frame an answer on the natural question the query implies and (b)
+        // tell an answer-worthy need from a browse/topic query — the latter should
+        // produce a grounded OVERVIEW of the matches, never a flat decline.
+        const parsePromise = parseSearchQuery(parsed.query).catch(() => null);
 
         // Resolve the pre-filled channel slugs once: the ids scope retrieval; the
         // names let the agent keep any follow-up search in the same channel scope.
@@ -354,10 +363,18 @@ export const Route = createFileRoute('/api/search-answer')({
             return declineResponse();
           }
 
-          // Frame the answer (and the answerability check) with the parser's
-          // reformulated question when present; retrieval/embedding/cache still
-          // key off the raw `parsed.query` so recall is unchanged.
-          const framingQuestion = parsed.question?.trim() || parsed.query;
+          // The parser separates an answer-worthy need ("what does Scripture
+          // say about X", a question) from a browse/topic/navigational query
+          // (a bare keyword, a channel name) — `questions` is populated only for
+          // the former. We frame an answer on its reformulated question, and let
+          // a topic query default to an overview rather than a decline.
+          const parsedQuery = await parsePromise;
+          const reformulated = parsedQuery?.questions[0]?.trim();
+          const framingQuestion =
+            reformulated || parsed.question?.trim() || parsed.query;
+          const isAnswerWorthy = Boolean(
+            reformulated || parsed.question?.trim(),
+          );
 
           // --- Decide ANSWER vs OVERVIEW vs DECLINE. ---
           // answer  → directly answer the question from the sources.
@@ -409,6 +426,14 @@ export const Route = createFileRoute('/api/search-answer')({
               'Answer gated off',
             );
             return declineResponse();
+          }
+
+          // Intent override: a browse/topic query (no reformulated question)
+          // should read as a grounded overview of what the matches cover, never
+          // a definitive "answer". The gate still owns the decline decision above;
+          // here we only soften answer→overview when the query wasn't a question.
+          if (!isAnswerWorthy && mode === 'answer') {
+            mode = 'overview';
           }
 
           if (mode === 'overview') {

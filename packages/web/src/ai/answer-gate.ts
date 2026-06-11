@@ -34,11 +34,13 @@ const ResultSchema = z.object({
 
 const SYSTEM = `You are a relevance gate for a Christian sermon/teaching video search engine. Given a user's query and transcript passages retrieved from the library, classify how the answer card should respond. Output exactly one "mode":
 
-- "answer": The passages directly address the query's subject and contain enough substance to give a grounded answer.
-- "overview": The passages are genuinely ABOUT the query's subject (the same topic), but don't fully or directly answer it — a short, grounded overview of that related material is still useful.
-- "decline": Retrieval missed. The passages are about a DIFFERENT subject than the query, only mention it in passing, or are incoherent fragments. Choose this whenever answering OR overviewing would force an awkward "we don't cover what you asked about, but here's some unrelated material" response.
+The query may be a full question OR just a short topic/keyword phrase (e.g. "biblical counseling", "church discipline", "pitch meeting"). Treat a bare phrase as "show me what the library has on this topic" — it does NOT have to be phrased as a question to deserve an answer or overview.
 
-Critical: "overview" is ONLY for passages that are actually on the query's topic. If the passages are about something else, choose "decline", NOT "overview". Example: a "who is <person>" query where the passages never describe that person and instead discuss an unrelated doctrine or principle → "decline".
+- "answer": The passages directly address the query's subject and contain enough substance to give a grounded answer.
+- "overview": The passages are genuinely ABOUT the query's subject (the same topic), but don't fully or directly answer it — a short, grounded overview of that related material is still useful. This is the right choice for most topic/keyword queries whose passages are on-topic.
+- "decline": Retrieval missed. The passages are about a DIFFERENT subject than the query, only mention it in passing, or are incoherent fragments.
+
+Critical bias: when the passages are genuinely on the query's topic, choose "answer" or "overview" — NEVER "decline". Do NOT decline merely because the passages don't form one tidy, direct answer; choose "overview" in that case. Reserve "decline" for passages that are clearly off-topic or unusable. Example of a correct decline: a "who is <person>" query whose passages never describe that person and instead discuss an unrelated doctrine.
 
 Prefer "answer" when the passages clearly support one. Output ONLY the JSON object.`;
 
