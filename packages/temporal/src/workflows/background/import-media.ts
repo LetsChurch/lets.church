@@ -77,8 +77,11 @@ export async function importMediaWorkflow({
   trimSilence: boolean;
   importSourceId?: string;
 }): Promise<string> {
+  // Hoisted so the failure path can deep-link to the upload's dashboard
+  // page when the failure happens after the upload record was created.
+  let uploadRecordId: string | undefined;
   try {
-    const { uploadRecordId, mediaUploadKey, thumbnailUploadKey } =
+    const { mediaUploadKey, thumbnailUploadKey, ...importIds } =
       await importMedia(url, {
         title,
         description,
@@ -94,6 +97,7 @@ export async function importMediaWorkflow({
           ? { publishedAt: new Date(publishedAt as string | Date) }
           : {}),
       });
+    uploadRecordId = importIds.uploadRecordId;
 
     await startChild(processMediaWorkflow, {
       taskQueue,
@@ -155,6 +159,10 @@ export async function importMediaWorkflow({
           dedupKey: `import-media:${url}`,
           summary: `Media import failed for ${url}: ${errorMessage}`,
           component: 'import-media',
+          // Present only when the failure happened after the upload record
+          // was created (e.g. during processing kickoff).
+          uploadId: uploadRecordId,
+          links: [{ href: url, text: 'Source media URL' }],
           customDetails: {
             url,
             importSourceId,

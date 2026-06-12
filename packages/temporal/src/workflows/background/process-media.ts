@@ -201,6 +201,7 @@ export async function processMediaWorkflow(
           dedupKey: `process-media:${targetId}`,
           summary: `Media processing failed for upload ${targetId}: ${message}`,
           component: 'process-media',
+          uploadId: targetId,
           customDetails: {
             uploadRecordId: targetId,
             scope,

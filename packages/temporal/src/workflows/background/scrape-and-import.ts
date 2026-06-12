@@ -217,6 +217,12 @@ export async function scrapeAndImportWorkflow(
         dedupKey: `scrape-import:${importSourceId}`,
         summary: `Import-source scrape failed (${importSourceId}): ${errorMessage}`,
         component: 'scrape-import',
+        links: [
+          {
+            href: '/dashboard/admin/import-sources',
+            text: 'Import sources (admin)',
+          },
+        ],
         customDetails: { importSourceId, runId, error: errorMessage },
       });
     } catch {
