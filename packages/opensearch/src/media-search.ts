@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { type OsMsearchItem, type OsQuery, osSearch } from './client';
 
 // Hybrid search over the unified `lc_media_v1` index. Fuses three signals with
-// OpenSearch's `hybrid` query + the RRF score-ranker search pipeline:
+// OpenSearch's `hybrid` query + the score-normalization search pipeline:
 //
 //   1. BM25 lexical — title/description/summary/channelName + nested
 //      `paragraphs.text` (the latter surfaces matched paragraphs via inner_hits
@@ -13,10 +13,12 @@ import { type OsMsearchItem, type OsQuery, osSearch } from './client';
 //      (which moment in the video matches — surfaced via inner_hits `para_knn`,
 //      with `expand_nested_docs` so multiple paragraphs per video come back).
 //
-// The three sub-query result lists are merged by Reciprocal Rank Fusion in the
-// `RRF_PIPELINE` search pipeline (created in mappings.ts), so a hit that only
-// the paragraph-kNN found (e.g. "love tank" → a paragraph about a "love cup")
-// still ranks even though BM25 missed it entirely.
+// The three sub-query score lists are fused in the `RRF_PIPELINE` search pipeline
+// (created in mappings.ts) — min_max normalization + a weighted mean that favors
+// the lexical signal, so a hit that only the paragraph-kNN found still ranks,
+// while a decisive lexical/phrase match isn't flattened away (it replaced plain
+// RRF, which fused by rank and discarded magnitude). See
+// docs/search-ranking-tuning.md.
 //
 // The query vector is a single request-time embedding of the user query with
 // the same model the index was built with (text-embedding-3-small, 1536 dims).
@@ -33,7 +35,8 @@ export const MEDIA_INDEX = 'lc_media_v1';
 // identity suggestions (see suggestSpeakersByEmbedding).
 export const SPEAKER_VECTOR_INDEX = 'lc_speaker_vectors';
 
-// Search pipeline (PUT in mappings.ts) that RRF-fuses the hybrid sub-queries.
+// Search pipeline (PUT in mappings.ts) that normalizes + weight-fuses the hybrid
+// sub-queries. Id kept as `lc-media-rrf` though it no longer uses RRF.
 export const RRF_PIPELINE = 'lc-media-rrf';
 
 // inner_hits names must be unique across all hybrid sub-queries in one request.
@@ -147,8 +150,14 @@ export type BuildMediaSearchArgs = {
    * tolerates a field sort — it still normalizes, then OpenSearch reorders.
    */
   sort?: unknown;
-  /** Max paragraph snippets returned per sub-query per hit. */
+  /** Max paragraph snippets returned by the BM25 sub-query per hit (the lexical
+   * matches — i.e. the highlighted "matching paragraphs" the UI lists). */
   innerHitsSize?: number;
+  /** Max paragraph snippets returned by the paragraph-kNN sub-query per hit.
+   * Defaults to `innerHitsSize`. Kept smaller for the results UI (its job is the
+   * best semantic *moment*, not an exhaustive list) so "show more" isn't padded
+   * with unhighlighted semantic neighbors. */
+  knnInnerHitsSize?: number;
   /**
    * Wrap BM25 snippet matches in `<mark>` highlight tags. The results UI needs
    * this; the agent does not (its context text comes from the DB, not the
@@ -200,6 +209,7 @@ export function buildMediaHybridBody({
   size = 20,
   sort,
   innerHitsSize = 3,
+  knnInnerHitsSize = innerHitsSize,
   highlight = true,
 }: BuildMediaSearchArgs): OsMsearchItem {
   const trimmed = lexicalText.trim();
@@ -252,26 +262,68 @@ export function buildMediaHybridBody({
     {
       nested: {
         path: 'paragraphs',
-        query: scopeToSpeaker({ match: { 'paragraphs.text': trimmed } }),
-        score_mode: 'avg',
+        // Require a paragraph to match a fraction of the query terms before it
+        // counts as a match — `match` is OR over tokens, so otherwise any
+        // paragraph containing a single common word ("of", "the") qualifies and
+        // floods the snippet list with irrelevant matches. The combined
+        // `2<70%` rule requires ALL terms for 1–2 word queries (a bare percent
+        // would floor to 1 and let single-token matches back in) and scales to
+        // 70% for longer queries (5 words → 3, 10 → 7). Note: stopwords count
+        // toward the total, so it's an approximation of content-word overlap.
+        query: scopeToSpeaker({
+          match: {
+            'paragraphs.text': {
+              query: trimmed,
+              minimum_should_match: '2<70%',
+            },
+          },
+        }),
+        // Score the doc by its single best-matching paragraph, not the average:
+        // a video with one paragraph that nails the query shouldn't be diluted
+        // by its many other, weakly-matching paragraphs.
+        score_mode: 'max',
         inner_hits: paragraphInnerHits(PARA_BM25, innerHitsSize, highlight),
       },
     },
   ];
-  for (const quote of quotes) {
-    const q = quote.trim();
-    if (!q) continue;
-    lexicalShould.push({ match_phrase: { title: { query: q, boost: 3 } } });
+
+  // Phrase-proximity boost: reward a CONSECUTIVE (or near-consecutive) match of
+  // the phrase in the title or a paragraph, so an exact phrase outscores docs
+  // that merely scatter the same words. This is only a BM25 boost — RRF then
+  // fuses it with the two semantic signals, so a strong phrase match rises but
+  // isn't force-ranked to the top. Applied to each explicit quoted phrase
+  // (exact, strongest boost — the user opted in); and, when the query is
+  // unquoted and multi-word, to the whole query as an implicit phrase with a
+  // little slop to tolerate minor gaps / filler words.
+  const addPhraseBoost = (
+    phrase: string,
+    titleBoost: number,
+    paraBoost: number,
+    slop: number,
+  ) => {
+    const p = phrase.trim();
+    if (!p) return;
+    lexicalShould.push({
+      match_phrase: { title: { query: p, boost: titleBoost, slop } },
+    });
     lexicalShould.push({
       nested: {
         path: 'paragraphs',
         query: scopeToSpeaker({
-          match_phrase: { 'paragraphs.text': { query: q, boost: 2 } },
+          match_phrase: {
+            'paragraphs.text': { query: p, boost: paraBoost, slop },
+          },
         }),
         score_mode: 'max',
       },
     });
+  };
+  if (quotes.length > 0) {
+    for (const quote of quotes) addPhraseBoost(quote, 3, 2, 0);
+  } else if (trimmed.split(/\s+/).filter(Boolean).length >= 2) {
+    addPhraseBoost(trimmed, 2, 1.5, 2);
   }
+
   const bm25Query: OsQuery = {
     bool: { filter, should: lexicalShould, minimum_should_match: 1 },
   };
@@ -310,7 +362,7 @@ export function buildMediaHybridBody({
               },
             },
             score_mode: 'max',
-            inner_hits: paragraphInnerHits(PARA_KNN, innerHitsSize, false),
+            inner_hits: paragraphInnerHits(PARA_KNN, knnInnerHitsSize, false),
           },
         },
       ],
@@ -520,6 +572,70 @@ export async function runMediaKnnProbe({
     },
   });
   return KnnProbeResponseSchema.parse(raw).hits.hits[0]?._score ?? null;
+}
+
+/**
+ * Whether the query has a *specific* lexical match in the (access-filtered)
+ * library: it overlaps a title, or appears verbatim as a phrase in a transcript.
+ * Used as a second-chance override on the semantic relevance gate — a rare,
+ * distinctive word ("colabor") that IS a chapter title can sit below the kNN
+ * cosine floor (it's semantically isolated) and get wrongly suppressed. A title
+ * or exact-phrase hit means the query genuinely exists in the library, so the
+ * results shouldn't be gated off. Deliberately strict (title overlap OR exact
+ * phrase, not a loose OR-token match) so common-word/off-topic queries — which
+ * the floor SHOULD suppress — don't slip through. BM25-only, size 0; cheap.
+ */
+export async function hasStrongLexicalMatch({
+  lexicalText,
+  channelIds,
+  publishedAt,
+  bibleRefs,
+  bibleBooks,
+  speakers,
+  uploadIds,
+}: {
+  lexicalText: string;
+  channelIds?: string[] | null;
+  publishedAt?: PublishedAtRange | null;
+  bibleRefs?: string[] | null;
+  bibleBooks?: string[] | null;
+  speakers?: string[] | null;
+  uploadIds?: string[] | null;
+}): Promise<boolean> {
+  const q = lexicalText.trim();
+  if (!q) return false;
+  const filter = buildFilter(
+    channelIds,
+    publishedAt,
+    bibleRefs,
+    bibleBooks,
+    speakers,
+    uploadIds,
+  );
+  const raw = await osSearch({
+    index: MEDIA_INDEX,
+    size: 0,
+    track_total_hits: 1,
+    _source: false,
+    query: {
+      bool: {
+        filter,
+        should: [
+          // The query overlaps a title (a navigational / title-word match).
+          { match: { title: { query: q, minimum_should_match: '2<70%' } } },
+          // The whole query appears verbatim in a transcript paragraph.
+          {
+            nested: {
+              path: 'paragraphs',
+              query: { match_phrase: { 'paragraphs.text': q } },
+            },
+          },
+        ],
+        minimum_should_match: 1,
+      },
+    },
+  });
+  return MediaSearchResponseSchema.parse(raw).hits.total.value > 0;
 }
 
 // Collapsed hit shape for the speaker-suggestion kNN over `lc_speaker_vectors`.
@@ -770,13 +886,18 @@ export type MediaSegment = {
 
 /**
  * Merge the BM25 and kNN paragraph inner_hits for one media hit into a single
- * ordered, de-duplicated snippet list. Prefers the highlighted BM25 text when
- * the same paragraph surfaced from both signals. Times are converted from
- * seconds (index) to milliseconds (UI contract).
+ * de-duplicated snippet list. Prefers the highlighted BM25 text when the same
+ * paragraph surfaced from both signals. Times are converted from seconds (index)
+ * to milliseconds (UI contract).
+ *
+ * Ordering: the single strongest match leads (the top BM25 inner hit, else the
+ * top kNN — OpenSearch returns inner hits in score order, so `hits[0]` is best),
+ * then the remaining matched paragraphs in chronological order so they read like
+ * a timeline. The UI shows the lead and tucks the rest behind "show more".
  */
 export function mergeParagraphSnippets(
   hit: MediaHit,
-  limit = 10,
+  limit = 25,
 ): MediaSegment[] {
   const byKey = new Map<string, MediaSegment>();
 
@@ -807,9 +928,19 @@ export function mergeParagraphSnippets(
   ingest(hit.inner_hits?.[PARA_BM25], true);
   ingest(hit.inner_hits?.[PARA_KNN], false);
 
-  return Array.from(byKey.values())
-    .sort((a, b) => a.start - b.start)
-    .slice(0, limit);
+  // The strongest match leads; the rest follow in chronological order. The key
+  // is `${start}:${end}` in raw index seconds (see `ingest`), matching the
+  // top inner hit's source times.
+  const topMatch =
+    hit.inner_hits?.[PARA_BM25]?.hits.hits[0]?._source ??
+    hit.inner_hits?.[PARA_KNN]?.hits.hits[0]?._source;
+  const lead = topMatch ? byKey.get(`${topMatch.start}:${topMatch.end}`) : null;
+
+  const rest = Array.from(byKey.values())
+    .filter((seg) => seg !== lead)
+    .sort((a, b) => a.start - b.start);
+
+  return (lead ? [lead, ...rest] : rest).slice(0, limit);
 }
 
 /**

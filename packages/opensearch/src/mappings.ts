@@ -351,11 +351,24 @@ await client.transport.request({
   method: 'PUT',
   path: `/_search/pipeline/${RRF_PIPELINE}`,
   body: {
-    description: 'Reciprocal Rank Fusion for lc_media_v1 hybrid search',
+    description:
+      'Min-max normalized, weighted fusion for lc_media_v1 hybrid search',
     phase_results_processors: [
       {
-        'score-ranker-processor': {
-          combination: { technique: 'rrf', rank_constant: 60 },
+        // Score-normalized fusion instead of plain RRF: RRF fuses by RANK and
+        // discards magnitude, so a much stronger lexical match reads the same as
+        // a marginal one and loses to a semantically-broad result. min_max
+        // normalizes each sub-query's scores to [0,1], then we take a WEIGHTED
+        // arithmetic mean — so a decisive lexical win carries through, and we can
+        // bias toward the lexical signal. Weights map to the hybrid sub-queries
+        // in order: [BM25 lexical, doc-kNN (summary), paragraph-kNN]. Lexical is
+        // weighted highest so exact/phrase matches rank where users expect.
+        'normalization-processor': {
+          normalization: { technique: 'min_max' },
+          combination: {
+            technique: 'arithmetic_mean',
+            parameters: { weights: [0.5, 0.25, 0.25] },
+          },
         },
       },
     ],

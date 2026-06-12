@@ -1,5 +1,6 @@
 import { db, SearchLogEntry, UploadView } from '@letschurch/db';
 import {
+  hasStrongLexicalMatch,
   type MediaSegment,
   MSearchResponseSchema,
   mergeParagraphSnippets,
@@ -958,6 +959,11 @@ export const searchProcedures = {
           from: cursor,
           size: limit,
           sort: hybridSort,
+          // Surface (nearly) all of a video's lexical matches under "show more",
+          // while keeping the semantic-kNN snippets to just the best moments so
+          // the list isn't padded with unhighlighted neighbors.
+          innerHitsSize: 25,
+          knnInnerHitsSize: 3,
         }),
         // All facet lists (channels, speakers, verses, years) with leave-one-out
         // scoping: each facet drops its OWN selection but respects the others, so
@@ -1002,16 +1008,34 @@ export const searchProcedures = {
       // RRF list is just semantically-vague noise — drop the media results
       // (channels carousel still shows). Null probe → treat as relevant.
       const topCosine = probeScore == null ? null : 2 * probeScore - 1;
-      const relevant =
+      let relevant =
         topCosine == null || topCosine >= RESULTS_RELEVANCE_COSINE_FLOOR;
       if (!relevant) {
+        // Second chance: a distinctive lexical match (a title-word overlap or an
+        // exact transcript phrase) means the query genuinely exists in the
+        // library even though it's semantically isolated — e.g. "colabor" is a
+        // chapter title but sits below the cosine floor. Don't suppress those.
+        const lexicalHit = await hasStrongLexicalMatch({
+          lexicalText: q,
+          channelIds,
+          publishedAt,
+          bibleRefs,
+          bibleBooks,
+          speakers,
+        }).catch(() => false);
+        if (lexicalHit) relevant = true;
         moduleLogger.info(
-          { context: { query: q, cosine: topCosine } },
-          'Hybrid results gated off (below relevance floor)',
+          { context: { query: q, cosine: topCosine, lexicalHit } },
+          lexicalHit
+            ? 'Below cosine floor but kept (strong lexical match)'
+            : 'Hybrid results gated off (below relevance floor)',
         );
       }
 
       const mediaCount = relevant ? hybrid.total : 0;
+      // Ranking (incl. the phrase-proximity boost for quoted + multi-word
+      // queries) lives entirely in the OpenSearch hybrid query — no Node-side
+      // re-rank — so the order here is already final.
       const gatedHits = relevant ? hybrid.hits : [];
       const uploadIds = gatedHits.map((h) => h._id);
 
