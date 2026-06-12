@@ -6,6 +6,7 @@ type LcTooltipProps = {
   // instead of wrapping `children` in the default trigger button.
   children?: ReactNode;
   content: ReactNode;
+  delay?: ComponentProps<typeof Tooltip.Root>['delay'];
   side?: ComponentProps<typeof Tooltip.Positioner>['side'];
   sideOffset?: number;
   render?: ComponentProps<typeof Tooltip.Trigger>['render'];
@@ -14,12 +15,13 @@ type LcTooltipProps = {
 export function LcTooltip({
   children,
   content,
+  delay,
   side = 'top',
   sideOffset = 8,
   render,
 }: LcTooltipProps) {
   return (
-    <Tooltip.Root>
+    <Tooltip.Root delay={delay}>
       <Tooltip.Trigger render={render}>{children}</Tooltip.Trigger>
       <Tooltip.Portal>
         <Tooltip.Positioner

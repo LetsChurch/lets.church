@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from '@tanstack/react-router';
 import { cva, type VariantProps } from 'class-variance-authority';
 import type { FormEvent } from 'react';
 import { useRef } from 'react';
+import { InfoTip } from '@/components/info-tip';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import {
   useAddRecentSearch,
@@ -93,6 +94,27 @@ const searchBarIconVariants = cva('', {
     variant: 'default',
   },
 });
+
+// Explains the three ways to use the bar, shown from the (?) trigger beside it.
+const SEARCH_HELP = (
+  <div className="max-w-64 space-y-1.5 font-normal text-xs leading-relaxed">
+    <p className="font-semibold">How to search</p>
+    <ul className="list-disc space-y-1 pl-4 marker:text-primary/40">
+      <li>
+        <span className="font-semibold">Ask a question</span> (e.g. “What is
+        sanctification?”)
+      </li>
+      <li>
+        <span className="font-semibold">Type keywords</span> to search titles,
+        descriptions, and transcripts
+      </li>
+      <li>
+        Wrap text in <span className="font-semibold">quotes</span> to match an
+        exact phrase
+      </li>
+    </ul>
+  </div>
+);
 
 type Channel = {
   id: string;
@@ -199,47 +221,54 @@ export default function SearchBar({
       defaultValue={defaultValue}
       items={searchQueries}
     >
-      <form
-        ref={formRef}
-        onSubmit={handleSubmit}
-        className={cn(searchBarFormVariants({ variant }), className)}
-      >
-        <div className="min-w-0 flex-1 px-1 pb-0.5">
-          <Autocomplete.Input
-            name="q"
-            type="search"
-            placeholder={placeholder}
-            className={searchBarInputVariants({ variant })}
-          />
-        </div>
-        <div className="flex shrink-0 items-center gap-0">
-          <Autocomplete.Clear
-            onClick={handleClear}
-            className={searchBarButtonVariants({ variant, isActive: false })}
-            aria-label="Clear search"
-          >
-            <IconX size={24} />
-          </Autocomplete.Clear>
-          <Autocomplete.Value>
-            {(value) =>
-              value ? null : (
-                <button
-                  type="submit"
-                  className="flex size-8 items-center justify-center rounded-full transition-colors hover:bg-white/10"
-                >
-                  <IconSearch
-                    size={24}
-                    className={cn(
-                      'opacity-50',
-                      searchBarIconVariants({ variant }),
-                    )}
-                  />
-                </button>
-              )
-            }
-          </Autocomplete.Value>
-        </div>
-      </form>
+      <div className={cn('flex w-full items-center gap-1.5', className)}>
+        <form
+          ref={formRef}
+          onSubmit={handleSubmit}
+          className={cn(searchBarFormVariants({ variant }), 'min-w-0 flex-1')}
+        >
+          <div className="min-w-0 flex-1 px-1 pb-0.5">
+            <Autocomplete.Input
+              name="q"
+              type="search"
+              placeholder={placeholder}
+              className={searchBarInputVariants({ variant })}
+            />
+          </div>
+          <div className="flex shrink-0 items-center gap-0">
+            <Autocomplete.Clear
+              onClick={handleClear}
+              className={searchBarButtonVariants({ variant, isActive: false })}
+              aria-label="Clear search"
+            >
+              <IconX size={24} />
+            </Autocomplete.Clear>
+            <Autocomplete.Value>
+              {(value) =>
+                value ? null : (
+                  <button
+                    type="submit"
+                    className="flex size-8 items-center justify-center rounded-full transition-colors hover:bg-white/10"
+                  >
+                    <IconSearch
+                      size={24}
+                      className={cn(
+                        'opacity-50',
+                        searchBarIconVariants({ variant }),
+                      )}
+                    />
+                  </button>
+                )
+              }
+            </Autocomplete.Value>
+          </div>
+        </form>
+        <InfoTip
+          content={SEARCH_HELP}
+          label="How search works"
+          className={variant === 'light' ? 'text-white' : undefined}
+        />
+      </div>
 
       <Autocomplete.Portal>
         <Autocomplete.Positioner
