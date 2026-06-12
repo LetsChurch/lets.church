@@ -7,7 +7,7 @@ import {
 import { useLocation, useNavigate } from '@tanstack/react-router';
 import { cva, type VariantProps } from 'class-variance-authority';
 import type { FormEvent } from 'react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import {
   useAddRecentSearch,
@@ -137,6 +137,7 @@ export default function SearchBar({
   const isLoggedIn = useIsLoggedIn();
   const isOnSearchPage = location.pathname === '/search';
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const { data: recentSearches = [] } = useRecentSearches();
   const { addSearch } = useAddRecentSearch();
@@ -210,6 +211,7 @@ export default function SearchBar({
   return (
     <Autocomplete.Root defaultValue={defaultValue} items={searchQueries}>
       <form
+        ref={formRef}
         onSubmit={handleSubmit}
         className={cn(searchBarFormVariants({ variant }), className)}
       >
@@ -269,13 +271,14 @@ export default function SearchBar({
 
       <Autocomplete.Portal>
         <Autocomplete.Positioner
+          anchor={formRef}
           sideOffset={8}
           className="z-50 data-empty:hidden"
         >
           <Autocomplete.Popup
             className={cn(
-              'hidden overflow-hidden rounded-2xl border border-white/10 bg-black/90 shadow-xl backdrop-blur-lg sm:block',
-              'min-w-(--anchor-width)',
+              'hidden overflow-hidden rounded-2xl border border-gray-950/10 bg-white/90 shadow-xl backdrop-blur-lg sm:block dark:border-white/10 dark:bg-black/90',
+              'w-(--anchor-width)',
             )}
           >
             <Autocomplete.List className="py-2">
@@ -284,15 +287,15 @@ export default function SearchBar({
                   key={search}
                   value={search}
                   onClick={() => handleItemClick(search)}
-                  className="cursor-pointer px-4 py-2.5 text-primary/80 text-sm outline-none transition-colors hover:bg-white/10 hover:text-primary data-highlighted:bg-white/10 data-highlighted:text-primary"
+                  className="cursor-pointer px-4 py-2.5 text-primary/80 text-sm outline-none transition-colors hover:bg-gray-950/5 hover:text-primary data-highlighted:bg-gray-950/5 data-highlighted:text-primary dark:data-highlighted:bg-white/10 dark:hover:bg-white/10"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
                       <IconSearch
                         size={16}
-                        className="text-primary opacity-50"
+                        className="shrink-0 text-primary opacity-50"
                       />
-                      <span>{search}</span>
+                      <span className="truncate">{search}</span>
                     </div>
                     {isLoggedIn ? (
                       <button
