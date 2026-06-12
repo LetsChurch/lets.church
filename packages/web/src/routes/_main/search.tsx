@@ -35,6 +35,7 @@ import {
 } from '@/hooks/use-recent-searches';
 import { useTRPC } from '@/trpc/react';
 import { formatTime } from '@/util/format';
+import { joinAdjacentMarks } from '@/util/highlight';
 
 type TranscriptSegment = {
   start: number;
@@ -723,7 +724,7 @@ function SegmentPreview({
       <div
         className="[&_mark]:-my-0.5 [&_mark]:-mx-1 text-primary/80 text-sm [&_mark]:rounded-sm [&_mark]:bg-orange-400/40 [&_mark]:px-1 [&_mark]:py-0.5 [&_mark]:text-primary"
         // biome-ignore lint/security/noDangerouslySetInnerHtml: escaped ElasticSearch output
-        dangerouslySetInnerHTML={{ __html: segment.text }}
+        dangerouslySetInnerHTML={{ __html: joinAdjacentMarks(segment.text) }}
       />
     </MediaPreviewTarget>
   );
