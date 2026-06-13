@@ -11,6 +11,7 @@ import {
   runMediaFacets,
   runMediaHybridSearch,
   runMediaKnnProbe,
+  suggestMediaPalette,
 } from '@letschurch/opensearch';
 import { publicS3 } from '@letschurch/s3/public';
 import {
@@ -22,7 +23,8 @@ import { and, count, eq, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { IncomingIdSchema, OutgoingIdSchema } from '@/schemas/common';
 import { appAvatarSm2x, appAvatarXs2x } from '@/util/avatar-sizes';
-import { formatVerseRef } from '@/util/bible-url';
+import { bibleBookName, formatVerseRef } from '@/util/bible-url';
+import { facetMatchScore } from '@/util/facet-score';
 import logger from '@/util/logger';
 import { isChannelRoutable } from '@/util/media-visibility';
 import { getPublicImageUrl } from '@/util/server-env';
@@ -160,6 +162,67 @@ async function hydrateChannelsForDisplay(channelIds: string[]) {
           })
         : null,
     }));
+}
+
+// Hydrate channel-facet buckets (channelId + count) into display rows for the
+// command-palette facet column — keeps the count joined (unlike
+// hydrateChannelsForDisplay, which drops the internal id). Public + approved only.
+async function hydrateFacetChannels(
+  buckets: Array<{ key: string; count: number }>,
+): Promise<
+  Array<{ slug: string; name: string; count: number; avatarUrl: string | null }>
+> {
+  if (buckets.length === 0) return [];
+  const dbChannels = await db.query.Channel.findMany({
+    where: (t, { inArray: inArr, eq: eqOp, and: andOp, isNotNull, isNull }) =>
+      andOp(
+        inArr(
+          t.id,
+          buckets.map((b) => b.key),
+        ),
+        eqOp(t.visibility, 'PUBLIC'),
+        isNotNull(t.approvedAt),
+        isNull(t.deletedAt),
+      ),
+    columns: { id: true, name: true, slug: true, avatarPath: true },
+  });
+  const byId = new Map(dbChannels.map((c) => [c.id, c]));
+  return buckets
+    .map((b) => {
+      const c = byId.get(b.key);
+      if (!c) return null;
+      return {
+        slug: c.slug,
+        name: c.name,
+        count: b.count,
+        avatarUrl: c.avatarPath
+          ? getPublicImageUrl(publicS3.getS3ProtocolUri(c.avatarPath), {
+              resize: appAvatarXs2x,
+            })
+          : null,
+      };
+    })
+    .filter((c): c is NonNullable<typeof c> => Boolean(c));
+}
+
+// Float facet rows whose label matches the typed query to the top — exact match
+// first, then full-substring, then per-token overlap — while preserving the
+// aggregation's native order (doc_count- or date-desc) for everything else via a
+// stable sort. So typing a specific reference like "matthew 10:8" surfaces that
+// exact verse even when other buckets share or exceed its doc_count. This is a
+// small display-layer reorder of a handful of facet labels against free text
+// (which terms aggregations can't express), not the media result ranking.
+function rankFacetsByQuery<T>(
+  rows: T[],
+  query: string,
+  getLabel: (row: T) => string,
+): T[] {
+  if (!query.trim()) return rows;
+  // Stable sort, so equal-score rows keep their input (doc_count/date) order.
+  return [...rows].sort(
+    (a, b) =>
+      facetMatchScore(getLabel(b), query) - facetMatchScore(getLabel(a), query),
+  );
 }
 
 // Convert provided channel slugs to internal UUIDs (public + approved only).
@@ -1254,6 +1317,91 @@ export const searchProcedures = {
           dateLabel: parsed.dateLabel,
         },
       };
+    }),
+
+  // Powers the whole search-bar command palette from ONE OpenSearch query (see
+  // `suggestMediaPalette`): left-column title suggestions + right-column facets
+  // (channels / speakers / books / verses / years). Public, so logged-out users
+  // get it too. Best-effort: any failure resolves to empty so the bar never
+  // breaks. (Popular/trending queries — a moderated, hourly-generated list — will
+  // slot in here later for the empty-`q` zero-state; see docs/search-scaling-guide.md.)
+  suggest: publicProcedure
+    .input(z.object({ q: z.string() }))
+    .query(async ({ input }) => {
+      const empty = {
+        titles: [],
+        channels: [],
+        speakers: [],
+        books: [],
+        verses: [],
+        years: [],
+      };
+      const trimmed = input.q.trim();
+      if (!trimmed) return empty;
+
+      try {
+        // Over-fetch (perGroup) so the relevance reorder has candidates beyond the
+        // top-by-count; rank against the typed query, then trim to the display cap.
+        const palette = await suggestMediaPalette({
+          query: trimmed,
+          titleSize: 6,
+          perGroup: 15,
+        });
+        const cap = 6;
+        // Single batched Postgres read resolves all channel buckets to slug/name/avatar.
+        const channels = rankFacetsByQuery(
+          await hydrateFacetChannels(palette.channels),
+          trimmed,
+          (c) => c.name,
+        ).slice(0, cap);
+        const speakers = rankFacetsByQuery(
+          palette.speakers.map((b) => ({ name: b.key, count: b.count })),
+          trimmed,
+          (s) => s.name,
+        ).slice(0, cap);
+        const books = rankFacetsByQuery(
+          palette.books.map((b) => ({
+            book: b.key,
+            label: bibleBookName(b.key),
+            count: b.count,
+          })),
+          trimmed,
+          (b) => b.label,
+        ).slice(0, cap);
+        const verses = rankFacetsByQuery(
+          palette.verses.map((b) => ({
+            ref: b.key,
+            label: formatVerseRef(b.key),
+            count: b.count,
+          })),
+          trimmed,
+          (v) => v.label,
+        ).slice(0, cap);
+        const years = rankFacetsByQuery(
+          palette.years.map((y) => ({ year: y.year, count: y.count })),
+          trimmed,
+          (y) => y.year,
+        ).slice(0, cap);
+        return {
+          titles: palette.titles,
+          channels,
+          speakers,
+          books,
+          verses,
+          years,
+        };
+      } catch (err) {
+        moduleLogger.warn(
+          {
+            context: {
+              error: err instanceof Error ? err.message : String(err),
+              q: trimmed,
+            },
+          },
+          'Search suggestions failed',
+        );
+        return empty;
+      }
     }),
 
   getRecentSearches: authProcedure.query(async ({ ctx }) => {

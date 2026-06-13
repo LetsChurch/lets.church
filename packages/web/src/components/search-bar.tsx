@@ -1,9 +1,9 @@
 import { Autocomplete } from '@base-ui-components/react/autocomplete';
-import { IconSearch, IconX } from '@tabler/icons-react';
+import { IconHistory, IconSearch, IconX } from '@tabler/icons-react';
 import { useLocation, useNavigate } from '@tanstack/react-router';
 import { cva, type VariantProps } from 'class-variance-authority';
 import type { FormEvent } from 'react';
-import { useRef } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { InfoTip } from '@/components/info-tip';
 import { useIsLoggedIn } from '@/hooks/use-is-logged-in';
 import {
@@ -11,7 +11,34 @@ import {
   useDeleteRecentSearch,
   useRecentSearches,
 } from '@/hooks/use-recent-searches';
+import { useSearchPalette } from '@/hooks/use-search-palette';
+import { $lastSearchQuery } from '@/stores/search-query';
 import { cn } from '@/util/cn';
+import { facetMatchScore } from '@/util/facet-score';
+
+// A row in the dropdown: the user's own recent searches plus corpus-derived
+// entity suggestions (real titles / channel names). `sectionLabel` is set on the
+// first item of a section so the render can emit a heading above it.
+type SearchItem = {
+  value: string;
+  label: string;
+  // 'search' is the always-present primary action ("Search for <query>").
+  kind: 'search' | 'recent' | 'title';
+  sectionLabel?: string;
+};
+
+// A clickable facet row in the right column. `onClick` runs the search with this
+// facet selected. Shares `value`/`label` with SearchItem so both can register as
+// Autocomplete options (keyboard-navigable across both columns).
+type FacetRow = {
+  value: string;
+  label: string;
+  count: number;
+  avatarUrl: string | null;
+  onClick: () => void;
+};
+
+type PaletteItem = SearchItem | FacetRow;
 
 // Form container variants
 const searchBarFormVariants = cva(
@@ -131,9 +158,21 @@ type SearchProps = {
   availableChannels?: Channel[];
 } & VariantProps<typeof searchBarFormVariants>;
 
+// Score a facet group by how well its best (already relevance-sorted, server-side)
+// row matches the query — exact > full-substring > token overlap — so the most
+// relevant GROUP leads (e.g. Verses for "matthew 10:8", Channels for an exact
+// channel name). Mirrors the per-row scoring in trpc/procedures/search.ts
+// `rankFacetsByQuery`.
+function facetGroupScore(
+  group: { rows: Array<{ label: string }> },
+  query: string,
+): number {
+  const top = group.rows[0];
+  return top ? facetMatchScore(top.label, query) : 0;
+}
+
 export default function SearchBar({
-  // placeholder = 'Search or ask anything...', // TODO
-  placeholder = 'Search anything...',
+  placeholder = 'Search or ask anything...',
   className,
   defaultValue,
   channelSlug,
@@ -144,13 +183,199 @@ export default function SearchBar({
   const isLoggedIn = useIsLoggedIn();
   const isOnSearchPage = location.pathname === '/search';
   const formRef = useRef<HTMLFormElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
   const { data: recentSearches = [] } = useRecentSearches();
   const { addSearch } = useAddRecentSearch();
   const deleteSearchMutation = useDeleteRecentSearch();
 
-  // Extract just the query strings for the autocomplete
-  const searchQueries = recentSearches.map((s) => s.query);
+  // Track the live input text (uncontrolled input + listener) and whether the
+  // user has the bar focused/open. The whole palette only appears once there's
+  // typed text — no empty zero-state — so both columns and their fetches are
+  // gated on `paletteActive`.
+  // Seeded from the persisted last query so the bar isn't empty on non-search
+  // pages (the header remounts per route); the /search URL still wins when present.
+  const [inputValue, setInputValue] = useState(
+    defaultValue ?? $lastSearchQuery.get(),
+  );
+  const [openIntent, setOpenIntent] = useState(false);
+  const hasText = inputValue.trim().length > 0;
+  const paletteActive = openIntent && hasText;
+
+  // Keep the bar in sync across navigations (the header remounts per route). On
+  // /search the URL query is the source of truth — mirror it into the store so the
+  // bar shows the same query elsewhere (and clearing here clears it). Everywhere
+  // else, seed the bar from the last search. Also closes the palette on navigation.
+  useEffect(() => {
+    if (isOnSearchPage) {
+      $lastSearchQuery.set(defaultValue ?? '');
+      setInputValue(defaultValue ?? '');
+    } else {
+      setInputValue($lastSearchQuery.get());
+    }
+    setOpenIntent(false);
+  }, [defaultValue, isOnSearchPage]);
+
+  // One query feeds the whole palette: titles (left) + facets (right).
+  const palette = useSearchPalette(inputValue, paletteActive);
+  const suggestions = palette.titles;
+  const facets = palette;
+
+  // LEFT column — always leads with a primary "Search for <query>" action so the
+  // column is never empty, then the user's recent searches and corpus suggestions.
+  // Filtering is done here (the Autocomplete runs in `mode="none"`): recent
+  // searches are substring-filtered against the input; suggestions arrive already
+  // prefix-matched. The literal query is dropped from recent/suggestions since the
+  // primary row already covers it. Recent wins on exact-text collisions.
+  const trimmedQuery = inputValue.trim();
+  const lowerInput = trimmedQuery.toLowerCase();
+  const searchItem: SearchItem = {
+    value: trimmedQuery,
+    label: trimmedQuery,
+    kind: 'search',
+  };
+  const recentItems: SearchItem[] = recentSearches
+    .map((s) => s.query)
+    .filter(
+      (q) =>
+        lowerInput !== '' &&
+        q.toLowerCase() !== lowerInput &&
+        q.toLowerCase().includes(lowerInput),
+    )
+    .map((q) => ({ value: q, label: q, kind: 'recent' }));
+  const recentSet = new Set(recentItems.map((r) => r.value.toLowerCase()));
+  // Title suggestions only — channels/scripture/etc. are in the right facet column.
+  const suggestionItems: SearchItem[] = suggestions
+    .filter(
+      (t) => t.toLowerCase() !== lowerInput && !recentSet.has(t.toLowerCase()),
+    )
+    .map((t) => ({ value: t, label: t, kind: 'title' as const }));
+
+  // Only label the sections when both are present — a lone group reads cleaner
+  // without a heading (matches the prior history-only behavior).
+  const bothSections = recentItems.length > 0 && suggestionItems.length > 0;
+  const items: SearchItem[] = [
+    searchItem,
+    ...recentItems.map((it, i) => ({
+      ...it,
+      sectionLabel: bothSections && i === 0 ? 'Recent' : undefined,
+    })),
+    ...suggestionItems.map((it, i) => ({
+      ...it,
+      sectionLabel: bothSections && i === 0 ? 'Suggestions' : undefined,
+    })),
+  ];
+
+  // Execute the search with the typed query plus one facet pre-selected. Keeps the
+  // bar's channel scope (if any), and records the query in recent searches.
+  const goToSearch = (extra: Record<string, unknown>) => {
+    const q = inputValue.trim();
+    if (isLoggedIn && q) {
+      addSearch(q);
+    }
+    navigate({
+      to: '/search',
+      search: {
+        q: q || undefined,
+        channelSlugs: channelSlug ? [channelSlug] : undefined,
+        ...extra,
+      },
+    });
+  };
+
+  // RIGHT column — facet groups; clicking a row runs the search with that facet.
+  const facetGroups: Array<{ title: string; rows: FacetRow[] }> = [
+    {
+      title: 'Channels',
+      rows: facets.channels.map((c) => ({
+        value: c.slug,
+        label: c.name,
+        count: c.count,
+        avatarUrl: c.avatarUrl,
+        onClick: () => goToSearch({ channelSlugs: [c.slug] }),
+      })),
+    },
+    {
+      title: 'Speakers',
+      rows: facets.speakers.map((s) => ({
+        value: s.name,
+        label: s.name,
+        count: s.count,
+        avatarUrl: null,
+        onClick: () => goToSearch({ speakers: [s.name] }),
+      })),
+    },
+    {
+      title: 'Scripture',
+      rows: facets.books.map((b) => ({
+        value: b.book,
+        label: b.label,
+        count: b.count,
+        avatarUrl: null,
+        onClick: () => goToSearch({ bibleBooks: [b.book] }),
+      })),
+    },
+    {
+      title: 'Verses',
+      rows: facets.verses.map((v) => ({
+        value: v.ref,
+        label: v.label,
+        count: v.count,
+        avatarUrl: null,
+        onClick: () => goToSearch({ bibleRefs: [v.ref] }),
+      })),
+    },
+    {
+      title: 'Year',
+      rows: facets.years.map((y) => ({
+        value: y.year,
+        label: y.year,
+        count: y.count,
+        avatarUrl: null,
+        onClick: () =>
+          goToSearch({
+            dateStart: `${y.year}-01-01`,
+            dateEnd: `${y.year}-12-31`,
+          }),
+      })),
+    },
+  ].filter((g) => g.rows.length > 0);
+
+  // Order the groups by relevance to the query (stable: equal scores keep the
+  // default Channels → Speakers → Scripture → Verses → Year order).
+  facetGroups.sort(
+    (a, b) =>
+      facetGroupScore(b, trimmedQuery) - facetGroupScore(a, trimmedQuery),
+  );
+
+  const hasFacets = facetGroups.length > 0;
+  // Every rendered option (left suggestions + right facets) registered with the
+  // Autocomplete so keyboard navigation spans both columns.
+  const allItems: PaletteItem[] = [
+    ...items,
+    ...facetGroups.flatMap((g) => g.rows),
+  ];
+  // The popup is shown (controlled `open`) only when there's something to show,
+  // so a query with no results never flashes an empty box.
+  const isOpen = paletteActive && (items.length > 0 || hasFacets);
+  const twoCol = items.length > 0 && hasFacets;
+
+  // The enveloping panel renders inline (not in a dismiss-managing popup), so we
+  // close it ourselves on an outside click. (Escape is handled on the form, and a
+  // result click navigates away.) Closing on blur is intentionally avoided so
+  // interacting inside the panel — e.g. the delete-recent button — doesn't dismiss
+  // it mid-click.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onPointerDown = (e: MouseEvent) => {
+      // The whole palette (input row + mobile in-flow suggestions) lives inside
+      // wrapperRef, so a press anywhere inside it never dismisses.
+      if (wrapperRef.current?.contains(e.target as Node)) return;
+      setOpenIntent(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, [isOpen]);
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -212,109 +437,315 @@ export default function SearchBar({
   };
 
   return (
-    // Keyed on the query so the (uncontrolled) input re-syncs when `q` changes
-    // via navigation — clicking a suggested/recent search, or a filter that
-    // clears the query — not just on first mount. Typing doesn't change `q`, so
-    // it never remounts mid-entry.
-    <Autocomplete.Root
-      key={defaultValue ?? ''}
-      defaultValue={defaultValue}
-      items={searchQueries}
-    >
-      <div className={cn('flex w-full items-center gap-1.5', className)}>
-        <form
-          ref={formRef}
-          onSubmit={handleSubmit}
-          className={cn(searchBarFormVariants({ variant }), 'min-w-0 flex-1')}
-        >
-          <div className="min-w-0 flex-1 px-1 pb-0.5">
-            <Autocomplete.Input
-              name="q"
-              type="search"
-              placeholder={placeholder}
-              className={searchBarInputVariants({ variant })}
-            />
-          </div>
-          <div className="flex shrink-0 items-center gap-0">
-            <Autocomplete.Clear
-              onClick={handleClear}
-              className={searchBarButtonVariants({ variant, isActive: false })}
-              aria-label="Clear search"
-            >
-              <IconX size={24} />
-            </Autocomplete.Clear>
-            <Autocomplete.Value>
-              {(value) =>
-                value ? null : (
-                  <button
-                    type="submit"
-                    className="flex size-8 items-center justify-center rounded-full transition-colors hover:bg-white/10"
-                  >
-                    <IconSearch
-                      size={24}
-                      className={cn(
-                        'opacity-50',
-                        searchBarIconVariants({ variant }),
-                      )}
-                    />
-                  </button>
-                )
-              }
-            </Autocomplete.Value>
-          </div>
-        </form>
-        <InfoTip
-          content={SEARCH_HELP}
-          label="How search works"
-          className={variant === 'light' ? 'text-white' : undefined}
-        />
-      </div>
+    // The input is controlled by `inputValue` (seeded from the persisted last
+    // query / the /search URL, kept in sync by the effect above), so it shows the
+    // last search on every page rather than resetting when the header remounts.
+    <div ref={wrapperRef} className={cn('relative w-full', className)}>
+      <Autocomplete.Root
+        value={inputValue}
+        items={allItems}
+        // We filter/merge recent + suggestions ourselves, so disable the built-in
+        // list filtering and inline autocompletion.
+        mode="none"
+        itemToStringValue={(item: PaletteItem) => item.value}
+        open={isOpen}
+        onValueChange={(value) => setInputValue(value)}
+        // Only honor "open" from Base UI (focus/typing). Closing is driven by our
+        // outside-click / Escape / navigation handlers — otherwise Base UI's
+        // close-on-blur fires when a tap moves focus to a (mobile) suggestion
+        // button, unmounting it before the click lands.
+        onOpenChange={(nextOpen) => {
+          if (nextOpen) setOpenIntent(true);
+        }}
+      >
+        <div className="flex w-full items-center gap-1.5">
+          {/* Reserves the bar's footprint in the header flow while the palette is
+            popped out to an absolute panel (desktop only). */}
+          {isOpen ? (
+            <div aria-hidden className="hidden h-10 min-w-0 flex-1 sm:block" />
+          ) : null}
 
-      <Autocomplete.Portal>
-        <Autocomplete.Positioner
-          anchor={formRef}
-          sideOffset={8}
-          className="z-50 data-empty:hidden"
-        >
-          <Autocomplete.Popup
+          {/* The palette: a pill bar that, on desktop, envelopes into a single
+            panel holding the input AND the results when open. The input stays
+            mounted across the morph, so focus and value are preserved. */}
+          <div
             className={cn(
-              'hidden overflow-hidden rounded-2xl border border-gray-950/10 bg-white/90 shadow-xl backdrop-blur-lg sm:block dark:border-white/10 dark:bg-black/90',
-              'w-(--anchor-width)',
+              'min-w-0 flex-1',
+              isOpen &&
+                'sm:absolute sm:top-0 sm:left-0 sm:z-50 sm:flex sm:w-[680px] sm:max-w-[calc(100vw-2rem)] sm:flex-col sm:overflow-hidden sm:rounded-2xl sm:border sm:border-gray-950/10 sm:bg-white/90 sm:shadow-xl sm:backdrop-blur-lg sm:dark:border-white/10 sm:dark:bg-black/90',
             )}
           >
-            <Autocomplete.List className="py-2">
-              {(search) => (
-                <Autocomplete.Item
-                  key={search}
-                  value={search}
-                  onClick={() => handleItemClick(search)}
-                  className="cursor-pointer px-4 py-2.5 text-primary/80 text-sm outline-none transition-colors hover:bg-gray-950/5 hover:text-primary data-highlighted:bg-gray-950/5 data-highlighted:text-primary dark:data-highlighted:bg-white/10 dark:hover:bg-white/10"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <IconSearch
-                        size={16}
-                        className="shrink-0 text-primary opacity-50"
-                      />
-                      <span className="truncate">{search}</span>
-                    </div>
-                    {isLoggedIn ? (
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteSearch(e, search)}
-                        className="flex size-6 items-center justify-center text-primary/30 transition-colors hover:text-primary/60"
-                        aria-label={`Remove ${search}`}
-                      >
-                        <IconX size={14} />
-                      </button>
-                    ) : null}
-                  </div>
-                </Autocomplete.Item>
+            <form
+              ref={formRef}
+              onSubmit={handleSubmit}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setOpenIntent(false);
+              }}
+              className={cn(
+                searchBarFormVariants({ variant }),
+                'min-w-0',
+                // On desktop the input row sheds its pill chrome and becomes the
+                // top row of the enveloping panel (the panel provides bg/border).
+                // Background is neutralized in every state AND in dark mode — the
+                // pill's `dark:bg-white/10` would otherwise show as a separated light
+                // band on the dark panel.
+                isOpen &&
+                  'sm:rounded-none sm:border-0 sm:bg-transparent sm:shadow-none sm:backdrop-blur-none sm:hover:bg-transparent sm:focus-within:bg-transparent sm:focus-within:shadow-none sm:dark:bg-transparent sm:dark:hover:bg-transparent sm:dark:focus-within:bg-transparent',
               )}
-            </Autocomplete.List>
-          </Autocomplete.Popup>
-        </Autocomplete.Positioner>
-      </Autocomplete.Portal>
-    </Autocomplete.Root>
+            >
+              <div className="min-w-0 flex-1 px-1 pb-0.5">
+                <Autocomplete.Input
+                  name="q"
+                  type="search"
+                  placeholder={placeholder}
+                  onFocus={() => setOpenIntent(true)}
+                  className={cn(
+                    searchBarInputVariants({ variant }),
+                    // On the (light) open panel the `light` variant's white text is
+                    // invisible — force readable on-panel colors (desktop).
+                    isOpen &&
+                      'sm:text-primary sm:placeholder-gray-950/40 sm:dark:placeholder-white/40',
+                  )}
+                />
+              </div>
+              <div className="flex shrink-0 items-center gap-0">
+                <Autocomplete.Clear
+                  onClick={handleClear}
+                  className={cn(
+                    searchBarButtonVariants({ variant, isActive: false }),
+                    isOpen && 'sm:text-primary sm:hover:text-primary',
+                  )}
+                  aria-label="Clear search"
+                >
+                  <IconX size={24} />
+                </Autocomplete.Clear>
+                <Autocomplete.Value>
+                  {(value) =>
+                    value ? null : (
+                      <button
+                        type="submit"
+                        className="flex size-8 items-center justify-center rounded-full transition-colors hover:bg-white/10"
+                      >
+                        <IconSearch
+                          size={24}
+                          className={cn(
+                            'opacity-50',
+                            searchBarIconVariants({ variant }),
+                            isOpen && 'sm:text-primary',
+                          )}
+                        />
+                      </button>
+                    )
+                  }
+                </Autocomplete.Value>
+              </div>
+            </form>
+
+            {/* Results — desktop only, inside the enveloping panel. */}
+            {isOpen ? (
+              <div className="hidden border-gray-950/10 border-t sm:block dark:border-white/10">
+                <Autocomplete.List className="flex max-h-[60vh]">
+                  {/* LEFT — recent searches + corpus entity suggestions */}
+                  {items.length > 0 ? (
+                    <div
+                      className={cn(
+                        'overflow-y-auto py-2',
+                        twoCol
+                          ? 'w-1/2 border-gray-950/10 border-r dark:border-white/10'
+                          : 'w-full',
+                      )}
+                    >
+                      {items.map((item) => {
+                        const Icon =
+                          item.kind === 'recent' ? IconHistory : IconSearch;
+                        return (
+                          <Fragment key={`${item.kind}:${item.value}`}>
+                            {item.sectionLabel ? (
+                              <div className="px-4 pt-2 pb-1 font-medium text-primary/40 text-xs uppercase tracking-wide">
+                                {item.sectionLabel}
+                              </div>
+                            ) : null}
+                            <Autocomplete.Item
+                              value={item}
+                              onClick={() => handleItemClick(item.value)}
+                              className="cursor-pointer px-4 py-2.5 text-primary/80 text-sm outline-none transition-colors hover:bg-gray-950/5 hover:text-primary data-highlighted:bg-gray-950/5 data-highlighted:text-primary dark:data-highlighted:bg-white/10 dark:hover:bg-white/10"
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex min-w-0 items-center gap-3">
+                                  <Icon
+                                    size={16}
+                                    className="shrink-0 text-primary opacity-50"
+                                  />
+                                  {item.kind === 'search' ? (
+                                    <span className="truncate">
+                                      Search for{' '}
+                                      <span className="font-medium text-primary">
+                                        “{item.label}”
+                                      </span>
+                                    </span>
+                                  ) : (
+                                    <span className="truncate">
+                                      {item.label}
+                                    </span>
+                                  )}
+                                </div>
+                                {item.kind === 'recent' && isLoggedIn ? (
+                                  <button
+                                    type="button"
+                                    onClick={(e) =>
+                                      handleDeleteSearch(e, item.value)
+                                    }
+                                    className="flex size-6 items-center justify-center text-primary/30 transition-colors hover:text-primary/60"
+                                    aria-label={`Remove ${item.value}`}
+                                  >
+                                    <IconX size={14} />
+                                  </button>
+                                ) : null}
+                              </div>
+                            </Autocomplete.Item>
+                          </Fragment>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+
+                  {/* RIGHT — facets; clicking one runs the search with it selected */}
+                  {hasFacets ? (
+                    <div
+                      className={cn(
+                        'overflow-y-auto py-2',
+                        twoCol ? 'w-1/2' : 'w-full',
+                      )}
+                    >
+                      {facetGroups.map((group) => (
+                        <Autocomplete.Group key={group.title} className="mb-1">
+                          <Autocomplete.GroupLabel className="px-4 pt-2 pb-1 font-medium text-primary/40 text-xs uppercase tracking-wide">
+                            {group.title}
+                          </Autocomplete.GroupLabel>
+                          {group.rows.map((row) => (
+                            <Autocomplete.Item
+                              key={row.value}
+                              value={row}
+                              onClick={row.onClick}
+                              className="flex cursor-pointer items-center justify-between gap-3 px-4 py-1.5 text-primary/80 text-sm outline-none transition-colors hover:bg-gray-950/5 hover:text-primary data-highlighted:bg-gray-950/5 data-highlighted:text-primary dark:data-highlighted:bg-white/10 dark:hover:bg-white/10"
+                            >
+                              <span className="flex min-w-0 items-center gap-2">
+                                {row.avatarUrl ? (
+                                  <img
+                                    src={row.avatarUrl}
+                                    alt=""
+                                    className="size-5 shrink-0 rounded-full object-cover"
+                                  />
+                                ) : null}
+                                <span className="truncate">{row.label}</span>
+                              </span>
+                              <span className="shrink-0 text-primary/40 text-xs tabular-nums">
+                                {row.count}
+                              </span>
+                            </Autocomplete.Item>
+                          ))}
+                        </Autocomplete.Group>
+                      ))}
+                    </div>
+                  ) : null}
+                </Autocomplete.List>
+              </div>
+            ) : null}
+          </div>
+
+          {/* The help tip tucks away while the palette is open. */}
+          {isOpen ? null : (
+            <InfoTip
+              content={SEARCH_HELP}
+              label="How search works"
+              className={variant === 'light' ? 'text-white' : undefined}
+            />
+          )}
+        </div>
+      </Autocomplete.Root>
+
+      {/* Mobile palette — same suggestions + facets as the desktop panel, but
+          in-flow below the input (the desktop panel is sm-only). Rendered OUTSIDE
+          Autocomplete.Root so the combobox's pointer handling can't swallow taps,
+          and inside wrapperRef so the outside-click dismiss ignores taps in it. */}
+      {isOpen ? (
+        <div className="mt-2 max-h-[calc(100dvh-13rem)] overflow-y-auto overscroll-contain rounded-2xl border border-gray-950/10 bg-white py-2 shadow-lg sm:hidden dark:border-white/10 dark:bg-zinc-900">
+          {items.map((item) => {
+            const Icon = item.kind === 'recent' ? IconHistory : IconSearch;
+            return (
+              <div
+                key={`m:${item.kind}:${item.value}`}
+                className="flex items-center gap-2 px-4"
+              >
+                <button
+                  type="button"
+                  onClick={() => handleItemClick(item.value)}
+                  className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left text-primary/90 text-sm"
+                >
+                  <Icon
+                    size={18}
+                    className="shrink-0 text-primary opacity-50"
+                  />
+                  {item.kind === 'search' ? (
+                    <span className="truncate">
+                      Search for{' '}
+                      <span className="font-medium text-primary">
+                        “{item.label}”
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="truncate">{item.label}</span>
+                  )}
+                </button>
+                {item.kind === 'recent' && isLoggedIn ? (
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteSearch(e, item.value)}
+                    className="flex size-8 shrink-0 items-center justify-center text-primary/30"
+                    aria-label={`Remove ${item.value}`}
+                  >
+                    <IconX size={18} />
+                  </button>
+                ) : null}
+              </div>
+            );
+          })}
+
+          {hasFacets ? (
+            <div className="mt-1 space-y-3 border-gray-950/10 border-t px-4 pt-3 pb-1 dark:border-white/10">
+              {facetGroups.map((group) => (
+                <div key={`m:${group.title}`}>
+                  <div className="mb-1.5 font-medium text-primary/40 text-xs uppercase tracking-wide">
+                    {group.title}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {group.rows.map((row) => (
+                      <button
+                        key={`m:${group.title}:${row.value}`}
+                        type="button"
+                        onClick={row.onClick}
+                        className="flex shrink-0 items-center gap-1.5 rounded-full border border-gray-950/10 bg-gray-950/5 px-3 py-1.5 text-primary/90 text-sm dark:border-white/10 dark:bg-white/5"
+                      >
+                        {row.avatarUrl ? (
+                          <img
+                            src={row.avatarUrl}
+                            alt=""
+                            className="size-4 shrink-0 rounded-full object-cover"
+                          />
+                        ) : null}
+                        <span className="whitespace-nowrap">{row.label}</span>
+                        <span className="text-primary/40 text-xs tabular-nums">
+                          {row.count}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   );
 }

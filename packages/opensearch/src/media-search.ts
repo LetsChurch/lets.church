@@ -719,6 +719,162 @@ export async function suggestSpeakersByEmbedding({
     .filter((c) => c.topScore >= minScore);
 }
 
+// --- Search-bar typeahead: one query powering the whole command palette ---
+
+const TermsAggSchema = z
+  .object({
+    buckets: z.array(z.object({ key: z.string(), doc_count: z.number() })),
+  })
+  .optional();
+
+const PaletteSuggestResponseSchema = z.object({
+  hits: z.object({
+    hits: z.array(
+      z.object({
+        _source: z.object({ title: z.string().nullable().optional() }),
+      }),
+    ),
+  }),
+  aggregations: z
+    .object({
+      channelIds: TermsAggSchema,
+      speakers: TermsAggSchema,
+      bibleBooks: TermsAggSchema,
+      bibleRefs: TermsAggSchema,
+      publishedYears: z
+        .object({
+          buckets: z.array(
+            z.object({ key_as_string: z.string(), doc_count: z.number() }),
+          ),
+        })
+        .optional(),
+    })
+    .optional(),
+});
+
+export type FacetBucket = { key: string; count: number };
+export type MediaPaletteSuggestions = {
+  /** Left-column title suggestions — titles containing every typed token. */
+  titles: string[];
+  /** Bucket key is the channelId (caller hydrates to slug/name/avatar). */
+  channels: FacetBucket[];
+  /** Bucket key is the resolved speaker name. */
+  speakers: FacetBucket[];
+  /** Bucket key is the OSIS book id ("Rom"). */
+  books: FacetBucket[];
+  /** Bucket key is the OSIS verse token ("John.3.16"). */
+  verses: FacetBucket[];
+  /** Year string ("yyyy") + count. */
+  years: Array<{ year: string; count: number }>;
+};
+
+/**
+ * One OpenSearch query that powers the entire search-bar command palette: its
+ * hits become the left-column TITLE suggestions and its aggregations become the
+ * right-column FACETS (channels / speakers / books / verses / years). A single
+ * `bool_prefix` `multi_match` over the doc-level text fields
+ * (`title^2 / description / summary / channelName`) with `accessControlFilter()` —
+ * no RRF pipeline, no nested-paragraph sub-queries, no leave-one-out (the palette
+ * has no active selections yet). Cheap enough per keystroke; a lexical proxy, so
+ * facet counts can differ slightly from the full hybrid panel on the results page.
+ *
+ * Titles ride the same broad query (so this is one request, not two), but each is
+ * gated on actually containing every typed token before being suggested — the
+ * `title^2` boost keeps genuine title matches near the top, and the gate drops
+ * hits that matched only on body text.
+ */
+export async function suggestMediaPalette({
+  query,
+  titleSize = 6,
+  perGroup = 8,
+}: {
+  query: string;
+  titleSize?: number;
+  perGroup?: number;
+}): Promise<MediaPaletteSuggestions> {
+  const empty: MediaPaletteSuggestions = {
+    titles: [],
+    channels: [],
+    speakers: [],
+    books: [],
+    verses: [],
+    years: [],
+  };
+  const trimmed = query.trim();
+  if (!trimmed) return empty;
+
+  const raw = await osSearch({
+    index: MEDIA_INDEX,
+    // Return enough hits that the title token-gate + dedupe still leaves
+    // `titleSize` distinct titles even when body-only matches rank among them.
+    size: Math.max(titleSize * 5, 30),
+    _source: ['title'],
+    query: {
+      bool: {
+        filter: accessControlFilter(),
+        must: [
+          {
+            multi_match: {
+              query: trimmed,
+              type: 'bool_prefix',
+              fields: ['title^2', 'description', 'summary', 'channelName'],
+            },
+          },
+        ],
+      },
+    },
+    aggs: {
+      channelIds: { terms: { field: 'channelId', size: perGroup } },
+      speakers: { terms: { field: 'speakers', size: perGroup } },
+      bibleBooks: { terms: { field: 'bibleBooks', size: perGroup } },
+      bibleRefs: { terms: { field: 'bibleRefs', size: perGroup } },
+      publishedYears: {
+        date_histogram: {
+          field: 'publishedAt',
+          calendar_interval: 'year',
+          min_doc_count: 1,
+          format: 'yyyy',
+          order: { _key: 'desc' },
+        },
+      },
+    },
+  });
+
+  const parsed = PaletteSuggestResponseSchema.parse(raw);
+
+  // Titles: keep hits whose title contains every typed token (so a body-only
+  // match never surfaces as a title suggestion), deduped, up to `titleSize`.
+  const tokens = trimmed.toLowerCase().split(/\s+/).filter(Boolean);
+  const titleMatches = (text: string) =>
+    tokens.every((tok) => text.toLowerCase().includes(tok));
+  const seen = new Set<string>();
+  const titles: string[] = [];
+  for (const h of parsed.hits.hits) {
+    const title = (h._source.title ?? '').trim();
+    if (!title || !titleMatches(title)) continue;
+    const key = title.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    titles.push(title);
+    if (titles.length >= titleSize) break;
+  }
+
+  const aggs = parsed.aggregations;
+  const toBuckets = (agg: z.infer<typeof TermsAggSchema>): FacetBucket[] =>
+    (agg?.buckets ?? []).map((b) => ({ key: b.key, count: b.doc_count }));
+
+  return {
+    titles,
+    channels: toBuckets(aggs?.channelIds),
+    speakers: toBuckets(aggs?.speakers),
+    books: toBuckets(aggs?.bibleBooks),
+    verses: toBuckets(aggs?.bibleRefs),
+    years: (aggs?.publishedYears?.buckets ?? [])
+      .map((b) => ({ year: b.key_as_string, count: b.doc_count }))
+      .slice(0, perGroup),
+  };
+}
+
 export type BuildMediaLexicalArgs = {
   lexicalText: string;
   quotes?: string[];
