@@ -11,10 +11,12 @@ import {
   useDeleteRecentSearch,
   useRecentSearches,
 } from '@/hooks/use-recent-searches';
-import { useSearchPalette } from '@/hooks/use-search-palette';
+import {
+  type PaletteFacetGroup,
+  useSearchPalette,
+} from '@/hooks/use-search-palette';
 import { $lastSearchQuery } from '@/stores/search-query';
 import { cn } from '@/util/cn';
-import { facetMatchScore } from '@/util/facet-score';
 
 // A row in the dropdown: the user's own recent searches plus corpus-derived
 // entity suggestions (real titles / channel names). `sectionLabel` is set on the
@@ -158,17 +160,24 @@ type SearchProps = {
   availableChannels?: Channel[];
 } & VariantProps<typeof searchBarFormVariants>;
 
-// Score a facet group by how well its best (already relevance-sorted, server-side)
-// row matches the query — exact > full-substring > token overlap — so the most
-// relevant GROUP leads (e.g. Verses for "matthew 10:8", Channels for an exact
-// channel name). Mirrors the per-row scoring in trpc/procedures/search.ts
-// `rankFacetsByQuery`.
-function facetGroupScore(
-  group: { rows: Array<{ label: string }> },
-  query: string,
-): number {
-  const top = group.rows[0];
-  return top ? facetMatchScore(top.label, query) : 0;
+// The `/search` param a facet row sets, by group kind. `value` is the param
+// payload the server put on the row (channel slug / speaker / book / ref / year).
+function facetSearchParam(
+  kind: PaletteFacetGroup['kind'],
+  value: string,
+): Record<string, unknown> {
+  switch (kind) {
+    case 'channels':
+      return { channelSlugs: [value] };
+    case 'speakers':
+      return { speakers: [value] };
+    case 'scripture':
+      return { bibleBooks: [value] };
+    case 'verses':
+      return { bibleRefs: [value] };
+    case 'year':
+      return { dateStart: `${value}-01-01`, dateEnd: `${value}-12-31` };
+  }
 }
 
 export default function SearchBar({
@@ -283,70 +292,20 @@ export default function SearchBar({
     });
   };
 
-  // RIGHT column — facet groups; clicking a row runs the search with that facet.
-  const facetGroups: Array<{ title: string; rows: FacetRow[] }> = [
-    {
-      title: 'Channels',
-      rows: facets.channels.map((c) => ({
-        value: c.slug,
-        label: c.name,
-        count: c.count,
-        avatarUrl: c.avatarUrl,
-        onClick: () => goToSearch({ channelSlugs: [c.slug] }),
+  // RIGHT column — facet groups, already relevance-ordered by the server (rows
+  // within each group and the groups themselves). We only attach the click
+  // handler that runs the search with that facet selected.
+  const facetGroups: Array<{ title: string; rows: FacetRow[] }> =
+    facets.facetGroups.map((group) => ({
+      title: group.title,
+      rows: group.rows.map((row) => ({
+        value: row.value,
+        label: row.label,
+        count: row.count,
+        avatarUrl: row.avatarUrl,
+        onClick: () => goToSearch(facetSearchParam(group.kind, row.value)),
       })),
-    },
-    {
-      title: 'Speakers',
-      rows: facets.speakers.map((s) => ({
-        value: s.name,
-        label: s.name,
-        count: s.count,
-        avatarUrl: null,
-        onClick: () => goToSearch({ speakers: [s.name] }),
-      })),
-    },
-    {
-      title: 'Scripture',
-      rows: facets.books.map((b) => ({
-        value: b.book,
-        label: b.label,
-        count: b.count,
-        avatarUrl: null,
-        onClick: () => goToSearch({ bibleBooks: [b.book] }),
-      })),
-    },
-    {
-      title: 'Verses',
-      rows: facets.verses.map((v) => ({
-        value: v.ref,
-        label: v.label,
-        count: v.count,
-        avatarUrl: null,
-        onClick: () => goToSearch({ bibleRefs: [v.ref] }),
-      })),
-    },
-    {
-      title: 'Year',
-      rows: facets.years.map((y) => ({
-        value: y.year,
-        label: y.year,
-        count: y.count,
-        avatarUrl: null,
-        onClick: () =>
-          goToSearch({
-            dateStart: `${y.year}-01-01`,
-            dateEnd: `${y.year}-12-31`,
-          }),
-      })),
-    },
-  ].filter((g) => g.rows.length > 0);
-
-  // Order the groups by relevance to the query (stable: equal scores keep the
-  // default Channels → Speakers → Scripture → Verses → Year order).
-  facetGroups.sort(
-    (a, b) =>
-      facetGroupScore(b, trimmedQuery) - facetGroupScore(a, trimmedQuery),
-  );
+    }));
 
   const hasFacets = facetGroups.length > 0;
   // Every rendered option (left suggestions + right facets) registered with the

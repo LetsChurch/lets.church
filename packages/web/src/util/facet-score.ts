@@ -18,8 +18,8 @@ export function facetMatchScore(label: string, query: string): number {
   const l = label.toLowerCase();
   if (l === q) return 1000;
   if (l.includes(q)) return 500;
-  return q
-    .split(/\s+/)
+  // Dedupe tokens so a repeated word ("test test") doesn't double-count.
+  return [...new Set(q.split(/\s+/))]
     .filter((t) => t.length >= 2)
     .reduce((acc, t) => (l.includes(t) ? acc + 1 : acc), 0);
 }

@@ -27,6 +27,13 @@ describe('facetMatchScore', () => {
     expect(facetMatchScore('Acts of the Apostles', 'acts apostles')).toBe(2);
   });
 
+  test('repeated query tokens are not double-counted in the overlap tier', () => {
+    // "test test test" must count the "test" token once, not three times.
+    expect(facetMatchScore('A test label', 'test test test')).toBe(1);
+    // distinct tokens still each count once
+    expect(facetMatchScore('A test label here', 'test here here')).toBe(2);
+  });
+
   test('1-char tokens are ignored in the overlap tier', () => {
     // the "1" must not float "1 Timothy" for a "1 corinthians" query via overlap;
     // only "corinthians" (absent here) would count, so score is 0.

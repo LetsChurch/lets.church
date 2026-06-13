@@ -225,6 +225,26 @@ function rankFacetsByQuery<T>(
   );
 }
 
+// A palette facet group, fully ordered server-side: rows are query-ranked within
+// the group, and the groups themselves are ordered so the most query-relevant one
+// leads. Rows are normalized to a single shape — `value` is the param payload
+// (slug / speaker / book / ref / year) the client feeds back into the search, and
+// `kind` tells the client which `/search` param to set. The client renders the
+// array as-is and only attaches the per-kind click handler (the one thing it can't
+// receive over the wire); no client-side scoring.
+type SuggestFacetGroup = {
+  kind: 'channels' | 'speakers' | 'scripture' | 'verses' | 'year';
+  title: string;
+  rows: Array<{
+    value: string;
+    label: string;
+    count: number;
+    avatarUrl: string | null;
+  }>;
+};
+
+type SuggestResult = { titles: string[]; facetGroups: SuggestFacetGroup[] };
+
 // Convert provided channel slugs to internal UUIDs (public + approved only).
 async function channelSlugsToIds(slugs: string[]): Promise<string[]> {
   if (slugs.length === 0) return [];
@@ -1328,14 +1348,7 @@ export const searchProcedures = {
   suggest: publicProcedure
     .input(z.object({ q: z.string() }))
     .query(async ({ input }) => {
-      const empty = {
-        titles: [],
-        channels: [],
-        speakers: [],
-        books: [],
-        verses: [],
-        years: [],
-      };
+      const empty: SuggestResult = { titles: [], facetGroups: [] };
       const trimmed = input.q.trim();
       if (!trimmed) return empty;
 
@@ -1349,47 +1362,108 @@ export const searchProcedures = {
         });
         const cap = 6;
         // Single batched Postgres read resolves all channel buckets to slug/name/avatar.
-        const channels = rankFacetsByQuery(
-          await hydrateFacetChannels(palette.channels),
-          trimmed,
-          (c) => c.name,
-        ).slice(0, cap);
-        const speakers = rankFacetsByQuery(
-          palette.speakers.map((b) => ({ name: b.key, count: b.count })),
-          trimmed,
-          (s) => s.name,
-        ).slice(0, cap);
-        const books = rankFacetsByQuery(
-          palette.books.map((b) => ({
-            book: b.key,
-            label: bibleBookName(b.key),
-            count: b.count,
-          })),
-          trimmed,
-          (b) => b.label,
-        ).slice(0, cap);
-        const verses = rankFacetsByQuery(
-          palette.verses.map((b) => ({
-            ref: b.key,
-            label: formatVerseRef(b.key),
-            count: b.count,
-          })),
-          trimmed,
-          (v) => v.label,
-        ).slice(0, cap);
-        const years = rankFacetsByQuery(
-          palette.years.map((y) => ({ year: y.year, count: y.count })),
-          trimmed,
-          (y) => y.year,
-        ).slice(0, cap);
-        return {
-          titles: palette.titles,
-          channels,
-          speakers,
-          books,
-          verses,
-          years,
-        };
+        const groups: SuggestFacetGroup[] = [
+          {
+            kind: 'channels',
+            title: 'Channels',
+            rows: rankFacetsByQuery(
+              await hydrateFacetChannels(palette.channels),
+              trimmed,
+              (c) => c.name,
+            )
+              .slice(0, cap)
+              .map((c) => ({
+                value: c.slug,
+                label: c.name,
+                count: c.count,
+                avatarUrl: c.avatarUrl,
+              })),
+          },
+          {
+            kind: 'speakers',
+            title: 'Speakers',
+            rows: rankFacetsByQuery(
+              palette.speakers.map((b) => ({ name: b.key, count: b.count })),
+              trimmed,
+              (s) => s.name,
+            )
+              .slice(0, cap)
+              .map((s) => ({
+                value: s.name,
+                label: s.name,
+                count: s.count,
+                avatarUrl: null,
+              })),
+          },
+          {
+            kind: 'scripture',
+            title: 'Scripture',
+            rows: rankFacetsByQuery(
+              palette.books.map((b) => ({
+                book: b.key,
+                label: bibleBookName(b.key),
+                count: b.count,
+              })),
+              trimmed,
+              (b) => b.label,
+            )
+              .slice(0, cap)
+              .map((b) => ({
+                value: b.book,
+                label: b.label,
+                count: b.count,
+                avatarUrl: null,
+              })),
+          },
+          {
+            kind: 'verses',
+            title: 'Verses',
+            rows: rankFacetsByQuery(
+              palette.verses.map((b) => ({
+                ref: b.key,
+                label: formatVerseRef(b.key),
+                count: b.count,
+              })),
+              trimmed,
+              (v) => v.label,
+            )
+              .slice(0, cap)
+              .map((v) => ({
+                value: v.ref,
+                label: v.label,
+                count: v.count,
+                avatarUrl: null,
+              })),
+          },
+          {
+            kind: 'year',
+            title: 'Year',
+            rows: rankFacetsByQuery(
+              palette.years.map((y) => ({ year: y.year, count: y.count })),
+              trimmed,
+              (y) => y.year,
+            )
+              .slice(0, cap)
+              .map((y) => ({
+                value: y.year,
+                label: y.year,
+                count: y.count,
+                avatarUrl: null,
+              })),
+          },
+        ];
+        // Order the groups by their best (already top-ranked) row's match to the
+        // query, so the most relevant group leads (Verses for "matthew 10:8",
+        // Channels for an exact channel name). Stable: equal-scored groups keep
+        // the default Channels → Speakers → Scripture → Verses → Year order.
+        const facetGroups = groups
+          .filter((g) => g.rows.length > 0)
+          .sort(
+            (a, b) =>
+              facetMatchScore(b.rows[0].label, trimmed) -
+              facetMatchScore(a.rows[0].label, trimmed),
+          );
+        return { titles: palette.titles, facetGroups } satisfies SuggestResult;
       } catch (err) {
         moduleLogger.warn(
           {

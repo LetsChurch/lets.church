@@ -2,29 +2,32 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useDebounce } from 'use-debounce';
 import { useTRPC } from '@/trpc/react';
 
-export type PaletteSuggestions = {
-  /** Left-column title suggestions. */
-  titles: string[];
-  /** Right-column facets. */
-  channels: Array<{
-    slug: string;
-    name: string;
+/**
+ * A facet group, fully ordered server-side (rows within the group and the groups
+ * themselves). `value` is the param payload the client feeds back into the search;
+ * `kind` selects which `/search` param to set. The client renders these as-is.
+ */
+export type PaletteFacetGroup = {
+  kind: 'channels' | 'speakers' | 'scripture' | 'verses' | 'year';
+  title: string;
+  rows: Array<{
+    value: string;
+    label: string;
     count: number;
     avatarUrl: string | null;
   }>;
-  speakers: Array<{ name: string; count: number }>;
-  books: Array<{ book: string; label: string; count: number }>;
-  verses: Array<{ ref: string; label: string; count: number }>;
-  years: Array<{ year: string; count: number }>;
+};
+
+export type PaletteSuggestions = {
+  /** Left-column title suggestions. */
+  titles: string[];
+  /** Right-column facet groups, already relevance-ordered. */
+  facetGroups: PaletteFacetGroup[];
 };
 
 const EMPTY: PaletteSuggestions = {
   titles: [],
-  channels: [],
-  speakers: [],
-  books: [],
-  verses: [],
-  years: [],
+  facetGroups: [],
 };
 
 /**
