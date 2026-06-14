@@ -74,10 +74,13 @@ services:
       OIDC_SIGNING_JWK: ${OIDC_SIGNING_JWK}
       OIDC_CLIENT_LETS_BIBLE_REDIRECT_URIS: ${OIDC_LETS_BIBLE_REDIRECT_URI}
       OIDC_CLIENT_LETS_BIBLE_POST_LOGOUT_REDIRECT_URIS: ${OIDC_LETS_BIBLE_POST_LOGOUT_URI}
+      # Production LLM calls (search parse/suggest/related, the Q&A agent,
+      # query-time embeddings) go direct to OpenAI from this container.
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
       # OpenRouter access for the admin LLM-eval surface
-      # (`evaluateLlmModel` tRPC mutation) and for dev-only seed bootstrap
-      # scripts (`just generate-seed-annotations`) — both execute inside
-      # this container and call OpenRouter directly.
+      # (`evaluateLlmModel` tRPC mutation), the content-filter fallback, and
+      # dev-only seed bootstrap scripts (`just generate-seed-annotations`) —
+      # all execute inside this container.
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       OPENROUTER_SUMMARY_MODEL: ${OPENROUTER_SUMMARY_MODEL:-openai/gpt-5.4-mini}
       OPENROUTER_ANNOTATE_MODEL: ${OPENROUTER_ANNOTATE_MODEL:-openai/gpt-5.4-mini}

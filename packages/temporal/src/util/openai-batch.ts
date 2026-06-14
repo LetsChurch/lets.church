@@ -2,6 +2,7 @@ import * as readline from 'node:readline';
 import { Readable } from 'node:stream';
 import OpenAI, { toFile } from 'openai';
 import { z } from 'zod';
+import { stripOpenaiPrefix } from './llm';
 
 const env = z
   .object({
@@ -48,13 +49,6 @@ export type BatchResponseLine = {
     message: string;
   } | null;
 };
-
-// OpenAI model ids in the live path are prefixed with `openai/` for
-// OpenRouter routing. The Batch API hits OpenAI direct, where the
-// model id is bare (`gpt-5.4-mini`, not `openai/gpt-5.4-mini`).
-export function stripOpenaiPrefix(model: string): string {
-  return model.startsWith('openai/') ? model.slice('openai/'.length) : model;
-}
 
 // Build a chat-completion request line. Caller passes the live
 // chat-completion body verbatim; we strip the OpenRouter-only

@@ -10,7 +10,6 @@ import { invariant } from 'es-toolkit';
 import { z } from 'zod';
 import {
   createChatCompletionTracked,
-  openrouterExtras,
   SUMMARY_FALLBACK_MODEL,
   SUMMARY_MODEL,
 } from '../../util/llm';
@@ -279,6 +278,11 @@ export async function runSummary(
       activity: string;
       uploadRecordId?: string | null;
     };
+    /**
+     * Provider routing. Production summarize runs `'openai'` (direct); the admin
+     * LLM-eval page passes `'openrouter'`. Defaults to `'openai'`.
+     */
+    via?: 'openai' | 'openrouter';
   } = {},
 ): Promise<RunSummaryResult> {
   invariant(paragraphTexts.length > 0, 'runSummary: no paragraphs provided');
@@ -297,7 +301,6 @@ export async function runSummary(
   // each — even 10 sections fit comfortably under 4K). The explicit
   // cap prevents the same silent-truncation surprise we hit on
   // annotate when the provider default is small.
-  // `openrouterExtras` adds OpenRouter-specific routing + cost hints.
   // Wrapper handles timing, audit-log insertion, and all built-in
   // guards (finish_reason length/content_filter, empty content,
   // create() throw). No activity-specific guards needed here — the
@@ -309,6 +312,7 @@ export async function runSummary(
   const t0 = Date.now();
   const completion = await createChatCompletionTracked({
     tracking: options.tracking,
+    via: options.via ?? 'openai',
     model,
     // Same content_filter fallback hook as annotate. Most summarize prompts
     // are short transcript echoes (much smaller than annotate), but the
@@ -321,7 +325,6 @@ export async function runSummary(
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: userContent },
     ],
-    ...(openrouterExtras as Record<string, unknown>),
   });
   const durationMs = Date.now() - t0;
   const choice = completion.choices[0];

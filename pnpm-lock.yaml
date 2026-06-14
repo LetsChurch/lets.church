@@ -135,7 +135,7 @@ importers:
         version: link:../util
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.1(@opentelemetry/api@1.9.0)(@prisma/client@6.19.0(prisma@6.19.0(magicast@0.3.5)(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.15.5)(pg@8.20.0)(prisma@6.19.0(magicast@0.3.5)(typescript@5.9.3))
+        version: 0.45.1(@opentelemetry/api@1.9.0)(@prisma/client@6.19.0(prisma@6.19.0(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.15.5)(pg@8.20.0)(prisma@6.19.0(typescript@5.9.3))
       es-toolkit:
         specifier: 'catalog:'
         version: 1.47.0
@@ -371,7 +371,7 @@ importers:
         version: 8.0.2
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.1(@opentelemetry/api@1.9.0)(@prisma/client@6.19.0(prisma@6.19.0(magicast@0.3.5)(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.15.5)(pg@8.20.0)(prisma@6.19.0(magicast@0.3.5)(typescript@5.9.3))
+        version: 0.45.1(@opentelemetry/api@1.9.0)(@prisma/client@6.19.0(prisma@6.19.0(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.15.5)(pg@8.20.0)(prisma@6.19.0(typescript@5.9.3))
       es-toolkit:
         specifier: 'catalog:'
         version: 1.47.0
@@ -580,6 +580,9 @@ importers:
 
   packages/web:
     dependencies:
+      '@ai-sdk/openai':
+        specifier: ^3.0.71
+        version: 3.0.71(zod@4.1.12)
       '@base-ui-components/react':
         specifier: ^1.0.0-beta.4
         version: 1.0.0-beta.4(@types/react@19.2.4)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -720,7 +723,7 @@ importers:
         version: 4.1.0
       drizzle-orm:
         specifier: ^0.45.1
-        version: 0.45.1(@opentelemetry/api@1.9.0)(@prisma/client@6.19.0(prisma@6.19.0(magicast@0.5.1)(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.15.5)(pg@8.20.0)(prisma@6.19.0(magicast@0.5.1)(typescript@5.9.3))
+        version: 0.45.1(@opentelemetry/api@1.9.0)(@prisma/client@6.19.0(prisma@6.19.0(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.15.5)(pg@8.20.0)(prisma@6.19.0(typescript@5.9.3))
       embla-carousel:
         specifier: ^8.6.0
         version: 8.6.0
@@ -980,6 +983,12 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
+  '@ai-sdk/openai@3.0.71':
+    resolution: {integrity: sha512-j6eBAa5oHFZ4U5CxpIV3T4zXNM/BviodNCZCL1qHkA4aqkwK9iQ18TWYz2DZcXpw4BO5pikKzqpXORxb1EnZGA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
   '@ai-sdk/provider-utils@3.0.25':
     resolution: {integrity: sha512-CvsRu+32Y8a167s+lrIBtsybvgTHp8j9y+6BeTvLeoW3Q+okw/b4CnNUFOLIXsRaKHQKAH+IHNJPYWywfpw0LA==}
     engines: {node: '>=18'}
@@ -988,6 +997,12 @@ packages:
 
   '@ai-sdk/provider-utils@4.0.27':
     resolution: {integrity: sha512-ubkAJ+xODouwtmN1tYlvTPphH1hPOBfZaEQe8U7skGvFAnIRs9PPpsq57bC2+Ky/MB4yzhd6YOsxTAx9sGpazw==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/provider-utils@4.0.29':
+    resolution: {integrity: sha512-uhukHaCBvqkwBHkT8C2PrnqKTCoLn3pdHXqtcR9I8ErH+flbzgW4o7VHSNIup9LRu+WBvZIZDQLsx6rwl2tiOA==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -10047,6 +10062,12 @@ snapshots:
       '@vercel/oidc': 3.2.0
       zod: 4.1.12
 
+  '@ai-sdk/openai@3.0.71(zod@4.1.12)':
+    dependencies:
+      '@ai-sdk/provider': 3.0.10
+      '@ai-sdk/provider-utils': 4.0.29(zod@4.1.12)
+      zod: 4.1.12
+
   '@ai-sdk/provider-utils@3.0.25(zod@4.1.12)':
     dependencies:
       '@ai-sdk/provider': 2.0.3
@@ -10055,6 +10076,13 @@ snapshots:
       zod: 4.1.12
 
   '@ai-sdk/provider-utils@4.0.27(zod@4.1.12)':
+    dependencies:
+      '@ai-sdk/provider': 3.0.10
+      '@standard-schema/spec': 1.1.0
+      eventsource-parser: 3.1.0
+      zod: 4.1.12
+
+  '@ai-sdk/provider-utils@4.0.29(zod@4.1.12)':
     dependencies:
       '@ai-sdk/provider': 3.0.10
       '@standard-schema/spec': 1.1.0
@@ -12944,26 +12972,10 @@ snapshots:
 
   '@posthog/types@1.381.0': {}
 
-  '@prisma/client@6.19.0(prisma@6.19.0(magicast@0.3.5)(typescript@5.9.3))(typescript@5.9.3)':
-    optionalDependencies:
-      prisma: 6.19.0(magicast@0.3.5)(typescript@5.9.3)
-      typescript: 5.9.3
-    optional: true
-
-  '@prisma/client@6.19.0(prisma@6.19.0(magicast@0.5.1)(typescript@5.9.3))(typescript@5.9.3)':
+  '@prisma/client@6.19.0(prisma@6.19.0(typescript@5.9.3))(typescript@5.9.3)':
     optionalDependencies:
       prisma: 6.19.0(magicast@0.5.1)(typescript@5.9.3)
       typescript: 5.9.3
-    optional: true
-
-  '@prisma/config@6.19.0(magicast@0.3.5)':
-    dependencies:
-      c12: 3.1.0(magicast@0.3.5)
-      deepmerge-ts: 7.1.5
-      effect: 3.18.4
-      empathic: 2.0.0
-    transitivePeerDependencies:
-      - magicast
     optional: true
 
   '@prisma/config@6.19.0(magicast@0.5.1)':
@@ -15330,24 +15342,6 @@ snapshots:
 
   bytes@3.1.2: {}
 
-  c12@3.1.0(magicast@0.3.5):
-    dependencies:
-      chokidar: 4.0.3
-      confbox: 0.2.2
-      defu: 6.1.4
-      dotenv: 16.6.1
-      exsolve: 1.0.7
-      giget: 2.0.0
-      jiti: 2.6.1
-      ohash: 2.0.11
-      pathe: 2.0.3
-      perfect-debounce: 1.0.0
-      pkg-types: 2.3.0
-      rc9: 2.1.2
-    optionalDependencies:
-      magicast: 0.3.5
-    optional: true
-
   c12@3.1.0(magicast@0.5.1):
     dependencies:
       chokidar: 4.0.3
@@ -15958,7 +15952,7 @@ snapshots:
 
   db0@0.3.4(drizzle-orm@0.45.1(@opentelemetry/api@1.9.0)(@prisma/client@6.19.0(prisma@6.19.0(magicast@0.5.1)(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.15.5)(pg@8.20.0)(prisma@6.19.0(magicast@0.5.1)(typescript@5.9.3))):
     optionalDependencies:
-      drizzle-orm: 0.45.1(@opentelemetry/api@1.9.0)(@prisma/client@6.19.0(prisma@6.19.0(magicast@0.5.1)(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.15.5)(pg@8.20.0)(prisma@6.19.0(magicast@0.5.1)(typescript@5.9.3))
+      drizzle-orm: 0.45.1(@opentelemetry/api@1.9.0)(@prisma/client@6.19.0(prisma@6.19.0(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.15.5)(pg@8.20.0)(prisma@6.19.0(typescript@5.9.3))
 
   debug@2.6.9:
     dependencies:
@@ -16114,18 +16108,10 @@ snapshots:
       esbuild: 0.25.11
       tsx: 4.21.0
 
-  drizzle-orm@0.45.1(@opentelemetry/api@1.9.0)(@prisma/client@6.19.0(prisma@6.19.0(magicast@0.3.5)(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.15.5)(pg@8.20.0)(prisma@6.19.0(magicast@0.3.5)(typescript@5.9.3)):
+  drizzle-orm@0.45.1(@opentelemetry/api@1.9.0)(@prisma/client@6.19.0(prisma@6.19.0(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.15.5)(pg@8.20.0)(prisma@6.19.0(typescript@5.9.3)):
     optionalDependencies:
       '@opentelemetry/api': 1.9.0
-      '@prisma/client': 6.19.0(prisma@6.19.0(magicast@0.3.5)(typescript@5.9.3))(typescript@5.9.3)
-      '@types/pg': 8.15.5
-      pg: 8.20.0
-      prisma: 6.19.0(magicast@0.3.5)(typescript@5.9.3)
-
-  drizzle-orm@0.45.1(@opentelemetry/api@1.9.0)(@prisma/client@6.19.0(prisma@6.19.0(magicast@0.5.1)(typescript@5.9.3))(typescript@5.9.3))(@types/pg@8.15.5)(pg@8.20.0)(prisma@6.19.0(magicast@0.5.1)(typescript@5.9.3)):
-    optionalDependencies:
-      '@opentelemetry/api': 1.9.0
-      '@prisma/client': 6.19.0(prisma@6.19.0(magicast@0.5.1)(typescript@5.9.3))(typescript@5.9.3)
+      '@prisma/client': 6.19.0(prisma@6.19.0(typescript@5.9.3))(typescript@5.9.3)
       '@types/pg': 8.15.5
       pg: 8.20.0
       prisma: 6.19.0(magicast@0.5.1)(typescript@5.9.3)
@@ -19103,16 +19089,6 @@ snapshots:
   pretty-ms@9.3.0:
     dependencies:
       parse-ms: 4.0.0
-
-  prisma@6.19.0(magicast@0.3.5)(typescript@5.9.3):
-    dependencies:
-      '@prisma/config': 6.19.0(magicast@0.3.5)
-      '@prisma/engines': 6.19.0
-    optionalDependencies:
-      typescript: 5.9.3
-    transitivePeerDependencies:
-      - magicast
-    optional: true
 
   prisma@6.19.0(magicast@0.5.1)(typescript@5.9.3):
     dependencies:

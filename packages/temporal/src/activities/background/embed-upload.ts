@@ -5,7 +5,6 @@ import {
   createEmbeddingsTracked,
   EMBED_DIMS,
   EMBED_MODEL,
-  openrouterExtras,
 } from '../../util/llm';
 import logger from '../../util/logger';
 
@@ -64,7 +63,6 @@ export default async function embedUpload(
     tracking: { activity: 'embedUpload', uploadRecordId },
     model: EMBED_MODEL,
     input: [row.summary, row.searchSummary],
-    ...(openrouterExtras as Record<string, unknown>),
   });
 
   invariant(

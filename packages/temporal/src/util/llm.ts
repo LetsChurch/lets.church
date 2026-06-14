@@ -5,6 +5,11 @@ import { computeCost } from './llm-pricing';
 
 const env = z
   .object({
+    // Production calls go direct to OpenAI. OpenRouter is kept only for the two
+    // paths that genuinely can't be OpenAI-direct: the admin LLM-eval page
+    // (arbitrary multi-provider models) and the content-filter fallback below
+    // (a non-OpenAI provider, by design).
+    OPENAI_API_KEY: z.string().min(1),
     OPENROUTER_API_KEY: z.string().min(1),
     OPENROUTER_SUMMARY_MODEL: z.string().default('openai/gpt-5.4-mini'),
     // Annotation defaults to gpt-5.4-mini. The full-doc markdown-output
@@ -32,16 +37,33 @@ const env = z
   })
   .parse(process.env);
 
-// One OpenAI-SDK client pointed at OpenRouter. Covers both
-// `chat.completions` (summarization) and `embeddings`: OpenRouter routes
-// `openai/text-embedding-3-small` to OpenAI at the same $0.02/1M with no
-// markup. SDK built-in exponential backoff handles 429/5xx; we bump from the
-// default 2 → 5 attempts. Temporal activity retry sits on top of that.
-export const llm = new OpenAI({
+// Production client — OpenAI direct (default baseURL https://api.openai.com/v1).
+// Used for every live chat completion + embedding. SDK built-in exponential
+// backoff handles 429/5xx; we bump from the default 2 → 5 attempts. Temporal
+// activity retry sits on top of that.
+export const openaiClient = new OpenAI({
+  apiKey: env.OPENAI_API_KEY,
+  maxRetries: 5,
+});
+
+// OpenRouter client — kept ONLY for `via: 'openrouter'` calls: the admin
+// LLM-eval page (which runs arbitrary multi-provider models) and the
+// content-filter fallback (which routes to a non-OpenAI provider so content
+// OpenAI's classifier blocked has a chance to land).
+export const openrouterClient = new OpenAI({
   apiKey: env.OPENROUTER_API_KEY,
   baseURL: 'https://openrouter.ai/api/v1',
   maxRetries: 5,
 });
+
+// Model ids are kept canonical (`openai/…`, the OpenRouter form) everywhere we
+// store/aggregate them — env defaults, the pricing table, `llm_call.model` — so
+// cost lookups stay stable across the OpenAI/OpenRouter split. When talking to
+// OpenAI directly the id must be bare, so we strip the prefix at that one
+// boundary (mirrors `openai-batch.ts`, which hits OpenAI direct too).
+export function stripOpenaiPrefix(model: string): string {
+  return model.startsWith('openai/') ? model.slice('openai/'.length) : model;
+}
 
 // Env-configurable: safe to swap because changing the chat model only affects
 // new output. Default is the cheap mini tier (~$0.00075/$0.0045 per 1M tok);
@@ -73,8 +95,10 @@ export const EMBED_DIMS = 1536;
 export const EMBED_MAX_INPUTS = 2_048;
 
 /**
- * OpenRouter-specific request body extras spread into every background LLM
- * call (chat completions + embeddings).
+ * OpenRouter-specific request body extras. Merged into a chat request only on
+ * the `via: 'openrouter'` path (the admin LLM-eval page and the content-filter
+ * fallback) by `createChatCompletionTracked` — never sent to OpenAI direct,
+ * which rejects unknown body fields.
  *
  *   - `provider.order: ['cloudflare', 'nextbit', 'siliconflow', 'parasail', 'novita']` —
  *     preferred provider list for multi-provider models (open-weight
@@ -92,7 +116,7 @@ export const EMBED_MAX_INPUTS = 2_048;
  *     to the response, which the admin LLM-eval surface displays
  *     per-model.
  *
- * Cast to `Record<string, unknown>` at the call site because these fields
+ * `createChatCompletionTracked` casts the merged body because these fields
  * aren't part of the OpenAI schema the SDK ships with.
  */
 export const openrouterExtras = {
@@ -224,17 +248,42 @@ export type CreateTrackedChatCompletionArgs =
      * switch models.
      */
     fallbackModel?: string | null;
+    /**
+     * Which provider to call. `'openai'` (default) hits OpenAI directly: the
+     * `openai/` prefix is stripped from `model` and no OpenRouter body extras
+     * are sent. `'openrouter'` routes through OpenRouter (model id kept verbatim,
+     * `openrouterExtras` merged in) — used only by the admin LLM-eval page and
+     * the content-filter fallback. `model` is still recorded canonically
+     * (`openai/…`) in `llm_call` either way, so cost lookups don't care.
+     */
+    via?: 'openai' | 'openrouter';
   };
 
 export async function createChatCompletionTracked(
   args: CreateTrackedChatCompletionArgs,
 ): Promise<OpenAI.ChatCompletion> {
-  const { tracking, guards, fallbackModel, ...createArgs } = args;
+  const {
+    tracking,
+    guards,
+    fallbackModel,
+    via = 'openai',
+    ...createArgs
+  } = args;
   const t0 = Date.now();
+
+  // Send a bare model id + no extras to OpenAI direct; keep the verbatim id +
+  // OpenRouter routing extras for the OpenRouter path. `createArgs.model` (the
+  // canonical, possibly-prefixed id) is what we record below, regardless.
+  const requestBody = (
+    via === 'openrouter'
+      ? { ...createArgs, ...openrouterExtras }
+      : { ...createArgs, model: stripOpenaiPrefix(createArgs.model) }
+  ) as OpenAI.ChatCompletionCreateParamsNonStreaming;
+  const client = via === 'openrouter' ? openrouterClient : openaiClient;
 
   let completion: OpenAI.ChatCompletion;
   try {
-    completion = await llm.chat.completions.create(createArgs);
+    completion = await client.chat.completions.create(requestBody);
   } catch (err) {
     if (tracking) {
       await recordLlmCall({
@@ -312,15 +361,17 @@ export async function createChatCompletionTracked(
 
   if (result.errorMessage) {
     // Fallback path: a different model on OpenRouter when the primary's
-    // provider classifier blocks the response. Recurse with the fallback
-    // model swapped in + `fallbackModel: null` so we only ever switch once
-    // per request. All other failure modes (length, empty, custom guards)
-    // throw normally — switching models there would mask different
-    // underlying bugs.
+    // provider classifier blocks the response. Always routed `via: 'openrouter'`
+    // — the fallback is a non-OpenAI provider (e.g. anthropic/claude-haiku-4-5)
+    // that OpenAI-direct can't reach. Recurse with the fallback model swapped in
+    // + `fallbackModel: null` so we only ever switch once per request. All other
+    // failure modes (length, empty, custom guards) throw normally — switching
+    // models there would mask different underlying bugs.
     if (result.outcome === 'guard_content_filter' && fallbackModel) {
       return createChatCompletionTracked({
         ...createArgs,
         model: fallbackModel,
+        via: 'openrouter',
         tracking,
         guards,
         fallbackModel: null,
@@ -352,7 +403,15 @@ export async function createEmbeddingsTracked(
 
   let res: OpenAI.CreateEmbeddingResponse;
   try {
-    res = await llm.embeddings.create(createArgs);
+    // OpenAI direct: bare model id (strip the canonical `openai/` prefix).
+    res = await openaiClient.embeddings.create({
+      ...createArgs,
+      model: stripOpenaiPrefix(
+        typeof createArgs.model === 'string'
+          ? createArgs.model
+          : String(createArgs.model),
+      ),
+    });
   } catch (err) {
     if (tracking) {
       // Asymmetry with the success path is intentional: failed creates
@@ -396,16 +455,13 @@ export async function createEmbeddingsTracked(
       // the price table's `outputPerMTokens: 0`. Passing null instead
       // would short-circuit cost computation and silently leave
       // `computedCostUsd` empty for the production embed model
-      // (`openai/text-embedding-3-small`, which OpenRouter routes
-      // direct-to-vendor and doesn't populate `usage.cost` for).
+      // (`openai/text-embedding-3-small`).
       promptTokens: res.usage?.prompt_tokens ?? null,
       completionTokens: 0,
-      // OpenRouter populates `usage.cost` on embedding responses for
-      // many routings — mirror the chat-path expression rather than
-      // hardcoding null. `resolveCostUsd` downstream prefers this
-      // value when present and positive.
-      providerCostUsd:
-        (res.usage as unknown as { cost?: number } | undefined)?.cost ?? null,
+      // OpenAI direct doesn't return a per-call cost, so provider cost is null
+      // and `computedCostUsd` (from the pricing table, keyed on the canonical
+      // `openai/text-embedding-3-small`) is the source of truth for embed spend.
+      providerCostUsd: null,
       durationMs: Date.now() - t0,
       finishReason: null,
       outcome: 'success',

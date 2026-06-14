@@ -4126,6 +4126,9 @@ export const adminRouter = router({
       if (input.task === 'annotate') {
         const r = await runAnnotation(paragraphs, metadata, input.model, {
           maxTokens: input.maxTokens,
+          // The eval page runs arbitrary, possibly non-OpenAI models — route it
+          // through OpenRouter (production annotate runs OpenAI-direct).
+          via: 'openrouter',
           tracking: {
             activity: 'evalAnnotate',
             uploadRecordId: input.uploadRecordId,
@@ -4146,6 +4149,8 @@ export const adminRouter = router({
         input.model,
         {
           maxTokens: input.maxTokens,
+          // Eval runs arbitrary models via OpenRouter (prod summarize is direct).
+          via: 'openrouter',
           tracking: {
             activity: 'evalSummarize',
             uploadRecordId: input.uploadRecordId,

@@ -6,7 +6,6 @@ import {
   EMBED_DIMS,
   EMBED_MAX_INPUTS,
   EMBED_MODEL,
-  openrouterExtras,
 } from '../../util/llm';
 import logger from '../../util/logger';
 
@@ -104,7 +103,6 @@ export default async function embedUploadSummariesBulk(
       tracking: { activity: 'embedUploadSummariesBulk' },
       model: EMBED_MODEL,
       input: inputs,
-      ...(openrouterExtras as Record<string, unknown>),
     });
     invariant(
       res.data.length === inputs.length,
