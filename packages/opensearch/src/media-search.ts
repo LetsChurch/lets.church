@@ -778,10 +778,12 @@ export type MediaPaletteSuggestions = {
  * has no active selections yet). Cheap enough per keystroke; a lexical proxy, so
  * facet counts can differ slightly from the full hybrid panel on the results page.
  *
- * Titles ride the same broad query (so this is one request, not two), but each is
- * gated on actually containing every typed token before being suggested — the
- * `title^2` boost keeps genuine title matches near the top, and the gate drops
- * hits that matched only on body text.
+ * Titles ride the same broad query (so this is one request, not two): the broad
+ * `bool_prefix` (with `title^2`) drives both scoring and the aggregations, while a
+ * `post_filter` restricts the returned *hits* to docs whose title actually matches
+ * every typed token (last token as a prefix). `post_filter` runs after aggregation,
+ * so the facet buckets still reflect the full broad match while the title column
+ * never surfaces a body-only hit — all of which OpenSearch does, no JS gate.
  */
 export async function suggestMediaPalette({
   query,
@@ -805,8 +807,8 @@ export async function suggestMediaPalette({
 
   const raw = await osSearch({
     index: MEDIA_INDEX,
-    // Return enough hits that the title token-gate + dedupe still leaves
-    // `titleSize` distinct titles even when body-only matches rank among them.
+    // Over-fetch so dedupe still leaves `titleSize` distinct titles when several
+    // title-matching docs share a title.
     size: Math.max(titleSize * 5, 30),
     _source: ['title'],
     query: {
@@ -821,6 +823,14 @@ export async function suggestMediaPalette({
             },
           },
         ],
+      },
+    },
+    // Applied after aggregations: facets still reflect the broad match above, but
+    // the returned hits (the title column) are limited to title matches — every
+    // typed token must hit the title, last token as a prefix.
+    post_filter: {
+      match_bool_prefix: {
+        title: { query: trimmed, operator: 'and' },
       },
     },
     aggs: {
@@ -842,16 +852,13 @@ export async function suggestMediaPalette({
 
   const parsed = PaletteSuggestResponseSchema.parse(raw);
 
-  // Titles: keep hits whose title contains every typed token (so a body-only
-  // match never surfaces as a title suggestion), deduped, up to `titleSize`.
-  const tokens = trimmed.toLowerCase().split(/\s+/).filter(Boolean);
-  const titleMatches = (text: string) =>
-    tokens.every((tok) => text.toLowerCase().includes(tok));
+  // Hits are already title-matched by the post_filter; here we only collapse
+  // duplicate titles (distinct docs can share one) and cap to `titleSize`.
   const seen = new Set<string>();
   const titles: string[] = [];
   for (const h of parsed.hits.hits) {
     const title = (h._source.title ?? '').trim();
-    if (!title || !titleMatches(title)) continue;
+    if (!title) continue;
     const key = title.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
