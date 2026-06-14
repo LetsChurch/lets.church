@@ -31,6 +31,10 @@ import { getPublicImageUrl } from '@/util/server-env';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 import { hydrateUploads } from '../search/hydrate';
 import { extractQuotedPhrases, parseSearchQuery } from '../search/parse-query';
+import {
+  generateQuerySuggestions,
+  type SuggestContext,
+} from '../search/query-suggestions';
 import { generateRelatedSearches } from '../search/related-searches';
 import { authProcedure, publicProcedure } from '../trpc';
 
@@ -1476,6 +1480,35 @@ export const searchProcedures = {
         );
         return empty;
       }
+    }),
+
+  // Grounded, Grok-style query suggestions for the palette's left column. Fired
+  // alongside `suggest` (the client passes back a compact slice of the facets
+  // `suggest` just returned as grounding), so it's a separate, non-blocking
+  // procedure: the OS palette renders instantly and these fill in when nano
+  // responds. Best-effort, cached — failure / empty `q` → no suggestions.
+  suggestQueries: publicProcedure
+    .input(
+      z.object({
+        q: z.string(),
+        context: z
+          .object({
+            titles: z.array(z.string()).optional(),
+            channels: z.array(z.string()).optional(),
+            speakers: z.array(z.string()).optional(),
+            books: z.array(z.string()).optional(),
+          })
+          .optional(),
+      }),
+    )
+    .query(async ({ input }): Promise<{ suggestions: string[] }> => {
+      const trimmed = input.q.trim();
+      if (!trimmed) return { suggestions: [] };
+      const suggestions = await generateQuerySuggestions(
+        trimmed,
+        (input.context ?? {}) satisfies SuggestContext,
+      );
+      return { suggestions };
     }),
 
   getRecentSearches: authProcedure.query(async ({ ctx }) => {
