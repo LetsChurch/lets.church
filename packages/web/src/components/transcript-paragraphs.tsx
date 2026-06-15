@@ -311,20 +311,24 @@ function CopyLinkButton({
   const { copied, copy } = useCopyTimestampLink(seconds);
   const label = copied ? 'Link copied' : 'Copy link to timestamp';
   return (
-    <LcTooltip content={label}>
-      <button
-        type="button"
-        onClick={copy}
-        aria-label={label}
-        className={`${TIMESTAMP_ACTION_CLASS} ${className ?? ''}`}
-      >
-        {copied ? (
-          <IconCheck size={12} aria-hidden="true" />
-        ) : (
-          <IconLink size={12} aria-hidden="true" />
-        )}
-      </button>
-    </LcTooltip>
+    <LcTooltip
+      content={label}
+      render={(props) => (
+        <button
+          {...props}
+          type="button"
+          onClick={copy}
+          aria-label={label}
+          className={`${TIMESTAMP_ACTION_CLASS} ${className ?? ''}`}
+        >
+          {copied ? (
+            <IconCheck size={12} aria-hidden="true" />
+          ) : (
+            <IconLink size={12} aria-hidden="true" />
+          )}
+        </button>
+      )}
+    />
   );
 }
 
