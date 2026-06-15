@@ -121,6 +121,17 @@ export function Player({
     }
   }, [mediaType]);
 
+  // Pause the underlying media element when the player unmounts, so a detached
+  // element can't keep emitting audio. Custom-element media players don't stop
+  // playback on disconnect, so a removed-but-still-playing <hls-video> would go
+  // on producing sound. Mirrors the mini-player's cleanup.
+  useEffect(() => {
+    const el = videoRef.current;
+    return () => {
+      el?.pause();
+    };
+  }, []);
+
   // Keyboard shortcuts for media controls
   useEffect(() => {
     if (!videoRef.current) {
@@ -462,7 +473,6 @@ export function Player({
               />
             )}
             <MediaController
-              key={mediaType}
               ref={controllerRef}
               className="group relative block [&[userinactive]:not([mediapaused])]:cursor-none"
               style={{
@@ -487,6 +497,13 @@ export function Player({
               <HlsVideo
                 ref={videoRef}
                 slot="media"
+                // The hls-video custom element manages its own attributes (e.g.
+                // tabindex) on the client once it upgrades, which the SSR markup
+                // can't know about. Without this, React treats the attribute
+                // drift as a hydration mismatch and regenerates the whole Player
+                // subtree — orphaning the already-autoplaying SSR media element,
+                // which then keeps emitting audio that the UI can't pause.
+                suppressHydrationWarning
                 preload="metadata"
                 src={currentSource}
                 poster={

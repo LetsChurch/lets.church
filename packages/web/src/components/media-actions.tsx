@@ -438,11 +438,14 @@ export function MediaActions({
             />
 
             {/* Share */}
-            <LcTooltip content="Share">
-              <LcButton className="p-2" onClick={handleShare}>
-                <IconShare2 size={16} />
-              </LcButton>
-            </LcTooltip>
+            <LcTooltip
+              content="Share"
+              render={(props) => (
+                <LcButton {...props} className="p-2" onClick={handleShare}>
+                  <IconShare2 size={16} />
+                </LcButton>
+              )}
+            />
 
             {/* Download */}
             {downloadData?.enabled && downloadData.urls.length > 0 ? (

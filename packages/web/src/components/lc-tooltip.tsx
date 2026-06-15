@@ -2,7 +2,9 @@ import { Tooltip } from '@base-ui-components/react/tooltip';
 import type { ComponentProps, ReactNode } from 'react';
 
 type LcTooltipProps = {
-  children: ReactNode;
+  // Optional: when `render` is provided, it supplies the trigger element
+  // instead of wrapping `children` in the default trigger button.
+  children?: ReactNode;
   content: ReactNode;
   side?: ComponentProps<typeof Tooltip.Positioner>['side'];
   sideOffset?: number;
