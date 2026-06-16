@@ -24,6 +24,7 @@ import {
   parseBibleMetadata,
 } from '@/util/bible-url';
 import { formatTime } from '@/util/format';
+import { scrollToCenterWithin } from '@/util/scroll-container';
 
 // Strip leading/trailing punctuation from a word, preserving inner
 // apostrophes ("can't" → "can't"). Mirrors the backend's `normalizeWord`
@@ -619,9 +620,8 @@ export function TranscriptParagraphs({
     if (highlightPattern) return;
     if (active.paragraphIndex < 0 || !containerRef.current) return;
     const order = paragraphs[active.paragraphIndex]?.order;
-    containerRef.current
-      .querySelector(`[data-p="${order}"]`)
-      ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const target = containerRef.current.querySelector(`[data-p="${order}"]`);
+    if (target) scrollToCenterWithin(containerRef.current, target);
   }, [active.paragraphIndex, paragraphs, highlightPattern]);
 
   const handleSeek = useCallback((start: number) => {

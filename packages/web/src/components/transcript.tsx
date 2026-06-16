@@ -3,6 +3,7 @@ import bSearch from 'binary-search';
 import { useEffect, useMemo, useRef } from 'react';
 import { $currentTime, $setPlayAt } from '@/stores/player';
 import { formatTime } from '@/util/format';
+import { scrollToCenterWithin } from '@/util/scroll-container';
 
 type TranscriptLine = {
   start: number;
@@ -44,12 +45,7 @@ export function Transcript({
       `[data-start="${transcript[currentI]?.start}"]`,
     );
 
-    line?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-      // @ts-expect-error: not typed in TypeScript
-      container: 'nearest',
-    });
+    if (line) scrollToCenterWithin(containerRef.current, line);
   }, [currentI, transcript]);
 
   const handleClick = (start: number) => {
