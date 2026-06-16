@@ -4,6 +4,7 @@ import { CURRENT_PIPELINE_VERSION } from '@letschurch/temporal/queues';
 import { createFileRoute } from '@tanstack/react-router';
 import { and, eq, inArray } from 'drizzle-orm';
 import { Podcast } from 'podcast';
+import { idTranslator } from '@/schemas/common';
 import { podcastImage } from '@/util/image-sizes';
 import logger from '@/util/logger';
 import {
@@ -181,7 +182,11 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
               size: 'card',
             });
 
-            const uploadUrl = `${siteUrl}/media/${upload.id}`;
+            // guid stays the full-UUID URL (stable, historical — never change
+            // it or podcast clients re-download every episode); the visible
+            // link uses the canonical short id.
+            const uploadGuid = `${siteUrl}/media/${upload.id}`;
+            const uploadUrl = `${siteUrl}/media/${idTranslator.fromUUID(upload.id)}`;
             const baseFilename = (upload.title ?? `media_${upload.id}`).replace(
               /[^\w\s.-]/g,
               '_',
@@ -212,6 +217,7 @@ export const Route = createFileRoute('/channel/$slug/podcast.xml')({
             feed.addItem({
               title: upload.title ?? 'Untitled',
               url: uploadUrl,
+              guid: uploadGuid,
               description: upload.description ?? upload.title ?? 'Untitled',
               date: upload.publishedAt,
               content,

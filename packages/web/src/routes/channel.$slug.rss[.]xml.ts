@@ -2,6 +2,7 @@ import { db } from '@letschurch/db';
 import { publicS3 } from '@letschurch/s3/public';
 import { createFileRoute } from '@tanstack/react-router';
 import { Feed } from 'feed';
+import { idTranslator } from '@/schemas/common';
 import { rssFeedIcon } from '@/util/image-sizes';
 import logger from '@/util/logger';
 import { getPublicImageUrl } from '@/util/server-env';
@@ -133,7 +134,11 @@ export const Route = createFileRoute('/channel/$slug/rss.xml')({
               size: 'card',
             });
 
-            const uploadUrl = `${siteUrl}/media/${upload.id}`;
+            // guid stays the full-UUID URL (stable, historical — never change
+            // it or readers re-surface every item); the visible link uses the
+            // canonical short id.
+            const uploadGuid = `${siteUrl}/media/${upload.id}`;
+            const uploadUrl = `${siteUrl}/media/${idTranslator.fromUUID(upload.id)}`;
 
             const content = [
               thumbnailUrl
@@ -146,7 +151,7 @@ export const Route = createFileRoute('/channel/$slug/rss.xml')({
 
             feed.addItem({
               title: upload.title ?? 'Untitled',
-              id: uploadUrl,
+              id: uploadGuid,
               link: uploadUrl,
               description: upload.description ?? upload.title ?? 'Untitled',
               content,

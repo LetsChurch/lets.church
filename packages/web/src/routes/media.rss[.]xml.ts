@@ -2,6 +2,7 @@ import { Channel, db, UploadRecord } from '@letschurch/db';
 import { createFileRoute } from '@tanstack/react-router';
 import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm';
 import { Feed } from 'feed';
+import { idTranslator } from '@/schemas/common';
 import logger from '@/util/logger';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
 
@@ -77,7 +78,11 @@ export const Route = createFileRoute('/media/rss.xml')({
               size: 'card',
             });
 
-            const uploadUrl = `${siteUrl}/media/${upload.id}`;
+            // guid stays the full-UUID URL (stable, historical — never change
+            // it or readers re-surface every item); the visible link uses the
+            // canonical short id.
+            const uploadGuid = `${siteUrl}/media/${upload.id}`;
+            const uploadUrl = `${siteUrl}/media/${idTranslator.fromUUID(upload.id)}`;
             const channelUrl = `${siteUrl}/channel/${upload.channel.slug}`;
 
             const content = [
@@ -91,7 +96,7 @@ export const Route = createFileRoute('/media/rss.xml')({
 
             feed.addItem({
               title: upload.title ?? 'Untitled',
-              id: uploadUrl,
+              id: uploadGuid,
               link: uploadUrl,
               description: upload.description ?? upload.title ?? 'Untitled',
               content,

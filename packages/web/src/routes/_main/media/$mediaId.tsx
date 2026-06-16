@@ -17,6 +17,7 @@ import {
   createFileRoute,
   Link,
   notFound,
+  redirect,
   useLocation,
 } from '@tanstack/react-router';
 import { formatDistanceToNow } from 'date-fns';
@@ -102,6 +103,25 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
   validateSearch: z.object({
     list: z.string().optional(),
   }),
+  beforeLoad: ({ params, location, search }) => {
+    // Both the full UUID and the short (base58) id resolve here, but the short
+    // id is canonical. If the URL used the full UUID, 301 to the short form so
+    // the same media isn't served under two URLs. `params.mediaId` is already
+    // normalized to a full lowercase UUID by the parser above; we inspect the
+    // raw path segment to know which form the visitor actually used.
+    const rawId = decodeURIComponent(
+      location.pathname.split('/').filter(Boolean).pop() ?? '',
+    );
+    if (z.uuid().safeParse(rawId).success) {
+      throw redirect({
+        to: '/media/$mediaId',
+        params: { mediaId: idTranslator.fromUUID(params.mediaId) },
+        search,
+        replace: true,
+        statusCode: 301,
+      });
+    }
+  },
   loader: async ({ context: { queryClient, trpc }, params }) => {
     // The transcript/paragraphs/rating/comments ensureQueryData calls run for
     // their cache-priming side effect (the component reads them via
@@ -176,6 +196,10 @@ export const Route = createFileRoute('/_main/media/$mediaId')({
       `Watch ${media.title || 'this video'} on Let's Church`;
 
     // TODO: centralize the public url logic
+    // `media.id` is already the canonical short (base58) id — getMediaById runs
+    // it through OutgoingIdSchema — so it's emitted directly here. Do NOT wrap it
+    // in idTranslator.fromUUID(): that expects a full UUID and throws on a short
+    // id, which crashes head() and blanks the page during client hydration.
     const url =
       typeof window !== 'undefined'
         ? window.location.href
