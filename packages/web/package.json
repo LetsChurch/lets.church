@@ -42,6 +42,7 @@
     "@node-rs/xxhash": "^1.7.6",
     "@openrouter/ai-sdk-provider": "^2.9.0",
     "@sindresorhus/slugify": "^3.0.0",
+    "@mux/mux-node": "^14.1.1",
     "@standard-schema/spec": "^1.0.0",
     "@tabler/icons-react": "^3.35.0",
     "@tailwindcss/vite": "catalog:",

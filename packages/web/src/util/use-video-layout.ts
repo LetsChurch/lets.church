@@ -15,6 +15,10 @@ type VideoLayoutParams = {
   transcriptSidebarWidth?: number;
   gap?: number;
   isAudio?: boolean;
+  // When false, never reserve space for the transcript/playlist sidebar (e.g.
+  // a live broadcast with no transcript and no series) so the video can use the
+  // full width.
+  hasSidebar?: boolean;
 };
 
 type VideoLayoutResult = {
@@ -38,6 +42,7 @@ export function useVideoLayout({
   transcriptSidebarWidth = 368, // 92rem = 92 * 0.25rem = 23rem = 368px
   gap = 16, // gap-4 = 1rem = 16px
   isAudio = false,
+  hasSidebar = true,
 }: VideoLayoutParams = {}): VideoLayout {
   const [pageSidebarCollapsed, setPageSidebarCollapsed] = useState(
     getInitialSidebarCollapsed(),
@@ -64,6 +69,7 @@ export function useVideoLayout({
       gap,
       pageSidebarCollapsed,
       isAudio,
+      hasSidebar,
     });
   });
 
@@ -83,6 +89,7 @@ export function useVideoLayout({
           gap,
           pageSidebarCollapsed,
           isAudio,
+          hasSidebar,
         }),
       );
     };
@@ -127,6 +134,7 @@ export function useVideoLayout({
     gap,
     pageSidebarCollapsed,
     isAudio,
+    hasSidebar,
   ]);
 
   return { ...layout, setTranscriptWidth: setDynamicTranscriptWidth };
@@ -145,6 +153,7 @@ type CalculateLayoutParams = VideoLayoutParams & {
   gap: number;
   pageSidebarCollapsed: boolean;
   isAudio: boolean;
+  hasSidebar: boolean;
 };
 
 function calculateLayout({
@@ -160,6 +169,7 @@ function calculateLayout({
   gap,
   pageSidebarCollapsed,
   isAudio,
+  hasSidebar,
 }: CalculateLayoutParams): VideoLayoutResult {
   const aspect = aspectWidth / aspectHeight;
 
@@ -173,8 +183,9 @@ function calculateLayout({
     vh - headerHeight - chromeBelow,
   );
 
-  // First, try with transcript sidebar if above sm breakpoint
-  let showSidebar = vw >= 640;
+  // First, try with transcript sidebar if above sm breakpoint (unless the
+  // caller says there's no sidebar to show at all)
+  let showSidebar = hasSidebar && vw >= 640;
   let availableWidth =
     vw -
     pageSidebarWidth -

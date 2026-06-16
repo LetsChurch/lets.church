@@ -361,3 +361,21 @@ transcribe file:
 
 transcribe-dir dir:
   fd . {{dir}} | xargs -o -n1 just transcribe
+
+#
+# Live streaming
+#
+
+# Stream a local video file to an RTMPS ingest endpoint + stream key in real
+# time, for testing live streaming. Pass the Server URL shown in the channel's
+# live settings as `server`; the publish URL is "<server>/<key>". Streams once
+# and disconnects when the file ends — which completes the broadcast and
+# triggers the recording import — or stop early with Ctrl-C. Requires ffmpeg
+# built with RTMPS/TLS support.
+# Example: just stream-rtmps ~/clip.mp4 <stream-key> rtmps://global-live.mux.com:443/app
+stream-rtmps file key server:
+  ffmpeg -re -i "{{file}}" \
+    -c:v libx264 -preset veryfast -tune zerolatency -profile:v high -pix_fmt yuv420p \
+    -b:v 4500k -maxrate 4500k -bufsize 9000k -g 60 \
+    -c:a aac -b:a 128k -ar 44100 \
+    -f flv "{{server}}/{{key}}"

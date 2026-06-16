@@ -20,9 +20,10 @@ const dirname =
 export default defineConfig((_config) => ({
   server: {
     port: 3000,
-    // Allow the in-cluster service hostname so other dev containers (e.g. the
-    // oidc-client example) can make back-channel calls to http://web:3000
-    // without Vite's dev-server host check rejecting them.
+    // Allow the in-compose-network service hostname so other dev containers can
+    // reach http://web:3000 without Vite's dev-server host check rejecting them —
+    // e.g. the oidc-client example's back-channel calls and the mux-webhooks
+    // forwarder POSTing to /webhooks/mux.
     allowedHosts: ['web'],
   },
   plugins: [

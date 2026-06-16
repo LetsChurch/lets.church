@@ -9,6 +9,7 @@ import {
   MediaController,
   MediaDurationDisplay,
   MediaFullscreenButton,
+  MediaLiveButton,
   MediaMuteButton,
   MediaPipButton,
   MediaPlayButton,
@@ -50,6 +51,9 @@ type Props = {
   embed?: boolean;
   initialTimestamp?: number;
   onVideoEnded?: () => void;
+  // True while this is a live broadcast streaming from Mux's live HLS. Shows a
+  // LIVE badge and disables the VOD-only view-range tracking.
+  isLive?: boolean;
 };
 
 function serializeTimeRanges(
@@ -78,6 +82,7 @@ export function Player({
   embed = false,
   initialTimestamp,
   onVideoEnded,
+  isLive = false,
 }: Props) {
   const trpc = useTRPC();
   const videoRef = useRef<HlsVideoElement>(null);
@@ -121,6 +126,15 @@ export function Player({
       );
     }
   }, [mediaType]);
+
+  // Tell media-chrome whether this is a live (DVR) stream so the controls
+  // render the live timeline / DVR window and the live button works, instead
+  // of a fixed-duration on-demand timeline (which jumps as the edge advances).
+  useEffect(() => {
+    const controller = controllerRef.current;
+    if (!controller) return;
+    controller.setAttribute('streamtype', isLive ? 'live' : 'on-demand');
+  }, [isLive]);
 
   // Fully tear down the underlying media element when the player unmounts, so a
   // detached element can't keep emitting audio. Custom-element media players
@@ -318,6 +332,43 @@ export function Player({
     };
   }, [savedPosition, savedPlayState]);
 
+  // Preserve playback position when the source URL swaps underneath us — most
+  // importantly the live→VOD handoff, where `mediaSource` changes from Mux's
+  // live HLS to our CDN master once the recording is imported. Without this the
+  // element reloads and resets to t=0, yanking the viewer back to the start.
+  const sourceInitializedRef = useRef(false);
+  useEffect(() => {
+    const videoElement = videoRef.current;
+    if (!videoElement) return;
+    // Skip the initial mount (initialTimestamp/savedPosition handle that).
+    if (!sourceInitializedRef.current) {
+      sourceInitializedRef.current = true;
+      return;
+    }
+    // Captured before the new source loads (currentTime hasn't reset yet).
+    const resumeAt = videoElement.currentTime;
+    const wasPlaying = !videoElement.paused;
+    if (resumeAt <= 0) return;
+
+    const handleLoaded = () => {
+      try {
+        videoElement.currentTime = resumeAt;
+        if (wasPlaying) {
+          videoElement.play().catch(() => {});
+        }
+      } catch {
+        // ignore — seeking can throw if the element isn't ready
+      }
+    };
+
+    videoElement.addEventListener('loadedmetadata', handleLoaded, {
+      once: true,
+    });
+    return () => {
+      videoElement.removeEventListener('loadedmetadata', handleLoaded);
+    };
+  }, [currentSource]);
+
   useEffect(() => {
     if (!videoRef.current || !viewHash) {
       return;
@@ -370,8 +421,11 @@ export function Player({
       }
     }
 
-    // Start the reporting timer
-    reportTimerRef.current = window.setTimeout(reportTimeRanges, 5000);
+    // Start the reporting timer (VOD only — live "played" ranges aren't a
+    // meaningful watch record, and the live edge keeps moving).
+    if (!isLive) {
+      reportTimerRef.current = window.setTimeout(reportTimeRanges, 5000);
+    }
 
     // Cleanup
     return () => {
@@ -380,19 +434,21 @@ export function Player({
       videoElement.removeEventListener('durationchange', handleDurationChange);
       videoElement.removeEventListener('ended', handleEnded);
       cleanSetPlayAt();
-      // Report one final time on unmount
-      const ranges = serializeTimeRanges(videoElement.played);
-      if (ranges.length > 0) {
-        recordViewSeconds({
-          uploadRecordId,
-          viewHash,
-          ranges,
-        }).catch((error) => {
-          console.error('[Player] Error recording view seconds', error);
-        });
+      // Report one final time on unmount (VOD only)
+      if (!isLive) {
+        const ranges = serializeTimeRanges(videoElement.played);
+        if (ranges.length > 0) {
+          recordViewSeconds({
+            uploadRecordId,
+            viewHash,
+            ranges,
+          }).catch((error) => {
+            console.error('[Player] Error recording view seconds', error);
+          });
+        }
       }
     };
-  }, [uploadRecordId, viewHash, recordViewSeconds, onVideoEnded]);
+  }, [uploadRecordId, viewHash, recordViewSeconds, onVideoEnded, isLive]);
 
   // Track playback start and streaming resolution in PostHog
   useEffect(() => {
@@ -465,6 +521,12 @@ export function Player({
           mediaType === 'audio' && embed && 'w-full',
         )}
       >
+        {isLive && currentSource && (
+          <div className="pointer-events-none absolute top-3 left-3 z-10 flex items-center gap-1.5 rounded-md bg-red-600 px-2 py-1 font-semibold text-white text-xs uppercase tracking-wide group-[[mediaisfullscreen]]:top-6 group-[[mediaisfullscreen]]:left-6">
+            <span className="size-2 animate-pulse rounded-full bg-white" />
+            Live
+          </div>
+        )}
         {currentSource ? (
           <>
             {mediaType === 'audio' && (
@@ -668,21 +730,35 @@ export function Player({
                   )}
                 >
                   <div className="flex justify-between px-2 font-normal tracking-[-0.2px]">
-                    <MediaTimeDisplay
-                      className={cn(
-                        'bg-transparent text-xs group-[[mediaisfullscreen]]:text-base',
-                        '[--media-text-color:white]',
-                        'tabular-nums',
-                      )}
-                      showDuration={false}
-                    />
-                    <MediaDurationDisplay
-                      className={cn(
-                        'bg-transparent text-xs group-[[mediaisfullscreen]]:text-base',
-                        '[--media-text-color:white]',
-                        'tabular-nums',
-                      )}
-                    />
+                    {isLive ? (
+                      // Live: a LIVE button (lit at the edge, click to jump back
+                      // to live) replaces the meaningless fixed duration; the
+                      // range below acts as the DVR window scrubber.
+                      <MediaLiveButton
+                        className={cn(
+                          'bg-transparent text-xs group-[[mediaisfullscreen]]:text-base',
+                          '[--media-text-color:white]',
+                        )}
+                      />
+                    ) : (
+                      <>
+                        <MediaTimeDisplay
+                          className={cn(
+                            'bg-transparent text-xs group-[[mediaisfullscreen]]:text-base',
+                            '[--media-text-color:white]',
+                            'tabular-nums',
+                          )}
+                          showDuration={false}
+                        />
+                        <MediaDurationDisplay
+                          className={cn(
+                            'bg-transparent text-xs group-[[mediaisfullscreen]]:text-base',
+                            '[--media-text-color:white]',
+                            'tabular-nums',
+                          )}
+                        />
+                      </>
+                    )}
                   </div>
 
                   <MediaTimeRange

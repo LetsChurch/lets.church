@@ -46,6 +46,13 @@ export const completeResetPasswordSignal = signal<
   'completeResetPassword'
 >('completeResetPassword');
 
+// Sent to muxImportRecordingWorkflow when a broadcast's downloadable MP4
+// rendition is ready, so it imports immediately instead of waiting out its
+// fallback timer.
+export const muxRenditionReadySignal = signal<[], 'muxRenditionReady'>(
+  'muxRenditionReady',
+);
+
 // ====== Queries ======
 
 export type BackfillProgress = {

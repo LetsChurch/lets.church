@@ -38,6 +38,7 @@
     "@letschurch/opensearch": "workspace:*",
     "@letschurch/s3": "workspace:*",
     "@letschurch/util": "workspace:*",
+    "@mux/mux-node": "^14.1.1",
     "@node-rs/xxhash": "^1.7.6",
     "@rowanmanning/feed-parser": "^2.1.1",
     "@temporalio/activity": "catalog:",

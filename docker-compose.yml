@@ -24,6 +24,10 @@ x-s3-backup-env: &s3-backup-env
   S3_BACKUP_ACCESS_KEY_ID: ${S3_BACKUP_ACCESS_KEY_ID}
   S3_BACKUP_SECRET_ACCESS_KEY: ${S3_BACKUP_SECRET_ACCESS_KEY}
 
+x-mux-env: &mux-env
+  MUX_TOKEN_ID: ${MUX_TOKEN_ID:-}
+  MUX_TOKEN_SECRET: ${MUX_TOKEN_SECRET:-}
+
 services:
   #
   # App Services
@@ -86,7 +90,10 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       OPENROUTER_SUMMARY_MODEL: ${OPENROUTER_SUMMARY_MODEL:-openai/gpt-5.4-mini}
       OPENROUTER_ANNOTATE_MODEL: ${OPENROUTER_ANNOTATE_MODEL:-openai/gpt-5.4-mini}
-      <<: [*s3-ingest-env, *s3-public-env]
+      # Mux live streaming. Webhook secret is the signing secret printed by
+      # `mux webhooks listen` (mux-webhooks service) — persists across runs.
+      MUX_WEBHOOK_SECRET: ${MUX_WEBHOOK_SECRET:-}
+      <<: [*s3-ingest-env, *s3-public-env, *mux-env]
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
@@ -190,7 +197,7 @@ services:
       OPENROUTER_ANNOTATE_MODEL: ${OPENROUTER_ANNOTATE_MODEL:-openai/gpt-5.4-mini}
       OPENROUTER_ANNOTATE_FALLBACK_MODEL: ${OPENROUTER_ANNOTATE_FALLBACK_MODEL:-anthropic/claude-haiku-4-5}
       OPENROUTER_SUMMARY_FALLBACK_MODEL: ${OPENROUTER_SUMMARY_FALLBACK_MODEL:-anthropic/claude-haiku-4-5}
-      <<: [*s3-ingest-env, *s3-public-env, *s3-backup-env]
+      <<: [*s3-ingest-env, *s3-public-env, *s3-backup-env, *mux-env]
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
@@ -341,7 +348,7 @@ services:
       IDENTITY: dev
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_SHUTDOWN_GRACE_TIME: 1m
-      <<: *s3-ingest-env
+      <<: [*s3-ingest-env, *mux-env]
     volumes:
       - ./pnpm-workspace.yaml:/usr/src/app/pnpm-workspace.yaml
       - ./pnpm-lock.yaml:/usr/src/app/pnpm-lock.yaml
@@ -360,6 +367,29 @@ services:
       - /usr/src/app/packages/import-worker/node_modules
     depends_on:
       - temporal
+
+  # Local-dev Mux webhook forwarder. Logs in with MUX_TOKEN_ID/MUX_TOKEN_SECRET,
+  # then runs the Mux CLI's `webhooks listen`, which forwards every webhook for
+  # that environment to the web service so you can test the end-to-end flow. The
+  # signing secret it uses persists across runs — copy it from the logs into
+  # MUX_WEBHOOK_SECRET (web service) only if you want signatures verified. With
+  # no/placeholder credentials it idles instead of crash-looping. No public
+  # tunnel needed.
+  mux-webhooks:
+    # glibc base (not alpine): @mux/cli ships per-platform binaries built
+    # against glibc, so the musl alpine image fails with ENOENT at runtime.
+    image: node:22-slim
+    command: >-
+      sh -c 'npm install -g @mux/cli &&
+      env | grep -E "^MUX_TOKEN_(ID|SECRET)=" > /tmp/mux.env &&
+      mux login --env-file /tmp/mux.env &&
+      mux webhooks listen --forward-to http://web:3000/webhooks/mux ||
+      (echo "mux-webhooks idle: set real MUX_TOKEN_ID/MUX_TOKEN_SECRET to enable" && sleep 3600)'
+    restart: unless-stopped
+    environment:
+      <<: *mux-env
+    depends_on:
+      - web
 
   #
   # Vendor Services

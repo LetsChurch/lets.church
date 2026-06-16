@@ -48,6 +48,25 @@ export OPENROUTER_API_KEY=
 # openai/gpt-5.4-nano. Better quality: openai/gpt-5.4 or openai/gpt-5.5.
 # export OPENROUTER_SUMMARY_MODEL=openai/gpt-5.4-mini
 
+# Mux live streaming API token (Settings -> Access Tokens in the Mux dashboard).
+# Grant it both Mux Video AND Mux System permissions — the mux-webhooks
+# forwarder (`mux webhooks listen`) needs System; a Video-only token fails with
+# "Permission denied or this route does not exist".
+export MUX_TOKEN_ID=
+export MUX_TOKEN_SECRET=
+# Webhook signing secret. Mux GENERATES this — you can't choose the value.
+# Leave UNSET in dev to skip signature verification; REQUIRED in production.
+#
+# In dev you don't need a dashboard webhook: run the mux-webhooks compose
+# service (`mux webhooks listen --forward-to http://web:3000/webhooks/mux`),
+# which forwards your environment's events to receive them and test the
+# end-to-end flow, and prints a signing secret to copy here.
+#
+# In production you must create a webhook in the Mux dashboard
+# (Settings -> Webhooks) pointing at https://<your-domain>/webhooks/mux and
+# copy its signing secret here. Webhooks/secrets are per-environment in Mux.
+# export MUX_WEBHOOK_SECRET=
+
 export LISTMONK_USER=admin
 export LISTMONK_PASSWORD=password
 export LISTMONK_API_USER=api

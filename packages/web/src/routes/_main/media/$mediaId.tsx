@@ -636,6 +636,10 @@ function RouteComponent() {
   // than the bare id — otherwise we'd show an empty playlist tab/sidebar.
   const playlistItems = playlistData?.items ?? [];
   const hasPlaylistContext = Boolean(activeListId) && playlistItems.length > 0;
+  // No transcript exists while we're still playing from Mux (live or the
+  // not-yet-imported recording), so hide the transcript UI; the sidebar still
+  // shows when there's a series/playlist to navigate.
+  const hideTranscript = media.servingMux;
   const mediaIdShort = idTranslator.fromUUID(params.mediaId);
   const currentIndex = playlistItems.findIndex(
     (item) => item.id === mediaIdShort,
@@ -988,6 +992,9 @@ function RouteComponent() {
     aspectHeight,
     transcriptSidebarWidth: transcriptWidth,
     isAudio: !media.mediaSource,
+    // While playing from Mux (live / awaiting import) we hide the sidebar
+    // entirely — including series/playlist — so the video uses the full width.
+    hasSidebar: !hideTranscript,
   });
 
   const handleTranscriptWidthChange = (width: number) => {
@@ -1028,6 +1035,7 @@ function RouteComponent() {
                 videoClassName={layout.showSidebar ? null : 'sticky top-0 z-10'}
                 initialTimestamp={initialTimestamp}
                 onVideoEnded={autoplay.handleVideoEnded}
+                isLive={media.isLive}
               />
               {hasPlaylistContext && nextItem ? (
                 <AutoplayCountdown
@@ -1081,8 +1089,10 @@ function RouteComponent() {
               createdAt={media.createdAt}
               license={media.license}
               lengthSeconds={media.lengthSeconds}
-              showTranscriptTab={!layout.showSidebar}
-              showPlaylistTab={!layout.showSidebar && hasPlaylistContext}
+              showTranscriptTab={!layout.showSidebar && !hideTranscript}
+              showPlaylistTab={
+                !layout.showSidebar && hasPlaylistContext && !hideTranscript
+              }
               playlistTabLabel={
                 playlistData?.type === 'SERIES' ? 'Series' : 'Playlist'
               }
@@ -1135,7 +1145,7 @@ function RouteComponent() {
           </div>
         </div>
 
-        {layout.showSidebar ? (
+        {layout.showSidebar && !hideTranscript ? (
           <>
             <WindowSplitter
               initialWidth={transcriptWidth}
