@@ -10,6 +10,12 @@ const moduleLogger = logger.child({ module: 'util/ffmpeg' });
 
 const HLS_TIME = 7;
 
+// Cap CPU encoder threads for the software path so a single ffmpeg job doesn't try
+// to grab the whole node and thrash. Should match the transcode-worker cpu limit in
+// the k8s manifests (infra repo, transcode-worker component: TRANSCODE_THREADS / cpu).
+// 0 (or unset -> default) lets ffmpeg auto-detect. Not applied to the AMA hardware path.
+const SOFTWARE_THREADS = Number(process.env.TRANSCODE_THREADS ?? 12);
+
 const BASE_HLS_ARGS = [
   // Defensive: avoid "Too many packets buffered for output stream"
   // muxer failures on inputs with large interleaving gaps. Applies to
@@ -388,6 +394,33 @@ export function ffmpegEncodingArgs(
   return [...filterComplex, ...outputMaps];
 }
 
+export function ffmpegEncodeArgs(
+  inputFilename: string,
+  probe: Probe,
+  variants: Array<UploadVariantValue>,
+  hwAccel: HwAccel,
+): Array<string> {
+  return [
+    // Baseline args
+    '-hide_banner',
+    '-y',
+    // Software path only: cap encoder threads to the cgroup CPU budget so x264
+    // doesn't spawn one thread per host core and fight the scheduler. AMA offloads
+    // encoding to hardware, so leave its threading alone.
+    ...(hwAccel === 'none' && SOFTWARE_THREADS > 0
+      ? ['-threads', String(SOFTWARE_THREADS)]
+      : []),
+    ...extraDecodeArgs(probe, hwAccel),
+    '-i',
+    inputFilename,
+    // KV output for progress
+    '-progress',
+    '-',
+    // Outputs
+    ...ffmpegEncodingArgs(variants, probe, hwAccel),
+  ];
+}
+
 export function runFfmpegEncode({
   cwd,
   inputFilename,
@@ -405,19 +438,7 @@ export function runFfmpegEncode({
 }) {
   const proc = execa(
     'ffmpeg',
-    [
-      // Baseline args
-      '-hide_banner',
-      '-y',
-      ...extraDecodeArgs(probe, hwAccel),
-      '-i',
-      inputFilename,
-      // KV output for progress
-      '-progress',
-      '-',
-      // Outputs
-      ...ffmpegEncodingArgs(variants, probe, hwAccel),
-    ],
+    ffmpegEncodeArgs(inputFilename, probe, variants, hwAccel),
     { cwd, cancelSignal: signal },
   );
 

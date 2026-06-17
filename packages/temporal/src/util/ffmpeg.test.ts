@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
   extraDecodeArgs,
+  ffmpegEncodeArgs,
   ffmpegEncodingArgs,
   getVariants,
   parseM3u8,
@@ -1117,6 +1118,49 @@ test('ffmpegEncodingArgs ama hwupload for non-hw-accelerated codec', () => {
       "AUDIO.m3u8",
     ]
   `);
+});
+
+describe('ffmpegEncodeArgs', () => {
+  // Helper: return the value passed to ffmpeg's -threads flag, or undefined if absent.
+  function threadsArg(args: Array<string>): string | undefined {
+    const i = args.indexOf('-threads');
+    return i === -1 ? undefined : args[i + 1];
+  }
+
+  test('software path caps encoder threads (default 12)', () => {
+    const args = ffmpegEncodeArgs(
+      'input.mp4',
+      mockProbe(1920, 1080),
+      ['VIDEO_1080P', 'AUDIO'],
+      'none',
+    );
+    // -threads must be present, set to a positive integer, and precede the input.
+    expect(threadsArg(args)).toBe('12');
+    expect(args.indexOf('-threads')).toBeLessThan(args.indexOf('-i'));
+  });
+
+  test('AMA hardware path does not set -threads', () => {
+    const args = ffmpegEncodeArgs(
+      'input.mp4',
+      mockProbe(1920, 1080),
+      ['VIDEO_1080P', 'AUDIO'],
+      'ama:0',
+    );
+    expect(threadsArg(args)).toBeUndefined();
+  });
+
+  test('passes through input filename and encoding outputs', () => {
+    const args = ffmpegEncodeArgs(
+      'input.mp4',
+      mockProbe(1920, 1080),
+      ['VIDEO_1080P', 'AUDIO'],
+      'none',
+    );
+    // input wired correctly
+    expect(args[args.indexOf('-i') + 1]).toBe('input.mp4');
+    // and the encoding args are appended after the input
+    expect(args.indexOf('-filter_complex')).toBeGreaterThan(args.indexOf('-i'));
+  });
 });
 
 describe('parseM3u8', () => {
