@@ -581,6 +581,22 @@ function AdminPage() {
           radius="md"
           withBorder
           component={Link}
+          to="/dashboard/admin/storage-audit"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Storage Audit</Text>
+          </Group>
+          <Text size="sm" c="dimmed">
+            Reconcile S3 buckets against the database for orphaned or missing
+            files
+          </Text>
+        </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
           to="/dashboard/admin/maintenance"
         >
           <Group justify="space-between" mb="xs">

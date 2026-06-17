@@ -142,6 +142,12 @@ export const BackupStatus = pgEnum('backup_status', [
   'BACKUP_FAILED',
 ]);
 
+export const StorageAuditStatus = pgEnum('storage_audit_status', [
+  'RUNNING',
+  'COMPLETED',
+  'FAILED',
+]);
+
 export const Rating = pgEnum('rating', ['LIKE', 'DISLIKE']);
 
 export const UploadViewSource = pgEnum('upload_view_source', [
@@ -736,6 +742,37 @@ export const UploadState = pgTable(
       name: 'upload_state_organization_fkey',
       columns: [UploadState.organizationId],
       foreignColumns: [Organization.id],
+    })
+      .onDelete('set null')
+      .onUpdate('cascade'),
+  }),
+);
+
+// One row per storage-audit run (admin-triggered, read-only S3 reconciliation).
+// Holds run status, a compact JSON summary (counts + capped sample findings),
+// and the S3 key of the full report. Powers the admin storage-audit page and
+// keeps run history. See storageAuditWorkflow.
+export const StorageAudit = pgTable(
+  'storage_audit',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    status: StorageAuditStatus('status').notNull().default('RUNNING'),
+    triggeredById: uuid('triggered_by_id'),
+    startedAt: timestamp('started_at', { precision: 3 }).notNull().defaultNow(),
+    finishedAt: timestamp('finished_at', { precision: 3 }),
+    // Compact summary: per-bucket/category counts + capped sample findings.
+    // The full, uncapped findings live in the S3 report at reportS3Key.
+    summary: jsonb('summary'),
+    reportS3Key: text('report_s3_key'),
+    error: text('error'),
+    createdAt: timestamp('created_at', { precision: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { precision: 3 }).notNull(),
+  },
+  (StorageAudit) => ({
+    storage_audit_triggeredBy_fkey: foreignKey({
+      name: 'storage_audit_triggeredBy_fkey',
+      columns: [StorageAudit.triggeredById],
+      foreignColumns: [AppUser.id],
     })
       .onDelete('set null')
       .onUpdate('cascade'),

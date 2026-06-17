@@ -126,6 +126,17 @@ export { default as setOrganizationAvatar } from './set-organization-avatar';
 export { default as setOrganizationCover } from './set-organization-cover';
 export { default as setProfileAvatar } from './set-profile-avatar';
 export { default as setUploadThumbnail } from './set-upload-thumbnail';
+export {
+  type AuditFinding,
+  type AuditFindingType,
+  assembleStorageAuditReport,
+  auditShard,
+  finalizeStorageAuditRecord,
+  getStorageAuditRecipient,
+  type ShardSummary,
+  type StorageAuditSummary,
+  sendStorageAuditEmail,
+} from './storage-audit';
 export { default as storeTranscriptParagraphs } from './store-transcript-paragraphs';
 export {
   default as submitLlmBatch,

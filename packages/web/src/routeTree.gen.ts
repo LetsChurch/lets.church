@@ -55,6 +55,7 @@ import { Route as DashboardChannelsNewRouteImport } from './routes/dashboard_/ch
 import { Route as DashboardChannelsChannelIdRouteImport } from './routes/dashboard_/channels_.$channelId'
 import { Route as DashboardAdminUsersRouteImport } from './routes/dashboard_/admin_.users'
 import { Route as DashboardAdminUploadBackupsRouteImport } from './routes/dashboard_/admin_.upload-backups'
+import { Route as DashboardAdminStorageAuditRouteImport } from './routes/dashboard_/admin_.storage-audit'
 import { Route as DashboardAdminSearchesRouteImport } from './routes/dashboard_/admin_/searches'
 import { Route as DashboardAdminReprocessRouteImport } from './routes/dashboard_/admin_.reprocess'
 import { Route as DashboardAdminProcessingUploadsRouteImport } from './routes/dashboard_/admin_.processing-uploads'
@@ -336,6 +337,12 @@ const DashboardAdminUploadBackupsRoute =
   DashboardAdminUploadBackupsRouteImport.update({
     id: '/admin_/upload-backups',
     path: '/admin/upload-backups',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardAdminStorageAuditRoute =
+  DashboardAdminStorageAuditRouteImport.update({
+    id: '/admin_/storage-audit',
+    path: '/admin/storage-audit',
     getParentRoute: () => DashboardRoute,
   } as any)
 const DashboardAdminSearchesRoute = DashboardAdminSearchesRouteImport.update({
@@ -669,6 +676,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/reindex': typeof DashboardAdminReindexRoute
   '/dashboard/admin/reprocess': typeof DashboardAdminReprocessRoute
   '/dashboard/admin/searches': typeof DashboardAdminSearchesRoute
+  '/dashboard/admin/storage-audit': typeof DashboardAdminStorageAuditRoute
   '/dashboard/admin/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
   '/dashboard/channels/$channelId': typeof DashboardChannelsChannelIdRoute
@@ -761,6 +769,7 @@ export interface FileRoutesByTo {
   '/dashboard/admin/reindex': typeof DashboardAdminReindexRoute
   '/dashboard/admin/reprocess': typeof DashboardAdminReprocessRoute
   '/dashboard/admin/searches': typeof DashboardAdminSearchesRoute
+  '/dashboard/admin/storage-audit': typeof DashboardAdminStorageAuditRoute
   '/dashboard/admin/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
   '/dashboard/channels/$channelId': typeof DashboardChannelsChannelIdRoute
@@ -857,6 +866,7 @@ export interface FileRoutesById {
   '/dashboard_/admin_/reindex': typeof DashboardAdminReindexRoute
   '/dashboard_/admin_/reprocess': typeof DashboardAdminReprocessRoute
   '/dashboard_/admin_/searches': typeof DashboardAdminSearchesRoute
+  '/dashboard_/admin_/storage-audit': typeof DashboardAdminStorageAuditRoute
   '/dashboard_/admin_/upload-backups': typeof DashboardAdminUploadBackupsRoute
   '/dashboard_/admin_/users': typeof DashboardAdminUsersRoute
   '/dashboard_/channels_/$channelId': typeof DashboardChannelsChannelIdRoute
@@ -953,6 +963,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/reindex'
     | '/dashboard/admin/reprocess'
     | '/dashboard/admin/searches'
+    | '/dashboard/admin/storage-audit'
     | '/dashboard/admin/upload-backups'
     | '/dashboard/admin/users'
     | '/dashboard/channels/$channelId'
@@ -1045,6 +1056,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/reindex'
     | '/dashboard/admin/reprocess'
     | '/dashboard/admin/searches'
+    | '/dashboard/admin/storage-audit'
     | '/dashboard/admin/upload-backups'
     | '/dashboard/admin/users'
     | '/dashboard/channels/$channelId'
@@ -1140,6 +1152,7 @@ export interface FileRouteTypes {
     | '/dashboard_/admin_/reindex'
     | '/dashboard_/admin_/reprocess'
     | '/dashboard_/admin_/searches'
+    | '/dashboard_/admin_/storage-audit'
     | '/dashboard_/admin_/upload-backups'
     | '/dashboard_/admin_/users'
     | '/dashboard_/channels_/$channelId'
@@ -1509,6 +1522,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/upload-backups'
       fullPath: '/dashboard/admin/upload-backups'
       preLoaderRoute: typeof DashboardAdminUploadBackupsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard_/admin_/storage-audit': {
+      id: '/dashboard_/admin_/storage-audit'
+      path: '/admin/storage-audit'
+      fullPath: '/dashboard/admin/storage-audit'
+      preLoaderRoute: typeof DashboardAdminStorageAuditRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard_/admin_/searches': {
@@ -1954,6 +1974,7 @@ interface DashboardRouteChildren {
   DashboardAdminReindexRoute: typeof DashboardAdminReindexRoute
   DashboardAdminReprocessRoute: typeof DashboardAdminReprocessRoute
   DashboardAdminSearchesRoute: typeof DashboardAdminSearchesRoute
+  DashboardAdminStorageAuditRoute: typeof DashboardAdminStorageAuditRoute
   DashboardAdminUploadBackupsRoute: typeof DashboardAdminUploadBackupsRoute
   DashboardAdminUsersRoute: typeof DashboardAdminUsersRoute
   DashboardChannelsChannelIdRoute: typeof DashboardChannelsChannelIdRoute
@@ -2006,6 +2027,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAdminReindexRoute: DashboardAdminReindexRoute,
   DashboardAdminReprocessRoute: DashboardAdminReprocessRoute,
   DashboardAdminSearchesRoute: DashboardAdminSearchesRoute,
+  DashboardAdminStorageAuditRoute: DashboardAdminStorageAuditRoute,
   DashboardAdminUploadBackupsRoute: DashboardAdminUploadBackupsRoute,
   DashboardAdminUsersRoute: DashboardAdminUsersRoute,
   DashboardChannelsChannelIdRoute: DashboardChannelsChannelIdRoute,

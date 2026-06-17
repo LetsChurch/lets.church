@@ -36,6 +36,7 @@ import {
   makeReprocessAllWorkflowId,
   makeResetPasswordWorkflowId,
   makeScrapeAndImportWorkflowId,
+  makeStorageAuditWorkflowId,
   makeSummarizeUploadWorkflowId,
   makeUpdateUploadRecordWorkflowId,
   makeVerificationEmailWorkflowId,
@@ -79,6 +80,7 @@ import {
   getBulkBackupProgressQuery,
   getCleanupProgressQuery,
   getReindexProgressQuery,
+  getStorageAuditProgressQuery,
   updateUploadRecordSignal,
   uploadDoneSignal,
 } from '@letschurch/temporal/refs';
@@ -185,6 +187,40 @@ export {
   makeUpdateUploadRecordWorkflowId,
   makeVerificationEmailWorkflowId,
 };
+
+// Storage Audit Workflow
+export async function startStorageAudit(params: {
+  auditId: string;
+  triggeredById: string;
+  shardHexLen?: number;
+}) {
+  return startBackground('storageAuditWorkflow', {
+    ...retryOps,
+    taskQueue: BACKGROUND_QUEUE,
+    priority: { priorityKey: PRIORITY_REPROCESS },
+    workflowId: makeStorageAuditWorkflowId(params.auditId),
+    args: [params],
+  });
+}
+
+export async function getStorageAuditProgress(auditId: string) {
+  try {
+    const handle = (await client).workflow.getHandle(
+      makeStorageAuditWorkflowId(auditId),
+    );
+    const description = await handle.describe();
+    if (description.status.name === 'RUNNING') {
+      const progress = await handle.query(getStorageAuditProgressQuery);
+      return { status: 'running' as const, ...progress };
+    }
+    // Not running: the database row already carries the terminal status; the
+    // live progress query only matters mid-flight.
+    return null;
+  } catch {
+    // Workflow doesn't exist or is past its retention window.
+    return null;
+  }
+}
 
 // Web-specific workflow ID helper
 function makeMultipartMediaUploadWorkflowId(

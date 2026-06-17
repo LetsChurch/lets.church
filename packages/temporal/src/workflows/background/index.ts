@@ -66,6 +66,13 @@ export {
   type SendVerificationEmailArgs,
   sendVerificationEmailWorkflow,
 } from './send-verification-email';
+export {
+  auditBucketShardWorkflow,
+  getStorageAuditProgressQuery,
+  type StorageAuditShardParams,
+  type StorageAuditWorkflowParams,
+  storageAuditWorkflow,
+} from './storage-audit';
 export { summarizeUploadWorkflow } from './summarize-upload';
 export { updateCommentScoresWorkflow } from './update-comment-scores';
 export { updateDailySaltWorkflow } from './update-daily-salt';

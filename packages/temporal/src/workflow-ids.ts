@@ -139,6 +139,21 @@ export function makeReprocessUploadWorkflowId(uploadRecordId: string) {
   return `reprocessUpload:${uploadRecordId}`;
 }
 
+// Storage audit workflows
+export type StorageAuditBucket = 'INGEST' | 'PUBLIC' | 'BACKUP';
+
+export function makeStorageAuditWorkflowId(auditId: string) {
+  return `storageAudit:${auditId}`;
+}
+
+export function makeStorageAuditShardWorkflowId(
+  auditId: string,
+  bucket: StorageAuditBucket,
+  shardPrefix: string,
+) {
+  return `storageAuditShard:${auditId}:${bucket}:${shardPrefix}`;
+}
+
 // Import workflows
 export function makeImportMediaWorkflowId(url: string) {
   return `importMedia:${xxh32(url)}:${Date.now()}`;

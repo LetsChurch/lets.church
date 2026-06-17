@@ -261,8 +261,20 @@ export class LcS3Client {
     }
   }
 
-  async *listObjects(prefix?: string) {
-    let continuationToken: string | undefined;
+  async *listObjects(
+    prefix?: string,
+    options?: {
+      // Resume from a prior page. Pass the token surfaced via onPage to pick
+      // a long scan back up (e.g. after an activity heartbeat/retry) instead
+      // of restarting from the first page.
+      startContinuationToken?: string;
+      // Called after each page with the token that would fetch the *next*
+      // page (undefined once the listing is exhausted). Lets a long-running
+      // consumer checkpoint its position.
+      onPage?: (nextContinuationToken: string | undefined) => void;
+    },
+  ) {
+    let continuationToken: string | undefined = options?.startContinuationToken;
 
     do {
       const listCmd: ListObjectsV2Command = new ListObjectsV2Command({
@@ -280,7 +292,19 @@ export class LcS3Client {
       for (const entry of listRes.Contents?.filter(Boolean) ?? []) {
         yield entry;
       }
+
+      options?.onPage?.(continuationToken);
     } while (continuationToken);
+  }
+
+  /**
+   * Read an object's body fully into a string. Convenience for small text
+   * objects (e.g. HLS playlists, JSON manifests).
+   */
+  async getObjectText(key: string): Promise<string> {
+    const res = await this.getObject(key);
+    invariant(res.Body, `No body in GetObject response for ${key}`);
+    return res.Body.transformToString();
   }
 
   async *listKeys(prefix?: string) {

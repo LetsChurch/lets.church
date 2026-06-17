@@ -153,3 +153,17 @@ export const getDeleteChannelProgressQuery = query<
   [],
   'getDeleteChannelProgress'
 >('getDeleteChannelProgress');
+
+export type StorageAuditProgress = {
+  phase: 'scanning' | 'reporting' | 'emailing' | 'done';
+  shardsComplete: number;
+  totalShards: number;
+  orphans: number;
+  missing: number;
+};
+
+export const getStorageAuditProgressQuery = query<
+  StorageAuditProgress,
+  [],
+  'getStorageAuditProgress'
+>('getStorageAuditProgress');

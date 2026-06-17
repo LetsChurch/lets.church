@@ -11,13 +11,15 @@ import {
   OrganizationChannelAssociation,
   OrganizationTag,
   SearchLogEntry,
+  StorageAudit,
   TranscriptParagraph,
   UploadRecord,
   UploadState,
 } from '@letschurch/db';
-import { ingestConfig } from '@letschurch/s3/ingest';
+import { ingestConfig, ingestS3 } from '@letschurch/s3/ingest';
 import { publicS3 } from '@letschurch/s3/public';
 import { runAnnotation } from '@letschurch/temporal/activities/background/annotate-transcript';
+import type { StorageAuditSummary } from '@letschurch/temporal/activities/background/storage-audit';
 import { runSummary } from '@letschurch/temporal/activities/background/summarize-upload';
 import {
   BACKGROUND_QUEUE,
@@ -75,6 +77,7 @@ import {
   getReindexProgress,
   getReprocessWorkflowStatus,
   getRunningWorkflowCount,
+  getStorageAuditProgress,
   makeAnnotateTranscriptWorkflowId,
   makeProcessMediaWorkflowId,
   makeSummarizeUploadWorkflowId,
@@ -89,6 +92,7 @@ import {
   startCleanupStaleUploadStates,
   startReindex,
   startReprocess,
+  startStorageAudit,
 } from '@/temporal';
 import { mantineAvatarSm2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
@@ -4627,6 +4631,127 @@ export const adminRouter = router({
           message: 'Failed to cancel reindex',
         });
       }
+    }),
+
+  // Storage audit procedures
+
+  getStorageAuditStatus: adminProcedure.query(async () => {
+    const rows = await db
+      .select()
+      .from(StorageAudit)
+      .orderBy(desc(StorageAudit.startedAt))
+      .limit(10);
+
+    return Promise.all(
+      rows.map(async (row) => {
+        const liveProgress =
+          row.status === 'RUNNING'
+            ? await getStorageAuditProgress(row.id)
+            : null;
+
+        // Fresh short-lived link to the full report for completed runs.
+        let reportUrl: string | null = null;
+        if (row.reportS3Key) {
+          try {
+            reportUrl = await ingestS3.getSignedGetObject(row.reportS3Key, {
+              expiresIn: 60 * 60, // 1 hour
+              responseContentDisposition:
+                'attachment; filename="storage-audit.json"',
+            });
+          } catch {
+            reportUrl = null;
+          }
+        }
+
+        return {
+          id: row.id,
+          status: row.status,
+          startedAt: row.startedAt,
+          finishedAt: row.finishedAt,
+          error: row.error,
+          summary: (row.summary as StorageAuditSummary | null) ?? null,
+          liveProgress:
+            liveProgress && liveProgress.status === 'running'
+              ? liveProgress
+              : null,
+          reportUrl,
+        };
+      }),
+    );
+  }),
+
+  startStorageAudit: adminProcedure
+    .input(
+      z
+        .object({ shardHexLen: z.number().int().min(1).max(2).optional() })
+        .optional(),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Guard against concurrent runs (the workflow id is also unique per
+      // audit, but this gives a clean error and avoids dangling RUNNING rows).
+      const running = await db
+        .select({ id: StorageAudit.id })
+        .from(StorageAudit)
+        .where(eq(StorageAudit.status, 'RUNNING'))
+        .limit(1);
+      if (running.length > 0) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'A storage audit is already running',
+        });
+      }
+
+      const [row] = await db
+        .insert(StorageAudit)
+        .values({
+          status: 'RUNNING',
+          triggeredById: ctx.session.appUserId,
+          updatedAt: new Date(),
+        })
+        .returning({ id: StorageAudit.id });
+      if (!row) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to create storage audit record',
+        });
+      }
+
+      try {
+        await startStorageAudit({
+          auditId: row.id,
+          triggeredById: ctx.session.appUserId,
+          ...(input?.shardHexLen ? { shardHexLen: input.shardHexLen } : {}),
+        });
+      } catch (error) {
+        await db
+          .update(StorageAudit)
+          .set({
+            status: 'FAILED',
+            finishedAt: new Date(),
+            updatedAt: new Date(),
+            error: error instanceof Error ? error.message : String(error),
+          })
+          .where(eq(StorageAudit.id, row.id));
+        moduleLogger.error(
+          {
+            appUserId: ctx.session.appUserId,
+            context: {
+              error: error instanceof Error ? error.message : String(error),
+            },
+          },
+          'Failed to start storage audit',
+        );
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to start storage audit',
+        });
+      }
+
+      moduleLogger.info(
+        { appUserId: ctx.session.appUserId, context: { auditId: row.id } },
+        'Started storage audit',
+      );
+      return { success: true, auditId: row.id };
     }),
 
   // Reprocess procedures
