@@ -38,9 +38,11 @@ The query may be a full question OR just a short topic/keyword phrase (e.g. "bib
 
 - "answer": The passages directly address the query's subject and contain enough substance to give a grounded answer.
 - "overview": The passages are genuinely ABOUT the query's subject (the same topic), but don't fully or directly answer it — a short, grounded overview of that related material is still useful. This is the right choice for most topic/keyword queries whose passages are on-topic.
-- "decline": Retrieval missed. The passages are about a DIFFERENT subject than the query, only mention it in passing, or are incoherent fragments.
+- "decline": Retrieval missed — the query's subject does NOT appear in the passages at all (they are about a wholly DIFFERENT subject, or are incoherent fragments). Do NOT decline merely because the passages lack a tidy, direct answer.
 
-Critical bias: when the passages are genuinely on the query's topic, choose "answer" or "overview" — NEVER "decline". Do NOT decline merely because the passages don't form one tidy, direct answer; choose "overview" in that case. Reserve "decline" for passages that are clearly off-topic or unusable. Example of a correct decline: a "who is <person>" query whose passages never describe that person and instead discuss an unrelated doctrine.
+Identity questions ("who is X" / "what is X"): if X is the author, the speaker, or a subject of the passages — even when they give no formal biography or definition — choose "answer". You can identify X by their role and the work attributed to them (e.g. passages from X's own book or sermon let you answer "who is X" as its author/teacher). Only "decline" when X is entirely absent from the passages.
+
+Critical bias: when the passages are genuinely on the query's topic, choose "answer" or "overview" — almost NEVER "decline". Reserve "decline" for passages that are clearly about something else. Example of a correct decline: a "who is <person>" query whose passages never mention that person at all and instead discuss an unrelated doctrine.
 
 Prefer "answer" when the passages clearly support one. Output ONLY the JSON object.`;
 

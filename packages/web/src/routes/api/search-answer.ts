@@ -477,11 +477,17 @@ export const Route = createFileRoute('/api/search-answer')({
             return declineResponse();
           }
 
-          // Intent override: a browse/topic query (no reformulated question)
-          // should read as a grounded overview of what the matches cover, never
-          // a definitive "answer". The gate still owns the decline decision above;
-          // here we only soften answer→overview when the query wasn't a question.
-          if (!isAnswerWorthy && mode === 'answer') {
+          // Intent override. The gate still owns the decline decision above
+          // (off-topic / retrieval miss); these only adjust answer↔overview:
+          // - A real question should always ATTEMPT a direct answer. "On-topic
+          //   but indirect" must not downgrade a question to a passive overview
+          //   of related material (e.g. answering "who is X" with a summary of
+          //   X's book) — answer it directly from what's on point instead.
+          // - A browse/topic query (no question) reads as a grounded overview of
+          //   what the matches cover, never a definitive "answer".
+          if (isAnswerWorthy && mode === 'overview') {
+            mode = 'answer';
+          } else if (!isAnswerWorthy && mode === 'answer') {
             mode = 'overview';
           }
 
@@ -524,11 +530,13 @@ export const Route = createFileRoute('/api/search-answer')({
 Answer using ONLY the numbered sources below (these are already fetched — you do not need to search again unless the question needs comparison or counts, or it asks what a specific PERSON said — in that case call searchMedia again with their name in speakerNames to scope to paragraphs they actually spoke).${scopeNote}${videoContext}
 
 Formatting rules:
-- Begin with a concise, direct answer in one or two sentences. Do NOT open with a heading, title, or a restatement of the question. Write about the subject directly — don't frame it as what "the library", "the sources", "the material", or "the passages" say (it reads wooden); attribute to a named speaker instead when a passage has one.
+- Answer the EXACT question asked, first — in one or two sentences — then add detail. Do NOT open with a heading, title, or a restatement of the question. For an identity question ("who is X" / "what is X"), lead by identifying X from what the sources show — their role, the work attributed to them, or what they teach (e.g. "Conley Owens is the author of The Dorean Principle, in which he argues…") — do NOT pivot straight into summarizing a related work without first answering who/what they are. Even when the sources only cover the subject indirectly, give the most direct answer they support rather than a passive tour of related material.
+- Write about the subject directly — don't frame it as what "the library", "the sources", "the material", or "the passages" say (it reads wooden); attribute to a named author/speaker instead when a passage has one, using active verbs.
 - After that, add any supporting detail, lists, or short sections that help.
 - Write in Markdown.
 - A passage prefixed with a name (e.g. "Conley Owens: …") is attributed to that speaker — you may name them and attribute their statements. Passages with no name prefix are unattributed; do not guess who is speaking.
 - Cite your sources inline with bracketed numbers that match the list below (e.g. place [1] or [2] immediately after the sentence it supports). Only cite numbers that appear in the list; never invent a citation or a source.
+- PHRASING (hard rule): state what a work teaches as a DIRECT claim. NEVER write "presents the book as…", "presents it as…", "is presented as…", "frames it as…", "is described as…", or "the book/appendix/text says/notes…". Instead write "he argues that…", "the book contends that…", or "in it, he teaches that…". (Reporting what the author says about the work itself — "he says he adapted it from his thesis" — is fine.)
 
 Sources:
 ${sourcesBlock}`
@@ -537,7 +545,7 @@ ${sourcesBlock}`
 The numbered sources below matched that search but don't form a single direct answer. In 2–4 sentences, give the reader a grounded overview of what they're actually about. Do NOT fabricate specifics the sources don't support.${scopeNote}${videoContext}
 
 Formatting rules:
-- Lead with the actual subject the sources discuss — infer it from THEM (a doctrine, a thesis, a practice, a named work or author). The search text may be a fragment, phrase, or title, so do NOT restate or echo it as if it were a defined subject (e.g. do NOT write "Biblical response Christianity is presented as…"). And do NOT make "the library", "the sources", "the material", "the passages", or "this collection" the subject of your sentences — both read wooden. State what's taught directly (e.g. "Commercialization is presented as something that distorts ministry…"), or attribute a point to a named speaker when a passage has one. Do NOT open with an apology or a heading, and do NOT pivot to material that isn't on point.
+- Lead with the actual subject the sources discuss — infer it from THEM (a doctrine, a thesis, a practice, a named work or author). The search text may be a fragment, phrase, or title, so do NOT restate or echo it as if it were a defined subject (e.g. do NOT write "Biblical response Christianity is…"). And do NOT make "the library", "the sources", "the material", "the passages", or "this collection" the subject of your sentences — it reads wooden. State what's taught directly with active verbs (e.g. "Commercialization distorts ministry by…"), or attribute a point to a named author/speaker when a passage has one (e.g. "Owens argues that…"). Do NOT hedge with meta-attribution like "is presented as", "is described as", "the book/appendix/text says/notes", or "according to the sources" — the citation already shows where it came from, so write the claim directly. Do NOT open with an apology or a heading, and do NOT pivot to material that isn't on point.
 - Keep it to 2–4 sentences. Write in Markdown. Use ONLY the sources below; do not search again.
 - Cite sources inline with bracketed numbers that match the list (e.g. [1], [2]). Only cite numbers that appear in the list; never invent a citation or a source.
 
