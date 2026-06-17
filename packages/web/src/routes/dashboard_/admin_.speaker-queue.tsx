@@ -91,6 +91,18 @@ function AdminSpeakerQueuePage() {
   ) => {
     await clusterMutation.mutateAsync({ channelId, name, members });
   };
+  const onAssignExistingCluster = async (
+    speakerId: string,
+    members: ClusterCreate[],
+  ) => {
+    await assignMutation.mutateAsync({
+      assignments: members.map((m) => ({
+        uploadId: m.uploadId,
+        speakerLabel: m.speakerLabel,
+        speakerId,
+      })),
+    });
+  };
 
   return (
     <Stack gap="lg">
@@ -98,8 +110,9 @@ function AdminSpeakerQueuePage() {
         <Title order={1}>Speaker labeling queue</Title>
         <Text c="dimmed" size="sm">
           Triage unlabeled diarized voices across every channel. Matches attach
-          to existing speakers; unknown speakers let you name new voices (a
-          recurring voice once, or a one-off on its own).
+          to existing speakers; unknown speakers let you name a new voice or
+          pick an existing speaker (a recurring voice once, or a one-off on its
+          own).
         </Text>
       </div>
       <Tabs defaultValue="matches" keepMounted={false}>
@@ -121,7 +134,9 @@ function AdminSpeakerQueuePage() {
           <SpeakerClusters
             clusters={data.clusters}
             onCreate={onCreateCluster}
+            onAssignExisting={onAssignExistingCluster}
             isWorking={clusterMutation.isPending}
+            isAssigning={assignMutation.isPending}
             showChannel
           />
         </Tabs.Panel>

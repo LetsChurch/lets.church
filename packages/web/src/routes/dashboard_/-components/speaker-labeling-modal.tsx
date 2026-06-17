@@ -1,7 +1,6 @@
 import {
   ActionIcon,
   Avatar,
-  Badge,
   Button,
   Divider,
   Group,
@@ -20,7 +19,6 @@ import {
 import { useDebouncedValue } from '@mantine/hooks';
 import {
   IconArrowBackUp,
-  IconCheck,
   IconDotsVertical,
   IconLink,
   IconPlus,
@@ -38,6 +36,7 @@ import { type CSSProperties, type ReactNode, useMemo, useState } from 'react';
 import { useTRPC } from '@/trpc/react';
 import { showFailure, showSuccess } from '../../-mantine';
 import styles from './speaker-labeling-modal.module.css';
+import { PickerRow } from './speaker-picker';
 
 type SpeakerLabelingModalProps = {
   opened: boolean;
@@ -1042,76 +1041,6 @@ function SpeakerAssignPopover({
         </ScrollArea.Autosize>
       </Popover.Dropdown>
     </Popover>
-  );
-}
-
-function PickerRow({
-  name,
-  subtitle,
-  selected = false,
-  sparkle = false,
-  icon,
-  badge,
-  matchPercent,
-  onClick,
-}: {
-  name: string;
-  subtitle?: string;
-  selected?: boolean;
-  sparkle?: boolean;
-  icon?: ReactNode;
-  badge?: { label: string; color: string };
-  matchPercent?: number | null;
-  onClick: () => void;
-}) {
-  return (
-    <UnstyledButton
-      onClick={onClick}
-      style={{ padding: '5px 8px' }}
-      className={styles.row}
-    >
-      <Group gap="xs" justify="space-between" wrap="nowrap">
-        <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
-          {sparkle ? (
-            <IconSparkles
-              size={14}
-              style={{ color: 'var(--mantine-color-indigo-5)' }}
-            />
-          ) : icon ? (
-            icon
-          ) : null}
-          <div style={{ minWidth: 0 }}>
-            <Text size="sm" truncate>
-              {name}
-            </Text>
-            {subtitle ? (
-              <Text size="xs" c="dimmed" truncate>
-                {subtitle}
-              </Text>
-            ) : null}
-          </div>
-        </Group>
-        <Group gap={6} wrap="nowrap">
-          {typeof matchPercent === 'number' ? (
-            <Text
-              size="xs"
-              c="dimmed"
-              fw={500}
-              style={{ fontVariant: 'tabular-nums' }}
-            >
-              {matchPercent}%
-            </Text>
-          ) : null}
-          {badge ? (
-            <Badge size="xs" variant="light" color={badge.color}>
-              {badge.label}
-            </Badge>
-          ) : selected ? (
-            <IconCheck size={16} />
-          ) : null}
-        </Group>
-      </Group>
-    </UnstyledButton>
   );
 }
 

@@ -1,5 +1,6 @@
 import {
   Badge,
+  Button,
   Group,
   Pagination,
   Stack,
@@ -7,11 +8,17 @@ import {
   Text,
   Title,
 } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
+import { IconArrowsJoin } from '@tabler/icons-react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { createFileRoute, Link, redirect } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useTRPC } from '@/trpc/react';
 import { formatDate } from '@/util/format';
+import {
+  type MergeSource,
+  MergeSpeakerModal,
+} from './-components/merge-speaker-modal';
 
 export const Route = createFileRoute('/dashboard_/admin_/speakers')({
   component: AdminSpeakersPage,
@@ -47,6 +54,9 @@ function AdminSpeakersPage() {
   const speakers = data?.speakers ?? [];
   const pageCount = data?.pageCount ?? 1;
 
+  const [mergeSource, setMergeSource] = useState<MergeSource | null>(null);
+  const [mergeOpened, { open: openMerge, close: closeMerge }] = useDisclosure();
+
   return (
     <Stack gap="lg">
       <div>
@@ -67,6 +77,7 @@ function AdminSpeakersPage() {
               <Table.Th>Channel</Table.Th>
               <Table.Th>Attributions</Table.Th>
               <Table.Th>Created</Table.Th>
+              <Table.Th />
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -98,6 +109,26 @@ function AdminSpeakersPage() {
                     {formatDate(s.createdAt)}
                   </Text>
                 </Table.Td>
+                <Table.Td>
+                  <Group justify="flex-end">
+                    <Button
+                      size="compact-sm"
+                      variant="subtle"
+                      color="gray"
+                      leftSection={<IconArrowsJoin size={14} />}
+                      onClick={() => {
+                        setMergeSource({
+                          id: s.id,
+                          name: s.name,
+                          channelName: s.channelName,
+                        });
+                        openMerge();
+                      }}
+                    >
+                      Merge
+                    </Button>
+                  </Group>
+                </Table.Td>
               </Table.Tr>
             ))}
           </Table.Tbody>
@@ -117,6 +148,12 @@ function AdminSpeakersPage() {
           />
         </Group>
       ) : null}
+
+      <MergeSpeakerModal
+        source={mergeSource}
+        opened={mergeOpened}
+        onClose={closeMerge}
+      />
     </Stack>
   );
 }

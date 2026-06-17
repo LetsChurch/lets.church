@@ -11,9 +11,9 @@ import {
   OrganizationChannelAssociation,
   OrganizationTag,
   SearchLogEntry,
-  StorageAudit,
   Speaker,
   SpeakerAttribution,
+  StorageAudit,
   TranscriptParagraph,
   UploadRecord,
   UploadState,
@@ -53,6 +53,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  ne,
   notExists,
   or,
   sql,
@@ -65,7 +66,9 @@ import {
   adminAssignSpeakerLabelsSchema,
   adminCreateSpeakerFromClusterSchema,
   adminLabelingQueueSchema,
+  adminSearchSpeakersSchema,
   adminSpeakersPageSchema,
+  mergeSpeakersSchema,
 } from '@/schemas/dashboard';
 import {
   addFeaturedUploadSchema,
@@ -125,6 +128,8 @@ import {
   filterUploadsWithoutActiveWorkflows,
 } from '@/util/temporal-workflow';
 import { resolveThumbnailUrl } from '@/util/thumbnails';
+import { authorizedSpeakerChannelIds } from '../../speaker-labeling/helpers';
+import { mergeSpeakers } from '../../speaker-labeling/merge';
 import {
   applySpeakerAssignments,
   buildLabelingData,
@@ -262,6 +267,47 @@ export const adminRouter = router({
         pageCount: Math.max(1, Math.ceil(total / pageSize)),
       };
     }),
+
+  // Speaker search by name. Global by default (the merge target picker); when a
+  // `channelId` is given, scoped to that channel's assignable pool (own +
+  // ACCEPTED links) so a queue cluster can only be attributed to a usable
+  // speaker. `excludeId` drops one (e.g. a merge's own source).
+  searchSpeakers: adminProcedure
+    .input(adminSearchSpeakersSchema)
+    .query(async ({ input }) => {
+      const channelPool = input.channelId
+        ? await authorizedSpeakerChannelIds(input.channelId)
+        : null;
+      const results = await db
+        .select({
+          speakerId: Speaker.id,
+          name: Speaker.name,
+          channelId: Speaker.channelId,
+          channelName: Channel.name,
+        })
+        .from(Speaker)
+        .innerJoin(Channel, eq(Speaker.channelId, Channel.id))
+        .where(
+          and(
+            isNull(Speaker.deletedAt),
+            ilike(Speaker.name, `%${escapeLikePattern(input.query)}%`),
+            input.excludeId ? ne(Speaker.id, input.excludeId) : undefined,
+            channelPool ? inArray(Speaker.channelId, channelPool) : undefined,
+          ),
+        )
+        .orderBy(asc(Speaker.name))
+        .limit(20);
+      return { results };
+    }),
+
+  // Merge one speaker into another: move all attributions/links/tag requests onto
+  // the target, then permanently delete the source. Re-indexes the affected
+  // uploads. A site admin may merge across channels.
+  mergeSpeakers: adminProcedure
+    .input(mergeSpeakersSchema)
+    .mutation(async ({ input }) =>
+      mergeSpeakers({ sourceId: input.sourceId, targetId: input.targetId }),
+    ),
 
   getPendingApprovals: adminProcedure.query(async () => {
     moduleLogger.info('Fetching pending approvals');

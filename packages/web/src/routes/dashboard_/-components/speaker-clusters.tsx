@@ -11,6 +11,7 @@ import {
 } from '@mantine/core';
 import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
+import { SpeakerPicker } from './speaker-picker';
 import { usePaged } from './use-paged';
 
 const PAGE_SIZE = 10;
@@ -52,11 +53,14 @@ function memberKey(m: ClusterMemberRow): string {
 }
 
 // One cluster of mutually-similar unlabeled segments. Pick which members belong,
-// name the voice, and create a speaker + attribute them all in one action.
+// then either name a new voice (create + attribute) or — when `onAssignExisting`
+// is provided — attribute them to an existing speaker, all in one action.
 function ClusterCard({
   cluster,
   onCreate,
+  onAssignExisting,
   isWorking,
+  isAssigning = false,
   showChannel,
 }: {
   cluster: ClusterRow;
@@ -65,7 +69,12 @@ function ClusterCard({
     name: string,
     members: ClusterCreate[],
   ) => Promise<void> | void;
+  onAssignExisting?: (
+    speakerId: string,
+    members: ClusterCreate[],
+  ) => Promise<void> | void;
   isWorking: boolean;
+  isAssigning?: boolean;
   showChannel?: boolean;
 }) {
   const [name, setName] = useState('');
@@ -82,17 +91,15 @@ function ClusterCard({
     });
 
   const selected = cluster.members.filter((m) => checked.has(memberKey(m)));
-  const canCreate = name.trim().length > 0 && selected.length > 0 && !isWorking;
+  const selectedMembers = selected.map((m) => ({
+    uploadId: m.uploadId,
+    speakerLabel: m.speakerLabel,
+  }));
+  const busy = isWorking || isAssigning;
+  const canCreate = name.trim().length > 0 && selected.length > 0 && !busy;
 
   const create = () =>
-    onCreate(
-      cluster.channelId,
-      name.trim(),
-      selected.map((m) => ({
-        uploadId: m.uploadId,
-        speakerLabel: m.speakerLabel,
-      })),
-    );
+    onCreate(cluster.channelId, name.trim(), selectedMembers);
 
   return (
     <Card withBorder padding="md" radius="md">
@@ -154,22 +161,49 @@ function ClusterCard({
         })}
       </Stack>
 
-      <Group gap="xs" align="flex-end" wrap="nowrap">
-        <TextInput
-          label="Name this speaker"
-          placeholder="e.g. Guest reader"
-          value={name}
-          onChange={(e) => setName(e.currentTarget.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && canCreate) create();
-          }}
-          style={{ flex: 1, maxWidth: 320 }}
-          size="sm"
-        />
-        <Button onClick={create} disabled={!canCreate} loading={isWorking}>
-          Create & assign {selected.length}
-        </Button>
-      </Group>
+      {onAssignExisting ? (
+        selected.length === 0 ? (
+          <Text size="sm" c="dimmed">
+            Select at least one segment above to label it.
+          </Text>
+        ) : (
+          <Stack gap={6}>
+            <Text size="xs" c="dimmed">
+              Assigning {selected.length} segment
+              {selected.length === 1 ? '' : 's'} — name a new speaker or pick an
+              existing one.
+            </Text>
+            <SpeakerPicker
+              channelId={cluster.channelId}
+              busy={busy}
+              placeholder="Name a new speaker or search existing…"
+              onCreate={(speakerName) =>
+                onCreate(cluster.channelId, speakerName, selectedMembers)
+              }
+              onPickExisting={(sp) =>
+                onAssignExisting(sp.speakerId, selectedMembers)
+              }
+            />
+          </Stack>
+        )
+      ) : (
+        <Group gap="xs" align="flex-end" wrap="nowrap">
+          <TextInput
+            label="Name this speaker"
+            placeholder="e.g. Guest reader"
+            value={name}
+            onChange={(e) => setName(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && canCreate) create();
+            }}
+            style={{ flex: 1, maxWidth: 320 }}
+            size="sm"
+          />
+          <Button onClick={create} disabled={!canCreate} loading={isWorking}>
+            Create & assign {selected.length}
+          </Button>
+        </Group>
+      )}
     </Card>
   );
 }
@@ -180,7 +214,9 @@ function ClusterCard({
 export function SpeakerClusters({
   clusters,
   onCreate,
+  onAssignExisting,
   isWorking,
+  isAssigning = false,
   showChannel = false,
 }: {
   clusters: ClusterRow[];
@@ -189,7 +225,12 @@ export function SpeakerClusters({
     name: string,
     members: ClusterCreate[],
   ) => Promise<void> | void;
+  onAssignExisting?: (
+    speakerId: string,
+    members: ClusterCreate[],
+  ) => Promise<void> | void;
   isWorking: boolean;
+  isAssigning?: boolean;
   showChannel?: boolean;
 }) {
   const paged = usePaged(clusters, PAGE_SIZE);
@@ -211,7 +252,9 @@ export function SpeakerClusters({
           key={`${c.channelId}:${c.members[0]?.uploadId}:${c.members[0]?.speakerLabel}`}
           cluster={c}
           onCreate={onCreate}
+          onAssignExisting={onAssignExisting}
           isWorking={isWorking}
+          isAssigning={isAssigning}
           showChannel={showChannel}
         />
       ))}

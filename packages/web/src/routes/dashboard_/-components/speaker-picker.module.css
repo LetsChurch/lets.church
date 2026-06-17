@@ -1,0 +1,8 @@
+.row {
+  border-radius: var(--mantine-radius-sm);
+  width: 100%;
+}
+
+.row:hover {
+  background: var(--mantine-color-default-hover);
+}

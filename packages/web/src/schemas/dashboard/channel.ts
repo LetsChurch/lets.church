@@ -261,6 +261,23 @@ export const searchSpeakersSchema = z.object({
   query: z.string().trim().min(1).max(200),
 });
 
+// Site-admin speaker search. Without `channelId` it spans every channel (the
+// merge target picker); with one it's scoped to that channel's assignable pool
+// (own + ACCEPTED links), for picking an existing speaker to attribute a queue
+// cluster to. `excludeId` drops one speaker (e.g. a merge's source).
+export const adminSearchSpeakersSchema = z.object({
+  query: z.string().trim().min(1).max(200),
+  channelId: channelIdSchema.optional(),
+  excludeId: speakerIdSchema.optional(),
+});
+
+// Merge the `sourceId` speaker into `targetId`: move every attribution, link,
+// and tag request onto the target, then permanently delete the source.
+export const mergeSpeakersSchema = z.object({
+  sourceId: speakerIdSchema,
+  targetId: speakerIdSchema,
+});
+
 export const requestSpeakerLinkSchema = z.object({
   channelId: channelIdSchema,
   speakerId: speakerIdSchema,
