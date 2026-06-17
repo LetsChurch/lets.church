@@ -16,6 +16,7 @@ import {
 } from '@/schemas/dashboard';
 import { sendVerificationEmail } from '@/temporal';
 import logger from '@/util/logger';
+import { getMaintenanceConfig } from '@/util/maintenance';
 import { uuidTranslator } from '@/util/uuid';
 import { authProcedure, publicProcedure } from '../trpc';
 
@@ -61,6 +62,19 @@ export const commonProcedures = {
   getClientEnv: publicProcedure.query(() => {
     moduleLogger.info('Client environment requested');
     return clientEnv;
+  }),
+
+  // Public: drives both the root-route redirect and the /maintenance page.
+  // `isAdmin` lets the client decide whether the current viewer is exempt
+  // without a second (auth-only) round trip.
+  getMaintenanceStatus: publicProcedure.query(async ({ ctx }) => {
+    const config = await getMaintenanceConfig();
+
+    return {
+      enabled: config.maintenanceMode,
+      message: config.maintenanceMessage,
+      isAdmin: ctx.isSiteAdmin,
+    };
   }),
 
   lookupSlug: publicProcedure

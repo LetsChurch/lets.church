@@ -1,6 +1,7 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import superjson from 'superjson';
 import logger from '@/util/logger';
+import { getMaintenanceConfig } from '@/util/maintenance';
 import type { Context } from './context';
 
 const moduleLogger = logger.child({
@@ -78,10 +79,53 @@ const loggingMiddleware = t.middleware(
   },
 );
 
-export const publicProcedure = t.procedure.use(loggingMiddleware);
+// Procedures that must stay reachable while maintenance mode is on so that an
+// admin can still log in and the maintenance page can render. Everything under
+// the `auth.` router (login, etc.) is allowlisted by prefix below.
+const MAINTENANCE_ALLOWLIST = new Set([
+  'common.getMaintenanceStatus',
+  'common.hasValidSession',
+  'common.getCurrentUser',
+  'common.getClientEnv',
+]);
+
+/**
+ * Global maintenance gate. When maintenance mode is enabled, only site admins
+ * may call tRPC procedures; everyone else gets SERVICE_UNAVAILABLE. A small
+ * allowlist keeps the login flow and the maintenance page working.
+ */
+const maintenanceMiddleware = t.middleware(async ({ path, ctx, next }) => {
+  if (
+    ctx.isSiteAdmin ||
+    MAINTENANCE_ALLOWLIST.has(path) ||
+    path.startsWith('auth.')
+  ) {
+    return next();
+  }
+
+  const { maintenanceMode } = await getMaintenanceConfig();
+
+  if (maintenanceMode) {
+    moduleLogger.info(
+      { context: { procedure: path } },
+      'Blocked non-admin tRPC call during maintenance mode',
+    );
+    throw new TRPCError({
+      code: 'SERVICE_UNAVAILABLE',
+      message: 'The site is currently down for maintenance.',
+    });
+  }
+
+  return next();
+});
+
+export const publicProcedure = t.procedure
+  .use(loggingMiddleware)
+  .use(maintenanceMiddleware);
 
 export const anonProcedure = t.procedure
   .use(loggingMiddleware)
+  .use(maintenanceMiddleware)
   .use(({ ctx, next }) => {
     if (ctx.session) {
       moduleLogger.warn('anonProcedure: session found when none expected');
@@ -98,6 +142,7 @@ export const anonProcedure = t.procedure
 
 export const authProcedure = t.procedure
   .use(loggingMiddleware)
+  .use(maintenanceMiddleware)
   .use(({ ctx, next }) => {
     if (!ctx.session) {
       moduleLogger.warn('authProcedure: no session found');

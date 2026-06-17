@@ -2,6 +2,7 @@ import { relations, sql } from 'drizzle-orm';
 import {
   bigint,
   boolean,
+  check,
   doublePrecision,
   foreignKey,
   index,
@@ -1256,6 +1257,27 @@ export const FeaturedUpload = pgTable(
       name: 'FeaturedUpload_cpk',
       columns: [FeaturedUpload.uploadRecordId],
     }),
+  }),
+);
+
+// Global, site-wide configuration. This is a singleton table: at most one row
+// (enforced by a CHECK that pins the primary key to 1). Read it via the cached
+// helper in the web app (`util/maintenance`) rather than querying on every
+// request.
+export const SiteConfig = pgTable(
+  'site_config',
+  {
+    id: integer('id').notNull().primaryKey().default(1),
+    maintenanceMode: boolean('maintenance_mode').notNull().default(false),
+    maintenanceMessage: text('maintenance_message'),
+    updatedById: uuid('updated_by_id'),
+    updatedAt: timestamp('updated_at', { precision: 3 }).notNull().defaultNow(),
+  },
+  (SiteConfig) => ({
+    site_config_singleton: check(
+      'site_config_singleton',
+      sql`${SiteConfig.id} = 1`,
+    ),
   }),
 );
 

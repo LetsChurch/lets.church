@@ -111,6 +111,10 @@ function AdminPage() {
     trpc.dashboard.admin.getDeletingUploadsCount.queryOptions(),
   );
 
+  const { data: maintenance } = useQuery(
+    trpc.dashboard.admin.getMaintenanceSettings.queryOptions(),
+  );
+
   return (
     <>
       <Title order={1} mb="lg">
@@ -569,6 +573,26 @@ function AdminPage() {
           </Group>
           <Text size="sm" c="dimmed">
             Re-transcode uploads through the current pipeline
+          </Text>
+        </Card>
+        <Card
+          shadow="xs"
+          padding="lg"
+          radius="md"
+          withBorder
+          component={Link}
+          to="/dashboard/admin/maintenance"
+        >
+          <Group justify="space-between" mb="xs">
+            <Text fw={500}>Maintenance Mode</Text>
+            {maintenance?.maintenanceMode ? (
+              <Badge color="orange" size="sm">
+                On
+              </Badge>
+            ) : null}
+          </Group>
+          <Text size="sm" c="dimmed">
+            Restrict the site to admins only
           </Text>
         </Card>
       </SimpleGrid>

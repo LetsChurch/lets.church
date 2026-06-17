@@ -54,6 +54,7 @@ import {
   addFeaturedUploadSchema,
   removeFeaturedUploadSchema,
   reorderFeaturedUploadsSchema,
+  setMaintenanceModeSchema,
 } from '@/schemas/dashboard/admin';
 import {
   cancelBackfillFilenames,
@@ -91,6 +92,10 @@ import {
 } from '@/temporal';
 import { mantineAvatarSm2x } from '@/util/avatar-sizes';
 import logger from '@/util/logger';
+import {
+  getMaintenanceSettings,
+  setMaintenanceConfig,
+} from '@/util/maintenance';
 import { escapeLikePattern } from '@/util/misc';
 import { generateResetPasswordEmail } from '@/util/reset-password-email';
 import { getPublicImageUrl } from '@/util/server-env';
@@ -4849,5 +4854,31 @@ export const adminRouter = router({
         channelId: channel.id,
       });
       return status;
+    }),
+
+  getMaintenanceSettings: adminProcedure.query(async () => {
+    return getMaintenanceSettings();
+  }),
+
+  setMaintenanceMode: adminProcedure
+    .input(setMaintenanceModeSchema)
+    .mutation(async ({ ctx, input }) => {
+      await setMaintenanceConfig({
+        maintenanceMode: input.maintenanceMode,
+        maintenanceMessage: input.maintenanceMessage,
+        updatedById: ctx.session.appUserId,
+      });
+
+      moduleLogger.warn(
+        {
+          appUserId: ctx.session.appUserId,
+          context: { maintenanceMode: input.maintenanceMode },
+        },
+        input.maintenanceMode
+          ? 'Maintenance mode ENABLED'
+          : 'Maintenance mode DISABLED',
+      );
+
+      return { success: true, maintenanceMode: input.maintenanceMode };
     }),
 });

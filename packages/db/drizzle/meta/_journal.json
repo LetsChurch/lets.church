@@ -92,6 +92,13 @@
       "when": 1780591075313,
       "tag": "0012_add_transcode_encoding_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1781664559745,
+      "tag": "0013_maintenance_mode",
+      "breakpoints": true
     }
   ]
 }

@@ -2,6 +2,7 @@ import {
   createRootRouteWithContext,
   HeadContent,
   Outlet,
+  redirect,
   Scripts,
   useMatches,
 } from '@tanstack/react-router';
@@ -27,7 +28,54 @@ const $getHasValidSession = createServerFn({ method: 'GET' }).handler(
   },
 );
 
+// Whether the current viewer should be locked out by maintenance mode. Returns
+// just enough for the root gate; the /maintenance page fetches the message
+// separately via tRPC.
+const $getMaintenanceGate = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const [{ getSession }, { getMaintenanceConfig }] = await Promise.all([
+      import('@/util/auth'),
+      import('@/util/maintenance'),
+    ]);
+    const [session, config] = await Promise.all([
+      getSession(),
+      getMaintenanceConfig(),
+    ]);
+    return {
+      enabled: config.maintenanceMode,
+      isAdmin: session?.appUser?.role === 'ADMIN',
+    };
+  },
+);
+
+// Paths that stay reachable during maintenance so an admin can log in and the
+// maintenance page itself can render. `/trpc` is excluded here because the tRPC
+// layer has its own gate (with a login allowlist).
+const MAINTENANCE_EXEMPT_PREFIXES = ['/maintenance', '/auth', '/trpc'];
+
 export const Route = createRootRouteWithContext<AppContextType>()({
+  beforeLoad: async ({ context: { queryClient }, location }) => {
+    if (
+      MAINTENANCE_EXEMPT_PREFIXES.some((prefix) =>
+        location.pathname.startsWith(prefix),
+      )
+    ) {
+      return;
+    }
+
+    // Cache the gate result briefly so client-side navigations don't round-trip
+    // on every link click, while still revalidating quickly after an admin
+    // toggles maintenance mode.
+    const { enabled, isAdmin } = await queryClient.fetchQuery({
+      queryKey: ['maintenance-gate'],
+      queryFn: () => $getMaintenanceGate(),
+      staleTime: 30_000,
+    });
+
+    if (enabled && !isAdmin) {
+      throw redirect({ to: '/maintenance' });
+    }
+  },
   loader: async ({ context: { queryClient, trpc } }) => {
     const isLoggedIn = await queryClient.fetchQuery({
       ...trpc.common.hasValidSession.queryOptions(),
